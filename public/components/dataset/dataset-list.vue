@@ -258,8 +258,7 @@ export default {
         this.$store.dispatch('breadcrumbs', [{ text: this.$tc('datasets', datasets.count) }])
         this.filtered = !!this.filters.q || hasFacetFilter
         this.loading = false
-      }
-      if (this.datasets) {
+
         // if the page is too large for the user to trigger a scroll we append results immediately
         await this.$nextTick()
         await this.$nextTick()

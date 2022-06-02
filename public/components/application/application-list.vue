@@ -69,24 +69,23 @@
             <v-list-item-title v-t="'configureApp'" />
           </v-list-item>
         </v-list>
-        <template v-if="applications">
-          <v-row class="px-2">
-            <v-col class="py-0">
-              <search-filters
-                :filter-labels="{'dataset': $t('dataset'), 'service': $t('service'), 'url': $t('baseApp')}"
-                :filters="filters"
-                :facets="applications && applications.facets"
-                :sorts="sorts"
-                type="applications"
-                @apply="refresh()"
-              />
-              <application-facets
-                :facets="applications.facets"
-                :facets-values="facetsValues"
-              />
-            </v-col>
-          </v-row>
-        </template>
+        <v-row class="px-2">
+          <v-col class="py-0">
+            <search-filters
+              :filter-labels="{'dataset': $t('dataset'), 'service': $t('service'), 'url': $t('baseApp')}"
+              :filters="filters"
+              :sorts="sorts"
+              type="applications"
+              @apply="filtersInitialized=true; refresh()"
+            />
+            <application-facets
+              v-if="applications"
+              :facets="applications.facets"
+              :facets-values="facetsValues"
+              :show-shared="filters.shared"
+            />
+          </v-col>
+        </v-row>
       </layout-navigation-right>
       <div
         v-else
@@ -151,7 +150,8 @@ export default {
       publicationSites: []
     },
     lastParams: null,
-    graphicSvg: require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw')
+    graphicSvg: require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw'),
+    filtersInitialized: false
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -185,7 +185,6 @@ export default {
     }
   },
   mounted () {
-    this.filters = { owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
     this.refresh()
   },
   methods: {
@@ -197,10 +196,10 @@ export default {
       }
     },
     async refresh (append) {
+      if (!this.filtersInitialized) return
       const fullFilters = { ...this.filters }
       let hasFacetFilter = false
       Object.entries(this.facetsValues).forEach(([facetKey, facetValues]) => {
-        if (this.filters.owner !== null && facetKey === 'owner') return
         const facetFilter = facetValues && facetValues.join(',')
         if (facetFilter) {
           hasFacetFilter = true
@@ -209,8 +208,7 @@ export default {
       })
       if (append) this.page += 1
       else this.page = 1
-      let facets = 'visibility,base-application,topics,publicationSites'
-      if (this.filters.owner === null) facets += ',owner'
+      const facets = 'visibility,base-application,topics,publicationSites,owner'
       const params = {
         size: this.size,
         page: this.page,

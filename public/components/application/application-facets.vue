@@ -1,18 +1,18 @@
 <template>
   <div class="applications-facets">
-    <template v-if="facets.owner">
+    <template v-if="showOwnerFacets">
       <v-select
         v-model="facetsValues.owner"
         multiple
         :label="$t('owner')"
         :items="facets.owner"
-        :item-value="item => `${item.value.type}:${item.value.id}`"
-        :item-text="item => `${item.value.name} (${item.count})`"
+        :item-value="item => item.value && `${item.value.type}:${item.value.id}${item.value.department ? ':' + item.value.department : ''}`"
+        :item-text="item => item.value && `${item.value.name}${item.value.department ? ' / ' + item.value.department : ''} (${item.count})`"
+        outlined
+        dense
         hide-details
         rounded
-        class="mb-4 mt-0 pt-0"
-        background-color="admin"
-        dark
+        class="mb-4"
       />
     </template>
 
@@ -101,13 +101,20 @@ en:
 import { mapState, mapGetters } from 'vuex'
 
 export default {
-  props: ['facets', 'facetsValues'],
+  props: ['facets', 'facetsValues', 'showShared'],
   data () {
     return { visibleFacet: 'visibility' }
   },
   computed: {
     ...mapState(['vocabulary', 'env']),
-    ...mapGetters(['activeAccountPublicationSitesById'])
+    ...mapGetters(['activeAccountPublicationSitesById']),
+    ...mapGetters('session', ['activeAccount']),
+    showOwnerFacets () {
+      if (!this.facets.owner) return false
+      if (this.showShared) return true
+      if (!this.activeAccount.department && this.facets.owner.find(o => !!o.value.department)) return true
+      return false
+    }
   },
   methods: {
     publicationSiteText (item) {

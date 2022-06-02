@@ -331,8 +331,10 @@ exports.parseFacets = (facets, nullFacetFields = []) => {
     res[facetKey].sort((a, b) => {
       if (a.count < b.count) return 1
       if (a.count > b.count) return -1
-      const titleA = (a.value && a.value.title) ? a.value.title : a.value
-      const titleB = (b.value && b.value.title) ? b.value.title : b.value
+      let titleA = a.value.title || a.value.name || a.value
+      if (a.value.department) titleA += a.value.department
+      let titleB = b.value.title || b.value.name || b.value
+      if (b.value.department) titleB += b.value.department
       if (titleA < titleB) return -1
       return 1
     })
