@@ -164,6 +164,24 @@
   },
   {
     "title": {
+      "fr": "Pays",
+      "en": "Country"
+    },
+    "description": {
+      "fr": "Nom d'un pays",
+      "en": "Name of a country"
+    },
+    "identifiers": [
+      "http://schema.org/addressCountry"
+    ],
+    "type": "string",
+    "tag": {
+      "fr": "Adresse",
+      "en": "Address"
+    }
+  },
+  {
+    "title": {
       "fr": "Code commune",
       "en": ""
     },
@@ -244,7 +262,26 @@
       "en": ""
     },
     "identifiers": [
-      "http://rdf.insee.fr/def/geo#codeIRIS"
+      "http://rdf.insee.fr/def/geo#codeIRIS",
+      "http://rdf.insee.fr/def/geo#IRIS"
+    ],
+    "type": "string",
+    "tag": {
+      "fr": "Référentiels administratifs français",
+      "en": "French administrative master-data"
+    }
+  },
+  {
+    "title": {
+      "fr": "Code pays (COG)",
+      "en": ""
+    },
+    "description": {
+      "fr": "Code INSEE du pays sur 5 caractères (code officiel géographique)",
+      "en": ""
+    },
+    "identifiers": [
+      "http://rdf.insee.fr/def/geo#codePays"
     ],
     "type": "string",
     "tag": {
@@ -301,6 +338,24 @@
     },
     "identifiers": [
       "http://www.w3.org/2003/01/geo/wgs84_pos#lat_long"
+    ],
+    "type": "string",
+    "tag": {
+      "fr": "Géographie",
+      "en": "Geography"
+    }
+  },
+  {
+    "title": {
+      "fr": "Code pays (ISO)",
+      "en": "Country code (ISO)"
+    },
+    "description": {
+      "fr": "Code pays ou territoire sur 2 caractères (ISO 3166-1 alpha-2)",
+      "en": "Country or territory code of 2 chars (ISO 3166-1 alpha-2)"
+    },
+    "identifiers": [
+      "http://dbpedia.org/ontology/iso31661Code"
     ],
     "type": "string",
     "tag": {
