@@ -1021,7 +1021,7 @@ async function manageESError (req, err) {
   // await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { $set: { status: 'error' } })
   // await journals.log(req.app, req.dataset, { type: 'error', data: message })
   // }
-  throw createError(err.status, message)
+  throw createError(err.status || err.statusCode, message)
 }
 
 // Read/search data for a dataset
@@ -1370,6 +1370,7 @@ router.get('/:datasetId/words_agg', readDataset(), applicationKey, permissions.m
   res.status(200).send(result)
 }))
 
+// DEPRECATED, replaced by metric_agg
 // Get max value of a field
 router.get('/:datasetId/max/:fieldKey', readDataset(), applicationKey, permissions.middleware('getMaxAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
@@ -1382,6 +1383,7 @@ router.get('/:datasetId/max/:fieldKey', readDataset(), applicationKey, permissio
   res.status(200).send(result)
 }))
 
+// DEPRECATED, replaced by metric_agg
 // Get min value of a field
 router.get('/:datasetId/min/:fieldKey', readDataset(), applicationKey, permissions.middleware('getMinAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)

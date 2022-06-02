@@ -5,6 +5,7 @@ const version = require('../package.json').version
 const masterData = require('./master-data')
 const dataFiles = require('./data-files')
 const datasetUtils = require('../server/utils/dataset')
+const { acceptedMetricAggs } = require('../server/utils/es/metric-agg')
 const utils = require('./utils')
 
 const apiRate = (key, label) => {
@@ -230,16 +231,6 @@ La valeur est une liste de colonnes séparées par des virgules.
     }
   }
 
-  const metricParam = {
-    in: 'query',
-    name: 'metric',
-    description: 'La métrique à appliquer',
-    schema: {
-      type: 'string',
-      enum: ['avg', 'sum', 'min', 'max']
-    }
-  }
-
   const metricFieldParam = {
     in: 'query',
     name: 'metric_field',
@@ -412,7 +403,15 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               type: 'string',
               enum: stringValuesProperties.length ? stringValuesProperties.map(p => p.key) : undefined
             }
-          }, formatParam, htmlParam, metricParam, metricFieldParam, aggSizeParam].concat(filterParams).concat(hitsParams(0, 100)),
+          }, formatParam, htmlParam, {
+            in: 'query',
+            name: 'metric',
+            description: 'La métrique à appliquer',
+            schema: {
+              type: 'string',
+              enum: ['avg', 'sum', 'min', 'max']
+            }
+          }, metricFieldParam, aggSizeParam].concat(filterParams).concat(hitsParams(0, 100)),
           // TODO: document sort param and interval
           responses: {
             200: {
@@ -466,9 +465,30 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [
-            Object.assign({}, metricParam, { required: true }),
+            {
+              in: 'query',
+              name: 'metric',
+              description: 'La métrique à appliquer',
+              required: true,
+              schema: {
+                type: 'string',
+                enum: acceptedMetricAggs
+              }
+            },
             Object.assign({}, metricFieldParam, { required: true }),
-            aggSizeParam
+            {
+              in: 'query',
+              name: 'percents',
+              description: 'Les pourcentages sur lesquels calculer la métrique percentiles (inutile pour les autres métriques)',
+              required: false,
+              schema: {
+                type: 'array',
+                items: {
+                  type: 'string'
+                }
+              },
+              style: 'commaDelimited'
+            }
           ].concat(filterParams),
           responses: {
             200: {
