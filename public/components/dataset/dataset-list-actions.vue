@@ -1,6 +1,6 @@
 <template>
   <v-list
-    v-if="canContrib"
+    v-if="canContribDep"
     dense
     class="list-actions"
   >
@@ -104,7 +104,7 @@ const { mapGetters } = require('vuex')
 
 export default {
   computed: {
-    ...mapGetters(['canContrib'])
+    ...mapGetters(['canContribDep'])
   }
 }
 </script>

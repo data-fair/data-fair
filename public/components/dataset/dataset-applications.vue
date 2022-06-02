@@ -17,7 +17,7 @@
       <draggable
         :list="applications"
         class="layout row wrap my-0"
-        :disabled="!canContrib"
+        :disabled="!canContribDep"
         ghost-class="application-ghost"
         @end="changeOrder"
       >
@@ -35,7 +35,7 @@
       </draggable>
     </template>
     <v-btn
-      v-if="canContrib"
+      v-if="canContribDep"
       v-t="'configureApp'"
       color="primary"
       :to="{path: '/new-application', query: {dataset: dataset.id}}"
@@ -63,7 +63,7 @@ export default {
   components: { Draggable },
   computed: {
     ...mapState('dataset', ['dataset', 'applications']),
-    ...mapGetters(['canContrib'])
+    ...mapGetters(['canContribDep'])
   },
   methods: {
     changeOrder (order) {

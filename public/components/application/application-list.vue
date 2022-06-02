@@ -56,7 +56,7 @@
 
       <layout-navigation-right v-if="$vuetify.breakpoint.lgAndUp">
         <v-list
-          v-if="canContrib"
+          v-if="canContribDep"
           dense
           class="list-actions"
         >
@@ -93,7 +93,7 @@
         class="actions-buttons"
       >
         <v-btn
-          v-if="canContrib"
+          v-if="canContribDep"
           color="primary"
           fab
           small
@@ -157,7 +157,7 @@ export default {
     ...mapState('session', ['user']),
     ...mapGetters('session', ['activeAccount']),
     ...mapState(['env']),
-    ...mapGetters(['canContrib']),
+    ...mapGetters(['canContribDep']),
     plural () {
       return this.applications.count > 1
     },

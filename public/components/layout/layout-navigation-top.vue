@@ -96,7 +96,7 @@ export default {
   computed: {
     ...mapState(['env', 'breadcrumbItems', 'breadcrumbsRouteName']),
     ...mapState('session', ['user', 'initialized']),
-    ...mapGetters(['canAdmin', 'canContrib', 'missingSubscription']),
+    ...mapGetters(['missingSubscription']),
     ...mapGetters('session', ['activeAccount'])
   },
   methods: {

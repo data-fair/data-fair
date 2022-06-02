@@ -195,7 +195,7 @@
 
         <template v-if="env.extraNavigationItems && user">
           <v-list-item
-            v-for="extra in env.extraNavigationItems.filter(extra => !extra.can || (extra.can === 'contrib' && canContrib) || (extra.can === 'admin' && canAdmin))"
+            v-for="extra in env.extraNavigationItems.filter(extra => !extra.can || (extra.can === 'contrib' && canContrib) || (extra.can === 'admin' && canAdmin) || (extra.can === 'contribDep' && canContribDep) || (extra.can === 'adminDep' && canAdminDep))"
             :key="extra.id"
             :nuxt="!!extra.iframe"
             :to="extra.iframe && `/extra/${extra.id}`"
@@ -277,7 +277,7 @@ export default {
   computed: {
     ...mapState(['env']),
     ...mapState('session', ['user']),
-    ...mapGetters(['canAdmin', 'canContrib', 'missingSubscription', 'lightPrimary5', 'lightPrimary10', 'darkPrimary5', 'darkPrimary10', 'darkPrimary20']),
+    ...mapGetters(['canAdmin', 'canContrib', 'canAdminDep', 'canContribDep', 'missingSubscription', 'lightPrimary5', 'lightPrimary10', 'darkPrimary5', 'darkPrimary10', 'darkPrimary20']),
     ...mapGetters('session', ['activeAccount']),
     routePrefix () {
       return this.$route && this.$route.name && this.$route.name.split('-')[0]

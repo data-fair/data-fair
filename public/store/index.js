@@ -104,19 +104,24 @@ export default () => {
         }
         return propertyTypes.find(p => p.type === prop.type).icon
       },
-      canContrib (state, getters) {
+      canContribDep (state, getters) {
         const activeAccount = getters['session/activeAccount']
         if (!activeAccount) return false
         if (activeAccount.type === 'user') return true
         const role = state.session.user.organization.role
         return role === state.env.adminRole || role === state.env.contribRole
       },
-      canAdmin (state, getters) {
+      canContrib (state, getters) {
+        return getters.canContribDep && !getters['session/activeAccount'].department
+      },
+      canAdminDep (state, getters) {
         const activeAccount = getters['session/activeAccount']
         if (!activeAccount) return false
         if (activeAccount.type === 'user') return true
-        const role = state.session.user.organization.role
-        return role === state.env.adminRole
+        return state.session.user.organization.role === state.env.adminRole
+      },
+      canAdmin (state, getters) {
+        return getters.canAdminDep && !getters['session/activeAccount'].department
       },
       missingSubscription (state) {
         return !!(state.limits && state.limits.defaults && state.env.subscriptionUrl)
