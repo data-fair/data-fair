@@ -591,7 +591,8 @@ export default {
       const keysParam = webhooks.map(w => `data-fair:${w.const}:${this.dataset.id}`).join(',')
       const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
       const urlTemplate = `${this.env.publicUrl}/dataset/${this.dataset.id}`
-      const sender = `${this.dataset.owner.type}:${this.dataset.owner.id}`
+      let sender = `${this.dataset.owner.type}:${this.dataset.owner.id}`
+      if (this.dataset.owner.department) sender += ':' + this.dataset.owner.department
       return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&sender=${encodeURIComponent(sender)}&register=false`
     },
     webhooksUrl () {
@@ -600,7 +601,8 @@ export default {
 
       const keysParam = webhooks.map(w => `data-fair:${w.const}:${this.dataset.id}`).join(',')
       const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
-      const sender = `${this.dataset.owner.type}:${this.dataset.owner.id}`
+      let sender = `${this.dataset.owner.type}:${this.dataset.owner.id}`
+      if (this.dataset.owner.department) sender += ':' + this.dataset.owner.department
       return `${this.env.notifyUrl}/embed/subscribe-webhooks?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&sender=${encodeURIComponent(sender)}`
     }
   },
