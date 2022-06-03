@@ -204,4 +204,22 @@ describe('CSV cases', () => {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?format=csv`)
     assert.equal(res.data.split('\n')[5].split('","')[1].length, 20)
   })
+
+  it('A TSV in .tsv file', async () => {
+    // better to remove these chars as they can be considered as some end of string by somer parsers
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/tab-sep.tsv', ax)
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results[0].id, 'koumoul')
+  })
+
+  it('A TSV in .txt file', async () => {
+    // better to remove these chars as they can be considered as some end of string by somer parsers
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/tab-sep.txt', ax)
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results[0].id, 'koumoul')
+  })
 })

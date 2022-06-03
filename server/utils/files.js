@@ -15,7 +15,7 @@ const fallbackMimeTypes = {
 }
 const debug = require('debug')('files')
 
-const { tabularTypes, geographicalTypes, archiveTypes, calendarTypes } = require('../workers/converter')
+const { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } = require('../workers/converter')
 
 const storage = multer.diskStorage({
   destination: async function (req, file, cb) {
@@ -53,7 +53,7 @@ const storage = multer.diskStorage({
   }
 })
 
-const allowedTypes = exports.allowedTypes = new Set(['text/csv', 'application/geo+json', ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes])
+const allowedTypes = exports.allowedTypes = new Set([...basicTypes, ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes])
 
 exports.uploadFile = () => {
   return multer({

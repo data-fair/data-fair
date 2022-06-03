@@ -22,7 +22,7 @@ const vocabulary = require('../../contract/vocabulary')
 const limits = require('./limits')
 const esUtils = require('./es')
 const locks = require('./locks')
-const baseTypes = new Set(['text/csv', 'application/geo+json'])
+const { basicTypes, csvTypes } = require('../workers/converter')
 const dataDir = path.resolve(config.dataDir)
 
 exports.dir = (dataset) => {
@@ -192,7 +192,7 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
   }
   if (mimeType === 'application/x-ndjson' || mimeType === 'application/json') {
     streams.push(mimeTypeStream(mimeType).parser())
-  } else if (mimeType === 'text/csv') {
+  } else if (csvTypes.includes(mimeType)) {
     // use result from csv-sniffer to configure parser
     const parserOpts = {
       separator: fileProps.fieldsDelimiter || ',',
@@ -618,7 +618,7 @@ exports.reindex = async (db, dataset) => {
   const patch = { status: 'loaded' }
   if (dataset.isVirtual) patch.status = 'indexed'
   else if (dataset.isRest) patch.status = 'analyzed'
-  else if (dataset.originalFile && !baseTypes.has(dataset.originalFile.mimetype)) patch.status = 'uploaded'
+  else if (dataset.originalFile && !basicTypes.includes(dataset.originalFile.mimetype)) patch.status = 'uploaded'
   return (await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
 }

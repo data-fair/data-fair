@@ -48,7 +48,7 @@ const datasetFileSample = require('../utils/dataset-file-sample')
 const { bulkSearchStreams } = require('../utils/master-data')
 const applicationKey = require('../utils/application-key')
 const { syncDataset: syncRemoteService } = require('./remote-services')
-const baseTypes = new Set(['text/csv', 'application/geo+json'])
+const { basicTypes } = require('../workers/converter')
 
 const router = express.Router()
 
@@ -343,7 +343,7 @@ router.patch('/:datasetId', lockDataset((patch) => {
     if (req.dataset.isVirtual) patch.status = 'indexed'
     else if (req.dataset.isRest) patch.status = 'analyzed'
     else if (req.dataset.remoteFile && !req.dataset.originalFile) patch.status = 'imported'
-    else if (!baseTypes.has(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
+    else if (!basicTypes.includes(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
     else patch.status = 'loaded'
   }
 
@@ -588,7 +588,7 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft, res) => {
     }
   }
 
-  if (file && !baseTypes.has(file.mimetype)) {
+  if (file && !basicTypes.includes(file.mimetype)) {
     // we first need to convert the file in a textual format easy to index
     patch.status = 'uploaded'
   } else {
@@ -925,7 +925,7 @@ router.post('/:datasetId/draft', lockDataset(), readDataset(['finalized'], true)
     await fs.move(datasetUtils.attachmentsDir(req.dataset), datasetUtils.attachmentsDir(patchedDataset))
   }
 
-  const statusPatch = { status: baseTypes.has(req.dataset.originalFile.mimetype) ? 'analyzed' : 'uploaded' }
+  const statusPatch = { status: basicTypes.includes(req.dataset.originalFile.mimetype) ? 'analyzed' : 'uploaded' }
   const statusPatchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: req.params.datasetId },
     { $set: statusPatch },
     { returnDocument: 'after' }

@@ -1,12 +1,12 @@
 const datasetFileSample = require('../utils/dataset-file-sample')
 const chardet = require('chardet')
-const baseTypes = new Set(['text/csv', 'application/geo+json'])
 const request = require('request')
 const fs = require('fs-extra')
 const util = require('util')
 const pump = util.promisify(require('pump'))
 const catalogs = require('../catalogs')
 const datasetUtils = require('../utils/dataset')
+const { basicTypes } = require('../workers/converter')
 
 exports.eventsPrefix = 'download'
 
@@ -43,7 +43,7 @@ exports.process = async function (app, dataset) {
   )
   debug(`Successfully downloaded file ${fileName}`)
 
-  if (!baseTypes.has(dataset.originalFile.mimetype)) {
+  if (!basicTypes.includes(dataset.originalFile.mimetype)) {
     // we first need to convert the file in a textual format easy to index
     patch.status = 'uploaded'
   } else {

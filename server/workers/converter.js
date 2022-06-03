@@ -30,9 +30,7 @@ const tabularTypes = exports.tabularTypes = new Set([
   'application/vnd.oasis.opendocument.spreadsheet', // ods, fods
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
   'application/vnd.ms-excel', // xls
-  'application/dbase', // dbf
-  'text/plain', // txt, dif
-  'text/tab-separated-values' // tsv
+  'application/dbase' // dbf
 ])
 const geographicalTypes = exports.geographicalTypes = new Set([
   'application/vnd.google-earth.kml+xml', // kml
@@ -41,6 +39,15 @@ const geographicalTypes = exports.geographicalTypes = new Set([
   'application/geopackage+sqlite3' // gpkg
 ])
 const calendarTypes = exports.calendarTypes = new Set(['text/calendar'])
+exports.csvTypes = [
+  'text/csv',
+  'text/plain', // txt often contains csv or tsv content
+  'text/tab-separated-values' // tsv processed in the same way as csv
+]
+exports.basicTypes = [
+  ...exports.csvTypes,
+  'application/geo+json'
+]
 
 async function decompress (mimetype, filePath, dirPath) {
   if (mimetype === 'application/zip') await exec('unzip', ['-o', '-q', filePath, '-d', dirPath])

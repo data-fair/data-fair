@@ -149,7 +149,6 @@ async function iter (app, resource, type) {
       const lastEvent = journal && journal.events[0]
       if (lastEvent && lastEvent.type === 'finalize-end') noStoreEvent = true
     }
-
     if (type === 'application') {
       // Not much to do on applications.. Just catalog publication
       taskKey = 'applicationPublisher'
@@ -160,7 +159,7 @@ async function iter (app, resource, type) {
       } else if (resource.status === 'uploaded') {
         // XLS to csv of other transformations
         taskKey = 'converter'
-      } else if (resource.status === 'loaded' && resource.file && resource.file.mimetype === 'text/csv') {
+      } else if (resource.status === 'loaded' && resource.file && tasks.converter.csvTypes.includes(resource.file.mimetype)) {
         // Quickly parse a CSV file
         taskKey = 'csvAnalyzer'
       } else if (resource.status === 'loaded' && resource.file && resource.file.mimetype === 'application/geo+json') {
