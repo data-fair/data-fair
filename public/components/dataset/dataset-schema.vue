@@ -27,7 +27,8 @@
           dense
           style="max-width:180px;"
           append-icon="mdi-magnify"
-          class="mx-3"
+          class="mx-3 mb-2"
+          hide-details
         />
         <v-spacer />
         <div>
@@ -47,12 +48,11 @@
       </v-row>
 
       <v-row
-        v-if="notCalculatedProperties && notCalculatedProperties.length"
+        v-if="notCalculatedProperties && notCalculatedProperties.length && dataset.isRest"
         class="mt-0 mb-2"
       >
         <v-col class="pt-0">
           <v-select
-            v-if="dataset.isRest"
             v-model="primaryKey"
             :label="$t('primaryKey')"
             :disabled="!!dataset.count || !can('writeDescription')"

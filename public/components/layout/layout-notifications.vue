@@ -10,6 +10,7 @@
     tile
     right
     bottom
+    :outlined="$vuetify.theme.dark"
   >
     <p>{{ notification.msg }}</p>
     <p

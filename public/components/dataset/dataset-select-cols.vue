@@ -24,33 +24,33 @@
           :disabled="!value.length"
           @click="$emit('input', [])"
         />
-        <template v-for="(header, i) in fieldHeaders">
+        <template v-for="group in groups">
           <v-checkbox
-            v-if="isFirstInGroup(i)"
-            :key="'group-' + header.value"
-            :label="header.field['x-group']"
+            v-if="group"
+            :key="group"
+            :label="group"
             dense
             hide-details
-            @change="value => toggleGroup(header.field['x-group'], value)"
+            @change="value => toggleGroup(group, value)"
           >
             <template #append>
               <v-btn
-                v-if="isFirstInGroup(i) && !foldedGroups[header.field['x-group']]"
-                :key="'fold-down-' + header.value"
+                v-if="!foldedGroups[group]"
+                :key="'fold-down-' + group"
                 icon
                 style="margin-top:-8px;"
-                @click="$set(foldedGroups, header.field['x-group'], true)"
+                @click="$set(foldedGroups, group, true)"
               >
                 <v-icon>
                   mdi-menu-down
                 </v-icon>
               </v-btn>
               <v-btn
-                v-if="isFirstInGroup(i) && foldedGroups[header.field['x-group']]"
-                :key="'fold-down-' + header.value"
+                v-if="foldedGroups[group]"
+                :key="'fold-up-' + group"
                 icon
                 style="margin-top:-8px;"
-                @click="$set(foldedGroups, header.field['x-group'], false)"
+                @click="$set(foldedGroups, group, false)"
               >
                 <v-icon>
                   mdi-menu-left
@@ -58,18 +58,19 @@
               </v-btn>
             </template>
           </v-checkbox>
-
-          <v-checkbox
-            v-show="!foldedGroups[header.field['x-group']]"
-            :key="header.value"
-            :value="header.value"
-            :label="header.text"
-            :input-value="value"
-            dense
-            hide-details
-            :class="{'ml-3': !!header.field['x-group']}"
-            @change="newValue => $emit('input', newValue)"
-          />
+          <template v-for="(header) in fieldHeaders.filter(header => (header.field['x-group'] || '') === group)">
+            <v-checkbox
+              v-show="!foldedGroups[header.field['x-group']]"
+              :key="header.value"
+              :value="header.value"
+              :label="header.text"
+              :input-value="value"
+              dense
+              hide-details
+              :class="{'ml-3': !!header.field['x-group']}"
+              @change="newValue => $emit('input', newValue)"
+            />
+          </template>
         </template>
       </v-card-text>
     </v-card>
@@ -94,6 +95,12 @@ export default {
   computed: {
     fieldHeaders () {
       return this.headers.filter(h => !!h.field)
+    },
+    groups () {
+      return this.fieldHeaders.reduce((groups, header) => {
+        if (header.field['x-group'] && !groups.includes(header.field['x-group'])) groups.push(header.field['x-group'])
+        return groups
+      }, []).concat([''])
     }
   },
   methods: {

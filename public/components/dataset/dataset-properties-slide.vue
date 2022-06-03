@@ -36,7 +36,10 @@
     >
       <v-subheader v-t="'detailedInfo'" />
     </v-row>
-    <v-sheet v-if="currentProperty != null">
+    <v-sheet
+      v-if="currentProperty != null"
+      color="transparent"
+    >
       <v-row v-if="currentPropRef.warning">
         <v-col class="mt-4 pa-0">
           <v-alert
@@ -91,20 +94,20 @@
           </v-row>
           <v-list
             dense
-            class="pt-0 labels-list"
+            class="labels-list mt-1"
           >
             <v-list-item
               v-if="currentPropRef.prop['x-extension'] && extensions[currentPropRef.prop['x-extension']]"
-              class="pl-0 font-weight-bold"
+              class="font-weight-bold"
             >
               <span :class="labelClass">{{ $t('extension') }}</span>&nbsp;
               {{ extensions[currentPropRef.prop['x-extension']].title }}
             </v-list-item>
-            <v-list-item class="pl-0">
+            <v-list-item>
               <span :class="labelClass">{{ $t('key') }}</span>&nbsp;
               {{ currentPropRef.prop['x-originalName'] || currentPropRef.prop.key }}
             </v-list-item>
-            <v-list-item class="pl-0">
+            <v-list-item>
               <span :class="labelClass">Type :</span>&nbsp;
               {{ propTypeTitle(currentPropRef.prop) }}
               <template v-if="currentFileProp && currentFileProp.dateFormat">
@@ -114,18 +117,12 @@
                 ({{ currentFileProp.dateTimeFormat }})
               </template>
             </v-list-item>
-            <v-list-item
-              v-if="currentPropRef.prop['x-cardinality']"
-              class="pl-0"
-            >
+            <v-list-item v-if="currentPropRef.prop['x-cardinality']">
               <span :class="labelClass">{{ $t('distinctValues') }} : </span>&nbsp;
               {{ currentPropRef.prop['x-cardinality'].toLocaleString() }}
               <help-tooltip>{{ $t('distinctValuesHelp') }}</help-tooltip>
             </v-list-item>
-            <v-list-item
-              v-if="currentPropRef.prop.enum"
-              class="pl-0"
-            >
+            <v-list-item v-if="currentPropRef.prop.enum">
               <span :class="labelClass">{{ $t('values') }}</span>&nbsp;
               {{ currentPropRef.prop.enum.join(' - ') | truncate(100) }}
             </v-list-item>
@@ -281,7 +278,7 @@
             class="mb-3"
             clearable
             hide-selected
-            @update:search-input="v => currentPropRef.prop['x-group'] = v || ''"
+            @update:search-input="setGroup"
           >
             <template #append-outer>
               <help-tooltip>{{ $t('groupHelp') }}</help-tooltip>
@@ -459,6 +456,13 @@ export default {
         this.currentProperty = null
         await this.$nextTick()
         this.currentProperty = i
+      }
+    },
+    async setGroup (group) {
+      if (group) {
+        this.$set(this.currentPropRef.prop, 'x-group', group)
+      } else if (this.currentPropRef.prop['x-group']) {
+        this.currentPropRef.prop['x-group'] = undefined
       }
     }
   }
