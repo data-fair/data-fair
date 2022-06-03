@@ -66,11 +66,13 @@ async function initBaseApp (db, app) {
     patch.hasConfigSchema = true
 
     // Read the config schema to deduce filters on datasets
-    const datasetsItems = (configSchema.properties && configSchema.properties.datasets && configSchema.properties.datasets.items) ||
-      (configSchema.allOf && configSchema.allOf[0].properties && configSchema.allOf[0].properties.datasets && configSchema.allOf[0].properties.datasets.items) ||
-      []
-
-    const datasetsUrls = Array.isArray(datasetsItems) ? datasetsItems.map(item => item['x-fromUrl']) : [datasetsItems['x-fromUrl']]
+    const datasetsDefinition = (configSchema.properties && configSchema.properties.datasets) || (configSchema.allOf && configSchema.allOf[0].properties && configSchema.allOf[0].properties.datasets)
+    let datasetsUrls = []
+    if (datasetsDefinition) {
+      if (datasetsDefinition['x-fromUrl']) datasetsUrls = [datasetsDefinition['x-fromUrl']]
+      if (datasetsDefinition.items && datasetsDefinition.items['x-fromUrl']) datasetsUrls = [datasetsDefinition.items['x-fromUrl']]
+      if (Array.isArray(datasetsDefinition.items)) datasetsUrls = datasetsDefinition.items.map(item => item['x-fromUrl'])
+    }
     const datasetsQueries = datasetsUrls.map(datasetsUrl => url.parse(datasetsUrl, { parseQueryString: true }).query)
     patch.datasetsFilters = datasetsQueries.map(prepareQuery)
   } catch (err) {
