@@ -136,7 +136,7 @@
           dense
           :to="`/organization`"
         >
-          <v-list-item-action><v-icon>mdi-account-multiple</v-icon></v-list-item-action>
+          <v-list-item-action><v-icon>mdi-account-group</v-icon></v-list-item-action>
           <v-list-item-content>
             <v-list-item-title v-t="'org'" />
             <v-list-item-subtitle>{{ activeAccount.name }}</v-list-item-subtitle>
@@ -149,7 +149,7 @@
           dense
           :to="`/department`"
         >
-          <v-list-item-action><v-icon>mdi-account-multiple</v-icon></v-list-item-action>
+          <v-list-item-action><v-icon>mdi-account-group</v-icon></v-list-item-action>
           <v-list-item-content>
             <v-list-item-title v-t="'dep'" />
             <v-list-item-subtitle>{{ activeAccount.name }} / {{ user.organization.department }}</v-list-item-subtitle>
