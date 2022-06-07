@@ -8,7 +8,7 @@
     />
 
     <v-btn
-      v-if="can('writePublications')"
+      v-if="canAdmin"
       v-t="'publish'"
       color="primary"
       @click="addPublicationDialog = true"
@@ -59,7 +59,7 @@
         <v-list-item-action>
           <v-row>
             <v-btn
-              v-if="can('writePublications') && ['error', 'published'].includes(publication.status)"
+              v-if="canAdmin && ['error', 'published'].includes(publication.status)"
               color="warning"
               icon
               :title="$t('republish')"
@@ -69,7 +69,7 @@
               <v-icon>mdi-play</v-icon>
             </v-btn>
             <v-btn
-              v-if="can('writePublications')"
+              v-if="canAdmin"
               color="warning"
               icon
               :title="$t('deletePublication')"
@@ -275,6 +275,7 @@ export default {
     ...mapState(['env']),
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['can', 'journalChannel']),
+    ...mapGetters(['canAdmin']),
     catalogsById () {
       return this.catalogs.reduce((a, c) => { a[c.id] = c; return a }, {})
     }

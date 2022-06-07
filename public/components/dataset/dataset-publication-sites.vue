@@ -23,7 +23,7 @@
               <v-list-item-action>
                 <v-checkbox
                   :input-value="dataset.publicationSites.includes(`${site.type}:${site.id}`)"
-                  :disabled="!can('writePublicationSites')"
+                  :disabled="!canAdmin"
                   @change="toggle(site)"
                 />
               </v-list-item-action>
@@ -79,7 +79,8 @@ export default {
   }),
   computed: {
     ...mapState('dataset', ['dataset']),
-    ...mapGetters('dataset', ['can'])
+    ...mapGetters('dataset', ['can']),
+    ...mapGetters(['canAdmin'])
   },
   methods: {
     ...mapActions('dataset', ['patch']),
