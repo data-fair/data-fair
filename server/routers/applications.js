@@ -185,28 +185,36 @@ router.put('/:applicationId', attemptInsert, readApplication, permissions.middle
   res.status(200).json(clean(newApplication, req.publicBaseUrl))
 }))
 
+const permissionsWritePublications = permissions.middleware('writePublications', 'admin')
+const permissionsWritePublicationSites = permissions.middleware('writePublicationSites', 'admin')
+
 // Update an application configuration
-router.patch('/:applicationId', readApplication, permissions.middleware('writeDescription', 'write'), asyncWrap(async (req, res) => {
-  const patch = req.body
-  const valid = validatePatch(patch)
-  if (!valid) return res.status(400).send(validatePatch.errors)
+router.patch('/:applicationId',
+  readApplication,
+  permissions.middleware('writeDescription', 'write'),
+  (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
+  (req, res, next) => req.body.publicationSites ? permissionsWritePublicationSites(req, res, next) : next(),
+  asyncWrap(async (req, res) => {
+    const patch = req.body
+    const valid = validatePatch(patch)
+    if (!valid) return res.status(400).send(validatePatch.errors)
 
-  // Retry previously failed publications
-  if (!patch.publications) {
-    const failedPublications = (req.application.publications || []).filter(p => p.status === 'error')
-    if (failedPublications.length) {
-      failedPublications.forEach(p => { p.status = 'waiting' })
-      patch.publications = req.application.publications
+    // Retry previously failed publications
+    if (!patch.publications) {
+      const failedPublications = (req.application.publications || []).filter(p => p.status === 'error')
+      if (failedPublications.length) {
+        failedPublications.forEach(p => { p.status = 'waiting' })
+        patch.publications = req.application.publications
+      }
     }
-  }
 
-  patch.updatedAt = moment().toISOString()
-  patch.updatedBy = { id: req.user.id, name: req.user.name }
+    patch.updatedAt = moment().toISOString()
+    patch.updatedBy = { id: req.user.id, name: req.user.name }
 
-  const patchedApplication = (await req.app.get('db').collection('applications')
-    .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })).value
-  res.status(200).json(clean(patchedApplication, req.publicBaseUrl))
-}))
+    const patchedApplication = (await req.app.get('db').collection('applications')
+      .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })).value
+    res.status(200).json(clean(patchedApplication, req.publicBaseUrl))
+  }))
 
 // Change ownership of an application
 router.put('/:applicationId/owner', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {

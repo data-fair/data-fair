@@ -289,17 +289,11 @@
                   <v-icon>mdi-security</v-icon>&nbsp;&nbsp;{{ $t('permissions') }}
                 </v-tab>
 
-                <v-tab
-                  v-if="canContrib"
-                  href="#share-publication-sites"
-                >
+                <v-tab href="#share-publication-sites">
                   <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;{{ $t('portals') }}
                 </v-tab>
 
-                <v-tab
-                  v-if="canContrib"
-                  href="#share-publications"
-                >
+                <v-tab href="#share-publications">
                   <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
                 </v-tab>
 

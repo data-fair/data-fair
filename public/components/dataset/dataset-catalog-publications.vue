@@ -8,7 +8,7 @@
     />
 
     <v-btn
-      v-if="can('writeDescription')"
+      v-if="can('writePublications')"
       v-t="'publish'"
       color="primary"
       @click="addPublicationDialog = true"
@@ -59,7 +59,7 @@
         <v-list-item-action>
           <v-row>
             <v-btn
-              v-if="can('writeDescription') && ['error', 'published'].includes(publication.status)"
+              v-if="can('writePublications') && ['error', 'published'].includes(publication.status)"
               color="warning"
               icon
               :title="$t('republish')"
@@ -69,7 +69,7 @@
               <v-icon>mdi-play</v-icon>
             </v-btn>
             <v-btn
-              v-if="can('writeDescription')"
+              v-if="can('writePublications')"
               color="warning"
               icon
               :title="$t('deletePublication')"

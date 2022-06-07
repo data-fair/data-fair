@@ -23,6 +23,7 @@
               <v-list-item-action>
                 <v-checkbox
                   :input-value="dataset.publicationSites.includes(`${site.type}:${site.id}`)"
+                  :disabled="!can('writePublicationSites')"
                   @change="toggle(site)"
                 />
               </v-list-item-action>
@@ -65,7 +66,7 @@ en:
 </i18n>
 
 <script>
-import { mapState, mapActions } from 'vuex'
+import { mapState, mapGetters, mapActions } from 'vuex'
 export default {
   props: {
     publicationSites: {
@@ -77,7 +78,8 @@ export default {
     selected: []
   }),
   computed: {
-    ...mapState('dataset', ['dataset'])
+    ...mapState('dataset', ['dataset']),
+    ...mapGetters('dataset', ['can'])
   },
   methods: {
     ...mapActions('dataset', ['patch']),

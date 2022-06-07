@@ -322,160 +322,169 @@ router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.midd
   res.status(200).send(schema)
 })
 
+const permissionsWritePublications = permissions.middleware('writePublications', 'admin')
+const permissionsWritePublicationSites = permissions.middleware('writePublicationSites', 'admin')
+
 // Update a dataset's metadata
-router.patch('/:datasetId', lockDataset((patch) => {
-  return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)
-}), readDataset((patch) => {
+router.patch('/:datasetId',
+  lockDataset((patch) => {
+    return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)
+  }),
+  readDataset((patch) => {
   // accept different statuses of the dataset depending on the content of the patch
-  if (patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection) {
-    return ['finalized', 'error']
-  } else {
-    return null
-  }
-}), permissions.middleware('writeDescription', 'write'), asyncWrap(async (req, res) => {
-  const db = req.app.get('db')
-  const patch = req.body
-  if (!validatePatch(patch)) return res.status(400).send(validatePatch.errors)
-
-  // Changed a previously failed dataset, retry everything.
-  // Except download.. We only try it again if the fetch failed.
-  if (req.dataset.status === 'error') {
-    if (req.dataset.isVirtual) patch.status = 'indexed'
-    else if (req.dataset.isRest) patch.status = 'analyzed'
-    else if (req.dataset.remoteFile && !req.dataset.originalFile) patch.status = 'imported'
-    else if (!basicTypes.includes(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
-    else patch.status = 'loaded'
-  }
-
-  // Ignore patch that doesn't bring actual change
-  Object.keys(patch).forEach(patchKey => {
-    if (JSON.stringify(patch[patchKey]) === JSON.stringify(req.dataset[patchKey])) { delete patch[patchKey] }
-  })
-  if (Object.keys(patch).length === 0) return res.status(200).send(clean(req.publicBaseUrl, req.dataset))
-
-  patch.updatedAt = moment().toISOString()
-  patch.updatedBy = { id: req.user.id, name: req.user.name }
-
-  if (patch.extensions) prepareExtensions(req, patch.extensions, req.dataset.extensions)
-  if (patch.extensions || req.dataset.extensions) {
-    patch.schema = await extensions.prepareSchema(db, patch.schema || req.dataset.schema, patch.extensions || req.dataset.extensions)
-  }
-
-  // Re-publish publications
-  if (!patch.publications && req.dataset.publications && req.dataset.publications.length) {
-    req.dataset.publications.filter(p => p.status !== 'deleted').forEach(p => { p.status = 'waiting' })
-    patch.publications = req.dataset.publications
-  }
-
-  // manage automatic export of REST datasets into files
-  if (patch.exports && patch.exports.restToCSV) {
-    if (patch.exports.restToCSV.active) {
-      const job = new CronJob(config.exportRestDatasets.cron, () => {})
-      patch.exports.restToCSV.nextExport = job.nextDates().toISOString()
+    if (patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection) {
+      return ['finalized', 'error']
     } else {
-      delete patch.exports.restToCSV.nextExport
-      if (await fs.pathExists(datasetUtils.exportedFileName(req.dataset, '.csv'))) {
-        await fs.remove(datasetUtils.exportedFileName(req.dataset, '.csv'))
+      return null
+    }
+  }),
+  permissions.middleware('writeDescription', 'write'),
+  (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
+  (req, res, next) => req.body.publicationSites ? permissionsWritePublicationSites(req, res, next) : next(),
+  asyncWrap(async (req, res) => {
+    const db = req.app.get('db')
+    const patch = req.body
+    if (!validatePatch(patch)) return res.status(400).send(validatePatch.errors)
+
+    // Changed a previously failed dataset, retry everything.
+    // Except download.. We only try it again if the fetch failed.
+    if (req.dataset.status === 'error') {
+      if (req.dataset.isVirtual) patch.status = 'indexed'
+      else if (req.dataset.isRest) patch.status = 'analyzed'
+      else if (req.dataset.remoteFile && !req.dataset.originalFile) patch.status = 'imported'
+      else if (!basicTypes.includes(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
+      else patch.status = 'loaded'
+    }
+
+    // Ignore patch that doesn't bring actual change
+    Object.keys(patch).forEach(patchKey => {
+      if (JSON.stringify(patch[patchKey]) === JSON.stringify(req.dataset[patchKey])) { delete patch[patchKey] }
+    })
+    if (Object.keys(patch).length === 0) return res.status(200).send(clean(req.publicBaseUrl, req.dataset))
+
+    patch.updatedAt = moment().toISOString()
+    patch.updatedBy = { id: req.user.id, name: req.user.name }
+
+    if (patch.extensions) prepareExtensions(req, patch.extensions, req.dataset.extensions)
+    if (patch.extensions || req.dataset.extensions) {
+      patch.schema = await extensions.prepareSchema(db, patch.schema || req.dataset.schema, patch.extensions || req.dataset.extensions)
+    }
+
+    // Re-publish publications
+    if (!patch.publications && req.dataset.publications && req.dataset.publications.length) {
+      req.dataset.publications.filter(p => p.status !== 'deleted').forEach(p => { p.status = 'waiting' })
+      patch.publications = req.dataset.publications
+    }
+
+    // manage automatic export of REST datasets into files
+    if (patch.exports && patch.exports.restToCSV) {
+      if (patch.exports.restToCSV.active) {
+        const job = new CronJob(config.exportRestDatasets.cron, () => {})
+        patch.exports.restToCSV.nextExport = job.nextDates().toISOString()
+      } else {
+        delete patch.exports.restToCSV.nextExport
+        if (await fs.pathExists(datasetUtils.exportedFileName(req.dataset, '.csv'))) {
+          await fs.remove(datasetUtils.exportedFileName(req.dataset, '.csv'))
+        }
       }
+      patch.exports.restToCSV.lastExport = req.dataset?.exports?.restToCSV?.lastExport
     }
-    patch.exports.restToCSV.lastExport = req.dataset?.exports?.restToCSV?.lastExport
-  }
 
-  // apply new configuration to rest dataset revisions collection
-  if (req.dataset.isRest && patch.rest) {
-    await restDatasetsUtils.applyHistoryTTL(db, { ...req.dataset, rest: patch.rest })
-  }
-
-  if (req.dataset.isVirtual) {
-    if (patch.schema || patch.virtual) {
-      patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...req.dataset, ...patch })
-      patch.status = 'indexed'
+    // apply new configuration to rest dataset revisions collection
+    if (req.dataset.isRest && patch.rest) {
+      await restDatasetsUtils.applyHistoryTTL(db, { ...req.dataset, rest: patch.rest })
     }
-  } else if (patch.extensions) {
+
+    if (req.dataset.isVirtual) {
+      if (patch.schema || patch.virtual) {
+        patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...req.dataset, ...patch })
+        patch.status = 'indexed'
+      }
+    } else if (patch.extensions) {
     // extensions have changed, trigger full re-indexing
-    patch.status = 'analyzed'
-    if (req.dataset.isRest && req.dataset.extensions) {
-      const removedExtensions = req.dataset.extensions.filter(e => !patch.extensions.find(pe => e.remoteService === pe.remoteService && e.action === pe.action))
-      if (removedExtensions.length) {
-        await restDatasetsUtils.collection(db, req.dataset).updateMany({},
-          { $unset: removedExtensions.reduce((a, re) => { a[extensions.getExtensionKey(re)] = ''; return a }, {}) }
-        )
-        await datasetUtils.updateStorage(db, req.dataset)
+      patch.status = 'analyzed'
+      if (req.dataset.isRest && req.dataset.extensions) {
+        const removedExtensions = req.dataset.extensions.filter(e => !patch.extensions.find(pe => e.remoteService === pe.remoteService && e.action === pe.action))
+        if (removedExtensions.length) {
+          await restDatasetsUtils.collection(db, req.dataset).updateMany({},
+            { $unset: removedExtensions.reduce((a, re) => { a[extensions.getExtensionKey(re)] = ''; return a }, {}) }
+          )
+          await datasetUtils.updateStorage(db, req.dataset)
+        }
       }
-    }
-  } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
+    } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
     // geo projection has changed, trigger full re-indexing
-    patch.status = 'analyzed'
-  } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.geoFieldsKey(req.dataset.schema)) {
+      patch.status = 'analyzed'
+    } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.geoFieldsKey(req.dataset.schema)) {
     // geo concepts haved changed, trigger full re-indexing
-    patch.status = 'analyzed'
-  } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.separator !== f.separator))) {
+      patch.status = 'analyzed'
+    } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.separator !== f.separator))) {
     // some separator has changed on a field, trigger full re-indexing
-    patch.status = 'analyzed'
-  } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.ignoreDetection !== f.ignoreDetection))) {
+      patch.status = 'analyzed'
+    } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.ignoreDetection !== f.ignoreDetection))) {
     // some ignoreDetection param has changed on a field, trigger full analysis / re-indexing
-    patch.status = 'loaded'
-  } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.ignoreIntegerDetection !== f.ignoreIntegerDetection))) {
+      patch.status = 'loaded'
+    } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.ignoreIntegerDetection !== f.ignoreIntegerDetection))) {
     // some ignoreIntegerDetection param has changed on a field, trigger full analysis / re-indexing
-    patch.status = 'loaded'
-  } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.timeZone !== f.timeZone))) {
+      patch.status = 'loaded'
+    } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.timeZone !== f.timeZone))) {
     // some timeZone has changed on a field, trigger full re-indexing
-    patch.status = 'analyzed'
-  } else if (req.dataset.isRest && patch.schema && req.dataset.schema.find(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))) {
+      patch.status = 'analyzed'
+    } else if (req.dataset.isRest && patch.schema && req.dataset.schema.find(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))) {
     // some property was removed in rest dataset, trigger full re-indexing
-    const deleteFields = req.dataset.schema.filter(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))
-    await restDatasetsUtils.collection(db, req.dataset).updateMany({},
-      { $unset: deleteFields.reduce((a, df) => { a[df.key] = ''; return a }, {}) }
-    )
-    await datasetUtils.updateStorage(db, req.dataset)
-    patch.status = 'analyzed'
-  } else if (patch.schema) {
-    try {
+      const deleteFields = req.dataset.schema.filter(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))
+      await restDatasetsUtils.collection(db, req.dataset).updateMany({},
+        { $unset: deleteFields.reduce((a, df) => { a[df.key] = ''; return a }, {}) }
+      )
+      await datasetUtils.updateStorage(db, req.dataset)
+      patch.status = 'analyzed'
+    } else if (patch.schema) {
+      try {
       // this method will routinely throw errors
       // we just try in case elasticsearch considers the new mapping compatible
       // so that we might optimize and reindex only when necessary
-      await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
-      await datasetUtils.updateStorage(db, { ...req.dataset, schema: patch.schema })
-      patch.status = 'indexed'
-    } catch (err) {
+        await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
+        await datasetUtils.updateStorage(db, { ...req.dataset, schema: patch.schema })
+        patch.status = 'indexed'
+      } catch (err) {
       // generated ES mappings are not compatible, trigger full re-indexing
-      patch.status = 'analyzed'
-    }
-  } else if (patch.thumbnails || patch.masterData) {
+        patch.status = 'analyzed'
+      }
+    } else if (patch.thumbnails || patch.masterData) {
     // just change finalizedAt so that cache is invalidated, but the worker doesn't relly need to work on the dataset
-    patch.finalizedAt = (new Date()).toISOString()
-  }
+      patch.finalizedAt = (new Date()).toISOString()
+    }
 
-  const previousPublicationSites = req.dataset.publicationSites || []
-  const previousTopics = req.dataset.topics || []
+    const previousPublicationSites = req.dataset.publicationSites || []
+    const previousTopics = req.dataset.topics || []
 
-  await datasetUtils.applyPatch(db, req.dataset, patch)
+    await datasetUtils.applyPatch(db, req.dataset, patch)
 
-  // send webhooks/notifs based on changes during this patch
-  const newPublicationSites = req.dataset.publicationSites || []
-  const newTopics = req.dataset.topics || []
-  for (const publicationSite of newPublicationSites) {
+    // send webhooks/notifs based on changes during this patch
+    const newPublicationSites = req.dataset.publicationSites || []
+    const newTopics = req.dataset.topics || []
+    for (const publicationSite of newPublicationSites) {
     // send a notification either because the publicationSite was added, or because the visibility changed
-    if (!previousPublicationSites.includes(publicationSite)) {
-      webhooks.trigger(db, 'dataset', req.dataset, { type: `published:${publicationSite}` })
-      for (const topic of newTopics) {
-        webhooks.trigger(db, 'dataset', req.dataset, { type: `published-topic:${publicationSite}:${topic.id}` })
+      if (!previousPublicationSites.includes(publicationSite)) {
+        webhooks.trigger(db, 'dataset', req.dataset, { type: `published:${publicationSite}` })
+        for (const topic of newTopics) {
+          webhooks.trigger(db, 'dataset', req.dataset, { type: `published-topic:${publicationSite}:${topic.id}` })
+        }
       }
     }
-  }
-  for (const topic of newTopics) {
+    for (const topic of newTopics) {
     // send a notification either because the topic was added
-    if (!previousTopics.find(t => t.id === topic.id)) {
-      for (const publicationSite of newPublicationSites) {
-        webhooks.trigger(db, 'dataset', req.dataset, { type: `published-topic:${publicationSite}:${topic.id}` })
+      if (!previousTopics.find(t => t.id === topic.id)) {
+        for (const publicationSite of newPublicationSites) {
+          webhooks.trigger(db, 'dataset', req.dataset, { type: `published-topic:${publicationSite}:${topic.id}` })
+        }
       }
     }
-  }
 
-  await syncRemoteService(db, req.dataset)
+    await syncRemoteService(db, req.dataset)
 
-  res.status(200).json(clean(req.publicBaseUrl, req.dataset))
-}))
+    res.status(200).json(clean(req.publicBaseUrl, req.dataset))
+  }))
 
 // Change ownership of a dataset
 router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwner', 'admin'), asyncWrap(async (req, res) => {
