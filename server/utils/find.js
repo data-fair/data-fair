@@ -97,8 +97,13 @@ exports.ownerFilters = (reqQuery, activeAccount) => {
   reqQuery.owner.split(',').forEach(ownerStr => {
     const [typ, id, dep] = ownerStr.split(':')
     const filter = { 'owner.type': typ.replace('-', ''), 'owner.id': id }
-    if (dep) filter['owner.department'] = dep
-    else filter['owner.department'] = { $exists: false }
+    if (!dep || dep === '*') {
+      // no department filter to apply
+    } else if (dep === '-') {
+      filter['owner.department'] = { $exists: false }
+    } else {
+      filter['owner.department'] = dep
+    }
     if (typ.startsWith('-')) nor.push(filter)
     else or.push(filter)
   })
