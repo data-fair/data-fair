@@ -41,7 +41,7 @@ services:
       - SECRET_NOTIFICATIONS=${SECRET}
 
   simple-directory:
-    image: ghcr.io/data-fair/simple-directory:3
+    image: ghcr.io/data-fair/simple-directory:4
     restart: ${RESTART}
     volumes:
       - simple-directory-security:/webapp/security
@@ -49,15 +49,19 @@ services:
       - mongo
     environment:
       - PUBLIC_URL=${BASE_URL}/simple-directory
+      - NOTIFY_URL=${BASE_URL}/notify
+      - PRIVATE_NOTIFY_URL=http://notify:8080
       - STORAGE_MONGO_URL=mongodb://mongo:27017/simple-directory
       - ADMINS=["admin@test.com"]
       - HOME_PAGE=${BASE_URL}
       - MAILDEV_ACTIVE=true
       - MAILDEV_URL=${BASE_URL}/mails/
       - SECRET_SENDMAILS=${SECRET}
+      - SECRET_NOTIFICATIONS=${SECRET}
       - ROLES_DEFAULTS=["admin","contrib","user"]
       - PASSWORDLESS=false
       - USER_SELF_DELETE=true
+      - LIST_ENTITIES_MODE=admin
 
   openapi-viewer:
     image: koumoul/openapi-viewer:1
@@ -73,7 +77,7 @@ services:
       - PRIVATE_DIRECTORY_URL=http://simple-directory:8080
 
   notify:
-    image: ghcr.io/data-fair/notify:2
+    image: ghcr.io/data-fair/notify:3
     restart: 'always'
     depends_on:
       - mongo

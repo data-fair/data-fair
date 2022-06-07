@@ -74,7 +74,7 @@ services:
       - SECRET_NOTIFICATIONS=${SECRET}
 
   simple-directory:
-    image: ghcr.io/data-fair/simple-directory:3
+    image: ghcr.io/data-fair/simple-directory:4
     restart: ${RESTART}
     volumes:
       - simple-directory-security:/webapp/security
@@ -94,9 +94,11 @@ services:
       - MAILDEV_URL=${BASE_URL}/mails/
       - SECRET_SENDMAILS=${SECRET}
       - SECRET_IDENTITIES=${SECRET}
+      - SECRET_NOTIFICATIONS=${SECRET}
       - ROLES_DEFAULTS=["admin","contrib","user"]
       - PASSWORDLESS=false
       - USER_SELF_DELETE=true
+      - LIST_ENTITIES_MODE=admin
 
   portals:
     image: ghcr.io/data-fair/portals:1
@@ -179,7 +181,7 @@ services:
       - PRIVATE_DIRECTORY_URL=http://simple-directory:8080
 
   notify:
-    image: ghcr.io/data-fair/notify:2
+    image: ghcr.io/data-fair/notify:3
     restart: 'always'
     depends_on:
       - mongo
