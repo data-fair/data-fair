@@ -99,6 +99,7 @@ services:
       - PASSWORDLESS=false
       - USER_SELF_DELETE=true
       - LIST_ENTITIES_MODE=admin
+      - MANAGE_DEPARTMENTS=true
 
   portals:
     image: ghcr.io/data-fair/portals:1

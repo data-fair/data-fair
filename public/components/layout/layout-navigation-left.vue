@@ -93,13 +93,14 @@
 
     <v-list nav>
       <v-list-item
-        v-if="canAdmin && env.subscriptionUrl"
+        v-if="missingSubscription && canAdmin && env.subscriptionUrl"
         :nuxt="true"
         :to="`/subscription`"
       >
         <v-list-item-action><v-icon>mdi-card-account-details</v-icon></v-list-item-action>
         <v-list-item-title v-t="'subscription'" />
       </v-list-item>
+
       <template v-if="!missingSubscription">
         <v-list-item
           :nuxt="true"
@@ -154,6 +155,15 @@
             <v-list-item-title v-t="'dep'" />
             <v-list-item-subtitle>{{ activeAccount.name }} / {{ user.organization.department }}</v-list-item-subtitle>
           </v-list-item-content>
+        </v-list-item>
+
+        <v-list-item
+          v-if="canAdmin && env.subscriptionUrl"
+          :nuxt="true"
+          :to="`/subscription`"
+        >
+          <v-list-item-action><v-icon>mdi-card-account-details</v-icon></v-list-item-action>
+          <v-list-item-title v-t="'subscription'" />
         </v-list-item>
 
         <v-list-item

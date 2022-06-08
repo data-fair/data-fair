@@ -62,6 +62,7 @@ services:
       - PASSWORDLESS=false
       - USER_SELF_DELETE=true
       - LIST_ENTITIES_MODE=admin
+      - MANAGE_DEPARTMENTS=true
 
   openapi-viewer:
     image: koumoul/openapi-viewer:1
