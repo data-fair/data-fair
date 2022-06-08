@@ -82,7 +82,7 @@ const getOwnerClasses = (owner, user, resourceType) => {
   if (ownerRole === config.contribRole) {
     return apiDocsUtil.contribOperationsClasses[resourceType] || []
   }
-  return apiDocsUtil.userOperationsClasses[resourceType] || []
+  return null
 }
 
 const matchPermission = (owner, permission, user) => {
@@ -90,6 +90,7 @@ const matchPermission = (owner, permission, user) => {
   if (!user) return false
   if (user.activeAccount.type !== permission.type || user.activeAccount.id !== permission.id) return false
   if (permission.type === 'user') return true
+  if (user.activeAccount.department && permission.department && permission.department !== '*' && permission.department !== user.activeAccount.department) return false
   return !permission.role || user.activeAccount.role === config.adminRole || user.activeAccount.role === permission.role
 }
 
@@ -138,21 +139,15 @@ exports.filter = function (user) {
       if (!user.organization) {
         // user is owner
         or.push({ 'owner.type': 'user', 'owner.id': user.id })
-      }
-      if (user.organization && !user.organization.department) {
-        // user is member of owner organization
-        or.push({ 'owner.type': 'organization', 'owner.id': user.organization.id })
-      }
-      if (user.organization && user.organization.department) {
-        // user is member of owner organization
-        or.push({ 'owner.type': 'organization', 'owner.id': user.organization.id, 'owner.department': user.organization.department })
-      }
-
-      if (!user.organization) {
         // user has specific permission to read
         or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', id: user.id } } })
-      }
-      if (user.organization) {
+      } else {
+        // user is privileged member of owner organization with or without department
+        if (['admin', 'contrib'].includes(user.organization.role)) {
+          if (user.organization.department) or.push({ 'owner.type': 'organization', 'owner.id': user.organization.id, 'owner.department': user.organization.department })
+          else or.push({ 'owner.type': 'organization', 'owner.id': user.organization.id })
+        }
+
         // user's orga has specific permission to read
         const filters = [
           // check that the permission applies to the current org of the user
@@ -160,13 +155,12 @@ exports.filter = function (user) {
           // check that the permission applies to the current operation (through its class or operation id)
           { $or: operationFilter },
           // either the permission is not specific to a role or it matches the user's role in the organization
-          { $or: [{ roles: user.organization.role }, { roles: { $size: 0 } }] }
+          { $or: [{ roles: user.organization.role }, { roles: { $size: 0 } }, { roles: { $exists: false } }] }
         ]
-        /* TODO: adapt explicit permissions for organizations with departments
         if (user.organization.department) {
-          // if the user is in a department only permissions explicitly targetted to his department concern hime
-          filters.push({ departments: user.organization.department })
-        } */
+          // either the permission is not specific to a department or it matches the user's department
+          filters.push({ $or: [{ department: user.organization.department }, { department: '*' }, { department: { $exists: false } }] })
+        }
         or.push({ permissions: { $elemMatch: { $and: filters } } })
       }
     }
@@ -212,7 +206,6 @@ module.exports.router = (resourceType, resourceName, onPublicCallback) => {
           )
         }
       }
-
       await resources.updateOne({ id: resource.id }, { $set: { permissions: req.body } })
 
       if (!wasPublic && willBePublic && onPublicCallback) {

@@ -23,11 +23,6 @@ exports.operationsClasses = {
   }
 }
 
-exports.userOperationsClasses = {
-  datasets: ['list', 'read'],
-  applications: ['list', 'read']
-}
-
 exports.contribOperationsClasses = {
   datasets: ['post', 'list', 'read', 'readAdvanced', 'write'],
   applications: ['post', 'list', 'read', 'readAdvanced', 'write'],

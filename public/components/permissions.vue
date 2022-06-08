@@ -10,6 +10,7 @@
         :value="isPublic"
         :disabled="(hasPublicDeps && isPublic) || (hasPrivateParents && !isPublic)"
         :label="$t('publicAccess')"
+        hide-details
         @change="switchPublic"
       />
     </div>
@@ -27,6 +28,24 @@
     >
       <span v-t="'warningPublicApp'" />
     </v-tooltip>
+
+    <v-switch
+      v-if="resource.owner.type === 'organization'"
+      :disabled="isPublic"
+      :value="isSharedInOrga || isPublic"
+      :label="$t('sharedInOrga')"
+      hide-details
+      @change="switchSharedInOrga"
+    />
+
+    <v-switch
+      v-if="resource.owner.type === 'organization' && resource.owner.department"
+      :disabled="isPublic || isSharedInOrga"
+      :value="isSharedInDep || isSharedInOrga || isPublic"
+      :label="$t('sharedInDep')"
+      hide-details
+      @change="switchSharedInDep"
+    />
 
     <v-btn
       v-if="user.adminMode"
@@ -54,8 +73,12 @@
               v-t="{path: 'userName', args: {name: item.name}}"
             />
             <div
-              v-if="item.type === 'organization'"
+              v-if="item.type === 'organization' && !item.department"
               v-t="{path: 'organizationName', args: {name: item.name}}"
+            />
+            <div
+              v-if="item.type === 'organization' && item.department"
+              v-t="{path: 'organizationName', args: {name: item.name + ' / ' + item.department}}"
             />
             <div
               v-if="item.type === 'organization' && (!item.roles || !item.roles.length)"
@@ -208,8 +231,10 @@
 
 <i18n lang="yaml">
 fr:
-  description: Permettez à d'autres utilisateurs ou aux membres d'autres organisations d'utiliser cette ressource.
+  description: Permettez à d'autres utilisateurs d'utiliser cette ressource.
   publicAccess: Accessible publiquement
+  sharedInOrga: Accessible à tous les utilisateurs de l'organisation
+  sharedInDep: Accessible à tous les utilisateurs du département
   warningPrivateDataset: Vous ne devriez pas rendre ce jeu de données privé tant qu'il est présent dans des visualisations publiques.
   warningPublicApp: Vous ne devriez pas rendre cette application publique tant qu'elle utilise des sources de données privées.
   addPermission: Ajouter des permissions
@@ -232,8 +257,10 @@ fr:
   updateError: Erreur pendant la mise à jour des permissions
   permissionsUpdated: Les permissions ont été mises à jour
 en:
-  description: Allow other users or other members of your organizations to use this resource.
+  description: Allow other users to use this resource.
   publicAccess: Publicly accessible
+  sharedInOrga: Accessible to all users of the organization
+  sharedInDep: Accessible to all users of the department
   warningPrivateDataset: You should not make this dataset private as long as it is used in public visualizations.
   warningPublicApp: You should not make this visualization public as long as it uses private datasets.
   addPermission: Add permissions
@@ -312,7 +339,13 @@ export default {
       return [].concat(...Object.keys(this.permissionClasses).filter(c => this.classNames[c]).map(c => [{ header: this.classNames[c] }].concat(this.permissionClasses[c])))
     },
     isPublic () {
-      return !!this.permissions.find(p => !p.type && p.classes && p.classes.includes('read') && p.classes.includes('list'))
+      return !!this.permissions.find(p => this.isPublicPermission(p))
+    },
+    isSharedInOrga () {
+      return !!this.permissions.find(p => this.isSharedInOrgaPermission(p))
+    },
+    isSharedInDep () {
+      return !!this.permissions.find(p => this.isSharedInDepPermission(p))
     }
   },
   watch: {
@@ -373,14 +406,47 @@ export default {
     this.permissions = permissions
   },
   methods: {
+    isPublicPermission (p) {
+      return !p.type && p.classes && p.classes.includes('read') && p.classes.includes('list')
+    },
+    isSharedInOrgaPermission (p) {
+      return p.type === 'organization' && p.id === this.resource.owner.id && !p.department && p.classes && p.classes.includes('read') && p.classes.includes('list')
+    },
+    isSharedInDepPermission (p) {
+      return p.type === 'organization' && p.id === this.resource.owner.id && p.department && p.classes && p.classes.includes('read') && p.classes.includes('list')
+    },
     async switchPublic () {
       if (this.isPublic) {
         this.addPermissions = false
         this.currentPermission = {}
-        this.permissions = this.permissions.filter(p => !(!p.type && p.classes && p.classes.includes('read') && p.classes.includes('list')))
+        this.permissions = this.permissions.filter(p => !this.isPublicPermission(p))
       } else {
         this.addPermissions = true
+        this.permissions = this.permissions.filter(p => !this.isSharedInOrgaPermission(p) && !this.isSharedInDepPermission(p))
         this.currentPermission = { operations: [], classes: ['read', 'list'] }
+      }
+      this.save()
+    },
+    async switchSharedInOrga () {
+      if (this.isSharedInOrga) {
+        this.addPermissions = false
+        this.currentPermission = {}
+        this.permissions = this.permissions.filter(p => !this.isSharedInOrgaPermission(p))
+      } else {
+        this.addPermissions = true
+        this.permissions = this.permissions.filter(p => !this.isSharedInDepPermission(p))
+        this.currentPermission = { type: 'organization', id: this.resource.owner.id, name: this.resource.owner.name, operations: [], classes: ['read', 'list'] }
+      }
+      this.save()
+    },
+    async switchSharedInDep () {
+      if (this.isSharedInDep) {
+        this.addPermissions = false
+        this.currentPermission = {}
+        this.permissions = this.permissions.filter(p => !this.isSharedInDepPermission(p))
+      } else {
+        this.addPermissions = true
+        this.currentPermission = { type: 'organization', id: this.resource.owner.id, name: this.resource.owner.name, department: this.resource.owner.department, operations: [], classes: ['read', 'list'] }
       }
       this.save()
     },
@@ -388,11 +454,12 @@ export default {
       if (this.addPermissions) this.permissions.push((this.currentPermission))
       else if (this.currentPermission) this.permissions[this.currentPermissionIdx] = this.currentPermission
       try {
-        this.permissions.forEach(permission => {
+        const permissions = JSON.parse(JSON.stringify(this.permissions))
+        permissions.forEach(permission => {
           if (!permission.type) delete permission.type
           if (!permission.id) delete permission.id
         })
-        await this.$axios.$put(this.resourceUrl + '/permissions', this.permissions)
+        await this.$axios.$put(this.resourceUrl + '/permissions', permissions)
         this.addPermissions = false
         eventBus.$emit('notification', this.$t('permissionsUpdated'))
       } catch (error) {

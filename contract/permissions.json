@@ -21,6 +21,10 @@
         "type": "string",
         "description": "Identifier of the entity"
       },
+      "department": {
+        "type": "string",
+        "description": "Identifier of the department or \"*\" for any department (same as empty) or \"-\" for no department"
+      },
       "name": {
         "type": "string",
         "description": "Name of the entity"

@@ -81,37 +81,21 @@ describe('owner roles', () => {
     const dataset = (await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Fivechat')
     await workers.hook('finalizer/' + dataset.id)
-    await global.ax.bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}`)
-    await global.ax.bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/lines`)
-    await assert.rejects(global.ax.bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/permissions`), (err) => {
-      assert.equal(err.status, 403)
-      return true
-    })
-    await assert.rejects(global.ax.bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/journal`), (err) => {
-      assert.equal(err.status, 403)
-      return true
-    })
-    await assert.rejects(global.ax.bhazeldean7Org.delete(`/api/v1/datasets/${dataset.id}`), (err) => {
-      assert.equal(err.status, 403)
-      return true
-    })
+    const datasets = (await global.ax.bhazeldean7Org.get('/api/v1/datasets')).data
+    assert.equal(datasets.count, 0)
+    await assert.rejects(global.ax.bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}`), err => err.status === 403)
+    await assert.rejects(global.ax.bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/lines`), err => err.status === 403)
+    await assert.rejects(global.ax.bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/permissions`), err => err.status === 403)
+    await assert.rejects(global.ax.bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}/journal`), err => err.status === 403)
+    await assert.rejects(global.ax.bhazeldean7Org.delete(`/api/v1/datasets/${dataset.id}`), err => err.status === 403)
 
-    await assert.rejects(global.ax.bhazeldean7Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' }), (err) => {
-      assert.equal(err.status, 403)
-      return true
-    })
+    await assert.rejects(global.ax.bhazeldean7Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' }), err => err.status === 403)
     const application = (await global.ax.dmeadusOrg.post('/api/v1/applications', { title: 'An application', url: 'http://monapp1.com/' })).data
-    await global.ax.bhazeldean7Org.get(`/api/v1/applications/${application.id}`)
-    await assert.rejects(global.ax.bhazeldean7Org.delete(`/api/v1/applications/${application.id}`), (err) => {
-      assert.equal(err.status, 403)
-      return true
-    })
+    await assert.rejects(global.ax.bhazeldean7Org.get(`/api/v1/applications/${application.id}`), err => err.status === 403)
+    await assert.rejects(global.ax.bhazeldean7Org.delete(`/api/v1/applications/${application.id}`), err => err.status === 403)
 
     // cannot create a catalog
-    await assert.rejects(global.ax.bhazeldean7Org.post('/api/v1/catalogs', {}), (err) => {
-      assert.equal(err.status, 403)
-      return true
-    })
+    await assert.rejects(global.ax.bhazeldean7Org.post('/api/v1/catalogs', {}), err => err.status === 403)
   })
 
   it('departments can be used to restrict contrib capabilities', async () => {
