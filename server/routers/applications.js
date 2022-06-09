@@ -28,6 +28,7 @@ const journals = require('../utils/journals')
 const capture = require('../utils/capture')
 const visibilityUtils = require('../utils/visibility')
 const cacheHeaders = require('../utils/cache-headers')
+const { validateId } = require('../utils/validation')
 
 const router = module.exports = express.Router()
 
@@ -111,6 +112,7 @@ router.post('', asyncWrap(async (req, res) => {
   const application = initNew(req)
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', req.user)) return res.status(403).send()
   if (!validate(application)) return res.status(400).send(validate.errors)
+  validateId(application.id)
 
   // Generate ids and try insertion until there is no conflict on id
   const toks = application.url.split('/').filter(part => !!part)

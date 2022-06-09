@@ -196,6 +196,14 @@ describe('datasets', () => {
     await workers.hook('finalizer/my-dataset-id')
   })
 
+  it('Reject some not URL friendly id', async () => {
+    const ax = global.ax.dmeadus
+    const form = new FormData()
+    form.append('title', 'my title')
+    form.append('file', datasetFd, 'yet-a-dataset.csv')
+    await assert.rejects(ax.post('/api/v1/datasets/my dataset id', form, { headers: testUtils.formHeaders(form) }), err => err.status === 400)
+  })
+
   it('Reject some other pre-filled attributes', async () => {
     const ax = global.ax.dmeadusOrg
     const form = new FormData()

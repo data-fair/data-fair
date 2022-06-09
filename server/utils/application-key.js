@@ -30,7 +30,7 @@ module.exports = asyncWrap(async (req, res, next) => {
         if (matchingApplication) {
           // this is basically the "crowd-sourcing" use case
           // we apply some anti-spam protection
-          if (req.method === 'POST') {
+          if (req.method !== 'GET' && req.method !== 'HEAD') {
             // 1rst level of anti-spam prevention, no cross origin requests on this route
             if (!matchingHost(req)) {
               return res.status(405).send('Appel depuis un domaine extérieur non supporté')

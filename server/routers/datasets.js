@@ -49,6 +49,7 @@ const { bulkSearchStreams } = require('../utils/master-data')
 const applicationKey = require('../utils/application-key')
 const { syncDataset: syncRemoteService } = require('./remote-services')
 const { basicTypes } = require('../workers/converter')
+const { validateId } = require('../utils/validation')
 
 const router = express.Router()
 
@@ -582,6 +583,7 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft, res) => {
     await fs.ensureDir(datasetUtils.dir({ ...dataset, ...patch }))
     await fs.move(file.path, datasetUtils.originalFileName({ ...dataset, ...patch }))
   } else {
+    validateId(dataset.id)
     if (draft) {
       patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant' }
     }
@@ -656,6 +658,8 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
   try {
     const db = req.app.get('db')
 
+    validateId(req.body.id)
+
     let dataset
     // After uploadFile, req.files contains the metadata of an uploaded file, and req.body the content of additional text fields
     const datasetFile = req.files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
@@ -692,8 +696,12 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       dataset.virtual = dataset.virtual || { children: [] }
       dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
       dataset.status = 'indexed'
-      const baseId = slug(req.body.title).toLowerCase()
-      await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
+      if (dataset.id) {
+        await db.collection('datasets').insertOne(dataset)
+      } else {
+        const baseId = slug(req.body.title).toLowerCase()
+        await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
+      }
     } else if (req.body.isRest) {
       if (!req.body.title) throw createError(400, 'Un jeu de données éditable doit être créé avec un titre')
       if (attachmentsFile) throw createError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
@@ -706,8 +714,12 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       // the dataset will go through a first index/finalize steps, not really necessary
       // but this way everything will be initialized (journal, index)
       dataset.status = 'analyzed'
-      const baseId = slug(req.body.title).toLowerCase()
-      await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
+      if (dataset.id) {
+        await db.collection('datasets').insertOne(dataset)
+      } else {
+        const baseId = slug(req.body.title).toLowerCase()
+        await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
+      }
       await restDatasetsUtils.initDataset(db, dataset)
       await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'analyzed' } })
     } else if (req.body.isMetaOnly) {
@@ -717,8 +729,12 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         throw createError(400, JSON.stringify(validatePost.errors))
       }
       dataset = await initNew(db, req)
-      const baseId = slug(req.body.title).toLowerCase()
-      await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
+      if (dataset.id) {
+        await db.collection('datasets').insertOne(dataset)
+      } else {
+        const baseId = slug(req.body.title).toLowerCase()
+        await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
+      }
     } else {
       throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "éditable" ou "métadonnées"')
     }
@@ -745,6 +761,7 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
 
   const newDataset = await initNew(db, req)
   newDataset.id = req.params.datasetId
+  validateId(newDataset.id)
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (permissions.canDoForOwner(newDataset.owner, 'datasets', 'post', req.user, db)) {
