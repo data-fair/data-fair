@@ -315,6 +315,7 @@
                   <v-container fluid>
                     <permissions
                       v-if="can('getPermissions')"
+                      :disabled="!can('setPermissions')"
                       :resource="dataset"
                       :resource-url="resourceUrl"
                       :api="api"

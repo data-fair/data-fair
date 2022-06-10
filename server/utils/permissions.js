@@ -91,7 +91,7 @@ const matchPermission = (owner, permission, user) => {
   if (user.activeAccount.type !== permission.type || user.activeAccount.id !== permission.id) return false
   if (permission.type === 'user') return true
   if (user.activeAccount.department && permission.department && permission.department !== '*' && permission.department !== user.activeAccount.department) return false
-  return !permission.role || user.activeAccount.role === config.adminRole || user.activeAccount.role === permission.role
+  return !permission.roles || user.activeAccount.role === config.adminRole || permission.roles.includes(user.activeAccount.role)
 }
 
 // resource can be an application, a dataset or an remote service

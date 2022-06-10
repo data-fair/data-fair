@@ -2,230 +2,146 @@
   <div>
     <p v-t="'description'" />
 
-    <div
-      id="dataset-privacy"
-      style="width:400px"
-    >
-      <v-switch
-        :value="isPublic"
-        :disabled="(hasPublicDeps && isPublic) || (hasPrivateParents && !isPublic)"
-        :label="$t('publicAccess')"
-        hide-details
-        @change="switchPublic"
-      />
-    </div>
-    <v-tooltip
-      v-if="hasPublicDeps && isPublic"
-      right
-      activator="#dataset-privacy"
-    >
-      <span v-t="'warningPrivateDataset'" />
-    </v-tooltip>
-    <v-tooltip
+    <v-alert
       v-if="hasPrivateParents && !isPublic"
       right
-      activator="#dataset-privacy"
+      dense
+      type="warning"
+      outlined
     >
       <span v-t="'warningPublicApp'" />
-    </v-tooltip>
+    </v-alert>
+    <v-alert
+      v-if="hasPublicDeps && isPublic"
+      right
+      dense
+      type="warning"
+      outlined
+    >
+      <span v-t="'warningPrivateDataset'" />
+    </v-alert>
 
-    <v-switch
-      v-if="resource.owner.type === 'organization'"
-      :disabled="isPublic"
-      :value="isSharedInOrga || isPublic"
-      :label="$t('sharedInOrga')"
+    <v-select
+      v-model="visibility"
+      :disabled="disabled"
+      :items="visibilityItems"
+      outlined
+      dense
+      style="max-width: 500px;"
       hide-details
-      @change="switchSharedInOrga"
     />
 
     <v-switch
-      v-if="resource.owner.type === 'organization' && resource.owner.department"
-      :disabled="isPublic || isSharedInOrga"
-      :value="isSharedInDep || isSharedInOrga || isPublic"
-      :label="$t('sharedInDep')"
-      hide-details
-      @change="switchSharedInDep"
-    />
-
-    <v-btn
-      v-if="user.adminMode"
-      id="new-permissions"
-      v-t="'addPermission'"
+      v-model="detailedMode"
       color="primary"
-      @click="currentPermission = initPermission();addPermissions = true;showDialog = true"
+      :label="$t('detailedMode')"
+      @change="fetchOwnerDetails"
     />
-    <v-data-table
-      v-if="permissions && permissions.length"
-      :headers="[{text: 'Portée', sortable: false}, {text: 'Actions', sortable: false}, { text: '', sortable: false }]"
-      :items="permissions"
-      hide-default-footer
-      class="elevation-1 mt-3"
-    >
-      <template #item="{item, index}">
-        <tr>
-          <td>
-            <div
-              v-if="!item.type"
-              v-t="'public'"
-            />
-            <div
-              v-if="item.type === 'user'"
-              v-t="{path: 'userName', args: {name: item.name}}"
-            />
-            <div
-              v-if="item.type === 'organization' && !item.department"
-              v-t="{path: 'organizationName', args: {name: item.name}}"
-            />
-            <div
-              v-if="item.type === 'organization' && item.department"
-              v-t="{path: 'organizationName', args: {name: item.name + ' / ' + item.department}}"
-            />
-            <div
-              v-if="item.type === 'organization' && (!item.roles || !item.roles.length)"
-              v-t="'allRoles'"
-            />
-            <div
-              v-if="item.type === 'organization' && (item.roles && item.roles.length)"
-              v-t="{path: 'restrictedRoles', args: {roles: item.roles.join(', ')}}"
-            />
-          </td>
-          <td>
-            <v-list
-              dense
-              class="pa-0"
-              style="background: transparent"
-            >
-              <template v-for="(classOperations, permClass) in permissionClasses">
-                <v-list-item
-                  v-if="((item.classes || []).includes(permClass)) || classOperations.filter(o => (item.operations || []).includes(o.id)).length"
-                  :key="permClass"
-                  class="pa-0"
-                >
-                  <v-list-item-content>
-                    <v-row style="width:100%">
-                      <v-col
-                        cols="3"
-                        class="py-0"
-                      >
-                        {{ classNames[permClass] }}
-                      </v-col>
-                      <v-col
-                        cols="9"
-                        class="py-0"
-                      >
-                        <span v-if="(item.classes || []).includes(permClass)" />
-                        <span v-else>{{ classOperations.filter(o => (item.operations || []).find(oid => o.id && o.id === oid)).map(o => o.title).join(' - ') }}</span>
-                      </v-col>
-                    </v-row>
-                  </v-list-item-content>
-                </v-list-item>
-              </template>
-            </v-list>
-          </td>
-          <td class="text-right">
-            <v-btn
-              v-if="user.adminMode"
-              icon
-              color="warning"
-              @click="editPermission(item, index);showDialog = true"
-            >
-              <v-icon>mdi-pencil</v-icon>
-            </v-btn>
-            <v-btn
-              v-if="user.adminMode"
-              icon
-              color="warning"
-              @click="removePermission(index)"
-            >
-              <v-icon>mdi-delete</v-icon>
-            </v-btn>
-          </td>
-        </tr>
-      </template>
-    </v-data-table>
 
-    <v-dialog
-      v-model="showDialog"
-      max-width="800"
-      persistent
-    >
-      <v-card outlined>
-        <v-card-title v-t="'editPermission'" />
-        <v-card-text>
-          <v-select
-            v-model="currentPermission.type"
-            :items="[{value: null, label: 'Public'}, {value: 'organization', label: $t('organization')}, {value: 'user', label: $t('user')}]"
-            item-text="label"
-            item-value="value"
-            :label="$t('scope')"
-            required
-          />
-
-          <v-autocomplete
-            v-if="currentPermission.type"
-            v-model="currentEntity"
-            :items="currentPermission.type === 'organization' ? organizations : users"
-            :search-input.sync="search"
-            :loading="loading"
-            item-text="name"
-            item-value="id"
-            :label="$t('name')"
-            required
-            cache-items
-            hide-no-data
-            return-object
-          />
-
-          <v-select
-            v-if="currentPermission.type === 'organization' && currentPermissionOrganizationRoles.length"
-            v-model="currentPermission.roles"
-            :items="currentPermissionOrganizationRoles"
-            :label="$t('rolesLabel')"
-            multiple
-          />
-
-          <v-select
-            v-model="currentPermission.classes"
-            :items="Object.keys(permissionClasses).filter(c => classNames[c]).map(c => ({class: c, title: classNames[c]}))"
-            item-text="title"
-            item-value="class"
-            :label="$t('actions')"
-            multiple
-          />
-
-          <v-switch
-            v-model="expertMode"
-            color="primary"
-            :label="$t('expertMode')"
-          />
-
-          <v-select
-            v-if="expertMode"
-            v-model="currentPermission.operations"
-            :items="operations"
-            item-text="title"
-            item-value="id"
-            :label="$t('detailedActions')"
-            multiple
-          />
-        </v-card-text>
-
-        <v-card-actions>
-          <v-spacer />
+    <template v-if="detailedMode && ownerDetails">
+      <permission-dialog
+        v-if="!disabled"
+        :permission-classes="permissionClasses"
+        :owner="ownerDetails"
+        @input="p=> {permissions.push(p); save()}"
+      >
+        <template #activator="{on, attrs}">
           <v-btn
-            v-t="'cancel'"
-            text
-            @click="showDialog = false"
-          />
-          <v-btn
-            v-t="'validate'"
-            :disabled="(currentPermission.type && !currentPermission.id) || ((!currentPermission.operations || !currentPermission.operations.length) && (!currentPermission.classes ||!currentPermission.classes.length))"
+            v-t="'addPermission'"
             color="primary"
-            @click="showDialog = false;save()"
+            v-bind="attrs"
+            v-on="on"
           />
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+        </template>
+      </permission-dialog>
+      <v-data-table
+        v-if="permissions && permissions.length"
+        :headers="[{text: 'Portée', sortable: false}, {text: 'Actions', sortable: false}, { text: '', sortable: false }]"
+        :items="permissions"
+        hide-default-footer
+        class="elevation-1 mt-3"
+      >
+        <template #item="{item, index}">
+          <tr>
+            <td>
+              <div
+                v-if="!item.type"
+                v-t="'public'"
+              />
+              <div
+                v-if="item.type === 'user'"
+                v-t="{path: 'userName', args: {name: item.name}}"
+              />
+              <div
+                v-if="item.type === 'organization' && !item.department"
+                v-t="{path: 'organizationName', args: {name: item.name}}"
+              />
+              <div
+                v-if="item.type === 'organization' && item.department"
+                v-t="{path: 'organizationName', args: {name: item.name + ' / ' + item.department}}"
+              />
+              <div
+                v-if="item.type === 'organization' && (!item.roles || !item.roles.length)"
+                v-t="'allRoles'"
+              />
+              <div
+                v-if="item.type === 'organization' && (item.roles && item.roles.length)"
+                v-t="{path: 'restrictedRoles', args: {roles: item.roles.join(', ')}}"
+              />
+            </td>
+            <td>
+              <v-list
+                dense
+                class="py-1"
+                style="background: transparent"
+              >
+                <template v-for="(classOperations, permClass) in permissionClasses">
+                  <v-list-item
+                    v-if="((item.classes || []).includes(permClass)) || classOperations.filter(o => (item.operations || []).includes(o.id)).length"
+                    :key="permClass"
+                    class="pa-0"
+                    style="min-height:25px"
+                  >
+                    <v-list-item-content class="pa-0">
+                      {{ $t('classNames.' +permClass) }}
+                      <template v-if="!(item.classes || []).includes(permClass)">({{ classOperations.filter(o => (item.operations || []).find(oid => o.id && o.id === oid)).map(o => o.title.toLowerCase().replace('.', '')).join(' - ') }})</template>
+                    </v-list-item-content>
+                  </v-list-item>
+                </template>
+              </v-list>
+            </td>
+            <td class="text-right">
+              <permission-dialog
+                v-if="!disabled"
+                :value="item"
+                :permission-classes="permissionClasses"
+                :owner="ownerDetails"
+                @input="p => {$set(permissions, index, p); save()}"
+              >
+                <template #activator="{on, attrs}">
+                  <v-btn
+                    color="primary"
+                    v-bind="attrs"
+                    icon
+                    v-on="on"
+                  >
+                    <v-icon>mdi-pencil</v-icon>
+                  </v-btn>
+                </template>
+              </permission-dialog>
+              <v-btn
+                v-if="!disabled"
+                icon
+                color="warning"
+                @click="permissions.splice(index, 1); save()"
+              >
+                <v-icon>mdi-delete</v-icon>
+              </v-btn>
+            </td>
+          </tr>
+        </template>
+      </v-data-table>
+    </template>
   </div>
 </template>
 
@@ -233,10 +149,12 @@
 fr:
   description: Permettez à d'autres utilisateurs d'utiliser cette ressource.
   publicAccess: Accessible publiquement
-  sharedInOrga: Accessible à tous les utilisateurs de l'organisation
+  privateAccessOrg: Accessible aux administrateurs et contributeurs
+  privateAccessUser: Accessible à vous uniquement
+  sharedInOrg: Accessible à tous les utilisateurs de l'organisation
   sharedInDep: Accessible à tous les utilisateurs du département
   warningPrivateDataset: Vous ne devriez pas rendre ce jeu de données privé tant qu'il est présent dans des visualisations publiques.
-  warningPublicApp: Vous ne devriez pas rendre cette application publique tant qu'elle utilise des sources de données privées.
+  warningPublicApp: Vous ne devriez pas rendre cette application publique, elle utilise des sources de données privées.
   addPermission: Ajouter des permissions
   editPermission: Éditer des permissions
   public: Public
@@ -251,15 +169,25 @@ fr:
   cancel: Annuler
   scope: Portée
   detailedActions: Actions détaillées
-  expertMode: Mode expert
+  detailedMode: Édition détaillée des permissions
   actions: Actions
   name: Nom
   updateError: Erreur pendant la mise à jour des permissions
   permissionsUpdated: Les permissions ont été mises à jour
+  noDep: Aucun département (organisation principale seulement)
+  classNames:
+    list: Lister
+    read: Lecture
+    # readAdvanced: 'Lecture informations détaillées',
+    # write: 'Ecriture',
+    # admin: 'Administration',
+    use: Utiliser le service
 en:
   description: Allow other users to use this resource.
   publicAccess: Publicly accessible
-  sharedInOrga: Accessible to all users of the organization
+  privateAccessOrg: Accessible to admins and contributors
+  privateAccessUser: Accessible only to you
+  sharedInOrg: Accessible to all users of the organization
   sharedInDep: Accessible to all users of the department
   warningPrivateDataset: You should not make this dataset private as long as it is used in public visualizations.
   warningPublicApp: You should not make this visualization public as long as it uses private datasets.
@@ -277,40 +205,36 @@ en:
   cancel: Annuler
   scope: Scope
   detailedActions: Detailed actions
-  expertMode: Expert mode
+  detailedMode: Detailed edition of permissions
   actions: Actions
   name: Name
   updateError: Error while updating permissions
-  permisisons: Permissions were updated
+  permissionsUpdated: Permissions were updated
+  noDep: No department (main organization only)
+  classNames:
+    list: List
+    read: Read
+    # readAdvanced: 'Lecture informations détaillées',
+    # write: 'Ecriture',
+    # admin: 'Administration',
+    use: Use the service
 </i18n>
 
 <script>
 import { mapState } from 'vuex'
 import eventBus from '~/event-bus'
+import permissionDialog from './permission-dialog.vue'
 
 export default {
-  props: ['resource', 'resourceUrl', 'api', 'hasPublicDeps', 'hasPrivateParents'],
+  components: { permissionDialog },
+  props: ['resource', 'resourceUrl', 'api', 'disabled', 'hasPublicDeps', 'hasPrivateParents'],
   data: () => ({
     permissions: [],
     currentPermission: {},
     currentPermissionIdx: {},
-    currentPermissionOrganizationRoles: [],
-    currentEntity: {},
-    users: [],
-    organizations: [],
     showDialog: false,
-    search: null,
-    loading: false,
-    classNames: {
-      list: 'Lister',
-      read: 'Lecture',
-      // readAdvanced: 'Lecture informations détaillées',
-      // write: 'Ecriture',
-      // admin: 'Administration',
-      use: 'Utiliser le service'
-    },
-    expertMode: false,
-    addPermissions: false
+    detailedMode: false,
+    ownerDetails: null
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -335,68 +259,51 @@ export default {
       }
       return classes
     },
-    operations () {
-      return [].concat(...Object.keys(this.permissionClasses).filter(c => this.classNames[c]).map(c => [{ header: this.classNames[c] }].concat(this.permissionClasses[c])))
-    },
     isPublic () {
       return !!this.permissions.find(p => this.isPublicPermission(p))
     },
-    isSharedInOrga () {
-      return !!this.permissions.find(p => this.isSharedInOrgaPermission(p))
+    isSharedInOrg () {
+      return !!this.permissions.find(p => this.isSharedInOrgPermission(p))
     },
     isSharedInDep () {
       return !!this.permissions.find(p => this.isSharedInDepPermission(p))
-    }
-  },
-  watch: {
-    'currentPermission.type' () {
-      if (this.currentPermission.type === null) {
-        delete this.currentPermission.id
-        delete this.currentPermission.name
-        delete this.currentPermission.roles
-      } else {
-        this.currentPermission.id = this.currentPermission.id || null
-        this.currentPermission.roles = this.currentPermission.roles || []
-      }
     },
-    'currentEntity.id': async function (id) {
-      this.currentPermission.id = this.currentEntity.id
-      this.currentPermission.name = this.currentEntity.name
-      if (this.currentPermission.type === 'organization' && id) {
-        if ((this.resource.owner.type === 'organization' && this.resource.owner.id === id) || (this.resource.owner.type === 'user' && this.user.organizations.find(o => o.id === id))) {
-          const roles = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + id + '/roles')
-          this.currentPermissionOrganizationRoles = roles.filter(role => role !== this.env.adminRole)
-        } else {
-          this.currentPermissionOrganizationRoles = []
+    visibility: {
+      get () {
+        if (this.permissions.find(p => this.isPublicPermission(p))) return 'public'
+        if (this.permissions.find(p => this.isSharedInDepPermission(p))) return 'sharedInDep'
+        if (this.permissions.find(p => this.isSharedInOrgPermission(p))) return 'sharedInOrg'
+        return 'private'
+      },
+      set (visibility) {
+        this.permissions = this.permissions
+          .filter(p => !this.isPublicPermission(p) && !this.isSharedInOrgPermission(p) && !this.isSharedInDepPermission(p))
+        if (visibility === 'private') {
+        // nothing to do
+        } else if (visibility === 'sharedInOrg') {
+          this.permissions.push({ type: 'organization', id: this.resource.owner.id, name: this.resource.owner.name, operations: [], classes: ['read', 'list'] })
+        } else if (visibility === 'sharedInDep') {
+          this.permissions.push({ type: 'organization', id: this.resource.owner.id, name: this.resource.owner.name, department: this.resource.owner.department, operations: [], classes: ['read', 'list'] })
+        } else if (visibility === 'public') {
+          this.permissions.push({ operations: [], classes: ['read', 'list'] })
         }
+        this.save()
       }
     },
-    'currentPermission.classes' (classes) {
-      if (classes && classes.includes('list') && !classes.includes('read')) {
-        classes.push('read')
-      }
-    },
-    'currentPermission.operations' (operations) {
-      if (operations && operations.includes('list') && !operations.includes('readDescription')) {
-        operations.push('readDescription')
-      }
-    },
-    search: async function () {
-      if (this.search && this.search === this.currentEntity.name) return
-
-      this.loading = true
-      if (this.currentPermission && this.currentPermission.type === 'organization') {
-        this.users = []
-        if (!this.search || this.search.length < 3) this.organizations = []
-        else this.organizations = (await this.$axios.$get(this.env.directoryUrl + '/api/organizations', { params: { q: this.search } })).results
+    visibilityItems () {
+      const items = []
+      const privateDisabled = this.hasPublicDeps && this.isPublic
+      if (this.resource.owner.type === 'organization') {
+        items.push({ value: 'private', text: this.$t('privateAccessOrg'), disabled: privateDisabled })
+        if (this.resource.owner.department) items.push({ value: 'sharedInDep', text: this.$t('sharedInDep'), disabled: privateDisabled })
+        items.push({ value: 'sharedInOrg', text: this.$t('sharedInOrg'), disabled: privateDisabled })
       } else {
-        this.organizations = []
-        if (!this.search || this.search.length < 3) this.users = []
-        else this.users = (await this.$axios.$get(this.env.directoryUrl + '/api/users', { params: { q: this.search } })).results
+        items.push({ value: 'private', text: this.$t('privateAccessUser'), disabled: privateDisabled })
       }
-
-      this.loading = false
+      items.push({ value: 'public', text: this.$t('publicAccess'), disabled: this.hasPrivateParents && !this.isPublic })
+      return items
     }
+
   },
   async mounted () {
     const permissions = await this.$axios.$get(this.resourceUrl + '/permissions')
@@ -409,84 +316,27 @@ export default {
     isPublicPermission (p) {
       return !p.type && p.classes && p.classes.includes('read') && p.classes.includes('list')
     },
-    isSharedInOrgaPermission (p) {
+    isSharedInOrgPermission (p) {
       return p.type === 'organization' && p.id === this.resource.owner.id && !p.department && p.classes && p.classes.includes('read') && p.classes.includes('list')
     },
     isSharedInDepPermission (p) {
       return p.type === 'organization' && p.id === this.resource.owner.id && p.department && p.classes && p.classes.includes('read') && p.classes.includes('list')
     },
-    async switchPublic () {
-      if (this.isPublic) {
-        this.addPermissions = false
-        this.currentPermission = {}
-        this.permissions = this.permissions.filter(p => !this.isPublicPermission(p))
-      } else {
-        this.addPermissions = true
-        this.permissions = this.permissions.filter(p => !this.isSharedInOrgaPermission(p) && !this.isSharedInDepPermission(p))
-        this.currentPermission = { operations: [], classes: ['read', 'list'] }
-      }
-      this.save()
-    },
-    async switchSharedInOrga () {
-      if (this.isSharedInOrga) {
-        this.addPermissions = false
-        this.currentPermission = {}
-        this.permissions = this.permissions.filter(p => !this.isSharedInOrgaPermission(p))
-      } else {
-        this.addPermissions = true
-        this.permissions = this.permissions.filter(p => !this.isSharedInDepPermission(p))
-        this.currentPermission = { type: 'organization', id: this.resource.owner.id, name: this.resource.owner.name, operations: [], classes: ['read', 'list'] }
-      }
-      this.save()
-    },
-    async switchSharedInDep () {
-      if (this.isSharedInDep) {
-        this.addPermissions = false
-        this.currentPermission = {}
-        this.permissions = this.permissions.filter(p => !this.isSharedInDepPermission(p))
-      } else {
-        this.addPermissions = true
-        this.currentPermission = { type: 'organization', id: this.resource.owner.id, name: this.resource.owner.name, department: this.resource.owner.department, operations: [], classes: ['read', 'list'] }
-      }
-      this.save()
-    },
     async save () {
-      if (this.addPermissions) this.permissions.push((this.currentPermission))
-      else if (this.currentPermission) this.permissions[this.currentPermissionIdx] = this.currentPermission
-      try {
-        const permissions = JSON.parse(JSON.stringify(this.permissions))
-        permissions.forEach(permission => {
-          if (!permission.type) delete permission.type
-          if (!permission.id) delete permission.id
-        })
-        await this.$axios.$put(this.resourceUrl + '/permissions', permissions)
-        this.addPermissions = false
-        eventBus.$emit('notification', this.$t('permissionsUpdated'))
-      } catch (error) {
-        this.permissions.pop()
-        eventBus.$emit('notification', { error, msg: this.$t('updateError') })
+      const permissions = JSON.parse(JSON.stringify(this.permissions))
+      permissions.forEach(permission => {
+        if (!permission.type) delete permission.type
+        if (!permission.id) delete permission.id
+        if (!permission.department) delete permission.department
+      })
+      await this.$axios.$put(this.resourceUrl + '/permissions', permissions)
+      eventBus.$emit('notification', this.$t('permissionsUpdated'))
+    },
+    async fetchOwnerDetails () {
+      this.ownerDetails = {
+        ...await this.$axios.$get(`${process.env.directoryUrl}/api/${this.resource.owner.type}s/${this.resource.owner.id}`),
+        type: this.resource.owner.type
       }
-    },
-    removePermission (rowIndex) {
-      this.permissions.splice(rowIndex, 1)
-      this.save()
-    },
-    initPermission () {
-      return {
-        type: 'organization',
-        id: null,
-        roles: [],
-        operations: [],
-        classes: []
-      }
-    },
-    editPermission (permission, idx) {
-      this.currentEntity = { id: permission.id, name: permission.name }
-      if (permission.type === 'organization') this.organizations = [this.currentEntity]
-      if (permission.type === 'user') this.users = [this.currentEntity]
-      this.currentPermissionIdx = idx
-      this.currentPermission = JSON.parse(JSON.stringify(permission))
-      if (this.currentPermission.operations && this.currentPermission.operations.length) this.expertMode = true
     }
   }
 }

@@ -95,6 +95,7 @@
                   <v-container fluid>
                     <permissions
                       v-if="can('getPermissions')"
+                      :disabled="!can('setPermissions')"
                       :resource="application"
                       :resource-url="resourceUrl"
                       :api="api"

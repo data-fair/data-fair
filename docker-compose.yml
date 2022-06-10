@@ -39,13 +39,13 @@ services:
       #- STORAGE_TYPE=mongo
       - STORAGE_MONGO_URL=mongodb://localhost:27017/simple-directory
       - NUXT_BUILD_BLOCKING=false
-      - LIST_ENTITIES_MODE=anonymous
       - NO_UI=${NO_UI}
       - AUTHRATELIMIT_ATTEMPTS=200
       - DEFAULT_MAX_CREATED_ORGS=10
       - ANONYMOUS_ACTION_NOT_BEFORE=1s
       - MANAGE_DEPARTMENTS=true
-      - LIST_ENTITIES_MODE=admin
+      - LIST_USERS_MODE=admin
+      - LIST_ORGANIZATIONS_MODE=authenticated
     volumes:
       - ./test/resources/users.json:/webapp/data/users.json
       - ./test/resources/organizations.json:/webapp/data/organizations.json
