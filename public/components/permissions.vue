@@ -35,7 +35,6 @@
       v-model="detailedMode"
       color="primary"
       :label="$t('detailedMode')"
-      @change="fetchOwnerDetails"
     />
 
     <template v-if="detailedMode && ownerDetails">
@@ -77,8 +76,12 @@
                 v-t="{path: 'organizationName', args: {name: item.name}}"
               />
               <div
-                v-if="item.type === 'organization' && item.department"
+                v-if="item.type === 'organization' && item.department && item.department !== '-'"
                 v-t="{path: 'organizationName', args: {name: item.name + ' / ' + item.department}}"
+              />
+              <div
+                v-if="item.type === 'organization' && item.department && item.department === '-'"
+                v-t="{path: 'organizationName', args: {name: item.name + ' / ' + $t('noDep')}}"
               />
               <div
                 v-if="item.type === 'organization' && (!item.roles || !item.roles.length)"
@@ -174,7 +177,7 @@ fr:
   name: Nom
   updateError: Erreur pendant la mise à jour des permissions
   permissionsUpdated: Les permissions ont été mises à jour
-  noDep: Aucun département (organisation principale seulement)
+  noDep: aucun département
   classNames:
     list: Lister
     read: Lecture
@@ -210,7 +213,7 @@ en:
   name: Name
   updateError: Error while updating permissions
   permissionsUpdated: Permissions were updated
-  noDep: No department (main organization only)
+  noDep: no department
   classNames:
     list: List
     read: Read
@@ -302,8 +305,15 @@ export default {
       }
       items.push({ value: 'public', text: this.$t('publicAccess'), disabled: this.hasPrivateParents && !this.isPublic })
       return items
+    },
+    hasDetailedPermission () {
+      return !!this.permissions.find(p => !this.isPublicPermission(p) && !this.isSharedInOrgPermission(p) && !this.isSharedInDepPermission(p))
     }
-
+  },
+  watch: {
+    detailedMode () {
+      if (this.detailedMode && !this.ownerDetails) this.fetchOwnerDetails()
+    }
   },
   async mounted () {
     const permissions = await this.$axios.$get(this.resourceUrl + '/permissions')
@@ -311,6 +321,7 @@ export default {
       if (!p.type) p.type = null
     })
     this.permissions = permissions
+    this.detailedMode = this.hasDetailedPermission
   },
   methods: {
     isPublicPermission (p) {
@@ -320,7 +331,7 @@ export default {
       return p.type === 'organization' && p.id === this.resource.owner.id && !p.department && p.classes && p.classes.includes('read') && p.classes.includes('list')
     },
     isSharedInDepPermission (p) {
-      return p.type === 'organization' && p.id === this.resource.owner.id && p.department && p.classes && p.classes.includes('read') && p.classes.includes('list')
+      return p.type === 'organization' && p.id === this.resource.owner.id && p.department && p.department === this.resource.owner.department && p.classes && p.classes.includes('read') && p.classes.includes('list')
     },
     async save () {
       const permissions = JSON.parse(JSON.stringify(this.permissions))
