@@ -15,6 +15,7 @@ const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
 const baseAppsUtils = require('../utils/base-apps')
 const cacheHeaders = require('../utils/cache-headers')
+const prometheus = require('../utils/prometheus')
 const router = exports.router = express.Router()
 
 // Fill the collection using the default base applications from config
@@ -43,7 +44,8 @@ async function failSafeInitBaseApp (db, app) {
   try {
     await initBaseApp(db, app)
   } catch (err) {
-    console.error(`Failure to initialize base application ${app.url}`, err.stack)
+    prometheus.internalError.inc({ errorCode: 'app-init' })
+    console.error(`(app-init) Failure to initialize base application ${app.url}`, err.stack)
   }
 }
 
@@ -77,7 +79,8 @@ async function initBaseApp (db, app) {
     patch.datasetsFilters = datasetsQueries.map(prepareQuery)
   } catch (err) {
     patch.hasConfigSchema = false
-    console.error(`Failed to fetch a config schema for application ${app.url}`, err.message)
+    prometheus.internalError.inc({ errorCode: 'app-config-schema' })
+    console.error(`(app-config-schema) Failed to fetch a config schema for application ${app.url}`, err.message)
   }
 
   if (!patch.hasConfigSchema && !(patch.meta && patch.meta['application-name'])) {

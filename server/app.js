@@ -15,6 +15,7 @@ const datasetUtils = require('./utils/dataset')
 const i18n = require('./utils/i18n')
 const expectType = require('./utils/expect-type')
 const workers = require('./workers')
+const prometheus = require('./utils/prometheus')
 const session = require('@koumoul/sd-express')({
   directoryUrl: config.directoryUrl,
   privateDirectoryUrl: config.privateDirectoryUrl || config.directoryUrl
@@ -117,7 +118,10 @@ if (config.mode.includes('server')) {
       return res.status(401).send('invalid token...')
     }
     const status = err.statusCode || err.status || 500
-    if (status === 500) console.error('Error in express route', err)
+    if (status === 500) {
+      console.error('(http) Error in express route', err)
+      prometheus.internalError.inc({ errorCode: 'http' })
+    }
     if (!res.headersSent) {
       res.set('Cache-Control', 'no-cache')
       res.set('Expires', '-1')
@@ -199,6 +203,8 @@ exports.run = async () => {
       datasetUtils.mergeDraft(resource)
     }
     await workers.tasks[process.argv[2]].process(app, resource)
+  } else if (config.prometheus.active) {
+    await prometheus.start(db)
   }
 
   return app
@@ -218,6 +224,10 @@ exports.stop = async () => {
   }
 
   await locksUtils.stop(app.get('db'))
+
+  if (config.mode !== 'task' && config.prometheus.active) {
+    await prometheus.stop()
+  }
 
   // this timeout is because we can a few small pending operations after worker and server were closed
   await new Promise(resolve => setTimeout(resolve, 1000))

@@ -78,5 +78,8 @@ module.exports = {
   }, {
     title: 'Sirene',
     url: 'http://test.com/sirene/api-docs.json'
-  }]
+  }],
+  prometheus: {
+    port: 9092
+  }
 }

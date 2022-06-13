@@ -222,5 +222,12 @@ module.exports = {
   i18n: {
     locales: 'I18N_LOCALES',
     defaultLocale: 'I18N_DEFAULT_LOCALE'
+  },
+  prometheus: {
+    active: {
+      __name: 'PROMETHEUS_ACTIVE',
+      __format: 'json'
+    },
+    port: 'PROMETHEUS_PORT'
   }
 }

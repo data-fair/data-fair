@@ -235,7 +235,7 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
   try {
     await unlink(await capture.path(req.application))
   } catch (err) {
-    console.error('Failure to remove capture file')
+    console.warn('Failure to remove capture file')
   }
   res.sendStatus(204)
 }))

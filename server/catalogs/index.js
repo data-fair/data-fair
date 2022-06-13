@@ -198,7 +198,7 @@ exports.processPublications = async function (app, type, resource) {
     }
     await setResult(null, res)
   } catch (err) {
-    console.error('Error while processing publication', err)
+    console.warn('Error while processing publication', err)
     await journals.log(app, resource, { type: 'error', data: err.message || err }, type)
     await setResult(err.message || err)
   }

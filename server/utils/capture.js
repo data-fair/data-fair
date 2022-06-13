@@ -56,7 +56,7 @@ exports.screenshot = async (req) => {
     }
   } catch (err) {
     // catch err locally as this method is called without waiting for result
-    console.error(`Failed to capture screenshot for application ${req.application.id}`, err)
+    console.warn(`Failed to capture screenshot for application ${req.application.id}`, err)
 
     // In case of error do not keep corrupted or empty file
     await fs.remove(capturePath)

@@ -25,12 +25,12 @@ exports.extend = async (app, dataset, extensions) => {
     accessFilter.push({ privateAccess: { $elemMatch: { type: dataset.owner.type, id: dataset.owner.id } } })
     const remoteService = await db.collection('remote-services').findOne({ id: extension.remoteService, $or: accessFilter })
     if (!remoteService) {
-      console.error(`Try to apply extension on dataset ${dataset.id} but remote service ${extension.action} was not found.`)
+      console.warn(`Try to apply extension on dataset ${dataset.id} but remote service ${extension.action} was not found.`)
       continue
     }
     const action = remoteService.actions.find(a => a.id === extension.action)
     if (!action) {
-      console.error(`Try to apply extension on dataset ${dataset.id} from remote service ${remoteService.id} but action ${extension.action} was not found.`)
+      console.warn(`Try to apply extension on dataset ${dataset.id} from remote service ${remoteService.id} but action ${extension.action} was not found.`)
       continue
     }
 

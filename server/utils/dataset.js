@@ -22,6 +22,7 @@ const vocabulary = require('../../contract/vocabulary')
 const limits = require('./limits')
 const esUtils = require('./es')
 const locks = require('./locks')
+const prometheus = require('./prometheus')
 const { basicTypes, csvTypes } = require('../workers/converter')
 const dataDir = path.resolve(config.dataDir)
 
@@ -115,7 +116,7 @@ exports.dataFiles = async (dataset) => {
   const results = []
   if (dataset.originalFile) {
     if (!files.includes(dataset.originalFile.name)) {
-      console.error('Original data file not found', dir, dataset.originalFile.name)
+      console.warn('Original data file not found', dir, dataset.originalFile.name)
     } else {
       results.push({
         name: dataset.originalFile.name,
@@ -127,7 +128,7 @@ exports.dataFiles = async (dataset) => {
     if (dataset.file) {
       if (dataset.file.name !== dataset.originalFile.name) {
         if (!files.includes(dataset.file.name)) {
-          console.error('Normalized data file not found', dir, dataset.file.name)
+          console.warn('Normalized data file not found', dir, dataset.file.name)
         } else {
           results.push({
             name: dataset.file.name,
@@ -141,7 +142,7 @@ exports.dataFiles = async (dataset) => {
       if (dataset.extensions && !!dataset.extensions.find(e => e.active)) {
         const name = `${parsed.name}-full${parsed.ext}`
         if (!files.includes(name)) {
-          console.error('Full data file not found', path.join(dir, name))
+          console.warn('Full data file not found', path.join(dir, name))
         } else {
           results.push({
             name,
@@ -156,7 +157,7 @@ exports.dataFiles = async (dataset) => {
   if (dataset.isRest && dataset?.exports?.restToCSV?.active && dataset?.exports?.restToCSV?.lastExport) {
     const name = `${dataset.id}-last-export.csv`
     if (!files.includes(name)) {
-      console.error('Exported data file not found', path.join(dir, name))
+      console.warn('Exported data file not found', path.join(dir, name))
     } else {
       results.push({
         name,
@@ -639,7 +640,10 @@ exports.insertWithBaseId = async (db, dataset, baseId, res) => {
       const lockKey = `dataset:${dataset.id}`
       const ack = await locks.acquire(db, lockKey)
       if (ack) {
-        res.on('close', () => locks.release(db, lockKey).catch(err => console.error('failure to release dataset lock', err)))
+        res.on('close', () => locks.release(db, lockKey).catch(err => {
+          prometheus.internalError.inc({ errorCode: 'dataset-lock' })
+          console.error('(dataset-lock) failure to release dataset lock', err)
+        }))
         await db.collection('datasets').insertOne(dataset)
         insertOk = true
         break
@@ -675,13 +679,13 @@ exports.delete = async (db, es, dataset) => {
   try {
     await fs.remove(exports.dir(dataset))
   } catch (err) {
-    console.error('Error while deleting dataset draft directory', err)
+    console.warn('Error while deleting dataset draft directory', err)
   }
   if (dataset.isRest) {
     try {
       await restDatasetsUtils.deleteDataset(db, dataset)
     } catch (err) {
-      console.error('Error while removing mongodb collection for REST dataset', err)
+      console.warn('Error while removing mongodb collection for REST dataset', err)
     }
   }
 
@@ -692,7 +696,7 @@ exports.delete = async (db, es, dataset) => {
     try {
       await esUtils.delete(es, dataset)
     } catch (err) {
-      console.error('Error while deleting dataset indexes and alias', err)
+      console.warn('Error while deleting dataset indexes and alias', err)
     }
     if (!dataset.draftReason) {
       await exports.updateStorage(db, dataset, true)

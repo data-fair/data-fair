@@ -316,5 +316,9 @@ module.exports = {
   },
   exportRestDatasets: {
     cron: '0 6 * * 0'
+  },
+  prometheus: {
+    active: true,
+    port: 9090
   }
 }

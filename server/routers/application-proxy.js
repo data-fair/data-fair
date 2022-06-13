@@ -13,6 +13,7 @@ const findUtils = require('../utils/find')
 const permissions = require('../utils/permissions')
 const thumbor = require('../utils/thumbor')
 const serviceWorkers = require('../utils/service-workers')
+const prometheus = require('../utils/prometheus')
 const router = module.exports = express.Router()
 // const debug = require('debug')('application-proxy')
 
@@ -96,7 +97,8 @@ const fetchHTML = async (cleanApplicationUrl, targetUrl) => {
       return res.data
     }
   } catch (err) {
-    console.error('failure to fetch HTML from application', err)
+    prometheus.internalError.inc({ errorCode: 'app-fetch' })
+    console.error('(app-fetch) failure to fetch HTML from application', err)
     if (cacheEntry) return cacheEntry.content
     throw err
     // in case of failure, serve from simple cache

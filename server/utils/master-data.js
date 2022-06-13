@@ -4,6 +4,7 @@ const mimeTypeStream = require('mime-type-stream')
 const virtualDatasetsUtils = require('./virtual-datasets')
 const batchStream = require('./batch-stream')
 const esUtils = require('./es')
+const prometheus = require('./prometheus')
 const pump = require('util').promisify(require('pump'))
 
 exports.bulkSearchPromise = async (streams, data) => {
@@ -74,7 +75,8 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
         try {
           esResponse = await esUtils.multiSearch(es, dataset, queries)
         } catch (err) {
-          console.error(`master-data multisearch query error ${dataset.id}`, err)
+          prometheus.internalError.inc({ errorCode: 'masterdata-multi-query' })
+          console.error(`(masterdata-multi-query) master-data multisearch query error ${dataset.id}`, err)
           const message = esUtils.errorMessage(err)
           return callback(createError(err.status, message))
         }
@@ -85,7 +87,8 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
           const response = esResponse.responses[i]
 
           if (response.error) {
-            console.error(`master-data item query error ${dataset.id}`, response.error)
+            prometheus.internalError.inc({ errorCode: 'masterdata-item-query' })
+            console.error(`(masterdata-item-query) master-data item query error ${dataset.id}`, response.error)
             this.push({ _key: lineKey, _error: esUtils.errorMessage(response.error) })
             continue
           }

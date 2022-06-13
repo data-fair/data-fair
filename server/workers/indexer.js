@@ -8,6 +8,7 @@ const datasetUtils = require('../utils/dataset')
 const restDatasetsUtils = require('../utils/rest-datasets')
 const journals = require('../utils/journals')
 const taskProgress = require('../utils/task-progress')
+const prometheus = require('../utils/prometheus')
 
 exports.eventsPrefix = 'index'
 
@@ -31,7 +32,8 @@ exports.process = async function (app, dataset) {
     try {
       indexName = await es.initDatasetIndex(esClient, dataset)
     } catch (err) {
-      console.error('elasticsearch init index error', err)
+      prometheus.internalError.inc({ errorCode: 'es-init-index' })
+      console.error('(es-init-index) elasticsearch init index error', err)
       const message = es.errorMessage(err)
       throw new Error(message)
     }

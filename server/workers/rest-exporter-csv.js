@@ -8,6 +8,8 @@ const pump = util.promisify(require('pump'))
 const restUtils = require('../utils/rest-datasets')
 const outputs = require('../utils/outputs')
 const datasetUtils = require('../utils/dataset')
+const prometheus = require('../utils/prometheus')
+
 const dataDir = path.resolve(config.dataDir)
 
 exports.process = async function (app, dataset) {
@@ -31,7 +33,8 @@ exports.process = async function (app, dataset) {
     debug('mode to file', exportedFile)
     await fs.move(tmpFile, exportedFile, { overwrite: true })
   } catch (err) {
-    console.error('failure in rest exporter', err)
+    prometheus.internalError.inc({ errorCode: 'rest-exporter' })
+    console.error('(rest-exporter) failure in rest exporter', err)
     patch.exports.restToCSV.lastExport.error = err.message
   }
 

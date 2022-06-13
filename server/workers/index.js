@@ -4,6 +4,7 @@ const moment = require('moment')
 const locks = require('../utils/locks')
 const journals = require('../utils/journals')
 const datasetUtils = require('../utils/dataset')
+const prometheus = require('../utils/prometheus')
 const debug = require('debug')('workers')
 const debugLoop = require('debug')('worker-loop')
 const tasks = exports.tasks = {
@@ -96,7 +97,10 @@ exports.start = async (app) => {
 
     if (stopped) continue
     promisePool[freeSlot] = iter(app, resource, type)
-    promisePool[freeSlot].catch(err => console.error('error in worker iter', err))
+    promisePool[freeSlot].catch(err => {
+      prometheus.internalError.inc({ errorCode: 'worker-iter' })
+      console.error('(worker-iter) error in worker iter', err)
+    })
     // always empty the slot after the promise is finished
     promisePool[freeSlot].finally(() => {
       promisePool[freeSlot] = null
@@ -211,6 +215,7 @@ async function iter (app, resource, type) {
 
     if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
 
+    const endTask = prometheus.workersTasks.startTimer({task: taskKey})
     if (config.worker.spawnTask) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
       const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task', DATASET_DRAFT: '' + !!resource.draftReason } })
@@ -226,6 +231,7 @@ async function iter (app, resource, type) {
     } else {
       await task.process(app, resource)
     }
+    endTask()
 
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
     if (task.eventsPrefix && newResource) {
@@ -250,8 +256,9 @@ async function iter (app, resource, type) {
       errorMessage.push(err.message)
     }
 
+    prometheus.internalError.inc({ errorCode: 'task' })
     if (resource) {
-      console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, err, errorMessage)
+      console.error(`(task) failure in worker ${taskKey} - ${type} / ${resource.id}`, err, errorMessage)
       await journals.log(app, resource, { type: 'error', data: errorMessage.join('\n') }, type)
       await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { [resource.draftReason ? 'draft.status' : 'status']: 'error' } })
       resource.status = 'error'
@@ -260,7 +267,7 @@ async function iter (app, resource, type) {
       if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
       if (hooks['finalizer/' + resource.id]) hooks['finalizer/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
     } else {
-      console.warn(`failure in worker ${taskKey} - ${type}`, err)
+      console.error(`(task) failure in worker ${taskKey} - ${type}`, err)
       await locks.release(db, `${type}:${resource.id}`)
     }
   }

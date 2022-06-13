@@ -86,7 +86,7 @@ exports.publishApplication = async (catalog, application, publication, datasets)
       existingReuse = (await axios.get(url.resolve(catalog.url, 'api/1/reuses/' + updateReuseId + '/'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
       if (existingReuse.deleted) existingReuse = null
     } catch (err) {
-      console.error('Failed to fetch existing reuse', err)
+      console.warn('Failed to fetch existing reuse', err)
     }
   }
 
@@ -337,7 +337,7 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
       existingDataset = (await axios.get(url.resolve(catalog.url, 'api/1/datasets/' + updateDatasetId + '/'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
       if (existingDataset.deleted) existingDataset = null
     } catch (err) {
-      console.error('Failed to fetch existing dataset', err)
+      console.warn('Failed to fetch existing dataset', err)
     }
   }
 

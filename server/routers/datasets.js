@@ -50,7 +50,7 @@ const applicationKey = require('../utils/application-key')
 const { syncDataset: syncRemoteService } = require('./remote-services')
 const { basicTypes } = require('../workers/converter')
 const { validateId } = require('../utils/validation')
-
+const prometheus = require('../utils/prometheus')
 const router = express.Router()
 
 function clean (publicUrl, dataset, thumbnail, html = false, draft = false) {
@@ -116,7 +116,7 @@ const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, 
         })
       )
     } catch (err) {
-      console.error('Failure to drain request that was rejected for exceeding storage limit', err)
+      console.warn('Failure to drain request that was rejected for exceeding storage limit', err)
     }
     if (!storageOk) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
     if (!indexedOk) throw createError(429, 'Vous avez atteint la limite de votre espace de données indexées.')
@@ -511,7 +511,7 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
   try {
     await fs.move(datasetUtils.dir(req.dataset), datasetUtils.dir(patchedDataset))
   } catch (err) {
-    console.error('Error while moving dataset directory', err)
+    console.warn('Error while moving dataset directory', err)
   }
 
   await syncRemoteService(req.app.get('db'), patchedDataset)
@@ -683,7 +683,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       }
       const lockKey = `dataset:${dataset.id}`
       const ack = await locks.acquire(db, lockKey)
-      if (ack) res.on('close', () => locks.release(db, lockKey).catch(err => console.error('failure to release dataset lock', err)))
+      if (ack) res.on('close', () => locks.release(db, lockKey).catch(err => console.warn('failure to release dataset lock', err)))
       await db.collection('datasets').insertOne(dataset)
       await datasetUtils.updateStorage(db, dataset)
     } else if (req.body.isVirtual) {
@@ -1037,10 +1037,11 @@ router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(),
 
 // Error from ES backend should be stored in the journal
 async function manageESError (req, err) {
-  console.error(`elasticsearch query error ${req.dataset.id}`, err)
+  console.error(`(es-query) elasticsearch query error ${req.dataset.id}`, err)
+  prometheus.internalError.inc({ errorCode: 'es-query' })
   const message = esUtils.errorMessage(err)
 
-  // We used to store an error on the data whenever a dataset encoutered an elasticsearch error
+  // We used to store an error on the data whenever a dataset encountered an elasticsearch error
   // but this can end up storing too many errors when the cluster is in a bad state
   // revert to simply logging
   // if (req.dataset.status === 'finalized' && err.statusCode >= 404 && errBody.type !== 'search_phase_execution_exception') {

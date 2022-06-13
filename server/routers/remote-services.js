@@ -24,6 +24,7 @@ const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const cacheHeaders = require('../utils/cache-headers')
 const rateLimiting = require('../utils/rate-limiting')
+const prometheus = require('../utils/prometheus')
 const datasetAPIDocs = require('../../contract/dataset-api-docs')
 
 const debug = require('debug')('remote-services')
@@ -60,7 +61,10 @@ exports.init = async (db) => {
   const apisPromises = [...apisToFetch].map(url => {
     return axios.get(url)
       .then(resp => ({ url, api: resp.data }))
-      .catch(err => console.error('Failure to init remote service', err))
+      .catch(err => {
+        prometheus.internalError.inc({ errorCode: 'service-init' })
+        console.error('(service-init) Failure to init remote service', err)
+      })
   })
   const apis = (await Promise.all(apisPromises)).filter(a => a && a.api)
   const apisDict = Object.assign({}, ...apis.map(a => ({ [a.url]: a.api })))
@@ -373,7 +377,10 @@ router.use('/:remoteServiceId/proxy*', asyncWrap(async (req, res, next) => {
   delete req.headers.authorization
   delete req.headers.cookie
   requestProxy(options)(req, res, err => {
-    if (err) console.error('Error while proxying remote service', err)
+    if (err) {
+      console.error('(service-proxy) Error while proxying remote service', err)
+      prometheus.internalError.inc({ errorCode: 'service-proxy' })
+    }
     next(err)
   })
 }))
