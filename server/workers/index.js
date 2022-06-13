@@ -215,7 +215,7 @@ async function iter (app, resource, type) {
 
     if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
 
-    const endTask = prometheus.workersTasks.startTimer({task: taskKey})
+    const endTask = prometheus.workersTasks.startTimer({ task: taskKey })
     if (config.worker.spawnTask) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
       const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task', DATASET_DRAFT: '' + !!resource.draftReason } })
