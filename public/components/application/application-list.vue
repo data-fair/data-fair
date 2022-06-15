@@ -72,7 +72,7 @@
         <v-row class="px-2">
           <v-col class="py-0">
             <search-filters
-              :filter-labels="{'dataset': $t('dataset'), 'service': $t('service'), 'url': $t('baseApp')}"
+              :filter-labels="{dataset: $t('dataset'), service: $t('service'), url: $t('baseApp'), owner: $t('owner')}"
               :filters="filters"
               :sorts="sorts"
               type="applications"
@@ -119,6 +119,7 @@ fr:
   sortCreatedAtDesc: création plus récente
   sortUpdatedAtAsc: màj plus ancienne
   sortUpdatedAtDesc: màj plus récente
+  owner: Propriétaire
 en:
   noApp: You haven't configured any visualization yet.
   noResult: No result matches your search criterias.
@@ -131,6 +132,7 @@ en:
   sortCreatedAtDesc: creation newer
   sortUpdatedAtAsc: update older
   sortUpdatedAtDesc: update newer
+  owner: Owner
 </i18n>
 
 <script>

@@ -74,7 +74,7 @@
         <v-row class="px-2">
           <v-col class="py-0">
             <search-filters
-              :filter-labels="{children: $t('childDataset')}"
+              :filter-labels="{children: $t('childDataset'), owner: $t('owner')}"
               :filters="filters"
               :sorts="sorts"
               type="datasets"
@@ -139,6 +139,7 @@ fr:
   sortDataUpdatedAtAsc: données plus ancienne
   sortDataUpdatedAtDesc: données plus récente
   datasets: aucun jeu de données | 1 jeu de données | {count} jeux de données
+  owner: Propriétaire
 en:
   noDataset: You haven't created a dataset yet.
   noResult: No result matches your search criterias.
@@ -150,6 +151,7 @@ en:
   sortDataUpdatedAtAsc: data older
   sortDataUpdatedAtDesc: data newer
   datasets: no dataset | 1 dataset | {count} datasets
+  owner: Owner
 </i18n>
 
 <script>
