@@ -66,6 +66,7 @@ en:
 <script>
 import 'easymde/dist/easymde.min.css'
 import { marked } from 'marked'
+const sanitizeHtml = require('../../shared/sanitize-html.js')
 
 export default {
   props: {
@@ -83,13 +84,15 @@ export default {
       element: this.$el.querySelector('textarea'),
       theme: 'dark',
       initialValue: this.value,
-      renderingConfig: {},
+      renderingConfig: {
+        sanitizerFunction: sanitizeHtml
+      },
       status: false,
       autoDownloadFontAwesome: false,
       spellChecker: false,
       insertTexts: {
         link: [this.$t('linkBefore'), this.$t('linkAfter')],
-        image: ['![](', this.$t('imageHref')],
+        image: [`![](${this.$t('imageHref')}`, ')'],
         table: ['', `\n\n| ${this.$t('column')} 1 | ${this.$t('column')} 2 | ${this.$t('column')} 3 |\n| -------- | -------- | -------- |\n| ${this.$t('text')}     | ${this.$t('text')}     | ${this.$t('text')}     |\n\n`],
         horizontalRule: ['', '\n\n-----\n\n']
       },
