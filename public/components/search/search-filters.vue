@@ -40,6 +40,8 @@
           small
           color="accent"
           text-color="white"
+          style="height:auto;white-space:normal;"
+          class="mt-1"
           @click:close="filters[filter] = null;writeParams(filter)"
         >
           <strong>{{ filterLabels[filter] }} : {{ filters[filter] }}</strong>
@@ -61,12 +63,12 @@
 
 <i18n lang="yaml">
 fr:
-  adminVue: "Vue administrateur :"
+  adminVue: "Admin : "
   search: Rechercher
   showShared: inclure les resources des autres comptes
   sortBy: trier par
 en:
-  adminVue: "Admin vue :"
+  adminVue: "Admin: "
   search: Search
   showShared: include resources from other accounts
   sortBy: sort by
@@ -77,9 +79,6 @@ import { mapActions, mapState, mapGetters } from 'vuex'
 
 export default {
   props: ['filters', 'filterLabels', 'type', 'hideOwners', 'sorts'],
-  data: () => ({
-    owners: []
-  }),
   computed: {
     ...mapState('session', ['user']),
     ...mapGetters('session', ['activeAccount'])
@@ -99,13 +98,8 @@ export default {
         this.$set(this.filters, key, this.$route.query[key])
       })
       this.$set(this.filters, 'q', this.$route.query.q)
-      if (this.$route.query.owner) {
-        this.owners = this.$route.query.owner.split(',')
-      }
       this.$set(this.filters, 'shared', this.$route.query.shared === 'true')
-      if (this.sorts) {
-        this.$set(this.filters, 'sort', this.$route.query.sort || 'createdAt:-1')
-      }
+      if (this.sorts) this.$set(this.filters, 'sort', this.$route.query.sort || 'createdAt:-1')
       this.$emit('apply')
     },
     writeParams () {
@@ -116,7 +110,7 @@ export default {
       })
       if (this.filters.shared) query.shared = 'true'
       else delete query.shared
-      if (this.owners.length) query.owner = this.owners.join(',').replace()
+      if (this.filters.owners) query.owner = this.filters.owners
       else delete query.owner
       if (this.sorts && this.filters.sort) query.sort = this.filters.sort
       else delete query.sort
