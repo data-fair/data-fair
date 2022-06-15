@@ -8,6 +8,7 @@
 
       <!-- add a dataset -->
       <v-autocomplete
+        :value="null"
         :items="datasets || []"
         :loading="loadingDatasets"
         :search-input.sync="searchDataset"
@@ -39,7 +40,7 @@
       <template v-if="childrenById">
         <!-- list of datasets -->
         <p
-          v-if="dataset.virtual.children.length === 0"
+          v-if="virtual.children.length === 0"
           v-t="'noChild'"
           class="caption mt-3"
         />
@@ -51,7 +52,7 @@
         >
           <v-list flat>
             <v-list-item
-              v-for="(child,index) in dataset.virtual.children"
+              v-for="(child,index) in virtual.children"
               :key="child"
             >
               <v-list-item-content
@@ -86,7 +87,7 @@
                 <v-icon
                   color="warning"
                   title="Supprimer"
-                  @click="currentChild = index; deleteChildDialog = true"
+                  @click="deleteChild(index)"
                 >
                   mdi-delete
                 </v-icon>
@@ -102,7 +103,7 @@
         />
 
         <p
-          v-if="dataset.schema.filter(f => !f['x-calculated']).length === 0"
+          v-if="schema.filter(f => !f['x-calculated']).length === 0"
           v-t="'noColumn'"
           class="caption mt-3"
         />
@@ -113,12 +114,11 @@
         >
           <v-list flat>
             <draggable
-              v-model="dataset.schema"
+              v-model="schema"
               :options="{handle: '.handle'}"
-              @end="saveSchema"
             >
               <v-list-item
-                v-for="field in dataset.schema"
+                v-for="field in schema"
                 v-show="!field['x-calculated']"
                 :key="field.key"
               >
@@ -154,13 +154,12 @@
         />
 
         <v-autocomplete
-          :items="allColumns.filter(c => !filtersByKey[c.key])"
-          :item-text="(field) => field.title || field['x-originalName'] || field.key"
+          v-model="searchedFilter"
+          :items="allColumns.map(c => ({disabled: filtersByKey[c.key], value: c.key, text: c.title || c['x-originalName'] || c.key}))"
           :search-input.sync="searchFilter"
           hide-no-data
           item-value="id"
           :label="$t('addFilter')"
-          return-object
           style="max-width: 400px;"
           dense
           outlined
@@ -170,7 +169,7 @@
         />
 
         <p
-          v-if="!dataset.virtual.filters.length"
+          v-if="!virtual.filters.length"
           v-t="'noFilter'"
           class="caption mt-3"
         />
@@ -180,7 +179,7 @@
           class="py-0"
         >
           <v-list-item
-            v-for="filter in dataset.virtual.filters"
+            v-for="filter in virtual.filters"
             :key="filter.key"
           >
             <v-list-item-content>
@@ -198,13 +197,12 @@
                   hide-details
                   dense
                   class="mt-1"
-                  @change="saveFilters"
                 >
                   <template #selection="data">
                     <v-chip
                       close
                       small
-                      @click:close="filter.values = filter.values.filter(v => v !== data.item); saveFilters()"
+                      @click:close="filter.values = filter.values.filter(v => v !== data.item)"
                     >
                       {{ data.item }}
                     </v-chip>
@@ -216,7 +214,7 @@
               <v-icon
                 color="warning"
                 title="Supprimer"
-                @click="dataset.virtual.filters = dataset.virtual.filters.filter(f => f.key !== filter.key); saveFilters()"
+                @click="virtual.filters = virtual.filters.filter(f => f.key !== filter.key)"
               >
                 mdi-delete
               </v-icon>
@@ -225,12 +223,22 @@
         </v-list>
       </template>
 
-      <v-dialog
+      <v-row class="ma-0 mt-2">
+        <v-spacer />
+        <v-btn
+          color="primary"
+          :disabled="!hasChanges"
+          @click="save"
+        >
+          {{ $t('save') }}
+        </v-btn>
+      </v-row>
+      <!--<v-dialog
         v-model="deleteChildDialog"
         max-width="500px"
       >
         <v-card
-          v-if="childrenById && childrenById[dataset.virtual.children[currentChild]]"
+          v-if="childrenById && childrenById[virtual.children[currentChild]]"
           outlined
         >
           <v-card-title
@@ -245,7 +253,7 @@
               outlined
             />
           </v-card-text>
-          <v-card-text v-t="{path: 'deleteConfirm', args: {name: childrenById[dataset.virtual.children[currentChild]].title }}" />
+          <v-card-text v-t="{path: 'deleteConfirm', args: {name: childrenById[virtual.children[currentChild]].title }}" />
           <v-card-actions>
             <v-spacer />
             <v-btn
@@ -260,7 +268,7 @@
             />
           </v-card-actions>
         </v-card>
-      </v-dialog>
+      </v-dialog>-->
     </v-col>
   </v-row>
 </template>
@@ -284,6 +292,7 @@ fr:
   filters: Filtres
   addFilter: ajouter un filtre
   noFilter: Aucun filtre défini.
+  save: Enregister
 en:
   search: Search
   children: Aggregated datasets
@@ -302,6 +311,7 @@ en:
   filters: Filters
   addFilter: add a filter
   noFilter: No filter defined.
+  save: Save
 </i18n>
 
 <script>
@@ -322,17 +332,22 @@ export default {
       schemasById: {},
       deleteChildDialog: false,
       currentChild: null,
-      loadingChildren: false
+      loadingChildren: false,
+      originalSchema: null,
+      schema: null,
+      originalVirtual: null,
+      virtual: null,
+      searchedFilter: null
     }
   },
   computed: {
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['can']),
     existingFields () {
-      return this.dataset.schema.map(f => f.key)
+      return this.schema.map(f => f.key)
     },
     filtersByKey () {
-      return this.dataset.virtual.filters.reduce((a, f) => {
+      return this.virtual.filters.reduce((a, f) => {
         a[f.key] = f
         return a
       }, {})
@@ -358,6 +373,9 @@ export default {
         }
       }
       return valuesByKey
+    },
+    hasChanges () {
+      return this.originalVirtual !== JSON.stringify(this.virtual) || this.originalSchema !== JSON.stringify(this.schema)
     }
   },
   watch: {
@@ -366,24 +384,38 @@ export default {
       handler () {
         this.searchDatasets()
       }
+    },
+    'dataset.schema' () {
+      this.init()
+    },
+    'dataset.virtual' () {
+      this.init()
     }
   },
   mounted () {
+    this.init()
     this.fetchChildren()
-    this.dataset.virtual.filters = this.dataset.virtual.filters || []
-    this.dataset.virtual.filters = this.dataset.virtual.filters.filter(f => f.values && f.values.length)
   },
   methods: {
     ...mapActions('dataset', ['patchAndCommit', 'fetchInfo']),
+    init () {
+      this.originalVirtual = JSON.stringify(this.dataset.virtual)
+      const virtual = JSON.parse(this.originalVirtual)
+      virtual.filters = virtual.filters || []
+      virtual.filters = virtual.filters.filter(f => f.values && f.values.length)
+      this.virtual = virtual
+      this.originalSchema = JSON.stringify(this.dataset.schema)
+      this.schema = JSON.parse(this.originalSchema)
+    },
     async fetchChildren () {
       this.loadingChildren = true
       const res = await this.$axios.$get('api/v1/datasets', {
-        params: { size: 1000, select: 'id,title,schema', id: this.dataset.virtual.children.join(',') }
+        params: { size: 1000, select: 'id,title,schema', id: this.virtual.children.join(',') }
       })
       // remove children that do not exist anymore
-      this.dataset.virtual.children = this.dataset.virtual.children.filter(child => res.results.find(d => d.id === child))
+      this.virtual.children = this.virtual.children.filter(child => res.results.find(d => d.id === child))
       this.childrenById = res.results.reduce((a, d) => { a[d.id] = d; return a }, {})
-      for (const child of this.dataset.virtual.children) {
+      for (const child of this.virtual.children) {
         this.$set(this.searchCol, child, '')
       }
       this.loadingChildren = false
@@ -394,42 +426,37 @@ export default {
         params: { q: this.searchDataset, size: 20, select: 'id,title', status: 'finalized', owner: `${this.dataset.owner.type}:${this.dataset.owner.id}` }
       })
       this.datasets = res.results
-        .filter(d => d.id !== this.dataset.id && !this.dataset.virtual.children.includes(d.id))
+        .filter(d => d.id !== this.dataset.id && !this.virtual.children.includes(d.id))
       this.loadingDatasets = false
     },
     async addChild (child) {
+      this.virtual.children.push(child)
       await this.$nextTick()
       this.searchDataset = ''
-      await this.patchAndCommit({ virtual: { ...this.dataset.virtual, children: this.dataset.virtual.children.concat([child]) } })
       this.fetchChildren()
     },
     async deleteChild (i) {
-      this.dataset.virtual.children.splice(i, 1)
-      await this.patchAndCommit({ virtual: { ...this.dataset.virtual } })
-      this.fetchInfo()
-    },
-    async saveSchema () {
-      await this.patchAndCommit({ schema: this.dataset.schema })
-    },
-    async saveFilters () {
-      await this.patchAndCommit({ virtual: { ...this.dataset.virtual, filters: this.dataset.virtual.filters } })
+      this.virtual.children.splice(i, 1)
     },
     async addField (field, child) {
-      const prop = { key: field.key, title: field.title, type: field.type, format: field.format }
-      await this.patchAndCommit({ schema: this.dataset.schema.concat(prop) })
+      this.schema.push({ key: field.key, title: field.title, type: field.type, format: field.format })
       this.$set(this.searchCol, child, '')
     },
     async deleteField (field) {
-      await this.patchAndCommit({ schema: this.dataset.schema.filter(f => f.key !== field.key) })
+      this.schema = this.schema.filter(f => f.key !== field.key)
     },
     filterLabel (filter) {
       const col = this.allColumns.find(c => c.key === filter.key)
       return (col && (col.title || col['x-originalName'] || col.key)) || filter.key
     },
-    async addFilter (col) {
-      this.dataset.virtual.filters.push({ key: col.key, values: [] })
+    async addFilter (key) {
+      this.virtual.filters.push({ key, values: [] })
       await this.$nextTick()
       this.searchFilter = ''
+      this.searchedFilter = null
+    },
+    async save () {
+      await this.patchAndCommit({ schema: this.schema, virtual: this.virtual })
     }
   }
 }
