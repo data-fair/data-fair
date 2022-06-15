@@ -4,7 +4,7 @@ const opts = {
   allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
   allowedAttributes: {
     ...sanitizeHtml.defaults.allowedAttributes,
-    img: ['title', 'alt', 'src', 'height', 'width', 'sizes']
+    img: ['title', 'alt', 'src', 'srcset', 'height', 'width', 'sizes', 'loading']
   }
 }
 

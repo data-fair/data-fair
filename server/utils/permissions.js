@@ -9,9 +9,9 @@ const validate = ajv.compile(permissionsSchema)
 exports.middleware = function (operationId, operationClass, trackingCategory) {
   return function (req, res, next) {
     if (
-      exports.can(req.resourceType, req.resource, operationId, req.user) ||
       (req.bypassPermissions && req.bypassPermissions.operations && req.bypassPermissions.operations.includes(operationId)) ||
-      (req.bypassPermissions && req.bypassPermissions.classes && req.bypassPermissions.classes.includes(operationClass))
+      (req.bypassPermissions && req.bypassPermissions.classes && req.bypassPermissions.classes.includes(operationClass)) ||
+      exports.can(req.resourceType, req.resource, operationId, req.user)
     ) {
       // nothing to do, user can proceed
     } else {
@@ -57,7 +57,8 @@ Sélectionnez l'organisation ${req.resource.owner.name} en tant que compte actif
 }
 
 const getOwnerRole = exports.getOwnerRole = (owner, user) => {
-  if (!user) return null
+  if (!user || user.isApplicationKey || !user.activeAccount) return null
+
   // user is implicitly admin of his own resources, even if he is currently switched to an organization
   if (owner.type === 'user') {
     if (owner.id === user.id) return config.adminRole
