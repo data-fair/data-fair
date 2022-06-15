@@ -583,7 +583,6 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft, res) => {
     await fs.ensureDir(datasetUtils.dir({ ...dataset, ...patch }))
     await fs.move(file.path, datasetUtils.originalFileName({ ...dataset, ...patch }))
   } else {
-    validateId(dataset.id)
     if (draft) {
       patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant' }
     }
@@ -761,12 +760,14 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
 
   const newDataset = await initNew(db, req)
   newDataset.id = req.params.datasetId
-  validateId(newDataset.id)
+  if (!await db.collection('datasets').countDocuments({ id: newDataset.id })) {
+    validateId(newDataset.id)
+  }
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (permissions.canDoForOwner(newDataset.owner, 'datasets', 'post', req.user, db)) {
     try {
-      await req.app.get('db').collection('datasets').insertOne(newDataset)
+      await db.collection('datasets').insertOne(newDataset)
       req.isNewDataset = true
       if ((await limits.remaining(req.app.get('db'), newDataset.owner)).nbDatasets === 0) {
         return res.status(429, 'Vous avez atteint votre nombre maximal de jeux de données autorisés.')
