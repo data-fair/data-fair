@@ -353,9 +353,10 @@ export default {
   methods: {
     setItemsPerPage () {
       // adapt number of lines to window height
+      // don't forget to let enough space for the optional horizontal scroll bar
       const height = window.innerHeight
-      let top = this.$vuetify.breakpoint.xs ? 150 : 100
-      if (this.filters.length) top += 28
+      let top = this.$vuetify.breakpoint.xs ? 150 : 110
+      if (this.filters.length) top += 36
       const nbRows = Math.floor(Math.max(height - top, 120) / (this.lineHeight + 2))
       this.pagination.itemsPerPage = Math.min(Math.max(nbRows, 4), 50)
       this.filterHeight = height - top
