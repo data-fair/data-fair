@@ -58,6 +58,7 @@ Chaque rôle possède des permissions différentes :
 
 
 L'administration d'un jeu de données (ou une visualisation) consiste dans la suppression et la visibilité.  
-L'administrateur est le seul à pouvoir rendre public ou supprimer un jeu de données (ou une visualisation).
+L'administrateur est le seul à pouvoir rendre public ou supprimer un jeu de données (ou une visualisation).  
+Le rôle utilisateur est utilisé pour donner accès aux ressources privées de l'organisation.  
 
 Si vous désirez avoir plus de permissions dans une de vos organisations, contactez un administrateur de cette organisation.

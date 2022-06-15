@@ -59,6 +59,7 @@ Each role has different permissions:
 | Creation and modification of the portal |  |  | x |
 
 Dataset or visualization administration is about deletion and visibility.  
-The administrator is the only one who can publish or delete a dataset or a visualization.
+The administrator is the only one who can publish or delete a dataset or a visualization.  
+The user role is used to provide access to private organization resources.
 
 If you need more permissions in your organizations, contact an administrator of the organization.
