@@ -698,7 +698,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       if (dataset.id) {
         await db.collection('datasets').insertOne(dataset)
       } else {
-        const baseId = slug(req.body.title).toLowerCase()
+        const baseId = slug(req.body.title, { lower: true, strict: true })
         await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
       }
     } else if (req.body.isRest) {
@@ -716,7 +716,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       if (dataset.id) {
         await db.collection('datasets').insertOne(dataset)
       } else {
-        const baseId = slug(req.body.title).toLowerCase()
+        const baseId = slug(req.body.title, { lower: true, strict: true })
         await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
       }
       await restDatasetsUtils.initDataset(db, dataset)
@@ -731,7 +731,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       if (dataset.id) {
         await db.collection('datasets').insertOne(dataset)
       } else {
-        const baseId = slug(req.body.title).toLowerCase()
+        const baseId = slug(req.body.title, { lower: true, strict: true })
         await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
       }
     } else {
