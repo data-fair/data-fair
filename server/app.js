@@ -117,9 +117,10 @@ if (config.mode.includes('server')) {
     if (err.name === 'UnauthorizedError') {
       return res.status(401).send('invalid token...')
     }
+    if (err.code === 'ECONNRESET') err.statusCode = 400
     const status = err.statusCode || err.status || 500
     if (status === 500) {
-      console.error('(http) Error in express route', err)
+      console.error('(http) Error in express route', req.originalUrl, err)
       prometheus.internalError.inc({ errorCode: 'http' })
     }
     if (!res.headersSent) {
