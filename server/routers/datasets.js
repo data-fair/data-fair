@@ -1038,9 +1038,11 @@ router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(),
 
 // Error from ES backend should be stored in the journal
 async function manageESError (req, err) {
-  console.error(`(es-query) elasticsearch query error ${req.dataset.id}`, err)
-  prometheus.internalError.inc({ errorCode: 'es-query' })
   const message = esUtils.errorMessage(err)
+  const status = err.status || err.statusCode
+
+  console.error(`(es-query) elasticsearch query error ${req.dataset.id}`, req.originalUrl, status, message, err.stack)
+  prometheus.internalError.inc({ errorCode: 'es-query' })
 
   // We used to store an error on the data whenever a dataset encountered an elasticsearch error
   // but this can end up storing too many errors when the cluster is in a bad state
@@ -1049,7 +1051,7 @@ async function manageESError (req, err) {
   // await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { $set: { status: 'error' } })
   // await journals.log(req.app, req.dataset, { type: 'error', data: message })
   // }
-  throw createError(err.status || err.statusCode, message)
+  throw createError(status, message)
 }
 
 // Read/search data for a dataset
