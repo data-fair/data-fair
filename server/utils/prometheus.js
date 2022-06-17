@@ -36,7 +36,7 @@ exports.workersTasks = new client.Histogram({
   name: 'df_datasets_workers_tasks',
   help: 'Number and duration in seconds of tasks run by the workers',
   buckets: [0.1, 1, 10, 60, 600],
-  labelNames: ['task'],
+  labelNames: ['task', 'status'],
   registers: [localRegister]
 })
 

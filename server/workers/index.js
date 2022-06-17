@@ -139,6 +139,7 @@ async function iter (app, resource, type) {
   const db = app.get('db')
   let taskKey
   let lastStderr = ''
+  let endTask
   try {
     // if there is something to be done in the draft mode of the dataset, it is prioritary
     if (type === 'dataset' && resource.draft && resource.draft.status !== 'finalized' && resource.draft.status !== 'error') {
@@ -215,7 +216,7 @@ async function iter (app, resource, type) {
 
     if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
 
-    const endTask = prometheus.workersTasks.startTimer({ task: taskKey })
+    endTask = prometheus.workersTasks.startTimer({ task: taskKey })
     if (config.worker.spawnTask) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
       const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task', DATASET_DRAFT: '' + !!resource.draftReason } })
@@ -231,7 +232,7 @@ async function iter (app, resource, type) {
     } else {
       await task.process(app, resource)
     }
-    endTask()
+    endTask({ status: 'ok' })
 
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
     if (task.eventsPrefix && newResource) {
@@ -241,6 +242,7 @@ async function iter (app, resource, type) {
     if (hooks[taskKey]) hooks[taskKey].resolve(JSON.parse(JSON.stringify(newResource)))
     if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].resolve(JSON.parse(JSON.stringify(newResource)))
   } catch (err) {
+    if (endTask) endTask({ status: 'error' })
     // Build back the original error message from the stderr of the child process
     const errorMessage = []
     if (lastStderr) {
@@ -258,7 +260,7 @@ async function iter (app, resource, type) {
 
     prometheus.internalError.inc({ errorCode: 'task' })
     if (resource) {
-      console.error(`(task) failure in worker ${taskKey} - ${type} / ${resource.id}`, err, errorMessage)
+      console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, err, errorMessage)
       await journals.log(app, resource, { type: 'error', data: errorMessage.join('\n') }, type)
       await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { [resource.draftReason ? 'draft.status' : 'status']: 'error' } })
       resource.status = 'error'
@@ -267,7 +269,7 @@ async function iter (app, resource, type) {
       if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
       if (hooks['finalizer/' + resource.id]) hooks['finalizer/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
     } else {
-      console.error(`(task) failure in worker ${taskKey} - ${type}`, err)
+      console.warn(`failure in worker ${taskKey} - ${type}`, err)
       await locks.release(db, `${type}:${resource.id}`)
     }
   }
