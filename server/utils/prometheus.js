@@ -32,6 +32,11 @@ exports.internalError = new client.Counter({
   labelNames: ['errorCode'],
   registers: [localRegister]
 })
+exports.esQueryError = new client.Counter({
+  name: 'df_es_query_error',
+  help: 'Errors in elasticearch queries',
+  registers: [localRegister]
+})
 exports.workersTasks = new client.Histogram({
   name: 'df_datasets_workers_tasks',
   help: 'Number and duration in seconds of tasks run by the workers',
