@@ -4,7 +4,7 @@ section: 10
 subsection : 2
 updated: 2022-06-15
 description : Organize your members and datasets
-published: false
+published: true
 ---
 
 Departments allow you to distribute your members according to the datasets they have access to.

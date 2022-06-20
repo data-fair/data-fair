@@ -4,7 +4,7 @@ section: 10
 subsection : 2
 updated: 2022-06-15
 description : Organisez vos membres et vos données
-published: false
+published: true
 ---
 
 Les départements permettent de répartir vos membres en fonction des jeux de données auxquels ils ont accès.
