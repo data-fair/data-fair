@@ -184,10 +184,10 @@ export default {
         page: this.page,
         select: 'title,description',
         ...this.filters,
-        facets: 'owner',
         sort: 'createdAt:-1',
         html: 'true'
       }
+      if (!append) params.facets = 'owner'
       if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
         this.lastParams = params
         this.loading = true

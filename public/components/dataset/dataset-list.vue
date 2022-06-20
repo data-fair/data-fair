@@ -242,15 +242,14 @@ export default {
       })
       if (append) this.page += 1
       else this.page = 1
-      const facets = 'status,visibility,services,concepts,topics,publicationSites,owner'
       const params = {
         size: this.size,
         page: this.page,
         select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt',
-        facets,
         sort: 'createdAt:-1',
         ...fullFilters
       }
+      if (!append) params.facets = 'status,visibility,services,concepts,topics,publicationSites,owner'
       if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
         this.lastParams = params
         this.loading = true
