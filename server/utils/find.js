@@ -233,24 +233,37 @@ exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []
 
   const fields = facetsQueryParam && facetsQueryParam.length && facetsQueryParam.split(',')
     .filter(f => facetFields[f] || f === 'owner' || f === 'visibility')
+
+  if (extraFilters) {
+    for (const extraFilter of extraFilters) {
+      pipeline.push({ $match: extraFilter })
+    }
+  }
+
+  // Apply all the filters from the current query that do not match a facetted field
+  Object.keys(filterFields).filter(name => req.query[name] !== undefined && !fields.includes(name)).forEach(name => {
+    pipeline.push({ $match: { [filterFields[name]]: { $in: req.query[name].split(',') } } })
+  })
+  if (req.query.owner && !fields.includes('owner')) {
+    pipeline.push({ $match: { $and: exports.ownerFilters(req.query, req.user && req.user.activeAccount) } })
+  }
+  if (!fields.includes('visibility') && visibility.filters(req.query)) {
+    pipeline.push({ $match: { $or: visibility.filters(req.query) } })
+  }
+
   if (fields) {
     const facets = {}
     fields.forEach(f => {
       const facet = []
       // Apply all the filters from the current query to the facet, except the one concerning current field
-      Object.keys(filterFields).filter(name => req.query[name] !== undefined && name !== f).forEach(name => {
+      Object.keys(filterFields).filter(name => req.query[name] !== undefined && fields.includes(name) && name !== f).forEach(name => {
         facet.push({ $match: { [filterFields[name]]: { $in: req.query[name].split(',') } } })
       })
-      if (req.query.owner && f !== 'owner') {
+      if (req.query.owner && fields.includes('owner') && f !== 'owner') {
         facet.push({ $match: { $and: exports.ownerFilters(req.query, req.user && req.user.activeAccount) } })
       }
-      if (f !== 'visibility' && visibility.filters(req.query)) {
+      if (fields.includes('visibility') && f !== 'visibility' && visibility.filters(req.query)) {
         facet.push({ $match: { $or: visibility.filters(req.query) } })
-      }
-      if (extraFilters) {
-        for (const extraFilter of extraFilters) {
-          facet.push({ $match: extraFilter })
-        }
       }
 
       // visibility is a special case.. we do a match and count
