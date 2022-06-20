@@ -138,7 +138,7 @@ export default {
     return {
       catalogs: null,
       page: 1,
-      loading: true,
+      loading: false,
       filters: {},
       filtered: false,
       importCatalogSheet: !!this.$route.query.import,
@@ -170,7 +170,7 @@ export default {
   },
   methods: {
     onScroll (e) {
-      if (!this.datasets) return
+      if (!this.datasets || this.loading) return
       const se = e.target.scrollingElement
       if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.datasets.results.length < this.datasets.count) {
         this.refresh(true)
