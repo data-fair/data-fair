@@ -18,8 +18,8 @@ module.exports = {
   notifyWSUrl: 'ws://localhost:8088',
   // subscriptionUrl: 'https://staging-koumoul.com/s/customers/embed/subscription',
   defaultLimits: {
-    totalStorage: 1000000000,
-    totalIndexed: 1000000000,
+    totalStorage: 10000000000,
+    totalIndexed: 10000000000,
     nbDatasets: 1000
     // datasetStorage: -1,
   },

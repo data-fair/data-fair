@@ -15,6 +15,14 @@ global.iFrameResizer = {
 }
 
 export default {
+  async fetch ({ store }) {
+    try {
+      await store.dispatch('dataset/fetchJournal')
+    } catch (err) {
+      // in embed mode we prefer a blank page rather than showing an error
+      console.error(err)
+    }
+  },
   computed: {
     ...mapState('dataset', ['journal'])
   },

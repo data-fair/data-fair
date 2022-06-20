@@ -35,5 +35,9 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
   if (route.query.dark) $vuetify.theme.dark = route.query.dark === 'true'
   $vuetify.theme.themes.light.admin = env.theme.colors.admin
   $vuetify.theme.themes.dark.admin = env.theme.darkColors.admin || env.theme.colors.admin
-  await store.dispatch('fetchLimits')
+
+  if (!route.path.startsWith('/embed/')) {
+    // use mostly to detect if the user has a subscription with explicit limits or is using the service default limits
+    await store.dispatch('fetchLimits')
+  }
 }
