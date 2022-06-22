@@ -39,8 +39,10 @@ module.exports = (dataset, publicUrl = config.publicUrl) => {
     .filter(p => !p['x-capabilities'] || p['x-capabilities'].text !== false || p['x-capabilities'].textStandard !== false)
   const textAggProperties = stringProperties
     .filter(p => !p['x-capabilities'] || p['x-capabilities'].textAgg !== false)
-  const stringValuesProperties = dataset.schema
-    .filter(p => !p['x-capabilities'] || p['x-capabilities'].index !== false)
+  const stringValuesProperties = stringProperties
+    .filter(p => !p['x-capabilities'] || p['x-capabilities'].values !== false)
+  const valuesProperties = dataset.schema
+    .filter(p => !p['x-capabilities'] || p['x-capabilities'].values !== false)
   const numberProperties = dataset.schema
     .filter(p => p.type === 'number')
 
@@ -149,7 +151,7 @@ Exemple: ma_colonne,-ma_colonne2`,
       default: [],
       items: {
         type: 'string',
-        enum: stringValuesProperties.length ? stringValuesProperties.map(p => p.key) : undefined
+        enum: valuesProperties.length ? valuesProperties.map(p => p.key) : undefined
       }
     },
     style: 'commaDelimited'
@@ -475,7 +477,16 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                 enum: acceptedMetricAggs
               }
             },
-            Object.assign({}, metricFieldParam, { required: true }),
+            {
+              in: 'query',
+              name: 'field',
+              description: 'La colonne sur laquelle calculer la métrique',
+              schema: {
+                type: 'string',
+                enum: valuesProperties.length ? properties.map(p => p.key) : undefined
+              },
+              required: true
+            },
             {
               in: 'query',
               name: 'percents',
@@ -485,6 +496,41 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                 type: 'array',
                 items: {
                   type: 'string'
+                }
+              },
+              style: 'commaDelimited'
+            }
+          ].concat(filterParams),
+          responses: {
+            200: {
+              description: 'Le résultat du calcul.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object'
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/simple_metrics_agg': {
+        get: {
+          summary: 'Calculer des métriques simples standards sur toutes les colonnes possibles ou sur une liste de colonnes.',
+          operationId: 'getSimpleMetricsAgg',
+          'x-permissionClass': 'read',
+          tags: ['Données'],
+          parameters: [
+            {
+              in: 'query',
+              name: 'fields',
+              description: 'Les colonnes sur lesquelles calculer les métriques',
+              schema: {
+                type: 'array',
+                items: {
+                  type: 'string',
+                  enum: valuesProperties.length ? properties.map(p => p.key) : undefined
                 }
               },
               style: 'commaDelimited'
@@ -676,6 +722,10 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
   if (stringValuesProperties.length === 0) {
     delete api.paths['/values_agg']
     delete api.paths['/values/{field}']
+  }
+  if (valuesProperties.length === 0) {
+    delete api.paths['/metric_agg']
+    delete api.paths['/simple_metrics_agg']
   }
 
   if (dataset.bbox && dataset.bbox.length === 4) {

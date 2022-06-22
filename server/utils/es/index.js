@@ -10,6 +10,7 @@ exports.count = require('./count')
 exports.valuesAgg = require('./values-agg')
 exports.values = require('./values')
 exports.metricAgg = require('./metric-agg').agg
+exports.simpleMetricsAgg = require('./metric-agg').simpleMetricsAgg
 exports.geoAgg = require('./geo-agg')
 exports.bboxAgg = require('./bbox-agg')
 exports.wordsAgg = require('./words-agg')

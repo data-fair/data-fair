@@ -1378,13 +1378,26 @@ router.get('/:datasetId/values/:fieldKey', readDataset(), applicationKey, permis
   res.status(200).send(result)
 }))
 
-// Simple metric aggregation to calculate some value (sum, avg, etc.)
+// Simple metric aggregation to calculate 1 value (sum, avg, etc.) about 1 column
 router.get('/:datasetId/metric_agg', readDataset(), applicationKey, permissions.middleware('getMetricAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
   res.throttleEnd()
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
   let result
   try {
     result = await esUtils.metricAgg(req.app.get('es'), req.dataset, req.query)
+  } catch (err) {
+    await manageESError(req, err)
+  }
+  res.status(200).send(result)
+}))
+
+// Simple metric aggregation to calculate some basic values about a list of columns
+router.get('/:datasetId/simple_metrics_agg', readDataset(), applicationKey, permissions.middleware('getSimpleMetricsAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
+  res.throttleEnd()
+  if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset)
+  let result
+  try {
+    result = await esUtils.simpleMetricsAgg(req.app.get('es'), req.dataset, req.query)
   } catch (err) {
     await manageESError(req, err)
   }
