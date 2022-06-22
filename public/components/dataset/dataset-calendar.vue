@@ -1,7 +1,7 @@
 <template lang="html">
   <v-row>
-    <v-col>
-      <v-row class="px-3">
+    <v-col class="mt-1">
+      <v-row>
         <v-col
           cols="6"
           lg="3"
@@ -10,6 +10,9 @@
             v-model="type"
             :items="typeOptions"
             label="Type"
+            outlined
+            dense
+            hide-details
           />
         </v-col>
         <v-spacer />
@@ -18,7 +21,7 @@
           lg="3"
           class="pr-4"
         >
-          <v-row>
+          <v-row class="ma-0">
             <v-btn
               fab
               outlined
@@ -52,9 +55,9 @@
         </v-col>
       </v-row>
 
-      <v-row>
+      <v-row class="mt-0">
         <v-col cols="12">
-          <v-card :height="calendarHeight">
+          <v-card :height="height">
             <v-calendar
               v-if="currentDate && eventsPerDays"
               ref="calendar"
@@ -109,9 +112,10 @@ const moment = require('moment')
 require('moment-timezone')
 
 export default {
-  props: ['heightMargin'],
+  props: {
+    height: { type: Number, default: 500 }
+  },
   data: () => ({
-    calendarHeight: 0,
     data: null,
     type: 'month',
     currentDate: null,
@@ -175,7 +179,6 @@ export default {
   },
   async mounted () {
     this.refresh()
-    this.calendarHeight = Math.max(window.innerHeight - this.$el.getBoundingClientRect().top - this.heightMargin - 76, 300)
     if (this.today > this.dataset.timePeriod.startDate && this.today < this.dataset.timePeriod.endDate) {
       this.currentDate = moment(this.today).format('YYYY-MM-DD')
     } else {

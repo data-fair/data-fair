@@ -8,9 +8,11 @@
       v-model="editThumbnails.resizeMode"
       style="max-width: 300px;"
       :label="$t('resizeMode')"
+      outlined
       dense
       hide-details
       :items="[{text: 'Rogner', value: 'crop'}, {text: 'Ne pas rogner', value: 'fitIn'}, {text: 'Rogner en analysant le contenu des images', value: 'smartCrop'}]"
+      class="mb-2"
       @change="patchAndCommit({ thumbnails: editThumbnails })"
     />
   </v-form>

@@ -7,7 +7,7 @@
     <v-row>
       <v-col>
         <dataset-nb-results :total="data.total" />
-        <v-row class="px-3">
+        <v-row class="mt-0">
           <v-col
             lg="3"
             md="4"
@@ -20,24 +20,24 @@
               append-icon="mdi-magnify"
               class="mr-3"
               style="min-width:150px;"
+              hide-details
+              dense
+              outlined
               @input="qMode === 'complete' && refresh(true)"
               @keyup.enter.native="refresh(true)"
               @click:append="refresh(true)"
             />
           </v-col>
           <v-spacer />
-          <v-col
-            v-show="$vuetify.breakpoint.mdAndUp"
-            xl="1"
-            lg="1"
-            md="2"
-          >
-            <v-select
-              v-model="pagination.itemsPerPage"
-              :items="[5, 10,20,50]"
-              label="Nombre de lignes"
-            />
-          </v-col>
+          <v-select
+            v-model="pagination.itemsPerPage"
+            :items="[5, 10,20,50]"
+            label="Nombre de lignes"
+            hide-details
+            dense
+            style="max-width: 120px;"
+          />
+
           <v-pagination
             v-if="data.total > pagination.itemsPerPage"
             v-model="pagination.page"
