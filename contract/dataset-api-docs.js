@@ -262,6 +262,16 @@ La valeur est une liste de colonnes séparées par des virgules.
     }
   }
 
+  /* TODO: add this when dataset is public and finalizedAt is filled
+  const finalizedAtParam = {
+    in: 'query',
+    name: 'finalizedAt',
+    description: 'La date de finalisation du jeu de données (propriété finalizedAt). Utilisée pour optimiser l\'utilisation de cache et améliorer la performance.',
+    schema: {
+      type: 'string'
+    }
+  } */
+
   let description = `
 Cette documentation interactive à destination des développeurs permet de consommer les ressources du jeu de données "${dataset.title || dataset.id}".
 `

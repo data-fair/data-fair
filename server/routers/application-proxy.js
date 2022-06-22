@@ -189,6 +189,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
     console.warn('serving anything else than /index.html from application-proxy is deprecated', targetUrl.href)
     return await deprecatedProxy(cleanApplicationUrl, targetUrl, req, res)
   }
+  res.setHeader('x-operation', JSON.stringify({ class: 'read', id: 'openApplication', track: 'openApplication' }))
   const rawHtml = await fetchHTML(cleanApplicationUrl, targetUrl)
 
   const document = parse5.parse(rawHtml.replace(/%APPLICATION%/, JSON.stringify(req.application, null, 2)))
