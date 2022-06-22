@@ -222,7 +222,7 @@ const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => 
       await new Promise(resolve => setTimeout(resolve, config.datasetStateRetries.interval))
     }
   }
-  throw createError(409, 'Le jeu de données n\'est pas dans un état permettant l\'opération demandée.')
+  throw createError(409, `Une opération bloquante est déjà en cours sur le jeu de données ${req.params.datasetId}.`)
 })
 // Shared middleware to read dataset in db
 // also checks that the dataset is in a state compatible with some action
