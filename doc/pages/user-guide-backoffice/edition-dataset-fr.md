@@ -73,14 +73,52 @@ Les fichiers en pièce jointe seront disponibles en téléchargement sur la page
 
 ## Données
 
-Dans cette section, les données sont consultables sous forme de tableau ou de carte (si vous données possèdent les concepts **Latitude**/**Longitude** ou **Géometrie** de renseignés).
+Dans cette section, les données sont consultables sous forme de tableau, de carte, de calendrier ou de vignettes.
 
-![Données](./images/user-guide-backoffice/dataset-donnees.jpg)  
-*Accédez à vos données sous forme de tableau ou de carte*
+**Le tableau**
 
-Le tableau permet d'explorer vos données à travers plusieurs fonctionnalités.  
-Il est possible de réaliser des recherches textuelles et des filtres sur une valeur d'une colonne, les 10 000 premières lignes du résultat seront alors affichées.  
-Le résultat de votre recherche est téléchargeable sous différents formats de fichiers.
+Le tableau vous permet d'accéder aux 10 000 premières lignes du fichier.
+
+![Tableau](./images/user-guide-backoffice/edition-tableau-1.png)
+
+Il contient plusieurs sections :
+1. la recherche  
+2. les pages de navigations  
+3. le choix des colonnes  
+4. le téléchargement  
+5. les filtres sur une colonne  
+6. le filtre sur une valeur d'une colonne  
+7. la barre de navigation
+
+
+![Tableau](./images/user-guide-backoffice/edition-tableau-2.png)
+
+1. Les filtres sur les valeurs d'une colonne vous permettent de réaliser un filtre de type "égal à" ou "commence par" sur les colonnes avec du texte et de réaliser des filtres "supérieur ou égale à" ou "inferieur ou égal à" sur les colonnes avec des nombres. Vous pouvez réaliser plusieurs filtres. Le nombre de lignes filtrées est alors disponible sous la recherche.
+2. Téléchargement des lignes filtrés sous différents formats.   
+Le téléchargement aux format XLSX, ODS et Geojson sont limités aux 10 000 premières lignes.
+
+![Tableau](./images/user-guide-backoffice/edition-tableau-3.png)
+
+Les choix des colonnes permettent de sélectionner les colonnes que vous souhaitez afficher dans le tableau.  
+Il est ensuite possible de télécharger le fichier avec seulement les colonnes que vous avez sélectionnées.
+
+**La carte**
+
+L'onglet **Carte** est disponible si les [concepts](./user-guide-backoffice/concept) de position, telles que des lat/lon ou des géométries, sont associés à vos données.  
+La carte va vous permettre de visualiser rapidement vos données sur un territoire et d'accéder aux données brutes de chaque point ou géométrie.
+
+![Tableau](./images/user-guide-backoffice/edition-map.png)
+
+**Calendrier**  
+
+L'onglet **Calendrier** est disponible si les [concepts](./user-guide-backoffice/concept) Libellé, Date de début et Date de fin sont associés à vos données.  
+Le calendrier va vous permettre de visualiser vos données chronologiquement.
+
+**Vignettes**  
+
+L'onglet **Calendrier** est disponible si le [concept](./user-guide-backoffice/concept) Images est associé à vos données.  
+
+![Tableau](./images/user-guide-backoffice/edition-images.png)
 
 ## Visualisations
 Dans cette section, vous retrouvez la liste des visualisations qui utilisent votre jeu de données.  

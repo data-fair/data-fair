@@ -78,15 +78,53 @@ The attached files will be available for download on the dataset page on your po
 
 ## Data
 
-In this section, the data can be viewed in table or map form (if the **Latitude** / **Longitude** or **Geometry** concepts are assigned to your data ).  
+In this section, the data can be displayed in the form of a table, map, calendar or thumbnails.
 
-![Données](./images/user-guide-backoffice/dataset-donnees.jpg)  
-*Access your data in table or map form*
+**Table**
 
-The table allows you to explore your data through several features.  
-It is possible to perform text searches and filters on a column value, the first 10,000 results will be displayed.
+The table lets you access the first 10,000 rows of the file.
 
-Your search result can be dowloaded in various file formats.  
+![Tableau](./images/user-guide-backoffice/edition-tableau-1.png)
+
+It contains several sections:
+1. search bar  
+2. navigation pages  
+3. columns choice  
+4. download  
+5. filters on a column  
+6. the filter on a value of a column  
+7. navigation bar
+
+
+![Tableau](./images/user-guide-backoffice/edition-tableau-2.png)
+
+1. Filters on the values ​​of a column allow you to perform an "equal to" or "begins with" type filter on columns with text and to perform "greater than or equal to" or "less than or equal to" filters on columns with numbers. You can make multiple filters. The number of filtered rows is then available under the search.  
+2. Download of filtered lines in different formats.  
+Downloading in XLSX, ODS and Geojson formats are limited to the first 10,000 lines.
+
+![Tableau](./images/user-guide-backoffice/edition-tableau-3.png)
+
+The column choices allow you to select the columns you want to display in the table.  
+It is then possible to download the file with only the columns you have selected.
+
+**Map**
+
+The **Map** tab is available if position [concepts](./user-guide-backoffice/concept) such as lat/lon or geometry, are associated with your data.  
+
+The map will allow you to quickly view your data on a territory and access raw data for each point or geometry.
+
+![Tableau](./images/user-guide-backoffice/edition-map.png)
+
+**Calendar**  
+
+The **Calendar** tab is available if the [concepts](./user-guide-backoffice/concept) Label, Start date and End date are associated with your data.  
+The calendar will allow you to view your data chronologically.
+
+**Thumbnails**  
+
+The **Thumbnails** tab is available if the [concept](./user-guide-backoffice/concept) Images is associated with your data.
+
+![Tableau](./images/user-guide-backoffice/edition-images.png)
 
 ## Visualizations
 
