@@ -207,19 +207,30 @@
               <help-tooltip>{{ $t('readOnlyHelp') }}</help-tooltip>
             </template>
           </v-checkbox>
-          <v-checkbox
+          <v-select
             v-if="currentPropRef.prop.type === 'string' && !currentPropRef.prop.format && currentPropRef.prop['x-refersTo'] !== 'http://schema.org/description'"
-            :input-value="isFormatted(currentPropRef.prop)"
+            v-model="xDisplay"
+            :items="[{value: 'singleline', text: $t('singleline')}, {value: 'textarea', text: $t('textarea')}, {value: 'markdown', text: $t('markdown')}]"
+            :label="$t('xDisplay')"
             :disabled="!editable || !currentPropRef.editable"
-            :label="$t('formatted')"
             hide-details
-            dense
-            @change="value => toggleFormatted(currentPropRef.prop, value)"
           >
-            <template #append>
-              <help-tooltip>{{ $t('formattedHelp') }}</help-tooltip>
+            <template #append-outer>
+              <help-tooltip>{{ $t('xDisplayHelp') }}</help-tooltip>
             </template>
-          </v-checkbox>
+          </v-select>
+          <v-text-field
+            v-if="dataset.isRest"
+            v-model.number="maxLength"
+            :disabled="!editable || !currentPropRef.editable"
+            :label="$t('maxLength')"
+            hide-details
+            type="number"
+          >
+            <!--<template #append-outer>
+              <help-tooltip>{{ $t('maxLengthHelp') }}</help-tooltip>
+            </template>-->
+          </v-text-field>
           <v-select
             v-if="currentPropRef.prop['x-refersTo'] && availableMasters[currentPropRef.prop['x-refersTo']]"
             item-value="id"
@@ -306,8 +317,11 @@ fr:
   separatorHelp: Ne renseigner que pour les colonnes multivaluées. Ce caractère sera utilisé pour séparer les valeurs.
   concept: Concept
   conceptHelp: Les concepts des colonnes améliorent le traitement de la donnée et sa visualisation.
-  formatted: Formaté
-  formattedHelp: Si vous cochez cette case la colonne pourra contenir du markdown ou du HTML et les visualisations en tiendront compte.
+  xDisplay: Format
+  xDisplayHelp: Si vous choisissez "texte formatté" la colonne pourra contenir du markdown ou du HTML simple et les visualisations en tiendront compte.
+  "singleline": "texte"
+  "textarea": "texte long"
+  "markdown": "texte formatté"
   group: Groupe
   groupHelp: Les groupes aident à la sélection de colonnes. Particulièrement utile quand il y a de nombreuses colonnes.
   ignoreDetection: Ignorer la détection de type
@@ -319,6 +333,7 @@ fr:
   masterData: Valeurs issues d'une donnée de référence
   deletePropertyTitle: Supprimer la colonne
   deletePropertyText: Souhaitez vous supprimer cette colonne ? Attention la donnée sera effacée et définitivement perdue !
+  maxLength: Nombre maximum de caractères
 en:
   detailedInfo: Click on a column title to display its detailed information.
   extension: "Extension: "
@@ -334,8 +349,11 @@ en:
   separatorHelp: Only provide for multi-values columns. This character will be used to separate the values.
   concept: Concept
   conceptHelp: The concepts improve data processing and visualization.
-  formatted: Formatted
-  formattedHelp: If you check this box the column will be able to contain markdown or HTML content that will be displayed as such by visualizations.
+  xDisplay: Format
+  xDisplayHelp: If you chose "formatted text" the column will be able to contain markdown or HTML content that will be displayed as such by visualizations.
+  "singleline": "text"
+  "textarea": "long text"
+  "markdown": "formatted text"
   group: Groupe
   groupHelp: Groups help selecting columns. Particularly useful whan there are many columns.
   ignoreDetection: Ignore type detection
@@ -347,6 +365,7 @@ en:
   masterData: Values coming from a master-data dataset
   deletePropertyTitle: Delete the column
   deletePropertyText: Do you want to delete this column ? Warning, data will be definitively erased !
+  maxLength: Max number of characters
 </i18n>
 
 <script>
@@ -397,6 +416,24 @@ export default {
     groups () {
       const groupsArray = this.propertiesRefs.map(pr => pr.prop['x-group']).filter(g => !!g)
       return [...new Set(groupsArray)]
+    },
+    xDisplay: {
+      get () {
+        return this.currentPropRef.prop['x-display'] || 'singleline'
+      },
+      set (value) {
+        if (value === 'singleline') this.$delete(this.currentPropRef.prop, 'x-display')
+        else this.$set(this.currentPropRef.prop, 'x-display', value)
+      }
+    },
+    maxLength: {
+      get () {
+        return this.currentPropRef.prop.maxLength
+      },
+      set (value) {
+        if (!value) this.$delete(this.currentPropRef.prop, 'maxLength')
+        else this.$set(this.currentPropRef.prop, 'maxLength', value)
+      }
     }
   },
   watch: {
@@ -441,13 +478,6 @@ export default {
         if (masterData['x-itemTitle']) this.currentPropRef.prop['x-itemTitle'] = masterData['x-itemTitle']
         this.currentPropRef.prop['x-itemsProp'] = 'results'
       }
-    },
-    isFormatted (prop) {
-      return prop['x-display'] === 'markdown'
-    },
-    toggleFormatted (prop, value) {
-      if (value) this.$set(prop, 'x-display', 'markdown')
-      else delete prop['x-display']
     },
     async switchProperty (i) {
       if (this.currentProperty === i) {
