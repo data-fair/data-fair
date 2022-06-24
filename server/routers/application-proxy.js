@@ -191,6 +191,9 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   }
   res.setHeader('x-resource', JSON.stringify({ type: req.resourceType, id: req.resource.id, title: encodeURIComponent(req.resource.title) }))
   res.setHeader('x-operation', JSON.stringify({ class: 'read', id: 'openApplication', track: 'openApplication' }))
+  const ownerHeader = { type: req.resource.owner.type, id: req.resource.owner.id }
+  if (req.resource.owner.department) ownerHeader.department = req.resource.owner.department
+  res.setHeader('x-owner', JSON.stringify(ownerHeader))
   const rawHtml = await fetchHTML(cleanApplicationUrl, targetUrl)
 
   const document = parse5.parse(rawHtml.replace(/%APPLICATION%/, JSON.stringify(req.application, null, 2)))
