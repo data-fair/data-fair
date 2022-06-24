@@ -274,7 +274,7 @@ router.use('/:datasetId/permissions', readDataset(), permissions.router('dataset
 
 // retrieve a dataset by its id
 router.get('/:datasetId', readDataset(), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
-  req.dataset.userPermissions = permissions.list('datasets', req.dataset, req.user)
+  req.dataset.userPermissions = permissions.list('datasets', req.dataset, req.user, req.bypassPermissions)
   res.status(200).send(clean(req.publicBaseUrl, req.dataset, req.query.thumbnail, req.query.html === 'true'))
 })
 

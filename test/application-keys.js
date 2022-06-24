@@ -77,6 +77,12 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     const key = res.data[0].id
     res = await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/lines`, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } })
     assert.equal(res.status, 200)
+    res = await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}`, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } })
+    assert.equal(res.status, 200)
+    assert.ok(res.data.userPermissions.includes('readDescription'))
+    assert.ok(res.data.userPermissions.includes('readLines'))
+    assert.ok(res.data.userPermissions.includes('readDescription'))
+    assert.ok(!res.data.userPermissions.includes('writeDescription'))
   })
 
   it('Reject an application without the read permission', async () => {
@@ -125,6 +131,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
       err => err.status === 403)
     res = await global.ax.anonymous.get('/api/v1/datasets/restcrowd', { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } })
     assert.equal(res.status, 200)
+    assert.deepEqual(res.data.userPermissions, ['createLine', 'readSchema', 'readDescription'])
     res = await global.ax.anonymous.get('/api/v1/datasets/restcrowd/schema', { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } })
     assert.equal(res.status, 200)
     const anonymousToken = (await global.ax.anonymous.get('http://localhost:8080/api/auth/anonymous-action')).data

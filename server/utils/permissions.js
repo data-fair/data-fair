@@ -8,11 +8,7 @@ const validate = ajv.compile(permissionsSchema)
 
 exports.middleware = function (operationId, operationClass, trackingCategory) {
   return function (req, res, next) {
-    if (
-      (req.bypassPermissions && req.bypassPermissions.operations && req.bypassPermissions.operations.includes(operationId)) ||
-      (req.bypassPermissions && req.bypassPermissions.classes && req.bypassPermissions.classes.includes(operationClass)) ||
-      exports.can(req.resourceType, req.resource, operationId, req.user)
-    ) {
+    if (exports.can(req.resourceType, req.resource, operationId, req.user, req.bypassPermissions)) {
       // nothing to do, user can proceed
     } else {
       res.status(403)
@@ -96,19 +92,44 @@ const matchPermission = (owner, permission, user) => {
 }
 
 // resource can be an application, a dataset or an remote service
-exports.can = function (resourceType, resource, operationId, user) {
+exports.can = function (resourceType, resource, operationId, user, bypassPermissions) {
   if (user && user.adminMode) return true
-  const userPermissions = exports.list(resourceType, resource, user)
+  const userPermissions = exports.list(resourceType, resource, user, bypassPermissions)
   return !!userPermissions.includes(operationId)
 }
 
 // list operations a user can do with a resource
-exports.list = function (resourceType, resource, user) {
+exports.list = function (resourceType, resource, user, bypassPermissions) {
   const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
+  const operations = new Set([])
+
+  // apply specific permissions from application key
+  if (bypassPermissions) {
+    for (const cl of bypassPermissions.classes || []) {
+      for (const operation of operationsClasses[cl] || []) operations.add(operation)
+    }
+    for (const operation of bypassPermissions.operations || []) operations.add(operation)
+    return [...operations]
+  }
+
+  // apply implicit permissions based on user being a member of the owner of this resource
   const ownerClasses = getOwnerClasses(resource.owner, user, resourceType)
-  if (ownerClasses) return [].concat(...ownerClasses.map(cl => operationsClasses[cl]))
+  if (ownerClasses) {
+    for (const cl of ownerClasses) {
+      for (const operation of operationsClasses[cl] || []) operations.add(operation)
+    }
+    return [...operations]
+  }
+
+  // apply explicit permissions set on the resource for this user
   const permissions = (resource.permissions || []).filter(p => matchPermission(resource.owner, p, user))
-  return [].concat(...permissions.map(p => (p.operations || []).concat(...(p.classes || []).map(c => operationsClasses[c]))))
+  for (const permission of permissions) {
+    for (const operation of permission.operations || []) operations.add(operation)
+    for (const cl of permission.classes || []) {
+      for (const operation of operationsClasses[cl] || []) operations.add(operation)
+    }
+  }
+  return [...operations]
 }
 
 // resource is public if there are public permissions for all operations of the classes 'read' and 'use'
