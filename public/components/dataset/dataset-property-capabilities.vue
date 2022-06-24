@@ -122,7 +122,7 @@ export default {
         if (capabilities[key] === true) delete capabilities[key]
       }
       if (Object.keys(capabilities).length) this.$set(this.property, 'x-capabilities', capabilities)
-      else delete this.property['x-capabilities']
+      else this.$set(this.property, 'x-capabilities', undefined)
     }
   }
 }
