@@ -16,6 +16,7 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
   // support opening with active account defined in URL
   if (route.query.account) {
     const parts = route.query.account.split(':')
+    store.commit('session/setAny', { reloadAfterSwitchOrganization: false })
     if (parts[0] === 'user') {
       store.dispatch('session/switchOrganization', null)
     } else {
