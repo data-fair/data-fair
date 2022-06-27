@@ -119,7 +119,7 @@ export default {
           notification.new = true
           this.notifications.unshift(notification)
           // TODO: replace this with a endpoint simply to reset pointer
-          this.$axios.$get(`${this.notifyUrl}/api/v1/notifications`, { params: { size: 1 } })
+          this.$axios.$get(`${this.notifyUrl}/api/v1/notifications`, { params: { size: 1, count: false } })
         }
 
         if (this.countNew !== null) {
@@ -130,12 +130,12 @@ export default {
   },
   methods: {
     async countNotifications () {
-      const res = await this.$axios.$get(`${this.notifyUrl}/api/v1/notifications`, { params: { size: 0 } })
+      const res = await this.$axios.$get(`${this.notifyUrl}/api/v1/notifications`, { params: { size: 0, count: false } })
       this.countNew = res.countNew
     },
     async fetchNotifications () {
       this.loading = true
-      const res = await this.$axios.$get(`${this.notifyUrl}/api/v1/notifications`, { params: { size: this.size } })
+      const res = await this.$axios.$get(`${this.notifyUrl}/api/v1/notifications`, { params: { size: this.size, count: false } })
       this.countNew = res.countNew
       this.notifications = res.results
       this.loading = false
