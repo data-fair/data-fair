@@ -21,7 +21,10 @@
           lg="3"
           class="pr-4"
         >
-          <v-row class="ma-0">
+          <v-row
+            v-if="currentDate && eventsPerDays"
+            class="ma-0"
+          >
             <v-btn
               fab
               outlined
@@ -57,7 +60,10 @@
 
       <v-row class="mt-0">
         <v-col cols="12">
-          <v-card :height="height">
+          <v-card
+            :height="height"
+            :loading="loading"
+          >
             <v-calendar
               v-if="currentDate && eventsPerDays"
               ref="calendar"
@@ -65,6 +71,7 @@
               locale="fr-fr"
               color="primary"
               :type="type"
+              @input="refresh"
               @click:date="setDay"
             >
               <!-- Week/Day only slots -->
@@ -110,6 +117,7 @@ import { mapState, mapGetters } from 'vuex'
 import eventBus from '~/event-bus'
 const moment = require('moment')
 require('moment-timezone')
+const filtersUtils = require('~/assets/filters-utils')
 
 export default {
   props: {
@@ -120,7 +128,8 @@ export default {
     type: 'month',
     currentDate: null,
     today: new Date().toISOString(),
-    typeOptions: [{ text: 'Jour', value: 'day' }, { text: 'Semaine', value: 'week' }, { text: 'Mois', value: 'month' }]
+    typeOptions: [{ text: 'Jour', value: 'day' }, { text: 'Semaine', value: 'week' }, { text: 'Mois', value: 'month' }],
+    loading: false
   }),
   computed: {
     ...mapState(['env']),
@@ -178,22 +187,33 @@ export default {
     }
   },
   async mounted () {
-    this.refresh()
     if (this.today > this.dataset.timePeriod.startDate && this.today < this.dataset.timePeriod.endDate) {
       this.currentDate = moment(this.today).format('YYYY-MM-DD')
     } else {
       this.currentDate = moment(this.dataset.timePeriod.startDate).format('YYYY-MM-DD')
     }
+    this.refresh()
   },
   methods: {
     async refresh () {
       try {
-        const params = { size: 10000, sort: this.startDateProp }
+        this.loading = true
+        const currentRange = {
+          start: { date: moment(this.currentDate).startOf('month').startOf('week').format('YYYY-MM-DD') },
+          end: { date: moment(this.currentDate).endOf('month').endOf('week').format('YYYY-MM-DD') }
+        }
+        const params = {
+          size: 10000,
+          sort: this.startDateProp,
+          qs: `${filtersUtils.escape(this.endDateProp)}:[${currentRange.start.date} TO *] AND ${filtersUtils.escape(this.startDateProp)}:[* TO ${currentRange.end.date}]`
+        }
         if (this.dataset.draftReason) params.draft = 'true'
+        if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
         this.data = (await this.$axios.$get(this.resourceUrl + '/lines', { params })).results
       } catch (error) {
         eventBus.$emit('notification', { error })
       }
+      this.loading = false
     },
     setDay ({ date }) {
       this.currentDate = date

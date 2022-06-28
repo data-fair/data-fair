@@ -34,7 +34,7 @@ export function filters2qs (filters, locale = 'fr') {
 }
 
 // cf https://github.com/joeybaker/lucene-escape-query/blob/master/index.js
-const escape = (val) => {
+export function escape (val) {
   if (typeof val !== 'string') return val
   return [].map.call(val, (char) => {
     if (char === '+' ||
