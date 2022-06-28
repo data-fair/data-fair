@@ -38,7 +38,7 @@ exports.init = async (db) => {
   const promises = [
     // datasets indexes
     exports.ensureIndex(db, 'datasets', { id: 1 }, { unique: true }),
-    exports.ensureIndex(db, 'datasets', { 'owner.type': 1, 'owner.id': 1 }),
+    exports.ensureIndex(db, 'datasets', { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, { name: 'main-keys' }),
     exports.ensureIndex(db, 'datasets', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
     exports.ensureIndex(db, 'datasets', { 'virtual.children': 1 }),
     exports.ensureIndex(db, 'datasets', { publicationSites: 1 }),
@@ -54,7 +54,7 @@ exports.init = async (db) => {
     exports.ensureIndex(db, 'base-applications', { title: 'text', description: 'text', 'meta.title': 'text', 'meta.description': 'text', 'meta.application-name': 'text' }, { name: 'fulltext' }),
     // applications indexes
     exports.ensureIndex(db, 'applications', { id: 1 }, { unique: true }),
-    exports.ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1 }),
+    exports.ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, { name: 'main-keys' }),
     exports.ensureIndex(db, 'applications', { 'configuration.datasets.href': 1 }),
     exports.ensureIndex(db, 'applications', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
     // applications keys indexes
