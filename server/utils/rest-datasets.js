@@ -184,7 +184,6 @@ const applyTransactions = async (req, transacs, validate) => {
           Object.assign(extendedBody, body)
         }
       }
-
       if (validate && !validate(body)) {
         await new Promise(resolve => setTimeout(resolve, 0)) // non-blocking in case of large series of errors
         result._error = validate.errors
@@ -331,7 +330,10 @@ async function manageAttachment (req, keepExisting) {
     req.dataset.schema
       .filter(f => !f['x-calculated'])
       .forEach(f => {
-        if (req.body[f.key] !== undefined) req.body[f.key] = fieldsSniffer.format(req.body[f.key], f)
+        if (req.body[f.key] !== undefined) {
+          const value = fieldsSniffer.format(req.body[f.key], f)
+          if (value !== null) req.body[f.key] = value
+        }
       })
   }
   const lineId = req.params.lineId || req.body._id
