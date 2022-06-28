@@ -9,7 +9,10 @@ published: true
 La page de données vous permet d'accéder à l'ensemble des données du portail.
 L'affichage est responsive et permet une navigation aussi bien sous ordinateur que sur téléphone portable.
 
-![page des données](./images/user-guide-frontoffice/datapage.png)
+
+<img src="./images/user-guide-frontoffice/datapage.png"
+     height="600" style="margin:15px auto;" />
+
 
 Le nombre de jeu de données aux quels vous avez accès ainsi que le bouton de téléchargement du catalogue des jeux de données est affiché en première ligne de la page.
 La fonction de recherche ainsi que des filtres par concepts et des tri sont  disponibles.

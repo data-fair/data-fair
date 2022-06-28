@@ -9,7 +9,8 @@ published: true
 The visualizations page gives you access to all of the portal's visualizations.  
 The display is responsive and allows browsing both on a computer and on a mobile device.
 
-![page des données](./images/user-guide-frontoffice/visupage-1.png)
+<img src="./images/user-guide-frontoffice/visupage-1.png"
+     height="600" style="margin:15px auto;" />
 
 The search bar as well as filters by type of visualization and sorting are available at the top of the page.
 It is also possible to sort the visualizations by theme by clicking on one or more of the themes displayed.

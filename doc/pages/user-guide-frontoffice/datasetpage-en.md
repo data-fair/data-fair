@@ -15,7 +15,8 @@ The page of a dataset is composed of several elements:
 
 External visualizations can be added at the end of the dataset page.
 
-![page d'un jeu de données](./images/user-guide-frontoffice/datasetpage.png)
+<img src="./images/user-guide-frontoffice/datasetpage.png"
+     height="600" style="margin:15px auto;" />)
 
 ### Title and description
 The title and description of the dataset provide context to the data. The description presents the data, differents process to obtain the data or presents the producer of the data.
@@ -31,7 +32,8 @@ From left to right: the table, the full screen table, the generic map, the API d
 
 The table lets you access the first 10,000 rows of the file.
 
-![Tableau](./images/user-guide-frontoffice/tableau-1.png)
+<img src="./images/user-guide-frontoffice/tableau-1.png"
+     height="400" style="margin:15px auto;" />
 
 It contains several sections:
 1. search bar  
@@ -43,13 +45,15 @@ It contains several sections:
 7. navigation bar
 
 
-![Tableau](./images/user-guide-frontoffice/tableau-2.png)
+<img src="./images/user-guide-frontoffice/tableau-2.png"
+     height="350" style="margin:15px auto;" />
 
 1. Filters on the values ​​of a column allow you to perform an "equal to" or "begins with" type filter on columns with text and to perform "greater than or equal to" or "less than or equal to" filters on columns with numbers. You can make multiple filters. The number of filtered rows is then available under the search.  
 2. Download of filtered lines in different formats.  
 Downloading in XLSX, ODS and Geojson formats are limited to the first 10,000 lines.
 
-![Tableau](./images/user-guide-frontoffice/tableau-3.png)
+<img src="./images/user-guide-frontoffice/tableau-3.png"
+     height="350" style="margin:15px auto;" />
 
 The column choices allow you to select the columns you want to display in the table.  
 It is then possible to download the file with only the columns you have selected.
@@ -65,19 +69,22 @@ The full-screen table has the same functionality as the table.
 6. the filter on a value of a column  
 7. navigation bar  
 
-![Tableau](./images/user-guide-frontoffice/tableau-full.png)
+<img src="./images/user-guide-frontoffice/tableau-full.png"
+     height="300" style="margin:15px auto;" />
 
 **The generic map**
 
 The generic map presents geographical data. A click on one of the points or geometries allows you to display the raw data of the element.
 
-![Tableau](./images/user-guide-frontoffice/carte-g.png)
+<img src="./images/user-guide-frontoffice/carte-g.png"
+     height="300" style="margin:15px auto;" /
 
 **API Documentation**
 
 Each dataset has its own API. The API's interactive documentation allows developers to perform queries and view results quickly.
 
-![Tableau](./images/user-guide-frontoffice/dataset-API.png)
+<img src="./images/user-guide-frontoffice/dataset-API.png"
+     height="600" style="margin:15px auto;" />
 
 **Download the original file**
 The download button in the metadata allows you to download the raw data file. The format depends on the type of file imported by the data producer.
@@ -89,14 +96,18 @@ The download button in the metadata allows you to download the CSV file containi
 
 You can access to the key, name, type, concept and description of each of the columns of the dataset.
 
-![Tableau](./images/user-guide-frontoffice/dataset-schema.png)
+<img src="./images/user-guide-frontoffice/dataset-code.png"
+     height="300" style="margin:15px auto;" />
 
 **Embed code**
 
 This code allows you to embed a table or map of a dataset on an external site as an iframe.
 Visitors of your site will have access to the data without having to navigate to the data portal.
 
-![Tableau](./images/user-guide-frontoffice/dataset-code.png)
+
+**Attachments**
+
+Attachments correspond to files added to the dataset. They can contain a dictionary of variables, a description of the data in PDF format or even an image corresponding to the data.
 
 **Notifications**
 
@@ -106,14 +117,14 @@ It is possible to activate two types of notifications on a dataset:
 
 The data compatibility break corresponds to a modification of the dataset schema.
 
-![Tableau](./images/user-guide-frontoffice/dataset-notif.png)
+<img src="./images/user-guide-frontoffice/dataset-notif.png"
+     height="200" style="margin:15px auto;" />
 
 ### Sharing icons
 
 Sharing icons allow you to quickly share the page link on different social networks.
 The share thumbnail is the thumbnail of the first visualization of the page.
 
-![Tableau](./images/user-guide-frontoffice/share-linkedin.png)
 
 
 ### Visualization

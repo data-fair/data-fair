@@ -14,7 +14,8 @@ The page of a dataset is composed of several elements:
 4. Visualization  
 5. Data used in visualization
 
-![visualisation](./images/user-guide-frontoffice/visu-1.png)
+<img src="./images/user-guide-frontoffice/visu-1.png"
+     height="450" style="margin:15px auto;" />
 
 ### Title and description
 
@@ -30,7 +31,9 @@ Action buttons provide access to HTML code to embed the visualization on an exte
 
 Sharing icons allow you to quickly share the page link on different social networks.  
 The share thumbnail is the visualization preview.
-![Tableau](./images/user-guide-frontoffice/visu-2.png)
+
+<img src="./images/user-guide-frontoffice/visu-2.png"
+     height="450" style="margin:15px auto;" />
 
 ### Visualization  
 

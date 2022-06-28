@@ -9,7 +9,9 @@ published: true
 La page de visualisations vous permet d'accéder à l'ensemble des visualisations du portail.  
 L'affichage est responsive et permet une navigation aussi bien sous ordinateur que sur téléphone portable.
 
-![page des données](./images/user-guide-frontoffice/visupage-1.png)
+
+<img src="./images/user-guide-frontoffice/visupage-1.png"
+     height="600" style="margin:15px auto;" />
 
 La fonction de recherche ainsi que des filtres par type de visualisation et des tris sont disponibles en haut de la page.
 Il est aussi possible de trier les visualisations par thématiques en cliquant sur une ou plusieurs des thématiques affichées.

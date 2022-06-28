@@ -9,7 +9,8 @@ published: true
 The data page gives you access to all of the portal's data.  
 The display is responsive and allows browsing both on a computer and on a mobile device.
 
-![page des données](./images/user-guide-frontoffice/datapage.png)
+<img src="./images/user-guide-frontoffice/datapage.png"
+     height="700" style="margin:15px auto;" />
 
 The number of datasets to which you have access as well as the dataset catalog download button is displayed on the first line of the page.  
 The search function as well as filters by concepts and sorting are available.  

@@ -13,7 +13,9 @@ It allows visitors to quickly access the data highlighted, view key figures, sea
 
 We will describe the home page of the [Koumoul open data portal ](https://opendata.koumoul.com/).
 
-![page d'accueil](./images/user-guide-frontoffice/homepage.png)
+<img src="./images/user-guide-frontoffice/homepage.png"
+     height="700" style="margin:15px auto;" />
+
 
 1. Portal logo  
 By clicking on the logo of the portal you can access the institutional site.  
@@ -34,8 +36,8 @@ A click on a theme allows you to filter the data by this theme.
 10. Featured visualization and twitter of the portal producer  
 Portals can display a featured visualization as well as the latest tweets from the producer's account. The visualization can be used directly on the home page. The visualization page can be accessed by clicking on the visualization title.  
 11. Latest dataviz  
-Visualizations are presented as cards with a title, a preview of the visualization, and two action buttons. The first action button is used to display the visualization in a window while remaining on the home page. The second action button takes you to the page of the visualization which contains a description and other information (see section visualizations page)  
+Visualizations are presented as cards with a title, a preview of the visualization, and two action buttons. The first action button is used to display the visualization in a window while remaining on the home page. The second action button takes you to the visualization page.
 12. Latest datasets  
-The data files are presented in the form of cards with a title, a description, action buttons and the date of the data update. Three action buttons are always available: The table which provides access to the first 10,000 rows of data in tabular format, the dataset API documentation and the dataset schema. If the dataset has coordinates, the icon to display a generic map will be available. It allows you to display a map containing all the points in the dataset. By clicking on a point, you can access the raw data for that point.  
+The data files are presented in the form of cards with a title, a description, action buttons and the date of the data update. Three action buttons are always available: The table which provides access to the first 10,000 rows of data in tabular format, the dataset API documentation and the dataset schema. If the dataset has coordinates, the icon to display a generic map will be available.  
 13. Footer  
 In the footer you can find the links to the social networks of the producer as well as links added by the producer of the portal. Links can be displayed as logo

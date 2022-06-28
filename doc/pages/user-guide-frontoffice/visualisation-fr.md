@@ -14,7 +14,9 @@ La page d'un jeu de données est composé de plusieurs éléments :
 4. La visualisation  
 5. Les données utilisées dans la visualisation  
 
-![visualisation](./images/user-guide-frontoffice/visu-1.png)
+
+<img src="./images/user-guide-frontoffice/visu-1.png"
+     height="450" style="margin:15px auto;" />
 
 ### Le titre et la description
 Le titre et la description d'une visualisation permettent de donner un contexte, de mieux comprendre les données et de découvrir certains points mis en avant par le producteur des données.  
@@ -29,7 +31,9 @@ Les boutons d'actions permettent d'accéder au code HTML pour intégrer la visua
 
 Les icones de partage vous permettent de rapidement partage le lien de la page sur différents réseaux sociaux.  
 La vignette du partage correspond à l'aperçu de la visualisation.
-![Tableau](./images/user-guide-frontoffice/visu-2.png)
+
+<img src="./images/user-guide-frontoffice/visu-2.png"
+     height="450" style="margin:15px auto;" />
 
 ### La visualisation  
 Toutes nos visualisations sont interactives. Elles permettent de plus facilement explorer les données.

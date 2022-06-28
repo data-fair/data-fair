@@ -15,7 +15,8 @@ For the moment, two types of presentations of these pages are available: the the
 
 Theme pages are presented with an image as a banner.
 
-![page des données](./images/user-guide-frontoffice/thematique.png)
+<img src="./images/user-guide-frontoffice/thematique.png"
+     height="570" style="margin:15px auto;" />
 
 The thematic pages are composed of several blocks, presenting one or more datasets per block.
 
@@ -25,6 +26,7 @@ Each blocks are contain a title, a description, a visualization and the datasets
 
 Free pages are less structured than theme pages and are more easily customizable.
 
-![page des données](./images/user-guide-frontoffice/libre.png)
+<img src="./images/user-guide-frontoffice/libre.png"
+     height="550" style="margin:15px auto;" />
 
 Freeform pages allow more different content to be displayed and easier to modify page components

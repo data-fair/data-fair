@@ -7,7 +7,6 @@ published: true
 ---
 
 The data portal allows visitors to quickly access data.  
-In this section we will discover the different functionalities of a portal.
 
 The portal consists of different pages:
 1. [Home page](./user-guide-frontoffice/homepage)
