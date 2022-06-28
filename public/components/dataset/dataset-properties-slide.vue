@@ -220,7 +220,7 @@
             </template>
           </v-select>
           <v-text-field
-            v-if="dataset.isRest"
+            v-if="dataset.isRest && currentPropRef.prop.type === 'string' && !currentPropRef.prop.format"
             v-model.number="maxLength"
             :disabled="!editable || !currentPropRef.editable"
             :label="$t('maxLength')"
