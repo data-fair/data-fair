@@ -141,7 +141,7 @@ exports.pagination = (query, defaultSize = 12) => {
   return [skip, size]
 }
 
-exports.project = (selectStr, exclude = []) => {
+exports.project = (selectStr, exclude = [], raw = false) => {
   const select = { _id: 0 }
   if (!selectStr) {
     exclude.forEach(e => {
@@ -151,7 +151,7 @@ exports.project = (selectStr, exclude = []) => {
     selectStr.split(',').forEach(s => {
       select[s] = 1
     })
-    Object.assign(select, { permissions: 1, id: 1, owner: 1 })
+    if (!raw) Object.assign(select, { permissions: 1, id: 1, owner: 1 })
     exclude.forEach(e => {
       delete select[e]
     })

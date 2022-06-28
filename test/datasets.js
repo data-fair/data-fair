@@ -43,7 +43,7 @@ describe('datasets', () => {
     assert.equal(res.data.count, 0)
   })
 
-  it('Search and apply facets', async () => {
+  it('Search and apply some params (facets, raw, count, etc)', async () => {
     const ax = global.ax.dmeadus
     const axOrg = global.ax.dmeadusOrg
 
@@ -72,6 +72,14 @@ describe('datasets', () => {
     // field-type facet is affected by the owner filter
     assert.equal(res.data.facets['field-type'].length, 2)
     assert.equal(res.data.facets['field-type'][0].count, 2)
+
+    res = await axOrg.get('/api/v1/datasets', { params: { count: false } })
+    assert.equal(res.data.count, undefined)
+
+    res = await axOrg.get('/api/v1/datasets', { params: { raw: true, select: 'count' } })
+    assert.equal(res.data.results[0].userPermissions, undefined)
+    assert.equal(res.data.results[0].owner, undefined)
+    assert.equal(res.data.results[0].count, 2)
   })
 
   const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')

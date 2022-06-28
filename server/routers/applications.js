@@ -79,22 +79,26 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
     id: 'id'
   }, filterFields))
   const sort = findUtils.sort(req.query.sort)
-  const project = findUtils.project(req.query.select, ['configuration', 'configurationDraft'])
+  const project = findUtils.project(req.query.select, ['configuration', 'configurationDraft'], req.query.raw === 'true')
   const [skip, size] = findUtils.pagination(req.query)
-  const mongoQueries = [
-    size > 0 ? applications.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
-    applications.countDocuments(query)
-  ]
-  if (req.query.facets) {
-    mongoQueries.push(applications.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields)).toArray())
+
+  const countPromise = req.query.count !== 'false' && applications.countDocuments(query)
+  const resultsPromise = size > 0 && applications.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
+  const facetsPromise = req.query.facets && applications.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields)).toArray()
+
+  const response = {}
+  if (countPromise) response.count = await countPromise
+  if (resultsPromise) response.results = await resultsPromise
+  else response.results = []
+  if (facetsPromise) response.facets = findUtils.parseFacets(await facetsPromise, nullFacetFields)
+
+  if (req.query.raw !== 'true') {
+    response.results.forEach(r => {
+      r.userPermissions = permissions.list('applications', r, req.user)
+      clean(r, req.publicBaseUrl, req.query.html === 'true')
+    })
   }
-  let [results, count, facets] = await Promise.all(mongoQueries)
-  results.forEach(r => {
-    r.userPermissions = permissions.list('applications', r, req.user)
-    clean(r, req.publicBaseUrl, req.query.html === 'true')
-  })
-  facets = findUtils.parseFacets(facets, nullFacetFields)
-  res.json({ count, results, facets })
+  res.json(response)
 }))
 
 const initNew = (req) => {
