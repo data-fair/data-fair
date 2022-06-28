@@ -373,7 +373,7 @@ router.get('/:applicationId/capture', readApplication, permissions.middleware('r
   if (await fs.pathExists(capturePath)) {
     res.sendFile(capturePath)
   } else {
-    res.sendFile(path.join(__dirname, '../resources/no-preview.png'))
+    res.redirect(req.publicBaseUrl + '/no-preview.png')
   }
 }))
 

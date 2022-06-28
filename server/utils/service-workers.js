@@ -46,10 +46,16 @@ workbox.routing.registerRoute(
 );
 `
   // Cache first for datasets queries that are performed with explicit
-  // cache invalidation using finalizedAt=... query param
+  // cache invalidation using finalizedAt=... or updatedAt=... query param
   sw += `
 workbox.routing.registerRoute(
   new RegExp('${basePath}api/v1/datasets/.*finalizedAt=.*'),
+  workbox.strategies.cacheFirst({cacheName: 'data-fair'})
+);
+`
+  sw += `
+workbox.routing.registerRoute(
+  new RegExp('${basePath}api/v1/datasets/.*updatedAt=.*'),
   workbox.strategies.cacheFirst({cacheName: 'data-fair'})
 );
 `

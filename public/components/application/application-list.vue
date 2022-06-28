@@ -213,7 +213,7 @@ export default {
       const params = {
         size: this.size,
         page: this.page,
-        select: 'title,description,status,topics,errorMessage',
+        select: 'title,description,status,topics,errorMessage,updatedAt',
         sort: 'createdAt:-1',
         ...fullFilters
       }

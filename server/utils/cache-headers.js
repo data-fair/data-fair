@@ -28,10 +28,11 @@ exports.resourceBased = (req, res, next) => {
 
   // finalizedAt passed as query parameter is used to timestamp the query and
   // make it compatible with a longer caching, only for datasets
-  if (req.query.finalizedAt) {
-    const qFinalizedAt = (new Date(req.query.finalizedAt)).toUTCString()
-    if (qFinalizedAt > date) {
-      throw createError(400, '"finalizedAt" query parameter has a value higher than the finalizedAt attribute of the dataset.')
+  const queryDateStr = req.query.finalizedAt || req.query.updatedAt
+  if (queryDateStr) {
+    const queryDate = (new Date(queryDateStr)).toUTCString()
+    if (queryDate > date) {
+      throw createError(400, '"finalizedAt" or "updatedAt" query parameter has a value higher than the finalizedAt attribute of the dataset.')
     }
     res.setHeader('Cache-Control', `must-revalidate, ${cacheVisibility}, max-age=${config.cache.timestampedPublicMaxAge}`)
   } else {
