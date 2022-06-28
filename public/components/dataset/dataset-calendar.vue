@@ -2,7 +2,7 @@
   <v-row>
     <v-col class="mt-1">
       <v-row>
-        <v-col
+        <!--<v-col
           cols="6"
           lg="3"
         >
@@ -14,7 +14,7 @@
             dense
             hide-details
           />
-        </v-col>
+        </v-col>-->
         <v-spacer />
         <v-col
           cols="6"
@@ -144,9 +144,6 @@ export default {
     titleProp () {
       return this.dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label').key
     },
-    descProp () {
-      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org')
-    },
     eventsPerDays () {
       if (!this.data) return
       const eventsPerDays = {}
@@ -205,7 +202,8 @@ export default {
         const params = {
           size: 10000,
           sort: this.startDateProp,
-          qs: `${filtersUtils.escape(this.endDateProp)}:[${currentRange.start.date} TO *] AND ${filtersUtils.escape(this.startDateProp)}:[* TO ${currentRange.end.date}]`
+          qs: `${filtersUtils.escape(this.endDateProp)}:[${currentRange.start.date} TO *] AND ${filtersUtils.escape(this.startDateProp)}:[* TO ${currentRange.end.date}]`,
+          select: `${this.endDateProp},${this.startDateProp},${this.titleProp}`
         }
         if (this.dataset.draftReason) params.draft = 'true'
         if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
@@ -216,9 +214,9 @@ export default {
       this.loading = false
     },
     setDay ({ date }) {
-      this.currentDate = date
-      if (this.type === 'month') this.type = 'week'
-      else if (this.type === 'week') this.type = 'day'
+      // this.currentDate = date
+      // if (this.type === 'month') this.type = 'week'
+      // else if (this.type === 'week') this.type = 'day'
     }
   }
 }
