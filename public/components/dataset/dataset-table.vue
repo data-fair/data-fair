@@ -274,28 +274,34 @@
         <v-card-title primary-title>
           {{ editedId ? $t('editLine') : $t('addLine') }}
         </v-card-title>
-        <v-card-text>
-          <dataset-edit-line-form
-            v-if="editLineDialog && editedLine"
-            v-model="editedLine"
-            :selected-cols="editedId ? selectedCols : []"
-            @onFileUpload="onFileUpload"
-          />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn
-            v-t="'cancel'"
-            text
-            @click="editLineDialog = false"
-          />
-          <v-btn
-            v-t="'save'"
-            color="primary"
-            :loading="saving"
-            @click="saveLine"
-          />
-        </v-card-actions>
+        <v-form
+          ref="editLineForm"
+          v-model="editLineValid"
+        >
+          <v-card-text>
+            <dataset-edit-line-form
+              v-if="editLineDialog && editedLine"
+              v-model="editedLine"
+              :selected-cols="editedId ? selectedCols : []"
+              @onFileUpload="onFileUpload"
+            />
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn
+              v-t="'cancel'"
+              text
+              @click="editLineDialog = false"
+            />
+            <v-btn
+              v-t="'save'"
+              color="primary"
+              :loading="saving"
+              :disabled="!editLineValid"
+              @click="saveLine"
+            />
+          </v-card-actions>
+        </v-form>
       </v-card>
     </v-dialog>
 
@@ -407,6 +413,7 @@ export default {
     notFound: false,
     loading: false,
     editLineDialog: false,
+    editLineValid: false,
     editedLine: null,
     editedId: null,
     deleteLineDialog: false,
@@ -622,6 +629,7 @@ export default {
       this.file = file
     },
     async saveLine () {
+      if (!this.$refs.editLineForm.validate()) return
       this.saving = true
       await new Promise(resolve => setTimeout(resolve, 100))
       const res = await this.$store.dispatch('dataset/saveLine', { line: this.editedLine, file: this.file, id: this.editedId })

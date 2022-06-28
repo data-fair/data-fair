@@ -13,22 +13,27 @@
       Vous n'avez pas la permission de saisir ces données
     </v-alert>
     <template v-else>
-      <dataset-edit-line-form
-        v-model="line"
-        @onFileUpload="onFileUpload"
-      />
-      <v-row>
-        <v-spacer />
-        <v-btn
-          color="primary"
-          :loading="saving"
-          :disabled="sent"
-          @click="saveLine"
-        >
-          Enregistrer
-        </v-btn>
-        <v-spacer />
-      </v-row>
+      <v-form
+        ref="editLineForm"
+        v-model="valid"
+      >
+        <dataset-edit-line-form
+          v-model="line"
+          @onFileUpload="onFileUpload"
+        />
+        <v-row>
+          <v-spacer />
+          <v-btn
+            color="primary"
+            :loading="saving"
+            :disabled="sent || !valid"
+            @click="saveLine"
+          >
+            Enregistrer
+          </v-btn>
+          <v-spacer />
+        </v-row>
+      </v-form>
     </template>
   </v-container>
 </template>
@@ -43,6 +48,7 @@ global.iFrameResizer = {
 
 export default {
   data: () => ({
+    valid: false,
     saving: false,
     sent: false,
     line: {},
@@ -56,6 +62,7 @@ export default {
       this.file = file
     },
     async saveLine () {
+      if (!this.$refs.editLineForm.validate()) return
       this.saving = true
       await new Promise(resolve => setTimeout(resolve, 100))
       await this.$store.dispatch('dataset/saveLine', { line: this.line, file: this.file })

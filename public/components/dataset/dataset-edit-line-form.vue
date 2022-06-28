@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-form
+  <div
     v-if="editSchema"
     ref="editLineForm"
     :lazy-validation="true"
@@ -24,7 +24,7 @@
       </div>
       <v-progress-linear v-model="lineUploadProgress" />
     </template>
-  </v-form>
+  </div>
 </template>
 
 <i18n lang="yaml">
