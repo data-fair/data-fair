@@ -23,6 +23,7 @@ Les visualisations cartographiques vous permettent de projeter vos données géo
 * [Infos-parcelles](./user-guide-backoffice/infos-parcelles) vous permet de projeter vos données sur le plan cadastral français. Vous pouvez ajouter une légende selon vos données. [Exemple sur une partie de la base MAJIC des parcelles des personnes morales](https://opendata.koumoul.com/reuses/carte-des-parcelles-des-personnes-morales-majic)
 * [Infos-localisations](./user-guide-backoffice/infos-localisations) vous permet de projeter vos données et de créer des fiches sur chaque marqueur. Les fiches peuvent contenir des images, des liens, des descriptions, etc... [Les journées européennes du patrimoine 2019](https://opendata.koumoul.com/reuses/carte-des-evenements-des-journees-europeennes-du-patrimoine-en-france-2019)
 * [Zones de chalandise](./user-guide-backoffice/catchment-area) vous permet de projeter des zones d'influence ou des indicateurs selon les codes communes. Les géométries sont calculées selon les valeurs de vos données. [Compétence territoriale gendarmerie et police nationales](https://opendata.koumoul.com/reuses/competence-territoriale-gendarmerie-et-police-nationales)
+* [Atelier Cartographique](./user-guide-backoffice/carto-workshop) vous permet de projeter plusieurs couches des données géolocalisées sur une carte. [Se déplacer à vélo](https://opendata.koumoul.com/reuses/se-deplacer-a-velo/full)
 
 ## Visualisations graphiques
 
