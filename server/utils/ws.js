@@ -14,6 +14,7 @@ Downstream examples:
 */
 const { nanoid } = require('nanoid')
 const permissions = require('./permissions')
+const { readApiKey } = require('./api-key')
 
 let cursor
 const subscribers = {}
@@ -54,7 +55,9 @@ exports.initServer = async (wss, db, session) => {
               const [type, id, subject] = message.channel.split('/')
               const resource = await db.collection(type).findOne({ id })
               if (!resource) return ws.send(JSON.stringify({ type: 'error', status: 404, data: `Ressource ${type}/${id} inconnue.` }))
-              if (!permissions.can(type, resource, `realtime-${subject}`, req.user)) {
+              let user = req.user
+              if (message.apiKey) user = await this.readApiKey(db, message.apiKey, type)
+              if (!permissions.can(type, resource, `realtime-${subject}`, user)) {
                 return ws.send(JSON.stringify({ type: 'error', status: 403, data: 'Permission manquante.' }))
               }
             }

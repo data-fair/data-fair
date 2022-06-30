@@ -85,7 +85,7 @@ if (config.mode.includes('server')) {
   })
 
   // Business routers
-  const apiKey = require('./utils/api-key')
+  const apiKey = require('./utils/api-key').middleware
   app.use('/api/v1', require('./routers/root'))
   app.use('/api/v1/remote-services', require('./routers/remote-services').router)
   app.use('/api/v1/catalogs', apiKey('catalogs'), require('./routers/catalogs'))
