@@ -29,13 +29,14 @@ const app = express()
 let server, wss
 
 if (config.mode.includes('server')) {
+  app.set('trust proxy', 1)
+  app.set('json spaces', 2)
+
+  app.use(cors())
   app.use((req, res, next) => {
     if (!req.app.get('api-ready')) res.status(503).send('Service indisponible pour cause de maintenance.')
     else next()
   })
-
-  app.set('trust proxy', 1)
-  app.set('json spaces', 2)
 
   if (process.env.NODE_ENV === 'development') {
     // Create a mono-domain environment with other services in dev
@@ -61,7 +62,6 @@ if (config.mode.includes('server')) {
   })
   app.use(require('cookie-parser')())
   app.use(i18n.middleware)
-  app.use(cors())
   app.use(session.auth)
 
   // TODO: we could make this better targetted but more verbose by adding it to all routes

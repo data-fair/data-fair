@@ -79,7 +79,7 @@ exports.latlon2fields = (dataset, doc) => {
     lon = doc[lonProp.key]
   }
 
-  if (!lat || !lon) return {}
+  if (lat === undefined || lon === undefined) return {}
   return {
     _geopoint: lat + ',' + lon
   }
