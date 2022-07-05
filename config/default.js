@@ -232,7 +232,7 @@ module.exports = {
   }, {
     url: 'https://cdn.jsdelivr.net/npm/@data-fair/app-carousel@0.2/dist/'
   }, {
-    url: 'https://koumoul.com/apps/data-fair-form/0.1/'
+    url: 'https://koumoul.com/apps/data-fair-form/1.0/'
   }, {
     url: 'https://koumoul.com/apps/data-fair-radar/0.1/'
   }, {
