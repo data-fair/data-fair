@@ -307,10 +307,9 @@ export default {
       const application = await this.$axios.$get(`api/v1/applications/${this.application.id}`)
       this.$store.commit('application/patch', { status: application.status, errorMessage: application.errorMessage, errorMessageDraft: application.errorMessageDraft })
     },
-    async saveDraft (e) {
+    async saveDraft () {
       if (!this.can('writeConfig')) return
-      this.$refs.configForm && this.$refs.configForm.validate()
-      if (!this.formValid) return
+      if (this.$refs.configForm && !this.$refs.configForm.validate()) return
       await this.writeConfigDraft(this.editConfig)
       await this.fetchStatus()
       // errors in draft app should be pushed by websocket, but to be extra safe we check after 5 seconds

@@ -4,8 +4,10 @@
     :options="options"
     :schema="schema"
     :value="value"
-    @input="v => $emit('input', v)"
-    @change="v => $emit('change', v)"
+    @input="v => {logEvent('input', v); $emit('input', v)}"
+    @change="v => {logEvent('change', v); $emit('change', v)}"
+    @input-child="e => logEvent('input-child', e)"
+    @change-child="e => logEvent('change-child', e)"
   />
 </template>
 
@@ -24,6 +26,11 @@ export default {
   async mounted () {
     window.EasyMDE = (await import('easymde/src/js/easymde.js')).default
     this.ready = true
+  },
+  methods: {
+    logEvent (key, e) {
+      // console.log('vjsf event', key, e)
+    }
   }
 }
 </script>

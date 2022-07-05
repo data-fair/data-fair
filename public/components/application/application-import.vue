@@ -2,7 +2,7 @@
   <v-stepper v-model="currentStep">
     <v-stepper-header>
       <v-stepper-step
-        v-t="selectApplication"
+        v-t="'selectApplication'"
         :complete="!!baseApp"
         step="1"
         :editable="!!baseApp"
