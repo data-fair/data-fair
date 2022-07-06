@@ -279,15 +279,6 @@ module.exports = {
     skip: false,
     timeout: 360000 // 6 minutes
   },
-  doc: {
-    applications: null,
-    datasets: null,
-    datasetEdit: null,
-    datasetExtend: null,
-    datasetAttachments: null,
-    settings: null,
-    catalogs: null
-  },
   extraNavigationItems: [],
   extraAdminNavigationItems: [],
   // cf https://momentjs.com/docs/#/parsing/string-format/ en mode strict

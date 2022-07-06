@@ -195,13 +195,6 @@ module.exports = {
       __format: 'json'
     }
   },
-  doc: {
-    datasetEdit: 'DOC_DATASET_EDIT',
-    datasetExtend: 'DOC_DATASET_EXTEND',
-    datasetAttachments: 'DOC_DATASET_ATTACHMENTS',
-    settings: 'DOC_SETTINGS',
-    catalogs: 'DOC_CATALOGS'
-  },
   extraNavigationItems: {
     __name: 'EXTRA_NAV_ITEMS',
     __format: 'json'

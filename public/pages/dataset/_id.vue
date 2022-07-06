@@ -60,10 +60,6 @@
                 </v-tab-item>
 
                 <v-tab-item value="structure-extensions">
-                  <layout-doc-link
-                    :tooltip="$t('docLinkExtend')"
-                    doc-key="datasetExtend"
-                  />
                   <v-container fluid>
                     <dataset-extensions />
                   </v-container>
@@ -95,10 +91,6 @@
               </template>
               <template #tabs-items>
                 <v-tab-item value="metadata-info">
-                  <layout-doc-link
-                    :tooltip="$t('docLinkEdit')"
-                    doc-key="datasetEdit"
-                  />
                   <v-container
                     fluid
                     class="py-0"
@@ -111,10 +103,6 @@
                 </v-tab-item>
 
                 <v-tab-item value="metadata-attachments">
-                  <layout-doc-link
-                    :tooltip="$t('docLinkAttachments')"
-                    doc-key="datasetAttachments"
-                  />
                   <dataset-attachments />
                 </v-tab-item>
               </template>

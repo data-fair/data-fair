@@ -8,6 +8,6 @@ module.exports = {
   nuxtDev: false,
   catalogs: [{
     title: 'Mydatacatalogue (local)',
-    href: 'http://localhost:5601',
-  }],
+    href: 'http://localhost:5601'
+  }]
 }

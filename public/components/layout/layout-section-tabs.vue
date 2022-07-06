@@ -70,7 +70,7 @@ export default {
     texture: { type: String, default: null },
     svg: { type: String, default: null },
     svgNoMargin: { type: Boolean, default: false },
-    section: { type: Object, required: true },
+    section: { type: Object, required: false, default: null },
     admin: { type: Boolean, default: false },
     extensionHeight: { type: Number, default: 48 }
   },

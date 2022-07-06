@@ -67,13 +67,6 @@ module.exports = {
     href: 'https://app.dawizz.fr/mydatacatalogue/'
   }],
   proxyNuxt: true,
-  /* doc: {
-    datasetEdit: 'https://koumoul.com/documentation/userguide/edition-dataset',
-    datasetExtend: 'https://koumoul.com/documentation/userguide/enrichment',
-    datasetAttachments: 'https://koumoul.com/documentation/userguide/attachements',
-    settings: 'https://koumoul.com/documentation/userguide/parameters',
-    catalogs: 'https://koumoul.com/documentation/userguide/catalogs',
-  }, */
   extraNavigationItems: [{ id: 'test', title: { fr: 'Test', en: 'Test en' }, iframe: `http://${host}:5600/_dev/extra`, icon: 'mdi-link' }],
   extraAdminNavigationItems: [{ id: 'test', title: { fr: 'Test admin', en: 'Test admin en' }, iframe: 'https://koumoul.com', icon: 'mdi-link' }],
   disableSharing: false,

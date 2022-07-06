@@ -2,11 +2,11 @@
   <v-row v-if="application">
     <v-col :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
-        <layout-doc-link
-          v-if="prodBaseApp"
-          :tooltip="`Consultez la documentation sur l'application ${prodBaseApp.title}`"
-          :doc-href="prodBaseApp.documentation"
-          offset="left"
+        <tutorial-alert
+          v-if="prodBaseApp && prodBaseApp.documentation"
+          :id="prodBaseApp.url"
+          :text="`Consultez la documentation sur l'application ${prodBaseApp.title}`"
+          :href="prodBaseApp.documentation"
         />
         <v-row class="application">
           <v-col>

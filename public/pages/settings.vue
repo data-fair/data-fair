@@ -2,9 +2,10 @@
   <v-row class="my-0">
     <v-col :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
-        <layout-doc-link
-          tooltip="Consultez la documentation sur les paramètres"
-          doc-key="settings"
+        <tutorial-alert
+          id="settings-doc"
+          text="Consultez la documentation sur les paramètres"
+          href="https://data-fair.github.io/3/user-guide-backoffice/parameters"
         />
         <v-row v-if="initialized">
           <v-col>

@@ -2,6 +2,13 @@
   <div>
     <p v-t="'description'" />
 
+    <tutorial-alert
+      v-if="resource.owner.department"
+      id="permissions-deps"
+      :text="$t('readDepPermissionsDoc')"
+      href="https://data-fair.github.io/3/user-guide-backoffice/department"
+    />
+
     <v-alert
       v-if="hasPrivateParents && !isPublic"
       right
@@ -178,6 +185,7 @@ fr:
   updateError: Erreur pendant la mise à jour des permissions
   permissionsUpdated: Les permissions ont été mises à jour
   noDep: aucun département
+  readDepPermissionsDoc: Consultez la documentation sur les départements pour comprend les permissions des différents membres du département.
   classNames:
     list: Lister
     read: Lecture
@@ -214,6 +222,7 @@ en:
   updateError: Error while updating permissions
   permissionsUpdated: Permissions were updated
   noDep: no department
+  readDepPermissionsDoc: Read the documentation about departments to understand the permissions applied to members of the departement and of the organization.
   classNames:
     list: List
     read: Read

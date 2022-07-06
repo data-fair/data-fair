@@ -3,11 +3,6 @@
     fluid
     class="px-0"
   >
-    <!--<layout-doc-link
-      tooltip="Consultez la documentation sur les catalogues"
-      doc-key="catalogs"
-      offset="left"
-    />-->
     <catalog-list v-if="user" />
     <!-- Anonymous: show jumbotron -->
     <v-col

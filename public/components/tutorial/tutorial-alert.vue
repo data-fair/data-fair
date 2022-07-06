@@ -10,13 +10,31 @@
     :outlined="$vuetify.theme.dark"
     @input="close"
   >
-    <slot />
+    <slot>
+      <a
+        v-if="href"
+        :href="href"
+        target="_blank"
+      >{{ text || $t('readDoc') }}</a>
+      <span v-else-if="text">{{ text }}</span>
+    </slot>
   </v-alert>
 </template>
 
+<i18n lang="yaml">
+fr:
+  readDoc: Consultez la documentation
+en:
+  readDoc: Read the documentation
+</i18n>
+
 <script>
 export default {
-  props: { id: { type: String, required: true } },
+  props: {
+    id: { type: String, required: true },
+    href: { type: String, required: false, default: null },
+    text: { type: String, required: false, default: null }
+  },
   data: () => ({
     show: false
   }),
@@ -36,4 +54,8 @@ export default {
 </script>
 
 <style lang="css" scoped>
+.tutorial-alert a {
+  color: white !important;
+  text-decoration: underline;
+}
 </style>
