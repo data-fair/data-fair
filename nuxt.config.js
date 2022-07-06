@@ -58,7 +58,7 @@ module.exports = {
     { src: '~plugins/moment' },
     { src: '~plugins/truncate' },
     { src: '~plugins/cell-values' },
-    { src: '~plugins/display-bytes' },
+    { src: '~plugins/filter-bytes' },
     { src: '~plugins/logger', ssr: false },
     { src: '~plugins/analytics', ssr: false },
     { src: '~plugins/polyfill', ssr: false }

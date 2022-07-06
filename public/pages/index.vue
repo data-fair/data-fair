@@ -121,15 +121,15 @@
                     v-if="stats.limits && stats.limits.store_bytes && stats.limits.store_bytes.limit && stats.limits.store_bytes.limit !== -1"
                     path="storageWithLimit"
                   >
-                    <template #bytes>{{ stats.limits.store_bytes.consumption | displayBytes($i18n.locale) }}</template>
-                    <template #bytesLimit>{{ stats.limits.store_bytes.limit | displayBytes($i18n.locale) }}</template>
+                    <template #bytes>{{ stats.limits.store_bytes.consumption | bytes($i18n.locale) }}</template>
+                    <template #bytesLimit>{{ stats.limits.store_bytes.limit | bytes($i18n.locale) }}</template>
                   </i18n>
                   <i18n
                     v-else-if="stats.limits && stats.limits.store_bytes"
                     path="storageWithoutLimit"
                   >
                     <template #bytes>
-                      {{ stats.limits.store_bytes.consumption | displayBytes($i18n.locale) }}
+                      {{ stats.limits.store_bytes.consumption | bytes($i18n.locale) }}
                     </template>
                   </i18n>
                 </p>

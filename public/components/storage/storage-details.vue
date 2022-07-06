@@ -8,8 +8,8 @@
               :href="dataset.page"
               target="_top"
             >{{ dataset.title || dataset.id }}</a>
-            <span v-if="dataset.storage"> - <b>{{ dataset.storage.size | displayBytes($i18n.locale) }}</b> de stockage</span>
-            <span v-if="dataset.storage && dataset.storage.indexed"> - <b>{{ dataset.storage.indexed.size | displayBytes($i18n.locale) }}</b> de données indexées</span>
+            <span v-if="dataset.storage"> - <b>{{ dataset.storage.size | bytes($i18n.locale) }}</b> de stockage</span>
+            <span v-if="dataset.storage && dataset.storage.indexed"> - <b>{{ dataset.storage.indexed.size | bytes($i18n.locale) }}</b> de données indexées</span>
             <span
               v-if="!dataset.storage"
               v-t="'noInfo'"
@@ -18,7 +18,7 @@
           <template v-if="dataset.storage">
             <v-list-item-subtitle v-if="dataset.storageParts.length">
               <template v-for="(part, j) in dataset.storageParts">
-                <span :key="'storage-part-' + j">{{ part.size | displayBytes($i18n.locale) }} {{ $t(part.key) }}</span>
+                <span :key="'storage-part-' + j">{{ part.size | bytes($i18n.locale) }} {{ $t(part.key) }}</span>
                 <span
                   v-if="part.indexed"
                   :key="'storage-part-indexed-' + j"

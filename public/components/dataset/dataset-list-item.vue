@@ -58,7 +58,7 @@
         >
           mdi-file
         </v-icon>
-        <span>{{ (dataset.remoteFile || dataset.originalFile || dataset.file).name | truncate(40,4) }} {{ ((dataset.remoteFile || dataset.originalFile || dataset.file).size) | displayBytes($i18n.locale) }}</span>
+        <span>{{ (dataset.remoteFile || dataset.originalFile || dataset.file).name | truncate(40,4) }} {{ ((dataset.remoteFile || dataset.originalFile || dataset.file).size) | bytes($i18n.locale) }}</span>
       </template>
 
       <template v-if="dataset.count !== undefined">

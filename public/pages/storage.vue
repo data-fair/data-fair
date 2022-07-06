@@ -23,15 +23,15 @@
                     </template>
                   </td>
                   <td>
-                    {{ item.limits.store_bytes.consumption | displayBytes($i18n.locale) }}
+                    {{ item.limits.store_bytes.consumption | bytes($i18n.locale) }}
                     <template v-if="item.limits.store_bytes.limit !== -1">
-                      / {{ item.limits.store_bytes.limit | displayBytes($i18n.locale) }} autorisé
+                      / {{ item.limits.store_bytes.limit | bytes($i18n.locale) }} autorisé
                     </template>
                   </td>
                   <td>
-                    {{ item.limits.indexed_bytes.consumption | displayBytes($i18n.locale) }}
+                    {{ item.limits.indexed_bytes.consumption | bytes($i18n.locale) }}
                     <template v-if="item.limits.indexed_bytes.limit !== -1">
-                      / {{ item.limits.indexed_bytes.limit | displayBytes($i18n.locale) }} autorisé
+                      / {{ item.limits.indexed_bytes.limit | bytes($i18n.locale) }} autorisé
                     </template>
                   </td>
                   <td>{{ item.applications.toLocaleString() }}</td>
