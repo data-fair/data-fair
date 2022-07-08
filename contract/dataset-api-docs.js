@@ -455,6 +455,15 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               type: 'string',
               enum: stringValuesProperties.length ? stringValuesProperties.map(p => p.key) : undefined
             }
+          }, {
+            in: 'query',
+            name: 'size',
+            description: 'Le nombre de résultats à retourner (taille de la pagination). 10 par défaut.',
+            schema: {
+              default: 10,
+              type: 'integer',
+              maximum: 10000
+            }
           }].concat(filterParams),
           // TODO: document sort param and interval
           responses: {
