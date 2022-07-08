@@ -144,7 +144,7 @@ exports.result2geojson = esResponse => {
     features: esResponse.hits.hits.map(hit => {
       const { _geoshape, ...properties } = hit._source
       let geometry = _geoshape
-      if (!geometry) {
+      if (!geometry && properties._geopoint) {
         const [lat, lon] = properties._geopoint.split(',')
         delete properties._geopoint
         geometry = { type: 'Point', coordinates: [Number(lon), Number(lat)] }
@@ -184,12 +184,12 @@ exports.result2wkt = esResponse => {
     type: 'GeometryCollection',
     geometries: esResponse.hits.hits.map(hit => {
       let geometry = hit._source._geoshape
-      if (!geometry) {
+      if (!geometry && hit._source._geopoint) {
         const [lat, lon] = hit._source._geopoint.split(',')
         geometry = { type: 'Point', coordinates: [Number(lon), Number(lat)] }
       }
       return geometry
-    })
+    }).filter(geometry => !!geometry)
   }
   return geojsonToWKT(geometryCollection)
 }
