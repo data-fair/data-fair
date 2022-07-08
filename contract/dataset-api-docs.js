@@ -45,6 +45,7 @@ module.exports = (dataset, publicUrl = config.publicUrl) => {
     .filter(p => !p['x-capabilities'] || p['x-capabilities'].values !== false)
   const numberProperties = dataset.schema
     .filter(p => p.type === 'number')
+  const imageProperty = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
 
   const filterParams = [{
     in: 'query',
@@ -72,7 +73,7 @@ module.exports = (dataset, publicUrl = config.publicUrl) => {
     schema: {
       type: 'string',
       default: 'simple',
-      enum: ['simple', 'complete']
+      enum: [null, 'simple', 'complete']
     }
   }, {
     in: 'query',
@@ -94,12 +95,8 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       name: 'bbox',
       description: "Un filtre pour restreindre les résultats à une zone géographique. Le format est 'gauche,bas,droite,haut' autrement dit 'lonMin,latMin,lonMax,latMax'.",
       schema: {
-        type: 'array',
-        items: {
-          type: 'string'
-        }
-      },
-      style: 'commaDelimited'
+        type: 'string'
+      }
     })
     filterParams.push({
       in: 'query',
@@ -110,12 +107,8 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
   Le format est 'x,y,z'.
     `,
       schema: {
-        type: 'array',
-        items: {
-          type: 'string'
-        }
-      },
-      style: 'commaDelimited'
+        type: 'string'
+      }
     })
     filterParams.push({
       in: 'query',
@@ -128,99 +121,103 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
   Si les documents contiennent des géométries la distance est calculée à partir de leurs centroïdes à moins que la distance soit 0 auquel cas le filtre retourner tous les documents dont la géométrie contient le point passé en paramètre.
     `,
       schema: {
-        type: 'array',
-        items: {
-          type: 'string'
-        }
-      },
-      style: 'commaDelimited'
+        type: 'string'
+      }
     })
   }
 
-  const hitsParams = (defaultSize = 12, maxSize = 10000) => [{
-    in: 'query',
-    name: 'sort',
-    description: `
+  const hitsParams = (defaultSize = 12, maxSize = 10000) => {
+    const params = [{
+      in: 'query',
+      name: 'size',
+      description: `Le nombre de résultats à retourner (taille de la pagination). ${defaultSize} par défaut.`,
+      schema: {
+        default: defaultSize,
+        type: 'integer',
+        maximum: maxSize
+      }
+    }, {
+      in: 'query',
+      name: 'sort',
+      description: `
 Le tri à effectuer sous forme d'une liste de clés de colonnes séparées par des virgules.
 
 Par défaut le tri est ascendant, si un nom de colonne est préfixé par un "-" alors le tri sera descendant.
 
 Exemple: ma_colonne,-ma_colonne2`,
-    schema: {
-      type: 'array',
-      default: [],
-      items: {
-        type: 'string',
-        enum: valuesProperties.length ? valuesProperties.map(p => p.key) : undefined
-      }
-    },
-    style: 'commaDelimited'
-  }, {
-    in: 'query',
-    name: 'size',
-    description: `Le nombre de résultats à retourner (taille de la pagination). ${defaultSize} par défaut.`,
-    schema: {
-      default: defaultSize,
-      type: 'integer',
-      maximum: maxSize
-    }
-  }, {
-    in: 'query',
-    name: 'select',
-    description: 'La liste des colonnes à retourner',
-    schema: {
-      default: ['*'],
-      type: 'array',
-      items: {
-        type: 'string',
-        enum: properties.length ? properties.map(p => p.key) : undefined
-      }
-    },
-    style: 'commaDelimited'
-  }, {
-    in: 'query',
-    name: 'thumbnail',
-    description: `
+      schema: {
+        type: 'array',
+        default: [],
+        items: {
+          type: 'string',
+          enum: valuesProperties.length ? valuesProperties.map(p => p.key) : undefined
+        }
+      },
+      style: 'commaDelimited'
+    }, {
+      in: 'query',
+      name: 'select',
+      description: 'La liste des colonnes à retourner',
+      schema: {
+        default: ['*'],
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: properties.length ? properties.map(p => p.key) : undefined
+        }
+      },
+      style: 'commaDelimited'
+    }, {
+      in: 'query',
+      name: 'highlight',
+      description: `
+Demande à retourner des extraits du document qui contiennent les mots utilisés en filtre (paramètres q et qs).
+
+La valeur est une liste de colonnes séparées par des virgules.
+    `,
+      schema: {
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: textSearchProperties.length ? textSearchProperties.map(p => p.key) : undefined
+        }
+      },
+      style: 'commaDelimited'
+    }]
+    if (imageProperty) {
+      params.push({
+        in: 'query',
+        name: 'thumbnail',
+        description: `
 Demande à retourner un lien de vignette d'une dimension déterminée à partir d'une colonne image.
 
 Pour que ce paramètre soit accepté le concept "Image" doit être associé à une colonne du jeu de données.
 
 La valeur du paramètre est la dimension passée sous la form largeurxhauteur (300x200 par exemple) où un 0 sur la largeur ou la hauteur signifie que l'autre valeur est prise en compte et les proportions conservées.
     `,
-    schema: {
-      type: 'string'
+        schema: {
+          type: 'string'
+        }
+      })
     }
-  }, {
-    in: 'query',
-    name: 'highlight',
-    description: `
-Demande à retourner des extraits du document qui contiennent les mots utilisés en filtre (paramètres q et qs).
-
-La valeur est une liste de colonnes séparées par des virgules.
-    `,
-    schema: {
-      type: 'array',
-      items: {
-        type: 'string',
-        enum: textSearchProperties.length ? textSearchProperties.map(p => p.key) : undefined
-      }
-    },
-    style: 'commaDelimited'
-  }, {
-    in: 'query',
-    name: 'sampling',
-    description: `
-**Uniquement avec le paramètre de tuilage xyz**. Configure le mode d'échantillonage des resultats pour privilégier soit l'exhaustivité des données soit une densité plus homogène sur la carte.
-
-  - **neighbors** (défaut) : utilise la densité maximale parmi les tuiles voisines pour réduire la densité de la tuile courante au même niveau d'échantillonage (couteux en performance).
-  - **max** : retourne le maximum (limité par le paramètre size) de résultat pour chaque tuile.
-    `,
-    schema: {
-      type: 'string',
-      enum: ['neighbors', 'max'],
-      default: 'neighbors'
+    if (dataset.bbox && dataset.bbox.length === 4) {
+      params.push({
+        in: 'query',
+        name: 'sampling',
+        description: `
+  **Uniquement avec le paramètre de tuilage xyz**. Configure le mode d'échantillonage des resultats pour privilégier soit l'exhaustivité des données soit une densité plus homogène sur la carte.
+  
+    - **neighbors** (défaut) : utilise la densité maximale parmi les tuiles voisines pour réduire la densité de la tuile courante au même niveau d'échantillonage (couteux en performance).
+    - **max** : retourne le maximum (limité par le paramètre size) de résultat pour chaque tuile.
+      `,
+        schema: {
+          type: 'string',
+          enum: [null, 'neighbors', 'max']
+        }
+      })
     }
-  }]
+    return params
+  }
 
   const aggSizeParam = {
     in: 'query',
@@ -246,17 +243,21 @@ La valeur est une liste de colonnes séparées par des virgules.
   const formatParam = {
     in: 'query',
     name: 'format',
-    description: 'Le format de la donnée. json par défaut, pbf pour tuiles vectorielles, geojson et wkt pour formats géographiques.',
+    description: `Le format de sérialisation de la donnée.
+  
+  - **json** (défaut)
+  - **csv** pour format compatibles tableurs
+  - **pbf** pour tuiles vectorielles
+  - **geojson** et **wkt** pour formats géographiques.`,
     schema: {
-      default: 'json',
-      enum: ['json'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson', 'wkt'] : [])
+      enum: [null, 'json', 'csv', 'xlsx', 'ods'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson', 'wkt'] : [])
     }
   }
 
   const htmlParam = {
     in: 'query',
     name: 'html',
-    description: 'Effectuer le rendu des contenus formattés de markdown vers HTML',
+    description: 'Effectuer le rendu des contenus formattés de **markdown** vers **HTML**',
     schema: {
       type: 'boolean'
     }
@@ -362,13 +363,13 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               default: 1,
               type: 'integer'
             }
-          }, formatParam, htmlParam].concat(filterParams).concat(hitsParams()).concat([{
+          }].concat(hitsParams()).concat([formatParam, htmlParam]).concat(filterParams).concat([{
             in: 'query',
             name: 'collapse',
-            description: 'Afficher une ligne de résultat par valeur distince d\'un champ',
+            description: 'Afficher une ligne de résultat par valeur distince d\'un champ.',
             schema: {
-              type: 'string'
-              // enum: stringValuesProperties.map(p => p.key), TODO: same thing but can be emptied, supported by openapi viewer ?
+              type: 'string',
+              enum: [null].concat(stringValuesProperties.map(p => p.key))
             }
           }]),
           responses: {
@@ -500,15 +501,11 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             {
               in: 'query',
               name: 'percents',
-              description: 'Les pourcentages sur lesquels calculer la métrique percentiles (inutile pour les autres métriques)',
+              description: 'Les pourcentages sur lesquels calculer la métrique percentiles (inutile pour les autres métriques). La valeur par défaut est "1,5,25,50,75,95,99".',
               required: false,
               schema: {
-                type: 'array',
-                items: {
-                  type: 'string'
-                }
-              },
-              style: 'commaDelimited'
+                type: 'string'
+              }
             }
           ].concat(filterParams),
           responses: {
