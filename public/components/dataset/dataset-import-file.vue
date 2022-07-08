@@ -31,6 +31,7 @@
             :label="$t('selectFile')"
             outlined
             dense
+            hide-details
             style="max-width: 300px;"
             :accept="accepted.join(', ')"
             @change="onFileUpload"
@@ -43,6 +44,9 @@
           <v-text-field
             v-model="title"
             name="title"
+            outlined
+            dense
+            hide-details
             :label="$t('title')"
             :placeholder="$t('titlePlaceholder')"
             style="max-width: 400px"
@@ -72,6 +76,7 @@
             dense
             style="max-width: 300px;"
             accept=".zip"
+            hide-details
             @change="onAttachmentUpload"
           />
           <v-checkbox
@@ -93,6 +98,7 @@
           v-model="action"
           class="mt-3 mb-3"
           hide-details
+          :disabled="importing"
         >
           <v-radio
             v-for="a in actions"
@@ -101,11 +107,31 @@
             :value="a"
           />
         </v-radio-group>
-        <v-progress-linear
+        <v-row
           v-if="importing"
-          v-model="uploadProgress"
-          class="mb-2"
-        />
+          class="mx-0 my-3"
+        >
+          <v-progress-linear
+            v-model="uploadProgress.percent"
+            class="my-1"
+            rounded
+            height="28"
+            style="max-width: 500px;"
+          >
+            {{ file && file.name }}
+            <template v-if="uploadProgress.total">
+              {{ uploadProgress.loaded | bytes($i18n.locale) }} / {{ uploadProgress.total | bytes($i18n.locale) }}
+            </template>
+          </v-progress-linear>
+          <v-btn
+            icon
+            color="warning"
+            :title="$t('cancel')"
+            @click="cancel"
+          >
+            <v-icon>mdi-cancel</v-icon>
+          </v-btn>
+        </v-row>
         <v-btn
           v-t="'import'"
           :disabled="!action || importing"
@@ -121,7 +147,7 @@
 fr:
   stepFile: Sélection du fichier
   stepAttachment: Pièces jointes
-  stepAction: Effectuer l'action
+  stepAction: Confirmation
   loadMainFile: Chargez un fichier de données principal.
   selectFile: sélectionnez un fichier
   title: Titre du jeu de données
@@ -136,6 +162,8 @@ fr:
   updateDataset: Mettre à jour les données du jeu {title}
   fileTooLarge: Le fichier est trop volumineux pour être importé
   importError: "Erreur pendant l'import du fichier :"
+  cancel: Annuler
+  cancelled: Chargement annulé par l'utilisateur
 en:
   stepFile: File selection
   stepAttachment: Attachments
@@ -154,6 +182,8 @@ en:
   updateDataset: Update the data of the dataset {title}
   fileTooLarge: The file is too large to be imported
   importError: "Failure to import the file :"
+  cancel: Cancel
+  cancelled: Loading cancelled by user
 </i18n>
 
 <script>
@@ -166,7 +196,7 @@ export default {
     attachment: null,
     attachmentsAsImage: false,
     currentStep: null,
-    uploadProgress: 0,
+    uploadProgress: { rate: 0 },
     actions: [],
     action: null,
     importing: false,
@@ -207,12 +237,18 @@ export default {
       this.attachment = file
     },
     async importData () {
+      this.cancelSource = this.$axios.CancelToken.source()
       const options = {
         onUploadProgress: (e) => {
           if (e.lengthComputable) {
-            this.uploadProgress = (e.loaded / e.total) * 100
+            this.uploadProgress = {
+              loaded: e.loaded,
+              total: e.total,
+              percent: (e.loaded / e.total) * 100
+            }
           }
         },
+        cancelToken: this.cancelSource.token,
         params: {}
       }
       const formData = new FormData()
@@ -244,6 +280,9 @@ export default {
         }
         this.importing = false
       }
+    },
+    cancel () {
+      if (this.cancelSource) this.cancelSource.cancel(this.$t('cancelled'))
     }
   }
 }
