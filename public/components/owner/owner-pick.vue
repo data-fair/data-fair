@@ -20,10 +20,10 @@
 
 <i18n lang="yaml">
 fr:
-  yourself: Vous-même
+  yourself: Compte personnel
   org: Organisation
 en:
-  yourself: Yourself
+  yourself: Personal account
   org: Organization
 </i18n>
 

@@ -294,7 +294,7 @@ export default () => ({
       try {
         await this.$axios.$put(`api/v1/datasets/${state.dataset.id}/owner`, owner)
         commit('patch', { owner })
-        eventBus.$emit('notification', `Le jeu de données ${state.dataset.title || state.dataset.id} a changé de propriétaire`)
+        window.location.reload()
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant le changement de propriétaire' })
       }

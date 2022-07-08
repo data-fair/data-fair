@@ -202,8 +202,7 @@ export default () => ({
     async changeOwner ({ commit, state }, owner) {
       try {
         await this.$axios.$put(`api/v1/applications/${state.application.id}/owner`, owner)
-        commit('patch', { owner })
-        eventBus.$emit('notification', `L'application ${state.application.title} a changé de propriétaire`)
+        window.location.reload()
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant le changement de propriétaire' })
       }
