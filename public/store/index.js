@@ -223,7 +223,10 @@ export default () => {
       },
       async fetchPublicationSites ({ getters, state, commit }, owner) {
         if (getters.ownerPublicationSites(owner)) return
-        const publicationSites = await this.$axios.$get('api/v1/settings/' + owner.type + '/' + owner.id + '/publication-sites')
+        let url = 'api/v1/settings/' + owner.type + '/' + owner.id
+        if (owner.department) url += ':' + owner.department
+        url += '/publication-sites'
+        const publicationSites = await this.$axios.$get(url)
         commit('ownerPublicationSites', { owner, publicationSites })
       },
       searchQuery ({ commit }, params) {
