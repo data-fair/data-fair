@@ -155,7 +155,7 @@ router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async (req, 
   const settings = await db.collection('settings').findOne(req.owner, { projection: { _id: 0 } })
   const publicationSites = (settings && settings.publicationSites) || []
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode && !permissions.getOwnerRole(owner, req.user)) {
+  if (!req.user.adminMode && !permissions.getOwnerRole(req.owner, req.user)) {
     return res.status(200).send(publicationSites.filter(p => !p.private))
   }
   res.status(200).send(publicationSites)

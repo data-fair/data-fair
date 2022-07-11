@@ -1,6 +1,6 @@
 const assert = require('assert').strict
 
-describe.only('settings API', () => {
+describe('settings API', () => {
   it('should reject wrong account type', async () => {
     try {
       await global.ax.dmeadus.get('/api/v1/settings/unknown/dmeadus0')
