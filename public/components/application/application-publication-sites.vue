@@ -23,7 +23,7 @@
               <v-list-item-action>
                 <v-checkbox
                   :input-value="application.publicationSites.includes(`${site.type}:${site.id}`)"
-                  :disabled="!can('writePublicationSites') || (activeAccount.department && activeAccount.department !== application.owner.department)"
+                  :disabled="!can('writePublicationSites') || (activeAccount.department && activeAccount.department !== site.department)"
                   @change="toggle(site)"
                 />
               </v-list-item-action>
