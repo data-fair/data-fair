@@ -62,4 +62,23 @@ describe('API keys', () => {
     assert.equal(dataset.owner.type, 'organization')
     assert.equal(dataset.owner.id, 'KWqAGZ4mG')
   })
+
+  it('Create and use a department level api key', async () => {
+    const res = await global.ax.hlalonde3Org.put('/api/v1/settings/organization/KWqAGZ4mG:dep1', {
+      apiKeys: [
+        { title: 'key1', scopes: ['datasets'] }
+      ]
+    })
+    assert.equal(res.data.name, 'Fivechat - dep1')
+    const key1 = res.data.apiKeys[0].clearKey
+    assert.ok(key1)
+
+    // Set the correct owner
+    const axKey1 = await global.ax.builder(null, null, { headers: { 'x-apiKey': key1 } })
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', axKey1)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.owner.type, 'organization')
+    assert.equal(dataset.owner.id, 'KWqAGZ4mG')
+    assert.equal(dataset.owner.department, 'dep1')
+  })
 })

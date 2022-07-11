@@ -10,7 +10,7 @@ exports.readApiKey = async (db, rawApiKey, scope, asAccount) => {
   hash.update(rawApiKey)
   const hashedApiKey = hash.digest('hex')
   const settings = await db.collection('settings')
-    .findOne({ 'apiKeys.key': hashedApiKey }, { projection: { _id: 0, id: 1, type: 1, name: 1, 'apiKeys.$': 1 } })
+    .findOne({ 'apiKeys.key': hashedApiKey }, { projection: { _id: 0, id: 1, type: 1, department: 1, name: 1, 'apiKeys.$': 1 } })
   if (!settings) throw createError(401, 'Cette clé d\'API est inconnue.')
   const apiKey = settings.apiKeys[0]
   if (!apiKey.scopes.includes(scope)) throw createError(403, 'Cette clé d\'API n\'a pas la portée nécessaire.')
