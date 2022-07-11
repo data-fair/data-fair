@@ -175,7 +175,7 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async (req, 
   } else {
     settings.publicationSites[index] = req.body
   }
-  const errors = validate(req.body)
+  const errors = validate(settings)
   if (errors) return res.status(400).send(errors)
   await db.collection('settings').replaceOne(req.owner, settings, { upsert: true })
   res.status(200).send(req.body)
