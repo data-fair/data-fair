@@ -10,7 +10,6 @@ const cacheHeaders = require('../utils/cache-headers')
 const topicsUtils = require('../utils/topics')
 
 const config = require('config')
-const { default: rewind } = require('@turf/rewind')
 
 const router = express.Router()
 
