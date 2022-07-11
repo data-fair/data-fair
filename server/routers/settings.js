@@ -4,7 +4,6 @@ const ajv = require('ajv')()
 const { nanoid } = require('nanoid')
 const createError = require('http-errors')
 const settingSchema = require('../../contract/settings')
-const validate = ajv.compile(settingSchema)
 const permissions = require('../utils/permissions')
 const asyncWrap = require('../utils/async-wrap')
 const cacheHeaders = require('../utils/cache-headers')
@@ -16,17 +15,48 @@ const router = express.Router()
 
 const allowedTypes = new Set(['user', 'organization'])
 
+// only some settings are managed at the department levels
+const departmentSettingsSchema = {
+  ...settingSchema,
+  properties: {
+    id: settingSchema.properties.id,
+    type: settingSchema.properties.id,
+    name: settingSchema.properties.name,
+    department: { type: 'string' },
+    apiKeys: settingSchema.properties.apiKeys,
+    publicationSites: settingSchema.properties.publicationSites,
+    webhooks: settingSchema.properties.webhooks
+  }
+}
+const validateSettings = ajv.compile(settingSchema)
+const validateDepartmentSettings = ajv.compile(departmentSettingsSchema)
+
+const validate = (settings) => {
+  if (settings.department) {
+    validateDepartmentSettings(settings)
+    return validateDepartmentSettings.errors
+  } else {
+    validateSettings(settings)
+    return validateSettings.errors
+  }
+}
+
 // Middlewares
 router.use('/:type/:id', (req, res, next) => {
   if (!allowedTypes.has(req.params.type)) {
     return res.status(400).send('Invalid type, it must be one of the following : ' + Array.from(allowedTypes).join(', '))
   }
+  const [id, department] = req.params.id.split(':')
+  req.owner = { type: req.params.type, id }
+  if (department) req.owner.department = department
   next()
 })
 
 function isOwnerAdmin (req, res, next) {
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode && permissions.getOwnerRole({ type: req.params.type, id: req.params.id }, req.user) !== 'admin') {
+  if (req.user.adminMode) return next()
+  const [id, department] = req.params.id.split(':')
+  if (permissions.getOwnerRole({ type: req.params.type, id, department }, req.user) !== 'admin') {
     return res.sendStatus(403)
   }
   next()
@@ -34,7 +64,8 @@ function isOwnerAdmin (req, res, next) {
 
 function isOwnerMember (req, res, next) {
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode && (req.user.activeAccount.type !== req.params.type || req.user.activeAccount.id !== req.params.id)) {
+  if (req.user.adminMode) return next()
+  if (req.user.activeAccount.type !== req.params.type || req.user.activeAccount.id !== req.params.id) {
     return res.sendStatus(403)
   }
   next()
@@ -43,28 +74,30 @@ function isOwnerMember (req, res, next) {
 // read settings as owner
 router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const settings = req.app.get('db').collection('settings')
-
   const result = await settings
-    .findOne({ type: req.params.type, id: req.params.id }, { projection: { _id: 0, id: 0, type: 0 } })
+    .findOne(req.owner, { projection: { _id: 0, id: 0, type: 0 } })
   res.status(200).send(result || {})
 }))
 
 const fillSettings = (owner, user, settings) => {
   Object.assign(settings, owner)
-  settings.name = owner.type === 'user' ? user.name : user.organizations.find(o => o.id === owner.id).name
+  if (owner.type === 'user') settings.name = user.name
+  else {
+    const org = user.organizations.find(o => o.id === owner.id)
+    settings.name = org.name
+    if (owner.department) settings.name += ' - ' + owner.department
+  }
   settings.apiKeys = settings.apiKeys || []
   settings.apiKeys.forEach(apiKey => delete apiKey.clearKey)
-  settings.topics = settings.topics || []
   settings.publicationSites = settings.publicationSites || []
 }
 
 // update settings as owner
 router.put('/:type/:id', isOwnerAdmin, asyncWrap(async (req, res) => {
   const db = req.app.get('db')
-  const owner = { type: req.params.type, id: req.params.id }
-  fillSettings(owner, req.user, req.body)
-  const valid = validate(req.body)
-  if (!valid) return res.status(400).send(validate.errors)
+  fillSettings(req.owner, req.user, req.body)
+  const errors = validate(req.body)
+  if (errors) return res.status(400).send(errors)
   const settings = db.collection('settings')
 
   const fullApiKeys = req.body.apiKeys.map(apiKey => ({ ...apiKey }))
@@ -75,20 +108,27 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async (req, res) => {
     if (!apiKey.id) apiKey.id = nanoid()
 
     if (!apiKey.key) {
-      fullApiKeys[i].clearKey = Buffer.from(`${owner.type.slice(0, 1)}:${owner.id}:${nanoid()}`).toString('base64url')
+      const clearKeyParts = [req.owner.type.slice(0, 1), req.owner.id]
+      if (req.owner.department) clearKeyParts.push(req.owner.department)
+      clearKeyParts.push(nanoid())
+      fullApiKeys[i].clearKey = Buffer.from(clearKeyParts.join(':')).toString('base64url')
       const hash = crypto.createHash('sha512')
       hash.update(fullApiKeys[i].clearKey)
       fullApiKeys[i].key = apiKey.key = hash.digest('hex')
     }
   })
 
-  req.body.topics.forEach((topic) => {
-    if (!topic.id) topic.id = nanoid()
-  })
+  if (req.body.topics) {
+    req.body.topics.forEach((topic) => {
+      if (!topic.id) topic.id = nanoid()
+    })
+  }
 
-  const oldSettings = (await settings.findOneAndReplace(owner, req.body, { upsert: true })).value
+  const oldSettings = (await settings.findOneAndReplace(req.owner, req.body, { upsert: true })).value
 
-  await topicsUtils.updateTopics(db, owner, (oldSettings && oldSettings.topics) || [], req.body.topics)
+  if (req.body.topics) {
+    await topicsUtils.updateTopics(db, req.owner, (oldSettings && oldSettings.topics) || [], req.body.topics)
+  }
 
   delete req.body.type
   delete req.body.id
@@ -98,18 +138,21 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async (req, res) => {
 // Get topics list as owner
 router.get('/:type/:id/topics', isOwnerMember, asyncWrap(async (req, res) => {
   const settings = req.app.get('db').collection('settings')
-  const result = await settings.findOne({
-    type: req.params.type,
-    id: req.params.id
-  })
+  const result = await settings.findOne({ type: req.params.type, id: req.params.id })
   res.status(200).send((result && result.topics) || [])
+}))
+
+// Get licenses list as anyone
+router.get('/:type/:id/licenses', cacheHeaders.noCache, asyncWrap(async (req, res) => {
+  const settings = req.app.get('db').collection('settings')
+  const result = await settings.findOne({ type: req.params.type, id: req.params.id })
+  res.status(200).send([].concat(config.licenses, (result && result.licenses) || []))
 }))
 
 // Get publication sites as owner (see all) or other use (only public)
 router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async (req, res) => {
   const db = req.app.get('db')
-  const owner = { type: req.params.type, id: req.params.id }
-  const settings = await db.collection('settings').findOne(owner, { projection: { _id: 0 } })
+  const settings = await db.collection('settings').findOne(req.owner, { projection: { _id: 0 } })
   const publicationSites = (settings && settings.publicationSites) || []
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode && !permissions.getOwnerRole(owner, req.user)) {
@@ -120,11 +163,10 @@ router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async (req, 
 // create/update publication sites as owner (used by data-fair-portals to sync portals)
 router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async (req, res) => {
   const db = req.app.get('db')
-  const owner = { type: req.params.type, id: req.params.id }
-  let settings = await db.collection('settings').findOne(owner, { projection: { _id: 0 } })
+  let settings = await db.collection('settings').findOne(req.owner, { projection: { _id: 0 } })
   if (!settings) {
     settings = {}
-    fillSettings(owner, req.user, settings)
+    fillSettings(req.Objectowner, req.user, settings)
   }
   settings.publicationSites = settings.publicationSites || []
   const index = settings.publicationSites.findIndex(ps => ps.type === req.body.type && ps.id === req.body.id)
@@ -133,15 +175,16 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async (req, 
   } else {
     settings.publicationSites[index] = req.body
   }
-  const valid = validate(settings)
-  if (!valid) return res.status(400).send(validate.errors)
-  await db.collection('settings').replaceOne(owner, settings, { upsert: true })
+  const errors = validate(req.body)
+  if (errors) return res.status(400).send(errors)
+  await db.collection('settings').replaceOne(req.owner, settings, { upsert: true })
   res.status(200).send(req.body)
 }))
 // delete publication sites as owner (used by data-fair-portals to sync portals)
 router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, asyncWrap(async (req, res) => {
   const db = req.app.get('db')
-  const owner = { type: req.params.type, id: req.params.id }
+  const [id, department] = req.params.id.split(':')
+  const owner = { type: req.params.type, id, department }
   let settings = await db.collection('settings').findOne(owner, { projection: { _id: 0 } })
   if (!settings) {
     settings = {}
@@ -149,23 +192,13 @@ router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, as
   }
   settings.publicationSites = settings.publicationSites || []
   settings.publicationSites = settings.publicationSites.filter(ps => ps.type !== req.params.siteType || ps.id !== req.params.siteId)
-  const valid = validate(settings)
-  if (!valid) return res.status(400).send(validate.errors)
+  const errors = validate(req.body)
+  if (errors) return res.status(400).send(errors)
   await db.collection('settings').replaceOne(owner, settings, { upsert: true })
   const ref = `${req.params.siteType}:${req.params.siteId}`
   await db.collection('datasets').updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })
   await db.collection('applications').updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })
   res.status(200).send(req.body)
-}))
-
-// Get licenses list as anyone
-router.get('/:type/:id/licenses', cacheHeaders.noCache, asyncWrap(async (req, res) => {
-  const settings = req.app.get('db').collection('settings')
-  const result = await settings.findOne({
-    type: req.params.type,
-    id: req.params.id
-  })
-  res.status(200).send([].concat(config.licenses, (result && result.licenses) || []))
 }))
 
 module.exports = router

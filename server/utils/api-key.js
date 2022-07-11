@@ -29,6 +29,7 @@ exports.readApiKey = async (db, rawApiKey, scope, asAccount) => {
       user.activeAccount = { ...account, name: user.name }
     } else {
       user.organization = { id: account.id, name: account.name, role: config.adminRole }
+      if (asAccount.department) user.organization.department = asAccount.department
       user.organizations = [user.organization]
       user.activeAccount = { ...user.organization, type: 'organization' }
     }
@@ -45,6 +46,7 @@ exports.readApiKey = async (db, rawApiKey, scope, asAccount) => {
       user.activeAccount = { type: 'user', id: settings.id, name: user.name }
     } else {
       user.organization = { id: settings.id, name: settings.name, role: config.adminRole }
+      if (settings.department) user.organization.department = settings.department
       user.organizations = [user.organization]
       user.activeAccount = { ...user.organization, type: 'organization' }
     }

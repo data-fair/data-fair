@@ -27,7 +27,12 @@ exports.trigger = async (db, type, resource, event) => {
   if (event.data) notif.body += ' - ' + event.data
   notifications.send(notif)
 
-  const settings = await db.collection('settings').findOne({ id: resource.owner.id, type: resource.owner.type }) || {}
+  const settingsFilter = {
+    id: resource.owner.id,
+    type: resource.owner.type,
+    department: resource.owner.department || { $exists: false }
+  }
+  const settings = await db.collection('settings').findOne(settingsFilter) || {}
   settings.webhooks = settings.webhooks || []
   for (const webhook of settings.webhooks) {
     if (webhook.events && webhook.events.length && !webhook.events.includes(`${type}-${event.type}`)) return

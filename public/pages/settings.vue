@@ -156,7 +156,7 @@
                 <template #tabs-items>
                   <v-container
                     fluid
-                    class="py-1"
+                    class="pt-1 pb-6"
                   >
                     <v-row>
                       <v-col
@@ -303,22 +303,30 @@ export default {
       return true
     },
     sections () {
-      const sections = [{
-        id: 'licences',
-        title: this.$t('licences')
-      }, {
-        id: 'topics',
-        title: this.$t('topics')
-      }, {
+      const sections = []
+      if (!this.activeAccount.department) {
+        sections.push({
+          id: 'licences',
+          title: this.$t('licences')
+        })
+        sections.push({
+          id: 'topics',
+          title: this.$t('topics')
+        })
+        sections.push({
+          id: 'privateVocabulary',
+          title: this.$t('privateVocab')
+        })
+      }
+      sections.push(sections.push({
         id: 'api-keys',
         title: this.$t('apiKeys')
-      }, {
+      }))
+      sections.push({
         id: 'webhooks',
         title: this.$t('webhooks')
-      }, {
-        id: 'privateVocabulary',
-        title: this.$t('privateVocab')
-      }]
+      })
+
       if (this.user.adminMode) {
         sections.push({
           id: 'publicationSites',
@@ -326,6 +334,11 @@ export default {
         })
       }
       return sections
+    },
+    settingsUrl () {
+      let url = 'api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id
+      if (this.activeAccount.department) url += ':' + this.activeAccount.department
+      return url
     }
   },
   watch: {
@@ -344,11 +357,14 @@ export default {
         roles = await this.$axios.$get(this.env.directoryUrl + '/api/organizations/' + this.activeAccount.id + '/roles')
         this.organizationRoles = roles.filter(role => role !== this.env.adminRole)
       }
-      this.settings = await this.$axios.$get('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id)
-      this.$set(this.settings, 'operationsPermissions', this.settings.operationsPermissions || {})
+      this.settings = await this.$axios.$get(this.settingsUrl)
       this.$set(this.settings, 'webhooks', this.settings.webhooks || [])
       this.$set(this.settings, 'apiKeys', this.settings.apiKeys || [])
-      this.$set(this.settings, 'licenses', this.settings.licenses || [])
+      if (!this.activeAccount.department) {
+        this.$set(this.settings, 'operationsPermissions', this.settings.operationsPermissions || {})
+        this.$set(this.settings, 'licenses', this.settings.licenses || [])
+      }
+
       /*
         this.api = await this.$axios.$get('api/v1/api-docs.json')
         this.operations = (this.api && [].concat(...Object.keys(this.api.paths).map(path => Object.keys(this.api.paths[path]).map(method => ({
@@ -362,7 +378,7 @@ export default {
         */
     },
     async save (action) {
-      this.settings = await this.$axios.$put('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id, this.settings)
+      this.settings = await this.$axios.$put(this.settingsUrl, this.settings)
       eventBus.$emit('notification', 'Les paramètres ont été mis à jour')
       if (action) this.$store.dispatch(action, this.activeAccount)
     }
