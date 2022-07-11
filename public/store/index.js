@@ -72,7 +72,9 @@ export default () => {
         return state.topics[owner.type + '/' + owner.id]
       },
       ownerPublicationSites: (state) => (owner) => {
-        return state.publicationSites[owner.type + '/' + owner.id]
+        let key = owner.type + '/' + owner.id
+        if (owner.department) key += '/' + owner.department
+        return state.publicationSites[key]
       },
       activeAccountPublicationSitesById: (state, getters) => {
         const activeAccount = getters['session/activeAccount']
