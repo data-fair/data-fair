@@ -14,6 +14,8 @@
         :required="true"
         :rules="[value => !!(value.trim()) || $t('requiredTitle')]"
         name="title"
+        outlined
+        dense
         :label="$t('title')"
       />
       <v-autocomplete

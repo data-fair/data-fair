@@ -16,6 +16,8 @@
         name="title"
         :label="$t('title')"
         style="max-width: 500px;"
+        outlined
+        dense
       />
       <v-checkbox
         v-model="rest.history"
