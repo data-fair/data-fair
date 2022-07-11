@@ -10,6 +10,7 @@ const cacheHeaders = require('../utils/cache-headers')
 const topicsUtils = require('../utils/topics')
 
 const config = require('config')
+const { default: rewind } = require('@turf/rewind')
 
 const router = express.Router()
 
@@ -153,7 +154,12 @@ router.get('/:type/:id/licenses', cacheHeaders.noCache, asyncWrap(async (req, re
 router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async (req, res) => {
   const db = req.app.get('db')
   const settings = await db.collection('settings').findOne(req.owner, { projection: { _id: 0 } })
-  const publicationSites = (settings && settings.publicationSites) || []
+  let publicationSites = (settings && settings.publicationSites) || []
+  if (req.owner.department) {
+    for (const publicationSite of publicationSites) publicationSite.department = req.owner.department
+    const orgSettings = await db.collection('settings').findOne({ type: req.owner.type, id: req.owner.id }, { projection: { _id: 0 } })
+    publicationSites = publicationSites.concat((orgSettings && orgSettings.publicationSites) || [])
+  }
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode && !permissions.getOwnerRole(req.owner, req.user)) {
     return res.status(200).send(publicationSites.filter(p => !p.private))

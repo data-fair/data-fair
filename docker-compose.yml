@@ -46,6 +46,7 @@ services:
       - MANAGE_DEPARTMENTS=true
       - LIST_USERS_MODE=admin
       - LIST_ORGANIZATIONS_MODE=authenticated
+      - PROMETHEUS_ACTIVE=false
     volumes:
       - ./test/resources/users.json:/webapp/data/users.json
       - ./test/resources/organizations.json:/webapp/data/organizations.json
@@ -67,6 +68,7 @@ services:
       - PORT=8087
       - DEBUG=capture
       - PUBLIC_URL=http://localhost:5600/capture
+      - PROMETHEUS_ACTIVE=false
 
   thumbor:
     profiles:
@@ -90,7 +92,7 @@ services:
       - DIRECTORY_URL=http://localhost:5600/simple-directory
       - SECRET_NOTIFICATIONS=secret-notifications
       - SECRET_SENDMAILS=secret-sendmails
-
+      - PROMETHEUS_ACTIVE=false
 volumes:
   elasticsearch-data:
   mongo-data:
