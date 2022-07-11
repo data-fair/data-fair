@@ -166,7 +166,7 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async (req, 
   let settings = await db.collection('settings').findOne(req.owner, { projection: { _id: 0 } })
   if (!settings) {
     settings = {}
-    fillSettings(req.Objectowner, req.user, settings)
+    fillSettings(req.owner, req.user, settings)
   }
   settings.publicationSites = settings.publicationSites || []
   const index = settings.publicationSites.findIndex(ps => ps.type === req.body.type && ps.id === req.body.id)
