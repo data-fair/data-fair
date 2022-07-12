@@ -166,7 +166,9 @@ export default () => {
         Vue.set(state.topics, payload.owner.type + '/' + payload.owner.id, payload.topics)
       },
       ownerPublicationSites (state, payload) {
-        Vue.set(state.publicationSites, payload.owner.type + '/' + payload.owner.id, payload.publicationSites)
+        let key = payload.owner.type + '/' + payload.owner.id
+        if (payload.owner.department) key += '/' + payload.owner.department
+        Vue.set(state.publicationSites, key, payload.publicationSites)
       },
       setSearchQuery (state, { type, query }) {
         Vue.set(state.searchQueries, type, query)
