@@ -274,6 +274,13 @@ export default {
     downloadParams () {
       if (this.selectedCols.length === 0) return this.params
       return { ...this.params, select: this.selectedCols.join(',') }
+    },
+    topBottomHeight () {
+      let height = 48 // app bar
+      if (this.filters.length) height += 48 // app bar extension
+      height += 48 // table header
+      height += 60 // bottom button
+      return height
     }
   },
   watch: {
@@ -301,11 +308,20 @@ export default {
   },
   async mounted () {
     this.readQueryParams()
+    if (this.displayMode === 'table') this.setItemsPerPage()
+    this.filterHeight = window.innerHeight - this.topBottomHeight
     await this.$nextTick()
     this.ready = true
     this.refresh(true)
   },
   methods: {
+    setItemsPerPage () {
+      // adapt number of lines to window height
+      // don't forget to let enough space for the optional horizontal scroll bar
+      const height = window.innerHeight
+      const nbRows = Math.floor(Math.max(height - this.topBottomHeight, 120) / (this.lineHeight + 2))
+      this.pagination.itemsPerPage = Math.min(Math.max(nbRows, 4), 50)
+    },
     async refresh (resetPagination, initial) {
       if (!this.ready) return
       if (!initial) this.writeQueryParams()
@@ -334,8 +350,6 @@ export default {
       this.loading = false
 
       // if the page is too large for the user to trigger a scroll we append results immediately
-      await this.$nextTick()
-      await this.$nextTick()
       this.continueFetch()
     },
     async fetchMore () {
@@ -348,8 +362,13 @@ export default {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       this.loading = false
+
+      // if the page is too large for the user to trigger a scroll we append results immediately
+      this.continueFetch()
     },
-    continueFetch () {
+    async continueFetch () {
+      await this.$nextTick()
+      await this.$nextTick()
       if (this.displayMode === 'table') return
       const html = document.getElementsByTagName('html')
       if (html[0].scrollHeight === html[0].clientHeight && this.data.next) {
