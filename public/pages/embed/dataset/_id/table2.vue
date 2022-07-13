@@ -418,7 +418,7 @@ export default {
 .embed .v-data-table td {
   white-space: nowrap;
 }
-.hidden-body tbody {
-  display: none;
+.v-data-table.hidden-body tbody {
+  display: none !important;
 }
 </style>
