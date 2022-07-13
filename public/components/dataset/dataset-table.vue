@@ -433,7 +433,7 @@ export default {
     ...mapState(['vocabulary']),
     ...mapState('session', ['user']),
     ...mapState('dataset', ['dataset']),
-    ...mapGetters('dataset', ['resourceUrl', 'can', 'qMode']),
+    ...mapGetters('dataset', ['resourceUrl', 'can', 'qMode', 'imageField', 'webPageField', 'digitalDocumentField']),
     headers () {
       const fieldsHeaders = this.dataset.schema
         .filter(field => !field['x-calculated'] || field.key === '_updatedAt')
@@ -462,15 +462,6 @@ export default {
     selectedHeaders () {
       if (this.selectedCols.length === 0) return this.headers
       return this.headers.filter(h => !h.field || this.selectedCols.includes(h.value))
-    },
-    imageField () {
-      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
-    },
-    digitalDocumentField () {
-      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
-    },
-    webPageField () {
-      return this.dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/WebPage')
     },
     params () {
       const params = {

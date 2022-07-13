@@ -118,18 +118,9 @@ export default {
   }),
   computed: {
     ...mapState('dataset', ['dataset']),
-    ...mapGetters('dataset', ['resourceUrl', 'qMode']),
+    ...mapGetters('dataset', ['resourceUrl', 'qMode', 'imageField', 'labelField', 'descriptionField']),
     plural () {
       return this.data.total > 1
-    },
-    imageField () {
-      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
-    },
-    labelField () {
-      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label')
-    },
-    descriptionField () {
-      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org')
     }
   },
   watch: {

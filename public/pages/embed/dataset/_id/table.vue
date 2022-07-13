@@ -252,7 +252,7 @@ export default {
   computed: {
     ...mapState(['vocabulary']),
     ...mapState('dataset', ['dataset']),
-    ...mapGetters('dataset', ['resourceUrl', 'qMode']),
+    ...mapGetters('dataset', ['resourceUrl', 'qMode', 'imageField', 'digitalDocumentField', 'webPageField']),
     headers () {
       const fieldsHeaders = this.dataset.schema
         .filter(field => !field['x-calculated'])
@@ -278,15 +278,6 @@ export default {
     selectedHeaders () {
       if (this.selectedCols.length === 0) return this.headers
       return this.headers.filter(h => !h.field || this.selectedCols.includes(h.value))
-    },
-    imageField () {
-      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
-    },
-    digitalDocumentField () {
-      return this.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
-    },
-    webPageField () {
-      return this.dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/WebPage')
     },
     truncate () {
       return this.$vuetify.breakpoint.mdAndUp ? 50 : 30

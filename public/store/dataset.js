@@ -92,6 +92,21 @@ export default () => ({
           })
       })
       return masters
+    },
+    imageField (state) {
+      return state.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
+    },
+    labelField (state) {
+      return state.dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label')
+    },
+    descriptionField (state) {
+      return state.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org')
+    },
+    digitalDocumentField (state) {
+      return state.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+    },
+    webPageField (state) {
+      return state.dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/WebPage')
     }
   },
   mutations: {
