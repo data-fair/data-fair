@@ -1,14 +1,14 @@
 <template>
   <div
-    v-if="total !== undefined"
+    v-if="total !== null"
     class="text-caption"
     style="line-height: 1;"
   >
-    <template v-if="total <= 10000">
+    <template v-if="!limit || total <= limit">
       {{ $tc('lines', total) }}
     </template>
     <template v-else>
-      {{ $t('firstLines', {lines: 10000, total}) }}
+      {{ $t('firstLines', {lines: limit, total}) }}
     </template>
   </div>
 </template>
@@ -25,7 +25,10 @@ en:
 
 <script>
 export default {
-  props: ['total'],
+  props: {
+    total: { type: Number, required: false, default: null },
+    limit: { type: Number, required: false, default: 10000 }
+  },
   computed: {
     plural () {
       return this.total > 1
