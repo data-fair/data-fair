@@ -25,10 +25,10 @@
         v-if="item._highlight"
         v-html="item._highlight['_file.content'][0].replace(/highlighted/g,'accent--text')"
       />
-      <div
+      <!--<div
         v-if="descriptionField && item[descriptionField.key]"
         :inner-html.prop="(item[descriptionField.key] + '')"
-      />
+      />-->
       <div style="flex: 1;" />
       <v-list
         dense
@@ -81,7 +81,7 @@ export default {
       return this.dataset.schema.filter(f => {
         if (f['x-calculated']) return false
         if (this.selectedFields.length && !this.selectedFields.includes(f.key)) return false
-        if (this.descriptionField && this.descriptionField.key === f.key) return false
+        // if (this.descriptionField && this.descriptionField.key === f.key) return false
         if (this.labelField && this.labelField.key === f.key) return false
         return true
       })

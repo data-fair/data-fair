@@ -268,7 +268,7 @@ export default {
         }
       }
       if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
-      if (this.displayMode === 'list') params.html = true
+      // if (this.displayMode === 'list') params.html = true
       return params
     },
     downloadParams () {
