@@ -1187,13 +1187,17 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
   }
 
   // manage pagination based on search_after, cd https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
+
+  // eslint-disable-next-line no-unused-vars
+  const [_, size] = findUtils.pagination(req.query)
+
   let nextLinkURL
-  const lastHit = esResponse.hits.hits[esResponse.hits.hits.length - 1]
-  if (lastHit) {
+  if (size && esResponse.hits.hits.length === size) {
     nextLinkURL = new URL(`${req.publicBaseUrl}/api/v1/datasets/${req.dataset.id}/lines`)
     Object.keys(req.query).filter(key => key !== 'page').forEach(key => {
       nextLinkURL.searchParams.set(key, req.query[key])
     })
+    const lastHit = esResponse.hits.hits[esResponse.hits.hits.length - 1]
     nextLinkURL.searchParams.set('after', JSON.stringify(lastHit.sort).slice(1, -1))
     const link = new LinkHeader()
     link.set({ rel: 'next', uri: nextLinkURL.href })
