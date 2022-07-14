@@ -62,7 +62,8 @@ export default () => {
         '.xml',
         '.gpx',
         '.ics'
-      ]
+      ],
+      queryPrimary: null
     },
     getters: {
       ownerLicenses: (state) => (owner) => {
@@ -128,20 +129,27 @@ export default () => {
       missingSubscription (state) {
         return !!(state.limits && state.limits.defaults && state.env.subscriptionUrl)
       },
-      lightPrimary5 (state) {
-        return tinycolor(state.env.theme.colors.primary).brighten(5).toHexString()
+      primary (state) {
+        if (state.queryPrimary) {
+          // ensure the color will provide a readable contrast with white text in buttons
+          return Vue.prototype.$readableColor(state.queryPrimary)
+        }
+        return state.env.theme.colors.primary
       },
-      lightPrimary10 (state) {
-        return tinycolor(state.env.theme.colors.primary).brighten(10).toHexString()
+      lightPrimary5 (state, getters) {
+        return tinycolor(getters.primary).brighten(5).toHexString()
       },
-      darkPrimary5 (state) {
-        return tinycolor(state.env.theme.colors.primary).darken(5).toHexString()
+      lightPrimary10 (state, getters) {
+        return tinycolor(getters.primary).brighten(10).toHexString()
       },
-      darkPrimary10 (state) {
-        return tinycolor(state.env.theme.colors.primary).darken(10).toHexString()
+      darkPrimary5 (state, getters) {
+        return tinycolor(getters.primary).darken(5).toHexString()
       },
-      darkPrimary20 (state) {
-        return tinycolor(state.env.theme.colors.primary).darken(20).toHexString()
+      darkPrimary10 (state, getters) {
+        return tinycolor(getters.primary).darken(10).toHexString()
+      },
+      darkPrimary20 (state, getters) {
+        return tinycolor(getters.primary).darken(20).toHexString()
       },
       lightAccent10 (state) {
         return tinycolor(state.env.theme.colors.accent).brighten(10).toHexString()

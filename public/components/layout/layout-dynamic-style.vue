@@ -6,24 +6,24 @@
     overflow-y: {{ htmlOverflow }} !important;
     }
     .v-btn.primary.theme--light {
-    background: linear-gradient(90deg, {{ env.theme.colors.primary }} 0%, {{ darkPrimary10 }} 100%);
+    background: linear-gradient(90deg, {{ primary }} 0%, {{ darkPrimary10 }} 100%);
     }
     .v-btn.primary.theme--dark {
-    background: linear-gradient(90deg, {{ darkPrimary10 }} 0%, {{ env.theme.colors.primary }} 100%);
+    background: linear-gradient(90deg, {{ darkPrimary10 }} 0%, {{ primary }} 100%);
     }
     .v-application.theme--light .v-btn.primary.v-btn--has-bg {
     border: 1px solid {{ darkPrimary10 }} !important;
     }
     .v-application.theme--dark .v-btn.primary.v-btn--has-bg {
-    border: 1px solid {{ env.theme.colors.primary }} !important;
+    border: 1px solid {{ primary }} !important;
     }
     .v-application.theme--light .navigation-left {
     border-top: 2px solid {{ darkPrimary10 }} !important;
     border-right: 2px solid {{ darkPrimary10 }} !important;
     }
     .v-application.theme--dark .navigation-left {
-    border-top: 2px solid {{ env.theme.colors.primary }} !important;
-    border-right: 2px solid {{ env.theme.colors.primary }} !important;
+    border-top: 2px solid {{ primary }} !important;
+    border-right: 2px solid {{ primary }} !important;
     }
   </component>
 </template>
@@ -38,7 +38,7 @@ export default {
   },
   computed: {
     ...mapState(['env']),
-    ...mapGetters(['lightPrimary5', 'darkPrimary5', 'darkPrimary10'])
+    ...mapGetters(['primary', 'darkPrimary10'])
   }
 }
 </script>

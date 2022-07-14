@@ -7,7 +7,6 @@ import { mapState } from 'vuex'
 
 export default {
   layout: 'embed',
-  middleware: 'dynamic-theme',
   async fetch ({ store, params, route }) {
     try {
       const html = route.path.endsWith('/fields') || route.path.endsWith('/table')
