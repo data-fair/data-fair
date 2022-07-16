@@ -53,7 +53,7 @@ describe('datasets', () => {
     await testUtils.sendDataset('datasets/dataset1.csv', axOrg)
     await testUtils.sendDataset('datasets/dataset1.csv', axOrg)
 
-    let res = await ax.get('/api/v1/datasets', { params: { facets: 'owner,field-type' } })
+    let res = await ax.get('/api/v1/datasets', { params: { facets: 'owner,field-type', sums: 'count' } })
     assert.equal(res.data.count, 1)
     assert.equal(res.data.facets.owner.length, 1)
     assert.equal(res.data.facets.owner[0].count, 1)
@@ -61,8 +61,9 @@ describe('datasets', () => {
     assert.equal(res.data.facets.owner[0].value.type, 'user')
     assert.equal(res.data.facets['field-type'].length, 2)
     assert.equal(res.data.facets['field-type'][0].count, 1)
+    assert.equal(res.data.sums.count, 2)
 
-    res = await axOrg.get('/api/v1/datasets', { params: { facets: 'owner,field-type' } })
+    res = await axOrg.get('/api/v1/datasets', { params: { facets: 'owner,field-type', sums: 'count' } })
     assert.equal(res.data.count, 2)
     assert.equal(res.data.facets.owner.length, 1)
     // owner facet is not affected by the owner filter
@@ -72,6 +73,7 @@ describe('datasets', () => {
     // field-type facet is affected by the owner filter
     assert.equal(res.data.facets['field-type'].length, 2)
     assert.equal(res.data.facets['field-type'][0].count, 2)
+    assert.equal(res.data.sums.count, 4)
 
     res = await axOrg.get('/api/v1/datasets', { params: { count: false } })
     assert.equal(res.data.count, undefined)

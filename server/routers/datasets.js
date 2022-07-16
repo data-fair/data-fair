@@ -188,6 +188,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
     ...filterFields,
     topics: 'topics'
   }
+  const sumsFields = { count: 'count' }
   const nullFacetFields = ['publicationSites']
   const extraFilters = []
   if (req.query.bbox === 'true') {
@@ -212,12 +213,20 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const countPromise = req.query.count !== 'false' && datasets.countDocuments(query)
   const resultsPromise = size > 0 && datasets.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
   const facetsPromise = req.query.facets && datasets.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields, extraFilters)).toArray()
+  const sumsPromise = req.query.sums && datasets
+    .aggregate(findUtils.sumsQuery(req, sumsFields, filterFields, extraFilters)).toArray()
+    .then(sumsResponse => {
+      const res = sumsResponse[0]
+      delete res._id
+      return res
+    })
 
   const response = {}
   if (countPromise) response.count = await countPromise
   if (resultsPromise) response.results = await resultsPromise
   else response.results = []
   if (facetsPromise) response.facets = findUtils.parseFacets(await facetsPromise, nullFacetFields)
+  if (sumsPromise) response.sums = await sumsPromise
 
   response.results.forEach(r => {
     if (req.query.raw !== 'true') r.userPermissions = permissions.list('datasets', r, req.user)

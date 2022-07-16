@@ -204,9 +204,7 @@ exports.setResourceLinks = (resource, resourceType, publicUrl = config.publicUrl
   if (resourceType === 'application') resource.exposedUrl = `${publicUrl}/app/${resource.id}`
 }
 
-exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = [], extraFilters) => {
-  filterFields = filterFields || facetFields
-  const facetsQueryParam = req.query.facets
+const basePipeline = (req, extraFilters) => {
   const pipeline = []
 
   if (req.query.q) {
@@ -231,14 +229,22 @@ exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []
     pipeline.push({ $match: accountFilter })
   }
 
-  const fields = facetsQueryParam && facetsQueryParam.length && facetsQueryParam.split(',')
-    .filter(f => facetFields[f] || f === 'owner' || f === 'visibility')
-
   if (extraFilters) {
     for (const extraFilter of extraFilters) {
       pipeline.push({ $match: extraFilter })
     }
   }
+
+  return pipeline
+}
+
+exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = [], extraFilters) => {
+  filterFields = filterFields || facetFields
+  const facetsQueryParam = req.query.facets
+  const pipeline = basePipeline(req, extraFilters)
+
+  const fields = facetsQueryParam && facetsQueryParam.length && facetsQueryParam.split(',')
+    .filter(f => facetFields[f] || f === 'owner' || f === 'visibility')
 
   // Apply all the filters from the current query that do not match a facetted field
   Object.keys(filterFields).filter(name => req.query[name] !== undefined && !fields.includes(name)).forEach(name => {
@@ -357,4 +363,23 @@ exports.parseFacets = (facets, nullFacetFields = []) => {
     })
   })
   return res
+}
+
+exports.sumsQuery = (req, sumFields = {}, filterFields, extraFilters) => {
+  const pipeline = basePipeline(req, extraFilters)
+  Object.keys(filterFields).filter(name => req.query[name] !== undefined).forEach(name => {
+    pipeline.push({ $match: { [filterFields[name]]: { $in: req.query[name].split(',') } } })
+  })
+  if (req.query.owner) {
+    pipeline.push({ $match: { $and: exports.ownerFilters(req.query, req.user && req.user.activeAccount) } })
+  }
+  if (visibility.filters(req.query)) {
+    pipeline.push({ $match: { $or: visibility.filters(req.query) } })
+  }
+  const group = { _id: 1 }
+  for (const field of req.query.sums.split(',')) {
+    group[field] = { $sum: '$' + sumFields[field] }
+  }
+  pipeline.push({ $group: group })
+  return pipeline
 }
