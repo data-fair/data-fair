@@ -182,6 +182,7 @@
     "strip-bom-stream": "^4.0.0",
     "thumbor": "^0.1.5",
     "tmp-promise": "^2.1.1",
+    "truncate-html": "^1.0.4",
     "truncate-middle": "^1.0.6",
     "vt-pbf": "3.1.1",
     "ws": "^7.4.1",

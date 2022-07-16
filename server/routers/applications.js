@@ -7,6 +7,8 @@ const util = require('util')
 const unlink = util.promisify(fs.unlink)
 const sanitizeHtml = require('../../shared/sanitize-html')
 const marked = require('marked')
+const truncateMiddle = require('truncate-middle')
+const truncateHTML = require('truncate-html')
 const { nanoid } = require('nanoid')
 const applicationAPIDocs = require('../../contract/application-api-docs')
 const ajv = require('ajv')()
@@ -45,6 +47,14 @@ function clean (application, publicUrl, query = {}) {
   if (application.description) {
     if (query.html === 'true') application.description = marked.parse(application.description).trim()
     application.description = sanitizeHtml(application.description)
+    if (query.truncate) {
+      const truncate = Number(query.truncate)
+      if (query.html === 'true') {
+        application.description = truncateHTML(application.description, truncate)
+      } else {
+        application.description = truncateMiddle(application.description, truncate, 0, '...')
+      }
+    }
   }
   application.description = application.description ? sanitizeHtml(application.description) : ''
   if (!select.includes('-links')) findUtils.setResourceLinks(application, 'application', publicUrl)

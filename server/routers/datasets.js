@@ -14,6 +14,8 @@ const slug = require('slugify')
 const sanitizeHtml = require('../../shared/sanitize-html')
 const CronJob = require('cron').CronJob
 const marked = require('marked')
+const truncateMiddle = require('truncate-middle')
+const truncateHTML = require('truncate-html')
 const LinkHeader = require('http-link-header')
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
@@ -63,6 +65,14 @@ function clean (publicUrl, dataset, query = {}, draft = false) {
     if (dataset.description) {
       if (query.html === 'true') dataset.description = marked.parse(dataset.description).trim()
       dataset.description = sanitizeHtml(dataset.description)
+      if (query.truncate) {
+        const truncate = Number(query.truncate)
+        if (query.html === 'true') {
+          dataset.description = truncateHTML(dataset.description, truncate)
+        } else {
+          dataset.description = truncateMiddle(dataset.description, truncate, 0, '...')
+        }
+      }
     }
     if (dataset.schema) {
       for (const field of dataset.schema) {

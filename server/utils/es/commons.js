@@ -6,6 +6,7 @@ const flatten = require('flat')
 const queryParser = require('lucene-query-parser')
 const sanitizeHtml = require('../../../shared/sanitize-html')
 const truncateMiddle = require('truncate-middle')
+const truncateHTML = require('truncate-html')
 const marked = require('marked')
 const thumbor = require('../thumbor')
 const tiles = require('../tiles')
@@ -458,7 +459,11 @@ exports.prepareResultItem = (hit, dataset, query) => {
       if (key === '_attachment_url') continue
       const field = dataset.schema.find(f => f.key === key)
       if (field && field.separator) continue
-      res[key] = truncateMiddle(res[key], truncate, 0, '...')
+      if (query.html === 'true' && (field['x-display'] === 'markdown' || field === descriptionField)) {
+        res[key] = truncateHTML(res[key], truncate)
+      } else {
+        res[key] = truncateMiddle(res[key], truncate, 0, '...')
+      }
     }
   }
 
