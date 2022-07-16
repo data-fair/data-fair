@@ -38,34 +38,51 @@ exports.init = async (db) => {
   const promises = [
     // datasets indexes
     exports.ensureIndex(db, 'datasets', { id: 1 }, { unique: true }),
+    // used to fetch list sorted by creation
     exports.ensureIndex(db, 'datasets', { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, { name: 'main-keys' }),
+    // combined filters mostly used for count and facetting in portals
+    exports.ensureIndex(db, 'datasets', { 'owner.type': 1, 'owner.id': 1, publicationSites: 1, 'schema.x-refersTo': 1, 'topics.id': 1 }, { name: 'combined-filters' }),
+    // full text search
     exports.ensureIndex(db, 'datasets', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
+    // special purpose indexes for workers, etc
     exports.ensureIndex(db, 'datasets', { 'virtual.children': 1 }),
     exports.ensureIndex(db, 'datasets', { publicationSites: 1 }),
     exports.ensureIndex(db, 'datasets', { 'rest.ttl.checkedAt': 1 }),
     exports.ensureIndex(db, 'datasets', { 'rest.ttl.active': 1 }),
+
     // remote-services indexes
     exports.ensureIndex(db, 'remote-services', { id: 1 }, { unique: true }),
     // exports.ensureIndex(db, 'remote-services', { 'apiDoc.info.x-api-id': 1 }, { unique: true })
     exports.ensureIndex(db, 'remote-services', { title: 'text', description: 'text' }, { name: 'fulltext' }),
+
     // base applications indexes
     exports.ensureIndex(db, 'base-applications', { url: 1 }, { unique: true }),
     exports.ensureIndex(db, 'base-applications', { id: 1 }, { unique: true }),
     exports.ensureIndex(db, 'base-applications', { title: 'text', description: 'text', 'meta.title': 'text', 'meta.description': 'text', 'meta.application-name': 'text' }, { name: 'fulltext' }),
+
     // applications indexes
     exports.ensureIndex(db, 'applications', { id: 1 }, { unique: true }),
+    // used to fetch list sorted by creation
     exports.ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, { name: 'main-keys' }),
-    exports.ensureIndex(db, 'applications', { 'configuration.datasets.href': 1 }),
+    // combined filters mostly used for count and facetting in portals
+    exports.ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1, publicationSites: 1, 'topics.id': 1 }, { name: 'combined-filters' }),
+    // full text search
     exports.ensureIndex(db, 'applications', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
+    // get the applications of a dataset
+    exports.ensureIndex(db, 'applications', { 'configuration.datasets.href': 1 }),
+
     // applications keys indexes
     exports.ensureIndex(db, 'applications-keys', { 'keys.id': 1 }),
+
     // catalogs indexes
     exports.ensureIndex(db, 'catalogs', { id: 1 }, { unique: true }),
     exports.ensureIndex(db, 'catalogs', { 'owner.type': 1, 'owner.id': 1 }),
     exports.ensureIndex(db, 'catalogs', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
+
     // settings
     exports.ensureIndex(db, 'settings', { type: 1, id: 1, department: 1 }, { unique: true, name: 'main-keys' }),
     exports.ensureIndex(db, 'settings', { 'apiKeys.key': 1 }, { sparse: true }),
+
     // shared extensions cache with a 10 days expiration delay
     exports.ensureIndex(db, 'extensions-cache', { extensionKey: 1, input: 1 }, { name: 'main-keys' }),
     exports.ensureIndex(db, 'extensions-cache', { lastUsed: 1 }, { name: 'expiration', expireAfterSeconds: 60 * 60 * 24 * 10 }),
