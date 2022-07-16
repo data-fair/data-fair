@@ -31,19 +31,23 @@ const { validateId } = require('../utils/validation')
 
 const router = module.exports = express.Router()
 
-function clean (application, publicUrl, html = false) {
-  application.public = permissions.isPublic('applications', application)
-  application.visibility = visibilityUtils.visibility(application)
+function clean (application, publicUrl, query = {}) {
+  const select = query.select ? query.select.split(',') : []
+  if (!select.includes('-public')) application.public = permissions.isPublic('applications', application)
+  if (!select.includes('-visibility')) application.visibility = visibilityUtils.visibility(application)
 
   delete application.permissions
   delete application._id
   delete application.configuration
+  if (select.includes('-userPermissions')) delete application.userPermissions
+  if (select.includes('-owner')) delete application.owner
+
   if (application.description) {
-    if (html) application.description = marked.parse(application.description).trim()
+    if (query.html === 'true') application.description = marked.parse(application.description).trim()
     application.description = sanitizeHtml(application.description)
   }
   application.description = application.description ? sanitizeHtml(application.description) : ''
-  findUtils.setResourceLinks(application, 'application', publicUrl)
+  if (!select.includes('-links')) findUtils.setResourceLinks(application, 'application', publicUrl)
   return application
 }
 
@@ -94,7 +98,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   if (req.query.raw !== 'true') {
     response.results.forEach(r => {
       r.userPermissions = permissions.list('applications', r, req.user)
-      clean(r, req.publicBaseUrl, req.query.html === 'true')
+      clean(r, req.publicBaseUrl, req.query)
     })
   }
   res.json(response)
@@ -154,7 +158,7 @@ router.use('/:applicationId/permissions', readApplication, permissions.router('a
 // retrieve a application by its id
 router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   req.application.userPermissions = permissions.list('applications', req.application, req.user)
-  res.status(200).send(clean(req.application, req.publicBaseUrl, req.query.html === 'true'))
+  res.status(200).send(clean(req.application, req.publicBaseUrl, req.query))
 })
 
 // PUT used to create or update

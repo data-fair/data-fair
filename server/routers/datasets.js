@@ -53,32 +53,40 @@ const { validateId } = require('../utils/validation')
 const prometheus = require('../utils/prometheus')
 const router = express.Router()
 
-function clean (publicUrl, dataset, thumbnail, html = false, draft = false) {
-  thumbnail = thumbnail || '300x200'
-  if (draft) datasetUtils.mergeDraft(dataset)
-  dataset.public = permissions.isPublic('datasets', dataset)
-  dataset.visibility = visibilityUtils.visibility(dataset)
-  delete dataset.permissions
-  if (dataset.description) {
-    if (html) dataset.description = marked.parse(dataset.description).trim()
-    dataset.description = sanitizeHtml(dataset.description)
-  }
-  if (dataset.schema) {
-    for (const field of dataset.schema) {
-      field.description = field.description || ''
-      if (html) field.description = marked.parse(field.description).trim()
-      field.description = sanitizeHtml(field.description)
+function clean (publicUrl, dataset, query = {}, draft = false) {
+  const select = query.select ? query.select.split(',') : []
+  if (query.raw !== 'true') {
+    const thumbnail = query.thumbnail || '300x200'
+    if (draft) datasetUtils.mergeDraft(dataset)
+    if (!select.includes('-public')) dataset.public = permissions.isPublic('datasets', dataset)
+    if (!select.includes('-visibility')) dataset.visibility = visibilityUtils.visibility(dataset)
+    if (dataset.description) {
+      if (query.html === 'true') dataset.description = marked.parse(dataset.description).trim()
+      dataset.description = sanitizeHtml(dataset.description)
+    }
+    if (dataset.schema) {
+      for (const field of dataset.schema) {
+        field.description = field.description || ''
+        if (query.html === 'true') field.description = marked.parse(field.description).trim()
+        field.description = sanitizeHtml(field.description)
+      }
+    }
+
+    if (dataset.schema && !select.includes('-previews')) {
+      dataset.previews = datasetUtils.previews(dataset)
+    }
+    if (!select.includes('-links')) findUtils.setResourceLinks(dataset, 'dataset', publicUrl)
+    if (dataset.image && dataset.public && !select.includes('-thumbnail')) {
+      dataset.thumbnail = thumbor.thumbnail(dataset.image, thumbnail)
+    }
+    if (dataset.image && publicUrl !== config.publicUrl) {
+      dataset.image = dataset.image.replace(config.publicUrl, publicUrl)
     }
   }
-
-  dataset.previews = datasetUtils.previews(dataset)
-  findUtils.setResourceLinks(dataset, 'dataset', publicUrl)
-  if (dataset.image && dataset.public) {
-    dataset.thumbnail = thumbor.thumbnail(dataset.image, thumbnail)
-  }
-  if (dataset.image && publicUrl !== config.publicUrl) {
-    dataset.image = dataset.image.replace(config.publicUrl, publicUrl)
-  }
+  delete dataset.permissions
+  delete dataset._id
+  if (select.includes('-userPermissions')) delete dataset.userPermissions
+  if (select.includes('-owner')) delete dataset.owner
   return dataset
 }
 
@@ -201,12 +209,10 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   else response.results = []
   if (facetsPromise) response.facets = findUtils.parseFacets(await facetsPromise, nullFacetFields)
 
-  if (req.query.raw !== 'true') {
-    response.results.forEach(r => {
-      r.userPermissions = permissions.list('datasets', r, req.user)
-      clean(req.publicBaseUrl, r, req.query.thumbnail, req.query.html === 'true')
-    })
-  }
+  response.results.forEach(r => {
+    if (req.query.raw !== 'true') r.userPermissions = permissions.list('datasets', r, req.user)
+    clean(req.publicBaseUrl, r, req.query)
+  })
   res.json(response)
 }))
 
@@ -279,7 +285,7 @@ router.use('/:datasetId/permissions', readDataset(), permissions.router('dataset
 // retrieve a dataset by its id
 router.get('/:datasetId', readDataset(), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   req.dataset.userPermissions = permissions.list('datasets', req.dataset, req.user, req.bypassPermissions)
-  res.status(200).send(clean(req.publicBaseUrl, req.dataset, req.query.thumbnail, req.query.html === 'true'))
+  res.status(200).send(clean(req.publicBaseUrl, req.dataset, req.query))
 })
 
 // retrieve only the schema.. Mostly useful for easy select fields
@@ -747,7 +753,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
     await datasetUtils.updateNbDatasets(req.app.get('db'), dataset.owner)
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
     await syncRemoteService(db, dataset)
-    res.status(201).send(clean(req.publicBaseUrl, dataset, null, false, req.query.draft === 'true'))
+    res.status(201).send(clean(req.publicBaseUrl, dataset, {}, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
     for (const file of req.files) {
@@ -868,7 +874,7 @@ const updateDataset = asyncWrap(async (req, res) => {
       datasetUtils.updateStorage(db, dataset),
       syncRemoteService(db, dataset)
     ])
-    res.status(req.isNewDataset ? 201 : 200).send(clean(req.publicBaseUrl, dataset, null, false, req.query.draft === 'true'))
+    res.status(req.isNewDataset ? 201 : 200).send(clean(req.publicBaseUrl, dataset, {}, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
     for (const file of req.files) {

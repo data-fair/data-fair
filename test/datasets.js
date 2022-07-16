@@ -43,7 +43,7 @@ describe('datasets', () => {
     assert.equal(res.data.count, 0)
   })
 
-  it('Search and apply some params (facets, raw, count, etc)', async () => {
+  it('Search and apply some params (facets, raw, count, select, etc)', async () => {
     const ax = global.ax.dmeadus
     const axOrg = global.ax.dmeadusOrg
 
@@ -80,6 +80,13 @@ describe('datasets', () => {
     assert.equal(res.data.results[0].userPermissions, undefined)
     assert.equal(res.data.results[0].owner, undefined)
     assert.equal(res.data.results[0].count, 2)
+
+    res = await axOrg.get('/api/v1/datasets', { params: { select: '-userPermissions' } })
+    assert.equal(res.data.results[0].userPermissions, undefined)
+    assert.deepEqual(res.data.results[0].owner, { id: 'KWqAGZ4mG', name: 'Fivechat', type: 'organization' })
+    res = await axOrg.get('/api/v1/datasets', { params: { select: '-userPermissions,-owner' } })
+    assert.equal(res.data.results[0].userPermissions, undefined)
+    assert.deepEqual(res.data.results[0].owner, undefined)
   })
 
   const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
