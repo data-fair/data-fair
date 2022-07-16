@@ -2,9 +2,7 @@
   <v-card
     outlined
     tile
-    :elevation="hover ? 4 : 0"
-    @mouseenter="hover = true"
-    @mouseleave="hover = false"
+    hover
   >
     <nuxt-link
       :to="`/application/${application.id}`"
@@ -101,9 +99,6 @@ import { mapGetters } from 'vuex'
 
 export default {
   props: ['application', 'showTopics', 'showOwner'],
-  data: () => ({
-    hover: false
-  }),
   computed: {
     ...mapGetters('session', ['activeAccount'])
   }

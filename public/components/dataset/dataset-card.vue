@@ -2,9 +2,7 @@
   <v-card
     outlined
     tile
-    :elevation="hover ? 4 : 0"
-    @mouseenter="hover = true"
-    @mouseleave="hover = false"
+    hover
   >
     <nuxt-link
       :to="`/dataset/${dataset.id}`"
@@ -123,9 +121,6 @@ import { mapGetters } from 'vuex'
 
 export default {
   props: ['dataset', 'showTopics', 'showOwner'],
-  data: () => ({
-    hover: false
-  }),
   computed: {
     ...mapGetters('session', ['activeAccount'])
   }

@@ -37,10 +37,7 @@ import VClamp from 'vue-clamp'
 
 export default {
   components: { VClamp },
-  props: ['catalog', 'showOwner'],
-  data: () => ({
-    hover: false
-  })
+  props: ['catalog', 'showOwner']
 }
 </script>
 

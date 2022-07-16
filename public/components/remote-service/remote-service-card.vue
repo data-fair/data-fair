@@ -39,10 +39,7 @@ import VClamp from 'vue-clamp'
 
 export default {
   components: { VClamp },
-  props: ['remoteService'],
-  data: () => ({
-    hover: false
-  })
+  props: ['remoteService']
 }
 </script>
 
