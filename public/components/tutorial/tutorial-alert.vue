@@ -1,13 +1,15 @@
 <template lang="html">
   <v-alert
     v-model="show"
-    type="info"
+    :type="$vuetify.smAndUp ? 'info' : null"
+    dark
     color="success"
     dense
     border="left"
     class="my-2 tutorial-alert"
     :dismissible="true"
     :outlined="$vuetify.theme.dark"
+    :style="$vuetify.theme.dark ? 'background: black !important' : ''"
     @input="close"
   >
     <slot>

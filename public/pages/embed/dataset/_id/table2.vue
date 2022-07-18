@@ -6,7 +6,7 @@
   >
     <tutorial-alert
       id="dataset-table"
-      style="position:absolute;bottom: 0px;z-index:1;left: 50%;transform: translate(-50%, 0);"
+      style="position:absolute;top: 60px;z-index:1;left: 50%;transform: translate(-50%, 0);min-width: 360px;"
     >
       {{ $t('tutorialFilter') }}
     </tutorial-alert>

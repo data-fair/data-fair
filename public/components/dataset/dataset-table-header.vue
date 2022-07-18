@@ -55,6 +55,12 @@ export default {
 .theme--light .dataset-table-header.active {
   color: rgba(0, 0, 0, 0.87);
 }
+.theme--dark .dataset-table-header {
+  color: rgba(255, 255, 255, 0.7);
+}
+.theme--dark .dataset-table-header.active {
+  color: rgb(255, 255, 255);
+}
 .dataset-table-header.sortable {
   pointer-events: auto;
   cursor: pointer;
