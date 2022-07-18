@@ -40,8 +40,6 @@ exports.init = async (db) => {
     exports.ensureIndex(db, 'datasets', { id: 1 }, { unique: true }),
     // used to fetch list sorted by creation
     exports.ensureIndex(db, 'datasets', { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, { name: 'main-keys' }),
-    // combined filters mostly used for count and facetting in portals
-    exports.ensureIndex(db, 'datasets', { 'owner.type': 1, 'owner.id': 1, publicationSites: 1, 'topics.id': 1 }, { name: 'combined-filters' }),
     // full text search
     exports.ensureIndex(db, 'datasets', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
     // special purpose indexes for workers, etc
@@ -64,8 +62,6 @@ exports.init = async (db) => {
     exports.ensureIndex(db, 'applications', { id: 1 }, { unique: true }),
     // used to fetch list sorted by creation
     exports.ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, { name: 'main-keys' }),
-    // combined filters mostly used for count and facetting in portals
-    exports.ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1, publicationSites: 1, 'topics.id': 1 }, { name: 'combined-filters' }),
     // full text search
     exports.ensureIndex(db, 'applications', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext' }),
     // get the applications of a dataset
