@@ -1,6 +1,6 @@
 const config = require('config')
 const createError = require('http-errors')
-
+const useragent = require('useragent')
 // adapt headers based on the state of the currently requested resource
 // Set max-age
 // Also compare last-modified and if-modified-since headers for cache revalidation on a specific resource
@@ -46,7 +46,9 @@ exports.resourceBased = (req, res, next) => {
 
 // cf https://stackoverflow.com/questions/12205632/express-returns-304-for-ie-repeative-requests
 exports.noCache = (req, res, next) => {
-  res.setHeader('Expires', '-1')
-  res.setHeader('Cache-Control', 'must-revalidate, private')
+  if (useragent.is(req.headers['user-agent']).ie) {
+    res.setHeader('Expires', '-1')
+    res.setHeader('Cache-Control', 'must-revalidate, private')
+  }
   next()
 }

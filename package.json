@@ -184,6 +184,7 @@
     "tmp-promise": "^2.1.1",
     "truncate-html": "^1.0.4",
     "truncate-middle": "^1.0.6",
+    "useragent": "^2.3.0",
     "vt-pbf": "3.1.1",
     "ws": "^7.4.1",
     "xlsx": "^0.18.0"
