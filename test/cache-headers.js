@@ -16,6 +16,11 @@ describe('Cache headers', () => {
     let res = await ax.get('/api/v1/datasets/dataset1/lines')
     assert.equal(res.headers['cache-control'], 'must-revalidate, private')
 
+    await assert.rejects(
+      ax.get('/api/v1/datasets/dataset1/lines', { headers: { 'If-None-Match': res.headers.etag } }),
+      err => err.status === 304)
+    assert.equal(res.headers['cache-control'], 'must-revalidate, private')
+
     res = await ax.get('/api/v1/datasets/dataset1/lines', { params: { finalizedAt: dataset.finalizedAt } })
     assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=' + config.cache.timestampedPublicMaxAge)
 
