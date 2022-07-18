@@ -40,7 +40,7 @@ describe('Cache headers', () => {
 
     // static files are not put in a public web cache, better for download webhooks and to prevent filling the cache with content that is inexpensive to manage ourself
     res = await ax.get('/api/v1/datasets/dataset1/full')
-    assert.equal(res.headers['cache-control'], 'must-revalidate, private')
+    assert.equal(res.headers['x-accel-buffering'], 'no')
     // console.log(res.headers)
   })
 })
