@@ -5,17 +5,17 @@
     style="line-height: 1;"
   >
     <template v-if="!limit || total <= limit">
-      {{ $tc('lines', total) }}
+      {{ $tc('lines', total, {total: $n(total)}) }}
     </template>
     <template v-else>
-      {{ $t('firstLines', {lines: limit, total}) }}
+      {{ $t('firstLines', {lines: $n(limit), total: $n(total)}) }}
     </template>
   </div>
 </template>
 
 <i18n lang="yaml">
 fr:
-  lines: "aucune ligne | 1 ligne | {count} lignes"
+  lines: "aucune ligne | 1 ligne | {total} lignes"
   firstLines: "{lines} premières lignes ({total} au total)"
 en:
   lines: "no line | 1 line | {count} lines"

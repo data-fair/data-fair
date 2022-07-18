@@ -246,7 +246,6 @@ export default {
     toggledMenu () {
       const filters = this.filters.filter(f => f.field.key === this.field.key)
       for (const filter of filters) {
-        console.log(filter)
         if ('minValue' in filter && filter.minValue !== '*') this.gte = filter.minValue
         if ('maxValue' in filter && filter.maxValue !== '*') this.lte = filter.maxValue
         if (filter.type === 'starts') this.startsWith = filter.value
@@ -255,7 +254,6 @@ export default {
           if (this.field.type === 'boolean') this.equalsBool = filter.values[0]
         }
       }
-      console.log(this.showMenu, this.filters)
     },
     emitIntervalFilter () {
       if (!this.gte && !this.lte) return

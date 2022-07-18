@@ -16,7 +16,7 @@
       dense
       :color="$vuetify.theme.dark ? 'black' : 'white'"
     >
-      <v-toolbar-title>
+      <v-toolbar-title style="white-space:normal;">
         <dataset-nb-results
           :total="data.total"
           :limit="0"
@@ -26,7 +26,7 @@
         v-model="query"
         placeholder="Rechercher"
         append-icon="mdi-magnify"
-        style="min-width:150px; max-width:250px;"
+        style="min-width:120px; max-width:250px;"
         outlined
         dense
         rounded
@@ -54,51 +54,33 @@
       </template>
     </v-app-bar>
 
+    <!-- table mode data-table -->
     <v-data-table
+      v-if="displayMode === 'table'"
       :headers="selectedHeaders"
-      :items="displayMode === 'table' ? data.results : []"
+      :items="data.results"
       :server-items-length="data.total"
       :loading="loading"
       :options.sync="pagination"
       hide-default-header
       hide-default-footer
-      :class="{'hidden-body': displayMode !== 'table'}"
     >
       <template #header>
-        <thead class="v-data-table-header">
+        <thead
+          class="v-data-table-header"
+          style="width:100%"
+        >
           <tr>
-            <th
+            <dataset-table-header
               v-for="header in selectedHeaders"
               :key="header.text"
-              :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy[0], asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
-              nowrap
-              @click="orderBy(header)"
-            >
-              <help-tooltip
-                v-if="header.tooltip"
-                small
-                orientation="bottom"
-              >
-                <div v-html="header.tooltip" />
-              </help-tooltip>
-              <span>
-                {{ header.text }}
-              </span>
-              <v-icon
-                v-if="header.sortable"
-                class="v-data-table-header__icon"
-                small
-              >
-                mdi-arrow-up
-              </v-icon>
-              <dataset-filter-col
-                v-if="header.field && header.filterable"
-                :max-height="filterHeight"
-                :field="header.field"
-                :filters="filters"
-                @filter="f => addFilter(header.value, f)"
-              />
-            </th>
+              :header="header"
+              :filters="filters"
+              :filter-height="filterHeight"
+              :pagination="pagination"
+              @sort="orderBy(header)"
+              @filter="f => addFilter(header.value, f)"
+            />
           </tr>
         </thead>
       </template>
@@ -130,6 +112,36 @@
         </tr>
       </template>
     </v-data-table>
+
+    <!-- list mode header -->
+    <template v-if="displayMode === 'list'">
+      <v-slide-group show-arrows>
+        <v-slide-item
+          v-for="header in selectedHeaders"
+          :key="header.text"
+        >
+          <dataset-table-header
+            :header="header"
+            :filters="filters"
+            :filter-height="filterHeight"
+            :pagination="pagination"
+            @sort="orderBy(header)"
+            @filter="f => addFilter(header.value, f)"
+          />
+        </v-slide-item>
+      </v-slide-group>
+
+      <div style="height:2px;width:100%;">
+        <v-progress-linear
+          v-if="loading"
+          indeterminate
+          height="2"
+          style="margin:0;"
+        />
+      </div>
+    </template>
+
+    <!--list mode body -->
     <v-row
       v-if="displayMode === 'list'"
       class="ma-0"
@@ -153,9 +165,9 @@
     </v-row>
     <v-row
       align="center"
-      class="my-1"
+      class="my-0"
     >
-      <v-col class="text-center">
+      <v-col class="text-center py-0">
         <v-btn
           v-if="data.next"
           :loading="loading"
@@ -175,21 +187,19 @@
 fr:
   tutorialFilter: Appliquez des filtres depuis les entêtes de colonnes et en survolant les valeurs. Triez en cliquant sur les entêtes de colonnes. Cliquez sur le bouton en haut à droite pour télécharger dans un fichier le contenu filtré et trié.
   noData: Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.
-  showMore: Voir plus
+  showMore: Voir plus de lignes
 en:
   tutorialFilter: Apply filters from the headers and by hovering the values. Sort by clicking on the headers. Click on the button on the top to the right to download in a file the filtered and sorted content.
   noData: The data is not accessible. Either the dataset was not yet entirely processed, or there was an error.
-  showMore: Show more
+  showMore: Show more lines
 </i18n>
 
 <script>
 import { mapState, mapGetters } from 'vuex'
 import eventBus from '~/event-bus'
-import helpTooltip from '../../../../components/help-tooltip.vue'
 const filtersUtils = require('~/assets/filters-utils')
 
 export default {
-  components: { helpTooltip },
   data: () => ({
     data: {},
     query: null,
@@ -279,7 +289,7 @@ export default {
       let height = 48 // app bar
       if (this.filters.length) height += 48 // app bar extension
       height += 48 // table header
-      height += 60 // bottom button
+      height += 36 // bottom button
       return height
     }
   },
@@ -312,7 +322,7 @@ export default {
     this.filterHeight = window.innerHeight - this.topBottomHeight
     await this.$nextTick()
     this.ready = true
-    this.refresh(true)
+    this.refresh()
   },
   methods: {
     setItemsPerPage () {
@@ -327,7 +337,9 @@ export default {
       if (!initial) this.writeQueryParams()
 
       if (resetPagination) {
+        if (this.displayMode === 'table') this.setItemsPerPage()
         this.pagination.page = 1
+        this.$vuetify.goTo(0)
         // this is debatable
         // but in case of full-text search you can forget that a sort is active
         // and be surprised by counter-intuitive results
@@ -355,7 +367,9 @@ export default {
     async fetchMore () {
       this.loading = true
       try {
-        const nextData = await this.$axios.$get(this.data.next)
+        const nextUrl = new URL(this.data.next)
+        nextUrl.searchParams.set('size', 40)
+        const nextData = await this.$axios.$get(nextUrl.href)
         this.data.next = nextData.next
         this.data.results = this.data.results.concat(nextData.results)
       } catch (error) {
@@ -389,7 +403,7 @@ export default {
         this.$set(this.pagination.sortDesc, 0, !this.pagination.sortDesc[0])
       } else {
         this.$set(this.pagination.sortBy, 0, header.value)
-        this.$set(this.pagination.sortDesc, 0, true)
+        this.$set(this.pagination.sortDesc, 0, false)
       }
     },
     addFilter (key, filter) {
@@ -436,8 +450,5 @@ export default {
 <style>
 .embed .v-data-table td {
   white-space: nowrap;
-}
-.v-data-table.hidden-body tbody {
-  display: none !important;
 }
 </style>
