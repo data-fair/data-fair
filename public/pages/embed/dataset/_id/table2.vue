@@ -32,9 +32,11 @@
         rounded
         hide-details
         class="mx-2"
+        clearable
         @input="qMode === 'complete' && refresh(true)"
         @keyup.enter.native="refresh(true)"
         @click:append="refresh(true)"
+        @click:clear="$nextTick(() => refresh(true))"
       />
 
       <v-spacer />
@@ -115,21 +117,23 @@
 
     <!-- list mode header -->
     <template v-if="displayMode === 'list'">
-      <v-slide-group show-arrows>
-        <v-slide-item
-          v-for="header in selectedHeaders"
-          :key="header.text"
-        >
-          <dataset-table-header
-            :header="header"
-            :filters="filters"
-            :filter-height="filterHeight"
-            :pagination="pagination"
-            @sort="orderBy(header)"
-            @filter="f => addFilter(header.value, f)"
-          />
-        </v-slide-item>
-      </v-slide-group>
+      <v-row class="ma-0 px-2">
+        <v-slide-group show-arrows>
+          <v-slide-item
+            v-for="header in selectedHeaders"
+            :key="header.text"
+          >
+            <dataset-table-header
+              :header="header"
+              :filters="filters"
+              :filter-height="filterHeight"
+              :pagination="pagination"
+              @sort="orderBy(header)"
+              @filter="f => addFilter(header.value, f)"
+            />
+          </v-slide-item>
+        </v-slide-group>
+      </v-row>
 
       <div style="height:2px;width:100%;">
         <v-progress-linear
