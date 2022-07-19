@@ -1,6 +1,5 @@
 <template lang="html">
   <v-container
-    v-scroll="onScroll"
     fluid
     class="pa-0"
   >
@@ -15,6 +14,7 @@
       app
       dense
       :color="$vuetify.theme.dark ? 'black' : 'white'"
+      :scroll-target="displayMode === 'table' ? '.v-data-table__wrapper' : ''"
     >
       <v-toolbar-title style="white-space:normal;">
         <dataset-nb-results
@@ -60,12 +60,12 @@
     <v-data-table
       v-if="displayMode === 'table'"
       :headers="selectedHeaders"
-      :items="data.results"
       :server-items-length="data.total"
       :loading="loading"
       :options.sync="pagination"
       hide-default-header
       hide-default-footer
+      :height="tableHeight"
     >
       <template #header>
         <thead
@@ -86,32 +86,53 @@
           </tr>
         </thead>
       </template>
-      <template #item="{item}">
-        <tr>
-          <td
-            v-for="header in selectedHeaders"
-            :key="header.value"
-            :class="`pl-4 pr-0`"
-            :style="`height: ${lineHeight}px;position:relative;`"
+      <template #body>
+        <tbody>
+          <tr
+            v-for="item in data.results"
+            :key="item._id"
           >
-            <template v-if="header.value === '_thumbnail'">
-              <v-avatar
-                v-if="item._thumbnail"
-                tile
-                :size="lineHeight"
-              >
-                <img :src="item._thumbnail">
-              </v-avatar>
-            </template>
-            <dataset-item-value
-              v-else
-              :item="item"
-              :field="header.field"
-              :filters="filters"
-              @filter="f => addFilter(header.value, f)"
-            />
-          </td>
-        </tr>
+            <td
+              v-for="header in selectedHeaders"
+              :key="header.value"
+              :class="`pl-4 pr-0`"
+              :style="`height: ${lineHeight}px;position:relative;`"
+            >
+              <template v-if="header.value === '_thumbnail'">
+                <v-avatar
+                  v-if="item._thumbnail"
+                  tile
+                  :size="lineHeight"
+                >
+                  <img :src="item._thumbnail">
+                </v-avatar>
+              </template>
+              <dataset-item-value
+                v-else
+                :item="item"
+                :field="header.field"
+                :filters="filters"
+                @filter="f => addFilter(header.value, f)"
+              />
+            </td>
+          </tr>
+          <tr
+            v-if="data.results"
+            v-intersect="fetchMore"
+            style="position:relative;"
+          >
+            <v-btn
+              v-if="data.next"
+              :loading="loading"
+              text
+              color="primary"
+              :style="`position:absolute;left: ${windowWidth/2}px;transform: translate(-50%, 0);`"
+              @click="fetchMore"
+            >
+              {{ $t('showMore') }}
+            </v-btn>
+          </tr>
+        </tbody>
       </template>
     </v-data-table>
 
@@ -167,22 +188,29 @@
         />
       </v-col>
     </v-row>
-    <v-row
-      align="center"
-      class="my-0"
-    >
-      <v-col class="text-center py-0">
-        <v-btn
-          v-if="data.next"
-          :loading="loading"
-          text
-          color="primary"
-          @click="fetchMore"
-        >
-          {{ $t('showMore') }}
-        </v-btn>
-      </v-col>
-    </v-row>
+
+    <!-- list mode show more -->
+    <template v-if="displayMode === 'list'">
+      <v-row
+        v-if="data.results"
+        v-intersect="fetchMore"
+        align="center"
+        class="my-0"
+      >
+        <v-col class="text-center py-0">
+          <v-btn
+            v-if="data.next"
+            :loading="loading"
+            text
+            color="primary"
+            @click="fetchMore"
+          >
+            {{ $t('showMore') }}
+          </v-btn>
+        </v-col>
+      </v-row>
+    </template>
+
     <layout-scroll-to-top />
   </v-container>
 </template>
@@ -221,7 +249,8 @@ export default {
     lastParams: null,
     selectedCols: [],
     ready: false,
-    windowHeight: window.innerHeight
+    windowHeight: window.innerHeight,
+    windowWidth: window.innerWidth
   }),
   computed: {
     ...mapState(['vocabulary']),
@@ -289,6 +318,12 @@ export default {
       if (this.selectedCols.length === 0) return this.params
       return { ...this.params, select: this.selectedCols.join(',') }
     },
+    tableHeight () {
+      let height = this.windowHeight
+      height -= 48 // app bar
+      if (this.filters.length) height -= 48 // app bar extension
+      return height
+    },
     topBottomHeight () {
       let height = 48 // app bar
       if (this.filters.length) height += 48 // app bar extension
@@ -322,26 +357,18 @@ export default {
   },
   async mounted () {
     this.readQueryParams()
-    if (this.displayMode === 'table') this.setItemsPerPage()
+    if (this.displayMode === 'table') this.pagination.itemsPerPage = 24
     this.filterHeight = window.innerHeight - this.topBottomHeight
     await this.$nextTick()
     this.ready = true
     this.refresh()
   },
   methods: {
-    setItemsPerPage () {
-      // adapt number of lines to window height
-      // don't forget to let enough space for the optional horizontal scroll bar
-      const height = window.innerHeight
-      const nbRows = Math.floor(Math.max(height - this.topBottomHeight, 120) / (this.lineHeight + 2))
-      this.pagination.itemsPerPage = Math.min(Math.max(nbRows, 4), 50)
-    },
     async refresh (resetPagination, initial) {
       if (!this.ready) return
       if (!initial) this.writeQueryParams()
 
       if (resetPagination) {
-        if (this.displayMode === 'table') this.setItemsPerPage()
         this.pagination.page = 1
         this.$vuetify.goTo(0)
         // this is debatable
@@ -364,15 +391,13 @@ export default {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       this.loading = false
-
-      // if the page is too large for the user to trigger a scroll we append results immediately
-      this.continueFetch()
     },
-    async fetchMore () {
+    async fetchMore (entries, observer, isIntersecting) {
+      console.log(entries, observer, isIntersecting)
+      if (!this.data.next || this.loading || !isIntersecting) return
       this.loading = true
       try {
         const nextUrl = new URL(this.data.next)
-        nextUrl.searchParams.set('size', 40)
         const nextData = await this.$axios.$get(nextUrl.href)
         this.data.next = nextData.next
         this.data.results = this.data.results.concat(nextData.results)
@@ -380,26 +405,6 @@ export default {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       this.loading = false
-
-      // if the page is too large for the user to trigger a scroll we append results immediately
-      this.continueFetch()
-    },
-    async continueFetch () {
-      await this.$nextTick()
-      await this.$nextTick()
-      if (this.displayMode === 'table') return
-      const html = document.getElementsByTagName('html')
-      if (html[0].scrollHeight === html[0].clientHeight && this.data.next) {
-        this.fetchMore()
-      }
-    },
-    onScroll (e) {
-      if (this.displayMode === 'table') return // infinite scroll incompatible with table horizontal scroll
-      if (this.loading) return
-      const se = e.target.scrollingElement
-      if (se.clientHeight + se.scrollTop > se.scrollHeight - 300 && this.data.next) {
-        this.fetchMore()
-      }
     },
     orderBy (header) {
       if (!header.sortable) return

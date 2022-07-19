@@ -43,7 +43,8 @@
       "vue/no-mutating-props": "off",
       "vue/require-prop-types": "off",
       "vue/no-useless-template-attributes": "off",
-      "vue/singleline-html-element-content-newline": "off"
+      "vue/singleline-html-element-content-newline": "off",
+      "vue/valid-v-slot": "off"
     }
   },
   "devDependencies": {
