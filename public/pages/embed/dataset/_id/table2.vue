@@ -370,7 +370,9 @@ export default {
 
       if (resetPagination) {
         this.pagination.page = 1
-        this.$vuetify.goTo(0)
+        const goToOpts = {}
+        if (this.displayMode === 'table') goToOpts.container = '.v-data-table__wrapper'
+        this.$vuetify.goTo(0, goToOpts)
         // this is debatable
         // but in case of full-text search you can forget that a sort is active
         // and be surprised by counter-intuitive results
@@ -394,7 +396,7 @@ export default {
     },
     async fetchMore (entries, observer, isIntersecting) {
       console.log(entries, observer, isIntersecting)
-      if (!this.data.next || this.loading || !isIntersecting) return
+      if (!this.data.next || this.loading || isIntersecting === false) return
       this.loading = true
       try {
         const nextUrl = new URL(this.data.next)
