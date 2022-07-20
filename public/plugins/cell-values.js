@@ -3,7 +3,7 @@ const truncateMiddle = require('truncate-middle')
 const moment = require('moment')
 require('moment/locale/fr')
 
-Vue.filter('cellValues', function (values, property) {
+Vue.filter('cellValues', function (values, property, truncate = 50) {
   if (values === undefined || values === null) return ''
   if (!Array.isArray(values)) values = [values]
   return values.map(value => {
@@ -18,6 +18,6 @@ Vue.filter('cellValues', function (values, property) {
       if (typeof value === 'string') return value === 'true' ? 'oui' : 'non'
       return value ? 'oui' : 'non'
     }
-    return truncateMiddle(value + '', 50, 0, '...')
+    return truncateMiddle(value + '', truncate, 0, '...')
   }).join(', ')
 })

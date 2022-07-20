@@ -32,7 +32,7 @@
               @click="addFilter(field.key, value)"
             >
               <span>
-                {{ value | cellValues(field) }}
+                {{ value | cellValues(field, truncate) }}
                 <v-icon v-if="hover">mdi-filter-variant</v-icon>
               </span>
             </v-chip>
@@ -44,7 +44,7 @@
         v-slot="{ hover }"
       >
         <div :style="`max-height: 40px; min-width: ${Math.min((itemValue + '').length, 50) * 6}px;`">
-          <span>{{ itemValue | cellValues(field) }}</span>
+          <span>{{ itemValue | cellValues(field, truncate) }}</span>
           <v-btn
             v-if="hover && !item._tmpState && !filters.find(f => f.field.key === field.key) && isFilterable(itemValue)"
             fab
@@ -67,7 +67,8 @@ export default {
   props: {
     item: { type: Object, required: true },
     field: { type: Object, required: true },
-    filters: { type: Array, required: false, default: () => ([]) }
+    filters: { type: Array, required: false, default: () => ([]) },
+    truncate: { type: Number, default: 50 }
   },
   computed: {
     itemValue () {
@@ -86,6 +87,7 @@ export default {
       if (this.field['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
       if (value === undefined || value === null || value === '') return false
       if (typeof value === 'string' && (value.length > 200 || value.startsWith('{'))) return false
+      if (typeof value === 'string' && value.endsWith('...')) return false
       return true
     }
   }

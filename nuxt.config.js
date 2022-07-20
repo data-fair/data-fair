@@ -47,6 +47,9 @@ module.exports = {
       const webpack = require('webpack')
       // Ignore all locale files of moment.js, those we want are loaded in plugins/moment.js
       config.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))
+    },
+    splitChunks: {
+      layouts: true
     }
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color

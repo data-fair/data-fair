@@ -112,6 +112,7 @@
                 :item="item"
                 :field="header.field"
                 :filters="filters"
+                :truncate="truncate"
                 @filter="f => addFilter(header.value, f)"
               />
             </td>
@@ -184,6 +185,7 @@
           :item="item"
           :filters="filters"
           :selected-fields="selectedCols"
+          :truncate="truncate"
           @filter="({field, filter}) => addFilter(field.key, filter)"
         />
       </v-col>
@@ -237,7 +239,7 @@ export default {
     query: null,
     pagination: {
       page: 1,
-      itemsPerPage: 12,
+      itemsPerPage: 20,
       sortBy: [null],
       sortDesc: [false]
     },
@@ -288,7 +290,7 @@ export default {
       return this.headers.filter(h => !h.field || this.selectedCols.includes(h.value))
     },
     truncate () {
-      return this.$vuetify.breakpoint.mdAndUp ? 50 : 30
+      return this.$vuetify.breakpoint.mdAndUp ? 50 : 40
     },
     params () {
       const params = {
@@ -357,7 +359,7 @@ export default {
   },
   async mounted () {
     this.readQueryParams()
-    if (this.displayMode === 'table') this.pagination.itemsPerPage = 24
+    if (this.displayMode === 'table') this.pagination.itemsPerPage = 40
     this.filterHeight = window.innerHeight - this.topBottomHeight
     await this.$nextTick()
     this.ready = true

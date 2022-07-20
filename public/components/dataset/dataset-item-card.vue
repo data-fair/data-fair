@@ -1,6 +1,6 @@
 <template>
   <v-card
-    class="fill-height"
+    class="fill-height dataset-item-card"
     outlined
   >
     <v-card-title class="pb-0">
@@ -32,33 +32,23 @@
       <div style="flex: 1;" />
       <v-list
         dense
-        class="transparent"
+        class="transparent pt-0"
       >
         <template v-for="field in otherFields">
-          <v-list-item
+          <v-input
             v-if="item[field.key] !== null && item[field.key] !== undefined && item[field.key] !== ''"
             :key="field.key"
-            class="px-0"
-            style="min-height:20px;"
-            two-line
+            :label="field.title ? field.title : (field['x-originalName'] || field.key)"
+            hide-details
           >
-            <v-list-item-content
-              class="py-0 font-weight-bold"
-            >
-              {{ field.title ? field.title : (field['x-originalName'] || field.key) }}
-            </v-list-item-content>
-            <v-list-item-content
-              style="flex:1.6;"
-              class="py-0 body-2"
-            >
-              <dataset-item-value
-                :item="item"
-                :field="field"
-                :filters="filters"
-                @filter="filter => $emit('filter', {field, filter})"
-              />
-            </v-list-item-content>
-          </v-list-item>
+            <dataset-item-value
+              :item="item"
+              :field="field"
+              :filters="filters"
+              :truncate="truncate"
+              @filter="filter => $emit('filter', {field, filter})"
+            />
+          </v-input>
         </template>
       </v-list>
     </v-card-text>
@@ -72,7 +62,8 @@ export default {
   props: {
     item: { type: Object, required: true },
     filters: { type: Array, required: false, default: () => ([]) },
-    selectedFields: { type: Array, required: false, default: () => ([]) }
+    selectedFields: { type: Array, required: false, default: () => ([]) },
+    truncate: { type: Number, default: 50 }
   },
   computed: {
     ...mapState('dataset', ['dataset']),
@@ -89,3 +80,17 @@ export default {
   }
 }
 </script>
+
+<style>
+
+.dataset-item-card .v-input__slot {
+  display: block;
+}
+
+.dataset-item-card .v-input__slot .v-label {
+  font-size:12px;
+  line-height: 16px;
+  height: 16px;
+  bottom: -4px;
+}
+</style>
