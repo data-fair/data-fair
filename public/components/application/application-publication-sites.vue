@@ -96,7 +96,7 @@ export default {
   }),
   computed: {
     ...mapState('application', ['application']),
-    ...mapGetters('dataset', ['can']),
+    ...mapGetters('application', ['can']),
     ...mapGetters('session', ['activeAccount'])
   },
   methods: {

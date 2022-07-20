@@ -397,7 +397,6 @@ export default {
       this.loading = false
     },
     async fetchMore (entries, observer, isIntersecting) {
-      console.log(entries, observer, isIntersecting)
       if (!this.data.next || this.loading || isIntersecting === false) return
       this.loading = true
       try {
