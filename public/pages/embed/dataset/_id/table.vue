@@ -1,142 +1,102 @@
-<template>
+<template lang="html">
   <v-container
     fluid
     class="pa-0"
   >
     <tutorial-alert
       id="dataset-table"
-      style="position:absolute;bottom: 0px;z-index:1;left: 50%;transform: translate(-50%, 0);"
+      style="position:absolute;top: 60px;z-index:1;left: 50%;transform: translate(-50%, 0);min-width: 360px;"
     >
       {{ $t('tutorialFilter') }}
     </tutorial-alert>
-    <v-sheet
-      v-if="notFound"
-      class="pa-2"
+    <v-app-bar
+      elevate-on-scroll
+      app
+      dense
+      :color="$vuetify.theme.dark ? 'black' : 'white'"
+      :scroll-target="displayMode === 'table' ? '.v-data-table__wrapper' : ''"
     >
-      <p v-t="'noData'" />
-    </v-sheet>
-    <template v-else>
-      <v-row class="ma-0">
-        <v-col
-          class="pb-0 pr-0 pl-1 pt-1"
-          sm="4"
-          cols="12"
-        >
-          <v-text-field
-            v-model="query"
-            placeholder="Rechercher"
-            append-icon="mdi-magnify"
-            style="min-width:150px;"
-            outlined
-            dense
-            hide-details
-            @input="qMode === 'complete' && refresh(true)"
-            @keyup.enter.native="refresh(true)"
-            @click:append="refresh(true)"
-          />
-        </v-col>
+      <v-toolbar-title style="white-space:normal;">
+        <dataset-nb-results
+          :total="data.total"
+          :limit="0"
+        />
+      </v-toolbar-title>
+      <v-text-field
+        v-model="query"
+        placeholder="Rechercher"
+        append-icon="mdi-magnify"
+        style="min-width:120px; max-width:250px;"
+        outlined
+        dense
+        rounded
+        hide-details
+        class="mx-2"
+        clearable
+        @input="qMode === 'complete' && refresh(true)"
+        @keyup.enter.native="refresh(true)"
+        @click:append="refresh(true)"
+        @click:clear="$nextTick(() => refresh(true))"
+      />
 
-        <v-col
-          sm="8"
-          cols="12"
-          class="pb-0"
-        >
-          <v-row
-            justify="end"
-            class="pr-3"
-          >
-            <v-spacer v-if="$vuetify.breakpoint.xs" />
-            <v-pagination
-              v-if="data.total"
-              v-model="pagination.page"
-              circle
-              :length="Math.ceil(Math.min(data.total, 10000 - pagination.itemsPerPage) / pagination.itemsPerPage)"
-              :total-visible="$vuetify.breakpoint.mdAndUp ? 6 : 5"
-              style="width: auto"
-            />
-            <v-spacer v-if="$vuetify.breakpoint.xs" />
-            <dataset-select-cols
-              v-model="selectedCols"
-              :headers="headers"
-            />
-            <dataset-download-results
-              :params="downloadParams"
-              :total="data.total"
-            />
-          </v-row>
-        </v-col>
-      </v-row>
-
-      <v-row
+      <v-spacer />
+      <dataset-select-cols
+        v-model="selectedCols"
+        :headers="headers"
+      />
+      <dataset-download-results
+        :params="downloadParams"
+        :total="data.total"
+      />
+      <template
         v-if="filters.length"
-        class="ma-0"
+        #extension
       >
-        <v-col class="pb-1 pt-2 pl-0">
-          <dataset-filters v-model="filters" />
-        </v-col>
-      </v-row>
-      <v-row class="ma-0">
-        <v-col class="pl-0 pb-1 pt-2">
-          <dataset-nb-results
-            :total="data.total"
-            class="ml-3"
-          />
-        </v-col>
-      </v-row>
-      <v-data-table
-        :headers="selectedHeaders"
-        :items="data.results"
-        :server-items-length="data.total"
-        :loading="loading"
-        :options.sync="pagination"
-        hide-default-header
-        hide-default-footer
-      >
-        <template #header>
-          <thead class="v-data-table-header">
-            <tr>
-              <th
-                v-for="header in selectedHeaders"
-                :key="header.text"
-                :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy[0], asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
-                nowrap
-                @click="orderBy(header)"
-              >
-                <help-tooltip
-                  v-if="header.tooltip"
-                  small
-                  orientation="bottom"
-                >
-                  <div v-html="header.tooltip" />
-                </help-tooltip>
-                <span>
-                  {{ header.text }}
-                </span>
-                <v-icon
-                  v-if="header.sortable"
-                  class="v-data-table-header__icon"
-                  small
-                >
-                  mdi-arrow-up
-                </v-icon>
-                <dataset-filter-col
-                  v-if="header.field && header.filterable"
-                  :max-height="filterHeight"
-                  :field="header.field"
-                  :filters="filters"
-                  @filter="f => addFilter(header.value, f)"
-                />
-              </th>
-            </tr>
-          </thead>
-        </template>
-        <template #item="{item}">
+        <dataset-filters v-model="filters" />
+      </template>
+    </v-app-bar>
+
+    <!-- table mode data-table -->
+    <v-data-table
+      v-if="displayMode === 'table'"
+      :headers="selectedHeaders"
+      :server-items-length="data.total"
+      :loading="loading"
+      :options.sync="pagination"
+      hide-default-header
+      hide-default-footer
+      :height="tableHeight"
+    >
+      <template #header>
+        <thead
+          class="v-data-table-header"
+          style="width:100%"
+        >
           <tr>
+            <dataset-table-header
+              v-for="header in selectedHeaders"
+              :key="header.text"
+              :header="header"
+              :filters="filters"
+              :filter-height="filterHeight"
+              :pagination="pagination"
+              @sort="orderBy(header)"
+              @filter="f => addFilter(header.value, f)"
+            />
+          </tr>
+        </thead>
+      </template>
+      <template #body>
+        <tbody>
+          <tr
+            v-for="item in data.results"
+            :key="item._id"
+          >
             <td
               v-for="header in selectedHeaders"
               :key="header.value"
               :class="`pl-4 pr-0`"
-              :style="`height: ${lineHeight}px`"
+              :style="`height: ${lineHeight}px;position:relative;`"
             >
               <template v-if="header.value === '_thumbnail'">
                 <v-avatar
@@ -147,70 +107,113 @@
                   <img :src="item._thumbnail">
                 </v-avatar>
               </template>
-              <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
-                <!-- attachment_url is empty if the value is an external link -->
-                <a :href="item._attachment_url || item[header.value]">{{ item[header.value] | truncate(truncate) }}</a>
-              </template>
-              <template v-else-if="webPageField && webPageField.key === header.value">
-                <a
-                  v-if="item[header.value]"
-                  target="_blank"
-                  :href="item[header.value]"
-                >{{ item[header.value] | truncate(truncate) }}</a>
-              </template>
-              <template v-else>
-                <div
-                  v-if="header.field.type === 'string' && header.field.separator"
-                  :style="`max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`"
-                >
-                  <v-chip-group
-                    v-if="item[header.value]"
-                    style="max-width:500px;"
-                    show-arrows
-                  >
-                    <v-hover
-                      v-for="(value, i) in item[header.value].split(header.field.separator).map(v => v.trim())"
-                      v-slot="{ hover }"
-                      :key="i"
-                    >
-                      <v-chip
-                        :class="{'my-0': true, 'px-4': !hover, 'px-2': hover}"
-                        :color="hover ? 'primary' : 'default'"
-                        @click="addFilter(header.value, value)"
-                      >
-                        <span>
-                          {{ value | cellValues(header.field) }}
-                          <v-icon v-if="hover">mdi-filter-variant</v-icon>
-                        </span>
-                      </v-chip>
-                    </v-hover>
-                  </v-chip-group>
-                </div>
-                <v-hover
-                  v-else
-                  v-slot="{ hover }"
-                >
-                  <div :style="`position: relative; max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
-                    <span>{{ item[header.value] | cellValues(header.field) }}</span>
-                    <v-btn
-                      v-if="hover && !item._tmpState && !filters.find(f => f.field.key === header.value) && header.filterable && isFilterable(item[header.value])"
-                      fab
-                      x-small
-                      color="primary"
-                      style="right: 0px;top: 50%;transform: translate(0, -50%);"
-                      absolute
-                      @click="addFilter(header.value, item[header.value])"
-                    >
-                      <v-icon>mdi-filter-variant</v-icon>
-                    </v-btn>
-                  </div>
-                </v-hover>
-              </template>
+              <dataset-item-value
+                v-else
+                :item="item"
+                :field="header.field"
+                :filters="filters"
+                :truncate="truncate"
+                @filter="f => addFilter(header.value, f)"
+              />
             </td>
           </tr>
-        </template>
-      </v-data-table>
+          <tr
+            v-if="data.results"
+            v-intersect="fetchMore"
+            style="position:relative;"
+          >
+            <v-btn
+              v-if="data.next"
+              :loading="loading"
+              text
+              color="primary"
+              :style="`position:absolute;left: ${windowWidth/2}px;transform: translate(-50%, 0);`"
+              @click="fetchMore"
+            >
+              {{ $t('showMore') }}
+            </v-btn>
+          </tr>
+        </tbody>
+      </template>
+    </v-data-table>
+
+    <!-- list mode header -->
+    <template v-if="displayMode === 'list'">
+      <v-row class="ma-0 px-2">
+        <v-slide-group show-arrows>
+          <v-slide-item
+            v-for="header in selectedHeaders"
+            :key="header.text"
+          >
+            <dataset-table-header
+              :header="header"
+              :filters="filters"
+              :filter-height="filterHeight"
+              :pagination="pagination"
+              @sort="orderBy(header)"
+              @filter="f => addFilter(header.value, f)"
+            />
+          </v-slide-item>
+        </v-slide-group>
+      </v-row>
+
+      <div style="height:2px;width:100%;">
+        <v-progress-linear
+          v-if="loading"
+          indeterminate
+          height="2"
+          style="margin:0;"
+        />
+      </div>
     </template>
+
+    <!--list mode body -->
+    <v-row
+      v-if="displayMode === 'list'"
+      class="ma-0"
+      dense
+    >
+      <v-col
+        v-for="item in data.results"
+        :key="item._id"
+        cols="12"
+        md="6"
+        lg="4"
+        xl="3"
+      >
+        <dataset-item-card
+          :item="item"
+          :filters="filters"
+          :selected-fields="selectedCols"
+          :truncate="truncate"
+          @filter="({field, filter}) => addFilter(field.key, filter)"
+        />
+      </v-col>
+    </v-row>
+
+    <!-- list mode show more -->
+    <template v-if="displayMode === 'list'">
+      <v-row
+        v-if="data.results"
+        v-intersect="fetchMore"
+        align="center"
+        class="my-0"
+      >
+        <v-col class="text-center py-0">
+          <v-btn
+            v-if="data.next"
+            :loading="loading"
+            text
+            color="primary"
+            @click="fetchMore"
+          >
+            {{ $t('showMore') }}
+          </v-btn>
+        </v-col>
+      </v-row>
+    </template>
+
+    <layout-scroll-to-top />
   </v-container>
 </template>
 
@@ -218,25 +221,25 @@
 fr:
   tutorialFilter: Appliquez des filtres depuis les entêtes de colonnes et en survolant les valeurs. Triez en cliquant sur les entêtes de colonnes. Cliquez sur le bouton en haut à droite pour télécharger dans un fichier le contenu filtré et trié.
   noData: Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.
+  showMore: Voir plus de lignes
 en:
   tutorialFilter: Apply filters from the headers and by hovering the values. Sort by clicking on the headers. Click on the button on the top to the right to download in a file the filtered and sorted content.
   noData: The data is not accessible. Either the dataset was not yet entirely processed, or there was an error.
+  showMore: Show more lines
 </i18n>
 
 <script>
 import { mapState, mapGetters } from 'vuex'
 import eventBus from '~/event-bus'
-import helpTooltip from '../../../../components/help-tooltip.vue'
 const filtersUtils = require('~/assets/filters-utils')
 
 export default {
-  components: { helpTooltip },
   data: () => ({
     data: {},
     query: null,
     pagination: {
       page: 1,
-      itemsPerPage: 5,
+      itemsPerPage: 20,
       sortBy: [null],
       sortDesc: [false]
     },
@@ -247,12 +250,19 @@ export default {
     filters: [],
     lastParams: null,
     selectedCols: [],
-    ready: false
+    ready: false,
+    windowHeight: window.innerHeight,
+    windowWidth: window.innerWidth
   }),
   computed: {
     ...mapState(['vocabulary']),
     ...mapState('dataset', ['dataset']),
-    ...mapGetters('dataset', ['resourceUrl', 'qMode', 'imageField', 'digitalDocumentField', 'webPageField']),
+    ...mapGetters('dataset', ['resourceUrl', 'qMode', 'imageField']),
+    displayMode () {
+      if (this.$route.query.display) return this.$route.query.display
+      if (this.$vuetify.breakpoint.smAndDown) return 'list'
+      return 'table'
+    },
     headers () {
       const fieldsHeaders = this.dataset.schema
         .filter(field => !field['x-calculated'])
@@ -280,7 +290,7 @@ export default {
       return this.headers.filter(h => !h.field || this.selectedCols.includes(h.value))
     },
     truncate () {
-      return this.$vuetify.breakpoint.mdAndUp ? 50 : 30
+      return this.$vuetify.breakpoint.mdAndUp ? 50 : 40
     },
     params () {
       const params = {
@@ -303,11 +313,25 @@ export default {
         }
       }
       if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
+      // if (this.displayMode === 'list') params.html = true
       return params
     },
     downloadParams () {
       if (this.selectedCols.length === 0) return this.params
       return { ...this.params, select: this.selectedCols.join(',') }
+    },
+    tableHeight () {
+      let height = this.windowHeight
+      height -= 48 // app bar
+      if (this.filters.length) height -= 48 // app bar extension
+      return height
+    },
+    topBottomHeight () {
+      let height = 48 // app bar
+      if (this.filters.length) height += 48 // app bar extension
+      height += 48 // table header
+      height += 36 // bottom button
+      return height
     }
   },
   watch: {
@@ -316,13 +340,12 @@ export default {
     },
     pagination: {
       handler () {
-        this.refresh()
+        this.refresh(false)
       },
       deep: true
     },
     filters: {
       handler () {
-        this.setItemsPerPage()
         this.refresh(true)
       },
       deep: true
@@ -336,27 +359,22 @@ export default {
   },
   async mounted () {
     this.readQueryParams()
-    this.setItemsPerPage()
+    if (this.displayMode === 'table') this.pagination.itemsPerPage = 40
+    this.filterHeight = window.innerHeight - this.topBottomHeight
     await this.$nextTick()
     this.ready = true
-    this.refresh(false, true)
+    this.refresh()
   },
   methods: {
-    setItemsPerPage () {
-      // adapt number of lines to window height
-      // don't forget to let enough space for the optional horizontal scroll bar
-      const height = window.innerHeight
-      let top = this.$vuetify.breakpoint.xs ? 150 : 110
-      if (this.filters.length) top += 36
-      const nbRows = Math.floor(Math.max(height - top, 120) / (this.lineHeight + 2))
-      this.pagination.itemsPerPage = Math.min(Math.max(nbRows, 4), 50)
-      this.filterHeight = height - top
-    },
     async refresh (resetPagination, initial) {
       if (!this.ready) return
       if (!initial) this.writeQueryParams()
+
       if (resetPagination) {
         this.pagination.page = 1
+        const goToOpts = {}
+        if (this.displayMode === 'table') goToOpts.container = '.v-data-table__wrapper'
+        this.$vuetify.goTo(0, goToOpts)
         // this is debatable
         // but in case of full-text search you can forget that a sort is active
         // and be surprised by counter-intuitive results
@@ -373,11 +391,21 @@ export default {
       this.loading = true
       try {
         this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params: this.params })
-        // console.log('data', this.data)
-        this.notFound = false
       } catch (error) {
-        if (error.status === 404) this.notFound = true
-        else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
+      }
+      this.loading = false
+    },
+    async fetchMore (entries, observer, isIntersecting) {
+      if (!this.data.next || this.loading || isIntersecting === false) return
+      this.loading = true
+      try {
+        const nextUrl = new URL(this.data.next)
+        const nextData = await this.$axios.$get(nextUrl.href)
+        this.data.next = nextData.next
+        this.data.results = this.data.results.concat(nextData.results)
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       this.loading = false
     },
@@ -387,7 +415,7 @@ export default {
         this.$set(this.pagination.sortDesc, 0, !this.pagination.sortDesc[0])
       } else {
         this.$set(this.pagination.sortBy, 0, header.value)
-        this.$set(this.pagination.sortDesc, 0, true)
+        this.$set(this.pagination.sortDesc, 0, false)
       }
     },
     addFilter (key, filter) {
@@ -395,11 +423,6 @@ export default {
       filter.field = this.dataset.schema.find(f => f.key === key)
       this.filters = this.filters.filter(f => !(f.field.key === key))
       this.filters.push(filter)
-    },
-    isFilterable (value) {
-      if (value === undefined || value === null || value === '') return false
-      if (typeof value === 'string' && (value.length > 200 || value.startsWith('{'))) return false
-      return true
     },
     readQueryParams () {
       const query = this.$route.query
