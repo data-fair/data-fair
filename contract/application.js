@@ -85,6 +85,13 @@ module.exports = {
         type: 'string'
       }
     },
+    requestedPublicationSites: {
+      type: 'array',
+      description: 'References to all sites the application would be exposed in if validated by an admin.',
+      items: {
+        type: 'string'
+      }
+    },
     topics: {
       type: 'array',
       title: 'Liste de thématiques',

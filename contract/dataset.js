@@ -440,6 +440,13 @@ module.exports = {
         type: 'string'
       }
     },
+    requestedPublicationSites: {
+      type: 'array',
+      description: 'References to all sites the dataset would be exposed in if validated by an admin.',
+      items: {
+        type: 'string'
+      }
+    },
     hasFiles: {
       type: 'boolean',
       default: false,

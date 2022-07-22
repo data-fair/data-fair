@@ -150,6 +150,7 @@ export default () => ({
       Vue.set(dataset, 'thumbnails', dataset.thumbnails || { resizeMode: 'crop', trim: false })
       Vue.set(dataset, 'publications', dataset.publications || [])
       Vue.set(dataset, 'publicationSites', dataset.publicationSites || [])
+      Vue.set(dataset, 'requestedPublicationSites', dataset.requestedPublicationSites || [])
       if (dataset.isRest) {
         dataset.rest = dataset.rest || {}
         dataset.rest.ttl = dataset.rest.ttl || { active: false, prop: '_updatedAt', delay: { value: 30, unit: 'days' } }

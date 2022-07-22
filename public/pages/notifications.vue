@@ -53,6 +53,8 @@ fr:
   pubsEvents: "Événements de publication sur le portail {title}"
   datasetPublished: "Un jeu de données a été publié sur {title}"
   datasetPublishedTopic: "Un jeu de données a été publié dans la thématique {topic} sur {title}"
+  datasetPublicationRequested: "Un contributeur a demandé la publication d'un jeu de données sur {title}"
+  appPublicationRequested: "Un contributeur a demandé la publication d'une visualisation sur {title}"
 </i18n>
 
 <script>
@@ -90,8 +92,16 @@ export default {
     publicationSites () {
       if (!this.settingsPublicationSites || !this.topics) return []
       return this.settingsPublicationSites.map(p => {
-        const keys = [`data-fair:dataset-published:${p.type}:${p.id}`]
-        const titles = [this.$t('datasetPublished', { title: p.title || p.url || p.id })]
+        const keys = [
+          `data-fair:dataset-published:${p.type}:${p.id}`,
+          `data-fair:dataset-publication-requested:${p.type}:${p.id}`,
+          `data-fair:app-publication-requested:${p.type}:${p.id}`
+        ]
+        const titles = [
+          this.$t('datasetPublished', { title: p.title || p.url || p.id }),
+          this.$t('datasetPublicationRequested', { title: p.title || p.url || p.id }),
+          this.$t('appPublicationRequested', { title: p.title || p.url || p.id })
+        ]
         for (const topic of (this.topics || [])) {
           keys.push(`data-fair:dataset-published-topic:${p.type}:${p.id}:${topic.id}`)
           titles.push(this.$t('datasetPublishedTopic', { title: p.title || p.url || p.id, topic: topic.title }))

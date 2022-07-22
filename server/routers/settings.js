@@ -8,7 +8,7 @@ const permissions = require('../utils/permissions')
 const asyncWrap = require('../utils/async-wrap')
 const cacheHeaders = require('../utils/cache-headers')
 const topicsUtils = require('../utils/topics')
-
+const notifications = require('../utils/notifications')
 const config = require('config')
 
 const router = express.Router()
@@ -176,6 +176,22 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async (req, 
   const index = settings.publicationSites.findIndex(ps => ps.type === req.body.type && ps.id === req.body.id)
   if (index === -1) {
     settings.publicationSites.push(req.body)
+    const baseSubscription = {
+      outputs: ['devices', 'email'],
+      locale: 'fr',
+      sender: req.owner,
+      visibility: 'private'
+    }
+    notifications.subscribe(req, {
+      ...baseSubscription,
+      topic: { key: `data-fair:dataset-publication-requested:${req.body.type}:${req.body.id}` },
+      urlTemplate: config.publicUrl + '/dataset/{id}'
+    })
+    notifications.subscribe(req, {
+      ...baseSubscription,
+      topic: { key: `data-fair:app-publication-requested:${req.body.type}:${req.body.id}` },
+      urlTemplate: config.publicUrl + '/application/{id}'
+    })
   } else {
     settings.publicationSites[index] = req.body
   }
