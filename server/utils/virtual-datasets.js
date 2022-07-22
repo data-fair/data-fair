@@ -59,8 +59,8 @@ exports.prepareSchema = async (db, dataset) => {
     })
 
     // we take the first child field as reference
-    field.title = field.title || matchingFields[0].title
-    field.description = field.description || matchingFields[0].description
+    field.title = field.title || matchingFields[0].title || ''
+    field.description = field.description || matchingFields[0].description || ''
     field.type = matchingFields[0].type
     if (matchingFields[0].format) field.format = matchingFields[0].format
     else delete field.format

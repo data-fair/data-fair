@@ -63,6 +63,12 @@ describe('virtual datasets', () => {
     assert.equal(virtualDataset.count, 6)
     assert.equal(virtualDataset.dataUpdatedAt, dataset3.dataUpdatedAt)
     assert.deepEqual(virtualDataset.dataUpdatedBy, dataset3.dataUpdatedBy)
+
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/api-docs.json`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.openapi, '3.0.0')
+    res = await ax.post('/api/v1/_check-api', res.data)
+
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.data.total, 6)
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { q: 'koumoul' } })
