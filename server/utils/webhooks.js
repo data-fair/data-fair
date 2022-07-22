@@ -9,7 +9,7 @@ exports.trigger = async (db, type, resource, event) => {
   const eventKey = resource.draftReason ? `${type}-draft-${event.type}` : `${type}-${event.type}`
   const eventType = settingsSchema.properties.webhooks.items.properties.events.items.oneOf
     .find(eventType => eventType.const === eventKey)
-  if (!eventType && !(event.type.startsWith('published:') || event.type.startsWith('published-topic:'))) {
+  if (!eventType && !(event.type.includes('published:') || event.type.includes('published-topic:') || event.type.includes('publication-requested:'))) {
     return debug('Unknown webhook event type', type, event.type)
   }
   // first send notifications before actual webhooks

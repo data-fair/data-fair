@@ -507,7 +507,7 @@ router.patch('/:datasetId',
     for (const requestedPublicationSite of newRequestedPublicationSites) {
     // send a notification either because the publicationSite was added, or because the visibility changed
       if (!previousRequestedPublicationSites.includes(requestedPublicationSite)) {
-        webhooks.trigger(db, 'dataset', req.dataset, { type: `dataset-publication-requested:${requestedPublicationSite}` })
+        webhooks.trigger(db, 'dataset', req.dataset, { type: `publication-requested:${requestedPublicationSite}`, body: `${req.dataset.title} - ${req.user.name}` })
       }
     }
     for (const topic of newTopics) {

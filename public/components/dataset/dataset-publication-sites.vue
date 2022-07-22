@@ -20,7 +20,7 @@
               v-for="(site,i) in publicationSites"
               :key="i"
             >
-              <v-list-item-content>
+              <v-list-item-content style="overflow:visible;">
                 <v-list-item-title>
                   <v-icon
                     v-if="site.private"
@@ -31,29 +31,35 @@
                   </v-icon>
                   <a :href="site.url">{{ site.title || site.url || site.id }}</a>
                 </v-list-item-title>
-                <v-list-item-subtitle>
-                  <a
-                    v-if="site.datasetUrlTemplate && dataset.publicationSites.includes(`${site.type}:${site.id}`)"
-                    :href="site.datasetUrlTemplate.replace('{id}', dataset.id)"
-                  >
+                <v-list-item-subtitle
+                  v-if="site.datasetUrlTemplate && dataset.publicationSites.includes(`${site.type}:${site.id}`)"
+                  class="mb-2"
+                >
+                  <a :href="site.datasetUrlTemplate.replace('{id}', dataset.id)">
                     {{ site.datasetUrlTemplate.replace('{id}', dataset.id) }}
                   </a>
                 </v-list-item-subtitle>
-                <v-list-item-subtitle>
-                  <v-switch
-                    hide-details
-                    :input-value="dataset.publicationSites.includes(`${site.type}:${site.id}`)"
-                    :disabled="!can('writePublicationSites') || (activeAccount.department && activeAccount.department !== site.department)"
-                    :label="$t('published')"
-                    @change="toggle(site, 'publicationSites')"
-                  />
-                  <v-switch
-                    hide-details
-                    :input-value="dataset.requestedPublicationSites.includes(`${site.type}:${site.id}`)"
-                    :disabled="!can('writeDescription') || (activeAccount.department && activeAccount.department !== site.department)"
-                    :label="$t('publicationRequested')"
-                    @change="toggle(site, 'requestedPublicationSites')"
-                  />
+                <v-list-item-subtitle style="overflow:visible;">
+                  <v-row>
+                    <v-switch
+                      hide-details
+                      dense
+                      :input-value="dataset.publicationSites.includes(`${site.type}:${site.id}`)"
+                      :disabled="!canPublish(site)"
+                      :label="$t('published')"
+                      class="mt-0 ml-6"
+                      @change="toggle(site, 'publicationSites')"
+                    />
+                    <v-switch
+                      hide-details
+                      dense
+                      :input-value="dataset.requestedPublicationSites.includes(`${site.type}:${site.id}`)"
+                      :disabled="dataset.publicationSites.includes(`${site.type}:${site.id}`) || canPublish(site) || !canRequestPublication(site)"
+                      :label="$t('publicationRequested')"
+                      class="mt-0 ml-6"
+                      @change="toggle(site, 'requestedPublicationSites')"
+                    />
+                  </v-row>
                 </v-list-item-subtitle>
               </v-list-item-content>
             </v-list-item>
@@ -113,6 +119,12 @@ export default {
         topic: { id: `data-fair:dataset-publication-requested:${site.type}:${site.id}` },
         title: 'Hey publication demandée'
       })
+    },
+    canPublish (site) {
+      return this.can('writePublicationSites') && (!this.activeAccount.department || this.activeAccount.department === site.department)
+    },
+    canRequestPublication (site) {
+      return this.can('writeDescription') && (!this.activeAccount.department || this.activeAccount.department === site.department)
     }
   }
 }

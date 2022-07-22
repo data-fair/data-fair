@@ -184,12 +184,18 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async (req, 
     }
     notifications.subscribe(req, {
       ...baseSubscription,
-      topic: { key: `data-fair:dataset-publication-requested:${req.body.type}:${req.body.id}` },
+      topic: {
+        key: `data-fair:dataset-publication-requested:${req.body.type}:${req.body.id}`,
+        title: `Un contributeur demande de publier un jeu de données sur ${req.body.title || req.body.url || req.body.id}`
+      },
       urlTemplate: config.publicUrl + '/dataset/{id}'
     })
     notifications.subscribe(req, {
       ...baseSubscription,
-      topic: { key: `data-fair:app-publication-requested:${req.body.type}:${req.body.id}` },
+      topic: {
+        key: `data-fair:app-publication-requested:${req.body.type}:${req.body.id}`,
+        title: `Un contributeur demande de publier une visualisation sur ${req.body.title || req.body.url || req.body.id}`
+      },
       urlTemplate: config.publicUrl + '/application/{id}'
     })
   } else {
