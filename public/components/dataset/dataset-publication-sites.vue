@@ -124,7 +124,7 @@ export default {
       return this.can('writePublicationSites') && (!this.activeAccount.department || this.activeAccount.department === site.department)
     },
     canRequestPublication (site) {
-      return this.can('writeDescription') && (!this.activeAccount.department || this.activeAccount.department === site.department)
+      return this.can('writeDescription')
     }
   }
 }
