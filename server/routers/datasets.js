@@ -486,6 +486,7 @@ router.patch('/:datasetId',
     }
 
     const previousPublicationSites = req.dataset.publicationSites || []
+    const previousRequestedPublicationSites = req.dataset.requestedPublicationSites || []
     const previousTopics = req.dataset.topics || []
 
     await datasetUtils.applyPatch(db, req.dataset, patch)
@@ -500,6 +501,13 @@ router.patch('/:datasetId',
         for (const topic of newTopics) {
           webhooks.trigger(db, 'dataset', req.dataset, { type: `published-topic:${publicationSite}:${topic.id}` })
         }
+      }
+    }
+    const newRequestedPublicationSites = req.dataset.requestedPublicationSites || []
+    for (const requestedPublicationSite of newRequestedPublicationSites) {
+    // send a notification either because the publicationSite was added, or because the visibility changed
+      if (!previousRequestedPublicationSites.includes(requestedPublicationSite)) {
+        webhooks.trigger(db, 'dataset', req.dataset, { type: `publication-requested:${requestedPublicationSite}`, body: `${req.dataset.title} - ${req.user.name}` })
       }
     }
     for (const topic of newTopics) {
