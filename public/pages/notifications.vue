@@ -40,7 +40,7 @@
       />
       <v-iframe :src="site.subscribeUrl" />
     </div>
-
+    <!--
     <div v-if="requestedDatasetPublicationSitesUrl">
       <h2
         v-t="'datasetsPubRequested'"
@@ -48,7 +48,7 @@
       />
       <v-iframe :src="requestedDatasetPublicationSitesUrl" />
     </div>
-
+    -->
     <!--<div v-if="requestedAppPublicationSitesUrl">
       <h2
         v-t="'appsPubRequested'"
