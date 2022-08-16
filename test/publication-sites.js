@@ -2,7 +2,7 @@ const assert = require('assert').strict
 
 const workers = require('../server/workers')
 
-describe.only('settings API', () => {
+describe('settings API', () => {
   it('should fail to publish dataset on unknown site', async () => {
     const ax = global.ax.dmeadusOrg
 
