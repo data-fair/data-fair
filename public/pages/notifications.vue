@@ -129,8 +129,10 @@ export default {
       const keys = []
       const titles = []
       this.settingsPublicationSites.forEach(p => {
-        keys.push(`data-fair:dataset-publication-requested:${p.type}:${p.id}`)
-        titles.push(this.$t('datasetPublicationRequested', { title: p.title || p.url || p.id }))
+        if ((this.activeAccount.department || null) === (p.department || null)) {
+          keys.push(`data-fair:dataset-publication-requested:${p.type}:${p.id}`)
+          titles.push(this.$t('datasetPublicationRequested', { title: p.title || p.url || p.id }))
+        }
       })
       const keysParam = keys.join(',')
       const titlesParam = titles.join(',')
@@ -152,8 +154,11 @@ export default {
     } */
   },
   async mounted () {
+    let publicationSitesUrl = 'api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id
+    if (this.activeAccount.department) publicationSitesUrl += ':' + this.activeAccount.department
+    publicationSitesUrl += '/publication-sites';
     [this.settingsPublicationSites, this.topics] = await Promise.all([
-      this.$axios.$get('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id + '/publication-sites'),
+      this.$axios.$get(publicationSitesUrl),
       this.$axios.$get('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id + '/topics')
     ])
   }
