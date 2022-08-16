@@ -704,7 +704,7 @@ exports.delete = async (db, es, dataset) => {
   }
 }
 
-exports.applyPatch = async (db, dataset, patch) => {
+exports.applyPatch = async (db, dataset, patch, save = true) => {
   Object.assign(dataset, patch)
 
   // if the dataset is in draft mode all patched values are stored in the draft state
@@ -715,8 +715,10 @@ exports.applyPatch = async (db, dataset, patch) => {
     })
     patch = draftPatch
   }
-  await db.collection('datasets')
-    .updateOne({ id: dataset.id }, { $set: patch })
+  if (save) {
+    await db.collection('datasets')
+      .updateOne({ id: dataset.id }, { $set: patch })
+  }
 }
 
 exports.mergeDraft = (dataset) => {

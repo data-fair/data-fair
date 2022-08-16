@@ -496,7 +496,11 @@ export default {
       store.dispatch('fetchVocabulary')
     ])
     if (store.state.dataset.dataset) {
-      await store.dispatch('fetchPublicationSites', store.state.dataset.dataset.owner)
+      try {
+        await store.dispatch('fetchPublicationSites', store.state.dataset.dataset.owner)
+      } catch (err) {
+        if (!err.response || err.response.status !== 403) throw err
+      }
     }
   },
   computed: {

@@ -30,6 +30,7 @@ const capture = require('../utils/capture')
 const visibilityUtils = require('../utils/visibility')
 const cacheHeaders = require('../utils/cache-headers')
 const { validateId } = require('../utils/validation')
+const publicationSites = require('../utils/publication-sites')
 
 const router = module.exports = express.Router()
 
@@ -163,7 +164,10 @@ const readApplication = asyncWrap(async (req, res, next) => {
   next()
 })
 
-router.use('/:applicationId/permissions', readApplication, permissions.router('applications', 'application'))
+router.use('/:applicationId/permissions', readApplication, permissions.router('applications', 'application', async (req, patchedApplication) => {
+  // this callback function is called when the resource becomes public
+  await publicationSites.onPublic(req.app.get('db'), patchedApplication)
+}))
 
 // retrieve a application by its id
 router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
@@ -229,6 +233,8 @@ router.patch('/:applicationId',
 
     patch.updatedAt = moment().toISOString()
     patch.updatedBy = { id: req.user.id, name: req.user.name }
+
+    await publicationSites.applyPatch(req.app.get('db'), req.application, { ...req.application, ...patch }, req.user)
 
     const patchedApplication = (await req.app.get('db').collection('applications')
       .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })).value

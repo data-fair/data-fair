@@ -53,6 +53,7 @@ const { syncDataset: syncRemoteService } = require('./remote-services')
 const { basicTypes } = require('../workers/converter')
 const { validateId } = require('../utils/validation')
 const prometheus = require('../utils/prometheus')
+const publicationSites = require('../utils/publication-sites')
 const router = express.Router()
 
 function clean (publicUrl, dataset, query = {}, draft = false) {
@@ -292,13 +293,7 @@ const readDataset = (_acceptedStatuses, preserveDraft, ignoreDraft) => asyncWrap
 
 router.use('/:datasetId/permissions', readDataset(), permissions.router('datasets', 'dataset', async (req, patchedDataset) => {
   // this callback function is called when the resource becomes public
-  const db = req.app.get('db')
-  for (const publicationSite of patchedDataset.publicationSites || []) {
-    webhooks.trigger(db, 'dataset', patchedDataset, { type: `published:${publicationSite}` })
-    for (const topic of patchedDataset.topics || []) {
-      webhooks.trigger(db, 'dataset', patchedDataset, { type: `published-topic:${publicationSite}:${topic.id}` })
-    }
-  }
+  await publicationSites.onPublic(req.app.get('db'), patchedDataset)
 }))
 
 // retrieve a dataset by its id
@@ -485,39 +480,11 @@ router.patch('/:datasetId',
       patch.finalizedAt = (new Date()).toISOString()
     }
 
-    const previousPublicationSites = req.dataset.publicationSites || []
-    const previousRequestedPublicationSites = req.dataset.requestedPublicationSites || []
-    const previousTopics = req.dataset.topics || []
+    const previousDataset = { ...req.dataset }
+    await datasetUtils.applyPatch(db, req.dataset, patch, false)
+    await publicationSites.applyPatch(db, previousDataset, req.dataset, req.user)
 
-    await datasetUtils.applyPatch(db, req.dataset, patch)
-
-    // send webhooks/notifs based on changes during this patch
-    const newPublicationSites = req.dataset.publicationSites || []
-    const newTopics = req.dataset.topics || []
-    for (const publicationSite of newPublicationSites) {
-    // send a notification either because the publicationSite was added, or because the visibility changed
-      if (!previousPublicationSites.includes(publicationSite)) {
-        webhooks.trigger(db, 'dataset', req.dataset, { type: `published:${publicationSite}` })
-        for (const topic of newTopics) {
-          webhooks.trigger(db, 'dataset', req.dataset, { type: `published-topic:${publicationSite}:${topic.id}` })
-        }
-      }
-    }
-    const newRequestedPublicationSites = req.dataset.requestedPublicationSites || []
-    for (const requestedPublicationSite of newRequestedPublicationSites) {
-    // send a notification either because the publicationSite was added, or because the visibility changed
-      if (!previousRequestedPublicationSites.includes(requestedPublicationSite)) {
-        webhooks.trigger(db, 'dataset', req.dataset, { type: `publication-requested:${requestedPublicationSite}`, body: `${req.dataset.title || req.dataset.id} - ${req.user.name}` })
-      }
-    }
-    for (const topic of newTopics) {
-    // send a notification either because the topic was added
-      if (!previousTopics.find(t => t.id === topic.id)) {
-        for (const publicationSite of newPublicationSites) {
-          webhooks.trigger(db, 'dataset', req.dataset, { type: `published-topic:${publicationSite}:${topic.id}` })
-        }
-      }
-    }
+    await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: patch })
 
     await syncRemoteService(db, req.dataset)
 

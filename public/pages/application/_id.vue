@@ -79,7 +79,10 @@
                   <v-icon>mdi-link</v-icon>&nbsp;&nbsp;{{ $t('protectedLink') }}
                 </v-tab>
 
-                <v-tab href="#share-publication-sites">
+                <v-tab
+                  v-if="publicationSites"
+                  href="#share-publication-sites"
+                >
                   <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;{{ $t('portals') }}
                 </v-tab>
 
@@ -214,7 +217,11 @@ export default {
     store.dispatch('application/clear')
     await store.dispatch('application/setId', route.params.id)
     if (store.state.application.application) {
-      await store.dispatch('fetchPublicationSites', store.state.application.application.owner)
+      try {
+        await store.dispatch('fetchPublicationSites', store.state.application.application.owner)
+      } catch (err) {
+        if (!err.response || err.response.status !== 403) throw err
+      }
     }
   },
   computed: {
