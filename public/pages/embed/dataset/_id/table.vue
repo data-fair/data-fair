@@ -250,9 +250,7 @@ export default {
     filters: [],
     lastParams: null,
     selectedCols: [],
-    ready: false,
-    windowHeight: window.innerHeight,
-    windowWidth: window.innerWidth
+    ready: false
   }),
   computed: {
     ...mapState(['vocabulary']),

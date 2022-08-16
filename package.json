@@ -94,6 +94,7 @@
     "tinycolor2": "^1.4.2",
     "vue-clamp": "^0.4.0",
     "vue-moment": "^4.1.0",
+    "vue-window-size": "0.6.2",
     "vuedraggable": "^2.24.3",
     "web-streams-polyfill": "^3.2.0"
   },
