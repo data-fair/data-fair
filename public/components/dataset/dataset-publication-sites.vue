@@ -50,7 +50,7 @@
                       class="mt-0 ml-6"
                       @change="toggle(site, 'publicationSites')"
                     />
-                    <!--<v-switch
+                    <v-switch
                       hide-details
                       dense
                       :input-value="dataset.requestedPublicationSites.includes(`${site.type}:${site.id}`)"
@@ -58,7 +58,7 @@
                       :label="$t('publicationRequested')"
                       class="mt-0 ml-6"
                       @change="toggle(site, 'requestedPublicationSites')"
-                    />-->
+                    />
                   </v-row>
                 </v-list-item-subtitle>
               </v-list-item-content>

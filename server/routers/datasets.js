@@ -503,8 +503,6 @@ router.patch('/:datasetId',
         }
       }
     }
-    // TODO: le sender n'est pas bon, il faudrait le owner du publicationSite, pas celui du dataset
-    // on met tout simplement au niveau racine d'orga ? ou on va chercher le owner du publicationSite ?
     const newRequestedPublicationSites = req.dataset.requestedPublicationSites || []
     for (const requestedPublicationSite of newRequestedPublicationSites) {
     // send a notification either because the publicationSite was added, or because the visibility changed
