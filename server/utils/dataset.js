@@ -719,6 +719,7 @@ exports.applyPatch = async (db, dataset, patch, save = true) => {
     await db.collection('datasets')
       .updateOne({ id: dataset.id }, { $set: patch })
   }
+  return patch
 }
 
 exports.mergeDraft = (dataset) => {
