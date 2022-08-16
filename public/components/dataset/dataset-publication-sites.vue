@@ -51,6 +51,7 @@
                       @change="toggle(site, 'publicationSites')"
                     />
                     <v-switch
+                      v-if="dataset.owner.type === 'organization'"
                       hide-details
                       dense
                       :input-value="dataset.requestedPublicationSites.includes(`${site.type}:${site.id}`)"
@@ -111,14 +112,6 @@ export default {
         this.dataset[key].push(siteKey)
       }
       this.patch({ [key]: this.dataset[key] })
-    },
-    async requestPublication (site) {
-      this.requestedPublications.push(`${site.type}:${site.id}`)
-      await this.$axios.$post(this.env.notifyUrl + '/api/v1/notifications', {
-        sender: site.owner,
-        topic: { id: `data-fair:dataset-publication-requested:${site.type}:${site.id}` },
-        title: 'Hey publication demandée'
-      })
     },
     canPublish (site) {
       return this.can('writePublicationSites') && (!this.activeAccount.department || this.activeAccount.department === site.department)
