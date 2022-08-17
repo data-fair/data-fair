@@ -32,6 +32,13 @@
                   <a :href="site.url">{{ site.title || site.url || site.id }}</a>
                 </v-list-item-title>
                 <v-list-item-subtitle
+                  v-if="dataset.owner.department"
+                  class="mb-2"
+                >
+                  <span>{{ dataset.owner.name }}</span>
+                  <span v-if="site.department"> - {{ site.department }}</span>
+                </v-list-item-subtitle>
+                <v-list-item-subtitle
                   v-if="site.datasetUrlTemplate && dataset.publicationSites.includes(`${site.type}:${site.id}`)"
                   class="mb-2"
                 >
@@ -39,7 +46,10 @@
                     {{ site.datasetUrlTemplate.replace('{id}', dataset.id) }}
                   </a>
                 </v-list-item-subtitle>
-                <v-list-item-subtitle style="overflow:visible;">
+                <v-list-item-subtitle
+                  style="overflow:visible;"
+                  class="mb-2"
+                >
                   <v-row>
                     <v-switch
                       hide-details
