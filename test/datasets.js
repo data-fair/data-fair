@@ -47,13 +47,19 @@ describe('datasets', () => {
     const ax = global.ax.dmeadus
     const axOrg = global.ax.dmeadusOrg
 
+    let res = await ax.get('/api/v1/datasets', { params: { facets: 'owner,field-type', sums: 'count' } })
+    assert.equal(res.data.count, 0)
+    assert.equal(res.data.sums.count, 0)
+    assert.equal(res.data.facets.owner.length, 0)
+    assert.equal(res.data.facets['field-type'].length, 0)
+
     // 1 dataset in user zone
     await testUtils.sendDataset('datasets/dataset1.csv', ax)
     // 2 datasets in organization zone
     await testUtils.sendDataset('datasets/dataset1.csv', axOrg)
     await testUtils.sendDataset('datasets/dataset1.csv', axOrg)
 
-    let res = await ax.get('/api/v1/datasets', { params: { facets: 'owner,field-type', sums: 'count' } })
+    res = await ax.get('/api/v1/datasets', { params: { facets: 'owner,field-type', sums: 'count' } })
     assert.equal(res.data.count, 1)
     assert.equal(res.data.facets.owner.length, 1)
     assert.equal(res.data.facets.owner[0].count, 1)

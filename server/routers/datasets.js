@@ -217,8 +217,10 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const sumsPromise = req.query.sums && datasets
     .aggregate(findUtils.sumsQuery(req, sumsFields, filterFields, extraFilters)).toArray()
     .then(sumsResponse => {
-      const res = sumsResponse[0]
-      delete res._id
+      const res = sumsResponse[0] || {}
+      req.query.sums.split(',').forEach(field => {
+        res[field] = res[field] || 0
+      })
       return res
     })
 

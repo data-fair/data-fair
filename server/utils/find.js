@@ -381,5 +381,6 @@ exports.sumsQuery = (req, sumFields = {}, filterFields, extraFilters) => {
     group[field] = { $sum: '$' + sumFields[field] }
   }
   pipeline.push({ $group: group })
+  pipeline.push({ $project: { _id: 0 } })
   return pipeline
 }
