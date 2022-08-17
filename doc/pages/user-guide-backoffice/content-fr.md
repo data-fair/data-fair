@@ -50,7 +50,7 @@ Un bloc est possède différentes sections :
 
 Vous pouvez prendre exemple sur la vidéo suivante pour compléter votre premier bloc :
 
-<iframe width="560" height="315" sandbox="allow-same-origin allow-scripts allow-popups" src="https://videos.koumoul.com/videos/embed/954b9a9c-055d-4b39-a8c8-4bf61c44264f?loop=1&warningTitle=0" frameborder="0" allowfullscreen></iframe>
+<iframe width="560" height="315" sandbox="allow-same-origin allow-scripts allow-popups" src="https://videos.koumoul.com/videos/embed/3522f40f-52a2-4106-95a6-238916389981?loop=1&warningTitle=0" frameborder="0" allowfullscreen></iframe>
 
 
 Une fois votre bloc édité, cliquez sur le crayon pour sortir du mode édition.  

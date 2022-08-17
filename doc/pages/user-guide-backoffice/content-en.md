@@ -49,7 +49,7 @@ A block has different sections:
 
 You can use the following video as an example to complete your first block:  
 
-<iframe width="560" height="315" sandbox="allow-same-origin allow-scripts allow-popups" src="https://videos.koumoul.com/videos/embed/954b9a9c-055d-4b39-a8c8-4bf61c44264f?loop=1&warningTitle=0" frameborder="0" allowfullscreen></iframe>
+<iframe width="560" height="315" sandbox="allow-same-origin allow-scripts allow-popups" src="https://videos.koumoul.com/videos/embed/3522f40f-52a2-4106-95a6-238916389981?loop=1&warningTitle=0" frameborder="0" allowfullscreen></iframe>
 
 
 Once your block has been edited, click on the pencil to exit edit mode.  
