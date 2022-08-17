@@ -10,6 +10,7 @@ const cacheHeaders = require('../utils/cache-headers')
 const topicsUtils = require('../utils/topics')
 const notifications = require('../utils/notifications')
 const config = require('config')
+const debugPublicationSites = require('debug')('publication-sites')
 
 const router = express.Router()
 
@@ -166,6 +167,7 @@ router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async (req, 
 }))
 // create/update publication sites as owner (used by data-fair-portals to sync portals)
 router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async (req, res) => {
+  debugPublicationSites('post site', req.body)
   const db = req.app.get('db')
   let settings = await db.collection('settings').findOne(req.owner, { projection: { _id: 0 } })
   if (!settings) {
@@ -202,25 +204,30 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async (req, 
     settings.publicationSites[index] = req.body
   }
   const errors = validate(settings)
-  if (errors) return res.status(400).send(errors)
+  if (errors) {
+    debugPublicationSites('bad settings after site update', settings, errors)
+    return res.status(400).send(errors)
+  }
   await db.collection('settings').replaceOne(req.owner, settings, { upsert: true })
   res.status(200).send(req.body)
 }))
 // delete publication sites as owner (used by data-fair-portals to sync portals)
 router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, asyncWrap(async (req, res) => {
+  debugPublicationSites('delete site', req.params)
   const db = req.app.get('db')
-  const [id, department] = req.params.id.split(':')
-  const owner = { type: req.params.type, id, department }
-  let settings = await db.collection('settings').findOne(owner, { projection: { _id: 0 } })
+  let settings = await db.collection('settings').findOne(req.owner, { projection: { _id: 0 } })
   if (!settings) {
     settings = {}
-    fillSettings(owner, req.user, settings)
+    fillSettings(req.owner, req.user, settings)
   }
   settings.publicationSites = settings.publicationSites || []
   settings.publicationSites = settings.publicationSites.filter(ps => ps.type !== req.params.siteType || ps.id !== req.params.siteId)
   const errors = validate(req.body)
-  if (errors) return res.status(400).send(errors)
-  await db.collection('settings').replaceOne(owner, settings, { upsert: true })
+  if (errors) {
+    debugPublicationSites('bad settings after site deletion', settings, errors)
+    return res.status(400).send(errors)
+  }
+  await db.collection('settings').replaceOne(req.owner, settings, { upsert: true })
   const ref = `${req.params.siteType}:${req.params.siteId}`
   await db.collection('datasets').updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })
   await db.collection('applications').updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })
