@@ -222,7 +222,7 @@ router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, as
   }
   settings.publicationSites = settings.publicationSites || []
   settings.publicationSites = settings.publicationSites.filter(ps => ps.type !== req.params.siteType || ps.id !== req.params.siteId)
-  const errors = validate(req.body)
+  const errors = validate(settings)
   if (errors) {
     debugPublicationSites('bad settings after site deletion', settings, errors)
     return res.status(400).send(errors)
