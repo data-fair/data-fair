@@ -279,7 +279,7 @@ export default {
             fr: 'Outil de cartographie et de catalogage de vos données.',
             en: 'A tool for mapping and cataloging your data.'
           },
-          img: 'https://www.dawizz.fr/wp-content/uploads/2018/04/logo-Dawizz-all-about-your-data-home.png',
+          img: 'https://dawizz.fr/logo-Dawizz-all-about-your-data-home.png',
           link: 'https://dawizz.fr',
           thanks: {
             fr: 'Dawizz intègre Data Fair dans sa plateforme et soutient son développement.',
