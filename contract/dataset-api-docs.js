@@ -6,6 +6,7 @@ const dataFiles = require('./data-files')
 const datasetUtils = require('../server/utils/dataset')
 const { acceptedMetricAggs } = require('../server/utils/es/metric-agg')
 const utils = require('./utils')
+const version = require('../package.json').version
 
 const apiRate = (key, label) => {
   return `Un utilisateur ${label} ne peut pas effectuer plus de ${config.defaultLimits.apiRate[key].nb} requêtes par interval de ${config.defaultLimits.apiRate[key].duration} seconde${config.defaultLimits.apiRate[key].duration > 1 ? 's' : ''}.
@@ -293,6 +294,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     info: {
       title: `API publique du jeu de données : ${dataset.title || dataset.id}`,
       description,
+      version,
       'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-dataset-${dataset.id}`,
       termsOfService: config.info.termsOfService,
       contact: { ...(info.contact || {}) }

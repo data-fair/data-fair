@@ -34,7 +34,9 @@ const router = exports.router = express.Router()
 exports.syncDataset = async (db, dataset) => {
   const id = 'dataset:' + dataset.id
   if (dataset.masterData && ((dataset.masterData.singleSearchs && dataset.masterData.singleSearchs.length) || (dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.length))) {
-    const apiDoc = datasetAPIDocs(dataset).api
+    const settings = await db.collection('settings')
+      .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { info: 1 } })
+    const apiDoc = datasetAPIDocs(dataset, config.publicUrl, (settings && settings.info) || {}).api
     const service = initNew({
       id,
       apiDoc,
