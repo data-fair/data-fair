@@ -1,16 +1,16 @@
 const config = require('config')
 const applicationSchema = require('./application')
 const journalSchema = require('./journal')
-const version = require('../package.json').version
 const permissionsDoc = require('../server/utils/permissions').apiDoc
 
-module.exports = (application) => {
+module.exports = (application, info) => {
   const api = {
     openapi: '3.1.0',
-    info: Object.assign({
+    info: {
       title: `Intégration de l'application : ${application.title || application.id}`,
-      version: version
-    }, config.info),
+      termsOfService: config.info.termsOfService,
+      contact: { ...(info.contact || {}) }
+    },
     components: {
       schemas: { applicationSchema, journalSchema },
       securitySchemes: {

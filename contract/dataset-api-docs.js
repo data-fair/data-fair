@@ -1,7 +1,6 @@
 const config = require('config')
 const prettyBytes = require('pretty-bytes')
 const datasetSchema = require('./dataset')
-const version = require('../package.json').version
 const masterData = require('./master-data')
 const dataFiles = require('./data-files')
 const datasetUtils = require('../server/utils/dataset')
@@ -15,7 +14,7 @@ const apiRate = (key, label) => {
 const userApiRate = apiRate('user', 'authentifié (session ou clé d\'API)')
 const anonymousApiRate = apiRate('anonymous', 'anonyme')
 
-module.exports = (dataset, publicUrl = config.publicUrl) => {
+module.exports = (dataset, publicUrl = config.publicUrl, info) => {
   dataset.schema = dataset.schema || []
   const datasetLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, true)
 
@@ -294,9 +293,9 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     info: {
       title: `API publique du jeu de données : ${dataset.title || dataset.id}`,
       description,
-      version,
       'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-dataset-${dataset.id}`,
-      ...config.info
+      termsOfService: config.info.termsOfService,
+      contact: { ...(info.contact || {}) }
     },
     components: {
       securitySchemes: {},

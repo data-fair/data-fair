@@ -20,6 +20,29 @@ module.exports = {
       type: 'string',
       description: 'The name of the owner'
     },
+    info: {
+      type: 'object',
+      properties: {
+        contact: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            name: {
+              type: 'string',
+              title: 'Nom'
+            },
+            url: {
+              type: 'string',
+              title: 'URL'
+            },
+            email: {
+              type: 'string',
+              title: 'Email'
+            }
+          }
+        }
+      }
+    },
     webhooks: {
       type: 'array',
       title: "Liste d'appels extérieurs",

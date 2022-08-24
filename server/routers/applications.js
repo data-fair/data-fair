@@ -346,9 +346,11 @@ router.get('/:applicationId/base-application', readApplication, permissions.midd
   res.send(baseAppsUtils.clean(baseApp, req.publicBaseUrl, req.query.html === 'true'))
 }))
 
-router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, (req, res) => {
-  res.send(applicationAPIDocs(req.application))
-})
+router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
+  const settings = await req.app.get('db').collection('settings')
+    .findOne({ type: req.dataset.owner.type, id: req.dataset.owner.id }, { projection: { info: 1 } })
+  res.send(applicationAPIDocs(req.application, (settings && settings.info) || {}))
+}))
 
 router.get('/:applicationId/status', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.noCache, (req, res) => {
   res.send(req.application.status)

@@ -1544,13 +1544,17 @@ router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFu
   }
 }))
 
-router.get('/:datasetId/api-docs.json', readDataset(), permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, (req, res) => {
-  res.send(datasetAPIDocs(req.dataset, req.publicBaseUrl).api)
-})
+router.get('/:datasetId/api-docs.json', readDataset(), permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
+  const settings = await req.app.get('db').collection('settings')
+    .findOne({ type: req.dataset.owner.type, id: req.dataset.owner.id }, { projection: { info: 1 } })
+  res.send(datasetAPIDocs(req.dataset, req.publicBaseUrl, (settings && settings.info) || {}).api)
+}))
 
-router.get('/:datasetId/private-api-docs.json', readDataset(), permissions.middleware('readPrivateApiDoc', 'readAdvanced'), cacheHeaders.noCache, (req, res) => {
-  res.send(privateDatasetAPIDocs(req.dataset, req.publicBaseUrl, req.user))
-})
+router.get('/:datasetId/private-api-docs.json', readDataset(), permissions.middleware('readPrivateApiDoc', 'readAdvanced'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
+  const settings = await req.app.get('db').collection('settings')
+    .findOne({ type: req.dataset.owner.type, id: req.dataset.owner.id }, { projection: { info: 1 } })
+  res.send(privateDatasetAPIDocs(req.dataset, req.publicBaseUrl, req.user, (settings && settings.info) || {}))
+}))
 
 router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({

@@ -7,8 +7,8 @@ const permissionsDoc = require('../server/utils/permissions').apiDoc
 const datasetUtils = require('../server/utils/dataset')
 const datasetPatchSchema = require('./dataset-patch')
 
-module.exports = (dataset, publicUrl = config.publicUrl, user) => {
-  const { api, userApiRate, anonymousApiRate, bulkLineSchema } = datasetAPIDocs(dataset, publicUrl)
+module.exports = (dataset, publicUrl = config.publicUrl, user, info) => {
+  const { api, userApiRate, anonymousApiRate, bulkLineSchema } = datasetAPIDocs(dataset, publicUrl, info)
 
   const title = `API privée du jeu de données : ${dataset.title || dataset.id}`
 

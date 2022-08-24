@@ -47,6 +47,37 @@
           </div>-->
 
               <layout-section-tabs
+                :svg="infoSvg"
+                svg-no-margin
+                :section="sections.find(s => s.id === 'info')"
+              >
+                <template #extension>
+                  <p>
+                    Permettez aux utilisateurs de vos APIs et de vos applications de vous contacter en renseignant ces informations.
+                  </p>
+                </template>
+                <template #tabs-items>
+                  <v-container
+                    fluid
+                    class="py-1"
+                  >
+                    <v-row>
+                      <v-col
+                        cols="12"
+                        md="6"
+                      >
+                        <settings-info
+                          v-if="settings"
+                          :settings="settings"
+                          @updated="save"
+                        />
+                      </v-col>
+                    </v-row>
+                  </v-container>
+                </template>
+              </layout-section-tabs>
+
+              <layout-section-tabs
                 :svg="qualitySvg"
                 :section="sections.find(s => s.id === 'licences')"
               >
@@ -257,6 +288,7 @@ fr:
   webhooks: "Appels extérieurs (Webhooks)"
   privateVocab: Vocabulaire privé
   publicationSites: Sites de publication
+  info: Informations de contact
 en:
   licences: Licences
   topics: Topics
@@ -264,6 +296,7 @@ en:
   webhooks: "External requests (Webhooks)"
   privateVocab: Private vocabulary
   publicationSites: Publication sites
+  info: Contact information
 </i18n>
 
 <script>
@@ -283,7 +316,8 @@ export default {
     securitysSvg: require('~/assets/svg/Security_Two Color.svg?raw'),
     wwwSvg: require('~/assets/svg/World wide web_Two Color.svg?raw'),
     uiSvg: require('~/assets/svg/User Interface _Two Color.svg?raw'),
-    checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw')
+    checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
+    infoSvg: require('~/assets/svg/Sending emails_Monochromatic.svg?raw')
   }),
   head: () => ({
     title: 'Paramètres'
@@ -305,6 +339,10 @@ export default {
     sections () {
       const sections = []
       if (!this.activeAccount.department) {
+        sections.push({
+          id: 'info',
+          title: this.$t('info')
+        })
         sections.push({
           id: 'licences',
           title: this.$t('licences')
