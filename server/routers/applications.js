@@ -348,7 +348,7 @@ router.get('/:applicationId/base-application', readApplication, permissions.midd
 
 router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
   const settings = await req.app.get('db').collection('settings')
-    .findOne({ type: req.dataset.owner.type, id: req.dataset.owner.id }, { projection: { info: 1 } })
+    .findOne({ type: req.application.owner.type, id: req.application.owner.id }, { projection: { info: 1 } })
   res.send(applicationAPIDocs(req.application, (settings && settings.info) || {}))
 }))
 
