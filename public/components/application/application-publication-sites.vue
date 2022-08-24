@@ -40,10 +40,10 @@
                   <a :href="site.url">{{ site.title || site.url || site.id }}</a>
                 </v-list-item-title>
                 <v-list-item-subtitle
-                  v-if="dataset.owner.department"
+                  v-if="application.owner.department"
                   class="mb-2"
                 >
-                  <span>{{ dataset.owner.name }}</span>
+                  <span>{{ application.owner.name }}</span>
                   <span v-if="site.department"> - {{ site.department }}</span>
                 </v-list-item-subtitle>
                 <v-list-item-subtitle>
