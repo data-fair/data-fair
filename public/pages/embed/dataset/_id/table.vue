@@ -450,8 +450,12 @@ export default {
         delete query.sort
       }
 
-      if (global.parent && global.parent !== global.self) parent.postMessage({ query }, '*')
-      else this.$router.push({ query })
+      if (global.parent && global.parent !== global.self) {
+        parent.postMessage({ viframe: true, queryParams: query }, '*')
+        parent.postMessage({ query }, '*') // TODO: remove this line after small retro-compatibility delay
+      } else {
+        this.$router.push({ query })
+      }
     }
   }
 }
