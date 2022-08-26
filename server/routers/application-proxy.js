@@ -22,7 +22,6 @@ const iframeResizerVersion = require('../../node_modules/iframe-resizer/package.
 const cacheableLookup = new CacheableLookup()
 
 const loginHtml = fs.readFileSync(path.join(__dirname, '../resources/login.html'), 'utf8')
-const vIframeContentWindow = fs.readFileSync('./node_modules/@koumoul/v-iframe/content-window.min.js', 'utf8')
 
 const brandEmbed = config.brand.embed && parse5.parseFragment(config.brand.embed)
 
@@ -252,8 +251,8 @@ ${await serviceWorkers.register()}
     nodeName: 'script',
     tagName: 'script',
     attrs: [
-      {name: 'type', value: 'text/javascript' },
-      {name: 'src', value: `https://cdn.jsdelivr.net/npm/@koumoul/v-iframe@${vIframeVersion}/content-window.min.js` }
+      { name: 'type', value: 'text/javascript' },
+      { name: 'src', value: `https://cdn.jsdelivr.net/npm/@koumoul/v-iframe@${vIframeVersion}/content-window.min.js` }
     ]
   })
 
@@ -263,8 +262,8 @@ ${await serviceWorkers.register()}
       nodeName: 'script',
       tagName: 'script',
       attrs: [
-        {name: 'type', value: 'text/javascript' },
-        {name: 'src', value: `https://cdn.jsdelivr.net/npm/iframe-resizer@${iframeResizerVersion}/js/iframeResizer.contentWindow.min.js` }
+        { name: 'type', value: 'text/javascript' },
+        { name: 'src', value: `https://cdn.jsdelivr.net/npm/iframe-resizer@${iframeResizerVersion}/js/iframeResizer.contentWindow.min.js` }
       ]
     })
   }
