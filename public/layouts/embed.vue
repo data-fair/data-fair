@@ -9,7 +9,13 @@
 </template>
 
 <script>
-export default {}
+import '@koumoul/v-iframe/content-window.js'
+
+export default {
+  created () {
+    global.vIframeOptions = { router: this.$router }
+  }
+}
 
 </script>
 

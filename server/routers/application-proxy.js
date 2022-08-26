@@ -20,6 +20,7 @@ const router = module.exports = express.Router()
 const cacheableLookup = new CacheableLookup()
 
 const loginHtml = fs.readFileSync(path.join(__dirname, '../resources/login.html'), 'utf8')
+const vIframeContentWindow = fs.readFileSync('./node_modules/@koumoul/v-iframe/content-window.min.js', 'utf8')
 
 const brandEmbed = config.brand.embed && parse5.parseFragment(config.brand.embed)
 
@@ -196,7 +197,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   res.setHeader('x-owner', JSON.stringify(ownerHeader))
   const rawHtml = await fetchHTML(cleanApplicationUrl, targetUrl)
 
-  const document = parse5.parse(rawHtml.replace(/%APPLICATION%/, JSON.stringify(req.application, null, 2)))
+  const document = parse5.parse(rawHtml.replace(/%APPLICATION%/, JSON.stringify(req.application)))
   const html = document.childNodes.find(c => c.tagName === 'html')
   if (!html) throw new Error(req.__('errors.brokenHTML'))
   const head = html.childNodes.find(c => c.tagName === 'head')
@@ -227,7 +228,24 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
     attrs: [{ name: 'type', value: 'text/javascript' }],
     childNodes: [{
       nodeName: '#text',
-      value: serviceWorkers.register(req.application)
+      value: `
+// service worker registration
+${await serviceWorkers.register()}
+`
+    }]
+  })
+
+  // Always add @koumoul/v-iframe/content-window.min.js to support state sync with portals, etc.
+  head.childNodes.push({
+    nodeName: 'script',
+    tagName: 'script',
+    attrs: [{ name: 'type', value: 'text/javascript' }],
+    childNodes: [{
+      nodeName: '#text',
+      value: `
+// @koumoul/v-iframe/content-window.min.js
+${vIframeContentWindow}
+`
     }]
   })
 

@@ -449,13 +449,7 @@ export default {
       } else {
         delete query.sort
       }
-
-      if (global.parent && global.parent !== global.self) {
-        parent.postMessage({ viframe: true, queryParams: query }, '*')
-        parent.postMessage({ query }, '*') // TODO: remove this line after small retro-compatibility delay
-      } else {
-        this.$router.push({ query })
-      }
+      this.$router.push({ query })
     }
   }
 }
