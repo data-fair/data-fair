@@ -191,7 +191,8 @@ module.exports = {
     'https://koumoul-dev.github.io/',
     'https://data-fair.github.io/',
     'https://cdn.jsdelivr.net/npm/@koumoul/',
-    'https://cdn.jsdelivr.net/npm/@data-fair/'
+    'https://cdn.jsdelivr.net/npm/@data-fair/',
+    'https://cdn.jsdelivr.net/npm/iframe-resizer'
   ],
   applications: [{
     url: 'https://koumoul.com/apps/infos-parcelles/2.7/'

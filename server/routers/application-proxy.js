@@ -16,6 +16,8 @@ const serviceWorkers = require('../utils/service-workers')
 const prometheus = require('../utils/prometheus')
 const router = module.exports = express.Router()
 // const debug = require('debug')('application-proxy')
+const vIframeVersion = require('../../node_modules/@koumoul/v-iframe/package.json').version
+const iframeResizerVersion = require('../../node_modules/iframe-resizer/package.json').version
 
 const cacheableLookup = new CacheableLookup()
 
@@ -147,7 +149,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
     { privateAccess: { $elemMatch: { type: req.application.owner.type, id: req.application.owner.id } } }
   ]
   const baseAppPromise = db.collection('base-applications')
-    .findOne({ url: applicationUrl, $or: accessFilter }, { projection: { id: 1 } })
+    .findOne({ url: applicationUrl, $or: accessFilter }, { projection: { id: 1, meta: 1 } })
 
   // the dates of last modification / finalization of both the app and the datasets it uses
   const updateDates = [new Date(req.application.updatedAt)]
@@ -221,6 +223,16 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
     })
   }
 
+  // make sure the referer is available when calling APIs and remote services from inside applications
+  head.childNodes.push({
+    nodeName: 'meta',
+    tagName: 'meta',
+    attrs: [
+      { name: 'name', value: 'referrer' },
+      { name: 'content', value: 'same-origin' }
+    ]
+  })
+
   // Data-fair also generates a basic service-workers configuration per app
   head.childNodes.push({
     nodeName: 'script',
@@ -236,28 +248,26 @@ ${await serviceWorkers.register()}
   })
 
   // Always add @koumoul/v-iframe/content-window.min.js to support state sync with portals, etc.
-  head.childNodes.push({
+  body.childNodes.push({
     nodeName: 'script',
     tagName: 'script',
-    attrs: [{ name: 'type', value: 'text/javascript' }],
-    childNodes: [{
-      nodeName: '#text',
-      value: `
-// @koumoul/v-iframe/content-window.min.js
-${vIframeContentWindow}
-`
-    }]
-  })
-
-  // make sure the referer is available when calling APIs and remote services from inside applications
-  head.childNodes.push({
-    nodeName: 'meta',
-    tagName: 'meta',
     attrs: [
-      { name: 'name', value: 'referrer' },
-      { name: 'content', value: 'same-origin' }
+      {name: 'type', value: 'text/javascript' },
+      {name: 'src', value: `https://cdn.jsdelivr.net/npm/@koumoul/v-iframe@${vIframeVersion}/content-window.min.js` }
     ]
   })
+
+  // Always add @koumoul/v-iframe/content-window.min.js to support state sync with portals, etc.
+  if (baseApp.meta['df:overflow'] === 'true') {
+    body.childNodes.push({
+      nodeName: 'script',
+      tagName: 'script',
+      attrs: [
+        {name: 'type', value: 'text/javascript' },
+        {name: 'src', value: `https://cdn.jsdelivr.net/npm/iframe-resizer@${iframeResizerVersion}/js/iframeResizer.contentWindow.min.js` }
+      ]
+    })
+  }
 
   // add a brand logo somewhere over the applications
   const hideBrand = (limits && limits.hide_brand && limits.hide_brand.limit) || config.defaultLimits.hideBrand
