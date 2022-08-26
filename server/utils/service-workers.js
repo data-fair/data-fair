@@ -88,6 +88,5 @@ let minifiedRegister
 exports.register = async () => {
   if (debugServiceWorkers) return register
   minifiedRegister = minifiedRegister || await minify(register, { toplevel: true, compress: true, mangle: true })
-  console.log(minifiedRegister)
   return minifiedRegister.code
 }
