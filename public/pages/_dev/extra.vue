@@ -4,12 +4,24 @@
     <nuxt-link to="/_dev/extra2?param=value2">
       Go to extra2 page
     </nuxt-link>
+    <br>
+    <nuxt-link to="/embed/dataset/test-10/table">
+      Go to embedded table
+    </nuxt-link>
+    <br>
+    <v-btn @click="$router.push({ query: {param2: 'value1'} })">
+      Write param2
+    </v-btn>
+    <v-btn @click="$router.push({ query: {param3: 'value1'} })">
+      Write param3
+    </v-btn>
+    <v-btn @click="$router.push({ query: {} })">
+      Empty params
+    </v-btn>
   </v-container>
 </template>
 
 <script>
-import '@koumoul/v-iframe/content-window.js'
-
 export default {
   layout: 'embed',
   mounted () {

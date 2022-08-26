@@ -8,12 +8,9 @@
 </template>
 
 <script>
-import '@koumoul/v-iframe/content-window.js'
-
 export default {
   layout: 'embed',
   mounted () {
-    window.vIframeOptions = { router: this.$router }
     console.log('extra2')
     parent.postMessage({
       breadcrumbs: [{
