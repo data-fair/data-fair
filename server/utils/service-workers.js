@@ -71,18 +71,20 @@ const oldBase = config.publicUrl.endsWith('/') ? config.publicUrl + 'app' : conf
 // so that we can accept accessing the application without a trailing slash
 const register = `
 if ('serviceWorker' in navigator) {
-  // unregister the deprecated service workers
-  navigator.serviceWorker.getRegistrations().then(function(regs) {
-    regs
-      .filter(function(reg) { return reg.scope.indexOf('${oldBase}') === 0; })
-      .filter(function(reg) { return reg.scope !== '${oldBase}'; })
-      .forEach(function(reg) { reg.unregister(); })
-  });
-  navigator.serviceWorker.register('${basePath}app-sw.js', { scope: '${basePath}app/' }).then(function(reg) {
-    ${debugServiceWorkers ? "console.log('Service worker registration succeeded. Scope is ' + reg.scope);" : ''}
-  }).catch(function(error) {
-    console.log('Service worker registration failed with ' + error);
-  });
+  window.addEventListener('load', function() {
+    // unregister the deprecated service workers
+    navigator.serviceWorker.getRegistrations().then(function(regs) {
+      regs
+        .filter(function(reg) { return reg.scope.indexOf('${oldBase}') === 0; })
+        .filter(function(reg) { return reg.scope !== '${oldBase}'; })
+        .forEach(function(reg) { reg.unregister(); })
+    });
+    navigator.serviceWorker.register('${basePath}app-sw.js', { scope: '${basePath}app/' }).then(function(reg) {
+      ${debugServiceWorkers ? "console.log('Service worker registration succeeded. Scope is ' + reg.scope);" : ''}
+    }).catch(function(error) {
+      console.log('Service worker registration failed with ' + error);
+    });
+  })
 };`
 let minifiedRegister
 exports.register = async () => {
