@@ -1,5 +1,5 @@
 <template>
-  <div class="applications-facets">
+  <v-col class="applications-facets">
     <template v-if="showOwnerFacets">
       <v-select
         v-model="facetsValues.owner"
@@ -79,7 +79,7 @@
         class="mb-4"
       />
     </template>
-  </div>
+  </v-col>
 </template>
 
 <i18n lang="yaml">

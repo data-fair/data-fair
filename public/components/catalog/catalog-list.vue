@@ -2,10 +2,35 @@
   <v-row>
     <v-col :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
-        <v-subheader class="px-0 pr-12 mb-2">
+        <v-subheader
+          class="px-0 pr-12 mb-2"
+          style="height: auto;"
+        >
           {{ $t('description') }}
         </v-subheader>
+        <template v-if="$vuetify.breakpoint.mdAndDown">
+          <div class="actions-buttons">
+            <v-btn
+              v-if="canAdmin"
+              color="primary"
+              fab
+              small
+              :title="$t('configureCatalog')"
+              @click="importCatalogSheet = true"
+            >
+              <v-icon>mdi-plus</v-icon>
+            </v-btn>
+          </div>
 
+          <search-filters
+            :filter-labels="{owner: $t('owner')}"
+            :filters="filters"
+            :facets="catalogs && catalogs.facets"
+            type="catalogs"
+            class="mr-6"
+            @apply="refresh()"
+          />
+        </template>
         <v-row
           v-if="catalogs"
           v-scroll="onScroll"
@@ -88,31 +113,13 @@
         </template>
       </layout-navigation-right>
 
-      <div
-        v-else
-        class="actions-buttons"
-      >
-        <v-btn
-          v-if="canAdmin"
-          color="primary"
-          fab
-          small
-          :title="$t('configureCatalog')"
-          @click="importCatalogSheet = true"
-        >
-          <v-icon>mdi-plus</v-icon>
-        </v-btn>
-      </div>
-
-      <div class="text-center">
-        <v-bottom-sheet v-model="importCatalogSheet">
-          <catalog-import
-            v-if="importCatalogSheet"
-            :init-catalog="importCatalog"
-            @cancel="importCatalogSheet = false"
-          />
-        </v-bottom-sheet>
-      </div>
+      <v-bottom-sheet v-model="importCatalogSheet">
+        <catalog-import
+          v-if="importCatalogSheet"
+          :init-catalog="importCatalog"
+          @cancel="importCatalogSheet = false"
+        />
+      </v-bottom-sheet>
     </v-col>
   </v-row>
 </template>

@@ -2,6 +2,24 @@
   <v-row>
     <v-col :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
+        <template v-if="$vuetify.breakpoint.mdAndDown">
+          <layout-actions-button
+            icon="mdi-plus"
+          >
+            <template #actions>
+              <dataset-list-actions />
+            </template>
+          </layout-actions-button>
+
+          <search-filters
+            :filter-labels="{children: $t('childDataset'), owner: $t('owner')}"
+            :filters="filters"
+            :sorts="sorts"
+            type="datasets"
+            class="mr-6"
+            @apply="filtersInitialized=true; refresh()"
+          />
+        </template>
         <template v-if="datasets">
           <v-row
             v-if="renderMode === 0"
@@ -71,7 +89,7 @@
       <layout-navigation-right v-if="$vuetify.breakpoint.lgAndUp">
         <dataset-list-actions />
 
-        <v-row class="px-2">
+        <v-row class="px-2 pt-2">
           <v-col class="py-0">
             <search-filters
               :filter-labels="{children: $t('childDataset'), owner: $t('owner')}"
@@ -80,12 +98,14 @@
               type="datasets"
               @apply="filtersInitialized=true; refresh()"
             />
-            <dataset-facets
-              v-if="datasets"
-              :facets="datasets.facets"
-              :facets-values="facetsValues"
-              :show-shared="filters.shared"
-            />
+            <v-row>
+              <dataset-facets
+                v-if="datasets"
+                :facets="datasets.facets"
+                :facets-values="facetsValues"
+                :show-shared="filters.shared"
+              />
+            </v-row>
           </v-col>
         </v-row>
 
@@ -115,14 +135,6 @@
           </v-btn-toggle>
         </v-row>
       </layout-navigation-right>
-      <layout-actions-button
-        v-else
-        icon="mdi-plus"
-      >
-        <template #actions>
-          <dataset-list-actions />
-        </template>
-      </layout-actions-button>
     </v-col>
   </v-row>
 </template>

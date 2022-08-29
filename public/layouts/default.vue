@@ -76,8 +76,8 @@ body .v-application {
 
   .actions-buttons {
     position: fixed;
-    top: 70px;
-    right: 8px;
+    top: 54px;
+    right: 6px;
     margin: 0;
 
     .v-btn {

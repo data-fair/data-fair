@@ -1,6 +1,10 @@
 <template lang="html">
-  <v-col>
-    <v-row class="mt-1">
+  <v-row dense>
+    <v-col
+      cols="12"
+      md="6"
+      lg="12"
+    >
       <v-text-field
         v-model="filters.q"
         :placeholder="$t('search')"
@@ -12,12 +16,18 @@
         @keyup.enter.native="writeParams"
         @click:append="writeParams"
       />
+    </v-col>
+    <v-col
+      v-if="sorts"
+      cols="12"
+      md="6"
+      lg="12"
+    >
       <v-card
         v-if="user.adminMode"
         color="admin"
         dark
         flat
-        class="mt-2"
       >
         <v-card-text class="pa-1">
           <v-switch
@@ -30,35 +40,44 @@
           />
         </v-card-text>
       </v-card>
-    </v-row>
-    <v-row class="mb-1">
-      <template v-for="filter in Object.keys(filterLabels)">
+    </v-col>
+    <v-col
+      v-if="Object.keys(filterLabels).filter(f => filters[f]).length"
+      cols="12"
+      md="6"
+      lg="12"
+    >
+      <template v-for="filter in Object.keys(filterLabels).filter(f => filters[f])">
         <v-chip
-          v-if="filters[filter]"
           :key="filter"
           close
           small
           color="accent"
           text-color="white"
           style="height:auto;white-space:normal;"
-          class="mt-1"
           @click:close="filters[filter] = null;writeParams(filter)"
         >
           <strong>{{ filterLabels[filter] }} : {{ filters[filter] }}</strong>
         </v-chip>
       </template>
-    </v-row>
-    <v-row v-if="sorts">
+    </v-col>
+    <v-col
+      v-if="sorts"
+      cols="12"
+      md="6"
+      lg="12"
+    >
       <v-select
         v-model="filters.sort"
         :label="$t('sortBy')"
         :items="sorts"
+        outlined
         dense
-        class="mt-2"
+        hide-details
         @change="writeParams"
       />
-    </v-row>
-  </v-col>
+    </v-col>
+  </v-row>
 </template>
 
 <i18n lang="yaml">

@@ -2,6 +2,29 @@
   <v-row>
     <v-col :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
+        <template v-if="$vuetify.breakpoint.mdAndDown">
+          <div class="actions-buttons">
+            <v-btn
+              v-if="canContribDep"
+              color="primary"
+              fab
+              small
+              :title="$t('configureApp')"
+              to="/new-application"
+            >
+              <v-icon>mdi-plus</v-icon>
+            </v-btn>
+          </div>
+
+          <search-filters
+            :filter-labels="{dataset: $t('dataset'), service: $t('service'), url: $t('baseApp'), owner: $t('owner')}"
+            :filters="filters"
+            :sorts="sorts"
+            type="applications"
+            class="mr-6"
+            @apply="filtersInitialized=true; refresh()"
+          />
+        </template>
         <v-row
           v-if="applications"
           v-scroll="onScroll"
@@ -69,7 +92,7 @@
             <v-list-item-title v-t="'configureApp'" />
           </v-list-item>
         </v-list>
-        <v-row class="px-2">
+        <v-row class="px-2 pt-2">
           <v-col class="py-0">
             <search-filters
               :filter-labels="{dataset: $t('dataset'), service: $t('service'), url: $t('baseApp'), owner: $t('owner')}"
@@ -78,30 +101,17 @@
               type="applications"
               @apply="filtersInitialized=true; refresh()"
             />
-            <application-facets
-              v-if="applications"
-              :facets="applications.facets"
-              :facets-values="facetsValues"
-              :show-shared="filters.shared"
-            />
+            <v-row>
+              <application-facets
+                v-if="applications"
+                :facets="applications.facets"
+                :facets-values="facetsValues"
+                :show-shared="filters.shared"
+              />
+            </v-row>
           </v-col>
         </v-row>
       </layout-navigation-right>
-      <div
-        v-else
-        class="actions-buttons"
-      >
-        <v-btn
-          v-if="canContribDep"
-          color="primary"
-          fab
-          small
-          :title="$t('configureApp')"
-          to="/new-application"
-        >
-          <v-icon>mdi-plus</v-icon>
-        </v-btn>
-      </div>
     </v-col>
   </v-row>
 </template>

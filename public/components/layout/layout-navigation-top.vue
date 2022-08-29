@@ -29,7 +29,7 @@
       </v-btn>
     </v-toolbar-items>
     <v-breadcrumbs
-      v-if="breadcrumbItems && breadcrumbsRouteName === $route.name"
+      v-if="breadcrumbItems && breadcrumbsRouteName === $route.name && $vuetify.breakpoint.mdAndUp"
       :items="breadcrumbItems"
       :large="!$vuetify.breakpoint.mobile"
       :class="{'pl-1': $vuetify.breakpoint.mobile}"

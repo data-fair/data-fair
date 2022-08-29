@@ -1,8 +1,5 @@
 <template>
-  <v-container
-    fluid
-    class="px-0"
-  >
+  <v-container fluid>
     <catalog-list v-if="user" />
     <!-- Anonymous: show jumbotron -->
     <v-col
