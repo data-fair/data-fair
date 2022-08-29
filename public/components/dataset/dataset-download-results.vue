@@ -226,9 +226,11 @@ export default {
           }
 
           const { data, headers } = res
-          const next = new URL(LinkHeader.parse(headers.link).rel('next')[0].uri)
-          next.searchParams.set('header', false)
-          nextUrl = next.href
+          if (headers.link) {
+            const next = new URL(LinkHeader.parse(headers.link).rel('next')[0].uri)
+            next.searchParams.set('header', false)
+            nextUrl = next.href
+          }
           await this.writer.write(new TextEncoder().encode(data))
           this.largeCsvValue = ((chunk + 1) / nbChunks) * 100
         }
@@ -237,7 +239,10 @@ export default {
           this.clickDownload('csv')
         }
       } catch (error) {
-        if (!this.largeCsvCancelled && !!error) eventBus.$emit('notification', { error })
+        if (!this.largeCsvCancelled && !!error) {
+          console.log('download large csv error', error)
+          eventBus.$emit('notification', { error })
+        }
       }
       this.largeCsvLoading = false
       this.largeCsvCancelled = false
