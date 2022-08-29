@@ -46,17 +46,21 @@
       </v-list-item-content>
     </v-list-item>
 
-    <v-list-item
-      v-if="can('writeConfig')"
-      @click="showCaptureDialog = true"
-    >
-      <v-list-item-icon>
-        <v-icon color="primary">
-          mdi-camera
-        </v-icon>
-      </v-list-item-icon>
-      <v-list-item-title v-t="'capture'" />
-    </v-list-item>
+    <application-capture-dialog v-if="can('writeConfig')">
+      <template #activator="{on, attrs}">
+        <v-list-item
+          v-bind="attrs"
+          v-on="on"
+        >
+          <v-list-item-icon>
+            <v-icon color="primary">
+              mdi-camera
+            </v-icon>
+          </v-list-item-icon>
+          <v-list-item-title v-t="'capture'" />
+        </v-list-item>
+      </template>
+    </application-capture-dialog>
 
     <v-list-item
       v-if="can('readApiDoc')"
@@ -135,56 +139,6 @@
             style="background-color: transparent; border: none;"
           />
         </v-card-text>
-      </v-card>
-    </v-dialog>
-
-    <v-dialog
-      v-model="showCaptureDialog"
-      max-width="500"
-    >
-      <v-card outlined>
-        <v-toolbar
-          dense
-          flat
-        >
-          <v-toolbar-title v-t="'capture'" />
-          <v-spacer />
-          <v-btn
-            icon
-            @click.native="showCaptureDialog = false"
-          >
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </v-toolbar>
-        <v-card-text
-          v-if="showCaptureDialog"
-          class="pb-0 pt-2"
-        >
-          <p v-t="'captureMsg'" />
-          <v-text-field
-            v-model="captureWidth"
-            label="Largeur"
-            type="number"
-          />
-          <v-text-field
-            v-model="captureHeight"
-            label="Hauteur"
-            type="number"
-          />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn
-            color="primary"
-            icon
-            :href="`${env.captureUrl}/api/v1/screenshot?target=${encodeURIComponent(applicationLink)}&width=${captureWidth}&height=${captureHeight}`"
-            download
-            :title="$t('downloadCapture')"
-          >
-            <v-icon>mdi-download</v-icon>
-          </v-btn>
-          <v-spacer />
-        </v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -286,8 +240,6 @@ fr:
   delete: Supprimer
   changeOwner: Changer le propriétaire
   integrationMsg: Pour intégrer cette visualisation dans un site vous pouvez copier le code suivant ou un code similaire dans le code source HTML.
-  captureMsg: Une image statique au format PNG va être créée à partir de cette visualisation.
-  downloadCapture: télécharger la capture
   deleteApp: Suppression de la visualisation
   deleteMsg: Voulez vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
   yes: Oui
@@ -305,8 +257,6 @@ en:
   delete: Delete
   changeOwner: Change owner
   integrationMsg: To integrate this visualization in a website you can copy the code below or a similar code in your HTML source code.
-  captureMsg: A static image with PNG format will be created based on this visualization.
-  downloadCapture: download the screenshot
   deleteApp: Deletion of the visualization
   deleteMsg: Do you really want to delete the visualization "{title}" ? Deletion is definitive and data will not be recoverable.
   yes: Yes
@@ -329,12 +279,9 @@ export default {
   data: () => ({
     showDeleteDialog: false,
     showIntegrationDialog: false,
-    showCaptureDialog: false,
     showOwnerDialog: false,
     showAPIDialog: false,
-    newOwner: null,
-    captureWidth: 800,
-    captureHeight: 450
+    newOwner: null
   }),
   computed: {
     ...mapState(['env']),
@@ -344,7 +291,7 @@ export default {
       if (!this.application.publicationSites) return []
       return this.application.publicationSites.map(dps => {
         const site = this.publicationSites.find(site => dps === `${site.type}:${site.id}`)
-        if (!site?.applicationUrlTemplate) return null
+        if (!(site && site.applicationUrlTemplate)) return null
         return {
           url: site.applicationUrlTemplate.replace('{id}', this.application.id),
           title: site.title || (site.url && site.url.replace('http://', '').replace('https://', '')) || site.id
