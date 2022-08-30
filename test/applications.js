@@ -106,7 +106,7 @@ describe('Applications', () => {
     assert.equal(res.data.image, 'http://monapp1.com/thumbnail.png')
   })
 
-  it.only('Read capture of application', async () => {
+  it('Read capture of application', async () => {
     const ax = global.ax.dmeadus
     try {
       await ax.get(config.captureUrl + '/api/v1/api-docs.json')

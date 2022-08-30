@@ -89,9 +89,9 @@ exports.sniff = async (sample) => {
     }
   }
   const bestCombination = combinations.sort((a, b) => b.score - a.score)[0]
-  debug(combinations)
+  debug('combinations', combinations)
   const result = bestCombination.props
   if (!result.labels || !result.labels.length) throw new Error('Échec de l\'analyse du fichier tabulaire, pas de colonne détectée.')
-
+  debug('result', result)
   return result
 }

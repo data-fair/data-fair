@@ -222,4 +222,12 @@ describe('CSV cases', () => {
     assert.equal(res.data.total, 2)
     assert.equal(res.data.results[0].id, 'koumoul')
   })
+
+  it('CSV with BOM', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/Fibre optique_ noeuds de la montée en débit dans le département des Côtes d\'Armor.csv', ax)
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 732)
+    assert.equal(res.data.results[0].ID_NOEUD, '22004N000')
+  })
 })
