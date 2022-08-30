@@ -74,7 +74,7 @@
           download
           :title="$t('downloadCapture')"
         >
-          <v-icon>mdi-download</v-icon>
+          <v-icon>mdi-camera</v-icon>
         </v-btn>
         <v-spacer />
       </v-card-actions>

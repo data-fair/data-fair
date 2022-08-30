@@ -31,7 +31,8 @@ exports.requestOpts = (req) => {
     target: targetUrl.href,
     type: 'png',
     width: 1050, // 21/9 resolution
-    height: 450
+    height: 450,
+    filename: req.application.id + '.png'
   }
   if (req.query.width) qs.width = req.query.width
   if (req.query.height) qs.height = req.query.height
