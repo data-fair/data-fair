@@ -150,9 +150,6 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   const baseAppPromise = db.collection('base-applications')
     .findOne({ url: applicationUrl, $or: accessFilter }, { projection: { id: 1, meta: 1 } })
 
-  // the dates of last modification / finalization of both the app and the datasets it uses
-  const updateDates = [new Date(req.application.updatedAt)]
-
   // Update the config with dates of last finalization of the used datasets
   // this info can then be used to add ?finalizedAt=... to any queries
   // and so benefit from better caching
@@ -167,7 +164,6 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
       .toArray()
 
     freshDatasets.forEach(fd => {
-      updateDates.push(new Date(fd.finalizedAt))
       req.application.configuration.datasets.find(d => fd.id === d.id).finalizedAt = fd.finalizedAt
     })
   }

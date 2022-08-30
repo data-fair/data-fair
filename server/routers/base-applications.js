@@ -57,6 +57,7 @@ async function initBaseApp (db, app) {
   const patch = {
     meta: data.meta,
     id: slug(app.url, { lower: true }),
+    updatedAt: new Date().toISOString(),
     ...app
   }
 

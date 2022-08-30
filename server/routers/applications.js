@@ -164,6 +164,32 @@ const readApplication = asyncWrap(async (req, res, next) => {
   next()
 })
 
+const readBaseApp = asyncWrap(async (req, res, next) => {
+  req.baseApp = await req.app.get('db').collection('base-applications').findOne({ url: req.application.url })
+  if (!req.baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
+  next()
+})
+
+const setFullUpdatedAt = asyncWrap(async (req, res, next) => {
+  const db = req.app.get('db')
+  // the dates of last modification / finalization of both the app, the base-app and the datasets it uses
+  const updateDates = [req.application.updatedAt]
+  const baseApp = await db.collection('base-applications')
+    .findOne({ url: req.application.url }, { projection: { updatedAt: 1, _id: 0 } })
+  if (!baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
+  if (baseApp && baseApp.updatedAt) updateDates.push(baseApp.updatedAt)
+  const datasets = req.application.configuration && req.application.configuration.datasets && req.application.configuration.datasets.filter(d => !!d)
+  if (datasets && datasets.length) {
+    const freshDatasets = await db.collection('datasets')
+      .find({ $or: datasets.map(d => ({ id: d.id })) })
+      .project({ _id: 0, finalizedAt: 1 })
+      .toArray()
+    freshDatasets.forEach(fd => updateDates.push(fd.finalizedAt))
+  }
+  req.resourceFullUpdatedAt = updateDates.sort().pop()
+  next()
+})
+
 router.use('/:applicationId/permissions', readApplication, permissions.router('applications', 'application', async (req, patchedApplication) => {
   // this callback function is called when the resource becomes public
   await publicationSites.onPublic(req.app.get('db'), patchedApplication)
@@ -289,7 +315,6 @@ const writeConfig = asyncWrap(async (req, res) => {
     }
   )
   await journals.log(req.app, req.application, { type: 'config-updated' }, 'application')
-  capture.screenshot(req)
   res.status(200).json(req.body)
 })
 router.put('/:applicationId/config', readApplication, permissions.middleware('writeConfig', 'write'), writeConfig)
@@ -338,12 +363,8 @@ router.delete('/:applicationId/configuration-draft', readApplication, permission
   res.status(200).json(req.body)
 }))
 
-router.get('/:applicationId/base-application', readApplication, permissions.middleware('readBaseApp', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
-  const db = req.app.get('db')
-  const baseApplications = db.collection('base-applications')
-  const baseApp = await baseApplications.findOne({ url: req.application.url })
-  if (!baseApp) return res.status(404).send('No base application matching ' + req.application.url)
-  res.send(baseAppsUtils.clean(baseApp, req.publicBaseUrl, req.query.html === 'true'))
+router.get('/:applicationId/base-application', readApplication, permissions.middleware('readBaseApp', 'read'), readBaseApp, cacheHeaders.noCache, asyncWrap(async (req, res) => {
+  res.send(baseAppsUtils.clean(req.baseApp, req.publicBaseUrl, req.query.html === 'true'))
 }))
 
 router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
@@ -389,13 +410,9 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
   res.status(204).send()
 }))
 
-router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
-  const capturePath = await capture.path(req.application)
-  if (await fs.pathExists(capturePath)) {
-    res.sendFile(capturePath)
-  } else {
-    res.redirect(req.publicBaseUrl + '/no-preview.png')
-  }
+// TODO: better cache headers ?
+router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), setFullUpdatedAt, cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
+  await capture.screenshot(req, res)
 }))
 
 // keys for readonly access to application

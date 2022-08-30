@@ -132,6 +132,7 @@ beforeEach('scratch data', async () => {
       global.db.collection('journals').deleteMany({}),
       fs.emptyDir('./data/test')
     ])
+    await fs.ensureDir('./data/test/captures')
   } catch (err) {
     console.warn('error while scratching data before test', err)
   }

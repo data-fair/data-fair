@@ -68,6 +68,7 @@ services:
       - PORT=8087
       - DEBUG=capture
       - PUBLIC_URL=http://localhost:5600/capture
+      - ONLY_SAME_HOST=false
       - PROMETHEUS_ACTIVE=false
 
   thumbor:

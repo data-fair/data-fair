@@ -8,8 +8,8 @@ const useragent = require('useragent')
 // prevent running expensive queries while always presenting fresh data
 // also set last finalized date into last-modified header
 exports.resourceBased = (req, res, next) => {
-  const dateKey = req.resource.finalizedAt ? 'finalizedAt' : 'updatedAt'
-  const date = (new Date(req.resource[dateKey])).toUTCString()
+  const dateStr = req.resourceFullUpdatedAt || req.resource.finalizedAt || req.resource.updatedAt
+  const date = (new Date(dateStr)).toUTCString()
   const cacheVisibility = req.publicOperation ? 'public' : 'private'
 
   const ifModifiedSince = req.get('if-modified-since')
