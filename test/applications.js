@@ -106,7 +106,7 @@ describe('Applications', () => {
     assert.equal(res.data.image, 'http://monapp1.com/thumbnail.png')
   })
 
-  it('Read capture of application', async () => {
+  it.only('Read capture of application', async () => {
     const ax = global.ax.dmeadus
     try {
       await ax.get(config.captureUrl + '/api/v1/api-docs.json')
@@ -122,14 +122,18 @@ describe('Applications', () => {
     await ax.put('/api/v1/applications/' + app.id + '/config', {
       datasets: [{ href: dataset.href, id: dataset.id }]
     })
+    const fullUpdatedAt = (await ax.get('/api/v1/applications/' + app.id)).data.fullUpdatedAt
+    assert.ok(fullUpdatedAt)
     let res = await ax.get('/api/v1/applications/' + app.id + '/capture')
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'image/png')
     assert.equal(res.headers['x-capture-cache-status'], 'MISS')
-    res = await ax.get('/api/v1/applications/' + app.id + '/capture')
+    assert.equal(res.headers['cache-control'], 'must-revalidate, private')
+    res = await ax.get('/api/v1/applications/' + app.id + '/capture?updatedAt=' + fullUpdatedAt)
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'image/png')
     assert.equal(res.headers['x-capture-cache-status'], 'HIT')
+    assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=604800')
     await ax.put('/api/v1/applications/' + app.id + '/config', {
       datasets: [{ href: dataset.href, id: dataset.id }],
       test: 'ok'

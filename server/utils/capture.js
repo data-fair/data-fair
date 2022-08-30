@@ -52,10 +52,10 @@ exports.screenshot = async (req, res) => {
 
   const reqOpts = exports.requestOpts(req)
 
-  if (Object.keys(req.query).length === 0) {
+  if (Object.keys(req.query).filter(k => k !== 'updatedAt').length === 0) {
     if (await fs.pathExists(capturePath)) {
       const stats = await fs.stat(capturePath)
-      if (stats.mtime.toISOString() > req.resourceFullUpdatedAt) {
+      if (stats.mtime.toISOString() > req.resource.fullUpdatedAt) {
         res.set('x-capture-cache-status', 'HIT')
         return res.sendFile(capturePath)
       } else {

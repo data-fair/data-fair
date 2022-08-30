@@ -70,7 +70,7 @@
           color="primary"
           fab
           small
-          :href="`${env.captureUrl}/api/v1/screenshot?target=${encodeURIComponent(stateSrc || applicationLink)}&width=${width}&height=${height}`"
+          :href="href"
           download
           :title="$t('downloadCapture')"
         >
@@ -111,10 +111,23 @@ export default {
   },
   computed: {
     ...mapState(['env']),
-    ...mapState('application', ['prodBaseApp']),
+    ...mapState('application', ['prodBaseApp', 'application']),
     ...mapGetters('application', ['applicationLink']),
     syncState () {
       return this.prodBaseApp.meta && this.prodBaseApp.meta['df:sync-state'] && this.prodBaseApp.meta['df:sync-state'] !== 'false'
+    },
+    href () {
+      const url = new URL(this.application.href + '/capture')
+      url.searchParams.set('width', this.width)
+      url.searchParams.set('height', this.height)
+      url.searchParams.set('updatedAt', this.application.fullUpdatedAt)
+      if (this.stateSrc) {
+        const stateUrl = new URL(this.stateSrc)
+        for (const key of stateUrl.searchParams.keys()) {
+          url.searchParams.set('app_' + key, stateUrl.searchParams.get(key))
+        }
+      }
+      return url.href
     }
   },
   watch: {

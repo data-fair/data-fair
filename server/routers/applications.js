@@ -42,6 +42,7 @@ function clean (application, publicUrl, query = {}) {
   delete application.permissions
   delete application._id
   delete application.configuration
+  delete application.configurationDraft
   if (select.includes('-userPermissions')) delete application.userPermissions
   if (select.includes('-owner')) delete application.owner
 
@@ -186,7 +187,7 @@ const setFullUpdatedAt = asyncWrap(async (req, res, next) => {
       .toArray()
     freshDatasets.forEach(fd => updateDates.push(fd.finalizedAt))
   }
-  req.resourceFullUpdatedAt = updateDates.sort().pop()
+  req.application.fullUpdatedAt = updateDates.sort().pop()
   next()
 })
 
@@ -196,7 +197,7 @@ router.use('/:applicationId/permissions', readApplication, permissions.router('a
 }))
 
 // retrieve a application by its id
-router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), setFullUpdatedAt, cacheHeaders.noCache, (req, res, next) => {
   req.application.userPermissions = permissions.list('applications', req.application, req.user)
   res.status(200).send(clean(req.application, req.publicBaseUrl, req.query))
 })
