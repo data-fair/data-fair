@@ -246,17 +246,19 @@ ${await serviceWorkers.register()}
     }]
   })
 
-  // Always add @koumoul/v-iframe/content-window.min.js to support state sync with portals, etc.
-  body.childNodes.push({
-    nodeName: 'script',
-    tagName: 'script',
-    attrs: [
-      { name: 'type', value: 'text/javascript' },
-      { name: 'src', value: `https://cdn.jsdelivr.net/npm/@koumoul/v-iframe@${vIframeVersion}/content-window.min.js` }
-    ]
-  })
+  // add @koumoul/v-iframe/content-window.min.js to support state sync with portals, etc.
+  if (baseApp.meta['df:sync-state'] === 'true') {
+    body.childNodes.push({
+      nodeName: 'script',
+      tagName: 'script',
+      attrs: [
+        { name: 'type', value: 'text/javascript' },
+        { name: 'src', value: `https://cdn.jsdelivr.net/npm/@koumoul/v-iframe@${vIframeVersion}/content-window.min.js` }
+      ]
+    })
+  }
 
-  // Always add @koumoul/v-iframe/content-window.min.js to support state sync with portals, etc.
+  // add iframe-resizer/js/iframeResizer.contentWindow.min.js to support dynamic resizing of the iframe in portals, etc
   if (baseApp.meta['df:overflow'] === 'true') {
     body.childNodes.push({
       nodeName: 'script',
