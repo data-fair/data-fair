@@ -4,6 +4,7 @@ const path = require('path')
 const request = require('request')
 const pump = require('util').promisify(require('pump'))
 const debug = require('debug')('capture')
+const permissionsUtils = require('./permissions')
 
 const captureUrl = config.privateCaptureUrl || config.captureUrl
 
@@ -38,13 +39,18 @@ exports.requestOpts = (req) => {
   if (req.query.height) qs.height = req.query.height
   if (req.query.type === 'gif') qs.type = 'gif' // will return a gif if the application supports an animation mode, png otherwise
   if (req.query.timer === 'true') qs.timer = true
+  const headers = {}
+  if (permissionsUtils.isPublic('applications', req.application)) {
+    qs.cookies = false
+  } else {
+    headers.Cookie = cookieText
+  }
+
   return {
     method: 'GET',
     url: screenShortUrl,
     qs,
-    headers: {
-      Cookie: cookieText
-    }
+    headers
   }
 }
 

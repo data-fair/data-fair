@@ -68,11 +68,11 @@
         <v-spacer />
         <v-btn
           color="primary"
+          :loading="downloading"
           fab
           small
-          :href="href"
-          download
           :title="$t('downloadCapture')"
+          @click="download"
         >
           <v-icon>mdi-camera</v-icon>
         </v-btn>
@@ -96,6 +96,7 @@ en:
 <script>
 import { mapState, mapGetters } from 'vuex'
 import VIframe from '@koumoul/v-iframe'
+import fileDownload from 'js-file-download'
 
 export default {
   components: {
@@ -106,7 +107,8 @@ export default {
       dialog: false,
       width: null,
       height: null,
-      stateSrc: null
+      stateSrc: null,
+      downloading: false
     }
   },
   computed: {
@@ -141,6 +143,12 @@ export default {
   methods: {
     setState (p) {
       console.log('state', p)
+    },
+    async download () {
+      this.downloading = true
+      const res = await this.$axios.get(this.href, { responseType: 'blob' })
+      fileDownload(res.data, this.application.id + '.' + res.headers['content-type'].split('/').pop())
+      this.downloading = false
     }
   }
 }
