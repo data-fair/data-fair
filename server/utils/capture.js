@@ -37,7 +37,7 @@ exports.requestOpts = (req) => {
   if (req.query.width) qs.width = req.query.width
   if (req.query.height) qs.height = req.query.height
   if (req.query.type === 'gif') qs.type = 'gif' // will return a gif if the application supports an animation mode, png otherwise
-
+  if (req.query.timer === 'true') qs.timer = true
   return {
     method: 'GET',
     url: screenShortUrl,
