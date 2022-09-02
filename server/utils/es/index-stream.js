@@ -21,6 +21,8 @@ const cleanItem = (item) => {
   delete item._updatedBy
 }
 
+const maxErroredItems = 3
+
 class IndexStream extends Transform {
   constructor (options) {
     super({ objectMode: true })
@@ -28,6 +30,7 @@ class IndexStream extends Transform {
     this.body = []
     this.bulkChars = 0
     this.i = 0
+    this.nbErroredItems = 0
     this.erroredItems = []
   }
 
@@ -58,7 +61,10 @@ class IndexStream extends Transform {
         this.body.push(item)
         this.bulkChars += JSON.stringify(item).length
       }
-      if (warning) this.erroredItems.push({ customMessage: warning })
+      if (warning) {
+        this.nbErroredItems += 1
+        if (this.erroredItems.length < maxErroredItems) this.erroredItems.push({ customMessage: warning })
+      }
 
       this.i += 1
 
@@ -120,7 +126,10 @@ class IndexStream extends Transform {
             input: this.body[(i * 2) + 1]
           }))
           .filter(item => !!item.error)
-          .forEach(item => this.erroredItems.push(item))
+          .forEach(item => {
+            this.nbErroredItems += 1
+            if (this.erroredItems.length < maxErroredItems) this.erroredItems.push(item)
+          })
       }
       this.body = []
       this.bulkChars = 0
@@ -132,10 +141,10 @@ class IndexStream extends Transform {
   }
 
   errorsSummary () {
-    if (!this.erroredItems.length) return null
-    const leftOutErrors = this.erroredItems.length - 3
-    let msg = `${Math.round(100 * (this.erroredItems.length / this.i))}% des lignes sont en erreur.\n<br>`
-    msg += this.erroredItems.slice(0, 3).map(item => {
+    if (!this.nbErroredItems) return null
+    const leftOutErrors = this.nbErroredItems - 3
+    let msg = `${Math.round(100 * (this.nbErroredItems / this.i))}% des lignes sont en erreur.\n<br>`
+    msg += this.erroredItems.map(item => {
       let itemMsg = ' - '
       if (item._i !== undefined) itemMsg += `Ligne ${item._i}: `
       if (item.customMessage) itemMsg += item.customMessage
@@ -146,7 +155,7 @@ class IndexStream extends Transform {
 
     if (leftOutErrors > 0) msg += `\n<br>${leftOutErrors} autres erreurs...`
     // blocking if more than 50% lines are broken in a way
-    if (this.erroredItems.length > this.i / 2) throw new Error(msg)
+    if (this.nbErroredItems > this.i / 2) throw new Error(msg)
     return msg
   }
 }
