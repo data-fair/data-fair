@@ -18,6 +18,7 @@ exports.process = async function (app, dataset) {
   }
 
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
+  const debugHeap = require('../utils/heap').debug(`worker:indexer:${dataset.id}`)
 
   if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape indexation.')
 
@@ -52,8 +53,11 @@ exports.process = async function (app, dataset) {
 
   debug('Run index stream')
   let readStreams, writeStream
-  const progress = taskProgress(app, dataset.id, exports.eventsPrefix, 100)
+  const progress = taskProgress(app, dataset.id, exports.eventsPrefix, 100, (progress) => {
+    debugHeap('progress ' + progress, indexStream)
+  })
   await progress(0)
+  debugHeap('before-stream')
   if (dataset.isRest) {
     readStreams = await restDatasetsUtils.readStreams(db, dataset, dataset.status === 'updated' || dataset.status === 'extended-updated', progress)
     writeStream = restDatasetsUtils.markIndexedStream(db, dataset)
@@ -65,6 +69,7 @@ exports.process = async function (app, dataset) {
   }
   await pump(...readStreams, indexStream, writeStream)
   debug('index stream ok')
+  debugHeap('after-stream')
   const errorsSummary = indexStream.errorsSummary()
   if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
 

@@ -388,7 +388,7 @@ exports.sampleValues = async (dataset) => {
         sampleValues[key] = sampleValues[key] || new Set([])
         // stop if we already have a lot of samples
         if (sampleValues[key].size > 1000) continue
-        // ignore empty of too long values to prevent costly sniffing
+        // ignore empty or too long values to prevent costly sniffing
         if (!chunk[key] || chunk[key].length > 200) continue
         finished = false
         sampleValues[key].add(chunk[key])
