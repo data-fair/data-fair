@@ -1,7 +1,7 @@
 const createError = require('http-errors')
 const { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } = require('./commons.js')
 
-module.exports = async (client, dataset, query, addGeoData) => {
+module.exports = async (client, dataset, query, addGeoData, publicBaseUrl) => {
   const fields = dataset.schema.map(f => f.key)
   // nested grouping by a serie of fields
   if (!query.field) throw createError(400, 'La paramètre "field" est obligatoire')
@@ -125,20 +125,20 @@ module.exports = async (client, dataset, query, addGeoData) => {
   }
   // Bound complexity with a timeout
   const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery, timeout: '2s' })).body
-  return prepareValuesAggResponse(esResponse, valuesFields, dataset, query)
+  return prepareValuesAggResponse(esResponse, valuesFields, dataset, query, publicBaseUrl)
 }
 
-const prepareValuesAggResponse = (esResponse, fields, dataset, query) => {
+const prepareValuesAggResponse = (esResponse, fields, dataset, query, publicBaseUrl) => {
   const response = {
     total: esResponse.hits.total.value,
     took: esResponse.took,
     timed_out: esResponse.timed_out
   }
-  recurseAggResponse(response, esResponse.aggregations, dataset, query)
+  recurseAggResponse(response, esResponse.aggregations, dataset, query, publicBaseUrl)
   return response
 }
 
-const recurseAggResponse = (response, aggRes, dataset, query) => {
+const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl) => {
   if (aggRes.card) response.total_values = aggRes.card.value
   if (!aggRes.values) return response
   response.total_other = aggRes.values.sum_other_doc_count
@@ -149,13 +149,13 @@ const recurseAggResponse = (response, aggRes, dataset, query) => {
     const aggItem = {
       total: b.doc_count,
       value: b.key_as_string || b.key,
-      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query)) : []
+      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query, publicBaseUrl)) : []
     }
     if (b.metric) {
       aggItem.metric = b.metric.value
     }
     if (b.values) {
-      recurseAggResponse(aggItem, b, dataset, query)
+      recurseAggResponse(aggItem, b, dataset, query, publicBaseUrl)
     }
     if (b.centroid) {
       aggItem.centroid = b.centroid.location

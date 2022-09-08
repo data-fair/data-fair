@@ -1024,7 +1024,7 @@ router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset
   const result = {
     total: esResponse.hits.total.value,
     results: esResponse.hits.hits.map(hit => {
-      const item = esUtils.prepareResultItem(hit, req.dataset, req.query)
+      const item = esUtils.prepareResultItem(hit, req.dataset, req.query, req.publicBaseUrl)
       let label = item[singleSearch.output.key]
       if (singleSearch.label && item[singleSearch.label.key]) label += ` (${item[singleSearch.label.key]})`
       return { output: item[singleSearch.output.key], label, score: item._score || undefined }
@@ -1236,7 +1236,7 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
   if (nextLinkURL) result.next = nextLinkURL.href
   if (req.query.collapse) result.totalCollapse = esResponse.aggregations.totalCollapse.value
   result.results = esResponse.hits.hits.map(hit => {
-    return esUtils.prepareResultItem(hit, req.dataset, req.query)
+    return esUtils.prepareResultItem(hit, req.dataset, req.query, req.publicBaseUrl)
   })
 
   if (req.query.format === 'csv') {
@@ -1302,7 +1302,7 @@ router.get('/:datasetId/geo_agg', readDataset(), applicationKey, permissions.mid
   }
   let result
   try {
-    result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query)
+    result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query, req.publicBaseUrl)
   } catch (err) {
     await manageESError(req, err)
   }
@@ -1349,7 +1349,7 @@ router.get('/:datasetId/values_agg', readDataset(), applicationKey, permissions.
 
   let result
   try {
-    result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, req.query, vectorTileRequested || req.query.format === 'geojson')
+    result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, req.query, vectorTileRequested || req.query.format === 'geojson', req.publicBaseUrl)
   } catch (err) {
     await manageESError(req, err)
   }

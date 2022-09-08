@@ -386,7 +386,7 @@ exports.getQueryBBOX = (query) => {
   return bbox
 }
 
-exports.prepareResultItem = (hit, dataset, query) => {
+exports.prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicUrl) => {
   // re-join splitted items
   dataset.schema.filter(field => field.separator && hit._source[field.key] && Array.isArray(hit._source[field.key])).forEach(field => {
     hit._source[field.key] = hit._source[field.key].join(field.separator)
@@ -421,7 +421,8 @@ exports.prepareResultItem = (hit, dataset, query) => {
   if (query.thumbnail) {
     if (!imageField) throw createError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
     if (res[imageField.key]) {
-      const ignoreThumbor = dataset.attachmentsAsImage && !permissions.isPublic('datasets', dataset)
+      const datasetHref = `${publicBaseUrl}/api/v1/datasets/${dataset.id}`
+      const ignoreThumbor = res[imageField.key].startsWith(datasetHref) && !permissions.isPublic('datasets', dataset)
       res._thumbnail = ignoreThumbor ? res[imageField.key] : thumbor.thumbnail(res[imageField.key], query.thumbnail, dataset.thumbnails)
     }
   }
