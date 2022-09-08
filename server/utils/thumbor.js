@@ -5,8 +5,7 @@ const thumbor = new Thumbor(config.thumbor.key, config.thumbor.url)
 
 exports.thumbnail = (url, size, thumbnailsOpts = {}) => {
   if (!url) return null
-  const alreadyEncoded = decodeURI(url) !== url
-  if (!alreadyEncoded) url = encodeURI(url)
+  url = encodeURI(decodeURI(url))
   if (size === 'true' || size === '1') size = '300x200'
   // special case as thumbor does not create thumbnails of SVG images by default
   if (url.toLowerCase().endsWith('.svg')) return url
