@@ -61,7 +61,7 @@ services:
   capture:
     profiles:
       - dev
-    image: koumoul/capture:master
+    image: ghcr.io/data-fair/capture:master
     network_mode: host
     shm_size: '1gb'
     environment:

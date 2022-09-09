@@ -6,6 +6,7 @@ exports.description = 'Remove empty capture files'
 
 exports.exec = async (db, debug) => {
   const dir = path.resolve(config.dataDir, 'captures')
+  await fs.ensureDir(dir)
   const files = await fs.readdir(dir)
   for (const file of files) {
     const stats = await fs.stat(path.join(dir, file))

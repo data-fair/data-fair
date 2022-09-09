@@ -2,9 +2,11 @@ const fs = require('fs-extra')
 const config = require('config')
 const path = require('path')
 const request = require('request')
+const eventToPromise = require('event-to-promise')
 const pump = require('util').promisify(require('pump'))
 const debug = require('debug')('capture')
 const permissionsUtils = require('./permissions')
+const prometheus = require('./prometheus')
 
 const captureUrl = config.privateCaptureUrl || config.captureUrl
 
@@ -54,10 +56,23 @@ exports.requestOpts = (req, isDefaultThumbnail) => {
   }
 }
 
+const stream2file = async (reqOpts, capturePath) => {
+  let captureRes
+  const captureReq = request(reqOpts)
+  await Promise.all([
+    eventToPromise(captureReq, 'response').then(r => { captureRes = r }),
+    pump(captureReq, fs.createWriteStream(capturePath))
+  ])
+  if (captureRes.statusCode >= 400) {
+    const data = await fs.readFile(capturePath, 'utf8')
+    throw new Error(`failure in capture - ${captureRes.statusCode} - ${data}`)
+  }
+}
+
 exports.screenshot = async (req, res) => {
   const capturePath = path.resolve(config.dataDir, 'captures', req.application.id + '.png')
 
-  const isDefaultThumbnail = Object.keys(req.query).filter(k => k !== 'updatedAt').length === 0
+  const isDefaultThumbnail = Object.keys(req.query).filter(k => k !== 'updatedAt' && k !== 'app_capture-test-error').length === 0
 
   const reqOpts = exports.requestOpts(req, isDefaultThumbnail)
 
@@ -75,24 +90,19 @@ exports.screenshot = async (req, res) => {
     }
 
     try {
-      let captureRes
       try {
-        captureRes = request(reqOpts)
-        await pump(captureRes, fs.createWriteStream(capturePath))
+        await stream2file(reqOpts, capturePath)
       } catch (err) {
         // we try twice as capture can have some stability issues
         await new Promise(resolve => setTimeout(resolve, 4000))
-        captureRes = request(reqOpts)
-        await pump(captureRes, fs.createWriteStream(capturePath))
+        await stream2file(reqOpts, capturePath)
       }
-
-      if (captureRes.headers['content-type'] === 'image/gif') {
-        await fs.move(capturePath, path.resolve(config.dataDir, 'captures', req.application.id + '.gif'))
-      }
+      await stream2file(reqOpts, capturePath)
       return res.sendFile(capturePath)
     } catch (err) {
       // catch err locally as this method is called without waiting for result
-      console.warn(`Failed to capture screenshot for application ${req.application.id}`, err)
+      console.warn(`(app-thumbnail) failed to capture screenshot for application ${req.application.id}`, err)
+      prometheus.internalError.inc({ errorCode: 'app-thumbnail' })
 
       // In case of error do not keep corrupted or empty file
       await fs.remove(capturePath)

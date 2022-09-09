@@ -119,33 +119,48 @@ describe('Applications', () => {
     const { data: app } = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const { data: dataset } = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
     await workers.hook('finalizer/' + dataset.id)
-    await ax.put('/api/v1/applications/' + app.id + '/config', {
-      datasets: [{ href: dataset.href, id: dataset.id }]
-    })
+    await ax.put('/api/v1/applications/' + app.id + '/config', { datasets: [{ href: dataset.href, id: dataset.id }] })
     const fullUpdatedAt = (await ax.get('/api/v1/applications/' + app.id)).data.fullUpdatedAt
     assert.ok(fullUpdatedAt)
+
+    // 1rst call, the capture file is created
     let res = await ax.get('/api/v1/applications/' + app.id + '/capture')
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'image/png')
     assert.equal(res.headers['x-capture-cache-status'], 'MISS')
     assert.equal(res.headers['cache-control'], 'must-revalidate, private')
+
+    // 2nd call, the capture file is served directly
     res = await ax.get('/api/v1/applications/' + app.id + '/capture?updatedAt=' + fullUpdatedAt)
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'image/png')
     assert.equal(res.headers['x-capture-cache-status'], 'HIT')
     assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=604800')
-    await ax.put('/api/v1/applications/' + app.id + '/config', {
-      datasets: [{ href: dataset.href, id: dataset.id }],
-      test: 'ok'
-    })
+
+    // after a config change file should be recreated
+    await ax.put('/api/v1/applications/' + app.id + '/config', { datasets: [{ href: dataset.href, id: dataset.id }], test: 'ok' })
     res = await ax.get('/api/v1/applications/' + app.id + '/capture')
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'image/png')
     assert.equal(res.headers['x-capture-cache-status'], 'EXPIRED')
 
+    // with some extra param no file cache is used
     res = await ax.get('/api/v1/applications/' + app.id + '/capture?app_test=ok')
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'image/png')
     assert.equal(res.headers['x-capture-cache-status'], 'BYPASS')
+
+    // when an error is thrown it is forwarded
+    await assert.rejects(ax.get('/api/v1/applications/' + app.id + '/capture?app_test=1&app_capture-test-error=true'), (err) => {
+      assert.equal(err.status, 500)
+      return true
+    })
+    // when an error in cached default thumbnail mode a no-preview image is returned
+    await ax.put('/api/v1/applications/' + app.id + '/config', { datasets: [{ href: dataset.href, id: dataset.id }], test: 'ok2' })
+    await assert.rejects(ax.get('/api/v1/applications/' + app.id + '/capture?app_capture-test-error=true', { maxRedirects: 0 }), (err) => {
+      assert.equal(err.status, 302)
+      assert.ok(err.headers.location.endsWith('/no-preview.png'))
+      return true
+    })
   })
 })
