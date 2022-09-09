@@ -17,10 +17,10 @@ exports.pathDefault = async (application) => {
   return path.resolve(config.dataDir, 'captures', application.id + '.png')
 }
 
-exports.requestOpts = (req) => {
+exports.requestOpts = (req, isDefaultThumbnail) => {
   const screenShortUrl = (captureUrl + '/api/v1/screenshot')
   const targetUrl = new URL(`${config.publicUrl}/app/${req.application.id}`)
-  targetUrl.searchParams.set('thumbnail', true) // the thumbnail query param can be used by the application to render something adapted to the context
+  if (isDefaultThumbnail) targetUrl.searchParams.set('thumbnail', true)
   const cookieText = Object.keys(req.cookies).map(c => `${c}=${req.cookies[c]}`).join('; ')
   // forward query params to open application in specific state
   for (const key of Object.keys(req.query)) {
@@ -57,9 +57,11 @@ exports.requestOpts = (req) => {
 exports.screenshot = async (req, res) => {
   const capturePath = path.resolve(config.dataDir, 'captures', req.application.id + '.png')
 
-  const reqOpts = exports.requestOpts(req)
+  const isDefaultThumbnail = Object.keys(req.query).filter(k => k !== 'updatedAt').length === 0
 
-  if (Object.keys(req.query).filter(k => k !== 'updatedAt').length === 0) {
+  const reqOpts = exports.requestOpts(req, isDefaultThumbnail)
+
+  if (isDefaultThumbnail) {
     if (await fs.pathExists(capturePath)) {
       const stats = await fs.stat(capturePath)
       if (stats.mtime.toISOString() > req.resource.fullUpdatedAt) {
