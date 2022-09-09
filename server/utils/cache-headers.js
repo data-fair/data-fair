@@ -9,14 +9,15 @@ const useragent = require('useragent')
 // also set last finalized date into last-modified header
 exports.resourceBased = (req, res, next) => {
   const dateStr = req.resource.fullUpdatedAt || req.resource.finalizedAt || req.resource.updatedAt
-  const date = (new Date(dateStr)).toUTCString()
+  const date = new Date(dateStr)
+  const dateUTC = date.toUTCString()
   const cacheVisibility = req.publicOperation ? 'public' : 'private'
 
   const ifModifiedSince = req.get('if-modified-since')
-  if (ifModifiedSince && date === ifModifiedSince) {
+  if (ifModifiedSince && dateUTC === ifModifiedSince) {
     return res.status(304).send()
   }
-  res.setHeader('Last-Modified', date)
+  res.setHeader('Last-Modified', dateUTC)
 
   if (cacheVisibility === 'public') {
     // force buffering (necessary for caching) of this response in the reverse proxy
@@ -27,10 +28,10 @@ exports.resourceBased = (req, res, next) => {
   // make it compatible with a longer caching, only for datasets
   const queryDateStr = req.query.finalizedAt || req.query.updatedAt
   if (queryDateStr) {
-    const queryDate = (new Date(queryDateStr)).toUTCString()
+    const queryDate = new Date(queryDateStr)
     if (queryDate > date) {
       console.warn(`wrong usage of finalizedAt or updatedAt parameters: query=${JSON.stringify(req.query)}, resource=${{ fullUpdatedAt: req.resource.fullUpdatedAt, finalizedAt: req.resource.finalizedAt, updatedAt: req.resource.updatedAt }}`)
-      throw createError(400, `"finalizedAt" or "updatedAt" parameter has a value higher in the query than in the resource (${queryDate} > ${date}).`)
+      throw createError(400, `"finalizedAt" or "updatedAt" parameter has a value higher in the query than in the resource (${queryDate.toISOString()} > ${date.toISOString()}).`)
     }
     res.setHeader('Cache-Control', `must-revalidate, ${cacheVisibility}, max-age=${config.cache.timestampedPublicMaxAge}`)
   } else {
