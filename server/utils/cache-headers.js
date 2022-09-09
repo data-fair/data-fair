@@ -29,7 +29,8 @@ exports.resourceBased = (req, res, next) => {
   if (queryDateStr) {
     const queryDate = (new Date(queryDateStr)).toUTCString()
     if (queryDate > date) {
-      throw createError(400, '"finalizedAt" or "updatedAt" query parameter has a value higher than the finalizedAt attribute of the dataset.')
+      console.warn(`wrong usage of finalizedAt or updatedAt parameters: query=${JSON.stringify(req.query)}, resource=${{ fullUpdatedAt: req.resource.fullUpdatedAt, finalizedAt: req.resource.finalizedAt, updatedAt: req.resource.updatedAt }}`)
+      throw createError(400, `"finalizedAt" or "updatedAt" parameter has a value higher in the query than in the resource (${queryDate} > ${date}).`)
     }
     res.setHeader('Cache-Control', `must-revalidate, ${cacheVisibility}, max-age=${config.cache.timestampedPublicMaxAge}`)
   } else {
