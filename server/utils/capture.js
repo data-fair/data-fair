@@ -80,7 +80,7 @@ exports.screenshot = async (req, res) => {
         captureRes = request(reqOpts)
         await pump(captureRes, fs.createWriteStream(capturePath))
       } catch (err) {
-      // we try twice as capture can have some stability issues
+        // we try twice as capture can have some stability issues
         await new Promise(resolve => setTimeout(resolve, 4000))
         captureRes = request(reqOpts)
         await pump(captureRes, fs.createWriteStream(capturePath))
