@@ -86,9 +86,35 @@ describe('Master data management', () => {
     assert.equal(remoteService.actions.length, 1)
     assert.equal(remoteService.actions[0].id, 'masterData_bulkSearch_siret')
 
+    // feed some data to the master
     const items = [{ siret: '82898347800011', extra: 'Extra information' }]
     await ax.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
     await workers.hook('finalizer/master')
+
+    // use the bulk-searchs endpoint with various mime-types, errors, etc.
+    let res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', [{ siret: '82898347800011' }])
+    assert.equal(res.data.length, 1)
+    assert.equal(res.data[0].siret, '82898347800011')
+    assert.equal(res.data[0].extra, 'Extra information')
+    res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', [{ siret: '82898347800011' }, { siret: 'unknown' }])
+    assert.equal(res.data.length, 2)
+    assert.equal(res.data[0].siret, '82898347800011')
+    assert.equal(res.data[0].extra, 'Extra information')
+    assert.ok(res.data[1]._error)
+    res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', [{ siret: 'unknown' }, { siret: '82898347800011' }])
+    assert.equal(res.data.length, 2)
+    assert.ok(res.data[0]._error)
+    assert.equal(res.data[1].siret, '82898347800011')
+    assert.equal(res.data[1].extra, 'Extra information')
+    res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', 'siret\n82898347800011', { headers: { 'content-type': 'text/csv' } })
+    assert.equal(res.data, `siret,extra,_key,_error
+82898347800011,Extra information,0,
+`)
+    res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', 'siret\nunknown\n82898347800011', { headers: { 'content-type': 'text/csv' } })
+    assert.equal(res.data, `siret,extra,_key,_error
+,,0,La donnée de référence ne contient pas de ligne correspondante.
+82898347800011,Extra information,1,
+`)
 
     // create slave dataset
     await ax.put('/api/v1/datasets/slave', {

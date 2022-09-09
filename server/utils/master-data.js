@@ -28,6 +28,20 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
 
   if (dataset.isVirtual) dataset.descendants = await virtualDatasetsUtils.descendants(db, dataset)
 
+  const { _source } = esUtils.prepareQuery(dataset, { select })
+  const finalizeResponseLine = (responseLine, lineKey, error) => {
+    const fixedLine = {}
+    for (const id of _source) {
+      if (id.startsWith('_')) continue
+      if (id in responseLine) fixedLine[id] = responseLine[id]
+      else if (contentType === 'text/csv') fixedLine[id] = '' // complete csv output with empty values so that the generated header is complete
+    }
+    fixedLine._key = lineKey
+    if (error) fixedLine._error = error
+    else if (contentType === 'text/csv') fixedLine._error = ''
+    return fixedLine
+  }
+
   // this function will be called for each input line of the bulk search stream
   const paramsBuilder = (line) => {
     const params = {}
@@ -89,18 +103,14 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
           if (response.error) {
             prometheus.internalError.inc({ errorCode: 'masterdata-item-query' })
             console.error(`(masterdata-item-query) master-data item query error ${dataset.id}`, response.error)
-            this.push({ _key: lineKey, _error: esUtils.errorMessage(response.error) })
+            this.push(finalizeResponseLine({}, lineKey, esUtils.errorMessage(response.error)))
             continue
           }
           if (response.hits.hits.length === 0) {
-            this.push({ _key: lineKey, _error: 'La donnée de référence ne contient pas de ligne correspondante.' })
+            this.push(finalizeResponseLine({}, lineKey, 'La donnée de référence ne contient pas de ligne correspondante.'))
             continue
           }
-          const responseLine = response.hits.hits[0]._source
-          Object.keys(responseLine).forEach(k => {
-            if (k.startsWith('_')) delete responseLine[k]
-          })
-          this.push({ ...responseLine, _key: lineKey })
+          this.push(finalizeResponseLine(response.hits.hits[0]._source, lineKey))
         }
         callback()
       },

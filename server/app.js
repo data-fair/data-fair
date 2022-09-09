@@ -57,7 +57,9 @@ if (config.mode.includes('server')) {
   const bodyParser = express.json({ limit: '1000kb' })
   app.use((req, res, next) => {
     // routes with _bulk are streamed, others are parsed as JSON
-    if (req.url.split('/').pop().indexOf('_bulk') === 0) return next()
+    const urlParts = req.url.split('/')
+    if (urlParts[urlParts.length - 1].startsWith('_bulk')) return next()
+    if (urlParts[urlParts.length - 2] === 'bulk-searchs') return next()
     bodyParser(req, res, next)
   })
   app.use(require('cookie-parser')())
