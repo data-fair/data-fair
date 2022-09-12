@@ -99,6 +99,7 @@ WORKDIR /webapp
 COPY --from=builder /webapp/node_modules /webapp/node_modules
 COPY --from=builder /webapp/nuxt-dist /webapp/nuxt-dist
 ADD nuxt.config.js nuxt.config.js
+ADD public/static public/static
 ADD server server
 ADD scripts scripts
 ADD upgrade upgrade
