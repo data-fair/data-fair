@@ -36,30 +36,31 @@ const router = module.exports = express.Router()
 
 function clean (application, publicUrl, query = {}) {
   const select = query.select ? query.select.split(',') : []
-  if (!select.includes('-public')) application.public = permissions.isPublic('applications', application)
-  if (!select.includes('-visibility')) application.visibility = visibilityUtils.visibility(application)
+  if (query.raw !== 'true') {
+    if (!select.includes('-public')) application.public = permissions.isPublic('applications', application)
+    if (!select.includes('-visibility')) application.visibility = visibilityUtils.visibility(application)
 
+    if (application.description) {
+      if (query.html === 'true') application.description = marked.parse(application.description).trim()
+      application.description = sanitizeHtml(application.description)
+      if (query.truncate) {
+        const truncate = Number(query.truncate)
+        if (query.html === 'true') {
+          application.description = truncateHTML(application.description, truncate)
+        } else {
+          application.description = truncateMiddle(application.description, truncate, 0, '...')
+        }
+      }
+    }
+    application.description = application.description ? sanitizeHtml(application.description) : ''
+    if (!select.includes('-links')) findUtils.setResourceLinks(application, 'application', publicUrl)
+  }
   delete application.permissions
   delete application._id
   delete application.configuration
   delete application.configurationDraft
   if (select.includes('-userPermissions')) delete application.userPermissions
   if (select.includes('-owner')) delete application.owner
-
-  if (application.description) {
-    if (query.html === 'true') application.description = marked.parse(application.description).trim()
-    application.description = sanitizeHtml(application.description)
-    if (query.truncate) {
-      const truncate = Number(query.truncate)
-      if (query.html === 'true') {
-        application.description = truncateHTML(application.description, truncate)
-      } else {
-        application.description = truncateMiddle(application.description, truncate, 0, '...')
-      }
-    }
-  }
-  application.description = application.description ? sanitizeHtml(application.description) : ''
-  if (!select.includes('-links')) findUtils.setResourceLinks(application, 'application', publicUrl)
   return application
 }
 
