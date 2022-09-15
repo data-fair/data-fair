@@ -13,10 +13,11 @@
     </v-list>-->
     <v-list
       v-if="user && user.adminMode"
-      class="py-0"
+      class="py-0 px-1"
       color="admin"
       style="background-image: none;"
       nav
+      dense
     >
       <v-list-item
         tile
@@ -63,7 +64,7 @@
         :to="`/admin/base-apps`"
       >
         <v-list-item-action><v-icon>mdi-apps</v-icon></v-list-item-action>
-        <v-list-item-title v-t="'applications'" />
+        <v-list-item-title v-t="'baseApplications'" />
       </v-list-item>
 
       <v-list-item
@@ -91,7 +92,10 @@
       <v-divider />
     </v-list>
 
-    <v-list nav>
+    <v-list
+      nav
+      class="pa-1"
+    >
       <v-list-item
         v-if="missingSubscription && canAdmin && env.subscriptionUrl"
         :nuxt="true"
@@ -126,7 +130,10 @@
           :class="routePrefix === 'application' ? 'v-list-item--active' : ''"
         >
           <v-list-item-action><v-icon>mdi-image-multiple</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'vizs'" />
+          <v-list-item-content>
+            <v-list-item-title v-t="'applications'" />
+            <v-list-item-subtitle v-t="'applicationsSubtitle'" />
+          </v-list-item-content>
         </v-list-item>
 
         <v-divider class="pb-2" />
@@ -246,11 +253,13 @@ fr:
   serviceInfo: Informations du service
   owners: Propriétaires
   errors: Erreurs
+  baseApplications: Modèles d'applications
   applications: Applications
+  applicationsSubtitle: Visualisations, formulaires ...
   accountsManagement: Gestion des comptes
   dashboard: Accueil
   datasets: Jeux de données
-  vizs: Visualisations
+  vizs: Applications
   org: Gestion de l'organisation
   dep: Gestion du département
   params: Paramètres
@@ -265,11 +274,13 @@ en:
   serviceInfo: Service informations
   owners: Owners
   errors: Errors
+  baseApplications: Application models
   applications: Applications
+  applicationsSubtitle: Visualizations, forms ...
   accountsManagement: Gestion des comptes
   dashboard: Dashboard
   datasets: Datasets
-  vizs: Visualizations
+  vizs: Applications
   org: Manage organization
   dep: Manage department
   params: Parameters
@@ -298,3 +309,12 @@ export default {
   }
 }
 </script>
+
+<style>
+.navigation-left .v-list-item__action {
+  margin-right: 16px !important;
+}
+.navigation-left .v-list-item {
+  margin-bottom: 4px !important;
+}
+</style>

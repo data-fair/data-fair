@@ -476,8 +476,8 @@ fr:
   integrationMsg: Pour intégrer une prévisualisation de ce jeu de données dans un site vous pouvez copier le code suivant ou un code similaire dans le code source HTML.
   previewType: Type de prévisualisation
   deleteDataset: Suppression du jeu de données
-  deleteWarning: " | Attention ! Ce jeu de données est utilisé par une visualisation. Si vous le supprimez cette visualisation ne sera plus fonctionnelle. | Attention ! Ce jeu de données est utilisé par {count} visualisations. Si vous le supprimez ces visualisations ne seront plus fonctionnelles."
-  updateWarning: " | Attention ! Ce jeu de données est utilisé par une visualisation. Si vous modifiez sa structure la visualisation peut ne plus fonctionner. | Attention ! Ce jeu de données est utilisé par {count} visualisations. Si vous modifiez sa structure les visualisations peuvent ne plus fonctionner."
+  deleteWarning: " | Attention ! Ce jeu de données est utilisé par une application. Si vous le supprimez cette application ne sera plus fonctionnelle. | Attention ! Ce jeu de données est utilisé par {count} applications. Si vous le supprimez ces applications ne seront plus fonctionnelles."
+  updateWarning: " | Attention ! Ce jeu de données est utilisé par une application. Si vous modifiez sa structure l'application peut ne plus fonctionner. | Attention ! Ce jeu de données est utilisé par {count} applications. Si vous modifiez sa structure les applications peuvent ne plus fonctionner."
   deleteMsg: Voulez vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
   yes: Oui
   no: Non
@@ -511,8 +511,8 @@ en:
   integrationMsg: To integrate a preview of this dataset in a website you can copy the code below or a similar code in your HTML source code.
   previewType: Preview type
   deleteDataset: Dataset deletion
-  deleteWarning: " | Warning ! This dataset is used by a visualization. If you delete it this visualization will be broken. | Warning ! This dataset is used by {count} visualizations. If you delete it these visualizations will be broken."
-  updateWarning: " | Warning ! This dataset is used by a visualization. If you change its structure this visualization might be broken. | Warning ! This dataset is used by {count} visualizations. If you change its structure these visualizations might be broken."
+  deleteWarning: " | Warning ! This dataset is used by a application. If you delete it this application will be broken. | Warning ! This dataset is used by {count} applications. If you delete it these applications will be broken."
+  updateWarning: " | Warning ! This dataset is used by a application. If you change its structure this application might be broken. | Warning ! This dataset is used by {count} applications. If you change its structure these applications might be broken."
   deleteMsg: Do you really want to delete the dataset "{title}" ? Deletion is definitive and data will not be recoverable.
   yes: Yes
   no: No

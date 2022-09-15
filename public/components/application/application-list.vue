@@ -118,26 +118,26 @@
 
 <i18n lang="yaml">
 fr:
-  noApp: Vous n'avez pas encore configuré de visualisation.
+  noApp: Vous n'avez pas encore configuré de application.
   noResult: Aucun résultat ne correspond aux critères de recherche
-  configureApp: Configurer une visualisation
+  configureApp: Configurer une application
   dataset: Jeu de données
   service: Service
   baseApp: Application
-  applicationsCount: "aucune visulisation | 1 visualisation | {count} visualisations"
+  applicationsCount: "aucune visulisation | 1 application | {count} applications"
   sortCreatedAtAsc: création plus ancienne
   sortCreatedAtDesc: création plus récente
   sortUpdatedAtAsc: màj plus ancienne
   sortUpdatedAtDesc: màj plus récente
   owner: Propriétaire
 en:
-  noApp: You haven't configured any visualization yet.
+  noApp: You haven't configured any application yet.
   noResult: No result matches your search criterias.
-  configureApp: Configure a visualization
+  configureApp: Configure a application
   dataset: Dataset
   service: Service
   baseApp: Application
-  applicationsCount: "no visualization | 1 visualization | {count} visualizations"
+  applicationsCount: "no application | 1 application | {count} applications"
   sortCreatedAtAsc: creation older
   sortCreatedAtDesc: creation newer
   sortUpdatedAtAsc: update older

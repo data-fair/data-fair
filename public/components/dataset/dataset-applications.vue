@@ -45,13 +45,13 @@
 
 <i18n lang="yaml">
 fr:
-  noApp: Vous n'avez pas encore configuré de visualisation pour ce jeu de données. Seules les configurations validées apparaissent ici.
-  reorder: Vous pouvez changer l'ordre des visualisations par glissé/déposé.
-  configureApp: Configurer une visualisation
+  noApp: Vous n'avez pas encore configuré de application pour ce jeu de données. Seules les configurations validées apparaissent ici.
+  reorder: Vous pouvez changer l'ordre des applications par glissé/déposé.
+  configureApp: Configurer une application
 en:
-  noApp: You haven't configured a visualization for this dataset yet. Only the validated configurations appear here.
-  reorder: You can change the orger of the visualizations using drag and drop.
-  configureApp: Configure a visualization
+  noApp: You haven't configured a application for this dataset yet. Only the validated configurations appear here.
+  reorder: You can change the orger of the applications using drag and drop.
+  configureApp: Configure a application
 </i18n>
 
 <script>

@@ -84,13 +84,13 @@
 
 <i18n lang="yaml">
 fr:
-  captureMsg: Une image statique au format PNG va être créée à partir de cette visualisation.
+  captureMsg: Une image statique au format PNG va être créée à partir de cette application.
   downloadCapture: télécharger la capture
-  setState: naviguez pour choisir l'état de la visualisation dans la capture
+  setState: naviguez pour choisir l'état de l'application dans la capture
 en:
-  captureMsg: A static image with PNG format will be created based on this visualization.
+  captureMsg: A static image with PNG format will be created based on this application.
   downloadCapture: download the screenshot
-  setState: navigate to chose the state of the visualization in the screenshot
+  setState: navigate to chose the state of the application in the screenshot
 </i18n>
 
 <script>

@@ -42,9 +42,9 @@
 
 <i18n lang="yaml">
 fr:
-  appType: "Visualisation de type {category}"
+  appType: "Application de type {category}"
 en:
-  appType: "Visualization of type {category}"
+  appType: "Application of type {category}"
 </i18n>
 
 <script>

@@ -163,7 +163,7 @@ fr:
   privateAccessUser: Accessible à vous uniquement
   sharedInOrg: Accessible à tous les utilisateurs de l'organisation
   sharedInDep: Accessible à tous les utilisateurs du département
-  warningPrivateDataset: Vous ne devriez pas rendre ce jeu de données privé tant qu'il est présent dans des visualisations publiques.
+  warningPrivateDataset: Vous ne devriez pas rendre ce jeu de données privé tant qu'il est présent dans des applications publiques.
   warningPublicApp: Vous ne devriez pas rendre cette application publique, elle utilise des sources de données privées.
   addPermission: Ajouter des permissions
   editPermission: Éditer des permissions
@@ -200,8 +200,8 @@ en:
   privateAccessUser: Accessible only to you
   sharedInOrg: Accessible to all users of the organization
   sharedInDep: Accessible to all users of the department
-  warningPrivateDataset: You should not make this dataset private as long as it is used in public visualizations.
-  warningPublicApp: You should not make this visualization public as long as it uses private datasets.
+  warningPrivateDataset: You should not make this dataset private as long as it is used in public applications.
+  warningPublicApp: You should not make this application public as long as it uses private datasets.
   addPermission: Add permissions
   editPermission: Edit permissions
   public: Public

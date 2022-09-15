@@ -47,7 +47,7 @@ fr:
 
 en:
   title: Datasets
-  description: This page lets you transform your files into interoperable datasets that you will be able to publish for other users and to use in data visualizations.
+  description: This page lets you transform your files into interoperable datasets that you will be able to publish for other users and to use in data applications.
   authRequired: You must be logged in to use this service.
   login: Login / Sign up
 </i18n>

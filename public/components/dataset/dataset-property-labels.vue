@@ -60,11 +60,11 @@
 <i18n lang="yaml">
 fr:
   labels: Libellés
-  tutorialLabels: Saisissez des libellés associés à des valeurs présentes dans la donnée pour améliorer la présentation dans les visualisations.
+  tutorialLabels: Saisissez des libellés associés à des valeurs présentes dans la donnée pour améliorer la présentation dans les applications.
   restricted: cochez cette case pour restreindre les futures saisies aux valeurs ci-dessous
 en:
   labels: Labels
-  tutorialLabels: Enter some labels associate to values present in the data to improve the display in visualizations.
+  tutorialLabels: Enter some labels associate to values present in the data to improve the display in applications.
   restricted: check this box to restrict future values to the values below
 </i18n>
 

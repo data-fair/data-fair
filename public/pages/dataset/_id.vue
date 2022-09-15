@@ -242,7 +242,7 @@
               />
               <template #tabs>
                 <v-tab href="#reuses-apps">
-                  <v-icon>mdi-image-multiple</v-icon>&nbsp;&nbsp;{{ $t('visualizations') }}
+                  <v-icon>mdi-image-multiple</v-icon>&nbsp;&nbsp;{{ $t('applications') }}
                 </v-tab>
 
                 <v-tab href="#reuses-external">
@@ -399,7 +399,7 @@ fr:
   extension: Enrichissement
   virtual: Jeu virtuel
   masterData: Données de référence
-  tutorialConcepts: Pensez à renseigner des concepts sur les colonnes. Ces concepts seront utilisés pour proposer des visualisations de données adaptées et des possibilités d'enrichissement.
+  tutorialConcepts: Pensez à renseigner des concepts sur les colonnes. Ces concepts seront utilisés pour proposer des applications de données adaptées et des possibilités d'enrichissement.
   docLinkExtend: Consultez la documentation sur l'extension de jeux de données
   info: Informations
   attachments: Pièces jointes
@@ -414,7 +414,7 @@ fr:
   files: Fichiers
   thumbnails: Vignettes
   exports: Exports
-  visualizations: Visualisations
+  applications: Applications
   extReuses: Réutilisations externes
   share: Partage
   permissions: Permissions
@@ -440,7 +440,7 @@ en:
   extension: Extension
   virtual: Virtual dataset
   masterData: Master-data
-  tutorialConcepts: You should assign concepts to your columns. They will be used to help you configure visualizations and data extensions.
+  tutorialConcepts: You should assign concepts to your columns. They will be used to help you configure applications and data extensions.
   docLinkExtend: Read the documentation about extending datasets
   info: Information
   attachments: Attachments
@@ -454,7 +454,7 @@ en:
   calendar: Calendar
   files: Files
   thumbnails: Thumbnails
-  visualizations: Visualizations
+  applications: Applications
   extReuses: External reuses
   share: Share
   permissions: Permissions

@@ -265,7 +265,7 @@
 <i18n lang="yaml">
 fr:
   title: Data Fair
-  breadcrumb: Partage et visualisation de données
+  breadcrumb: Partage et application de données
   description: Enrichissez et publiez facilement vos données. Vous pouvez les utiliser dans des applications dédiées et les mettre à disposition d'autres personnes en mode ouvert ou privé.
   authRequired: Vous devez être authentifié pour utiliser ce service.
   login: Se connecter / S'inscrire
@@ -284,13 +284,13 @@ fr:
   datasetsCountNone: Aucun jeu de donnée n'a été créé pour l'instant dans votre espace.
   storageWithLimit: Vous utilisez {bytes} sur un total disponible de {bytesLimit}.
   storageWithoutLimit: Vous utilisez {bytes} de stockage.
-  apps: Visualisations
+  apps: Applications
   appsCountMessage: '{link} ont déjà été configurées dans votre espace.'
-  appsCount: '{count} visualisations'
+  appsCount: '{count} applications'
   appsCountMessage1: '{link} a déjà été configurée'
-  appsCount1: 1 visualisation
-  appsCountNone: Aucune visualisation n'a été configurée pour l'instant dans votre espace.
-  baseAppsCount: Vous avez accès à {count} applications pour configurer autant de visualisations que vous le souhaitez.
+  appsCount1: 1 application
+  appsCountNone: Aucune application n'a été configurée pour l'instant dans votre espace.
+  baseAppsCount: Vous avez accès à {count} applications pour configurer autant de applications que vous le souhaitez.
 en:
   breadcrumb: Share and visualize data
   description: Easily enrich and publish your data. You can use it in dedicated applications and make it available to other people both openly or privately.
@@ -311,13 +311,13 @@ en:
   datasetsCountNone: No dataset was loaded in your space yet.
   storageWithLimit: You use {bytes} out of {bytesLimit} of total available space.
   storageWithoutLimit: You use {bytes} of storage space.
-  apps: Visualizations
+  apps: Applications
   appsCountMessage: '{link} were already configured in your space.'
-  appsCount: '{count} visualizations'
+  appsCount: '{count} applications'
   appsCountMessage1: '{link} was already configured in your space'
-  appsCount1: 1 visualization
-  appsCountNone: No visualization was configured in your space yet.
-  baseAppsCount: You have access to {count} applications to configure as many visualizations as you want.
+  appsCount1: 1 application
+  appsCountNone: No application was configured in your space yet.
+  baseAppsCount: You have access to {count} applications to configure as many applications as you want.
 </i18n>
 
 <script>

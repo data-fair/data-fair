@@ -40,14 +40,14 @@
 
 <i18n lang="yaml">
 fr:
-  title: Visualisations
-  description: Vous pouvez configurer des visualisations qui vont utiliser vos jeux de données. Ces visualisations peuvent ensuite être partagées ou intégrées dans d\'autres sites web.',
+  title: Applications
+  description: Vous pouvez configurer des applications qui vont utiliser vos jeux de données. Ces applications peuvent ensuite être partagées ou intégrées dans d\'autres sites web.',
   authRequired: Vous devez être authentifié pour utiliser ce service.
   login: Se connecter / S'inscrire
 
 en:
-  title: Visualizations
-  description: You can configure data visualizations based on your datasets. These visualizations can then be shared and integrated in your websites.
+  title: Applications
+  description: You can configure data applications based on your datasets. These applications can then be shared and integrated in your websites.
   authRequired: You must be logged in to use this service.
   login: Login / Sign up
 </i18n>

@@ -126,12 +126,12 @@
 
 <i18n lang="yaml">
 fr:
-  description: Cette page vous permet de gérer vos connexions avec des catalogues externes. Ces connexions permettent de publier à la demande des informations sur les jeux de données et les visualisations que vous créez.
+  description: Cette page vous permet de gérer vos connexions avec des catalogues externes. Ces connexions permettent de publier à la demande des informations sur les jeux de données et les applications que vous créez.
   noMatch: Aucun résultat ne correspond aux critères de recherche
   configureCatalog: Configurer un catalogue
   owner: Propriétaire
 en:
-  description: This page lets you manage connections to external catalogs. These connections will let you publish metadata about the datasets and visualizations you create.
+  description: This page lets you manage connections to external catalogs. These connections will let you publish metadata about the datasets and applications you create.
   noMatch: No result matches your search
   configureCatalog: Configure a catalog
   owner: Owner

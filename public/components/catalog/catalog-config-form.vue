@@ -70,8 +70,8 @@ fr:
   apiKeyHelp: "Cette clé est à configurer dans <a target=\"_blank\" href=\"{url}/fr/admin/me/#apikey\">votre profil</a> sur le catalogue."
   datasetUrlTemplate: Format du lien vers la page d'un jeu de données
   datasetUrlTemplateHelp: "Laissez vide pour créer automatiquement un lien vers la page du jeu de données dans cette instance data-fair. Renseignez pour pointer vers une autre page publique. Par exemple 'https://test.com/datasets/{id}'."
-  applicationUrlTemplate: Format du lien vers la page d'une visualisation
-  applicationUrlTemplateHelp: "Laissez vide pour créer automatiquement un lien vers la page de la visualisation dans cette instance data-fair. Renseignez pour pointer vers une autre page publique. Par exemple 'https://test.com/reuses/{id}'."
+  applicationUrlTemplate: Format du lien vers la page d'une application
+  applicationUrlTemplateHelp: "Laissez vide pour créer automatiquement un lien vers la page de l'application dans cette instance data-fair. Renseignez pour pointer vers une autre page publique. Par exemple 'https://test.com/reuses/{id}'."
   dataFairBaseUrl: URL du service de données
   dataFairBaseUrlHelp: "Laissez vide pour utiliser l'exposition principale de ce service, renseignez pour faire passer les utilisateurs par un autre nom de domaine. Par exemple 'https://test.com/data-fair'"
   org: Organisation
@@ -84,8 +84,8 @@ en:
   apiKeyHelp: "This key must be configured in your <a target=\"_blank\" href=\"{url}/fr/admin/me/#apikey\">your profile</a> in the catalog."
   datasetUrlTemplate: Format of the link to a dataset's page
   datasetUrlTemplateHelp: "Leave empty to automatically create a link to the dataset's page in this data-fair instance. Enter to link to another public page. For example 'https://test.com/datasets/{id}'."
-  applicationUrlTemplate: Format of the link to a visualization's page
-  applicationUrlTemplateHelp: "Leave empty to automatically create a link to the visualization's page in this data-fair instance. Enter to link to another public page. For example 'https://test.com/reuses/{id}'."
+  applicationUrlTemplate: Format of the link to a application's page
+  applicationUrlTemplateHelp: "Leave empty to automatically create a link to the application's page in this data-fair instance. Enter to link to another public page. For example 'https://test.com/reuses/{id}'."
   org: Organization
   orgHelp: Leave empty to work in a personnal account. Otherwise use the id of an organization in which you have write permissions.
   search: Search

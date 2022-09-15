@@ -182,7 +182,7 @@ fr:
   tutorialShare: Configurez des portails pour mieux partager vos données au public ou en interne.
   activity: Activité
   journal: Journal
-  visualizations: visualisations
+  applications: applications
   metadata: Métadonnées
   config: Configuration
   share: Partage
@@ -197,7 +197,7 @@ en:
   tutorialShare: Configure portals to better publish your data privately or publicly.
   activity: Activity
   journal: Journal
-  visualizations: visualizations
+  applications: applications
   metadata: Metadata
   config: Configuration
   share: Share
@@ -251,7 +251,7 @@ export default {
     const path = `/application/${this.$route.params.id}`
     if (this.$route.path !== path) return this.$router.push(path)
     if (this.application) {
-      this.$store.dispatch('breadcrumbs', [{ text: this.$t('visualizations'), to: '/applications' }, { text: this.application.title || this.application.id }])
+      this.$store.dispatch('breadcrumbs', [{ text: this.$t('applications'), to: '/applications' }, { text: this.application.title || this.application.id }])
       this.subscribe()
     }
   },

@@ -78,7 +78,7 @@ export default {
       { text: 'Nombre de jeux de données', value: 'datasets', sortable: false },
       { text: 'Espace de stockage', value: 'storage', sortable: false },
       { text: 'Données indexées', value: 'storageLimit', sortable: false },
-      { text: 'Nombre de visualisations', value: 'applications', sortable: false }
+      { text: 'Nombre de applications', value: 'applications', sortable: false }
     ]
   }),
   computed: {

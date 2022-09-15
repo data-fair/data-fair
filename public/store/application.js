@@ -134,10 +134,10 @@ export default () => ({
         const silent = patch.silent
         delete patch.silent
         await this.$axios.patch(getters.resourceUrl, patch)
-        if (!silent) eventBus.$emit('notification', 'La visualisation a été mise à jour.')
+        if (!silent) eventBus.$emit('notification', 'La application a été mise à jour.')
         return true
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour de la visualisation:' })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour de l\'application:' })
         return false
       }
     },
@@ -148,9 +148,9 @@ export default () => ({
     async remove ({ state, getters, dispatch }) {
       try {
         await this.$axios.delete(getters.resourceUrl)
-        eventBus.$emit('notification', `La visualisation ${state.application.title} a été supprimée.`)
+        eventBus.$emit('notification', `La application ${state.application.title} a été supprimée.`)
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la visualisation:' })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de l\'application:' })
       }
     },
     addJournalEvent ({ commit }, event) {
@@ -176,7 +176,7 @@ export default () => ({
         await this.$axios.$put(getters.resourceUrl + '/configuration', config)
         commit('setAny', { config: JSON.parse(JSON.stringify(config)) })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture de la visualisation:' })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture de l\'application:' })
       }
     },
     async readConfigDraft ({ state, commit, getters }) {
@@ -189,7 +189,7 @@ export default () => ({
         await this.$axios.$put(getters.resourceUrl + '/configuration-draft', configDraft)
         commit('setAny', { configDraft: JSON.parse(JSON.stringify(configDraft)) })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture du brouillon de visualisation:' })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture du brouillon de application:' })
       }
     },
     async cancelConfigDraft ({ state, commit, getters, dispatch }) {
@@ -197,7 +197,7 @@ export default () => ({
         await this.$axios.$delete(getters.resourceUrl + '/configuration-draft')
         commit('setAny', { configDraft: state.config })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture du brouillon de visualisation:' })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture du brouillon de application:' })
       }
     },
     async changeOwner ({ commit, state }, owner) {

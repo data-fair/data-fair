@@ -38,14 +38,14 @@
 <i18n lang="yaml">
 fr:
   message: Créez un lien que pourrez pouvez communiquer aux personnes avec qui vous souhaitez partager cette application et qui ne sont pas authentifiés sur ce service.
-  warning: Attention ! Ce lien donne accès à cette visualisation et au contenu du jeu de données référencé dans sa configuration. Si vous craignez que ce lien ait trop circulé vous pouvez le supprimer, en créer un autre et communiquer ce nouveau lien aux bonnes personnes.
+  warning: Attention ! Ce lien donne accès à cette application et au contenu du jeu de données référencé dans sa configuration. Si vous craignez que ce lien ait trop circulé vous pouvez le supprimer, en créer un autre et communiquer ce nouveau lien aux bonnes personnes.
   protectedLink: "Lien protégé"
   delete: Supprimer ce lien
   deleteText: Souhaitez-vous confirmer la suppression ?
   createProtectedLink: Créer un lien protégé
 en:
-  message: Create a link that you will be able to share with the people to whom you want to give access to this visualization and who are not authenticated on this service.
-  warning: Warning ! This link gives access to this visualization and to the content of the dataset used in its configuration. If you fear this link might have been to widely communicated you can delete it then create another one and communicate this new link to your users.
+  message: Create a link that you will be able to share with the people to whom you want to give access to this application and who are not authenticated on this service.
+  warning: Warning ! This link gives access to this application and to the content of the dataset used in its configuration. If you fear this link might have been to widely communicated you can delete it then create another one and communicate this new link to your users.
   protectedLink: "Protected link"
   delete: Delete this link
   deleteText: Do you really want to delete this link ?

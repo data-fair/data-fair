@@ -239,12 +239,12 @@ fr:
   useAPI: Utiliser l'API
   delete: Supprimer
   changeOwner: Changer le propriétaire
-  integrationMsg: Pour intégrer cette visualisation dans un site vous pouvez copier le code suivant ou un code similaire dans le code source HTML.
-  deleteApp: Suppression de la visualisation
+  integrationMsg: Pour intégrer cette application dans un site vous pouvez copier le code suivant ou un code similaire dans le code source HTML.
+  deleteApp: Suppression de l'application
   deleteMsg: Voulez vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
   yes: Oui
   no: Non
-  changeOwnerTitle: Changer le propriétaire de la visualisation
+  changeOwnerTitle: Changer le propriétaire de l'application
   cancel: Annuler
   confirm: Confirmer
 en:
@@ -256,12 +256,12 @@ en:
   useAPI: Use the API
   delete: Delete
   changeOwner: Change owner
-  integrationMsg: To integrate this visualization in a website you can copy the code below or a similar code in your HTML source code.
-  deleteApp: Deletion of the visualization
-  deleteMsg: Do you really want to delete the visualization "{title}" ? Deletion is definitive and data will not be recoverable.
+  integrationMsg: To integrate this application in a website you can copy the code below or a similar code in your HTML source code.
+  deleteApp: Deletion of the application
+  deleteMsg: Do you really want to delete the application "{title}" ? Deletion is definitive and data will not be recoverable.
   yes: Yes
   no: No
-  changeOwnerTitle: Change the owner of the visualization
+  changeOwnerTitle: Change the owner of the application
   cancel: Cancel
   confirm: Confirm
 </i18n>

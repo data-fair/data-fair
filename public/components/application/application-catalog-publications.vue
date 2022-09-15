@@ -180,10 +180,10 @@
 
 <i18n lang="yaml">
 fr:
-  message: Publiez cette visualisation sur un ou plusieurs catalogues Open Data. Cette publication rendra vos données plus faciles à trouver et permettra à la communauté Open Data d'échanger avec vous.
-  noPublication: Il n'existe pas encore de publication de cette visualisation sur un catalogue.
+  message: Publiez cette application sur un ou plusieurs catalogues Open Data. Cette publication rendra vos données plus faciles à trouver et permettra à la communauté Open Data d'échanger avec vous.
+  noPublication: Il n'existe pas encore de publication de cette application sur un catalogue.
   publish: Publier sur un catalogue
-  appPublication: Visualisation publiée sur le catalogue "{catalog}"
+  appPublication: Application publiée sur le catalogue "{catalog}"
   waitingDeletion: En attente de suppression
   waitingPublication: En attente de publication
   unknownCatalog: Cette publication référence une configuration de catalogue inconnue ({catalog}).
@@ -200,9 +200,9 @@ fr:
   yes: Oui
 en:
   message: Publish this dataset onto one or more Open Data catalogs. This publication will make your data easier to find et will allow the Open Data community to interact with you.
-  noPublication: There are no publication of this visualization on a catalog yet.
+  noPublication: There are no publication of this application on a catalog yet.
   publish: Publish on a catalog
-  appPublication: Visualization published on the catalog "{catalog}"
+  appPublication: Application published on the catalog "{catalog}"
   waitingDeletion: Waiting for deletion
   waitingPublication: Waiting for publication
   unknownCatalog: This publication references an unknown configuration of catalog ({catalog})

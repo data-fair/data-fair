@@ -9,11 +9,11 @@
 
 <i18n lang="yaml">
 fr:
-  apps: Visualisations
-  breadcrumb: Configurer une visualisation
+  apps: Applications
+  breadcrumb: Configurer une application
 en:
-  apps: Visualizations
-  breadcrumb: Configure a visualization
+  apps: Applications
+  breadcrumb: Configure a application
 </i18n>
 
 <script>

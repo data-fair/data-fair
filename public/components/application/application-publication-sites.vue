@@ -78,15 +78,15 @@
 
 <i18n lang="yaml">
 fr:
-  noPublicationSite: Vous n'avez pas configuré de portail sur lequel publier cette visualisation.
-  publishThisApp: Publiez cette visualisation sur un ou plusieurs de vos portails.
+  noPublicationSite: Vous n'avez pas configuré de portail sur lequel publier cette application.
+  publishThisApp: Publiez cette application sur un ou plusieurs de vos portails.
   preferLargeDisplay: privilégier un rendu large
-  preferLargeDisplayTutorial: En cochant l'option ci-dessous vous indiquez aux portails que cette visualisation est à afficher sur une largeur importante autant que possible. Ceci pourra changer l'affichage dans les pages des jeux de données ou les tableaux de bords par exemple.
+  preferLargeDisplayTutorial: En cochant l'option ci-dessous vous indiquez aux portails que cette application est à afficher sur une largeur importante autant que possible. Ceci pourra changer l'affichage dans les pages des jeux de données ou les tableaux de bords par exemple.
 en:
-  noPublicationSite: You haven't configured a portal to publish this visualization on.
-  publishThisApp: Publish this visualization on one or more of your portals.
+  noPublicationSite: You haven't configured a portal to publish this application on.
+  publishThisApp: Publish this application on one or more of your portals.
   preferLargeDisplay: prefer a large display
-  preferLargeDisplayTutorial: By checking the following option you indicate to the portals that this visualization should be rendered on a large section of page as much as possible. This will change the rendering in dataset pages and dashboards.
+  preferLargeDisplayTutorial: By checking the following option you indicate to the portals that this application should be rendered on a large section of page as much as possible. This will change the rendering in dataset pages and dashboards.
 </i18n>
 
 <script>

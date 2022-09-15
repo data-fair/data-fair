@@ -307,18 +307,18 @@ fr:
   extension: "Extension : "
   key: "Clé dans la source : "
   label: Libellé
-  labelHelp: Libellé court de la colonne utilisé dans toutes les visualisations de données, la clé sera utilisée si vous laissez cette information vide.
+  labelHelp: Libellé court de la colonne utilisé dans toutes les applications de données, la clé sera utilisée si vous laissez cette information vide.
   description: Description
-  descriptionHelp: Un contenu markdown ou HTML qui sera utilisé pour décrire cette colonne aux utilisateurs des visualisations de données et de la documentations d'API.
+  descriptionHelp: Un contenu markdown ou HTML qui sera utilisé pour décrire cette colonne aux utilisateurs des applications de données et de la documentations d'API.
   distinctValues: Nombre de valeurs distinctes
   distinctValuesHelp: approximatif dans le cas de données volumineuses
   values: "Valeurs : "
   sep: Séparateur
   separatorHelp: Ne renseigner que pour les colonnes multivaluées. Ce caractère sera utilisé pour séparer les valeurs.
   concept: Concept
-  conceptHelp: Les concepts des colonnes améliorent le traitement de la donnée et sa visualisation.
+  conceptHelp: Les concepts des colonnes améliorent le traitement de la donnée et sa application.
   xDisplay: Format
-  xDisplayHelp: Si vous choisissez "texte formatté" la colonne pourra contenir du markdown ou du HTML simple et les visualisations en tiendront compte.
+  xDisplayHelp: Si vous choisissez "texte formatté" la colonne pourra contenir du markdown ou du HTML simple et les applications en tiendront compte.
   "singleline": "texte"
   "textarea": "texte long"
   "markdown": "texte formatté"
@@ -339,18 +339,18 @@ en:
   extension: "Extension: "
   key: "Key in the source: "
   label: Label
-  labelHelp: Short label of the column used in all data visualizations, the key will be used if you leave this empty.
+  labelHelp: Short label of the column used in all data applications, the key will be used if you leave this empty.
   description: Description
-  descriptionHelp: A markdown or HTML content that will be used to describe this column to the users of data visualisations and API documentations.
+  descriptionHelp: A markdown or HTML content that will be used to describe this column to the users of data applications and API documentations.
   distinctValues: Number of istinct values
   distinctValuesHelp: approximative in the case of a large dataset
   values: "Values: "
   sep: Separator
   separatorHelp: Only provide for multi-values columns. This character will be used to separate the values.
   concept: Concept
-  conceptHelp: The concepts improve data processing and visualization.
+  conceptHelp: The concepts improve data processing and application.
   xDisplay: Format
-  xDisplayHelp: If you chose "formatted text" the column will be able to contain markdown or HTML content that will be displayed as such by visualizations.
+  xDisplayHelp: If you chose "formatted text" the column will be able to contain markdown or HTML content that will be displayed as such by applications.
   "singleline": "text"
   "textarea": "long text"
   "markdown": "formatted text"

@@ -61,21 +61,21 @@
 
 <i18n lang="yaml">
 fr:
-  selectApplication: Sélection de l'application
+  selectApplication: Sélection du modèle d'application
   info: Informations
   customApp: Koumoul réalise aussi des <span class="accent--text">applications personnalisées</span> sur demande. N'hésitez pas à <a href="https://koumoul.com/contact" class="">nous contacter</a> !
   title: Titre
   save: Enregistrer
   back: Retour
-  creationError: Erreur pendant la création de la visualisation
+  creationError: Erreur pendant la création de l'application
 en:
-  selectApplication: Application selection
+  selectApplication: Application model selection
   info: Informations
   customApp: Koumoul also creates <span class="accent--text">custom applications</span> on demand. Do not hesitate <a href="https://koumoul.com/contact" class="">contacting us</a> !
   title: Title
   save: Save
   back: Back
-  creationError: Error while creating the visualization
+  creationError: Error while creating the application
 </i18n>
 
 <script>

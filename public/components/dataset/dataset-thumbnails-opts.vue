@@ -20,10 +20,10 @@
 
 <i18n lang="yaml">
 fr:
-  message: Les vignettes sont utilisées par les visualisations pour afficher les images du jeu de données de manière performante et en les adaptant aux dimensions souhaitées.
+  message: Les vignettes sont utilisées par les applications pour afficher les images du jeu de données de manière performante et en les adaptant aux dimensions souhaitées.
   resizeMode: Mode de redimensionnement
 en:
-  message: Thumbnails are used by visualization to display the images from the dataset in an efficient manner by adapting the dimensions.
+  message: Thumbnails are used by application to display the images from the dataset in an efficient manner by adapting the dimensions.
   resizeMode: Resize mode
 </i18n>
 

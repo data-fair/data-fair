@@ -5,7 +5,7 @@
         <v-row>
           <v-col>
             <h2 class="text-h6">
-              Applications
+              Modèles d'applications
             </h2>
             <v-row>
               <v-col

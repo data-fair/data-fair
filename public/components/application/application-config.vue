@@ -134,7 +134,7 @@ fr:
   cancel: Annuler
   confirm: Confirmer
   removeDraft: Effacer le brouillon
-  removeDraftWarning: Attention ! Le brouillon sera perdu et la visualisation reviendra à son état validé précédent.
+  removeDraftWarning: Attention ! Le brouillon sera perdu et l'application reviendra à son état validé précédent.
 en:
   validatedError: Error in the <b>validated version</b>
   changeVersion: Change version
@@ -142,7 +142,7 @@ en:
   cancel: Cancel
   confirm: Confirm
   removeDraft: Remove draft
-  removeDraftWarning: Warning ! The draft will be lost and the visualization will get back to its previously validated state.
+  removeDraftWarning: Warning ! The draft will be lost and the application will get back to its previously validated state.
 </i18n>
 
 <script>

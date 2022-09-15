@@ -117,7 +117,7 @@
                     Les thématiques sont une manière simple d'organiser vos jeux de données.
                   </p>
                   <p v-else>
-                    Les thématiques sont une manière simple d'organiser vos jeux de données et vos visualisations.
+                    Les thématiques sont une manière simple d'organiser vos jeux de données et vos applications.
                   </p>
                 </template>
                 <template #tabs-items>
@@ -244,7 +244,7 @@
               >
                 <template #extension>
                   <p>
-                    Les <i>sites de publication</i> sont les sites externes à data-fair qui peuvent exposer ses ressources (jeux de données et visualisations).
+                    Les <i>sites de publication</i> sont les sites externes à data-fair qui peuvent exposer ses ressources (jeux de données et applications).
                     Cette liste de sites est normalement gérée automatiquement par le projet data-fair-portals.
                   </p>
                 </template>

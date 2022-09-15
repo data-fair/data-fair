@@ -64,15 +64,15 @@ fr:
   devices: Appareils configurés pour recevoir vos notifications
   datasetsOrgEvents: "Événements des jeux de données de l'organisation {name}"
   datasetsUserEvents: Événements des jeux de données de votre compte personnel
-  appsOrgEvents: "Événements des visualisations de l'organisation {name}"
-  appsUserEvents: Événements des visualisations de votre compte personnel
+  appsOrgEvents: "Événements des applications de l'organisation {name}"
+  appsUserEvents: Événements des applications de votre compte personnel
   pubsEvents: "Événements de publication sur le portail {title}"
   datasetsPubRequested: "Demandes de publications de jeux de données"
-  appsPubRequested: "Demandes de publications de visualisations"
+  appsPubRequested: "Demandes de publications de applications"
   datasetPublished: "Un jeu de données a été publié sur {title}"
   datasetPublishedTopic: "Un jeu de données a été publié dans la thématique {topic} sur {title}"
   datasetPublicationRequested: "Un contributeur demande de publier un jeu de données sur {title}"
-  appPublicationRequested: "Un contributeur demande de publier une visualisation sur {title}"
+  appPublicationRequested: "Un contributeur demande de publier une application sur {title}"
 </i18n>
 
 <script>
