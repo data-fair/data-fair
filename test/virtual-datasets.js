@@ -460,4 +460,26 @@ describe('virtual datasets', () => {
 
     await global.ax.cdurning2.get(`/api/v1/datasets/${res.data.id}/lines`)
   })
+
+  it('A virtual dataset has the most restrictive capabilities of its children', async () => {
+    const ax = global.ax.dmeadus
+    const child1 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    child1.schema[0]['x-capabilities'] = { textAgg: false, values: false }
+    await ax.patch('/api/v1/datasets/' + child1.id, { schema: child1.schema })
+    const child2 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    child2.schema[0]['x-capabilities'] = { textAgg: false, insensitive: false }
+    await ax.patch('/api/v1/datasets/' + child2.id, { schema: child2.schema })
+
+    const res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [child1.id, child2.id]
+      },
+      schema: [{ key: 'id' }]
+    })
+
+    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    assert.deepEqual(virtualDataset.schema[0]['x-capabilities'], { textAgg: false, insensitive: false, values: false })
+  })
 })
