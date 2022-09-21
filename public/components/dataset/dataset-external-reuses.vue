@@ -3,6 +3,12 @@
     fluid
     class="py-0"
   >
+    <v-alert
+      dense
+      type="warning"
+      outlined
+      v-text="$t('deprecated')"
+    />
     <v-row>
       <v-col>
         <v-dialog
@@ -145,6 +151,7 @@ fr:
   save: Enregistrer
   confirmDeleteTooltip: Supprimer la réutilisation
   confirmDeleteText: Souhaitez-vous confirmer la suppression ?
+  deprecated: Cette gestion des réutilisations est dépréciée. À la place veuillez gérer les réutilisations directement dans l'administration des portails.
 en:
   addReuse: Add a reuse
   newReuse: New external reuse
@@ -155,6 +162,7 @@ en:
   save: Save
   confirmDeleteTooltip: Delete the reuse
   confirmDeleteText: Do you want to confirm the deletion ?
+  deprecated: This management of reuses is deprecated. Instead please manage reuses directly in the portals administration.
 </i18n>
 
 <script>
