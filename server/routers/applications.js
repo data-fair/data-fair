@@ -100,12 +100,12 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const countPromise = req.query.count !== 'false' && applications.countDocuments(query)
   const resultsPromise = size > 0 && applications.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
   const facetsPromise = req.query.facets && applications.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields)).toArray()
-
+  const [count, results, facets] = await Promise.all([countPromise, resultsPromise, facetsPromise])
   const response = {}
-  if (countPromise) response.count = await countPromise
-  if (resultsPromise) response.results = await resultsPromise
+  if (countPromise) response.count = count
+  if (resultsPromise) response.results = results
   else response.results = []
-  if (facetsPromise) response.facets = findUtils.parseFacets(await facetsPromise, nullFacetFields)
+  if (facetsPromise) response.facets = findUtils.parseFacets(facets, nullFacetFields)
 
   if (req.query.raw !== 'true') {
     response.results.forEach(r => {

@@ -223,13 +223,13 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
       }
       return res
     })
-
+  const [count, results, facets, sums] = await Promise.all([countPromise, resultsPromise, facetsPromise, sumsPromise])
   const response = {}
-  if (countPromise) response.count = await countPromise
-  if (resultsPromise) response.results = await resultsPromise
+  if (countPromise) response.count = count
+  if (resultsPromise) response.results = results
   else response.results = []
-  if (facetsPromise) response.facets = findUtils.parseFacets(await facetsPromise, nullFacetFields)
-  if (sumsPromise) response.sums = await sumsPromise
+  if (facetsPromise) response.facets = findUtils.parseFacets(facets, nullFacetFields)
+  if (sumsPromise) response.sums = sums
 
   response.results.forEach(r => {
     if (req.query.raw !== 'true') r.userPermissions = permissions.list('datasets', r, req.user)
@@ -1096,12 +1096,6 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
 
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(db, req.dataset)
 
-  // geojson format benefits from bbox info
-  let bboxPromise
-  if (req.query.format === 'geojson') {
-    bboxPromise = esUtils.bboxAgg(req.app.get('es'), req.dataset, { ...req.query })
-  }
-
   const sampling = req.query.sampling || 'neighbors'
   if (!['max', 'neighbors'].includes(sampling)) return res.status(400).send('Sampling can be "max" or "neighbors"')
 
@@ -1208,7 +1202,8 @@ router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middl
 
   if (req.query.format === 'geojson') {
     const geojson = geo.result2geojson(esResponse)
-    geojson.bbox = (await bboxPromise).bbox
+    // geojson format benefits from bbox info
+    geojson.bbox = (await esUtils.bboxAgg(req.app.get('es'), req.dataset, { ...req.query })).bbox
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.geojson"`)
     res.throttleEnd()
     return res.status(200).send(geojson)
