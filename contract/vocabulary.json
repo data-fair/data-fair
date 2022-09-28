@@ -347,15 +347,34 @@
   },
   {
     "title": {
-      "fr": "Code pays (ISO)",
-      "en": "Country code (ISO)"
+      "fr": "Code pays (ISO, 2 caractères)",
+      "en": "Country code (ISO, 2 chars)"
     },
     "description": {
       "fr": "Code pays ou territoire sur 2 caractères (ISO 3166-1 alpha-2)",
       "en": "Country or territory code of 2 chars (ISO 3166-1 alpha-2)"
     },
     "identifiers": [
-      "http://dbpedia.org/ontology/iso31661Code"
+      "http://dbpedia.org/ontology/iso31661Code",
+      "https://www.omg.org/spec/LCC/Countries/CountryRepresentation/Alpha2Code"
+    ],
+    "type": "string",
+    "tag": {
+      "fr": "Géographie",
+      "en": "Geography"
+    }
+  },
+  {
+    "title": {
+      "fr": "Code pays (ISO, 3 caractères)",
+      "en": "Country code (ISO, 3 chars)"
+    },
+    "description": {
+      "fr": "Code pays ou territoire sur 3 caractères (ISO 3166-1 alpha-3)",
+      "en": "Country or territory code of 3 chars (ISO 3166-1 alpha-3)"
+    },
+    "identifiers": [
+      "https://www.omg.org/spec/LCC/Countries/CountryRepresentation/Alpha3Code"
     ],
     "type": "string",
     "tag": {
