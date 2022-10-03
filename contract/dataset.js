@@ -114,6 +114,36 @@ module.exports = {
       type: 'string',
       description: 'URL d\'une image, illustration du jeu de données'
     },
+    spatial: {
+      type: 'string',
+      description: 'spatial coverage'
+    },
+    temporal: {
+      type: 'object',
+      description: 'temporal coverage',
+      start: {
+        type: 'string',
+        format: 'date'
+      },
+      end: {
+        type: 'string',
+        format: 'date'
+      }
+    },
+    keywords: {
+      type: 'array',
+      description: 'keywords',
+      items: {
+        type: 'string'
+      }
+    },
+    frequency: {
+      type: 'array',
+      description: 'keywords',
+      items: {
+        type: 'string'
+      }
+    },
     file: {
       type: 'object',
       additionalProperties: false,
@@ -602,7 +632,7 @@ module.exports = {
   }
 }
 
-const draftKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions', 'publications', 'publicationSites', 'virtual', 'rest', 'extras', 'attachmentsAsImage', 'projection', 'attachments', 'topics', 'thumbnails', 'masterData', 'primaryKey']
+const draftKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions', 'publications', 'publicationSites', 'virtual', 'rest', 'extras', 'attachmentsAsImage', 'projection', 'attachments', 'topics', 'thumbnails', 'masterData', 'primaryKey', 'origin', 'image', 'spatial', 'temporal', 'keywords', 'frequency']
 
 module.exports.properties.draft = {
   title: 'Dataset draft',

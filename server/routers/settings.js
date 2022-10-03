@@ -138,15 +138,22 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async (req, res) => {
 // Get topics list as owner
 router.get('/:type/:id/topics', isOwnerMember, asyncWrap(async (req, res) => {
   const settings = req.app.get('db').collection('settings')
-  const result = await settings.findOne({ type: req.params.type, id: req.params.id })
+  const result = await settings.findOne(req.owner)
   res.status(200).send((result && result.topics) || [])
 }))
 
 // Get licenses list as anyone
 router.get('/:type/:id/licenses', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const settings = req.app.get('db').collection('settings')
-  const result = await settings.findOne({ type: req.params.type, id: req.params.id })
+  const result = await settings.findOne(req.owner)
   res.status(200).send([].concat(config.licenses, (result && result.licenses) || []))
+}))
+
+// Get datasets metadata settings as owner
+router.get('/:type/:id/datasets-metadata', isOwnerMember, asyncWrap(async (req, res) => {
+  const settings = req.app.get('db').collection('settings')
+  const result = await settings.findOne(req.owner)
+  res.status(200).send((result && result.datasetsMetadata) || {})
 }))
 
 // Get publication sites as owner (see all) or other use (only public)

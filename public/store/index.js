@@ -36,6 +36,7 @@ export default () => {
       vocabularyItems: [],
       licenses: {},
       topics: {},
+      datasetsMetadata: {},
       publicationSites: {},
       env: {},
       searchQueries: {},
@@ -71,6 +72,9 @@ export default () => {
       },
       ownerTopics: (state) => (owner) => {
         return state.topics[owner.type + '/' + owner.id]
+      },
+      ownerDatasetsMetadata: (state) => (owner) => {
+        return state.datasetsMetadata[owner.type + '/' + owner.id]
       },
       ownerPublicationSites: (state) => (owner) => {
         let key = owner.type + '/' + owner.id
@@ -173,6 +177,9 @@ export default () => {
         }
         Vue.set(state.topics, payload.owner.type + '/' + payload.owner.id, payload.topics)
       },
+      ownerDatasetsMetadata (state, payload) {
+        Vue.set(state.datasetsMetadata, payload.owner.type + '/' + payload.owner.id, payload.datasetsMetadata)
+      },
       ownerPublicationSites (state, payload) {
         let key = payload.owner.type + '/' + payload.owner.id
         if (payload.owner.department) key += '/' + payload.owner.department
@@ -232,6 +239,11 @@ export default () => {
         if (getters.ownerTopics(owner)) return
         const topics = await this.$axios.$get('api/v1/settings/' + owner.type + '/' + owner.id + '/topics')
         commit('ownerTopics', { owner, topics })
+      },
+      async fetchDatasetsMetadata ({ getters, state, commit }, owner) {
+        if (getters.ownerDatasetsMetadata(owner)) return
+        const datasetsMetadata = await this.$axios.$get('api/v1/settings/' + owner.type + '/' + owner.id + '/datasets-metadata')
+        commit('ownerDatasetsMetadata', { owner, datasetsMetadata })
       },
       async fetchPublicationSites ({ getters, state, commit }, owner) {
         if (getters.ownerPublicationSites(owner)) return

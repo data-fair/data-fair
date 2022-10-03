@@ -149,6 +149,33 @@
         class="mb-3"
         @change="patch({image: dataset.image})"
       />
+      <v-combobox
+        v-if="datasetsMetadata && datasetsMetadata.spatial && datasetsMetadata.keywords.active"
+        v-model="dataset.keywords"
+        :items="keywordsFacets && keywordsFacets.map(f => f.value)"
+        :disabled="!can('writeDescription')"
+        :label="$t('keywords')"
+        hide-details
+        multiple
+        chips
+        deletable-chips
+        class="mb-3"
+        :loading="loadingKeywordsFacets"
+        @update:search-input="fetchKeywordsFacets"
+        @change="patch({keywords: dataset.keywords})"
+      />
+      <v-combobox
+        v-if="datasetsMetadata && datasetsMetadata.spatial && datasetsMetadata.spatial.active"
+        v-model="dataset.spatial"
+        :items="spatialFacets && spatialFacets.map(f => f.value)"
+        :disabled="!can('writeDescription')"
+        :label="$t('spatial')"
+        hide-details
+        class="mb-3"
+        :loading="loadingSpatialFacets"
+        @update:search-input="fetchSpatialFacets"
+        @change="patch({spatial: dataset.spatial})"
+      />
     </v-col>
     <v-col
       cols="12"
@@ -191,6 +218,8 @@ fr:
   projection: Projection cartographique
   origin: Provenance
   image: Adresse d'une image utilisée comme vignette
+  spatial: Couverture géographique
+  keywords: Mots clés
   title: Titre
   description: Description
 en:
@@ -206,6 +235,8 @@ en:
   projection: Map projection
   origin: Origin
   image: URL of an image used as thumbnail
+  spatial: Spatial coverage
+  keywords: Keywords
   title: Title
   description: Description
 </i18n>
@@ -218,7 +249,13 @@ const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 
 export default {
   data () {
-    return { error: null }
+    return {
+      error: null,
+      spatialFacets: null,
+      loadingSpatialFacets: false,
+      keywordsFacets: null,
+      loadingKeywordsFacets: false
+    }
   },
   computed: {
     ...mapState(['projections']),
@@ -230,6 +267,9 @@ export default {
     },
     topics () {
       return this.$store.getters.ownerTopics(this.dataset.owner)
+    },
+    datasetsMetadata () {
+      return this.$store.getters.ownerDatasetsMetadata(this.dataset.owner)
     },
     editProjection () {
       return !!(this.dataset && this.dataset.schema &&
@@ -253,6 +293,7 @@ export default {
     if (this.dataset) {
       this.$store.dispatch('fetchLicenses', this.dataset.owner)
       this.$store.dispatch('fetchTopics', this.dataset.owner)
+      this.$store.dispatch('fetchDatasetsMetadata', this.dataset.owner)
     }
     if (this.editProjection) this.$store.dispatch('fetchProjections')
 
@@ -266,7 +307,23 @@ export default {
     }
   },
   methods: {
-    ...mapActions('dataset', ['patch', 'reindex'])
+    ...mapActions('dataset', ['patch', 'reindex']),
+    async fetchSpatialFacets (search) {
+      if (this.spatialFacets || !search) return
+      this.loadingSpatialFacets = true
+      this.spatialFacets = (await this.$axios.$get('api/v1/datasets', {
+        params: { size: 0, facets: 'spatial', owner: `${this.dataset.owner.type}:${this.dataset.owner.id}` }
+      })).facets.spatial
+      this.loadingSpatialFacets = false
+    },
+    async fetchKeywordsFacets (search) {
+      if (this.keywordsFacets || !search) return
+      this.loadingKeywordsFacets = true
+      this.keywordsFacets = (await this.$axios.$get('api/v1/datasets', {
+        params: { size: 0, facets: 'keywords', owner: `${this.dataset.owner.type}:${this.dataset.owner.id}` }
+      })).facets.keywords
+      this.loadingKeywordsFacets = false
+    }
   }
 }
 </script>

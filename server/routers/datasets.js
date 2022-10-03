@@ -183,7 +183,9 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
     services: 'extensions.remoteService',
     status: 'status',
     topics: 'topics.id',
-    publicationSites: 'publicationSites'
+    publicationSites: 'publicationSites',
+    spatial: 'spatial',
+    keywords: 'keywords'
   }
   const facetFields = {
     ...filterFields,

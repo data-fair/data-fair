@@ -142,6 +142,35 @@
               </layout-section-tabs>
 
               <layout-section-tabs
+                :svg="flagsSvg"
+                svg-no-margin
+                :section="sections.find(s => s.id === 'datasetsMetadata')"
+              >
+                <template #extension>
+                  Configurez des métadonnées additionnelles pour vos jeux de données.
+                </template>
+                <template #tabs-items>
+                  <v-container
+                    fluid
+                    class="py-1"
+                  >
+                    <v-row>
+                      <v-col
+                        cols="12"
+                        md="6"
+                      >
+                        <settings-datasets-metadata
+                          v-if="settings"
+                          :settings="settings"
+                          @updated="save('fetchDatasetsMetadata')"
+                        />
+                      </v-col>
+                    </v-row>
+                  </v-container>
+                </template>
+              </layout-section-tabs>
+
+              <layout-section-tabs
                 :svg="securitysSvg"
                 svg-no-margin
                 :section="sections.find(s => s.id === 'api-keys')"
@@ -284,6 +313,7 @@
 fr:
   licences: Licences
   topics: Thématiques
+  datasetsMetadata: Métadonnées des jeux de données
   apiKeys: "Clés d'API"
   webhooks: "Appels extérieurs (Webhooks)"
   privateVocab: Vocabulaire privé
@@ -292,6 +322,7 @@ fr:
 en:
   licences: Licences
   topics: Topics
+  datasetsMetadata: Datasets metadata
   apiKeys: API keys
   webhooks: "External requests (Webhooks)"
   privateVocab: Private vocabulary
@@ -350,6 +381,10 @@ export default {
         sections.push({
           id: 'topics',
           title: this.$t('topics')
+        })
+        sections.push({
+          id: 'datasetsMetadata',
+          title: this.$t('datasetsMetadata')
         })
         sections.push({
           id: 'privateVocabulary',
