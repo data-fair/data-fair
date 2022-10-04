@@ -21,11 +21,6 @@ router.get('/info', (req, res) => {
   if (!req.user) return res.status(401).send()
   res.send(info)
 })
-router.get('/admin/info', (req, res) => {
-  if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode) return res.status(403).send()
-  res.send({ ...info, config })
-})
 
 router.get('/status', status.status)
 router.get('/ping', status.ping)

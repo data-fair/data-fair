@@ -21,13 +21,6 @@ describe('root', () => {
     assert.equal(res.data.version, 'test')
   })
 
-  it('Get service admin info', async () => {
-    const ax = global.ax.superadmin
-    const res = await ax.get('/api/v1/admin/info')
-    assert.equal(res.status, 200)
-    assert.equal(res.data.version, 'test')
-  })
-
   it('Check API format', async () => {
     const ax = global.ax.dmeadus
     const api = require('./resources/geocoder-api.json')
