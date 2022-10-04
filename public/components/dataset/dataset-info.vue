@@ -150,7 +150,7 @@
         @change="patch({image: dataset.image})"
       />
       <v-combobox
-        v-if="datasetsMetadata && datasetsMetadata.spatial && datasetsMetadata.keywords.active"
+        v-if="datasetsMetadata && datasetsMetadata.keywords && datasetsMetadata.keywords.active"
         v-model="dataset.keywords"
         :items="keywordsFacets && keywordsFacets.map(f => f.value)"
         :disabled="!can('writeDescription')"
