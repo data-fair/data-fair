@@ -176,6 +176,47 @@
         @update:search-input="fetchSpatialFacets"
         @change="patch({spatial: dataset.spatial})"
       />
+      <v-text-field
+        v-if="datasetsMetadata && datasetsMetadata.temporal && datasetsMetadata.temporal.active"
+        :value="formatTemporal(dataset.temporal)"
+        readonly
+        :label="$t('temporal')"
+        hide-details
+        class="mb-3"
+        @click="temporalMenu = true"
+      >
+        <template #append>
+          <v-menu
+            v-model="temporalMenu"
+            left
+            :close-on-content-click="false"
+          >
+            <template #activator="{attrs, on}">
+              <v-icon
+                v-bind="attrs"
+                v-on="on"
+              >
+                mdi-calendar
+              </v-icon>
+            </template>
+            <v-date-picker
+              :value="[dataset.temporal && dataset.temporal.start, dataset.temporal && dataset.temporal.end].filter(d => !!d)"
+              multiple
+              @input="setTemporalDates"
+            />
+          </v-menu>
+        </template>
+      </v-text-field>
+      <v-select
+        v-if="datasetsMetadata && datasetsMetadata.frequency && datasetsMetadata.frequency.active"
+        v-model="dataset.frequency"
+        :items="frequencies"
+        :disabled="!can('writeDescription')"
+        :label="$t('frequency')"
+        hide-details
+        class="mb-3"
+        @change="patch({frequency: dataset.frequency})"
+      />
     </v-col>
     <v-col
       cols="12"
@@ -219,9 +260,26 @@ fr:
   origin: Provenance
   image: Adresse d'une image utilisée comme vignette
   spatial: Couverture géographique
+  temporal: Couverture temporelle
   keywords: Mots clés
+  frequency: Fréquence des mises à jour
   title: Titre
   description: Description
+  frequencyItems:
+    triennial: tous les 3 ans
+    biennial: tous les 2 ans
+    annual: tous les ans
+    semiannual: 2 fois pas ans
+    threeTimesAYear: 3 fois par an
+    quarterly: chaque trimestre
+    bimonthly: tous les 2 mois
+    monthly: tous les mois
+    semimonthly: 2 fois pas mois
+    biweekly: toutes les 2 semaines
+    threeTimesAMonth: 3 fois par mois
+    daily: tous les jours
+    continuous: en continu
+    irregular: irrégulier
 en:
   updatedAt: last update of metadata
   dataUpdatedAt: last update of data
@@ -236,9 +294,26 @@ en:
   origin: Origin
   image: URL of an image used as thumbnail
   spatial: Spatial coverage
+  temporal: Temporal coverage
   keywords: Keywords
+  frequency: Update frequency
   title: Title
   description: Description
+  frequencyItems:
+    triennial: every 3 years
+    biennial: every 2 years
+    annual: every year
+    semiannual: twice a year
+    threeTimesAYear: 3 times a year
+    quarterly: every quarter
+    bimonthly: every 2 months
+    monthly: every month
+    semimonthly: twice a month
+    biweekly: every 2 weeks
+    threeTimesAMonth: 3 times a month
+    daily: every day
+    continuous: continuous
+    irregular: irregular
 </i18n>
 
 <script>
@@ -254,7 +329,8 @@ export default {
       spatialFacets: null,
       loadingSpatialFacets: false,
       keywordsFacets: null,
-      loadingKeywordsFacets: false
+      loadingKeywordsFacets: false,
+      temporalMenu: false
     }
   },
   computed: {
@@ -275,6 +351,10 @@ export default {
       return !!(this.dataset && this.dataset.schema &&
           this.dataset.schema.find(p => p['x-refersTo'] === coordXUri) &&
           this.dataset.schema.find(p => p['x-refersTo'] === coordYUri))
+    },
+    frequencies () {
+      return ['triennial', 'biennial', 'annual', 'semiannual', 'threeTimesAYear', 'quarterly', 'bimonthly', 'monthly', 'semimonthly', 'biweekly', 'threeTimesAMonth', 'weekly', 'semiWeekly', 'threeTimesAWeek', 'daily', 'continuous', 'irregular']
+        .map(value => ({ value, text: this.$t('frequencyItems.' + value) }))
     }
   },
   watch: {
@@ -323,6 +403,24 @@ export default {
         params: { size: 0, facets: 'keywords', owner: `${this.dataset.owner.type}:${this.dataset.owner.id}` }
       })).facets.keywords
       this.loadingKeywordsFacets = false
+    },
+    setTemporalDates (dates) {
+      dates.sort()
+      if (dates.length === 3) {
+        dates[1] = dates[2]
+        delete dates[2]
+      }
+      const temporal = {}
+      if (dates[0]) temporal.start = dates[0]
+      if (dates[1]) temporal.end = dates[1]
+      this.$set(this.dataset, 'temporal', temporal)
+      this.patch({ temporal: temporal })
+    },
+    formatTemporal (temporal) {
+      if (!temporal || !temporal.start) return ''
+      let str = this.$moment(temporal.start).format('LL')
+      if (temporal.end) str += ' - ' + this.$moment(temporal.end).format('LL')
+      return str
     }
   }
 }

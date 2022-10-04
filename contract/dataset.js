@@ -114,10 +114,12 @@ module.exports = {
       type: 'string',
       description: 'URL d\'une image, illustration du jeu de données'
     },
+    // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_spatial
     spatial: {
       type: 'string',
       description: 'spatial coverage'
     },
+    // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_temporal
     temporal: {
       type: 'object',
       description: 'temporal coverage',
@@ -137,12 +139,11 @@ module.exports = {
         type: 'string'
       }
     },
+    // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_frequency and https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
     frequency: {
-      type: 'array',
-      description: 'keywords',
-      items: {
-        type: 'string'
-      }
+      type: 'string',
+      description: 'update frequency',
+      enum: ['triennial', 'biennial', 'annual', 'semiannual', 'threeTimesAYear', 'quarterly', 'bimonthly', 'monthly', 'semimonthly', 'biweekly', 'threeTimesAMonth', 'weekly', 'semiWeekly', 'threeTimesAWeek', 'daily', 'continuous', 'irregular']
     },
     file: {
       type: 'object',
