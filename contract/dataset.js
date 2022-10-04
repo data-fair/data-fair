@@ -145,7 +145,7 @@ module.exports = {
     frequency: {
       type: 'string',
       description: 'update frequency',
-      enum: ['triennial', 'biennial', 'annual', 'semiannual', 'threeTimesAYear', 'quarterly', 'bimonthly', 'monthly', 'semimonthly', 'biweekly', 'threeTimesAMonth', 'weekly', 'semiWeekly', 'threeTimesAWeek', 'daily', 'continuous', 'irregular']
+      enum: ['', 'triennial', 'biennial', 'annual', 'semiannual', 'threeTimesAYear', 'quarterly', 'bimonthly', 'monthly', 'semimonthly', 'biweekly', 'threeTimesAMonth', 'weekly', 'semiWeekly', 'threeTimesAWeek', 'daily', 'continuous', 'irregular']
     },
     file: {
       type: 'object',

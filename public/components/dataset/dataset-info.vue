@@ -214,8 +214,9 @@
         :disabled="!can('writeDescription')"
         :label="$t('frequency')"
         hide-details
+        clearable
         class="mb-3"
-        @change="patch({frequency: dataset.frequency})"
+        @change="patch({frequency: dataset.frequency || ''})"
       />
     </v-col>
     <v-col

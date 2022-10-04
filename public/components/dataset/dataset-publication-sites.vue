@@ -6,6 +6,23 @@
     />
     <template v-else>
       <p v-t="'publishThisDataset'" />
+      <v-alert
+        v-if="publicationWarnings && publicationWarnings.length"
+        type="error"
+        outlined
+      >
+        <p>
+          {{ $t('hasWarning') }}
+        </p>
+        <ul>
+          <li
+            v-for="warning in publicationWarnings"
+            :key="warning"
+          >
+            {{ $t('warning.' + warning) }}
+          </li>
+        </ul>
+      </v-alert>
       <v-row class="px-2">
         <v-card
           tile
@@ -87,11 +104,23 @@ fr:
   publishThisDataset: Publiez ce jeu de données sur un ou plusieurs de vos portails.
   published: publié
   publicationRequested: publication demandée par un contributeur
+  hasWarning: "publication bloquée : le jeu de données n'a pas toutes les métadonnées attendues"
+  warning:
+    missingTemporal: couverture temporelle
+    missingSpatial: couverture géographique
+    missingKeywords: mots clés
+    missingFrequency: fréquence des mises à jour
 en:
   noPublicationSite: You haven't configured a portal to publish this dataset on.
   publishThisDataset: Publish this dataset on one or more of your portals.
   published: published
   publicationRequested: publication requested by a contributor
+  hasWarning: "publication forbidden : the dataset does not have all required metadata"
+  warning:
+    missingTemporal: temporal coverage
+    missingSpatial: spatial coverage
+    missingKeywords: keywords
+    missingFrequency: update frequency
 </i18n>
 
 <script>
@@ -109,7 +138,7 @@ export default {
   computed: {
     ...mapState(['env']),
     ...mapState('dataset', ['dataset']),
-    ...mapGetters('dataset', ['can']),
+    ...mapGetters('dataset', ['can', 'publicationWarnings']),
     ...mapGetters('session', ['activeAccount'])
   },
   methods: {
@@ -124,7 +153,7 @@ export default {
       this.patch({ [key]: this.dataset[key] })
     },
     canPublish (site) {
-      return this.can('writePublicationSites') && (!this.activeAccount.department || this.activeAccount.department === site.department)
+      return this.publicationWarnings && this.publicationWarnings.length === 0 && this.can('writePublicationSites') && (!this.activeAccount.department || this.activeAccount.department === site.department)
     },
     canRequestPublication (site) {
       return this.can('writeDescription')

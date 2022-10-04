@@ -107,6 +107,25 @@ export default () => ({
     },
     webPageField (state) {
       return state.dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/WebPage')
+    },
+    publicationWarnings (state, getters, rootState, rootGetters) {
+      const datasetsMetadata = rootGetters.ownerDatasetsMetadata(state.dataset.owner)
+      if (!datasetsMetadata) return
+      console.log(datasetsMetadata)
+      const warnings = []
+      if (datasetsMetadata.spatial && datasetsMetadata.spatial.active && datasetsMetadata.spatial.requiredForPublication && !state.dataset.spatial) {
+        warnings.push('missingSpatial')
+      }
+      if (datasetsMetadata.temporal && datasetsMetadata.temporal.active && datasetsMetadata.temporal.requiredForPublication && !(state.dataset.temporal && state.dataset.temporal.start)) {
+        warnings.push('missingTemporal')
+      }
+      if (datasetsMetadata.keywords && datasetsMetadata.keywords.active && datasetsMetadata.keywords.requiredForPublication && !(state.dataset.keywords && state.dataset.keywords.length)) {
+        warnings.push('missingKeywords')
+      }
+      if (datasetsMetadata.frequency && datasetsMetadata.frequency.active && datasetsMetadata.frequency.requiredForPublication && !state.dataset.frequency) {
+        warnings.push('missingFrequency')
+      }
+      return warnings
     }
   },
   mutations: {
