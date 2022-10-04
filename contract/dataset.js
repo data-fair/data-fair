@@ -123,13 +123,15 @@ module.exports = {
     temporal: {
       type: 'object',
       description: 'temporal coverage',
-      start: {
-        type: 'string',
-        format: 'date'
-      },
-      end: {
-        type: 'string',
-        format: 'date'
+      properties: {
+        start: {
+          type: 'string',
+          format: 'date'
+        },
+        end: {
+          type: 'string',
+          format: 'date'
+        }
       }
     },
     keywords: {
