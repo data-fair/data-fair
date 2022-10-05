@@ -270,14 +270,17 @@ fr:
     triennial: tous les 3 ans
     biennial: tous les 2 ans
     annual: tous les ans
-    semiannual: 2 fois pas ans
+    semiannual: 2 fois par ans
     threeTimesAYear: 3 fois par an
     quarterly: chaque trimestre
     bimonthly: tous les 2 mois
     monthly: tous les mois
-    semimonthly: 2 fois pas mois
+    semimonthly: 2 fois par mois
     biweekly: toutes les 2 semaines
     threeTimesAMonth: 3 fois par mois
+    weekly: chaque semaine
+    semiweekly: 2 fois par semaine
+    threeTimesAWeek: 3 fois par semaine
     daily: tous les jours
     continuous: en continu
     irregular: irrégulier
@@ -312,6 +315,9 @@ en:
     semimonthly: twice a month
     biweekly: every 2 weeks
     threeTimesAMonth: 3 times a month
+    weekly: every week
+    semiweekly: twice a week
+    threeTimesAWeek: 3 times a week
     daily: every day
     continuous: continuous
     irregular: irregular
@@ -354,8 +360,9 @@ export default {
           this.dataset.schema.find(p => p['x-refersTo'] === coordYUri))
     },
     frequencies () {
-      return ['triennial', 'biennial', 'annual', 'semiannual', 'threeTimesAYear', 'quarterly', 'bimonthly', 'monthly', 'semimonthly', 'biweekly', 'threeTimesAMonth', 'weekly', 'semiWeekly', 'threeTimesAWeek', 'daily', 'continuous', 'irregular']
-        .map(value => ({ value, text: this.$t('frequencyItems.' + value) }))
+      // https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
+      return ['triennial', 'biennial', 'annual', 'semiannual', 'threeTimesAYear', 'quarterly', 'bimonthly', 'monthly', 'semimonthly', 'biweekly', 'threeTimesAMonth', 'weekly', 'semiweekly', 'threeTimesAWeek', 'daily', 'continuous', 'irregular']
+        .map(value => ({ value, text: this.$t('frequencyItems.' + value) })).reverse()
     }
   },
   watch: {
