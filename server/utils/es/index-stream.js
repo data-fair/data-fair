@@ -63,7 +63,7 @@ class IndexStream extends Transform {
       }
       if (warning) {
         this.nbErroredItems += 1
-        if (this.erroredItems.length < maxErroredItems) this.erroredItems.push({ customMessage: warning })
+        if (this.erroredItems.length < maxErroredItems) this.erroredItems.push({ customMessage: warning, _i: this.i })
       }
 
       this.i += 1
@@ -183,9 +183,19 @@ const applyCalculations = async (dataset, item) => {
 
   // calculate geopoint and geometry fields depending on concepts
   if (geoUtils.schemaHasGeopoint(dataset.schema)) {
-    Object.assign(item, geoUtils.latlon2fields(dataset, flatItem))
+    try {
+      Object.assign(item, geoUtils.latlon2fields(dataset, flatItem))
+    } catch (err) {
+      console.log('failure to parse geopoints', dataset.id, err, flatItem)
+      return 'Coordonnée géographique non valide - ' + err.message
+    }
   } else if (geoUtils.schemaHasGeometry(dataset.schema)) {
-    Object.assign(item, await geoUtils.geometry2fields(dataset.schema, flatItem))
+    try {
+      Object.assign(item, await geoUtils.geometry2fields(dataset.schema, flatItem))
+    } catch (err) {
+      console.log('failure to parse geometry', dataset.id, err, flatItem)
+      return 'Géométrie non valide - ' + err.message
+    }
   }
 
   // Add a pseudo-random number for random sorting (more natural distribution)

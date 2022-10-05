@@ -91,7 +91,12 @@ exports.readGeometry = (value) => {
   try {
     return JSON.parse(value)
   } catch (err) {
-    return wktToGeoJSON(value)
+    try {
+      return wktToGeoJSON(value)
+    } catch (err2) {
+      console.log('invalid JSON or WKT', value, err, err2)
+      throw new Error('la géométrie ne contient pas de JSON ou de WKT valide')
+    }
   }
 }
 
