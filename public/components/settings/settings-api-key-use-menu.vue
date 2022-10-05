@@ -20,6 +20,7 @@
     <v-card
       v-if="menu"
       outlined
+      data-iframe-height
     >
       <v-card-title primary-title>
         Utilisation d'une clé d'API
