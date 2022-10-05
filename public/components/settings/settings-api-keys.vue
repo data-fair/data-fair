@@ -46,15 +46,17 @@
               label="Clé permettant de travailler dans le contexte d'autres comptes (nécessaire pour configurer le service de traitements périodiques)"
               hide-details="auto"
             />
-            <v-checkbox
-              v-for="scope of scopes"
-              :key="scope.value"
-              v-model="newApiKey.scopes"
-              :label="scope.text"
-              :value="scope.value"
-              :rules="[v => !!v.length || '']"
-              hide-details="auto"
-            />
+            <template v-if="filteredScopes.length > 1">
+              <v-checkbox
+                v-for="scope of filteredScopes"
+                :key="scope.value"
+                v-model="newApiKey.scopes"
+                :label="scope.text"
+                :value="scope.value"
+                :rules="[v => !!v.length || '']"
+                hide-details="auto"
+              />
+            </template>
           </v-form>
         </v-card-text>
         <v-card-actions>
@@ -141,7 +143,7 @@
 import { mapState } from 'vuex'
 
 export default {
-  props: ['settings'],
+  props: ['settings', 'restrictedScopes'],
   data: () => ({
     newApiKey: {
       title: null,
@@ -153,14 +155,23 @@ export default {
     currentApiKey: null,
     showUseDialog: false,
     scopes: [
-      { value: 'datasets', text: 'Gestion des jeux de données' },
-      { value: 'applications', text: 'Gestion des applications' },
-      { value: 'catalogs', text: 'Gestion des connecteurs aux catalogues' },
-      { value: 'stats', text: 'Récupération d\'informations statistiques' }
+      { value: 'datasets', text: 'jeux de données' },
+      { value: 'applications', text: 'applications' },
+      { value: 'catalogs', text: 'connecteurs aux catalogues' },
+      { value: 'stats', text: 'récupération d\'informations statistiques' }
     ]
   }),
   computed: {
-    ...mapState('session', ['user'])
+    ...mapState('session', ['user']),
+    filteredScopes () {
+      if (!this.restrictedScopes || this.restrictedScopes.length === 0) return this.scopes
+      return this.scopes.filter(s => this.restrictedScopes.includes(s.value))
+    }
+  },
+  mounted () {
+    if (this.filteredScopes.length === 1) {
+      this.newApiKey.scopes.push(this.filteredScopes[0].value)
+    }
   },
   methods: {
     addApiKey () {

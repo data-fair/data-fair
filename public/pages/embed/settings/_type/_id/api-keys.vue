@@ -6,6 +6,7 @@
     <settings-api-keys
       v-if="settings"
       :settings="settings"
+      :restricted-scopes="scopes"
       @updated="save"
     />
   </v-container>
@@ -26,6 +27,11 @@ export default {
     settings: null,
     ready: false
   }),
+  computed: {
+    scopes () {
+      return this.$route.query.scopes && this.$route.query.scopes.split(',')
+    }
+  },
   async mounted () {
     this.settings = await this.$axios.$get('api/v1/settings/' + this.$route.params.type + '/' + this.$route.params.id)
     this.$set(this.settings, 'apiKeys', this.settings.apiKeys || [])
