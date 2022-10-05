@@ -63,7 +63,7 @@ class IndexStream extends Transform {
       }
       if (warning) {
         this.nbErroredItems += 1
-        if (this.erroredItems.length < maxErroredItems) this.erroredItems.push({ customMessage: warning, _i: this.i })
+        if (this.erroredItems.length < maxErroredItems) this.erroredItems.push({ customMessage: warning, _i: this.i + 1 })
       }
 
       this.i += 1
