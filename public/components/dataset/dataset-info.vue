@@ -270,7 +270,7 @@ fr:
     triennial: tous les 3 ans
     biennial: tous les 2 ans
     annual: tous les ans
-    semiannual: 2 fois par ans
+    semiannual: 2 fois par an
     threeTimesAYear: 3 fois par an
     quarterly: chaque trimestre
     bimonthly: tous les 2 mois
