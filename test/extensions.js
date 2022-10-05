@@ -504,9 +504,7 @@ other,unknown address
     delete dataset.schema.find(field => field.key === 'adr')['x-refersTo']
     dataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema })).data
     assert.equal(dataset.schema.length, 6)
-    /* await workers.hook(`extender/${dataset.id}`)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
-    assert.equal(dataset.extensions.length, 0) */
+    await workers.hook(`finalizer/${dataset.id}`)
   })
 
   it('Extend geojson dataset', async function () {
