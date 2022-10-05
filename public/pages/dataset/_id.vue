@@ -163,31 +163,6 @@
                 </v-tab-item>
 
                 <v-tab-item value="data-revisions">
-                  <v-list-item v-if="dataset.isRest && dataset.rest.history">
-                    <v-list-item-avatar class="ml-0 my-0">
-                      <v-icon
-                        :disabled="!dataset.rest.historyTTL.active"
-                        color="warning"
-                      >
-                        mdi-delete-restore
-                      </v-icon>
-                    </v-list-item-avatar>
-                    <span
-                      v-if="dataset.rest.historyTTL.active"
-                      v-t="{path: 'historyTTL', args: {days: dataset.rest.historyTTL.delay.value}}"
-                    />
-                    <span
-                      v-else
-                      v-t="'noHistoryTTL'"
-                    />
-                    <dataset-edit-ttl
-                      v-if="can('writeDescription')"
-                      :ttl="dataset.rest.historyTTL"
-                      :schema="dataset.schema"
-                      :revisions="true"
-                      @change="ttl => {dataset.rest.historyTTL = ttl; patch({rest: dataset.rest})}"
-                    />
-                  </v-list-item>
                   <dataset-history />
                 </v-tab-item>
 
@@ -427,8 +402,6 @@ fr:
   metadata: Métadonnées
   uses: Utilisations
   datasets: jeux de données
-  historyTTL: Supprimer automatiquement les révisions de lignes qui datent de plus de {days} jours.
-  noHistoryTTL: pas de politique d'expiration des révisions configurée
   tasks:
     index: indexation
     extend: extensions
@@ -467,8 +440,6 @@ en:
   metadata: Metadata
   uses: Uses
   datasets: datasets
-  historyTTL: Automatically delete revisions more than {days} days old.
-  noHistoryTTL: no automatic expiration of revisions configured
   tasks:
     index: indexing
     extend: extensions

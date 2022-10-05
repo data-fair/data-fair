@@ -69,6 +69,51 @@
           </v-list-item>
           <v-list-item v-if="dataset.isRest">
             <v-list-item-avatar class="ml-0 my-0">
+              <v-icon :disabled="!dataset.rest.history">
+                mdi-history
+              </v-icon>
+            </v-list-item-avatar>
+            <span
+              v-if="dataset.rest.history"
+              v-t="'history'"
+            />
+            <span
+              v-else
+              v-t="'noHistory'"
+            />
+            <dataset-edit-history
+              v-if="can('writeDescription')"
+              :history="dataset.rest.history"
+              @change="history => {dataset.rest.history = history; patch({rest: dataset.rest})}"
+            />
+          </v-list-item>
+          <v-list-item v-if="dataset.isRest && dataset.rest.history">
+            <v-list-item-avatar class="ml-0 my-0">
+              <v-icon
+                :disabled="!dataset.rest.historyTTL.active"
+                color="warning"
+              >
+                mdi-delete-clock
+              </v-icon>
+            </v-list-item-avatar>
+            <span
+              v-if="dataset.rest.historyTTL.active"
+              v-t="{path: 'historyTTL', args: {days: dataset.rest.historyTTL.delay.value}}"
+            />
+            <span
+              v-else
+              v-t="'noHistoryTTL'"
+            />
+            <dataset-edit-ttl
+              v-if="can('writeDescription')"
+              :ttl="dataset.rest.historyTTL"
+              :schema="dataset.schema"
+              :revisions="true"
+              @change="ttl => {dataset.rest.historyTTL = ttl; patch({rest: dataset.rest})}"
+            />
+          </v-list-item>
+          <v-list-item v-if="dataset.isRest">
+            <v-list-item-avatar class="ml-0 my-0">
               <v-icon
                 :disabled="!dataset.rest.ttl.active"
                 color="warning"
@@ -284,6 +329,10 @@ fr:
     daily: tous les jours
     continuous: en continu
     irregular: irrégulier
+  noHistory: Pas d'historisation (ne conserve pas les révisions des lignes)
+  history: Historisation (conserve les révisions des lignes)
+  historyTTL: Supprimer automatiquement les révisions de lignes qui datent de plus de {days} jours.
+  noHistoryTTL: pas de politique d'expiration des révisions configurée
 en:
   updatedAt: last update of metadata
   dataUpdatedAt: last update of data
@@ -321,6 +370,10 @@ en:
     daily: every day
     continuous: continuous
     irregular: irregular
+  history: History (store revisions of lines)
+  noHistory: 'No history configured (do not store revisions of lines)'
+  historyTTL: Automatically delete revisions more than {days} days old.
+  noHistoryTTL: no automatic expiration of revisions configured
 </i18n>
 
 <script>

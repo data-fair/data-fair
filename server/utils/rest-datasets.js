@@ -74,46 +74,69 @@ exports.collection = (db, dataset) => {
   return db.collection('dataset-data-' + dataset.id)
 }
 
+exports.revisionsCollectionName = (dataset) => 'dataset-revisions-' + dataset.id
 exports.revisionsCollection = (db, dataset) => {
-  return db.collection('dataset-revisions-' + dataset.id)
+  return db.collection(exports.revisionsCollectionName(dataset))
 }
 
 exports.initDataset = async (db, dataset) => {
-  // just in cas of badly cleaner data from previous dataset with same if
+  // just in case of badly cleaned data from previous dataset with same if
   try {
     await exports.deleteDataset(db, dataset)
   } catch (err) {
     // nothing
   }
   const collection = exports.collection(db, dataset)
-  const revisionsCollection = exports.revisionsCollection(db, dataset)
   await Promise.all([
     collection.createIndex({ _needsIndexing: 1 }),
-    revisionsCollection.createIndex({ _lineId: 1, _i: -1 }),
     collection.createIndex({ _i: -1 }, { unique: true })
   ])
-  await exports.applyHistoryTTL(db, dataset)
 }
 
-exports.applyHistoryTTL = async (db, dataset) => {
-  const revisionsCollection = exports.revisionsCollection(db, dataset)
-  if (dataset.rest.historyTTL && dataset.rest.historyTTL.active && dataset.rest.historyTTL.delay && dataset.rest.historyTTL.delay.value) {
-    const expireAfterSeconds = dayjs.duration(dataset.rest.historyTTL.delay.value, dataset.rest.historyTTL.delay.unit || 'days').asSeconds()
-    await revisionsCollection.createIndex({ _updatedAt: 1 }, { expireAfterSeconds, name: 'history-ttl' })
+exports.configureHistory = async (db, dataset) => {
+  const revisionsCollectionExists = (await db.listCollections({ name: exports.revisionsCollectionName(dataset) }).toArray()).length === 1
+  if (!dataset.rest.history) {
+    if (revisionsCollectionExists) await exports.revisionsCollection(db, dataset).drop()
   } else {
-    try {
-      await revisionsCollection.dropIndex('history-ttl')
-    } catch (err) {
-      if (err.codeName !== 'IndexNotFound') throw err
+    const revisionsCollection = exports.revisionsCollection(db, dataset)
+    if (!revisionsCollectionExists) {
+      // create revisions collection and fill it with initial state
+      await revisionsCollection.createIndex({ _lineId: 1, _i: -1 })
+      let revisionsBulkOp = revisionsCollection.initializeUnorderedBulkOp()
+      for await (const line of exports.collection(db, dataset).find()) {
+        const revision = { ...line, _action: 'create' }
+        delete revision._needsIndexing
+        fillPrimaryKeyFromId(revision, dataset)
+        revision._lineId = revision._id
+        delete revision._id
+        if (!revision._deleted) delete revision._deleted
+        revisionsBulkOp.insert(revision)
+        if (revisionsBulkOp.length >= config.mongo.maxBulkOps) {
+          await revisionsBulkOp.execute()
+          revisionsBulkOp = revisionsCollection.initializeUnorderedBulkOp()
+        }
+      }
+      if (revisionsBulkOp.length) await revisionsBulkOp.execute()
+    }
+
+    // manage history TTL
+    if (dataset.rest.historyTTL && dataset.rest.historyTTL.active && dataset.rest.historyTTL.delay && dataset.rest.historyTTL.delay.value) {
+      const expireAfterSeconds = dayjs.duration(dataset.rest.historyTTL.delay.value, dataset.rest.historyTTL.delay.unit || 'days').asSeconds()
+      await revisionsCollection.createIndex({ _updatedAt: 1 }, { expireAfterSeconds, name: 'history-ttl' })
+    } else {
+      try {
+        await revisionsCollection.dropIndex('history-ttl')
+      } catch (err) {
+        if (err.codeName !== 'IndexNotFound') throw err
+      }
     }
   }
 }
 
 exports.deleteDataset = async (db, dataset) => {
-  await Promise.all([
-    exports.collection(db, dataset).drop(),
-    exports.revisionsCollection(db, dataset).drop()
-  ])
+  await exports.collection(db, dataset).drop()
+  const revisionsCollectionExists = (await db.listCollections({ name: exports.revisionsCollectionName(dataset) }).toArray()).length === 1
+  if (revisionsCollectionExists) exports.revisionsCollection(db, dataset).drop()
 }
 
 const getLineId = (line, dataset) => {

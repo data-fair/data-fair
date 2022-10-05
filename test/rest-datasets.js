@@ -428,7 +428,7 @@ describe('REST datasets', () => {
     assert.equal(res.data.storage.collection.size, storageSize)
   })
 
-  it('Activate the history mode', async () => {
+  it('Use the history mode', async () => {
     const ax = await global.ax.hlalonde3
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -580,9 +580,32 @@ describe('REST datasets', () => {
     // disable TTL
     dataset.rest.historyTTL = { active: false }
     res = await ax.patch('/api/v1/datasets/resthistttl', { rest: dataset.rest })
+    await workers.hook('finalizer/resthistttl')
     indexes = await revisionsCollection.listIndexes().toArray()
     assert.equal(indexes.length, 2)
     assert.ok(!indexes.find(i => i.name === 'history-ttl'))
+  })
+
+  it('Toggle the history mode', async () => {
+    const ax = await global.ax.hlalonde3
+    let res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'resthisttoggle',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+    })
+    await workers.hook('finalizer/resthisttoggle')
+    await ax.post('/api/v1/datasets/resthisttoggle/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
+    await workers.hook('finalizer/resthisttoggle')
+    await assert.rejects(ax.get('/api/v1/datasets/resthisttoggle/lines/id1/revisions', { params: { size: 1 } }), (err) => err.status === 400)
+
+    res = await ax.patch('/api/v1/datasets/resthisttoggle', { rest: { history: true } })
+    await workers.hook('finalizer/resthisttoggle')
+    res = await ax.get('/api/v1/datasets/resthisttoggle/lines/id1/revisions', { params: { size: 1 } })
+    assert.equal(res.data.total, 1)
+
+    res = await ax.patch('/api/v1/datasets/resthisttoggle', { rest: { history: false } })
+    await workers.hook('finalizer/resthisttoggle')
+    await assert.rejects(ax.get('/api/v1/datasets/resthisttoggle/lines/id1/revisions', { params: { size: 1 } }), (err) => err.status === 400)
   })
 
   it('Apply a TTL on some date-field', async () => {

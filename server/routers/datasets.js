@@ -419,11 +419,6 @@ router.patch('/:datasetId',
       patch.exports.restToCSV.lastExport = req.dataset?.exports?.restToCSV?.lastExport
     }
 
-    // apply new configuration to rest dataset revisions collection
-    if (req.dataset.isRest && patch.rest) {
-      await restDatasetsUtils.applyHistoryTTL(db, { ...req.dataset, rest: patch.rest })
-    }
-
     if (req.dataset.isVirtual) {
       if (patch.schema || patch.virtual) {
         patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...req.dataset, ...patch })
@@ -482,6 +477,9 @@ router.patch('/:datasetId',
     } else if (patch.thumbnails || patch.masterData) {
     // just change finalizedAt so that cache is invalidated, but the worker doesn't relly need to work on the dataset
       patch.finalizedAt = (new Date()).toISOString()
+    } else if (patch.rest) {
+    // changes in rest history mode will be processed by the finalizer worker
+      patch.status = 'indexed'
     }
 
     const previousDataset = { ...req.dataset }

@@ -5,6 +5,7 @@ const datasetUtils = require('../utils/dataset')
 const attachmentsUtils = require('../utils/attachments')
 const virtualDatasetsUtils = require('../utils/virtual-datasets')
 const taskProgress = require('../utils/task-progress')
+const restDatasetsUtils = require('../utils/rest-datasets')
 
 exports.eventsPrefix = 'finalize'
 
@@ -115,6 +116,9 @@ exports.process = async function (app, dataset) {
   if (dataset.isRest && (await collection.findOne({ id: dataset.id })).status === 'updated') {
     // dataset was updated while we were finalizing.. keep it as such
     delete result.status
+  }
+  if (dataset.isRest) {
+    await restDatasetsUtils.configureHistory(db, dataset)
   }
 
   // virtual datasets have to be re-counted here (others were implicitly counte ad index step)
