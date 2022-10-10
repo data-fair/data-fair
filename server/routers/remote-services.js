@@ -1,4 +1,6 @@
-const { Transform } = require('stream')
+const path = require('path')
+const http = require('http')
+const https = require('https')
 const express = require('express')
 const moment = require('moment')
 const slug = require('slugify')
@@ -6,11 +8,11 @@ const soasLoader = require('soas')
 const marked = require('marked')
 const sanitizeHtml = require('../../shared/sanitize-html')
 const axios = require('../utils/axios')
-const requestProxy = require('@koumoul/express-request-proxy')
+const pipeline = require('stream/promises').pipeline
+const CacheableLookup = require('cacheable-lookup')
 const remoteServiceAPIDocs = require('../../contract/remote-service-api-docs')
 const mongoEscape = require('mongo-escape')
 const config = require('config')
-const requestIp = require('request-ip')
 const ajv = require('ajv')()
 const createError = require('http-errors')
 const validate = ajv.compile(require('../../contract/remote-service'))
@@ -28,6 +30,8 @@ const prometheus = require('../utils/prometheus')
 const datasetAPIDocs = require('../../contract/dataset-api-docs')
 
 const debug = require('debug')('remote-services')
+
+const cacheableLookup = new CacheableLookup()
 
 const router = exports.router = express.Router()
 
@@ -300,23 +304,14 @@ async function getAppOwner (req) {
 }
 
 // Use the proxy as a user of an application
-// TODO: replace express-request-proxy by a simple use of https.request as done in application proxy
-router.use('/:remoteServiceId/proxy*', asyncWrap(async (req, res, next) => {
+// always apply restrictive rate limiting to remote services, privileged access does not go through here
+router.use('/:remoteServiceId/proxy*', rateLimiting.middleware('remoteService'), asyncWrap(async (req, res, next) => {
   const appOwner = await getAppOwner(req)
   debug('Referer application owner', appOwner)
 
   // preventing POST is a simple way to prevent exposing bulk methods through this public proxy
   if (req.method.toUpperCase() !== 'GET') {
     return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')
-  }
-
-  // rate limiting both on number of requests and total size to prevent abuse of this public proxy
-  // it is only meant to be used by applications, not scripts
-  const limiterId = requestIp.getClientIp(req)
-  try {
-    await Promise.all([rateLimiting.remoteServices.nb.consume(limiterId, 1), rateLimiting.remoteServices.kb.consume(limiterId, 1)])
-  } catch (err) {
-    return res.status(429).send('Trop de traffic dans un interval restreint pour cette exposition de service.')
   }
 
   // for perf, do not use the middleware readService, we want to read only absolutely necessary info
@@ -328,62 +323,82 @@ router.use('/:remoteServiceId/proxy*', asyncWrap(async (req, res, next) => {
 
   if (!remoteService) return res.status(404).send('service distant inconnu')
 
-  const headers = { 'x-forwarded-url': `${req.publicBaseUrl}/api/v1/remote-services/${remoteService.id}/proxy/` }
-  // if (appOwner) headers['x-consumer'] = JSON.stringify(appOwner)
+  const headers = {
+    'x-forwarded-url': `${req.publicBaseUrl}/api/v1/remote-services/${remoteService.id}/proxy/`
+  }
+  // auth header, TODO handle query & cookie header types
+  if (remoteService.apiKey && remoteService.apiKey.in === 'header' && remoteService.apiKey.value) {
+    headers[remoteService.apiKey.name] = remoteService.apiKey.value
+  } else if (config.defaultRemoteKey.in === 'header' && config.defaultRemoteKey.value) {
+    headers[config.defaultRemoteKey.name] = config.defaultRemoteKey.value
+  }
+  // transmit some useful headers for REST endpoints
+  ['accept', 'accept-encoding', 'accept-language', 'if-none-match', 'if-modified-since'].forEach(header => {
+    if (req.headers[header]) headers[header] = req.headers[header]
+  })
+
+  // merge incoming and target URL elements
+  const incomingUrl = new URL('http://host' + req.url)
+  const targetUrl = new URL(remoteService.server)
+  const extraPath = req.params['0']
+  targetUrl.pathname = path.join(targetUrl.pathname, extraPath)
+  targetUrl.search = incomingUrl.searchParams
 
   const options = {
-    url: remoteService.server + '*',
-    headers,
-    query: {},
+    host: targetUrl.host,
+    port: targetUrl.port,
+    protocol: targetUrl.protocol,
+    path: targetUrl.pathname + targetUrl.hash + targetUrl.search,
     timeout: config.remoteTimeout,
-    transforms: [{
-      name: 'rate-limiter',
-      match: (resp) => {
-        // Prevent caches in front of data-fair to cache public expositions of remote-services
+    headers,
+    lookup: cacheableLookup.lookup
+  }
+  await new Promise((resolve, reject) => {
+    let timedout = false
+    const reqTimeout = setTimeout(() => {
+      timedout = true
+      req.destroy()
+    }, config.remoteTimeout)
+    const req = (targetUrl.protocol === 'http:' ? http.request : https.request)(options, async (appRes) => {
+      try {
+        ['content-type', 'content-length', 'content-encoding', 'etag', 'pragma', 'cache-control', 'expires', 'last-modified', 'x-taxman-cache-status'].forEach(header => {
+          if (appRes.headers[header]) res.set(header, appRes.headers[header])
+        })
+        // Prevent caches in front of data-fair
         // otherwise rate limiting is not accurate and we have complicated multi-cache cases
-        if (!resp.headers['cache-control']) {
-          resp.headers['cache-control'] = 'private, max-age=0, must-revalidate'
+        if (!appRes.headers['cache-control']) {
+          res.set('cache-control', 'private, max-age=0, must-revalidate')
         } else {
-          resp.headers['cache-control'] = resp.headers['cache-control'].replace('public', 'private')
+          res.set('cache-control', appRes.headers['cache-control'].replace('public', 'private'))
         }
-
-        // If we apply to non 200 codes, the code is transformed in 200
-        // so no kb rate limiting on other codes
-        return resp.statusCode === 200
-      },
-      transform: () => new Transform({
-        transform (chunk, encoding, cb) {
-          cb(null, chunk)
-          this.consumed = (this.consumed || 0) + chunk.length
-          // for perf do not update rate limiter at every chunk, but only every 100kb
-          if (this.consumed > 100000) {
-            rateLimiting.remoteServices.kb.consume(limiterId, this.consumed).catch(() => {})
-            this.consumed = 0
-          }
-        },
-        flush (cb) {
-          cb()
-          rateLimiting.remoteServices.kb.consume(limiterId, this.consumed).catch(() => {})
+        res.status(appRes.statusCode)
+        const throttle = res.throttle('dynamic')
+        await pipeline(appRes, throttle, res)
+        resolve()
+      } catch (err) {
+        if (err.code === 'ERR_STREAM_PREMATURE_CLOSE') {
+          // nothing to do, happens when requests are reinterrupted by browser
+          resolve()
+        } else {
+          console.error('(service-proxy-res) Error while proxying remote service', err)
+          prometheus.internalError.inc({ errorCode: 'service-proxy-res' })
+          reject(err)
         }
-      })
-    }]
-  }
-  // TODO handle query & cookie header types
-  if (remoteService.apiKey && remoteService.apiKey.in === 'header' && remoteService.apiKey.value) {
-    options.headers[remoteService.apiKey.name] = remoteService.apiKey.value
-  } else if (config.defaultRemoteKey.in === 'header' && config.defaultRemoteKey.value) {
-    options.headers[config.defaultRemoteKey.name] = config.defaultRemoteKey.value
-  }
-
-  // We never transmit authentication
-  delete req.headers.authorization
-  delete req.headers.cookie
-  requestProxy(options)(req, res, err => {
-    if (err) {
-      console.error('(service-proxy) Error while proxying remote service', err)
-      prometheus.internalError.inc({ errorCode: 'service-proxy' })
-    }
-    next(err)
+      } finally {
+        clearTimeout(reqTimeout)
+      }
+    })
+    req.on('error', err => {
+      if (timedout) {
+        res.status(504).send('remote-service timed out')
+        resolve()
+      } else {
+        console.error('(service-proxy-req) Error while proxying remote service', err)
+        prometheus.internalError.inc({ errorCode: 'service-proxy-req' })
+        reject(err)
+      }
+    })
+    req.end()
   })
 }))
 

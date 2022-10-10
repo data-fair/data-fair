@@ -88,13 +88,6 @@ module.exports = {
     attachmentStorage: 100 * 1000 * 1000,
     // Maximum size for attachment to be indexed
     attachmentIndexed: 5 * 1000 * 1000,
-    // Limits applied to public re-exposition of remote services used by public applications
-    // will respond with 429 errors when these limits are exceeded
-    remoteServiceRate: {
-      duration: 5, // 5 seconds intervals
-      nb: 100, // 100 req max in this interval
-      kb: 4000 // 4 mb in this interval
-    },
     // Limits applied to all API requests
     apiRate: {
       anonymous: {
@@ -118,6 +111,14 @@ module.exports = {
           // in bytes per second, no 429, instead the stream is throttled
           // used by routes with streamed static files content
           static: 4000000 // 4mb/s
+        }
+      },
+      remoteService: {
+        duration: 5, // 5 seconds intervals
+        nb: 100, // 100 req max in this interval, 429 afterwards
+        // in bytes per second, no 429, instead the stream is throttled
+        bandwidth: {
+          dynamic: 500000 // 500 kb/s
         }
       }
     },

@@ -10,32 +10,18 @@ const asyncWrap = require('./async-wrap')
 // load balancing has to be based on a hash of the rate limiting key i.e the origin IP
 // TODO: optional redis or mongo backend ?
 
-// used for public exposition of remote services, it does not use throttling only rate limiting on both data size and number of requests
-// same limits are applied whether used is authenticated or not, the purpose here is simply to ensure
-// that visualizations can used remote services in a reasonnable manner, this is not for API users
-exports.remoteServices = {
-  kb: new RateLimiterMemory({
-    points: config.defaultLimits.remoteServiceRate.kb * 1000,
-    duration: config.defaultLimits.remoteServiceRate.duration
-  }),
-  nb: new RateLimiterMemory({
-    points: config.defaultLimits.remoteServiceRate.nb,
-    duration: config.defaultLimits.remoteServiceRate.duration
-  })
-}
-
 // other parts of the API are protected using rate-limiting on number of requests and throttling on data size
 // different limits are applied for anonymous or authenticated used
 const limiters = {}
-for (const limitType of ['user', 'anonymous']) {
+for (const limitType of Object.keys(config.defaultLimits.apiRate)) {
   limiters[limitType] = new RateLimiterMemory({
     points: config.defaultLimits.apiRate[limitType].nb,
     duration: config.defaultLimits.apiRate[limitType].duration
   })
 }
 const throttleGroups = {}
-exports.middleware = asyncWrap(async (req, res, next) => {
-  const limitType = req.user && req.user.id ? 'user' : 'anonymous'
+exports.middleware = (_limitType) => asyncWrap(async (req, res, next) => {
+  const limitType = _limitType || ((req.user && req.user.id) ? 'user' : 'anonymous')
   const throttlingId = limitType === 'user' ? req.user.id : requestIp.getClientIp(req)
 
   try {
