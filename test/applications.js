@@ -152,6 +152,7 @@ describe('Applications', () => {
 
     // when an error is thrown it is forwarded
     await assert.rejects(ax.get('/api/v1/applications/' + app.id + '/capture?app_test=1&app_capture-test-error=true'), (err) => {
+      assert.equal(err.headers['cache-control'], 'no-cache')
       assert.equal(err.status, 500)
       return true
     })

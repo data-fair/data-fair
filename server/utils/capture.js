@@ -106,10 +106,19 @@ exports.screenshot = async (req, res) => {
 
       // In case of error do not keep corrupted or empty file
       await fs.remove(capturePath)
+      res.set('Cache-Control', 'no-cache')
+      res.set('Expires', '-1')
       return res.redirect(req.publicBaseUrl + '/no-preview.png')
     }
   } else {
     res.set('x-capture-cache-status', 'BYPASS')
-    await pump(request(reqOpts), res)
+    const captureReq = request(reqOpts)
+    captureReq.on('response', (captureRes) => {
+      if (captureRes.statusCode >= 400) {
+        res.set('Cache-Control', 'no-cache')
+        res.set('Expires', '-1')
+      }
+    })
+    await pump(captureReq, res)
   }
 }
