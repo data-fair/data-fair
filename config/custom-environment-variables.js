@@ -21,6 +21,21 @@ module.exports = {
       __format: 'json'
     }
   },
+  cache: {
+    publicMaxAge: {
+      __name: 'CACHE_PUBLIC_MAX_AGE',
+      __format: 'json'
+    },
+    timestampedPublicMaxAge: {
+      __name: 'CACHE_TIMESTAMPED_PUBLIC_MAX_AGE',
+      __format: 'json'
+    },
+    // size of cache of vector tiles in mongodb (in mb)
+    mongoSize: {
+      __name: 'CACHE_MONGO_SIZE',
+      __format: 'json'
+    }
+  },
   analytics: {
     __name: 'ANALYTICS',
     __format: 'json'

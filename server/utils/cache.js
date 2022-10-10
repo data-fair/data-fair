@@ -8,7 +8,7 @@ const debug = require('debug')('cache')
 
 exports.init = async (db) => {
   const collection = (await db.listCollections({ name: 'cache' }).toArray())[0]
-  if (!collection) await db.createCollection('cache', { capped: true, size: config.cache.size * 1000000 })
+  if (!collection) await db.createCollection('cache', { capped: true, size: config.cache.mongoSize * 1000000 })
   return db.collection('cache')
 }
 
