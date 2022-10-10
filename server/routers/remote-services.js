@@ -339,7 +339,7 @@ router.use('/:remoteServiceId/proxy*', rateLimiting.middleware('remoteService'),
 
   // merge incoming and target URL elements
   const incomingUrl = new URL('http://host' + req.url)
-  const targetUrl = new URL(remoteService.server)
+  const targetUrl = new URL(remoteService.server.replace(config.remoteServicesPrivateMapping[0], config.remoteServicesPrivateMapping[1]))
   const extraPath = req.params['0']
   targetUrl.pathname = path.join(targetUrl.pathname, extraPath)
   targetUrl.search = incomingUrl.searchParams
@@ -371,6 +371,7 @@ router.use('/:remoteServiceId/proxy*', rateLimiting.middleware('remoteService'),
         } else {
           res.set('cache-control', appRes.headers['cache-control'].replace('public', 'private'))
         }
+        res.setHeader('X-Accel-Buffering', 'no')
         res.status(appRes.statusCode)
         const throttle = res.throttle('dynamic')
         await pipeline(appRes, throttle, res)

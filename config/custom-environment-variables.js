@@ -60,9 +60,6 @@ module.exports = {
       __format: 'json'
     }
   },
-  defaultRemoteKey: {
-    value: 'DEFAULT_REMOTE_KEY'
-  },
   secretKeys: {
     identities: 'SECRET_IDENTITIES',
     limits: 'SECRET_LIMITS',
@@ -175,6 +172,13 @@ module.exports = {
   },
   remoteServices: {
     __name: 'REMOTE_SERVICES',
+    __format: 'json'
+  },
+  defaultRemoteKey: {
+    value: 'DEFAULT_REMOTE_KEY'
+  },
+  remoteServicesPrivateMapping: {
+    __name: 'REMOTE_SERVICES_PRIVATE_MAPPING',
     __format: 'json'
   },
   catalogs: {

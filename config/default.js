@@ -139,13 +139,6 @@ module.exports = {
   adminRole: 'admin',
   contribRole: 'contrib',
   userRole: 'user',
-  // A global default API key for backend to backend calls to remote services
-  defaultRemoteKey: {
-    in: 'header',
-    name: 'x-apiKey',
-    value: null
-  },
-  remoteTimeout: 5000,
   // secrets that can be used to configure global webhooks for example to update users and organizations
   secretKeys: {
     identities: null,
@@ -273,6 +266,14 @@ module.exports = {
     href: 'https://www.data.gouv.fr',
     logo: 'https://static.data.gouv.fr/_themes/gouvfr/img/logo-header.svg'
   }],
+  // A global default API key for backend to backend calls to remote services
+  defaultRemoteKey: {
+    in: 'header',
+    name: 'x-apiKey',
+    value: null
+  },
+  remoteTimeout: 5000,
+  remoteServicesPrivateMapping: ['', ''], // an optional 2 items array mapping url prefixes from remote service to the local equivalent
   disableSharing: false,
   disableApplications: false,
   disableRemoteServices: false,
