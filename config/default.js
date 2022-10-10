@@ -173,7 +173,7 @@ module.exports = {
   analytics: {}, // a "modules" definition for @koumoul/vue-multianalytics
   browserLogLevel: 'error',
   thumbor: {
-    url: 'http://localhost:8000',
+    url: 'http://thumbor:8000',
     key: 'thumborkey'
   },
   nuxtDev: false,

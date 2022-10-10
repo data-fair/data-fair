@@ -4,10 +4,10 @@
 const host = 'localhost'
 
 module.exports = {
-  port: 5600,
+  port: 5599,
   dataDir: './data/development',
-  publicUrl: `http://${host}:5600`,
-  wsPublicUrl: `ws://${host}:5600`,
+  publicUrl: `http://${host}:5600/data-fair`,
+  wsPublicUrl: `ws://${host}:5600/data-fair`,
   directoryUrl: `http://${host}:5600/simple-directory`,
   privateDirectoryUrl: 'http://localhost:5600/simple-directory',
   openapiViewerUrl: `http://${host}:5600/openapi-viewer/`,
@@ -16,6 +16,10 @@ module.exports = {
   notifyUrl: `http://${host}:5600/notify`,
   privateNotifyUrl: 'http://localhost:8088',
   notifyWSUrl: 'ws://localhost:8088',
+  thumbor: {
+    url: 'http://localhost:8000',
+    key: 'thumborkey'
+  },
   // subscriptionUrl: 'https://staging-koumoul.com/s/customers/embed/subscription',
   defaultLimits: {
     totalStorage: 10000000000,

@@ -6,7 +6,7 @@ services:
   #########################
 
   nginx:
-    image: nginx:1.21.6-alpine
+    image: nginx:1.23.1-alpine
     restart: ${RESTART}
     volumes:
       - ./default.conf:/etc/nginx/conf.d/default.conf:ro

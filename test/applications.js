@@ -80,7 +80,7 @@ describe('Applications', () => {
     // The configuration is injected
     assert.ok(res.data.includes('window.APPLICATION={'))
     // A link to the manifest is injected
-    assert.ok(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/app/${appId}/manifest.json">`))
+    assert.ok(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/data-fair/app/${appId}/manifest.json">`))
     // The app reference a service worker
     assert.ok(res.data.includes('/app-sw.js'))
     // the app contains the brand embed (cf config.brand.embed)

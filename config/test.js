@@ -1,9 +1,19 @@
 module.exports = {
-  port: 4657,
-  publicUrl: 'http://localhost:4657',
-  wsPublicUrl: 'ws://localhost:4657',
-  captureUrl: 'http://localhost:8087',
+  port: 5599,
+  publicUrl: 'http://localhost:5600/data-fair',
+  wsPublicUrl: 'ws://localhost:5600/data-fair',
+  directoryUrl: 'http://localhost:5600/simple-directory',
+  privateDirectoryUrl: 'http://localhost:5600/simple-directory',
+  openapiViewerUrl: 'http://localhost:5600/openapi-viewer/',
+  captureUrl: 'http://localhost:5600/capture',
   privateCaptureUrl: 'http://localhost:8087',
+  notifyUrl: 'http://localhost:5600/notify',
+  privateNotifyUrl: 'http://localhost:8088',
+  notifyWSUrl: 'ws://localhost:8088',
+  thumbor: {
+    url: 'http://localhost:8000',
+    key: 'thumborkey'
+  },
   dataDir: './data/test',
   brand: {
     embed: '<div>application embed</div>'

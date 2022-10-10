@@ -56,6 +56,8 @@ before('init globals', async () => {
   global.ax.builder = async (email, org, opts = {}) => {
     debug('prepare axios instance', email)
     opts.baseURL = config.publicUrl
+    opts.headers = opts.headers || {}
+    opts.headers['x-cache-bypass'] = opts.headers['x-cache-bypass'] || '1'
 
     let ax
     if (email) ax = await axiosAuth(email, org, opts)

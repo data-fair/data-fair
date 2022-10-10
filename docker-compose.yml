@@ -1,5 +1,14 @@
 version: '3'
 services:
+  nginx:
+    image: nginx:1.23.1-alpine
+    profiles:
+      - dev
+      - test
+    network_mode: host
+    volumes:
+      - ./test/resources/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
   es:
     profiles:
       - dev

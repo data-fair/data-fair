@@ -38,22 +38,6 @@ if (config.mode.includes('server')) {
     else next()
   })
 
-  if (process.env.NODE_ENV === 'development') {
-    // Create a mono-domain environment with other services in dev
-    const { createProxyMiddleware } = require('http-proxy-middleware')
-    app.use('/openapi-viewer', createProxyMiddleware({ target: 'http://localhost:5680', pathRewrite: { '^/openapi-viewer': '' } }))
-    app.use('/simple-directory', createProxyMiddleware({ target: 'http://localhost:8080', pathRewrite: { '^/simple-directory': '' } }))
-    app.use('/capture', createProxyMiddleware({ target: 'http://localhost:8087', pathRewrite: { '^/capture': '' } }))
-    app.use('/notify', createProxyMiddleware({ target: 'http://localhost:8088', pathRewrite: { '^/notify': '' } }))
-
-    // but also serve this whole service on another domain, use this to simulate a portal exposed independantly
-    const mirrorApp = express()
-    mirrorApp.use('/', createProxyMiddleware({ target: 'http://localhost:5600' }))
-    mirrorApp.listen(5601, () => {
-      console.log('mirror server listening on http://localhost:5601')
-    })
-  }
-
   const bodyParser = express.json({ limit: '1000kb' })
   app.use((req, res, next) => {
     // routes with _bulk are streamed, others are parsed as JSON
