@@ -165,10 +165,10 @@ module.exports = {
   },
   cache: {
     // set cache-control max-age for public GET endpoints (in seconds)
-    publicMaxAge: 20,
-    timestampedPublicMaxAge: 60 * 60 * 24 * 7,
+    publicMaxAge: 300, // 5 minutes
+    timestampedPublicMaxAge: 60 * 60 * 24 * 7, // 1 week
     // size of cache of vector tiles in mongodb (in mb)
-    size: 1000
+    mongoSize: 2000 // 2G
   },
   analytics: {}, // a "modules" definition for @koumoul/vue-multianalytics
   browserLogLevel: 'error',
