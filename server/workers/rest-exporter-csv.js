@@ -29,7 +29,7 @@ exports.process = async function (app, dataset) {
       fs.createWriteStream(tmpFile)
     )
 
-    const exportedFile = datasetUtils.exportedFileName(dataset, '.csv')
+    const exportedFile = datasetUtils.exportedFilePath(dataset, '.csv')
     debug('mode to file', exportedFile)
     await fs.move(tmpFile, exportedFile, { overwrite: true })
   } catch (err) {

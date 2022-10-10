@@ -9,14 +9,6 @@ const limits = require('./limits')
 const exec = require('./exec')
 const debug = require('debug')('attachments')
 
-exports.downloadAttachment = (req, res, next) => {
-  // no buffering of this response in the reverse proxy
-  res.setHeader('X-Accel-Buffering', 'no')
-  const filePath = req.params['0']
-  if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
-  res.download(path.resolve(datasetUtils.attachmentsDir(req.dataset), filePath))
-}
-
 exports.addAttachments = async (dataset, attachmentsArchive) => {
   const dir = datasetUtils.attachmentsDir(dataset)
   await fs.ensureDir(dir)

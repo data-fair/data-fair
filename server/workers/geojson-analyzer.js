@@ -57,7 +57,7 @@ exports.process = async function (app, dataset) {
   const attachments = await datasetUtils.lsAttachments(dataset)
   const analyzer = new AnalyzerWritable({ attachments, existingSchema: dataset.schema || [] })
   await pump(
-    fs.createReadStream(datasetUtils.fileName(dataset)),
+    fs.createReadStream(datasetUtils.filePath(dataset)),
     iconv.decodeStream(dataset.file.encoding),
     JSONStream.parse('features.*'),
     analyzer

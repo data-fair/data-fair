@@ -37,26 +37,25 @@ exports.dir = (dataset) => {
   return path.join(...parts)
 }
 
-exports.fileName = (dataset) => {
+exports.filePath = (dataset) => {
   return path.join(exports.dir(dataset), dataset.file.name)
 }
 
-exports.originalFileName = (dataset) => {
+exports.originalFilePath = (dataset) => {
   return path.join(exports.dir(dataset), dataset.originalFile.name)
 }
 
 exports.fullFileName = (dataset) => {
   const parsed = path.parse(dataset.file.name)
-  return path.join(exports.dir(dataset), `${parsed.name}-full${parsed.ext}`)
+  return `${parsed.name}-full${parsed.ext}`
 }
 
-exports.exportedFileName = (dataset, ext) => {
+exports.fullFilePath = (dataset) => {
+  return path.join(exports.dir(dataset), exports.fullFileName(dataset))
+}
+
+exports.exportedFilePath = (dataset, ext) => {
   return path.join(exports.dir(dataset), `${dataset.id}-last-export${ext}`)
-}
-
-exports.extFileName = (dataset, ext) => {
-  const parsed = path.parse(dataset.originalFile.name)
-  return path.join(exports.dir(dataset), `${parsed.name}.${ext}`)
 }
 
 exports.attachmentsDir = (dataset) => {
@@ -86,11 +85,11 @@ exports.lsMetadataAttachments = async (dataset) => {
 exports.lsFiles = async (dataset) => {
   const infos = {}
   if (dataset.file) {
-    const filePath = exports.fileName(dataset)
+    const filePath = exports.filePath(dataset)
     infos.file = { filePath, size: (await fs.promises.stat(filePath)).size }
   }
   if (dataset.originalFile) {
-    const filePath = exports.originalFileName(dataset)
+    const filePath = exports.originalFilePath(dataset)
     infos.originalFile = { filePath, size: (await fs.promises.stat(filePath)).size }
   }
   if (dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
@@ -288,11 +287,11 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
 // Read the dataset file and get a stream of line items
 exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraftLimit = false, progress) => {
   if (dataset.isRest) return restDatasetsUtils.readStreams(db, dataset)
-  const fileName = full ? exports.fullFileName(dataset) : exports.fileName(dataset)
+  const filePath = full ? exports.fullFilePath(dataset) : exports.filePath(dataset)
 
-  let streams = [fs.createReadStream(fileName)]
+  let streams = [fs.createReadStream(filePath)]
   if (progress) {
-    const { size } = await fs.stat(fileName)
+    const { size } = await fs.stat(filePath)
     streams.push(new Transform({
       transform (chunk, encoding, callback) {
         progress((chunk.length / size) * 100)

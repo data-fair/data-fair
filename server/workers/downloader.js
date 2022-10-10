@@ -36,12 +36,12 @@ exports.process = async function (app, dataset) {
   if (remaining.storage === 0) throw new Error('Vous avez atteint la limite de votre espace de stockage.')
   if (remaining.indexed === 0) throw new Error('Vous avez atteint la limite de votre espace de données indexées.')
 
-  const fileName = datasetUtils.originalFileName({ ...dataset, ...patch })
+  const filePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
   await pump(
     request({ ...catalogHttpParams, method: 'GET', url: dataset.remoteFile.url }),
-    fs.createWriteStream(fileName)
+    fs.createWriteStream(filePath)
   )
-  debug(`Successfully downloaded file ${fileName}`)
+  debug(`Successfully downloaded file ${filePath}`)
 
   if (!basicTypes.includes(dataset.originalFile.mimetype)) {
     // we first need to convert the file in a textual format easy to index

@@ -62,7 +62,7 @@ exports.extend = async (app, dataset, extensions) => {
     ...writeStreams
   )
   const filePath = writeStreams[writeStreams.length - 1].path
-  if (filePath) await fs.move(filePath, datasetUtils.fullFileName(dataset), { overwrite: true })
+  if (filePath) await fs.move(filePath, datasetUtils.fullFilePath(dataset), { overwrite: true })
 
   debug('Extension is over')
 }

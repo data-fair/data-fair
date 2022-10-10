@@ -44,9 +44,9 @@ exports.process = async function (app, dataset) {
   const indexStream = es.indexStream({ esClient, indexName, dataset, attachments })
 
   if (!dataset.extensions || dataset.extensions.filter(e => e.active).length === 0) {
-    if (dataset.file && await fs.pathExists(datasetUtils.fullFileName(dataset))) {
+    if (dataset.file && await fs.pathExists(datasetUtils.fullFilePath(dataset))) {
       debug('Delete previously extended file')
-      await fs.remove(datasetUtils.fullFileName(dataset))
+      await fs.remove(datasetUtils.fullFilePath(dataset))
       if (!dataset.draftReason) await datasetUtils.updateStorage(db, dataset, false, true)
     }
   }
@@ -63,7 +63,7 @@ exports.process = async function (app, dataset) {
     writeStream = restDatasetsUtils.markIndexedStream(db, dataset)
   } else {
     const extended = dataset.extensions && dataset.extensions.find(e => e.active)
-    if (!extended) await fs.remove(datasetUtils.fullFileName(dataset))
+    if (!extended) await fs.remove(datasetUtils.fullFilePath(dataset))
     readStreams = await datasetUtils.readStreams(db, dataset, false, extended, false, progress)
     writeStream = new Writable({ objectMode: true, write (chunk, encoding, cb) { cb() } })
   }

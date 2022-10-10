@@ -412,8 +412,8 @@ router.patch('/:datasetId',
         patch.exports.restToCSV.nextExport = job.nextDates().toISOString()
       } else {
         delete patch.exports.restToCSV.nextExport
-        if (await fs.pathExists(datasetUtils.exportedFileName(req.dataset, '.csv'))) {
-          await fs.remove(datasetUtils.exportedFileName(req.dataset, '.csv'))
+        if (await fs.pathExists(datasetUtils.exportedFilePath(req.dataset, '.csv'))) {
+          await fs.remove(datasetUtils.exportedFilePath(req.dataset, '.csv'))
         }
       }
       patch.exports.restToCSV.lastExport = req.dataset?.exports?.restToCSV?.lastExport
@@ -587,7 +587,7 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft, res) => {
     }
 
     await fs.ensureDir(datasetUtils.dir({ ...dataset, ...patch }))
-    await fs.move(file.path, datasetUtils.originalFileName({ ...dataset, ...patch }))
+    await fs.move(file.path, datasetUtils.originalFilePath({ ...dataset, ...patch }))
   } else {
     if (draft) {
       patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant' }
@@ -597,10 +597,10 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft, res) => {
 
   // in draft mode this file replacement will occur later, when draft is validated
   if (!draft) {
-    const oldOriginalFileName = dataset.originalFile && datasetUtils.originalFileName({ ...dataset, ...patch, originalFile: dataset.originalFile })
-    const newOriginalFileName = datasetUtils.originalFileName({ ...dataset, ...patch })
-    if (oldOriginalFileName && oldOriginalFileName !== newOriginalFileName) {
-      await fs.remove(oldOriginalFileName)
+    const oldoriginalFilePath = dataset.originalFile && datasetUtils.originalFilePath({ ...dataset, ...patch, originalFile: dataset.originalFile })
+    const neworiginalFilePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
+    if (oldoriginalFilePath && oldoriginalFilePath !== neworiginalFilePath) {
+      await fs.remove(oldoriginalFilePath)
     }
   }
 
@@ -612,22 +612,22 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft, res) => {
     patch.status = 'loaded'
     if (file) {
       patch.file = patch.originalFile
-      const fileName = datasetUtils.fileName({ ...dataset, ...patch })
+      const filePath = datasetUtils.filePath({ ...dataset, ...patch })
       // Try to prevent weird bug with NFS by forcing syncing file before sampling
-      const fd = await fs.open(fileName, 'r')
+      const fd = await fs.open(filePath, 'r')
       await fs.fsync(fd)
       await fs.close(fd)
       const fileSample = await datasetFileSample({ ...dataset, ...patch })
-      debugFiles(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${fileName}`)
+      debugFiles(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${filePath}`)
       patch.file.encoding = chardet.detect(fileSample)
-      debugFiles(`Detected encoding ${patch.file.encoding} for file ${fileName}`)
+      debugFiles(`Detected encoding ${patch.file.encoding} for file ${filePath}`)
     }
   }
 
-  if (draft && !file && !await fs.pathExists(datasetUtils.fileName({ ...dataset, ...patch }))) {
+  if (draft && !file && !await fs.pathExists(datasetUtils.filePath({ ...dataset, ...patch }))) {
     // this happens if we upload only the attachments, not the data file itself
     // in this case copy the one from prod
-    await fs.copy(datasetUtils.fileName(dataset), datasetUtils.fileName({ ...dataset, ...patch }))
+    await fs.copy(datasetUtils.filePath(dataset), datasetUtils.filePath({ ...dataset, ...patch }))
   }
   if (draft && !attachmentsFile && await fs.pathExists(datasetUtils.attachmentsDir(dataset)) && !await fs.pathExists(datasetUtils.attachmentsDir({ ...dataset, ...patch }))) {
     // this happens if we upload only the main data file and not the attachments
@@ -907,10 +907,10 @@ router.post('/:datasetId/draft', lockDataset(), readDataset(['finalized'], true)
     { $set: patch, $unset: { draft: '' } },
     { returnDocument: 'after' }
   )).value
-  if (req.dataset.prod.originalFile) await fs.remove(datasetUtils.originalFileName(req.dataset.prod))
+  if (req.dataset.prod.originalFile) await fs.remove(datasetUtils.originalFilePath(req.dataset.prod))
   if (req.dataset.prod.file) {
-    await fs.remove(datasetUtils.fileName(req.dataset.prod))
-    await fs.remove(datasetUtils.fullFileName(req.dataset.prod))
+    await fs.remove(datasetUtils.filePath(req.dataset.prod))
+    await fs.remove(datasetUtils.fullFilePath(req.dataset.prod))
     webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
 
     // WARNING, this functionality is kind of a duplicate of the UI in dataset-schema.vue
@@ -952,7 +952,7 @@ router.post('/:datasetId/draft', lockDataset(), readDataset(['finalized'], true)
     }
   }
   await fs.ensureDir(datasetUtils.dir(patchedDataset))
-  await fs.move(datasetUtils.originalFileName(req.dataset), datasetUtils.originalFileName(patchedDataset))
+  await fs.move(datasetUtils.originalFilePath(req.dataset), datasetUtils.originalFilePath(patchedDataset))
   if (await fs.pathExists(datasetUtils.attachmentsDir(req.dataset))) {
     await fs.remove(datasetUtils.attachmentsDir(patchedDataset))
     await fs.move(datasetUtils.attachmentsDir(req.dataset), datasetUtils.attachmentsDir(patchedDataset))
@@ -1452,10 +1452,8 @@ router.get('/:datasetId/min/:fieldKey', readDataset(), applicationKey, permissio
 router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissions.middleware('downloadAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
   // no buffering of this response in the reverse proxy
   res.setHeader('X-Accel-Buffering', 'no')
-  const filePath = req.params['0']
-  if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
   // the transform stream option was patched into "send" module using patch-package
-  res.download(path.resolve(datasetUtils.attachmentsDir(req.dataset), filePath), null, { transformStream: res.throttle('static') })
+  res.download(req.params['0'], null, { transformStream: res.throttle('static'), root: datasetUtils.attachmentsDir(req.dataset) })
 })
 
 // Direct access to data files
@@ -1465,10 +1463,8 @@ router.get('/:datasetId/data-files', readDataset(), permissions.middleware('list
 router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadDataFile', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   // no buffering of this response in the reverse proxy
   res.setHeader('X-Accel-Buffering', 'no')
-  const filePath = req.params['0']
-  if (filePath.includes('..')) return res.status(400).send('Unacceptable data file path')
   // the transform stream option was patched into "send" module using patch-package
-  res.download(path.resolve(datasetUtils.dir(req.dataset), filePath), null, { transformStream: res.throttle('static') })
+  res.download(req.params['0'], null, { transformStream: res.throttle('static'), root: datasetUtils.dir(req.dataset) })
 }))
 
 // Special attachments referenced in dataset metadatas
@@ -1481,10 +1477,8 @@ router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middl
 router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('downloadMetadataAttachment', 'read'), cacheHeaders.noCache, (req, res, next) => {
   // no buffering of this response in the reverse proxy
   res.setHeader('X-Accel-Buffering', 'no')
-  const filePath = req.params['0']
-  if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
   // the transform stream option was patched into "send" module using patch-package
-  res.download(path.resolve(datasetUtils.metadataAttachmentsDir(req.dataset), filePath), null, { transformStream: res.throttle('static') })
+  res.download(req.params['0'], null, { transformStream: res.throttle('static'), root: datasetUtils.metadataAttachmentsDir(req.dataset) })
 })
 router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('deleteMetadataAttachment', 'write'), asyncWrap(async (req, res, next) => {
   const filePath = req.params['0']
@@ -1513,7 +1507,7 @@ router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOri
   }
   if (!req.dataset.originalFile) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
   // the transform stream option was patched into "send" module using patch-package
-  res.download(datasetUtils.originalFileName(req.dataset), null, { transformStream: res.throttle('static') })
+  res.download(req.dataset.originalFile.name, null, { transformStream: res.throttle('static'), root: datasetUtils.dir(req.dataset) })
 }))
 
 // Download the dataset in various formats
@@ -1523,7 +1517,7 @@ router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloa
   if (!req.dataset.file) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
 
   // the transform stream option was patched into "send" module using patch-package
-  res.download(datasetUtils.fileName(req.dataset), null, { transformStream: res.throttle('static') })
+  res.download(req.dataset.file.name, null, { transformStream: res.throttle('static'), root: datasetUtils.dir(req.dataset) })
 })
 
 // Download the full dataset with extensions
@@ -1532,10 +1526,10 @@ router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFu
   // no buffering of this response in the reverse proxy
   res.setHeader('X-Accel-Buffering', 'no')
   // the transform stream option was patched into "send" module using patch-package
-  if (await fs.pathExists(datasetUtils.fullFileName(req.dataset))) {
-    res.download(datasetUtils.fullFileName(req.dataset), null, { transformStream: res.throttle('static') })
+  if (await fs.pathExists(datasetUtils.fullFilePath(req.dataset))) {
+    res.download(datasetUtils.fullFileName(req.dataset), null, { transformStream: res.throttle('static'), root: datasetUtils.dir(req.dataset) })
   } else {
-    res.download(datasetUtils.fileName(req.dataset), null, { transformStream: res.throttle('static') })
+    res.download(req.dataset.file.name, null, { transformStream: res.throttle('static'), root: datasetUtils.dir(req.dataset) })
   }
 }))
 

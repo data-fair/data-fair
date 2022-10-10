@@ -56,7 +56,7 @@ async function decompress (mimetype, filePath, dirPath) {
 exports.process = async function (app, dataset) {
   const debug = require('debug')(`worker:converter:${dataset.id}`)
   const db = app.get('db')
-  const originalFilePath = datasetUtils.originalFileName(dataset)
+  const originalFilePath = datasetUtils.originalFilePath(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
   const tmpDir = (await tmp.dir()).path
 
@@ -67,13 +67,13 @@ exports.process = async function (app, dataset) {
     const files = (await dir.promiseFiles(tmpDir))
       .map(f => path.relative(tmpDir, f))
       .filter(p => path.basename(p).toLowerCase() !== 'thumbs.db')
-    const fileNames = files.map(f => path.parse(f))
+    const filePaths = files.map(f => path.parse(f))
 
     // Check if this archive is actually a shapefile source
-    const shpFile = fileNames.find(f => f.ext.toLowerCase().endsWith('.shp'))
+    const shpFile = filePaths.find(f => f.ext.toLowerCase().endsWith('.shp'))
     if (shpFile &&
-        fileNames.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.shx')) &&
-        fileNames.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.dbf'))) {
+        filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.shx')) &&
+        filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.dbf'))) {
       isShapefile = true
     } else {
       if (await fs.pathExists(datasetUtils.attachmentsDir(dataset))) {
