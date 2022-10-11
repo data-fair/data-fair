@@ -112,7 +112,7 @@ describe('Applications', () => {
       await ax.get(config.captureUrl + '/api/v1/api-docs.json')
     } catch (err) {
       console.warn('capture is not available in this test environment')
-      assert.equal(err.code, 'ECONNREFUSED')
+      assert.equal(err.status, 502)
       return
     }
 
