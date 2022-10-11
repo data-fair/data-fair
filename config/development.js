@@ -10,7 +10,7 @@ module.exports = {
   wsPublicUrl: `ws://${host}:5600/data-fair`,
   directoryUrl: `http://${host}:5600/simple-directory`,
   privateDirectoryUrl: 'http://localhost:5600/simple-directory',
-  openapiViewerUrl: `http://${host}:5600/openapi-viewer/`,
+  openapiViewerUrl: `http://${host}:5600/api-doc/`,
   captureUrl: `http://${host}:5600/capture`,
   privateCaptureUrl: 'http://localhost:8087',
   notifyUrl: `http://${host}:5600/notify`,

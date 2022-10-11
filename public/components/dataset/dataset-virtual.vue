@@ -82,6 +82,12 @@
                     @change="field => addField(field, child)"
                   />
                 </v-list-item-subtitle>
+                <v-list-item-subtitle>
+                  <dataset-virtual-child-compat
+                    :parent-schema="schema"
+                    :child="childrenById[child]"
+                  />
+                </v-list-item-subtitle>
               </v-list-item-content>
               <v-list-item-action>
                 <v-icon
@@ -410,7 +416,7 @@ export default {
     async fetchChildren () {
       this.loadingChildren = true
       const res = await this.$axios.$get('api/v1/datasets', {
-        params: { size: 1000, select: 'id,title,schema', id: this.virtual.children.join(',') }
+        params: { size: 1000, select: 'id,title,schema,status', id: this.virtual.children.join(',') }
       })
       // remove children that do not exist anymore
       this.virtual.children = this.virtual.children.filter(child => res.results.find(d => d.id === child))
