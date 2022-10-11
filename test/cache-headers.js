@@ -4,7 +4,7 @@ const config = require('config')
 const { nanoid } = require('nanoid')
 const workers = require('../server/workers')
 
-describe.only('Cache headers', () => {
+describe('Cache headers', () => {
   const createDataset = async (ax) => {
     // Set the correct owner
     let dataset = (await ax.post('/api/v1/datasets', {
