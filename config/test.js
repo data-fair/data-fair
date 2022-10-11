@@ -93,5 +93,9 @@ module.exports = {
   }],
   prometheus: {
     port: 9092
+  },
+  cache: {
+    // set cache-control max-age for public GET endpoints (in seconds)
+    publicMaxAge: 1
   }
 }

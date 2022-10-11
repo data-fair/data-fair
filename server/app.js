@@ -32,6 +32,22 @@ if (config.mode.includes('server')) {
   app.set('trust proxy', 1)
   app.set('json spaces', 2)
 
+  app.use((req, res, next) => {
+    // We use custom "X-Private-If-Modified-Since" and "X-Private-If-None-Match" headers as
+    // alternatives to "If-Modified-Since" and "If-None-Match"
+    // this is because nginx does not transmit these headers when proxy cache is activated
+    // but in the case of a "Private" cache-control proxy pass is not used but it still breaks
+    // summary :
+    // this is necessary for private cache revalidation when public cache revalication is activated in nginx
+    if (req.headers['x-private-if-modified-since'] && !req.headers['if-modified-since']) {
+      req.headers['if-modified-since'] = req.headers['x-private-if-modified-since']
+    }
+    if (req.headers['x-private-if-none-match'] && !req.headers['if-none-match']) {
+      req.headers['if-none-match'] = req.headers['x-private-if-none-match']
+    }
+    next()
+  })
+
   app.use(cors())
   app.use((req, res, next) => {
     if (!req.app.get('api-ready')) res.status(503).send('Service indisponible pour cause de maintenance.')

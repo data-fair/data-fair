@@ -1,6 +1,8 @@
 const config = require('config')
 const createError = require('http-errors')
 const useragent = require('useragent')
+const debug = require('debug')('cache-headers')
+
 // adapt headers based on the state of the currently requested resource
 // Set max-age
 // Also compare last-modified and if-modified-since headers for cache revalidation on a specific resource
@@ -12,9 +14,11 @@ exports.resourceBased = (req, res, next) => {
   const date = new Date(dateStr)
   const dateUTC = date.toUTCString()
   const cacheVisibility = req.publicOperation ? 'public' : 'private'
+  debug(`dateUTC=${dateUTC}, visibility=${cacheVisibility}`)
 
   const ifModifiedSince = req.get('if-modified-since')
   if (ifModifiedSince && dateUTC === ifModifiedSince) {
+    debug('if-modified-since matches local date, return 304')
     return res.status(304).send()
   }
   res.setHeader('Last-Modified', dateUTC)
@@ -25,9 +29,10 @@ exports.resourceBased = (req, res, next) => {
   }
 
   // finalizedAt passed as query parameter is used to timestamp the query and
-  // make it compatible with a longer caching, only for datasets
+  // make it compatible with a longer caching
   const queryDateStr = req.query.finalizedAt || req.query.updatedAt
   if (queryDateStr) {
+    debug('date in query parameter, use longer max age', queryDateStr)
     const queryDate = new Date(queryDateStr)
     if (queryDate > date) {
       console.warn(`wrong usage of finalizedAt or updatedAt parameters: query=${JSON.stringify(req.query)}, resource=${{ fullUpdatedAt: req.resource.fullUpdatedAt, finalizedAt: req.resource.finalizedAt, updatedAt: req.resource.updatedAt }}`)
