@@ -7,9 +7,6 @@ module.exports = {
   openapiViewerUrl: 'http://localhost:5600/api-doc/',
   captureUrl: 'http://localhost:5600/capture',
   privateCaptureUrl: 'http://localhost:8087',
-  notifyUrl: 'http://localhost:5600/notify',
-  privateNotifyUrl: 'http://localhost:8088',
-  notifyWSUrl: 'ws://localhost:8088',
   thumbor: {
     url: 'http://localhost:8000',
     key: 'thumborkey'
