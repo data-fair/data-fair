@@ -445,7 +445,12 @@ export default {
       this.virtual.children.splice(i, 1)
     },
     async addField (field, child) {
-      this.schema.push({ key: field.key, title: field.title, type: field.type, format: field.format })
+      const newField = { key: field.key, title: field.title, type: field.type }
+      if (field.format && field.format !== 'uri-reference') newField.format = field.format
+      if (field['x-display']) newField['x-display'] = field['x-display']
+      if (field['x-refersTo']) newField['x-refersTo'] = field['x-refersTo']
+      if (field['x-capabilities']) newField['x-capabilities'] = field['x-capabilities']
+      this.schema.push(newField)
       this.$set(this.searchCol, child, '')
     },
     async deleteField (field) {

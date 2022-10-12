@@ -70,6 +70,8 @@ exports.prepareSchema = async (db, dataset) => {
     else delete field['x-refersTo']
     if (matchingFields[0].separator) field.separator = matchingFields[0].separator
     else delete field.separator
+    if (matchingFields[0]['x-display']) field['x-display'] = matchingFields[0]['x-display']
+    else delete field['x-display']
 
     // Some attributes of a a fields have to be homogeneous accross all children
     matchingFields.forEach(f => {
