@@ -37,10 +37,15 @@ exports.middleware = (_limitType) => asyncWrap(async (req, res, next) => {
     }
     groupInfo.nb += 1
     const throttle = groupInfo.group.throttle()
-    finished(throttle).then(() => {
-      groupInfo.nb -= 1
-      if (groupInfo.nb === 0) delete throttleGroups[throttlingId + bandwidthType]
-    })
+    finished(throttle)
+      .catch(() => {
+        // nothing, throttle might finish in error if the HTTP request was interrupted or somethin like that
+        // we don't care about ERR_STREAM_PREMATURE_CLOSE errors, etc
+      })
+      .then(() => {
+        groupInfo.nb -= 1
+        if (groupInfo.nb === 0) delete throttleGroups[throttlingId + bandwidthType]
+      })
     return throttle
   }
   res.throttleEnd = (bandwidthType = 'dynamic') => {
