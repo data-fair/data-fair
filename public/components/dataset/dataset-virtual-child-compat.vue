@@ -106,7 +106,7 @@ export default {
         const parentCapabilities = parentField['x-capabilities'] || {}
         for (const key in childCapabilities) {
           if (childCapabilities[key] === false && parentCapabilities[key] !== false) {
-            messages.error.push(this.$t('disabledConfig', {
+            messages.warning.push(this.$t('disabledConfig', {
               field: field.title || field['x-originalName'] || field.key,
               param: capabilitiesSchema.properties[key].title
             }))
