@@ -10,7 +10,7 @@ const debug = require('debug')('cache-headers')
 // prevent running expensive queries while always presenting fresh data
 // also set last finalized date into last-modified header
 exports.resourceBased = (req, res, next) => {
-  const dateStr = req.resource.fullUpdatedAt || req.resource.finalizedAt || req.resource.updatedAt
+  const dateStr = req.resource.finalizedAt || req.resource.updatedAt
   const date = new Date(dateStr)
   const dateUTC = date.toUTCString()
   const cacheVisibility = req.publicOperation ? 'public' : 'private'
@@ -35,7 +35,7 @@ exports.resourceBased = (req, res, next) => {
     debug('date in query parameter, use longer max age', queryDateStr)
     const queryDate = new Date(queryDateStr)
     if (queryDate > date) {
-      console.warn(`wrong usage of finalizedAt or updatedAt parameters: query=${JSON.stringify(req.query)}, resource=${{ fullUpdatedAt: req.resource.fullUpdatedAt, finalizedAt: req.resource.finalizedAt, updatedAt: req.resource.updatedAt }}`)
+      console.warn(`wrong usage of finalizedAt or updatedAt parameters: query=${JSON.stringify(req.query)}, resource=${{ finalizedAt: req.resource.finalizedAt, updatedAt: req.resource.updatedAt }}`)
       throw createError(400, `"finalizedAt" or "updatedAt" parameter has a value higher in the query than in the resource (${queryDate.toISOString()} > ${date.toISOString()}).`)
     }
     res.setHeader('Cache-Control', `must-revalidate, ${cacheVisibility}, max-age=${config.cache.timestampedPublicMaxAge}`)

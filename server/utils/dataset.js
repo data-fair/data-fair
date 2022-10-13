@@ -795,3 +795,28 @@ exports.jsonSchema = (schema, publicBaseUrl, keepReadOnly = false, writableId = 
     properties
   }
 }
+
+// synchronize the list of application references stored in dataset.extras.applications
+// used for quick access to capture, and default sorting in dataset pages
+exports.syncApplications = async (db, datasetId) => {
+  const dataset = await db.collection('datasets').findOne({ id: datasetId }, { projection: { owner: 1, extras: 1 } })
+  if (!dataset) return
+  const applications = await db.collection('applications')
+    .find({
+      'owner.type': dataset.owner.type,
+      'owner.id': dataset.owner.id,
+      'configuration.datasets.href': config.publicUrl + '/api/v1/datasets/' + datasetId
+    })
+    .project({ id: 1, updatedAt: 1, _id: 0 })
+    .toArray()
+  const applicationsExtras = ((dataset.extras && dataset.extras.applications) || [])
+    .map(appExtra => applications.find(app => app.id === appExtra.id))
+    .filter(appExtra => !!appExtra)
+  for (const app of applications) {
+    if (!applicationsExtras.find(appExtra => appExtra.id === app.id)) {
+      applicationsExtras.push(app)
+    }
+  }
+  await db.collection('datasets')
+    .updateOne({ id: datasetId }, { $set: { 'extras.applications': applicationsExtras } })
+}

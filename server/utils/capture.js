@@ -81,7 +81,7 @@ exports.screenshot = async (req, res) => {
     res.set('cache-control', res.get('cache-control').replace('public', 'private'))
     if (await fs.pathExists(capturePath)) {
       const stats = await fs.stat(capturePath)
-      if (stats.mtime.toISOString() > req.resource.fullUpdatedAt) {
+      if (stats.mtime.toISOString() > req.resource.updatedAt) {
         res.set('x-capture-cache-status', 'HIT')
         return res.sendFile(capturePath)
       } else {

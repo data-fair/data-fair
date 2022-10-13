@@ -120,8 +120,8 @@ describe('Applications', () => {
     const { data: dataset } = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
     await workers.hook('finalizer/' + dataset.id)
     await ax.put('/api/v1/applications/' + app.id + '/config', { datasets: [{ href: dataset.href, id: dataset.id }] })
-    const fullUpdatedAt = (await ax.get('/api/v1/applications/' + app.id)).data.fullUpdatedAt
-    assert.ok(fullUpdatedAt)
+    const updatedAt = (await ax.get('/api/v1/applications/' + app.id)).data.updatedAt
+    assert.ok(updatedAt)
 
     // 1rst call, the capture file is created
     let res = await ax.get('/api/v1/applications/' + app.id + '/capture')
@@ -131,7 +131,7 @@ describe('Applications', () => {
     assert.equal(res.headers['cache-control'], 'must-revalidate, private')
 
     // 2nd call, the capture file is served directly
-    res = await ax.get('/api/v1/applications/' + app.id + '/capture?updatedAt=' + fullUpdatedAt)
+    res = await ax.get('/api/v1/applications/' + app.id + '/capture?updatedAt=' + updatedAt)
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'image/png')
     assert.equal(res.headers['x-capture-cache-status'], 'HIT')

@@ -31,6 +31,7 @@ const visibilityUtils = require('../utils/visibility')
 const cacheHeaders = require('../utils/cache-headers')
 const { validateId } = require('../utils/validation')
 const publicationSites = require('../utils/publication-sites')
+const datasetUtils = require('../utils/dataset')
 
 const router = module.exports = express.Router()
 
@@ -61,6 +62,15 @@ function clean (application, publicUrl, query = {}) {
   application.description = application.description ? sanitizeHtml(application.description) : ''
   if (!select.includes('-links')) findUtils.setResourceLinks(application, 'application', publicUrl)
   return application
+}
+
+// update references to an application into the datasets it references (or used to reference before a patch)
+const syncDatasets = async (db, newApp, oldApp = {}) => {
+  const ids = [...(newApp?.configuration?.datasets || []), ...(oldApp?.configuration?.datasets || [])]
+    .map(dataset => dataset.href.replace(config.publicUrl + '/api/v1/datasets/', ''))
+  for (const id of [...new Set(ids)]) {
+    await datasetUtils.syncApplications(db, id)
+  }
 }
 
 // Get the list of applications
@@ -171,6 +181,10 @@ const readBaseApp = asyncWrap(async (req, res, next) => {
   next()
 })
 
+/*
+// maybe the idea is ok, but this didn't work great, missing in list mode, etc.
+// disabled for now
+
 const setFullUpdatedAt = asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
   // the dates of last modification / finalization of both the app, the base-app and the datasets it uses
@@ -189,7 +203,7 @@ const setFullUpdatedAt = asyncWrap(async (req, res, next) => {
   }
   req.application.fullUpdatedAt = updateDates.sort().pop()
   next()
-})
+}) */
 
 router.use('/:applicationId/permissions', readApplication, permissions.router('applications', 'application', async (req, patchedApplication) => {
   // this callback function is called when the resource becomes public
@@ -197,7 +211,7 @@ router.use('/:applicationId/permissions', readApplication, permissions.router('a
 }))
 
 // retrieve a application by its id
-router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), setFullUpdatedAt, cacheHeaders.noCache, (req, res, next) => {
+router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   req.application.userPermissions = permissions.list('applications', req.application, req.user)
   res.status(200).send(clean(req.application, req.publicBaseUrl, req.query))
 })
@@ -245,6 +259,7 @@ router.patch('/:applicationId',
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
   (req, res, next) => req.body.publicationSites ? permissionsWritePublicationSites(req, res, next) : next(),
   asyncWrap(async (req, res) => {
+    const db = req.app.get('db')
     const patch = req.body
     const valid = validatePatch(patch)
     if (!valid) return res.status(400).send(validatePatch.errors)
@@ -261,32 +276,37 @@ router.patch('/:applicationId',
     patch.updatedAt = moment().toISOString()
     patch.updatedBy = { id: req.user.id, name: req.user.name }
 
-    await publicationSites.applyPatch(req.app.get('db'), req.application, { ...req.application, ...patch }, req.user)
+    await publicationSites.applyPatch(db, req.application, { ...req.application, ...patch }, req.user)
 
-    const patchedApplication = (await req.app.get('db').collection('applications')
+    const patchedApplication = (await db.collection('applications')
       .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })).value
+    await syncDatasets(db, patchedApplication, req.application)
     res.status(200).json(clean(patchedApplication, req.publicBaseUrl))
   }))
 
 // Change ownership of an application
 router.put('/:applicationId/owner', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
+  const db = req.app.get('db')
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
   if (!permissions.canDoForOwner(req.body, 'applications', 'post', req.user)) return res.status(403).send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
-  const patchedApp = (await req.app.get('db').collection('applications')
+  const patchedApp = (await db.collection('applications')
     .findOneAndUpdate({ id: req.params.applicationId }, { $set: { owner: req.body } }, { returnDocument: 'after' })).value
+  await syncDatasets(db, patchedApp)
   res.status(200).json(clean(patchedApp, req.publicBaseUrl))
 }))
 
 // Delete an application configuration
 router.delete('/:applicationId', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
-  await req.app.get('db').collection('applications').deleteOne({ id: req.params.applicationId })
-  await req.app.get('db').collection('journals').deleteOne({ type: 'application', id: req.params.applicationId })
-  await req.app.get('db').collection('applications-keys').deleteOne({ _id: req.application.id })
+  const db = req.app.get('db')
+  await db.collection('applications').deleteOne({ id: req.params.applicationId })
+  await db.collection('journals').deleteOne({ type: 'application', id: req.params.applicationId })
+  await db.collection('applications-keys').deleteOne({ _id: req.application.id })
   try {
     await unlink(await capture.path(req.application))
   } catch (err) {
     console.warn('Failure to remove capture file')
   }
+  await syncDatasets(db, req.application)
   res.sendStatus(204)
 }))
 
@@ -298,9 +318,10 @@ router.get('/:applicationId/configuration', readApplication, permissions.middlew
 
 // Update only the configuration part of the application
 const writeConfig = asyncWrap(async (req, res) => {
+  const db = req.app.get('db')
   const valid = validateConfiguration(req.body)
   if (!valid) return res.status(400).send(validateConfiguration.errors)
-  await req.app.get('db').collection('applications').updateOne(
+  await db.collection('applications').updateOne(
     { id: req.params.applicationId },
     {
       $unset: {
@@ -316,6 +337,7 @@ const writeConfig = asyncWrap(async (req, res) => {
     }
   )
   await journals.log(req.app, req.application, { type: 'config-updated' }, 'application')
+  await syncDatasets(db, { configuration: req.body })
   res.status(200).json(req.body)
 })
 router.put('/:applicationId/config', readApplication, permissions.middleware('writeConfig', 'write'), writeConfig)
@@ -411,8 +433,7 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
   res.status(204).send()
 }))
 
-// TODO: better cache headers ?
-router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), setFullUpdatedAt, cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
+router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
   await capture.screenshot(req, res)
 }))
 
