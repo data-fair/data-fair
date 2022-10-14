@@ -597,15 +597,20 @@ describe('REST datasets', () => {
     await ax.post('/api/v1/datasets/resthisttoggle/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
     await workers.hook('finalizer/resthisttoggle')
     await assert.rejects(ax.get('/api/v1/datasets/resthisttoggle/lines/id1/revisions', { params: { size: 1 } }), (err) => err.status === 400)
+    res = await ax.get('/api/v1/datasets/resthisttoggle')
+    assert.equal(res.data.storage.revisions, undefined)
 
     res = await ax.patch('/api/v1/datasets/resthisttoggle', { rest: { history: true } })
     await workers.hook('finalizer/resthisttoggle')
     res = await ax.get('/api/v1/datasets/resthisttoggle/lines/id1/revisions', { params: { size: 1 } })
-    assert.equal(res.data.total, 1)
+    res = await ax.get('/api/v1/datasets/resthisttoggle')
+    assert.equal(res.data.storage.revisions.count, 1)
 
     res = await ax.patch('/api/v1/datasets/resthisttoggle', { rest: { history: false } })
     await workers.hook('finalizer/resthisttoggle')
     await assert.rejects(ax.get('/api/v1/datasets/resthisttoggle/lines/id1/revisions', { params: { size: 1 } }), (err) => err.status === 400)
+    res = await ax.get('/api/v1/datasets/resthisttoggle')
+    assert.equal(res.data.storage.revisions, undefined)
   })
 
   it('Apply a TTL on some date-field', async () => {

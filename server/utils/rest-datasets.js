@@ -96,7 +96,10 @@ exports.initDataset = async (db, dataset) => {
 exports.configureHistory = async (db, dataset) => {
   const revisionsCollectionExists = (await db.listCollections({ name: exports.revisionsCollectionName(dataset) }).toArray()).length === 1
   if (!dataset.rest.history) {
-    if (revisionsCollectionExists) await exports.revisionsCollection(db, dataset).drop()
+    if (revisionsCollectionExists) {
+      await exports.revisionsCollection(db, dataset).drop()
+      await datasetUtils.updateStorage(db, dataset)
+    }
   } else {
     const revisionsCollection = exports.revisionsCollection(db, dataset)
     if (!revisionsCollectionExists) {
@@ -117,6 +120,7 @@ exports.configureHistory = async (db, dataset) => {
         }
       }
       if (revisionsBulkOp.length) await revisionsBulkOp.execute()
+      await datasetUtils.updateStorage(db, dataset)
     }
 
     // manage history TTL
