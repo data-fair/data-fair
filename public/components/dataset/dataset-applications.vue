@@ -68,7 +68,7 @@ export default {
   methods: {
     changeOrder (order) {
       const extras = this.dataset.extras || {}
-      extras.applications = this.applications.map(a => ({ id: a.id, updatedAt: a.updatedAt }))
+      extras.applications = this.applications.map(a => ({ id: a.id, updatedAt: a.updatedAt, publicationSites: a.publicationSites }))
       this.$store.dispatch('dataset/patchAndCommit', { extras })
     }
   }

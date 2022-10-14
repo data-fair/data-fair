@@ -20,7 +20,7 @@ describe('Applications', () => {
     }
   })
 
-  it('Post an external application configuration, read it, update it and delete it', async () => {
+  it('Post an application configuration, read it, update it and delete it', async () => {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     assert.equal(res.status, 201)

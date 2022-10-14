@@ -184,7 +184,7 @@ export default () => ({
       }
     },
     async fetchApplications ({ commit, state }) {
-      const apps = await this.$axios.$get('api/v1/applications', { params: { dataset: state.dataset.id, size: 10000, select: 'id,title' } })
+      const apps = await this.$axios.$get('api/v1/applications', { params: { dataset: state.dataset.id, size: 10000, select: 'id,title,updatedAt,publicationSites' } })
       if (state.dataset.extras && state.dataset.extras.applications) {
         const ordered = state.dataset.extras.applications.map(appRef => apps.results.find(a => a.id === appRef.id)).filter(a => a)
         const remaining = apps.results.filter(a => !state.dataset.extras.applications.find(appRef => appRef.id === a.id))

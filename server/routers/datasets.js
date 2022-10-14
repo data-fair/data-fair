@@ -98,6 +98,17 @@ function clean (publicUrl, dataset, query = {}, draft = false) {
   delete dataset._id
   if (select.includes('-userPermissions')) delete dataset.userPermissions
   if (select.includes('-owner')) delete dataset.owner
+
+  // TODO: this cleanup of extras.applications.publicationSites should be adapted
+  // when we introduce implicit filtering on publicationSite based on domain name
+  if (query.publicationSites && dataset?.extras?.applications) {
+    const publicationSites = query.publicationSites.split(',')
+    dataset.extras.applications = dataset.extras.applications
+      .filter(appRef => appRef.publicationSites && appRef.publicationSites.find(p => publicationSites.includes(p)))
+    if (publicationSites.length === 1) {
+      for (const appRef of dataset.extras.applications) delete appRef.publicationSites
+    }
+  }
   return dataset
 }
 
