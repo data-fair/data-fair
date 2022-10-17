@@ -27,12 +27,14 @@ describe('thumbnails', () => {
       schema: [{ key: 'desc', type: 'string' }, { key: 'imageUrl', type: 'string', 'x-refersTo': 'http://schema.org/image' }]
     })
     await workers.hook('finalizer/thumbnails1')
-    res = await ax.post('/api/v1/datasets/thumbnails1/lines', { imageUrl: 'http://test.com/imag%C3%A9.png', desc: 'image 1' })
-    res = await ax.post('/api/v1/datasets/thumbnails1/lines', { imageUrl: 'http://test.com/imagé.png', desc: 'image 2' })
-    res = await ax.post('/api/v1/datasets/thumbnails1/lines', { imageUrl: 'http://test.com/image (1).png', desc: 'image 3' })
-    res = await ax.post('/api/v1/datasets/thumbnails1/lines', { imageUrl: 'http://test.com/image%20%281%29.png', desc: 'image 4' })
+    await ax.post('/api/v1/datasets/thumbnails1/_bulk_lines', [
+      { imageUrl: 'http://test.com/imag%C3%A9.png', desc: 'image 1' },
+      { imageUrl: 'http://test.com/imagé.png', desc: 'image 2' },
+      { imageUrl: 'http://test.com/image (1).png', desc: 'image 3' },
+      { imageUrl: 'http://test.com/image%20%281%29.png', desc: 'image 4' }
+    ])
     await workers.hook('finalizer/thumbnails1')
-    res = await ax.get('/api/v1/datasets/thumbnails1/lines', { params: { thumbnail: true, select: 'desc', sort: '_updatedAt' } })
+    res = await ax.get('/api/v1/datasets/thumbnails1/lines', { params: { thumbnail: true, select: 'desc', sort: 'desc' } })
     assert.equal(res.data.results.length, 4)
     assert.equal(res.data.results[0].desc, 'image 1')
     assert.ok(res.data.results[0]._thumbnail.includes('test.com/imag%C3%A9.png'))
