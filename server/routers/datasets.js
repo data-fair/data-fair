@@ -185,6 +185,7 @@ const prepareExtensions = (req, extensions, oldExtensions = []) => {
 
 // Get the list of datasets
 router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
+  const explain = req.query.explain === 'true' && req.user && req.user.adminMode && {}
   const datasets = req.app.get('db').collection('datasets')
   const filterFields = {
     concepts: 'schema.x-refersTo',
@@ -224,9 +225,19 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const project = findUtils.project(req.query.select, [], req.query.raw === 'true')
   const [skip, size] = findUtils.pagination(req.query)
 
-  const countPromise = req.query.count !== 'false' && datasets.countDocuments(query)
-  const resultsPromise = size > 0 && datasets.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
-  const facetsPromise = req.query.facets && datasets.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields, extraFilters)).toArray()
+  const t0 = new Date().getTime()
+  const countPromise = req.query.count !== 'false' && datasets.countDocuments(query).then(res => {
+    if (explain) explain.countMS = new Date().getTime() - t0
+    return res
+  })
+  const resultsPromise = size > 0 && datasets.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray().then(res => {
+    if (explain) explain.resultsMS = new Date().getTime() - t0
+    return res
+  })
+  const facetsPromise = req.query.facets && datasets.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields, extraFilters)).toArray().then(res => {
+    if (explain) explain.facetsMS = new Date().getTime() - t0
+    return res
+  })
   const sumsPromise = req.query.sums && datasets
     .aggregate(findUtils.sumsQuery(req, sumsFields, filterFields, extraFilters)).toArray()
     .then(sumsResponse => {
@@ -234,6 +245,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
       for (const field of req.query.sums.split(',')) {
         res[field] = res[field] || 0
       }
+      if (explain) explain.sumsMS = new Date().getTime() - t0
       return res
     })
   const [count, results, facets, sums] = await Promise.all([countPromise, resultsPromise, facetsPromise, sumsPromise])
@@ -243,11 +255,15 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   else response.results = []
   if (facetsPromise) response.facets = findUtils.parseFacets(facets, nullFacetFields)
   if (sumsPromise) response.sums = sums
-
+  const t1 = new Date().getTime()
   response.results.forEach(r => {
     if (req.query.raw !== 'true') r.userPermissions = permissions.list('datasets', r, req.user)
     clean(req.publicBaseUrl, r, req.query)
   })
+  if (explain) {
+    explain.cleanMS = new Date().getTime() - t1
+    response.explain = explain
+  }
   res.json(response)
 }))
 
