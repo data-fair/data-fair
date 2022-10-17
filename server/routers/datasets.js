@@ -226,6 +226,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const [skip, size] = findUtils.pagination(req.query)
 
   const t0 = new Date().getTime()
+  if (explain) explain.middlewares = t0 - req.ts
   const countPromise = req.query.count !== 'false' && datasets.countDocuments(query).then(res => {
     if (explain) explain.countMS = new Date().getTime() - t0
     return res

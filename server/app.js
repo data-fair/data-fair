@@ -28,6 +28,12 @@ global.events = new EventEmitter()
 const app = express()
 let server, wss
 
+// a middleware for performance analysis
+app.use((req, res, next) => {
+  req.ts = new Date().getTime()
+  next()
+})
+
 if (config.mode.includes('server')) {
   app.set('trust proxy', 1)
   app.set('json spaces', 2)
