@@ -41,7 +41,7 @@ exports.init = async (db) => {
     // used to fetch list sorted by creation
     exports.ensureIndex(db, 'datasets', { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, { name: 'main-keys' }),
     // full text search
-    exports.ensureIndex(db, 'datasets', { title: 'text', description: 'text', 'owner.name': 'text', keywords: 'text', 'topics.title': 'text' }, { name: 'fulltext', weights: { title: 2 } }),
+    exports.ensureIndex(db, 'datasets', { title: 'text', description: 'text', 'owner.name': 'text', 'owner.departmentName': 'text', keywords: 'text', 'topics.title': 'text' }, { name: 'fulltext', weights: { title: 2 } }),
     // special purpose indexes for workers, etc
     exports.ensureIndex(db, 'datasets', { 'virtual.children': 1 }),
     exports.ensureIndex(db, 'datasets', { publicationSites: 1 }),
@@ -63,7 +63,7 @@ exports.init = async (db) => {
     // used to fetch list sorted by creation
     exports.ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, { name: 'main-keys' }),
     // full text search
-    exports.ensureIndex(db, 'applications', { title: 'text', description: 'text', 'owner.name': 'text' }, { name: 'fulltext', weights: { title: 2 } }),
+    exports.ensureIndex(db, 'applications', { title: 'text', description: 'text', 'owner.name': 'text', 'owner.departmentName': 'text' }, { name: 'fulltext', weights: { title: 2 } }),
     // get the applications of a dataset
     exports.ensureIndex(db, 'applications', { 'configuration.datasets.href': 1 }),
 
