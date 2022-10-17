@@ -28,7 +28,7 @@ const promisePool = []
 
 // Hooks for testing
 let hooks = {}
-exports.hook = (key, delay = 10000, message = 'time limit on worker hook') => {
+exports.hook = (key, delay = 15000, message = 'time limit on worker hook') => {
   const promise = new Promise((resolve, reject) => {
     hooks[key] = { resolve, reject }
   })

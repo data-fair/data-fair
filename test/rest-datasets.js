@@ -211,6 +211,8 @@ describe('REST datasets', () => {
     assert.equal(res.data.errors.length, 1)
     assert.equal(res.data.errors[0].line, 1)
     assert.ok(res.data.errors[0].error)
+
+    await workers.hook('finalizer/rest4')
   })
 
   it('Send attachment with multipart request', async function () {
