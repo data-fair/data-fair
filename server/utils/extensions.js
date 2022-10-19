@@ -107,16 +107,16 @@ class RemoteExtensionStream extends Transform {
       debug(`Send req with ${this.buffer.length} items`, this.reqOpts)
       const opts = {
         method: extension.action.operation.method,
-        url: extension.remoteService.server + extension.action.operation.path,
+        url: extension.remoteService.server.replace(config.remoteServicesPrivateMapping[0], config.remoteServicesPrivateMapping[1]) + extension.action.operation.path,
         headers: {
           Accept: 'application/x-ndjson',
           'Content-Type': 'application/x-ndjson'
-          // 'x-consumer': JSON.stringify(this.dataset.owner),
         },
         params: {},
         responseType: 'text',
         data: ''
       }
+
       // TODO handle query & cookie header types
       if (extension.remoteService.apiKey && extension.remoteService.apiKey.in === 'header' && extension.remoteService.apiKey.value) {
         opts.headers[extension.remoteService.apiKey.name] = extension.remoteService.apiKey.value
