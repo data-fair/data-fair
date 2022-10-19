@@ -26,6 +26,11 @@ router.post('/:type/:id', asyncWrap(async (req, res) => {
   for (const c of collectionNames) {
     const collection = req.app.get('db').collection(c)
     await collection.updateMany({ 'owner.type': identity.type, 'owner.id': identity.id }, { $set: { 'owner.name': identity.name } })
+    if (req.body.departments) {
+      for (const department of req.body.departments) {
+        await collection.updateMany({ 'owner.type': identity.type, 'owner.id': identity.id, 'owner.department': department.id }, { $set: { 'owner.departmentName': department.name } })
+      }
+    }
 
     // permissions
     const cursor = collection.find({ permissions: { $elemMatch: { type: identity.type, id: identity.id } } })
