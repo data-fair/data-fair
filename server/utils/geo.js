@@ -1,3 +1,5 @@
+const path = require('path')
+const config = require('config')
 const util = require('util')
 const fs = require('fs')
 const pointOnFeature = require('@turf/point-on-feature').default
@@ -22,6 +24,7 @@ const latUri = ['http://schema.org/latitude', 'http://www.w3.org/2003/01/geo/wgs
 const lonUri = ['http://schema.org/longitude', 'http://www.w3.org/2003/01/geo/wgs84_pos#long']
 const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
 const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
+const dataDir = path.resolve(config.dataDir)
 
 exports.allGeoConcepts = [geomUri, latlonUri, ...latUri, ...lonUri, coordXUri, coordYUri]
 
@@ -228,7 +231,7 @@ const prepair = async (feature) => {
   let tmpFile
   try {
     // const wkt = wktParser.convert(feature.geometry)
-    tmpFile = await tmp.file({ postfix: '.geojson' })
+    tmpFile = await tmp.file({ postfix: '.geojson', dir: path.join(dataDir, 'tmp') })
     await writeFile(tmpFile.fd, JSON.stringify(feature))
     const repaired = await exec(`prepair --ogr '${tmpFile.path}'`, { maxBuffer: 100000000 })
     feature.geometry = wktToGeoJSON(repaired.stdout)

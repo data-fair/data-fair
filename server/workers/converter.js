@@ -16,6 +16,8 @@ const exec = require('../utils/exec')
 const xlsx = require('../utils/xlsx')
 const i18nUtils = require('../utils/i18n')
 
+const dataDir = path.resolve(config.dataDir)
+
 exports.eventsPrefix = 'convert'
 
 const archiveTypes = exports.archiveTypes = new Set([
@@ -58,7 +60,7 @@ exports.process = async function (app, dataset) {
   const db = app.get('db')
   const originalFilePath = datasetUtils.originalFilePath(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
-  const tmpDir = (await tmp.dir()).path
+  const tmpDir = (await tmp.dir({ dir: path.join(dataDir, 'tmp') })).path
 
   let isShapefile = false
   if (archiveTypes.has(dataset.originalFile.mimetype)) {
