@@ -1,11 +1,11 @@
 ######################################################
 # Stage: install prepair that depends on gdal and cgal
-FROM node:16.13.2-alpine3.14 AS geodeps
+FROM node:16.18.0-alpine3.15 AS geodeps
 
 RUN apk add --no-cache curl cmake make g++ linux-headers
 RUN apk add --no-cache gdal gdal-dev
 RUN apk add --no-cache boost-dev gmp gmp-dev mpfr-dev
-RUN apk add --no-cache libressl3.3-libcrypto
+RUN apk add --no-cache libressl3.4-libcrypto
 
 # build CGAL (not yet present in alpine repos)
 WORKDIR /tmp
@@ -30,7 +30,7 @@ RUN prepair --help
 ############################################################################################################
 # Stage: prepare a base image with all native utils pre-installed, used both by builder and definitive image
 
-FROM node:16.13.2-alpine3.14 AS nativedeps
+FROM node:16.18.0-alpine3.15 AS nativedeps
 
 # these are also geodeps, but we need to install them here as they pull many dependencies
 RUN apk add --no-cache gmp gdal-tools
