@@ -53,7 +53,7 @@
                   class="mb-2"
                 >
                   <span>{{ dataset.owner.name }}</span>
-                  <span v-if="site.department"> - {{ site.department }}</span>
+                  <span v-if="site.department"> - {{ site.departmentName || site.department }}</span>
                 </v-list-item-subtitle>
                 <v-list-item-subtitle
                   v-if="site.datasetUrlTemplate && dataset.publicationSites.includes(`${site.type}:${site.id}`)"

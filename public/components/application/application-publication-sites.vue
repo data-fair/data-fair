@@ -44,7 +44,7 @@
                   class="mb-2"
                 >
                   <span>{{ application.owner.name }}</span>
-                  <span v-if="site.department"> - {{ site.department }}</span>
+                  <span v-if="site.department"> - {{ site.departmentName || site.department }}</span>
                 </v-list-item-subtitle>
                 <v-list-item-subtitle>
                   <a

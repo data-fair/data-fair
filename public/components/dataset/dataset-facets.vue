@@ -7,7 +7,7 @@
         :label="$t('owner')"
         :items="facets.owner"
         :item-value="item => item.value && `${item.value.type}:${item.value.id}:${item.value.department ? item.value.department : '-'}`"
-        :item-text="item => item.value && `${item.value.name}${item.value.department ? ' / ' + item.value.department : ''} (${item.count})`"
+        :item-text="item => item.value && `${item.value.name}${item.value.department ? ' / ' + (item.value.departmentName || item.value.department) : ''} (${item.count})`"
         outlined
         dense
         hide-details

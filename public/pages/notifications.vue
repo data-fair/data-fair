@@ -8,7 +8,7 @@
 
     <h2
       v-if="activeAccount.type ==='organization'"
-      v-t="{path: 'datasetsOrgEvents', args: {name: activeAccount.name + (activeAccount.department ? ' / ' + activeAccount.department : '')}}"
+      v-t="{path: 'datasetsOrgEvents', args: {name: activeAccount.name + (activeAccount.department ? ' / ' + (activeAccount.departmentName || activeAccount.department) : '')}}"
       class="mt-8 mb-2 text-h5"
     />
     <h2
@@ -20,7 +20,7 @@
 
     <h2
       v-if="activeAccount.type ==='organization'"
-      v-t="{path: 'appsOrgEvents', args: {name: activeAccount.name + (activeAccount.department ? ' / ' + activeAccount.department : '')}}"
+      v-t="{path: 'appsOrgEvents', args: {name: activeAccount.name + (activeAccount.department ? ' / ' + (activeAccount.departmentName || activeAccount.department) : '')}}"
       class="mt-8 mb-2 text-h5"
     />
     <h2
