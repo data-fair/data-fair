@@ -38,7 +38,7 @@ RUN test -f /usr/bin/ogr2ogr
 COPY --from=geodeps /usr/bin/prepair /usr/bin/prepair
 COPY --from=geodeps /usr/local/lib/libCGAL.so.13 /usr/local/lib/libCGAL.so.13
 COPY --from=geodeps /usr/lib/libmpfr.so.6 /usr/lib/libmpfr.so.6
-RUN ln -s /usr/lib/libproj.so.21.1.2 /usr/lib/libproj.so
+RUN ln -s /usr/lib/libproj.so.22 /usr/lib/libproj.so
 RUN test -f /usr/lib/libproj.so
 # check that geo execs actually load
 RUN prepair --help
