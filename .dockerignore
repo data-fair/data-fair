@@ -6,3 +6,4 @@ data
 nuxt-dist
 doc-dist
 /doc/static/install/*/data
+.git
