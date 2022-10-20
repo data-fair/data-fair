@@ -485,16 +485,6 @@ exports.storage = async (db, dataset) => {
   return storage
 }
 
-exports.totalStorage = async (db, owner) => {
-  const aggQuery = [
-    { $match: { 'owner.type': owner.type, 'owner.id': owner.id } },
-    { $project: { 'storage.size': 1, 'storage.indexed.size': 1 } },
-    { $group: { _id: null, size: { $sum: '$storage.size' }, indexed: { $sum: '$storage.indexed.size' }, count: { $sum: 1 } } }
-  ]
-  const res = await db.collection('datasets').aggregate(aggQuery).toArray()
-  return { size: (res[0] && res[0].size) || 0, indexed: (res[0] && res[0].indexed) || 0, count: (res[0] && res[0].count) || 0 }
-}
-
 // After a change that might impact consumed storage, we store the value
 exports.updateStorage = async (db, dataset, deleted = false, checkRemaining = false) => {
   if (dataset.draftReason) {
@@ -508,20 +498,29 @@ exports.updateStorage = async (db, dataset, deleted = false, checkRemaining = fa
       }
     })
   }
-  const totalStorage = await exports.totalStorage(db, dataset.owner)
-  await limits.setConsumption(db, dataset.owner, 'store_bytes', totalStorage.size)
-  await limits.setConsumption(db, dataset.owner, 'indexed_bytes', totalStorage.indexed)
-  if (checkRemaining && process.env.NO_STORAGE_CHECK !== 'true') {
-    const remaining = await limits.remaining(db, dataset.owner)
-    if (remaining.storage === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
-    if (remaining.indexed === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de données indexées.')
-  }
-  return totalStorage
+  return exports.updateTotalStorage(db, dataset.owner, checkRemaining)
 }
 
-exports.updateNbDatasets = async (db, owner) => {
-  const count = await db.collection('datasets').countDocuments({ 'owner.type': owner.type, 'owner.id': owner.id })
-  await limits.setConsumption(db, owner, 'nb_datasets', count)
+exports.updateTotalStorage = async (db, owner, checkRemaining = false) => {
+  const aggQuery = [
+    { $match: { 'owner.type': owner.type, 'owner.id': owner.id } },
+    { $project: { 'storage.size': 1, 'storage.indexed.size': 1 } },
+    { $group: { _id: null, size: { $sum: '$storage.size' }, indexed: { $sum: '$storage.indexed.size' }, count: { $sum: 1 } } }
+  ]
+  const res = await db.collection('datasets').aggregate(aggQuery).toArray()
+  const totalStorage = { size: (res[0] && res[0].size) || 0, indexed: (res[0] && res[0].indexed) || 0, count: (res[0] && res[0].count) || 0 }
+
+  await limits.setConsumption(db, owner, 'store_bytes', totalStorage.size)
+  await limits.setConsumption(db, owner, 'indexed_bytes', totalStorage.indexed)
+  await limits.setConsumption(db, owner, 'nb_datasets', totalStorage.count)
+
+  if (checkRemaining && process.env.NO_STORAGE_CHECK !== 'true') {
+    const remaining = await limits.remaining(db, owner)
+    if (remaining.storage === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
+    if (remaining.indexed === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de données indexées.')
+    if (remaining.nbDatasets === 0) throw createError(429, 'Vous avez atteint la limite de votre nombre de jeux de données.')
+  }
+  return totalStorage
 }
 
 exports.mergeFileSchema = (dataset) => {

@@ -550,6 +550,9 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
 
   await syncRemoteService(req.app.get('db'), patchedDataset)
 
+  await datasetUtils.updateTotalStorage(req.app.get('db'), req.dataset.owner)
+  await datasetUtils.updateTotalStorage(req.app.get('db'), patch.owner)
+
   res.status(200).json(clean(req.publicBaseUrl, patchedDataset))
 }))
 
@@ -560,7 +563,7 @@ router.delete('/:datasetId', readDataset(null, true, true), permissions.middlewa
     await datasetUtils.delete(req.app.get('db'), req.app.get('es'), req.dataset.prod)
   }
   await syncRemoteService(req.app.get('db'), { ...req.dataset, masterData: null })
-  await datasetUtils.updateNbDatasets(req.app.get('db'), req.dataset.owner)
+  await datasetUtils.updateTotalStorage(req.app.get('db'), req.dataset.owner)
   res.sendStatus(204)
 }))
 
@@ -774,7 +777,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
 
     delete dataset._id
 
-    await datasetUtils.updateNbDatasets(req.app.get('db'), dataset.owner)
+    await datasetUtils.updateTotalStorage(req.app.get('db'), dataset.owner)
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
     await syncRemoteService(db, dataset)
     res.status(201).send(clean(req.publicBaseUrl, dataset, {}, req.query.draft === 'true'))
@@ -806,7 +809,7 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
       if ((await limits.remaining(req.app.get('db'), newDataset.owner)).nbDatasets === 0) {
         return res.status(429, 'Vous avez atteint votre nombre maximal de jeux de données autorisés.')
       }
-      await datasetUtils.updateNbDatasets(req.app.get('db'), newDataset.owner)
+      await datasetUtils.updateTotalStorage(req.app.get('db'), newDataset.owner)
     } catch (err) {
       if (err.code !== 11000) throw err
     }
