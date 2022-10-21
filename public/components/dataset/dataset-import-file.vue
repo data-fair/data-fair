@@ -37,6 +37,12 @@
             @change="onFileUpload"
           />
         </div>
+        <v-alert
+          v-if="file && file.size > 50000000 && (file.name.endsWith('.csv') || file.name.endsWith('.tsv') || file.name.endsWith('.txt') || file.name.endsWith('.geojson'))"
+          outlined
+          type="info"
+          v-html="$t('suggestArchive', {name: file.name})"
+        />
         <div
           v-if="file"
           class="mt-3 mb-3"
@@ -52,12 +58,6 @@
             style="max-width: 400px"
           />
         </div>
-        <v-alert
-          v-if="file && file.size > 50000000 && (file.name.endsWith('.csv') || file.name.endsWith('.tsv') || file.name.endsWith('.txt') || file.name.endsWith('.geojson'))"
-          outlined
-          type="info"
-          v-html="$t('suggestArchive', {name: file.name})"
-        />
         <v-btn
           v-t="'continue'"
           class="mt-2"
@@ -123,10 +123,11 @@
             rounded
             height="28"
             style="max-width: 500px;"
+            :color="$readableColor($vuetify.theme.themes.light.primary, true)"
           >
             {{ file && file.name }}
             <template v-if="uploadProgress.total">
-              {{ uploadProgress.loaded | bytes($i18n.locale) }} / {{ uploadProgress.total | bytes($i18n.locale) }}
+              {{ Math.floor(uploadProgress.percent) }}% {{ $t('of') }} {{ uploadProgress.total | bytes($i18n.locale) }}
             </template>
           </v-progress-linear>
           <v-btn
@@ -173,6 +174,7 @@ fr:
   suggestArchive: |
     Ce fichier est volumineux. Pour économiser du temps et de l'énergie vous pouvez si vous le souhaitez le charger sous forme compressée.
     <br>Pour ce faire vous devez créer soit un fichier "{name}.gz" soit une archive .zip contenant uniquement ce fichier.
+  of: de
 en:
   stepFile: File selection
   stepAttachment: Attachments
@@ -193,6 +195,10 @@ en:
   importError: "Failure to import the file :"
   cancel: Cancel
   cancelled: Loading cancelled by user
+  suggestArchive: |
+    This file is large. To save and time and energy you can if you wish send a compressed version of it.
+    <br>To do so you must create a file "{name}.gz" or a zip archive containing only this file.
+  of: of
 </i18n>
 
 <script>
