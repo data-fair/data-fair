@@ -10,6 +10,7 @@ const restDatasetsUtils = require('./rest-datasets')
 const geoUtils = require('./geo')
 const { bulkSearchPromise, bulkSearchStreams } = require('./master-data')
 const taskProgress = require('./task-progress')
+const permissionsUtils = require('./permissions')
 
 const debug = require('debug')('extensions')
 
@@ -25,13 +26,11 @@ exports.extend = async (app, dataset, extensions) => {
     accessFilter.push({ privateAccess: { $elemMatch: { type: dataset.owner.type, id: dataset.owner.id } } })
     const remoteService = await db.collection('remote-services').findOne({ id: extension.remoteService, $or: accessFilter })
     if (!remoteService) {
-      console.warn(`Try to apply extension on dataset ${dataset.id} but remote service ${extension.action} was not found.`)
-      continue
+      throw new Error(`Try to apply extension on dataset ${dataset.id} but remote service ${extension.action} was not found.`)
     }
     const action = remoteService.actions.find(a => a.id === extension.action)
     if (!action) {
-      console.warn(`Try to apply extension on dataset ${dataset.id} from remote service ${remoteService.id} but action ${extension.action} was not found.`)
-      continue
+      throw new Error(`Try to apply extension on dataset ${dataset.id} from remote service ${remoteService.id} but action ${extension.action} was not found.`)
     }
 
     const extensionKey = exports.getExtensionKey(extension)
@@ -157,8 +156,13 @@ class RemoteExtensionStream extends Transform {
       let data
       if (localMasterData) {
         const masterDatasetId = extension.remoteService.server.replace(`${config.publicUrl}/api/v1/datasets/`, '')
-        const masterDataset = await this.db.collection('datasets').findOne({ id: masterDatasetId, 'owner.type': this.dataset.owner.type, 'owner.id': this.dataset.owner.id })
-        if (!masterDataset) throw new Error('dataset de données de référence inconnu ' + masterDatasetId)
+        const pseudoUser = this.dataset.owner.type === 'user' ? { id: this.dataset.owner.id } : { id: '_master-data', organizations: [{ id: this.dataset.owner.id, role: 'admin' }] }
+        pseudoUser.activeAccount = this.dataset.owner
+        const masterDataset = await this.db.collection('datasets').findOne({ id: masterDatasetId })
+        if (!masterDataset) throw new Error('jeu de données de référence inconnu ' + masterDatasetId)
+        if (!permissionsUtils.list('datasets', masterDataset, pseudoUser).includes('readLines')) {
+          throw new Error('permission manquante sur le jeu de données de référence ' + masterDatasetId)
+        }
         const bulkSearchId = extension.action.id.replace('masterData_bulkSearch_', '')
         data = await bulkSearchPromise(
           await bulkSearchStreams(this.db, this.es, masterDataset, 'application/x-ndjson', bulkSearchId, opts.params.select),

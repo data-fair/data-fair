@@ -417,3 +417,104 @@ it('should handle geo-distance search type', async () => {
   assert.equal(results[1].extra, 'Extra information 2')
   assert.ok(results[2]._error.includes('pas de ligne'))
 })
+
+it('should prevent using master-data without access to remote service', async () => {
+  const { remoteService } = await initMaster(
+    global.ax.dmeadus,
+    [siretProperty, { key: 'extra', type: 'string' }],
+    [{
+      id: 'siret',
+      title: 'Fetch extra info from siret',
+      description: '',
+      input: [{ type: 'equals', property: siretProperty }]
+    }]
+  )
+
+  // create slave dataset
+  await global.ax.cdurning2.put('/api/v1/datasets/slave', {
+    isRest: true,
+    title: 'slave',
+    schema: [siretProperty],
+    extensions: [{
+      active: true,
+      remoteService: remoteService.id,
+      action: 'masterData_bulkSearch_siret',
+      select: ['extra']
+    }]
+  })
+  await assert.rejects(workers.hook('finalizer/slave'), err => err.message.startsWith('Try to apply extension'))
+})
+
+it('should prevent using master-data without permission on dataset', async () => {
+  const { remoteService } = await initMaster(
+    global.ax.dmeadus,
+    [siretProperty, { key: 'extra', type: 'string' }],
+    [{
+      id: 'siret',
+      title: 'Fetch extra info from siret',
+      description: '',
+      input: [{ type: 'equals', property: siretProperty }]
+    }]
+  )
+
+  // only super admin can open remote service to public
+  await assert.rejects(global.ax.dmeadus.patch('/api/v1/remote-services/' + remoteService.id, { public: true }), (err) => err.status === 403)
+  global.ax.superadmin.patch('/api/v1/remote-services/' + remoteService.id, { public: true })
+
+  // create slave dataset
+  await global.ax.cdurning2.put('/api/v1/datasets/slave', {
+    isRest: true,
+    title: 'slave',
+    schema: [siretProperty],
+    extensions: [{
+      active: true,
+      remoteService: remoteService.id,
+      action: 'masterData_bulkSearch_siret',
+      select: ['extra']
+    }]
+  })
+  await workers.hook('finalizer/slave')
+  await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
+  await assert.rejects(workers.hook('finalizer/slave'), err => err.message.startsWith('permission manquante'))
+})
+
+it('should support using master-data from other account if visibility is ok', async () => {
+  const { remoteService, master } = await initMaster(
+    global.ax.dmeadus,
+    [siretProperty, { key: 'extra', type: 'string' }],
+    [{
+      id: 'siret',
+      title: 'Fetch extra info from siret',
+      description: '',
+      input: [{ type: 'equals', property: siretProperty }]
+    }]
+  )
+  // feed some data to the master
+  const items = [{ siret: '82898347800011', extra: 'Extra information' }]
+  await global.ax.dmeadus.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
+  await workers.hook('finalizer/master')
+
+  // only super admin can open remote service to public
+  await assert.rejects(global.ax.dmeadus.patch('/api/v1/remote-services/' + remoteService.id, { public: true }), (err) => err.status === 403)
+  global.ax.superadmin.patch('/api/v1/remote-services/' + remoteService.id, { public: true })
+  // owner of the master-data dataset can open it to public
+  await global.ax.dmeadus.put(`/api/v1/datasets/${master.id}/permissions`, [{ classes: ['read'] }])
+
+  // create slave dataset
+  await global.ax.cdurning2.put('/api/v1/datasets/slave', {
+    isRest: true,
+    title: 'slave',
+    schema: [siretProperty],
+    extensions: [{
+      active: true,
+      remoteService: remoteService.id,
+      action: 'masterData_bulkSearch_siret',
+      select: ['extra']
+    }]
+  })
+  await workers.hook('finalizer/slave')
+  await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
+  await workers.hook('finalizer/slave')
+  const results = (await global.ax.cdurning2.get('/api/v1/datasets/slave/lines')).data.results
+  assert.equal(results[0]['_siret.extra'], 'Extra information')
+})
