@@ -1,7 +1,7 @@
 const assert = require('assert').strict
 const testUtils = require('./resources/test-utils')
 
-describe.only('Archive conversions', () => {
+describe('Archive conversions', () => {
   it('should extract a zipped csv file', async () => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.zip', ax)
