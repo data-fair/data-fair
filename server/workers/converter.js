@@ -9,6 +9,9 @@ const pump = util.promisify(require('pump'))
 const csvStringify = require('csv-stringify')
 const tmp = require('tmp-promise')
 const dir = require('node-dir')
+const mime = require('mime-types')
+const pipeline = require('stream/promises').pipeline
+const zlib = require('node:zlib')
 const { displayBytes } = require('../utils/bytes')
 const datasetUtils = require('../utils/dataset')
 const icalendar = require('../utils/icalendar')
@@ -25,8 +28,7 @@ const archiveTypes = exports.archiveTypes = new Set([
   /* 'application/x-7z-compressed', // .7z
   'application/x-bzip', // .bzip
   'application/x-bzip2', // .bzip2
-  'application/x-tar', // .tar
-  'application/gzip' // .gz */
+  'application/x-tar', // .tar */
 ])
 const tabularTypes = exports.tabularTypes = new Set([
   'application/vnd.oasis.opendocument.spreadsheet', // ods, fods
@@ -77,6 +79,16 @@ exports.process = async function (app, dataset) {
         filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.shx')) &&
         filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.dbf'))) {
       isShapefile = true
+    } else if (filePaths.length === 1 && exports.basicTypes.includes(mime.lookup(filePaths[0].base))) {
+      // case of a single data file in an archive
+      const filePath = path.join(datasetUtils.dir(dataset), filePaths[0].base)
+      await fs.move(path.join(tmpDir, files[0]), filePath)
+      dataset.file = {
+        name: filePaths[0].base,
+        size: await fs.stat(filePath).size,
+        mimetype: mime.lookup(filePaths[0].base),
+        encoding: 'utf-8'
+      }
     } else {
       if (await fs.pathExists(datasetUtils.attachmentsDir(dataset))) {
         throw new Error('Vous avez chargé un fichier zip comme fichier de données principal, mais il y a également des pièces jointes chargées.')
@@ -103,6 +115,18 @@ exports.process = async function (app, dataset) {
           'x-refersTo': 'http://schema.org/DigitalDocument'
         })
       }
+    }
+  }
+
+  if (dataset.originalFile.mimetype === 'application/gzip') {
+    const basicTypeFileName = dataset.originalFile.name.slice(0, dataset.originalFile.name.length - 3)
+    const filePath = path.join(datasetUtils.dir(dataset), basicTypeFileName)
+    await pipeline(fs.createReadStream(originalFilePath), zlib.createGunzip(), fs.createWriteStream(filePath))
+    dataset.file = {
+      name: basicTypeFileName,
+      size: await fs.stat(filePath).size,
+      mimetype: mime.lookup(basicTypeFileName),
+      encoding: 'utf-8'
     }
   }
 

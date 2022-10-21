@@ -52,6 +52,12 @@
             style="max-width: 400px"
           />
         </div>
+        <v-alert
+          v-if="file && file.size > 50000000 && (file.name.endsWith('.csv') || file.name.endsWith('.tsv') || file.name.endsWith('.txt') || file.name.endsWith('.geojson'))"
+          outlined
+          type="info"
+          v-html="$t('suggestArchive', {name: file.name})"
+        />
         <v-btn
           v-t="'continue'"
           class="mt-2"
@@ -164,6 +170,9 @@ fr:
   importError: "Erreur pendant l'import du fichier :"
   cancel: Annuler
   cancelled: Chargement annulé par l'utilisateur
+  suggestArchive: |
+    Ce fichier est volumineux. Pour économiser du temps et de l'énergie vous pouvez si vous le souhaitez le charger sous forme compressée.
+    <br>Pour ce faire vous devez créer soit un fichier "{name}.gz" soit une archive .zip contenant uniquement ce fichier.
 en:
   stepFile: File selection
   stepAttachment: Attachments

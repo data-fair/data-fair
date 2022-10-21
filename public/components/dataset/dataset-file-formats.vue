@@ -56,10 +56,12 @@ const { mapState } = require('vuex')
 const formats = [
   {
     type: 'CSV',
-    format: '.csv'
+    format: '.csv',
+    formatsInArchive: '.csv.gz ou .csv seul dans une archive .zip'
   }, {
     type: 'TSV',
-    format: '.tsv'
+    format: '.tsv',
+    formatsInArchive: '.tsv.gz ou .tsv seul dans une archive .zip'
   }, {
     type: 'OpenDocument',
     format: '.ods, .fods'
@@ -85,7 +87,8 @@ const formats = [
     //   formatsInArchive: ''
   }, {
     type: 'GeoJSON',
-    format: '.geojson'
+    format: '.geojson',
+    formatsInArchive: '.geojson.gz ou .geojson seul dans une archive .zip'
   }, {
     type: 'KML/KMZ',
     format: '.kml, .kmz'
@@ -95,7 +98,7 @@ const formats = [
   }, {
     type: 'ESRI Shapefile',
     description: 'Format de fichier pour les systèmes d\'informations géographiques',
-    formatsInArchive: '.shp, .dbf, .shx (.prj optionel)'
+    formatsInArchive: '.shp, .dbf, .shx (.prj optionel) dans une archive .zip'
   }, {
     type: 'iCalendar',
     format: '.ics'
@@ -111,7 +114,7 @@ export default {
       { text: 'Type', sortable: false, value: 'type' },
       { text: 'Description', sortable: false, value: 'description' },
       { text: 'Format', sortable: false, value: 'format' },
-      { text: 'Format archivé (.zip)', sortable: false, value: 'formatsInArchive' }
+      { text: 'Format archivé', sortable: false, value: 'formatsInArchive' }
     ]
   }),
   computed: {

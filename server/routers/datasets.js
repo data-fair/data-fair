@@ -596,7 +596,9 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft, res) => {
   }
 
   if (!dataset.id) {
-    const baseTitle = dataset.title || path.parse(file.originalname).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')
+    let baseFileName = path.parse(file.originalname).name
+    if (file.originalname.endsWith('.gz')) baseFileName = path.parse(baseFileName).name
+    const baseTitle = dataset.title || path.parse(baseFileName).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')
     const baseId = slug(baseTitle, { lower: true, strict: true })
     dataset.id = baseId
     dataset.title = baseTitle

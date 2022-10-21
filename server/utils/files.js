@@ -68,7 +68,13 @@ exports.uploadFile = () => {
         file.mimetype = mime.lookup(file.originalname) || fallbackMimeTypes[file.originalname.split('.').pop()] || file.originalname.split('.').pop()
 
         if (file.fieldname === 'file' || file.fieldname === 'dataset') {
-          if (!allowedTypes.has(file.mimetype)) throw createError(400, file.mimetype + ' type is not supported')
+          if (!allowedTypes.has(file.mimetype)) {
+            if (file.mimetype === 'application/gzip' && basicTypes.includes(mime.lookup(file.originalname.slice(0, file.originalname.length - 3)))) {
+              // gzip of a csv or other basic type is also accepted, converter will proceed
+            } else {
+              throw createError(400, file.mimetype + ' type is not supported')
+            }
+          }
         } else if (file.fieldname === 'attachments') {
           if (file.mimetype !== 'application/zip') throw createError(400, 'Les fichiers joints doivent être embarqués dans une archive zip')
         } else {
