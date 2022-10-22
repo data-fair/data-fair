@@ -875,6 +875,27 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     assert.equal(lines[1].attr1, 'test1')
   })
 
+  it('Send bulk as a .zip file', async () => {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'restcsvzip',
+      schema: [{ key: 'id', type: 'string' }, { key: 'adr', type: 'string' }, { key: 'some date', type: 'string' }, { key: 'loc', type: 'string' }]
+    })
+    let dataset = await workers.hook('finalizer/restcsvzip')
+
+    // Create a line with an attached file
+    const form = new FormData()
+    const actionsContent = fs.readFileSync('./test/resources/datasets/dataset1.zip')
+    form.append('actions', actionsContent, 'dataset1.zip')
+    await ax.post('/api/v1/datasets/restcsvzip/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
+    dataset = await workers.hook('finalizer/restcsvzip')
+    assert.equal(dataset.count, 2)
+    const lines = (await ax.get('/api/v1/datasets/restcsvzip/lines', { params: { sort: '_i' } })).data.results
+    assert.equal(lines[0].id, 'koumoul')
+    assert.equal(lines[1].id, 'bidule')
+  })
+
   it('Use the primary key defined by the user', async () => {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets', {

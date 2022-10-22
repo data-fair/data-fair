@@ -14,6 +14,7 @@ const { crc32 } = require('crc')
 const stableStringify = require('fast-json-stable-stringify')
 const stripBom = require('strip-bom-stream')
 const LinkHeader = require('http-link-header')
+const unzipper = require('unzipper')
 const dayjs = require('dayjs')
 const duration = require('dayjs/plugin/duration')
 dayjs.extend(duration)
@@ -466,13 +467,21 @@ exports.bulkLines = async (req, res, next) => {
   let inputStream, parseStreams
   const transactionSchema = [...req.dataset.schema, { key: '_id', type: 'string' }, { key: '_action', type: 'string' }]
   if (req.files && req.files.actions && req.files.actions.length) {
-    inputStream = fs.createReadStream(req.files.actions[0].path)
-
-    // handle .csv.gz file or other .gz files
     let actionsMime = mime.lookup(req.files.actions[0].originalname)
-    if (req.files.actions[0].originalname.endsWith('.gz')) {
-      actionsMime = mime.lookup(req.files.actions[0].originalname.slice(0, -3))
-      if (actionsMime) actionsMime += '+gzip'
+
+    if (req.files.actions[0].mimetype === 'application/zip') {
+      // handle .zip archive
+      const directory = await unzipper.Open.file(req.files.actions[0].path)
+      if (directory.files.length !== 1) return res.status(400).send('only accept zip archive with a single file inside')
+      actionsMime = mime.lookup(directory.files[0].path)
+      inputStream = directory.files[0].stream()
+    } else {
+      inputStream = fs.createReadStream(req.files.actions[0].path)
+      // handle .csv.gz file or other .gz files
+      if (req.files.actions[0].originalname.endsWith('.gz')) {
+        actionsMime = mime.lookup(req.files.actions[0].originalname.slice(0, -3))
+        if (actionsMime) actionsMime += '+gzip'
+      }
     }
     parseStreams = datasetUtils.transformFileStreams(actionsMime || 'application/x-ndjson', transactionSchema, null, {}, false, true)
   } else {
