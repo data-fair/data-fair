@@ -28,11 +28,11 @@ exports.stop = async (db) => {
   await db.collection('locks').deleteMany({ pid })
 }
 
-exports.acquire = async (db, _id) => {
-  debug('acquire', _id)
+exports.acquire = async (db, _id, origin) => {
+  debug('acquire', _id, origin)
   const locks = db.collection('locks')
   try {
-    await locks.insertOne({ _id, pid })
+    await locks.insertOne({ _id, pid, origin })
     try {
       await locks.updateOne({ _id }, { $currentDate: { updatedAt: true } })
     } catch (err) {

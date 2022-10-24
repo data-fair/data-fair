@@ -275,7 +275,7 @@ const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => 
   if (!shouldLock) return next()
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
     const lockKey = `dataset:${req.params.datasetId}`
-    const ack = await locks.acquire(db, lockKey)
+    const ack = await locks.acquire(db, lockKey, `${req.method} ${req.originalUrl}`)
     if (ack) {
       res.on('close', () => locks.release(db, lockKey).catch(err => console.error('failure to release dataset lock', err)))
       return next()
@@ -726,7 +726,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         throw err
       }
       const lockKey = `dataset:${dataset.id}`
-      const ack = await locks.acquire(db, lockKey)
+      const ack = await locks.acquire(db, lockKey, `${req.method} - ${req.originalUrl}`)
       if (ack) res.on('close', () => locks.release(db, lockKey).catch(err => console.warn('failure to release dataset lock', err)))
       await db.collection('datasets').insertOne(dataset)
       await datasetUtils.updateStorage(db, dataset)
@@ -1606,7 +1606,8 @@ router.get('/:datasetId/_diagnose', readDataset(), cacheHeaders.noCache, asyncWr
   if (!req.user.adminMode) return res.status(403).send()
   const esInfos = await esUtils.datasetInfos(req.app.get('es'), req.dataset)
   const filesInfos = await datasetUtils.lsFiles(req.dataset)
-  res.json({ filesInfos, esInfos })
+  const lock = await req.app.get('db').collection('locks').findOne({ _id: `dataset:${req.params.datasetId}` })
+  res.json({ filesInfos, esInfos, lock })
 }))
 
 // Special admin route to force reindexing a dataset

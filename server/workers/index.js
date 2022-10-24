@@ -281,7 +281,7 @@ async function acquireNext (db, type, filter) {
   while (await cursor.hasNext()) {
     const resource = await cursor.next()
     // console.log('resource', resource)
-    const ack = await locks.acquire(db, `${type}:${resource.id}`)
+    const ack = await locks.acquire(db, `${type}:${resource.id}`, 'worker')
     if (ack) return resource
   }
 }

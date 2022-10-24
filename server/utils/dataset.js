@@ -636,7 +636,7 @@ exports.insertWithBaseId = async (db, dataset, baseId, res) => {
   while (!insertOk) {
     try {
       const lockKey = `dataset:${dataset.id}`
-      const ack = await locks.acquire(db, lockKey)
+      const ack = await locks.acquire(db, lockKey, 'insertWithBaseid')
       if (ack) {
         res.on('close', () => locks.release(db, lockKey).catch(err => {
           prometheus.internalError.inc({ errorCode: 'dataset-lock' })
