@@ -56,7 +56,7 @@ exports.initServer = async (wss, db, session) => {
               const resource = await db.collection(type).findOne({ id })
               if (!resource) return ws.send(JSON.stringify({ type: 'error', status: 404, data: `Ressource ${type}/${id} inconnue.` }))
               let user = req.user
-              if (message.apiKey) user = await readApiKey(db, message.apiKey, type)
+              if (message.apiKey) user = await readApiKey(db, message.apiKey, type, message.account)
               if (!permissions.can(type, resource, `realtime-${subject}`, user)) {
                 return ws.send(JSON.stringify({ type: 'error', status: 403, data: 'Permission manquante.' }))
               }
