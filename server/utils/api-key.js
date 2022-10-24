@@ -18,7 +18,7 @@ exports.readApiKey = async (db, rawApiKey, scope, asAccount) => {
   let user
   if (apiKey.adminMode && apiKey.asAccount) {
     if (!asAccount) throw createError(403, 'Cette clé d\'API requiert de spécifier le compte à incarner')
-    const account = JSON.parse(asAccount)
+    const account = typeof asAccount === 'string' ? JSON.parse(asAccount) : asAccount
     user = {
       id: apiKey.id,
       name: apiKey.title,
