@@ -762,13 +762,19 @@ describe('REST datasets', () => {
     await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'restcsv',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'boolean' }]
+      schema: [
+        { key: 'attr1', type: 'string' },
+        { key: 'attr2', type: 'string' },
+        { key: 'attr3', type: 'boolean' },
+        { key: 'attr4', type: 'string', format: 'date-time' }
+      ]
     })
     let dataset = await workers.hook('finalizer/restcsv')
-    await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attr1,attr2,attr3
-line1,test1,test1,oui
-line2,test1,test1,non
-line3,test1,test1,true`, { headers: { 'content-type': 'text/csv' } })
+    const bulkRes = (await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attr1,attr2,attr3,attr4
+line1,test1,test1,oui,2015-03-18T00:58:59
+line2,test1,test1,non,
+line3,test1,test1,true,`, { headers: { 'content-type': 'text/csv' } })).data
+    console.log(bulkRes.errors[0])
     dataset = await workers.hook('finalizer/restcsv')
     assert.equal(dataset.count, 3)
     let lines = (await ax.get('/api/v1/datasets/restcsv/lines', { params: { sort: '_i' } })).data.results
@@ -776,6 +782,7 @@ line3,test1,test1,true`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(lines[0].attr1, 'test1')
     assert.equal(lines[0].attr2, 'test1')
     assert.equal(lines[0].attr3, true)
+    assert.equal(lines[0].attr4, '2015-03-18T00:58:59+01:00')
     assert.equal(lines[1]._id, 'line2')
     assert.equal(lines[1].attr1, 'test1')
     assert.equal(lines[1].attr2, 'test1')

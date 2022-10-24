@@ -47,6 +47,11 @@ exports.format = (value, prop, fileProp) => {
   }
   if (prop.type === 'string' && prop.format === 'date-time' && !(fileProp && fileProp.dateTimeFormat)) {
     if (value[10] !== 'T') value = value.substring(0, 10) + 'T' + value.substring(11)
+    const isValid = dateTimeSchema(value)
+    if (!isValid) {
+      const date = moment.tz(value, null, true, prop.timeZone || config.defaultTimeZone)
+      value = date.format()
+    }
   }
   if (prop.type === 'string') return value
   const cleanValue = value.replace(new RegExp(`^${trimablePrefix}`, 'g'), '').replace(new RegExp(`${trimablePrefix}$`, 'g'), '')
