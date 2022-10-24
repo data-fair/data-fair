@@ -171,15 +171,15 @@ export default {
       return this.$route.query.import
     }
   },
-  created () {
+  mounted () {
     this.filters = { owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
     this.refresh()
   },
   methods: {
     onScroll (e) {
-      if (!this.datasets || this.loading) return
+      if (!this.catalogs || this.loading) return
       const se = e.target.scrollingElement
-      if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.datasets.results.length < this.datasets.count) {
+      if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.catalogs.results.length < this.catalogs.count) {
         this.refresh(true)
       }
     },
@@ -209,7 +209,7 @@ export default {
         await this.$nextTick()
         await this.$nextTick()
         const html = document.getElementsByTagName('html')
-        if (html[0].scrollHeight === html[0].clientHeight && this.catalogs.results.length < this.catalogs.count) {
+        if (html[0].clientHeight >= (html[0].scrollHeight - 200) && this.catalogs.results.length < this.catalogs.count) {
           this.refresh(true)
         }
       }

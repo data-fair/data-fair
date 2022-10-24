@@ -242,7 +242,7 @@ export default {
         await this.$nextTick()
         await this.$nextTick()
         const html = document.getElementsByTagName('html')
-        if (html[0].scrollHeight === html[0].clientHeight && this.applications.results.length < this.applications.count) {
+        if (html[0].clientHeight >= (html[0].scrollHeight - 200) && this.applications.results.length < this.applications.count) {
           this.refresh(true)
         }
       }

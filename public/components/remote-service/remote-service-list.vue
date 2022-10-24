@@ -9,36 +9,21 @@
           {{ $t('description') }}
         </v-subheader>
 
-        <v-container
+        <v-row
+          v-if="remoteServices"
           v-scroll="onScroll"
-          class="pa-0"
-          fluid
+          class="resourcesList"
         >
-          <v-row
-            v-if="remoteServices"
-            class="resourcesList"
+          <v-col
+            v-for="remoteService in remoteServices.results"
+            :key="remoteService.id"
+            cols="12"
+            md="6"
+            lg="4"
           >
-            <v-col
-              v-for="remoteService in remoteServices.results"
-              :key="remoteService.id"
-              cols="12"
-              md="6"
-              lg="4"
-            >
-              <remote-service-card :remote-service="remoteService" />
-            </v-col>
-            <search-progress :loading="loading" />
-          </v-row>
-        </v-container>
-
-        <v-row v-if="remoteServices && remoteServices.count > size">
-          <v-spacer />
-          <v-pagination
-            v-model="page"
-            circle
-            :length="Math.ceil(remoteServices.count / size)"
-            @input="$vuetify.goTo('.resourcesList', {offset});refresh()"
-          />
+            <remote-service-card :remote-service="remoteService" />
+          </v-col>
+          <search-progress :loading="loading" />
         </v-row>
       </v-container>
 
@@ -108,6 +93,7 @@ export default {
       remoteServices: null,
       filters: {},
       filtered: false,
+      lastParams: null,
       importServiceSheet: !!this.$route.query.import
     }
   },
@@ -124,14 +110,14 @@ export default {
       return this.$route.query.import
     }
   },
-  created () {
+  mounted () {
     this.refresh()
   },
   methods: {
     onScroll (e) {
-      if (!this.datasets || this.loading) return
+      if (!this.remoteServices || this.loading) return
       const se = e.target.scrollingElement
-      if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.datasets.results.length < this.datasets.count) {
+      if (se.clientHeight + se.scrollTop > se.scrollHeight - 140 && this.remoteServices.results.length < this.remoteServices.count) {
         this.refresh(true)
       }
     },
@@ -139,28 +125,30 @@ export default {
       this.loading = true
       if (append) this.page += 1
       else this.page = 1
-      const remoteServices = await this.$axios.$get('api/v1/remote-services', {
-        params: {
-          size: this.size,
-          page: this.page,
-          select: 'title,description,public,privateAccess',
-          showAll: 'true',
-          html: 'true',
-          ...this.filters
-        }
-      })
-      if (append) remoteServices.results.forEach(r => this.remoteServices.results.push(r))
-      else this.remoteServices = remoteServices
-      this.$store.dispatch('breadcrumbs', [{ text: `${this.remoteServices.count} service${this.plural ? 's' : ''}` }])
-      this.filtered = this.filters.q !== undefined
-      this.loading = false
+      const params = {
+        size: this.size,
+        page: this.page,
+        select: 'title,description,public,privateAccess',
+        showAll: 'true',
+        html: 'true',
+        ...this.filters
+      }
+      if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
+        this.lastParams = params
+        const remoteServices = await this.$axios.$get('api/v1/remote-services', { params })
+        if (append) remoteServices.results.forEach(r => this.remoteServices.results.push(r))
+        else this.remoteServices = remoteServices
+        this.$store.dispatch('breadcrumbs', [{ text: `${this.remoteServices.count} service${this.plural ? 's' : ''}` }])
+        this.filtered = this.filters.q !== undefined
+        this.loading = false
 
-      // if the page is too large for the user to trigger a scroll we append results immediately
-      await this.$nextTick()
-      await this.$nextTick()
-      const html = document.getElementsByTagName('html')
-      if (html[0].scrollHeight === html[0].clientHeight && this.remoteServices.results.length < this.remoteServices.count) {
-        this.refresh(true)
+        // if the page is too large for the user to trigger a scroll we append results immediately
+        await this.$nextTick()
+        await this.$nextTick()
+        const html = document.getElementsByTagName('html')
+        if (html[0].clientHeight >= (html[0].scrollHeight - 200) && this.remoteServices.results.length < this.remoteServices.count) {
+          this.refresh(true)
+        }
       }
     }
   }

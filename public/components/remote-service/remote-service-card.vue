@@ -44,18 +44,21 @@ export default {
 </script>
 
 <style lang="css" scoped>
+.card-desc170 {
+  position: relative;
+}
 .card-desc170:before {
   content:'';
-  width:100%;
-  height:82px;
   position:absolute;
+  width:100%;
+  height:170px;
   left:0;
-  top:160px;
+  top:0;
 }
 .theme--light .card-desc170:before {
-  background:linear-gradient(transparent 0, white);
+  background:linear-gradient(transparent 0, transparent 70%, white);
 }
 .theme--dark .card-desc170:before {
-  background:linear-gradient(transparent 0, #1E1E1E);
+  background:linear-gradient(transparent 0, transparent 70%, #1E1E1E);
 }
 </style>

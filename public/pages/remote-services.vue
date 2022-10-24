@@ -1,9 +1,9 @@
 <template>
   <v-container fluid>
-    <remote-service-list v-if="user" />
+    <remote-service-list />
     <!-- Anonymous: show jumbotron -->
     <v-col
-      v-else-if="initialized"
+      v-if="initialized && !user"
       md="6"
       offset="3"
     >
