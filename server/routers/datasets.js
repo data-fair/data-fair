@@ -447,48 +447,54 @@ router.patch('/:datasetId',
       patch.exports.restToCSV.lastExport = req.dataset?.exports?.restToCSV?.lastExport
     }
 
-    if (req.dataset.isVirtual) {
-      if (patch.schema || patch.virtual) {
-        patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...req.dataset, ...patch })
-        patch.status = 'indexed'
+    if (patch.extensions && req.dataset.isRest && req.dataset.extensions) {
+      const removedExtensions = req.dataset.extensions.filter(e => !patch.extensions.find(pe => e.remoteService === pe.remoteService && e.action === pe.action))
+      if (removedExtensions.length) {
+        await restDatasetsUtils.collection(db, req.dataset).updateMany({},
+          { $unset: removedExtensions.reduce((a, re) => { a[extensions.getExtensionKey(re)] = ''; return a }, {}) }
+        )
+        await datasetUtils.updateStorage(db, req.dataset)
       }
-    } else if (patch.extensions) {
-    // extensions have changed, trigger full re-indexing
-      patch.status = 'analyzed'
-      if (req.dataset.isRest && req.dataset.extensions) {
-        const removedExtensions = req.dataset.extensions.filter(e => !patch.extensions.find(pe => e.remoteService === pe.remoteService && e.action === pe.action))
-        if (removedExtensions.length) {
-          await restDatasetsUtils.collection(db, req.dataset).updateMany({},
-            { $unset: removedExtensions.reduce((a, re) => { a[extensions.getExtensionKey(re)] = ''; return a }, {}) }
-          )
-          await datasetUtils.updateStorage(db, req.dataset)
-        }
-      }
-    } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
-    // geo projection has changed, trigger full re-indexing
-      patch.status = 'analyzed'
-    } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.geoFieldsKey(req.dataset.schema)) {
-    // geo concepts haved changed, trigger full re-indexing
-      patch.status = 'analyzed'
-    } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.separator !== f.separator))) {
-    // some separator has changed on a field, trigger full re-indexing
-      patch.status = 'analyzed'
-    } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.ignoreDetection !== f.ignoreDetection))) {
-    // some ignoreDetection param has changed on a field, trigger full analysis / re-indexing
-      patch.status = 'loaded'
-    } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.ignoreIntegerDetection !== f.ignoreIntegerDetection))) {
-    // some ignoreIntegerDetection param has changed on a field, trigger full analysis / re-indexing
-      patch.status = 'loaded'
-    } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.timeZone !== f.timeZone))) {
-    // some timeZone has changed on a field, trigger full re-indexing
-      patch.status = 'analyzed'
-    } else if (req.dataset.isRest && patch.schema && req.dataset.schema.find(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))) {
-    // some property was removed in rest dataset, trigger full re-indexing
+    }
+
+    const removedRestProp = req.dataset.isRest && patch.schema && req.dataset.schema.find(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))
+    if (removedRestProp) {
+      // some property was removed in rest dataset, trigger full re-indexing
       const deleteFields = req.dataset.schema.filter(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))
       await restDatasetsUtils.collection(db, req.dataset).updateMany({},
         { $unset: deleteFields.reduce((a, df) => { a[df.key] = ''; return a }, {}) }
       )
       await datasetUtils.updateStorage(db, req.dataset)
+      patch.status = 'analyzed'
+    }
+
+    if (req.dataset.isVirtual) {
+      if (patch.schema || patch.virtual) {
+        patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...req.dataset, ...patch })
+        patch.status = 'indexed'
+      }
+    } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.ignoreDetection !== f.ignoreDetection))) {
+      // some ignoreDetection param has changed on a field, trigger full analysis / re-indexing
+      patch.status = 'loaded'
+    } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.ignoreIntegerDetection !== f.ignoreIntegerDetection))) {
+      // some ignoreIntegerDetection param has changed on a field, trigger full analysis / re-indexing
+      patch.status = 'loaded'
+    } else if (patch.extensions) {
+      // extensions have changed, trigger full re-indexing
+      patch.status = 'analyzed'
+    } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
+      // geo projection has changed, trigger full re-indexing
+      patch.status = 'analyzed'
+    } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.geoFieldsKey(req.dataset.schema)) {
+      // geo concepts haved changed, trigger full re-indexing
+      patch.status = 'analyzed'
+    } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.separator !== f.separator))) {
+      // some separator has changed on a field, trigger full re-indexing
+      patch.status = 'analyzed'
+    } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.timeZone !== f.timeZone))) {
+      // some timeZone has changed on a field, trigger full re-indexing
+      patch.status = 'analyzed'
+    } else if (removedRestProp) {
       patch.status = 'analyzed'
     } else if (patch.schema) {
       try {
