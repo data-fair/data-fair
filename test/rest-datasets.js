@@ -528,6 +528,7 @@ describe('REST datasets', () => {
     const older = moment().subtract(2, 'day').toISOString()
     await axAdmin.post('/api/v1/datasets/resthistfill/lines',
       { _id: 'id1', attr1: 'test-older', _updatedAt: older })
+    await workers.hook('finalizer/resthistfill')
     const old = moment().subtract(1, 'day').toISOString()
     await axAdmin.post('/api/v1/datasets/resthistfill/lines',
       { _id: 'id1', attr1: 'test-old', _updatedAt: old })
