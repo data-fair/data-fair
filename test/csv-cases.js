@@ -196,6 +196,16 @@ describe('CSV cases', () => {
     assert.equal(res.data.results[0].r2, undefined)
   })
 
+  it('A CSV with numbers in scientific notation', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/numbers.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.schema[0].key, 'floats')
+    assert.equal(dataset.schema[0].type, 'number')
+    assert.equal(dataset.schema[1].key, 'ints')
+    assert.equal(dataset.schema[1].type, 'integer')
+  })
+
   it('A CSV with null utf chars', async () => {
     // better to remove these chars as they can be considered as some end of string by somer parsers
     const ax = global.ax.dmeadus

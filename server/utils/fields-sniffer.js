@@ -10,11 +10,11 @@ exports.sniff = (values, attachmentsPaths = [], existingField) => {
     return { type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
   }
   if (checkAll(values, val => booleanRegexp.test(val))) return { type: 'boolean' }
-  if (checkAll(values, val => intRegexp.test(val))) {
+  if (checkAll(values, checkInteger)) {
     if (existingField && existingField.ignoreIntegerDetection) return { type: 'number' }
     else return { type: 'integer' }
   }
-  if (checkAll(values, val => floatRegexp.test(val))) return { type: 'number' }
+  if (checkAll(values, val => !isNaN(formatNumber(trimValue(val))))) return { type: 'number' }
   if (checkAll(values, dateTimeSchema)) return { type: 'string', format: 'date-time' }
   if (checkAll(values, dateSchema)) return { type: 'string', format: 'date' }
   for (const dateTimeFormat of config.dateTimeFormats) {
@@ -24,6 +24,26 @@ exports.sniff = (values, attachmentsPaths = [], existingField) => {
     if (checkAll(values, hasDateFormat(dateFormat))) return { type: 'string', format: 'date', dateFormat }
   }
   return { type: 'string' }
+}
+
+// underscore is accepted and ignored around numbers and booleans
+const trimablePrefix = '(\\s|_)*'
+
+const trimValue = (value) => {
+  return value
+    .trim()
+    .replace(new RegExp(`^${trimablePrefix}`, 'g'), '')
+    .replace(new RegExp(`${trimablePrefix}$`, 'g'), '')
+}
+
+const formatNumber = (cleanValue) => {
+  return Number(cleanValue.replace(/\s/g, '').replace(',', '.'))
+}
+
+const checkInteger = (val) => {
+  const number = formatNumber(trimValue(val))
+  if (isNaN(number)) return false
+  return Number.isInteger(number)
 }
 
 exports.format = (value, prop, fileProp) => {
@@ -54,10 +74,10 @@ exports.format = (value, prop, fileProp) => {
     }
   }
   if (prop.type === 'string') return value
-  const cleanValue = value.replace(new RegExp(`^${trimablePrefix}`, 'g'), '').replace(new RegExp(`${trimablePrefix}$`, 'g'), '')
+  const cleanValue = trimValue(value)
   if (!cleanValue) return null
   if (prop.type === 'boolean') return ['1', 'true', 'vrai', 'oui', 'yes'].includes(cleanValue.toLowerCase())
-  if (prop.type === 'integer' || prop.type === 'number') return Number(cleanValue.replace(/\s/g, '').replace(',', '.'))
+  if (prop.type === 'integer' || prop.type === 'number') return formatNumber(cleanValue)
 }
 
 // WARNING: this code is duplicated in dataset-schema.vue
@@ -99,14 +119,9 @@ Valeurs valides : ${validValuesMsg}
   return !invalidValues.length
 }
 
-// underscore is accepted and ignored around numbers and booleans
-const trimablePrefix = '(\\s|_)*'
-
 const isOneOf = (value, values) => values.includes(value)
 // const isBoolean = (value) => ['0', '1', '-1', 'true', 'false'].indexOf(value.toLowerCase()) !== -1
 const booleanRegexp = new RegExp(`^${trimablePrefix}(0|1|-1|true|false|vrai|faux|oui|non|yes|no)${trimablePrefix}$`, 'i')
-const intRegexp = new RegExp(`^${trimablePrefix}(-|\\+)?[0-9\\s]+${trimablePrefix}$`)
-const floatRegexp = new RegExp(`^${trimablePrefix}(-|\\+)?([0-9\\s]+([.,][0-9]+)?)${trimablePrefix}$`)
 const dateTimeSchema = ajv.compile({ type: 'string', format: 'date-time' })
 const dateSchema = ajv.compile({ type: 'string', format: 'date' })
 const hasDateFormat = (format) => (value) => moment(value, format, true).isValid()
