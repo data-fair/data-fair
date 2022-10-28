@@ -277,6 +277,8 @@ exports.prepareSchema = async (db, schema, extensions) => {
         if (output.concept && !schema.find(f => !f['x-extension'] && f['x-refersTo'] === output.concept)) {
           field['x-refersTo'] = output.concept
         }
+        if (output['x-capabilities']) field['x-capabilities'] = output['x-capabilities']
+        if (output['x-labels']) field['x-labels'] = output['x-labels']
         return field
       }))
     const errorField = action.output.find(o => o.name === '_error') || action.output.find(o => o.name === 'error')
