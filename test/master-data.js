@@ -67,7 +67,7 @@ describe('Master data management', () => {
 
     const { remoteService, apiDoc } = await initMaster(
       ax,
-      [siretProperty, { key: 'extra', type: 'string' }],
+      [siretProperty, { key: 'extra', type: 'string', 'x-labels': { value1: 'label1' }, 'x-capabilities': { text: false } }],
       [{
         id: 'siret',
         title: 'Fetch extra info from siret',
@@ -131,7 +131,12 @@ describe('Master data management', () => {
     await workers.hook('finalizer/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
     const slave = await workers.hook('finalizer/slave')
-    assert.ok(slave.schema.find(p => p.key === '_siret.extra'))
+    const extraProp = slave.schema.find(p => p.key === '_siret.extra')
+    assert.ok(extraProp)
+    assert.ok(extraProp['x-labels'])
+    assert.equal(extraProp['x-labels'].value1, 'label1')
+    assert.ok(extraProp['x-capabilities'])
+    assert.equal(extraProp['x-capabilities'].text, false)
     assert.ok(slave.schema.find(p => p.key === '_siret._error'))
     assert.ok(!slave.schema.find(p => p.key === '_siret.siret'))
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
