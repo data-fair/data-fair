@@ -40,10 +40,13 @@ const webhooks = require('../utils/webhooks')
 const outputs = require('../utils/outputs')
 const limits = require('../utils/limits')
 const locks = require('../utils/locks')
+const notifications = require('../utils/notifications')
 const datasetPatchSchema = require('../../contract/dataset-patch')
 const validatePatch = ajv.compile(datasetPatchSchema)
 const datasetPostSchema = require('../../contract/dataset-post')
 const validatePost = ajv.compile(datasetPostSchema.properties.body)
+const userNotificationSchema = require('../../contract/user-notification')
+const validateUserNotification = ajv.compile(userNotificationSchema)
 const debugFiles = require('debug')('files')
 const thumbor = require('../utils/thumbor')
 const datasetFileSample = require('../utils/dataset-file-sample')
@@ -1643,6 +1646,29 @@ router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJou
     if (e.data) e.data = sanitizeHtml(e.data)
   })
   res.json(journal.events)
+}))
+
+router.post('/:datasetId/user-notification', readDataset(), permissions.middleware('sendUserNotification', 'write'), asyncWrap(async (req, res, next) => {
+  const userNotification = req.body
+  if (!validateUserNotification(userNotification)) return res.status(400).send(validateUserNotification.errors)
+  const urlParams = userNotification.urlParams || {}
+  let visibility = userNotification.visibility || permissions.isPublic('datasets', req.dataset) ? 'public' : 'private'
+  if (visibility === 'public') {
+    if (!permissions.isPublic('datasets', req.dataset)) visibility = 'private'
+    const ownerRole = permissions.getOwnerRole(req.owner, req.user)
+    if (['admin', 'contrib'].includes(ownerRole)) visibility = 'private'
+  }
+  const notif = {
+    sender: req.dataset.owner,
+    topic: { key: `data-fair:dataset-user-notification:${req.dataset.id}:${userNotification.topic}` },
+    title: userNotification.title,
+    body: req.user.name,
+    urlParams: { ...urlParams, datasetId: req.dataset.id, userId: req.user.id },
+    visibility,
+    recipient: userNotification.recipient
+  }
+  await notifications.send(notif, true)
+  res.send(notif)
 }))
 
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.
