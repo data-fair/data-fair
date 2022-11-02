@@ -335,8 +335,35 @@ router.get('/:datasetId', readDataset(), applicationKey, permissions.middleware(
 })
 
 // retrieve only the schema.. Mostly useful for easy select fields
-router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.middleware('readSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
-  let schema = req.dataset.schema
+const sendSchema = (req, res, schema) => {
+  if (req.query.type) {
+    const types = req.query.type.split(',')
+    schema = schema.filter(field => types.includes(field.type))
+  }
+  if (req.query.format) {
+    const formats = req.query.format.split(',')
+    schema = schema.filter(field => formats.includes(field.format))
+  }
+  if (req.query.enum === 'true') {
+    schema = schema.filter(field => !!field.enum)
+  }
+  if (req.query.calculated === 'false') {
+    schema = schema.filter(field => !field['x-calculated'])
+  }
+  if (req.query.capability) {
+    schema = schema.filter(field => {
+      if (field['x-capabilities'] && field['x-capabilities'][req.query.capability] === false) return false
+      if (field.key === '_id') return false
+      if (req.query.capability.startsWith('text') && field.type !== 'string') return false
+      if (req.query.capability === 'insensitive' && field.type !== 'string') return false
+      if (field.type === 'string' && (field.format === 'date' || field.format === 'date-time')) {
+        if (req.query.capability === 'text') return false
+        if (req.query.capability === 'textAgg') return false
+        if (req.query.capability === 'insensitive') return false
+      }
+      return true
+    })
+  }
   if (req.query.mimeType === 'application/tableschema+json') {
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-tableschema.json"`)
     schema = datasetUtils.tableSchema(schema)
@@ -347,36 +374,20 @@ router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.midd
     schema.forEach(field => {
       field.label = field.title || field['x-originalName'] || field.key
     })
-    if (req.query.type) {
-      const types = req.query.type.split(',')
-      schema = schema.filter(field => types.includes(field.type))
-    }
-    if (req.query.format) {
-      const formats = req.query.format.split(',')
-      schema = schema.filter(field => formats.includes(field.format))
-    }
-    if (req.query.enum === 'true') {
-      schema = schema.filter(field => !!field.enum)
-    }
-    if (req.query.calculated === 'false') {
-      schema = schema.filter(field => !field['x-calculated'])
-    }
-    if (req.query.capability) {
-      schema = schema.filter(field => {
-        if (field['x-capabilities'] && field['x-capabilities'][req.query.capability] === false) return false
-        if (field.key === '_id') return false
-        if (req.query.capability.startsWith('text') && field.type !== 'string') return false
-        if (req.query.capability === 'insensitive' && field.type !== 'string') return false
-        if (field.type === 'string' && (field.format === 'date' || field.format === 'date-time')) {
-          if (req.query.capability === 'text') return false
-          if (req.query.capability === 'textAgg') return false
-          if (req.query.capability === 'insensitive') return false
-        }
-        return true
-      })
-    }
   }
   res.status(200).send(schema)
+}
+router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.middleware('readSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
+  sendSchema(req, res, req.dataset.schema)
+})
+// alternate read schema route that does not return clues about the data (cardinality and enums)
+router.get('/:datasetId/safe-schema', readDataset(), applicationKey, permissions.middleware('readSafeSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
+  const schema = req.dataset.schema
+  for (const p of schema) {
+    delete p['x-cardinality']
+    delete p.enum
+  }
+  sendSchema(req, res, schema)
 })
 
 const permissionsWritePublications = permissions.middleware('writePublications', 'admin')

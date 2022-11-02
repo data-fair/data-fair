@@ -37,8 +37,8 @@ describe('REST datasets with owner specific lines', () => {
 
     // give permission to external users to manage his own lines in the dataset
     await global.ax.dmeadusOrg.put('/api/v1/datasets/' + dataset.id + '/permissions', [
-      { type: 'user', id: 'cdurning2', classes: ['manageOwnLines'], operations: ['readDescription'] },
-      { type: 'user', id: 'alone', classes: ['manageOwnLines'], operations: ['readDescription'] }
+      { type: 'user', id: 'cdurning2', classes: ['manageOwnLines'], operations: ['readSafeSchema'] },
+      { type: 'user', id: 'alone', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
     ])
 
     // external user cannot read all lines, but he can read his own lines
@@ -96,21 +96,15 @@ describe('REST datasets with owner specific lines', () => {
 
     // give permission to ALL external users to manage their own lines in the dataset
     await global.ax.dmeadusOrg.put('/api/v1/datasets/' + dataset.id + '/permissions', [
-      { type: 'user', id: '*', classes: ['manageOwnLines'], operations: ['readDescription'] }
+      { type: 'user', id: '*', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
     ])
     res = await global.ax.cdurning2.get(`/api/v1/datasets/${dataset.id}/own/user:cdurning2/lines`)
-    res = await global.ax.cdurning2.get(`/api/v1/datasets/${dataset.id}`)
-    assert.deepEqual(res.data.userPermissions, [
-      'readDescription',
-      'readOwnLines',
-      'readOwnLine',
-      'createOwnLine',
-      'updateOwnLine',
-      'patchOwnLine',
-      'bulkOwnLines',
-      'deleteOwnLine',
-      'readOwnLineRevisions',
-      'readOwnRevisions'
-    ])
+
+    // safe schema for external users is purged of indices about the data
+    res = await global.ax.cdurning2.get(`/api/v1/datasets/${dataset.id}/safe-schema`)
+    assert.equal(res.data.find(p => p.key === 'col1')['x-cardinality'], undefined)
+    res = await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/schema`)
+    assert.equal(res.data.find(p => p.key === 'col1')['x-cardinality'], 2)
+    assert.rejects(global.ax.cdurning2.get(`/api/v1/datasets/${dataset.id}/schema`), (err) => err.status === 403)
   })
 })

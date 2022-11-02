@@ -338,7 +338,7 @@ export default {
       set (allUsersManageOwnLines) {
         this.permissions = this.permissions
           .filter(p => !this.isManageOwnLinesPermission(p))
-        if (allUsersManageOwnLines) this.permissions.push({ type: 'user', id: '*', operations: ['readDescription'], classes: ['manageOwnLines'] })
+        if (allUsersManageOwnLines) this.permissions.push({ type: 'user', id: '*', operations: ['readSafeSchema'], classes: ['manageOwnLines'] })
         this.save()
       }
     }

@@ -3,6 +3,7 @@ const prettyBytes = require('pretty-bytes')
 const datasetSchema = require('./dataset')
 const masterData = require('./master-data')
 const dataFiles = require('./data-files')
+const capabilities = require('./capabilities')
 const datasetUtils = require('../server/utils/dataset')
 const { acceptedMetricAggs } = require('../server/utils/es/metric-agg')
 const utils = require('./utils')
@@ -283,6 +284,73 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
 - ${anonymousApiRate}
 - ${userApiRate}
   `
+
+  const readSchema = (safe) => ({
+    summary: `Récupérer la liste des colonnes${safe ? ' - les indices sur le contenu de la donnée sont purgés' : ''}`,
+    operationId: safe ? 'readSafeSchema' : 'readSchema',
+    'x-permissionClass': 'read',
+    tags: ['Métadonnées'],
+    parameters: [
+      {
+        in: 'query',
+        name: 'mimeType',
+        description: 'Définir le format du schéma',
+        required: false,
+        schema: {
+          type: 'string',
+          default: 'application/json',
+          enum: ['application/json', 'application/tableschema+json', 'application/schema+json']
+        }
+      },
+      utils.filterParam('type', 'Filtre sur le type de colonne', ['string', 'boolean', 'integer', 'number']),
+      utils.filterParam('format', 'Filtre sur de format d\'une colonne de type chaine de caractère', ['uri-reference', 'date', 'date-time']),
+      {
+        in: 'query',
+        name: 'capability',
+        description: 'Restreindre aux colonnes ayant une capacité particulière',
+        required: false,
+        schema: {
+          type: 'string',
+          enum: [null, ...Object.keys(capabilities.properties)]
+        }
+      },
+      {
+        in: 'query',
+        name: 'enum',
+        description: 'Restreindre aux colonnes ayant une énumération de valeurs (moins de 50 valeurs distinctes)',
+        required: false,
+        schema: {
+          type: 'string',
+          enum: ['false', 'true']
+        }
+      },
+      {
+        in: 'query',
+        name: 'calculated',
+        description: 'Include les colonnes calculées (non issues du fichier d\'origine)',
+        required: false,
+        schema: {
+          type: 'string',
+          enum: ['true', 'false']
+        }
+      }
+    ],
+    responses: {
+      200: {
+        description: 'La liste des colonnes',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'array',
+              items: {
+                type: 'object'
+              }
+            }
+          }
+        }
+      }
+    }
+  })
 
   const servers = [{
     url: `${publicUrl}/api/v1/datasets/${dataset.id}`,
@@ -648,47 +716,10 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
         }
       },
       '/schema': {
-        get: {
-          summary: 'Récupérer la liste des colonnes filtrable',
-          operationId: 'readSchema',
-          'x-permissionClass': 'read',
-          tags: ['Métadonnées'],
-          parameters: [
-            utils.filterParam('type', 'Filtre sur le type de colonne', ['string', 'boolean', 'integer', 'number']),
-            utils.filterParam('format', 'Filtre sur de format d\'une colonne de type chaine de caractère', ['uri-reference', 'date', 'date-time']),
-            {
-              in: 'query',
-              name: 'enum',
-              description: 'Restreindre aux colonnes ayant une énumération de valeurs (moins de 50 valeurs distinctes)',
-              schema: {
-                type: 'boolean'
-              }
-            },
-            {
-              in: 'query',
-              name: 'calculated',
-              description: 'Restreindre aux colonnes qui ne sont pas calculées (issues du fichier d\'origine)',
-              schema: {
-                type: 'boolean'
-              }
-            }
-          ],
-          responses: {
-            200: {
-              description: 'La liste des colonnes',
-              content: {
-                'application/json': {
-                  schema: {
-                    type: 'array',
-                    items: {
-                      type: 'object'
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+        get: readSchema(false)
+      },
+      '/safe-schema': {
+        get: readSchema(true)
       },
       '/api-docs.json': {
         get: {
