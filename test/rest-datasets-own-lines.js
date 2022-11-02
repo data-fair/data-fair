@@ -105,6 +105,6 @@ describe('REST datasets with owner specific lines', () => {
     assert.equal(res.data.find(p => p.key === 'col1')['x-cardinality'], undefined)
     res = await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/schema`)
     assert.equal(res.data.find(p => p.key === 'col1')['x-cardinality'], 2)
-    assert.rejects(global.ax.cdurning2.get(`/api/v1/datasets/${dataset.id}/schema`), (err) => err.status === 403)
+    await assert.rejects(global.ax.cdurning2.get(`/api/v1/datasets/${dataset.id}/schema`), (err) => err.status === 403)
   })
 })
