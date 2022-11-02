@@ -23,7 +23,6 @@ const attachmentsUtils = require('./attachments')
 const findUtils = require('./find')
 const fieldsSniffer = require('./fields-sniffer')
 const esUtils = require('../utils/es')
-const c = require('config')
 
 const actions = ['create', 'update', 'patch', 'delete']
 
