@@ -107,6 +107,21 @@
                   <img :src="item._thumbnail">
                 </v-avatar>
               </template>
+              <template v-else-if="header.value === '_owner'">
+                <v-tooltip top>
+                  <template #activator="{on}">
+                    <span
+                      class="text-body-2"
+                      v-on="on"
+                    >
+                      <v-avatar :size="28">
+                        <img :src="`${env.directoryUrl}/api/avatars/${item._owner.split(':').join('/')}/avatar.png`">
+                      </v-avatar>
+                    </span>
+                  </template>
+                  {{ item._owner }}
+                </v-tooltip>
+              </template>
               <dataset-item-value
                 v-else
                 :item="item"

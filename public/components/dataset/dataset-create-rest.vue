@@ -25,6 +25,11 @@
         :label="$t('history')"
       />
       <v-checkbox
+        v-model="rest.lineOwnership"
+        hide-details
+        :label="$t('lineOwnership')"
+      />
+      <v-checkbox
         v-model="attachments"
         hide-details
         :label="$t('attachments')"
@@ -56,6 +61,7 @@ fr:
   history: Conserver un historique complet des révisions des lignes du jeu de données
   attachments: Accepter des pièces jointes
   attachmentsAsImage: Traiter les pièces jointes comme des images
+  lineOwnership: Permettre de donner la propriété des lignes à des utilisateurs (usages collaboratifs)
 en:
   message: An editable dataset is created empty without data file or schema. You will edit the schema and the data lines afterward.
   title: Title
@@ -66,6 +72,7 @@ en:
   history: Keep a full history of the revisions of the lines of the dataset
   attachments: Accept attachments
   attachmentsAsImage: Process the attachments as images
+  lineOwnership: Accept giving ownership of lines to users (collaborative use-cases)
 </i18n>
 
 <script>
@@ -77,7 +84,8 @@ export default {
     valid: false,
     title: '',
     rest: {
-      history: false
+      history: false,
+      lineOwnership: false
     },
     attachments: false,
     attachmentsAsImage: false

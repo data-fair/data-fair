@@ -197,7 +197,7 @@ export default () => ({
       commit('setAny', { nbVirtualDatasets: virtuals.count })
     },
     async fetchApiDoc ({ commit, state }) {
-      const api = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/api-docs.json`, { params: { draft: state.draftMode } })
+      const api = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/private-api-docs.json`, { params: { draft: state.draftMode } })
       commit('setAny', { api })
     },
     async fetchJournal ({ commit, state }) {

@@ -39,6 +39,14 @@
     />
 
     <v-switch
+      v-if="resource.rest && resource.rest.lineOwnership"
+      v-model="allUsersManageOwnLines"
+      color="primary"
+      :label="$t('allUsersManageOwnLines')"
+      hide-details
+    />
+
+    <v-switch
       v-model="detailedMode"
       color="primary"
       :label="$t('detailedMode')"
@@ -76,7 +84,7 @@
               />
               <div
                 v-if="item.type === 'user'"
-                v-t="{path: 'userName', args: {name: item.name}}"
+                v-t="{path: 'userName', args: {name: item.name || item.id}}"
               />
               <div
                 v-if="item.type === 'organization' && !item.department"
@@ -189,10 +197,12 @@ fr:
   classNames:
     list: Lister
     read: Lecture
+    manageOwnLines: Gestion de ses propres lignes
     # readAdvanced: 'Lecture informations détaillées',
     # write: 'Ecriture',
     # admin: 'Administration',
     use: Utiliser le service
+  allUsersManageOwnLines: Permettre à tous les utilisateurs externes de gérer leurs propres lignes à l'intérieur de ce jeu de données (usages crowd-sourcing avancés).
 en:
   description: Allow other users to use this resource.
   publicAccess: Publicly accessible
@@ -226,10 +236,12 @@ en:
   classNames:
     list: List
     read: Read
+    manageOwnLines: Manage own lines
     # readAdvanced: 'Lecture informations détaillées',
     # write: 'Ecriture',
     # admin: 'Administration',
     use: Use the service
+  allUsersManageOwnLines: Allow all external users to manage their own lines inside the dataset (advanced crowd-sourcing use-cases).
 </i18n>
 
 <script>
@@ -268,6 +280,7 @@ export default {
             class: permClass
           })
         }))
+        console.log('api classes', classes)
       }
       return classes
     },
@@ -316,7 +329,18 @@ export default {
       return items
     },
     hasDetailedPermission () {
-      return !!this.permissions.find(p => !this.isPublicPermission(p) && !this.isSharedInOrgPermission(p) && !this.isSharedInDepPermission(p))
+      return !!this.permissions.find(p => !this.isPublicPermission(p) && !this.isSharedInOrgPermission(p) && !this.isSharedInDepPermission(p) && !this.isManageOwnLinesPermission(p))
+    },
+    allUsersManageOwnLines: {
+      get () {
+        return !!this.permissions.find(p => this.isManageOwnLinesPermission(p))
+      },
+      set (allUsersManageOwnLines) {
+        this.permissions = this.permissions
+          .filter(p => !this.isManageOwnLinesPermission(p))
+        if (allUsersManageOwnLines) this.permissions.push({ type: 'user', id: '*', operations: ['readDescription'], classes: ['manageOwnLines'] })
+        this.save()
+      }
     }
   },
   watch: {
@@ -341,6 +365,9 @@ export default {
     },
     isSharedInDepPermission (p) {
       return p.type === 'organization' && p.id === this.resource.owner.id && p.department && p.department === this.resource.owner.department && p.classes && p.classes.includes('read') && p.classes.includes('list')
+    },
+    isManageOwnLinesPermission (p) {
+      return p.type === 'user' && p.id === '*' && p.classes && p.classes.includes('manageOwnLines')
     },
     async save () {
       const permissions = JSON.parse(JSON.stringify(this.permissions))

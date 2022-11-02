@@ -242,7 +242,7 @@ export default {
           prop: p,
           originalProp: this.originalProperties.find(op => op.key === p.key),
           validatedProp,
-          editable: !p['x-extension'],
+          editable: !p['x-extension'] && !p.key.startsWith('_'),
           warning
         }
       }))

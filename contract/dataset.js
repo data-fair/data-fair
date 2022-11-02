@@ -572,7 +572,8 @@ module.exports = {
               }
             }
           }
-        }
+        },
+        lineOwnership: { type: 'boolean' }
       }
     },
     isMetaOnly: {

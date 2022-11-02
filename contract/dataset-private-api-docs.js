@@ -63,7 +63,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   Object.assign(api.paths['/'], {
     patch: {
-      summary: 'Mettre à jour les informations du jeu de données.',
+      summary: 'Mettre à jour les informations du jeu de données',
       operationId: 'writeDescription',
       'x-permissionClass': 'write',
       tags: ['Métadonnées'],
@@ -78,7 +78,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       },
       responses: {
         200: {
-          description: 'Les informations du jeu de données.',
+          description: 'Les informations du jeu de données',
           content: {
             'application/json': {
               schema: { $ref: '#/components/schemas/datasetSchema' }
@@ -88,7 +88,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       }
     },
     post: {
-      summary: 'Mettre à jour les données du jeu de données.',
+      summary: 'Mettre à jour les données du jeu de données',
       operationId: 'writeData',
       'x-permissionClass': 'write',
       tags: ['Données'],
@@ -113,7 +113,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       }
     },
     delete: {
-      summary: 'Supprimer le jeu de données.',
+      summary: 'Supprimer le jeu de données',
       operationId: 'delete',
       'x-permissionClass': 'admin',
       tags: ['Métadonnées'],
@@ -154,7 +154,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       tags: ['Métadonnées'],
       responses: {
         200: {
-          description: 'Le journal.',
+          description: 'Le journal',
           content: {
             'application/json': {
               schema: journalSchema
@@ -346,6 +346,36 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           }
         }
       }
+    }
+
+    if (dataset.rest.lineOwnership) {
+      const convertOwnLineApiPath = (apiPath) => {
+        if (!api.paths[apiPath]) return
+        api.paths['/own/{owner}' + apiPath] = JSON.parse(JSON.stringify(api.paths[apiPath]))
+        api.paths['/own/{owner}' + apiPath].parameters = api.paths['/own/{owner}' + apiPath].parameters || []
+        api.paths['/own/{owner}' + apiPath].parameters.push({
+          in: 'path',
+          name: 'owner',
+          description: 'Le propriétaire des lignes',
+          required: true,
+          schema: {
+            type: 'string'
+          }
+        })
+        Object.values(api.paths['/own/{owner}' + apiPath]).forEach(p => {
+          if (!p.operationId) return
+          p['x-permissionClass'] = 'manageOwnLines'
+          p.operationId = p.operationId.replace('Line', 'OwnLine')
+          p.summary += ' (restreint par propriétaire de ligne)'
+          p.tags = ['Données éditables par propriétaire de ligne']
+        })
+      }
+      convertOwnLineApiPath('/lines')
+      delete api.paths['/own/{owner}/lines'].delete
+      convertOwnLineApiPath('/lines/{lineId}')
+      convertOwnLineApiPath('/_bulk_lines')
+      convertOwnLineApiPath('/revisions')
+      convertOwnLineApiPath('/lines/{lineId}/revisions')
     }
   }
 

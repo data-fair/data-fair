@@ -19,7 +19,7 @@
       <v-card-text>
         <v-select
           v-model="permission.type"
-          :items="[{value: null, label: $t('public')}, {value: 'organization', label: $t('organization')}]"
+          :items="[{value: null, label: $t('public')}, {value: 'organization', label: $t('organization')}, {value: 'user', label: $t('user')}]"
           item-text="label"
           item-value="value"
           :label="$t('scope')"
@@ -28,7 +28,7 @@
         />
 
         <v-autocomplete
-          v-if="permission.type"
+          v-if="permission.type && (permission.type === 'organization' || user.adminMode)"
           :value="permission"
           :items="permission.type === 'organization' ? organizations : users"
           :search-input.sync="search"
@@ -41,6 +41,13 @@
           hide-no-data
           return-object
           @change="setOrganization"
+        />
+
+        <v-text-field
+          v-if="permission.type && permission.type === 'user' && !user.adminMode"
+          v-model="permission.id"
+          :label="$t('id')"
+          required
         />
 
         <v-select
@@ -116,6 +123,7 @@ fr:
   expertMode: Mode expert
   actions: Actions
   name: Nom
+  id: Identifiant
   ownerOrganization: Membres de l'organisation propriétaire
   ownerOrganizationNoDep: Membres de l'organisation propriétaire hors département
   ownerOrganizationDep: Membres de l'organisation propriétaire et du département {name} ({id})
@@ -126,6 +134,7 @@ fr:
   classNames:
     list: Lister
     read: Lecture
+    manageOwnLines: Gestion de ses propres lignes
     # readAdvanced: 'Lecture informations détaillées',
     # write: 'Ecriture',
     # admin: 'Administration',
@@ -143,6 +152,7 @@ en:
   expertMode: Expert mode
   actions: Actions
   name: Name
+  id: Id
   ownerOrganization: Members of owner organization
   ownerOrganizationNoDep: Members of owner organization outside a department
   ownerOrganizationDep: Members of owner organization in department {name} ({id})
@@ -153,6 +163,7 @@ en:
   classNames:
     list: List
     read: Read
+    manageOwnLines: Manage own lines
     # readAdvanced: 'Lecture informations détaillées',
     # write: 'Ecriture',
     # admin: 'Administration',
@@ -162,6 +173,8 @@ en:
 <script>
 import { mapState } from 'vuex'
 
+const allUsers = { id: '*', name: '*' }
+
 export default {
   props: ['value', 'permissionClasses', 'owner'],
   data: () => ({
@@ -170,11 +183,12 @@ export default {
     expertMode: false,
     search: '',
     loading: false,
-    users: [],
+    users: [allUsers],
     organizations: []
   }),
   computed: {
     ...mapState(['env']),
+    ...mapState('session', ['user']),
     scopeItems () {
       if (!this.owner) return []
       const items = [{ value: 'public', label: this.$t('public') }]
@@ -234,13 +248,13 @@ export default {
 
       this.loading = true
       if (this.permission && this.permission.type === 'organization') {
-        this.users = []
+        this.users = [allUsers]
         if (!this.search || this.search.length < 3) this.organizations = []
         else this.organizations = (await this.$axios.$get(this.env.directoryUrl + '/api/organizations', { params: { q: this.search } })).results
       } else {
         this.organizations = []
-        if (!this.search || this.search.length < 3) this.users = []
-        else this.users = (await this.$axios.$get(this.env.directoryUrl + '/api/users', { params: { q: this.search } })).results
+        if (!this.search || this.search.length < 3) this.users = [allUsers]
+        else this.users = [allUsers].concat((await this.$axios.$get(this.env.directoryUrl + '/api/users', { params: { q: this.search } })).results)
       }
 
       this.loading = false

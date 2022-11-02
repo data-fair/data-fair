@@ -130,7 +130,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     const params = [{
       in: 'query',
       name: 'size',
-      description: `Le nombre de résultats à retourner (taille de la pagination). ${defaultSize} par défaut.`,
+      description: `Le nombre de résultats à retourner (taille de la pagination), ${defaultSize} par défaut`,
       schema: {
         default: defaultSize,
         type: 'integer',
@@ -248,7 +248,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
   - **json** (défaut)
   - **csv** pour format compatibles tableurs
   - **pbf** pour tuiles vectorielles
-  - **geojson** et **wkt** pour formats géographiques.`,
+  - **geojson** et **wkt** pour formats géographiques`,
     schema: {
       enum: [null, 'json', 'csv', 'xlsx', 'ods'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson', 'wkt'] : [])
     }
@@ -267,7 +267,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
   const finalizedAtParam = {
     in: 'query',
     name: 'finalizedAt',
-    description: 'La date de finalisation du jeu de données (propriété finalizedAt). Utilisée pour optimiser l\'utilisation de cache et améliorer la performance.',
+    description: 'La date de finalisation du jeu de données (propriété finalizedAt). Utilisée pour optimiser l\'utilisation de cache et améliorer la performance',
     schema: {
       type: 'string'
     }
@@ -308,13 +308,13 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     paths: {
       '/': {
         get: {
-          summary: 'Récupérer les informations du jeu de données.',
+          summary: 'Récupérer les informations du jeu de données',
           operationId: 'readDescription',
           'x-permissionClass': 'read',
           tags: ['Métadonnées'],
           responses: {
             200: {
-              description: 'Les informations du jeu de données.',
+              description: 'Les informations du jeu de données',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/datasetSchema' }
@@ -326,13 +326,13 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/data-files': {
         get: {
-          summary: 'Récupérer la liste des fichiers de données.',
+          summary: 'Récupérer la liste des fichiers de données',
           operationId: 'readDataFiles',
           'x-permissionClass': 'read',
           tags: ['Données'],
           responses: {
             200: {
-              description: 'Le résultat de la requête.',
+              description: 'Le résultat de la requête',
               content: {
                 'application/json': {
                   schema: dataFiles
@@ -344,14 +344,14 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/lines': {
         get: {
-          summary: 'Requêter les lignes du jeu de données.',
+          summary: 'Requêter les lignes du jeu de données',
           operationId: 'readLines',
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [{
             in: 'query',
             name: 'page',
-            description: 'Le numéro de la page (indice de la pagination). Débute à 1. Pour paginer sur de gros volumes de données utilisez plutôt le paramètre after.',
+            description: 'Le numéro de la page (indice de la pagination). Débute à 1. Pour paginer sur de gros volumes de données utilisez plutôt le paramètre after',
             schema: {
               default: 1,
               type: 'integer'
@@ -359,7 +359,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           }, {
             in: 'query',
             name: 'after',
-            description: 'Pagination en profondeur. Automatiquement renseigné par la propriété next du résultat de la requête précédente.',
+            description: 'Pagination en profondeur. Automatiquement renseigné par la propriété next du résultat de la requête précédente',
             schema: {
               default: 1,
               type: 'integer'
@@ -367,7 +367,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           }].concat(hitsParams()).concat([formatParam, htmlParam]).concat(filterParams).concat([{
             in: 'query',
             name: 'collapse',
-            description: 'Afficher une ligne de résultat par valeur distince d\'un champ.',
+            description: 'Afficher une ligne de résultat par valeur distince d\'un champ',
             schema: {
               type: 'string',
               enum: [null].concat(stringValuesProperties.map(p => p.key))
@@ -375,7 +375,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           }]),
           responses: {
             200: {
-              description: 'Le résultat de la requête.',
+              description: 'Le résultat de la requête',
               content: {
                 'application/json': {
                   schema: {
@@ -387,7 +387,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                       },
                       results: {
                         type: 'array',
-                        description: 'Le tableau de résultats.',
+                        description: 'Le tableau de résultats',
                         items: datasetLineSchema
                       },
                       next: {
@@ -404,7 +404,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/values_agg': {
         get: {
-          summary: 'Récupérer des informations agrégées en fonction des valeurs d\'une colonne.',
+          summary: 'Récupérer des informations agrégées en fonction des valeurs d\'une colonne',
           operationId: 'getValuesAgg',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -429,7 +429,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           // TODO: document sort param and interval
           responses: {
             200: {
-              description: 'Les informations du jeu de données agrégées par valeurs d\'une colonne.',
+              description: 'Les informations du jeu de données agrégées par valeurs d\'une colonne',
               content: {
                 'application/json': {
                   schema: {
@@ -443,7 +443,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/values/{field}': {
         get: {
-          summary: 'Récupérer la liste des valeurs distinctes d\'une colonne éventuellement filtrée par le paramètre q.',
+          summary: 'Récupérer la liste des valeurs distinctes d\'une colonne éventuellement filtrée par le paramètre q',
           operationId: 'getValues',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -459,7 +459,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           }, {
             in: 'query',
             name: 'size',
-            description: 'Le nombre de résultats à retourner (taille de la pagination). 10 par défaut.',
+            description: 'Le nombre de résultats à retourner (taille de la pagination). 10 par défaut',
             schema: {
               default: 10,
               type: 'integer',
@@ -469,7 +469,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           // TODO: document sort param and interval
           responses: {
             200: {
-              description: 'Les valeurs d\'une colonne.',
+              description: 'Les valeurs d\'une colonne',
               content: {
                 'application/json': {
                   schema: {
@@ -483,7 +483,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/metric_agg': {
         get: {
-          summary: 'Calculer une métrique sur un ensemble de lignes.',
+          summary: 'Calculer une métrique sur un ensemble de lignes',
           operationId: 'getMetricAgg',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -511,7 +511,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             {
               in: 'query',
               name: 'percents',
-              description: 'Les pourcentages sur lesquels calculer la métrique percentiles (inutile pour les autres métriques). La valeur par défaut est "1,5,25,50,75,95,99".',
+              description: 'Les pourcentages sur lesquels calculer la métrique percentiles (inutile pour les autres métriques). La valeur par défaut est "1,5,25,50,75,95,99"',
               required: false,
               schema: {
                 type: 'string'
@@ -520,7 +520,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           ].concat(filterParams),
           responses: {
             200: {
-              description: 'Le résultat du calcul.',
+              description: 'Le résultat du calcul',
               content: {
                 'application/json': {
                   schema: {
@@ -534,7 +534,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/simple_metrics_agg': {
         get: {
-          summary: 'Calculer des métriques simples standards sur toutes les colonnes possibles ou sur une liste de colonnes.',
+          summary: 'Calculer des métriques simples standards sur toutes les colonnes possibles ou sur une liste de colonnes',
           operationId: 'getSimpleMetricsAgg',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -555,7 +555,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           ].concat(filterParams),
           responses: {
             200: {
-              description: 'Le résultat du calcul.',
+              description: 'Le résultat du calcul',
               content: {
                 'application/json': {
                   schema: {
@@ -569,7 +569,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/words_agg': {
         get: {
-          summary: 'Récupérer des mots significatifs dans un jeu de données.',
+          summary: 'Récupérer des mots significatifs dans un jeu de données',
           operationId: 'getWordsAgg',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -585,7 +585,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           }, {
             in: 'query',
             name: 'analysis',
-            description: 'Le type d\'analyse textuelle effectuée sur la colonne. L\'analyse "lang" est intelligente en fonction de la langue, elle calcule la racine grammaticale des mots et ignore les mots les moins significatifs. L\'analyse "standard" effectue un travail plus basique d\'extraction de mots bruts depuis le texte.',
+            description: 'Le type d\'analyse textuelle effectuée sur la colonne. L\'analyse "lang" est intelligente en fonction de la langue, elle calcule la racine grammaticale des mots et ignore les mots les moins significatifs. L\'analyse "standard" effectue un travail plus basique d\'extraction de mots bruts depuis le texte',
             schema: {
               type: 'string',
               default: 'lang',
@@ -595,7 +595,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           // TODO: document sort param and interval
           responses: {
             200: {
-              description: 'Le résultat de l\'analyse.',
+              description: 'Le résultat de l\'analyse',
               content: {
                 'application/json': {
                   schema: {
@@ -615,7 +615,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           tags: ['Données'],
           responses: {
             200: {
-              description: 'Le jeu de données.',
+              description: 'Le jeu de données',
               content: {
                 'text/csv': {
                   schema: {
@@ -635,7 +635,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           tags: ['Données'],
           responses: {
             200: {
-              description: 'Le jeu de données.',
+              description: 'Le jeu de données',
               content: {
                 'text/csv': {
                   schema: {
@@ -675,7 +675,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           ],
           responses: {
             200: {
-              description: 'La liste des colonnes.',
+              description: 'La liste des colonnes',
               content: {
                 'application/json': {
                   schema: {
@@ -748,14 +748,14 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
   if (dataset.bbox && dataset.bbox.length === 4) {
     api.paths['/geo_agg'] = {
       get: {
-        summary: 'Récupérer des informations agrégées spatialement sur le jeu de données.',
+        summary: 'Récupérer des informations agrégées spatialement sur le jeu de données',
         operationId: 'getGeoAgg',
         'x-permissionClass': 'read',
         tags: ['Données'],
         parameters: [aggSizeParam].concat(filterParams).concat(hitsParams(0, 100)).concat([formatParam, htmlParam]),
         responses: {
           200: {
-            description: 'Les informations du jeu de données agrégées spatialement.',
+            description: 'Les informations du jeu de données agrégées spatialement',
             content: {
               'application/json': {
                 schema: {
@@ -774,7 +774,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     const before = {
       in: 'query',
       name: 'before',
-      description: 'Pagination pour remonter dans l\'historique. Automatiquement renseigné par la propriété next du résultat de la requête précédente.',
+      description: 'Pagination pour remonter dans l\'historique. Automatiquement renseigné par la propriété next du résultat de la requête précédente',
       schema: {
         default: 1,
         type: 'integer'

@@ -238,6 +238,11 @@ exports.prepareQuery = (dataset, query) => {
     })
   }
 
+  // Envorced filter in case of rest datasets with line ownership
+  if (query.owner) {
+    filter.push({ term: { _owner: query.owner } })
+  }
+
   // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
   // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
   const searchFields = []

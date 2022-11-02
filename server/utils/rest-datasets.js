@@ -23,6 +23,7 @@ const attachmentsUtils = require('./attachments')
 const findUtils = require('./find')
 const fieldsSniffer = require('./fields-sniffer')
 const esUtils = require('../utils/es')
+const c = require('config')
 
 const actions = ['create', 'update', 'patch', 'delete']
 
@@ -160,6 +161,23 @@ const fillPrimaryKeyFromId = (line, dataset) => {
   })
 }
 
+const linesOwnerCols = (req) => {
+  const linesOwner = req.linesOwner
+  if (!req.linesOwner) return {}
+  const cols = { _owner: linesOwner.type + ':' + linesOwner.id }
+  if (linesOwner.department) cols._owner += ':' + linesOwner.department
+  if (linesOwner.name) {
+    cols._ownerName = linesOwner.name
+    if (linesOwner.departmentName) cols._ownerName += ` (${linesOwner.department})`
+  }
+  return cols
+}
+const linesOwnerFilter = (req) => {
+  if (!req.linesOwner) return {}
+  const cols = linesOwnerCols(req)
+  return { _owner: cols._owner }
+}
+
 const applyTransactions = async (req, transacs, validate) => {
   const db = req.app.get('db')
   const dataset = req.dataset
@@ -187,6 +205,7 @@ const applyTransactions = async (req, transacs, validate) => {
     if (_action === 'create' && !body._id) body._id = nanoid()
     if (!body._id) throw createError(400, '"_id" attribute is required')
 
+    Object.assign(body, linesOwnerCols(req))
     const extendedBody = { ...body }
     extendedBody._needsIndexing = true
     extendedBody._updatedAt = body._updatedAt ? new Date(body._updatedAt) : updatedAt
@@ -201,12 +220,12 @@ const applyTransactions = async (req, transacs, validate) => {
     if (_action === 'delete') {
       extendedBody._deleted = true
       extendedBody._hash = null
-      bulkOp.find({ _id: body._id }).replaceOne(extendedBody)
+      bulkOp.find({ _id: body._id, ...linesOwnerFilter(req) }).replaceOne(extendedBody)
       hasBulkOp = true
     } else {
       extendedBody._deleted = false
       if (_action === 'patch') {
-        const previousBody = await collection.findOne({ _id: body._id }, { projection: patchProjection })
+        const previousBody = await collection.findOne({ _id: body._id, ...linesOwnerFilter(req) }, { projection: patchProjection })
         if (previousBody) {
           body = { ...previousBody, ...body }
           Object.assign(extendedBody, body)
@@ -218,7 +237,7 @@ const applyTransactions = async (req, transacs, validate) => {
         result._status = 400
       } else {
         extendedBody._hash = crc32(stableStringify(body)).toString(16)
-        const filter = { _id: body._id, _hash: { $ne: extendedBody._hash } }
+        const filter = { _id: body._id, _hash: { $ne: extendedBody._hash }, ...linesOwnerFilter(req) }
         bulkOp.find(filter).upsert().replaceOne(extendedBody)
         hasBulkOp = true
       }
@@ -386,7 +405,7 @@ async function manageAttachment (req, keepExisting) {
 exports.readLine = async (req, res, next) => {
   const db = req.app.get('db')
   const collection = exports.collection(db, req.dataset)
-  const line = await collection.findOne({ _id: req.params.lineId })
+  const line = await collection.findOne({ _id: req.params.lineId, ...linesOwnerFilter(req) })
   if (!line) return res.status(404).send('Identifiant de ligne inconnu')
   if (line._deleted) return res.status(404).send('Identifiant de ligne inconnu')
   cleanLine(line)
@@ -574,6 +593,7 @@ exports.readRevisions = async (req, res, next) => {
   }
   const revisionsCollection = exports.revisionsCollection(req.app.get('db'), req.dataset)
   const filter = req.params.lineId ? { _lineId: req.params.lineId } : {}
+  Object.assign(filter, linesOwnerFilter(req))
   const countFilter = { ...filter }
   if (req.query.before) filter._i = { $lt: parseInt(req.query.before) }
   // eslint-disable-next-line no-unused-vars

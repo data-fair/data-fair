@@ -85,6 +85,7 @@ const getOwnerClasses = (owner, user, resourceType) => {
 const matchPermission = (owner, permission, user) => {
   if (!permission.type && !permission.id) return true // public
   if (!user || user.isApplicationKey || !user.activeAccount) return false
+  if (permission.type === 'user' && permission.id === '*') return true
   if (user.activeAccount.type !== permission.type || user.activeAccount.id !== permission.id) return false
   if (permission.type === 'user') return true
   if (user.activeAccount.department && permission.department && permission.department !== '*' && permission.department !== user.activeAccount.department) return false
