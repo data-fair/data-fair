@@ -74,6 +74,7 @@ exports.prepareSchema = async (db, dataset) => {
     else delete field['x-display']
 
     // Some attributes of a a fields have to be homogeneous accross all children
+    field['x-capabilities'] = {}
     matchingFields.forEach(f => {
       if (f.type !== field.type) {
         let message = `Le champ "${field.key}" a des types contradictoires (${field.type}, ${f.type}).`
@@ -87,7 +88,6 @@ exports.prepareSchema = async (db, dataset) => {
       if (format === 'uri-reference') format = undefined
       if (format !== field.format) throw createError(400, `Le champ "${field.key}" a des formats contradictoires (${field.format || 'non défini'}, ${f.format || 'non défini'}).`)
       if (f['x-refersTo'] !== field['x-refersTo']) throw createError(400, `Le champ "${field.key}" a des concepts contradictoires (${field['x-refersTo'] || 'non défini'}, ${f['x-refersTo'] || 'non défini'}).`)
-      field['x-capabilities'] = field['x-capabilities'] || {}
       for (const key in f['x-capabilities'] || {}) {
         if (f['x-capabilities'][key] === false) field['x-capabilities'][key] = false
       }

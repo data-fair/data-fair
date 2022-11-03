@@ -479,7 +479,15 @@ describe('virtual datasets', () => {
       schema: [{ key: 'id' }]
     })
 
-    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    let virtualDataset = await workers.hook('finalizer/' + res.data.id)
     assert.deepEqual(virtualDataset.schema[0]['x-capabilities'], { textAgg: false, insensitive: false, values: false })
+
+    child1.schema[0]['x-capabilities'] = { values: false }
+    await ax.patch('/api/v1/datasets/' + child1.id, { schema: child1.schema })
+    child2.schema[0]['x-capabilities'] = { insensitive: false }
+    await ax.patch('/api/v1/datasets/' + child2.id, { schema: child2.schema })
+
+    virtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
+    assert.deepEqual(virtualDataset.schema[0]['x-capabilities'], { insensitive: false, values: false })
   })
 })
