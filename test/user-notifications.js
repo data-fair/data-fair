@@ -3,7 +3,7 @@ const assert = require('assert').strict
 const workers = require('../server/workers')
 
 describe('user-notifications about dataset', () => {
-  it('send user otification', async () => {
+  it('send user notification', async () => {
     const ax = global.ax.dmeadus
     const dataset = (await ax.post('/api/v1/datasets', {
       isRest: true,
