@@ -123,4 +123,5 @@ ENV DEBUG db,upgrade*
 VOLUME /data
 EXPOSE 8080
 
-CMD ["dumb-init", "node", "--max-http-header-size", "64000", "server"]
+# CMD ["dumb-init", "node", "--max-http-header-size", "64000", "server"]
+CMD ["node", "--max-http-header-size", "64000", "server"]
