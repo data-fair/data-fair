@@ -24,11 +24,17 @@
         hide-details
         :label="$t('history')"
       />
+
       <v-checkbox
+        v-if="user.adminMode"
         v-model="rest.lineOwnership"
         hide-details
         :label="$t('lineOwnership')"
+        background-color="admin"
+        color="white"
+        dark
       />
+
       <v-checkbox
         v-model="attachments"
         hide-details
