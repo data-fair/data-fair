@@ -238,7 +238,7 @@ exports.stop = async () => {
     await prometheus.stop()
   }
 
-  // this timeout is because we can a few small pending operations after worker and server were closed
+  // this timeout is because we can have a few small pending operations after worker and server were closed
   await new Promise(resolve => setTimeout(resolve, 1000))
   await Promise.all([
     app.get('mongoClient').close(),

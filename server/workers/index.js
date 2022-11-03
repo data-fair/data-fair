@@ -242,6 +242,12 @@ async function iter (app, resource, type) {
     if (hooks[taskKey]) hooks[taskKey].resolve(JSON.parse(JSON.stringify(newResource)))
     if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].resolve(JSON.parse(JSON.stringify(newResource)))
   } catch (err) {
+    if (stopped) {
+      console.log('task failed while service was shutting down', err)
+      if (endTask) endTask({ status: 'interrupted' })
+      return
+    }
+
     if (endTask) endTask({ status: 'error' })
     // Build back the original error message from the stderr of the child process
     const errorMessage = []
