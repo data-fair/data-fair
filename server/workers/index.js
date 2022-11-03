@@ -111,7 +111,9 @@ exports.start = async (app) => {
 // Stop and wait for all workers to finish their current task
 exports.stop = async () => {
   stopped = true
+  console.log('waiting for worker loop to finish current tasks')
   await Promise.all(promisePool.filter(p => !!p))
+  console.log('all tasks are done')
 }
 
 // Filters to select eligible datasets or applications for processing
@@ -223,10 +225,12 @@ async function iter (app, resource, type) {
       spawnPromise.childProcess.stdout.on('data', data => {
         lastStderr = ''
         debug('[spawned task stdout] ' + data)
+        if (stopped) console.log('[spawned task stdout after stopping]', data)
       })
       spawnPromise.childProcess.stderr.on('data', data => {
         debug('[spawned task stderr] ' + data)
         lastStderr += data
+        if (stopped) console.log('[spawned task stderr after stopping]', data)
       })
       await spawnPromise
     } else {
@@ -242,13 +246,6 @@ async function iter (app, resource, type) {
     if (hooks[taskKey]) hooks[taskKey].resolve(JSON.parse(JSON.stringify(newResource)))
     if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].resolve(JSON.parse(JSON.stringify(newResource)))
   } catch (err) {
-    if (stopped) {
-      console.log('task failed while service was shutting down', err)
-      if (endTask) endTask({ status: 'interrupted' })
-      return
-    }
-
-    if (endTask) endTask({ status: 'error' })
     // Build back the original error message from the stderr of the child process
     const errorMessage = []
     if (lastStderr) {
@@ -263,6 +260,14 @@ async function iter (app, resource, type) {
     } else {
       errorMessage.push(err.message)
     }
+
+    if (stopped) {
+      console.log('task failed while service was shutting down', errorMessage)
+      if (endTask) endTask({ status: 'interrupted' })
+      return
+    }
+
+    if (endTask) endTask({ status: 'error' })
 
     prometheus.internalError.inc({ errorCode: 'task' })
     if (resource) {
