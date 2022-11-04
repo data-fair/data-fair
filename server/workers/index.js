@@ -142,6 +142,7 @@ async function iter (app, resource, type) {
   let taskKey
   let lastStderr = ''
   let endTask
+  let hookResolution, hookRejection
   try {
     // if there is something to be done in the draft mode of the dataset, it is prioritary
     if (type === 'dataset' && resource.draft && resource.draft.status !== 'finalized' && resource.draft.status !== 'error') {
@@ -244,8 +245,7 @@ async function iter (app, resource, type) {
     if (task.eventsPrefix && newResource) {
       await journals.log(app, resource.draftReason ? datasetUtils.mergeDraft({ ...newResource }) : newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
     }
-    if (hooks[taskKey]) hooks[taskKey].resolve(JSON.parse(JSON.stringify(newResource)))
-    if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].resolve(JSON.parse(JSON.stringify(newResource)))
+    hookResolution = newResource
   } catch (err) {
     // Build back the original error message from the stderr of the child process
     const errorMessage = []
@@ -276,11 +276,18 @@ async function iter (app, resource, type) {
     await journals.log(app, resource, { type: 'error', data: errorMessage.join('\n') }, type)
     await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { [resource.draftReason ? 'draft.status' : 'status']: 'error' } })
     resource.status = 'error'
-    if (hooks[taskKey]) hooks[taskKey].reject({ resource, message: errorMessage.join('\n') })
-    if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
-    if (hooks['finalizer/' + resource.id]) hooks['finalizer/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
+    hookRejection = { resource, message: errorMessage.join('\n') }
   } finally {
     await locks.release(db, `${type}:${resource.id}`)
+    if (hookRejection) {
+      if (hooks[taskKey]) hooks[taskKey].reject(hookRejection)
+      if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject(hookRejection)
+      if (hooks['finalizer/' + resource.id]) hooks['finalizer/' + resource.id].reject(hookRejection)
+    }
+    if (hookResolution) {
+      if (hooks[taskKey]) hooks[taskKey].resolve(hookResolution)
+      if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].resolve(hookResolution)
+    }
   }
 }
 
