@@ -244,7 +244,6 @@ async function iter (app, resource, type) {
     if (task.eventsPrefix && newResource) {
       await journals.log(app, resource.draftReason ? datasetUtils.mergeDraft({ ...newResource }) : newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
     }
-    await locks.release(db, `${type}:${resource.id}`)
     if (hooks[taskKey]) hooks[taskKey].resolve(JSON.parse(JSON.stringify(newResource)))
     if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].resolve(JSON.parse(JSON.stringify(newResource)))
   } catch (err) {
@@ -272,19 +271,16 @@ async function iter (app, resource, type) {
     if (endTask) endTask({ status: 'error' })
 
     prometheus.internalError.inc({ errorCode: 'task' })
-    if (resource) {
-      console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, err, errorMessage)
-      await journals.log(app, resource, { type: 'error', data: errorMessage.join('\n') }, type)
-      await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { [resource.draftReason ? 'draft.status' : 'status']: 'error' } })
-      resource.status = 'error'
-      await locks.release(db, `${type}:${resource.id}`)
-      if (hooks[taskKey]) hooks[taskKey].reject({ resource, message: errorMessage.join('\n') })
-      if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
-      if (hooks['finalizer/' + resource.id]) hooks['finalizer/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
-    } else {
-      console.warn(`failure in worker ${taskKey} - ${type}`, err)
-      await locks.release(db, `${type}:${resource.id}`)
-    }
+
+    console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, err, errorMessage)
+    await journals.log(app, resource, { type: 'error', data: errorMessage.join('\n') }, type)
+    await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { [resource.draftReason ? 'draft.status' : 'status']: 'error' } })
+    resource.status = 'error'
+    if (hooks[taskKey]) hooks[taskKey].reject({ resource, message: errorMessage.join('\n') })
+    if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
+    if (hooks['finalizer/' + resource.id]) hooks['finalizer/' + resource.id].reject({ resource, message: errorMessage.join('\n') })
+  } finally {
+    await locks.release(db, `${type}:${resource.id}`)
   }
 }
 
