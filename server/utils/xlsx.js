@@ -7,7 +7,12 @@ const csvParse = require('csv-parse/lib/sync')
 exports.getCSV = async (filePath) => {
   const data = await fs.readFile(filePath)
   const workbook = new Excel.Workbook()
-  await workbook.xlsx.load(data)
+  try {
+    await workbook.xlsx.load(data)
+  } catch (err) {
+    console.log('failed to use Excel module to parse file, use older parser', err)
+    return await getCSVOld(data)
+  }
 
   // fallback to previous implementation
   if (!workbook.worksheets?.length) return await getCSVOld(data)
