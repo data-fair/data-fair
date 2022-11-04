@@ -58,7 +58,7 @@ exports.process = async function (app, dataset) {
       const fileField = dataset.file.schema.find(f => f.key === escapedKey)
       if (!fileField) throw new Error(`Champ ${field} présent dans la donnée mais absent de l'analyse initiale du fichier`)
       const existingField = dataset.schema && dataset.schema.find(f => f.key === escapedKey)
-      Object.assign(fileField, fieldsSniffer.sniff(sampleValues[field], attachments, existingField))
+      Object.assign(fileField, fieldsSniffer.sniff([...sampleValues[field]], attachments, existingField))
     })
   if (attachments.length && !dataset.file.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
     throw new Error(`Vous avez chargé des pièces jointes, mais aucune colonne ne contient les chemins vers ces pièces jointes. Valeurs attendues : ${attachments.slice(0, 3).join(', ')}.`)

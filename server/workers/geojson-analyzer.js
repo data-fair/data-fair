@@ -45,7 +45,7 @@ class AnalyzerWritable extends Writable {
       this.schema.push({
         key,
         'x-originalName': property,
-        ...fieldsSniffer.sniff(this.samples[property], this.options.attachments, existingField)
+        ...fieldsSniffer.sniff([...this.samples[property]], this.options.attachments, existingField)
       })
     }
     callback()

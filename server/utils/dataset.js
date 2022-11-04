@@ -387,10 +387,11 @@ exports.sampleValues = async (dataset) => {
         sampleValues[key] = sampleValues[key] || new Set([])
         // stop if we already have a lot of samples
         if (sampleValues[key].size > 1000) continue
-        // ignore empty or too long values to prevent costly sniffing
-        if (!chunk[key] || chunk[key].length > 200) continue
+        // ignore empty values
+        if (!chunk[key]) continue
         finished = false
-        sampleValues[key].add(chunk[key])
+        // prevent too costly sniffing by truncating long strings
+        sampleValues[key].add(chunk[key].length > 300 ? chunk[key].slice(300) : chunk[key])
       }
       currentLine += 1
 
@@ -534,6 +535,8 @@ exports.mergeFileSchema = (dataset) => {
       const { dateFormat, dateTimeFormat, ...f } = field
       // manage default capabilities
       if (field.type === 'string' && !field.format) f['x-capabilities'] = { textAgg: false }
+      if (field.type === 'string' && field['x-display'] === 'textarea') f['x-capabilities'] = { index: false, values: false, textAgg: false, insensitive: false }
+      if (field.type === 'string' && field['x-display'] === 'markdown') f['x-capabilities'] = { index: false, values: false, textAgg: false, insensitive: false }
       return f
     })
   dataset.schema = dataset.schema.concat(newFields)

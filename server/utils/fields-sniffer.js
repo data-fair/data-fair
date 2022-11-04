@@ -5,6 +5,7 @@ const config = require('config')
 
 exports.sniff = (values, attachmentsPaths = [], existingField) => {
   if (existingField && existingField.ignoreDetection) return { type: 'string' }
+  if (!values.length) return { type: 'string' }
 
   if (attachmentsPaths && attachmentsPaths.length && checkAll(values, isOneOf, attachmentsPaths, 'Vous avez chargé des pièces jointes, et une colonne semble contenir des chemins vers ces pièces jointes. Mais certaines valeurs sont erronées.')) {
     return { type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
@@ -23,7 +24,9 @@ exports.sniff = (values, attachmentsPaths = [], existingField) => {
   for (const dateFormat of config.dateFormats) {
     if (checkAll(values, hasDateFormat(dateFormat))) return { type: 'string', format: 'date', dateFormat }
   }
-  return { type: 'string' }
+  if (checkAll(values, val => val.length <= 200)) return { type: 'string' }
+  // TODO: detect markdown/html format ?
+  return { type: 'string', 'x-display': 'textarea' }
 }
 
 // underscore is accepted and ignored around numbers and booleans
@@ -91,7 +94,7 @@ exports.escapeKey = (key) => {
 }
 
 function checkAll (values, check, param, throwIfAlmost) {
-  const definedValues = [...values]
+  const definedValues = values
     .filter(v => !!v)
     .map(v => v.trim())
     .filter(v => !!v)
