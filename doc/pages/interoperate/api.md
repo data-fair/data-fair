@@ -10,7 +10,7 @@ Data Fair expose une API Rest complète. Une partie de cette API est essentielle
 
 ### Pré-requis
 
-  - Une installation opérationnelle de Data FAIR, soit locale, soit publique comme sur [koumoul.com](https://koumoul.com/s/data-fair)
+  - Une installation opérationnelle de Data FAIR, soit locale, soit publique comme sur [koumoul.com](https://koumoul.com/data-fair)
   - Un compte et une clé d'API avec la portée "Gestion des jeux de données" (voir vos paramètres personnels ou d'organisation dans le menu en haut à droite)
   - [curl](https://curl.haxx.se/) ou autre client HTTP à condition d'adapter les exemples
 
@@ -23,7 +23,7 @@ export API_KEY="XXXX"
 Définissez une variable contenant l'URL de base de votre instance Data Fair :
 
 ```sh
-export Data Fair_URL="https://koumoul.com/s/data-fair"
+export Data Fair_URL="https://koumoul.com/data-fair"
 export Data Fair_URL="http://localhost/data-fair"
 ```
 

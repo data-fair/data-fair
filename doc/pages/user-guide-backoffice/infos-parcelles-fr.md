@@ -14,7 +14,7 @@ La visualisation **Infos-parcelles** permet de projeter ses données sur un plan
 
 Pour visualiser vos données sur **Infos-parcelles**, votre jeu de données doit contenir une colonne d'**identifiants de parcelles sur 14 caractères**. Ces identifiant (ou code parcelles) sont constitués de cette méthode : code commune INSEE de 5 chiffres + code section cadastre de 5 caractères + numéro parcelle cadastre de 4 chiffres = identifiant de parcelle structuré pour Infos-Parcelles.
 
-Par exemple **56197037ZC0063** est un code valide pour **Infos-parcelles**. Vous pouvez consulter ce [jeu de données de parcelles agricoles gérées par la régie agricole de la Ville de Toulouse](https://koumoul.com/s/data-fair/api/v1/datasets/domaine-agricole-toulouse/full) qui possède une colonne avec des identifiants sur 14 caractères valides pour Infos-parcelles.
+Par exemple **56197037ZC0063** est un code valide pour **Infos-parcelles**. Vous pouvez consulter ce [jeu de données de parcelles agricoles gérées par la régie agricole de la Ville de Toulouse](https://koumoul.com/data-fair/api/v1/datasets/domaine-agricole-toulouse/full) qui possède une colonne avec des identifiants sur 14 caractères valides pour Infos-parcelles.
 
 Votre jeu de données doit aussi contenir des latitudes et longitudes associées à chaque code parcelle.  
 Si vous n'avez que des identifiants de 14 caractères, il est possible d'[enrichir votre jeu de données](./user-guide-backoffice/enrichment) et d'importer les latitudes et longitudes en fonction des identifiants de parcelles à l'aide de l'enrichissement **cadastre** de la plateforme Koumoul.

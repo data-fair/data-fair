@@ -30,8 +30,8 @@ const customEnvVars = flattenVars(require('../../../config/custom-environment-va
 
 const varDescriptions = flatten({
   mode: 'Use this parameter to run both the Web server and the dataset processing loop or run them separately. Pissible values: "server_worker", "server", "worker".',
-  publicUrl: '<b>IMPORTANT.</b> The URL where the server will be exposed. For example https://koumoul.com/s/data-fair',
-  wsPublicUrl: '<b>IMPORTANT.</b> The URL where the Web socket server will be exposed. For example wss://koumoul.com/s/data-fair',
+  publicUrl: '<b>IMPORTANT.</b> The URL where the server will be exposed. For example https://koumoul.com/data-fair',
+  wsPublicUrl: '<b>IMPORTANT.</b> The URL where the Web socket server will be exposed. For example wss://koumoul.com/data-fair',
   directoryUrl: '<b>IMPORTANT.</b> The URL where the user management service will be exposed. For example https://koumoul.com/s/simple-directory',
   mongoUrl: 'The full connexion chain to the mongodb database.',
   analytics: 'JSON configuration of analytics, matches the "modules" part of the configuration for this library <a href="https://github.com/koumoul-dev/vue-multianalytics#modules">vue-multianalytics</a>',

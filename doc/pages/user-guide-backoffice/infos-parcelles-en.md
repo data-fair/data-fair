@@ -16,7 +16,7 @@ To view your data on **Parcel Info**, your dataset must contain a column of **pa
 These identifier (or parcel code) are made up of this method: common INSEE code of 5 digits + cadastre section code of 5 characters + cadastral parcel number of 4 digits = structured parcel identifier for Parcel info.
 
 
-For example **56197037ZC0063** is a valid code for **Parcel info**. An exemple is the [dataset of agricultural plots managed by the agricultural management of the City of Toulouse](https://koumoul.com/s/data-fair/api/v1/datasets/domaine-agricole-toulouse/full) which has a column with identifiers of 14 characters valid for Parcel info.
+For example **56197037ZC0063** is a valid code for **Parcel info**. An exemple is the [dataset of agricultural plots managed by the agricultural management of the City of Toulouse](https://koumoul.com/data-fair/api/v1/datasets/domaine-agricole-toulouse/full) which has a column with identifiers of 14 characters valid for Parcel info.
 
 Your dataset must also contain latitudes and longitudes associated with each field code.  
 If you only have 14 character identifiers, it is possible to [enrich your dataset](./user-guide-backoffice/enrichment) and import the latitudes and longitudes according to the parcel identifiers with the help for the **cadastre** enrichment of the Koumoul platform.
