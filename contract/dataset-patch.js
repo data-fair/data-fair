@@ -11,6 +11,6 @@ module.exports = {
   properties: {}
 }
 patchKeys.forEach(k => {
-  module.exports.properties[k] = dataset.properties[k]
+  module.exports.properties[k] = { ...dataset.properties[k] }
   module.exports.properties[k].type = ['null', module.exports.properties[k].type]
 })
