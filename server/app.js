@@ -18,7 +18,7 @@ const workers = require('./workers')
 const prometheus = require('./utils/prometheus')
 const session = require('@koumoul/sd-express')({
   directoryUrl: config.directoryUrl,
-  privateDirectoryUrl: config.privateDirectoryUrl || config.directoryUrl
+  privateDirectoryUrl: config.privateDirectoryUrl
 })
 const debugDomain = require('debug')('domain')
 

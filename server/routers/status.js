@@ -1,6 +1,6 @@
 const config = require('config')
 const moment = require('moment')
-const rp = require('request-promise-native')
+const axios = require('../utils/axios')
 const fs = require('fs-extra')
 const asyncWrap = require('../utils/async-wrap')
 
@@ -16,7 +16,7 @@ async function esStatus (req) {
 }
 
 async function jwksStatus (req) {
-  const jwksRes = await rp.get({ url: config.directoryUrl + '/.well-known/jwks.json', json: true })
+  const jwksRes = (await axios.get(config.directoryUrl + '/.well-known/jwks.json')).data
   if (!jwksRes || !jwksRes.keys || !jwksRes.keys.length) throw new Error('Incomplete JWKS response')
 }
 
