@@ -402,7 +402,7 @@ router.patch('/:datasetId',
     return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)
   }),
   readDataset((patch) => {
-  // accept different statuses of the dataset depending on the content of the patch
+    // accept different statuses of the dataset depending on the content of the patch
     if (patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection) {
       return ['finalized', 'error']
     } else {
@@ -533,8 +533,7 @@ router.patch('/:datasetId',
     const previousDataset = { ...req.dataset }
     const mongoPatch = await datasetUtils.applyPatch(db, req.dataset, patch, false)
     await publicationSites.applyPatch(db, previousDataset, req.dataset, req.user)
-
-    await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: mongoPatch })
+    await db.collection('datasets').updateOne({ id: req.dataset.id }, mongoPatch)
 
     await syncRemoteService(db, req.dataset)
 

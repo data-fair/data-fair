@@ -149,6 +149,7 @@
         return-object
         hide-details
         class="mb-3"
+        clearable
         @input="patch({license: dataset.license})"
       />
       <v-select
@@ -176,6 +177,7 @@
         return-object
         hide-details
         class="mb-3"
+        clearable
         @input="patch({projection: dataset.projection})"
       />
       <v-text-field
@@ -184,6 +186,7 @@
         :label="$t('origin')"
         hide-details
         class="mb-3"
+        clearable
         @change="patch({origin: dataset.origin})"
       />
       <v-text-field
@@ -192,6 +195,7 @@
         :label="$t('image')"
         hide-details
         class="mb-3"
+        clearable
         @change="patch({image: dataset.image})"
       />
       <v-combobox
@@ -218,6 +222,7 @@
         hide-details
         class="mb-3"
         :loading="loadingSpatialFacets"
+        clearable
         @update:search-input="fetchSpatialFacets"
         @change="patch({spatial: dataset.spatial})"
       />
@@ -228,7 +233,9 @@
         :label="$t('temporal')"
         hide-details
         class="mb-3"
+        clearable
         @click="temporalMenu = true"
+        @click:clear="patch({temporal: null})"
       >
         <template #append>
           <v-menu
