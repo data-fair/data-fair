@@ -13,9 +13,6 @@ const chardet = require('chardet')
 const slug = require('slugify')
 const sanitizeHtml = require('../../shared/sanitize-html')
 const CronJob = require('cron').CronJob
-const marked = require('marked')
-const truncateMiddle = require('truncate-middle')
-const truncateHTML = require('truncate-html')
 const LinkHeader = require('http-link-header')
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
@@ -57,6 +54,7 @@ const { basicTypes } = require('../workers/converter')
 const { validateId } = require('../utils/validation')
 const prometheus = require('../utils/prometheus')
 const publicationSites = require('../utils/publication-sites')
+const { prepareMarkdownContent } = require('../utils/markdown')
 const router = express.Router()
 
 function clean (publicUrl, dataset, query = {}, draft = false) {
@@ -66,23 +64,13 @@ function clean (publicUrl, dataset, query = {}, draft = false) {
     if (draft) datasetUtils.mergeDraft(dataset)
     if (!select.includes('-public')) dataset.public = permissions.isPublic('datasets', dataset)
     if (!select.includes('-visibility')) dataset.visibility = visibilityUtils.visibility(dataset)
-    if (dataset.description) {
-      if (query.html === 'true') dataset.description = marked.parse(dataset.description).trim()
-      dataset.description = sanitizeHtml(dataset.description)
-      if (query.truncate) {
-        const truncate = Number(query.truncate)
-        if (query.html === 'true') {
-          dataset.description = truncateHTML(dataset.description, truncate)
-        } else {
-          dataset.description = truncateMiddle(dataset.description, truncate, 0, '...')
-        }
-      }
-    }
+    dataset.description = dataset.description || ''
+    dataset.description = prepareMarkdownContent(dataset.description, query.html === 'true', query.truncate, dataset.updatedAt)
+
     if (dataset.schema) {
       for (const field of dataset.schema) {
         field.description = field.description || ''
-        if (query.html === 'true') field.description = marked.parse(field.description).trim()
-        field.description = sanitizeHtml(field.description)
+        field.description = prepareMarkdownContent(field.description, query.html === 'true', null, dataset.updatedAt)
       }
     }
 

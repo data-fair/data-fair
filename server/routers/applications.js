@@ -6,9 +6,6 @@ const fs = require('fs-extra')
 const util = require('util')
 const unlink = util.promisify(fs.unlink)
 const sanitizeHtml = require('../../shared/sanitize-html')
-const marked = require('marked')
-const truncateMiddle = require('truncate-middle')
-const truncateHTML = require('truncate-html')
 const { nanoid } = require('nanoid')
 const applicationAPIDocs = require('../../contract/application-api-docs')
 const ajv = require('ajv')()
@@ -32,6 +29,7 @@ const cacheHeaders = require('../utils/cache-headers')
 const { validateId } = require('../utils/validation')
 const publicationSites = require('../utils/publication-sites')
 const datasetUtils = require('../utils/dataset')
+const { prepareMarkdownContent } = require('../utils/markdown')
 
 const router = module.exports = express.Router()
 
@@ -47,19 +45,9 @@ function clean (application, publicUrl, query = {}) {
   if (select.includes('-userPermissions')) delete application.userPermissions
   if (select.includes('-owner')) delete application.owner
 
-  if (application.description) {
-    if (query.html === 'true') application.description = marked.parse(application.description).trim()
-    application.description = sanitizeHtml(application.description)
-    if (query.truncate) {
-      const truncate = Number(query.truncate)
-      if (query.html === 'true') {
-        application.description = truncateHTML(application.description, truncate)
-      } else {
-        application.description = truncateMiddle(application.description, truncate, 0, '...')
-      }
-    }
-  }
-  application.description = application.description ? sanitizeHtml(application.description) : ''
+  application.description = application.description || ''
+  application.description = prepareMarkdownContent(application.description, query.html === 'true', query.truncate, application.updatedAt)
+
   if (!select.includes('-links')) findUtils.setResourceLinks(application, 'application', publicUrl)
   return application
 }
