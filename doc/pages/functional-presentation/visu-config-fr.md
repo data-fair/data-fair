@@ -40,16 +40,16 @@ Dès que les données possèdent des colonnes avec des types numériques, il est
 
 #### Visualisations temporelles
 
-Les données ayant des concepts liés aux dates peuvent être visualisées avec des visualisation temporelles. Certaines sont interactives, comme *Séries temporelles* qui permet de comparer des **courbes au cours du temps** (décès liés au covid par exemple), ou *Diagramme Timeline*  et *Calendrier* pour visualiser les données ayant des dates de début et dates de fin.
+Les données ayant des concepts liés aux dates peuvent être visualisées avec des visualisations temporelles. Certaines sont interactives, comme *Séries temporelles* qui permet de comparer des **courbes au cours du temps** (décès liés au covid par exemple), ou *Diagramme Timeline*  et *Calendrier* pour visualiser les données ayant des dates de début et dates de fin.
 
 <img src="./images/functional-presentation/visu-temp.jpg"
      height="300" style="margin:20px auto;" />
 
-D'autres visualisation temporelles sont animées : elles possèdent un bouton lecture et l'utilisateur peut les regarder de manière passive. Ces visualisations sont intéressantes pour les réseaux sociaux car elles permettent d'attirer l'attention des utilisateurs, qui n'ont pas a cliquer sur le lien pour voir le résultat. *Bar chart race* permet de voir des courses de barres horizontales et est adapté quand il y a un **nombre important d'éléments qui ont la valeur maximale**, par exemple pour voir le prénom le plus donné au cours du temps. *Periodic Series* permet d'analyser les **données cycliques** pour voir comment elle se comportent d'une période sur une autre (par exemple des températures ou du trafic de véhicules).
+D'autres visualisations temporelles sont animées : elles possèdent un bouton lecture et l'utilisateur peut les regarder de manière passive. Ces visualisations sont intéressantes pour les réseaux sociaux car elles permettent d'attirer l'attention des utilisateurs, qui n'ont pas a cliquer sur le lien pour voir le résultat. *Bar chart race* permet de voir des courses de barres horizontales et est adapté quand il y a un **nombre important d'éléments qui ont la valeur maximale**, par exemple pour voir le prénom le plus donné au cours du temps. *Periodic Series* permet d'analyser les **données cycliques** pour voir comment elle se comportent d'une période sur une autre (par exemple des températures ou du trafic de véhicules).
 
 #### Visualisations textuelles
 
-Ce type de visualisations présente les données sous forme de texte, y compris les données numériques. *Métriques* permet de mettre en avant des **chiffres clés** sous la forme de tuiles. *Tableau synthétique* calcule des **agrégats sur 1 ou 2 axes**, et peut par exemple montrer des moyennes d'une valeur par départements. *Simple Table* permet d'afficher quelques colonnes du jeu de données en proposant des **filtres ou une arborescence** pour accéder plus rapidement aux données (par exemple région > département > commune). *Nuage de mots* analyse la fréquence des différents termes d'un jeu de données, ou de l'une de ses colonnes, pour mettre en avant ceux qui sont les plus présents.
+Ce type de visualisation présente les données sous forme de texte, y compris les données numériques. *Métriques* permet de mettre en avant des **chiffres clés** sous la forme de tuiles. *Tableau synthétique* calcule des **agrégats sur 1 ou 2 axes**, et peut par exemple montrer des moyennes d'une valeur par départements. *Simple Table* permet d'afficher quelques colonnes du jeu de données en proposant des **filtres ou une arborescence** pour accéder plus rapidement aux données (par exemple région > département > commune). *Nuage de mots* analyse la fréquence des différents termes d'un jeu de données, ou de l'une de ses colonnes, pour mettre en avant ceux qui sont les plus présents.
 
 <img src="./images/functional-presentation/visu-text.jpg"
      height="150" style="margin:20px auto;" />
@@ -68,7 +68,7 @@ En plus des visualisations de données "traditionnelles", il est possible de con
 #### Autre types de visualisations
 Certaines visualisations sont compliquées à classer et nous les mentionnons ici. *Diaporama* permet d'afficher des données ayant des **images en pièces-jointes**. *Formulaire de saisie* offre la possibilité de collecter des retours directement stockés dans un jeu de données, de faire du **crowd sourcing** ou d'offrir une interface de mise à jour des données plus légère que l'intégralité du back-office pour une personne qui ne serait responsable de la mise à jour que d'un jeu de données.
 
-Il y a aussi des visualisation qui sont spécifiquement **adaptées à des schémas de données**, comme les *délibérations* ou les *équipements* publiés suivant les schémas du **Socle Commun des Données Locales (SCDL)**.
+Il y a aussi des visualisations qui sont spécifiquement **adaptées à des schémas de données**, comme les *délibérations* ou les *équipements* publiés suivant les schémas du **Socle Commun des Données Locales (SCDL)**.
 
 ### Permissions et publication des visualisations
 

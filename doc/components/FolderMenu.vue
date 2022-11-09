@@ -131,6 +131,10 @@ export default {
           title: this.$t('user-guide-frontoffice')
         },
         {
+          id: 'lessons',
+          title: this.$t('lessons')
+        },
+        {
           id: 'technical-architecture',
           title: this.$t('technical-architecture')
         },
