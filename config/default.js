@@ -8,7 +8,7 @@ module.exports = {
   dataDir: '/data',
   sessionDomain: null,
   directoryUrl: 'http://localhost:8080',
-  privateDirectoryUrl: '',
+  privateDirectoryUrl: null,
   openapiViewerUrl: 'https://koumoul.com/openapi-viewer/',
   captureUrl: 'http://capture:8080',
   privateCaptureUrl: null,
