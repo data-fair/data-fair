@@ -2,17 +2,14 @@
   <v-col class="datasets-facets">
     <template v-if="showOwnerFacets">
       <v-select
+        v-if="ownerProps.items.length <= 10"
         v-model="facetsValues.owner"
-        multiple
-        :label="$t('owner')"
-        :items="facets.owner"
-        :item-value="item => item.value && `${item.value.type}:${item.value.id}:${item.value.department ? item.value.department : '-'}`"
-        :item-text="item => item.value && `${item.value.name}${item.value.department ? ' / ' + (item.value.departmentName || item.value.department) : ''} (${item.count})`"
-        outlined
-        dense
-        hide-details
-        rounded
-        class="mb-4"
+        v-bind="ownerProps"
+      />
+      <v-autocomplete
+        v-else
+        v-model="facetsValues.owner"
+        v-bind="ownerProps"
       />
     </template>
 
@@ -151,6 +148,20 @@ export default {
       if (this.showShared) return true
       if (!this.activeAccount.department && this.facets.owner.find(o => !!o.value.department)) return true
       return false
+    },
+    ownerProps () {
+      return {
+        multiple: true,
+        label: this.$t('owner'),
+        items: this.facets.owner,
+        itemValue: item => item.value && `${item.value.type}:${item.value.id}:${item.value.department ? item.value.department : '-'}`,
+        itemText: item => item.value && `${this.ownerName(item.value)} (${item.count})`,
+        outlined: true,
+        dense: true,
+        hideDetails: true,
+        rounded: true,
+        class: 'mb-4'
+      }
     }
   },
   methods: {
@@ -166,6 +177,13 @@ export default {
         }
       }
       return `${title} (${item.count})`
+    },
+    ownerName (owner) {
+      if (!owner.department) return owner.name
+      if (this.activeAccount.type === owner.type && this.activeAccount.id === owner.id) {
+        return owner.departmentName || owner.department
+      }
+      return `${owner.name}/${owner.departmentName || owner.department}`
     }
   }
 }
