@@ -484,9 +484,9 @@ describe('virtual datasets', () => {
 
     child1.schema[0]['x-capabilities'] = { values: false }
     await ax.patch('/api/v1/datasets/' + child1.id, { schema: child1.schema })
+    virtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
     child2.schema[0]['x-capabilities'] = { insensitive: false }
     await ax.patch('/api/v1/datasets/' + child2.id, { schema: child2.schema })
-
     virtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
     assert.deepEqual(virtualDataset.schema[0]['x-capabilities'], { insensitive: false, values: false })
   })
