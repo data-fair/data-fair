@@ -1057,7 +1057,6 @@ router.use('/:datasetId/own/:owner', readDataset(writableStatuses), isRest, (req
   req.linesOwner = { type, id, department }
   if (!['organization', 'user'].includes(req.linesOwner.type)) return res.status(400).send('ownerType must be user or organization')
   if (!req.user) return res.status(401).send('auth required')
-  if (req.user.adminMode) return next()
   if (req.linesOwner.type === 'organization' && req.user.activeAccount.type === 'organization' && req.user.activeAccount.id === req.linesOwner.id && (req.user.activeAccount.department || null) === (req.linesOwner.department || null)) {
     req.linesOwner.name = req.user.activeAccount.name
     return next()
@@ -1066,6 +1065,7 @@ router.use('/:datasetId/own/:owner', readDataset(writableStatuses), isRest, (req
     req.linesOwner.name = req.user.name
     return next()
   }
+  if (req.user.adminMode) return next()
   res.status(403).send('only owner can manage his own lines')
 })
 router.get('/:datasetId/own/:owner/lines/:lineId', readDataset(), isRest, permissions.middleware('readOwnLine', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
