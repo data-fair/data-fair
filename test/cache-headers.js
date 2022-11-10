@@ -76,7 +76,7 @@ describe('Cache headers', () => {
     // console.log(res.headers)
   })
 
-  it('supports public cache revalidation', async () => {
+  it('Supports public cache revalidation', async () => {
     const ax = global.ax.dmeadus
     const dataset = await createDataset(ax)
     const id = dataset.id
@@ -98,5 +98,35 @@ describe('Cache headers', () => {
     await assert.rejects(ax.get(`/api/v1/datasets/${id}/lines`, { headers: { 'x-cache-bypass': '0', 'if-none-match': res.headers.etag } }), (err) => err.status === 304)
     // sending last-modified in if-modified-since should return a 304
     await assert.rejects(ax.get(`/api/v1/datasets/${id}/lines`, { headers: { 'x-cache-bypass': '0', 'if-modified-since': res.headers['last-modified'] } }), (err) => err.status === 304)
+  })
+
+  it.only('Supports caching of lists', async () => {
+    const ax = global.ax.dmeadus
+    await createDataset(ax)
+    const dataset = await createDataset(ax)
+    const id = dataset.id
+    await ax.put(`/api/v1/datasets/${id}/permissions`, [{ classes: ['read', 'list'] }])
+
+    let res = await ax.get('/api/v1/datasets')
+    assert.equal(res.headers['cache-control'], 'no-cache, private')
+    assert.equal(res.data.count, 2)
+
+    // sending etag in if-none-match should return a 304
+    await assert.rejects(ax.get('/api/v1/datasets', { headers: { 'x-cache-bypass': '0', 'if-none-match': res.headers.etag } }), (err) => err.status === 304)
+
+    res = await ax.get('/api/v1/datasets', { params: { select: '-userPermissions' } })
+    // use base userPermissions is remove but we might see private/protected resources
+    assert.equal(res.headers['cache-control'], 'no-cache, private')
+    assert.equal(res.data.count, 2)
+
+    res = await ax.get('/api/v1/datasets', { params: { visibility: 'public' } })
+    // only public resources but userPermissions depends on current user
+    assert.equal(res.headers['cache-control'], 'no-cache, private')
+    assert.equal(res.data.count, 1)
+
+    res = await ax.get('/api/v1/datasets', { params: { select: '-userPermissions', visibility: 'public' } })
+    // no userPermissions and only public resources means we can use a public cache
+    assert.equal(res.headers['cache-control'], 'must-revalidate, public, max-age=' + config.cache.publicMaxAge)
+    assert.equal(res.data.count, 1)
   })
 })

@@ -62,7 +62,7 @@ const syncDatasets = async (db, newApp, oldApp = {}) => {
 }
 
 // Get the list of applications
-router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
+router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   const applications = req.app.get('db').collection('applications')
 
   if (req.query.dataset &&

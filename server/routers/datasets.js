@@ -175,7 +175,7 @@ const prepareExtensions = (req, extensions, oldExtensions = []) => {
 }
 
 // Get the list of datasets
-router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
+router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   const explain = req.query.explain === 'true' && req.user && (req.user.isAdmin || req.user.asAdmin) && {}
   const datasets = req.app.get('db').collection('datasets')
   const filterFields = {

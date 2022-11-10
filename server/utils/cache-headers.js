@@ -3,6 +3,17 @@ const createError = require('http-errors')
 const useragent = require('useragent')
 const debug = require('debug')('cache-headers')
 
+const noCache = (req, res) => {
+  // compatibility with older IE
+  // cf https://stackoverflow.com/questions/12205632/express-returns-304-for-ie-repeative-requests
+  if (useragent.is(req.headers['user-agent']).ie) {
+    res.setHeader('Expires', '-1')
+    res.setHeader('Cache-Control', 'must-revalidate, private')
+  } else {
+    res.setHeader('Cache-Control', 'no-cache, private')
+  }
+}
+
 // adapt headers based on the state of the currently requested resource
 // Set max-age
 // Also compare last-modified and if-modified-since headers for cache revalidation on a specific resource
@@ -43,19 +54,27 @@ exports.resourceBased = (req, res, next) => {
     if (cacheVisibility === 'public') {
       res.setHeader('Cache-Control', `must-revalidate, public, max-age=${config.cache.publicMaxAge}`)
     } else {
-      res.setHeader('Expires', '-1')
-      res.setHeader('Cache-Control', 'must-revalidate, private')
+      noCache(req, res)
     }
   }
 
   next()
 }
 
-// cf https://stackoverflow.com/questions/12205632/express-returns-304-for-ie-repeative-requests
-exports.noCache = (req, res, next) => {
-  if (useragent.is(req.headers['user-agent']).ie) {
-    res.setHeader('Expires', '-1')
-    res.setHeader('Cache-Control', 'must-revalidate, private')
+// adapt headers for a request listing the content of a collection
+exports.listBased = (req, res, next) => {
+  const select = req.query.select ? req.query.select.split(',') : []
+  let cacheVisibility = 'private'
+  if (select.includes('-userPermissions') && req.query.visibility && req.query.visibility.includes('public')) cacheVisibility = 'public'
+  if (cacheVisibility === 'public') {
+    res.setHeader('Cache-Control', `must-revalidate, public, max-age=${config.cache.publicMaxAge}`)
+  } else {
+    noCache(req, res)
   }
+  next()
+}
+
+exports.noCache = (req, res, next) => {
+  noCache(req, res)
   next()
 }
