@@ -4,6 +4,7 @@ const useragent = require('useragent')
 const debug = require('debug')('cache-headers')
 
 const noCache = (req, res) => {
+  res.setHeader('X-Accel-Buffering', 'no')
   // compatibility with older IE
   // cf https://stackoverflow.com/questions/12205632/express-returns-304-for-ie-repeative-requests
   if (useragent.is(req.headers['user-agent']).ie) {
@@ -37,6 +38,8 @@ exports.resourceBased = (req, res, next) => {
   if (cacheVisibility === 'public') {
     // force buffering (necessary for caching) of this response in the reverse proxy
     res.setHeader('X-Accel-Buffering', 'yes')
+  } else {
+    res.setHeader('X-Accel-Buffering', 'no')
   }
 
   // finalizedAt passed as query parameter is used to timestamp the query and
@@ -67,6 +70,8 @@ exports.listBased = (req, res, next) => {
   let cacheVisibility = 'private'
   if (select.includes('-userPermissions') && req.query.visibility && req.query.visibility.includes('public')) cacheVisibility = 'public'
   if (cacheVisibility === 'public') {
+    // force buffering (necessary for caching) of this response in the reverse proxy
+    res.setHeader('X-Accel-Buffering', 'yes')
     res.setHeader('Cache-Control', `must-revalidate, public, max-age=${config.cache.publicMaxAge}`)
   } else {
     noCache(req, res)

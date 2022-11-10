@@ -1524,8 +1524,6 @@ router.get('/:datasetId/min/:fieldKey', readDataset(), applicationKey, permissio
 
 // For datasets with attached files
 router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissions.middleware('downloadAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
-  // no buffering of this response in the reverse proxy
-  res.setHeader('X-Accel-Buffering', 'no')
   // the transform stream option was patched into "send" module using patch-package
   res.download(req.params['0'], null, { transformStream: res.throttle('static'), root: datasetUtils.attachmentsDir(req.dataset) })
 })
@@ -1535,8 +1533,6 @@ router.get('/:datasetId/data-files', readDataset(), permissions.middleware('list
   res.send(await datasetUtils.dataFiles(req.dataset))
 }))
 router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadDataFile', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
-  // no buffering of this response in the reverse proxy
-  res.setHeader('X-Accel-Buffering', 'no')
   // the transform stream option was patched into "send" module using patch-package
   res.download(req.params['0'], null, { transformStream: res.throttle('static'), root: datasetUtils.dir(req.dataset) })
 }))
@@ -1549,8 +1545,6 @@ router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middl
   res.status(200).send(req.body)
 }))
 router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('downloadMetadataAttachment', 'read'), cacheHeaders.noCache, (req, res, next) => {
-  // no buffering of this response in the reverse proxy
-  res.setHeader('X-Accel-Buffering', 'no')
   // the transform stream option was patched into "send" module using patch-package
   res.download(req.params['0'], null, { transformStream: res.throttle('static'), root: datasetUtils.metadataAttachmentsDir(req.dataset) })
 })
@@ -1564,8 +1558,6 @@ router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.m
 
 // Download the full dataset in its original form
 router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
-  // no buffering of this response in the reverse proxy
-  res.setHeader('X-Accel-Buffering', 'no')
   // a special case for superadmins.. handy but quite dangerous for the db load
   if (req.dataset.isRest && req.user.adminMode) {
     req.query.select = req.query.select || ['_id'].concat(req.dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)).join(',')
@@ -1586,8 +1578,6 @@ router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOri
 
 // Download the dataset in various formats
 router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
-  // no buffering of this response in the reverse proxy
-  res.setHeader('X-Accel-Buffering', 'no')
   if (!req.dataset.file) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
 
   // the transform stream option was patched into "send" module using patch-package
@@ -1597,8 +1587,6 @@ router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloa
 // Download the full dataset with extensions
 // TODO use ES scroll functionality instead of file read + extensions
 router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFullData', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
-  // no buffering of this response in the reverse proxy
-  res.setHeader('X-Accel-Buffering', 'no')
   // the transform stream option was patched into "send" module using patch-package
   if (await fs.pathExists(datasetUtils.fullFilePath(req.dataset))) {
     res.download(datasetUtils.fullFileName(req.dataset), null, { transformStream: res.throttle('static'), root: datasetUtils.dir(req.dataset) })

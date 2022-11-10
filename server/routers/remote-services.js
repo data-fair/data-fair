@@ -367,7 +367,7 @@ router.use('/:remoteServiceId/proxy*', rateLimiting.middleware('remoteService'),
         // Prevent caches in front of data-fair
         // otherwise rate limiting is not accurate and we have complicated multi-cache cases
         if (!appRes.headers['cache-control']) {
-          res.set('cache-control', 'private, max-age=0, must-revalidate')
+          res.set('cache-control', 'private, no-cache')
         } else {
           res.set('cache-control', appRes.headers['cache-control'].replace('public', 'private'))
         }
