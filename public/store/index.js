@@ -62,7 +62,10 @@ export default () => {
         '.kmz',
         '.xml',
         '.gpx',
-        '.ics'
+        '.ics',
+        '.geojson.gz',
+        '.csv.gz',
+        '.tsv.gz'
       ],
       queryPrimary: null
     },
