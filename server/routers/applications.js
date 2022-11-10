@@ -46,7 +46,7 @@ function clean (application, publicUrl, query = {}) {
   if (select.includes('-owner')) delete application.owner
 
   application.description = application.description || ''
-  application.description = prepareMarkdownContent(application.description, query.html === 'true', query.truncate, application.updatedAt)
+  application.description = prepareMarkdownContent(application.description, query.html === 'true', query.truncate, 'application:' + application.id, application.updatedAt)
 
   if (!select.includes('-links')) findUtils.setResourceLinks(application, 'application', publicUrl)
   return application
