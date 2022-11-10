@@ -1631,7 +1631,7 @@ router.post('/:datasetId/user-notification', readDataset(), permissions.middlewa
   if (visibility === 'public') {
     if (!permissions.isPublic('datasets', req.dataset)) visibility = 'private'
     const ownerRole = permissions.getOwnerRole(req.owner, req.user)
-    if (['admin', 'contrib'].includes(ownerRole)) visibility = 'private'
+    if (!['admin', 'contrib'].includes(ownerRole)) visibility = 'private'
   }
   const notif = {
     sender: req.dataset.owner,
