@@ -26,12 +26,12 @@ describe('Cache headers', () => {
     assert.equal(dataset.owner.id, 'dmeadus0')
 
     let res = await ax.get(`/api/v1/datasets/${id}/lines`)
-    assert.equal(res.headers['cache-control'], 'must-revalidate, private')
+    assert.equal(res.headers['cache-control'], 'no-cache, private')
     assert.equal(res.headers['x-cache-status'], 'BYPASS')
 
     // same but without bypassing the cache
     res = await ax.get(`/api/v1/datasets/${id}/lines`, { headers: { 'x-cache-bypass': '0' } })
-    assert.equal(res.headers['cache-control'], 'must-revalidate, private')
+    assert.equal(res.headers['cache-control'], 'no-cache, private')
     assert.equal(res.headers['x-cache-status'], 'MISS')
 
     // the finalizedAt parameter extends the max-age

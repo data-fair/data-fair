@@ -128,7 +128,7 @@ describe('Applications', () => {
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'image/png')
     assert.equal(res.headers['x-capture-cache-status'], 'MISS')
-    assert.equal(res.headers['cache-control'], 'must-revalidate, private')
+    assert.equal(res.headers['cache-control'], 'no-cache, private')
 
     // 2nd call, the capture file is served directly
     res = await ax.get('/api/v1/applications/' + app.id + '/capture?updatedAt=' + updatedAt)
