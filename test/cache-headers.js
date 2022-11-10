@@ -100,7 +100,7 @@ describe('Cache headers', () => {
     await assert.rejects(ax.get(`/api/v1/datasets/${id}/lines`, { headers: { 'x-cache-bypass': '0', 'if-modified-since': res.headers['last-modified'] } }), (err) => err.status === 304)
   })
 
-  it.only('Supports caching of lists', async () => {
+  it('Supports caching of lists', async () => {
     const ax = global.ax.dmeadus
     await createDataset(ax)
     const dataset = await createDataset(ax)
