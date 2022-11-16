@@ -2,19 +2,21 @@ const config = require('config')
 const dir = require('node-dir')
 
 // Additional dynamic routes for generate
-const routes = dir.files('doc/pages/', { sync: true })
+const langs = ['fr', 'en']
+const paths = dir.files('doc/pages/', { sync: true })
   .filter(f => f.endsWith('.md'))
   .map(f => {
-    f = f.replace('.md', '').replace('doc/pages/', '')
-    for (const lang of ['fr', 'en']) {
-      if (f.endsWith(`-${lang}`)) {
-        const p = f.replace(new RegExp(`-${lang}$`), '')
-        if (lang === 'fr') return p
-        return `/${lang}/${p}`
-      }
-    }
-    return f
+    let path = f.replace('.md', '').replace('doc/pages/', '')
+    for (const lang of langs) path = path.replace(new RegExp(`-${lang}$`), '')
+    return path
   })
+const routes = []
+for (const path of [...new Set(paths)]) {
+  for (const lang of langs) {
+    if (lang === 'fr') routes.push(path)
+    else routes.push(`/${lang}/${path}`)
+  }
+}
 
 module.exports = {
   telemetry: false,

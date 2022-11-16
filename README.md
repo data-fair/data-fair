@@ -2,7 +2,7 @@
 
 *Findable, Accessible, Interoperable and Reusable Data*
 
-[Visit documentation website (french)](https://data-fair.github.io/3/)
+[Visit documentation website](https://data-fair.github.io/3/)
 
 ![](doc/static/data-fair.gif)
 
