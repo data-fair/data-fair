@@ -145,9 +145,50 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     res = await global.ax.anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } })
     assert.equal(res.status, 201)
 
-    // rejected because ok simple rate limiting
+    // rejected because of simple rate limiting
     await assert.rejects(
       global.ax.anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } }),
       err => err.status === 429)
+  })
+
+  it('Use an application key to manage own lines', async () => {
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
+    const appId = res.data.id
+
+    await ax.put('/api/v1/datasets/restcrowdown', {
+      isRest: true,
+      rest: { lineOwnership: true },
+      title: 'restcrowdown',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+    })
+    await workers.hook('finalizer/restcrowdown')
+
+    res = await ax.put('/api/v1/applications/' + appId + '/config', {
+      datasets: [{
+        href: `${config.publicUrl}/api/v1/datasets/restcrowdown`,
+        applicationKeyPermissions: { operations: ['createOwnLine', 'readOwnLines', 'readDescription'] }
+      }]
+    })
+    res = await ax.post(`/api/v1/applications/${appId}/keys`, [{ title: 'Access key' }])
+    const key = res.data[0].id
+    const anonymousToken = (await global.ax.cdurning2.get('http://localhost:8080/api/auth/anonymous-action')).data
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    const headers = { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken }
+
+    await assert.rejects(
+      global.ax.cdurning2.get('/api/v1/datasets/restcrowdown/lines', { headers }),
+      err => err.status === 403)
+    res = await global.ax.cdurning2.get('/api/v1/datasets/restcrowdown', { headers })
+    assert.equal(res.status, 200)
+    assert.deepEqual(res.data.userPermissions, ['createOwnLine', 'readOwnLines', 'readDescription'])
+
+    res = await global.ax.cdurning2.post('/api/v1/datasets/restcrowdown/own/user:cdurning2/lines', {}, { headers })
+    assert.equal(res.status, 201)
+    await workers.hook('finalizer/restcrowdown')
+
+    res = await global.ax.cdurning2.get('/api/v1/datasets/restcrowdown/own/user:cdurning2/lines', { headers })
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 1)
   })
 })
