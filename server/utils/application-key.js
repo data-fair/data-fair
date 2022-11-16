@@ -51,7 +51,7 @@ module.exports = asyncWrap(async (req, res, next) => {
 
             try {
               // 3rd level of anti-spam protection, simple rate limiting based on ip
-              await rateLimiting.postApplicationKey.consume(requestIp.getClientIp(req), 1)
+              await rateLimiting.postApplicationKey.consume(req.user ? req.user.id : requestIp.getClientIp(req), 1)
             } catch (err) {
               console.warn('Rate limit error for application key', requestIp.getClientIp(req), req.originalUrl, err)
               return res.status(429).send('Trop de messages dans un bref interval. Veuillez patienter avant d\'essayer de nouveau.')
