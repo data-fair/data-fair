@@ -1,89 +1,172 @@
 <template>
-  <v-row
+  <v-container
     v-if="initialized"
-    class="home my-0"
+    class="home"
   >
-    <v-col v-if="missingSubscription">
-      <v-iframe :src="env.subscriptionUrl" />
-    </v-col>
+    <v-iframe
+      v-if="missingSubscription"
+      :src="env.subscriptionUrl"
+    />
+
     <v-col
-      v-else
-      :style="(user && $vuetify.breakpoint.lgAndUp) ? 'padding-right:256px;' : ''"
+      v-else-if="!user"
+      class="text-center"
     >
-      <v-container class="py-0">
-        <v-responsive v-if="!user">
-          <v-container class="fill-height">
-            <v-row align="center">
-              <v-col class="text-center">
-                <h3
-                  v-t="'title'"
-                  class="text-h4 mb-3 mt-5"
-                />
-                <layout-wrap-svg
-                  :source="dataProcessSvg"
-                  :color="$vuetify.theme.themes.light.primary"
-                />
-                <div
-                  v-if="!env.disableApplications && !env.disableRemoteServices"
-                  v-t="'description'"
-                  class="text-h6"
-                />
-                <p
-                  v-t="'authRequired'"
-                  class="text-h6 mt-5"
-                />
-                <v-btn
-                  v-t="'login'"
-                  color="primary"
-                  @click="login"
-                />
-              </v-col>
-            </v-row>
-          </v-container>
-        </v-responsive>
-        <v-row v-else>
-          <v-col>
-            <h2 class="mb-4">
-              <template v-if="activeAccount.type === 'organization'">
-                {{ $t('organizationSpace', {name: activeAccount.name}) }}
+      <h1
+        v-t="'title'"
+        class="text-h4 mb-3 mt-5"
+      />
+      <layout-wrap-svg
+        :source="dataProcessSvg"
+        :color="$vuetify.theme.themes.light.primary"
+      />
+      <div
+        v-if="!env.disableApplications && !env.disableRemoteServices"
+        v-t="'description'"
+        class="text-h6"
+      />
+      <p
+        v-t="'authRequired'"
+        class="text-h6 mt-5"
+      />
+      <v-btn
+        v-t="'login'"
+        color="primary"
+        @click="login"
+      />
+    </v-col>
+    <template v-else>
+      <v-row>
+        <v-col cols="12">
+          <h2 class="mb-4">
+            <template v-if="activeAccount.type === 'organization'">
+              {{ $t('organizationSpace', {name: activeAccount.name}) }}
+            </template>
+            <template v-else>
+              {{ $t('userSpace', {name: activeAccount.name}) }}
+            </template>
+          </h2>
+          <p
+            v-if="activeAccount.type ==='organization'"
+            v-html="$t('organizationRole', {role: user.organizations.find(o => o.id===activeAccount.id).role})"
+          />
+          <p v-else-if="user.organizations.length">
+            <v-icon color="warning">
+              mdi-alert
+            </v-icon>
+            <i18n path="collaborativeMessage">
+              <template #collaborativeMode>
+                <strong v-t="'collaborativeMode'" />
               </template>
-              <template v-else>
-                {{ $t('userSpace', {name: activeAccount.name}) }}
+              <template #yourAccountLink>
+                <nuxt-link
+                  v-t="'yourAccount'"
+                  to="/me"
+                />
               </template>
-            </h2>
-            <p
-              v-if="activeAccount.type ==='organization'"
-              v-html="$t('organizationRole', {role: user.organizations.find(o => o.id===activeAccount.id).role})"
-            />
-            <p v-else-if="user.organizations.length">
-              <v-icon color="warning">
-                mdi-alert
-              </v-icon>
-              <i18n path="collaborativeMessage">
-                <template #collaborativeMode>
-                  <strong v-t="'collaborativeMode'" />
-                </template>
-                <template #yourAccountLink>
-                  <nuxt-link
-                    v-t="'yourAccount'"
-                    to="/me"
-                  />
-                </template>
-              </i18n>
-            </p>
-            <p v-else>
-              <i18n path="collaborativeMessageNoOrg">
-                <template #collaborativeMode>
-                  <strong v-t="'collaborativeMode'" />
-                </template>
-                <template #yourAccountLink>
-                  <nuxt-link
-                    v-t="'yourAccount'"
-                    to="/me"
-                  />
-                </template>
-              </i18n>
-            </p>
+            </i18n>
+          </p>
+          <p v-else>
+            <i18n path="collaborativeMessageNoOrg">
+              <template #collaborativeMode>
+                <strong v-t="'collaborativeMode'" />
+              </template>
+              <template #yourAccountLink>
+                <nuxt-link
+                  v-t="'yourAccount'"
+                  to="/me"
+                />
+              </template>
+            </i18n>
+          </p>
+        </v-col>
+      </v-row>
+      <v-row class="mx-0">
+        <h2
+          v-t="'contribute'"
+          class="text-h5"
+        />
+      </v-row>
+      <v-row style="height:100%">
+        <v-col
+          cols="12"
+          md="4"
+          lg="3"
+        >
+          <dashboard-svg-link
+            to="/new-dataset?type=file"
+            :title="$t('createDataset')"
+            :svg="dataSvg"
+          />
+        </v-col>
+        <v-col
+          cols="12"
+          md="4"
+          lg="3"
+        >
+          <dashboard-svg-link
+            to="/new-dataset?type=file"
+            :title="$t('updateDataset')"
+            :svg="dataMaintenanceSvg"
+          />
+        </v-col>
+        <v-col
+          cols="12"
+          md="4"
+          lg="3"
+        >
+          <dashboard-svg-link
+            to="/new-dataset?type=file"
+            :title="$t('shareDataset')"
+            :svg="shareSvg"
+          />
+        </v-col>
+        <v-col
+          cols="12"
+          md="4"
+          lg="3"
+        >
+          <dashboard-svg-link
+            to="/new-app"
+            :title="$t('createApp')"
+            :svg="graphicSvg"
+          />
+        </v-col>
+      </v-row>
+      <v-row class="mx-0">
+        <h2
+          v-t="'manage'"
+          class="text-h5"
+        />
+      </v-row>
+      <v-row>
+        <v-col
+          cols="12"
+          md="6"
+          lg="4"
+        >
+          <dashboard-activity />
+        </v-col>
+        <v-col
+          v-if="!env.disableApplications"
+          cols="12"
+          md="6"
+          lg="4"
+        >
+          <dashboard-base-apps />
+        </v-col>
+        <v-col
+          cols="12"
+          md="6"
+          lg="4"
+        >
+          <dashboard-storage :stats="stats" />
+        </v-col>
+      </v-row>
+    </template>
+    <!--
+          <v-col v-else>
+
             <p v-if="!env.disableApplications && !env.disableRemoteServices">
               {{ $t('description') }}
             </p>
@@ -117,21 +200,7 @@
                     v-else
                     v-t="'datasetsCountNone'"
                   />
-                  <i18n
-                    v-if="stats.limits && stats.limits.store_bytes && stats.limits.store_bytes.limit && stats.limits.store_bytes.limit !== -1"
-                    path="storageWithLimit"
-                  >
-                    <template #bytes>{{ stats.limits.store_bytes.consumption | bytes($i18n.locale) }}</template>
-                    <template #bytesLimit>{{ stats.limits.store_bytes.limit | bytes($i18n.locale) }}</template>
-                  </i18n>
-                  <i18n
-                    v-else-if="stats.limits && stats.limits.store_bytes"
-                    path="storageWithoutLimit"
-                  >
-                    <template #bytes>
-                      {{ stats.limits.store_bytes.consumption | bytes($i18n.locale) }}
-                    </template>
-                  </i18n>
+
                 </p>
               </template>
               <template #tabs-items>
@@ -196,70 +265,14 @@
                     v-else
                     v-t="'appsCountNone'"
                   />
-                  <span v-if="baseApps">
-                    {{ $t('baseAppsCount', {count: $n(baseApps.length)}) }}
-                  </span>
                 </p>
-              </template>
-              <template #tabs-items>
-                <v-container fluid>
-                  <v-row v-if="baseApps">
-                    <v-spacer />
-                    <v-carousel
-                      cycle
-                      style="max-width:510px;"
-                      hide-delimiters
-                      show-arrows
-                    >
-                      <v-carousel-item
-                        v-for="(app, i) in baseApps"
-                        :key="i"
-                      >
-                        <div style="position:relative">
-                          <v-sheet
-                            style="position:absolute;top:0;left:0;right:0;z-index:1;"
-                            flat
-                            color="rgba(0, 0, 0, 0.6)"
-                            class="pa-2"
-                            dark
-                          >
-                            {{ app.title }}
-                          </v-sheet>
-                          <v-img
-                            :src="app.image"
-                            height="340"
-                            contain
-                          />
-                          <v-sheet
-                            v-if="app.description"
-                            style="position:absolute;bottom:0;left:0;right:0;z-index:1;"
-                            flat
-                            color="rgba(0, 0, 0, 0.6)"
-                            class="pa-2"
-                            dark
-                          >
-                            {{ app.description }}
-                          </v-sheet>
-                        </div>
-                      </v-carousel-item>
-                    </v-carousel>
-                    <v-spacer />
-                  </v-row>
-                </v-container>
               </template>
             </layout-section-tabs>
           </v-col>
         </v-row>
       </v-container>
-    </v-col>
-
-    <layout-navigation-right v-if="$vuetify.breakpoint.lgAndUp">
-      <activity
-        v-if="activity"
-        :activity="activity"
-      />
-    </layout-navigation-right>
-  </v-row>
+    </v-col>-->
+  </v-container>
 </template>
 
 <i18n lang="yaml">
@@ -282,15 +295,18 @@ fr:
   datasetsCountMessage1: '{link} a déjà été créé dans votre espace.'
   datasetsCount1: 1 jeu de données
   datasetsCountNone: Aucun jeu de donnée n'a été créé pour l'instant dans votre espace.
-  storageWithLimit: Vous utilisez {bytes} sur un total disponible de {bytesLimit}.
-  storageWithoutLimit: Vous utilisez {bytes} de stockage.
   apps: Applications
   appsCountMessage: '{link} ont déjà été configurées dans votre espace.'
   appsCount: '{count} applications'
   appsCountMessage1: '{link} a déjà été configurée'
   appsCount1: 1 application
   appsCountNone: Aucune application n'a été configurée pour l'instant dans votre espace.
-  baseAppsCount: Vous avez accès à {count} applications pour configurer autant de applications que vous le souhaitez.
+  contribute: Contribuez
+  createDataset: Créer un nouveau jeu de données
+  updateDataset: Mettre à jour un jeu de données
+  shareDataset: Partager un jeu de données
+  createApp: Configurer une nouvelle application
+  manage: Supervisez
 en:
   breadcrumb: Share and visualize data
   description: Easily enrich and publish your data. You can use it in dedicated applications and make it available to other people both openly or privately.
@@ -309,15 +325,18 @@ en:
   datasetsCountMessage1: '{link} was already loaded in your space.'
   datasetsCount1: 1 dataset
   datasetsCountNone: No dataset was loaded in your space yet.
-  storageWithLimit: You use {bytes} out of {bytesLimit} of total available space.
-  storageWithoutLimit: You use {bytes} of storage space.
   apps: Applications
   appsCountMessage: '{link} were already configured in your space.'
   appsCount: '{count} applications'
   appsCountMessage1: '{link} was already configured in your space'
   appsCount1: 1 application
   appsCountNone: No application was configured in your space yet.
-  baseAppsCount: You have access to {count} applications to configure as many applications as you want.
+  contribute: Contribute
+  createDataset: Create a dataset
+  updateDataset: Update a dataset
+  shareDataset: share a dataset
+  createApp: Configure an application
+  manage: Manage
 </i18n>
 
 <script>
@@ -332,8 +351,9 @@ export default {
     stats: null,
     datasets: null,
     baseApps: null,
-    activity: null,
     dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
+    dataMaintenanceSvg: require('~/assets/svg/Data maintenance_Two Color.svg?raw'),
+    shareSvg: require('~/assets/svg/Share_Two Color.svg?raw'),
     graphicSvg: require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw'),
     dataProcessSvg: require('~/assets/svg/Data Process_Two Color.svg?raw')
   }),
@@ -352,21 +372,7 @@ export default {
   async created () {
     if (!this.user) return
     this.$store.dispatch('breadcrumbs', [{ text: this.$t('breadcrumb') }])
-
     this.stats = await this.$axios.$get('api/v1/stats')
-
-    const owner = `${this.activeAccount.type}:${this.activeAccount.id}`
-    this.activity = await this.$axios.$get('api/v1/activity', {
-      params: { size: 8, owner }
-    })
-
-    this.datasets = await this.$axios.$get('api/v1/datasets', {
-      params: { size: 11, owner: owner, select: 'id,title,storage', sort: 'storage.size:-1' }
-    })
-
-    this.baseApps = (await this.$axios.$get('api/v1/base-applications', {
-      params: { size: 10000, privateAccess: owner, select: 'title,image' }
-    })).results
   },
   methods: {
     ...mapActions('session', ['login'])

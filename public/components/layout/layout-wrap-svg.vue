@@ -16,8 +16,8 @@ export default {
     themedSource () {
       if (!this.color) return this.source
       return this.source
-        .replace(/#6C63FF/gi, this.color) // default undraw color
-        .replace(/#68E1FD/gi, this.color) // default manypixels color
+        .replace(/#6C63FF/gi, this.color || this.$vuetify.theme.themes.light.primary) // default undraw color
+        .replace(/#68E1FD/gi, this.color || this.$vuetify.theme.themes.light.primary) // default manypixels color
         .replace(/#FFD200/gi, this.secondaryColor || this.$vuetify.theme.themes.light.accent)
     }
   }
