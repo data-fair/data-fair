@@ -42,10 +42,26 @@ describe('search', () => {
     assert.equal(res.data.total, 1)
     res = await ax.get('/api/v1/datasets/dataset1/lines?geo_distance=-2.75,47.7,10km')
     assert.equal(res.data.total, 1)
+    res = await ax.get('/api/v1/datasets/dataset1/lines?geo_distance=-2.75:47.7:10km')
+    assert.equal(res.data.total, 1)
     res = await ax.get('/api/v1/datasets/dataset1/lines?geo_distance=-2.74,47.7,1')
     assert.equal(res.data.total, 0)
+    // geo_distance without a distance means distance=0 so it is a contains
     res = await ax.get('/api/v1/datasets/dataset1/lines?geo_distance=-2.748526,47.687375')
     assert.equal(res.data.total, 1)
+    // sort on distance
+    res = await ax.get('/api/v1/datasets/dataset1/lines?sort=_geo_distance:2.6:45.5')
+    assert.equal(res.data.results[0].id, 'bidule')
+    res = await ax.get('/api/v1/datasets/dataset1/lines?sort=-_geo_distance:2.6:45.5')
+    assert.equal(res.data.results[0].id, 'koumoul')
+    // geo_distance filter makes the default sort a distance sort
+    res = await ax.get('/api/v1/datasets/dataset1/lines?geo_distance=2.6,45.5,1000km')
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results[0].id, 'bidule')
+    res = await ax.get('/api/v1/datasets/dataset1/lines?geo_distance=-2.748526,47.687375,1000km')
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results[0].id, 'koumoul')
+
     res = await ax.get('/api/v1/datasets/dataset1/geo_agg?bbox=-3,47,-2,48')
     assert.equal(res.status, 200)
     assert.equal(res.data.aggs.length, 1)

@@ -117,9 +117,9 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       description: `
   Un filtre pour restreindre les résultats à moins d'une certaine distance du point passé en paramètre.
 
-  Le format est 'lon,lat,distance'. La distance optionnelle (0 par défaut) et est exprimée en mètres.
+  Le format est 'lon:lat:distance'. La distance optionnelle (0 par défaut) et est exprimée en mètres.
 
-  Si les documents contiennent des géométries la distance est calculée à partir de leurs centroïdes à moins que la distance soit 0 auquel cas le filtre retourner tous les documents dont la géométrie contient le point passé en paramètre.
+  Si les documents contiennent des géométries la distance est calculée à partir de leurs centroïdes à moins que la distance soit 0 auquel cas le filtre retourne tous les documents dont la géométrie contient le point passé en paramètre.
     `,
       schema: {
         type: 'string'

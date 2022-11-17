@@ -85,7 +85,7 @@ module.exports = async (client, dataset, query, addGeoData, publicBaseUrl) => {
 
     // manage sorting
     if (currentAggLevel.values) {
-      currentAggLevel.values[aggTypes[i]].order = parseOrder(sorts[i], fields, dataset.schema)
+      currentAggLevel.values[aggTypes[i]].order = parseOrder(sorts[i], fields, dataset)
       if (query.metric && query.metric_field) {
         if (!fields.includes(query.metric_field)) {
           throw createError(400, `Impossible d'agréger sur le champ ${query.metric_field}, il n'existe pas dans le jeu de données.`)
@@ -116,7 +116,7 @@ module.exports = async (client, dataset, query, addGeoData, publicBaseUrl) => {
   if (size) {
     currentAggLevel.values.aggs = currentAggLevel.values.aggs || {}
     // the sort instruction after sort for aggregation results is used to sort inner hits
-    const hitsSort = parseSort(sorts[valuesFields.length], fields, dataset.schema)
+    const hitsSort = parseSort(sorts[valuesFields.length], fields, dataset)
     // Also implicitly sort by score
     hitsSort.push('_score')
     // And lastly random order for natural distribution (mostly important for geo results)

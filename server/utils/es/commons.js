@@ -81,7 +81,7 @@ exports.aliasName = dataset => {
   return `${config.indicesPrefix}-${dataset.id}`
 }
 
-exports.parseSort = (sortStr, fields, schema) => {
+exports.parseSort = (sortStr, fields, dataset) => {
   if (!sortStr) return []
   const result = []
   const keys = sortStr.split(',')
@@ -94,10 +94,17 @@ exports.parseSort = (sortStr, fields, schema) => {
       key = s
       order = 'asc'
     }
+    if (key.startsWith('_geo_distance:')) {
+      if (!dataset.bbox) throw createError(400, '"geo_distance" filter cannot be used on this dataset. It is not geolocalized.')
+      const [lon, lat] = key.replace('_geo_distance:', '').split(':')
+      result.push({ _geo_distance: { _geopoint: { lon, lat }, order } })
+      return
+    }
+
     if (!fields.concat(['_key', '_count', '_time', 'metric', '_i', '_rand', '_score']).includes(key)) {
       throw createError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     }
-    const field = schema.find(f => f.key === key)
+    const field = dataset.schema.find(f => f.key === key)
     const capabilities = (field && field['x-capabilities']) || {}
     if (capabilities.values === false && capabilities.insensitive === false) {
       throw createError(400, `Impossible de trier sur le champ ${key}, la fonctionnalité a été désactivée.`)
@@ -114,8 +121,8 @@ exports.parseSort = (sortStr, fields, schema) => {
   return result
 }
 
-exports.parseOrder = (sortStr, fields, schema) => {
-  const sort = exports.parseSort(sortStr, fields, schema)
+exports.parseOrder = (sortStr, fields, dataset) => {
+  const sort = exports.parseSort(sortStr, fields, dataset)
   return sort.map(s => {
     const key = Object.keys(s)[0]
     return { [key]: s[key].order }
@@ -203,7 +210,11 @@ exports.prepareQuery = (dataset, query) => {
   }
 
   // Sort by list of fields (prefixed by - for descending sort)
-  esQuery.sort = query.sort ? exports.parseSort(query.sort, fields, dataset.schema) : []
+  // if there is a geo_distance filter, apply a default _geo_distance sort
+  if (query.geo_distance && !query.sort) {
+    query.sort = '_geo_distance:' + query.geo_distance.split(/[,:]/).slice(0, 2).join(':')
+  }
+  esQuery.sort = query.sort ? exports.parseSort(query.sort, fields, dataset) : []
   // implicitly sort by score after other criteria
   if (!esQuery.sort.find(s => !!s._score) && query.q) esQuery.sort.push('_score')
   // every other things equal, sort by original line order
@@ -340,7 +351,7 @@ exports.prepareQuery = (dataset, query) => {
 
   if (query.geo_distance) {
     if (!dataset.bbox) throw createError(400, '"geo_distance" filter cannot be used on this dataset. It is not geolocalized.')
-    let [lon, lat, distance] = query.geo_distance.split(',')
+    let [lon, lat, distance] = query.geo_distance.split(/[,:]/)
     if (!distance || distance === '0') distance = '0m'
     lon = Number(lon)
     lat = Number(lat)
