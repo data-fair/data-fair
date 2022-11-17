@@ -53,7 +53,10 @@ const renderer = new marked.Renderer()
 renderer.defaultCode = renderer.code
 renderer.code = function (code, language) {
   if (language === 'mermaid') {
-    // return `<iframe class="mermaid-iframe" id="mermaid-iframe-${Math.round(Math.random() * 100000)}" frameborder="0" scrolling="no" style="width:100%" src="/_mermaid?code=${encodeURIComponent(code)}"></iframe>`
+    if (process.server) return ''
+    const key = (Math.random() + '').replace('0.', '')
+    window.sessionStorage.setItem('mermaid-' + key, code)
+    return `<iframe class="mermaid-iframe" id="mermaid-iframe-${key}" frameborder="0" scrolling="no" style="width:100%" src="${process.env.base}mermaid?key=${key}"></iframe>`
   }
   return this.defaultCode(code, language)
 }
@@ -75,7 +78,7 @@ export default {
   },
   async mounted () {
     for (const iframe of this.$el.querySelectorAll('.mermaid-iframe')) {
-      window.iFrameResize({ log: true, scrolling: 'no' }, '#' + iframe.id)
+      window.iFrameResize({}, '#' + iframe.id)
     }
     // Apply classes from vuetify to markdown generated HTML
     const elemClasses = {

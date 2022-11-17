@@ -40,7 +40,7 @@ flowchart TD
   conflict --> confirm{Confirmer ?}
   confirm -- Oui --> import[[Import]]
   import --> dataset([Page du nouveau jeu de données])
-  dataset --> worker[["Traitement du jeu données<br>(analyse, indexation...)"]]
+  dataset --> worker[["Traitement du jeu de données<br>(analyse, indexation...)"]]
   worker --> dataset
 
   %% styling
