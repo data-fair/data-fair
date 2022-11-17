@@ -33,6 +33,13 @@
           step="4"
           :editable="!!file"
         >
+          {{ $t('stepParams') }}
+        </v-stepper-step>
+        <v-divider />
+        <v-stepper-step
+          step="5"
+          :editable="fileParamsForm"
+        >
           {{ $t('stepAction') }}
         </v-stepper-step>
       </template>
@@ -86,21 +93,6 @@
             type="info"
             v-html="$t('suggestArchive', {name: file.name})"
           />
-          <div
-            v-if="file"
-            class="mt-3 mb-3"
-          >
-            <v-text-field
-              v-model="title"
-              name="title"
-              outlined
-              dense
-              hide-details
-              :label="$t('title')"
-              :placeholder="$t('titlePlaceholder')"
-              style="max-width: 400px"
-            />
-          </div>
           <v-btn
             v-t="'continue'"
             class="mt-2"
@@ -128,7 +120,7 @@
           <p v-t="'attachmentsMsg2'" />
           <div
             class="mt-3 mb-3"
-            @drop.prevent="e => {attachment = e.dataTransfer.files[0]}"
+            @drop.prevent="e => {attachment = e.dataTransfer.files[0]; currentStep = 4}"
             @dragover.prevent
           >
             <v-file-input
@@ -139,12 +131,7 @@
               style="max-width: 400px;"
               accept=".zip"
               hide-details
-            />
-            <v-checkbox
-              v-if="attachment"
-              v-model="attachmentsAsImage"
-              hide-details
-              :label="$t('attachmentsAsImage')"
+              @change="currentStep = 4"
             />
           </div>
           <v-btn
@@ -156,19 +143,49 @@
         </v-stepper-content>
 
         <v-stepper-content step="4">
-          <v-radio-group
-            v-model="action"
-            class="mt-3 mb-3"
-            hide-details
-            :disabled="importing"
-          >
-            <v-radio
-              v-for="a in actions"
-              :key="a.id"
-              :label="a.title"
-              :value="a"
+          <v-form v-model="fileParamsForm">
+            <v-alert
+              outlined
+              type="warning"
+              style="max-width:800px;"
+            >
+              {{ $t('titleId') }}
+            </v-alert>
+            <v-checkbox
+              v-model="filenameTitle"
+              name="filenameTitle"
+              hide-details
+              :label="$t('filenameTitle')"
             />
-          </v-radio-group>
+            <v-text-field
+              v-if="!filenameTitle"
+              v-model="title"
+              name="title"
+              outlined
+              dense
+              hide-details
+              :label="$t('title')"
+              :placeholder="$t('titlePlaceholder')"
+              style="max-width: 400px"
+              :rules="[() => !!cleanTitle]"
+              class="mt-5"
+            />
+            <v-checkbox
+              v-if="!attachment"
+              v-model="attachmentsAsImage"
+              :label="$t('attachmentsAsImage')"
+            />
+          </v-form>
+          <v-btn
+            v-t="'continue'"
+            color="primary"
+            class="mt-4"
+            :disabled="!fileParamsForm"
+            @click.native="currentStep = 5"
+          />
+        </v-stepper-content>
+
+        <v-stepper-content step="5">
           <v-row
             v-if="importing"
             class="mx-0 my-3"
@@ -223,11 +240,14 @@ fr:
   type_desc_metaOnly: "Créez un pseudo jeu de données sans données locales, uniquement les autres informations (description, pièces jointes, etc)."
   stepFile: Sélection du fichier
   stepAttachment: Pièces jointes
+  stepParams: Paramètres
   stepAction: Confirmation
   loadMainFile: Chargez un fichier de données principal.
   selectFile: sélectionnez ou glissez/déposez un fichier
   title: Titre du jeu de données
   titlePlaceholder: Laissez vide pour utiliser le nom de fichier
+  titleId: Le titre du jeu de données sera utilisé pour construire un identifiant unique visible dans les URLs de pages de portails, les APIs, etc. Cet identifiant ne pourra pas être modifié.
+  filenameTitle: Utiliser le nom du fichier pour construire le titre du jeu de données
   continue: Continuer
   formats: Formats supportés
   attachmentInfo: Cette étape est optionnelle
@@ -260,11 +280,14 @@ en:
   type_desc_metaOnly: Create a pseudo dataset without any local data, only other information (description, attachments, etc).
   stepFile: File selection
   stepAttachment: Attachments
+  stepParams: Parameters
   stepAction: Perform the action
   loadMainFile: Load the main data file
   selectFile: select a file
   title: Dataset title
   titlePlaceholder: Leave empty to use the file name
+  titleId: The title of the dataset will be used to create a unique id visible in URLs of portals pages, APIs, etc. This id cannot be changed.
+  filenameTitle: Use the file name to create the title of the dataset
   continue: Continue
   formats: Supported formats
   attachmentInfo: This step is optional
@@ -295,7 +318,7 @@ export default {
     attachmentsAsImage: false,
     currentStep: 1,
     uploadProgress: { rate: 0 },
-    actions: [],
+    conflicts: [],
     action: null,
     importing: false,
     title: '',
@@ -306,7 +329,9 @@ export default {
       virtual: 'mdi-picture-in-picture-bottom-right-outline',
       metaOnly: 'mdi-information-variant'
     },
-    datasetType: null
+    datasetType: null,
+    filenameTitle: false,
+    fileParamsForm: false
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -319,19 +344,19 @@ export default {
   },
   watch: {
     async currentStep () {
-      if (this.currentStep === 4) {
-        let existingDatasets
-        if (this.cleanTitle) {
-          existingDatasets = { results: [] }
-        } else {
-          existingDatasets = await this.$axios.$get('api/v1/datasets', { params: { filename: this.file.name, owner: `${this.activeAccount.type}:${this.activeAccount.id}` } })
+      if (this.currentStep === 5) {
+        const conflicts = []
+        const datasetFilenameConflicts = await this.$axios.$get('api/v1/datasets', { params: { filename: this.file.name, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })
+        for (const dataset in datasetFilenameConflicts) {
+          conflicts.push({ dataset, conflict: 'filename' })
         }
-        this.actions = [{ type: 'create', title: this.$t('createDataset') }, ...existingDatasets.results.map(d => ({
-          type: 'update',
-          id: d.id,
-          title: this.$t('updateDataset', { title: d.title })
-        }))]
-        this.action = this.actions[0]
+        if (!this.filenameTitle) {
+          const datasetTitleConflicts = await this.$axios.$get('api/v1/datasets', { params: { title: this.cleanTitle, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })
+          for (const dataset in datasetTitleConflicts) {
+            conflicts.push({ dataset, conflict: 'title' })
+          }
+        }
+        this.conflicts = conflicts
       }
     }
   },
@@ -361,17 +386,11 @@ export default {
         formData.append('attachments', this.attachment)
         if (this.attachmentsAsImage) formData.append('attachmentsAsImage', true)
       }
-      if (this.cleanTitle) formData.append('title', this.cleanTitle)
+      if (!this.filenameTitle && this.cleanTitle) formData.append('title', this.cleanTitle)
       this.importing = true
       try {
-        let dataset
-        if (this.action.type === 'create') {
-          if (this.file.size > 100000) options.params.draft = 'true'
-          dataset = await this.$axios.$post('api/v1/datasets', formData, options)
-        } else {
-          options.params.draft = 'true'
-          dataset = await this.$axios.$post('api/v1/datasets/' + this.action.id, formData, options)
-        }
+        if (this.file.size > 100000) options.params.draft = 'true'
+        const dataset = await this.$axios.$post('api/v1/datasets', formData, options)
         if (dataset.error) throw new Error(dataset.error)
         this.$router.push({ path: `/dataset/${dataset.id}` })
       } catch (error) {

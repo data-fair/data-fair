@@ -1627,11 +1627,10 @@ router.post('/:datasetId/user-notification', readDataset(), permissions.middlewa
   const userNotification = req.body
   if (!validateUserNotification(userNotification)) return res.status(400).send(validateUserNotification.errors)
   const urlParams = userNotification.urlParams || {}
-  let visibility = userNotification.visibility || permissions.isPublic('datasets', req.dataset) ? 'public' : 'private'
+  const visibility = userNotification.visibility || 'private'
   if (visibility === 'public') {
-    if (!permissions.isPublic('datasets', req.dataset)) visibility = 'private'
     const ownerRole = permissions.getOwnerRole(req.owner, req.user)
-    if (!['admin', 'contrib'].includes(ownerRole)) visibility = 'private'
+    if (!['admin', 'contrib'].includes(ownerRole)) throw new Error('A non owner use cannot set visibility=public')
   }
   const notif = {
     sender: req.dataset.owner,

@@ -44,14 +44,17 @@
 
 <script>
 import { mapState } from 'vuex'
-import mermaid from 'mermaid/dist/mermaid.esm.min.mjs'
+import 'iframe-resizer/js/iframeResizer'
+
 const marked = require('marked')
 const metaMarked = require('@hackmd/meta-marked')
 
 const renderer = new marked.Renderer()
 renderer.defaultCode = renderer.code
 renderer.code = function (code, language) {
-  if (language === 'mermaid') return `<pre class="mermaid">${code}</pre>`
+  if (language === 'mermaid') {
+    // return `<iframe class="mermaid-iframe" id="mermaid-iframe-${Math.round(Math.random() * 100000)}" frameborder="0" scrolling="no" style="width:100%" src="/_mermaid?code=${encodeURIComponent(code)}"></iframe>`
+  }
   return this.defaultCode(code, language)
 }
 marked.use({ renderer })
@@ -66,18 +69,14 @@ export default {
     ...mapState(['env']),
     filledContent () {
       const content = metaMarked(this.content)
-      content.html = marked.parse(content.markdown).replace('<table>', '<div class="v-data-table v-data-table--dense theme--light"><div class="v-data-table__wrapper"><table>').replace('</table>', '</table></div></div>')
+      content.html = (marked.parse(content.markdown)).replace('<table>', '<div class="v-data-table v-data-table--dense theme--light"><div class="v-data-table__wrapper"><table>').replace('</table>', '</table></div></div>')
       return content
     }
   },
-  mounted () {
-    mermaid.initialize({
-      theme: 'base',
-      themeVariables: {
-        primaryColor: '#FFFFFF',
-        primaryBorderColor: this.$vuetify.theme.themes.light.primary
-      }
-    })
+  async mounted () {
+    for (const iframe of this.$el.querySelectorAll('.mermaid-iframe')) {
+      window.iFrameResize({ log: true, scrolling: 'no' }, '#' + iframe.id)
+    }
     // Apply classes from vuetify to markdown generated HTML
     const elemClasses = {
       h2: ['display-1', 'my-4'],
@@ -113,12 +112,6 @@ export default {
       margin: 12px auto;
       border: solid;
       border-width: 1px;
-    }
-    pre.mermaid {
-      visibility: hidden;
-    }
-    pre.mermaid[data-processed="true"] {
-      visibility: visible;
     }
 }
 </style>
