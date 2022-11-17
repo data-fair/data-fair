@@ -94,7 +94,7 @@
           lg="3"
         >
           <dashboard-svg-link
-            to="/new-dataset?type=file"
+            to="/new-dataset"
             :title="$t('createDataset')"
             :svg="dataSvg"
           />
@@ -105,7 +105,7 @@
           lg="3"
         >
           <dashboard-svg-link
-            to="/new-dataset?type=file"
+            to="/update-dataset"
             :title="$t('updateDataset')"
             :svg="dataMaintenanceSvg"
           />
@@ -116,7 +116,7 @@
           lg="3"
         >
           <dashboard-svg-link
-            to="/new-dataset?type=file"
+            to="/share-dataset"
             :title="$t('shareDataset')"
             :svg="shareSvg"
           />

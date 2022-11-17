@@ -46,6 +46,7 @@ module.exports = {
     hideDraft: (process.env.HIDE_DRAFT === 'true') || (process.env.GITHUB_REF_NAME && process.env.GITHUB_REF_NAME !== 'master')
   },
   plugins: [
+    // { src: '~plugins/mermaid', ssr: false },
     { src: '~plugins/moment' }
   ],
   modules: [['@nuxtjs/i18n', {

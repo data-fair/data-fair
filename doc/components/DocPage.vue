@@ -44,7 +44,18 @@
 
 <script>
 import { mapState } from 'vuex'
-const marked = require('@hackmd/meta-marked')
+import mermaid from 'mermaid/dist/mermaid.esm.min.mjs'
+const marked = require('marked')
+const metaMarked = require('@hackmd/meta-marked')
+
+const renderer = new marked.Renderer()
+renderer.defaultCode = renderer.code
+renderer.code = function (code, language) {
+  if (language === 'mermaid') return `<pre class="mermaid">${code}</pre>`
+  return this.defaultCode(code, language)
+}
+marked.use({ renderer })
+
 // const escape = require('escape-string-regexp')
 require('highlight.js/styles/github.css')
 
@@ -54,12 +65,19 @@ export default {
   computed: {
     ...mapState(['env']),
     filledContent () {
-      const content = marked(this.content)
-      content.html = content.html.replace('<table>', '<div class="v-data-table v-data-table--dense theme--light"><div class="v-data-table__wrapper"><table>').replace('</table>', '</table></div></div>')
+      const content = metaMarked(this.content)
+      content.html = marked.parse(content.markdown).replace('<table>', '<div class="v-data-table v-data-table--dense theme--light"><div class="v-data-table__wrapper"><table>').replace('</table>', '</table></div></div>')
       return content
     }
   },
   mounted () {
+    mermaid.initialize({
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#FFFFFF',
+        primaryBorderColor: this.$vuetify.theme.themes.light.primary
+      }
+    })
     // Apply classes from vuetify to markdown generated HTML
     const elemClasses = {
       h2: ['display-1', 'my-4'],
@@ -95,6 +113,12 @@ export default {
       margin: 12px auto;
       border: solid;
       border-width: 1px;
+    }
+    pre.mermaid {
+      visibility: hidden;
+    }
+    pre.mermaid[data-processed="true"] {
+      visibility: visible;
     }
 }
 </style>
