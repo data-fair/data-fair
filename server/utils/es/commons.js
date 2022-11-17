@@ -210,13 +210,14 @@ exports.prepareQuery = (dataset, query) => {
   }
 
   // Sort by list of fields (prefixed by - for descending sort)
-  // if there is a geo_distance filter, apply a default _geo_distance sort
-  if (query.geo_distance && !query.sort) {
-    query.sort = '_geo_distance:' + query.geo_distance.split(/[,:]/).slice(0, 2).join(':')
-  }
   esQuery.sort = query.sort ? exports.parseSort(query.sort, fields, dataset) : []
   // implicitly sort by score after other criteria
   if (!esQuery.sort.find(s => !!s._score) && query.q) esQuery.sort.push('_score')
+  // if there is a geo_distance filter, apply a default _geo_distance sort
+  if (query.geo_distance && !esQuery.sort.find(s => !!s._geo_distance)) {
+    const [lon, lat] = query.geo_distance.split(/[,:]/)
+    esQuery.sort.push({ _geo_distance: { _geopoint: { lon, lat }, order: 'asc' } })
+  }
   // every other things equal, sort by original line order
   // this is very important as it provides a tie-breaker for search_after pagination
   if (fields.includes('_updatedAt')) {
