@@ -1637,10 +1637,11 @@ router.post('/:datasetId/user-notification', readDataset(), permissions.middlewa
     sender: req.dataset.owner,
     topic: { key: `data-fair:dataset-user-notification:${req.dataset.id}:${userNotification.topic}` },
     title: userNotification.title,
-    body: req.user.name,
+    body: userNotification.body,
     urlParams: { ...urlParams, datasetId: req.dataset.id, userId: req.user.id },
     visibility,
-    recipient: userNotification.recipient
+    recipient: userNotification.recipient,
+    extra: { user: { id: req.user.id, name: req.user.name } }
   }
   await notifications.send(notif, true)
   res.send(notif)

@@ -5,6 +5,7 @@ module.exports = {
   properties: {
     topic: { type: 'string' },
     title: { type: 'string' },
+    body: { type: 'string' },
     urlParams: { type: 'object' },
     recipient: {
       type: 'object',
