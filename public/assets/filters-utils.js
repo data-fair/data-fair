@@ -13,8 +13,9 @@ export function filter2qs (filter, locale = 'fr') {
     if (Array.isArray(filter.values) && filter.values.length === 0) return null
     return `!${key}:(${filter.values.map(v => `"${escape(v)}"`).join(' AND ')})`
   } else if (filter.type === 'interval') {
-    if (!filter.minValue || !filter.maxValue) return null
-    return `${key}:[${escape(filter.minValue)} TO ${escape(filter.maxValue)}]`
+    const min = ![null, undefined, ''].includes(filter.minValue) ? escape(filter.minValue) : '*'
+    const max = ![null, undefined, ''].includes(filter.maxValue) ? escape(filter.maxValue) : '*'
+    return `${key}:[${escape(min)} TO ${escape(max)}]`
   } else if (filter.type === 'starts') {
     if ([null, undefined, ''].includes(filter.value)) return null
     if (filter.value.includes(',')) {
