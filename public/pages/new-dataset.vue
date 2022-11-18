@@ -84,6 +84,25 @@
           {{ $t('stepAction') }}
         </v-stepper-step>
       </template>
+
+      <!-- META ONLY steps -->
+      <template v-if="datasetType === 'metaOnly'">
+        <v-divider />
+        <v-stepper-step
+          :step="2"
+          editable
+          :complete="metaParamsForm"
+        >
+          {{ $t('stepParams') }}
+        </v-stepper-step>
+        <v-divider />
+        <v-stepper-step
+          :step="3"
+          :editable="metaParamsForm"
+        >
+          {{ $t('stepAction') }}
+        </v-stepper-step>
+      </template>
     </v-stepper-header>
 
     <v-stepper-items>
@@ -553,6 +572,92 @@
           />
         </v-stepper-content>
       </template>
+
+      <!-- META ONLY steps -->
+      <template v-if="datasetType === 'metaOnly'">
+        <v-stepper-content step="2">
+          <v-form v-model="metaParamsForm">
+            <v-alert
+              outlined
+              type="warning"
+              dense
+              style="max-width:800px;"
+            >
+              {{ $t('titleId') }}
+            </v-alert>
+            <v-text-field
+              v-model="metaOnlyDataset.title"
+              name="title"
+              outlined
+              dense
+              :label="$t('title')"
+              :placeholder="$t('titlePlaceholder')"
+              style="max-width: 400px"
+              :rules="[val => val && val.length > 3]"
+              class="pl-2 mt-5"
+            />
+          </v-form>
+          <v-btn
+            v-t="'continue'"
+            color="primary"
+            class="ml-2 mt-4"
+            :disabled="!metaParamsForm"
+            @click.native="currentStep = 3"
+          />
+        </v-stepper-content>
+
+        <v-stepper-content step="3">
+          <template v-if="conflicts && conflicts.length">
+            <v-alert
+              color="warning"
+              outlined
+              dense
+              style="max-width:800px;"
+              class="px-0 pb-0"
+            >
+              <span class="px-4">{{ $t('conflicts') }}</span>
+              <v-list
+                class="pb-0"
+                color="transparent"
+              >
+                <v-list-item
+                  v-for="(conflict,i) in conflicts"
+                  :key="i"
+                >
+                  <v-list-item-content class="py-0">
+                    <v-list-item-title>
+                      <a
+                        :href="$router.resolve(`/dataset/${conflict.dataset.id}`).href"
+                        target="_blank"
+                      >
+                        {{ conflict.dataset.title }}
+                      </a>
+                    </v-list-item-title>
+                    <v-list-item-subtitle>
+                      {{ $t('conflict_' + conflict.conflict) }}
+                    </v-list-item-subtitle>
+                  </v-list-item-content>
+                </v-list-item>
+              </v-list>
+            </v-alert>
+
+            <v-checkbox
+              v-model="ignoreConflicts"
+              class="pl-2"
+              :label="$t('ignoreConflicts')"
+              color="warning"
+              dense
+            />
+          </template>
+
+          <v-btn
+            v-t="'createDataset'"
+            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts)"
+            color="primary"
+            @click.native="createDataset(metaOnlyDataset)"
+          />
+        </v-stepper-content>
+      </template>
     </v-stepper-items>
   </v-stepper>
 </template>
@@ -702,10 +807,15 @@ export default {
         children: []
       }
     },
+    metaOnlyDataset: {
+      isMetaOnly: true,
+      title: ''
+    },
     filenameTitle: false,
     fileParamsForm: false,
     restParamsForm: false,
     virtualParamsForm: false,
+    metaParamsForm: false,
     ignoreConflicts: false,
     virtualChildren: [],
     restSource: null,
@@ -751,6 +861,10 @@ export default {
       }
       if (this.datasetType === 'virtual' && this.currentStep === 3) {
         const datasetTitleConflicts = (await this.$axios.$get('api/v1/datasets', { params: { title: this.virtualDataset.title, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
+        for (const dataset of datasetTitleConflicts) conflicts.push({ dataset, conflict: 'title' })
+      }
+      if (this.datasetType === 'metaOnly' && this.currentStep === 3) {
+        const datasetTitleConflicts = (await this.$axios.$get('api/v1/datasets', { params: { title: this.metaOnlyDataset.title, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
         for (const dataset of datasetTitleConflicts) conflicts.push({ dataset, conflict: 'title' })
       }
       this.conflicts = conflicts

@@ -7,7 +7,7 @@
       <v-container class="py-0">
         <v-row class="dataset">
           <v-col>
-            <dataset-status />
+            <dataset-status v-if="!dataset.isMetaOnly" />
 
             <layout-section-tabs
               :min-height="180"
