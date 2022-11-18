@@ -65,6 +65,25 @@
           {{ $t('stepAction') }}
         </v-stepper-step>
       </template>
+
+      <!-- VIRTUAL steps -->
+      <template v-if="datasetType === 'virtual'">
+        <v-divider />
+        <v-stepper-step
+          :step="2"
+          editable
+          :complete="virtualParamsForm"
+        >
+          {{ $t('stepParams') }}
+        </v-stepper-step>
+        <v-divider />
+        <v-stepper-step
+          :step="3"
+          :editable="virtualParamsForm"
+        >
+          {{ $t('stepAction') }}
+        </v-stepper-step>
+      </template>
     </v-stepper-header>
 
     <v-stepper-items>
@@ -416,11 +435,121 @@
               dense
             />
           </template>
+        </v-stepper-content>
+      </template>
+
+      <!-- VIRTUAL steps -->
+      <template v-if="datasetType === 'virtual'">
+        <v-stepper-content step="2">
+          <v-form v-model="virtualParamsForm">
+            <v-alert
+              outlined
+              type="warning"
+              dense
+              style="max-width:800px;"
+            >
+              {{ $t('titleId') }}
+            </v-alert>
+            <v-text-field
+              v-model="virtualDataset.title"
+              name="title"
+              outlined
+              dense
+              :label="$t('title')"
+              :placeholder="$t('titlePlaceholder')"
+              style="max-width: 400px"
+              :rules="[val => val && val.length > 3]"
+              class="pl-2 mt-5"
+            />
+            <v-autocomplete
+              v-model="virtualChildren"
+              :items="datasetsAndChildren"
+              :loading="loadingDatasets"
+              :search-input.sync="search"
+              hide-no-data
+              item-text="title"
+              item-value="id"
+              :label="$t('children')"
+              :placeholder="$t('search')"
+              return-object
+              outlined
+              dense
+              hide-details
+              style="max-width: 700px"
+              class="pl-2"
+              clearable
+              multiple
+              :required="true"
+              chips
+              :rules="[value => !!(value && value.length) || '']"
+              @change="datasets => {virtualDataset.virtual.children = datasets.map(d => d.id); fillVirtualDataset()}"
+            />
+            <v-checkbox
+              v-model="virtualDatasetFill"
+              hide-details
+              class="pl-2"
+              :label="$t('virtualDatasetFill')"
+              @change="fillVirtualDataset"
+            />
+          </v-form>
+          <v-btn
+            v-t="'continue'"
+            color="primary"
+            class="ml-2 mt-4"
+            :disabled="!virtualParamsForm"
+            @click.native="currentStep = 3"
+          />
+        </v-stepper-content>
+
+        <v-stepper-content step="3">
+          <template v-if="conflicts && conflicts.length">
+            <v-alert
+              color="warning"
+              outlined
+              dense
+              style="max-width:800px;"
+              class="px-0 pb-0"
+            >
+              <span class="px-4">{{ $t('conflicts') }}</span>
+              <v-list
+                class="pb-0"
+                color="transparent"
+              >
+                <v-list-item
+                  v-for="(conflict,i) in conflicts"
+                  :key="i"
+                >
+                  <v-list-item-content class="py-0">
+                    <v-list-item-title>
+                      <a
+                        :href="$router.resolve(`/dataset/${conflict.dataset.id}`).href"
+                        target="_blank"
+                      >
+                        {{ conflict.dataset.title }}
+                      </a>
+                    </v-list-item-title>
+                    <v-list-item-subtitle>
+                      {{ $t('conflict_' + conflict.conflict) }}
+                    </v-list-item-subtitle>
+                  </v-list-item-content>
+                </v-list-item>
+              </v-list>
+            </v-alert>
+
+            <v-checkbox
+              v-model="ignoreConflicts"
+              class="pl-2"
+              :label="$t('ignoreConflicts')"
+              color="warning"
+              dense
+            />
+          </template>
+
           <v-btn
             v-t="'createDataset'"
             :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts)"
             color="primary"
-            @click.native="createDataset(restDataset)"
+            @click.native="createDataset(virtualDataset)"
           />
         </v-stepper-content>
       </template>
@@ -478,6 +607,8 @@ fr:
   history: Conserver un historique complet des révisions des lignes du jeu de données
   lineOwnership: Accept giving ownership of lines to users (collaborative use-cases)
   restSource: Initialiser le schéma en dupliquant celui d'un jeu de données existant
+  children: Jeux enfants
+  virtualDatasetFill: Initialiser le schéma avec toutes les colonnes des jeux enfants
 en:
   datasetType: Type de jeu de données
   newDataset: Create a dataset
@@ -526,6 +657,8 @@ en:
   conflict_title: the title is the same
   history: Keep a full history of the revisions of the lines of the dataset
   lineOwnership: Accept giving ownership of lines to users (collaborative use-cases)
+  children: Children datasets
+  virtualDatasetFill: Initialize the schema with all columns from children
 </i18n>
 
 <script>
@@ -562,15 +695,24 @@ export default {
       },
       schema: []
     },
+    virtualDataset: {
+      title: '',
+      isVirtual: true,
+      virtual: {
+        children: []
+      }
+    },
     filenameTitle: false,
     fileParamsForm: false,
     restParamsForm: false,
+    virtualParamsForm: false,
     ignoreConflicts: false,
     virtualChildren: [],
     restSource: null,
     loadingDatasets: false,
     search: '',
-    datasets: []
+    datasets: [],
+    virtualDatasetFill: false
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -587,6 +729,9 @@ export default {
           this.restDataset.schema = this.restDataset.schema.filter(p => p['x-refersTo'] !== 'http://schema.org/DigitalDocument')
         }
       }
+    },
+    datasetsAndChildren () {
+      return this.virtualChildren.concat(this.datasets.filter(d => !this.virtualChildren.find(c => c.id === d.id)))
     }
   },
   watch: {
@@ -594,21 +739,19 @@ export default {
       const conflicts = []
       if (this.datasetType === 'file' && this.currentStep === 5) {
         const datasetFilenameConflicts = (await this.$axios.$get('api/v1/datasets', { params: { filename: this.file.name, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
-        for (const dataset of datasetFilenameConflicts) {
-          conflicts.push({ dataset, conflict: 'filename' })
-        }
+        for (const dataset of datasetFilenameConflicts) conflicts.push({ dataset, conflict: 'filename' })
         if (!this.filenameTitle) {
           const datasetTitleConflicts = (await this.$axios.$get('api/v1/datasets', { params: { title: this.fileDataset.title, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
-          for (const dataset of datasetTitleConflicts) {
-            conflicts.push({ dataset, conflict: 'title' })
-          }
+          for (const dataset of datasetTitleConflicts) conflicts.push({ dataset, conflict: 'title' })
         }
       }
       if (this.datasetType === 'rest' && this.currentStep === 3) {
         const datasetTitleConflicts = (await this.$axios.$get('api/v1/datasets', { params: { title: this.restDataset.title, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
-        for (const dataset of datasetTitleConflicts) {
-          conflicts.push({ dataset, conflict: 'title' })
-        }
+        for (const dataset of datasetTitleConflicts) conflicts.push({ dataset, conflict: 'title' })
+      }
+      if (this.datasetType === 'virtual' && this.currentStep === 3) {
+        const datasetTitleConflicts = (await this.$axios.$get('api/v1/datasets', { params: { title: this.virtualDataset.title, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
+        for (const dataset of datasetTitleConflicts) conflicts.push({ dataset, conflict: 'title' })
       }
       this.conflicts = conflicts
     },
@@ -680,6 +823,18 @@ export default {
       })
       this.datasets = res.results
       this.loadingDatasets = false
+    },
+    fillVirtualDataset () {
+      this.virtualDataset.schema = []
+      if (this.virtualDatasetFill) {
+        for (const dataset of this.virtualChildren) {
+          for (const property of dataset.schema) {
+            if (!this.virtualDataset.schema.find(p => p.key === property.key)) {
+              this.virtualDataset.schema.push(property)
+            }
+          }
+        }
+      }
     }
   }
 }
