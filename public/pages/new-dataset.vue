@@ -5,7 +5,7 @@
   >
     <v-stepper-header>
       <v-stepper-step
-        step="1"
+        :step="1"
         :complete="!!datasetType"
         editable
       >
@@ -14,7 +14,7 @@
       <template v-if="datasetType === 'file'">
         <v-divider />
         <v-stepper-step
-          step="2"
+          :step="2"
           :complete="!!file"
           :editable="!!datasetType"
         >
@@ -22,7 +22,7 @@
         </v-stepper-step>
         <v-divider />
         <v-stepper-step
-          step="3"
+          :step="3"
           :complete="!!attachment"
           :editable="!!file"
         >
@@ -30,14 +30,15 @@
         </v-stepper-step>
         <v-divider />
         <v-stepper-step
-          step="4"
+          :step="4"
           :editable="!!file"
+          :complete="fileParamsForm"
         >
           {{ $t('stepParams') }}
         </v-stepper-step>
         <v-divider />
         <v-stepper-step
-          step="5"
+          :step="5"
           :editable="fileParamsForm"
         >
           {{ $t('stepAction') }}
@@ -91,6 +92,7 @@
             v-if="file && file.size > 50000000 && (file.name.endsWith('.csv') || file.name.endsWith('.tsv') || file.name.endsWith('.txt') || file.name.endsWith('.geojson'))"
             outlined
             type="info"
+            dense
             v-html="$t('suggestArchive', {name: file.name})"
           />
           <v-btn
@@ -112,6 +114,7 @@
           <v-alert
             type="info"
             outlined
+            dense
             style="max-width:400px;"
           >
             {{ $t('attachmentInfo') }}
@@ -131,6 +134,7 @@
               style="max-width: 400px;"
               accept=".zip"
               hide-details
+              clearable
               @change="currentStep = 4"
             />
           </div>
@@ -147,6 +151,7 @@
             <v-alert
               outlined
               type="warning"
+              dense
               style="max-width:800px;"
             >
               {{ $t('titleId') }}
@@ -156,6 +161,7 @@
               name="filenameTitle"
               hide-details
               :label="$t('filenameTitle')"
+              class="pl-2"
             />
             <v-text-field
               v-if="!filenameTitle"
@@ -168,24 +174,67 @@
               :placeholder="$t('titlePlaceholder')"
               style="max-width: 400px"
               :rules="[() => !!cleanTitle]"
-              class="mt-5"
+              class="pl-2 mt-5"
             />
             <v-checkbox
               v-if="!attachment"
               v-model="attachmentsAsImage"
               :label="$t('attachmentsAsImage')"
+              class="pl-2"
             />
           </v-form>
           <v-btn
             v-t="'continue'"
             color="primary"
-            class="mt-4"
+            class="ml-2 mt-4"
             :disabled="!fileParamsForm"
             @click.native="currentStep = 5"
           />
         </v-stepper-content>
 
         <v-stepper-content step="5">
+          <template v-if="conflicts && conflicts.length">
+            <v-alert
+              color="warning"
+              outlined
+              dense
+              style="max-width:800px;"
+              class="px-0 pb-0"
+            >
+              <span class="px-4">{{ $t('conflicts') }}</span>
+              <v-list
+                class="pb-0"
+                color="transparent"
+              >
+                <v-list-item
+                  v-for="(conflict,i) in conflicts"
+                  :key="i"
+                >
+                  <v-list-item-content>
+                    <v-list-item-title>
+                      <a
+                        :href="$router.resolve(`/dataset/${conflict.dataset.id}`).href"
+                        target="_blank"
+                      >
+                        {{ conflict.dataset.title }}
+                      </a>
+                    </v-list-item-title>
+                    <v-list-item-subtitle>
+                      {{ $t('conflict_' + conflict.conflict) }}
+                    </v-list-item-subtitle>
+                  </v-list-item-content>
+                </v-list-item>
+              </v-list>
+            </v-alert>
+
+            <v-checkbox
+              v-model="ignoreConflicts"
+              class="pl-2"
+              :label="$t('ignoreConflicts')"
+              color="warning"
+              dense
+            />
+          </template>
           <v-row
             v-if="importing"
             class="mx-0 my-3"
@@ -214,7 +263,7 @@
           </v-row>
           <v-btn
             v-t="'import'"
-            :disabled="!action || importing"
+            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts)"
             color="primary"
             @click.native="importData()"
           />
@@ -265,6 +314,10 @@ fr:
     Ce fichier est volumineux. Pour économiser du temps et de l'énergie vous pouvez si vous le souhaitez le charger sous forme compressée.
     <br>Pour ce faire vous devez créer soit un fichier "{name}.gz" soit une archive .zip contenant uniquement ce fichier.
   of: de
+  conflicts: Doublons potentiels
+  ignoreConflicts: Ignorer ces doublons potentiels
+  conflict_filename: le nom de fichier est identique
+  conflict_title: le titre est identique
 en:
   datasetType: Type de jeu de données
   newDataset: Create a dataset
@@ -305,6 +358,10 @@ en:
     This file is large. To save and time and energy you can if you wish send a compressed version of it.
     <br>To do so you must create a file "{name}.gz" or a zip archive containing only this file.
   of: of
+  conflicts: Potential duplicates
+  ignoreConflits: Ignore these potentiel duplicates
+  conflict_filename: the file name is the same
+  conflict_title: the title is the same
 </i18n>
 
 <script>
@@ -331,7 +388,8 @@ export default {
     },
     datasetType: null,
     filenameTitle: false,
-    fileParamsForm: false
+    fileParamsForm: false,
+    ignoreConflicts: false
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -346,13 +404,13 @@ export default {
     async currentStep () {
       if (this.currentStep === 5) {
         const conflicts = []
-        const datasetFilenameConflicts = await this.$axios.$get('api/v1/datasets', { params: { filename: this.file.name, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })
-        for (const dataset in datasetFilenameConflicts) {
+        const datasetFilenameConflicts = (await this.$axios.$get('api/v1/datasets', { params: { filename: this.file.name, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
+        for (const dataset of datasetFilenameConflicts) {
           conflicts.push({ dataset, conflict: 'filename' })
         }
         if (!this.filenameTitle) {
-          const datasetTitleConflicts = await this.$axios.$get('api/v1/datasets', { params: { title: this.cleanTitle, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })
-          for (const dataset in datasetTitleConflicts) {
+          const datasetTitleConflicts = (await this.$axios.$get('api/v1/datasets', { params: { title: this.cleanTitle, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
+          for (const dataset of datasetTitleConflicts) {
             conflicts.push({ dataset, conflict: 'title' })
           }
         }
