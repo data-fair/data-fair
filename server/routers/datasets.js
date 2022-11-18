@@ -188,7 +188,8 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
     topics: 'topics.id',
     publicationSites: 'publicationSites',
     spatial: 'spatial',
-    keywords: 'keywords'
+    keywords: 'keywords',
+    title: 'title'
   }
   const facetFields = {
     ...filterFields,

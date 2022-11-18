@@ -11,6 +11,8 @@
       >
         {{ $t('datasetType') }}
       </v-stepper-step>
+
+      <!-- FILE steps -->
       <template v-if="datasetType === 'file'">
         <v-divider />
         <v-stepper-step
@@ -44,6 +46,25 @@
           {{ $t('stepAction') }}
         </v-stepper-step>
       </template>
+
+      <!-- REST steps -->
+      <template v-if="datasetType === 'rest'">
+        <v-divider />
+        <v-stepper-step
+          :step="2"
+          editable
+          :complete="restParamsForm"
+        >
+          {{ $t('stepParams') }}
+        </v-stepper-step>
+        <v-divider />
+        <v-stepper-step
+          :step="3"
+          :editable="restParamsForm"
+        >
+          {{ $t('stepAction') }}
+        </v-stepper-step>
+      </template>
     </v-stepper-header>
 
     <v-stepper-items>
@@ -69,6 +90,7 @@
         </v-list>
       </v-stepper-content>
 
+      <!-- FILE steps -->
       <template v-if="datasetType === 'file'">
         <v-stepper-content step="2">
           <p v-t="'loadMainFile'" />
@@ -165,7 +187,7 @@
             />
             <v-text-field
               v-if="!filenameTitle"
-              v-model="title"
+              v-model="fileDataset.title"
               name="title"
               outlined
               dense
@@ -173,12 +195,12 @@
               :label="$t('title')"
               :placeholder="$t('titlePlaceholder')"
               style="max-width: 400px"
-              :rules="[() => !!cleanTitle]"
+              :rules="[val => val && val.length > 3]"
               class="pl-2 mt-5"
             />
             <v-checkbox
-              v-if="!attachment"
-              v-model="attachmentsAsImage"
+              v-if="attachment"
+              v-model="fileDataset.attachmentsAsImage"
               :label="$t('attachmentsAsImage')"
               class="pl-2"
             />
@@ -210,7 +232,7 @@
                   v-for="(conflict,i) in conflicts"
                   :key="i"
                 >
-                  <v-list-item-content>
+                  <v-list-item-content class="py-0">
                     <v-list-item-title>
                       <a
                         :href="$router.resolve(`/dataset/${conflict.dataset.id}`).href"
@@ -265,7 +287,140 @@
             v-t="'import'"
             :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts)"
             color="primary"
-            @click.native="importData()"
+            @click.native="createFileDataset()"
+          />
+        </v-stepper-content>
+      </template>
+
+      <!-- REST steps -->
+      <template v-if="datasetType === 'rest'">
+        <v-stepper-content step="2">
+          <v-form v-model="restParamsForm">
+            <v-alert
+              outlined
+              type="warning"
+              dense
+              style="max-width:800px;"
+            >
+              {{ $t('titleId') }}
+            </v-alert>
+            <v-text-field
+              v-model="restDataset.title"
+              name="title"
+              outlined
+              dense
+              :label="$t('title')"
+              :placeholder="$t('titlePlaceholder')"
+              style="max-width: 400px"
+              :rules="[val => val && val.length > 3]"
+              class="pl-2 mt-5"
+            />
+            <v-autocomplete
+              :items="datasets"
+              :loading="loadingDatasets"
+              :search-input.sync="search"
+              hide-no-data
+              item-text="title"
+              item-value="id"
+              :label="$t('restSource')"
+              :placeholder="$t('search')"
+              return-object
+              outlined
+              dense
+              hide-details
+              style="max-width: 700px"
+              class="pl-2"
+              clearable
+              @change="source => {restDataset.schema = source ? source.schema : []}"
+            />
+            <v-checkbox
+              v-model="restDataset.rest.history"
+              hide-details
+              class="pl-2"
+              :label="$t('history')"
+            />
+
+            <v-checkbox
+              v-if="user.adminMode"
+              v-model="restDataset.rest.lineOwnership"
+              hide-details
+              class="pl-2"
+              :label="$t('lineOwnership')"
+              background-color="admin"
+              color="white"
+              dark
+            />
+            <v-checkbox
+              v-model="restDatasetAttachments"
+              hide-details
+              class="pl-2"
+              :label="$t('attachments')"
+            />
+            <v-checkbox
+              v-if="restDatasetAttachments"
+              v-model="restDataset.attachmentsAsImage"
+              hide-details
+              class="pl-2"
+              :label="$t('attachmentsAsImage')"
+            />
+          </v-form>
+          <v-btn
+            v-t="'continue'"
+            color="primary"
+            class="ml-2 mt-4"
+            :disabled="!restParamsForm"
+            @click.native="currentStep = 3"
+          />
+        </v-stepper-content>
+
+        <v-stepper-content step="3">
+          <template v-if="conflicts && conflicts.length">
+            <v-alert
+              color="warning"
+              outlined
+              dense
+              style="max-width:800px;"
+              class="px-0 pb-0"
+            >
+              <span class="px-4">{{ $t('conflicts') }}</span>
+              <v-list
+                class="pb-0"
+                color="transparent"
+              >
+                <v-list-item
+                  v-for="(conflict,i) in conflicts"
+                  :key="i"
+                >
+                  <v-list-item-content class="py-0">
+                    <v-list-item-title>
+                      <a
+                        :href="$router.resolve(`/dataset/${conflict.dataset.id}`).href"
+                        target="_blank"
+                      >
+                        {{ conflict.dataset.title }}
+                      </a>
+                    </v-list-item-title>
+                    <v-list-item-subtitle>
+                      {{ $t('conflict_' + conflict.conflict) }}
+                    </v-list-item-subtitle>
+                  </v-list-item-content>
+                </v-list-item>
+              </v-list>
+            </v-alert>
+
+            <v-checkbox
+              v-model="ignoreConflicts"
+              class="pl-2"
+              :label="$t('ignoreConflicts')"
+              color="warning"
+              dense
+            />
+          </template>
+          <v-btn
+            v-t="'createDataset'"
+            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts)"
+            color="primary"
+            @click.native="createDataset(restDataset)"
           />
         </v-stepper-content>
       </template>
@@ -302,12 +457,14 @@ fr:
   attachmentInfo: Cette étape est optionnelle
   attachmentsMsg1: Vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal.
   attachmentsMsg2: Le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
+  attachments: Accepter des pièces jointes
   attachmentsAsImage: Traiter les pièces jointes comme des images
   import: Lancer l'import
-  createDataset: Créer un nouveau jeu de données
+  createDataset: Créer le jeu de données
   updateDataset: Mettre à jour les données du jeu {title}
   fileTooLarge: Le fichier est trop volumineux pour être importé
   importError: "Erreur pendant l'import du fichier :"
+  creationError: "Erreur pendant la création du jeu de données :"
   cancel: Annuler
   cancelled: Chargement annulé par l'utilisateur
   suggestArchive: |
@@ -318,6 +475,9 @@ fr:
   ignoreConflicts: Ignorer ces doublons potentiels
   conflict_filename: le nom de fichier est identique
   conflict_title: le titre est identique
+  history: Conserver un historique complet des révisions des lignes du jeu de données
+  lineOwnership: Accept giving ownership of lines to users (collaborative use-cases)
+  restSource: Initialiser le schéma en dupliquant celui d'un jeu de données existant
 en:
   datasetType: Type de jeu de données
   newDataset: Create a dataset
@@ -346,12 +506,14 @@ en:
   attachmentInfo: This step is optional
   attachmentsMsg1: You can load a zip archive containing files to be used as attachments to the lines of the main dataset file.
   attachmentsMsg2: The main data file must have a column that contains paths of the attachments in the archive.
+  attachments: Accept attachments
   attachmentsAsImage: Process the attachments as images
   import: Proceed with importing data
-  createDataset: Create a new dataset
+  createDataset: Create the dataset
   updateDataset: Update the data of the dataset {title}
   fileTooLarge: The file is too large to be imported
   importError: "Failure to import the file :"
+  creationError: "Error while creating the dataset:"
   cancel: Cancel
   cancelled: Loading cancelled by user
   suggestArchive: |
@@ -362,6 +524,8 @@ en:
   ignoreConflits: Ignore these potentiel duplicates
   conflict_filename: the file name is the same
   conflict_title: the title is the same
+  history: Keep a full history of the revisions of the lines of the dataset
+  lineOwnership: Accept giving ownership of lines to users (collaborative use-cases)
 </i18n>
 
 <script>
@@ -372,13 +536,10 @@ export default {
   data: () => ({
     file: null,
     attachment: null,
-    attachmentsAsImage: false,
     currentStep: 1,
     uploadProgress: { rate: 0 },
     conflicts: [],
-    action: null,
     importing: false,
-    title: '',
     datasetTypes: ['file', 'rest', 'virtual', 'metaOnly'],
     datasetTypeIcons: {
       file: 'mdi-file-upload',
@@ -387,42 +548,79 @@ export default {
       metaOnly: 'mdi-information-variant'
     },
     datasetType: null,
+    fileDataset: {
+      title: '',
+      attachmentsAsImage: false
+    },
+    restDataset: {
+      title: '',
+      isRest: true,
+      attachmentsAsImage: false,
+      rest: {
+        history: false,
+        lineOwnership: false
+      },
+      schema: []
+    },
     filenameTitle: false,
     fileParamsForm: false,
-    ignoreConflicts: false
+    restParamsForm: false,
+    ignoreConflicts: false,
+    virtualChildren: [],
+    restSource: null,
+    loadingDatasets: false,
+    search: '',
+    datasets: []
   }),
   computed: {
     ...mapState('session', ['user']),
     ...mapGetters('session', ['activeAccount']),
     ...mapState(['env', 'accepted']),
-    cleanTitle () {
-      const trimmed = this.title.trim()
-      return trimmed.length > 3 ? trimmed : null
+    restDatasetAttachments: {
+      get () {
+        return !!this.restDataset.schema.find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
+      },
+      set (val) {
+        if (val) {
+          this.restDataset.schema.push({ key: 'attachmentPath', type: 'string', title: this.$t('attachment'), 'x-refersTo': 'http://schema.org/DigitalDocument' })
+        } else {
+          this.restDataset.schema = this.restDataset.schema.filter(p => p['x-refersTo'] !== 'http://schema.org/DigitalDocument')
+        }
+      }
     }
   },
   watch: {
     async currentStep () {
-      if (this.currentStep === 5) {
-        const conflicts = []
+      const conflicts = []
+      if (this.datasetType === 'file' && this.currentStep === 5) {
         const datasetFilenameConflicts = (await this.$axios.$get('api/v1/datasets', { params: { filename: this.file.name, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
         for (const dataset of datasetFilenameConflicts) {
           conflicts.push({ dataset, conflict: 'filename' })
         }
         if (!this.filenameTitle) {
-          const datasetTitleConflicts = (await this.$axios.$get('api/v1/datasets', { params: { title: this.cleanTitle, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
+          const datasetTitleConflicts = (await this.$axios.$get('api/v1/datasets', { params: { title: this.fileDataset.title, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
           for (const dataset of datasetTitleConflicts) {
             conflicts.push({ dataset, conflict: 'title' })
           }
         }
-        this.conflicts = conflicts
       }
+      if (this.datasetType === 'rest' && this.currentStep === 3) {
+        const datasetTitleConflicts = (await this.$axios.$get('api/v1/datasets', { params: { title: this.restDataset.title, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
+        for (const dataset of datasetTitleConflicts) {
+          conflicts.push({ dataset, conflict: 'title' })
+        }
+      }
+      this.conflicts = conflicts
+    },
+    search () {
+      this.searchDatasets()
     }
   },
   created () {
     this.$store.dispatch('breadcrumbs', [{ text: this.$t('datasets'), to: '/datasets' }, { text: this.$t('newDataset') }])
   },
   methods: {
-    async importData () {
+    async createFileDataset () {
       this.cancelSource = this.$axios.CancelToken.source()
       const options = {
         onUploadProgress: (e) => {
@@ -438,13 +636,14 @@ export default {
         params: {}
       }
       const formData = new FormData()
-
       formData.append('dataset', this.file)
       if (this.attachment) {
         formData.append('attachments', this.attachment)
-        if (this.attachmentsAsImage) formData.append('attachmentsAsImage', true)
+      } else {
+        delete this.fileDataset.attachmentsAsImage
       }
-      if (!this.filenameTitle && this.cleanTitle) formData.append('title', this.cleanTitle)
+      if (this.filenameTitle) delete this.fileDataset.title
+      formData.append('body', JSON.stringify(this.fileDataset))
       this.importing = true
       try {
         if (this.file.size > 100000) options.params.draft = 'true'
@@ -463,6 +662,24 @@ export default {
     },
     cancel () {
       if (this.cancelSource) this.cancelSource.cancel(this.$t('cancelled'))
+    },
+    async createDataset (dataset) {
+      this.importing = true
+      try {
+        dataset = await this.$axios.$post('api/v1/datasets', dataset)
+        this.$router.push({ path: `/dataset/${dataset.id}` })
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: this.$t('creationError') })
+        this.importing = false
+      }
+    },
+    async searchDatasets () {
+      this.loadingDatasets = true
+      const res = await this.$axios.$get('api/v1/datasets', {
+        params: { q: this.search, size: 20, select: 'id,title,schema', owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
+      })
+      this.datasets = res.results
+      this.loadingDatasets = false
     }
   }
 }
