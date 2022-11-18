@@ -202,7 +202,10 @@
                 </v-avatar>
               </template>
               <template v-else-if="header.value === '_owner'">
-                <v-tooltip top>
+                <v-tooltip
+                  v-if="item._owner"
+                  top
+                >
                   <template #activator="{on}">
                     <span
                       class="text-body-2"

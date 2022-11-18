@@ -12,7 +12,7 @@ export function filter2qs (filter, locale = 'fr') {
     return filter.values.map(v => `!(${key}:"${escape(v)})"`).join(' AND ')
   } else if (filter.type === 'interval') {
     if (!filter.minValue || !filter.maxValue) return null
-    return `${key}:[${filter.minValue} TO ${filter.maxValue}]`
+    return `${key}:[${escape(filter.minValue)} TO ${escape(filter.maxValue)}]`
   } else if (filter.type === 'starts') {
     if ([null, undefined, ''].includes(filter.value)) return null
     if (filter.value.includes(',')) {
