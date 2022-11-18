@@ -23,5 +23,12 @@ describe('user-notifications about dataset', () => {
     assert.equal(notifications[0].title, 'Title')
     assert.ok(notifications[0].topic.key.endsWith(':topic1'))
     assert.equal(notifications[0].visibility, 'private')
+
+    await assert.rejects(global.ax.cdurning2.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' }), (err) => err.status === 403)
+    await global.ax.dmeadusOrg.put(`/api/v1/datasets/${dataset.id}/permissions`, [
+      { type: 'user', id: '*', operations: ['sensUserNotification'] }
+    ])
+    await ax.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' })
+    await assert.rejects(global.ax.cdurning2.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title', visibility: 'public' }), (err) => err.status === 403)
   })
 })

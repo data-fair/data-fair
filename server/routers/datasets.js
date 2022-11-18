@@ -1629,8 +1629,8 @@ router.post('/:datasetId/user-notification', readDataset(), permissions.middlewa
   const urlParams = userNotification.urlParams || {}
   userNotification.visibility = userNotification.visibility || 'private'
   if (userNotification.visibility !== 'private') {
-    const ownerRole = permissions.getOwnerRole(req.owner, req.user)
-    if (!['admin', 'contrib'].includes(ownerRole)) throw new Error('User does not have permission to emit a public notification')
+    const ownerRole = permissions.getOwnerRole(req.dataset.owner, req.user)
+    if (!['admin', 'contrib'].includes(ownerRole)) return res.status(403).send('User does not have permission to emit a public notification')
   }
   const notif = {
     sender: req.dataset.owner,
