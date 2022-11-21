@@ -159,6 +159,7 @@ exports.endpoints = (dataset) => {
       delete a[f.key].ignoreDetection
       delete a[f.key].separator
       delete a[f.key].icon
+      delete a[f.key].label
       return a
     }, {})
   }
@@ -245,6 +246,7 @@ exports.endpoints = (dataset) => {
       delete inputProperties[input.property.key].ignoreDetection
       delete inputProperties[input.property.key].separator
       delete inputProperties[input.property.key].icon
+      delete inputProperties[input.property.key].label
     }
     inputProperties._key = {
       description: 'Identifiant de la ligne de requête',

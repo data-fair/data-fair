@@ -802,6 +802,7 @@ const cleanProperty = (p, publicBaseUrl, writableId) => {
   delete cleanProp.ignoreDetection
   delete cleanProp.ignoreIntegerDetection
   delete cleanProp.icon
+  delete cleanProp.label
   return cleanProp
 }
 

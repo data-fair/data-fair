@@ -4,6 +4,7 @@ const pump = util.promisify(require('pump'))
 const fs = require('fs-extra')
 const { Transform } = require('stream')
 const stringify = require('json-stable-stringify')
+const flatten = require('flat')
 const axios = require('./axios')
 const datasetUtils = require('./dataset')
 const restDatasetsUtils = require('./rest-datasets')
@@ -225,15 +226,16 @@ function prepareInputMapping (action, dataset, extensionKey, selectFields) {
     if (fieldMappings.find(mapping => mapping[0].startsWith('_geo'))) {
       // calculate geopoint and geometry fields depending on concepts
       if (geoUtils.schemaHasGeopoint(dataset.schema)) {
-        item = { ...item, ...geoUtils.latlon2fields(dataset, item) }
+        Object.assign(item, geoUtils.latlon2fields(dataset, item))
       } else if (geoUtils.schemaHasGeometry(dataset.schema)) {
-        item = { ...item, ...await geoUtils.geometry2fields(dataset.schema, item) }
+        Object.assign(item, await geoUtils.geometry2fields(dataset.schema, item))
       }
     }
-    fieldMappings.forEach(mapping => {
-      const val = item[mapping[0]]
+    const flatItem = flatten(item) // in case the input comes from another extension
+    for (const mapping of fieldMappings) {
+      const val = flatItem[mapping[0]]
       if (val !== undefined && val !== '') mappedItem[mapping[1]] = val
-    })
+    }
     return mappedItem
   }
 }

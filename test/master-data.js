@@ -6,22 +6,22 @@ const assert = require('assert').strict
 const workers = require('../server/workers')
 const testUtils = require('./resources/test-utils')
 
-const initMaster = async (ax, schema, bulkSearchs) => {
-  await ax.put('/api/v1/datasets/master', {
+const initMaster = async (ax, schema, bulkSearchs, id = 'master') => {
+  await ax.put('/api/v1/datasets/' + id, {
     isRest: true,
-    title: 'master',
+    title: id,
     schema,
     masterData: {
       bulkSearchs
     }
   })
-  await workers.hook('finalizer/master')
-  const master = (await ax.get('api/v1/datasets/master')).data
+  await workers.hook('finalizer/' + id)
+  const master = (await ax.get('api/v1/datasets/' + id)).data
 
   const apiDocUrl = master.href + '/api-docs.json'
   const apiDoc = (await ax.get(apiDocUrl)).data
 
-  const remoteService = (await global.ax.superadmin.get('/api/v1/remote-services/dataset:master', { params: { showAll: true } })).data
+  const remoteService = (await global.ax.superadmin.get('/api/v1/remote-services/dataset:' + id, { params: { showAll: true } })).data
 
   return { master, remoteService, apiDoc }
 }
@@ -32,6 +32,13 @@ const siretProperty = {
   type: 'string',
   'x-refersTo': 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
 }
+const countryProperty = {
+  key: 'country',
+  title: 'Country',
+  type: 'string',
+  'x-refersTo': 'https://www.omg.org/spec/LCC/Countries/CountryRepresentation/Alpha3Code'
+}
+
 const startProperty = {
   key: 'start',
   title: 'Start',
@@ -522,4 +529,70 @@ it('should support using master-data from other account if visibility is ok', as
   await workers.hook('finalizer/slave')
   const results = (await global.ax.cdurning2.get('/api/v1/datasets/slave/lines')).data.results
   assert.equal(results[0]['_siret.extra'], 'Extra information')
+})
+
+it('should support chaining extensions', async () => {
+  const ax = global.ax.dmeadus
+  const { remoteService } = await initMaster(
+    ax,
+    [latlonProperty, countryProperty],
+    [{
+      id: 'geo',
+      title: 'Fetch info matching geo shape',
+      input: [{ type: 'geo-distance', distance: 0, property: geopointProperty }]
+    }],
+    'master1'
+  )
+  const { remoteService: remoteService2 } = await initMaster(
+    ax,
+    [countryProperty, { key: 'name', type: 'string' }],
+    [{
+      id: 'country',
+      title: 'Fetch extra info from country',
+      description: '',
+      input: [{ type: 'equals', property: countryProperty }]
+    }],
+    'master2'
+  )
+  await ax.post('/api/v1/datasets/master1/_bulk_lines', [
+    { latlon: '-2.7,47.6', country: 'FRA' },
+    { latlon: '-2.8,45.5', country: 'JPN' }
+  ])
+  await workers.hook('finalizer/master1')
+
+  await ax.post('/api/v1/datasets/master2/_bulk_lines', [
+    { country: 'FRA', name: 'France' },
+    { country: 'JPN', name: 'Japan' }
+  ])
+  await workers.hook('finalizer/master2')
+
+  // create slave dataset
+  await ax.put('/api/v1/datasets/slave', {
+    isRest: true,
+    title: 'slave',
+    schema: [latlonProperty],
+    extensions: [{
+      active: true,
+      remoteService: remoteService.id,
+      action: 'masterData_bulkSearch_geo',
+      select: ['country']
+    }, {
+      active: true,
+      remoteService: remoteService2.id,
+      action: 'masterData_bulkSearch_country',
+      select: ['name']
+    }]
+  })
+  const slave = await workers.hook('finalizer/slave')
+  assert.ok(slave.schema.find(p => p.key === '_geo.country'))
+  assert.ok(slave.schema.find(p => p.key === '_country.name'))
+
+  await ax.post('/api/v1/datasets/slave/_bulk_lines', [
+    { latlon: '-2.7,47.6' },
+    { latlon: '-2.8,45.5' }
+  ])
+  await workers.hook('finalizer/slave')
+  const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
+  assert.equal(results[0]['_geo.country'], 'JPN')
+  assert.equal(results[0]['_country.name'], 'Japan')
 })
