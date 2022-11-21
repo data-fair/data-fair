@@ -400,12 +400,12 @@ export default {
         title: this.$t('webhooks')
       })
 
-      if (this.user.adminMode) {
-        sections.push({
-          id: 'publicationSites',
-          title: this.$t('publicationSites')
-        })
-      }
+      // if (this.user.adminMode) {
+      sections.push({
+        id: 'publicationSites',
+        title: this.$t('publicationSites')
+      })
+      // }
       return sections
     },
     settingsUrl () {

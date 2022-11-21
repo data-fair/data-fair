@@ -27,7 +27,6 @@ module.exports = {
       private: {
         type: 'boolean',
         title: 'Site privé',
-        description: 'Possible uniquement sur un portail qui partage le domaine d\'authentification avec ce service.',
         default: false
       },
       datasetUrlTemplate: {
@@ -39,6 +38,17 @@ module.exports = {
         type: 'string',
         title: 'Adresse des pages de visualisations',
         description: 'Exemple: https://mon-portail/reuses/{id}'
+      },
+      settings: {
+        type: 'object',
+        properties: {
+          staging: {
+            title: 'pré-production',
+            description: 'si vrai les contributeurs pourront publier sans solliciter les administrateurs',
+            type: 'boolean',
+            default: false
+          }
+        }
       }
     }
   }

@@ -105,4 +105,17 @@ describe('settings API', () => {
     assert.equal(notif.sender.id, 'KWqAGZ4mG')
     assert.equal(notif.sender.department, 'dep1')
   })
+
+  it('contrib can public on a "staging" publication site', async () => {
+    const portalProd = { type: 'data-fair-portals', id: 'portal-staging', url: 'http://portal.com', settings: { staging: true } }
+    await global.ax.dmeadusOrg.post('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites', portalProd)
+    const portalStaging = { type: 'data-fair-portals', id: 'portal-prod', url: 'http://portal.com' }
+    await global.ax.dmeadusOrg.post('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites', portalStaging)
+
+    const dataset = (await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
+    await workers.hook(`finalizer/${dataset.id}`)
+    await assert.rejects(global.ax.ngernier4Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal-unknown'] }), err => err.status === 404)
+    await assert.rejects(global.ax.ngernier4Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal-prod'] }), err => err.status === 403)
+    await global.ax.ngernier4Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal-staging'] })
+  })
 })

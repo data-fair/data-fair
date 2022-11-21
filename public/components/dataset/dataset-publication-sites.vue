@@ -72,13 +72,13 @@
                       hide-details
                       dense
                       :input-value="dataset.publicationSites.includes(`${site.type}:${site.id}`)"
-                      :disabled="!canPublish(site)"
+                      :disabled="!canPublish(site) && !(site.settings && site.settings.staging)"
                       :label="$t('published')"
                       class="mt-0 ml-6"
                       @change="toggle(site, 'publicationSites')"
                     />
                     <v-switch
-                      v-if="dataset.owner.type === 'organization'"
+                      v-if="dataset.owner.type === 'organization' && !(site.settings && site.settings.staging)"
                       hide-details
                       dense
                       :input-value="dataset.requestedPublicationSites.includes(`${site.type}:${site.id}`)"

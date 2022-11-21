@@ -238,14 +238,12 @@ router.put('/:applicationId', attemptInsert, readApplication, permissions.middle
 }))
 
 const permissionsWritePublications = permissions.middleware('writePublications', 'admin')
-const permissionsWritePublicationSites = permissions.middleware('writePublicationSites', 'admin')
 
 // Update an application configuration
 router.patch('/:applicationId',
   readApplication,
   permissions.middleware('writeDescription', 'write'),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
-  (req, res, next) => req.body.publicationSites ? permissionsWritePublicationSites(req, res, next) : next(),
   asyncWrap(async (req, res) => {
     const db = req.app.get('db')
     const patch = req.body
@@ -264,7 +262,7 @@ router.patch('/:applicationId',
     patch.updatedAt = moment().toISOString()
     patch.updatedBy = { id: req.user.id, name: req.user.name }
 
-    await publicationSites.applyPatch(db, req.application, { ...req.application, ...patch }, req.user)
+    await publicationSites.applyPatch(db, req.application, { ...req.application, ...patch }, req.user, 'applications')
 
     const patchedApplication = (await db.collection('applications')
       .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })).value

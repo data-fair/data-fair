@@ -383,7 +383,6 @@ router.get('/:datasetId/safe-schema', readDataset(), applicationKey, permissions
 })
 
 const permissionsWritePublications = permissions.middleware('writePublications', 'admin')
-const permissionsWritePublicationSites = permissions.middleware('writePublicationSites', 'admin')
 
 // Update a dataset's metadata
 router.patch('/:datasetId',
@@ -400,7 +399,6 @@ router.patch('/:datasetId',
   }),
   permissions.middleware('writeDescription', 'write'),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
-  (req, res, next) => req.body.publicationSites ? permissionsWritePublicationSites(req, res, next) : next(),
   asyncWrap(async (req, res) => {
     const db = req.app.get('db')
     const patch = req.body
@@ -521,7 +519,7 @@ router.patch('/:datasetId',
 
     const previousDataset = { ...req.dataset }
     const mongoPatch = await datasetUtils.applyPatch(db, req.dataset, patch, false)
-    await publicationSites.applyPatch(db, previousDataset, req.dataset, req.user)
+    await publicationSites.applyPatch(db, previousDataset, req.dataset, req.user, 'datasets')
     await db.collection('datasets').updateOne({ id: req.dataset.id }, mongoPatch)
 
     await syncRemoteService(db, req.dataset)
