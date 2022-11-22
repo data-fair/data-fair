@@ -6,23 +6,6 @@
     />
     <template v-else>
       <p v-t="'publishThisDataset'" />
-      <v-alert
-        v-if="publicationWarnings && publicationWarnings.length"
-        type="error"
-        outlined
-      >
-        <p>
-          {{ $t('hasWarning') }}
-        </p>
-        <ul>
-          <li
-            v-for="warning in publicationWarnings"
-            :key="warning"
-          >
-            {{ $t('warning.' + warning) }}
-          </li>
-        </ul>
-      </v-alert>
       <v-row class="px-2">
         <v-card
           tile
@@ -64,10 +47,13 @@
                   </a>
                 </v-list-item-subtitle>
                 <v-list-item-subtitle
-                  style="overflow:visible;"
-                  class="mb-2"
+                  v-if="sitesWarnings[`${site.type}:${site.id}`] && sitesWarnings[`${site.type}:${site.id}`].length"
+                  class="warning--text"
                 >
-                  <v-row>
+                  {{ $t('hasWarning') }}{{ sitesWarnings[`${site.type}:${site.id}`].map(w => $t('warning.' + w)).join(', ') }}
+                </v-list-item-subtitle>
+                <v-list-item-subtitle>
+                  <v-row class="my-0">
                     <v-switch
                       hide-details
                       dense
@@ -104,23 +90,31 @@ fr:
   publishThisDataset: Publiez ce jeu de données sur un ou plusieurs de vos portails.
   published: publié
   publicationRequested: publication demandée par un contributeur
-  hasWarning: "publication bloquée : le jeu de données n'a pas toutes les métadonnées attendues"
+  hasWarning: "métadonnées manquantes : "
   warning:
-    missingTemporal: couverture temporelle
-    missingSpatial: couverture géographique
-    missingKeywords: mots clés
-    missingFrequency: fréquence des mises à jour
+    title: titre
+    description: description
+    topics: thématique
+    license: licence
+    temporal: couverture temporelle
+    spatial: couverture géographique
+    keywords: mot clé
+    frequency: fréquence des mises à jour
 en:
   noPublicationSite: You haven't configured a portal to publish this dataset on.
   publishThisDataset: Publish this dataset on one or more of your portals.
   published: published
   publicationRequested: publication requested by a contributor
-  hasWarning: "publication forbidden : the dataset does not have all required metadata"
+  hasWarning: "missing metadata : "
   warning:
-    missingTemporal: temporal coverage
-    missingSpatial: spatial coverage
-    missingKeywords: keywords
-    missingFrequency: update frequency
+    title: title
+    description: description
+    topics: topic
+    license: license
+    temporal: temporal coverage
+    smissingSpatial: spatial coverage
+    keywords: keyword
+    frequency: update frequency
 </i18n>
 
 <script>
@@ -137,9 +131,37 @@ export default {
   }),
   computed: {
     ...mapState(['env']),
+    ...mapGetters(['ownerPublicationSites']),
     ...mapState('dataset', ['dataset']),
-    ...mapGetters('dataset', ['can', 'publicationWarnings']),
-    ...mapGetters('session', ['activeAccount'])
+    ...mapGetters('dataset', ['can']),
+    ...mapGetters('session', ['activeAccount']),
+    settingsPublicationSites () {
+      return this.ownerPublicationSites(this.dataset.owner)
+    },
+    sitesWarnings () {
+      const sitesWarnings = {}
+      for (const site of this.publicationSites) {
+        const warnings = sitesWarnings[`${site.type}:${site.id}`] = []
+        const siteSettings = this.settingsPublicationSites.find(s => s.type === site.type && s.id === site.id)
+        const requiredMetadata = (siteSettings && siteSettings.settings && siteSettings.settings.datasetsRequiredMetadata) || []
+        for (const m of requiredMetadata) {
+          if (m === 'temporal') {
+            if (!(this.dataset.temporal && this.dataset.temporal.start)) warnings.push(m)
+          } if (m === 'keywords') {
+            if (!(this.dataset.keywords && this.dataset.keywords.length)) warnings.push(m)
+          } if (m === 'topics') {
+            if (!(this.dataset.topics && this.dataset.topics.length)) warnings.push(m)
+          } if (m === 'title') {
+            if (!(this.dataset.title && this.dataset.title.length > 3)) warnings.push(m)
+          } if (m === 'description') {
+            if (!(this.dataset.description && this.dataset.description.length > 10)) warnings.push(m)
+          } else {
+            if (!this.dataset[m]) warnings.push(m)
+          }
+        }
+      }
+      return sitesWarnings
+    }
   },
   methods: {
     ...mapActions('dataset', ['patch']),
@@ -153,7 +175,8 @@ export default {
       this.patch({ [key]: this.dataset[key] })
     },
     canPublish (site) {
-      return this.publicationWarnings && this.publicationWarnings.length === 0 && this.can('writePublicationSites') && (!this.activeAccount.department || this.activeAccount.department === site.department)
+      const warnings = this.sitesWarnings[`${site.type}:${site.id}`]
+      return warnings && warnings.length === 0 && this.can('writePublicationSites') && (!this.activeAccount.department || this.activeAccount.department === site.department)
     },
     canRequestPublication (site) {
       return this.can('writeDescription')

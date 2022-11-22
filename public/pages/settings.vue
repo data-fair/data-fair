@@ -332,16 +332,16 @@ fr:
   apiKeys: "Clés d'API"
   webhooks: "Appels extérieurs (Webhooks)"
   privateVocab: Vocabulaire privé
-  publicationSites: Sites de publication
+  publicationSites: Portails
   info: Informations de contact
 en:
-  licences: Licences
+  licences: Licenses
   topics: Topics
   datasetsMetadata: Datasets metadata
   apiKeys: API keys
   webhooks: "External requests (Webhooks)"
   privateVocab: Private vocabulary
-  publicationSites: Publication sites
+  publicationSites: Portals
   info: Contact information
 </i18n>
 
@@ -408,17 +408,16 @@ export default {
         })
       }
       sections.push({
+        id: 'publicationSites',
+        title: this.$t('publicationSites')
+      })
+      sections.push({
         id: 'api-keys',
         title: this.$t('apiKeys')
       })
       sections.push({
         id: 'webhooks',
         title: this.$t('webhooks')
-      })
-
-      sections.push({
-        id: 'publicationSites',
-        title: this.$t('publicationSites')
       })
       return sections
     },

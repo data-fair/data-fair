@@ -56,6 +56,14 @@ module.exports = {
             description: 'Si coché les contributeurs pourront publier des ressources sans solliciter les administrateurs',
             type: 'boolean',
             default: false
+          },
+          datasetsRequiredMetadata: {
+            title: 'Métadonnées requises pour les jeux de données',
+            type: 'array',
+            'x-fromData': 'context.datasetsMetadata',
+            items: {
+              type: 'string'
+            }
           }
         }
       }

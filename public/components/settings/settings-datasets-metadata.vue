@@ -47,7 +47,7 @@ export default {
     }
   }),
   created () {
-    this.wrapper.datasetsMetadata = JSON.parse(JSON.stringify(this.settings.datasetsMetadata || []))
+    this.wrapper.datasetsMetadata = JSON.parse(JSON.stringify(this.settings.datasetsMetadata || {}))
   },
   methods: {
     async change () {
