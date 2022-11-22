@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div style="min-height:60px;">
     <v-form ref="form">
       <lazy-v-jsf
         v-model="wrapper"

@@ -1,10 +1,10 @@
 <template>
-  <div>
+  <div style="min-height:60px;">
     <v-form ref="form">
       <lazy-v-jsf
         v-model="wrapper"
         :schema="wrapperSchema"
-        :options="{locale: 'fr'}"
+        :options="{locale: 'fr', textFieldProps: {outlined:true, dense: true}}"
         @change="change"
       />
     </v-form>
