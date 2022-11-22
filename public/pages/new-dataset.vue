@@ -730,7 +730,7 @@ en:
   stepFile: File selection
   stepAttachment: Attachments
   stepParams: Parameters
-  stepAction: Perform the action
+  stepAction: Confirmation
   loadMainFile: Load the main data file
   selectFile: select a file
   title: Dataset title

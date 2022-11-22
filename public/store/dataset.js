@@ -127,6 +127,11 @@ export default () => ({
     }
   },
   actions: {
+    async setId ({ commit, getters, dispatch, state }, { datasetId, draftMode, html, fetchInfo }) {
+      dispatch('clear')
+      commit('setAny', { datasetId, draftMode, html })
+      if (fetchInfo !== false) await dispatch('fetchInfo')
+    },
     async fetchInfo ({ commit, dispatch, getters }) {
       await dispatch('fetchDataset')
       await Promise.all([
@@ -192,11 +197,6 @@ export default () => ({
     async fetchJsonSchema ({ commit, state }) {
       const jsonSchema = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/schema`, { params: { mimeType: 'application/schema+json' } })
       commit('setAny', { jsonSchema })
-    },
-    async setId ({ commit, getters, dispatch, state }, { datasetId, draftMode, html, fetchInfo }) {
-      dispatch('clear')
-      commit('setAny', { datasetId, draftMode, html })
-      if (fetchInfo !== false) await dispatch('fetchInfo')
     },
     subscribe ({ getters, dispatch, state, commit }) {
       eventBus.$emit('subscribe', getters.journalChannel)

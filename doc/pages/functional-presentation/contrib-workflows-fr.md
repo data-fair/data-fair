@@ -44,8 +44,8 @@ flowchart TD
   worker --> dataset
 
   %% styling
-  classDef terminus fill:#1E88E5,color:#FFF;
-  class start,dataset terminus;
+  classDef primary fill:#1E88E5,color:#FFF;
+  class start,dataset primary;
 ```
 
 ## Mettre à jour un jeu de données
@@ -60,4 +60,25 @@ flowchart TD
   datasetDraft --> draftValidate{Valider le<br>brouillon ?}
   draftValidate -- Annuler --> dataset([Page du jeu de données])
   draftValidate -- Valider --> dataset
+```
+
+### Partager un jeu de données sur un portail
+
+```mermaid
+flowchart TD
+  start([Bouton partager un jeu de données]) --> choseDataset[/Choix du jeu de données/]
+  choseDataset --> chosePortal[/Choix du portail/]
+  chosePortal -- rôle contrib --> fetchRequiredMetadata[[Récupération des métadonnées<br>obligatoires pour ce portail]]
+  chosePortal --> rôle admin --> editPermissions[Édition des permissions]
+  editPermissions --> fetchRequiredMetadata
+  fetchRequiredMetadata --> editMetadata[Édition des métadonnées]
+  editMetadata --> confirm{Confirmer ?}
+  confirm -- rôle contrib --> publicationRequested[[Demande de publication<br>envoyée aux administrateurs]]
+  publicationRequested --> home([Retour à l'accueil])
+  confirm -- rôle admin --> publicationSaved[[Enregistrement de la publication]]
+  publicationSaved --> datasetPortal([Page du jeu de données dans le portail])
+
+  %% styling
+  classDef primary fill:#1E88E5,color:#FFF;
+  class start,datasetPortal,home primary;
 ```
