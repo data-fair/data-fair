@@ -353,23 +353,9 @@
               :rules="[val => val && val.length > 3]"
               class="pl-2 mt-5"
             />
-            <v-autocomplete
-              :items="datasets"
-              :loading="loadingDatasets"
-              :search-input.sync="search"
-              hide-no-data
-              item-text="title"
-              item-value="id"
+            <dataset-select
               :label="$t('restSource')"
-              :placeholder="$t('search')"
-              return-object
-              outlined
-              dense
-              hide-details
-              style="max-width: 700px"
-              class="pl-2"
-              clearable
-              @change="source => {restDataset.schema = source ? source.schema : []}"
+              @change="setRestSource"
             />
             <v-checkbox
               v-model="restDataset.rest.history"
@@ -949,6 +935,10 @@ export default {
           }
         }
       }
+    },
+    async setRestSource (dataset) {
+      if (!dataset) this.restDataset.schema = []
+      else this.restDataset.schema = (await this.$axios.$get('api/v1/datasets/' + dataset.id)).schema
     }
   }
 }

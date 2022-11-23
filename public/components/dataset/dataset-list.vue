@@ -49,8 +49,9 @@
               <dataset-list-item
                 :key="dataset.id"
                 :dataset="dataset"
-                :show-topics="datasets.facets.topics.length"
+                :show-topics="!!datasets.facets.topics.length"
                 :show-owner="filters.owner === null"
+                :show-table="true"
               />
               <v-divider :key="dataset.id + '-divider'" />
             </template>

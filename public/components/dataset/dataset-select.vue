@@ -6,7 +6,7 @@
     hide-no-data
     item-text="title"
     item-value="id"
-    :label="$t('selectDataset')"
+    :label="label || $t('selectDataset')"
     :placeholder="$t('search')"
     return-object
     outlined
@@ -18,31 +18,17 @@
     @change="dataset => $emit('change', dataset)"
   >
     <template #item="{item}">
-      <v-list-item-avatar
-        v-if="item.status === 'error'"
-        class="mr-0"
+      <dataset-list-item
+        style="min-height:40px;"
+        v-bind="attrs"
+        :dataset="item"
+        :dense="true"
+        :show-topics="true"
+        :no-link="true"
+        v-on="on"
       >
-        <v-tooltip top>
-          <template #activator="{on}">
-            <v-icon
-              color="error"
-              v-on="on"
-            >
-              mdi-alert
-            </v-icon>
-          </template>
-          {{ $t('error') }}
-        </v-tooltip>
-      </v-list-item-avatar>
-      <v-list-item-avatar>
-        <visibility :visibility="item.visibility" />
-      </v-list-item-avatar>
-      <v-list-item-content>
-        <v-list-item-title>{{ item.title }} ({{ item.id }})</v-list-item-title>
-        <v-list-item-subtitle>
-          <span v-text="$tc('lines', item.count)" />
-        </v-list-item-subtitle>
-      </v-list-item-content>
+        {{ dataset }}
+      </dataset-list-item>
     </template>
   </v-autocomplete>
 </template>
@@ -62,6 +48,9 @@ en:
 import { mapGetters } from 'vuex'
 
 export default {
+  props: {
+    select: { type: String, default: '' }
+  },
   data: () => ({
     loadingDatasets: false,
     search: '',
@@ -79,7 +68,7 @@ export default {
     async searchDatasets () {
       this.loadingDatasets = true
       const res = await this.$axios.$get('api/v1/datasets', {
-        params: { q: this.search, size: 20, select: 'id,title,status,count', owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
+        params: { q: this.search, size: 20, select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions', owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
       })
       this.datasets = res.results
       this.loadingDatasets = false

@@ -46,7 +46,7 @@
     <v-stepper-items>
       <v-stepper-content step="1">
         <v-row class="my-1 mx-0">
-          <dataset-select-dataset @change="toggleDataset" />
+          <dataset-select @change="toggleDataset" />
         </v-row>
 
         <v-btn
