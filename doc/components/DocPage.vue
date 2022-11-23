@@ -44,7 +44,24 @@
 
 <script>
 import { mapState } from 'vuex'
-const marked = require('@hackmd/meta-marked')
+import 'iframe-resizer/js/iframeResizer'
+
+const marked = require('marked')
+const metaMarked = require('@hackmd/meta-marked')
+
+const renderer = new marked.Renderer()
+renderer.defaultCode = renderer.code
+renderer.code = function (code, language) {
+  if (language === 'mermaid') {
+    if (process.server) return ''
+    const key = (Math.random() + '').replace('0.', '')
+    window.sessionStorage.setItem('mermaid-' + key, code)
+    return `<iframe class="mermaid-iframe" id="mermaid-iframe-${key}" frameborder="0" scrolling="no" style="width:100%" src="${process.env.base}mermaid?key=${key}"></iframe>`
+  }
+  return this.defaultCode(code, language)
+}
+marked.use({ renderer })
+
 // const escape = require('escape-string-regexp')
 require('highlight.js/styles/github.css')
 
@@ -54,12 +71,15 @@ export default {
   computed: {
     ...mapState(['env']),
     filledContent () {
-      const content = marked(this.content)
-      content.html = content.html.replace('<table>', '<div class="v-data-table v-data-table--dense theme--light"><div class="v-data-table__wrapper"><table>').replace('</table>', '</table></div></div>')
+      const content = metaMarked(this.content)
+      content.html = (marked.parse(content.markdown)).replace('<table>', '<div class="v-data-table v-data-table--dense theme--light"><div class="v-data-table__wrapper"><table>').replace('</table>', '</table></div></div>')
       return content
     }
   },
-  mounted () {
+  async mounted () {
+    for (const iframe of this.$el.querySelectorAll('.mermaid-iframe')) {
+      window.iFrameResize({}, '#' + iframe.id)
+    }
     // Apply classes from vuetify to markdown generated HTML
     const elemClasses = {
       h2: ['display-1', 'my-4'],

@@ -233,79 +233,51 @@ module.exports = {
     },
     datasetsMetadata: {
       type: 'object',
-      title: 'options des métadonnées de jeux de données',
+      title: 'Options des métadonnées de jeux de données',
       properties: {
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_spatial
         spatial: {
           type: 'object',
-          title: 'couverture géographique',
           'x-cols': 6,
           properties: {
             active: {
+              title: 'couverture géographique',
               type: 'boolean',
               default: false,
-              title: 'métadonnée activée',
               'x-cols': 12
-            },
-            requiredForPublication: {
-              type: 'boolean',
-              'x-if': 'datasetsMetadata.spatial.active',
-              default: false,
-              title: 'requise pour publication'
             }
           }
         },
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_temporal
         temporal: {
           type: 'object',
-          title: 'couverture temporelle',
           properties: {
             active: {
+              title: 'couverture temporelle',
               type: 'boolean',
-              default: false,
-              title: 'métadonnée activée'
-            },
-            requiredForPublication: {
-              type: 'boolean',
-              'x-if': 'datasetsMetadata.temporal.active',
-              default: false,
-              title: 'requise pour publication'
+              default: false
+
             }
           }
         },
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_frequency and https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
         frequency: {
           type: 'object',
-          title: 'fréquence de mise à jour',
           properties: {
             active: {
+              title: 'fréquence de mise à jour',
               type: 'boolean',
-              default: false,
-              title: 'métadonnée activée'
-            },
-            requiredForPublication: {
-              type: 'boolean',
-              'x-if':
-               'datasetsMetadata.frequency.active',
-              default: false,
-              title: 'requise pour publication'
+              default: false
             }
           }
         },
         keywords: {
           type: 'object',
-          title: 'mots clés',
           properties: {
             active: {
+              title: 'mots clés',
               type: 'boolean',
-              default: false,
-              title: 'métadonnée activée'
-            },
-            requiredForPublication: {
-              type: 'boolean',
-              'x-if': 'datasetsMetadata.keywords.active',
-              default: false,
-              title: 'requise pour publication'
+              default: false
             }
           }
         }

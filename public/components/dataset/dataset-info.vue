@@ -150,6 +150,8 @@
         hide-details
         class="mb-3"
         clearable
+        :required="required.includes('license')"
+        :rules="required.includes('license') ? [(val) => !!val]: []"
         @input="patch({license: dataset.license})"
       />
       <v-select
@@ -164,6 +166,8 @@
         return-object
         hide-details
         class="mb-3"
+        :required="required.includes('topics')"
+        :rules="required.includes('topics') ? [(val) => !!val.length]: []"
         @input="patch({topics: dataset.topics})"
       />
       <v-select
@@ -187,6 +191,8 @@
         hide-details
         class="mb-3"
         clearable
+        :required="required.includes('origin')"
+        :rules="required.includes('origin') ? [(val) => !!val]: []"
         @change="patch({origin: dataset.origin})"
       />
       <v-text-field
@@ -196,6 +202,8 @@
         hide-details
         class="mb-3"
         clearable
+        :required="required.includes('image')"
+        :rules="required.includes('image') ? [(val) => !!val]: []"
         @change="patch({image: dataset.image})"
       />
       <v-combobox
@@ -210,6 +218,8 @@
         deletable-chips
         class="mb-3"
         :loading="loadingKeywordsFacets"
+        :required="required.includes('keywords')"
+        :rules="required.includes('keywords') ? [(val) => !!val.length]: []"
         @update:search-input="fetchKeywordsFacets"
         @change="patch({keywords: dataset.keywords})"
       />
@@ -223,6 +233,8 @@
         class="mb-3"
         :loading="loadingSpatialFacets"
         clearable
+        :required="required.includes('spatial')"
+        :rules="required.includes('spatial') ? [(val) => !!val]: []"
         @update:search-input="fetchSpatialFacets"
         @change="patch({spatial: dataset.spatial})"
       />
@@ -234,6 +246,8 @@
         hide-details
         class="mb-3"
         clearable
+        :required="required.includes('temporal')"
+        :rules="required.includes('temporal') ? [(val) => !!val]: []"
         @click="temporalMenu = true"
         @click:clear="patch({temporal: null})"
       >
@@ -268,6 +282,8 @@
         hide-details
         clearable
         class="mb-3"
+        :required="required.includes('frequency')"
+        :rules="required.includes('frequency') ? [(val) => !!val]: []"
         @change="patch({frequency: dataset.frequency || ''})"
       />
     </v-col>
@@ -286,12 +302,16 @@
         dense
         hide-details
         class="mb-3"
+        :required="required.includes('title')"
+        :rules="required.includes('title') ? [(val) => !!val]: []"
         @change="patch({title: dataset.title})"
       />
       <markdown-editor
         v-model="dataset.description"
         :disabled="!can('writeDescription')"
         :label="$t('description')"
+        :required="required.includes('description')"
+        :rules="required.includes('description') ? [(val) => !!val]: []"
         @change="patch({description: dataset.description})"
       />
     </v-col>
@@ -390,6 +410,9 @@ const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
 const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 
 export default {
+  props: {
+    required: { type: Array, default: () => ([]) }
+  },
   data () {
     return {
       error: null,

@@ -33,6 +33,7 @@ const validateSettings = ajv.compile(settingSchema)
 const validateDepartmentSettings = ajv.compile(departmentSettingsSchema)
 
 const validate = (settings) => {
+  console.log(settings)
   if (settings.department) {
     validateDepartmentSettings(settings)
     return validateDepartmentSettings.errors
@@ -50,6 +51,8 @@ router.use('/:type/:id', (req, res, next) => {
   const [id, department] = req.params.id.split(':')
   req.owner = { type: req.params.type, id }
   if (department) req.owner.department = department
+  req.ownerFilter = { ...req.owner }
+  if (!department) req.ownerFilter.department = { $exists: false }
   next()
 })
 
@@ -75,7 +78,7 @@ function isOwnerMember (req, res, next) {
 router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const settings = req.app.get('db').collection('settings')
   const result = await settings
-    .findOne(req.owner, { projection: { _id: 0, id: 0, type: 0 } })
+    .findOne(req.ownerFilter, { projection: { _id: 0, id: 0, type: 0 } })
   res.status(200).send(result || {})
 }))
 
@@ -90,6 +93,7 @@ const fillSettings = (owner, user, settings) => {
   settings.apiKeys = settings.apiKeys || []
   settings.apiKeys.forEach(apiKey => delete apiKey.clearKey)
   settings.publicationSites = settings.publicationSites || []
+  delete settings.operationsPermissions // deprecated
 }
 
 // update settings as owner
@@ -124,7 +128,7 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async (req, res) => {
     })
   }
 
-  const oldSettings = (await settings.findOneAndReplace(req.owner, req.body, { upsert: true })).value
+  const oldSettings = (await settings.findOneAndReplace(req.ownerFilter, req.body, { upsert: true })).value
 
   if (req.body.topics) {
     await topicsUtils.updateTopics(db, req.owner, (oldSettings && oldSettings.topics) || [], req.body.topics)
@@ -138,28 +142,28 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async (req, res) => {
 // Get topics list as owner
 router.get('/:type/:id/topics', isOwnerMember, asyncWrap(async (req, res) => {
   const settings = req.app.get('db').collection('settings')
-  const result = await settings.findOne(req.owner)
+  const result = await settings.findOne(req.ownerFilter)
   res.status(200).send((result && result.topics) || [])
 }))
 
 // Get licenses list as anyone
 router.get('/:type/:id/licenses', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const settings = req.app.get('db').collection('settings')
-  const result = await settings.findOne(req.owner)
+  const result = await settings.findOne(req.ownerFilter)
   res.status(200).send([].concat(config.licenses, (result && result.licenses) || []))
 }))
 
 // Get datasets metadata settings as owner
 router.get('/:type/:id/datasets-metadata', isOwnerMember, asyncWrap(async (req, res) => {
   const settings = req.app.get('db').collection('settings')
-  const result = await settings.findOne(req.owner)
+  const result = await settings.findOne(req.ownerFilter)
   res.status(200).send((result && result.datasetsMetadata) || {})
 }))
 
 // Get publication sites as owner (see all) or other use (only public)
 router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async (req, res) => {
   const db = req.app.get('db')
-  const settings = await db.collection('settings').findOne(req.owner, { projection: { _id: 0 } })
+  const settings = await db.collection('settings').findOne(req.ownerFilter, { projection: { _id: 0 } })
   let publicationSites = (settings && settings.publicationSites) || []
   if (req.owner.department) {
     for (const publicationSite of publicationSites) publicationSite.department = req.owner.department
@@ -176,7 +180,7 @@ router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async (req, 
 router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async (req, res) => {
   debugPublicationSites('post site', req.body)
   const db = req.app.get('db')
-  let settings = await db.collection('settings').findOne(req.owner, { projection: { _id: 0 } })
+  let settings = await db.collection('settings').findOne(req.ownerFilter, { projection: { _id: 0 } })
   if (!settings) {
     settings = {}
     fillSettings(req.owner, req.user, settings)
@@ -208,7 +212,7 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async (req, 
       urlTemplate: config.publicUrl + '/application/{id}'
     })
   } else {
-    settings.publicationSites[index] = req.body
+    settings.publicationSites[index] = { ...req.body, settings: settings.publicationSites[index].settings || {} }
   }
   const errors = validate(settings)
   if (errors) {
@@ -222,7 +226,7 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async (req, 
 router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, asyncWrap(async (req, res) => {
   debugPublicationSites('delete site', req.params)
   const db = req.app.get('db')
-  let settings = await db.collection('settings').findOne(req.owner, { projection: { _id: 0 } })
+  let settings = await db.collection('settings').findOne(req.ownerFilter, { projection: { _id: 0 } })
   if (!settings) {
     settings = {}
     fillSettings(req.owner, req.user, settings)
@@ -234,7 +238,7 @@ router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, as
     debugPublicationSites('bad settings after site deletion', settings, errors)
     return res.status(400).send(errors)
   }
-  await db.collection('settings').replaceOne(req.owner, settings, { upsert: true })
+  await db.collection('settings').replaceOne(req.ownerFilter, settings, { upsert: true })
   const ref = `${req.params.siteType}:${req.params.siteId}`
   await db.collection('datasets').updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })
   await db.collection('applications').updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })

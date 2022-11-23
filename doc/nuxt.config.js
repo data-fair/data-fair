@@ -18,6 +18,8 @@ for (const path of [...new Set(paths)]) {
   }
 }
 
+const base = process.env.DOC_BASE || '/'
+
 module.exports = {
   telemetry: false,
   ssr: false,
@@ -40,12 +42,14 @@ module.exports = {
     routes
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
-  router: { base: process.env.DOC_BASE || '/' },
+  router: { base },
   env: {
+    base,
     theme: config.theme,
     hideDraft: (process.env.HIDE_DRAFT === 'true') || (process.env.GITHUB_REF_NAME && process.env.GITHUB_REF_NAME !== 'master')
   },
   plugins: [
+    // { src: '~plugins/mermaid', ssr: false },
     { src: '~plugins/moment' }
   ],
   modules: [['@nuxtjs/i18n', {
@@ -71,7 +75,7 @@ module.exports = {
     }
   },
   head: {
-    title: 'Data Fair',
+    title: 'Data Fair - documentation',
     meta: [
       { charset: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },

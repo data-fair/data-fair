@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div style="min-height:60px;">
     <v-form v-model="formValid">
       <lazy-v-jsf
         v-model="wrapper"
@@ -47,7 +47,7 @@ export default {
     }
   }),
   created () {
-    this.wrapper.datasetsMetadata = JSON.parse(JSON.stringify(this.settings.datasetsMetadata || []))
+    this.wrapper.datasetsMetadata = JSON.parse(JSON.stringify(this.settings.datasetsMetadata || {}))
   },
   methods: {
     async change () {

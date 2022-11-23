@@ -1,16 +1,16 @@
 <template lang="html">
-  <v-row class="my-0">
+  <v-row class="my-0 settings">
     <v-col :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
       <v-container class="py-0">
-        <tutorial-alert
-          id="settings-doc"
-          text="Consultez la documentation sur les paramètres"
-          href="https://data-fair.github.io/3/user-guide-backoffice/parameters"
-        />
         <v-row v-if="initialized">
           <v-col>
             <!--<v-subheader>{{ $t('pages.settings.description') }}</v-subheader>-->
             <template v-if="authorized">
+              <tutorial-alert
+                id="settings-doc"
+                text="Consultez la documentation sur les paramètres"
+                href="https://data-fair.github.io/3/user-guide-backoffice/parameters"
+              />
               <h2 class="mb-4">
                 Paramètres de l'{{ activeAccount.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' + user.name) }}
               </h2>
@@ -45,258 +45,273 @@
               </template>
             </v-data-table>
           </div>-->
-
-              <layout-section-tabs
-                :svg="infoSvg"
-                svg-no-margin
-                :section="sections.find(s => s.id === 'info')"
+              <div
+                v-for="section of sections"
+                :key="section.id"
               >
-                <template #extension>
-                  <p>
-                    Permettez aux utilisateurs de vos APIs et de vos applications de vous contacter en renseignant ces informations.
-                  </p>
-                </template>
-                <template #tabs-items>
-                  <v-container
-                    fluid
-                    class="py-1"
-                  >
-                    <v-row>
-                      <v-col
-                        cols="12"
-                        md="6"
-                      >
-                        <settings-info
-                          v-if="settings"
-                          :settings="settings"
-                          @updated="save"
-                        />
-                      </v-col>
-                    </v-row>
-                  </v-container>
-                </template>
-              </layout-section-tabs>
+                <layout-section-tabs
+                  v-if="section.id === 'info'"
+                  :svg="infoSvg"
+                  svg-no-margin
+                  :section="section"
+                >
+                  <template #extension>
+                    <p>
+                      Permettez aux utilisateurs de vos APIs et de vos applications de vous contacter en renseignant ces informations.
+                    </p>
+                  </template>
+                  <template #tabs-items>
+                    <v-container
+                      fluid
+                      class="py-1"
+                    >
+                      <v-row>
+                        <v-col
+                          cols="12"
+                          md="6"
+                        >
+                          <settings-info
+                            v-if="settings"
+                            :settings="settings"
+                            @updated="save"
+                          />
+                        </v-col>
+                      </v-row>
+                    </v-container>
+                  </template>
+                </layout-section-tabs>
 
-              <layout-section-tabs
-                :svg="qualitySvg"
-                :section="sections.find(s => s.id === 'licences')"
-              >
-                <template #extension>
-                  <p>
-                    Définissez des licences pour clarifier les utilisations possibles des jeux de données que vous diffusez.
-                  </p>
-                </template>
-                <template #tabs-items>
-                  <v-container
-                    fluid
-                    class="py-1"
-                  >
-                    <v-row>
-                      <v-col
-                        cols="12"
-                        md="6"
-                      >
-                        <settings-licenses
-                          v-if="settings"
-                          :settings="settings"
-                          @license-updated="save('fetchLicenses')"
-                        />
-                      </v-col>
-                    </v-row>
-                  </v-container>
-                </template>
-              </layout-section-tabs>
+                <layout-section-tabs
+                  v-if="section.id === 'licences'"
+                  :svg="qualitySvg"
+                  :section="section"
+                >
+                  <template #extension>
+                    <p>
+                      Définissez des licences pour clarifier les utilisations possibles des jeux de données que vous diffusez.
+                    </p>
+                  </template>
+                  <template #tabs-items>
+                    <v-container
+                      fluid
+                      class="py-1"
+                    >
+                      <v-row>
+                        <v-col
+                          cols="12"
+                          md="6"
+                        >
+                          <settings-licenses
+                            v-if="settings"
+                            :settings="settings"
+                            @license-updated="save('fetchLicenses')"
+                          />
+                        </v-col>
+                      </v-row>
+                    </v-container>
+                  </template>
+                </layout-section-tabs>
 
-              <layout-section-tabs
-                :svg="flagsSvg"
-                svg-no-margin
-                :section="sections.find(s => s.id === 'topics')"
-              >
-                <template #extension>
-                  <p v-if="env.disableApplications">
-                    Les thématiques sont une manière simple d'organiser vos jeux de données.
-                  </p>
-                  <p v-else>
-                    Les thématiques sont une manière simple d'organiser vos jeux de données et vos applications.
-                  </p>
-                </template>
-                <template #tabs-items>
-                  <v-container
-                    fluid
-                    class="py-1"
-                  >
-                    <v-row>
-                      <v-col
-                        cols="12"
-                        md="6"
-                      >
-                        <settings-topics
-                          v-if="settings"
-                          :settings="settings"
-                          @updated="save('fetchTopics')"
-                        />
-                      </v-col>
-                    </v-row>
-                  </v-container>
-                </template>
-              </layout-section-tabs>
+                <layout-section-tabs
+                  v-if="section.id === 'topics'"
+                  :svg="flagsSvg"
+                  svg-no-margin
+                  :section="section"
+                >
+                  <template #extension>
+                    <p v-if="env.disableApplications">
+                      Les thématiques sont une manière simple d'organiser vos jeux de données.
+                    </p>
+                    <p v-else>
+                      Les thématiques sont une manière simple d'organiser vos jeux de données et vos applications.
+                    </p>
+                  </template>
+                  <template #tabs-items>
+                    <v-container
+                      fluid
+                      class="py-1"
+                    >
+                      <v-row>
+                        <v-col
+                          cols="12"
+                          md="6"
+                        >
+                          <settings-topics
+                            v-if="settings"
+                            :settings="settings"
+                            @updated="save('fetchTopics')"
+                          />
+                        </v-col>
+                      </v-row>
+                    </v-container>
+                  </template>
+                </layout-section-tabs>
 
-              <layout-section-tabs
-                :svg="flagsSvg"
-                svg-no-margin
-                :section="sections.find(s => s.id === 'datasetsMetadata')"
-              >
-                <template #extension>
-                  Configurez des métadonnées additionnelles pour vos jeux de données.
-                </template>
-                <template #tabs-items>
-                  <v-container
-                    fluid
-                    class="py-1"
-                  >
-                    <v-row>
-                      <v-col
-                        cols="12"
-                        md="6"
-                      >
-                        <settings-datasets-metadata
-                          v-if="settings"
-                          :settings="settings"
-                          @updated="save('fetchDatasetsMetadata')"
-                        />
-                      </v-col>
-                    </v-row>
-                  </v-container>
-                </template>
-              </layout-section-tabs>
+                <layout-section-tabs
+                  v-if="section.id === 'datasetsMetadata'"
+                  :svg="flagsSvg"
+                  svg-no-margin
+                  :section="section"
+                >
+                  <template #extension>
+                    Configurez des métadonnées additionnelles pour vos jeux de données.
+                  </template>
+                  <template #tabs-items>
+                    <v-container
+                      fluid
+                      class="py-1"
+                    >
+                      <v-row>
+                        <v-col
+                          cols="12"
+                          md="6"
+                        >
+                          <settings-datasets-metadata
+                            v-if="settings"
+                            :settings="settings"
+                            @updated="save('fetchDatasetsMetadata')"
+                          />
+                        </v-col>
+                      </v-row>
+                    </v-container>
+                  </template>
+                </layout-section-tabs>
 
-              <layout-section-tabs
-                :svg="securitysSvg"
-                svg-no-margin
-                :section="sections.find(s => s.id === 'api-keys')"
-              >
-                <template #extension>
-                  <p>
-                    Les clés d'API sont un moyen d'utiliser l'API de data-fair de manière sécurisée.
-                    Il s'agit d'une configuration technique pour personne avertie.
-                  </p>
-                </template>
-                <template #tabs-items>
-                  <v-container
-                    fluid
-                    class="py-1"
-                  >
-                    <v-row>
-                      <v-col
-                        cols="12"
-                        md="6"
-                      >
-                        <settings-api-keys
-                          v-if="settings"
-                          :settings="settings"
-                          @updated="save"
-                        />
-                      </v-col>
-                    </v-row>
-                  </v-container>
-                </template>
-              </layout-section-tabs>
+                <layout-section-tabs
+                  v-if="section.id === 'api-keys'"
+                  :svg="securitysSvg"
+                  svg-no-margin
+                  :section="section"
+                >
+                  <template #extension>
+                    <p>
+                      Les clés d'API sont un moyen d'utiliser l'API de data-fair de manière sécurisée.
+                      Il s'agit d'une configuration technique pour personne avertie.
+                    </p>
+                  </template>
+                  <template #tabs-items>
+                    <v-container
+                      fluid
+                      class="py-1"
+                    >
+                      <v-row>
+                        <v-col
+                          cols="12"
+                          md="6"
+                        >
+                          <settings-api-keys
+                            v-if="settings"
+                            :settings="settings"
+                            @updated="save"
+                          />
+                        </v-col>
+                      </v-row>
+                    </v-container>
+                  </template>
+                </layout-section-tabs>
 
-              <layout-section-tabs
-                :svg="wwwSvg"
-                svg-no-margin
-                :section="sections.find(s => s.id === 'webhooks')"
-              >
-                <template #extension>
-                  <p>
-                    Les <i>webhooks</i> sont un moyen de lier d'autres services Web à des événements internes à ce service de diffusion de données (créations, mises à jour, etc.).
-                    Il s'agit d'une configuration technique pour personne avertie.
-                  </p>
-                </template>
-                <template #tabs-items>
-                  <v-container
-                    fluid
-                    class="pt-1 pb-6"
-                  >
-                    <v-row>
-                      <v-col
-                        cols="12"
-                        md="6"
-                      >
-                        <settings-webhooks
-                          v-if="settings"
-                          :settings="settings"
-                          @webhook-updated="save"
-                        />
-                      </v-col>
-                    </v-row>
-                  </v-container>
-                </template>
-              </layout-section-tabs>
+                <layout-section-tabs
+                  v-if="section.id === 'webhooks'"
+                  :svg="wwwSvg"
+                  svg-no-margin
+                  :section="section"
+                >
+                  <template #extension>
+                    <p>
+                      Les <i>webhooks</i> sont un moyen de lier d'autres services Web à des événements internes à ce service de diffusion de données (créations, mises à jour, etc.).
+                      Il s'agit d'une configuration technique pour personne avertie.
+                    </p>
+                  </template>
+                  <template #tabs-items>
+                    <v-container
+                      fluid
+                      class="pt-1 pb-6"
+                    >
+                      <v-row>
+                        <v-col
+                          cols="12"
+                          md="6"
+                        >
+                          <settings-webhooks
+                            v-if="settings"
+                            :settings="settings"
+                            @webhook-updated="save"
+                          />
+                        </v-col>
+                      </v-row>
+                    </v-container>
+                  </template>
+                </layout-section-tabs>
 
-              <layout-section-tabs
-                :svg="checklistSvg"
-                svg-no-margin
-                :section="sections.find(s => s.id === 'privateVocabulary')"
-              >
-                <template #extension>
-                  <p>
-                    Le <i>vocabulaire privé</i> vous permet d'étendre la liste des concepts avec lesquels pour pouvez annoter les colonnes de vos jeux de données.
-                  </p>
-                </template>
-                <template #tabs-items>
-                  <v-container fluid>
-                    <v-alert type="warning">
-                      Attention, si vous supprimez ou changez l'identifiant d'un concept référencé dans des jeux de données vous pouvez causer des dysfonctionnements.
-                    </v-alert>
-                    <v-row>
-                      <v-col
-                        cols="12"
-                        md="6"
+                <layout-section-tabs
+                  v-if="section.id === 'privateVocabulary'"
+                  :svg="checklistSvg"
+                  svg-no-margin
+                  :section="section"
+                >
+                  <template #extension>
+                    <p>
+                      Le <i>vocabulaire privé</i> vous permet d'étendre la liste des concepts avec lesquels pour pouvez annoter les colonnes de vos jeux de données.
+                    </p>
+                  </template>
+                  <template #tabs-items>
+                    <v-container fluid>
+                      <v-alert
+                        type="warning"
+                        outlined
+                        dense
                       >
-                        <settings-private-vocabulary
-                          v-if="settings"
-                          :settings="settings"
-                          @updated="save('fetchVocabulary')"
-                        />
-                      </v-col>
-                    </v-row>
-                  </v-container>
-                </template>
-              </layout-section-tabs>
+                        Attention, si vous supprimez ou changez l'identifiant d'un concept référencé dans des jeux de données vous pouvez causer des dysfonctionnements.
+                      </v-alert>
+                      <v-row>
+                        <v-col
+                          cols="12"
+                          md="6"
+                        >
+                          <settings-private-vocabulary
+                            v-if="settings"
+                            :settings="settings"
+                            @updated="save('fetchVocabulary')"
+                          />
+                        </v-col>
+                      </v-row>
+                    </v-container>
+                  </template>
+                </layout-section-tabs>
 
-              <layout-section-tabs
-                :svg="uiSvg"
-                svg-no-margin
-                :section="sections.find(s => s.id === 'publicationSites')"
-                :admin="true"
-              >
-                <template #extension>
-                  <p>
-                    Les <i>sites de publication</i> sont les sites externes à data-fair qui peuvent exposer ses ressources (jeux de données et applications).
-                    Cette liste de sites est normalement gérée automatiquement par le projet data-fair-portals.
-                  </p>
-                </template>
-                <template #tabs-items>
-                  <v-container
-                    fluid
-                    class="py-1"
-                  >
-                    <v-row>
-                      <v-col
-                        cols="12"
-                        md="6"
-                      >
-                        <settings-publication-sites
-                          v-if="settings"
-                          :settings="settings"
-                          @updated="save('fetchPublicationSites')"
-                        />
-                      </v-col>
-                    </v-row>
-                  </v-container>
-                </template>
-              </layout-section-tabs>
+                <layout-section-tabs
+                  v-if="section.id === 'publicationSites'"
+                  :svg="uiSvg"
+                  svg-no-margin
+                  :section="section"
+                >
+                  <template #extension>
+                    <p>
+                      Les <i>portails</i> sont les sites externes à Data Fair qui peuvent exposer ses ressources (jeux de données et applications).
+                      Cette liste de sites est en partie gérée depuis l'onglet Portails mais certains paramètres relatifs à la publication des ressources sont édités ici.
+                    </p>
+                  </template>
+                  <template #tabs-items>
+                    <v-container
+                      fluid
+                      class="py-1"
+                    >
+                      <v-row>
+                        <v-col
+                          cols="12"
+                          md="6"
+                        >
+                          <settings-publication-sites
+                            v-if="settings"
+                            :settings="settings"
+                            @updated="save('fetchPublicationSites')"
+                          />
+                        </v-col>
+                      </v-row>
+                    </v-container>
+                  </template>
+                </layout-section-tabs>
+              </div>
             </template>
             <layout-not-authorized v-else />
           </v-col>
@@ -317,16 +332,16 @@ fr:
   apiKeys: "Clés d'API"
   webhooks: "Appels extérieurs (Webhooks)"
   privateVocab: Vocabulaire privé
-  publicationSites: Sites de publication
+  publicationSites: Portails
   info: Informations de contact
 en:
-  licences: Licences
+  licences: Licenses
   topics: Topics
   datasetsMetadata: Datasets metadata
   apiKeys: API keys
   webhooks: "External requests (Webhooks)"
   privateVocab: Private vocabulary
-  publicationSites: Publication sites
+  publicationSites: Portals
   info: Contact information
 </i18n>
 
@@ -368,6 +383,7 @@ export default {
       return true
     },
     sections () {
+      if (!this.user) return []
       const sections = []
       if (!this.activeAccount.department) {
         sections.push({
@@ -391,21 +407,18 @@ export default {
           title: this.$t('privateVocab')
         })
       }
-      sections.push(sections.push({
+      sections.push({
+        id: 'publicationSites',
+        title: this.$t('publicationSites')
+      })
+      sections.push({
         id: 'api-keys',
         title: this.$t('apiKeys')
-      }))
+      })
       sections.push({
         id: 'webhooks',
         title: this.$t('webhooks')
       })
-
-      if (this.user.adminMode) {
-        sections.push({
-          id: 'publicationSites',
-          title: this.$t('publicationSites')
-        })
-      }
       return sections
     },
     settingsUrl () {
@@ -458,6 +471,3 @@ export default {
   }
 }
 </script>
-
-<style lang="css">
-</style>

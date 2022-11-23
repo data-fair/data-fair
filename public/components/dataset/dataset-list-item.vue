@@ -1,71 +1,30 @@
 <template>
-  <v-list-item style="min-height:40px;">
-    <v-list-item-title>
-      <nuxt-link :to="`/dataset/${dataset.id}`">
-        {{ dataset.title || dataset.id }}
-      </nuxt-link>
-      <v-chip
-        v-for="topic of dataset.topics"
-        :key="topic.id"
-        small
-        outlined
-        :color="topic.color || 'default'"
-        class="ml-2"
-        style="font-weight: bold"
-      >
-        {{ topic.title }}
-      </v-chip>
-    </v-list-item-title>
-    <v-list-item-subtitle>
-      <owner-short
-        v-if="showOwner"
-        :owner="dataset.owner"
+  <v-list-item
+    style="min-height:40px;"
+    v-bind="listItemProps"
+  >
+    <v-list-item-content v-if="dense">
+      <dataset-list-item-title
+        :dataset="dataset"
+        :show-topics="showTopics"
+        :no-link="noLink"
       />
-      <template v-if="dataset.isVirtual">
-        <v-icon
-          small
-          style="margin-top:-3px;"
-        >
-          mdi-picture-in-picture-bottom-right-outline
-        </v-icon>
-        <span v-t="'virtual'" />
-      </template>
-
-      <template v-if="dataset.isRest">
-        <v-icon
-          small
-          style="margin-top:-3px;"
-        >
-          mdi-all-inclusive
-        </v-icon>
-        <span v-t="'inc'" />
-      </template>
-
-      <template v-if="dataset.isMetaOnly">
-        <v-icon
-          small
-          style="margin-top:-3px;"
-        >
-          mdi-information-variant
-        </v-icon>
-        <span v-t="'metaOnly'" />
-      </template>
-
-      <template v-if="dataset.remoteFile || dataset.originalFile || dataset.file">
-        <v-icon
-          small
-          style="margin-top:-3px;"
-        >
-          mdi-file
-        </v-icon>
-        <span>{{ (dataset.remoteFile || dataset.originalFile || dataset.file).name | truncate(40,4) }} {{ ((dataset.remoteFile || dataset.originalFile || dataset.file).size) | bytes($i18n.locale) }}</span>
-      </template>
-
-      <template v-if="dataset.count !== undefined">
-        -
-        <span v-text="$tc('lines', dataset.count)" />
-      </template>
-    </v-list-item-subtitle>
+      <dataset-list-item-subtitle
+        :dataset="dataset"
+        :show-owner="showOwner"
+      />
+    </v-list-item-content>
+    <template v-else>
+      <dataset-list-item-title
+        :dataset="dataset"
+        :show-topics="showTopics"
+        :no-link="noLink"
+      />
+      <dataset-list-item-subtitle
+        :dataset="dataset"
+        :show-owner="showOwner"
+      />
+    </template>
 
     <v-list-item-action class="my-0">
       <v-tooltip
@@ -86,7 +45,10 @@
     <v-list-item-action class="my-0 ml-1">
       <visibility :visibility="dataset.visibility" />
     </v-list-item-action>
-    <v-list-item-action class="my-0 ml-1">
+    <v-list-item-action
+      v-if="showTable"
+      class="my-0 ml-1"
+    >
       <dataset-btn-table :dataset="dataset" />
     </v-list-item-action>
   </v-list-item>
@@ -94,22 +56,22 @@
 
 <i18n lang="yaml">
 fr:
-  virtual: jeu de données virtuel
-  inc: jeu de données éditable
-  metaOnly: métadonnées seules
-  lines: "aucune ligne | 1 ligne | {count} lignes"
   error: En erreur
 en:
-  virtual: virtual dataset
-  inc: editable dataset
-  metaOnly: metadata only
-  lines: "no line | 1 line | {count} lines"
   error: Error status
 </i18n>
 
 <script>
 export default {
-  props: ['dataset', 'showTopics', 'showOwner'],
+  props: {
+    dataset: { type: Object, required: true },
+    showTopics: { type: Boolean, default: false },
+    showOwner: { type: Boolean, default: false },
+    showTable: { type: Boolean, default: false },
+    noLink: { type: Boolean, default: false },
+    dense: { type: Boolean, default: false },
+    listItemProps: { type: Object, default: () => ({}) }
+  },
   data: () => ({
     hover: false
   })

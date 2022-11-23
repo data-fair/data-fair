@@ -64,8 +64,10 @@ function clean (publicUrl, dataset, query = {}, draft = false) {
     if (draft) datasetUtils.mergeDraft(dataset)
     if (!select.includes('-public')) dataset.public = permissions.isPublic('datasets', dataset)
     if (!select.includes('-visibility')) dataset.visibility = visibilityUtils.visibility(dataset)
-    dataset.description = dataset.description || ''
-    dataset.description = prepareMarkdownContent(dataset.description, query.html === 'true', query.truncate, 'dataset:' + dataset.id, dataset.updatedAt)
+    if (!query.select || select.includes('description')) {
+      dataset.description = dataset.description || ''
+      dataset.description = prepareMarkdownContent(dataset.description, query.html === 'true', query.truncate, 'dataset:' + dataset.id, dataset.updatedAt)
+    }
 
     if (dataset.schema) {
       for (const field of dataset.schema) {
@@ -188,7 +190,8 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
     topics: 'topics.id',
     publicationSites: 'publicationSites',
     spatial: 'spatial',
-    keywords: 'keywords'
+    keywords: 'keywords',
+    title: 'title'
   }
   const facetFields = {
     ...filterFields,
@@ -203,6 +206,9 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   if (req.query.queryable === 'true') {
     extraFilters.push({ isMetaOnly: { $ne: true } })
     extraFilters.push({ finalizedAt: { $ne: null } })
+  }
+  if (req.query.hasRequestedPublicationSites === 'true') {
+    extraFilters.push({ 'requestedPublicationSites.0': { $exists: true } })
   }
   const query = findUtils.query(req, Object.assign({
     filename: 'originalFile.name',
@@ -382,7 +388,6 @@ router.get('/:datasetId/safe-schema', readDataset(), applicationKey, permissions
 })
 
 const permissionsWritePublications = permissions.middleware('writePublications', 'admin')
-const permissionsWritePublicationSites = permissions.middleware('writePublicationSites', 'admin')
 
 // Update a dataset's metadata
 router.patch('/:datasetId',
@@ -399,7 +404,6 @@ router.patch('/:datasetId',
   }),
   permissions.middleware('writeDescription', 'write'),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
-  (req, res, next) => req.body.publicationSites ? permissionsWritePublicationSites(req, res, next) : next(),
   asyncWrap(async (req, res) => {
     const db = req.app.get('db')
     const patch = req.body
@@ -520,7 +524,7 @@ router.patch('/:datasetId',
 
     const previousDataset = { ...req.dataset }
     const mongoPatch = await datasetUtils.applyPatch(db, req.dataset, patch, false)
-    await publicationSites.applyPatch(db, previousDataset, req.dataset, req.user)
+    await publicationSites.applyPatch(db, previousDataset, req.dataset, req.user, 'datasets')
     await db.collection('datasets').updateOne({ id: req.dataset.id }, mongoPatch)
 
     await syncRemoteService(db, req.dataset)
