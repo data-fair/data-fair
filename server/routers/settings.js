@@ -33,7 +33,6 @@ const validateSettings = ajv.compile(settingSchema)
 const validateDepartmentSettings = ajv.compile(departmentSettingsSchema)
 
 const validate = (settings) => {
-  console.log(settings)
   if (settings.department) {
     validateDepartmentSettings(settings)
     return validateDepartmentSettings.errors

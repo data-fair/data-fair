@@ -7,6 +7,14 @@ exports.applyPatch = async (db, previousResource, resource, user, resourceType) 
   const previousPublicationSites = previousResource.publicationSites || []
   const previousRequestedPublicationSites = previousResource.requestedPublicationSites || []
   const previousTopics = previousResource.topics || []
+  const newPublicationSites = resource.publicationSites || []
+  const newRequestedPublicationSites = resource.requestedPublicationSites || []
+  const newTopics = resource.topics || []
+
+  if (!previousPublicationSites.length && !previousRequestedPublicationSites.length && !newPublicationSites.length && !newRequestedPublicationSites.length) {
+    return
+  }
+
   const publicationSitesSettings = await db.collection('settings').findOne({
     type: resource.owner.type,
     id: resource.owner.id
@@ -19,8 +27,6 @@ exports.applyPatch = async (db, previousResource, resource, user, resourceType) 
   }
 
   // send webhooks/notifs based on changes during this patch
-  const newPublicationSites = resource.publicationSites || []
-  const newTopics = resource.topics || []
   for (const publicationSite of newPublicationSites) {
     // send a notification either because the publicationSite was added, or because the visibility changed
     if (!previousPublicationSites.includes(publicationSite)) {
@@ -45,12 +51,11 @@ exports.applyPatch = async (db, previousResource, resource, user, resourceType) 
       }
     }
   }
-  const newRequestedPublicationSites = resource.requestedPublicationSites || []
   for (const requestedPublicationSite of newRequestedPublicationSites) {
     // send a notification either because the the publication was requeststed
     if (!previousRequestedPublicationSites.includes(requestedPublicationSite)) {
       if (!publicationSitesSettingsObj[requestedPublicationSite]) throw createError(404, 'unknown publication site')
-      const sender = { type: publicationSitesSettingsObj.type, id: publicationSitesSettingsObj.id, department: publicationSitesSettingsObj.department }
+      const sender = { type: publicationSitesSettings.type, id: publicationSitesSettings.id, department: publicationSitesSettings.department }
       webhooks.trigger(db, 'dataset', resource, { type: `publication-requested:${requestedPublicationSite}`, body: `${resource.title || resource.id} - ${user.name}` }, sender)
     }
   }
@@ -59,7 +64,7 @@ exports.applyPatch = async (db, previousResource, resource, user, resourceType) 
     if (!previousTopics.find(t => t.id === topic.id)) {
       for (const publicationSite of newPublicationSites) {
         if (!publicationSitesSettingsObj[publicationSite]) throw createError(404, 'unknown publication site')
-        const sender = { type: publicationSitesSettingsObj.type, id: publicationSitesSettingsObj.id, department: publicationSitesSettingsObj.department }
+        const sender = { type: publicationSitesSettings.type, id: publicationSitesSettings.id, department: publicationSitesSettings.department }
         webhooks.trigger(db, 'dataset', resource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender)
       }
     }
