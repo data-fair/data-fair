@@ -253,7 +253,7 @@ fr:
   serviceInfo: Informations du service
   owners: Propriétaires
   errors: Erreurs
-  baseApplications: Modèles d'applications
+  baseApplications: Modèles d'application
   applications: Applications
   applicationsSubtitle: Visualisations, formulaires ...
   accountsManagement: Gestion des comptes

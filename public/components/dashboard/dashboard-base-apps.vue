@@ -69,7 +69,7 @@
 <i18n lang="yaml">
 fr:
   baseApps: Modèles d'application
-  baseAppsCount: Vous avez accès à {count} modèles d'applications pour créer vos visualisations.
+  baseAppsCount: Vous avez accès à {count} modèles d'application pour créer vos visualisations.
 en:
   baseApps: Application models
   baseAppsCount: You have access to {count} application models.
