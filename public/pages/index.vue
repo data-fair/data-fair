@@ -127,7 +127,7 @@
           lg="3"
         >
           <dashboard-svg-link
-            to="/new-app"
+            to="/new-application"
             :title="$t('createApp')"
             :svg="graphicSvg"
           />
