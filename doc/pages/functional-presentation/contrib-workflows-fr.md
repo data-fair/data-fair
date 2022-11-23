@@ -68,8 +68,9 @@ flowchart TD
 flowchart TD
   start([Bouton partager un jeu de données]) --> choseDataset[/Choix du jeu de données/]
   choseDataset --> chosePortal[/Choix du portail/]
-  chosePortal -- rôle contrib --> fetchRequiredMetadata[[Récupération des métadonnées<br>obligatoires pour ce portail]]
-  chosePortal --> rôle admin --> editPermissions[Édition des permissions]
+  chosePortal -- rôle contrib --> showPermissions[Consultation des permissions]
+  showPermissions --> fetchRequiredMetadata[[Récupération des métadonnées<br>obligatoires pour ce portail]]
+  chosePortal -- rôle admin --> editPermissions[Édition des permissions]
   editPermissions --> fetchRequiredMetadata
   fetchRequiredMetadata --> editMetadata[Édition des métadonnées]
   editMetadata --> confirm{Confirmer ?}
