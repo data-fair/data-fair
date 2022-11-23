@@ -19,13 +19,10 @@
   >
     <template #item="{item}">
       <dataset-list-item
-        style="min-height:40px;"
-        v-bind="attrs"
         :dataset="item"
         :dense="true"
         :show-topics="true"
         :no-link="true"
-        v-on="on"
       >
         {{ dataset }}
       </dataset-list-item>
@@ -68,7 +65,7 @@ export default {
     async searchDatasets () {
       this.loadingDatasets = true
       const res = await this.$axios.$get('api/v1/datasets', {
-        params: { q: this.search, size: 20, select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions', owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
+        params: { q: this.search, size: 20, select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions,-links,-owner', owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
       })
       this.datasets = res.results
       this.loadingDatasets = false

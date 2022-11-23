@@ -81,197 +81,115 @@
           </p>
         </v-col>
       </v-row>
-      <v-row class="mx-0">
-        <h2
-          v-t="'contribute'"
-          class="text-h5"
-        />
-      </v-row>
-      <v-row style="height:100%">
-        <v-col
-          cols="12"
-          md="4"
-          lg="3"
-        >
-          <dashboard-svg-link
-            to="/new-dataset"
-            :title="$t('createDataset')"
-            :svg="dataSvg"
+      <template v-if="canContrib">
+        <v-row class="mx-0">
+          <h2
+            v-t="'contribute'"
+            class="text-h5"
           />
-        </v-col>
-        <v-col
-          cols="12"
-          md="4"
-          lg="3"
-        >
-          <dashboard-svg-link
-            to="/update-dataset"
-            :title="$t('updateDataset')"
-            :svg="dataMaintenanceSvg"
-          />
-        </v-col>
-        <v-col
-          cols="12"
-          md="4"
-          lg="3"
-        >
-          <dashboard-svg-link
-            to="/share-dataset"
-            :title="$t('shareDataset')"
-            :svg="shareSvg"
-          />
-        </v-col>
-        <v-col
-          cols="12"
-          md="4"
-          lg="3"
-        >
-          <dashboard-svg-link
-            to="/new-application"
-            :title="$t('createApp')"
-            :svg="graphicSvg"
-          />
-        </v-col>
-      </v-row>
-      <v-row class="mx-0">
-        <h2
-          v-t="'manage'"
-          class="text-h5"
-        />
-      </v-row>
-      <v-row>
-        <v-col
-          cols="12"
-          md="6"
-          lg="4"
-        >
-          <dashboard-activity />
-        </v-col>
-        <v-col
-          v-if="!env.disableApplications"
-          cols="12"
-          md="6"
-          lg="4"
-        >
-          <dashboard-base-apps />
-        </v-col>
-        <v-col
-          cols="12"
-          md="6"
-          lg="4"
-        >
-          <dashboard-storage :stats="stats" />
-        </v-col>
-      </v-row>
-    </template>
-    <!--
-          <v-col v-else>
-
-            <p v-if="!env.disableApplications && !env.disableRemoteServices">
-              {{ $t('description') }}
-            </p>
-            <layout-section-tabs
-              :min-height="390"
+        </v-row>
+        <v-row style="height:100%">
+          <v-col
+            cols="12"
+            md="4"
+            lg="3"
+          >
+            <dashboard-svg-link
+              to="/new-dataset"
+              :title="$t('createDataset')"
               :svg="dataSvg"
-              svg-no-margin
-              :section="sections.find(s => s.id === 'datasets')"
-            >
-              <template #extension>
-                <p v-if="stats && datasets">
-                  <span v-if="datasets.count > 1">
-                    <i18n path="datasetsCountMessage">
-                      <template #link>
-                        <nuxt-link to="/datasets">
-                          {{ $t('datasetsCount', {count: $n(datasets.count)}) }}
-                        </nuxt-link>
-                      </template>
-                    </i18n>
-                  </span>
-                  <span v-else-if="datasets.count === 1">
-                    <i18n path="datasetsCountMessage1">
-                      <template #link>
-                        <nuxt-link to="/datasets">
-                          {{ $t('datasetsCount1') }}
-                        </nuxt-link>
-                      </template>
-                    </i18n>
-                  </span>
-                  <span
-                    v-else
-                    v-t="'datasetsCountNone'"
-                  />
-
-                </p>
-              </template>
-              <template #tabs-items>
-                <v-container
-                  fluid
-                  class="py-0 px-2"
-                >
-                  <v-row>
-                    <v-col
-                      cols="12"
-                      sm="6"
-                      md="7"
-                    >
-                      <storage-treemap
-                        v-if="stats && datasets"
-                        :stats="stats"
-                        :datasets="datasets"
-                      />
-                    </v-col>
-                    <v-col
-                      cols="12"
-                      sm="6"
-                      md="5"
-                    >
-                      <dataset-list-actions />
-                    </v-col>
-                  </v-row>
-                </v-container>
-              </template>
-            </layout-section-tabs>
-
-            <layout-section-tabs
-              v-if="!env.disableApplications"
-              :min-height="400"
+            />
+          </v-col>
+          <v-col
+            cols="12"
+            md="4"
+            lg="3"
+          >
+            <dashboard-svg-link
+              to="/update-dataset"
+              :title="$t('updateDataset')"
+              :svg="dataMaintenanceSvg"
+            />
+          </v-col>
+          <v-col
+            cols="12"
+            md="4"
+            lg="3"
+          >
+            <dashboard-svg-link
+              to="/share-dataset"
+              :title="$t('shareDataset')"
+              :svg="shareSvg"
+            />
+          </v-col>
+          <v-col
+            cols="12"
+            md="4"
+            lg="3"
+          >
+            <dashboard-svg-link
+              to="/new-application"
+              :title="$t('createApp')"
               :svg="graphicSvg"
-              :section="sections.find(s => s.id === 'apps')"
-              :extension-height="$vuetify.breakpoint.mdAndUp ? 48 : 80"
-            >
-              <template #extension>
-                <p v-if="stats">
-                  <i18n
-                    v-if="stats.applications > 1"
-                    path="appsCountMessage"
-                  >
-                    <template #link>
-                      <nuxt-link to="/applications">
-                        {{ $t('appsCount', {count: $n(stats.applications)}) }}
-                      </nuxt-link>
-                    </template>
-                  </i18n>
-                  <i18n
-                    v-else-if="stats.applications=== 1"
-                    path="appsCountMessage1"
-                  >
-                    <template #link>
-                      <nuxt-link to="/applications">
-                        {{ $t('appsCount1') }}
-                      </nuxt-link>
-                    </template>
-                  </i18n>
-                  <span
-                    v-else
-                    v-t="'appsCountNone'"
-                  />
-                </p>
-              </template>
-            </layout-section-tabs>
+            />
           </v-col>
         </v-row>
-      </v-container>
-    </v-col>-->
+      </template>
+      <template v-if="canAdmin">
+        <v-row class="mx-0 mt-6">
+          <h2
+            v-t="'manageDatasets'"
+            class="text-h5"
+          />
+        </v-row>
+        <v-row>
+          <v-col
+            cols="12"
+            md="6"
+            lg="4"
+          >
+            <dashboard-requested-publications />
+          </v-col>
+          <v-col
+            cols="12"
+            md="6"
+            lg="4"
+          >
+            <dashboard-datasets-error />
+          </v-col>
+          <v-col
+            cols="12"
+            md="6"
+            lg="4"
+          >
+            <dashboard-activity />
+          </v-col>
+        </v-row>
+        <v-row class="mx-0 mt-6">
+          <h2
+            v-t="'administrate'"
+            class="text-h5"
+          />
+        </v-row>
+        <v-row>
+          <v-col
+            v-if="!env.disableApplications"
+            cols="12"
+            md="6"
+            lg="4"
+          >
+            <dashboard-base-apps />
+          </v-col>
+          <v-col
+            cols="12"
+            md="6"
+            lg="4"
+          >
+            <dashboard-storage :stats="stats" />
+          </v-col>
+        </v-row>
+      </template>
+    </template>
   </v-container>
 </template>
 
@@ -306,7 +224,8 @@ fr:
   updateDataset: Mettre à jour un jeu de données
   shareDataset: Partager un jeu de données
   createApp: Configurer une nouvelle application
-  manage: Supervisez
+  manageDatasets: Gérez les jeux de données
+  administrate: Administrez
 en:
   breadcrumb: Share and visualize data
   description: Easily enrich and publish your data. You can use it in dedicated applications and make it available to other people both openly or privately.
@@ -336,7 +255,8 @@ en:
   updateDataset: Update a dataset
   shareDataset: share a dataset
   createApp: Configure an application
-  manage: Manage
+  manageDatasets: Manage datasets
+  administrate: Administrate
 </i18n>
 
 <script>
@@ -360,7 +280,7 @@ export default {
   computed: {
     ...mapState('session', ['user', 'initialized']),
     ...mapState(['env']),
-    ...mapGetters(['missingSubscription']),
+    ...mapGetters(['missingSubscription', 'canContrib', 'canAdmin']),
     ...mapGetters('session', ['activeAccount']),
     sections () {
       return [

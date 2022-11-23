@@ -1,13 +1,13 @@
 <template>
   <v-list-item
     style="min-height:40px;"
-    v-bind="attrs"
+    v-bind="listItemProps"
   >
     <v-list-item-content v-if="dense">
       <dataset-list-item-title
         :dataset="dataset"
         :show-topics="showTopics"
-        :no-link="true"
+        :no-link="noLink"
       />
       <dataset-list-item-subtitle
         :dataset="dataset"
@@ -18,6 +18,7 @@
       <dataset-list-item-title
         :dataset="dataset"
         :show-topics="showTopics"
+        :no-link="noLink"
       />
       <dataset-list-item-subtitle
         :dataset="dataset"
@@ -68,7 +69,8 @@ export default {
     showOwner: { type: Boolean, default: false },
     showTable: { type: Boolean, default: false },
     noLink: { type: Boolean, default: false },
-    dense: { type: Boolean, default: false }
+    dense: { type: Boolean, default: false },
+    listItemProps: { type: Object, default: () => ({}) }
   },
   data: () => ({
     hover: false

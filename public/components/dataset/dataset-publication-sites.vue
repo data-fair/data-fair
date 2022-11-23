@@ -61,17 +61,17 @@
                       :disabled="!canPublish(site) && !(site.settings && site.settings.staging)"
                       :label="$t('published')"
                       class="mt-0 ml-6"
-                      @change="toggle(site, 'publicationSites')"
+                      @change="togglePublicationSites(site)"
                     />
                     <v-switch
-                      v-if="dataset.owner.type === 'organization' && !(site.settings && site.settings.staging)"
+                      v-if="dataset.owner.type === 'organization' && !(site.settings && site.settings.staging) && !dataset.publicationSites.includes(`${site.type}:${site.id}`)"
                       hide-details
                       dense
                       :input-value="dataset.requestedPublicationSites.includes(`${site.type}:${site.id}`)"
                       :disabled="dataset.publicationSites.includes(`${site.type}:${site.id}`) || canPublish(site) || !canRequestPublication(site)"
                       :label="$t('publicationRequested')"
                       class="mt-0 ml-6"
-                      @change="toggle(site, 'requestedPublicationSites')"
+                      @change="toggleRequestedPublicationSites(site)"
                     />
                   </v-row>
                 </v-list-item-subtitle>
@@ -173,6 +173,25 @@ export default {
         this.dataset[key].push(siteKey)
       }
       this.patch({ [key]: this.dataset[key] })
+    },
+    togglePublicationSites (site) {
+      const siteKey = `${site.type}:${site.id}`
+      if (this.dataset.publicationSites.includes(siteKey)) {
+        this.dataset.publicationSites = this.dataset.publicationSites.filter(s => s !== siteKey)
+      } else {
+        this.dataset.publicationSites.push(siteKey)
+        this.dataset.requestedPublicationSites = this.dataset.requestedPublicationSites.filter(s => s !== siteKey)
+      }
+      this.patch({ publicationSites: this.dataset.publicationSites, requestedPublicationSites: this.dataset.requestedPublicationSites })
+    },
+    toggleRequestedPublicationSites (site) {
+      const siteKey = `${site.type}:${site.id}`
+      if (this.dataset.requestedPublicationSites.includes(siteKey)) {
+        this.dataset.requestedPublicationSites = this.dataset.requestedPublicationSites.filter(s => s !== siteKey)
+      } else {
+        this.dataset.requestedPublicationSites.push(siteKey)
+      }
+      this.patch({ requestedPublicationSites: this.dataset.requestedPublicationSites })
     },
     canPublish (site) {
       const warnings = this.sitesWarnings[`${site.type}:${site.id}`]

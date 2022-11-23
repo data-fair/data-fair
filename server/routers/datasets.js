@@ -64,8 +64,10 @@ function clean (publicUrl, dataset, query = {}, draft = false) {
     if (draft) datasetUtils.mergeDraft(dataset)
     if (!select.includes('-public')) dataset.public = permissions.isPublic('datasets', dataset)
     if (!select.includes('-visibility')) dataset.visibility = visibilityUtils.visibility(dataset)
-    dataset.description = dataset.description || ''
-    dataset.description = prepareMarkdownContent(dataset.description, query.html === 'true', query.truncate, 'dataset:' + dataset.id, dataset.updatedAt)
+    if (!query.select || select.includes('description')) {
+      dataset.description = dataset.description || ''
+      dataset.description = prepareMarkdownContent(dataset.description, query.html === 'true', query.truncate, 'dataset:' + dataset.id, dataset.updatedAt)
+    }
 
     if (dataset.schema) {
       for (const field of dataset.schema) {
@@ -204,6 +206,9 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   if (req.query.queryable === 'true') {
     extraFilters.push({ isMetaOnly: { $ne: true } })
     extraFilters.push({ finalizedAt: { $ne: null } })
+  }
+  if (req.query.hasRequestedPublicationSites === 'true') {
+    extraFilters.push({ 'requestedPublicationSites.0': { $exists: true } })
   }
   const query = findUtils.query(req, Object.assign({
     filename: 'originalFile.name',

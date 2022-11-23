@@ -4,7 +4,16 @@
       v-if="showOwner"
       :owner="dataset.owner"
     />
-    <template v-if="dataset.isVirtual">
+    <template v-if="dataset.status === 'draft'">
+      <v-icon
+        small
+        style="margin-top:-3px;"
+      >
+        mdi-progress-wrench
+      </v-icon>
+      <span v-t="'draft'" />
+    </template>
+    <template v-else-if="dataset.isVirtual">
       <v-icon
         small
         style="margin-top:-3px;"
@@ -14,7 +23,7 @@
       <span v-t="'virtual'" />
     </template>
 
-    <template v-if="dataset.isRest">
+    <template v-else-if="dataset.isRest">
       <v-icon
         small
         style="margin-top:-3px;"
@@ -24,7 +33,7 @@
       <span v-t="'inc'" />
     </template>
 
-    <template v-if="dataset.isMetaOnly">
+    <template v-else-if="dataset.isMetaOnly">
       <v-icon
         small
         style="margin-top:-3px;"
@@ -34,7 +43,7 @@
       <span v-t="'metaOnly'" />
     </template>
 
-    <template v-if="dataset.remoteFile || dataset.originalFile || dataset.file">
+    <template v-else-if="dataset.remoteFile || dataset.originalFile || dataset.file">
       <v-icon
         small
         style="margin-top:-3px;"
@@ -57,11 +66,13 @@ fr:
   inc: jeu de données éditable
   metaOnly: métadonnées seules
   lines: "aucune ligne | 1 ligne | {count} lignes"
+  draft: brouillon
 en:
   virtual: virtual dataset
   inc: editable dataset
   metaOnly: metadata only
   lines: "no line | 1 line | {count} lines"
+  draft: draft
 </i18n>
 
 <script>
