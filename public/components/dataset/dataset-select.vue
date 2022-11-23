@@ -12,8 +12,7 @@
     outlined
     dense
     hide-details
-    style="max-width: 700px"
-    class="pl-2"
+    style="max-width: 500px"
     clearable
     @change="dataset => $emit('change', dataset)"
   >
@@ -46,7 +45,8 @@ import { mapGetters } from 'vuex'
 
 export default {
   props: {
-    select: { type: String, default: '' }
+    label: { type: String, default: '' },
+    extraParams: { type: Object, default: () => ({}) }
   },
   data: () => ({
     loadingDatasets: false,
@@ -65,7 +65,13 @@ export default {
     async searchDatasets () {
       this.loadingDatasets = true
       const res = await this.$axios.$get('api/v1/datasets', {
-        params: { q: this.search, size: 20, select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions,-links,-owner', owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
+        params: {
+          q: this.search,
+          size: 20,
+          select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions,-links,-owner',
+          owner: `${this.activeAccount.type}:${this.activeAccount.id}`,
+          ...this.extraParams
+        }
       })
       this.datasets = res.results
       this.loadingDatasets = false

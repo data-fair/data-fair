@@ -172,7 +172,6 @@
 fr:
   shareDataset: Partager un jeu de données
   dataset: Jeu de données
-  selectDataset: Choisissez un jeu de données
   selectPortal: Choisissez un portail
   stepDataset: Jeu de données
   stepPortal: Portail
@@ -187,7 +186,6 @@ fr:
 en:
   shareDataset: Share a dataset
   dataset: Dataset
-  selectDataset: Select a dataset
   selectPortal: Select a portal
   stepDataset: Dataset
   stepPortal: Portal
@@ -230,9 +228,6 @@ export default {
         await this.$nextTick()
         this.$refs.metadataForm.validate()
       }
-    },
-    search () {
-      this.searchDatasets()
     }
   },
   created () {

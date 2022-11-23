@@ -53,16 +53,25 @@ flowchart TD
 ```mermaid
 flowchart TD
   start([Bouton mettre à jour un jeu de données]) --> file[/Chargement de fichier/]
+  file --> fileSize[["Vérification de la taille du fichier<br>propose d'utiliser une archive si pertinent"]]
+  fileSize --> file
   file --> suggest[Suggestion de jeu de données<br>correspondant au nom de fichier]
   suggest --> choseDataset[/Choix du jeu de données/]
-  choseDataset --> datasetDraft[Page du brouillon]
+  choseDataset --> attachment[/"Chargement des pièces jointes<br>(optionnel)"/]
+  attachment --> confirm{Confirmer ?}
+  confirm -- Oui --> import[[Import]]
+  import --> datasetDraft[Page du brouillon]
   datasetDraft -- "Étapes de traitement<br>(analyse, indexation...)" --> datasetDraft
   datasetDraft --> draftValidate{Valider le<br>brouillon ?}
   draftValidate -- Annuler --> dataset([Page du jeu de données])
   draftValidate -- Valider --> dataset
+
+  %% styling
+  classDef primary fill:#1E88E5,color:#FFF;
+  class start,dataset primary;
 ```
 
-### Partager un jeu de données sur un portail
+## Partager un jeu de données sur un portail
 
 ```mermaid
 flowchart TD

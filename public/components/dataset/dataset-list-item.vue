@@ -2,6 +2,7 @@
   <v-list-item
     style="min-height:40px;"
     v-bind="listItemProps"
+    @click="e => $emit('click', e)"
   >
     <v-list-item-content v-if="dense">
       <dataset-list-item-title

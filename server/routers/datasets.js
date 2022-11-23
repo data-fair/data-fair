@@ -210,6 +210,9 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   if (req.query.hasRequestedPublicationSites === 'true') {
     extraFilters.push({ 'requestedPublicationSites.0': { $exists: true } })
   }
+  if (req.query.file === 'true') {
+    extraFilters.push({ file: { $exists: true } })
+  }
   const query = findUtils.query(req, Object.assign({
     filename: 'originalFile.name',
     ids: 'id',

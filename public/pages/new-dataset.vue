@@ -134,7 +134,7 @@
           <p v-t="'loadMainFile'" />
           <div
             class="mt-3 mb-3"
-            @drop.prevent="e => {file = e.dataTransfer.files[0]; currentStep = 3}"
+            @drop.prevent="e => {file = e.dataTransfer.files[0]; if (!suggestArchive) currentStep = 3}"
             @dragover.prevent
           >
             <v-file-input
@@ -145,11 +145,11 @@
               hide-details
               style="max-width: 400px;"
               :accept="accepted.join(', ')"
-              @change="currentStep = 3"
+              @change="() => {if (!suggestArchive) currentStep = 3}"
             />
           </div>
           <v-alert
-            v-if="file && file.size > 50000000 && (file.name.endsWith('.csv') || file.name.endsWith('.tsv') || file.name.endsWith('.txt') || file.name.endsWith('.geojson'))"
+            v-if="suggestArchive"
             outlined
             type="info"
             dense
@@ -718,7 +718,7 @@ en:
   stepParams: Parameters
   stepAction: Confirmation
   loadMainFile: Load the main data file
-  selectFile: select a file
+  selectFile: select or drag and drop a file
   title: Dataset title
   titlePlaceholder: Leave empty to use the file name
   titleId: The title of the dataset will be used to create a unique id visible in URLs of portals pages, APIs, etc. This id cannot be changed.
@@ -828,6 +828,9 @@ export default {
     },
     datasetsAndChildren () {
       return this.virtualChildren.concat(this.datasets.filter(d => !this.virtualChildren.find(c => c.id === d.id)))
+    },
+    suggestArchive () {
+      return this.file && this.file.size > 50000000 && (this.file.name.endsWith('.csv') || this.file.name.endsWith('.tsv') || this.file.name.endsWith('.txt') || this.file.name.endsWith('.geojson'))
     }
   },
   watch: {
