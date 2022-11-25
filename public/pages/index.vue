@@ -91,38 +91,35 @@
         <v-row style="height:100%">
           <v-col
             cols="12"
-            md="4"
-            lg="3"
+            sm="4"
           >
             <dashboard-svg-link
               to="/new-dataset"
               :title="$t('createDataset')"
-              :svg="dataSvg"
+              :svg="$vuetify.breakpoint.smAndUp ? dataSvg : ''"
             />
           </v-col>
           <v-col
             cols="12"
-            md="4"
-            lg="3"
+            sm="4"
           >
             <dashboard-svg-link
               to="/update-dataset"
               :title="$t('updateDataset')"
-              :svg="dataMaintenanceSvg"
+              :svg="$vuetify.breakpoint.smAndUp ? dataMaintenanceSvg : ''"
             />
           </v-col>
           <v-col
             cols="12"
-            md="4"
-            lg="3"
+            sm="4"
           >
             <dashboard-svg-link
               to="/share-dataset"
               :title="$t('shareDataset')"
-              :svg="shareSvg"
+              :svg="$vuetify.breakpoint.smAndUp ? shareSvg : ''"
             />
           </v-col>
-          <v-col
+          <!--<v-col
             cols="12"
             md="4"
             lg="3"
@@ -132,7 +129,7 @@
               :title="$t('createApp')"
               :svg="graphicSvg"
             />
-          </v-col>
+          </v-col>-->
         </v-row>
       </template>
       <template v-if="canAdmin">
@@ -145,27 +142,31 @@
         <v-row>
           <v-col
             cols="12"
-            md="6"
-            lg="4"
+            sm="4"
           >
             <dashboard-requested-publications />
           </v-col>
           <v-col
             cols="12"
-            md="6"
-            lg="4"
+            sm="4"
           >
             <dashboard-datasets-error />
           </v-col>
           <v-col
             cols="12"
+            sm="4"
+          >
+            <dashboard-datasets-draft />
+          </v-col>
+          <!--<v-col
+            cols="12"
             md="6"
             lg="4"
           >
             <dashboard-activity />
-          </v-col>
+          </v-col>-->
         </v-row>
-        <v-row class="mx-0 mt-6">
+        <!--<v-row class="mx-0 mt-6">
           <h2
             v-t="'administrate'"
             class="text-h5"
@@ -187,7 +188,7 @@
           >
             <dashboard-storage :stats="stats" />
           </v-col>
-        </v-row>
+        </v-row>-->
       </template>
     </template>
   </v-container>
@@ -222,7 +223,7 @@ fr:
   contribute: Contribuez
   createDataset: Créer un nouveau jeu de données
   updateDataset: Mettre à jour un jeu de données
-  shareDataset: Partager un jeu de données
+  shareDataset: Publier un jeu de données
   createApp: Configurer une nouvelle application
   manageDatasets: Gérez les jeux de données
   administrate: Administrez
@@ -268,7 +269,6 @@ const { mapState, mapActions, mapGetters } = require('vuex')
 export default {
   components: { VIframe },
   data: () => ({
-    stats: null,
     datasets: null,
     baseApps: null,
     dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
@@ -280,19 +280,23 @@ export default {
   computed: {
     ...mapState('session', ['user', 'initialized']),
     ...mapState(['env']),
-    ...mapGetters(['missingSubscription', 'canContrib', 'canAdmin']),
+    ...mapGetters(['missingSubscription', 'canContrib', 'canAdmin', 'ownerPublicationSites']),
     ...mapGetters('session', ['activeAccount']),
     sections () {
       return [
         { id: 'datasets', title: this.$t('datasets') },
         { id: 'apps', title: this.$t('apps') }
       ]
+    },
+    publicationSites () {
+      return this.ownerPublicationSites(this.activeAccount)
     }
   },
   async created () {
     if (!this.user) return
     this.$store.dispatch('breadcrumbs', [{ text: this.$t('breadcrumb') }])
-    this.stats = await this.$axios.$get('api/v1/stats')
+    await this.$store.dispatch('fetchPublicationSites', this.activeAccount)
+    // this.stats = await this.$axios.$get('api/v1/stats')
   },
   methods: {
     ...mapActions('session', ['login'])

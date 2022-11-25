@@ -5,16 +5,16 @@
     html {
     overflow-y: {{ htmlOverflow }} !important;
     }
-    .v-btn.primary.theme--light {
+    .v-btn.primary.theme--light, .theme--light .primary-gradient {
     background: linear-gradient(90deg, {{ primary }} 0%, {{ darkPrimary10 }} 100%);
     }
-    .v-btn.primary.theme--dark {
+    .v-btn.primary.theme--dark, .theme--dark .primary-gradient {
     background: linear-gradient(90deg, {{ darkPrimary10 }} 0%, {{ primary }} 100%);
     }
-    .v-application.theme--light .v-btn.primary.v-btn--has-bg {
+    .v-application.theme--light .v-btn.primary.v-btn--has-bg, .theme--light .primary-gradient {
     border: 1px solid {{ darkPrimary10 }} !important;
     }
-    .v-application.theme--dark .v-btn.primary.v-btn--has-bg {
+    .v-application.theme--dark .v-btn.primary.v-btn--has-bg, .theme--dark .primary-gradient {
     border: 1px solid {{ primary }} !important;
     }
     .v-application.theme--light .navigation-left {

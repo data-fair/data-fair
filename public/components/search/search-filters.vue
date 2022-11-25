@@ -122,6 +122,7 @@ export default {
   methods: {
     readParams () {
       let query = this.$route.query
+      // use the last params if this page is opened without parameters
       if (window.localStorage && Object.keys(this.$route.query).length === 0) {
         query = JSON.parse(window.localStorage.getItem(this.localStorageKey) || '{}')
       }

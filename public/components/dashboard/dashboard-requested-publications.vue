@@ -1,40 +1,16 @@
 <template>
-  <v-card
-    :loading="!datasets"
-    outlined
-    tile
-  >
-    <v-card-title v-t="$t('requestedPublications')" />
-    <v-card-text
-      v-if="datasets && !datasets.results.length"
-      v-t="$t('noRequestedPublications')"
-    />
-    <v-list
-      v-if="datasets"
-      dense
-      color="transparent"
-      class="pb-1"
-    >
-      <dataset-list-item
-        v-for="dataset in datasets.results"
-        :key="dataset.id"
-        :dataset="dataset"
-        :dense="true"
-        :show-topics="true"
-        :no-link="true"
-        :list-item-props="{to: '/dataset/' + dataset.id}"
-      />
-    </v-list>
-  </v-card>
+  <dashboard-metric
+    :value="nbDatasets"
+    :title="$tc('requestedPublications', nbDatasets)"
+    :to="{name: 'datasets', query: {requestedPublicationSites: requestedPublicationSitesFacet && requestedPublicationSitesFacet.map(f => f.value).join(',')}}"
+  />
 </template>
 
 <i18n lang="yaml">
 fr:
-  requestedPublications: Publications à valider
-  noRequestedPublications: aucune
+  requestedPublications: Publication à valider | Publication à valider | Publications à valider
 en:
-  requestedPublications: Requested publications
-  noRequestedPublications: none
+  requestedPublications: Requested publication | Requested publication | Requested publications
 </i18n>
 
 <script>
@@ -42,22 +18,36 @@ en:
 const { mapGetters } = require('vuex')
 
 export default {
-  props: {
-    stats: { type: Object, default: null }
-  },
   data () {
     return {
-      datasets: null,
-      nbLines: 7
+      nbDatasets: null,
+      requestedPublicationSitesFacet: null
     }
   },
   computed: {
-    ...mapGetters('session', ['activeAccount'])
+    ...mapGetters('session', ['activeAccount']),
+    ...mapGetters(['ownerPublicationSites']),
+    publicationSites () {
+      return this.ownerPublicationSites(this.activeAccount)
+    },
+    publicationSitesFilter () {
+      return this.publicationSites && this.publicationSites.map(p => `${p.type}:${p.id}`).join(',')
+    }
   },
-  async created () {
-    this.datasets = await this.$axios.$get('api/v1/datasets', {
-      params: { size: this.nbLines, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions,-links,-owner', hasRequestedPublicationSites: true }
-    })
+  watch: {
+    publicationSites: {
+      async handler () {
+        if (this.publicationSites) {
+          const res = (await this.$axios.$get('api/v1/datasets', {
+            params: { size: 0, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, requestedPublicationSites: this.publicationSitesFilter, facets: 'requestedPublicationSites' }
+          }))
+
+          this.nbDatasets = res.count
+          this.requestedPublicationSitesFacet = res.facets.requestedPublicationSites
+        }
+      },
+      immediate: true
+    }
   }
 }
 </script>

@@ -187,6 +187,7 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
     children: 'virtual.children',
     services: 'extensions.remoteService',
     status: 'status',
+    draftStatus: 'draft.status',
     topics: 'topics.id',
     publicationSites: 'publicationSites',
     requestedPublicationSites: 'requestedPublicationSites',

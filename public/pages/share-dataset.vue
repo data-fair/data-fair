@@ -170,7 +170,7 @@
 
 <i18n lang="yaml">
 fr:
-  shareDataset: Partager un jeu de données
+  shareDataset: Publier un jeu de données
   dataset: Jeu de données
   selectPortal: Choisissez un portail
   stepDataset: Jeu de données

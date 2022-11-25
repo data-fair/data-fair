@@ -60,32 +60,30 @@
         </template>
         <search-progress :loading="loading" />
 
-        <v-responsive
+        <v-container
           v-if="!hasDatasets"
-          height="auto"
+          class="mt-6"
         >
-          <v-container class="fill-height">
-            <v-row align="center">
-              <v-col class="text-center">
-                <div
-                  v-if="!filtered"
-                  class="text-h6"
-                >
-                  {{ $t('noDataset') }}
-                  <layout-wrap-svg
-                    :source="dataSvg"
-                    :color="$vuetify.theme.themes.light.primary"
-                  />
-                </div>
-                <div
-                  v-else
-                  v-t="'noResult'"
-                  class="text-h6"
+          <v-row align="center">
+            <v-col class="text-center">
+              <div
+                v-if="!filtered"
+                class="text-h6"
+              >
+                {{ $t('noDataset') }}
+                <layout-wrap-svg
+                  :source="dataSvg"
+                  :color="$vuetify.theme.themes.light.primary"
                 />
-              </v-col>
-            </v-row>
-          </v-container>
-        </v-responsive>
+              </div>
+              <div
+                v-else
+                v-t="'noResult'"
+                class="text-h6"
+              />
+            </v-col>
+          </v-row>
+        </v-container>
       </v-container>
 
       <layout-navigation-right v-if="$vuetify.breakpoint.lgAndUp">
@@ -181,11 +179,13 @@ export default {
     filtered: false,
     facetsValues: {
       status: [],
+      draftStatus: [],
       visibility: [],
       services: [],
       concepts: [],
       topics: [],
-      publicationSites: []
+      publicationSites: [],
+      requestedPublicationSites: []
     },
     lastParams: null,
     dataSvg: require('~/assets/svg/Data Arranging_Two Color.svg?raw'),
@@ -264,7 +264,7 @@ export default {
         sort: 'createdAt:-1',
         ...fullFilters
       }
-      if (!append) params.facets = 'status,visibility,services,concepts,topics,publicationSites,requestedPublicationSites,owner'
+      if (!append) params.facets = 'status,draftStatus,visibility,services,concepts,topics,publicationSites,requestedPublicationSites,owner'
       if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
         this.lastParams = params
         this.loading = true

@@ -1,5 +1,20 @@
 <template>
   <v-col class="datasets-facets">
+    <!--<div
+      v-if="missingFacetsValues.length"
+      class="mb-1"
+    >
+      <v-chip
+        v-for="(fv,i) in missingFacetsValues"
+        :key="i"
+        color="warning"
+        close
+        @click:close="facetsValues[fv.key] = facetsValues[fv.key].filter(f => f !== fv.value)"
+      >
+        {{ $t(fv.key) }}: {{ fv.value }}
+      </v-chip>
+    </div>-->
+
     <template v-if="showOwnerFacets">
       <v-select
         v-if="ownerProps.items.length <= 10"
@@ -35,6 +50,22 @@
         multiple
         :label="$t('status')"
         :items="facets.status"
+        item-value="value"
+        :item-text="item => item.value && `${statuses.dataset[item.value] ? (statuses.dataset[item.value].title[$i18n.locale] || statuses.dataset[item.value].title[$i18n.defaultLocale]) : item.value} (${item.count})`"
+        outlined
+        dense
+        hide-details
+        rounded
+        class="mb-4"
+      />
+    </template>
+
+    <template v-if="facets.draftStatus && facets.draftStatus.length">
+      <v-select
+        v-model="facetsValues.draftStatus"
+        multiple
+        :label="$t('draftStatus')"
+        :items="facets.draftStatus"
         item-value="value"
         :item-text="item => item.value && `${statuses.dataset[item.value] ? (statuses.dataset[item.value].title[$i18n.locale] || statuses.dataset[item.value].title[$i18n.defaultLocale]) : item.value} (${item.count})`"
         outlined
@@ -132,6 +163,7 @@ fr:
   owner: Propriétaire
   visibility: Visibilité
   status: État
+  draftStatus: État de brouillon
   topics: Thématiques
   publicationSites: Portails
   requestedPublicationSites: Portails à valider
@@ -141,6 +173,7 @@ en:
   owner: Owner
   visibility: Visibility
   status: Status
+  draftStatus: État de brouillon
   topics: Topics
   publicationSites: Portals
   requestedPublicationSites: Requested publications
@@ -180,6 +213,16 @@ export default {
         rounded: true,
         class: 'mb-4'
       }
+    },
+    missingFacetsValues () {
+      const missing = []
+      for (const key in this.facetsValues) {
+        for (const value of this.facetsValues[key]) {
+          const matchingFacet = this.facets[key] && this.facets[key].find(f => f.value === value)
+          if (!matchingFacet) missing.push({ key, value })
+        }
+      }
+      return missing
     }
   },
   methods: {

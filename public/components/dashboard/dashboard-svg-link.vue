@@ -7,10 +7,14 @@
   >
     <v-card-title
       style="word-break:normal;line-break:1.5rem;"
-      class="primary--text pb-0"
+      class="primary--text"
+      :class="{'pb-0': !!svg}"
       v-text="title"
     />
-    <v-responsive :aspect-ratio="16/9">
+    <v-responsive
+      v-if="!!svg"
+      :aspect-ratio="16/9"
+    >
       <layout-wrap-svg
         :source="svg"
         style="height:100%;width:100%;"

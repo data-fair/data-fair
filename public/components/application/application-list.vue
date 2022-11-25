@@ -47,35 +47,33 @@
         </v-row>
         <search-progress :loading="loading" />
 
-        <v-responsive
+        <v-container
           v-if="!hasApplications"
-          height="auto"
+          class="mt-6"
         >
-          <v-container class="fill-height">
-            <v-row align="center">
-              <v-col class="text-center">
-                <div
-                  v-if="!filtered"
-                  class="text-h6"
-                >
-                  {{ $t('noApp') }}
-                  <!--<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
+          <v-row align="center">
+            <v-col class="text-center">
+              <div
+                v-if="!filtered"
+                class="text-h6"
+              >
+                {{ $t('noApp') }}
+                <!--<br>Vous pouvez <nuxt-link :to="localePath('user-guide')">
                     consulter la documentation
                   </nuxt-link> pour en savoir plus.-->
-                  <layout-wrap-svg
-                    :source="graphicSvg"
-                    :color="$vuetify.theme.themes.light.primary"
-                  />
-                </div>
-                <div
-                  v-else
-                  v-t="'noResult'"
-                  class="text-h6"
+                <layout-wrap-svg
+                  :source="graphicSvg"
+                  :color="$vuetify.theme.themes.light.primary"
                 />
-              </v-col>
-            </v-row>
-          </v-container>
-        </v-responsive>
+              </div>
+              <div
+                v-else
+                v-t="'noResult'"
+                class="text-h6"
+              />
+            </v-col>
+          </v-row>
+        </v-container>
       </v-container>
 
       <layout-navigation-right v-if="$vuetify.breakpoint.lgAndUp">
