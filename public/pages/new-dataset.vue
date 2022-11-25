@@ -394,6 +394,7 @@
             />
             <dataset-select
               :label="$t('restSource')"
+              :extra-params="{queryable: true}"
               @change="setRestSource"
             />
             <v-checkbox

@@ -43,6 +43,21 @@
             </v-list-item-avatar>
             <span>{{ (dataset.remoteFile || dataset.originalFile || dataset.file).name | truncate(40,4) }} {{ ((dataset.remoteFile || dataset.originalFile || dataset.file).size) | bytes($i18n.locale) }}</span>
           </v-list-item>
+          <v-list-item
+            v-else-if="dataset.draft.file"
+            style="overflow: hidden;"
+          >
+            <v-list-item-avatar class="ml-0 my-0">
+              <v-icon>mdi-file</v-icon>
+            </v-list-item-avatar>
+            <span>{{ (dataset.draft.remoteFile || dataset.draft.originalFile || dataset.draft.file).name | truncate(40,4) }} {{ ((dataset.draft.remoteFile || dataset.draft.originalFile || dataset.draft.file).size) | bytes($i18n.locale) }}</span>
+          </v-list-item>
+          <v-list-item v-if="dataset.draft && !dataset.file">
+            <v-list-item-avatar class="ml-0 my-0">
+              <v-icon>mdi-progress-wrench</v-icon>
+            </v-list-item-avatar>
+            <span v-text="$t('draft')" />
+          </v-list-item>
           <v-list-item v-if="dataset.count !== undefined">
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-view-headline</v-icon>
@@ -109,11 +124,13 @@ fr:
   inc: Jeu de données éditable
   lines: "aucune ligne | 1 ligne | {count} lignes"
   error: En erreur
+  draft: brouillon
 en:
   virtual: Virtual dataset
   inc: Editable dataset
   lines: "no line | 1 line | {count} lines"
   error: Error status
+  draft: draft
 </i18n>
 
 <script>
