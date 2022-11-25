@@ -22,9 +22,7 @@
         :dense="true"
         :show-topics="true"
         :no-link="true"
-      >
-        {{ dataset }}
-      </dataset-list-item>
+      />
     </template>
   </v-autocomplete>
 </template>

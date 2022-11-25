@@ -10,6 +10,10 @@
         editable
       >
         {{ $t('datasetType') }}
+        <small
+          v-if="datasetType"
+          v-t="'type_' + datasetType"
+        />
       </v-stepper-step>
 
       <!-- FILE steps -->
@@ -21,6 +25,11 @@
           :editable="!!datasetType"
         >
           {{ $t('stepFile') }}
+          <small
+            v-if="file"
+          >
+            {{ file.name | truncate(30) }}
+          </small>
         </v-stepper-step>
         <v-divider />
         <v-stepper-step
@@ -29,6 +38,10 @@
           :editable="!!file"
         >
           {{ $t('stepAttachment') }}
+          <small
+            v-if="attachment"
+            v-t="'loaded'"
+          />
         </v-stepper-step>
         <v-divider />
         <v-stepper-step
@@ -37,6 +50,10 @@
           :complete="fileParamsForm"
         >
           {{ $t('stepParams') }}
+          <small
+            v-if="fileParamsForm"
+            v-t="'completed'"
+          />
         </v-stepper-step>
         <v-divider />
         <v-stepper-step
@@ -56,6 +73,10 @@
           :complete="restParamsForm"
         >
           {{ $t('stepParams') }}
+          <small
+            v-if="restParamsForm"
+            v-t="'completed'"
+          />
         </v-stepper-step>
         <v-divider />
         <v-stepper-step
@@ -75,6 +96,10 @@
           :complete="virtualParamsForm"
         >
           {{ $t('stepParams') }}
+          <small
+            v-if="virtualParamsForm"
+            v-t="'completed'"
+          />
         </v-stepper-step>
         <v-divider />
         <v-stepper-step
@@ -94,6 +119,10 @@
           :complete="metaParamsForm"
         >
           {{ $t('stepParams') }}
+          <small
+            v-if="metaParamsForm"
+            v-t="'completed'"
+          />
         </v-stepper-step>
         <v-divider />
         <v-stepper-step
@@ -107,25 +136,35 @@
 
     <v-stepper-items>
       <v-stepper-content step="1">
-        <v-list>
-          <p v-t="'choseType'" />
-          <v-list-item
+        <p v-t="'choseType'" />
+        <v-row
+          dense
+          class="mt-2 mb-6"
+        >
+          <v-card
             v-for="type of datasetTypes"
             :key="type"
+            width="300px"
+            class="ma-1"
+            outlined
+            hover
+            tile
             @click="datasetType = type; $nextTick(() => currentStep = 2);"
           >
-            <v-list-item-icon>
-              <v-icon color="primary">{{ datasetTypeIcons[type] }}</v-icon>
-            </v-list-item-icon>
-            <v-list-item-content>
-              <v-list-item-title v-t="'type_' + type" />
-              <v-list-item-subtitle
-                v-t="'type_desc_' + type"
-                style="white-space:normal"
-              />
-            </v-list-item-content>
-          </v-list-item>
-        </v-list>
+            <v-card-title class="primary--text">
+              <v-icon
+                color="primary"
+                class="mr-2"
+              >
+                {{ datasetTypeIcons[type] }}
+              </v-icon>
+              {{ $t('type_' + type) }}
+            </v-card-title>
+            <v-card-text>
+              {{ $t('type_desc_' + type) }}
+            </v-card-text>
+          </v-card>
+        </v-row>
       </v-stepper-content>
 
       <!-- FILE steps -->
@@ -231,7 +270,6 @@
               dense
               hide-details
               :label="$t('title')"
-              :placeholder="$t('titlePlaceholder')"
               style="max-width: 400px"
               :rules="[val => val && val.length > 3]"
               class="pl-2 mt-5"
@@ -348,10 +386,9 @@
               outlined
               dense
               :label="$t('title')"
-              :placeholder="$t('titlePlaceholder')"
               style="max-width: 400px"
               :rules="[val => val && val.length > 3]"
-              class="pl-2 mt-5"
+              class="mt-5"
             />
             <dataset-select
               :label="$t('restSource')"
@@ -440,6 +477,13 @@
               dense
             />
           </template>
+
+          <v-btn
+            v-t="'createDataset'"
+            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts)"
+            color="primary"
+            @click.native="createDataset(restDataset)"
+          />
         </v-stepper-content>
       </template>
 
@@ -461,10 +505,9 @@
               outlined
               dense
               :label="$t('title')"
-              :placeholder="$t('titlePlaceholder')"
               style="max-width: 400px"
               :rules="[val => val && val.length > 3]"
-              class="pl-2 mt-5"
+              class="mt-5"
             />
             <v-autocomplete
               v-model="virtualChildren"
@@ -478,17 +521,30 @@
               :placeholder="$t('search')"
               return-object
               outlined
-              dense
               hide-details
-              style="max-width: 700px"
-              class="pl-2"
-              clearable
+              style="max-width: 500px"
               multiple
               :required="true"
+              dense
               chips
+              deletable-chips
+              small-chips
               :rules="[value => !!(value && value.length) || '']"
               @change="datasets => {virtualDataset.virtual.children = datasets.map(d => d.id); fillVirtualDataset()}"
-            />
+            >
+              <template #item="{item}">
+                <v-checkbox
+                  readonly
+                  :value="!!virtualDataset.virtual.children.find(d => d === item.id)"
+                />
+                <dataset-list-item
+                  :dataset="item"
+                  :dense="true"
+                  :show-topics="true"
+                  :no-link="true"
+                />
+              </template>
+            </v-autocomplete>
             <v-checkbox
               v-model="virtualDatasetFill"
               hide-details
@@ -577,7 +633,6 @@
               outlined
               dense
               :label="$t('title')"
-              :placeholder="$t('titlePlaceholder')"
               style="max-width: 400px"
               :rules="[val => val && val.length > 3]"
               class="pl-2 mt-5"
@@ -669,7 +724,6 @@ fr:
   loadMainFile: Chargez un fichier de données principal.
   selectFile: sélectionnez ou glissez/déposez un fichier
   title: Titre du jeu de données
-  titlePlaceholder: Laissez vide pour utiliser le nom de fichier
   titleId: Le titre du jeu de données sera utilisé pour construire un identifiant unique visible dans les URLs de pages de portails, les APIs, etc. Cet identifiant ne pourra pas être modifié.
   filenameTitle: Utiliser le nom du fichier pour construire le titre du jeu de données
   continue: Continuer
@@ -700,6 +754,8 @@ fr:
   restSource: Initialiser le schéma en dupliquant celui d'un jeu de données existant
   children: Jeux enfants
   virtualDatasetFill: Initialiser le schéma avec toutes les colonnes des jeux enfants
+  completed: complétés
+  loaded: chargées
 en:
   datasetType: Type de jeu de données
   newDataset: Create a dataset
@@ -720,7 +776,6 @@ en:
   loadMainFile: Load the main data file
   selectFile: select or drag and drop a file
   title: Dataset title
-  titlePlaceholder: Leave empty to use the file name
   titleId: The title of the dataset will be used to create a unique id visible in URLs of portals pages, APIs, etc. This id cannot be changed.
   filenameTitle: Use the file name to create the title of the dataset
   continue: Continue
@@ -750,6 +805,8 @@ en:
   lineOwnership: Accept giving ownership of lines to users (collaborative use-cases)
   children: Children datasets
   virtualDatasetFill: Initialize the schema with all columns from children
+  completed: completed
+  loaded: loaded
 </i18n>
 
 <script>
@@ -922,7 +979,7 @@ export default {
     async searchDatasets () {
       this.loadingDatasets = true
       const res = await this.$axios.$get('api/v1/datasets', {
-        params: { q: this.search, size: 20, select: 'id,title,schema', owner: `${this.activeAccount.type}:${this.activeAccount.id}` }
+        params: { q: this.search, size: 20, select: 'id,title,schema,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions,-links,-owner', owner: `${this.activeAccount.type}:${this.activeAccount.id}`, queryable: true }
       })
       this.datasets = res.results
       this.loadingDatasets = false
