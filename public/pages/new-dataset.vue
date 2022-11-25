@@ -32,18 +32,20 @@
           </small>
         </v-stepper-step>
         <v-divider />
-        <v-stepper-step
-          :step="3"
-          :complete="!!attachment"
-          :editable="!!file"
-        >
-          {{ $t('stepAttachment') }}
-          <small
-            v-if="attachment"
-            v-t="'loaded'"
-          />
-        </v-stepper-step>
-        <v-divider />
+        <template v-if="$route.query.simple !== 'true'">
+          <v-stepper-step
+            :step="3"
+            :complete="!!attachment"
+            :editable="!!file"
+          >
+            {{ $t('stepAttachment') }}
+            <small
+              v-if="attachment"
+              v-t="'loaded'"
+            />
+          </v-stepper-step>
+          <v-divider />
+        </template>
         <v-stepper-step
           :step="4"
           :editable="!!file"
@@ -173,7 +175,7 @@
           <p v-t="'loadMainFile'" />
           <div
             class="mt-3 mb-3"
-            @drop.prevent="e => {file = e.dataTransfer.files[0]; if (!suggestArchive) currentStep = 3}"
+            @drop.prevent="e => {file = e.dataTransfer.files[0]; if (!suggestArchive) currentStep = afterFileStep}"
             @dragover.prevent
           >
             <v-file-input
@@ -184,7 +186,7 @@
               hide-details
               style="max-width: 400px;"
               :accept="accepted.join(', ')"
-              @change="() => {if (!suggestArchive) currentStep = 3}"
+              @change="() => {if (!suggestArchive) currentStep = afterFileStep}"
             />
           </div>
           <v-alert
@@ -199,7 +201,7 @@
             class="mt-2"
             :disabled="!file"
             color="primary"
-            @click.native="currentStep = 3"
+            @click.native="currentStep = afterFileStep"
           />
 
           <h3
@@ -888,6 +890,9 @@ export default {
     },
     suggestArchive () {
       return this.file && this.file.size > 50000000 && (this.file.name.endsWith('.csv') || this.file.name.endsWith('.tsv') || this.file.name.endsWith('.txt') || this.file.name.endsWith('.geojson'))
+    },
+    afterFileStep () {
+      return this.$route.query.simple === 'true' ? 4 : 3
     }
   },
   watch: {

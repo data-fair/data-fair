@@ -94,7 +94,7 @@
             sm="4"
           >
             <dashboard-svg-link
-              to="/new-dataset"
+              to="/new-dataset?simple=true"
               :title="$t('createDataset')"
               :svg="$vuetify.breakpoint.smAndUp ? dataSvg : ''"
             />
