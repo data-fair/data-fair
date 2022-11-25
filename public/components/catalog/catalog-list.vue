@@ -25,7 +25,6 @@
           <search-filters
             :filter-labels="{owner: $t('owner')}"
             :filters="filters"
-            :facets="catalogs && catalogs.facets"
             type="catalogs"
             class="mr-6"
             @apply="refresh()"

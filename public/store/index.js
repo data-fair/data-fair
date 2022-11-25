@@ -39,7 +39,6 @@ export default () => {
       datasetsMetadata: {},
       publicationSites: {},
       env: {},
-      searchQueries: {},
       projections: null,
       propertyTypes,
       breadcrumbsRouteName: null,
@@ -90,11 +89,6 @@ export default () => {
         const publicationSites = state.publicationSites[activeAccount.type + '/' + activeAccount.id]
         if (!publicationSites) return {}
         return publicationSites.reduce((a, ps) => { a[ps.type + ':' + ps.id] = ps; return a }, {})
-      },
-      searchQuery: (state) => (type) => {
-        const searchQuery = Object.assign({}, state.searchQueries[type])
-        if (searchQuery.owner === undefined && state.user) searchQuery.owner = `user:${state.user.id}`
-        return searchQuery
       },
       propTypeTitle: (state) => (prop) => {
         if (prop.type === 'object') return 'Objet JSON'
@@ -187,9 +181,6 @@ export default () => {
         let key = payload.owner.type + '/' + payload.owner.id
         if (payload.owner.department) key += '/' + payload.owner.department
         Vue.set(state.publicationSites, key, payload.publicationSites)
-      },
-      setSearchQuery (state, { type, query }) {
-        Vue.set(state.searchQueries, type, query)
       }
     },
     actions: {
@@ -255,9 +246,6 @@ export default () => {
         url += '/publication-sites'
         const publicationSites = await this.$axios.$get(url)
         commit('ownerPublicationSites', { owner, publicationSites })
-      },
-      searchQuery ({ commit }, params) {
-        commit('setSearchQuery', params)
       },
       breadcrumbs ({ commit }, breadcrumbItems) {
         commit('setAny', { breadcrumbItems, breadcrumbsRouteName: this.$router.currentRoute.name })

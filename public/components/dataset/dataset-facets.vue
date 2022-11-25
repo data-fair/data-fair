@@ -65,8 +65,24 @@
       <v-select
         v-model="facetsValues.publicationSites"
         multiple
-        :label="$t('portals')"
+        :label="$t('publicationSites')"
         :items="facets.publicationSites.filter(item => !item.value || (activeAccountPublicationSitesById && activeAccountPublicationSitesById[item.value]))"
+        :item-value="item => item.value || 'null'"
+        :item-text="item => publicationSiteText(item)"
+        outlined
+        dense
+        hide-details
+        rounded
+        class="mb-4"
+      />
+    </template>
+
+    <template v-if="facets.requestedPublicationSites && facets.requestedPublicationSites.find(item => item.value !== null)">
+      <v-select
+        v-model="facetsValues.requestedPublicationSites"
+        multiple
+        :label="$t('requestedPublicationSites')"
+        :items="facets.requestedPublicationSites.filter(item => !item.value || (activeAccountPublicationSitesById && activeAccountPublicationSitesById[item.value]))"
         :item-value="item => item.value || 'null'"
         :item-text="item => publicationSiteText(item)"
         outlined
@@ -117,7 +133,8 @@ fr:
   visibility: Visibilité
   status: État
   topics: Thématiques
-  portals: Portails
+  publicationSites: Portails
+  requestedPublicationSites: Portails à valider
   extensions: Enrichissement
   concepts: Concepts
 en:
@@ -125,7 +142,8 @@ en:
   visibility: Visibility
   status: Status
   topics: Topics
-  portals: Portals
+  publicationSites: Portals
+  requestedPublicationSites: Requested publications
   extension: Extensions
   concepts: Concepts
 </i18n>

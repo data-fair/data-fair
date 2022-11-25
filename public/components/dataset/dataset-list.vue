@@ -14,6 +14,7 @@
           <search-filters
             :filter-labels="{children: $t('childDataset'), owner: $t('owner')}"
             :filters="filters"
+            :facets-values="facetsValues"
             :sorts="sorts"
             type="datasets"
             class="mr-6"
@@ -96,6 +97,7 @@
               :filter-labels="{children: $t('childDataset'), owner: $t('owner')}"
               :filters="filters"
               :sorts="sorts"
+              :facets-values="facetsValues"
               type="datasets"
               @apply="filtersInitialized=true; refresh()"
             />
@@ -262,7 +264,7 @@ export default {
         sort: 'createdAt:-1',
         ...fullFilters
       }
-      if (!append) params.facets = 'status,visibility,services,concepts,topics,publicationSites,owner'
+      if (!append) params.facets = 'status,visibility,services,concepts,topics,publicationSites,requestedPublicationSites,owner'
       if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
         this.lastParams = params
         this.loading = true

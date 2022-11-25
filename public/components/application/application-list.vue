@@ -19,6 +19,7 @@
           <search-filters
             :filter-labels="{dataset: $t('dataset'), service: $t('service'), url: $t('baseApp'), owner: $t('owner')}"
             :filters="filters"
+            :facets-values="facetsValues"
             :sorts="sorts"
             type="applications"
             class="mr-6"

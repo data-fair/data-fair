@@ -94,35 +94,59 @@ en:
 </i18n>
 
 <script>
-import { mapActions, mapState, mapGetters } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 
 export default {
-  props: ['filters', 'filterLabels', 'type', 'hideOwners', 'sorts'],
+  props: ['filters', 'filterLabels', 'type', 'sorts', 'facetsValues'],
   computed: {
     ...mapState('session', ['user']),
-    ...mapGetters('session', ['activeAccount'])
+    ...mapGetters('session', ['activeAccount']),
+    localStorageKey () {
+      return `df-search:${this.$route.name}:${this.user.id}:${this.activeAccount.type}:${this.activeAccount.id}`
+    }
   },
   watch: {
     '$route' () {
       this.readParams()
+    },
+    facetsValues: {
+      handler () {
+        this.writeParams()
+      },
+      deep: true
     }
   },
   mounted () {
     this.readParams()
   },
   methods: {
-    ...mapActions(['searchQuery']),
     readParams () {
+      let query = this.$route.query
+      if (window.localStorage && Object.keys(this.$route.query).length === 0) {
+        query = JSON.parse(window.localStorage.getItem(this.localStorageKey) || '{}')
+      }
+
+      if (this.facetsValues) {
+        Object.keys(this.facetsValues).forEach(key => {
+          this.$set(this.facetsValues, key, query[key] ? query[key].split(',') : [])
+        })
+      }
       Object.keys(this.filterLabels).forEach(key => {
-        this.$set(this.filters, key, this.$route.query[key])
+        this.$set(this.filters, key, query[key])
       })
-      this.$set(this.filters, 'q', this.$route.query.q)
-      this.$set(this.filters, 'shared', this.$route.query.shared === 'true')
-      if (this.sorts) this.$set(this.filters, 'sort', this.$route.query.sort || 'createdAt:-1')
+      this.$set(this.filters, 'q', query.q)
+      this.$set(this.filters, 'shared', query.shared === 'true')
+      if (this.sorts) this.$set(this.filters, 'sort', query.sort || 'createdAt:-1')
       this.$emit('apply')
     },
     writeParams () {
       const query = { ...this.$route.query }
+      if (this.facetsValues) {
+        Object.keys(this.facetsValues).forEach(key => {
+          if (this.facetsValues[key] && this.facetsValues[key].length) query[key] = this.facetsValues[key].join(',')
+          else delete query[key]
+        })
+      }
       Object.keys(this.filters).forEach(key => {
         if (![null, undefined, '', true].includes(this.filters[key])) query[key] = '' + this.filters[key]
         else delete query[key]
@@ -133,8 +157,13 @@ export default {
       else delete query.owner
       if (this.sorts && this.filters.sort) query.sort = this.filters.sort
       else delete query.sort
-      this.$router.push({ query })
-      this.searchQuery({ type: this.type, query })
+
+      if (window.localStorage) {
+        window.localStorage.setItem(this.localStorageKey, JSON.stringify(query))
+      }
+
+      if (JSON.stringify(this.$route.query) === JSON.stringify(query)) return
+      this.$router.replace({ query })
     }
   }
 }

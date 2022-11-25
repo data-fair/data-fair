@@ -189,6 +189,7 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
     status: 'status',
     topics: 'topics.id',
     publicationSites: 'publicationSites',
+    requestedPublicationSites: 'requestedPublicationSites',
     spatial: 'spatial',
     keywords: 'keywords',
     title: 'title'
@@ -206,9 +207,6 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   if (req.query.queryable === 'true') {
     extraFilters.push({ isMetaOnly: { $ne: true } })
     extraFilters.push({ finalizedAt: { $ne: null } })
-  }
-  if (req.query.hasRequestedPublicationSites === 'true') {
-    extraFilters.push({ 'requestedPublicationSites.0': { $exists: true } })
   }
   if (req.query.file === 'true') {
     extraFilters.push({ file: { $exists: true } })
