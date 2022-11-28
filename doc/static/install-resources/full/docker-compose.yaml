@@ -173,13 +173,16 @@ services:
     restart: 'always'
 
   capture:
-    image: koumoul/capture:1
+    image: koumoul/capture:3
     restart: 'always'
     shm_size: '1gb'
+    security_opt:
+      - seccomp:./capture-seccomp.json
     environment:
       - PUBLIC_URL=${BASE_URL}/capture
       - DIRECTORY_URL=${BASE_URL}/simple-directory
       - PRIVATE_DIRECTORY_URL=http://simple-directory:8080
+      - ONLY_SAME_HOST=true
 
   notify:
     image: ghcr.io/data-fair/notify:3

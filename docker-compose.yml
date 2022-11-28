@@ -79,6 +79,7 @@ services:
       - PUBLIC_URL=http://localhost:5600/capture
       - ONLY_SAME_HOST=false
       - PROMETHEUS_ACTIVE=false
+      - PUPPETEER_ARGS=["--no-sandbox"]
 
   thumbor:
     profiles:
