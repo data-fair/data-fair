@@ -47,7 +47,7 @@
                   </a>
                 </v-list-item-subtitle>
                 <v-list-item-subtitle
-                  v-if="sitesWarnings[`${site.type}:${site.id}`] && sitesWarnings[`${site.type}:${site.id}`].length"
+                  v-if="hasWarning(site)"
                   class="warning--text"
                 >
                   {{ $t('hasWarning') }}{{ sitesWarnings[`${site.type}:${site.id}`].map(w => $t('warning.' + w)).join(', ') }}
@@ -58,7 +58,7 @@
                       hide-details
                       dense
                       :input-value="dataset.publicationSites.includes(`${site.type}:${site.id}`)"
-                      :disabled="!canPublish(site) && !(site.settings && site.settings.staging)"
+                      :disabled="(hasWarning(site) && !dataset.publicationSites.includes(`${site.type}:${site.id}`)) || (!canPublish(site) && !(site.settings && site.settings.staging))"
                       :label="$t('published')"
                       class="mt-0 ml-6"
                       @change="togglePublicationSites(site)"
@@ -68,7 +68,7 @@
                       hide-details
                       dense
                       :input-value="dataset.requestedPublicationSites.includes(`${site.type}:${site.id}`)"
-                      :disabled="dataset.publicationSites.includes(`${site.type}:${site.id}`) || canPublish(site) || !canRequestPublication(site)"
+                      :disabled="(hasWarning(site) && !dataset.requestedPublicationSites.includes(`${site.type}:${site.id}`)) || dataset.publicationSites.includes(`${site.type}:${site.id}`) || canPublish(site) || !canRequestPublication(site)"
                       :label="$t('publicationRequested')"
                       class="mt-0 ml-6"
                       @change="toggleRequestedPublicationSites(site)"
@@ -161,6 +161,11 @@ export default {
         }
       }
       return sitesWarnings
+    },
+    hasWarning () {
+      return (site) => {
+        return this.sitesWarnings[`${site.type}:${site.id}`] && this.sitesWarnings[`${site.type}:${site.id}`].length
+      }
     }
   },
   methods: {
