@@ -761,7 +761,7 @@ fr:
   completed: complétés
   loaded: chargées
 en:
-  datasetType: Type de jeu de données
+  datasetType: Dataset type
   newDataset: Create a dataset
   datasets: Datasets
   home: Home

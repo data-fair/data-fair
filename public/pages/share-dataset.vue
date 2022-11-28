@@ -256,6 +256,7 @@ export default {
     }
   },
   created () {
+    this.$store.dispatch('dataset/clear')
     this.$store.dispatch('breadcrumbs', [{ text: this.$t('home'), to: '/' }, { text: this.$t('shareDataset') }])
     this.$store.dispatch('fetchPublicationSites', this.activeAccount)
   },
