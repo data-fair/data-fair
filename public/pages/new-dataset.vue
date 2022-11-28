@@ -711,6 +711,7 @@ fr:
   datasetType: Type de jeu de données
   newDataset: Créer un jeu de données
   datasets: Jeux de données
+  home: Accueil
   choseType: Choisissez le type de jeu de données que vous souhaitez créer.
   type_file: Fichier
   type_desc_file: Chargez un fichier parmi les nombreux formats supportés.
@@ -763,6 +764,7 @@ en:
   datasetType: Type de jeu de données
   newDataset: Create a dataset
   datasets: Datasets
+  home: Home
   choseType: Chose the type of dataset you wish to create.
   type_file: File
   type_desc_file: Load a file among the many supported formats.
@@ -926,7 +928,11 @@ export default {
     }
   },
   created () {
-    this.$store.dispatch('breadcrumbs', [{ text: this.$t('datasets'), to: '/datasets' }, { text: this.$t('newDataset') }])
+    if (this.$route.query.simple === 'true') {
+      this.$store.dispatch('breadcrumbs', [{ text: this.$t('home'), to: '/' }, { text: this.$t('newDataset') }])
+    } else {
+      this.$store.dispatch('breadcrumbs', [{ text: this.$t('datasets'), to: '/datasets' }, { text: this.$t('newDataset') }])
+    }
   },
   methods: {
     async createFileDataset () {

@@ -171,6 +171,7 @@
 <i18n lang="yaml">
 fr:
   shareDataset: Publier un jeu de données
+  home: Accueil
   dataset: Jeu de données
   selectPortal: Choisissez un portail
   stepDataset: Jeu de données
@@ -185,6 +186,7 @@ fr:
   publicationRequested: La publication sera soumise à un administrateur pour validation.
 en:
   shareDataset: Share a dataset
+  home: Home
   dataset: Dataset
   selectPortal: Select a portal
   stepDataset: Dataset
@@ -231,7 +233,7 @@ export default {
     }
   },
   created () {
-    this.$store.dispatch('breadcrumbs', [{ text: this.$t('datasets'), to: '/datasets' }, { text: this.$t('shareDataset') }])
+    this.$store.dispatch('breadcrumbs', [{ text: this.$t('home'), to: '/' }, { text: this.$t('shareDataset') }])
   },
   methods: {
     ...mapActions('dataset', ['patch']),

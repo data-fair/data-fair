@@ -201,6 +201,7 @@
 <i18n lang="yaml">
 fr:
   updateDataset: Mettre à jour un jeu de données
+  home: Accueil
   dataset: Jeu de données
   selectDataset: Choisissez un jeu de données
   stepFile: Fichier
@@ -223,6 +224,7 @@ fr:
   update: Mettre à jour
 en:
   updateDataset: Update a dataset
+  home: Home
   dataset: Dataset
   selectDataset: Select a dataset
   stepFile: File
@@ -277,7 +279,7 @@ export default {
     }
   },
   created () {
-    this.$store.dispatch('breadcrumbs', [{ text: this.$t('datasets'), to: '/datasets' }, { text: this.$t('updateDataset') }])
+    this.$store.dispatch('breadcrumbs', [{ text: this.$t('home'), to: '/' }, { text: this.$t('updateDataset') }])
   },
   methods: {
     async toggleDataset (dataset) {
