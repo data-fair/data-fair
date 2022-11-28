@@ -1,34 +1,41 @@
 <template>
-  <v-card
-    outlined
-    tile
-    hover
-    :to="to"
-  >
+  <v-card v-bind="cardProps">
     <v-card-title
       style="word-break:normal;line-break:1.5rem;"
-      class="primary--text"
-      :class="{'pb-0': !!svg}"
-      v-text="title"
-    />
-    <v-responsive
-      v-if="!!svg"
-      :aspect-ratio="16/9"
+      class="justify-center"
+      :class="{'pb-0': !!svg, [color + '--text']: !!to}"
     >
-      <layout-wrap-svg
-        :source="svg"
-        style="height:100%;width:100%;"
-      />
-    </v-responsive>
+      {{ title }}
+    </v-card-title>
+
+    <layout-wrap-svg
+      :source="svg"
+      style="height:100%;width:100%;"
+      :color="$vuetify.theme.themes.light[color] || color"
+    />
   </v-card>
 </template>
 
 <script>
 export default {
   props: {
-    to: { type: String, required: true },
+    to: { type: [Object, String], default: null },
     svg: { type: String, required: true },
-    title: { type: String, required: true }
+    title: { type: String, required: true },
+    color: { type: String, default: 'primary' }
+  },
+  computed: {
+    cardProps () {
+      const props = {
+        outlined: true,
+        tile: true
+      }
+      if (this.to) {
+        props.to = this.to
+        props.hover = true
+      }
+      return props
+    }
   }
 }
 </script>

@@ -1,16 +1,22 @@
 <template>
-  <dashboard-metric
+  <!--<dashboard-metric
     :value="nbDatasets"
     :title="$tc('requestedPublications', nbDatasets)"
     :to="{name: 'datasets', query: {requestedPublicationSites: requestedPublicationSitesFacet && requestedPublicationSitesFacet.map(f => f.value).join(',')}}"
+  />-->
+
+  <dashboard-svg-link
+    :to="nbDatasets ? {name: 'datasets', query: {requestedPublicationSites: requestedPublicationSitesFacet && requestedPublicationSitesFacet.map(f => f.value).join(',')}} : null"
+    :title="$tc('requestedPublications', nbDatasets)"
+    :svg="$vuetify.breakpoint.smAndUp ? checklistSvg : ''"
   />
 </template>
 
 <i18n lang="yaml">
 fr:
-  requestedPublications: Publication à valider | Publication à valider | Publications à valider
+  requestedPublications: Aucune publication à valider | 1 publication à valider | {n} publications à valider
 en:
-  requestedPublications: Requested publication | Requested publication | Requested publications
+  requestedPublications: No requested publication | 1 requested publication | {n} requested publications
 </i18n>
 
 <script>
@@ -21,7 +27,8 @@ export default {
   data () {
     return {
       nbDatasets: null,
-      requestedPublicationSitesFacet: null
+      requestedPublicationSitesFacet: null,
+      checklistSvg: require('~/assets/svg/Checklist _Two Color.svg?raw')
     }
   },
   computed: {
