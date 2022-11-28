@@ -6,35 +6,54 @@
     <v-stepper-header>
       <v-stepper-step
         :step="1"
-        :complete="!!dataset"
-        editable
-      >
-        {{ $t('stepDataset') }}
-      </v-stepper-step>
-      <v-divider />
-      <v-stepper-step
-        :step="2"
         :complete="!!publicationSite"
         :editable="!!dataset"
       >
         {{ $t('stepPortal') }}
+        <small v-if="publicationSite">
+          {{ publicationSite.title || publicationSite.url || publicationSite.id | truncate(30) }}
+        </small>
       </v-stepper-step>
       <v-divider />
+
+      <v-stepper-step
+        :step="2"
+        :complete="!!dataset"
+        editable
+      >
+        {{ $t('stepDataset') }}
+        <small v-if="dataset">
+          {{ dataset.title | truncate(30) }}
+        </small>
+      </v-stepper-step>
+      <v-divider />
+
       <v-stepper-step
         :step="3"
+        :editable="metadataForm"
+      >
+        {{ $t('stepPermissions') }}
+        <small
+          v-if="$refs.permissions && $refs.permissions.visibilityLabel"
+        >
+          {{ $refs.permissions.visibilityLabel }}
+        </small>
+      </v-stepper-step>
+      <v-divider />
+
+      <v-stepper-step
+        :step="4"
         :complete="!!metadataForm"
         :editable="!!publicationSite"
       >
         {{ $t('stepMetadata') }}
+        <small
+          v-if="metadataForm"
+          v-t="'completed'"
+        />
       </v-stepper-step>
       <v-divider />
-      <v-stepper-step
-        :step="4"
-        :editable="metadataForm"
-      >
-        {{ $t('stepPermissions') }}
-      </v-stepper-step>
-      <v-divider />
+
       <v-stepper-step
         :step="5"
         :editable="metadataForm"
@@ -45,23 +64,9 @@
 
     <v-stepper-items>
       <v-stepper-content step="1">
-        <v-row class="my-1 mx-0">
-          <dataset-select @change="toggleDataset" />
-        </v-row>
-
-        <v-btn
-          v-t="'continue'"
-          color="primary"
-          class="ml-2 mt-4"
-          :disabled="!dataset"
-          @click.native="currentStep = 2"
-        />
-      </v-stepper-content>
-
-      <v-stepper-content step="2">
         <p>{{ $t('selectPortal') }}</p>
         <v-card
-          v-if="dataset && publicationSites"
+          v-if="publicationSites"
           tile
           outlined
           style="width: 500px;"
@@ -74,7 +79,7 @@
               <v-list-item
                 v-for="(site,i) in publicationSites"
                 :key="i"
-                @click="publicationSite = site;currentStep=3"
+                @click="publicationSite = site;currentStep=2"
               >
                 <v-list-item-content style="overflow:visible;">
                   <v-list-item-title>
@@ -88,7 +93,7 @@
                     {{ site.title || site.url || site.id }}
                   </v-list-item-title>
                   <v-list-item-subtitle
-                    v-if="dataset.owner.department"
+                    v-if="site.department"
                     class="mb-2"
                   >
                     <span>{{ dataset.owner.name }}</span>
@@ -105,18 +110,35 @@
           color="primary"
           class="mt-4"
           :disabled="!publicationSite"
+          @click.native="currentStep = 2"
+        />
+      </v-stepper-content>
+
+      <v-stepper-content step="2">
+        <v-row class="my-1 mx-0">
+          <dataset-select @change="toggleDataset" />
+        </v-row>
+
+        <v-btn
+          v-t="'continue'"
+          color="primary"
+          class="ml-2 mt-4"
+          :disabled="!dataset"
           @click.native="currentStep = 3"
         />
       </v-stepper-content>
 
       <v-stepper-content step="3">
-        <v-form
-          v-if="dataset && publicationSite"
-          ref="metadataForm"
-          v-model="metadataForm"
-        >
-          <dataset-info :required="(publicationSite.settings && publicationSite.settings.datasetsRequiredMetadata) || []" />
-        </v-form>
+        <permissions
+          v-if="dataset && can('getPermissions')"
+          ref="permissions"
+          :disabled="!can('setPermissions')"
+          :resource="dataset"
+          :resource-url="resourceUrl"
+          :api="api"
+          :has-public-deps="hasPublicApplications"
+          :simple="true"
+        />
 
         <v-btn
           v-t="'continue'"
@@ -128,14 +150,16 @@
       </v-stepper-content>
 
       <v-stepper-content step="4">
-        <permissions
-          v-if="dataset && publicationSite && can('getPermissions')"
-          :disabled="!can('setPermissions')"
-          :resource="dataset"
-          :resource-url="resourceUrl"
-          :api="api"
-          :has-public-deps="hasPublicApplications"
-        />
+        <v-form
+          v-if="dataset && publicationSite"
+          ref="metadataForm"
+          v-model="metadataForm"
+        >
+          <dataset-info
+            :required="(publicationSite.settings && publicationSite.settings.datasetsRequiredMetadata) || []"
+            :simple="true"
+          />
+        </v-form>
 
         <v-btn
           v-t="'continue'"
@@ -184,6 +208,7 @@ fr:
   publish: Publier le jeu de données
   requestPublication: Demander la publication de ce jeu de données à un administrateur
   publicationRequested: La publication sera soumise à un administrateur pour validation.
+  completed: complètes
 en:
   shareDataset: Share a dataset
   home: Home
@@ -199,6 +224,7 @@ en:
   publish: Publish the dataset
   requestPublication: Submit the publication of this dataset to an admin for approval
   publicationRequested: The publication will be submitted to an admin for validation.
+  completed: completed
 </i18n>
 
 <script>
@@ -223,10 +249,7 @@ export default {
   },
   watch: {
     async currentStep () {
-      if (this.currentStep === 2) {
-        this.$store.dispatch('fetchPublicationSites', this.activeAccount)
-      }
-      if (this.currentStep === 3) {
+      if (this.currentStep === 4) {
         await this.$nextTick()
         this.$refs.metadataForm.validate()
       }
@@ -234,13 +257,14 @@ export default {
   },
   created () {
     this.$store.dispatch('breadcrumbs', [{ text: this.$t('home'), to: '/' }, { text: this.$t('shareDataset') }])
+    this.$store.dispatch('fetchPublicationSites', this.activeAccount)
   },
   methods: {
     ...mapActions('dataset', ['patch']),
     async toggleDataset (dataset) {
       if (dataset) {
         await this.$store.dispatch('dataset/setId', { datasetId: dataset.id })
-        this.currentStep = 2
+        this.currentStep = 3
       } else {
         this.$store.dispatch('dataset/clear')
       }

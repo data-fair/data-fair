@@ -47,6 +47,7 @@
     />
 
     <v-switch
+      v-if="!simple"
       v-model="detailedMode"
       color="primary"
       :label="$t('detailedMode')"
@@ -166,11 +167,12 @@
 <i18n lang="yaml">
 fr:
   description: Permettez à d'autres utilisateurs d'utiliser cette ressource.
-  publicAccess: Accessible publiquement
-  privateAccessOrg: Accessible aux administrateurs et contributeurs
-  privateAccessUser: Accessible à vous uniquement
-  sharedInOrg: Accessible à tous les utilisateurs de l'organisation
-  sharedInDep: Accessible à tous les utilisateurs du département
+  visibility:
+    public: Accessible publiquement
+    privateOrg: Accessible aux administrateurs et contributeurs
+    privateUser: Accessible à vous uniquement
+    sharedInOrg: Accessible à tous les utilisateurs de l'organisation
+    sharedInDep: Accessible à tous les utilisateurs du département
   warningPrivateDataset: Vous ne devriez pas rendre ce jeu de données privé tant qu'il est présent dans des applications publiques.
   warningPublicApp: Vous ne devriez pas rendre cette application publique, elle utilise des sources de données privées.
   addPermission: Ajouter des permissions
@@ -205,11 +207,12 @@ fr:
   allUsersManageOwnLines: Permettre à tous les utilisateurs externes de gérer leurs propres lignes à l'intérieur de ce jeu de données (usages crowd-sourcing avancés).
 en:
   description: Allow other users to use this resource.
-  publicAccess: Publicly accessible
-  privateAccessOrg: Accessible to admins and contributors
-  privateAccessUser: Accessible only to you
-  sharedInOrg: Accessible to all users of the organization
-  sharedInDep: Accessible to all users of the department
+  visibility:
+    public: Publicly accessible
+    privateOrg: Accessible to admins and contributors
+    privateUser: Accessible only to you
+    sharedInOrg: Accessible to all users of the organization
+    sharedInDep: Accessible to all users of the department
   warningPrivateDataset: You should not make this dataset private as long as it is used in public applications.
   warningPublicApp: You should not make this application public as long as it uses private datasets.
   addPermission: Add permissions
@@ -251,9 +254,9 @@ import permissionDialog from './permission-dialog.vue'
 
 export default {
   components: { permissionDialog },
-  props: ['resource', 'resourceUrl', 'api', 'disabled', 'hasPublicDeps', 'hasPrivateParents'],
+  props: ['resource', 'resourceUrl', 'api', 'disabled', 'hasPublicDeps', 'hasPrivateParents', 'simple'],
   data: () => ({
-    permissions: [],
+    permissions: null,
     currentPermission: {},
     currentPermissionIdx: {},
     showDialog: false,
@@ -295,15 +298,17 @@ export default {
     },
     visibility: {
       get () {
+        if (!this.permissions) return
         if (this.permissions.find(p => this.isPublicPermission(p))) return 'public'
         if (this.permissions.find(p => this.isSharedInDepPermission(p))) return 'sharedInDep'
         if (this.permissions.find(p => this.isSharedInOrgPermission(p))) return 'sharedInOrg'
-        return 'private'
+        if (this.resource.owner.type === 'organization') return 'privateOrg'
+        return 'privateUser'
       },
       set (visibility) {
         this.permissions = this.permissions
           .filter(p => !this.isPublicPermission(p) && !this.isSharedInOrgPermission(p) && !this.isSharedInDepPermission(p))
-        if (visibility === 'private') {
+        if (visibility === 'privateUser' || visibility === 'privateOrg') {
         // nothing to do
         } else if (visibility === 'sharedInOrg') {
           this.permissions.push({ type: 'organization', id: this.resource.owner.id, name: this.resource.owner.name, operations: [], classes: ['read', 'list'] })
@@ -315,17 +320,20 @@ export default {
         this.save()
       }
     },
+    visibilityLabel () {
+      return this.visibility && this.$t('visibility.' + this.visibility)
+    },
     visibilityItems () {
       const items = []
       const privateDisabled = this.hasPublicDeps && this.isPublic
       if (this.resource.owner.type === 'organization') {
-        items.push({ value: 'private', text: this.$t('privateAccessOrg'), disabled: privateDisabled })
-        if (this.resource.owner.department) items.push({ value: 'sharedInDep', text: this.$t('sharedInDep'), disabled: privateDisabled })
-        items.push({ value: 'sharedInOrg', text: this.$t('sharedInOrg'), disabled: privateDisabled })
+        items.push({ value: 'privateOrg', text: this.$t('visibility.privateOrg'), disabled: privateDisabled })
+        if (this.resource.owner.department) items.push({ value: 'visibility.sharedInDep', text: this.$t('sharedInDep'), disabled: privateDisabled })
+        items.push({ value: 'sharedInOrg', text: this.$t('visibility.sharedInOrg'), disabled: privateDisabled })
       } else {
-        items.push({ value: 'private', text: this.$t('privateAccessUser'), disabled: privateDisabled })
+        items.push({ value: 'privateUser', text: this.$t('visibility.privateUser'), disabled: privateDisabled })
       }
-      items.push({ value: 'public', text: this.$t('publicAccess'), disabled: this.hasPrivateParents && !this.isPublic })
+      items.push({ value: 'public', text: this.$t('visibility.public'), disabled: this.hasPrivateParents && !this.isPublic })
       return items
     },
     hasDetailedPermission () {
@@ -348,7 +356,7 @@ export default {
       if (this.detailedMode && !this.ownerDetails) this.fetchOwnerDetails()
     }
   },
-  async mounted () {
+  async created () {
     const permissions = await this.$axios.$get(this.resourceUrl + '/permissions')
     permissions.forEach(p => {
       if (!p.type) p.type = null

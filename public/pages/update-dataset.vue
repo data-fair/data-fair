@@ -12,6 +12,7 @@
         {{ $t('stepFile') }}
       </v-stepper-step>
       <v-divider />
+
       <v-stepper-step
         :step="2"
         :complete="!!dataset"
@@ -20,6 +21,7 @@
         {{ $t('stepDataset') }}
       </v-stepper-step>
       <v-divider />
+
       <v-stepper-step
         :step="3"
         :complete="!!attachment"
@@ -28,6 +30,7 @@
         {{ $t('stepAttachment') }}
       </v-stepper-step>
       <v-divider />
+
       <v-stepper-step
         :step="4"
         :complete="!!metadataForm"

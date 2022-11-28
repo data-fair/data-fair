@@ -6,7 +6,7 @@
       lg="5"
       order-md="2"
     >
-      <v-sheet>
+      <v-sheet v-if="!simple">
         <v-list dense>
           <owner-list-item :owner="dataset.owner" />
 
@@ -411,7 +411,8 @@ const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 
 export default {
   props: {
-    required: { type: Array, default: () => ([]) }
+    required: { type: Array, default: () => ([]) },
+    simple: { type: Boolean, default: false }
   },
   data () {
     return {
