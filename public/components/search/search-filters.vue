@@ -121,11 +121,10 @@ export default {
   },
   methods: {
     readParams () {
-      let query = this.$route.query
+      const query = this.$route.query
+
       // use the last params if this page is opened without parameters
-      if (window.localStorage && Object.keys(this.$route.query).length === 0) {
-        query = JSON.parse(window.localStorage.getItem(this.localStorageKey) || '{}')
-      }
+      // if (window.localStorage && Object.keys(this.$route.query).length === 0) query = JSON.parse(window.localStorage.getItem(this.localStorageKey) || '{}')
 
       if (this.facetsValues) {
         Object.keys(this.facetsValues).forEach(key => {
@@ -160,9 +159,7 @@ export default {
       else delete query.sort
 
       if (JSON.stringify(this.$route.query) === JSON.stringify(query)) return
-      if (window.localStorage) {
-        window.localStorage.setItem(this.localStorageKey, JSON.stringify(query))
-      }
+      // if (window.localStorage) window.localStorage.setItem(this.localStorageKey, JSON.stringify(query))
       this.$router.replace({ query })
     }
   }
