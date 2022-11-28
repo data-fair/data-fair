@@ -159,11 +159,10 @@ export default {
       if (this.sorts && this.filters.sort) query.sort = this.filters.sort
       else delete query.sort
 
+      if (JSON.stringify(this.$route.query) === JSON.stringify(query)) return
       if (window.localStorage) {
         window.localStorage.setItem(this.localStorageKey, JSON.stringify(query))
       }
-
-      if (JSON.stringify(this.$route.query) === JSON.stringify(query)) return
       this.$router.replace({ query })
     }
   }
