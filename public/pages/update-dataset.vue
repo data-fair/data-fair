@@ -195,7 +195,7 @@
 
           <v-row class="mt-4 mb-1 mx-0">
             <dataset-select
-              :extra-params="{isFile: true}"
+              :extra-params="{file: true}"
               @change="toggleDataset"
             />
           </v-row>
@@ -289,7 +289,7 @@
         <v-stepper-content step="2">
           <v-row class="mt-4 mb-1 mx-0">
             <dataset-select
-              :extra-params="{isRest: true}"
+              :extra-params="{rest: true}"
               @change="dataset => toggleDataset(dataset, 3)"
             />
           </v-row>

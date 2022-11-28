@@ -209,9 +209,9 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
     extraFilters.push({ isMetaOnly: { $ne: true } })
     extraFilters.push({ finalizedAt: { $ne: null } })
   }
-  if (req.query.isFile === 'true') {
-    extraFilters.push({ file: { $exists: true } })
-  }
+
+  if (req.query.file === 'true') extraFilters.push({ file: { $exists: true } })
+
   const query = findUtils.query(req, Object.assign({
     filename: 'originalFile.name',
     ids: 'id',
