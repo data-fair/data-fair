@@ -59,15 +59,28 @@
           v-model="form"
           @submit="upload"
         >
-          <v-file-input
-            v-model="file"
-            :label="$t('selectFile')"
-            outlined
-            dense
-            hide-details
-            accept=".csv,.geojson"
-            :rules="[(file) => !!file] || ''"
-          />
+          <div
+            class="mt-3 mb-3"
+            @drop.prevent="e => {file = e.dataTransfer.files[0]; if (!suggestArchive) currentStep = 3}"
+            @dragover.prevent
+          >
+            <v-file-input
+              v-model="file"
+              :label="$t('selectFile')"
+              outlined
+              dense
+              hide-details
+              accept=".csv,.geojson"
+              :rules="[(file) => !!file] || ''"
+            />
+            <v-progress-linear
+              v-if="importing"
+              v-model="uploadProgress"
+              class="my-1"
+              style="max-width: 500px;"
+              :color="$readableColor($vuetify.theme.themes.light.primary, true)"
+            />
+          </div>
         </v-form>
       </v-card-text>
 
@@ -104,7 +117,7 @@
 <i18n lang="yaml">
 fr:
   loadLines: Charger plusieurs lignes depuis un fichier
-  selectFile: sélectionnez un fichier
+  selectFile: sélectionnez glissez/déposez un fichier
   cancel: Annuler
   load: Charger
   ok: Ok
@@ -115,7 +128,7 @@ fr:
   resultDeleted: "{nb} ligne(s) supprimées(s)"
 en:
   loadLines: Load multiple lines from a file
-  selectFile: Select a file
+  selectFile: select or drag and drop a file
   cancel: Cancel
   load: Load
   ok: Ok
@@ -134,23 +147,33 @@ export default {
     dialog: false,
     file: null,
     importing: false,
-    result: null
+    result: null,
+    uploadProgress: 0
   }),
   watch: {
     dialog () {
       this.result = null
       this.file = null
       this.importing = false
+      this.uploadProgress = 0
     }
   },
   methods: {
     async upload (e) {
       if (e) e.preventDefault()
+      const options = {
+        onUploadProgress: (e) => {
+          if (e.lengthComputable) {
+            this.uploadProgress = (e.loaded / e.total) * 100
+          }
+        },
+        params: { draft: true }
+      }
       const formData = new FormData()
       formData.append('actions', this.file)
       this.importing = true
       try {
-        this.result = await this.$axios.$post(`api/v1/datasets/${this.dataset.id}/_bulk_lines`, formData)
+        this.result = await this.$axios.$post(`api/v1/datasets/${this.dataset.id}/_bulk_lines`, formData, options)
       } catch (error) {
         if (typeof (error.response && error.response.data) === 'object') {
           this.result = error.response.data

@@ -76,7 +76,6 @@
               :svg="checklistSvg"
               svg-no-margin
               :section="sections.find(s => s.id === 'metadata')"
-              default-tab="metadata-attachments"
             >
               <template #tabs>
                 <v-tab

@@ -128,8 +128,9 @@
                   mdi-arrow-up
                 </v-icon>
                 <dataset-filter-col
-                  v-if="header.field && header.filterable"
+                  v-if="header.field"
                   :max-height="420"
+                  :filter-height="420"
                   :field="header.field"
                   :filters="filters"
                   @filter="f => addFilter(header.value, f)"
@@ -266,7 +267,7 @@
                   <div :style="`position: relative; max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
                     <span>{{ item[header.value] | cellValues(header.field) }}</span>
                     <v-btn
-                      v-if="hover && !item._tmpState && !filters.find(f => f.field.key === header.value) && header.filterable && isFilterable(item[header.value])"
+                      v-if="hover && !item._tmpState && !filters.find(f => f.field.key === header.value) && isFilterable(header.field, item[header.value])"
                       fab
                       x-small
                       color="primary"
@@ -465,7 +466,6 @@ export default {
                 field.type === 'number' ||
                 field.type === 'integer'
               ),
-          filterable: (!field['x-capabilities'] || field['x-capabilities'].index !== false) && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry',
           tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description),
           field
         }))
@@ -664,9 +664,12 @@ export default {
       this.filters = this.filters.filter(f => !(f.field.key === key))
       this.filters.push(filter)
     },
-    isFilterable (value) {
+    isFilterable (field, value) {
+      if (field['x-capabilities'] && field['x-capabilities'].index === false) return false
+      if (field['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
       if (value === undefined || value === null || value === '') return false
       if (typeof value === 'string' && (value.length > 200 || value.startsWith('{'))) return false
+      if (typeof value === 'string' && value.endsWith('...')) return false
       return true
     }
   }

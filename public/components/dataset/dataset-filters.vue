@@ -58,6 +58,7 @@ export default {
             ' et ' + this.$root.$options.filters.cellValues(filter.maxValue, filter.field)
         }
       }
+      if (filter.type === 'search') operator = 'contient des mots'
       return `${field} ${operator} ${value}`
     }
   }

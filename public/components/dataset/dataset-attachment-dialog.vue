@@ -27,11 +27,14 @@
         <v-icon>mdi-pencil</v-icon>
       </v-btn>
     </template>
-    <v-card outlined>
+    <v-card
+      outlined
+    >
       <v-card-title primary-title>
         {{ index === -1 ? $t('addAttachment') : $t('editAttachment') }}
       </v-card-title>
       <v-form
+        v-if="dialog"
         ref="form"
         v-model="formValid"
       >
@@ -43,11 +46,12 @@
           />
           <template v-if="editValue && editValue.type === 'file'">
             <v-alert
+              v-if="duplicateName"
               type="warning"
               outlined
               dense
             >
-              {{ $t('attachmentNameWarning') }}
+              {{ $t('attachmentNameWarning', {name: editValue.name}) }}
             </v-alert>
             <div class="mt-3 mb-3">
               <v-file-input
@@ -77,7 +81,7 @@
             v-t="'save'"
             color="primary"
             :loading="saving"
-            :disabled="!formValid"
+            :disabled="!formValid || duplicateName || (editValue.type === 'file' && !editValue.name)"
             @click="save"
           />
         </v-card-actions>
@@ -91,12 +95,12 @@ fr:
   addAttachment: Ajouter une pièce jointe
   editAttachment: Modifier la pièce jointe
   selectFile: sélectionnez un fichier
-  attachmentNameWarning: Le nom de fichier doit être unique parmi toutes les pièces jointes du jeu de données sinon les fichiers seront écrasés.
+  attachmentNameWarning: "Il existe déjà une pièce jointe avec le nom de fichier \"{name}\"."
 en:
   addAttachment: Add an attachment
   editAttachment: Edit the attachment
   selectFile: select a file
-  attachmentNameWarning: The file name must be unique accross all attachments of the dataset or the files will be overwritten.
+  attachmentNameWarning: "There is already an attachment with file name \"{name}\"."
 </i18n>
 
 <script>
@@ -121,6 +125,10 @@ export default {
     ...mapState('dataset', ['dataset', 'lineUploadProgress']),
     schema () {
       return datasetSchema.properties.attachments.items
+    },
+    duplicateName () {
+      if (this.editValue.type !== 'file' || !this.editValue.name) return false
+      return !!(this.dataset.attachments || []).find((a, i) => i !== this.index && a.type === 'file' && a.name === this.editValue.name)
     }
   },
   methods: {
@@ -129,6 +137,7 @@ export default {
       this.editValue = { ...this.value }
       if (!this.editValue.type) this.$set(this.editValue, 'type', 'file')
       this.file = null
+      this.uploadProgress = 0
     },
     setFileInfo () {
       if (this.file) {
@@ -144,10 +153,10 @@ export default {
           this.$set(this.editValue, 'mimetype', this.value.mimetype)
           this.$set(this.editValue, 'updatedAt', this.value.updatedAt)
         } else {
-          delete this.editValue.name
-          delete this.editValue.size
-          delete this.editValue.type
-          delete this.editValue.lastModified
+          this.$delete(this.editValue, 'name')
+          this.$delete(this.editValue, 'size')
+          this.$delete(this.editValue, 'mimetype')
+          this.$delete(this.editValue, 'updatedAt')
         }
       }
     },
