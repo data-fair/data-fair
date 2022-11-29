@@ -32,7 +32,7 @@
           </v-card-text>
           <v-card-actions v-if="can('writeData')">
             <v-btn
-              v-if="attachment.mimetype && attachment.mimetype.startsWith('image/') && can('writeDescription')"
+              v-if="canBeThumbnail(attachment) && can('writeDescription')"
               v-t="'thumbnail'"
               text
               @click="patchAndCommit({'image': attachment.url || resourceUrl + '/metadata-attachments/' + attachment.name})"
@@ -87,7 +87,17 @@ export default {
   }),
   computed: {
     ...mapGetters('dataset', ['can', 'resourceUrl']),
-    ...mapState('dataset', ['dataset'])
+    ...mapState('dataset', ['dataset']),
+    canBeThumbnail () {
+      return (attachment) => {
+        if (attachment.type === 'file' && attachment.mimetype && attachment.mimetype.startsWith('image/')) return true
+        if (attachment.type === 'url' && attachment.url) {
+          const lowerUrl = attachment.url.toLowerCase()
+          if (lowerUrl.endsWith('.png') || lowerUrl.endsWith('.jpeg') || lowerUrl.endsWith('.jpg') || lowerUrl.endsWith('.svg')) return true
+        }
+        return false
+      }
+    }
   },
   methods: {
     ...mapActions('dataset', ['patchAndCommit']),
