@@ -166,7 +166,7 @@ fr:
   draftStatus: État de brouillon
   topics: Thématiques
   publicationSites: Portails
-  requestedPublicationSites: Portails à valider
+  requestedPublicationSites: Publications à valider
   extensions: Enrichissement
   concepts: Concepts
 en:
