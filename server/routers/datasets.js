@@ -80,7 +80,7 @@ function clean (publicUrl, dataset, query = {}, draft = false) {
         const attachment = dataset.attachments[i]
         attachment.description = attachment.description || ''
         attachment.description = prepareMarkdownContent(attachment.description, query.html === 'true', null, `dataset:${dataset.id}:attachment-${i}`, dataset.updatedAt)
-        if (!attachment.type === 'file') {
+        if (attachment.type === 'file') {
           attachment.url = `${publicUrl}/api/v1/datasets/${dataset.id}/metadata-attachments/${attachment.name}`
         }
       }
