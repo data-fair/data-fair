@@ -45,7 +45,7 @@
         </v-stepper-step>
         <v-divider />
 
-        <template v-if="dataset && dataset.attachments">
+        <template v-if="dataset && digitalDocumentField">
           <v-stepper-step
             :step="4"
             :complete="!!attachment"
@@ -61,7 +61,7 @@
         </template>
 
         <v-stepper-step
-          :step="5"
+          :step="(dataset && digitalDocumentField) ? 5 : 4"
           :editable="!!publicationSite"
         >
           {{ $t('stepAction') }}
@@ -101,7 +101,7 @@
           <v-card
             v-for="type of datasetTypes"
             :key="type"
-            width="300px"
+            width="460px"
             class="ma-1"
             outlined
             hover
@@ -186,7 +186,7 @@
                     :show-owner="false"
                     :no-link="true"
                     :dense="true"
-                    @click="toggleDataset(dataset)"
+                    @click="toggleDataset(dataset, 4)"
                   />
                 </v-list-item-group>
               </v-list>
@@ -196,7 +196,7 @@
           <v-row class="mt-4 mb-1 mx-0">
             <dataset-select
               :extra-params="{file: true}"
-              @change="toggleDataset"
+              @change="dataset => toggleDataset(dataset, 4)"
             />
           </v-row>
 
@@ -205,11 +205,14 @@
             color="primary"
             class="mt-4"
             :disabled="!dataset"
-            @click.native="currentStep = dataset.attachments ? 4 : 5"
+            @click.native="currentStep = 4"
           />
         </v-stepper-content>
 
-        <v-stepper-content step="4">
+        <v-stepper-content
+          v-if="dataset && digitalDocumentField"
+          step="4"
+        >
           <v-alert
             type="info"
             outlined
@@ -245,7 +248,7 @@
           />
         </v-stepper-content>
 
-        <v-stepper-content step="5">
+        <v-stepper-content :step="(dataset && digitalDocumentField) ? 5 : 4">
           <template v-if="dataset && file">
             <p>{{ $t('updateMsg') }}</p>
             <v-row
@@ -313,13 +316,13 @@
 <i18n lang="yaml">
 fr:
   updateDataset: Mettre à jour un jeu de données
-  datasetType: Type de jeu de données
-  choseType: Choisissez le type de jeu de données que vous souhaitez mettre à jour.
+  datasetType: Type de mise à jour
+  choseType: Quelle action de mise à jour souhaitez vous effectuer ?
   home: Accueil
-  type_file: Fichier
-  type_desc_file: Chargez un fichier parmi les nombreux formats supportés.
-  type_rest: Éditable
-  type_desc_rest: Créez un jeu de données dont le contenu sera saisissable directement avec un formulaire en ligne.
+  type_file: Remplacer un fichier
+  type_desc_file: Chargez un fichier parmi les nombreux formats supportés et remplacez le fichier d'un jeu de données existant.
+  type_rest: Contribuer à un jeu de données éditable
+  type_desc_rest: Créez, supprimez et éditez des lignes. Vous pouvez également charger un fichier pour mettre à jour plusieurs lignes à la fois.
   dataset: Jeu de données
   selectDataset: Choisissez un jeu de données
   stepFile: Fichier
@@ -345,12 +348,12 @@ fr:
 en:
   updateDataset: Update a dataset
   datasetType: Dataset type
-  choseType: Chose the type of dataset you wish to update.
+  choseType: What update action do you wish to perform ?
   home: Home
-  type_file: File
-  type_desc_file: Load a file among the many supported formats.
-  type_rest: Editable
-  type_desc_rest: Create a dataset whose content will be writable directly through a form.
+  type_file: Replace a file
+  type_desc_file: Load a file among the many supported formats and replace an existing file.
+  type_rest: Contribute to an editable file
+  type_desc_rest: Create, update and delete lines. You can also load a file to upadte multiple lines.
   dataset: Dataset
   selectDataset: Select a dataset
   stepFile: File
@@ -400,6 +403,7 @@ export default {
     ...mapState('session', ['user']),
     ...mapGetters('session', ['activeAccount']),
     ...mapState('dataset', ['dataset']),
+    ...mapGetters('dataset', ['digitalDocumentField']),
     suggestArchive () {
       return this.file && this.file.size > 50000000 && (this.file.name.endsWith('.csv') || this.file.name.endsWith('.tsv') || this.file.name.endsWith('.txt') || this.file.name.endsWith('.geojson'))
     }
@@ -419,7 +423,8 @@ export default {
     async toggleDataset (dataset, nextStep) {
       if (dataset) {
         await this.$store.dispatch('dataset/setId', { datasetId: dataset.id })
-        this.currentStep = nextStep || (this.dataset.attachments ? 4 : 5)
+        this.$store.dispatch('dataset/subscribe')
+        this.currentStep = nextStep
       } else {
         this.$store.dispatch('dataset/clear')
       }
