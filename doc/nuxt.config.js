@@ -22,7 +22,7 @@ const base = process.env.DOC_BASE || '/'
 
 module.exports = {
   telemetry: false,
-  ssr: false,
+  ssr: true,
   srcDir: 'doc/',
   target: 'static',
   components: true,
