@@ -24,15 +24,19 @@
       </v-btn>
     </template>
     <v-sheet class="pa-1">
-      <v-text-field
+      <v-combobox
         v-if="showEquals"
         v-model="equals"
+        chips
+        multiple
         label="égal"
         outlined
         hide-details
         dense
+        deletable-chips
         class="mt-1"
-        @keyup.enter="equals && emitFilter(equals)"
+        @change="emitFilter({ type: 'in', values: equals }, false)"
+        @keyup.enter="emitFilter({ type: 'in', values: equals })"
       >
         <template #append-outer>
           <v-btn
@@ -41,12 +45,12 @@
             :disabled="!equals"
             color="primary"
             :title="$t('applyFilter')"
-            @click="emitFilter(equals)"
+            @click="emitFilter({ type: 'in', values: equals })"
           >
             <v-icon>mdi-check</v-icon>
           </v-btn>
         </template>
-      </v-text-field>
+      </v-combobox>
       <v-text-field
         v-if="showStartsWith"
         v-model="startsWith"
@@ -78,10 +82,27 @@
         <v-list-item
           v-for="value in field.enum.slice().sort()"
           :key="value"
-          :input-value="equals === value"
-          @click="emitFilter(value)"
+          :input-value="equals.includes(value)"
+          style="min-height:32px;"
+          class="px-2"
+          @click="toggleEquals(value)"
         >
-          {{ value | cellValues(field) }}
+          <v-list-item-icon class="my-1 mr-3">
+            <v-icon
+              v-if="equals.includes(value)"
+              color="primary"
+            >
+              mdi-checkbox-marked
+            </v-icon>
+            <v-icon v-else>
+              mdi-checkbox-blank-outline
+            </v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>
+              {{ value | cellValues(field) }}
+            </v-list-item-title>
+          </v-list-item-content>
         </v-list-item>
       </v-list>
       <v-list
@@ -214,7 +235,7 @@ export default {
   data () {
     return {
       showMenu: false,
-      equals: '',
+      equals: [],
       startsWith: '',
       equalsBool: null,
       lte: null,
@@ -249,11 +270,18 @@ export default {
         if ('minValue' in filter && filter.minValue !== '*') this.gte = filter.minValue
         if ('maxValue' in filter && filter.maxValue !== '*') this.lte = filter.maxValue
         if (filter.type === 'starts') this.startsWith = filter.value
-        if (filter.type === 'in' && filter.values && filter.values.length === 1) {
-          if (this.field.type === 'string') this.equals = filter.values[0]
+        if (filter.type === 'in' && filter.values && filter.values.length) {
+          if (this.field.type === 'string' || this.field.type === 'number' || this.field.type === 'integer') {
+            this.equals = filter.values
+          }
           if (this.field.type === 'boolean') this.equalsBool = filter.values[0]
         }
       }
+    },
+    toggleEquals (value) {
+      if (this.equals.includes(value)) this.equals = this.equals.filter(v => v !== value)
+      else this.equals.push(value)
+      this.emitFilter({ type: 'in', values: this.equals })
     },
     emitIntervalFilter () {
       if (!this.gte && !this.lte) return
@@ -263,15 +291,17 @@ export default {
         maxValue: this.lte || '*'
       })
     },
-    emitFilter (filter) {
+    emitFilter (filter, close = true) {
       this.$emit('filter', filter)
-      this.showMenu = false
-      this.equals = ''
-      this.startsWith = ''
-      this.equalsBool = null
-      this.lte = null
-      this.gte = null
-      this.editDate = null
+      if (close) {
+        this.showMenu = false
+        this.equals = []
+        this.startsWith = ''
+        this.equalsBool = null
+        this.lte = null
+        this.gte = null
+        this.editDate = null
+      }
     }
   }
 }
