@@ -1,7 +1,7 @@
 <template lang="html">
   <v-container
     fluid
-    class="pa-0"
+    class="pa-0 embed-table"
   >
     <tutorial-alert
       id="dataset-table"
@@ -56,101 +56,136 @@
       </template>
     </v-app-bar>
 
-    <!-- table mode data-table -->
-    <v-data-table
-      v-if="displayMode === 'table'"
-      :headers="selectedHeaders"
-      :server-items-length="data.total"
-      :loading="loading"
-      :options.sync="pagination"
-      hide-default-header
-      hide-default-footer
-      :height="tableHeight"
-    >
-      <template #header>
-        <thead
-          class="v-data-table-header"
-          style="width:100%"
+    <div style="width:100%;overflow-x:auto;">
+      <div
+        class="v-data-table"
+        :style="`max-width:none;width:${totalHeaderWidth}px;`"
+      >
+        <div
+          class="v-data-table__wrapper"
         >
-          <tr>
-            <dataset-table-header
-              v-for="header in selectedHeaders"
-              :key="header.text"
-              :header="header"
-              :filters="filters"
-              :filter-height="filterHeight"
-              :pagination="pagination"
-              @sort="orderBy(header)"
-              @filter="f => addFilter(header.value, f)"
-            />
-          </tr>
-        </thead>
-      </template>
-      <template #body>
-        <tbody>
-          <tr
-            v-for="item in data.results"
-            :key="item._id"
-          >
-            <td
-              v-for="header in selectedHeaders"
-              :key="header.value"
-              :class="`pl-4 pr-0`"
-              :style="`height: ${lineHeight}px;position:relative;`"
+          <table :style="`table-layout:fixed;`">
+            <thead
+              class="v-data-table-header"
+              style="width:100%"
             >
-              <template v-if="header.value === '_thumbnail'">
-                <v-avatar
-                  v-if="item._thumbnail"
-                  tile
-                  :size="lineHeight"
-                >
-                  <img :src="item._thumbnail">
-                </v-avatar>
-              </template>
-              <template v-else-if="header.value === '_owner'">
-                <v-tooltip top>
-                  <template #activator="{on}">
-                    <span
-                      class="text-body-2"
-                      v-on="on"
-                    >
-                      <v-avatar :size="28">
-                        <img :src="`${env.directoryUrl}/api/avatars/${item._owner.split(':').join('/')}/avatar.png`">
-                      </v-avatar>
-                    </span>
-                  </template>
-                  {{ item._owner }}
-                </v-tooltip>
-              </template>
-              <dataset-item-value
-                v-else
-                :item="item"
-                :field="header.field"
+              <tr>
+                <dataset-table-header
+                  v-for="(header, i) in selectedHeaders.filter((header,i) => !!headerWidths[i])"
+                  :id="`visible-header-${i}`"
+                  :key="header.text"
+                  :header="header"
+                  :filters="filters"
+                  :filter-height="filterHeight"
+                  :pagination="pagination"
+                  :style="headerWidths[i] ? `width:${headerWidths[i]}px` : 'display:none'"
+                  @sort="orderBy(header)"
+                  @filter="f => addFilter(header.value, f)"
+                />
+              </tr>
+            </thead>
+          </table>
+        </div>
+      </div>
+
+      <!-- table mode data-table -->
+      <v-data-table
+        v-if="displayMode === 'table'"
+        :headers="selectedHeaders"
+        :server-items-length="data.total"
+        :loading="loading"
+        :options.sync="pagination"
+        hide-default-header
+        hide-default-footer
+        :height="tableHeight"
+        :style="`max-width:none;width:${totalHeaderWidth}px;`"
+      >
+        <template #header>
+          <thead
+            class="v-data-table-header"
+            style="width:100%;height:1px;"
+          >
+            <tr>
+              <dataset-table-header
+                v-for="(header, i) in selectedHeaders"
+                :id="`hidden-header-${i}`"
+                :key="header.text"
+                class="hidden-header"
+                :header="header"
                 :filters="filters"
-                :truncate="truncate"
-                @filter="f => addFilter(header.value, f)"
+                :filter-height="filterHeight"
+                :pagination="pagination"
+                @width="width => $set(headerWidths, header.text, width)"
               />
-            </td>
-          </tr>
-          <tr
-            v-if="data.results"
-            v-intersect="fetchMore"
-            style="position:relative;"
-          >
-            <v-btn
-              v-if="data.next"
-              :loading="loading"
-              text
-              color="primary"
-              :style="`position:absolute;left: ${windowWidth/2}px;transform: translate(-50%, 0);`"
-              @click="fetchMore"
+            </tr>
+          </thead>
+        </template>
+        <template #body>
+          <tbody>
+            <tr
+              v-for="item in data.results"
+              :key="item._id"
             >
-              {{ $t('showMore') }}
-            </v-btn>
-          </tr>
-        </tbody>
-      </template>
-    </v-data-table>
+              <td
+                v-for="header in selectedHeaders"
+                :key="header.value"
+                :class="`pl-4 pr-0`"
+                :style="`height: ${lineHeight}px;position:relative;`"
+              >
+                <template v-if="header.value === '_thumbnail'">
+                  <v-avatar
+                    v-if="item._thumbnail"
+                    tile
+                    :size="lineHeight"
+                  >
+                    <img :src="item._thumbnail">
+                  </v-avatar>
+                </template>
+                <template v-else-if="header.value === '_owner'">
+                  <v-tooltip top>
+                    <template #activator="{on}">
+                      <span
+                        class="text-body-2"
+                        v-on="on"
+                      >
+                        <v-avatar :size="28">
+                          <img :src="`${env.directoryUrl}/api/avatars/${item._owner.split(':').join('/')}/avatar.png`">
+                        </v-avatar>
+                      </span>
+                    </template>
+                    {{ item._owner }}
+                  </v-tooltip>
+                </template>
+                <dataset-item-value
+                  v-else
+                  :item="item"
+                  :field="header.field"
+                  :filters="filters"
+                  :truncate="truncate"
+                  @filter="f => addFilter(header.value, f)"
+                />
+              </td>
+            </tr>
+            <tr
+              v-if="data.results"
+              v-intersect="fetchMore"
+              style="position:relative;"
+            >
+              <v-btn
+                v-if="data.next"
+                :loading="loading"
+                text
+                color="primary"
+                :style="`position:absolute;left: ${windowWidth/2}px;transform: translate(-50%, 0);`"
+                @click="fetchMore"
+              >
+                {{ $t('showMore') }}
+              </v-btn>
+            </tr>
+          </tbody>
+        </template>
+      </v-data-table>
+    </div>
 
     <!-- list mode header -->
     <template v-if="displayMode === 'list'">
@@ -265,7 +300,8 @@ export default {
     filters: [],
     lastParams: null,
     selectedCols: [],
-    ready: false
+    ready: false,
+    headerWidths: []
   }),
   computed: {
     ...mapState(['vocabulary']),
@@ -336,15 +372,20 @@ export default {
     tableHeight () {
       let height = this.windowHeight
       height -= 48 // app bar
+      height -= 48 // table header
       if (this.filters.length) height -= 48 // app bar extension
       return height
     },
     topBottomHeight () {
       let height = 48 // app bar
+      height += 48 // table header
       if (this.filters.length) height += 48 // app bar extension
       height += 48 // table header
       height += 36 // bottom button
       return height
+    },
+    totalHeaderWidth () {
+      return this.headerWidths.reduce((a, w) => a + w, 0)
     }
   },
   watch: {
@@ -408,6 +449,7 @@ export default {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       this.loading = false
+      this.syncHeaderWidths()
     },
     async fetchMore (entries, observer, isIntersecting) {
       if (!this.data.next || this.loading || isIntersecting === false) return
@@ -465,13 +507,26 @@ export default {
         delete query.sort
       }
       this.$router.push({ query })
+    },
+    async syncHeaderWidths () {
+      await this.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      const children = this.$el.querySelectorAll('.hidden-header')
+      const headerWidths = []
+      for (const child of children) {
+        headerWidths.push(child.clientWidth)
+      }
+      this.headerWidths = headerWidths
     }
   }
 }
 </script>
 
 <style>
-.embed .v-data-table td {
+.embed-table .v-data-table td {
   white-space: nowrap;
+}
+.embed-table .v-toolbar__extension {
+  padding-left:0;
 }
 </style>
