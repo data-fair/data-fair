@@ -826,7 +826,6 @@ export default {
     uploadProgress: { rate: 0 },
     conflicts: [],
     importing: false,
-    datasetTypes: ['file', 'rest', 'virtual', 'metaOnly'],
     datasetTypeIcons: {
       file: 'mdi-file-upload',
       rest: 'mdi-all-inclusive',
@@ -876,6 +875,9 @@ export default {
     ...mapState('session', ['user']),
     ...mapGetters('session', ['activeAccount']),
     ...mapState(['env', 'accepted']),
+    datasetTypes () {
+      return this.$route.query.simple === 'true' ? ['file', 'rest', 'metaOnly'] : ['file', 'rest', 'virtual', 'metaOnly']
+    },
     restDatasetAttachments: {
       get () {
         return !!this.restDataset.schema.find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
