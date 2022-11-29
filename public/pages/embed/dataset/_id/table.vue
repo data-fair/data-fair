@@ -14,7 +14,8 @@
       app
       dense
       :color="$vuetify.theme.dark ? 'black' : 'white'"
-      :scroll-target="displayMode === 'table' ? '.v-data-table__wrapper' : ''"
+      :scroll-target="displayMode === 'table' ? '.real-data-table .v-data-table__wrapper' : ''"
+      :extension-height="extensionHeight"
     >
       <v-toolbar-title style="white-space:normal;">
         <dataset-nb-results
@@ -48,49 +49,59 @@
         :params="downloadParams"
         :total="data.total"
       />
-      <template
-        v-if="filters.length"
-        #extension
-      >
-        <dataset-filters v-model="filters" />
+      <template #extension>
+        <v-col class="pa-0">
+          <v-row
+            v-if="filters.length"
+            class="ma-0 align-center"
+            style="height:32px;"
+          >
+            <dataset-filters
+              v-model="filters"
+            />
+          </v-row>
+
+          <!-- fake table only here to have a fiex position header that follow the scroll on the actual table -->
+          <v-row
+            v-if="displayMode === 'table'"
+            class="v-data-table ma-0"
+          >
+            <div
+              class="v-data-table__wrapper"
+              :style="`overflow:visible;position:relative;left:-${scrollHeader}px;`"
+            >
+              <table :style="`table-layout:fixed;`">
+                <thead
+                  class="v-data-table-header"
+                  style="width:100%"
+                >
+                  <tr>
+                    <dataset-table-header
+                      v-for="(header, i) in selectedHeaders.filter((header,i) => !!headerWidths[i])"
+                      :id="`visible-header-${i}`"
+                      :key="header.text"
+                      :header="header"
+                      :filters="filters"
+                      :filter-height="filterHeight"
+                      :pagination="pagination"
+                      :style="headerWidths[i] ? `width:${headerWidths[i]}px` : 'display:none'"
+                      @sort="orderBy(header)"
+                      @filter="f => addFilter(header.value, f)"
+                    />
+                  </tr>
+                </thead>
+              </table>
+            </div>
+          </v-row>
+        </v-col>
       </template>
     </v-app-bar>
 
-    <div style="width:100%;overflow-x:auto;">
-      <div
-        class="v-data-table"
-        :style="`max-width:none;width:${totalHeaderWidth}px;`"
-      >
-        <div
-          class="v-data-table__wrapper"
-        >
-          <table :style="`table-layout:fixed;`">
-            <thead
-              class="v-data-table-header"
-              style="width:100%"
-            >
-              <tr>
-                <dataset-table-header
-                  v-for="(header, i) in selectedHeaders.filter((header,i) => !!headerWidths[i])"
-                  :id="`visible-header-${i}`"
-                  :key="header.text"
-                  :header="header"
-                  :filters="filters"
-                  :filter-height="filterHeight"
-                  :pagination="pagination"
-                  :style="headerWidths[i] ? `width:${headerWidths[i]}px` : 'display:none'"
-                  @sort="orderBy(header)"
-                  @filter="f => addFilter(header.value, f)"
-                />
-              </tr>
-            </thead>
-          </table>
-        </div>
-      </div>
-
-      <!-- table mode data-table -->
+    <!-- table mode data-table -->
+    <template v-if="displayMode === 'table'">
+      <!-- actual data-table the header is hidden, the visible header is in the app bar-->
       <v-data-table
-        v-if="displayMode === 'table'"
+        class="real-data-table"
         :headers="selectedHeaders"
         :server-items-length="data.total"
         :loading="loading"
@@ -98,12 +109,12 @@
         hide-default-header
         hide-default-footer
         :height="tableHeight"
-        :style="`max-width:none;width:${totalHeaderWidth}px;`"
+        style="margin-top:-48px"
       >
         <template #header>
           <thead
             class="v-data-table-header"
-            style="width:100%;height:1px;"
+            style="width:100%;"
           >
             <tr>
               <dataset-table-header
@@ -115,7 +126,6 @@
                 :filters="filters"
                 :filter-height="filterHeight"
                 :pagination="pagination"
-                @width="width => $set(headerWidths, header.text, width)"
               />
             </tr>
           </thead>
@@ -185,7 +195,7 @@
           </tbody>
         </template>
       </v-data-table>
-    </div>
+    </template>
 
     <!-- list mode header -->
     <template v-if="displayMode === 'list'">
@@ -301,7 +311,8 @@ export default {
     lastParams: null,
     selectedCols: [],
     ready: false,
-    headerWidths: []
+    headerWidths: [],
+    scrollHeader: 0
   }),
   computed: {
     ...mapState(['vocabulary']),
@@ -368,18 +379,21 @@ export default {
       if (this.selectedCols.length === 0) return this.params
       return { ...this.params, select: this.selectedCols.join(',') }
     },
+    extensionHeight () {
+      let height = 0
+      if (this.filters.length) height += 32
+      if (this.displayMode === 'table') height += 48
+      return height
+    },
     tableHeight () {
       let height = this.windowHeight
-      height -= 48 // app bar
-      height -= 48 // table header
-      if (this.filters.length) height -= 48 // app bar extension
+      // height -= 48 // app bar cancelled by margin-top=-48px on the table
+      height -= this.extensionHeight
       return height
     },
     topBottomHeight () {
       let height = 48 // app bar
-      height += 48 // table header
-      if (this.filters.length) height += 48 // app bar extension
-      height += 48 // table header
+      height += this.extensionHeight
       height += 36 // bottom button
       return height
     },
@@ -417,8 +431,18 @@ export default {
     await this.$nextTick()
     this.ready = true
     this.refresh()
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    if (this.displayMode === 'table') {
+      const tableWrapper = document.querySelector('.real-data-table .v-data-table__wrapper')
+      tableWrapper.addEventListener('scroll', () => {
+        this.scrollHeader = tableWrapper.scrollLeft
+      })
+    }
   },
   methods: {
+    onScroll () {
+      console.log('BIM')
+    },
     async refresh (resetPagination, initial) {
       if (!this.ready) return
       if (!initial) this.writeQueryParams()
@@ -462,6 +486,7 @@ export default {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       this.loading = false
+      this.syncHeaderWidths()
     },
     orderBy (header) {
       if (!header.sortable) return
@@ -509,7 +534,6 @@ export default {
     },
     async syncHeaderWidths () {
       await this.$nextTick()
-      await new Promise(resolve => setTimeout(resolve, 1000))
       const children = this.$el.querySelectorAll('.hidden-header')
       const headerWidths = []
       for (const child of children) {
