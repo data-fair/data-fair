@@ -108,7 +108,7 @@ export default {
   props: ['value', 'index'],
   data: () => ({
     vjsfOptions: {
-      easyMDEOptions: { minHeight: '150px' }
+      easyMDEOptions: { minHeight: '100px' }
     },
     dialog: false,
     file: null,
