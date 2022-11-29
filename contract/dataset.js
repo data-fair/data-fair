@@ -218,35 +218,69 @@ module.exports = {
       type: 'array',
       items: {
         type: 'object',
-        additionalProperties: false,
-        required: ['name'],
+        required: ['title'],
         properties: {
-          name: {
-            type: 'string',
-            description: 'Name of the file that was used to create or update this attachment'
-          },
           title: {
             type: 'string',
-            description: 'Short title of the attachment'
+            title: 'Titre',
+            'x-props': { outlined: true, dense: true }
           },
           description: {
             type: 'string',
-            description: 'Short description of this attachment'
-          },
-          size: {
-            type: 'number',
-            description: 'Size of the file on disk'
-          },
-          mimetype: {
-            type: 'string',
-            description: 'Mime type of the file'
-          },
-          updatedAt: {
-            type: 'string',
-            description: 'Date of the last update for this attachment',
-            format: 'date-time'
+            title: 'Description',
+            'x-display': 'markdown'
           }
-        }
+        },
+        oneOf: [{
+          title: 'Fichier',
+          required: ['name'],
+          properties: {
+            type: {
+              title: 'Type de pièce jointe',
+              const: 'file'
+            },
+            name: {
+              'x-display': 'hidden',
+              type: 'string',
+              description: 'Name of the file that was used to create or update this attachment'
+            },
+            size: {
+              'x-display': 'hidden',
+              type: 'number',
+              description: 'Size of the file on disk'
+            },
+            mimetype: {
+              'x-display': 'hidden',
+              type: 'string',
+              description: 'Mime type of the file'
+            },
+            updatedAt: {
+              'x-display': 'hidden',
+              type: 'string',
+              description: 'Date of the last update for this attachment',
+              format: 'date-time'
+            },
+            url: {
+              'x-display': 'hidden',
+              readOnly: true,
+              type: 'string',
+              title: 'URL'
+            }
+          }
+        }, {
+          title: 'Lien',
+          required: ['url'],
+          properties: {
+            type: {
+              title: 'Type de pièce jointe',
+              const: 'url'
+            },
+            url: {
+              type: 'string',
+              title: 'URL'
+            }
+          }
+        }]
       }
     },
     remoteFile: {

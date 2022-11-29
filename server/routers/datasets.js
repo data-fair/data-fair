@@ -75,6 +75,16 @@ function clean (publicUrl, dataset, query = {}, draft = false) {
         field.description = prepareMarkdownContent(field.description, query.html === 'true', null, `dataset:${dataset.id}:${field.key}`, dataset.updatedAt)
       }
     }
+    if (dataset.attachments) {
+      for (let i = 0; i < dataset.attachments.length; i++) {
+        const attachment = dataset.attachments[i]
+        attachment.description = attachment.description || ''
+        attachment.description = prepareMarkdownContent(attachment.description, query.html === 'true', null, `dataset:${dataset.id}:attachment-${i}`, dataset.updatedAt)
+        if (!attachment.type === 'file') {
+          attachment.url = `${publicUrl}/api/v1/datasets/${dataset.id}/metadata-attachments/${attachment.name}`
+        }
+      }
+    }
 
     if (dataset.schema && !select.includes('-previews')) {
       dataset.previews = datasetUtils.previews(dataset)

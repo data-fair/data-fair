@@ -1,34 +1,11 @@
 <template lang="html">
   <v-container fluid>
-    <v-row>
-      <v-col>
-        <template v-if="can('writeData')">
-          <p v-t="'message'" />
-          <v-file-input
-            :label="$t('selectFile')"
-            outlined
-            dense
-            style="max-width: 300px;"
-            @change="onFileUpload"
-          />
-          <v-btn
-            v-t="'load'"
-            :disabled="!file || uploading"
-            color="primary"
-            @click="confirmUpload()"
-          />
-          <v-progress-linear
-            v-if="uploading"
-            v-model="uploadProgress"
-          />
-        </template>
-        <p
-          v-else-if="!dataset.attachments || dataset.attachments.length === 0"
-          v-t="'noAttachment'"
-        />
-      </v-col>
-    </v-row>
-    <v-row>
+    <dataset-attachment-dialog
+      v-if="can('postMetadataAttachment')"
+      :value="{}"
+      :index="-1"
+    />
+    <v-row class="mt-2">
       <v-col
         v-for="(attachment, i) in dataset.attachments"
         :key="i"
@@ -36,28 +13,43 @@
         md="6"
         lg="4"
       >
-        <v-card>
+        <v-card
+          tile
+          outlined
+        >
           <v-card-title primary-title>
-            <a :href="resourceUrl + '/metadata-attachments/' + attachment.name">{{ attachment.name }} ({{ (attachment.size / 1000).toFixed(2) }} ko)</a>
+            <a
+              :href="attachment.url || resourceUrl + '/metadata-attachments/' + attachment.name"
+              download
+            >{{ attachment.title }}</a>
           </v-card-title>
-          <v-card-text>
+          <v-card-text v-if="attachment.type === 'file'">
+            <span>{{ attachment.name }} ({{ (attachment.size / 1000).toFixed(2) }} ko)</span>
             <span>{{ attachment.updatedAt | moment("lll") }}</span>
+          </v-card-text>
+          <v-card-text v-if="attachment.type === 'url'">
+            <span>{{ attachment.url }}</span>
           </v-card-text>
           <v-card-actions v-if="can('writeData')">
             <v-btn
-              v-if="attachment.mimetype && attachment.mimetype.startsWith('image/')"
+              v-if="attachment.mimetype && attachment.mimetype.startsWith('image/') && can('writeDescription')"
               v-t="'thumbnail'"
               text
-              @click="patchAndCommit({'image': resourceUrl + '/metadata-attachments/' + attachment.name})"
+              @click="patchAndCommit({'image': attachment.url || resourceUrl + '/metadata-attachments/' + attachment.name})"
             />
             <v-spacer />
-            <v-btn
-              icon
-              color="warning"
-              @click="deleteAttachment(attachment)"
-            >
-              <v-icon>mdi-delete</v-icon>
-            </v-btn>
+            <dataset-attachment-dialog
+              v-if="can('postMetadataAttachment')"
+              :value="attachment"
+              :index="i"
+            />
+            <confirm-menu
+              v-if="can('deleteMetadataAttachment')"
+              yes-color="warning"
+              :text="$t('deleteText')"
+              :tooltip="$t('delete')"
+              @confirm="deleteAttachment(i)"
+            />
           </v-card-actions>
         </v-card>
       </v-col>
@@ -72,17 +64,20 @@ fr:
   load: Charger
   noAttachment: Aucune pièce jointe chargée pour l'instant.
   thumbnail: utiliser comme vignette
+  delete: Supprimer la pièce jointe
+  deleteText: Souhaitez-vous confirmer la suppression ?
 en:
   message: Load a file to create/update an attachment. The file name is used as identifier of the attachment.
   selectFile: select a file
   load: Load
   noAttachment: No attachment uploaded yet.
   thumbnail: use as a thumbnail
+  delete: Delete attachment
+  deleteText: Do you really want to delete this attachment ?
 </i18n>
 
 <script>
 import { mapGetters, mapState, mapActions } from 'vuex'
-import eventBus from '~/event-bus'
 
 export default {
   data: () => ({
@@ -96,46 +91,13 @@ export default {
   },
   methods: {
     ...mapActions('dataset', ['patchAndCommit']),
-    onFileUpload (file) {
-      this.file = file
-    },
-    async confirmUpload () {
-      const options = {
-        onUploadProgress: (e) => {
-          if (e.lengthComputable) {
-            this.uploadProgress = (e.loaded / e.total) * 100
-          }
-        }
+    async deleteAttachment (i) {
+      const attachment = this.dataset.attachments[i]
+      if (attachment.type === 'file' && attachment.name) {
+        await this.$axios.$delete('api/v1/datasets/' + this.dataset.id + '/metadata-attachments/' + attachment.name)
       }
-      const formData = new FormData()
-      formData.append('attachment', this.file)
-
-      this.uploading = true
-      try {
-        const newAttachment = await this.$axios.$post('api/v1/datasets/' + this.dataset.id + '/metadata-attachments', formData, options)
-        const attachments = this.dataset.attachments || []
-        const existingAttachment = attachments.find(a => a.name === newAttachment.name)
-        if (existingAttachment) {
-          Object.assign(existingAttachment, newAttachment)
-        } else {
-          attachments.push(newAttachment)
-        }
-        await this.patchAndCommit({ attachments })
-      } catch (error) {
-        const status = error.response && error.response.status
-        if (status === 413) {
-          eventBus.$emit('notification', { type: 'error', msg: 'Le fichier est trop volumineux pour être importé' })
-        } else if (status === 429) {
-          eventBus.$emit('notification', { type: 'error', msg: 'Le propriétaire n\'a pas assez d\'espace disponible pour ce fichier' })
-        } else {
-          eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'import du fichier:' })
-        }
-      }
-      this.uploading = false
-    },
-    async deleteAttachment (attachment) {
-      await this.$axios.$delete('api/v1/datasets/' + this.dataset.id + '/metadata-attachments/' + attachment.name)
-      const attachments = (this.dataset.attachments || []).filter(a => a.name !== attachment.name)
+      const attachments = [...this.dataset.attachments]
+      attachments.splice(i, 1)
       await this.patchAndCommit({ attachments })
     }
   }

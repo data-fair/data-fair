@@ -76,14 +76,19 @@
               :svg="checklistSvg"
               svg-no-margin
               :section="sections.find(s => s.id === 'metadata')"
+              default-tab="metadata-attachments"
             >
               <template #tabs>
-                <v-tab href="#metadata-info">
+                <v-tab
+                  key="metadata-info"
+                  href="#metadata-info"
+                >
                   <v-icon>mdi-information</v-icon>&nbsp;&nbsp;{{ $t('info') }}
                 </v-tab>
 
                 <v-tab
                   v-if="!dataset.draftReason"
+                  key="metadata-attachments"
                   href="#metadata-attachments"
                 >
                   <v-icon>mdi-attachment</v-icon>&nbsp;&nbsp;{{ $t('attachments') }}

@@ -23,6 +23,7 @@
               x-small
               class="mx-2"
               :disabled="dataset.schema.filter(f => !f['x-calculated']).length === 0"
+              :title="$t('addLine')"
               @click="editedLine = null; showEditLineDialog();"
             >
               <v-icon>mdi-plus</v-icon>
