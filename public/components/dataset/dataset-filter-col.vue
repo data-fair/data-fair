@@ -287,8 +287,8 @@ export default {
       if (!this.gte && !this.lte) return
       this.emitFilter({
         type: 'interval',
-        minValue: this.gte || '*',
-        maxValue: this.lte || '*'
+        minValue: this.gte,
+        maxValue: this.lte
       })
     },
     emitFilter (filter, close = true) {
