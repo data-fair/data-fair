@@ -288,7 +288,6 @@ export default {
                 field.type === 'number' ||
                 field.type === 'integer'
               ),
-          filterable: (!field['x-capabilities'] || field['x-capabilities'].index !== false) && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry',
           tooltip: field.description || (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description),
           field
         }))

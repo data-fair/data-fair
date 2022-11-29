@@ -24,7 +24,7 @@
         mdi-arrow-up
       </v-icon>
       <dataset-filter-col
-        v-if="header.field && header.filterable"
+        v-if="header.field"
         :max-height="filterHeight"
         :field="header.field"
         :filters="filters"

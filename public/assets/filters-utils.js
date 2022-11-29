@@ -2,7 +2,8 @@
 export function filter2qs (filter, locale = 'fr') {
   if (typeof filter === 'string') return filter
 
-  const key = escape(filter.field.key)
+  let key = escape(filter.field.key)
+  if (filter.nested) key += '.' + filter.nested
 
   if (!filter.type || filter.type === 'in') {
     if ([null, undefined, ''].includes(filter.values)) return null
@@ -25,6 +26,9 @@ export function filter2qs (filter, locale = 'fr') {
       }[locale])
     }
     return `${key}:${escape(filter.value)}*`
+  } else if (filter.type === 'search') {
+    if ([null, undefined, ''].includes(filter.value)) return null
+    return `${key}:${escape(filter.value)}`
   }
 }
 

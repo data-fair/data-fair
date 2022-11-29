@@ -51,6 +51,7 @@
           </v-btn>
         </template>
       </v-combobox>
+
       <v-text-field
         v-if="showStartsWith"
         v-model="startsWith"
@@ -74,37 +75,31 @@
           </v-btn>
         </template>
       </v-text-field>
-      <v-list
-        v-if="showEnum"
+
+      <v-text-field
+        v-if="showSearch"
+        v-model="search"
+        label="contient des mots"
+        outlined
+        hide-details
         dense
-        class="py-0"
+        class="mt-1"
+        @keyup.enter="search && emitFilter({value: search, type: 'search', nested: showSearch})"
       >
-        <v-list-item
-          v-for="value in field.enum.slice().sort()"
-          :key="value"
-          :input-value="equals.includes(value)"
-          style="min-height:32px;"
-          class="px-2"
-          @click="toggleEquals(value)"
-        >
-          <v-list-item-icon class="my-1 mr-3">
-            <v-icon
-              v-if="equals.includes(value)"
-              color="primary"
-            >
-              mdi-checkbox-marked
-            </v-icon>
-            <v-icon v-else>
-              mdi-checkbox-blank-outline
-            </v-icon>
-          </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>
-              {{ value | cellValues(field) }}
-            </v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-      </v-list>
+        <template #append-outer>
+          <v-btn
+            icon
+            class="mr-1"
+            :disabled="!search"
+            color="primary"
+            :title="$t('applyFilter')"
+            @click="emitFilter({value: search, type: 'search', nested: showSearch})"
+          >
+            <v-icon>mdi-check</v-icon>
+          </v-btn>
+        </template>
+      </v-text-field>
+
       <v-list
         v-if="showBoolEquals"
         dense
@@ -123,6 +118,7 @@
           {{ false | cellValues(field) }}
         </v-list-item>
       </v-list>
+
       <!-- num interval -->
       <v-text-field
         v-if="showNumCompare"
@@ -218,6 +214,39 @@
         v-model="lte"
         no-title
       />
+
+      <!-- enum -->
+      <v-list
+        v-if="showEnum"
+        dense
+        class="py-0"
+      >
+        <v-list-item
+          v-for="value in field.enum.slice().sort()"
+          :key="value"
+          :input-value="equals.includes(value)"
+          style="min-height:32px;"
+          class="px-2"
+          @click="toggleEquals(value)"
+        >
+          <v-list-item-icon class="my-1 mr-3">
+            <v-icon
+              v-if="equals.includes(value)"
+              color="primary"
+            >
+              mdi-checkbox-marked
+            </v-icon>
+            <v-icon v-else>
+              mdi-checkbox-blank-outline
+            </v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>
+              {{ value | cellValues(field) }}
+            </v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+      </v-list>
     </v-sheet>
   </v-menu>
 </template>
@@ -237,6 +266,7 @@ export default {
       showMenu: false,
       equals: [],
       startsWith: '',
+      search: '',
       equalsBool: null,
       lte: null,
       gte: null,
@@ -245,31 +275,50 @@ export default {
   },
   computed: {
     showEnum () {
+      if (this.field['x-capabilities'] && this.field['x-capabilities'].index === false) return false
       return this.field.enum && this.field['x-cardinality'] > 1
     },
     showEquals () {
-      return !this.showEnum && this.field.type === 'string' && (!this.field.format || this.field.format === 'uri-reference')
+      if (this.showEnum) return false
+      if (this.field['x-capabilities'] && this.field['x-capabilities'].index === false) return false
+      if (this.field['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
+      if (this.field.type === 'string' && (!this.field.format || this.field.format === 'uri-reference')) return true
+      if (this.field.type === 'number' || this.field.type === 'integer') return true
+      return false
     },
     showBoolEquals () {
+      if (this.field['x-capabilities'] && this.field['x-capabilities'].index === false) return false
       return !this.showEnum && this.field.type === 'boolean'
     },
     showStartsWith () {
-      return this.field.type === 'string' && (!this.field.format || this.field.format === 'uri-reference')
+      return this.field.type === 'string' && this.showEquals
     },
     showNumCompare () {
+      if (this.field['x-capabilities'] && this.field['x-capabilities'].index === false) return false
       return this.field.type === 'integer' || this.field.type === 'number'
     },
     showDateCompare () {
+      if (this.field['x-capabilities'] && this.field['x-capabilities'].index === false) return false
       return this.field.type === 'string' && (this.field.format === 'date' || this.field.format === 'date-time')
+    },
+    showSearch () {
+      if (this.showEnum) return ''
+      if (this.field.type !== 'string') return ''
+      if (this.field.format && this.field.format !== 'uri-reference') return ''
+      if (!this.field['x-capabilities'] || this.field['x-capabilities'].text !== false) return 'text'
+      if (!this.field['x-capabilities'] || this.field['x-capabilities'].textStandard !== false) return 'text_standard'
+      return ''
     }
   },
   methods: {
     toggledMenu () {
+      this.emptyFilters()
       const filters = this.filters.filter(f => f.field.key === this.field.key)
       for (const filter of filters) {
         if ('minValue' in filter && filter.minValue !== '*') this.gte = filter.minValue
         if ('maxValue' in filter && filter.maxValue !== '*') this.lte = filter.maxValue
         if (filter.type === 'starts') this.startsWith = filter.value
+        if (filter.type === 'search') this.search = filter.value
         if (filter.type === 'in' && filter.values && filter.values.length) {
           if (this.field.type === 'string' || this.field.type === 'number' || this.field.type === 'integer') {
             this.equals = filter.values
@@ -295,13 +344,17 @@ export default {
       this.$emit('filter', filter)
       if (close) {
         this.showMenu = false
-        this.equals = []
-        this.startsWith = ''
-        this.equalsBool = null
-        this.lte = null
-        this.gte = null
-        this.editDate = null
+        this.emptyFilters()
       }
+    },
+    emptyFilters () {
+      this.equals = []
+      this.startsWith = ''
+      this.search = ''
+      this.equalsBool = null
+      this.lte = null
+      this.gte = null
+      this.editDate = null
     }
   }
 }
