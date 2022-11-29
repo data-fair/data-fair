@@ -35,6 +35,7 @@
         dense
         deletable-chips
         class="mt-1"
+        :type="field.type === 'number' || field.type === 'integer' ? 'number' : 'text'"
         @change="emitFilter({ type: 'in', values: equals }, false)"
         @keyup.enter="emitFilter({ type: 'in', values: equals })"
       >
