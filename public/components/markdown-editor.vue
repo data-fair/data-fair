@@ -4,6 +4,8 @@
     :label="label"
     :disabled="disabled"
     class="markdown-editor"
+    :rules="rules"
+    :required="required"
   >
     <template #append>
       <slot name="append" />
@@ -73,7 +75,9 @@ export default {
     value: { type: String, default: '' },
     label: { type: String, default: '' },
     disabled: { type: Boolean, default: false },
-    easymdeConfig: { type: Object, default: () => {} }
+    easymdeConfig: { type: Object, default: () => {} },
+    required: { type: Boolean, default: false },
+    rules: { type: Array, default: () => [] }
   },
   async mounted () {
     if (this.disabled) return

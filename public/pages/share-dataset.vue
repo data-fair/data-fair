@@ -188,8 +188,7 @@
           v-t="'continue'"
           color="primary"
           class="mt-4"
-          :disabled="!metadataForm"
-          @click.native="currentStep = 5"
+          @click.native="() => {if ($refs.metadataForm.validate()) currentStep = 5}"
         />
       </v-stepper-content>
 
@@ -278,14 +277,6 @@ export default {
     },
     alreadyPublished () {
       return this.publicationSite && this.dataset && this.dataset.publicationSites && this.dataset.publicationSites.includes(this.publicationSiteKey)
-    }
-  },
-  watch: {
-    async currentStep () {
-      if (this.currentStep === 4) {
-        await this.$nextTick()
-        this.$refs.metadataForm.validate()
-      }
     }
   },
   created () {
