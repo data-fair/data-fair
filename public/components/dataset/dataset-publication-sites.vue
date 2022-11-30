@@ -147,13 +147,13 @@ export default {
         for (const m of requiredMetadata) {
           if (m === 'temporal') {
             if (!(this.dataset.temporal && this.dataset.temporal.start)) warnings.push(m)
-          } if (m === 'keywords') {
+          } else if (m === 'keywords') {
             if (!(this.dataset.keywords && this.dataset.keywords.length)) warnings.push(m)
-          } if (m === 'topics') {
+          } else if (m === 'topics') {
             if (!(this.dataset.topics && this.dataset.topics.length)) warnings.push(m)
-          } if (m === 'title') {
+          } else if (m === 'title') {
             if (!(this.dataset.title && this.dataset.title.length > 3)) warnings.push(m)
-          } if (m === 'description') {
+          } else if (m === 'description') {
             if (!(this.dataset.description && this.dataset.description.length > 10)) warnings.push(m)
           } else {
             if (!this.dataset[m]) warnings.push(m)
