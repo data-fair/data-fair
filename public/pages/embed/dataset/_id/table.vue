@@ -150,6 +150,8 @@
               />
             </tr>
           </thead>
+          <!-- a mask over the hidden header to make sure that when the extension changes size for a second we don't see the header below the app bar -->
+          <div :style="`background-color:${$vuetify.theme.isDark ? '#000000' : '#FFFFFF'};width:100%;height:48px;position:absolute;top:-48px;`" />
         </template>
         <template #body>
           <tbody>
@@ -493,6 +495,7 @@ export default {
       if (typeof filter !== 'object') filter = { type: 'in', values: [filter] }
       filter.field = this.dataset.schema.find(f => f.key === key)
       this.filters = this.filters.filter(f => !(f.field.key === key))
+      if (filter.type === 'in' && filter.values.length === 0) return
       this.filters.push(filter)
     },
     readQueryParams () {

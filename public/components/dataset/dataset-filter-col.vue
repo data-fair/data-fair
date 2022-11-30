@@ -12,12 +12,12 @@
     <template #activator="{on, attrs}">
       <v-btn
         small
-        depressed
-        text
+        icon
+        :outlined="active"
         v-bind="attrs"
         class="pa-0"
         color="primary"
-        style="min-width:40px;"
+        :input-value="active"
         v-on="on"
       >
         <v-icon>mdi-filter-variant</v-icon>
@@ -36,7 +36,7 @@
         deletable-chips
         class="mt-1"
         :type="field.type === 'number' || field.type === 'integer' ? 'number' : 'text'"
-        @change="emitFilter({ type: 'in', values: equals }, false)"
+        @change="emitFilter({ type: 'in', values: equals })"
         @keyup.enter="emitFilter({ type: 'in', values: equals })"
       >
         <template #append-outer>
@@ -309,6 +309,9 @@ export default {
       if (!this.field['x-capabilities'] || this.field['x-capabilities'].text !== false) return 'text'
       if (!this.field['x-capabilities'] || this.field['x-capabilities'].textStandard !== false) return 'text_standard'
       return ''
+    },
+    active () {
+      return !!this.filters.find(f => f.field.key === this.field.key)
     }
   },
   methods: {
@@ -322,7 +325,7 @@ export default {
         if (filter.type === 'search') this.search = filter.value
         if (filter.type === 'in' && filter.values && filter.values.length) {
           if (this.field.type === 'string' || this.field.type === 'number' || this.field.type === 'integer') {
-            this.equals = filter.values
+            this.equals = [...filter.values]
           }
           if (this.field.type === 'boolean') this.equalsBool = filter.values[0]
         }
@@ -343,10 +346,8 @@ export default {
     },
     emitFilter (filter, close = true) {
       this.$emit('filter', filter)
-      if (close) {
-        this.showMenu = false
-        this.emptyFilters()
-      }
+      this.showMenu = false
+      this.emptyFilters()
     },
     emptyFilters () {
       this.equals = []
