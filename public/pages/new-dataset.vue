@@ -754,7 +754,7 @@ fr:
   conflict_filename: le nom de fichier est identique
   conflict_title: le titre est identique
   history: Conserver un historique complet des révisions des lignes du jeu de données
-  lineOwnership: Accept giving ownership of lines to users (collaborative use-cases)
+  lineOwnership: Permet de donner la propriété d'une lignes à des utilisateurs (scénarios collaboratifs)
   restSource: Initialiser le schéma en dupliquant celui d'un jeu de données existant
   children: Jeux enfants
   virtualDatasetFill: Initialiser le schéma avec toutes les colonnes des jeux enfants

@@ -93,6 +93,27 @@
               </table>
             </div>
           </v-row>
+
+          <!-- list mode header -->
+          <template v-if="displayMode === 'list'">
+            <v-row class="ma-0 px-2">
+              <v-slide-group show-arrows>
+                <v-slide-item
+                  v-for="header in selectedHeaders"
+                  :key="header.text"
+                >
+                  <dataset-table-header
+                    :header="header"
+                    :filters="filters"
+                    :filter-height="filterHeight"
+                    :pagination="pagination"
+                    @sort="orderBy(header)"
+                    @filter="f => addFilter(header.value, f)"
+                  />
+                </v-slide-item>
+              </v-slide-group>
+            </v-row>
+          </template>
         </v-col>
       </template>
     </v-app-bar>
@@ -197,26 +218,8 @@
       </v-data-table>
     </template>
 
-    <!-- list mode header -->
+    <!--list mode body -->
     <template v-if="displayMode === 'list'">
-      <v-row class="ma-0 px-2">
-        <v-slide-group show-arrows>
-          <v-slide-item
-            v-for="header in selectedHeaders"
-            :key="header.text"
-          >
-            <dataset-table-header
-              :header="header"
-              :filters="filters"
-              :filter-height="filterHeight"
-              :pagination="pagination"
-              @sort="orderBy(header)"
-              @filter="f => addFilter(header.value, f)"
-            />
-          </v-slide-item>
-        </v-slide-group>
-      </v-row>
-
       <div style="height:2px;width:100%;">
         <v-progress-linear
           v-if="loading"
@@ -225,34 +228,30 @@
           style="margin:0;"
         />
       </div>
-    </template>
 
-    <!--list mode body -->
-    <v-row
-      v-if="displayMode === 'list'"
-      class="ma-0"
-      dense
-    >
-      <v-col
-        v-for="item in data.results"
-        :key="item._id"
-        cols="12"
-        md="6"
-        lg="4"
-        xl="3"
+      <v-row
+        class="ma-0"
+        dense
       >
-        <dataset-item-card
-          :item="item"
-          :filters="filters"
-          :selected-fields="selectedCols"
-          :truncate="truncate"
-          @filter="({field, filter}) => addFilter(field.key, filter)"
-        />
-      </v-col>
-    </v-row>
+        <v-col
+          v-for="item in data.results"
+          :key="item._id"
+          cols="12"
+          md="6"
+          lg="4"
+          xl="3"
+        >
+          <dataset-item-card
+            :item="item"
+            :filters="filters"
+            :selected-fields="selectedCols"
+            :truncate="truncate"
+            @filter="({field, filter}) => addFilter(field.key, filter)"
+          />
+        </v-col>
+      </v-row>
 
-    <!-- list mode show more -->
-    <template v-if="displayMode === 'list'">
+      <!-- list mode show more -->
       <v-row
         v-if="data.results"
         v-intersect="fetchMore"
@@ -380,9 +379,8 @@ export default {
       return { ...this.params, select: this.selectedCols.join(',') }
     },
     extensionHeight () {
-      let height = 0
+      let height = 48
       if (this.filters.length) height += 32
-      if (this.displayMode === 'table') height += 48
       return height
     },
     tableHeight () {
