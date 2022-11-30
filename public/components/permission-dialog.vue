@@ -28,19 +28,35 @@
         />
 
         <v-autocomplete
-          v-if="permission.type && (permission.type === 'organization' || user.adminMode)"
+          v-if="permission.type === 'organization' "
           :value="permission"
-          :items="permission.type === 'organization' ? organizations : users"
-          :search-input.sync="search"
+          :items="filledOrganizations"
+          :search-input.sync="searchOrganization"
           :loading="loading"
           item-text="name"
           item-value="id"
-          :label="$t('name')"
+          :label="$t('organization')"
           required
           cache-items
           hide-no-data
           return-object
           @change="setOrganization"
+        />
+
+        <v-autocomplete
+          v-if="permission.type === 'user'"
+          :value="permission"
+          :items="filledUsers"
+          :search-input.sync="searchUser"
+          :loading="loading"
+          item-text="name"
+          item-value="id"
+          :label="$t('user')"
+          required
+          cache-items
+          hide-no-data
+          return-object
+          @change="setUser"
         />
 
         <v-text-field
@@ -181,9 +197,10 @@ export default {
     showDialog: false,
     permission: null,
     expertMode: false,
-    search: '',
+    searchUser: '',
+    searchOrganization: '',
     loading: false,
-    users: [allUsers],
+    users: [],
     organizations: []
   }),
   computed: {
@@ -208,6 +225,20 @@ export default {
       return [].concat(...Object.keys(this.permissionClasses)
         .filter(c => this.$te('classNames.' + c))
         .map(c => [{ header: this.$t('classNames.' + c) }].concat(this.permissionClasses[c])))
+    },
+    filledOrganizations () {
+      const orgs = []
+      if (this.permission.type === 'organization' && this.permission.id && this.permission.name) {
+        orgs.push({ id: this.permission.id, name: this.permission.name })
+      }
+      return orgs.concat(this.organizations)
+    },
+    filledUsers () {
+      const users = [allUsers]
+      if (this.permission.type === 'user' && this.permission.id && this.permission.name) {
+        users.push({ id: this.permission.id, name: this.permission.name })
+      }
+      return users.concat(this.users)
     }
   },
   watch: {
@@ -243,20 +274,32 @@ export default {
         operations.push('readDescription')
       }
     },
-    search: async function () {
-      if (this.search && this.search === this.permission.name) return
-
+    'permission.type' () {
+      if (!this.permission) return
+      this.permission.id = null
+      this.permission.department = null
+      this.permission.name = null
+      this.users = []
+      this.organizations = []
+    },
+    searchUser: async function () {
+      if (this.searchUser && this.searchUser === this.permission.name) return
       this.loading = true
-      if (this.permission && this.permission.type === 'organization') {
-        this.users = [allUsers]
-        if (!this.search || this.search.length < 3) this.organizations = []
-        else this.organizations = (await this.$axios.$get(this.env.directoryUrl + '/api/organizations', { params: { q: this.search } })).results
+      if (this.searchUser && this.searchUser.length >= 3) {
+        this.users = (await this.$axios.$get(this.env.directoryUrl + '/api/users', { params: { q: this.searchUser } })).results
+      } else {
+        this.users = []
+      }
+      this.loading = false
+    },
+    searchOrganization: async function () {
+      if (this.searchOrganization && this.searchOrganization === this.permission.name) return
+      this.loading = true
+      if (this.searchOrganization && this.searchOrganization.length >= 3) {
+        this.organizations = (await this.$axios.$get(this.env.directoryUrl + '/api/organizations', { params: { q: this.searchOrganization } })).results
       } else {
         this.organizations = []
-        if (!this.search || this.search.length < 3) this.users = [allUsers]
-        else this.users = [allUsers].concat((await this.$axios.$get(this.env.directoryUrl + '/api/users', { params: { q: this.search } })).results)
       }
-
       this.loading = false
     }
   },
@@ -281,13 +324,25 @@ export default {
       if (!org) {
         this.permission.id = null
         this.permission.name = null
+        delete this.permission.department
+        delete this.permission.roles
         return
       }
       this.permission.id = org.id
       this.permission.name = org.name
       this.permission.department = null
       this.permission.roles = []
-      this.organizations = [org]
+    },
+    setUser (user) {
+      delete this.permission.department
+      delete this.permission.roles
+      if (!user) {
+        this.permission.id = null
+        this.permission.name = null
+        return
+      }
+      this.permission.id = user.id
+      this.permission.name = user.name
     }
   }
 }
