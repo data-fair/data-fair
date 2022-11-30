@@ -292,7 +292,7 @@
             color="primary"
             class="ml-2 mt-4"
             :disabled="!fileParamsForm"
-            @click.native="currentStep = 5"
+            @click.native="currentStep = $route.query.simple ? 4 : 5"
           />
         </v-stepper-content>
 
