@@ -288,6 +288,7 @@ export default {
       this.dataset.requestedPublicationSites.push(siteKey)
       await this.patch({ requestedPublicationSites: this.dataset.requestedPublicationSites })
       eventBus.$emit('notification', this.$t('publicationRequested'))
+      this.$router.push({ path: '/' })
     }
   }
 }
