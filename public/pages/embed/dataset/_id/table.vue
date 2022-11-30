@@ -79,7 +79,7 @@
                     <dataset-table-header
                       v-for="(header, i) in selectedHeaders.filter((header,i) => !!headerWidths[i])"
                       :id="`visible-header-${i}`"
-                      :key="header.text"
+                      :key="`visible-header-${i}`"
                       :header="header"
                       :filters="filters"
                       :filter-height="filterHeight"
@@ -99,8 +99,8 @@
             <v-row class="ma-0 px-2">
               <v-slide-group show-arrows>
                 <v-slide-item
-                  v-for="header in selectedHeaders"
-                  :key="header.text"
+                  v-for="(header, i) in selectedHeaders"
+                  :key="`list-header-${i}`"
                 >
                   <dataset-table-header
                     :header="header"
@@ -141,7 +141,7 @@
               <dataset-table-header
                 v-for="(header, i) in selectedHeaders"
                 :id="`hidden-header-${i}`"
-                :key="header.text"
+                :key="`hidden-header-${i}`"
                 class="hidden-header"
                 :header="header"
                 :filters="filters"
@@ -418,8 +418,12 @@ export default {
     selectedCols: {
       handler () {
         this.writeQueryParams()
+        this.syncHeader()
       },
       deep: true
+    },
+    windowWidth () {
+      this.syncHeader()
     }
   },
   async mounted () {
@@ -429,18 +433,8 @@ export default {
     await this.$nextTick()
     this.ready = true
     this.refresh()
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    if (this.displayMode === 'table') {
-      const tableWrapper = document.querySelector('.real-data-table .v-data-table__wrapper')
-      tableWrapper.addEventListener('scroll', () => {
-        this.scrollHeader = tableWrapper.scrollLeft
-      })
-    }
   },
   methods: {
-    onScroll () {
-      console.log('BIM')
-    },
     async refresh (resetPagination, initial) {
       if (!this.ready) return
       if (!initial) this.writeQueryParams()
@@ -470,7 +464,7 @@ export default {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       this.loading = false
-      this.syncHeaderWidths()
+      this.syncHeader()
     },
     async fetchMore (entries, observer, isIntersecting) {
       if (!this.data.next || this.loading || isIntersecting === false) return
@@ -484,7 +478,7 @@ export default {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       this.loading = false
-      this.syncHeaderWidths()
+      this.syncHeader()
     },
     orderBy (header) {
       if (!header.sortable) return
@@ -530,14 +524,34 @@ export default {
       }
       this.$router.push({ query })
     },
-    async syncHeaderWidths () {
+    async syncHeader () {
       await this.$nextTick()
+
+      // in table mode the header is outside the actual table so that we can have
+      // infinite scroll, horizontal scroll and fixed header at the same time
+
+      // sync cols widths
       const children = this.$el.querySelectorAll('.hidden-header')
       const headerWidths = []
       for (const child of children) {
         headerWidths.push(child.clientWidth)
       }
-      this.headerWidths = headerWidths
+      if (JSON.stringify(this.headerWidths) !== JSON.stringify(headerWidths)) {
+        this.headerWidths = headerWidths
+      }
+
+      // sync horizontal scroll
+      if (this._tableWrapper) {
+        this._tableWrapper.removeEventListener('scroll', this.onTableScroll)
+      }
+      if (this.displayMode === 'table') {
+        this._tableWrapper = document.querySelector('.real-data-table .v-data-table__wrapper')
+        this.scrollHeader = this._tableWrapper.scrollLeft
+        this._tableWrapper.addEventListener('scroll', this.onTableScroll)
+      }
+    },
+    onTableScroll (e) {
+      this.scrollHeader = e.target.scrollLeft
     }
   }
 }
