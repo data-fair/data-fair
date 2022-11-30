@@ -7,7 +7,7 @@
       <v-stepper-step
         :step="1"
         :complete="!!publicationSite"
-        :editable="!!dataset"
+        editable
       >
         {{ $t('stepPortal') }}
         <small v-if="publicationSite">
@@ -19,7 +19,7 @@
       <v-stepper-step
         :step="2"
         :complete="!!dataset"
-        editable
+        :editable="!!publicationSite"
       >
         {{ $t('stepDataset') }}
         <small v-if="dataset">
@@ -30,7 +30,8 @@
 
       <v-stepper-step
         :step="3"
-        :editable="metadataForm"
+        complete
+        :editable="!!dataset"
       >
         {{ $t('stepPermissions') }}
         <small
@@ -44,7 +45,7 @@
       <v-stepper-step
         :step="4"
         :complete="!!metadataForm"
-        :editable="!!publicationSite"
+        :editable="!!publicationSite && !!dataset"
       >
         {{ $t('stepMetadata') }}
         <small
@@ -144,7 +145,6 @@
           v-t="'continue'"
           color="primary"
           class="mt-4"
-          :disabled="!metadataForm"
           @click.native="currentStep = 4"
         />
       </v-stepper-content>
@@ -156,6 +156,7 @@
           v-model="metadataForm"
         >
           <dataset-info
+            v-if="currentStep === 4"
             :required="(publicationSite.settings && publicationSite.settings.datasetsRequiredMetadata) || []"
             :simple="true"
           />
