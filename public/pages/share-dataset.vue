@@ -31,7 +31,7 @@
       <v-stepper-step
         :step="3"
         complete
-        :editable="!!dataset"
+        :editable="!!dataset && !alreadyPublished"
       >
         {{ $t('stepPermissions') }}
         <small
@@ -119,12 +119,25 @@
         <v-row class="my-1 mx-0">
           <dataset-select @change="toggleDataset" />
         </v-row>
+        <v-row
+          v-if="alreadyPublished"
+          class="mt-4 mb-1 mx-0"
+        >
+          <v-alert
+            type="warning"
+            outlined
+            dense
+            class="mb-0"
+          >
+            {{ $t('alreadyPublished') }}
+          </v-alert>
+        </v-row>
 
         <v-btn
           v-t="'continue'"
           color="primary"
-          class="ml-2 mt-4"
-          :disabled="!dataset"
+          class="mt-4"
+          :disabled="!dataset || alreadyPublished"
           @click.native="currentStep = 3"
         />
       </v-stepper-content>
@@ -174,7 +187,7 @@
       <v-stepper-content step="5">
         <template v-if="dataset && publicationSite">
           <v-btn
-            v-if="can('writePublicationSites') && (!activeAccount.department || activeAccount.department === site.department)"
+            v-if="(can('writePublicationSites') || (publicationSite.settings && publicationSite.settings.staging)) && (!activeAccount.department || activeAccount.department === site.department)"
             v-t="'publish'"
             color="primary"
             class="mt-4"
@@ -210,6 +223,7 @@ fr:
   requestPublication: Demander la publication de ce jeu de données à un administrateur
   publicationRequested: La publication sera soumise à un administrateur pour validation.
   completed: complètes
+  alreadyPublished: Ce jeu de données est déjà publié sur ce portail.
 en:
   shareDataset: Share a dataset
   home: Home
@@ -226,6 +240,7 @@ en:
   requestPublication: Submit the publication of this dataset to an admin for approval
   publicationRequested: The publication will be submitted to an admin for validation.
   completed: completed
+  alreadyPublished: This dataset is already published on this portal.
 </i18n>
 
 <script>
@@ -246,6 +261,12 @@ export default {
     ...mapGetters('dataset', ['can', 'resourceUrl', 'hasPublicApplications']),
     publicationSites () {
       return this.ownerPublicationSites(this.activeAccount)
+    },
+    publicationSiteKey () {
+      return this.publicationSite && `${this.publicationSite.type}:${this.publicationSite.id}`
+    },
+    alreadyPublished () {
+      return this.publicationSite && this.dataset && this.dataset.publicationSites && this.dataset.publicationSites.includes(this.publicationSiteKey)
     }
   },
   watch: {
@@ -266,16 +287,18 @@ export default {
     async toggleDataset (dataset) {
       if (dataset) {
         await this.$store.dispatch('dataset/setId', { datasetId: dataset.id })
-        this.currentStep = 3
+        if (!this.alreadyPublished) {
+          this.currentStep = 3
+        }
       } else {
         this.$store.dispatch('dataset/clear')
       }
     },
     async publish () {
-      const siteKey = `${this.publicationSite.type}:${this.publicationSite.id}`
-      this.dataset.publicationSites = this.dataset.publicationSites || []
-      this.dataset.publicationSites.push(siteKey)
-      await this.patch({ publicationSites: this.dataset.publicationSites })
+      this.dataset.publicationSites = (this.dataset.publicationSites || []).filter(s => s !== this.publicationSiteKey)
+      this.dataset.publicationSites.push(this.publicationSiteKey)
+      this.dataset.requestedPublicationSites = (this.dataset.requestedPublicationSites || []).filter(s => s !== this.publicationSiteKey)
+      await this.patch({ publicationSites: this.dataset.publicationSites, requestedPublicationSites: this.dataset.requestedPublicationSites })
       if (this.publicationSite.datasetUrlTemplate) {
         window.location.href = this.publicationSite.datasetUrlTemplate.replace('{id}', this.dataset.id)
       } else {
@@ -283,9 +306,8 @@ export default {
       }
     },
     async requestPublication () {
-      const siteKey = `${this.publicationSite.type}:${this.publicationSite.id}`
-      this.dataset.requestedPublicationSites = this.dataset.requestedPublicationSites || []
-      this.dataset.requestedPublicationSites.push(siteKey)
+      this.dataset.requestedPublicationSites = (this.dataset.requestedPublicationSites || []).filter(s => s !== this.publicationSiteKey)
+      this.dataset.requestedPublicationSites.push(this.publicationSiteKey)
       await this.patch({ requestedPublicationSites: this.dataset.requestedPublicationSites })
       eventBus.$emit('notification', this.$t('publicationRequested'))
       this.$router.push({ path: '/' })
