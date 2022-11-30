@@ -49,7 +49,8 @@ module.exports = {
       config.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))
     },
     splitChunks: {
-      layouts: true
+      // this would be good for chunk sizes, but it causes double loading of embed pages
+      // layouts: true
     }
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
