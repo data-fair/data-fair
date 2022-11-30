@@ -316,6 +316,7 @@ export default {
   },
   methods: {
     toggledMenu () {
+      if (!this.showMenu) return
       this.emptyFilters()
       const filters = this.filters.filter(f => f.field.key === this.field.key)
       for (const filter of filters) {
@@ -347,7 +348,6 @@ export default {
     emitFilter (filter, close = true) {
       this.$emit('filter', filter)
       this.showMenu = false
-      this.emptyFilters()
     },
     emptyFilters () {
       this.equals = []

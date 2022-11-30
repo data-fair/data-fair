@@ -204,6 +204,14 @@
               v-intersect="fetchMore"
               style="position:relative;"
             >
+              <div style="height:2px;width:100%;">
+                <v-progress-linear
+                  v-if="loading"
+                  indeterminate
+                  height="2"
+                  style="margin:0;"
+                />
+              </div>
               <v-btn
                 v-if="data.next"
                 :loading="loading"
@@ -432,23 +440,21 @@ export default {
     this.readQueryParams()
     if (this.displayMode === 'table') this.pagination.itemsPerPage = 40
     this.filterHeight = window.innerHeight - this.topBottomHeight
-    await this.$nextTick()
-    this.ready = true
     this.refresh()
   },
   methods: {
-    async refresh (resetPagination, initial) {
-      if (!this.ready) return
-      if (!initial) this.writeQueryParams()
+    async refresh (resetPagination) {
+      this.writeQueryParams()
 
       if (resetPagination) {
         this.pagination.page = 1
         const goToOpts = {}
         if (this.displayMode === 'table') goToOpts.container = '.v-data-table__wrapper'
-        this.$vuetify.goTo(0, goToOpts)
-        // this is debatable
-        // but in case of full-text search you can forget that a sort is active
-        // and be surprised by counter-intuitive results
+        if (this.displayMode === 'list') {
+          this.$vuetify.goTo(0, goToOpts)
+        } else {
+          document.querySelector('.real-data-table .v-data-table__wrapper').scrollTop = 0
+        }
         this.pagination.sortBy = [null]
         this.pagination.sortDesc = [false]
       }
@@ -467,6 +473,7 @@ export default {
       }
       this.loading = false
       this.syncHeader()
+      setTimeout(() => this.syncHeader(), 500)
     },
     async fetchMore (entries, observer, isIntersecting) {
       if (!this.data.next || this.loading || isIntersecting === false) return
