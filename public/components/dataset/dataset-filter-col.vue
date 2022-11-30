@@ -24,35 +24,40 @@
       </v-btn>
     </template>
     <v-sheet class="pa-1">
-      <v-combobox
-        v-if="showEquals"
-        v-model="equals"
-        chips
-        multiple
-        label="égal"
-        outlined
-        hide-details
-        dense
-        deletable-chips
-        class="mt-1"
-        :type="field.type === 'number' || field.type === 'integer' ? 'number' : 'text'"
-        @change="emitFilter({ type: 'in', values: equals })"
-        @keyup.enter="emitFilter({ type: 'in', values: equals })"
-      >
-        <template #append-outer>
-          <v-btn
-            icon
-            class="mr-1"
-            :disabled="!equals"
-            color="primary"
-            :title="$t('applyFilter')"
-            @click="emitFilter({ type: 'in', values: equals })"
-          >
-            <v-icon>mdi-check</v-icon>
-          </v-btn>
-        </template>
-      </v-combobox>
-
+      <template v-if="showEquals">
+        <v-text-field
+          v-for="i in equals.length"
+          :key="i"
+          v-model="equals[i - 1]"
+          :label="i === 1 ? 'égal' : 'ou égal'"
+          outlined
+          hide-details
+          dense
+          class="mt-1"
+          clearable
+          @keyup.enter="emitFilter({ type: 'in', values: equals.filter(v => !!v) })"
+          @click:clear="equals[i - 1] = ''; emitFilter({ type: 'in', values: equals.filter(v => !!v) }, false)"
+          @change="emitFilter({ type: 'in', values: equals.filter(v => !!v) }, false)"
+        >
+          <template #append-outer>
+            <v-btn
+              v-if="i === equals.length - 1"
+              icon
+              class="mr-1"
+              :disabled="equals.length <= 1"
+              color="primary"
+              :title="$t('applyFilter')"
+              @click="emitFilter({ type: 'in', values: equals.filter(v => !!v) })"
+            >
+              <v-icon>mdi-check</v-icon>
+            </v-btn>
+            <div
+              v-else
+              style="width:40px;height:36px;"
+            />
+          </template>
+        </v-text-field>
+      </template>
       <v-text-field
         v-if="showStartsWith"
         v-model="startsWith"
@@ -314,6 +319,17 @@ export default {
       return !!this.filters.find(f => f.field.key === this.field.key)
     }
   },
+  watch: {
+    equals: {
+      handler () {
+        if (!this.showEquals) return
+        const equals = this.equals.filter(v => !!v).concat([''])
+        if (JSON.stringify(equals) !== JSON.stringify(this.equals)) this.equals = equals
+      },
+      deep: true,
+      immediate: true
+    }
+  },
   methods: {
     toggledMenu () {
       if (!this.showMenu) return
@@ -335,7 +351,7 @@ export default {
     toggleEquals (value) {
       if (this.equals.includes(value)) this.equals = this.equals.filter(v => v !== value)
       else this.equals.push(value)
-      this.emitFilter({ type: 'in', values: this.equals })
+      this.emitFilter({ type: 'in', values: this.equals }, false)
     },
     emitIntervalFilter () {
       if (!this.gte && !this.lte) return
@@ -347,7 +363,9 @@ export default {
     },
     emitFilter (filter, close = true) {
       this.$emit('filter', filter)
-      this.showMenu = false
+      if (close) {
+        this.showMenu = false
+      }
     },
     emptyFilters () {
       this.equals = []
