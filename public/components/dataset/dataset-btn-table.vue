@@ -2,7 +2,8 @@
   <v-dialog
     v-model="dialog"
     :fullscreen="$vuetify.breakpoint.smAndDown"
-    max-width="1200"
+    :max-width="1200"
+    transition="none"
   >
     <template #activator="{ on }">
       <v-icon
@@ -29,9 +30,12 @@
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-toolbar>
-      <v-card-text class="pa-0">
-        <dataset-table v-if="$store.state.dataset.dataset" />
-      </v-card-text>
+      <v-iframe
+        :src="iframeSrc"
+        scrolling="yes"
+        :iframe-resizer="false"
+        :style="$vuetify.breakpoint.smAndDown ? `height: ${windowHeight - 48}px;` : ''"
+      />
     </v-card>
   </v-dialog>
 </template>
@@ -44,14 +48,19 @@ en:
 </i18n>
 
 <script>
+import VIframe from '@koumoul/v-iframe'
+import { mapState } from 'vuex'
+
 export default {
+  components: { VIframe },
   props: ['dataset'],
   data: () => ({
     dialog: false
   }),
-  watch: {
-    dialog () {
-      if (this.dialog) this.$store.dispatch('dataset/setId', { datasetId: this.dataset.id })
+  computed: {
+    ...mapState(['env']),
+    iframeSrc () {
+      return `${this.env.publicUrl}/embed/dataset/${this.dataset.id}/table?display=${this.$vuetify.breakpoint.smAndDown ? 'list' : 'table'}`
     }
   }
 }
