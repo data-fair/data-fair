@@ -16,7 +16,7 @@ export function filter2qs (filter, locale = 'fr') {
   } else if (filter.type === 'interval') {
     const min = ![null, undefined, ''].includes(filter.minValue) ? escape(filter.minValue) : '*'
     const max = ![null, undefined, ''].includes(filter.maxValue) ? escape(filter.maxValue) : '*'
-    return `${key}:[${escape(min)} TO ${escape(max)}]`
+    return `${key}:[${min} TO ${max}]`
   } else if (filter.type === 'starts') {
     if ([null, undefined, ''].includes(filter.value)) return null
     if (filter.value.includes(',')) {

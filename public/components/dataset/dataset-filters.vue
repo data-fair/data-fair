@@ -54,8 +54,8 @@ export default {
           value = this.$root.$options.filters.cellValues(filter.minValue, filter.field)
         } else {
           operator = 'compris entre'
-          value = this.$root.$options.filters.cellValues(filter.minValue, filter.field) +
-            ' et ' + this.$root.$options.filters.cellValues(filter.maxValue, filter.field)
+          value = (this.$root.$options.filters.cellValues(filter.minValue, filter.field) || '*') +
+            ' et ' + (this.$root.$options.filters.cellValues(filter.maxValue, filter.field) || '*')
         }
       }
       if (filter.type === 'search') operator = 'contient des mots'
