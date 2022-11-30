@@ -3,7 +3,6 @@
     :items="datasets"
     :loading="loadingDatasets"
     :search-input.sync="search"
-    hide-no-data
     item-text="title"
     item-value="id"
     :label="label || $t('selectDataset')"

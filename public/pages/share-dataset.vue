@@ -65,46 +65,55 @@
 
     <v-stepper-items>
       <v-stepper-content step="1">
-        <p>{{ $t('selectPortal') }}</p>
-        <v-card
-          v-if="publicationSites"
-          tile
+        <v-alert
+          v-if="publicationSites && !publicationSites.length"
           outlined
-          style="width: 500px;"
+          type="warning"
+          style="max-width: 500px;"
         >
-          <v-list class="py-0">
-            <v-list-item-group
-              :value="publicationSite && publicationSites.findIndex(p => p.type === publicationSite.type && p.id === publicationSite.id)"
-              color="primary"
-            >
-              <v-list-item
-                v-for="(site,i) in publicationSites"
-                :key="i"
-                @click="publicationSite = site;currentStep=2"
+          {{ $t('noPublicationSite') }}
+        </v-alert>
+        <template v-if="publicationSites && publicationSites.length">
+          <p>{{ $t('selectPortal') }}</p>
+          <v-card
+            tile
+            outlined
+            style="width: 500px;"
+          >
+            <v-list class="py-0">
+              <v-list-item-group
+                :value="publicationSite && publicationSites.findIndex(p => p.type === publicationSite.type && p.id === publicationSite.id)"
+                color="primary"
               >
-                <v-list-item-content style="overflow:visible;">
-                  <v-list-item-title>
-                    <v-icon
-                      v-if="site.private"
-                      small
-                      color="warning"
+                <v-list-item
+                  v-for="(site,i) in publicationSites"
+                  :key="i"
+                  @click="publicationSite = site;currentStep=2"
+                >
+                  <v-list-item-content style="overflow:visible;">
+                    <v-list-item-title>
+                      <v-icon
+                        v-if="site.private"
+                        small
+                        color="warning"
+                      >
+                        mdi-lock
+                      </v-icon>
+                      {{ site.title || site.url || site.id }}
+                    </v-list-item-title>
+                    <v-list-item-subtitle
+                      v-if="site.department"
+                      class="mb-2"
                     >
-                      mdi-lock
-                    </v-icon>
-                    {{ site.title || site.url || site.id }}
-                  </v-list-item-title>
-                  <v-list-item-subtitle
-                    v-if="site.department"
-                    class="mb-2"
-                  >
-                    <span>{{ dataset.owner.name }}</span>
-                    <span v-if="site.department"> - {{ site.departmentName || site.department }}</span>
-                  </v-list-item-subtitle>
-                </v-list-item-content>
-              </v-list-item>
-            </v-list-item-group>
-          </v-list>
-        </v-card>
+                      <span>{{ dataset.owner.name }}</span>
+                      <span v-if="site.department"> - {{ site.departmentName || site.department }}</span>
+                    </v-list-item-subtitle>
+                  </v-list-item-content>
+                </v-list-item>
+              </v-list-item-group>
+            </v-list>
+          </v-card>
+        </template>
 
         <v-btn
           v-t="'continue'"
@@ -211,7 +220,7 @@ fr:
   shareDataset: Publier un jeu de données
   home: Accueil
   dataset: Jeu de données
-  selectPortal: Choisissez un portail
+  selectPortal: "Choisissez un portail :"
   stepDataset: Jeu de données
   stepPortal: Portail
   stepPermissions: Permissions
@@ -224,11 +233,12 @@ fr:
   publicationRequested: La publication sera soumise à un administrateur pour validation.
   completed: complètes
   alreadyPublished: Ce jeu de données est déjà publié sur ce portail.
+  noPublicationSite: Aucun portail n'est configuré sur ce compte.
 en:
   shareDataset: Share a dataset
   home: Home
   dataset: Dataset
-  selectPortal: Select a portal
+  selectPortal: "Select a portal:"
   stepDataset: Dataset
   stepPortal: Portal
   stepPermissions: Permissions
@@ -241,6 +251,7 @@ en:
   publicationRequested: The publication will be submitted to an admin for validation.
   completed: completed
   alreadyPublished: This dataset is already published on this portal.
+  noPublicationSite: No portal is configured for this account.
 </i18n>
 
 <script>
