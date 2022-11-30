@@ -34,6 +34,7 @@
         <v-divider />
         <template v-if="$route.query.simple !== 'true'">
           <v-stepper-step
+            v-if="$route.query.simple !== 'true'"
             :step="3"
             :complete="!!attachment"
             :editable="!!file"
@@ -47,7 +48,7 @@
           <v-divider />
         </template>
         <v-stepper-step
-          :step="4"
+          :step="$route.query.simple === 'true' ? 3 : 4"
           :editable="!!file"
           :complete="fileParamsForm"
         >
@@ -59,7 +60,7 @@
         </v-stepper-step>
         <v-divider />
         <v-stepper-step
-          :step="5"
+          :step="$route.query.simple === 'true' ? 4 : 5"
           :editable="fileParamsForm"
         >
           {{ $t('stepAction') }}
@@ -175,7 +176,7 @@
           <p v-t="'loadMainFile'" />
           <div
             class="mt-3 mb-3"
-            @drop.prevent="e => {file = e.dataTransfer.files[0]; if (!suggestArchive) currentStep = afterFileStep}"
+            @drop.prevent="e => {file = e.dataTransfer.files[0]; if (!suggestArchive) currentStep = 3}"
             @dragover.prevent
           >
             <v-file-input
@@ -186,7 +187,7 @@
               hide-details
               style="max-width: 400px;"
               :accept="accepted.join(', ')"
-              @change="() => {if (!suggestArchive) currentStep = afterFileStep}"
+              @change="() => {if (file && !suggestArchive) currentStep = 3}"
             />
           </div>
           <v-alert
@@ -201,7 +202,7 @@
             class="mt-2"
             :disabled="!file"
             color="primary"
-            @click.native="currentStep = afterFileStep"
+            @click.native="currentStep = 3"
           />
 
           <h3
@@ -211,7 +212,10 @@
           <dataset-file-formats />
         </v-stepper-content>
 
-        <v-stepper-content step="3">
+        <v-stepper-content
+          v-if="$route.query.simple !== 'true'"
+          step="3"
+        >
           <v-alert
             type="info"
             outlined
@@ -236,7 +240,7 @@
               accept=".zip"
               hide-details
               clearable
-              @change="currentStep = 4"
+              @change="() => {if (attachment) currentStep = 4}"
             />
           </div>
           <v-btn
@@ -247,7 +251,7 @@
           />
         </v-stepper-content>
 
-        <v-stepper-content step="4">
+        <v-stepper-content :step="$route.query.simple === 'true' ? 3 : 4">
           <v-form v-model="fileParamsForm">
             <v-alert
               outlined
@@ -292,7 +296,7 @@
           />
         </v-stepper-content>
 
-        <v-stepper-content step="5">
+        <v-stepper-content :step="$route.query.simple === 'true' ? 4 : 5">
           <template v-if="conflicts && conflicts.length">
             <v-alert
               color="warning"
@@ -895,9 +899,6 @@ export default {
     },
     suggestArchive () {
       return this.file && this.file.size > 50000000 && (this.file.name.endsWith('.csv') || this.file.name.endsWith('.tsv') || this.file.name.endsWith('.txt') || this.file.name.endsWith('.geojson'))
-    },
-    afterFileStep () {
-      return this.$route.query.simple === 'true' ? 4 : 3
     }
   },
   watch: {
