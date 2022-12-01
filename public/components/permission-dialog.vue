@@ -12,7 +12,7 @@
       />
     </template>
     <v-card
-      v-if="permission"
+      v-if="permission && showDialog"
       outlined
     >
       <v-card-title v-t="'editPermission'" />
@@ -27,59 +27,42 @@
           @change="setPermissionType"
         />
 
-        <v-autocomplete
-          v-if="permission.type === 'organization' "
-          :value="permission"
-          :items="filledOrganizations"
-          :search-input.sync="searchOrganization"
-          :loading="loading"
-          item-text="name"
-          item-value="id"
-          :label="$t('organization')"
-          required
-          cache-items
-          hide-no-data
-          return-object
-          @change="setOrganization"
-        />
+        <template v-if="permission.type === 'organization'">
+          <organization-select
+            v-model="organization"
+          />
+          <v-select
+            v-if="owner.type === 'organization' && permission.id === owner.id && owner.departments && owner.departments.length"
+            v-model="permission.department"
+            :items="[{value: null, text: $t('allDeps')}, ...owner.departments.map(d => ({value: d.id, text: `${d.name} (${d.id})`})), {value: '-', text: $t('noDep')}]"
+            :label="$t('department')"
+          />
 
-        <v-autocomplete
-          v-if="permission.type === 'user'"
-          :value="permission"
-          :items="filledUsers"
-          :search-input.sync="searchUser"
-          :loading="loading"
-          item-text="name"
-          item-value="id"
-          :label="$t('user')"
-          required
-          cache-items
-          hide-no-data
-          return-object
-          @change="setUser"
-        />
+          <v-select
+            v-if="owner.type === 'organization' && permission.id === owner.id && owner.roles && owner.roles.length"
+            v-model="permission.roles"
+            :items="owner.roles"
+            :label="$t('rolesLabel')"
+            multiple
+          />
+        </template>
 
-        <v-text-field
-          v-if="permission.type && permission.type === 'user' && !user.adminMode"
-          v-model="permission.id"
-          :label="$t('id')"
-          required
-        />
-
-        <v-select
-          v-if="permission.type === 'organization' && owner.type === 'organization' && permission.id === owner.id && owner.departments && owner.departments.length"
-          v-model="permission.department"
-          :items="[{value: null, text: $t('allDeps')}, ...owner.departments.map(d => ({value: d.id, text: `${d.name} (${d.id})`})), {value: '-', text: $t('noDep')}]"
-          :label="$t('department')"
-        />
-
-        <v-select
-          v-if="permission.type === 'organization' && owner.type === 'organization' && permission.id === owner.id && owner.roles && owner.roles.length"
-          v-model="permission.roles"
-          :items="owner.roles"
-          :label="$t('rolesLabel')"
-          multiple
-        />
+        <template v-if="permission.type === 'user'">
+          <v-select
+            v-model="userSelectType"
+            :items="userSelectTypes"
+          />
+          <member-select
+            v-if="userSelectType === 'member'"
+            v-model="member"
+            :organization="owner"
+          />
+          <v-text-field
+            v-if="userSelectType === 'email'"
+            v-model="permission.email"
+            :label="$t('email')"
+          />
+        </template>
 
         <v-select
           v-model="permission.classes"
@@ -116,7 +99,7 @@
         />
         <v-btn
           v-t="'validate'"
-          :disabled="(permission.type && !permission.id) || ((!permission.operations || !permission.operations.length) && (!permission.classes ||!permission.classes.length))"
+          :disabled="!valid"
           color="primary"
           @click="showDialog = false;$emit('input', permission)"
         />
@@ -147,6 +130,10 @@ fr:
   department: Département
   allDeps: Tous les départements
   noDep: Aucun département (organisation principale seulement)
+  allUsers: Tous les utilisateurs de la plateforme non anonymes
+  memberOf: Parmi les membres de {org}
+  userByEmail: Utilisateur désigné par son adresse email
+  email: Email
   classNames:
     list: Lister
     read: Lecture
@@ -176,6 +163,10 @@ en:
   department: Department
   allDeps: All departments
   noDep: No department (main organization only)
+  allUsers: All non-anonymous users of the platform
+  memberOf: Among the members of {org}
+  userByEmail: User designed by their email
+  email: Email
   classNames:
     list: List
     read: Read
@@ -188,8 +179,6 @@ en:
 
 <script>
 import { mapState } from 'vuex'
-
-const allUsers = { id: '*', name: '*' }
 
 export default {
   props: ['value', 'permissionClasses', 'owner'],
@@ -206,39 +195,93 @@ export default {
   computed: {
     ...mapState(['env']),
     ...mapState('session', ['user']),
-    scopeItems () {
-      if (!this.owner) return []
-      const items = [{ value: 'public', label: this.$t('public') }]
-      if (this.owner.type === 'organization') {
-        items.push({ value: 'ownerOrganization', label: this.$t('ownerOrganization') })
-        if (this.owner.departments) {
-          items.push({ value: 'ownerOrganizationNoDep', label: this.$t('ownerOrganizationNoDep') })
-          for (const dep of this.owner.departments) {
-            items.push({ value: 'ownerOrganizationDep:' + dep.id, label: this.$t('ownerOrganizationDep', { ...dep }) })
-          }
-        }
-      }
-      items.push({ value: 'organization', label: this.$t('otherOrganization') })
-      return items
-    },
     operations () {
       return [].concat(...Object.keys(this.permissionClasses)
         .filter(c => this.$te('classNames.' + c))
         .map(c => [{ header: this.$t('classNames.' + c) }].concat(this.permissionClasses[c])))
     },
-    filledOrganizations () {
-      const orgs = []
-      if (this.permission.type === 'organization' && this.permission.id && this.permission.name) {
-        orgs.push({ id: this.permission.id, name: this.permission.name })
-      }
-      return orgs.concat(this.organizations)
+    userSelectTypes () {
+      const types = [{ value: '*', text: this.$t('allUsers') }]
+      if (this.owner.type === 'organization') types.push({ value: 'member', text: this.$t('memberOf', { org: this.owner.name }) })
+      types.push({ value: 'email', text: this.$t('userByEmail') })
+      return types
     },
-    filledUsers () {
-      const users = [allUsers]
-      if (this.permission.type === 'user' && this.permission.id && this.permission.name) {
-        users.push({ id: this.permission.id, name: this.permission.name })
+    userSelectType: {
+      get () {
+        console.log('GET')
+        if (this.permission.id === '*') return '*'
+        if (![null, undefined].includes(this.permission.email) && !this.permission.id) return 'email'
+        if (this.owner.type === 'organization') {
+          if (this.permission.email && this.permission.id) return 'member'
+          if (!this.permission.id) return 'member'
+          return null
+        } else {
+          return 'email'
+        }
+      },
+      set (userSelectType) {
+        if (userSelectType === '*') {
+          this.$set(this.permission, 'id', '*')
+          this.$delete(this.permission, 'name')
+          this.$delete(this.permission, 'email')
+        }
+        if (userSelectType === 'email') {
+          this.$delete(this.permission, 'id')
+          this.$delete(this.permission, 'name')
+          this.$set(this.permission, 'email', '')
+        }
+        if (userSelectType === 'member') {
+          this.$set(this.permission, 'id', null)
+          this.$set(this.permission, 'name', null)
+          this.$set(this.permission, 'email', null)
+        }
       }
-      return users.concat(this.users)
+    },
+    organization: {
+      get () {
+        if (this.permission.type !== 'organization') return null
+        if (!this.permission.id) return null
+        return { id: this.permission.id, name: this.permission.name }
+      },
+      set (org) {
+        this.$delete(this.permission, 'email')
+        if (org) {
+          this.$set(this.permission, 'id', org.id)
+          this.$set(this.permission, 'name', org.name)
+        } else {
+          this.$set(this.permission, 'id', null)
+          this.$set(this.permission, 'name', null)
+        }
+        this.$set(this.permission, 'department', null)
+        this.$set(this.permission, 'roles', [])
+      }
+    },
+    member: {
+      get () {
+        if (this.permission.type !== 'user') return null
+        if (!this.permission.id) return null
+        return { id: this.permission.id, name: this.permission.name }
+      },
+      set (user) {
+        this.$delete(this.permission, 'department')
+        this.$delete(this.permission, 'roles')
+        if (user) {
+          this.$set(this.permission, 'id', user.id)
+          this.$set(this.permission, 'name', user.name)
+          this.$set(this.permission, 'email', user.email)
+        } else {
+          this.$set(this.permission, 'id', null)
+          this.$set(this.permission, 'name', null)
+          this.$set(this.permission, 'email', null)
+        }
+      }
+    },
+    valid () {
+      if ((!this.permission.operations || !this.permission.operations.length) && (!this.permission.classes || !this.permission.classes.length)) return false
+      if (this.permission.type === 'organization' && !this.permission.id) return false
+      if (this.permission.type === 'organization' && this.owner.type === 'organization' && this.permission.id === this.owner.id && !((this.permission.roles && this.permission.roles.length) || this.permission.department)) return false
+      if (this.permission.type === 'user' && !(this.permission.id || this.permission.email)) return false
+      return true
     }
   },
   watch: {
@@ -248,19 +291,21 @@ export default {
         if (this.value) {
           this.permission = JSON.parse(JSON.stringify(this.value))
           if (this.permission.operations && this.permission.operations.length) this.expertMode = true
-          if (this.permission.type === 'organization') {
-            this.organizations = [this.permission]
-          }
           this.permission.type = this.permission.type || null
           this.permission.id = this.permission.id || null
           this.permission.department = this.permission.department || null
         } else {
+          // init default permission if value is not defined
           this.permission = {
             type: 'organization',
             operations: [],
             classes: ['read', 'list']
           }
-          this.setPermissionType()
+          if (this.owner.type === 'organization') {
+            this.organization = this.owner
+          } else {
+            this.organization = null
+          }
         }
       }
     },
@@ -273,76 +318,25 @@ export default {
       if (operations && operations.includes('list') && !operations.includes('readDescription')) {
         operations.push('readDescription')
       }
-    },
-    'permission.type' () {
-      if (!this.permission) return
-      this.permission.id = null
-      this.permission.department = null
-      this.permission.name = null
-      this.users = []
-      this.organizations = []
-    },
-    searchUser: async function () {
-      if (this.searchUser && this.searchUser === this.permission.name) return
-      this.loading = true
-      if (this.searchUser && this.searchUser.length >= 3) {
-        this.users = (await this.$axios.$get(this.env.directoryUrl + '/api/users', { params: { q: this.searchUser } })).results
-      } else {
-        this.users = []
-      }
-      this.loading = false
-    },
-    searchOrganization: async function () {
-      if (this.searchOrganization && this.searchOrganization === this.permission.name) return
-      this.loading = true
-      if (this.searchOrganization && this.searchOrganization.length >= 3) {
-        this.organizations = (await this.$axios.$get(this.env.directoryUrl + '/api/organizations', { params: { q: this.searchOrganization } })).results
-      } else {
-        this.organizations = []
-      }
-      this.loading = false
     }
   },
   methods: {
     setPermissionType () {
-      if (this.permission.type === null) {
-        delete this.permission.id
-        delete this.permission.name
-        delete this.permission.roles
-      } else if (this.permission.type === 'organization') {
+      if (this.permission.type === 'organization') {
         if (this.owner.type === 'organization') {
-          this.setOrganization(this.owner)
-          this.permission.department = this.owner.department || null
+          this.organization = this.owner
         } else {
-          this.permission.id = null
-          this.permission.name = null
+          this.organization = null
         }
-        this.permission.roles = []
+      } else if (this.permission.type === 'user') {
+        this.member = null
+      } else if (this.permission.type === null) {
+        this.$delete(this.permission, 'department')
+        this.$delete(this.permission, 'roles')
+        this.$delete(this.permission, 'name')
+        this.$delete(this.permission, 'email')
+        this.$delete(this.permission, 'id')
       }
-    },
-    setOrganization (org) {
-      if (!org) {
-        this.permission.id = null
-        this.permission.name = null
-        delete this.permission.department
-        delete this.permission.roles
-        return
-      }
-      this.permission.id = org.id
-      this.permission.name = org.name
-      this.permission.department = null
-      this.permission.roles = []
-    },
-    setUser (user) {
-      delete this.permission.department
-      delete this.permission.roles
-      if (!user) {
-        this.permission.id = null
-        this.permission.name = null
-        return
-      }
-      this.permission.id = user.id
-      this.permission.name = user.name
     }
   }
 }

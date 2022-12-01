@@ -213,7 +213,7 @@ module.exports.router = (resourceType, resourceName, onPublicCallback) => {
     if (!valid) return res.status(400).send(validate.errors)
     req.body = req.body || []
     req.body.forEach(permission => {
-      if ((!permission.type && permission.id) || (permission.type && !permission.id)) valid = false
+      if ((!permission.type && permission.id) || (permission.type && !(permission.id || permission.email))) valid = false
     })
     if (!valid) return res.status(400).send('Error in permissions format')
     const resources = req.app.get('db').collection(resourceType)

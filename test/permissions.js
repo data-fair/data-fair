@@ -7,7 +7,8 @@ describe('permissions', () => {
     const datasetId = res.data.id
     await global.ax.dmeadus.put('/api/v1/datasets/' + datasetId + '/permissions', [
       { type: 'user', id: 'ngernier4', operations: ['readDescription', 'list'] },
-      { type: 'user', id: 'ddecruce5', classes: ['read'] }
+      { type: 'user', id: 'ddecruce5', classes: ['read'] },
+      { type: 'user', email: 'alone@no.org', classes: ['read'] }
     ])
 
     // Another one that can be read by all
@@ -30,6 +31,10 @@ describe('permissions', () => {
 
     // User has permissions on class
     res = await global.ax.ddecruce5.get('/api/v1/datasets/' + datasetId)
+    assert.equal(res.status, 200)
+
+    // User has permission given using only his email
+    res = await global.ax.alone.get('/api/v1/datasets/' + datasetId)
     assert.equal(res.status, 200)
 
     // Read with public and private filters
