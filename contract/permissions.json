@@ -21,13 +21,24 @@
         "type": "string",
         "description": "Identifier of the entity"
       },
+      "name": {
+        "type": "string",
+        "description": "Name of the entity"
+      },
+      "email": {
+        "type": "string",
+        "description": "Email of the user"
+      },
       "department": {
         "type": "string",
         "description": "Identifier of the department or \"*\" for any department (same as empty) or \"-\" for no department"
       },
-      "name": {
-        "type": "string",
-        "description": "Name of the entity"
+      "roles": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "description": "Role name"
+        }
       },
       "operations": {
         "type": "array",
@@ -41,13 +52,6 @@
         "items": {
           "type": "string",
           "description": "API permission classes that can be used"
-        }
-      },
-      "roles": {
-        "type": "array",
-        "items": {
-          "type": "string",
-          "description": "Role name"
         }
       }
     }

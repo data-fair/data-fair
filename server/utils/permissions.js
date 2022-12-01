@@ -85,7 +85,8 @@ const getOwnerClasses = (owner, user, resourceType) => {
 const matchPermission = (owner, permission, user) => {
   if (!permission.type && !permission.id) return true // public
   if (!user || user.isApplicationKey || !user.activeAccount) return false
-  if (permission.type === 'user' && permission.id === '*') return true
+  if (permission.type === 'user' && user.activeAccount.type === 'user' && permission.id === '*') return true
+  if (permission.type === 'user' && user.activeAccount.type === 'user' && permission.email && permission.email === user.email) return true
   if (user.activeAccount.type !== permission.type || user.activeAccount.id !== permission.id) return false
   if (permission.type === 'user') return true
   if (user.activeAccount.department && permission.department && permission.department !== '*' && permission.department !== user.activeAccount.department) return false
@@ -162,8 +163,9 @@ exports.filter = function (user) {
       if (!user.organization) {
         // user is owner
         or.push({ 'owner.type': 'user', 'owner.id': user.id })
-        // user has specific permission to read
+        // user has specific permission to read, given by id or by email
         or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', id: user.id } } })
+        if (user.email) or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', email: user.email } } })
       } else {
         // user is privileged member of owner organization with or without department
         if (['admin', 'contrib'].includes(user.organization.role)) {
@@ -211,7 +213,7 @@ module.exports.router = (resourceType, resourceName, onPublicCallback) => {
     if (!valid) return res.status(400).send(validate.errors)
     req.body = req.body || []
     req.body.forEach(permission => {
-      if ((!permission.type && permission.id) || (permission.type && !permission.id)) valid = false
+      if ((!permission.type && permission.id) || (permission.type && !(permission.id || permission.email))) valid = false
     })
     if (!valid) return res.status(400).send('Error in permissions format')
     const resources = req.app.get('db').collection(resourceType)
