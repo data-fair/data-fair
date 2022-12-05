@@ -638,12 +638,9 @@ describe('REST datasets', () => {
     await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(2, 'days').toISOString() })
     await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(1, 'days').toISOString() })
     await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(1, 'hours').toISOString() })
-    await workers.hook('finalizer/restttl')
-    let res = await ax.get('/api/v1/datasets/restttl/lines')
-    assert.equal(res.data.total, 4)
     await workers.hook('ttlManager/restttl')
     await workers.hook('finalizer/restttl')
-    res = await ax.get('/api/v1/datasets/restttl/lines')
+    const res = await ax.get('/api/v1/datasets/restttl/lines')
     assert.equal(res.data.total, 1)
   })
 
