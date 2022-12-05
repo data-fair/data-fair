@@ -11,16 +11,13 @@
       <tr>
         <td>{{ item.key }}</td>
         <td>{{ item.title || item['x-originalName'] || item.key }}</td>
-        <td>{{ item.format || item.type }}</td>
+        <td>{{ propTypeTitle(item) }}</td>
         <td>{{ vocabulary && vocabulary[item['x-refersTo']] && vocabulary[item['x-refersTo']].title }}</td>
         <td v-html="item.description || (vocabulary && vocabulary[item['x-refersTo']] && vocabulary[item['x-refersTo']].description)" />
       </tr>
     </template>
     <template #top>
-      <div
-        v-t="'downloadSchema'"
-        class="text-center"
-      >
+      <div class="text-center">
         <v-menu
           offset-y
           tile
@@ -28,10 +25,10 @@
           <template #activator="{ on }">
             <v-btn
               color="primary"
-              icon
-              large
+              text
               v-on="on"
             >
+              {{ $t('downloadSchema') }}&nbsp;
               <v-icon>mdi-download</v-icon>
             </v-btn>
           </template>
@@ -97,6 +94,7 @@ export default {
     ...mapState(['vocabulary']),
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['resourceUrl']),
+    ...mapGetters(['propTypeTitle', 'propTypeIcon']),
     labelProp () {
       return this.dataset && this.dataset.schema && this.dataset.schema.find(f => f['x-refersTo'] && ['http://www.w3.org/2000/01/rdf-schema#label', 'http://www.bbc.co.uk/ontologies/coreconcepts/label'].indexOf(f['x-refersTo']) >= 0)
     },
