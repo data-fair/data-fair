@@ -79,6 +79,16 @@ describe('settings API', () => {
     assert.equal(notif.sender.department, undefined)
   })
 
+  it('department admin can publish dataset on department site', async () => {
+    await global.ax.dmeadusOrg.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', { type: 'data-fair-portals', id: 'portalorg', url: 'http://portal.com' })
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
+    await global.ax.hlalonde3Org.post('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites', portal)
+
+    const dataset = (await global.ax.hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
+    await workers.hook(`finalizer/${dataset.id}`)
+    await global.ax.hlalonde3Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] })
+  })
+
   it('department contrib cannot publish dataset on department site', async () => {
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
     await global.ax.hlalonde3Org.post('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites', portal)
@@ -106,7 +116,7 @@ describe('settings API', () => {
     assert.equal(notif.sender.department, 'dep1')
   })
 
-  it('contrib can public on a "staging" publication site', async () => {
+  it('contrib can publish on a "staging" publication site', async () => {
     const portalProd = { type: 'data-fair-portals', id: 'portal-staging', url: 'http://portal.com', settings: { staging: true } }
     await global.ax.dmeadusOrg.post('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites', portalProd)
     const portalStaging = { type: 'data-fair-portals', id: 'portal-prod', url: 'http://portal.com' }

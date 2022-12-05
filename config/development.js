@@ -71,8 +71,12 @@ module.exports = {
     href: 'https://app.dawizz.fr/mydatacatalogue/'
   }],
   proxyNuxt: true,
-  extraNavigationItems: [{ id: 'test', title: { fr: 'Test', en: 'Test en' }, iframe: `http://${host}:5600/_dev/extra`, icon: 'mdi-link' }],
-  extraAdminNavigationItems: [{ id: 'test', title: { fr: 'Test admin', en: 'Test admin en' }, iframe: 'https://koumoul.com', icon: 'mdi-link' }],
+  extraNavigationItems: [
+    { id: 'test', title: { fr: 'Test', en: 'Test en' }, iframe: `http://${host}:5600/_dev/extra`, icon: 'mdi-link' }
+  ],
+  extraAdminNavigationItems: [
+    { id: 'test', title: { fr: 'Test admin', en: 'Test admin en' }, iframe: 'https://koumoul.com', icon: 'mdi-link' }
+  ],
   disableSharing: false,
   disableApplications: false,
   disableRemoteServices: false,

@@ -5,7 +5,7 @@
       {{ wrapper }}-->
       <lazy-v-jsf
         v-model="wrapper"
-        :schema="wrapperSchema"
+        :schema="schema"
         :options="{locale: 'fr', arrayItemCardProps: {outlined: true, tile: true}, editMode: 'inline', context}"
         @change="change"
       />
@@ -26,6 +26,7 @@ en:
 
 <script>
 import Vue from 'vue'
+import { mapState } from 'vuex'
 import eventBus from '~/event-bus'
 
 if (process.browser) {
@@ -33,26 +34,29 @@ if (process.browser) {
   Vue.component('Draggable', Draggable)
 }
 
-const publicationSitesSchema = require('~/../contract/settings').properties.publicationSites
+const publicationSitesSchema = require('~/../contract/publication-sites')(false)
+const publicationSitesAdminSchema = require('~/../contract/publication-sites')(true)
 const datasetsMetadataSchema = require('~/../contract/settings').properties.datasetsMetadata
-const wrapperSchema = {
-  type: 'object',
-  properties: {
-    publicationSites: publicationSitesSchema
-  }
-}
 
 export default {
   props: ['settings'],
   data: () => ({
     eventBus,
-    wrapperSchema,
     formValid: true,
     wrapper: {
       publicationSites: []
     }
   }),
   computed: {
+    ...mapState('session', ['user']),
+    schema () {
+      return {
+        type: 'object',
+        properties: {
+          publicationSites: this.user.adminMode ? publicationSitesAdminSchema : publicationSitesSchema
+        }
+      }
+    },
     context () {
       return {
         datasetsMetadata: [

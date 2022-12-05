@@ -1,7 +1,7 @@
-module.exports = {
+module.exports = (admin = false) => ({
   type: 'array',
   title: 'Portails',
-  'x-options': { arrayOperations: ['update'] },
+  'x-options': admin ? {} : { arrayOperations: ['update'] },
   items: {
     type: 'object',
     required: ['type', 'id', 'url'],
@@ -11,42 +11,42 @@ module.exports = {
         title: 'Type de site',
         description: 'Utilisé pour séparer la gestion des sites par groupes.',
         default: 'data-fair-portals',
-        'x-display': 'hidden'
+        'x-display': admin ? null : 'hidden'
       },
       id: {
         type: 'string',
         title: 'Identifiant',
         description: 'Cet identifiant doit être unique pour la même valeur de "Type de site".',
-        'x-display': 'hidden'
+        'x-display': admin ? null : 'hidden'
       },
       title: {
         type: 'string',
         title: 'Titre',
-        readOnly: true
+        readOnly: !admin
       },
       url: {
         type: 'string',
         title: 'Adresse du site',
-        readOnly: true
+        readOnly: !admin
       },
       private: {
         type: 'boolean',
         title: 'Site privé',
         description: 'Dépend de la configuration de l\'authentification sur le portail. Si coché il sera permis de publier des ressources dont les permissions ne permettent pas l\'accès au public.',
         default: false,
-        readOnly: true
+        readOnly: !admin
       },
       datasetUrlTemplate: {
         type: 'string',
         title: 'Adresse des pages de jeux de données',
         description: 'Exemple: https://mon-portail/datasets/{id}',
-        'x-display': 'hidden'
+        'x-display': admin ? null : 'hidden'
       },
       applicationUrlTemplate: {
         type: 'string',
         title: 'Adresse des pages de visualisations',
         description: 'Exemple: https://mon-portail/reuses/{id}',
-        'x-display': 'hidden'
+        'x-display': admin ? null : 'hidden'
       },
       settings: {
         type: 'object',
@@ -69,4 +69,4 @@ module.exports = {
       }
     }
   }
-}
+})

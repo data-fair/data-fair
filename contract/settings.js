@@ -1,5 +1,5 @@
 const topic = require('./topic')
-const publicationSites = require('./publication-sites')
+const publicationSites = require('./publication-sites')()
 
 module.exports = {
   title: 'Settings',
