@@ -29,28 +29,32 @@
             v-if="group"
             :key="group"
             :label="group"
+            :input-value="groupStatus(group) !== 'none'"
+            :color="groupStatus(group) === 'some' ? 'grey' : 'primary'"
             dense
             hide-details
             @change="value => toggleGroup(group, value)"
           >
             <template #append>
               <v-btn
-                v-if="!foldedGroups[group]"
+                v-if="unfoldedGroups[group]"
                 :key="'fold-down-' + group"
                 icon
                 style="margin-top:-8px;"
-                @click="$set(foldedGroups, group, true)"
+                :title="$t('fold')"
+                @click="$set(unfoldedGroups, group, false)"
               >
                 <v-icon>
                   mdi-menu-down
                 </v-icon>
               </v-btn>
               <v-btn
-                v-if="foldedGroups[group]"
+                v-if="!unfoldedGroups[group]"
                 :key="'fold-up-' + group"
                 icon
                 style="margin-top:-8px;"
-                @click="$set(foldedGroups, group, false)"
+                :title="$t('unfold')"
+                @click="$set(unfoldedGroups, group, true)"
               >
                 <v-icon>
                   mdi-menu-left
@@ -60,7 +64,7 @@
           </v-checkbox>
           <template v-for="(header) in fieldHeaders.filter(header => (header.field['x-group'] || '') === group)">
             <v-checkbox
-              v-show="!foldedGroups[header.field['x-group']]"
+              v-show="!header.field['x-group'] || unfoldedGroups[header.field['x-group']]"
               :key="header.value"
               :value="header.value"
               :label="header.text"
@@ -81,16 +85,20 @@
 fr:
   visibleColumns: Colonnes visibles
   showAll: tout afficher
+  fold: plier
+  unfold: déplier
 en:
   visibleColumns: Visible columnes
   showAll: show all
+  fold: fold
+  unfold: unfold
 </i18n>
 
 <script>
 export default {
   props: ['value', 'headers'],
   data () {
-    return { foldedGroups: {} }
+    return { unfoldedGroups: {} }
   },
   computed: {
     fieldHeaders () {
@@ -101,6 +109,20 @@ export default {
         if (header.field['x-group'] && !groups.includes(header.field['x-group'])) groups.push(header.field['x-group'])
         return groups
       }, []).concat([''])
+    },
+    groupStatus () {
+      return (group) => {
+        let nbSelected = 0
+        let nbTotal = 0
+        for (const header of this.fieldHeaders) {
+          if (header.field['x-group'] !== group) continue
+          nbTotal += 1
+          if (this.value.includes(header.value)) nbSelected += 1
+        }
+        if (nbTotal === nbSelected) return 'all'
+        if (nbSelected) return 'some'
+        return 'none'
+      }
     }
   },
   methods: {
