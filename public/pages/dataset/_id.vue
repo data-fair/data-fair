@@ -223,18 +223,10 @@
                 <v-tab href="#reuses-apps">
                   <v-icon>mdi-image-multiple</v-icon>&nbsp;&nbsp;{{ $t('applications') }}
                 </v-tab>
-
-                <v-tab href="#reuses-external">
-                  <v-icon>mdi-open-in-new</v-icon>&nbsp;&nbsp;{{ $t('extReuses') }}
-                </v-tab>
               </template>
               <template #tabs-items>
                 <v-tab-item value="reuses-apps">
                   <dataset-applications />
-                </v-tab-item>
-
-                <v-tab-item value="reuses-external">
-                  <dataset-external-reuses />
                 </v-tab-item>
               </template>
             </layout-section-tabs>
@@ -394,7 +386,6 @@ fr:
   thumbnails: Vignettes
   exports: Exports
   applications: Applications
-  extReuses: Réutilisations externes
   share: Partage
   permissions: Permissions
   portals: Portails
@@ -432,7 +423,6 @@ en:
   files: Files
   thumbnails: Thumbnails
   applications: Applications
-  extReuses: External reuses
   share: Share
   permissions: Permissions
   portals: Portals
