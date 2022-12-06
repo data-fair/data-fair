@@ -17,7 +17,11 @@ exports.middleware = function (operationId, operationClass, trackingCategory) {
         applications: 'L\'application',
         catalogs: 'Le connecteur'
       }[req.resourceType]
-      if (req.user && operationId === 'readDescription' && denomination) {
+      if (!denomination) return res.send('permission manquante')
+      if (!req.user) {
+        return res.send(`${denomination} n'est pas accessible publiquement. Veuillez vous connecter.`)
+      }
+      if (operationId === 'readDescription') {
         if (req.resource.owner.type === 'user' && req.user.id === req.resource.owner.id) {
           return res.send(`${denomination} ${req.resource.title} appartient à votre compte personnel mais vous avez sélectionné une organisation comme compte actif.
     Sélectionnez votre compte personnel en tant que compte actif pour visualiser les informations.`)
@@ -26,11 +30,6 @@ exports.middleware = function (operationId, operationClass, trackingCategory) {
           return res.send(`${denomination} ${req.resource.title} appartient à l'organisation ${req.resource.owner.name} dont vous êtes membre.
 Sélectionnez l'organisation ${req.resource.owner.name} en tant que compte actif pour visualiser les informations.`)
         }
-      }
-      if (!req.user) {
-        return res.send(`${denomination} n'est pas accessible publiquement. Veuillez vous connecter.`)
-      }
-      if (operationId === 'readDescription') {
         return res.send(`${denomination} est accessible uniquement aux utilisateurs autorisés par le propriétaire. Vous n'avez pas les permissions nécessaires pour visualiser les informations.`)
       }
       return res.send(`Permission manquante pour l'opération "${operationId}" ou la catégorie "${operationClass}".`)

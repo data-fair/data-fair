@@ -283,7 +283,6 @@ export default {
             class: permClass
           })
         }))
-        console.log('api classes', classes)
       }
       return classes
     },
