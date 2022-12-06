@@ -16,19 +16,22 @@ exports.middleware = function (operationId, operationClass, trackingCategory) {
         datasets: 'Le jeu de données',
         applications: 'L\'application',
         catalogs: 'Le connecteur'
-      }[req.resourceType]
-      if (!denomination) return res.send('permission manquante')
-      if (!req.user) {
-        return res.send(`${denomination} n'est pas accessible publiquement. Veuillez vous connecter.`)
-      }
+      }[req.resourceType] || 'La ressource'
       if (operationId === 'readDescription') {
-        if (req.resource.owner.type === 'user' && req.user.id === req.resource.owner.id) {
-          return res.send(`${denomination} ${req.resource.title} appartient à votre compte personnel mais vous avez sélectionné une organisation comme compte actif.
-    Sélectionnez votre compte personnel en tant que compte actif pour visualiser les informations.`)
+        if (!req.user) {
+          return res.send(`${denomination} n'est pas accessible publiquement. Veuillez vous connecter.`)
         }
-        if (req.resource.owner.type === 'organization' && req.user.organizations.find(o => o.id === req.resource.owner.id) && req.resource.owner.id !== req.user.activeAccount.id) {
-          return res.send(`${denomination} ${req.resource.title} appartient à l'organisation ${req.resource.owner.name} dont vous êtes membre.
-Sélectionnez l'organisation ${req.resource.owner.name} en tant que compte actif pour visualiser les informations.`)
+        const altAccounts = [{ id: req.user.id, name: 'personnel', activeAccount: { type: 'user', ...req.user } }]
+        for (const org of req.user.organizations || []) {
+          let name = 'organisation ' + (org.name || org.id)
+          if (org.department) name += ' / ' + (org.departmentName || org.department)
+          altAccounts.push({ id: req.user.id, name, activeAccount: { type: 'organization', ...org } })
+        }
+        for (const altAccount of altAccounts) {
+          if (exports.can(req.resourceType, req.resource, operationId, altAccount)) {
+            return res.send(`${denomination} ${req.resource.title} est accessible depuis votre compte ${altAccount.name} mais vous ne l'avez pas sélectionné comme compte actif.
+ Changez de compte pour visualiser les informations.`)
+          }
         }
         return res.send(`${denomination} est accessible uniquement aux utilisateurs autorisés par le propriétaire. Vous n'avez pas les permissions nécessaires pour visualiser les informations.`)
       }

@@ -29,6 +29,12 @@ describe('permissions', () => {
     res = await global.ax.ngernier4.get('/api/v1/datasets/' + datasetId)
     assert.equal(res.status, 200)
 
+    await assert.rejects(global.ax.ngernier4Org.get('/api/v1/datasets/' + datasetId), (err) => {
+      assert.ok(err.data.includes('depuis votre compte personnel'))
+      assert.equal(err.status, 403)
+      return true
+    })
+
     // User has permissions on class
     res = await global.ax.ddecruce5.get('/api/v1/datasets/' + datasetId)
     assert.equal(res.status, 200)
