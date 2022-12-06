@@ -85,7 +85,7 @@ const getOwnerClasses = (owner, user, resourceType) => {
 const matchPermission = (owner, permission, user) => {
   if (!permission.type && !permission.id) return true // public
   if (!user || user.isApplicationKey || !user.activeAccount) return false
-  if (permission.type === 'user' && user.activeAccount.type === 'user' && permission.id === '*') return true
+  if (permission.type === 'user' && permission.id === '*') return true
   if (permission.type === 'user' && user.activeAccount.type === 'user' && permission.email && permission.email === user.email) return true
   if (user.activeAccount.type !== permission.type || user.activeAccount.id !== permission.id) return false
   if (permission.type === 'user') return true
@@ -156,6 +156,7 @@ exports.filter = function (user) {
   const or = [visibilityUtils.publicFilter]
 
   if (user) {
+    or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', id: '*' } } })
     // user is in super admin mode, show all
     if (user.adminMode) {
       or.push({ 'owner.type': { $exists: true } })

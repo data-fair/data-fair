@@ -96,4 +96,17 @@ describe('permissions', () => {
     assert.equal((await global.ax.ddecruce5Org.get('/api/v1/datasets')).data.count, 1)
     await global.ax.ddecruce5Org.get('/api/v1/datasets/' + datasetId)
   })
+
+  it('apply permission to any authenticated user', async () => {
+    const res = await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })
+    const datasetId = res.data.id
+    assert.equal((await global.ax.bhazeldean7.get('/api/v1/datasets')).data.count, 0)
+    await assert.rejects(global.ax.bhazeldean7.get('/api/v1/datasets/' + datasetId), err => err.status === 403)
+    await global.ax.dmeadusOrg.put('/api/v1/datasets/' + datasetId + '/permissions', [
+      { type: 'user', id: '*', classes: ['list', 'read'] }
+    ])
+    assert.equal((await global.ax.bhazeldean7.get('/api/v1/datasets')).data.count, 1)
+    await global.ax.bhazeldean7.get('/api/v1/datasets/' + datasetId)
+    await global.ax.bhazeldean7Org.get('/api/v1/datasets/' + datasetId)
+  })
 })

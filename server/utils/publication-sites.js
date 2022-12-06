@@ -59,6 +59,9 @@ exports.applyPatch = async (db, previousResource, resource, user, resourceType) 
   for (const publicationSite of previousPublicationSites) {
     if (!newPublicationSites.includes(publicationSite)) {
       const publicationSiteInfo = await getPublicationSiteInfo(db, resource.owner, publicationSite)
+      if (!user.adminMode && resource.owner.type === 'organization' && user.activeAccount.type === 'organization' && user.activeAccount.id === resource.owner.id && !publicationSiteInfo.department && user.activeAccount.department) {
+        throw createError(403, 'publication site does not belong to user department')
+      }
       if (publicationSiteInfo && !publicationSiteInfo.settings?.staging && !permissions.can(resourceType, resource, 'writePublicationSites', user)) {
         throw createError(403, 'publication site requires permission to unpublish')
       }
