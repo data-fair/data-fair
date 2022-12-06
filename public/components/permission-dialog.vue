@@ -95,13 +95,13 @@
         <v-btn
           v-t="'cancel'"
           text
-          @click="showDialog = false; permission = null"
+          @click="showDialog = false"
         />
         <v-btn
           v-t="'validate'"
           :disabled="!valid"
           color="primary"
-          @click="showDialog = false;$emit('input', permission)"
+          @click="$emit('input', permission);showDialog = false;"
         />
       </v-card-actions>
     </v-card>
@@ -288,26 +288,11 @@ export default {
     value: {
       immediate: true,
       handler () {
-        if (this.value) {
-          this.permission = JSON.parse(JSON.stringify(this.value))
-          if (this.permission.operations && this.permission.operations.length) this.expertMode = true
-          this.permission.type = this.permission.type || null
-          this.permission.id = this.permission.id || null
-          this.permission.department = this.permission.department || null
-        } else {
-          // init default permission if value is not defined
-          this.permission = {
-            type: 'organization',
-            operations: [],
-            classes: ['read', 'list']
-          }
-          if (this.owner.type === 'organization') {
-            this.organization = this.owner
-          } else {
-            this.organization = null
-          }
-        }
+        this.init()
       }
+    },
+    showDialog () {
+      this.init()
     },
     'permission.classes' (classes) {
       if (classes && classes.includes('list') && !classes.includes('read')) {
@@ -321,6 +306,31 @@ export default {
     }
   },
   methods: {
+    init () {
+      if (!this.showDialog) {
+        this.permission = null
+        return
+      }
+      if (this.value) {
+        this.permission = JSON.parse(JSON.stringify(this.value))
+        if (this.permission.operations && this.permission.operations.length) this.expertMode = true
+        this.permission.type = this.permission.type || null
+        this.permission.id = this.permission.id || null
+        this.permission.department = this.permission.department || null
+      } else {
+        // init default permission if value is not defined
+        this.permission = {
+          type: 'organization',
+          operations: [],
+          classes: ['read', 'list']
+        }
+        if (this.owner.type === 'organization') {
+          this.organization = this.owner
+        } else {
+          this.organization = null
+        }
+      }
+    },
     setPermissionType () {
       if (this.permission.type === 'organization') {
         if (this.owner.type === 'organization') {
