@@ -47,13 +47,13 @@
     />
 
     <v-switch
-      v-if="!simple"
+      v-if="!simple && api"
       v-model="detailedMode"
       color="primary"
       :label="$t('detailedMode')"
     />
 
-    <template v-if="detailedMode && ownerDetails">
+    <template v-if="detailedMode && ownerDetails && api">
       <permission-dialog
         v-if="!disabled"
         :permission-classes="permissionClasses"

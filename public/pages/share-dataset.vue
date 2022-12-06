@@ -158,7 +158,6 @@
           :disabled="!can('setPermissions')"
           :resource="dataset"
           :resource-url="resourceUrl"
-          :api="api"
           :has-public-deps="hasPublicApplications"
           :simple="true"
         />
@@ -267,7 +266,7 @@ export default {
     ...mapState('session', ['user']),
     ...mapGetters('session', ['activeAccount']),
     ...mapGetters(['ownerPublicationSites']),
-    ...mapState('dataset', ['dataset', 'api']),
+    ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['can', 'resourceUrl', 'hasPublicApplications']),
     publicationSites () {
       return this.ownerPublicationSites(this.activeAccount)

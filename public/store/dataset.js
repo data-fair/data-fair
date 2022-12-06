@@ -137,9 +137,9 @@ export default () => ({
       await Promise.all([
         dispatch('fetchApplications'),
         dispatch('fetchVirtuals'),
-        dispatch('fetchApiDoc'),
         dispatch('fetchDataFiles')
       ])
+      if (getters.can('readPrivateApiDoc')) await dispatch('fetchApiDoc')
       if (getters.can('readJournal')) await dispatch('fetchJournal')
     },
     async fetchDataset ({ commit, state }) {
@@ -234,7 +234,7 @@ export default () => ({
           const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'publications', draft: 'true' } })
           commit('patch', { publications: dataset.publications })
         }
-        dispatch('fetchApiDoc')
+        if (state.api) dispatch('fetchApiDoc')
       })
       eventBus.$emit('subscribe', getters.taskProgressChannel)
       eventBus.$on(getters.taskProgressChannel, async taskProgress => {
