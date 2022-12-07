@@ -466,9 +466,11 @@ describe('virtual datasets', () => {
     const child1 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     child1.schema[0]['x-capabilities'] = { textAgg: false, values: false }
     await ax.patch('/api/v1/datasets/' + child1.id, { schema: child1.schema })
+    await workers.hook('finalizer/' + child1.id)
     const child2 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     child2.schema[0]['x-capabilities'] = { textAgg: false, insensitive: false }
     await ax.patch('/api/v1/datasets/' + child2.id, { schema: child2.schema })
+    await workers.hook('finalizer/' + child2.id)
 
     const res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
