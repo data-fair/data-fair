@@ -70,8 +70,12 @@ describe('datasets', () => {
     assert.equal(res.data.sums.count, 2)
 
     res = await axOrg.get('/api/v1/datasets', { params: { facets: 'owner,field-type', sums: 'count' } })
+    assert.equal(res.data.count, 3)
+    assert.equal(res.data.facets.owner.length, 2)
+
+    res = await axOrg.get('/api/v1/datasets', { params: { facets: 'owner,field-type', sums: 'count', owner: 'organization:KWqAGZ4mG' } })
     assert.equal(res.data.count, 2)
-    assert.equal(res.data.facets.owner.length, 1)
+    assert.equal(res.data.facets.owner.length, 2)
     // owner facet is not affected by the owner filter
     assert.equal(res.data.facets.owner[0].count, 2)
     assert.equal(res.data.facets.owner[0].value.id, 'KWqAGZ4mG')
@@ -84,15 +88,15 @@ describe('datasets', () => {
     res = await axOrg.get('/api/v1/datasets', { params: { count: false } })
     assert.equal(res.data.count, undefined)
 
-    res = await axOrg.get('/api/v1/datasets', { params: { raw: true, select: 'count' } })
+    res = await axOrg.get('/api/v1/datasets', { params: { raw: true, select: 'count', owner: 'organization:KWqAGZ4mG' } })
     assert.equal(res.data.results[0].userPermissions, undefined)
     assert.equal(res.data.results[0].owner, undefined)
     assert.equal(res.data.results[0].count, 2)
 
-    res = await axOrg.get('/api/v1/datasets', { params: { select: '-userPermissions' } })
+    res = await axOrg.get('/api/v1/datasets', { params: { select: '-userPermissions', owner: 'organization:KWqAGZ4mG' } })
     assert.equal(res.data.results[0].userPermissions, undefined)
     assert.deepEqual(res.data.results[0].owner, { id: 'KWqAGZ4mG', name: 'Fivechat', type: 'organization' })
-    res = await axOrg.get('/api/v1/datasets', { params: { select: '-userPermissions,-owner' } })
+    res = await axOrg.get('/api/v1/datasets', { params: { select: '-userPermissions,-owner', owner: 'organization:KWqAGZ4mG' } })
     assert.equal(res.data.results[0].userPermissions, undefined)
     assert.deepEqual(res.data.results[0].owner, undefined)
   })
