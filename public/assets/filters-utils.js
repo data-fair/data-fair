@@ -117,7 +117,7 @@ export function readQueryParams (query, dataset) {
       type: 'interval',
       field: dataset.schema.find(p => p.key === key.slice(0, -9)),
       minValue: values[0],
-      maxValue: values[0]
+      maxValue: values[1]
     })
   })
   return filters
