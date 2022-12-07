@@ -3,12 +3,12 @@
     :value="value"
     :items="filledMembers"
     :search-input.sync="search"
+    no-filter
     :loading="loading"
     item-text="name"
     item-value="id"
     :label="$t('member', {org: organization.name})"
     required
-    cache-items
     return-object
     clearable
     @change="o => $emit('input', o)"
