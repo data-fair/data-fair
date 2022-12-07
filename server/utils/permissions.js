@@ -21,16 +21,12 @@ exports.middleware = function (operationId, operationClass, trackingCategory) {
         if (!req.user) {
           return res.send(`${denomination} n'est pas accessible publiquement. Veuillez vous connecter.`)
         }
-        const altAccounts = [{ id: req.user.id, name: 'personnel', activeAccount: { type: 'user', ...req.user } }]
         for (const org of req.user.organizations || []) {
-          let name = 'organisation ' + (org.name || org.id)
+          let name = org.name || org.id
           if (org.department) name += ' / ' + (org.departmentName || org.department)
-          altAccounts.push({ id: req.user.id, name, activeAccount: { type: 'organization', ...org } })
-        }
-        for (const altAccount of altAccounts) {
-          if (exports.can(req.resourceType, req.resource, operationId, altAccount)) {
-            return res.send(`${denomination} ${req.resource.title} est accessible depuis votre compte ${altAccount.name} mais vous ne l'avez pas sélectionné comme compte actif.
- Changez de compte pour visualiser les informations.`)
+          const altAccount = { id: req.user.id, activeAccount: { type: 'organization', ...org } }
+          if (exports.can(req.resourceType, req.resource, operationId, altAccount, req.bypassPermissions)) {
+            return res.send(`${denomination} ${req.resource.title} est accessible depuis l'organisation ${name} dont vous êtes membre mais vous ne l'avez pas sélectionné comme compte actif. Changez de compte pour visualiser les informations.`)
           }
         }
         return res.send(`${denomination} est accessible uniquement aux utilisateurs autorisés par le propriétaire. Vous n'avez pas les permissions nécessaires pour visualiser les informations.`)
@@ -87,15 +83,28 @@ const getOwnerClasses = (owner, user, resourceType) => {
 const matchPermission = (owner, permission, user) => {
   if (!permission.type && !permission.id) return true // public
   if (!user || user.isApplicationKey || !user.activeAccount) return false
-  if (permission.type === 'user' && permission.id === '*') return true
-  if (permission.type === 'user' && user.activeAccount.type === 'user' && permission.email && permission.email === user.email) return true
-  if (user.activeAccount.type !== permission.type || user.activeAccount.id !== permission.id) return false
-  if (permission.type === 'user') return true
-  if (user.activeAccount.department && permission.department && permission.department !== '*' && permission.department !== user.activeAccount.department) return false
-  return !permission.roles || user.activeAccount.role === config.adminRole || permission.roles.includes(user.activeAccount.role)
+
+  // individual user permissions are applied no matter the current active account
+  if (permission.type === 'user') {
+    if (permission.id === '*') return true
+    if (permission.email && permission.email === user.email) return true
+    if (permission.id && permission.id === user.id) return true
+    return false
+  }
+
+  // if a user is switched on an organization, permissions for his role in this organization apply
+  // permissions for his other organizations do not apply
+  if (permission.type === 'organization' && user.activeAccount.type === 'organization' && permission.id === user.activeAccount.id) {
+    // department does not match
+    if (user.activeAccount.department && permission.department && permission.department !== '*' && permission.department !== user.activeAccount.department) return false
+    if (!permission.roles) return true
+    if (user.activeAccount.role === config.adminRole) return true
+    if (permission.roles.includes(user.activeAccount.role)) return true
+  }
+  return false
 }
 
-// resource can be an application, a dataset or an remote service
+// resource can be an application, a dataset or a remote service
 exports.can = function (resourceType, resource, operationId, user, bypassPermissions) {
   if (user && user.adminMode) return true
   const userPermissions = exports.list(resourceType, resource, user, bypassPermissions)
@@ -163,13 +172,14 @@ exports.filter = function (user) {
     if (user.adminMode) {
       or.push({ 'owner.type': { $exists: true } })
     } else {
-      if (!user.organization) {
-        // user is owner
-        or.push({ 'owner.type': 'user', 'owner.id': user.id })
-        // user has specific permission to read, given by id or by email
-        or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', id: user.id } } })
-        if (user.email) or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', email: user.email } } })
-      } else {
+      // individual user permissions are applied no matter the current active account
+      // user is owner
+      or.push({ 'owner.type': 'user', 'owner.id': user.id })
+      // user has specific permission to read, given by id or by email
+      or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', id: user.id } } })
+      if (user.email) or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', email: user.email } } })
+
+      if (user.organization) {
         // user is privileged member of owner organization with or without department
         if (['admin', 'contrib'].includes(user.organization.role)) {
           if (user.organization.department) or.push({ 'owner.type': 'organization', 'owner.id': user.organization.id, 'owner.department': user.organization.department })

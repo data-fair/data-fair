@@ -8,7 +8,8 @@ describe('permissions', () => {
     await global.ax.dmeadus.put('/api/v1/datasets/' + datasetId + '/permissions', [
       { type: 'user', id: 'ngernier4', operations: ['readDescription', 'list'] },
       { type: 'user', id: 'ddecruce5', classes: ['read'] },
-      { type: 'user', email: 'alone@no.org', classes: ['read'] }
+      { type: 'user', email: 'alone@no.org', classes: ['read'] },
+      { type: 'user', id: 'bhazeldean7', classes: ['read'] }
     ])
 
     // Another one that can be read by all
@@ -29,11 +30,9 @@ describe('permissions', () => {
     res = await global.ax.ngernier4.get('/api/v1/datasets/' + datasetId)
     assert.equal(res.status, 200)
 
-    await assert.rejects(global.ax.ngernier4Org.get('/api/v1/datasets/' + datasetId), (err) => {
-      assert.ok(err.data.includes('depuis votre compte personnel'))
-      assert.equal(err.status, 403)
-      return true
-    })
+    // User level permission applies also if he is switched in an organization account
+    res = await global.ax.ngernier4Org.get('/api/v1/datasets/' + datasetId)
+    assert.equal(res.status, 200)
 
     // User has permissions on class
     res = await global.ax.ddecruce5.get('/api/v1/datasets/' + datasetId)
@@ -41,6 +40,10 @@ describe('permissions', () => {
 
     // User has permission given using only his email
     res = await global.ax.alone.get('/api/v1/datasets/' + datasetId)
+    assert.equal(res.status, 200)
+
+    // Member has individual permission
+    res = await global.ax.bhazeldean7.get('/api/v1/datasets/' + datasetId)
     assert.equal(res.status, 200)
 
     // Read with public and private filters
