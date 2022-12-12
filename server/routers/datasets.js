@@ -373,6 +373,10 @@ const sendSchema = (req, res, schema) => {
       return true
     })
   }
+  if (req.query.maxCardinality) {
+    const maxCardinality = Number(req.query.maxCardinality)
+    schema = schema.filter(field => field['x-cardinality'] != null && field['x-cardinality'] <= maxCardinality)
+  }
   if (req.query.mimeType === 'application/tableschema+json') {
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-tableschema.json"`)
     schema = datasetUtils.tableSchema(schema)

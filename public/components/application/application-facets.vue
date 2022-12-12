@@ -88,13 +88,13 @@ fr:
   visibility: Visibilité
   topics: Thématiques
   portals: Portails
-  app: Application
+  app: Modèle d'application
 en:
   owner: Owner
   visibility: Visibility
   topics: Topics
   portals: Portals
-  app: Application
+  app: Application model
 </i18n>
 
 <script>
