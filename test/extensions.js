@@ -19,7 +19,7 @@ describe('Extensions', () => {
         const inputs = requestBody.trim().split('\n').map(JSON.parse)
         assert.equal(inputs.length, 2)
         assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-        return inputs.map(input => ({ key: input.key, lat: 10, lon: 10 }))
+        return inputs.map((input, i) => ({ key: input.key, lat: 10, lon: 10, matchLevel: 'match' + i }))
           .map(JSON.stringify).join('\n') + '\n'
       })
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
@@ -33,6 +33,8 @@ describe('Extensions', () => {
     const extensionKey = dataset.extensions[0].propertyPrefix
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lat'))
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lon'))
+    const matchLevelProp = dataset.schema.find(field => field.key === extensionKey + '.matchLevel')
+    assert.equal(matchLevelProp['x-cardinality'], 2)
     // A search to check results
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)

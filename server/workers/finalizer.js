@@ -36,7 +36,7 @@ exports.process = async function (app, dataset) {
 
   // Try to calculate enum values
   const cardinalityProps = dataset.schema
-    .filter(prop => !prop.key.startsWith('_'))
+    .filter(prop => !prop['x-calculated'])
     .filter(prop => prop['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
     .filter(prop => prop['x-refersTo'] !== 'http://schema.org/latitude')
     .filter(prop => prop['x-refersTo'] !== 'http://schema.org/longitude')
