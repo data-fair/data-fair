@@ -56,6 +56,7 @@ services:
       - LIST_USERS_MODE=admin
       - LIST_ORGANIZATIONS_MODE=authenticated
       - PROMETHEUS_ACTIVE=false
+      - ROLES_DEFAULTS=["admin","contrib","user"]
     volumes:
       - ./test/resources/users.json:/webapp/data/users.json
       - ./test/resources/organizations.json:/webapp/data/organizations.json

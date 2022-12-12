@@ -563,7 +563,8 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
   const patch = {
     owner: req.body,
     updatedBy: { id: req.user.id, name: req.user.name },
-    updatedAt: moment().toISOString()
+    updatedAt: moment().toISOString(),
+    permissions: []
   }
   const patchedDataset = (await req.app.get('db').collection('datasets')
     .findOneAndUpdate({ id: req.params.datasetId }, { $set: patch }, { returnDocument: 'after' })).value
@@ -740,6 +741,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       res.write(' ')
       try {
         dataset = await datasetPromise
+        permissions.initDatasetPermissions(dataset, req.user)
       } catch (err) {
         // should not happen too often, but sometimes we get an error after sending the 201 status
         // we return an error object nevertheless, better than to do nothing
@@ -758,6 +760,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         throw createError(400, JSON.stringify(validatePost.errors))
       }
       dataset = await initNew(db, req)
+      permissions.initDatasetPermissions(dataset, req.user)
       dataset.virtual = dataset.virtual || { children: [] }
       dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
       dataset.status = 'indexed'
@@ -774,6 +777,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         throw createError(400, JSON.stringify(validatePost.errors))
       }
       dataset = await initNew(db, req)
+      permissions.initDatasetPermissions(dataset, req.user)
       dataset.rest = dataset.rest || {}
       dataset.schema = dataset.schema || []
       // the dataset will go through a first index/finalize steps, not really necessary
@@ -794,6 +798,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         throw createError(400, JSON.stringify(validatePost.errors))
       }
       dataset = await initNew(db, req)
+      permissions.initDatasetPermissions(dataset, req.user)
       if (dataset.id) {
         await db.collection('datasets').insertOne(dataset)
       } else {
@@ -918,6 +923,7 @@ const updateDataset = asyncWrap(async (req, res) => {
     } else {
       Object.assign(dataset, req.body)
     }
+    if (req.isNewDataset) permissions.initDatasetPermissions(dataset, req.user)
     await db.collection('datasets').replaceOne({ id: req.params.datasetId }, dataset)
     if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'dataset-created' }, 'dataset')
     else if (!dataset.isRest && !dataset.isVirtual) {

@@ -131,7 +131,6 @@ exports.list = function (resourceType, resource, user, bypassPermissions) {
     for (const cl of ownerClasses) {
       for (const operation of operationsClasses[cl] || []) operations.add(operation)
     }
-    return [...operations]
   }
 
   // apply explicit permissions set on the resource for this user
@@ -212,6 +211,27 @@ exports.canDoForOwner = function (owner, resourceType, operationClass, user) {
   if (user && user.adminMode) return true
   const ownerClasses = getOwnerClasses(owner, user, resourceType)
   return ownerClasses && ownerClasses.includes(operationClass)
+}
+
+exports.initDatasetPermissions = async (dataset, user) => {
+  // initially give owner contribs permissions to write
+  if (dataset.owner.type === 'user') return
+  const contribPermission = {
+    type: dataset.owner.type,
+    id: dataset.owner.id,
+    name: dataset.owner.name,
+    department: dataset.owner.department || '-',
+    roles: ['contrib'],
+    classes: ['write']
+  }
+  if (dataset.owner.departmentName) contribPermission.departmentName = dataset.owner.departmentName
+
+  // if the dataset is created by a contrib initially allow them to also destroy it
+  if (getOwnerRole(dataset.owner, user) === 'contrib') {
+    contribPermission.operations = ['delete']
+  }
+
+  dataset.permissions = [contribPermission]
 }
 
 module.exports.router = (resourceType, resourceName, onPublicCallback) => {

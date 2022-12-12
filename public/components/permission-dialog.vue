@@ -66,7 +66,7 @@
 
         <v-select
           v-model="permission.classes"
-          :items="Object.keys(permissionClasses).filter(c => $te('classNames.' + c)).map(c => ({class: c, title: $t('classNames.' + c)}))"
+          :items="Object.keys(restrictedPermissionClasses).filter(c => $te('classNames.' + c)).map(c => ({class: c, title: $t('classNames.' + c)}))"
           item-text="title"
           item-value="class"
           :label="$t('actions')"
@@ -138,9 +138,9 @@ fr:
     list: Lister
     read: Lecture
     manageOwnLines: Gestion de ses propres lignes
-    # readAdvanced: 'Lecture informations détaillées',
-    # write: 'Ecriture',
-    # admin: 'Administration',
+    readAdvanced: Lecture informations détaillées
+    write: Écriture
+    # admin: Administration
     use: Utiliser le service
 en:
   editPermission: Edit permissions
@@ -171,9 +171,9 @@ en:
     list: List
     read: Read
     manageOwnLines: Manage own lines
-    # readAdvanced: 'Lecture informations détaillées',
-    # write: 'Ecriture',
-    # admin: 'Administration',
+    readAdvanced: Read advanced metadata
+    write: Write
+    # admin: Administration
     use: Use the service
 </i18n>
 
@@ -196,9 +196,9 @@ export default {
     ...mapState(['env']),
     ...mapState('session', ['user']),
     operations () {
-      return [].concat(...Object.keys(this.permissionClasses)
+      return [].concat(...Object.keys(this.restrictedPermissionClasses)
         .filter(c => this.$te('classNames.' + c))
-        .map(c => [{ header: this.$t('classNames.' + c) }].concat(this.permissionClasses[c])))
+        .map(c => [{ header: this.$t('classNames.' + c) }].concat(this.restrictedPermissionClasses[c])))
     },
     userSelectTypes () {
       const types = [{ value: '*', text: this.$t('allUsers') }]
@@ -282,6 +282,14 @@ export default {
       if (this.permission.type === 'organization' && this.owner.type === 'organization' && this.permission.id === this.owner.id && !((this.permission.roles && this.permission.roles.length) || this.permission.department)) return false
       if (this.permission.type === 'user' && !(this.permission.id || this.permission.email)) return false
       return true
+    },
+    restrictedPermissionClasses () {
+      if (this.permission && !this.permission.type) {
+        return ['read', 'list', 'use']
+          .reduce((classes, c) => { if (this.permissionClasses[c]) classes[c] = this.permissionClasses[c]; return classes }, {})
+      } else {
+        return this.permissionClasses
+      }
     }
   },
   watch: {
@@ -302,6 +310,11 @@ export default {
     'permission.operations' (operations) {
       if (operations && operations.includes('list') && !operations.includes('readDescription')) {
         operations.push('readDescription')
+      }
+    },
+    restrictedPermissionClasses () {
+      if (this.permission && this.permission.classes && this.permission.classes.length) {
+        this.permission.classes = this.permission.classes.filter(c => !!this.restrictedPermissionClasses[c])
       }
     }
   },
