@@ -842,3 +842,20 @@ exports.syncApplications = async (db, datasetId) => {
   await db.collection('datasets')
     .updateOne({ id: datasetId }, { $set: { 'extras.applications': applicationsExtras } })
 }
+
+exports.schemasFullyCompatible = (schema1, schema2) => {
+  // a change in these properties does not consitute a breaking change of the api
+  // and does not require a re-finalization of the dataset when patched
+  const innocuous = {
+    title: '',
+    description: '',
+    'x-display': '',
+    'x-master': '',
+    'x-labelsRestricted': '',
+    'x-labels': '',
+    'x-group': ''
+  }
+  const schema1Bare = schema1.map(p => ({ ...p, ...innocuous })).sort((p1, p2) => p1.key.localeCompare(p2.key))
+  const schema2Bare = schema2.map(p => ({ ...p, ...innocuous })).sort((p1, p2) => p1.key.localeCompare(p2.key))
+  return JSON.stringify(schema1Bare) === JSON.stringify(schema2Bare)
+}

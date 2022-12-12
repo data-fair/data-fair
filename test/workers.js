@@ -152,4 +152,29 @@ describe('workers', () => {
     assert.equal(res.data[0].data, 'This is a test error')
     config.worker.spawnTask = false
   })
+
+  it('Update dataset schema and apply only required worker tasks', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    const schema = dataset.schema
+    const idProp = schema.find(p => p.key === 'id')
+
+    // changing separator requires a full redindexing
+    idProp.separator = ','
+    let patchedDataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema })).data
+    assert.equal(patchedDataset.status, 'analyzed')
+    await workers.hook(`finalizer/${dataset.id}`)
+
+    // changing capabilities requires only refinalizing
+    idProp['x-capabilities'].insensitive = false
+    patchedDataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema })).data
+    assert.equal(patchedDataset.status, 'indexed')
+    await workers.hook(`finalizer/${dataset.id}`)
+
+    // changing a title does not require any worker tasks
+    idProp.title = 'Identifier'
+    patchedDataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema })).data
+    assert.equal(patchedDataset.status, 'finalized')
+  })
 })

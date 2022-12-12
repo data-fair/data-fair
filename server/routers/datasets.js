@@ -514,23 +514,23 @@ router.patch('/:datasetId',
       patch.status = 'analyzed'
     } else if (removedRestProp) {
       patch.status = 'analyzed'
-    } else if (patch.schema) {
+    } else if (patch.schema && !datasetUtils.schemasFullyCompatible(patch.schema, req.dataset.schema)) {
       try {
-      // this method will routinely throw errors
-      // we just try in case elasticsearch considers the new mapping compatible
-      // so that we might optimize and reindex only when necessary
+        // this method will routinely throw errors
+        // we just try in case elasticsearch considers the new mapping compatible
+        // so that we might optimize and reindex only when necessary
         await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
         await datasetUtils.updateStorage(db, { ...req.dataset, schema: patch.schema })
         patch.status = 'indexed'
       } catch (err) {
-      // generated ES mappings are not compatible, trigger full re-indexing
+        // generated ES mappings are not compatible, trigger full re-indexing
         patch.status = 'analyzed'
       }
     } else if (patch.thumbnails || patch.masterData) {
-    // just change finalizedAt so that cache is invalidated, but the worker doesn't relly need to work on the dataset
+      // just change finalizedAt so that cache is invalidated, but the worker doesn't relly need to work on the dataset
       patch.finalizedAt = (new Date()).toISOString()
     } else if (patch.rest) {
-    // changes in rest history mode will be processed by the finalizer worker
+      // changes in rest history mode will be processed by the finalizer worker
       patch.status = 'indexed'
     }
 
