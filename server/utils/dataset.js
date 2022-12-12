@@ -24,6 +24,7 @@ const esUtils = require('./es')
 const locks = require('./locks')
 const prometheus = require('./prometheus')
 const { basicTypes, csvTypes } = require('../workers/converter')
+const equal = require('deep-equal')
 const dataDir = path.resolve(config.dataDir)
 
 exports.dir = (dataset) => {
@@ -853,9 +854,11 @@ exports.schemasFullyCompatible = (schema1, schema2) => {
     'x-master': '',
     'x-labelsRestricted': '',
     'x-labels': '',
-    'x-group': ''
+    'x-group': '',
+    'x-cardinality': '',
+    enum: ''
   }
   const schema1Bare = schema1.map(p => ({ ...p, ...innocuous })).sort((p1, p2) => p1.key.localeCompare(p2.key))
   const schema2Bare = schema2.map(p => ({ ...p, ...innocuous })).sort((p1, p2) => p1.key.localeCompare(p2.key))
-  return JSON.stringify(schema1Bare) === JSON.stringify(schema2Bare)
+  return equal(schema1Bare, schema2Bare)
 }
