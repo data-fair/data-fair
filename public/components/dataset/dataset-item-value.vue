@@ -25,6 +25,7 @@
             v-for="(value, i) in itemValue.split(field.separator).map(v => v.trim())"
             v-slot="{ hover }"
             :key="i"
+            :disabled="disableHover"
           >
             <v-chip
               :class="{'my-0': true, 'px-4': !hover, 'px-2': hover}"
@@ -42,6 +43,7 @@
       <v-hover
         v-else
         v-slot="{ hover }"
+        :disabled="disableHover"
       >
         <div :style="`max-height: 40px; min-width: ${Math.min((itemValue + '').length, 50) * 6}px;`">
           <span>{{ itemValue | cellValues(field, truncate) }}</span>
@@ -68,7 +70,8 @@ export default {
     item: { type: Object, required: true },
     field: { type: Object, required: true },
     filters: { type: Array, required: false, default: () => ([]) },
-    truncate: { type: Number, default: 50 }
+    truncate: { type: Number, default: 50 },
+    disableHover: { type: Boolean, default: false }
   },
   computed: {
     itemValue () {
