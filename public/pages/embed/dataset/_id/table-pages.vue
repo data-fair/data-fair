@@ -14,7 +14,6 @@
       app
       dense
       :color="$vuetify.theme.dark ? 'black' : 'white'"
-      :scroll-target="displayMode === 'table' ? '.real-data-table .v-data-table__wrapper' : ''"
       :extension-height="extensionHeight"
     >
       <v-toolbar-title style="white-space:normal;">
@@ -34,11 +33,39 @@
         hide-details
         class="mx-2"
         clearable
-        @input="qMode === 'complete' && refresh(true)"
-        @keyup.enter.native="refresh(true)"
-        @click:append="refresh(true)"
-        @click:clear="$nextTick(() => {$nextTick(() => refresh(true))})"
+        @input="qMode === 'complete' && refresh()"
+        @keyup.enter.native="refresh()"
+        @click:append="refresh()"
+        @click:clear="$nextTick(() => {$nextTick(() => refresh())})"
       />
+      <template v-if="data.total">
+        <v-btn
+          :disabled="page <= 2"
+          icon
+          small
+          class="ml-2"
+          @click="page = 1"
+        >
+          <v-icon>mdi-chevron-double-left</v-icon>
+        </v-btn>
+        <v-btn
+          :disabled="page === 1"
+          icon
+          small
+          @click="page -= 1"
+        >
+          <v-icon>mdi-chevron-left</v-icon>
+        </v-btn>
+        <v-btn
+          :disabled="data.total <= (page * nbLines)"
+          icon
+          color="primary"
+          @click="page += 1"
+        >
+          <v-icon>mdi-chevron-right</v-icon>
+        </v-btn>
+      </template>
+
       <v-spacer />
       <dataset-select-cols
         v-model="selectedCols"
@@ -58,41 +85,6 @@
             <dataset-filters
               v-model="filters"
             />
-          </v-row>
-
-          <!-- fake table only here to have a fiex position header that follow the scroll on the actual table -->
-          <v-row
-            v-if="displayMode === 'table'"
-            class="v-data-table ma-0"
-          >
-            <div
-              class="v-data-table__wrapper"
-              :style="`overflow:visible;position:relative;left:-${scrollHeader}px;`"
-            >
-              <table :style="`table-layout:fixed;width:100%;`">
-                <thead
-                  class="v-data-table-header"
-                  style="width:100%"
-                >
-                  <tr>
-                    <template v-for="(header, i) in selectedHeaders.filter((header,i) => i >= headerIndex)">
-                      <dataset-table-header
-                        v-if="headerWidths[header.value]"
-                        :id="`visible-header-${i}`"
-                        :key="`visible-header-${i}`"
-                        :header="header"
-                        :filters="filters"
-                        :filter-height="filterHeight"
-                        :pagination="pagination"
-                        :style="`width:${headerWidths[header.value]}px;min-width:${headerWidths[header.value]}px;max-width:${headerWidths[header.value]}px`"
-                        @sort="orderBy(header)"
-                        @filter="f => addFilter(header.value, f)"
-                      />
-                    </template>
-                  </tr>
-                </thead>
-              </table>
-            </div>
           </v-row>
 
           <!-- list mode header -->
@@ -121,139 +113,81 @@
 
     <!-- table mode data-table -->
     <template v-if="displayMode === 'table'">
-      <!-- actual data-table the header is hidden, the visible header is in the app bar-->
       <v-data-table
         class="real-data-table"
         :headers="selectedHeaders"
         :server-items-length="data.total"
+        :loading="loading"
         :options.sync="pagination"
         hide-default-header
         hide-default-footer
-        :height="tableHeight"
-        style="margin-top:-22px"
+        :style="{height: `${tableHeight}px`}"
       >
         <template #header>
-          <thead
-            class="v-data-table-header hidden-header"
-            style="width:100%;"
-          >
+          <thead class="v-data-table-header">
             <tr>
               <dataset-table-header
-                v-for="(header, i) in selectedHeaders.filter((header,i) => i >= headerIndex)"
-                :id="`hidden-header-${i}`"
-                :key="`hidden-header-${i}`"
-                :data-header="header.value"
+                v-for="(header, i) in selectedHeaders"
+                :key="i"
                 :header="header"
                 :filters="filters"
                 :filter-height="filterHeight"
                 :pagination="pagination"
+                @sort="orderBy(header)"
+                @filter="f => addFilter(header.value, f)"
               />
             </tr>
           </thead>
-          <!-- a mask over the hidden header to make sure that when the extension changes size for a second we don't see the header below the app bar -->
-          <div :style="`background-color:${$vuetify.theme.isDark ? '#000000' : '#FFFFFF'};width:100%;height:22px;position:absolute;top:-22px;`" />
         </template>
         <template #body>
-          <tbody v-if="data.results && data.results.length">
-            <tr :key="`top-padding-${virtualScroll.topPadding}`">
-              <td :style="'height:'+virtualScroll.topPadding+'px'" />
-            </tr>
+          <tbody v-if="currentPageData">
             <tr
-              v-for="i in virtualScroll.nbRendered"
-              :key="i -1 + virtualScroll.index"
+              v-for="(item, i) in currentPageData"
+              :key="i"
             >
-              <template v-for="(header, h) in selectedHeaders">
-                <td
-                  v-if="h >= headerIndex && h <= headerIndex + nbVisibleHeaders"
-                  :key="header.value"
-                  :class="`pl-4 pr-0`"
-                  :style="`height: ${lineHeight}px;position:relative;`"
-                >
-                  <template v-if="header.value === '_thumbnail'">
-                    <v-avatar
-                      v-if="data.results[i -1 + virtualScroll.index]._thumbnail"
-                      tile
-                      :size="lineHeight"
-                    >
-                      <img :src="data.results[i -1 + virtualScroll.index]._thumbnail">
-                    </v-avatar>
-                  </template>
-                  <template v-else-if="header.value === '_owner'">
-                    <v-tooltip top>
-                      <template #activator="{on}">
-                        <span
-                          class="text-body-2"
-                          v-on="on"
-                        >
-                          <v-avatar :size="28">
-                            <img :src="`${env.directoryUrl}/api/avatars/${data.results[i -1 + virtualScroll.index]._owner.split(':').join('/')}/avatar.png`">
-                          </v-avatar>
-                        </span>
-                      </template>
-                      {{ data.results[i -1 + virtualScroll.index]._owner }}
-                    </v-tooltip>
-                  </template>
-                  <dataset-item-value
-                    v-else
-                    :item="data.results[i -1 + virtualScroll.index]"
-                    :field="header.field"
-                    :filters="filters"
-                    :truncate="truncate"
-                    @filter="f => addFilter(header.value, f)"
-                  />
-                </td>
-              </template>
-            </tr>
-            <tr :key="`bottom-padding-${virtualScroll.bottomPadding}`">
-              <td :style="'height:'+virtualScroll.bottomPadding+'px'" />
-            </tr>
-            <tr
-              v-if="data.results"
-              style="position:relative;"
-            >
-              <v-btn
-                v-if="data.next"
-                v-intersect="fetchMore"
-                :loading="loading"
-                text
-                color="primary"
-                :style="`position:absolute;left: ${windowWidth/2}px;transform: translate(-50%, 0);`"
-                @click="fetchMore"
+              <td
+                v-for="header in selectedHeaders"
+                :key="header.value"
+                :class="`pl-4 pr-0`"
+                :style="`height: ${lineHeight}px;position:relative;`"
               >
-                {{ $t('showMore') }}
-              </v-btn>
+                <template v-if="header.value === '_thumbnail'">
+                  <v-avatar
+                    v-if="item._thumbnail"
+                    tile
+                    :size="lineHeight"
+                  >
+                    <img :src="item._thumbnail">
+                  </v-avatar>
+                </template>
+                <template v-else-if="header.value === '_owner'">
+                  <v-tooltip top>
+                    <template #activator="{on}">
+                      <span
+                        class="text-body-2"
+                        v-on="on"
+                      >
+                        <v-avatar :size="28">
+                          <img :src="`${env.directoryUrl}/api/avatars/${item._owner.split(':').join('/')}/avatar.png`">
+                        </v-avatar>
+                      </span>
+                    </template>
+                    {{ item._owner }}
+                  </v-tooltip>
+                </template>
+                <dataset-item-value
+                  v-else
+                  :item="item"
+                  :field="header.field"
+                  :filters="filters"
+                  :truncate="truncate"
+                  @filter="f => addFilter(header.value, f)"
+                />
+              </td>
             </tr>
           </tbody>
         </template>
       </v-data-table>
-
-      <!-- horizontal sliding through headers -->
-      <v-btn
-        v-if="headerIndex > 0"
-        :style="`top:${tableHeight / 2}px;transform: translate(0, -50%);`"
-        fab
-        absolute
-        left
-        small
-        depressed
-        color="primary"
-        @click="headerIndex -= 1"
-      >
-        <v-icon>mdi-chevron-left</v-icon>
-      </v-btn>
-      <v-btn
-        v-if="totalHeaderWidth > windowWidth"
-        :style="`top:${tableHeight / 2}px;transform: translate(0, -50%);`"
-        fab
-        absolute
-        right
-        small
-        depressed
-        color="primary"
-        @click="headerIndex += 1"
-      >
-        <v-icon>mdi-chevron-right</v-icon>
-      </v-btn>
     </template>
 
     <!--list mode body -->
@@ -334,9 +268,8 @@ export default {
   data: () => ({
     data: {},
     query: null,
+    page: 1,
     pagination: {
-      page: 1,
-      itemsPerPage: 20,
       sortBy: [null],
       sortDesc: [false]
     },
@@ -347,14 +280,7 @@ export default {
     filters: [],
     lastParams: null,
     selectedCols: [],
-    ready: false,
-    headerWidths: [],
-    scrollHeader: 0,
-    scrollTop: 0,
-    scrolling: false,
-    headerIndex: 0,
-    nbVisibleHeaders: 0,
-    totalHeaderWidth: 0
+    ready: false
   }),
   computed: {
     ...mapState(['vocabulary']),
@@ -395,8 +321,7 @@ export default {
     },
     params () {
       const params = {
-        size: this.pagination.itemsPerPage,
-        page: this.pagination.page,
+        size: 20,
         q_mode: this.qMode,
         truncate: this.truncate
       }
@@ -422,15 +347,15 @@ export default {
       return { ...this.params, select: this.selectedCols.join(',') }
     },
     extensionHeight () {
-      let height = 48
+      let height = 0
+      if (this.displayMode === 'list') height += 48
       if (this.filters.length) height += 32
       return height
     },
     tableHeight () {
       let height = this.windowHeight
-      height -= 48 // app bar
-      height += 22 // the hidden table header
       height -= this.extensionHeight
+      height -= 48 // app bar
       return height
     },
     topBottomHeight () {
@@ -439,28 +364,17 @@ export default {
       height += 36 // bottom button
       return height
     },
-    virtualScroll () {
-      const linesBuffer = 10
-
-      // index is equivalent to the number of lines hidden at the top
-      const index = Math.max(0, Math.floor(this.scrollTop / this.lineHeight) - linesBuffer)
-      // number of lines available in memory
-      const nbLoaded = this.data.results ? this.data.results.length : 0
-      // number of lines visible on the screen
-      const nbVisible = Math.ceil(this.tableHeight / this.lineHeight)
-      // number of lines rendered by virtual scrolling
-      const nbRendered = Math.min(nbLoaded - index, nbVisible + (linesBuffer * 2))
-
-      // blank space on top of table matching the non-rendered lines
-      const topPadding = index * this.lineHeight
-      // blank space at bottom of table matching the non-rendered lines
-      const bottomPadding = Math.max(nbLoaded - index - nbRendered, 0) * this.lineHeight
-      return { index, nbRendered, topPadding, bottomPadding }
+    nbLines () {
+      // -48 for table header, -20 for horizontal scroll
+      return Math.floor((this.tableHeight - 48 - 20) / this.lineHeight)
+    },
+    currentPageData () {
+      return this.data.results && this.data.results.slice((this.page - 1) * this.nbLines, this.page * this.nbLines)
     }
   },
   watch: {
     'dataset.schema' () {
-      this.refresh(true)
+      this.refresh()
     },
     pagination: {
       handler () {
@@ -470,46 +384,38 @@ export default {
     },
     filters: {
       handler () {
-        this.refresh(true)
+        this.refresh()
       },
       deep: true
     },
     selectedCols: {
       handler () {
         this.writeQueryParams()
-        this.syncHeader(true)
       },
       deep: true
     },
-    windowWidth () {
-      this.syncHeader()
-    },
-    headerIndex () {
-      this.syncHeader()
+    currentPageData () {
+      if (this.currentPageData.length < this.nbLines) this.fetchMore()
     }
   },
   async mounted () {
     this.readQueryParams()
-    if (this.displayMode === 'table') this.pagination.itemsPerPage = 40
     this.filterHeight = window.innerHeight - this.topBottomHeight
     this.refresh()
   },
   methods: {
-    async refresh (resetPagination) {
-      this.writeQueryParams()
-
-      if (resetPagination) {
-        this.pagination.page = 1
-        const goToOpts = { duration: 0 }
-        if (this.displayMode === 'table') goToOpts.container = '.v-data-table__wrapper'
-        if (this.displayMode === 'list') {
-          this.$vuetify.goTo(0, goToOpts)
-        } else {
-          document.querySelector('.real-data-table .v-data-table__wrapper').scrollTop = 0
-          this.scrollTop = 0
-        }
+    async refresh (resetSort = true) {
+      this.page = 1
+      if (resetSort) {
         this.pagination.sortBy = [null]
         this.pagination.sortDesc = [false]
+      }
+
+      this.writeQueryParams()
+
+      const goToOpts = {}
+      if (this.displayMode === 'list') {
+        this.$vuetify.goTo(0, goToOpts)
       }
 
       // prevent triggering multiple times the same request
@@ -525,9 +431,6 @@ export default {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       this.loading = false
-      this.syncHeader()
-      setTimeout(() => this.syncHeader(), 500)
-      setTimeout(() => this.syncHeader(), 2000)
     },
     async fetchMore (entries, observer, isIntersecting) {
       if (!this.data.next || this.loading || isIntersecting === false) return
@@ -541,7 +444,6 @@ export default {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       this.loading = false
-      this.syncHeader()
     },
     orderBy (header) {
       if (!header.sortable) return
@@ -587,52 +489,6 @@ export default {
         delete query.sort
       }
       this.$router.push({ query })
-    },
-    async syncHeader (resetIndex) {
-      if (resetIndex) this.headerIndex = 0
-
-      await this.$nextTick()
-
-      // in table mode the header is outside the actual table so that we can have
-      // infinite scroll, horizontal scroll and fixed header at the same time
-
-      // sync cols widths
-      const children = this.$el.querySelectorAll('.hidden-header th')
-      let totalWidth = 0
-      let nbVisibleHeaders = 1
-      for (const child of children) {
-        if (this.headerWidths[child.attributes['data-header'].value] !== child.clientWidth) {
-          this.$set(this.headerWidths, child.attributes['data-header'].value, child.clientWidth)
-        }
-        totalWidth += child.clientWidth
-        if (totalWidth < this.windowWidth) nbVisibleHeaders += 1
-      }
-      this.totalHeaderWidth = totalWidth
-      this.nbVisibleHeaders = nbVisibleHeaders
-
-      // sync horizontal scroll
-      // if (this._tableWrapper) {
-      // this._tableWrapper.removeEventListener('scroll', this.onTableScroll)
-      // }
-      const tableWrapper = document.querySelector('.real-data-table .v-data-table__wrapper')
-      if (this.displayMode === 'table' && !this._tableWrapper !== tableWrapper) {
-        this._tableWrapper = tableWrapper
-        this.scrollHeader = this._tableWrapper.scrollLeft
-        this._tableWrapper.addEventListener('scroll', this.onTableScroll)
-      }
-      await this.$nextTick()
-    },
-    onTableScroll (e) {
-      this.scrollHeader = e.target.scrollLeft
-      if (this.scrollTop !== e.target.scrollTop) {
-        this.scrolling = true
-        if (this._scrollTimeout) clearTimeout(this._scrollTimeout)
-        this._scrollTimeout = setTimeout(() => {
-          this.scrollTop = e.target.scrollTop
-          this.scrolling = false
-          this.syncHeader()
-        }, 20)
-      }
     }
   }
 }
@@ -645,21 +501,7 @@ export default {
 .embed-table .v-toolbar__extension {
   padding-left:0;
 }
-.real-data-table .v-data-table__wrapper {
-  overflow-x: hidden;
-}
-
-/* compact the hidden header to a height of 2px, these 2px will be hidden using a negative margin-top */
-.hidden-header {
-  height: 20px !important;
-}
-.hidden-header tr {
-  height: 20px !important;
-}
-.hidden-header tr th {
-  height: 20px !important;
-}
-.hidden-header tr th .v-btn--icon{
-  height: 20px;
+.v-data-table__wrapper {
+  height: 100% !important;
 }
 </style>

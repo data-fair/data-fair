@@ -218,7 +218,7 @@
                       </v-avatar>
                     </span>
                   </template>
-                  {{ item._owner }}
+                  {{ item._ownerName || item._owner }}
                 </v-tooltip>
               </template>
               <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">

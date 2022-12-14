@@ -37,7 +37,7 @@
         @input="qMode === 'complete' && refresh(true)"
         @keyup.enter.native="refresh(true)"
         @click:append="refresh(true)"
-        @click:clear="$nextTick(() => refresh(true))"
+        @click:clear="$nextTick(() => {$nextTick(() => refresh(true))})"
       />
 
       <v-spacer />

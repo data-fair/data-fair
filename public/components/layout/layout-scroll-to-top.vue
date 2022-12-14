@@ -3,7 +3,7 @@
 <template>
   <v-fab-transition>
     <v-btn
-      v-show="fab && $vuetify.breakpoint.smAndDown"
+      v-show="fab"
       v-scroll="onScroll"
       title="Remonter au début de la page"
       aria-label="Remonter au début de la page"
