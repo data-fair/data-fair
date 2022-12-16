@@ -163,22 +163,6 @@
             <tr :key="`bottom-padding-${virtualScrollVertical.bottomPadding}`">
               <td :style="'height:'+virtualScrollVertical.bottomPadding+'px'" />
             </tr>
-            <tr
-              v-if="data.results"
-              style="position:relative;"
-            >
-              <v-btn
-                v-if="data.next"
-                v-intersect="fetchMore"
-                :loading="loading"
-                text
-                color="primary"
-                :style="`position:absolute;left: ${windowWidth/2}px;transform: translate(-50%, 0);`"
-                @click="fetchMore"
-              >
-                {{ $t('showMore') }}
-              </v-btn>
-            </tr>
           </tbody>
         </template>
       </v-data-table>

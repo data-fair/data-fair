@@ -63,6 +63,11 @@ export default {
       return headersPositions
     }
   },
+  watch: {
+    virtualScrollVertical (value, previousValue) {
+      if (previousValue && previousValue.bottomPadding > value.bottomPadding && value.bottomPadding <= 1000) this.fetchMore()
+    }
+  },
   methods: {
     async measureHeaders () {
       await this.$nextTick()
