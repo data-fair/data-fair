@@ -39,7 +39,6 @@
         @click:append="refresh(true)"
         @click:clear="$nextTick(() => {$nextTick(() => refresh(true))})"
       />
-      {{ virtualScrollHorizontal }}
       <v-spacer />
       <dataset-select-cols
         v-model="selectedCols"
@@ -91,10 +90,10 @@
       <v-row class="header-data-table v-data-table ma-0">
         <div
           class="v-data-table__wrapper"
-          :class="{'elevation-4': scrollTop > 4}"
+          :class="{'elevation-4': true}"
           style="overflow-x: hidden;"
         >
-          <table>
+          <table :style="{'table-layout': totalHeaderWidth ? 'fixed' : 'auto'}">
             <thead class="v-data-table-header">
               <tr>
                 <template v-for="(header, i) in selectedHeaders">
@@ -105,6 +104,7 @@
                     :filters="filters"
                     :filter-height="filterHeight"
                     :pagination="pagination"
+                    :width="headerWidths[header.value]"
                     @sort="orderBy(header)"
                     @filter="f => addFilter(header.value, f)"
                   />
@@ -182,6 +182,19 @@
           </tbody>
         </template>
       </v-data-table>
+    </template>
+
+    <!-- drag and drop handles to resize columns -->
+    <template
+      v-if="headersPositions && virtualScrollHorizontal && !scrollingHorizontal"
+    >
+      <dataset-table-drag-col
+        v-for="(header, i) in selectedHeaders"
+        :key="`drag-col-${i}`"
+        :height="tableHeight + 20"
+        :left="headersPositions[header.value] - scrollLeft"
+        @move="movement => headerWidths[header.value] = Math.max(originalHeaderWidths[header.value], headerWidths[header.value] + movement)"
+      />
     </template>
 
     <!--list mode body -->
@@ -380,9 +393,10 @@ export default {
       deep: true
     },
     selectedCols: {
-      handler () {
+      async handler () {
         this.writeQueryParams()
-        this.measureHeaders(true)
+        this.headerWidths = {}
+        this.measureHeaders()
       },
       deep: true
     }

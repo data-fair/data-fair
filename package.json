@@ -188,6 +188,7 @@
     "streamsaver": "^2.0.6",
     "strip-bom-stream": "^4.0.0",
     "terser": "^5.15.0",
+    "throttle-debounce": "^5.0.0",
     "thumbor": "^0.1.5",
     "tmp-promise": "^2.1.1",
     "truncate-html": "^1.0.4",

@@ -1,38 +1,47 @@
 <template>
-  <v-hover v-slot="{ hover }">
-    <th
-      class="dataset-table-header text-start"
-      :class="{sortable: header.sortable, active : header.value === pagination.sortBy[0] || hover, asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
-      nowrap
-      :data-header="header.value"
+  <th
+    class="dataset-table-header text-start"
+    :class="{sortable: header.sortable, active : header.value === pagination.sortBy[0] || hover, asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
+    nowrap
+    :data-header="header.value"
+    :style="{
+      cursor: 'default',
+      width: width ? width + 'px' : ''
+    }"
+  >
+    <help-tooltip
+      v-if="header.tooltip"
+      small
+      orientation="bottom"
+    >
+      <div v-html="header.tooltip" />
+    </help-tooltip>
+
+    <span
+      class="dataset-table-header-title"
+      @mouseenter="e => {hover = true}"
+      @mouseleave="e => {hover = false}"
       @click="$emit('sort')"
     >
-      <help-tooltip
-        v-if="header.tooltip"
-        small
-        orientation="bottom"
-      >
-        <div v-html="header.tooltip" />
-      </help-tooltip>
-      <span>
-        {{ header.text }}
-      </span>
-      <v-icon
-        v-if="header.sortable"
-        class="sort-icon"
-        small
-      >
-        mdi-arrow-up
-      </v-icon>
-      <dataset-filter-col
-        v-if="header.field"
-        :max-height="filterHeight"
-        :field="header.field"
-        :filters="filters"
-        @filter="f => $emit('filter', f)"
-      />
-    </th>
-  </v-hover>
+      {{ header.text }}
+
+    </span>
+    <v-icon
+      v-if="header.sortable"
+      class="sort-icon"
+      small
+    >
+      mdi-arrow-up
+    </v-icon>
+
+    <dataset-filter-col
+      v-if="header.field"
+      :max-height="filterHeight"
+      :field="header.field"
+      :filters="filters"
+      @filter="f => $emit('filter', f)"
+    />
+  </th>
 </template>
 
 <script>
@@ -41,7 +50,13 @@ export default {
     header: { type: Object, required: true },
     filters: { type: Array, required: true },
     filterHeight: { type: Number, required: true },
-    pagination: { type: Object, required: true }
+    pagination: { type: Object, required: true },
+    width: { type: Number, default: null }
+  },
+  data () {
+    return {
+      hover: false
+    }
   }
 }
 </script>
@@ -62,7 +77,7 @@ export default {
 .theme--dark .dataset-table-header.active {
   color: rgb(255, 255, 255);
 }
-.dataset-table-header.sortable {
+.dataset-table-header.sortable .dataset-table-header-title {
   pointer-events: auto;
   cursor: pointer;
 }

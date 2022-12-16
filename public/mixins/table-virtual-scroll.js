@@ -1,11 +1,14 @@
+import { throttle, debounce } from 'throttle-debounce'
+
 export default {
   data: () => ({
+    originalHeaderWidths: {},
     headerWidths: {},
     totalHeaderWidth: 0,
-    scrollHeader: 0,
     scrollTop: 0,
     scrollLeft: 0,
-    scrolling: false
+    scrollingHorizontal: false,
+    scrollingVertical: false
   }),
   computed: {
     virtualScrollVertical () {
@@ -48,10 +51,20 @@ export default {
       }
 
       return { leftPadding, index, nbRendered: last - index, rightPadding }
+    },
+    headersPositions () {
+      if (!this.headerWidths) return
+      const headersPositions = {}
+      let p = 0
+      for (const header of this.selectedHeaders) {
+        p += this.headerWidths[header.value]
+        headersPositions[header.value] = p
+      }
+      return headersPositions
     }
   },
   methods: {
-    async measureHeaders (resetIndex) {
+    async measureHeaders () {
       await this.$nextTick()
 
       // in table mode the header is outside the actual table so that we can have
@@ -66,6 +79,7 @@ export default {
         }
         totalWidth += child.clientWidth
       }
+      this.originalHeaderWidths = { ...this.headerWidths }
       this.totalHeaderWidth = totalWidth
     },
     watchTableScroll () {
@@ -74,20 +88,26 @@ export default {
       if (this.displayMode === 'table' && this._tableWrapper !== tableWrapper) {
         if (this._tableWrapper) this._tableWrapper.removeEventListener('scroll', this.onTableScroll)
         this._tableWrapper = tableWrapper
-        this.scrollHeader = this._tableWrapper.scrollLeft
         this._tableWrapper.addEventListener('scroll', this.onTableScroll)
       }
     },
     onTableScroll (e) {
       this._headerWrapper.scrollTo(e.target.scrollLeft, 0)
-      this.scrollHeader = e.target.scrollLeft
-      this.scrolling = true
-      if (this._scrollTimeout) clearTimeout(this._scrollTimeout)
-      this._scrollTimeout = setTimeout(() => {
+
+      if (e.target.scrollLeft !== this.scrollLeft) this.scrollingHorizontal = true
+      if (e.target.scrollTop !== this.scrollTop) this.scrollingVertical = true
+
+      this._throttleScroll = this._throttleScroll || throttle(20, (e) => {
         this.scrollTop = e.target.scrollTop
         this.scrollLeft = e.target.scrollLeft
-        this.scrolling = false
-      }, 20)
+      }, { noLeading: true })
+      this._throttleScroll(e)
+
+      this._debounceScroll = this._debounceScroll || debounce(20, () => {
+        this.scrollingHorizontal = false
+        this.scrollingVertical = false
+      })
+      this._debounceScroll()
     }
   }
 }
