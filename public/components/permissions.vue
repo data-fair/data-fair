@@ -9,49 +9,55 @@
       href="https://data-fair.github.io/3/user-guide-backoffice/department"
     />
 
-    <v-alert
-      v-if="hasPrivateParents && !isPublic"
-      right
-      dense
-      type="warning"
-      outlined
-    >
-      <span v-t="'warningPublicApp'" />
-    </v-alert>
-    <v-alert
-      v-if="hasPublicDeps && isPublic"
-      right
-      dense
-      type="warning"
-      outlined
-    >
-      <span v-t="'warningPrivateDataset'" />
-    </v-alert>
-
-    <v-select
-      v-model="visibility"
-      :disabled="disabled"
-      :items="visibilityItems"
-      outlined
-      dense
-      style="max-width: 500px;"
-      hide-details
+    <v-progress-linear
+      v-if="!permissions"
+      indeterminate
     />
+    <template v-else>
+      <v-alert
+        v-if="hasPrivateParents && !isPublic"
+        right
+        dense
+        type="warning"
+        outlined
+      >
+        <span v-t="'warningPublicApp'" />
+      </v-alert>
+      <v-alert
+        v-if="hasPublicDeps && isPublic"
+        right
+        dense
+        type="warning"
+        outlined
+      >
+        <span v-t="'warningPrivateDataset'" />
+      </v-alert>
 
-    <v-switch
-      v-if="resource.rest && resource.rest.lineOwnership"
-      v-model="allUsersManageOwnLines"
-      color="primary"
-      :label="$t('allUsersManageOwnLines')"
-      hide-details
-    />
+      <v-select
+        v-model="visibility"
+        :disabled="disabled"
+        :items="visibilityItems"
+        outlined
+        dense
+        style="max-width: 500px;"
+        hide-details
+      />
 
-    <v-switch
-      v-if="!simple && api"
-      v-model="detailedMode"
-      color="primary"
-      :label="$t('detailedMode')"
-    />
+      <v-switch
+        v-if="resource.rest && resource.rest.lineOwnership"
+        v-model="allUsersManageOwnLines"
+        color="primary"
+        :label="$t('allUsersManageOwnLines')"
+        hide-details
+      />
+
+      <v-switch
+        v-if="!simple && api"
+        v-model="detailedMode"
+        color="primary"
+        :label="$t('detailedMode')"
+      />
+    </template>
 
     <template v-if="detailedMode && ownerDetails && api">
       <permission-dialog
