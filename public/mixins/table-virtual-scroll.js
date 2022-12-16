@@ -64,8 +64,10 @@ export default {
     }
   },
   watch: {
-    virtualScrollVertical (value, previousValue) {
-      if (previousValue && previousValue.bottomPadding > value.bottomPadding && value.bottomPadding <= 1000) this.fetchMore()
+    scrollTop (value, previousValue) {
+      if (this.virtualScrollVertical && this.virtualScrollVertical.bottomPadding <= 1000) {
+        this.fetchMore()
+      }
     }
   },
   methods: {

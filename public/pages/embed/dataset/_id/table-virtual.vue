@@ -383,11 +383,15 @@ export default {
         this.measureHeaders()
       },
       deep: true
+    },
+    'data.results' () {
+      if (this.data.results && (this.data.results.length * this.lineHeight) < this.windowHeight) {
+        this.fetchMore()
+      }
     }
   },
   async mounted () {
     this.readQueryParams()
-    if (this.displayMode === 'table') this.pagination.itemsPerPage = 40
     this.filterHeight = window.innerHeight - this.topBottomHeight
     this.refresh()
   },
