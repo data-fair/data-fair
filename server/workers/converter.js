@@ -82,7 +82,7 @@ exports.process = async function (app, dataset) {
     } else if (filePaths.length === 1 && exports.basicTypes.includes(mime.lookup(filePaths[0].base))) {
       // case of a single data file in an archive
       const filePath = path.join(datasetUtils.dir(dataset), filePaths[0].base)
-      await fs.move(path.join(tmpDir, files[0]), filePath)
+      await fs.move(path.join(tmpDir, files[0]), filePath, { overwrite: true })
       dataset.file = {
         name: filePaths[0].base,
         size: await fs.stat(filePath).size,
