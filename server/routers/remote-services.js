@@ -293,8 +293,10 @@ async function getAppOwner (req) {
   if (!referer) return console.warn('remote service proxy called without a referer header')
   debug('Referer URL', referer)
 
+  if (!referer.startsWith(req.publicBaseUrl + '/')) return console.warn('remote service proxy called from outside a data-fair page', referer)
+
   const refererAppId = referer.startsWith(req.publicBaseUrl + '/app/') && referer.replace(req.publicBaseUrl + '/app/', '').split('?')[0].split('/')[0]
-  if (!refererAppId) return console.warn('remote service proxy called from outside an application page', referer)
+  if (!refererAppId) return
   debug('Referer application id', refererAppId)
 
   const refererApp = await req.app.get('db').collection('applications').findOne({ id: refererAppId }, { projection: { owner: 1 } })
