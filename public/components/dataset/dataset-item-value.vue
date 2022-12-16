@@ -14,7 +14,7 @@
     <template v-else>
       <div
         v-if="field.type === 'string' && field.separator"
-        :style="`max-height: 40px; min-width: ${Math.min((itemValue + '').length, 50) * 6}px;`"
+        :style="`max-height: 40px;`"
       >
         <v-chip-group
           v-if="itemValue"
@@ -45,7 +45,7 @@
         v-slot="{ hover }"
         :disabled="disableHover"
       >
-        <div :style="`max-height: 40px; min-width: ${Math.min((itemValue + '').length, 50) * 6}px;`">
+        <div :style="`max-height: 40px;`">
           <span>{{ itemValue | cellValues(field, truncate) }}</span>
           <v-btn
             v-if="hover && !item._tmpState && !filters.find(f => f.field.key === field.key) && isFilterable(itemValue)"

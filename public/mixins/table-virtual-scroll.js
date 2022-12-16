@@ -68,6 +68,12 @@ export default {
       if (this.virtualScrollVertical && this.virtualScrollVertical.bottomPadding <= 1000) {
         this.fetchMore()
       }
+    },
+    data () {
+      this.adjustHeaderWidths()
+    },
+    originalHeaderWidths () {
+      this.adjustHeaderWidths()
     }
   },
   methods: {
@@ -115,6 +121,17 @@ export default {
         this.scrollingVertical = false
       })
       this._debounceScroll()
+    },
+    adjustHeaderWidths () {
+      if (!this.data.results || !this.totalHeaderWidth) return
+      for (const header of this.selectedHeaders) {
+        for (const result of this.data.results) {
+          if (!(header.value in result)) continue
+          console.log(header.value, result[header.value])
+          const estimatedSize = Math.min(50, (result[header.value] + '').length) * 10
+          if (estimatedSize > this.headerWidths[header.value]) this.headerWidths[header.value] = estimatedSize
+        }
+      }
     }
   }
 }
