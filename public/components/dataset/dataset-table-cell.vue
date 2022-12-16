@@ -1,6 +1,6 @@
 <template>
   <td
-    :class="`pl-4 pr-0`"
+    :class="`pl-4 pr-0 dataset-table-cell`"
     :style="`height: ${lineHeight}px;position:relative;`"
   >
     <template v-if="header.value === '_thumbnail'">
@@ -33,7 +33,7 @@
       :field="header.field"
       :filters="filters"
       :truncate="truncate"
-      @filter="f => $emit('addFilter', f)"
+      @filter="f => $emit('filter', f)"
     />
   </td>
 </template>
@@ -45,7 +45,9 @@ export default {
   props: {
     item: { type: Object, required: true },
     header: { type: Object, required: true },
-    lineHeight: { type: Number, required: true }
+    lineHeight: { type: Number, required: true },
+    filters: { type: Array, required: true },
+    truncate: { type: Number, required: true }
   },
   computed: {
     ...mapState(['env'])
@@ -54,5 +56,7 @@ export default {
 </script>
 
 <style>
-
+.dataset-table-cell {
+  overflow-x: hidden;
+}
 </style>

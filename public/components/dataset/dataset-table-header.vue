@@ -4,6 +4,7 @@
       class="dataset-table-header text-start"
       :class="{sortable: header.sortable, active : header.value === pagination.sortBy[0] || hover, asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
       nowrap
+      :data-header="header.value"
       @click="$emit('sort')"
     >
       <help-tooltip

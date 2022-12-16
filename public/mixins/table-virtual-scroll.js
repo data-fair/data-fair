@@ -1,12 +1,11 @@
 export default {
   data: () => ({
-    headerWidths: [],
+    headerWidths: {},
+    totalHeaderWidth: 0,
     scrollHeader: 0,
     scrollTop: 0,
-    scrolling: false,
-    headerIndex: 0,
-    nbVisibleHeaders: 0,
-    totalHeaderWidth: 0
+    scrollLeft: 0,
+    scrolling: false
   }),
   computed: {
     virtualScrollVertical () {
@@ -25,64 +24,58 @@ export default {
       const topPadding = index * this.lineHeight
       // blank space at bottom of table matching the non-rendered lines
       const bottomPadding = Math.max(nbLoaded - index - nbRendered, 0) * this.lineHeight
-      return { first: index, last: index + nbRendered, index, nbRendered, topPadding, bottomPadding }
+      return { index, nbRendered, topPadding, bottomPadding }
     },
     virtualScrollHorizontal () {
       if (!this.totalHeaderWidth) return
+      const pixelsBuffer = 1000
       let x = 0
-      let before = 0
-      let first = 0
+      let leftPadding = 0
+      let index = 0
+      let rightPadding = 0
       let last = 0
-      let after = 0
       for (const header of this.selectedHeaders) {
-        if (x < this.scrollLeft + this.windowWidth) {
+        if (x < this.scrollLeft + this.windowWidth + pixelsBuffer) {
           last++
         } else {
-          after += this.headerWidths[header.value]
+          rightPadding += this.headerWidths[header.value]
         }
         x += this.headerWidths[header.value]
-        if (x < this.scrollLeft) {
-          first++
-          before += this.headerWidths[header.value]
+        if (x < this.scrollLeft - pixelsBuffer) {
+          index++
+          leftPadding += this.headerWidths[header.value]
         }
       }
-      return { before, first, last, after, scrollLeft: this.scrollLeft, x }
+
+      return { leftPadding, index, nbRendered: last - index, rightPadding }
     }
   },
   methods: {
-    async syncHeader (resetIndex) {
-      if (resetIndex) this.headerIndex = 0
-
+    async measureHeaders (resetIndex) {
       await this.$nextTick()
 
       // in table mode the header is outside the actual table so that we can have
       // infinite scroll, horizontal scroll and fixed header at the same time
 
       // sync cols widths
-      const children = this.$el.querySelectorAll('.hidden-header th')
+      const children = this.$el.querySelectorAll('th.dataset-table-header')
       let totalWidth = 0
-      let nbVisibleHeaders = 1
       for (const child of children) {
         if (this.headerWidths[child.attributes['data-header'].value] !== child.clientWidth) {
           this.$set(this.headerWidths, child.attributes['data-header'].value, child.clientWidth)
         }
         totalWidth += child.clientWidth
-        if (totalWidth < this.windowWidth) nbVisibleHeaders += 1
       }
       this.totalHeaderWidth = totalWidth
-      this.nbVisibleHeaders = nbVisibleHeaders
-
-      // sync horizontal scroll
-      // if (this._tableWrapper) {
-      // this._tableWrapper.removeEventListener('scroll', this.onTableScroll)
-      // }
+    },
+    watchTableScroll () {
       const tableWrapper = document.querySelector('.real-data-table .v-data-table__wrapper')
-      if (this.displayMode === 'table' && !this._tableWrapper !== tableWrapper) {
+      if (this.displayMode === 'table' && this._tableWrapper !== tableWrapper) {
+        if (this._tableWrapper) this._tableWrapper.removeEventListener('scroll', this.onTableScroll)
         this._tableWrapper = tableWrapper
         this.scrollHeader = this._tableWrapper.scrollLeft
         this._tableWrapper.addEventListener('scroll', this.onTableScroll)
       }
-      await this.$nextTick()
     },
     onTableScroll (e) {
       this.scrollHeader = e.target.scrollLeft
@@ -92,7 +85,6 @@ export default {
         this.scrollTop = e.target.scrollTop
         this.scrollLeft = e.target.scrollLeft
         this.scrolling = false
-        this.syncHeader()
       }, 20)
     }
   }

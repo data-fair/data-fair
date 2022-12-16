@@ -39,6 +39,7 @@
         @click:append="refresh(true)"
         @click:clear="$nextTick(() => {$nextTick(() => refresh(true))})"
       />
+      {{ virtualScrollHorizontal }}
       <v-spacer />
       <dataset-select-cols
         v-model="selectedCols"
@@ -67,24 +68,19 @@
           >
             <div
               class="v-data-table__wrapper"
-              :style="`overflow:visible;position:relative;left:-${scrollHeader}px;`"
+              :style="`overflow:visible;position:relative;left:-${scrollLeft}px;`"
             >
-              <table :style="`table-layout:fixed;width:100%;`">
-                <thead
-                  class="v-data-table-header"
-                  style="width:100%"
-                >
+              <table>
+                <thead class="v-data-table-header">
                   <tr>
-                    <template v-for="(header, i) in selectedHeaders.filter((header,i) => i >= headerIndex)">
+                    <template v-for="(header, i) in selectedHeaders">
                       <dataset-table-header
-                        v-if="headerWidths[header.value]"
                         :id="`visible-header-${i}`"
                         :key="`visible-header-${i}`"
                         :header="header"
                         :filters="filters"
                         :filter-height="filterHeight"
                         :pagination="pagination"
-                        :style="`width:${headerWidths[header.value]}px;min-width:${headerWidths[header.value]}px;max-width:${headerWidths[header.value]}px`"
                         @sort="orderBy(header)"
                         @filter="f => addFilter(header.value, f)"
                       />
@@ -130,31 +126,9 @@
         hide-default-header
         hide-default-footer
         :height="tableHeight"
-        style="margin-top:-22px"
       >
-        <template #header>
-          <thead
-            class="v-data-table-header hidden-header"
-            style="width:100%;"
-          >
-            <tr>
-              <dataset-table-header
-                v-for="(header, i) in selectedHeaders.filter((header,i) => i >= headerIndex)"
-                :id="`hidden-header-${i}`"
-                :key="`hidden-header-${i}`"
-                :data-header="header.value"
-                :header="header"
-                :filters="filters"
-                :filter-height="filterHeight"
-                :pagination="pagination"
-              />
-            </tr>
-          </thead>
-          <!-- a mask over the hidden header to make sure that when the extension changes size for a second we don't see the header below the app bar -->
-          <div :style="`background-color:${$vuetify.theme.isDark ? '#000000' : '#FFFFFF'};width:100%;height:22px;position:absolute;top:-22px;`" />
-        </template>
         <template #body>
-          <tbody v-if="data.results && data.results.length">
+          <tbody v-if="data.results && data.results.length && totalHeaderWidth">
             <tr :key="`top-padding-${virtualScrollVertical.topPadding}`">
               <td :style="'height:'+virtualScrollVertical.topPadding+'px'" />
             </tr>
@@ -162,16 +136,28 @@
               v-for="i in virtualScrollVertical.nbRendered"
               :key="i -1 + virtualScrollVertical.index"
             >
-              <template v-for="(header, h) in selectedHeaders">
+              <td
+                v-if="virtualScrollHorizontal.leftPadding"
+                :key="`left-padding-${virtualScrollHorizontal.leftPadding}`"
+                :style="{height: lineHeight + 'px', width: virtualScrollHorizontal.leftPadding + 'px', 'max-width': virtualScrollHorizontal.leftPadding + 'px', 'min-width': virtualScrollHorizontal.leftPadding + 'px'}"
+              />
+              <template v-for="h in virtualScrollHorizontal.nbRendered">
                 <dataset-table-cell
-                  v-if="h >= headerIndex && h <= headerIndex + nbVisibleHeaders"
-                  :key="header.value"
+                  :key="h - 1 + virtualScrollHorizontal.index"
                   :item="data.results[i -1 + virtualScrollVertical.index]"
                   :line-height="lineHeight"
-                  :header="header"
-                  @add-filter="f => addFilter(header.value, f)"
+                  :header="selectedHeaders[h - 1 + virtualScrollHorizontal.index]"
+                  :filters="filters"
+                  :truncate="truncate"
+                  :style="{width: headerWidths[selectedHeaders[h - 1 + virtualScrollHorizontal.index].value] + 'px', 'min-width': headerWidths[selectedHeaders[h - 1 + virtualScrollHorizontal.index].value] + 'px', 'max-width': headerWidths[selectedHeaders[h - 1 + virtualScrollHorizontal.index].value] + 'px'}"
+                  @filter="f => addFilter(selectedHeaders[h - 1 + virtualScrollHorizontal.index].value, f)"
                 />
               </template>
+              <td
+                v-if="virtualScrollHorizontal.rightPadding"
+                :key="`right-padding-${virtualScrollHorizontal.rightPadding}`"
+                :style="{height: lineHeight + 'px', width: virtualScrollHorizontal.rightPadding + 'px', 'max-width': virtualScrollHorizontal.rightPadding + 'px', 'min-width': virtualScrollHorizontal.rightPadding + 'px'}"
+              />
             </tr>
             <tr :key="`bottom-padding-${virtualScrollVertical.bottomPadding}`">
               <td :style="'height:'+virtualScrollVertical.bottomPadding+'px'" />
@@ -195,34 +181,6 @@
           </tbody>
         </template>
       </v-data-table>
-
-      <!-- horizontal sliding through headers -->
-      <v-btn
-        v-if="headerIndex > 0"
-        :style="`top:${tableHeight / 2}px;transform: translate(0, -50%);`"
-        fab
-        absolute
-        left
-        small
-        depressed
-        color="primary"
-        @click="headerIndex -= 1"
-      >
-        <v-icon>mdi-chevron-left</v-icon>
-      </v-btn>
-      <v-btn
-        v-if="totalHeaderWidth > windowWidth"
-        :style="`top:${tableHeight / 2}px;transform: translate(0, -50%);`"
-        fab
-        absolute
-        right
-        small
-        depressed
-        color="primary"
-        @click="headerIndex += 1"
-      >
-        <v-icon>mdi-chevron-right</v-icon>
-      </v-btn>
     </template>
 
     <!--list mode body -->
@@ -311,7 +269,6 @@ export default {
       sortBy: [null],
       sortDesc: [false]
     },
-    notFound: false,
     loading: false,
     lineHeight: 40,
     filterHeight: 500,
@@ -393,7 +350,6 @@ export default {
     tableHeight () {
       let height = this.windowHeight
       height -= 48 // app bar
-      height += 22 // the hidden table header
       height -= this.extensionHeight
       return height
     },
@@ -423,15 +379,9 @@ export default {
     selectedCols: {
       handler () {
         this.writeQueryParams()
-        this.syncHeader(true)
+        this.measureHeaders(true)
       },
       deep: true
-    },
-    windowWidth () {
-      this.syncHeader()
-    },
-    headerIndex () {
-      this.syncHeader()
     }
   },
   async mounted () {
@@ -471,9 +421,8 @@ export default {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       this.loading = false
-      this.syncHeader()
-      setTimeout(() => this.syncHeader(), 500)
-      setTimeout(() => this.syncHeader(), 2000)
+      this.measureHeaders()
+      this.watchTableScroll()
     },
     async fetchMore (entries, observer, isIntersecting) {
       if (!this.data.next || this.loading || isIntersecting === false) return
@@ -487,7 +436,6 @@ export default {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       this.loading = false
-      this.syncHeader()
     },
     orderBy (header) {
       if (!header.sortable) return
@@ -545,8 +493,8 @@ export default {
 .embed-table .v-toolbar__extension {
   padding-left:0;
 }
-.real-data-table .v-data-table__wrapper {
-  overflow-x: hidden;
+.real-data-table .v-data-table__wrapper table {
+  table-layout: auto;
 }
 
 /* compact the hidden header to a height of 2px, these 2px will be hidden using a negative margin-top */
