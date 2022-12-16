@@ -155,57 +155,26 @@
         </template>
         <template #body>
           <tbody v-if="data.results && data.results.length">
-            <tr :key="`top-padding-${virtualScroll.topPadding}`">
-              <td :style="'height:'+virtualScroll.topPadding+'px'" />
+            <tr :key="`top-padding-${virtualScrollVertical.topPadding}`">
+              <td :style="'height:'+virtualScrollVertical.topPadding+'px'" />
             </tr>
             <tr
-              v-for="i in virtualScroll.nbRendered"
-              :key="i -1 + virtualScroll.index"
+              v-for="i in virtualScrollVertical.nbRendered"
+              :key="i -1 + virtualScrollVertical.index"
             >
               <template v-for="(header, h) in selectedHeaders">
-                <td
+                <dataset-table-cell
                   v-if="h >= headerIndex && h <= headerIndex + nbVisibleHeaders"
                   :key="header.value"
-                  :class="`pl-4 pr-0`"
-                  :style="`height: ${lineHeight}px;position:relative;`"
-                >
-                  <template v-if="header.value === '_thumbnail'">
-                    <v-avatar
-                      v-if="data.results[i -1 + virtualScroll.index]._thumbnail"
-                      tile
-                      :size="lineHeight"
-                    >
-                      <img :src="data.results[i -1 + virtualScroll.index]._thumbnail">
-                    </v-avatar>
-                  </template>
-                  <template v-else-if="header.value === '_owner'">
-                    <v-tooltip top>
-                      <template #activator="{on}">
-                        <span
-                          class="text-body-2"
-                          v-on="on"
-                        >
-                          <v-avatar :size="28">
-                            <img :src="`${env.directoryUrl}/api/avatars/${data.results[i -1 + virtualScroll.index]._owner.split(':').join('/')}/avatar.png`">
-                          </v-avatar>
-                        </span>
-                      </template>
-                      {{ data.results[i -1 + virtualScroll.index]._owner }}
-                    </v-tooltip>
-                  </template>
-                  <dataset-item-value
-                    v-else
-                    :item="data.results[i -1 + virtualScroll.index]"
-                    :field="header.field"
-                    :filters="filters"
-                    :truncate="truncate"
-                    @filter="f => addFilter(header.value, f)"
-                  />
-                </td>
+                  :item="data.results[i -1 + virtualScrollVertical.index]"
+                  :line-height="lineHeight"
+                  :header="header"
+                  @add-filter="f => addFilter(header.value, f)"
+                />
               </template>
             </tr>
-            <tr :key="`bottom-padding-${virtualScroll.bottomPadding}`">
-              <td :style="'height:'+virtualScroll.bottomPadding+'px'" />
+            <tr :key="`bottom-padding-${virtualScrollVertical.bottomPadding}`">
+              <td :style="'height:'+virtualScrollVertical.bottomPadding+'px'" />
             </tr>
             <tr
               v-if="data.results"
@@ -328,9 +297,11 @@ en:
 <script>
 import { mapState, mapGetters } from 'vuex'
 import eventBus from '~/event-bus'
+import tableVirtualScrollMixin from '~/mixins/table-virtual-scroll'
 const filtersUtils = require('~/assets/filters-utils')
 
 export default {
+  mixins: [tableVirtualScrollMixin],
   data: () => ({
     data: {},
     query: null,
@@ -347,14 +318,7 @@ export default {
     filters: [],
     lastParams: null,
     selectedCols: [],
-    ready: false,
-    headerWidths: [],
-    scrollHeader: 0,
-    scrollTop: 0,
-    scrolling: false,
-    headerIndex: 0,
-    nbVisibleHeaders: 0,
-    totalHeaderWidth: 0
+    ready: false
   }),
   computed: {
     ...mapState(['vocabulary']),
@@ -438,24 +402,6 @@ export default {
       height += this.extensionHeight
       height += 36 // bottom button
       return height
-    },
-    virtualScroll () {
-      const linesBuffer = 10
-
-      // index is equivalent to the number of lines hidden at the top
-      const index = Math.max(0, Math.floor(this.scrollTop / this.lineHeight) - linesBuffer)
-      // number of lines available in memory
-      const nbLoaded = this.data.results ? this.data.results.length : 0
-      // number of lines visible on the screen
-      const nbVisible = Math.ceil(this.tableHeight / this.lineHeight)
-      // number of lines rendered by virtual scrolling
-      const nbRendered = Math.min(nbLoaded - index, nbVisible + (linesBuffer * 2))
-
-      // blank space on top of table matching the non-rendered lines
-      const topPadding = index * this.lineHeight
-      // blank space at bottom of table matching the non-rendered lines
-      const bottomPadding = Math.max(nbLoaded - index - nbRendered, 0) * this.lineHeight
-      return { index, nbRendered, topPadding, bottomPadding }
     }
   },
   watch: {
@@ -587,52 +533,6 @@ export default {
         delete query.sort
       }
       this.$router.push({ query })
-    },
-    async syncHeader (resetIndex) {
-      if (resetIndex) this.headerIndex = 0
-
-      await this.$nextTick()
-
-      // in table mode the header is outside the actual table so that we can have
-      // infinite scroll, horizontal scroll and fixed header at the same time
-
-      // sync cols widths
-      const children = this.$el.querySelectorAll('.hidden-header th')
-      let totalWidth = 0
-      let nbVisibleHeaders = 1
-      for (const child of children) {
-        if (this.headerWidths[child.attributes['data-header'].value] !== child.clientWidth) {
-          this.$set(this.headerWidths, child.attributes['data-header'].value, child.clientWidth)
-        }
-        totalWidth += child.clientWidth
-        if (totalWidth < this.windowWidth) nbVisibleHeaders += 1
-      }
-      this.totalHeaderWidth = totalWidth
-      this.nbVisibleHeaders = nbVisibleHeaders
-
-      // sync horizontal scroll
-      // if (this._tableWrapper) {
-      // this._tableWrapper.removeEventListener('scroll', this.onTableScroll)
-      // }
-      const tableWrapper = document.querySelector('.real-data-table .v-data-table__wrapper')
-      if (this.displayMode === 'table' && !this._tableWrapper !== tableWrapper) {
-        this._tableWrapper = tableWrapper
-        this.scrollHeader = this._tableWrapper.scrollLeft
-        this._tableWrapper.addEventListener('scroll', this.onTableScroll)
-      }
-      await this.$nextTick()
-    },
-    onTableScroll (e) {
-      this.scrollHeader = e.target.scrollLeft
-      if (this.scrollTop !== e.target.scrollTop) {
-        this.scrolling = true
-        if (this._scrollTimeout) clearTimeout(this._scrollTimeout)
-        this._scrollTimeout = setTimeout(() => {
-          this.scrollTop = e.target.scrollTop
-          this.scrolling = false
-          this.syncHeader()
-        }, 20)
-      }
     }
   }
 }
