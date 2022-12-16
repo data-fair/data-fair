@@ -10,11 +10,11 @@
       {{ $t('tutorialFilter') }}
     </tutorial-alert>
     <v-app-bar
-      elevate-on-scroll
+      :elevate-on-scroll="displayMode === 'list'"
       app
       dense
+      :flat="displayMode === 'table'"
       :color="$vuetify.theme.dark ? 'black' : 'white'"
-      :scroll-target="displayMode === 'table' ? '.real-data-table .v-data-table__wrapper' : ''"
       :extension-height="extensionHeight"
     >
       <v-toolbar-title style="white-space:normal;">
@@ -61,36 +61,6 @@
             />
           </v-row>
 
-          <!-- fake table only here to have a fiex position header that follow the scroll on the actual table -->
-          <v-row
-            v-if="displayMode === 'table'"
-            class="v-data-table ma-0"
-          >
-            <div
-              class="v-data-table__wrapper"
-              :style="`overflow:visible;position:relative;left:-${scrollLeft}px;`"
-            >
-              <table>
-                <thead class="v-data-table-header">
-                  <tr>
-                    <template v-for="(header, i) in selectedHeaders">
-                      <dataset-table-header
-                        :id="`visible-header-${i}`"
-                        :key="`visible-header-${i}`"
-                        :header="header"
-                        :filters="filters"
-                        :filter-height="filterHeight"
-                        :pagination="pagination"
-                        @sort="orderBy(header)"
-                        @filter="f => addFilter(header.value, f)"
-                      />
-                    </template>
-                  </tr>
-                </thead>
-              </table>
-            </div>
-          </v-row>
-
           <!-- list mode header -->
           <template v-if="displayMode === 'list'">
             <v-row class="ma-0 px-2">
@@ -117,6 +87,34 @@
 
     <!-- table mode data-table -->
     <template v-if="displayMode === 'table'">
+      <!-- fake table only here to have a fiex position header that follow the scroll on the actual table -->
+      <v-row class="header-data-table v-data-table ma-0">
+        <div
+          class="v-data-table__wrapper"
+          :class="{'elevation-4': scrollTop > 4}"
+          style="overflow-x: hidden;"
+        >
+          <table>
+            <thead class="v-data-table-header">
+              <tr>
+                <template v-for="(header, i) in selectedHeaders">
+                  <dataset-table-header
+                    :id="`visible-header-${i}`"
+                    :key="`visible-header-${i}`"
+                    :header="header"
+                    :filters="filters"
+                    :filter-height="filterHeight"
+                    :pagination="pagination"
+                    @sort="orderBy(header)"
+                    @filter="f => addFilter(header.value, f)"
+                  />
+                </template>
+              </tr>
+            </thead>
+          </table>
+        </div>
+      </v-row>
+
       <!-- actual data-table the header is hidden, the visible header is in the app bar-->
       <v-data-table
         class="real-data-table"
@@ -128,7 +126,10 @@
         :height="tableHeight"
       >
         <template #body>
-          <tbody v-if="data.results && data.results.length && totalHeaderWidth">
+          <tbody
+            v-if="data.results && data.results.length && totalHeaderWidth"
+            :style="{height: tableHeight - 100 + 'px'}"
+          >
             <tr :key="`top-padding-${virtualScrollVertical.topPadding}`">
               <td :style="'height:'+virtualScrollVertical.topPadding+'px'" />
             </tr>
@@ -343,7 +344,8 @@ export default {
       return { ...this.params, select: this.selectedCols.join(',') }
     },
     extensionHeight () {
-      let height = 48
+      let height = 0
+      if (this.displayMode === 'list') height += 48
       if (this.filters.length) height += 32
       return height
     },
@@ -351,6 +353,7 @@ export default {
       let height = this.windowHeight
       height -= 48 // app bar
       height -= this.extensionHeight
+      height -= 48 // fixed header
       return height
     },
     topBottomHeight () {
@@ -493,21 +496,14 @@ export default {
 .embed-table .v-toolbar__extension {
   padding-left:0;
 }
-.real-data-table .v-data-table__wrapper table {
+.v-data-table {
+  max-width: none;
+}
+.v-data-table.real-data-table .v-data-table__wrapper {
+  position: relative;
+}
+.v-data-table.real-data-table .v-data-table__wrapper table {
   table-layout: auto;
 }
 
-/* compact the hidden header to a height of 2px, these 2px will be hidden using a negative margin-top */
-.hidden-header {
-  height: 20px !important;
-}
-.hidden-header tr {
-  height: 20px !important;
-}
-.hidden-header tr th {
-  height: 20px !important;
-}
-.hidden-header tr th .v-btn--icon{
-  height: 20px;
-}
 </style>

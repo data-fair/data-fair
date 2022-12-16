@@ -69,6 +69,7 @@ export default {
       this.totalHeaderWidth = totalWidth
     },
     watchTableScroll () {
+      this._headerWrapper = document.querySelector('.header-data-table .v-data-table__wrapper')
       const tableWrapper = document.querySelector('.real-data-table .v-data-table__wrapper')
       if (this.displayMode === 'table' && this._tableWrapper !== tableWrapper) {
         if (this._tableWrapper) this._tableWrapper.removeEventListener('scroll', this.onTableScroll)
@@ -78,6 +79,7 @@ export default {
       }
     },
     onTableScroll (e) {
+      this._headerWrapper.scrollTo(e.target.scrollLeft, 0)
       this.scrollHeader = e.target.scrollLeft
       this.scrolling = true
       if (this._scrollTimeout) clearTimeout(this._scrollTimeout)
