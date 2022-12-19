@@ -5,6 +5,7 @@
     right
     offset-y
     tile
+    eager
     :max-height="filterHeight"
     :close-on-content-click="false"
     @input="toggledMenu"
@@ -16,6 +17,8 @@
           :data-header="header.value"
           :style="{
             width: width ? width + 'px' : '',
+            'min-width': width ? width + 'px' : '',
+            'max-width': width ? width + 'px' : '',
             position: 'relative',
             overflow: 'hidden'
           }"

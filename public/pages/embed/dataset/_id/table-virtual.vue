@@ -102,7 +102,6 @@
           <div
             class="v-data-table__wrapper"
             :class="{'elevation-1': true}"
-            style="overflow-x:hidden;"
           >
             <table :style="{'table-layout': 'fixed'}">
               <thead
@@ -166,7 +165,6 @@
         <div
           class="v-data-table__wrapper"
           :class="{'elevation-1': scrollTop <= 10, 'elevation-8': scrollTop > 10}"
-          style="overflow-x: hidden;"
         >
           <table :style="{'table-layout': 'fixed'}">
             <thead
@@ -188,6 +186,9 @@
                     @fixCol="fixedCol = header.value; writeQueryParams()"
                   />
                 </template>
+                <th
+                  style="width:40px;min-width:40px;max-width:40px"
+                />
               </tr>
             </thead>
           </table>
@@ -233,9 +234,8 @@
                 />
               </template>
               <td
-                v-if="virtualScrollHorizontal.rightPadding"
                 :key="`right-padding-${virtualScrollHorizontal.rightPadding}`"
-                :style="{height: lineHeight + 'px', width: virtualScrollHorizontal.rightPadding + 'px', 'max-width': virtualScrollHorizontal.rightPadding + 'px', 'min-width': virtualScrollHorizontal.rightPadding + 'px'}"
+                :style="{height: lineHeight + 'px', width: Math.max(40, virtualScrollHorizontal.rightPadding) + 'px', 'min-width': Math.max(40, virtualScrollHorizontal.rightPadding) + 'px', 'max-width': Math.max(40, virtualScrollHorizontal.rightPadding) + 'px'}"
               />
             </tr>
             <tr :key="`bottom-padding-${virtualScrollVertical.bottomPadding}`">
@@ -252,7 +252,7 @@
         <dataset-table-drag-col
           v-if="fixedHeader"
           :key="`drag-col-fixed`"
-          :height="tableHeight + 48"
+          :height="tableHeight + 30"
           :left="-5"
           style="z-index:6"
           @move="movement => headerWidths[fixedHeader.value] = Math.max(100, headerWidths[fixedHeader.value] + movement)"
@@ -260,7 +260,7 @@
         <dataset-table-drag-col
           v-for="(header, i) in selectedHeaders.filter(header => headersPositions[header.value] - scrollLeft > 0 && headersPositions[header.value] - scrollLeft < tableWidth)"
           :key="`drag-col-${i}`"
-          :height="tableHeight + 48"
+          :height="tableHeight + 30"
           :left="headersPositions[header.value] - scrollLeft - 4"
           @move="movement => headerWidths[header.value] = Math.max(100, headerWidths[header.value] + movement)"
         />
@@ -610,6 +610,7 @@ export default {
 }
 .v-data-table.real-data-table .v-data-table__wrapper {
   position: relative;
+  overflow: scroll;
 }
 .v-data-table.real-data-table .v-data-table__wrapper table {
   table-layout: auto;
@@ -618,7 +619,12 @@ export default {
   z-index: 6;
 }
 .fixed-data-table .v-data-table__wrapper {
-  overflow: hidden;
+  overflow-y: hidden;
+  overflow-x: scroll;
+}
+.header-data-table .v-data-table__wrapper {
+  overflow-x: hidden;
+  overflow-y: scroll;
 }
 
 </style>
