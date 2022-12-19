@@ -60,7 +60,7 @@ export default {
 .drag-col {
   display: inline-block;
   position:absolute;
-  bottom: 18px;
+  bottom: 0px;
   cursor:col-resize;
   user-select:none;
   width: 5px;

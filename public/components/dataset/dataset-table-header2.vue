@@ -13,7 +13,6 @@
       <v-hover v-slot="{hover}">
         <th
           class="dataset-table-header text-start"
-          nowrap
           :data-header="header.value"
           :style="{
             width: width ? width + 'px' : '',
@@ -23,10 +22,17 @@
           v-bind="attrs"
           v-on="on"
         >
-          <span :style="{'margin-right': '16px',}">{{ header.text }}</span>
+          <v-clamp
+            :max-lines="2"
+            autoresize
+            :style="{'margin-right': '14px',}"
+          >
+            {{ header.text }}
+          </v-clamp>
           <v-icon
             v-if="hover || header.value === pagination.sortBy[0]"
             style="position:absolute;top:12px;right:2px;"
+            :color="header.value === pagination.sortBy[0] ? 'primary' : 'default'"
           >
             <template v-if="header.value === pagination.sortBy[0] && !pagination.sortDesc[0]">mdi-sort-ascending</template>
             <template v-else-if="header.value === pagination.sortBy[0] && pagination.sortDesc[0]">mdi-sort-descending</template>
@@ -45,6 +51,7 @@
       >
         <!-- hide column -->
         <v-list-item
+          v-if="header.value !== fixedCol"
           class="pl-2"
           @click="$emit('hide');showMenu=false"
         >
@@ -370,7 +377,10 @@ en:
 </i18n>
 
 <script>
+import VClamp from 'vue-clamp'
+
 export default {
+  components: { VClamp },
   props: {
     header: { type: Object, required: true },
     filters: { type: Array, required: true },

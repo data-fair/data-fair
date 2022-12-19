@@ -88,7 +88,7 @@
     </v-app-bar>
 
     <!-- table mode data-table -->
-    <template v-if="displayMode === 'table'">
+    <template v-if="showTable">
       <!-- fixed table to the left -->
       <v-navigation-drawer
         v-if="fixedCol"
@@ -96,15 +96,15 @@
         :width="fixedColWidth"
         app
         permanent
-        :class="{'elevation-1': scrollLeft <= 10, 'elevation-8': scrollLeft > 10}"
+        :class="{flat: scrollLeft <= 10, 'elevation-8': scrollLeft > 10}"
       >
         <v-row class="fixed-header-data-table v-data-table ma-0">
           <div
             class="v-data-table__wrapper"
-            :class="{'elevation-1': scrollTop <= 10, 'elevation-8': scrollTop > 10}"
+            :class="{'elevation-1': true}"
             style="overflow-x:hidden;"
           >
-            <table :style="{'table-layout': totalHeaderWidth ? 'fixed' : 'auto'}">
+            <table :style="{'table-layout': 'fixed'}">
               <thead
                 class="v-data-table-header"
               >
@@ -135,10 +135,7 @@
           :height="tableHeight"
         >
           <template #body>
-            <tbody
-              v-if="data.results && data.results.length && totalHeaderWidth"
-              :style="{height: tableHeight - 100 + 'px'}"
-            >
+            <tbody :style="{height: tableHeight - 100 + 'px'}">
               <tr :key="`top-padding-${virtualScrollVertical.topPadding}`">
                 <td :style="'height:'+virtualScrollVertical.topPadding+'px'" />
               </tr>
@@ -171,7 +168,7 @@
           :class="{'elevation-1': scrollTop <= 10, 'elevation-8': scrollTop > 10}"
           style="overflow-x: hidden;"
         >
-          <table :style="{'table-layout': totalHeaderWidth ? 'fixed' : 'auto'}">
+          <table :style="{'table-layout': 'fixed'}">
             <thead
               class="v-data-table-header"
             >
@@ -209,7 +206,6 @@
       >
         <template #body>
           <tbody
-            v-if="data.results && data.results.length && totalHeaderWidth"
             :style="{height: tableHeight - 100 + 'px'}"
           >
             <tr :key="`top-padding-${virtualScrollVertical.topPadding}`">
@@ -248,19 +244,27 @@
           </tbody>
         </template>
       </v-data-table>
-    </template>
 
-    <!-- drag and drop handles to resize columns -->
-    <template
-      v-if="headersPositions && virtualScrollHorizontal && !scrollingHorizontal"
-    >
-      <dataset-table-drag-col
-        v-for="(header, i) in selectedHeaders"
-        :key="`drag-col-${i}`"
-        :height="tableHeight + 20"
-        :left="headersPositions[header.value] - scrollLeft - 4"
-        @move="movement => headerWidths[header.value] = Math.max(originalHeaderWidths[header.value], headerWidths[header.value] + movement)"
-      />
+      <!-- drag and drop handles to resize columns -->
+      <template
+        v-if="headersPositions && virtualScrollHorizontal && !scrollingHorizontal"
+      >
+        <dataset-table-drag-col
+          v-if="fixedHeader"
+          :key="`drag-col-fixed`"
+          :height="tableHeight + 48"
+          :left="-5"
+          style="z-index:6"
+          @move="movement => headerWidths[fixedHeader.value] = Math.max(100, headerWidths[fixedHeader.value] + movement)"
+        />
+        <dataset-table-drag-col
+          v-for="(header, i) in selectedHeaders.filter(header => headersPositions[header.value] - scrollLeft > 0 && headersPositions[header.value] - scrollLeft < tableWidth)"
+          :key="`drag-col-${i}`"
+          :height="tableHeight + 48"
+          :left="headersPositions[header.value] - scrollLeft - 4"
+          @move="movement => headerWidths[header.value] = Math.max(100, headerWidths[header.value] + movement)"
+        />
+      </template>
     </template>
 
     <!--list mode body -->
@@ -393,7 +397,7 @@ export default {
     },
     selectedHeaders () {
       if (this.selectedCols.length === 0) return this.headers
-      return this.headers.filter(h => !h.field || this.selectedCols.includes(h.value))
+      return this.headers.filter(h => (!h.field || !this.selectedCols.length || this.selectedCols.includes(h.value)) && h.value !== this.fixedCol)
     },
     truncate () {
       return this.$vuetify.breakpoint.mdAndUp ? 50 : 40
@@ -447,6 +451,9 @@ export default {
     },
     fixedHeader () {
       return this.fixedCol && this.headers.find(h => h.value === this.fixedCol)
+    },
+    showTable () {
+      return this.displayMode === 'table' && this.headerWidthsAdjusted
     }
   },
   watch: {
@@ -469,7 +476,6 @@ export default {
       async handler () {
         this.writeQueryParams()
         this.headerWidths = {}
-        this.measureHeaders()
       },
       deep: true
     },
@@ -477,6 +483,9 @@ export default {
       if (this.data.results && (this.data.results.length * this.lineHeight) < this.windowHeight) {
         this.fetchMore()
       }
+    },
+    showTable (value) {
+      if (value) this.watchTableScroll()
     }
   },
   async mounted () {
@@ -495,7 +504,7 @@ export default {
         if (this.displayMode === 'list') {
           this.$vuetify.goTo(0, goToOpts)
         } else {
-          document.querySelector('.real-data-table .v-data-table__wrapper').scrollTop = 0
+          if (this._tableWrapper) this._tableWrapper.scrollTop = 0
           this.scrollTop = 0
         }
       }
@@ -513,8 +522,6 @@ export default {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
       }
       this.loading = false
-      this.measureHeaders()
-      this.watchTableScroll()
     },
     async fetchMore (entries, observer, isIntersecting) {
       if (!this.data.next || this.loading || isIntersecting === false) return

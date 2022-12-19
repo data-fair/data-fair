@@ -2,15 +2,16 @@ import { throttle, debounce } from 'throttle-debounce'
 
 export default {
   data: () => ({
-    originalHeaderWidths: {},
     headerWidths: {},
-    totalHeaderWidth: 0,
     scrollTop: 0,
     scrollLeft: 0,
     scrollingHorizontal: false,
     scrollingVertical: false
   }),
   computed: {
+    headerWidthsAdjusted () {
+      return !this.selectedHeaders.find(header => !(header.value in this.headerWidths))
+    },
     virtualScrollVertical () {
       const linesBuffer = 8
 
@@ -30,7 +31,7 @@ export default {
       return { index, nbRendered, topPadding, bottomPadding }
     },
     virtualScrollHorizontal () {
-      if (!this.totalHeaderWidth) return
+      if (!this.headerWidthsAdjusted) return
       const pixelsBuffer = 500
       let x = 0
       let leftPadding = 0
@@ -38,7 +39,7 @@ export default {
       let rightPadding = 0
       let last = 0
       for (const header of this.selectedHeaders) {
-        if (x < this.scrollLeft + this.windowWidth + pixelsBuffer) {
+        if (x < this.scrollLeft + this.tableWidth + pixelsBuffer) {
           last++
         } else {
           rightPadding += this.headerWidths[header.value]
@@ -63,8 +64,11 @@ export default {
       return headersPositions
     },
     fixedColWidth () {
-      if (!this.fixedCol) return ''
+      if (!this.fixedCol) return 0
       return this.headerWidths[this.fixedCol]
+    },
+    tableWidth () {
+      return this.windowWidth - this.fixedColWidth
     }
   },
   watch: {
@@ -74,32 +78,15 @@ export default {
       }
     },
     data () {
-      this.adjustHeaderWidths()
+      this.adjustColsWidths()
     },
-    originalHeaderWidths () {
-      this.adjustHeaderWidths()
+    headerWidthsAdjusted (value) {
+      if (!value) this.adjustColsWidths()
     }
   },
   methods: {
-    async measureHeaders () {
+    async watchTableScroll () {
       await this.$nextTick()
-
-      // in table mode the header is outside the actual table so that we can have
-      // infinite scroll, horizontal scroll and fixed header at the same time
-
-      // sync cols widths
-      const children = this.$el.querySelectorAll('th.dataset-table-header')
-      let totalWidth = 0
-      for (const child of children) {
-        if (this.headerWidths[child.attributes['data-header'].value] !== child.clientWidth) {
-          this.$set(this.headerWidths, child.attributes['data-header'].value, child.clientWidth)
-        }
-        totalWidth += child.clientWidth
-      }
-      this.originalHeaderWidths = { ...this.headerWidths }
-      this.totalHeaderWidth = totalWidth
-    },
-    watchTableScroll () {
       this._headerWrapper = document.querySelector('.header-data-table .v-data-table__wrapper')
       this._fixedTableWrapper = document.querySelector('.fixed-data-table .v-data-table__wrapper')
       const tableWrapper = document.querySelector('.real-data-table .v-data-table__wrapper')
@@ -129,9 +116,12 @@ export default {
       })
       this._debounceScroll()
     },
-    adjustHeaderWidths () {
-      if (!this.data.results || !this.totalHeaderWidth) return
-      for (const header of this.selectedHeaders) {
+    adjustColsWidths () {
+      if (!this.data.results || !this.headers) return
+      for (const header of this.headers) {
+        if (this.headerWidths[header.value]) return
+        const estimatedHeaderSize = ((header.text.length / 2) * 9) + 46
+        this.$set(this.headerWidths, header.value, estimatedHeaderSize)
         for (const result of this.data.results) {
           if (!(header.value in result)) continue
           const estimatedSize = (Math.min(50, (result[header.value] + '').length) * 9) + 16
