@@ -12,7 +12,7 @@ export default {
   }),
   computed: {
     virtualScrollVertical () {
-      const linesBuffer = 10
+      const linesBuffer = 8
 
       // index is equivalent to the number of lines hidden at the top
       const index = Math.max(0, Math.floor(this.scrollTop / this.lineHeight) - linesBuffer)
@@ -31,7 +31,7 @@ export default {
     },
     virtualScrollHorizontal () {
       if (!this.totalHeaderWidth) return
-      const pixelsBuffer = 1000
+      const pixelsBuffer = 500
       let x = 0
       let leftPadding = 0
       let index = 0
@@ -110,13 +110,13 @@ export default {
       if (e.target.scrollLeft !== this.scrollLeft) this.scrollingHorizontal = true
       if (e.target.scrollTop !== this.scrollTop) this.scrollingVertical = true
 
-      this._throttleScroll = this._throttleScroll || throttle(20, (e) => {
+      this._throttleScroll = this._throttleScroll || throttle(30, (e) => {
         this.scrollTop = e.target.scrollTop
         this.scrollLeft = e.target.scrollLeft
       }, { noLeading: true })
       this._throttleScroll(e)
 
-      this._debounceScroll = this._debounceScroll || debounce(20, () => {
+      this._debounceScroll = this._debounceScroll || debounce(30, () => {
         this.scrollingHorizontal = false
         this.scrollingVertical = false
       })
@@ -127,8 +127,7 @@ export default {
       for (const header of this.selectedHeaders) {
         for (const result of this.data.results) {
           if (!(header.value in result)) continue
-          console.log(header.value, result[header.value])
-          const estimatedSize = Math.min(50, (result[header.value] + '').length) * 10
+          const estimatedSize = (Math.min(50, (result[header.value] + '').length) * 9) + 16
           if (estimatedSize > this.headerWidths[header.value]) this.headerWidths[header.value] = estimatedSize
         }
       }

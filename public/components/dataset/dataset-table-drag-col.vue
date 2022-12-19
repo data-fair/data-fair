@@ -64,6 +64,6 @@ export default {
   cursor:col-resize;
   user-select:none;
   width: 5px;
-  z-index:10;
+  z-index:5;
 }
 </style>
