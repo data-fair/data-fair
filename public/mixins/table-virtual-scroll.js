@@ -5,12 +5,17 @@ export default {
     headerWidths: {},
     scrollTop: 0,
     scrollLeft: 0,
+    scrollLeftRT: 0,
     scrollingHorizontal: false,
     scrollingVertical: false
   }),
   computed: {
     headerWidthsAdjusted () {
       return !this.selectedHeaders.find(header => !(header.value in this.headerWidths))
+    },
+    totalHeaderWidths () {
+      if (!this.headerWidthsAdjusted) return 0
+      return this.selectedHeaders.map(header => this.headerWidths[header.value]).reduce((sum, width) => sum + width, 0)
     },
     virtualScrollVertical () {
       const linesBuffer = 8
@@ -50,6 +55,7 @@ export default {
           leftPadding += this.headerWidths[header.value]
         }
       }
+      rightPadding = Math.max(40, rightPadding)
 
       return { leftPadding, index, nbRendered: last - index, rightPadding }
     },
@@ -99,22 +105,19 @@ export default {
     onTableScroll (e) {
       this._headerWrapper.scrollTo(e.target.scrollLeft, 0)
       this._fixedTableWrapper = this._fixedTableWrapper || document.querySelector('.fixed-data-table .v-data-table__wrapper')
-      this._fixedTableWrapper.scrollTo(0, e.target.scrollTop)
+      if (this._fixedTableWrapper) this._fixedTableWrapper.scrollTo(0, e.target.scrollTop)
+      this.scrollLeftRT = e.target.scrollLeft
 
       if (e.target.scrollLeft !== this.scrollLeft) this.scrollingHorizontal = true
       if (e.target.scrollTop !== this.scrollTop) this.scrollingVertical = true
 
-      this._throttleScroll = this._throttleScroll || throttle(30, (e) => {
+      this._throttleScroll = this._throttleScroll || debounce(30, (e) => {
         this.scrollTop = e.target.scrollTop
         this.scrollLeft = e.target.scrollLeft
-      }, { noLeading: true })
-      this._throttleScroll(e)
-
-      this._debounceScroll = this._debounceScroll || debounce(30, () => {
         this.scrollingHorizontal = false
         this.scrollingVertical = false
-      })
-      this._debounceScroll()
+      }, { noLeading: true })
+      this._throttleScroll(e)
     },
     adjustColsWidths () {
       if (!this.data.results || !this.headers) return
