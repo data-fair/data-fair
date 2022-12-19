@@ -45,14 +45,16 @@
         v-slot="{ hover }"
         :disabled="disableHover"
       >
-        <div :style="`max-height: 40px;`">
-          <span>{{ itemValue | cellValues(field, truncate) }}</span>
+        <div :style="`max-height: 40px;max-width:100%;overflow:hidden;text-overflow:ellipsis;`">
+          <span>
+            {{ itemValue | cellValues(field, truncate) }}
+          </span>
           <v-btn
             v-if="hover && !item._tmpState && !filters.find(f => f.field.key === field.key) && isFilterable(itemValue)"
             fab
             x-small
             color="primary"
-            style="right: 0px;top: 50%;transform: translate(0, -50%);z-index:100;"
+            style="right: 4px;top: 50%;transform: translate(0, -50%);z-index:100;"
             absolute
             @click="$emit('filter', itemValue)"
           >
