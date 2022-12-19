@@ -7,6 +7,7 @@
     tile
     eager
     :max-height="filterHeight"
+    :max-width="400"
     :close-on-content-click="false"
     @input="toggledMenu"
   >
