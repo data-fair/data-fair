@@ -610,7 +610,7 @@ export default {
 }
 .v-data-table.real-data-table .v-data-table__wrapper {
   position: relative;
-  overflow: scroll;
+  overflow: scroll !important;
 }
 .v-data-table.real-data-table .v-data-table__wrapper table {
   table-layout: auto;
@@ -619,12 +619,12 @@ export default {
   z-index: 6;
 }
 .fixed-data-table .v-data-table__wrapper {
-  overflow-y: hidden;
-  overflow-x: scroll;
+  overflow-y: hidden !important;
+  overflow-x: scroll !important;
 }
 .header-data-table .v-data-table__wrapper {
-  overflow-x: hidden;
-  overflow-y: scroll;
+  overflow-x: hidden !important;
+  overflow-y: scroll !important;
 }
 
 </style>
