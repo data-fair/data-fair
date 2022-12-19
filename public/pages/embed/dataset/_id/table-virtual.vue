@@ -16,6 +16,7 @@
       :flat="displayMode === 'table'"
       :color="$vuetify.theme.dark ? 'black' : 'white'"
       :extension-height="extensionHeight"
+      clipped-left
     >
       <v-toolbar-title style="white-space:normal;">
         <dataset-nb-results
@@ -73,8 +74,10 @@
                     :filters="filters"
                     :filter-height="filterHeight"
                     :pagination="pagination"
+                    :fixed-col="fixedCol"
                     @filter="f => addFilter(header.value, f)"
                     @hide="hideHeader(header)"
+                    @fixCol="fixedCol = header.value; writeQueryParams()"
                   />
                 </v-slide-item>
               </v-slide-group>
@@ -86,16 +89,93 @@
 
     <!-- table mode data-table -->
     <template v-if="displayMode === 'table'">
-      <!-- fake table only here to have a fiex position header that follow the scroll on the actual table -->
+      <!-- fixed table to the left -->
+      <v-navigation-drawer
+        v-if="fixedCol"
+        clipped
+        :width="fixedColWidth"
+        app
+        permanent
+        :class="{'elevation-1': scrollLeft <= 10, 'elevation-8': scrollLeft > 10}"
+      >
+        <v-row class="fixed-header-data-table v-data-table ma-0">
+          <div
+            class="v-data-table__wrapper"
+            :class="{'elevation-1': scrollTop <= 10, 'elevation-8': scrollTop > 10}"
+            style="overflow-x:hidden;"
+          >
+            <table :style="{'table-layout': totalHeaderWidth ? 'fixed' : 'auto'}">
+              <thead
+                class="v-data-table-header"
+              >
+                <tr style="position:relative">
+                  <dataset-table-header2
+                    :header="fixedHeader"
+                    :filters="filters"
+                    :filter-height="filterHeight"
+                    :pagination="pagination"
+                    :fixed-col="fixedCol"
+                    :width="fixedColWidth"
+                    @filter="f => addFilter(fixedHeader.value, f)"
+                    @hide="hideHeader(fixedHeader)"
+                    @fixCol="fixedCol = null; writeQueryParams()"
+                  />
+                </tr>
+              </thead>
+            </table>
+          </div>
+        </v-row>
+        <v-data-table
+          class="fixed-data-table"
+          :headers="[fixedHeader]"
+          :server-items-length="data.total"
+          :options.sync="pagination"
+          hide-default-header
+          hide-default-footer
+          :height="tableHeight"
+        >
+          <template #body>
+            <tbody
+              v-if="data.results && data.results.length && totalHeaderWidth"
+              :style="{height: tableHeight - 100 + 'px'}"
+            >
+              <tr :key="`top-padding-${virtualScrollVertical.topPadding}`">
+                <td :style="'height:'+virtualScrollVertical.topPadding+'px'" />
+              </tr>
+              <tr
+                v-for="i in virtualScrollVertical.nbRendered"
+                :key="i -1 + virtualScrollVertical.index"
+              >
+                <dataset-table-cell
+                  :item="data.results[i -1 + virtualScrollVertical.index]"
+                  :line-height="lineHeight"
+                  :header="fixedHeader"
+                  :filters="filters"
+                  :truncate="truncate"
+                  :style="{width: fixedColWidth + 'px', 'min-width': fixedColWidth + 'px', 'max-width': fixedColWidth + 'px'}"
+                  @filter="f => addFilter(selectedHeaders[h - 1 + virtualScrollHorizontal.index].value, f)"
+                />
+              </tr>
+              <tr :key="`bottom-padding-${virtualScrollVertical.bottomPadding}`">
+                <td :style="'height:'+virtualScrollVertical.bottomPadding+'px'" />
+              </tr>
+            </tbody>
+          </template>
+        </v-data-table>
+      </v-navigation-drawer>
+
+      <!-- fake table only here to have a fixed position header that follow the scroll on the actual table -->
       <v-row class="header-data-table v-data-table ma-0">
         <div
           class="v-data-table__wrapper"
-          :class="{'elevation-4': true}"
+          :class="{'elevation-1': scrollTop <= 10, 'elevation-8': scrollTop > 10}"
           style="overflow-x: hidden;"
         >
           <table :style="{'table-layout': totalHeaderWidth ? 'fixed' : 'auto'}">
-            <thead class="v-data-table-header">
-              <tr>
+            <thead
+              class="v-data-table-header"
+            >
+              <tr style="position:relative">
                 <template v-for="(header, i) in selectedHeaders">
                   <dataset-table-header2
                     :id="`visible-header-${i}`"
@@ -104,9 +184,11 @@
                     :filters="filters"
                     :filter-height="filterHeight"
                     :pagination="pagination"
+                    :fixed-col="fixedCol"
                     :width="headerWidths[header.value]"
                     @filter="f => addFilter(header.value, f)"
                     @hide="hideHeader(header)"
+                    @fixCol="fixedCol = header.value; writeQueryParams()"
                   />
                 </template>
               </tr>
@@ -273,7 +355,8 @@ export default {
     filters: [],
     lastParams: null,
     selectedCols: [],
-    ready: false
+    ready: false,
+    fixedCol: null
   }),
   computed: {
     ...mapState(['vocabulary']),
@@ -361,6 +444,9 @@ export default {
       height += this.extensionHeight
       height += 36 // bottom button
       return height
+    },
+    fixedHeader () {
+      return this.fixedCol && this.headers.find(h => h.value === this.fixedCol)
     }
   },
   watch: {
@@ -457,6 +543,7 @@ export default {
         const hiddenCols = query['hide-cols'].split(',')
         this.selectedCols = this.cols.filter(col => !hiddenCols.includes(col))
       }
+      if (query.fixed) this.fixedCol = query.fixed
       if (query.q) this.query = query.q
       if (query.sort) {
         const [sortBy, sortDesc] = query.sort.split(':')
@@ -480,6 +567,9 @@ export default {
         delete query.cols
         delete query['hide-cols']
       }
+
+      if (this.fixedCol) query.fixed = this.fixedCol
+      else delete query.fixed
 
       if (this.query) query.q = this.query
       else delete query.q
@@ -516,6 +606,12 @@ export default {
 }
 .v-data-table.real-data-table .v-data-table__wrapper table {
   table-layout: auto;
+}
+.fixed-data-table {
+  z-index: 6;
+}
+.fixed-data-table .v-data-table__wrapper {
+  overflow: hidden;
 }
 
 </style>

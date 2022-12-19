@@ -54,6 +54,20 @@
           </v-list-item-content>
         </v-list-item>
 
+        <!-- fix column to the left -->
+        <v-list-item-group color="primary">
+          <v-list-item
+            class="pl-2"
+            :class="{'v-item--active v-list-item--active': header.value === fixedCol}"
+            @click="$emit('fixCol');showMenu=false"
+          >
+            <v-list-item-icon class="mr-2"><v-icon>mdi-format-horizontal-align-left</v-icon></v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title>{{ $t('fixLeft') }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-item-group>
+
         <!-- sorting -->
         <template v-if="header.sortable">
           <v-list-item-group color="primary">
@@ -344,6 +358,7 @@ fr:
   filter: "Filtrer :"
   applyFilter: Appliquer le filtre
   info: "Informations :"
+  fixLeft: "Fixer la colonne à gauche"
 en:
   hide: hide this column
   sortAsc: Ascending sort
@@ -351,6 +366,7 @@ en:
   filter: "Filter:"
   applyFilter: Apply filter
   info: "Information:"
+  fixLeft: "Fix the column to the left"
 </i18n>
 
 <script>
@@ -360,7 +376,8 @@ export default {
     filters: { type: Array, required: true },
     filterHeight: { type: Number, required: true },
     pagination: { type: Object, required: true },
-    width: { type: Number, default: null }
+    width: { type: Number, default: null },
+    fixedCol: { type: String, default: null }
   },
   data () {
     return {

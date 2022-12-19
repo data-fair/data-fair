@@ -61,6 +61,10 @@ export default {
         headersPositions[header.value] = p
       }
       return headersPositions
+    },
+    fixedColWidth () {
+      if (!this.fixedCol) return ''
+      return this.headerWidths[this.fixedCol]
     }
   },
   watch: {
@@ -97,6 +101,7 @@ export default {
     },
     watchTableScroll () {
       this._headerWrapper = document.querySelector('.header-data-table .v-data-table__wrapper')
+      this._fixedTableWrapper = document.querySelector('.fixed-data-table .v-data-table__wrapper')
       const tableWrapper = document.querySelector('.real-data-table .v-data-table__wrapper')
       if (this.displayMode === 'table' && this._tableWrapper !== tableWrapper) {
         if (this._tableWrapper) this._tableWrapper.removeEventListener('scroll', this.onTableScroll)
@@ -106,6 +111,8 @@ export default {
     },
     onTableScroll (e) {
       this._headerWrapper.scrollTo(e.target.scrollLeft, 0)
+      this._fixedTableWrapper = this._fixedTableWrapper || document.querySelector('.fixed-data-table .v-data-table__wrapper')
+      this._fixedTableWrapper.scrollTo(0, e.target.scrollTop)
 
       if (e.target.scrollLeft !== this.scrollLeft) this.scrollingHorizontal = true
       if (e.target.scrollTop !== this.scrollTop) this.scrollingVertical = true
