@@ -68,13 +68,13 @@
                   v-for="(header, i) in selectedHeaders"
                   :key="`list-header-${i}`"
                 >
-                  <dataset-table-header
+                  <dataset-table-header2
                     :header="header"
                     :filters="filters"
                     :filter-height="filterHeight"
                     :pagination="pagination"
-                    @sort="orderBy(header)"
                     @filter="f => addFilter(header.value, f)"
+                    @hide="hideHeader(header)"
                   />
                 </v-slide-item>
               </v-slide-group>
@@ -97,7 +97,7 @@
             <thead class="v-data-table-header">
               <tr>
                 <template v-for="(header, i) in selectedHeaders">
-                  <dataset-table-header
+                  <dataset-table-header2
                     :id="`visible-header-${i}`"
                     :key="`visible-header-${i}`"
                     :header="header"
@@ -105,8 +105,8 @@
                     :filter-height="filterHeight"
                     :pagination="pagination"
                     :width="headerWidths[header.value]"
-                    @sort="orderBy(header)"
                     @filter="f => addFilter(header.value, f)"
+                    @hide="hideHeader(header)"
                   />
                 </template>
               </tr>
@@ -176,7 +176,7 @@
         v-for="(header, i) in selectedHeaders"
         :key="`drag-col-${i}`"
         :height="tableHeight + 20"
-        :left="headersPositions[header.value] - scrollLeft"
+        :left="headersPositions[header.value] - scrollLeft - 4"
         @move="movement => headerWidths[header.value] = Math.max(originalHeaderWidths[header.value], headerWidths[header.value] + movement)"
       />
     </template>
@@ -305,6 +305,9 @@ export default {
       }
       return fieldsHeaders
     },
+    cols () {
+      return this.headers.filter(h => !!h.field).map(h => h.value)
+    },
     selectedHeaders () {
       if (this.selectedCols.length === 0) return this.headers
       return this.headers.filter(h => !h.field || this.selectedCols.includes(h.value))
@@ -409,8 +412,6 @@ export default {
           document.querySelector('.real-data-table .v-data-table__wrapper').scrollTop = 0
           this.scrollTop = 0
         }
-        this.pagination.sortBy = [null]
-        this.pagination.sortDesc = [false]
       }
 
       // prevent triggering multiple times the same request
@@ -442,15 +443,6 @@ export default {
       }
       this.loading = false
     },
-    orderBy (header) {
-      if (!header.sortable) return
-      if (this.pagination.sortBy[0] === header.value) {
-        this.$set(this.pagination.sortDesc, 0, !this.pagination.sortDesc[0])
-      } else {
-        this.$set(this.pagination.sortBy, 0, header.value)
-        this.$set(this.pagination.sortDesc, 0, false)
-      }
-    },
     addFilter (key, filter) {
       if (typeof filter !== 'object') filter = { type: 'in', values: [filter] }
       filter.field = this.dataset.schema.find(f => f.key === key)
@@ -461,6 +453,10 @@ export default {
     readQueryParams () {
       const query = this.$route.query
       if (query.cols) this.selectedCols = query.cols.split(',')
+      if (query['hide-cols']) {
+        const hiddenCols = query['hide-cols'].split(',')
+        this.selectedCols = this.cols.filter(col => !hiddenCols.includes(col))
+      }
       if (query.q) this.query = query.q
       if (query.sort) {
         const [sortBy, sortDesc] = query.sort.split(':')
@@ -472,8 +468,18 @@ export default {
     writeQueryParams () {
       const query = { ...this.$route.query }
 
-      if (this.selectedCols.length) query.cols = this.selectedCols.join(',')
-      else delete query.cols
+      if (this.selectedCols.length) {
+        if (this.selectedCols.length > this.cols.length / 2) {
+          query['hide-cols'] = this.cols.filter(col => !this.selectedCols.includes(col)).join(',')
+          delete query.cols
+        } else {
+          query.cols = this.selectedCols.join(',')
+          delete query['hide-cols']
+        }
+      } else {
+        delete query.cols
+        delete query['hide-cols']
+      }
 
       if (this.query) query.q = this.query
       else delete query.q
@@ -486,6 +492,10 @@ export default {
         delete query.sort
       }
       this.$router.push({ query })
+    },
+    hideHeader (header) {
+      if (!this.selectedCols.length) this.selectedCols = this.cols
+      this.selectedCols = this.selectedCols.filter(sc => sc !== header.value)
     }
   }
 }
