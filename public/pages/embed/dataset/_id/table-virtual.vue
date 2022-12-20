@@ -604,6 +604,9 @@ export default {
 .embed-table .v-toolbar__extension {
   padding-left:0;
 }
+.embed-table .tutorial-alert {
+  z-index: 7 !important;
+}
 .embed-table .v-navigation-drawer__content {
   overflow-x: hidden;
   overflow-y: hidden;
