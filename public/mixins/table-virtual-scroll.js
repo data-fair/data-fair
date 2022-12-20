@@ -1,4 +1,4 @@
-import { throttle, debounce } from 'throttle-debounce'
+import { debounce } from 'throttle-debounce'
 
 export default {
   data: () => ({
@@ -111,13 +111,13 @@ export default {
       if (e.target.scrollLeft !== this.scrollLeft) this.scrollingHorizontal = true
       if (e.target.scrollTop !== this.scrollTop) this.scrollingVertical = true
 
-      this._throttleScroll = this._throttleScroll || debounce(30, (e) => {
+      this._debounceScroll = this._debounceScroll || debounce(30, (e) => {
         this.scrollTop = e.target.scrollTop
         this.scrollLeft = e.target.scrollLeft
         this.scrollingHorizontal = false
         this.scrollingVertical = false
       }, { noLeading: true })
-      this._throttleScroll(e)
+      this._debounceScroll(e)
     },
     adjustColsWidths () {
       if (!this.data.results || !this.headers) return
