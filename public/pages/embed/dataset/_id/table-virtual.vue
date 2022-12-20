@@ -604,6 +604,10 @@ export default {
 .embed-table .v-toolbar__extension {
   padding-left:0;
 }
+.embed-table .v-navigation-drawer__content {
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
 .v-data-table {
   max-width: none;
 }
@@ -620,6 +624,10 @@ export default {
 .fixed-data-table .v-data-table__wrapper {
   overflow-y: hidden !important;
   overflow-x: scroll !important;
+}
+.fixed-header-data-table .v-data-table__wrapper {
+  overflow-y: hidden !important;
+  overflow-x: hidden !important;
 }
 .header-data-table .v-data-table__wrapper {
   overflow-x: hidden !important;
