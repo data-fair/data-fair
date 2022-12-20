@@ -23,7 +23,7 @@ export default {
       // index is equivalent to the number of lines hidden at the top
       const index = Math.max(0, Math.floor(this.scrollTop / this.lineHeight) - linesBuffer)
       // number of lines available in memory
-      const nbLoaded = this.data.results ? this.data.results.length : 0
+      const nbLoaded = this.data.results.length
       // number of lines visible on the screen
       const nbVisible = Math.ceil(this.tableHeight / this.lineHeight)
       // number of lines rendered by virtual scrolling
@@ -33,7 +33,10 @@ export default {
       const topPadding = index * this.lineHeight
       // blank space at bottom of table matching the non-rendered lines
       const bottomPadding = Math.max(nbLoaded - index - nbRendered, 0) * this.lineHeight
-      return { index, nbRendered, topPadding, bottomPadding }
+
+      const results = this.data.results.slice(index, index + nbRendered)
+
+      return { index, topPadding, bottomPadding, results }
     },
     virtualScrollHorizontal () {
       if (!this.headerWidthsAdjusted) return
@@ -57,7 +60,9 @@ export default {
       }
       rightPadding = Math.max(40, rightPadding)
 
-      return { leftPadding, index, nbRendered: last - index, rightPadding }
+      const headers = this.selectedHeaders.slice(index, last)
+
+      return { index, leftPadding, rightPadding, headers }
     },
     headersPositions () {
       if (!this.headerWidths) return

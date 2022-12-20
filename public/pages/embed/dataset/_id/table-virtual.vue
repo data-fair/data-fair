@@ -139,11 +139,11 @@
                 <td :style="'height:'+virtualScrollVertical.topPadding+'px'" />
               </tr>
               <tr
-                v-for="i in virtualScrollVertical.nbRendered"
-                :key="i -1 + virtualScrollVertical.index"
+                v-for="result in virtualScrollVertical.results"
+                :key="result._id"
               >
                 <dataset-table-cell
-                  :item="data.results[i -1 + virtualScrollVertical.index]"
+                  :item="result"
                   :line-height="lineHeight"
                   :header="fixedHeader"
                   :filters="filters"
@@ -213,24 +213,24 @@
               <td :style="'height:'+virtualScrollVertical.topPadding+'px'" />
             </tr>
             <tr
-              v-for="i in virtualScrollVertical.nbRendered"
-              :key="i -1 + virtualScrollVertical.index"
+              v-for="result in virtualScrollVertical.results"
+              :key="result._id"
             >
               <td
                 v-if="virtualScrollHorizontal.leftPadding"
                 :key="`left-padding-${virtualScrollHorizontal.leftPadding}`"
                 :style="{height: lineHeight + 'px', width: virtualScrollHorizontal.leftPadding + 'px', 'max-width': virtualScrollHorizontal.leftPadding + 'px', 'min-width': virtualScrollHorizontal.leftPadding + 'px'}"
               />
-              <template v-for="h in virtualScrollHorizontal.nbRendered">
+              <template v-for="header in virtualScrollHorizontal.headers">
                 <dataset-table-cell
-                  :key="h - 1 + virtualScrollHorizontal.index"
-                  :item="data.results[i -1 + virtualScrollVertical.index]"
+                  :key="header.value"
+                  :item="result"
                   :line-height="lineHeight"
-                  :header="selectedHeaders[h - 1 + virtualScrollHorizontal.index]"
+                  :header="header"
                   :filters="filters"
                   :truncate="truncate"
-                  :style="{width: headerWidths[selectedHeaders[h - 1 + virtualScrollHorizontal.index].value] + 'px', 'min-width': headerWidths[selectedHeaders[h - 1 + virtualScrollHorizontal.index].value] + 'px', 'max-width': headerWidths[selectedHeaders[h - 1 + virtualScrollHorizontal.index].value] + 'px'}"
-                  @filter="f => addFilter(selectedHeaders[h - 1 + virtualScrollHorizontal.index].value, f)"
+                  :style="{width: headerWidths[header.value] + 'px', 'min-width': headerWidths[header.value] + 'px', 'max-width': headerWidths[header.value] + 'px'}"
+                  @filter="f => addFilter(header.value, f)"
                 />
               </template>
               <td
