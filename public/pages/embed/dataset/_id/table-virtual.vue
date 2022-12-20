@@ -651,6 +651,7 @@ export default {
 .fixed-data-table .v-data-table__wrapper {
   overflow-y: hidden !important;
   overflow-x: scroll !important;
+  will-change: scroll-position;
 }
 .fixed-header-data-table .v-data-table__wrapper {
   overflow-y: hidden !important;
@@ -659,6 +660,7 @@ export default {
 .header-data-table .v-data-table__wrapper {
   overflow-x: hidden !important;
   overflow-y: scroll !important;
+  will-change: scroll-position;
 }
 
 </style>
