@@ -1,6 +1,7 @@
 import { debounce } from 'throttle-debounce'
 
-let uid = 0
+let vuid = 0
+let huid = 0
 
 export default {
   data: () => ({
@@ -43,7 +44,7 @@ export default {
 
       const results = this.data.results ? this.data.results.slice(index, index + nbRendered) : []
 
-      return { index, topPadding, bottomPadding, results }
+      return { index, topPadding, bottomPadding, results, totalHeight: nbLoaded * this.lineHeight }
     },
     virtualScrollHorizontal () {
       if (!this.headerWidthsAdjusted) return
@@ -112,7 +113,7 @@ export default {
       }
       for (const header of value) {
         if (!this.horizontalKeys[header.value]) {
-          this.$set(this.horizontalKeys, header.value, this.freeHorizontalKeys.pop() || uid++)
+          this.$set(this.horizontalKeys, header.value, this.freeHorizontalKeys.pop() || huid++)
         }
       }
     },
@@ -127,7 +128,7 @@ export default {
       }
       for (const result of value) {
         if (!this.verticalKeys[result._id]) {
-          this.$set(this.verticalKeys, result._id, this.freeVerticalKeys.pop() || uid++)
+          this.$set(this.verticalKeys, result._id, this.freeVerticalKeys.pop() || vuid++)
         }
       }
     }

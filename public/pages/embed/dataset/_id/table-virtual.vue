@@ -129,7 +129,7 @@
                     :fixed-col="fixedCol"
                     @filter="f => addFilter(fixedHeader.value, f)"
                     @hide="hideHeader(fixedHeader)"
-                    @fixCol="fixedCol = fixedHeader.value; writeQueryParams()"
+                    @fixCol="fixedCol = null; writeQueryParams()"
                   />
                 </tr>
               </thead>
@@ -182,23 +182,33 @@
             <thead
               class="v-data-table-header"
             >
-              <tr style="position:relative;">
-                <th
-                  v-if="virtualScrollHorizontal.leftPadding"
-                  :key="`left-padding-${virtualScrollHorizontal.leftPadding}`"
-                  :style="{height: lineHeight + 'px', width: virtualScrollHorizontal.leftPadding + 'px', 'max-width': virtualScrollHorizontal.leftPadding + 'px', 'min-width': virtualScrollHorizontal.leftPadding + 'px'}"
-                />
-                <template v-for="(header, h) in virtualScrollHorizontal.headers">
+              <tr
+                style="position:relative;"
+                :style="{
+                  display: 'block',
+                  position: 'relative',
+                  width: totalHeaderWidths + 'px',
+                  minWidth: totalHeaderWidths + 'px',
+                  maxWidth: totalHeaderWidths + 'px',
+                  height: '48px'
+                }"
+              >
+                <template v-for="header in virtualScrollHorizontal.headers">
                   <dataset-table-header-cell
-                    :id="'header-cell-' + (h + virtualScrollHorizontal.index)"
+                    :id="'header-cell-' + horizontalKeys[header.value]"
                     :key="'header-cell-' + horizontalKeys[header.value]"
                     :header="header"
                     :pagination="pagination"
                     :width="headerWidths[header.value]"
+                    :style="{
+                      position: 'relative',
+                      'will-change': 'transform',
+                      transform: `translateX(${virtualScrollHorizontal.leftPadding}px)`
+                    }"
                   />
                   <dataset-table-header-menu
                     :key="'header-menu-' + horizontalKeys[header.value]"
-                    :activator="'#header-cell-' + (h + virtualScrollHorizontal.index)"
+                    :activator="'#header-cell-' + horizontalKeys[header.value]"
                     :header="header"
                     :filters="filters"
                     :filter-height="filterHeight"
@@ -209,10 +219,6 @@
                     @fixCol="fixedCol = header.value; writeQueryParams()"
                   />
                 </template>
-                <th
-                  :key="`right-padding-${virtualScrollHorizontal.rightPadding}`"
-                  :style="{height: lineHeight + 'px', width: virtualScrollHorizontal.rightPadding + 'px', 'min-width': virtualScrollHorizontal.rightPadding + 'px', 'max-width': virtualScrollHorizontal.rightPadding + 'px'}"
-                />
               </tr>
             </thead>
           </table>
@@ -231,7 +237,9 @@
       >
         <template #body>
           <tbody
-            :style="{'max-height': tableHeight - 100 + 'px'}"
+            :style="{
+              'max-height': tableHeight - 100 + 'px',
+            }"
           >
             <tr :key="`top-padding-${virtualScrollVertical.topPadding}`">
               <td :style="'height:'+virtualScrollVertical.topPadding+'px'" />
@@ -239,12 +247,15 @@
             <tr
               v-for="result in virtualScrollVertical.results"
               :key="verticalKeys[result._id]"
+              :style="{
+                display: 'block',
+                position: 'relative',
+                width: totalHeaderWidths + 'px',
+                minWidth: totalHeaderWidths + 'px',
+                maxWidth: totalHeaderWidths + 'px',
+                height: lineHeight + 'px'
+              }"
             >
-              <td
-                v-if="virtualScrollHorizontal.leftPadding"
-                :key="`left-padding-${virtualScrollHorizontal.leftPadding}`"
-                :style="{height: lineHeight + 'px', width: virtualScrollHorizontal.leftPadding + 'px', 'max-width': virtualScrollHorizontal.leftPadding + 'px', 'min-width': virtualScrollHorizontal.leftPadding + 'px'}"
-              />
               <template v-for="header in virtualScrollHorizontal.headers">
                 <dataset-table-cell
                   :key="horizontalKeys[header.value]"
@@ -253,14 +264,17 @@
                   :header="header"
                   :filters="filters"
                   :truncate="truncate"
-                  :style="{width: headerWidths[header.value] + 'px', 'min-width': headerWidths[header.value] + 'px', 'max-width': headerWidths[header.value] + 'px'}"
+                  :style="{
+                    width: headerWidths[header.value] + 'px',
+                    'min-width': headerWidths[header.value] + 'px',
+                    'max-width': headerWidths[header.value] + 'px',
+                    position: 'relative',
+                    'will-change': 'transform',
+                    transform: `translateX(${virtualScrollHorizontal.leftPadding}px)`
+                  }"
                   @filter="f => addFilter(header.value, f)"
                 />
               </template>
-              <td
-                :key="`right-padding-${virtualScrollHorizontal.rightPadding}`"
-                :style="{height: lineHeight + 'px', width: virtualScrollHorizontal.rightPadding + 'px', 'min-width': virtualScrollHorizontal.rightPadding + 'px', 'max-width': virtualScrollHorizontal.rightPadding + 'px'}"
-              />
             </tr>
             <tr :key="`bottom-padding-${virtualScrollVertical.bottomPadding}`">
               <td :style="'height:'+virtualScrollVertical.bottomPadding+'px'" />
