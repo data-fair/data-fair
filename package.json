@@ -87,6 +87,7 @@
     "nuxt-webpack-optimisations": "^2.2.0",
     "nyc": "^15.1.0",
     "patch-package": "^6.4.7",
+    "perfect-scrollbar": "^1.5.5",
     "raw-loader": "^4.0.2",
     "reconnecting-websocket": "^4.4.0",
     "semver-extract": "^1.2.0",

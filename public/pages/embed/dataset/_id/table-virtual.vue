@@ -146,13 +146,20 @@
           :height="tableHeight"
         >
           <template #body>
-            <tbody :style="{'max-height': tableHeight - 100 + 'px'}">
-              <tr :key="`top-padding-${virtualScrollVertical.topPadding}`">
-                <td :style="'height:'+virtualScrollVertical.topPadding+'px'" />
-              </tr>
+            <tbody :style="{ 'height': virtualScrollVertical.totalHeight + 'px', }">
               <tr
                 v-for="result in virtualScrollVertical.results"
                 :key="verticalKeys[result._id]"
+                :style="{
+                  display: 'block',
+                  position: 'relative',
+                  width: totalHeaderWidths + 'px',
+                  minWidth: totalHeaderWidths + 'px',
+                  maxWidth: totalHeaderWidths + 'px',
+                  height: lineHeight + 'px',
+                  'will-change': 'transform',
+                  transform: `translateY(${virtualScrollVertical.topPadding}px)`
+                }"
               >
                 <dataset-table-cell
                   :item="result"
@@ -163,9 +170,6 @@
                   :style="{width: fixedColWidth + 'px', 'min-width': fixedColWidth + 'px', 'max-width': fixedColWidth + 'px'}"
                   @filter="f => addFilter(fixedHeader.value, f)"
                 />
-              </tr>
-              <tr :key="`bottom-padding-${virtualScrollVertical.bottomPadding}`">
-                <td :style="'height:'+virtualScrollVertical.bottomPadding+'px'" />
               </tr>
             </tbody>
           </template>
@@ -236,11 +240,7 @@
         :height="tableHeight"
       >
         <template #body>
-          <tbody
-            :style="{
-              'height': virtualScrollVertical.totalHeight + 'px',
-            }"
-          >
+          <tbody :style="{ 'height': virtualScrollVertical.totalHeight + 'px', }">
             <tr
               v-for="result in virtualScrollVertical.results"
               :key="verticalKeys[result._id]"
@@ -641,36 +641,35 @@ export default {
 .embed-table .tutorial-alert {
   z-index: 7 !important;
 }
-.embed-table .v-navigation-drawer__content {
-  overflow-x: hidden;
-  overflow-y: hidden;
-}
-.v-data-table {
-  max-width: none;
-}
-.v-data-table.real-data-table .v-data-table__wrapper {
-  position: relative;
-  overflow: scroll !important;
-}
-.v-data-table.real-data-table .v-data-table__wrapper table {
-  table-layout: auto;
-}
 .fixed-data-table {
   z-index: 6;
 }
-.fixed-data-table .v-data-table__wrapper {
+
+/* replace native scrolling with perfect scrollbar */
+.embed-table .v-navigation-drawer__content, .embed-table .v-data-table__wrapper {
+  overflow-x: hidden !important;
   overflow-y: hidden !important;
-  overflow-x: scroll !important;
+}
+.embed-table .v-data-table {
+  max-width: none;
+}
+.embed-table .real-data-table .v-data-table__wrapper {
+  position: relative;
+}
+.embed-table .v-data-table .v-data-table__wrapper {
   will-change: scroll-position;
 }
-.fixed-header-data-table .v-data-table__wrapper {
-  overflow-y: hidden !important;
-  overflow-x: hidden !important;
+
+/* customize perfect scrollbar */
+.embed-table .ps .ps__rail-y, .embed-table .ps .ps__rail-x {
+  opacity: 0.9;
+  background-color: #eee;
 }
-.header-data-table .v-data-table__wrapper {
-  overflow-x: hidden !important;
-  overflow-y: scroll !important;
-  will-change: scroll-position;
+.embed-table .ps .ps__rail-y .ps__thumb-y {
+  width: 11px;
+}
+.embed-table .ps .ps__rail-x .ps__thumb-x {
+  height: 11px;
 }
 
 </style>

@@ -1,4 +1,6 @@
 import { debounce } from 'throttle-debounce'
+import PerfectScrollbar from 'perfect-scrollbar'
+import 'perfect-scrollbar/css/perfect-scrollbar.css'
 
 let vuid = 0
 let huid = 0
@@ -23,7 +25,7 @@ export default {
     },
     totalHeaderWidths () {
       if (!this.headerWidthsAdjusted) return 0
-      return this.selectedHeaders.map(header => this.headerWidths[header.value]).reduce((sum, width) => sum + width, 0)
+      return this.selectedHeaders.map(header => this.headerWidths[header.value]).reduce((sum, width) => sum + width, 0) + 15
     },
     virtualScrollVertical () {
       const linesBuffer = 10
@@ -44,7 +46,7 @@ export default {
 
       const results = this.data.results ? this.data.results.slice(index, index + nbRendered) : []
 
-      return { index, topPadding, bottomPadding, results, totalHeight: nbLoaded * this.lineHeight }
+      return { index, topPadding, bottomPadding, results, totalHeight: (nbLoaded * this.lineHeight) + 15 }
     },
     virtualScrollHorizontal () {
       if (!this.headerWidthsAdjusted) return
@@ -140,26 +142,37 @@ export default {
       this._fixedTableWrapper = document.querySelector('.fixed-data-table .v-data-table__wrapper')
       const tableWrapper = document.querySelector('.real-data-table .v-data-table__wrapper')
       if (this.displayMode === 'table' && this._tableWrapper !== tableWrapper) {
-        if (this._tableWrapper) this._tableWrapper.removeEventListener('scroll', this.onTableScroll)
+        if (this._tableWrapper) {
+          this._tableWrapper.removeEventListener('ps-scroll-x', this.onTableScrollX)
+          this._tableWrapper.removeEventListener('ps-scroll-y', this.onTableScrollY)
+        }
         this._tableWrapper = tableWrapper
-        this._tableWrapper.addEventListener('scroll', this.onTableScroll)
+        // eslint-disable-next-line no-new
+        const ps = new PerfectScrollbar(this._tableWrapper)
+        console.log('init PS', ps)
+        // this._tableWrapper.addEventListener('scroll', this.onTableScroll)
+        tableWrapper.addEventListener('ps-scroll-x', this.onTableScrollX)
+        tableWrapper.addEventListener('ps-scroll-y', this.onTableScrollY)
       }
     },
-    async onTableScroll (e) {
+    onTableScrollX (e) {
       this._headerWrapper.scrollTo(e.target.scrollLeft, 0)
-      this._fixedTableWrapper = this._fixedTableWrapper || document.querySelector('.fixed-data-table .v-data-table__wrapper')
-      if (this._fixedTableWrapper) this._fixedTableWrapper.scrollTo(0, e.target.scrollTop)
-      await this.$nextTick()
-      if (e.target.scrollLeft !== this.scrollLeft) this.scrollingHorizontal = true
-      if (e.target.scrollTop !== this.scrollTop) this.scrollingVertical = true
-
-      this._debounceScroll = this._debounceScroll || debounce(60, (e) => {
-        this.scrollTop = e.target.scrollTop
+      this.scrollingHorizontal = true
+      this._debounceScrollX = this._debounceScrollX || debounce(60, (e) => {
         this.scrollLeft = e.target.scrollLeft
         this.scrollingHorizontal = false
+      }, { noLeading: true })
+      this._debounceScrollX(e)
+    },
+    onTableScrollY (e) {
+      this._fixedTableWrapper = this._fixedTableWrapper || document.querySelector('.fixed-data-table .v-data-table__wrapper')
+      if (this._fixedTableWrapper) this._fixedTableWrapper.scrollTo(0, e.target.scrollTop)
+      this.scrollingVertical = true
+      this._debounceScrollY = this._debounceScrollY || debounce(60, (e) => {
+        this.scrollTop = e.target.scrollTop
         this.scrollingVertical = false
       }, { noLeading: true })
-      this._debounceScroll(e)
+      this._debounceScrollY(e)
     },
     adjustColsWidths () {
       if (!this.data.results || !this.headers) return
