@@ -149,7 +149,7 @@
                   :filters="filters"
                   :truncate="truncate"
                   :style="{width: fixedColWidth + 'px', 'min-width': fixedColWidth + 'px', 'max-width': fixedColWidth + 'px'}"
-                  @filter="f => addFilter(selectedHeaders[h - 1 + virtualScrollHorizontal.index].value, f)"
+                  @filter="f => addFilter(fixedHeader.value, f)"
                 />
               </tr>
               <tr :key="`bottom-padding-${virtualScrollVertical.bottomPadding}`">
