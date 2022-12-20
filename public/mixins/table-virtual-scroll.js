@@ -5,7 +5,6 @@ export default {
     headerWidths: {},
     scrollTop: 0,
     scrollLeft: 0,
-    scrollLeftRT: 0,
     scrollingHorizontal: false,
     scrollingVertical: false
   }),
@@ -107,16 +106,15 @@ export default {
         this._tableWrapper.addEventListener('scroll', this.onTableScroll)
       }
     },
-    onTableScroll (e) {
+    async onTableScroll (e) {
       this._headerWrapper.scrollTo(e.target.scrollLeft, 0)
       this._fixedTableWrapper = this._fixedTableWrapper || document.querySelector('.fixed-data-table .v-data-table__wrapper')
       if (this._fixedTableWrapper) this._fixedTableWrapper.scrollTo(0, e.target.scrollTop)
-      this.scrollLeftRT = e.target.scrollLeft
-
+      await this.$nextTick()
       if (e.target.scrollLeft !== this.scrollLeft) this.scrollingHorizontal = true
       if (e.target.scrollTop !== this.scrollTop) this.scrollingVertical = true
 
-      this._debounceScroll = this._debounceScroll || debounce(30, (e) => {
+      this._debounceScroll = this._debounceScroll || debounce(60, (e) => {
         this.scrollTop = e.target.scrollTop
         this.scrollLeft = e.target.scrollLeft
         this.scrollingHorizontal = false

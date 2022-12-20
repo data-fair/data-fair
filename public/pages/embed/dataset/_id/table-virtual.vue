@@ -182,7 +182,7 @@
             <thead
               class="v-data-table-header"
             >
-              <tr style="position:relative">
+              <tr style="position:relative;">
                 <th
                   v-if="virtualScrollHorizontal.leftPadding"
                   :key="`left-padding-${virtualScrollHorizontal.leftPadding}`"
@@ -271,7 +271,7 @@
 
       <!-- drag and drop handles to resize columns -->
       <template
-        v-if="headersPositions && virtualScrollHorizontal"
+        v-if="headersPositions && virtualScrollHorizontal && !scrollingHorizontal"
       >
         <dataset-table-drag-col
           v-if="fixedHeader"
@@ -282,10 +282,10 @@
           @move="movement => headerWidths[fixedHeader.value] = Math.max(100, headerWidths[fixedHeader.value] + movement)"
         />
         <dataset-table-drag-col
-          v-for="(header, i) in selectedHeaders.filter(header => headersPositions[header.value] - scrollLeftRT > 0 && headersPositions[header.value] - scrollLeftRT < tableWidth)"
+          v-for="(header, i) in selectedHeaders.filter(header => headersPositions[header.value] - scrollLeft > 0 && headersPositions[header.value] - scrollLeft < tableWidth)"
           :key="`drag-col-${i}`"
           :height="tableHeight + 30"
-          :left="headersPositions[header.value] - scrollLeftRT - 4"
+          :left="headersPositions[header.value] - scrollLeft - 4"
           @move="movement => headerWidths[header.value] = Math.max(100, headerWidths[header.value] + movement)"
         />
       </template>
