@@ -152,7 +152,7 @@
               </tr>
               <tr
                 v-for="result in virtualScrollVertical.results"
-                :key="result._id"
+                :key="verticalKeys[result._id]"
               >
                 <dataset-table-cell
                   :item="result"
@@ -191,13 +191,13 @@
                 <template v-for="(header, h) in virtualScrollHorizontal.headers">
                   <dataset-table-header-cell
                     :id="'header-cell-' + (h + virtualScrollHorizontal.index)"
-                    :key="'header-cell-' + header.value"
+                    :key="'header-cell-' + horizontalKeys[header.value]"
                     :header="header"
                     :pagination="pagination"
                     :width="headerWidths[header.value]"
                   />
                   <dataset-table-header-menu
-                    :key="'header-menu-' + header.value"
+                    :key="'header-menu-' + horizontalKeys[header.value]"
                     :activator="'#header-cell-' + (h + virtualScrollHorizontal.index)"
                     :header="header"
                     :filters="filters"
@@ -238,7 +238,7 @@
             </tr>
             <tr
               v-for="result in virtualScrollVertical.results"
-              :key="result._id"
+              :key="verticalKeys[result._id]"
             >
               <td
                 v-if="virtualScrollHorizontal.leftPadding"
@@ -247,7 +247,7 @@
               />
               <template v-for="header in virtualScrollHorizontal.headers">
                 <dataset-table-cell
-                  :key="header.value"
+                  :key="horizontalKeys[header.value]"
                   :item="result"
                   :line-height="lineHeight"
                   :header="header"
@@ -270,7 +270,7 @@
       </v-data-table>
 
       <!-- drag and drop handles to resize columns -->
-      <template
+      <!--<template
         v-if="headersPositions && virtualScrollHorizontal && !scrollingHorizontal"
       >
         <dataset-table-drag-col
@@ -288,7 +288,7 @@
           :left="headersPositions[header.value] - scrollLeft - 4"
           @move="movement => headerWidths[header.value] = Math.max(100, headerWidths[header.value] + movement)"
         />
-      </template>
+      </template>-->
     </template>
 
     <!--list mode body -->
