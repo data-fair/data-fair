@@ -102,12 +102,11 @@
         :width="fixedColWidth"
         app
         permanent
-        :class="{flat: scrollLeft <= 10, 'elevation-8': scrollLeft > 10}"
+        class="elevation-4"
       >
         <v-row class="fixed-header-data-table v-data-table ma-0">
           <div
             class="v-data-table__wrapper"
-            :class="{'elevation-1': true}"
           >
             <table :style="{'table-layout': 'fixed'}">
               <thead
@@ -179,8 +178,7 @@
       <!-- fake table only here to have a fixed position header that follow the scroll on the actual table -->
       <v-row class="header-data-table v-data-table ma-0">
         <div
-          class="v-data-table__wrapper"
-          :class="{'elevation-1': scrollTop <= 10, 'elevation-8': scrollTop > 10}"
+          class="v-data-table__wrapper elevation-4"
         >
           <table :style="{'table-layout': 'fixed'}">
             <thead

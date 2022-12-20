@@ -11,7 +11,6 @@ export default {
     scrollTop: 0,
     scrollLeft: 0,
     scrollingHorizontal: false,
-    scrollingVertical: false,
     // try to optimize reuse of components in a way similar to
     // https://github.com/Akryum/vue-virtual-scroller/blob/master/packages/vue-virtual-scroller/src/components/RecycleScroller.vue
     horizontalKeys: {},
@@ -28,7 +27,7 @@ export default {
       return this.selectedHeaders.map(header => this.headerWidths[header.value]).reduce((sum, width) => sum + width, 0) + 15
     },
     virtualScrollVertical () {
-      const linesBuffer = 10
+      const linesBuffer = 8
 
       // index is equivalent to the number of lines hidden at the top
       const index = Math.max(0, Math.floor(this.scrollTop / this.lineHeight) - linesBuffer)
@@ -50,7 +49,7 @@ export default {
     },
     virtualScrollHorizontal () {
       if (!this.headerWidthsAdjusted) return
-      const pixelsBuffer = 1000
+      const pixelsBuffer = 500
       let x = 0
       let leftPadding = 0
       let index = 0
@@ -148,8 +147,7 @@ export default {
         }
         this._tableWrapper = tableWrapper
         // eslint-disable-next-line no-new
-        const ps = new PerfectScrollbar(this._tableWrapper)
-        console.log('init PS', ps)
+        new PerfectScrollbar(this._tableWrapper)
         // this._tableWrapper.addEventListener('scroll', this.onTableScroll)
         tableWrapper.addEventListener('ps-scroll-x', this.onTableScrollX)
         tableWrapper.addEventListener('ps-scroll-y', this.onTableScrollY)
@@ -167,10 +165,8 @@ export default {
     onTableScrollY (e) {
       this._fixedTableWrapper = this._fixedTableWrapper || document.querySelector('.fixed-data-table .v-data-table__wrapper')
       if (this._fixedTableWrapper) this._fixedTableWrapper.scrollTo(0, e.target.scrollTop)
-      this.scrollingVertical = true
       this._debounceScrollY = this._debounceScrollY || debounce(60, (e) => {
         this.scrollTop = e.target.scrollTop
-        this.scrollingVertical = false
       }, { noLeading: true })
       this._debounceScrollY(e)
     },
