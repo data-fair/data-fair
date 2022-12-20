@@ -5,45 +5,12 @@
     right
     offset-y
     tile
+    :activator="activator"
     :max-height="filterHeight"
     :max-width="400"
     :close-on-content-click="false"
     @input="toggledMenu"
   >
-    <template #activator="{on, attrs}">
-      <v-hover v-slot="{hover}">
-        <th
-          class="dataset-table-header text-start"
-          :data-header="header.value"
-          :style="{
-            width: width ? width + 'px' : '',
-            'min-width': width ? width + 'px' : '',
-            'max-width': width ? width + 'px' : '',
-            position: 'relative',
-            overflow: 'hidden'
-          }"
-          v-bind="attrs"
-          v-on="on"
-        >
-          <v-clamp
-            :max-lines="2"
-            autoresize
-            :style="{'margin-right': '14px',}"
-          >
-            {{ header.text }}
-          </v-clamp>
-          <v-icon
-            v-if="hover || header.value === pagination.sortBy[0]"
-            style="position:absolute;top:12px;right:2px;"
-            :color="header.value === pagination.sortBy[0] ? 'primary' : 'default'"
-          >
-            <template v-if="header.value === pagination.sortBy[0] && !pagination.sortDesc[0]">mdi-sort-ascending</template>
-            <template v-else-if="header.value === pagination.sortBy[0] && pagination.sortDesc[0]">mdi-sort-descending</template>
-            <template v-else>mdi-menu-down</template>
-          </v-icon>
-        </th>
-      </v-hover>
-    </template>
     <v-sheet
       class="pa-1"
       tile
@@ -380,17 +347,15 @@ en:
 </i18n>
 
 <script>
-import VClamp from 'vue-clamp'
 
 export default {
-  components: { VClamp },
   props: {
     header: { type: Object, required: true },
     filters: { type: Array, required: true },
     filterHeight: { type: Number, required: true },
     pagination: { type: Object, required: true },
-    width: { type: Number, default: null },
-    fixedCol: { type: String, default: null }
+    fixedCol: { type: String, default: null },
+    activator: { type: String, required: true }
   },
   data () {
     return {

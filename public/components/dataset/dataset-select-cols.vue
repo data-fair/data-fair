@@ -5,11 +5,12 @@
     :close-on-content-click="false"
     max-height="500"
   >
-    <template #activator="{ on }">
+    <template #activator="{ on, attrs }">
       <v-btn
         icon
         large
         :color="value.length ? 'warning' : 'default'"
+        v-bind="attrs"
         v-on="on"
       >
         <v-icon>mdi-table-eye</v-icon>

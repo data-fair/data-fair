@@ -69,7 +69,13 @@
                   v-for="(header, i) in selectedHeaders"
                   :key="`list-header-${i}`"
                 >
-                  <dataset-table-header2
+                  <dataset-table-header-cell
+                    :id="`list-header-cell-${i}`"
+                    :header="header"
+                    :pagination="pagination"
+                  />
+                  <dataset-table-header-menu
+                    :activator="`#list-header-cell-${i}`"
                     :header="header"
                     :filters="filters"
                     :filter-height="filterHeight"
@@ -108,16 +114,22 @@
                 class="v-data-table-header"
               >
                 <tr style="position:relative">
-                  <dataset-table-header2
+                  <dataset-table-header-cell
+                    :id="'fixed-header-cell'"
+                    :header="fixedHeader"
+                    :pagination="pagination"
+                    :width="headerWidths[fixedHeader.value]"
+                  />
+                  <dataset-table-header-menu
+                    :activator="'#fixed-header-cell'"
                     :header="fixedHeader"
                     :filters="filters"
                     :filter-height="filterHeight"
                     :pagination="pagination"
                     :fixed-col="fixedCol"
-                    :width="fixedColWidth"
                     @filter="f => addFilter(fixedHeader.value, f)"
                     @hide="hideHeader(fixedHeader)"
-                    @fixCol="fixedCol = null; writeQueryParams()"
+                    @fixCol="fixedCol = fixedHeader.value; writeQueryParams()"
                   />
                 </tr>
               </thead>
@@ -171,23 +183,35 @@
               class="v-data-table-header"
             >
               <tr style="position:relative">
-                <template v-for="(header, i) in selectedHeaders">
-                  <dataset-table-header2
-                    :id="`visible-header-${i}`"
-                    :key="`visible-header-${i}`"
+                <th
+                  v-if="virtualScrollHorizontal.leftPadding"
+                  :key="`left-padding-${virtualScrollHorizontal.leftPadding}`"
+                  :style="{height: lineHeight + 'px', width: virtualScrollHorizontal.leftPadding + 'px', 'max-width': virtualScrollHorizontal.leftPadding + 'px', 'min-width': virtualScrollHorizontal.leftPadding + 'px'}"
+                />
+                <template v-for="(header, h) in virtualScrollHorizontal.headers">
+                  <dataset-table-header-cell
+                    :id="'header-cell-' + (h + virtualScrollHorizontal.index)"
+                    :key="'header-cell-' + header.value"
+                    :header="header"
+                    :pagination="pagination"
+                    :width="headerWidths[header.value]"
+                  />
+                  <dataset-table-header-menu
+                    :key="'header-menu-' + header.value"
+                    :activator="'#header-cell-' + (h + virtualScrollHorizontal.index)"
                     :header="header"
                     :filters="filters"
                     :filter-height="filterHeight"
                     :pagination="pagination"
                     :fixed-col="fixedCol"
-                    :width="headerWidths[header.value]"
                     @filter="f => addFilter(header.value, f)"
                     @hide="hideHeader(header)"
                     @fixCol="fixedCol = header.value; writeQueryParams()"
                   />
                 </template>
                 <th
-                  style="width:40px;min-width:40px;max-width:40px"
+                  :key="`right-padding-${virtualScrollHorizontal.rightPadding}`"
+                  :style="{height: lineHeight + 'px', width: virtualScrollHorizontal.rightPadding + 'px', 'min-width': virtualScrollHorizontal.rightPadding + 'px', 'max-width': virtualScrollHorizontal.rightPadding + 'px'}"
                 />
               </tr>
             </thead>
