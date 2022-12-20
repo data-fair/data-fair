@@ -238,12 +238,9 @@
         <template #body>
           <tbody
             :style="{
-              'max-height': tableHeight - 100 + 'px',
+              'height': virtualScrollVertical.totalHeight + 'px',
             }"
           >
-            <tr :key="`top-padding-${virtualScrollVertical.topPadding}`">
-              <td :style="'height:'+virtualScrollVertical.topPadding+'px'" />
-            </tr>
             <tr
               v-for="result in virtualScrollVertical.results"
               :key="verticalKeys[result._id]"
@@ -253,7 +250,9 @@
                 width: totalHeaderWidths + 'px',
                 minWidth: totalHeaderWidths + 'px',
                 maxWidth: totalHeaderWidths + 'px',
-                height: lineHeight + 'px'
+                height: lineHeight + 'px',
+                'will-change': 'transform',
+                transform: `translateY(${virtualScrollVertical.topPadding}px)`
               }"
             >
               <template v-for="header in virtualScrollHorizontal.headers">
@@ -276,15 +275,12 @@
                 />
               </template>
             </tr>
-            <tr :key="`bottom-padding-${virtualScrollVertical.bottomPadding}`">
-              <td :style="'height:'+virtualScrollVertical.bottomPadding+'px'" />
-            </tr>
           </tbody>
         </template>
       </v-data-table>
 
       <!-- drag and drop handles to resize columns -->
-      <!--<template
+      <template
         v-if="headersPositions && virtualScrollHorizontal && !scrollingHorizontal"
       >
         <dataset-table-drag-col
@@ -302,7 +298,7 @@
           :left="headersPositions[header.value] - scrollLeft - 4"
           @move="movement => headerWidths[header.value] = Math.max(100, headerWidths[header.value] + movement)"
         />
-      </template>-->
+      </template>
     </template>
 
     <!--list mode body -->
