@@ -396,7 +396,6 @@ export default {
       return this.headers.filter(h => !!h.field).map(h => h.value)
     },
     selectedHeaders () {
-      if (this.selectedCols.length === 0) return this.headers
       return this.headers.filter(h => (!h.field || !this.selectedCols.length || this.selectedCols.includes(h.value)) && h.value !== this.fixedCol)
     },
     truncate () {
