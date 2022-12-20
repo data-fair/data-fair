@@ -134,7 +134,7 @@
           :height="tableHeight"
         >
           <template #body>
-            <tbody :style="{height: tableHeight - 100 + 'px'}">
+            <tbody :style="{'max-height': tableHeight - 100 + 'px'}">
               <tr :key="`top-padding-${virtualScrollVertical.topPadding}`">
                 <td :style="'height:'+virtualScrollVertical.topPadding+'px'" />
               </tr>
@@ -207,7 +207,7 @@
       >
         <template #body>
           <tbody
-            :style="{height: tableHeight - 100 + 'px'}"
+            :style="{'max-height': tableHeight - 100 + 'px'}"
           >
             <tr :key="`top-padding-${virtualScrollVertical.topPadding}`">
               <td :style="'height:'+virtualScrollVertical.topPadding+'px'" />
