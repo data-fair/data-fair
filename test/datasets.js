@@ -30,19 +30,6 @@ describe('datasets', () => {
     assert.equal(res.data.count, 0)
   })
 
-  it('Get datasets with special param as super admin', async () => {
-    const ax = await global.ax.alone
-    try {
-      await ax.get('/api/v1/datasets', { params: { showAll: true } })
-    } catch (err) {
-      assert.equal(err.status, 400)
-    }
-    const axAdmin = global.ax.alban
-    const res = await axAdmin.get('/api/v1/datasets', { params: { showAll: true } })
-    assert.equal(res.status, 200)
-    assert.equal(res.data.count, 0)
-  })
-
   it('Search and apply some params (facets, raw, count, select, etc)', async () => {
     const ax = global.ax.dmeadus
     const axOrg = global.ax.dmeadusOrg
@@ -107,12 +94,7 @@ describe('datasets', () => {
     const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', Buffer.alloc(160000), 'largedataset.csv')
-    try {
-      await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 413)
-    }
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 413)
   })
 
   it('Failure to upload multiple datasets exceeding limit', async () => {
@@ -123,12 +105,7 @@ describe('datasets', () => {
 
     form = new FormData()
     form.append('file', Buffer.alloc(110000), 'largedataset2.csv')
-    try {
-      await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 429)
-    }
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 429)
   })
 
   it('Upload new dataset in user zone', async () => {
@@ -236,22 +213,13 @@ describe('datasets', () => {
     const form = new FormData()
     form.append('id', 'pre-filling id is not possible')
     form.append('file', datasetFd, 'yet-a-dataset.csv')
-    try {
-      await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    } catch (err) {
-      assert.equal(err.status, 400)
-    }
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 400)
   })
 
   it('Fail to upload new dataset when not authenticated', async () => {
     const ax = global.ax.anonymous
     const form = new FormData()
-    try {
-      await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 401)
-    }
+    await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 401)
   })
 
   it('Upload dataset - full test with webhooks', async () => {
@@ -290,20 +258,8 @@ describe('datasets', () => {
 
     assert.equal(res.data.length, 14)
     // testing permissions
-    const ax1 = global.ax.dmeadus
-    try {
-      await ax1.get(webhook.href)
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
-    const ax2 = global.ax.anonymous
-    try {
-      await ax2.get(webhook.href)
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
+    await assert.rejects(global.ax.dmeadus.get(webhook.href), err => err.status === 403)
+    await assert.rejects(global.ax.anonymous.get(webhook.href), err => err.status === 403)
 
     // Updating schema
     res = await ax.get(webhook.href)
@@ -323,11 +279,7 @@ describe('datasets', () => {
     // Delete the dataset
     res = await ax.delete('/api/v1/datasets/' + datasetId)
     assert.equal(res.status, 204)
-    try {
-      await ax.get('/api/v1/datasets/' + datasetId)
-    } catch (err) {
-      assert.equal(err.status, 404)
-    }
+    await assert.rejects(ax.get('/api/v1/datasets/' + datasetId), err => err.status === 404)
   })
 
   it('Upload dataset and update with different file name', async () => {
@@ -357,40 +309,28 @@ describe('datasets', () => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
 
-    try {
-      await ax.put(`/api/v1/datasets/${dataset.id}/owner`, {
+    await assert.rejects(
+      ax.put(`/api/v1/datasets/${dataset.id}/owner`, {
         type: 'organization',
         id: 'anotherorg',
         name: 'Test'
-      })
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
-
-    try {
-      await ax.put(`/api/v1/datasets/${dataset.id}/owner`, {
+      }),
+      err => err.status === 403
+    )
+    await assert.rejects(
+      ax.put(`/api/v1/datasets/${dataset.id}/owner`, {
         type: 'user',
         id: 'anotheruser',
         name: 'Test'
-      })
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
-
+      }),
+      err => err.status === 403
+    )
     await ax.put(`/api/v1/datasets/${dataset.id}/owner`, {
       type: 'organization',
       id: 'KWqAGZ4mG',
       name: 'Fivechat'
     })
-
-    try {
-      await ax.get(`/api/v1/datasets/${dataset.id}`)
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}`), err => err.status === 403)
     await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}`)
   })
 
