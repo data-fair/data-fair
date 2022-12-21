@@ -395,7 +395,7 @@ export default {
       return this.field.enum && this.field['x-cardinality'] > 1
     },
     enumDense () {
-      return this.showEnum && this.field.enum.length > 5
+      return this.showEnum && this.field.enum.length > 4
     },
     showEquals () {
       if (this.showEnum) return false

@@ -78,7 +78,7 @@
                     :activator="`#list-header-cell-${i}`"
                     :header="header"
                     :filters="filters"
-                    :filter-height="filterHeight"
+                    :filter-height="tableHeight - 20"
                     :pagination="pagination"
                     :fixed-col="fixedCol"
                     @filter="f => addFilter(header.value, f)"
@@ -123,7 +123,7 @@
                     :activator="'#fixed-header-cell'"
                     :header="fixedHeader"
                     :filters="filters"
-                    :filter-height="filterHeight"
+                    :filter-height="tableHeight - 20"
                     :pagination="pagination"
                     :fixed-col="fixedCol"
                     @filter="f => addFilter(fixedHeader.value, f)"
@@ -213,7 +213,7 @@
                     :activator="'#header-cell-' + horizontalKeys[header.value]"
                     :header="header"
                     :filters="filters"
-                    :filter-height="filterHeight"
+                    :filter-height="tableHeight - 20"
                     :pagination="pagination"
                     :fixed-col="fixedCol"
                     @filter="f => addFilter(header.value, f)"
@@ -387,7 +387,6 @@ export default {
     },
     loading: false,
     lineHeight: 40,
-    filterHeight: 500,
     filters: [],
     lastParams: null,
     selectedCols: [],
@@ -474,12 +473,6 @@ export default {
       height -= 48 // fixed header
       return height
     },
-    topBottomHeight () {
-      let height = 48 // app bar
-      height += this.extensionHeight
-      height += 36 // bottom button
-      return height
-    },
     fixedHeader () {
       return this.fixedCol && this.headers.find(h => h.value === this.fixedCol)
     },
@@ -521,7 +514,6 @@ export default {
   },
   async mounted () {
     this.readQueryParams()
-    this.filterHeight = window.innerHeight - this.topBottomHeight
     this.refresh()
   },
   methods: {
