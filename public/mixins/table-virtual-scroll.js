@@ -16,7 +16,8 @@ export default {
     horizontalKeys: {},
     freeHorizontalKeys: [],
     verticalKeys: {},
-    freeVerticalKeys: []
+    freeVerticalKeys: [],
+    renderFullHeader: false
   }),
   computed: {
     headerWidthsAdjusted () {
@@ -97,14 +98,17 @@ export default {
         this.fetchMore()
       }
     },
+    async selectedHeaders () {
+      this.renderFullHeader = false
+      this.debouncedRenderFullHeader()
+      await this.$nextTick()
+      if (this._perfectScrollbar) this._perfectScrollbar.update()
+    },
     data () {
       this.adjustColsWidths()
     },
     async 'data.results' () {
-      await this.$nextTick()
-      if (this._perfectScrollbar) this._perfectScrollbar.update()
-    },
-    async 'selectedCols' () {
+      this.debouncedRenderFullHeader()
       await this.$nextTick()
       if (this._perfectScrollbar) this._perfectScrollbar.update()
     },
@@ -112,6 +116,7 @@ export default {
       if (!value) this.adjustColsWidths()
     },
     'virtualScrollHorizontal.headers' (value, previousValue) {
+      this.debouncedRenderFullHeader()
       if (previousValue) {
         for (const previousHeader of previousValue) {
           if (!value.find(header => header.value === previousHeader.value)) {
@@ -127,6 +132,7 @@ export default {
       }
     },
     'virtualScrollVertical.results' (value, previousValue) {
+      this.debouncedRenderFullHeader()
       if (previousValue) {
         for (const previousResult of previousValue) {
           if (!value.find(result => result._id === previousResult._id)) {
@@ -190,6 +196,15 @@ export default {
           if (estimatedSize > this.headerWidths[header.value]) this.headerWidths[header.value] = estimatedSize
         }
       }
+    },
+    debouncedRenderFullHeader () {
+      console.log('debounce')
+      if (this.renderFullHeader) return
+      this._debouncedRenderFullHeader = this._debouncedRenderFullHeader || debounce(2000, () => {
+        console.log('render full headers')
+        this.renderFullHeader = true
+      })
+      this._debouncedRenderFullHeader()
     }
   }
 }

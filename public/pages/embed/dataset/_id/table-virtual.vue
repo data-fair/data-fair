@@ -195,22 +195,22 @@
                   height: '48px'
                 }"
               >
-                <template v-for="header in virtualScrollHorizontal.headers">
+                <template v-for="(header, h) in renderFullHeader ? selectedHeaders : virtualScrollHorizontal.headers">
                   <dataset-table-header-cell
-                    :id="'header-cell-' + horizontalKeys[header.value]"
-                    :key="'header-cell-' + horizontalKeys[header.value]"
+                    :id="'header-cell-' + (renderFullHeader ? h : horizontalKeys[header.value])"
+                    :key="'header-cell-' + (renderFullHeader ? h : horizontalKeys[header.value])"
                     :header="header"
                     :pagination="pagination"
                     :width="headerWidths[header.value]"
-                    :style="{
+                    :style="renderFullHeader ? {} : {
                       position: 'relative',
                       'will-change': 'transform',
                       transform: `translateX(${virtualScrollHorizontal.leftPadding}px)`
                     }"
                   />
                   <dataset-table-header-menu
-                    :key="'header-menu-' + horizontalKeys[header.value]"
-                    :activator="'#header-cell-' + horizontalKeys[header.value]"
+                    :key="'header-menu-' + (renderFullHeader ? h : horizontalKeys[header.value])"
+                    :activator="'#header-cell-' + (renderFullHeader ? h : horizontalKeys[header.value])"
                     :header="header"
                     :filters="filters"
                     :filter-height="tableHeight - 20"
