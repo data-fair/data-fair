@@ -18,27 +18,30 @@
       :extension-height="extensionHeight"
       clipped-left
     >
-      <v-toolbar-title style="white-space:normal;">
-        <dataset-nb-results
-          :total="data.total"
-          :limit="0"
-        />
-      </v-toolbar-title>
+      <dataset-nb-results
+        :total="data.total"
+        :limit="0"
+        style="min-width:80px;max-width:80px;"
+      />
       <v-text-field
         v-model="query"
         placeholder="Rechercher"
         append-icon="mdi-magnify"
-        style="min-width:120px; max-width:250px;"
+        style="min-width:170px; max-width:250px;"
         outlined
         dense
         rounded
         hide-details
-        class="mx-2"
+        class="ml-2 mr-2"
         clearable
         @input="qMode === 'complete' && refresh(true)"
         @keyup.enter.native="refresh(true)"
         @click:append="refresh(true)"
         @click:clear="$nextTick(() => {$nextTick(() => refresh(true))})"
+      />
+      <dataset-filters
+        v-model="filters"
+        :style="{maxWidth: (windowWidth - 80 - 170 - 44 - 44) + 'px'}"
       />
       <v-spacer />
       <dataset-select-cols
@@ -49,10 +52,12 @@
         :params="downloadParams"
         :total="data.total"
       />
-      <template #extension>
+      <template
+        v-if="displayMode === 'list' && filters.length"
+        #extension
+      >
         <v-col class="pa-0">
           <v-row
-            v-if="filters.length"
             class="ma-0 align-center"
             style="height:32px;"
           >
@@ -60,35 +65,6 @@
               v-model="filters"
             />
           </v-row>
-
-          <!-- list mode header -->
-          <template v-if="displayMode === 'list'">
-            <v-row class="ma-0 px-2">
-              <v-slide-group show-arrows>
-                <v-slide-item
-                  v-for="(header, i) in selectedHeaders"
-                  :key="`list-header-${i}`"
-                >
-                  <dataset-table-header-cell
-                    :id="`list-header-cell-${i}`"
-                    :header="header"
-                    :pagination="pagination"
-                  />
-                  <dataset-table-header-menu
-                    :activator="`#list-header-cell-${i}`"
-                    :header="header"
-                    :filters="filters"
-                    :filter-height="tableHeight - 20"
-                    :pagination="pagination"
-                    :fixed-col="fixedCol"
-                    @filter="f => addFilter(header.value, f)"
-                    @hide="hideHeader(header)"
-                    @fixCol="fixedCol = header.value; writeQueryParams()"
-                  />
-                </v-slide-item>
-              </v-slide-group>
-            </v-row>
-          </template>
         </v-col>
       </template>
     </v-app-bar>
@@ -452,8 +428,7 @@ export default {
     },
     extensionHeight () {
       let height = 0
-      if (this.displayMode === 'list') height += 48
-      if (this.filters.length) height += 32
+      if (this.displayMode === 'list' && this.filters.length) height += 32
       return height
     },
     tableHeight () {

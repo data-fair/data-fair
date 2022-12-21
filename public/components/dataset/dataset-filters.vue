@@ -2,6 +2,7 @@
   <v-slide-group
     v-model="currentFilter"
     show-arrows
+    class="dataset-filters"
   >
     <v-slide-item
       v-for="(filter,i) in value"
@@ -9,17 +10,25 @@
       v-slot="{toggle}"
     >
       <v-chip
-        class="ml-3"
+        :class="{'ml-1': i > 0}"
         close
         small
         :input-value="true"
         color="primary"
         outlined
         style="font-weight: bold;"
+        :style="{height: '40px', borderRadius: '20px', lineHeight: '16px'}"
         @click:close="removeFilter(i)"
         @click="toggle"
       >
-        {{ label(filter) }}
+        <div>
+          <span style="display:inline-block">{{ filter.field.title || filter.field['x-originalName'] || filter.field.key }}</span>
+          <br>
+          <span
+            style="display:inline-block"
+            v-html="label(filter)"
+          />
+        </div>
       </v-chip>
     </v-slide-item>
   </v-slide-group>
@@ -41,29 +50,31 @@ export default {
       this.$emit('input', this.value)
     },
     label (filter) {
-      const field = filter.field.title || filter.field['x-originalName'] || filter.field.key
-      let operator = 'égal à'
-      if (filter.type === 'starts') operator = 'commence par'
+      let operator = '= '
+      if (filter.type === 'starts') operator = 'commence par '
       let value = this.$root.$options.filters.cellValues(filter.values || filter.value, filter.field)
+      console.log(filter.minValue)
       if (filter.type === 'interval') {
-        if (filter.minValue === '*') {
-          operator = 'inférieur ou égal à'
+        if (filter.minValue === '*' || !filter.minValue) {
+          operator = '&leq;'
           value = this.$root.$options.filters.cellValues(filter.maxValue, filter.field)
-        } else if (filter.maxValue === '*') {
-          operator = 'supérieur ou égal à'
+        } else if (filter.maxValue === '*' || !filter.maxValue) {
+          operator = '&GreaterEqual;'
           value = this.$root.$options.filters.cellValues(filter.minValue, filter.field)
         } else {
-          operator = 'compris entre'
-          value = (this.$root.$options.filters.cellValues(filter.minValue, filter.field) || '*') +
-            ' et ' + (this.$root.$options.filters.cellValues(filter.maxValue, filter.field) || '*')
+          operator = ''
+          value = `&GreaterEqual; ${this.$root.$options.filters.cellValues(filter.minValue, filter.field)}, &leq; ${this.$root.$options.filters.cellValues(filter.maxValue, filter.field)}`
         }
       }
       if (filter.type === 'search') operator = 'contient des mots'
-      return `${field} ${operator} ${value}`
+      return `${operator}${value}`
     }
   }
 }
 </script>
 
-<style lang="css" scoped>
+<style lang="css">
+.dataset-filters .v-slide-group__prev, .dataset-filters .v-slide-group__next {
+  min-width: 40px;
+}
 </style>
