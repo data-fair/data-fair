@@ -311,22 +311,26 @@
           v-for="value in field.enum.slice().sort()"
           :key="value"
           :input-value="equals.includes(value)"
-          style="min-height:32px;"
+          :style="{'minHeight': enumDense ? '24px' : '32px'}"
           class="px-2"
           @click="toggleEquals(value)"
         >
-          <v-list-item-icon class="my-1 mr-3">
+          <v-list-item-icon :class="{'my-0': enumDense, 'my-1': !enumDense, 'mr-0': enumDense, 'mr-2': !enumDense}">
             <v-icon
               v-if="equals.includes(value)"
               color="primary"
+              :small="enumDense"
             >
               mdi-checkbox-marked
             </v-icon>
-            <v-icon v-else>
+            <v-icon
+              v-else
+              :small="enumDense"
+            >
               mdi-checkbox-blank-outline
             </v-icon>
           </v-list-item-icon>
-          <v-list-item-content>
+          <v-list-item-content :class="{'pt-1': enumDense, 'pb-0': enumDense, 'pt-2': !enumDense, 'pb-2': !enumDense}">
             <v-list-item-title>
               {{ value | cellValues(field) }}
             </v-list-item-title>
@@ -389,6 +393,9 @@ export default {
     showEnum () {
       if (this.field['x-capabilities'] && this.field['x-capabilities'].index === false) return false
       return this.field.enum && this.field['x-cardinality'] > 1
+    },
+    enumDense () {
+      return this.showEnum && this.field.enum.length > 5
     },
     showEquals () {
       if (this.showEnum) return false
