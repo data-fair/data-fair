@@ -137,9 +137,6 @@
         </v-row>
         <v-data-table
           class="fixed-data-table"
-          :headers="[fixedHeader]"
-          :server-items-length="data.total"
-          :options.sync="pagination"
           hide-default-header
           hide-default-footer
           :height="tableHeight"
@@ -177,13 +174,9 @@
 
       <!-- fake table only here to have a fixed position header that follow the scroll on the actual table -->
       <v-row class="header-data-table v-data-table ma-0">
-        <div
-          class="v-data-table__wrapper elevation-4"
-        >
+        <div class="v-data-table__wrapper elevation-4">
           <table :style="{'table-layout': 'fixed'}">
-            <thead
-              class="v-data-table-header"
-            >
+            <thead class="v-data-table-header">
               <tr
                 style="position:relative;"
                 :style="{
@@ -230,9 +223,6 @@
       <!-- actual data-table the header is hidden, the visible header is in the app bar-->
       <v-data-table
         class="real-data-table"
-        :headers="selectedHeaders"
-        :server-items-length="data.total"
-        :options.sync="pagination"
         hide-default-header
         hide-default-footer
         :height="tableHeight"

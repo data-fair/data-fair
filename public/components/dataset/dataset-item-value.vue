@@ -21,47 +21,45 @@
           style="max-width:500px;"
           show-arrows
         >
-          <v-hover
+          <v-chip
             v-for="(value, i) in itemValue.split(field.separator).map(v => v.trim())"
             v-slot="{ hover }"
             :key="i"
-            :disabled="disableHover"
+            :class="{'my-0': true, 'px-4': !hover, 'px-2': hover}"
+            :color="hover ? 'primary' : 'default'"
+            @click="$emit('filter', value)"
+            @mouseenter="hoverValue(value)"
+            @mouseleave="leaveValue(value)"
           >
-            <v-chip
-              :class="{'my-0': true, 'px-4': !hover, 'px-2': hover}"
-              :color="hover ? 'primary' : 'default'"
-              @click="addFilter(field.key, value)"
-            >
-              <span>
-                {{ value | cellValues(field, truncate) }}
-                <v-icon v-if="hover">mdi-filter-variant</v-icon>
-              </span>
-            </v-chip>
-          </v-hover>
+            <span>
+              {{ value | cellValues(field, truncate) }}
+              <v-icon v-if="hover">mdi-filter-variant</v-icon>
+            </span>
+          </v-chip>
         </v-chip-group>
       </div>
-      <v-hover
+
+      <div
         v-else
-        v-slot="{ hover }"
-        :disabled="disableHover"
+        :style="`max-height: 40px;max-width:100%;overflow:hidden;text-overflow:ellipsis;`"
+        @mouseenter="hoverValue(itemValue)"
+        @mouseleave="leaveValue(itemValue)"
       >
-        <div :style="`max-height: 40px;max-width:100%;overflow:hidden;text-overflow:ellipsis;`">
-          <span>
-            {{ itemValue | cellValues(field, truncate) }}
-          </span>
-          <v-btn
-            v-if="hover && !item._tmpState && !filters.find(f => f.field.key === field.key) && isFilterable(itemValue)"
-            fab
-            x-small
-            color="primary"
-            style="right: 4px;top: 50%;transform: translate(0, -50%);z-index:100;"
-            absolute
-            @click="$emit('filter', itemValue)"
-          >
-            <v-icon>mdi-filter-variant</v-icon>
-          </v-btn>
-        </div>
-      </v-hover>
+        <span>
+          {{ itemValue | cellValues(field, truncate) }}
+        </span>
+        <v-btn
+          v-if="hovered[itemValue] && !item._tmpState && !filters.find(f => f.field.key === field.key) && isFilterable(itemValue)"
+          fab
+          x-small
+          color="primary"
+          style="right: 4px;top: 50%;transform: translate(0, -50%);z-index:100;"
+          absolute
+          @click="$emit('filter', itemValue)"
+        >
+          <v-icon>mdi-filter-variant</v-icon>
+        </v-btn>
+      </div>
     </template>
   </div>
 </template>
@@ -72,8 +70,12 @@ export default {
     item: { type: Object, required: true },
     field: { type: Object, required: true },
     filters: { type: Array, required: false, default: () => ([]) },
-    truncate: { type: Number, default: 50 },
-    disableHover: { type: Boolean, default: false }
+    truncate: { type: Number, default: 50 }
+  },
+  data () {
+    return {
+      hovered: {}
+    }
   },
   computed: {
     itemValue () {
@@ -94,6 +96,16 @@ export default {
       if (typeof value === 'string' && (value.length > 200 || value.startsWith('{'))) return false
       if (typeof value === 'string' && value.endsWith('...')) return false
       return true
+    },
+    hoverValue (value) {
+      this._hoverTimeout = setTimeout(() => { this.$set(this.hovered, value, true) }, 60)
+    },
+    leaveValue (value) {
+      if (this._hoverTimeout) {
+        clearTimeout(this._hoverTimeout)
+        delete this._hoverTimeout
+      }
+      this.$delete(this.hovered, value)
     }
   }
 }

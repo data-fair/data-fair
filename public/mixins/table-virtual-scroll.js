@@ -198,10 +198,8 @@ export default {
       }
     },
     debouncedRenderFullHeader () {
-      console.log('debounce')
       if (this.renderFullHeader) return
       this._debouncedRenderFullHeader = this._debouncedRenderFullHeader || debounce(2000, () => {
-        console.log('render full headers')
         this.renderFullHeader = true
       })
       this._debouncedRenderFullHeader()
