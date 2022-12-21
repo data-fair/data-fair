@@ -9,7 +9,7 @@ export default {
   layout: 'embed',
   async fetch ({ store, params, route }) {
     try {
-      const html = route.path.endsWith('/fields') || route.path.endsWith('/table')
+      const html = route.path.endsWith('/fields') || route.path.endsWith('/table') || route.path.endsWith('/table-virtual')
       await store.dispatch('dataset/setId', { datasetId: route.params.id, html, fetchInfo: false })
       await Promise.all([
         store.dispatch('fetchVocabulary', route.params.id),

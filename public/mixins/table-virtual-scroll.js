@@ -100,6 +100,14 @@ export default {
     data () {
       this.adjustColsWidths()
     },
+    async 'data.results' () {
+      await this.$nextTick()
+      if (this._perfectScrollbar) this._perfectScrollbar.update()
+    },
+    async 'selectedCols' () {
+      await this.$nextTick()
+      if (this._perfectScrollbar) this._perfectScrollbar.update()
+    },
     headerWidthsAdjusted (value) {
       if (!value) this.adjustColsWidths()
     },
@@ -147,7 +155,7 @@ export default {
         }
         this._tableWrapper = tableWrapper
         // eslint-disable-next-line no-new
-        new PerfectScrollbar(this._tableWrapper)
+        this._perfectScrollbar = new PerfectScrollbar(this._tableWrapper)
         // this._tableWrapper.addEventListener('scroll', this.onTableScroll)
         tableWrapper.addEventListener('ps-scroll-x', this.onTableScrollX)
         tableWrapper.addEventListener('ps-scroll-y', this.onTableScrollY)

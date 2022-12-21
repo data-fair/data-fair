@@ -7,7 +7,7 @@
     tile
     :activator="activator"
     :max-height="filterHeight"
-    :max-width="400"
+    :max-width="450"
     :close-on-content-click="false"
     @input="toggledMenu"
   >
@@ -70,6 +70,30 @@
             </v-list-item>
           </v-list-item-group>
         </template>
+
+        <!-- show help -->
+        <v-list-item-group color="primary">
+          <v-list-item
+            v-if="!!header.tooltip"
+            class="pl-2"
+            :class="{'v-item--active v-list-item--active': showHelp}"
+            @click="showHelp = !showHelp"
+          >
+            <v-list-item-icon class="mr-2"><v-icon>mdi-information</v-icon></v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title>{{ $t('showHelp') }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-item-group>
+        <v-alert
+          v-if="showHelp"
+          color="info"
+          text
+          tile
+          style="overflow-wrap: break-word"
+          class="mt-0 mb-2 pa-2"
+          v-html="header.tooltip"
+        />
       </v-list>
 
       <v-subheader
@@ -309,41 +333,29 @@
           </v-list-item-content>
         </v-list-item>
       </v-list>
-
-      <!-- show help html -->
-      <template v-if="header.tooltip">
-        <v-alert
-          color="info"
-          text
-          class="mt-2 mb-0 pa-2 pt-1"
-        >
-          <div>
-            <v-icon color="info">mdi-information</v-icon>
-          </div>
-          <div v-html="header.tooltip" />
-        </v-alert>
-      </template>
     </v-sheet>
   </v-menu>
 </template>
 
 <i18n lang="yaml">
 fr:
-  hide: masquer cette colonne
+  hide: Masquer cette colonne
   sortAsc: Tri ascendant
   sortDesc: Tri descendant
   filter: "Filtrer :"
   applyFilter: Appliquer le filtre
   info: "Informations :"
   fixLeft: "Fixer la colonne à gauche"
+  showHelp: "Afficher la description"
 en:
-  hide: hide this column
+  hide: Hide this column
   sortAsc: Ascending sort
   sortDesc: Descending sort
   filter: "Filter:"
   applyFilter: Apply filter
   info: "Information:"
   fixLeft: "Fix the column to the left"
+  showHelp: "Show description"
 </i18n>
 
 <script>
@@ -366,7 +378,8 @@ export default {
       equalsBool: null,
       lte: null,
       gte: null,
-      editDate: null
+      editDate: null,
+      showHelp: false
     }
   },
   computed: {
