@@ -72,6 +72,11 @@ exports.agg = async (client, dataset, query) => {
       esQuery.aggs.metric.percentiles.percents = query.percents.split(',')
     }
   }
+  if (query.metric === 'cardinality') {
+    // number after which we accept that cardinality is approximative
+    const precisionThreshold = Number(query.precision_threshold ?? '40000')
+    esQuery.aggs.metric.cardinality.precision_threshold = precisionThreshold
+  }
   const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body
   const response = { total: esResponse.hits.total.value }
   response.metric = getValueFromAggRes(field, query.metric, esResponse.aggregations.metric)
