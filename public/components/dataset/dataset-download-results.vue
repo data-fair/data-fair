@@ -10,6 +10,7 @@
         color="primary"
         icon
         large
+        :title="$t('downloadTitle')"
         v-on="on"
       >
         <v-icon>mdi-download</v-icon>
@@ -147,6 +148,7 @@
 
 <i18n lang="yaml">
 fr:
+  downloadTitle: Télécharger les résultats
   alert1: Ces téléchargements tiennent compte du tri et de la recherche
   alert2: Les formats suivants sont limités aux 10 000 premières lignes
   csv: format CSV
@@ -155,6 +157,7 @@ fr:
   geojson: format GeoJSON
   cancel: Annuler
 en:
+  downloadTitle: Download results
   alert1: These downloads take into consideration the current filters and sorting
   alert2: The next formats are limited to the 10,000 first lines
   csv: CSV format

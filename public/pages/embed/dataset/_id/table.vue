@@ -42,12 +42,80 @@
       <dataset-filters
         v-if="$vuetify.breakpoint.mdAndUp"
         v-model="filters"
-        :style="{maxWidth: (windowWidth - 80 - 170 - 44 - 44) + 'px'}"
+        :style="{maxWidth: filtersWidth + 'px'}"
       />
       <v-spacer />
+      <v-menu
+        v-if="$vuetify.breakpoint.mdAndUp"
+        offset-y
+        tile
+      >
+        <template #activator="{ on }">
+          <v-btn
+            icon
+            large
+            :title="$t('selectDisplay')"
+            v-on="on"
+          >
+            <v-icon v-if="displayMode === 'table'">
+              mdi-table
+            </v-icon>
+            <v-icon v-if="displayMode === 'table-dense'">
+              mdi-table-large
+            </v-icon>
+            <v-icon v-if="displayMode === 'list'">
+              mdi-view-list
+            </v-icon>
+          </v-btn>
+        </template>
+        <v-sheet>
+          <v-subheader v-t="'displayTitle'" />
+          <v-list
+            class="py-0"
+            dense
+          >
+            <v-list-item-group
+              v-model="displayMode"
+              color="primary"
+            >
+              <v-list-item value="table">
+                <v-list-item-avatar :size="30">
+                  <v-avatar :size="30">
+                    <v-icon>
+                      mdi-table
+                    </v-icon>
+                  </v-avatar>
+                </v-list-item-avatar>
+                <v-list-item-title v-t="'displayTable'" />
+              </v-list-item>
+              <!--<v-list-item value="table-dense">
+                <v-list-item-avatar :size="30">
+                  <v-avatar :size="30">
+                    <v-icon>
+                      mdi-table-large
+                    </v-icon>
+                  </v-avatar>
+                </v-list-item-avatar>
+                <v-list-item-title v-t="'displayTableDense'" />
+              </v-list-item>-->
+              <v-list-item value="list">
+                <v-list-item-avatar :size="30">
+                  <v-avatar :size="30">
+                    <v-icon>
+                      mdi-view-list
+                    </v-icon>
+                  </v-avatar>
+                </v-list-item-avatar>
+                <v-list-item-title v-t="'displayList'" />
+              </v-list-item>
+            </v-list-item-group>
+          </v-list>
+        </v-sheet>
+      </v-menu>
       <dataset-select-cols
         v-model="selectedCols"
         :headers="headers"
+        :height="windowHeight - 60"
       />
       <dataset-download-results
         :params="downloadParams"
@@ -336,10 +404,20 @@
 
 <i18n lang="yaml">
 fr:
+  selectDisplay: Choisir le type d'affichage
+  displayTitle: Type d'affichage
+  displayTable: Table
+  displayTableDense: Table dense
+  displayList: Liste de vignettes
   tutorialFilter: Appliquez des filtres depuis les entêtes de colonnes et en survolant les valeurs. Triez en cliquant sur les entêtes de colonnes. Cliquez sur le bouton en haut à droite pour télécharger dans un fichier le contenu filtré et trié.
   noData: Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.
   showMore: Voir plus de lignes
 en:
+  selectDisplay: Chose the type of display
+  displayTitle: Type of display
+  displayTable: Table
+  displayTableDense: Dense table
+  displayList: Liste of cards
   tutorialFilter: Apply filters from the headers and by hovering the values. Sort by clicking on the headers. Click on the button on the top to the right to download in a file the filtered and sorted content.
   noData: The data is not accessible. Either the dataset was not yet entirely processed, or there was an error.
   showMore: Show more lines
@@ -374,10 +452,16 @@ export default {
     ...mapState(['vocabulary']),
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['resourceUrl', 'qMode', 'imageField']),
-    displayMode () {
-      if (this.$route.query.display) return this.$route.query.display
-      if (this.$vuetify.breakpoint.smAndDown) return 'list'
-      return 'table'
+    displayMode: {
+      get () {
+        if (this.$route.query.display) return this.$route.query.display
+        if (this.$vuetify.breakpoint.smAndDown) return 'list'
+        return 'table'
+      },
+      set (value) {
+        console.log(value)
+        this.$router.replace({ query: { ...this.$route.query, display: value } })
+      }
     },
     headers () {
       const fieldsHeaders = this.dataset.schema
@@ -449,6 +533,16 @@ export default {
       height -= 48 // fixed header
       height -= 1 // header border
       return height
+    },
+    filtersWidth () {
+      let width = this.windowWidth
+      width -= 32 // app bar padding
+      width -= 80 // number of lines
+      width -= 186 // search bar
+      width -= 44 // select display
+      width -= 44 // select cols
+      width -= 44 // download
+      return width
     },
     fixedHeader () {
       return this.fixedCol && this.headers.find(h => h.value === this.fixedCol)
@@ -588,7 +682,9 @@ export default {
       } else {
         delete query.sort
       }
-      this.$router.push({ query })
+      if (JSON.stringify(query) !== JSON.stringify(this.$route.query)) {
+        this.$router.replace({ query })
+      }
     },
     hideHeader (header) {
       if (!this.selectedCols.length) this.selectedCols = this.cols

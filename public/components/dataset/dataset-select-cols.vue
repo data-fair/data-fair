@@ -3,7 +3,7 @@
     offset-y
     tile
     :close-on-content-click="false"
-    max-height="500"
+    :max-height="height || 500"
   >
     <template #activator="{ on, attrs }">
       <v-btn
@@ -11,9 +11,10 @@
         large
         :color="value.length ? 'warning' : 'default'"
         v-bind="attrs"
+        :title="$t('selectColsTitle')"
         v-on="on"
       >
-        <v-icon>mdi-table-eye</v-icon>
+        <v-icon>mdi-table-column-plus-after</v-icon>
       </v-btn>
     </template>
     <v-card>
@@ -84,12 +85,14 @@
 
 <i18n lang="yaml">
 fr:
+  selectColsTitle: Choisir les colonnes visibles
   visibleColumns: Colonnes visibles
   showAll: tout afficher
   fold: plier
   unfold: déplier
 en:
-  visibleColumns: Visible columnes
+  selectColsTitle: Chose visible columns
+  visibleColumns: Visible columns
   showAll: show all
   fold: fold
   unfold: unfold
@@ -97,7 +100,7 @@ en:
 
 <script>
 export default {
-  props: ['value', 'headers'],
+  props: ['value', 'headers', 'height'],
   data () {
     return { unfoldedGroups: {} }
   },

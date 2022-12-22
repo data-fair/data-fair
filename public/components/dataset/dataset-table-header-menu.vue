@@ -498,7 +498,7 @@ export default {
     },
     emitFilter (filter, close = true) {
       this.$emit('filter', filter)
-      if (close) {
+      if (close || this.closeOnFilter) {
         this.showMenu = false
       }
     },
