@@ -3,8 +3,7 @@
 <template>
   <v-fab-transition>
     <v-btn
-      v-show="fab"
-      v-scroll="onScroll"
+      v-show="show"
       title="Remonter au début de la page"
       aria-label="Remonter au début de la page"
       bottom
@@ -12,7 +11,6 @@
       color="primary"
       fab
       fixed
-      large
       right
       style="z-index: 6"
       @click="toTop"
@@ -24,15 +22,31 @@
 
 <script>
 export default {
-  data: () => ({ fab: false }),
+  props: {
+    selector: { type: String, required: false, default: null }
+  },
+  data: () => ({ show: false }),
+  mounted () {
+    this._scrollElement = this.selector ? document.querySelector(this.selector) : window
+    this._scrollElement.addEventListener('scroll', this.onScroll)
+  },
+  destroyed () {
+    if (this._scrollElement) {
+      this._scrollElement.removeEventListener('scroll', this.onScroll)
+    }
+  },
   methods: {
-    onScroll () {
-      const top = window.pageYOffset || document.documentElement.offsetTop || 0
-      this.fab = top > 300
+    onScroll (e) {
+      const top = this.selector ? e.target.scrollTop : (window.pageYOffset || document.documentElement.offsetTop || 0)
+      this.show = top > 300
     },
     toTop () {
-      if (this.$route.hash) this.$router.push({ hash: '' })
-      this.$vuetify.goTo(0)
+      if (this.selector) {
+        this._scrollElement.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+      } else {
+        if (this.$route.hash) this.$router.push({ hash: '' })
+        this.$vuetify.goTo(0)
+      }
     }
   }
 }

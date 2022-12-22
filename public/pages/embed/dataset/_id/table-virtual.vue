@@ -264,6 +264,8 @@
           @move="movement => headerWidths[header.value] = Math.max(100, headerWidths[header.value] + movement)"
         />
       </template>
+
+      <layout-scroll-to-top selector=".real-data-table .v-data-table__wrapper" />
     </template>
 
     <!--list mode body -->
@@ -323,9 +325,8 @@
           </v-btn>
         </v-col>
       </v-row>
+      <layout-scroll-to-top />
     </template>
-
-    <layout-scroll-to-top />
   </v-container>
 </template>
 
