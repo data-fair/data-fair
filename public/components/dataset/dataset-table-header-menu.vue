@@ -32,7 +32,10 @@
         </v-list-item>
 
         <!-- fix column to the left -->
-        <v-list-item-group color="primary">
+        <v-list-item-group
+          v-if="!noFix"
+          color="primary"
+        >
           <v-list-item
             class="pl-2"
             :class="{'v-item--active v-list-item--active': header.value === fixedCol}"
@@ -308,7 +311,7 @@
         class="py-0"
       >
         <v-list-item
-          v-for="value in field.enum.slice().sort()"
+          v-for="{value, important} in fullEnum"
           :key="value"
           :input-value="equals.includes(value)"
           :style="{'minHeight': enumDense ? '24px' : '32px'}"
@@ -331,7 +334,7 @@
             </v-icon>
           </v-list-item-icon>
           <v-list-item-content :class="{'pt-1': enumDense, 'pb-0': enumDense, 'pt-2': !enumDense, 'pb-2': !enumDense}">
-            <v-list-item-title>
+            <v-list-item-title :class="{'font-weight-bold': important}">
               {{ value | cellValues(field) }}
             </v-list-item-title>
           </v-list-item-content>
@@ -371,7 +374,9 @@ export default {
     filterHeight: { type: Number, required: true },
     pagination: { type: Object, required: true },
     fixedCol: { type: String, default: null },
-    activator: { type: String, required: true }
+    activator: { type: String, required: true },
+    noFix: { type: Boolean, default: false },
+    localEnum: { type: Array, required: false }
   },
   data () {
     return {
@@ -390,12 +395,28 @@ export default {
     field () {
       return this.header.field
     },
+    fullEnum () {
+      if (!this.showEnum) return
+      const fullEnum = []
+      if (this.localEnum) {
+        for (const value of this.localEnum) {
+          fullEnum.push({ value, important: true })
+        }
+      }
+      if (this.field.enum) {
+        for (const value of this.field.enum.slice().sort()) {
+          if (!this.localEnum || !this.localEnum.includes(value)) fullEnum.push({ value })
+        }
+      }
+      return fullEnum
+    },
     showEnum () {
       if (this.field['x-capabilities'] && this.field['x-capabilities'].index === false) return false
+      if (this.localEnum) return true
       return this.field.enum && this.field['x-cardinality'] > 1
     },
     enumDense () {
-      return this.showEnum && this.field.enum.length > 4
+      return this.showEnum && this.fullEnum.length > 4
     },
     showEquals () {
       if (this.showEnum) return false

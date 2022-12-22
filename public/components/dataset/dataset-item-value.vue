@@ -70,7 +70,8 @@ export default {
     item: { type: Object, required: true },
     field: { type: Object, required: true },
     filters: { type: Array, required: false, default: () => ([]) },
-    truncate: { type: Number, default: 50 }
+    truncate: { type: Number, default: 50 },
+    disableHover: { type: Boolean, default: false }
   },
   data () {
     return {
@@ -98,9 +99,11 @@ export default {
       return true
     },
     hoverValue (value) {
+      if (this.disableHover) return
       this._hoverTimeout = setTimeout(() => { this.$set(this.hovered, value, true) }, 60)
     },
     leaveValue (value) {
+      if (this.disableHover) return
       if (this._hoverTimeout) {
         clearTimeout(this._hoverTimeout)
         delete this._hoverTimeout

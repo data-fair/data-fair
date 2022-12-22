@@ -56,10 +56,10 @@ export default {
       console.log(filter.minValue)
       if (filter.type === 'interval') {
         if (filter.minValue === '*' || !filter.minValue) {
-          operator = '&leq;'
+          operator = '&leq; '
           value = this.$root.$options.filters.cellValues(filter.maxValue, filter.field)
         } else if (filter.maxValue === '*' || !filter.maxValue) {
-          operator = '&GreaterEqual;'
+          operator = '&GreaterEqual; '
           value = this.$root.$options.filters.cellValues(filter.minValue, filter.field)
         } else {
           operator = ''

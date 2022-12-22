@@ -40,6 +40,7 @@
         @click:clear="$nextTick(() => {$nextTick(() => refresh(true))})"
       />
       <dataset-filters
+        v-if="$vuetify.breakpoint.mdAndUp"
         v-model="filters"
         :style="{maxWidth: (windowWidth - 80 - 170 - 44 - 44) + 'px'}"
       />
@@ -53,13 +54,13 @@
         :total="data.total"
       />
       <template
-        v-if="displayMode === 'list' && filters.length"
+        v-if="$vuetify.breakpoint.smAndDown && filters.length"
         #extension
       >
         <v-col class="pa-0">
           <v-row
-            class="ma-0 align-center"
-            style="height:32px;"
+            class="my-0 mx-1 align-center"
+            style="height:40px;"
           >
             <dataset-filters
               v-model="filters"
@@ -284,16 +285,21 @@
           v-for="item in data.results"
           :key="item._id"
           cols="12"
-          md="6"
-          lg="4"
-          xl="3"
+          sm="6"
+          md="4"
+          lg="3"
+          xl="2"
         >
           <dataset-item-card
             :item="item"
             :filters="filters"
+            :filter-height="tableHeight - 20"
             :selected-fields="selectedCols"
+            :headers="selectedHeaders"
             :truncate="truncate"
-            @filter="({field, filter}) => addFilter(field.key, filter)"
+            :pagination="pagination"
+            @filter="({header, filter}) => addFilter(header.value, filter)"
+            @hide="header => hideHeader(header)"
           />
         </v-col>
       </v-row>
@@ -428,7 +434,7 @@ export default {
     },
     extensionHeight () {
       let height = 0
-      if (this.displayMode === 'list' && this.filters.length) height += 32
+      if (this.$vuetify.breakpoint.smAndDown && this.filters.length) height += 40
       return height
     },
     tableHeight () {
