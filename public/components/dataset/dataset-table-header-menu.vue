@@ -376,7 +376,8 @@ export default {
     fixedCol: { type: String, default: null },
     activator: { type: String, required: true },
     noFix: { type: Boolean, default: false },
-    localEnum: { type: Array, required: false }
+    localEnum: { type: Array, required: false, default: null },
+    closeOnFilter: { type: Boolean, default: false }
   },
   data () {
     return {

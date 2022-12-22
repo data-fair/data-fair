@@ -77,6 +77,7 @@
               :filter-height="filterHeight"
               :pagination="pagination"
               no-fix
+              close-on-filter
               :local-enum="header.field.separator ? item[header.value].split(header.field.separator).map(v => v.trim()) : [item[header.value]]"
               @filter="filter => $emit('filter', {header, filter})"
               @hide="$emit('hide', header)"
