@@ -41,7 +41,7 @@
 
       <div
         v-else
-        :style="`max-height: 40px;max-width:100%;overflow:hidden;text-overflow:ellipsis;`"
+        :style="`max-height: 40px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;`"
         @mouseenter="hoverValue(itemValue)"
         @mouseleave="leaveValue(itemValue)"
       >
