@@ -17,7 +17,9 @@ export default {
     freeHorizontalKeys: [],
     verticalKeys: {},
     freeVerticalKeys: [],
-    renderFullHeader: false
+    renderFullHeader: false,
+    elevateTop: false,
+    elevateLeft: false
   }),
   computed: {
     headerWidthsAdjusted () {
@@ -169,6 +171,7 @@ export default {
     },
     onTableScrollX (e) {
       this._headerWrapper.scrollTo(e.target.scrollLeft, 0)
+      this.elevateLeft = e.target.scrollLeft > 10
       this.scrollingHorizontal = true
       this._debounceScrollX = this._debounceScrollX || debounce(60, (e) => {
         this.scrollLeft = e.target.scrollLeft
@@ -179,6 +182,7 @@ export default {
     onTableScrollY (e) {
       this._fixedTableWrapper = this._fixedTableWrapper || document.querySelector('.fixed-data-table .v-data-table__wrapper')
       if (this._fixedTableWrapper) this._fixedTableWrapper.scrollTo(0, e.target.scrollTop)
+      this.elevateTop = e.target.scrollTop > 10
       this._debounceScrollY = this._debounceScrollY || debounce(60, (e) => {
         this.scrollTop = e.target.scrollTop
       }, { noLeading: true })

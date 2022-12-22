@@ -79,7 +79,8 @@
         :width="fixedColWidth"
         app
         permanent
-        class="elevation-4"
+        class="fixed-column-drawer"
+        :class="{'elevation-6': elevateLeft}"
       >
         <v-row class="fixed-header-data-table v-data-table ma-0">
           <div
@@ -151,7 +152,10 @@
 
       <!-- fake table only here to have a fixed position header that follow the scroll on the actual table -->
       <v-row class="header-data-table v-data-table ma-0">
-        <div class="v-data-table__wrapper elevation-4">
+        <div
+          class="v-data-table__wrapper"
+          :class="{'elevation-6': elevateTop}"
+        >
           <table :style="{'table-layout': 'fixed'}">
             <thead class="v-data-table-header">
               <tr
@@ -443,6 +447,7 @@ export default {
       height -= 48 // app bar
       height -= this.extensionHeight
       height -= 48 // fixed header
+      height -= 1 // header border
       return height
     },
     fixedHeader () {
@@ -605,6 +610,9 @@ export default {
 }
 .fixed-data-table {
   z-index: 6;
+}
+.header-data-table .v-data-table__wrapper, .fixed-header-data-table .v-data-table__wrapper {
+  border-bottom: 1px solid #D1D1D1;
 }
 
 /* replace native scrolling with perfect scrollbar */
