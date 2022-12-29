@@ -64,7 +64,7 @@
               mdi-table-large
             </v-icon>
             <v-icon v-if="displayMode === 'list'">
-              mdi-view-list
+              mdi-view-grid-outline
             </v-icon>
           </v-btn>
         </template>
@@ -102,7 +102,7 @@
                 <v-list-item-avatar :size="30">
                   <v-avatar :size="30">
                     <v-icon>
-                      mdi-view-list
+                      mdi-view-grid-outline
                     </v-icon>
                   </v-avatar>
                 </v-list-item-avatar>
@@ -462,8 +462,9 @@ export default {
         return 'table'
       },
       async set (value) {
-        await this.$router.replace({ query: { ...this.$route.query, display: value } })
-        window.location.reload()
+        const url = new URL(window.location.href)
+        url.searchParams.set('display', value)
+        window.location.href = url.href
       }
     },
     lineHeight () {

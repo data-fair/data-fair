@@ -58,6 +58,7 @@
                 :filters="filters"
                 :truncate="truncate"
                 :disable-hover="true"
+                :dense="true"
                 @filter="filter => $emit('filter', {field, filter})"
               />
               <v-icon
@@ -144,6 +145,6 @@ export default {
   font-size:12px;
   line-height: 16px;
   height: 16px;
-  bottom: -4px;
+  bottom: -2px;
 }
 </style>
