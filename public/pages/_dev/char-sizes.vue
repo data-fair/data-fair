@@ -36,7 +36,7 @@ export default {
       const chars = [
         ...letters,
         ...letters.toUpperCase(),
-        ...'0123456789 +=<>%*!/:.;,?&~@\'"_-|#()[]{}°²–\t'
+        ...'0123456789 +=<>%*!/:.;,?&~@\'"_-|#()[]{}°²–\t\\'
       ]
       return chars
     }

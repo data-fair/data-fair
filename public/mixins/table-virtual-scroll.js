@@ -195,7 +195,7 @@ export default {
       for (const header of this.headers) {
         if (this.headerWidths[header.value]) return
         if (dense) {
-          this.$set(this.headerWidths, header.value, 100)
+          this.$set(this.headerWidths, header.value, 80)
         } else {
           const estimatedHeaderSize = (estimateTextSize(header.text) * 0.7) + (dense ? 16 : 32) + 14
           this.$set(this.headerWidths, header.value, estimatedHeaderSize)
@@ -210,7 +210,7 @@ export default {
               estimatedSize += estimateTextSize(this.$root.$options.filters.cellValues(part, header.field), dense ? 12 : 14) + 40
             }
           } else {
-            estimatedSize += estimateTextSize(header.field ? this.$root.$options.filters.cellValues(val, header.field) : val)
+            estimateTextSize(header.field ? this.$root.$options.filters.cellValues(val, header.field) : val)
           }
           estimatedSize = Math.max(50, estimatedSize) + (dense ? 16 : 32)
           if (estimatedSize > this.headerWidths[header.value]) this.headerWidths[header.value] = estimatedSize
