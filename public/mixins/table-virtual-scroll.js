@@ -1,3 +1,4 @@
+import { estimateTextSize } from '../assets/chars-utils'
 import { debounce } from 'throttle-debounce'
 import PerfectScrollbar from 'perfect-scrollbar'
 import 'perfect-scrollbar/css/perfect-scrollbar.css'
@@ -156,7 +157,7 @@ export default {
       this._headerWrapper = document.querySelector('.header-data-table .v-data-table__wrapper')
       this._fixedTableWrapper = document.querySelector('.fixed-data-table .v-data-table__wrapper')
       const tableWrapper = document.querySelector('.real-data-table .v-data-table__wrapper')
-      if (this.displayMode === 'table' && this._tableWrapper !== tableWrapper) {
+      if (this._tableWrapper !== tableWrapper) {
         if (this._tableWrapper) {
           this._tableWrapper.removeEventListener('ps-scroll-x', this.onTableScrollX)
           this._tableWrapper.removeEventListener('ps-scroll-y', this.onTableScrollY)
@@ -190,13 +191,28 @@ export default {
     },
     adjustColsWidths () {
       if (!this.data.results || !this.headers) return
+      const dense = this.displayMode === 'table-dense'
       for (const header of this.headers) {
         if (this.headerWidths[header.value]) return
-        const estimatedHeaderSize = ((header.text.length / 2) * 9) + 46
-        this.$set(this.headerWidths, header.value, estimatedHeaderSize)
+        if (dense) {
+          this.$set(this.headerWidths, header.value, 100)
+        } else {
+          const estimatedHeaderSize = (estimateTextSize(header.text) * 0.7) + (dense ? 16 : 32) + 14
+          this.$set(this.headerWidths, header.value, estimatedHeaderSize)
+        }
+
         for (const result of this.data.results) {
           if (!(header.value in result)) continue
-          const estimatedSize = (Math.min(50, (result[header.value] + '').length) * 9) + 16
+          const val = result[header.value] + ''
+          let estimatedSize = 0
+          if (header.field && header.field.separator) {
+            for (const part of val.split(header.field.separator)) {
+              estimatedSize += estimateTextSize(this.$root.$options.filters.cellValues(part, header.field), dense ? 12 : 14) + 40
+            }
+          } else {
+            estimatedSize += estimateTextSize(header.field ? this.$root.$options.filters.cellValues(val, header.field) : val)
+          }
+          estimatedSize = Math.max(50, estimatedSize) + (dense ? 16 : 32)
           if (estimatedSize > this.headerWidths[header.value]) this.headerWidths[header.value] = estimatedSize
         }
       }

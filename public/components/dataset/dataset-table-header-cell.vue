@@ -1,5 +1,6 @@
 <template>
   <th
+    :class="{'pl-4': !dense, 'pl-2': dense}"
     class="dataset-table-header text-start"
     :data-header="header.value"
     :style="{
@@ -42,7 +43,8 @@ export default {
   props: {
     header: { type: Object, required: true },
     pagination: { type: Object, required: true },
-    width: { type: Number, default: null }
+    width: { type: Number, default: null },
+    dense: { type: Boolean, default: false }
   },
   data () {
     return {

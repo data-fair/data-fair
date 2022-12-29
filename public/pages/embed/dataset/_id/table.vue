@@ -13,7 +13,7 @@
       :elevate-on-scroll="displayMode === 'list'"
       app
       dense
-      :flat="displayMode === 'table'"
+      :flat="displayMode === 'table' || displayMode === 'table-dense'"
       :color="$vuetify.theme.dark ? 'black' : 'white'"
       :extension-height="extensionHeight"
       clipped-left
@@ -88,7 +88,7 @@
                 </v-list-item-avatar>
                 <v-list-item-title v-t="'displayTable'" />
               </v-list-item>
-              <!--<v-list-item value="table-dense">
+              <v-list-item value="table-dense">
                 <v-list-item-avatar :size="30">
                   <v-avatar :size="30">
                     <v-icon>
@@ -97,7 +97,7 @@
                   </v-avatar>
                 </v-list-item-avatar>
                 <v-list-item-title v-t="'displayTableDense'" />
-              </v-list-item>-->
+              </v-list-item>
               <v-list-item value="list">
                 <v-list-item-avatar :size="30">
                   <v-avatar :size="30">
@@ -164,6 +164,7 @@
                     :header="fixedHeader"
                     :pagination="pagination"
                     :width="headerWidths[fixedHeader.value]"
+                    :dense="displayMode === 'table-dense'"
                   />
                   <dataset-table-header-menu
                     :activator="'#fixed-header-cell'"
@@ -209,6 +210,7 @@
                   :header="fixedHeader"
                   :filters="filters"
                   :truncate="truncate"
+                  :dense="displayMode === 'table-dense'"
                   :style="{width: fixedColWidth + 'px', 'min-width': fixedColWidth + 'px', 'max-width': fixedColWidth + 'px'}"
                   @filter="f => addFilter(fixedHeader.value, f)"
                 />
@@ -249,6 +251,7 @@
                       'will-change': 'transform',
                       transform: `translateX(${virtualScrollHorizontal.leftPadding}px)`
                     }"
+                    :dense="displayMode === 'table-dense'"
                   />
                   <dataset-table-header-menu
                     :key="'header-menu-' + (renderFullHeader ? h : horizontalKeys[header.value])"
@@ -300,6 +303,7 @@
                   :header="header"
                   :filters="filters"
                   :truncate="truncate"
+                  :dense="displayMode === 'table-dense'"
                   :style="{
                     width: headerWidths[header.value] + 'px',
                     'min-width': headerWidths[header.value] + 'px',
@@ -441,7 +445,6 @@ export default {
       sortDesc: [false]
     },
     loading: false,
-    lineHeight: 40,
     filters: [],
     lastParams: null,
     selectedCols: [],
@@ -458,10 +461,13 @@ export default {
         if (this.$vuetify.breakpoint.smAndDown) return 'list'
         return 'table'
       },
-      set (value) {
-        console.log(value)
-        this.$router.replace({ query: { ...this.$route.query, display: value } })
+      async set (value) {
+        await this.$router.replace({ query: { ...this.$route.query, display: value } })
+        window.location.reload()
       }
+    },
+    lineHeight () {
+      return this.displayMode === 'table-dense' ? 28 : 40
     },
     headers () {
       const fieldsHeaders = this.dataset.schema
@@ -548,7 +554,7 @@ export default {
       return this.fixedCol && this.headers.find(h => h.value === this.fixedCol)
     },
     showTable () {
-      return this.displayMode === 'table' && this.headerWidthsAdjusted
+      return (this.displayMode === 'table' || this.displayMode === 'table-dense') && this.headerWidthsAdjusted
     }
   },
   watch: {
@@ -594,7 +600,6 @@ export default {
       if (resetPagination) {
         this.pagination.page = 1
         const goToOpts = { duration: 0 }
-        if (this.displayMode === 'table') goToOpts.container = '.v-data-table__wrapper'
         if (this.displayMode === 'list') {
           this.$vuetify.goTo(0, goToOpts)
         } else {

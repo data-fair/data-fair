@@ -14,26 +14,31 @@
     <template v-else>
       <div
         v-if="field.type === 'string' && field.separator"
-        :style="`max-height: 40px;`"
+        :style="`max-height: ${lineHeight}px;`"
       >
         <v-chip-group
           v-if="itemValue"
           style="max-width:500px;"
           show-arrows
+          :class="{'dense-value': dense}"
         >
           <v-chip
             v-for="(value, i) in itemValue.split(field.separator).map(v => v.trim())"
-            v-slot="{ hover }"
             :key="i"
-            :class="{'my-0': true, 'px-4': !hover, 'px-2': hover}"
-            :color="hover ? 'primary' : 'default'"
+            :class="{'my-0': true, 'pr-1': isFilterable(value) && dense, 'pr-2': isFilterable(value) && !dense}"
+            :color="hovered[value] ? 'primary' : 'default'"
+            :small="dense"
             @click="$emit('filter', value)"
             @mouseenter="hoverValue(value)"
             @mouseleave="leaveValue(value)"
           >
             <span>
               {{ value | cellValues(field, truncate) }}
-              <v-icon v-if="hover">mdi-filter-variant</v-icon>
+              <v-icon
+                v-if="isFilterable(value)"
+                :style="{width: '14px'}"
+                :size="dense ? 14 : 18"
+              >{{ hovered[value] ? 'mdi-filter-variant' : '' }}</v-icon>
             </span>
           </v-chip>
         </v-chip-group>
@@ -41,7 +46,7 @@
 
       <div
         v-else
-        :style="`max-height: 40px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;`"
+        :style="`max-height: ${lineHeight}px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;`"
         @mouseenter="hoverValue(itemValue)"
         @mouseleave="leaveValue(itemValue)"
       >
@@ -50,11 +55,13 @@
         </span>
         <v-btn
           v-if="hovered[itemValue] && !item._tmpState && !filters.find(f => f.field.key === field.key) && isFilterable(itemValue)"
-          fab
+          :fab="!dense"
+          :icon="dense"
           x-small
           color="primary"
-          style="right: 4px;top: 50%;transform: translate(0, -50%);z-index:100;"
+          style="right: 4px;top: 50%;transform: translate(0, -50%);z-index:100;background-color:white;"
           absolute
+          :title="$t('filterValue')"
           @click="$emit('filter', itemValue)"
         >
           <v-icon>mdi-filter-variant</v-icon>
@@ -64,6 +71,13 @@
   </div>
 </template>
 
+<i18n lang="yaml">
+fr:
+  filterValue: Filtrer les lignes qui ont la même valeur dans cette colonne
+en:
+  filterValue: Filter the lines that have the same value in this column
+</i18n>
+
 <script>
 export default {
   props: {
@@ -71,7 +85,9 @@ export default {
     field: { type: Object, required: true },
     filters: { type: Array, required: false, default: () => ([]) },
     truncate: { type: Number, default: 50 },
-    disableHover: { type: Boolean, default: false }
+    lineHeight: { type: Number, default: 40 },
+    disableHover: { type: Boolean, default: false },
+    dense: { type: Boolean, default: false }
   },
   data () {
     return {
@@ -115,5 +131,8 @@ export default {
 </script>
 
 <style>
-
+.v-chip-group.dense-value .v-slide-group__content {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
 </style>

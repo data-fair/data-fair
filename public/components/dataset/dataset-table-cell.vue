@@ -1,6 +1,7 @@
 <template>
   <td
-    :class="`pl-4 pr-0 dataset-table-cell`"
+    class="pr-0 dataset-table-cell"
+    :class="{'pl-2': dense}"
     :style="`height: ${lineHeight}px;position:relative;`"
   >
     <template v-if="header.value === '_thumbnail'">
@@ -33,6 +34,8 @@
       :field="header.field"
       :filters="filters"
       :truncate="truncate"
+      :dense="dense"
+      :line-height="lineHeight"
       @filter="f => $emit('filter', f)"
     />
   </td>
@@ -47,7 +50,8 @@ export default {
     header: { type: Object, required: true },
     lineHeight: { type: Number, required: true },
     filters: { type: Array, required: true },
-    truncate: { type: Number, required: true }
+    truncate: { type: Number, required: true },
+    dense: { type: Boolean, default: false }
   },
   computed: {
     ...mapState(['env'])
