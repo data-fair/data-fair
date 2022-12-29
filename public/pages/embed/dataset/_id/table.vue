@@ -330,14 +330,14 @@
           :height="tableHeight + 30"
           :left="-5"
           style="z-index:6"
-          @move="movement => headerWidths[fixedHeader.value] = Math.max(100, headerWidths[fixedHeader.value] + movement)"
+          @move="movement => headerWidths[fixedHeader.value] = Math.min(tableWidth, Math.max(80, headerWidths[fixedHeader.value] + movement))"
         />
         <dataset-table-drag-col
           v-for="(header, i) in selectedHeaders.filter(header => headersPositions[header.value] - scrollLeft > 0 && headersPositions[header.value] - scrollLeft < tableWidth)"
           :key="`drag-col-${i}`"
           :height="tableHeight + 30"
           :left="headersPositions[header.value] - scrollLeft - 4"
-          @move="movement => headerWidths[header.value] = Math.max(100, headerWidths[header.value] + movement)"
+          @move="movement => headerWidths[header.value] = Math.min(tableWidth, Math.max(80, headerWidths[header.value] + movement))"
         />
       </template>
 
