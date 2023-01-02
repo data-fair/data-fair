@@ -208,7 +208,6 @@ export default {
     },
     userSelectType: {
       get () {
-        console.log('GET')
         if (this.permission.id === '*') return '*'
         if (![null, undefined].includes(this.permission.email) && !this.permission.id) return 'email'
         if (this.owner.type === 'organization') {

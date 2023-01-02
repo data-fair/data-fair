@@ -281,7 +281,10 @@
         :height="tableHeight"
       >
         <template #body>
-          <tbody :style="{ 'height': virtualScrollVertical.totalHeight + 'px', }">
+          <tbody :style="{ 'height': virtualScrollVertical.totalHeight + 'px'}">
+            <tr v-if="virtualScrollVertical.results.length === 0">
+              <td :style="{minWidth: totalHeaderWidths + 'px'}" />
+            </tr>
             <tr
               v-for="result in virtualScrollVertical.results"
               :key="verticalKeys[result._id]"

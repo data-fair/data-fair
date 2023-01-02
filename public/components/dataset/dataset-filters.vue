@@ -54,7 +54,6 @@ export default {
       let operator = '= '
       if (filter.type === 'starts') operator = 'commence par '
       let value = this.$root.$options.filters.cellValues(filter.values || filter.value, filter.field)
-      console.log(filter.minValue)
       if (filter.type === 'interval') {
         if (filter.minValue === '*' || !filter.minValue) {
           operator = '&leq; '
