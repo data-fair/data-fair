@@ -3,6 +3,7 @@
     v-model="currentFilter"
     show-arrows
     class="dataset-filters"
+    :style="{maxWidth: maxWidth && (maxWidth + 'px')}"
   >
     <v-slide-item
       v-for="(filter,i) in value"
@@ -17,12 +18,12 @@
         color="primary"
         outlined
         style="font-weight: bold;"
-        :style="{height: '40px', borderRadius: '20px', lineHeight: '16px'}"
+        :style="{height: '40px', borderRadius: '20px', lineHeight: '16px', maxWidth: (maxWidth - 16) + 'px'}"
         @click:close="removeFilter(i)"
         @click="toggle"
       >
-        <div>
-          <span style="display:inline-block">{{ filter.field.title || filter.field['x-originalName'] || filter.field.key }}</span>
+        <div style="overflow: hidden;">
+          <span style="display:inline-block;white-space:nowrap;">{{ (filter.field.title || filter.field['x-originalName'] || filter.field.key) }}</span>
           <br>
           <span
             style="display:inline-block"
@@ -36,7 +37,7 @@
 
 <script>
 export default {
-  props: ['value'],
+  props: ['value', 'maxWidth'],
   data () {
     return {
       currentFilter: null
@@ -76,5 +77,9 @@ export default {
 <style lang="css">
 .dataset-filters .v-slide-group__prev, .dataset-filters .v-slide-group__next {
   min-width: 40px;
+}
+
+.dataset-filters .v-chip_content {
+  max-width: 100%;
 }
 </style>

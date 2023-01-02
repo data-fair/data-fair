@@ -42,7 +42,7 @@
       <dataset-filters
         v-if="$vuetify.breakpoint.mdAndUp"
         v-model="filters"
-        :style="{maxWidth: filtersWidth + 'px'}"
+        :max-width="filtersWidth"
       />
       <v-spacer />
       <v-menu
@@ -132,6 +132,7 @@
           >
             <dataset-filters
               v-model="filters"
+              :max-width="windowWidth"
             />
           </v-row>
         </v-col>
