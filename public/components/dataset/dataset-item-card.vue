@@ -139,6 +139,8 @@ export default {
 
 .dataset-item-card .v-input__slot {
   display: block;
+  overflow: hidden;
+  text-overflow:ellipsis;
 }
 
 .dataset-item-card .v-input__slot .v-label {
@@ -146,5 +148,6 @@ export default {
   line-height: 16px;
   height: 16px;
   bottom: -2px;
+  white-space:nowrap;
 }
 </style>
