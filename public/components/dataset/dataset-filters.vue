@@ -66,7 +66,7 @@ export default {
           value = `&GreaterEqual; ${this.$root.$options.filters.cellValues(filter.minValue, filter.field)}, &leq; ${this.$root.$options.filters.cellValues(filter.maxValue, filter.field)}`
         }
       }
-      if (filter.type === 'search') operator = 'contient des mots'
+      if (filter.type === 'search') operator = 'contient des mots '
       return `${operator}${value}`
     }
   }
