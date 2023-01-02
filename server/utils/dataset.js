@@ -672,21 +672,21 @@ exports.insertWithBaseId = async (db, dataset, baseId, res) => {
   }
 }
 
-exports.previews = (dataset) => {
+exports.previews = (dataset, publicUrl = config.publicUrl) => {
   if (!dataset.schema) return []
-  const previews = [{ id: 'table', title: 'Tableau', href: `${config.publicUrl}/embed/dataset/${dataset.id}/table` }]
+  const previews = [{ id: 'table', title: 'Tableau', href: `${publicUrl}/embed/dataset/${dataset.id}/table` }]
   if (!!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate') && !!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate' && !!dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))) {
-    previews.push({ id: 'calendar', title: 'Calendrier', href: `${config.publicUrl}/embed/dataset/${dataset.id}/calendar` })
+    previews.push({ id: 'calendar', title: 'Calendrier', href: `${publicUrl}/embed/dataset/${dataset.id}/calendar` })
   }
   if (dataset.bbox) {
-    previews.push({ id: 'map', title: 'Carte', href: `${config.publicUrl}/embed/dataset/${dataset.id}/map` })
+    previews.push({ id: 'map', title: 'Carte', href: `${publicUrl}/embed/dataset/${dataset.id}/map` })
   }
   const documentProperty = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (documentProperty && (!documentProperty['x-capabilities'] || documentProperty['x-capabilities'].indexAttachment !== false)) {
-    previews.push({ id: 'search-files', title: 'Fichiers', href: `${config.publicUrl}/embed/dataset/${dataset.id}/search-files` })
+    previews.push({ id: 'search-files', title: 'Fichiers', href: `${publicUrl}/embed/dataset/${dataset.id}/search-files` })
   }
   if (dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')) {
-    previews.push({ id: 'thumbnails', title: 'Vignettes', href: `${config.publicUrl}/embed/dataset/${dataset.id}/thumbnails` })
+    previews.push({ id: 'thumbnails', title: 'Vignettes', href: `${publicUrl}/embed/dataset/${dataset.id}/thumbnails` })
   }
   return previews
 }
