@@ -5,6 +5,14 @@
 <script>
 import { mapState } from 'vuex'
 
+function inIframe () {
+  try {
+    return window.self !== window.top
+  } catch (e) {
+    return true
+  }
+}
+
 export default {
   layout: 'embed',
   async fetch ({ store, params, route }) {
@@ -22,6 +30,15 @@ export default {
   },
   computed: {
     ...mapState('dataset', ['dataset'])
+  },
+  mounted () {
+    // used to track the original referer in case of embeded pages
+    if (inIframe() && document.referrer) {
+      const refererDomain = new URL(document.referrer).hostname
+      if (refererDomain !== window.location.hostname && refererDomain !== this.$route.query.referer) {
+        this.$router.replace({ query: { ...this.$route.query, referer: refererDomain } })
+      }
+    }
   }
 }
 </script>

@@ -242,6 +242,39 @@ ${await serviceWorkers.register()}
     }]
   })
 
+  // Data-fair manages tracking of original referer
+  const referer = req.headers.referer || req.headers.referrer
+  if (referer) {
+    const refererDomain = new URL(referer).hostname
+    const redirectUrl = new URL(`${req.publicBaseUrl}${req.url}`)
+    if (refererDomain !== redirectUrl.hostname && refererDomain !== redirectUrl.searchParams.get('referer')) {
+      redirectUrl.searchParams.set('referer', refererDomain)
+      const iframeRedirect = redirectUrl.href
+      head.childNodes.push({
+        nodeName: 'script',
+        tagName: 'script',
+        attrs: [{ name: 'type', value: 'text/javascript' }],
+        childNodes: [{
+          nodeName: '#text',
+          value: `
+    // redirect inside the iframe to track original referer ${refererDomain}
+    function inIframe () {
+      try {
+        return window.self !== window.top
+      } catch (e) {
+        return true
+      }
+    }
+    if (inIframe()) {
+      if (window.location.replace) window.location.replace("${iframeRedirect}");
+      else window.location.href = "${iframeRedirect}"
+    }
+    `
+        }]
+      })
+    }
+  }
+
   // add @koumoul/v-iframe/content-window.min.js to support state sync with portals, etc.
   if (baseApp.meta['df:sync-state'] === 'true') {
     body.childNodes.push({
