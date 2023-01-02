@@ -1,13 +1,23 @@
 const config = require('config')
+const asyncWrap = require('./utils/async-wrap')
 
 module.exports = async () => {
-  const trackEmbed = (req, res, next) => {
+  const trackEmbed = asyncWrap(async (req, res, next) => {
     if (!req.url.startsWith('/embed/')) return next()
     const [resourceType, resourceId, embedView] = req.url.replace('/embed/', '').split(/[/?]/)
-    res.setHeader('x-resource', JSON.stringify({ type: 'embed', id: `${resourceType}-${resourceId}-${embedView}`, title: encodeURIComponent(`${resourceId} / ${embedView}`) }))
-    res.setHeader('x-operation', JSON.stringify({ class: 'read', id: 'openEmbed', track: 'openApplication' }))
+    if (resourceType === 'dataset') {
+      const dataset = await req.app.get('db').collection('datasets').findOne({ id: resourceId }, { projection: { owner: 1, id: 1, title: 1 } })
+      if (dataset) {
+        const ownerHeader = { type: dataset.owner.type, id: dataset.owner.id }
+        if (dataset.owner.department) ownerHeader.department = dataset.owner.department
+
+        res.setHeader('x-resource', JSON.stringify({ type: 'embed', id: `${resourceType}-${resourceId}-${embedView}`, title: encodeURIComponent(`${dataset.title || dataset.id} / ${embedView}`) }))
+        res.setHeader('x-operation', JSON.stringify({ class: 'read', id: 'openEmbed', track: 'openApplication' }))
+        res.setHeader('x-owner', JSON.stringify(ownerHeader))
+      }
+    }
     next()
-  }
+  })
   if (config.proxyNuxt) {
     // in dev mode the nuxt dev server is already running, we re-expose it
     return {
