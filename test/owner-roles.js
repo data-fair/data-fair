@@ -105,6 +105,15 @@ describe('owner roles', () => {
 
     // admin in org without department restriction -> ok for read and write
     await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}`)
+    const initialPermissions = (await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/permissions`)).data
+    assert.equal(initialPermissions.length, 1)
+    assert.deepEqual(initialPermissions[0], {
+      type: 'organization',
+      id: 'KWqAGZ4mG',
+      department: '-',
+      roles: ['contrib'],
+      classes: ['write']
+    })
     await global.ax.dmeadusOrg.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' })
     // outside user -> ko
     await assert.rejects(global.ax.ddecruce5.get(`/api/v1/datasets/${dataset.id}`), err => err.status === 403)
@@ -120,7 +129,8 @@ describe('owner roles', () => {
       name: 'Fivechat',
       department: 'dep1'
     })
-
+    initialPermissions[0].department = 'dep1'
+    await global.ax.dmeadusOrg.put(`/api/v1/datasets/${dataset.id}/permissions`, initialPermissions)
     // admin in org without department restriction -> ok
     await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}`)
     await global.ax.dmeadusOrg.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' })

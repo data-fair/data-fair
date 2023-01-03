@@ -25,7 +25,7 @@ exports.operationsClasses = {
 }
 
 exports.contribOperationsClasses = {
-  datasets: ['post', 'list', 'read', 'readAdvanced', 'write'],
+  datasets: ['post', 'list', 'read', 'readAdvanced'],
   applications: ['post', 'list', 'read', 'readAdvanced', 'write'],
   catalogs: ['list', 'read', 'use']
 }
