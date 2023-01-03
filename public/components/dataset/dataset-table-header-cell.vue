@@ -19,7 +19,7 @@
     <v-clamp
       :max-lines="2"
       autoresize
-      :style="{'margin-right': '14px',}"
+      :style="{'margin-right': '14px', 'overflow-wrap': 'break-word'}"
     >
       {{ header.text }}
     </v-clamp>
