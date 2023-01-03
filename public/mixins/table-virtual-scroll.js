@@ -193,7 +193,11 @@ export default {
       if (!this.data.results || !this.headers) return
       const dense = this.displayMode === 'table-dense'
       for (const header of this.headers) {
-        if (this.headerWidths[header.value]) return
+        if (this.headerWidths[header.value]) continue
+        if (header.value === '_thumbnail' || header.value === '_owner') {
+          this.$set(this.headerWidths, header.value, 56)
+          continue
+        }
         if (dense) {
           this.$set(this.headerWidths, header.value, 80)
         } else {
