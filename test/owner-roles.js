@@ -38,7 +38,7 @@ describe('owner roles', () => {
   })
 
   it('organization contrib has limited capabilities', async () => {
-    // can create a dataset and use it, but not delete it or administrate it
+    // can create a dataset and use it, but not administrate it
     const dataset = (await global.ax.ngernier4Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Fivechat')
     await workers.hook('finalizer/' + dataset.id)
@@ -50,22 +50,10 @@ describe('owner roles', () => {
     } catch (err) {
       assert.equal(err.status, 403)
     }
-    try {
-      await global.ax.ngernier4Org.delete(`/api/v1/datasets/${dataset.id}`)
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
 
-    // can create an application and use it, but not delete it
+    // can create an application and use it
     const application = (await global.ax.ngernier4Org.post('/api/v1/applications', { title: 'An application', url: 'http://monapp1.com/' })).data
     await global.ax.ngernier4Org.get(`/api/v1/applications/${application.id}`)
-    try {
-      await global.ax.ngernier4Org.delete(`/api/v1/applications/${application.id}`)
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
 
     // cannot create a catalog
     try {
@@ -110,6 +98,7 @@ describe('owner roles', () => {
     assert.deepEqual(initialPermissions[0], {
       type: 'organization',
       id: 'KWqAGZ4mG',
+      name: 'Fivechat',
       department: '-',
       roles: ['contrib'],
       classes: ['write']

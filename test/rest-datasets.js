@@ -772,7 +772,6 @@ describe('REST datasets', () => {
 line1,test1,test1,oui,2015-03-18T00:58:59
 line2,test1,test1,non,
 line3,test1,test1,true,`, { headers: { 'content-type': 'text/csv' } })).data
-    console.log(bulkRes.errors[0])
     dataset = await workers.hook('finalizer/restcsv')
     assert.equal(dataset.count, 3)
     let lines = (await ax.get('/api/v1/datasets/restcsv/lines', { params: { sort: '_i' } })).data.results

@@ -151,7 +151,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
       err => err.status === 429)
   })
 
-  it.only('Use an application key to manage own lines', async () => {
+  it('Use an application key to manage own lines', async () => {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id
