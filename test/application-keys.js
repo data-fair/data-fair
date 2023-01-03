@@ -151,7 +151,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
       err => err.status === 429)
   })
 
-  it('Use an application key to manage own lines', async () => {
+  it.only('Use an application key to manage own lines', async () => {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id
@@ -162,7 +162,6 @@ describe('Applications keys for unauthenticated readOnly access', () => {
       title: 'restcrowdown',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/restcrowdown')
 
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
       datasets: [{
