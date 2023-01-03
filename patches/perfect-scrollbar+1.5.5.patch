@@ -1,0 +1,23 @@
+diff --git a/node_modules/perfect-scrollbar/dist/perfect-scrollbar.esm.js b/node_modules/perfect-scrollbar/dist/perfect-scrollbar.esm.js
+index 4215b17..4d43433 100644
+--- a/node_modules/perfect-scrollbar/dist/perfect-scrollbar.esm.js
++++ b/node_modules/perfect-scrollbar/dist/perfect-scrollbar.esm.js
+@@ -569,6 +569,7 @@ function bindMouseScrollHandler(
+     removeScrollingClass(i, y);
+     i[scrollbarYRail].classList.remove(cls.state.clicking);
+     i.event.unbind(i.ownerDocument, 'mousemove', mouseMoveHandler);
++    element.dispatchEvent(createEvent(('released')));
+   }
+ 
+   function bindMoves(e, touchMode) {
+@@ -583,7 +584,9 @@ function bindMouseScrollHandler(
+     if (!touchMode) {
+       i.event.bind(i.ownerDocument, 'mousemove', mouseMoveHandler);
+       i.event.once(i.ownerDocument, 'mouseup', mouseUpHandler);
+-      e.preventDefault();
++      // mitigate this issue https://bugs.chromium.org/p/chromium/issues/detail?id=269917
++      // e.preventDefault();
++      element.dispatchEvent(createEvent(('grabbed')));
+     } else {
+       i.event.bind(i.ownerDocument, 'touchmove', mouseMoveHandler);
+     }

@@ -20,7 +20,8 @@ export default {
     freeVerticalKeys: [],
     renderFullHeader: false,
     elevateTop: false,
-    elevateLeft: false
+    elevateLeft: false,
+    scrollGrabbed: false
   }),
   computed: {
     headerWidthsAdjusted () {
@@ -161,6 +162,8 @@ export default {
         if (this._tableWrapper) {
           this._tableWrapper.removeEventListener('ps-scroll-x', this.onTableScrollX)
           this._tableWrapper.removeEventListener('ps-scroll-y', this.onTableScrollY)
+          this._tableWrapper.removeEventListener('grabbed', this.onScrollGrabbed)
+          this._tableWrapper.removeEventListener('released', this.onScrollReleased)
         }
         this._tableWrapper = tableWrapper
         // eslint-disable-next-line no-new
@@ -168,7 +171,19 @@ export default {
         // this._tableWrapper.addEventListener('scroll', this.onTableScroll)
         tableWrapper.addEventListener('ps-scroll-x', this.onTableScrollX)
         tableWrapper.addEventListener('ps-scroll-y', this.onTableScrollY)
+
+        // insert an overlay when the scroll is grabbed to prevent side effects of having remove preventDefault()
+        // from perfect scrollbar
+        // this is all to mitigate this issue https://bugs.chromium.org/p/chromium/issues/detail?id=269917
+        tableWrapper.addEventListener('grabbed', this.onScrollGrabbed)
+        tableWrapper.addEventListener('released', this.onScrollReleased)
       }
+    },
+    onScrollGrabbed () {
+      this.scrollGrabbed = true
+    },
+    onScrollReleased () {
+      this.scrollGrabbed = false
     },
     onTableScrollX (e) {
       this._headerWrapper.scrollTo(e.target.scrollLeft, 0)

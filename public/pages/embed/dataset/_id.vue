@@ -39,6 +39,11 @@ export default {
         this.$router.replace({ query: { ...this.$route.query, referer: refererDomain } })
       }
     }
+
+    document.addEventListener('mouseleave', (e) => {
+      const event = new MouseEvent('mouseup')
+      document.dispatchEvent(event)
+    })
   }
 }
 </script>

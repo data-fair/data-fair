@@ -408,6 +408,12 @@
       </v-row>
       <layout-scroll-to-top />
     </template>
+
+    <div
+      v-if="scrollGrabbed"
+      id="scroll-overlay"
+      style="background-color:rgba(0,0,0,0);position:fixed;top:0;left:0;bottom:0;right:0;z-index:7;"
+    />
   </v-container>
 </template>
 
