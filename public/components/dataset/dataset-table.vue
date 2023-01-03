@@ -85,7 +85,7 @@
         </v-col>
       </v-row>
       <v-row v-if="filters.length">
-        <v-col class="pb-1 pt-2 pl-0">
+        <v-col class="pa-0">
           <dataset-filters v-model="filters" />
         </v-col>
       </v-row>
@@ -103,39 +103,26 @@
         <template #header>
           <thead class="v-data-table-header">
             <tr>
-              <th
-                v-for="header in selectedHeaders"
-                :key="header.value"
-                :class="{'text-start': true, sortable: header.sortable, active : header.value === pagination.sortBy[0], asc: !pagination.sortDesc[0], desc: pagination.sortDesc[0]}"
-                nowrap
-                @click="orderBy(header)"
-              >
-                <help-tooltip
-                  v-if="header.tooltip"
-                  small
-                  orientation="bottom"
-                >
-                  <div v-html="header.tooltip" />
-                </help-tooltip>
-                <span>
-                  {{ header.text }}
-                </span>
-                <v-icon
-                  v-if="header.sortable"
-                  class="v-data-table-header__icon"
-                  small
-                >
-                  mdi-arrow-up
-                </v-icon>
-                <dataset-filter-col
-                  v-if="header.field"
-                  :max-height="420"
-                  :filter-height="420"
-                  :field="header.field"
-                  :filters="filters"
-                  @filter="f => addFilter(header.value, f)"
+              <template v-for="(header, h) in selectedHeaders">
+                <dataset-table-header-cell
+                  :id="'header-cell-' + h"
+                  :key="'header-cell-' + h"
+                  :header="header"
+                  :pagination="pagination"
                 />
-              </th>
+                <dataset-table-header-menu
+                  v-if="header.field"
+                  :key="'header-menu-' + h"
+                  :activator="'#header-cell-' + h"
+                  :header="header"
+                  :filters="filters"
+                  :filter-height="420"
+                  :pagination="pagination"
+                  no-fix
+                  @filter="f => addFilter(header.value, f)"
+                  @hide="hideHeader(header)"
+                />
+              </template>
             </tr>
           </thead>
         </template>
@@ -478,6 +465,9 @@ export default {
       }
       return fieldsHeaders
     },
+    cols () {
+      return this.headers.filter(h => !!h.field).map(h => h.value)
+    },
     selectedHeaders () {
       if (this.selectedCols.length === 0) return this.headers
       return this.headers.filter(h => !h.field || this.selectedCols.includes(h.value))
@@ -662,6 +652,7 @@ export default {
       if (typeof filter !== 'object') filter = { type: 'in', values: [filter] }
       filter.field = this.dataset.schema.find(f => f.key === key)
       this.filters = this.filters.filter(f => !(f.field.key === key))
+      if (filter.type === 'in' && filter.values.length === 0) return
       this.filters.push(filter)
     },
     isFilterable (field, value) {
@@ -671,6 +662,10 @@ export default {
       if (typeof value === 'string' && (value.length > 200 || value.startsWith('{'))) return false
       if (typeof value === 'string' && value.endsWith('...')) return false
       return true
+    },
+    hideHeader (header) {
+      if (!this.selectedCols.length) this.selectedCols = this.cols
+      this.selectedCols = this.selectedCols.filter(sc => sc !== header.value)
     }
   }
 }
