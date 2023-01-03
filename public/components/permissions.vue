@@ -187,18 +187,18 @@
 <i18n lang="yaml">
 fr:
   description: Permettez à d'autres utilisateurs d'utiliser cette ressource.
-  visibilityLabel: Contrôlez l'accès
+  visibilityLabel: Qui peut consulter cette ressource ?
   visibility:
-    public: Accessible publiquement
-    privateOrg: Accessible aux administrateurs et contributeurs
-    privateUser: Accessible à vous uniquement
-    sharedInOrg: Accessible à tous les utilisateurs de l'organisation
-    sharedInDep: Accessible à tous les utilisateurs du département
-  contribProfileLabel: Contrôlez la capacité à contribuer
+    public: tout le monde
+    privateOrg: les administrateurs et contributeurs de l'organisation {org}
+    privateUser: uniquement l'utilisateur {user}
+    sharedInOrg: tous les utilisateurs de l'organisation {org}
+    sharedInDep: tous les utilisateurs du département {dep}
+  contribProfileLabel: Qui peut contribuer à cette ressource ?
   contribProfile:
-    adminOnly: Uniquement les administrateurs
-    contribWrite: Les administrateurs et les contributeurs, sauf la suppression pour les contributeurs
-    contribWriteDelete: Les administrateurs et les contributeurs, suppression autorisée aux contributeur
+    adminOnly: les administrateurs de l'organisation {org}
+    contribWrite: les administrateurs et contributeurs de l'organisation {org}, sauf la suppression pour les contributeurs
+    contribWriteDelete: les administrateurs et contributeurs de l'organisation {org}, suppression autorisée aux contributeurs
   warningPrivateDataset: Vous ne devriez pas rendre ce jeu de données privé tant qu'il est présent dans des applications publiques.
   warningPublicApp: Vous ne devriez pas rendre cette application publique, elle utilise des sources de données privées.
   addPermission: Ajouter des permissions
@@ -226,19 +226,25 @@ fr:
     list: Lister
     read: Lecture
     manageOwnLines: Gestion de ses propres lignes
-    readAdvanced: Lecture informations détaillées
+    readAdvanced: Lecture informations avancées
     write: Écriture
     admin: Administration
     use: Utiliser le service
   allUsersManageOwnLines: Permettre à tous les utilisateurs externes de gérer leurs propres lignes à l'intérieur de ce jeu de données (usages crowd-sourcing avancés).
 en:
   description: Allow other users to use this resource.
+  visibilityLabel: Who can read this dataset ?
   visibility:
-    public: Publicly accessible
-    privateOrg: Accessible to admins and contributors
-    privateUser: Accessible only to you
-    sharedInOrg: Accessible to all users of the organization
-    sharedInDep: Accessible to all users of the department
+    public: anyone
+    privateOrg: admins and contributors of the organization {org}
+    privateUser: only yourself
+    sharedInOrg: any user of the organization {org}
+    sharedInDep: any user of the department {dep}
+  contribProfileLabel: Who can contribute to this resource ?
+  contribProfile:
+    adminOnly: admins of the organization {org}
+    contribWrite: admins and contributors of the organization {org}, but the deletion is not auhtorized for contributors
+    contribWriteDelete: admins and contributors of the organization {org}, the deletion is auhtorized for contributors
   warningPrivateDataset: You should not make this dataset private as long as it is used in public applications.
   warningPublicApp: You should not make this application public as long as it uses private datasets.
   addPermission: Add permissions
@@ -351,12 +357,19 @@ export default {
     visibilityItems () {
       const items = []
       const privateDisabled = this.hasPublicDeps && this.isPublic
+      const i18nParams = {}
       if (this.resource.owner.type === 'organization') {
-        items.push({ value: 'privateOrg', text: this.$t('visibility.privateOrg'), disabled: privateDisabled })
-        if (this.resource.owner.department) items.push({ value: 'visibility.sharedInDep', text: this.$t('sharedInDep'), disabled: privateDisabled })
-        items.push({ value: 'sharedInOrg', text: this.$t('visibility.sharedInOrg'), disabled: privateDisabled })
+        i18nParams.org = this.resource.owner.name || this.resource.owner.id
+        if (this.resource.owner.department) {
+          i18nParams.dep = this.resource.owner.name || this.resource.owner.id
+        }
+      }
+      if (this.resource.owner.type === 'organization') {
+        items.push({ value: 'privateOrg', text: this.$t('visibility.privateOrg', { org: this.resource.owner.name || this.resource.owner.id }), disabled: privateDisabled })
+        if (this.resource.owner.department) items.push({ value: 'visibility.sharedInDep', text: this.$t('sharedInDep', { dep: this.resource.owner.departmentName || this.resource.owner.department }), disabled: privateDisabled })
+        items.push({ value: 'sharedInOrg', text: this.$t('visibility.sharedInOrg', { org: this.resource.owner.name || this.resource.owner.id }), disabled: privateDisabled })
       } else {
-        items.push({ value: 'privateUser', text: this.$t('visibility.privateUser'), disabled: privateDisabled })
+        items.push({ value: 'privateUser', text: this.$t('visibility.privateUser', { user: this.resource.owner.name || this.resource.owner.id }), disabled: privateDisabled })
       }
       items.push({ value: 'public', text: this.$t('visibility.public'), disabled: this.hasPrivateParents && !this.isPublic })
       return items
@@ -378,7 +391,7 @@ export default {
         this.permissions = this.permissions
           .filter(p => !this.isContribWritePermission(p) && !this.isContribWriteDeletePermission(p))
         if (contribProfile === 'adminOnly') {
-        // nothing to do
+          // nothing to do
         } else if (contribProfile === 'contribWrite') {
           this.permissions.push({ type: 'organization', id: this.resource.owner.id, department: this.resource.owner.department || '-', name: this.resource.owner.name, roles: ['contrib'], operations: [], classes: ['write'] })
         } else if (contribProfile === 'contribWriteDelete') {
@@ -392,9 +405,9 @@ export default {
     },
     contribProfileItems () {
       return [
-        { value: 'adminOnly', text: this.$t('contribProfile.adminOnly') },
-        { value: 'contribWrite', text: this.$t('contribProfile.contribWrite') },
-        { value: 'contribWriteDelete', text: this.$t('contribProfile.contribWriteDelete') }
+        { value: 'adminOnly', text: this.$t('contribProfile.adminOnly', { org: this.resource.owner.name || this.resource.owner.id }) },
+        { value: 'contribWrite', text: this.$t('contribProfile.contribWrite', { org: this.resource.owner.name || this.resource.owner.id }) },
+        { value: 'contribWriteDelete', text: this.$t('contribProfile.contribWriteDelete', { org: this.resource.owner.name || this.resource.owner.id }) }
       ]
     },
     hasDetailedPermission () {

@@ -138,7 +138,7 @@ fr:
     list: Lister
     read: Lecture
     manageOwnLines: Gestion de ses propres lignes
-    readAdvanced: Lecture informations détaillées
+    readAdvanced: Lecture informations avancées
     write: Écriture
     # admin: Administration
     use: Utiliser le service
