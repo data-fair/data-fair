@@ -149,7 +149,7 @@
         app
         permanent
         class="fixed-column-drawer"
-        :class="{'elevation-6': elevateLeft}"
+        :class="{'elevation-3': elevateLeft}"
       >
         <v-row class="fixed-header-data-table v-data-table ma-0">
           <div
@@ -225,7 +225,7 @@
       <v-row class="header-data-table v-data-table ma-0">
         <div
           class="v-data-table__wrapper"
-          :class="{'elevation-6': elevateTop}"
+          :class="{'elevation-3': elevateTop}"
         >
           <table :style="{'table-layout': 'fixed'}">
             <thead class="v-data-table-header">
