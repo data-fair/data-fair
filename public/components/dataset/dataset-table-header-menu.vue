@@ -1,29 +1,112 @@
 <template>
   <v-menu
-    v-if="showEnum || showEquals || showStartsWith || showBoolEquals || showNumCompare || showDateCompare"
     v-model="showMenu"
     bottom
-    left
+    right
     offset-y
+    tile
+    :activator="activator"
     :max-height="filterHeight"
+    :max-width="450"
     :close-on-content-click="false"
     @input="toggledMenu"
   >
-    <template #activator="{on, attrs}">
-      <v-btn
-        small
-        icon
-        :outlined="active"
-        v-bind="attrs"
+    <v-sheet
+      class="pa-1"
+      tile
+    >
+      <v-list
+        dense
         class="pa-0"
-        color="primary"
-        :input-value="active"
-        v-on="on"
       >
-        <v-icon>mdi-filter-variant</v-icon>
-      </v-btn>
-    </template>
-    <v-sheet class="pa-1">
+        <!-- hide column -->
+        <v-list-item
+          v-if="header.value !== fixedCol"
+          class="pl-2"
+          @click="$emit('hide');showMenu=false"
+        >
+          <v-list-item-icon class="mr-2"><v-icon>mdi-eye-off-outline</v-icon></v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>{{ $t('hide') }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
+        <!-- fix column to the left -->
+        <v-list-item-group
+          v-if="!noFix"
+          color="primary"
+        >
+          <v-list-item
+            class="pl-2"
+            :class="{'v-item--active v-list-item--active': header.value === fixedCol}"
+            @click="$emit('fixCol');showMenu=false"
+          >
+            <v-list-item-icon class="mr-2"><v-icon>mdi-format-horizontal-align-left</v-icon></v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title>{{ $t('fixLeft') }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-item-group>
+
+        <!-- sorting -->
+        <template v-if="header.sortable">
+          <v-list-item-group color="primary">
+            <v-list-item
+              class="pl-2"
+              :class="{'v-item--active v-list-item--active': header.value === pagination.sortBy[0] && !pagination.sortDesc[0]}"
+              @click="$set(pagination, 'sortBy', [header.value]);$set(pagination, 'sortDesc', [false]);showMenu=false"
+            >
+              <v-list-item-icon class="mr-2"><v-icon>mdi-sort-ascending</v-icon></v-list-item-icon>
+              <v-list-item-content>
+                <v-list-item-title>{{ $t('sortAsc') }}</v-list-item-title>
+              </v-list-item-content>
+            </v-list-item>
+            <v-list-item
+              class="pl-2"
+              :class="{'v-item--active v-list-item--active': header.value === pagination.sortBy[0] && pagination.sortDesc[0]}"
+              @click="$set(pagination, 'sortBy', [header.value]);$set(pagination, 'sortDesc', [true]);showMenu=false"
+            >
+              <v-list-item-icon class="mr-2"><v-icon>mdi-sort-descending</v-icon></v-list-item-icon>
+              <v-list-item-content>
+                <v-list-item-title>{{ $t('sortDesc') }}</v-list-item-title>
+              </v-list-item-content>
+            </v-list-item>
+          </v-list-item-group>
+        </template>
+
+        <!-- show help -->
+        <v-list-item-group color="primary">
+          <v-list-item
+            v-if="!!header.tooltip"
+            class="pl-2"
+            :class="{'v-item--active v-list-item--active': showHelp}"
+            @click="showHelp = !showHelp"
+          >
+            <v-list-item-icon class="mr-2"><v-icon>mdi-information</v-icon></v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title>{{ $t('showHelp') }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-item-group>
+        <v-alert
+          v-if="showHelp"
+          color="info"
+          text
+          tile
+          style="overflow-wrap: break-word"
+          class="mt-0 mb-2 pa-2"
+          v-html="header.tooltip"
+        />
+      </v-list>
+
+      <v-subheader
+        v-if="showEnum || showEquals || showStartsWith || showBoolEquals || showNumCompare || showDateCompare"
+        dense
+        style="height:22px"
+        class="pl-2"
+      >
+        {{ $t('filter') }}
+      </v-subheader>
       <template v-if="showEquals">
         <v-text-field
           v-for="i in equals.length"
@@ -228,26 +311,30 @@
         class="py-0"
       >
         <v-list-item
-          v-for="value in field.enum.slice().sort()"
+          v-for="{value, important} in fullEnum"
           :key="value"
           :input-value="equals.includes(value)"
-          style="min-height:32px;"
+          :style="{'minHeight': enumDense ? '24px' : '32px'}"
           class="px-2"
           @click="toggleEquals(value)"
         >
-          <v-list-item-icon class="my-1 mr-3">
+          <v-list-item-icon :class="{'my-0': enumDense, 'my-1': !enumDense, 'mr-0': enumDense, 'mr-2': !enumDense}">
             <v-icon
               v-if="equals.includes(value)"
               color="primary"
+              :small="enumDense"
             >
               mdi-checkbox-marked
             </v-icon>
-            <v-icon v-else>
+            <v-icon
+              v-else
+              :small="enumDense"
+            >
               mdi-checkbox-blank-outline
             </v-icon>
           </v-list-item-icon>
-          <v-list-item-content>
-            <v-list-item-title>
+          <v-list-item-content :class="{'pt-1': enumDense, 'pb-0': enumDense, 'pt-2': !enumDense, 'pb-2': !enumDense}">
+            <v-list-item-title :class="{'font-weight-bold': important}">
               {{ value | cellValues(field) }}
             </v-list-item-title>
           </v-list-item-content>
@@ -259,14 +346,39 @@
 
 <i18n lang="yaml">
 fr:
+  hide: Masquer cette colonne
+  sortAsc: Tri ascendant
+  sortDesc: Tri descendant
+  filter: "Filtrer :"
   applyFilter: Appliquer le filtre
+  info: "Informations :"
+  fixLeft: "Fixer la colonne à gauche"
+  showHelp: "Afficher la description"
 en:
+  hide: Hide this column
+  sortAsc: Ascending sort
+  sortDesc: Descending sort
+  filter: "Filter:"
   applyFilter: Apply filter
+  info: "Information:"
+  fixLeft: "Fix the column to the left"
+  showHelp: "Show description"
 </i18n>
 
 <script>
+
 export default {
-  props: ['field', 'filterHeight', 'filters'],
+  props: {
+    header: { type: Object, required: true },
+    filters: { type: Array, required: true },
+    filterHeight: { type: Number, required: true },
+    pagination: { type: Object, required: true },
+    fixedCol: { type: String, default: null },
+    activator: { type: String, required: true },
+    noFix: { type: Boolean, default: false },
+    localEnum: { type: Array, required: false, default: null },
+    closeOnFilter: { type: Boolean, default: false }
+  },
   data () {
     return {
       showMenu: false,
@@ -276,13 +388,36 @@ export default {
       equalsBool: null,
       lte: null,
       gte: null,
-      editDate: null
+      editDate: null,
+      showHelp: false
     }
   },
   computed: {
+    field () {
+      return this.header.field
+    },
+    fullEnum () {
+      if (!this.showEnum) return
+      const fullEnum = []
+      if (this.localEnum) {
+        for (const value of this.localEnum) {
+          fullEnum.push({ value, important: true })
+        }
+      }
+      if (this.field.enum) {
+        for (const value of this.field.enum.slice().sort()) {
+          if (!this.localEnum || !this.localEnum.includes(value)) fullEnum.push({ value })
+        }
+      }
+      return fullEnum
+    },
     showEnum () {
       if (this.field['x-capabilities'] && this.field['x-capabilities'].index === false) return false
+      if (this.localEnum) return true
       return this.field.enum && this.field['x-cardinality'] > 1
+    },
+    enumDense () {
+      return this.showEnum && this.fullEnum.length > 4
     },
     showEquals () {
       if (this.showEnum) return false
@@ -363,7 +498,7 @@ export default {
     },
     emitFilter (filter, close = true) {
       this.$emit('filter', filter)
-      if (close) {
+      if (close || this.closeOnFilter) {
         this.showMenu = false
       }
     },

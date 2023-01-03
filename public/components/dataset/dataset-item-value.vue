@@ -14,53 +14,69 @@
     <template v-else>
       <div
         v-if="field.type === 'string' && field.separator"
-        :style="`max-height: 40px; min-width: ${Math.min((itemValue + '').length, 50) * 6}px;`"
+        :style="`max-height: ${lineHeight}px;`"
       >
         <v-chip-group
           v-if="itemValue"
           style="max-width:500px;"
           show-arrows
+          :class="{'dense-value': dense}"
         >
-          <v-hover
+          <v-chip
             v-for="(value, i) in itemValue.split(field.separator).map(v => v.trim())"
-            v-slot="{ hover }"
             :key="i"
+            :class="{'my-0': true, 'pr-1': isFilterable(value) && dense, 'pr-2': isFilterable(value) && !dense}"
+            :color="hovered[value] ? 'primary' : 'default'"
+            :small="dense"
+            @click="$emit('filter', value)"
+            @mouseenter="hoverValue(value)"
+            @mouseleave="leaveValue(value)"
           >
-            <v-chip
-              :class="{'my-0': true, 'px-4': !hover, 'px-2': hover}"
-              :color="hover ? 'primary' : 'default'"
-              @click="addFilter(field.key, value)"
-            >
-              <span>
-                {{ value | cellValues(field, truncate) }}
-                <v-icon v-if="hover">mdi-filter-variant</v-icon>
-              </span>
-            </v-chip>
-          </v-hover>
+            <span>
+              {{ value | cellValues(field, truncate) }}
+              <v-icon
+                v-if="isFilterable(value)"
+                :style="{width: '14px'}"
+                :size="dense ? 14 : 18"
+              >{{ hovered[value] ? 'mdi-filter-variant' : '' }}</v-icon>
+            </span>
+          </v-chip>
         </v-chip-group>
       </div>
-      <v-hover
+
+      <div
         v-else
-        v-slot="{ hover }"
+        :style="`max-height: ${lineHeight}px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;`"
+        @mouseenter="hoverValue(itemValue)"
+        @mouseleave="leaveValue(itemValue)"
       >
-        <div :style="`max-height: 40px; min-width: ${Math.min((itemValue + '').length, 50) * 6}px;`">
-          <span>{{ itemValue | cellValues(field, truncate) }}</span>
-          <v-btn
-            v-if="hover && !item._tmpState && !filters.find(f => f.field.key === field.key) && isFilterable(itemValue)"
-            fab
-            x-small
-            color="primary"
-            style="right: 0px;top: 50%;transform: translate(0, -50%);z-index:100;"
-            absolute
-            @click="$emit('filter', itemValue)"
-          >
-            <v-icon>mdi-filter-variant</v-icon>
-          </v-btn>
-        </div>
-      </v-hover>
+        <span>
+          {{ itemValue | cellValues(field, truncate) }}
+        </span>
+        <v-btn
+          v-if="hovered[itemValue] && !item._tmpState && !filters.find(f => f.field.key === field.key) && isFilterable(itemValue)"
+          :fab="!dense"
+          :icon="dense"
+          x-small
+          color="primary"
+          style="right: 4px;top: 50%;transform: translate(0, -50%);z-index:100;background-color:white;"
+          absolute
+          :title="$t('filterValue')"
+          @click="$emit('filter', itemValue)"
+        >
+          <v-icon>mdi-filter-variant</v-icon>
+        </v-btn>
+      </div>
     </template>
   </div>
 </template>
+
+<i18n lang="yaml">
+fr:
+  filterValue: Filtrer les lignes qui ont la même valeur dans cette colonne
+en:
+  filterValue: Filter the lines that have the same value in this column
+</i18n>
 
 <script>
 export default {
@@ -68,7 +84,15 @@ export default {
     item: { type: Object, required: true },
     field: { type: Object, required: true },
     filters: { type: Array, required: false, default: () => ([]) },
-    truncate: { type: Number, default: 50 }
+    truncate: { type: Number, default: 50 },
+    lineHeight: { type: Number, default: 40 },
+    disableHover: { type: Boolean, default: false },
+    dense: { type: Boolean, default: false }
+  },
+  data () {
+    return {
+      hovered: {}
+    }
   },
   computed: {
     itemValue () {
@@ -89,11 +113,26 @@ export default {
       if (typeof value === 'string' && (value.length > 200 || value.startsWith('{'))) return false
       if (typeof value === 'string' && value.endsWith('...')) return false
       return true
+    },
+    hoverValue (value) {
+      if (this.disableHover) return
+      this._hoverTimeout = setTimeout(() => { this.$set(this.hovered, value, true) }, 60)
+    },
+    leaveValue (value) {
+      if (this.disableHover) return
+      if (this._hoverTimeout) {
+        clearTimeout(this._hoverTimeout)
+        delete this._hoverTimeout
+      }
+      this.$delete(this.hovered, value)
     }
   }
 }
 </script>
 
 <style>
-
+.v-chip-group.dense-value .v-slide-group__content {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
 </style>

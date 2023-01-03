@@ -6,7 +6,9 @@ module.exports = async (client, dataset, query, publicBaseUrl) => {
 
   if (query.collapse) {
     esQuery.collapse = { field: query.collapse }
-    esQuery.aggs = { totalCollapse: { cardinality: { field: query.collapse, precision_threshold: 40000 } } }
+    // number after which we accept that cardinality is approximative
+    const precisionThreshold = Number(query.precision_threshold ?? '40000')
+    esQuery.aggs = { totalCollapse: { cardinality: { field: query.collapse, precision_threshold: precisionThreshold } } }
   }
 
   const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body

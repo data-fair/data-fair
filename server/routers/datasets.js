@@ -87,7 +87,7 @@ function clean (publicUrl, dataset, query = {}, draft = false) {
     }
 
     if (dataset.schema && !select.includes('-previews')) {
-      dataset.previews = datasetUtils.previews(dataset)
+      dataset.previews = datasetUtils.previews(dataset, publicUrl)
     }
     if (!select.includes('-links')) findUtils.setResourceLinks(dataset, 'dataset', publicUrl)
     if (dataset.image && dataset.public && !select.includes('-thumbnail')) {

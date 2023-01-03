@@ -3,7 +3,10 @@
     class="fill-height dataset-item-card"
     outlined
   >
-    <v-card-title class="pb-0">
+    <v-card-title
+      v-if="labelField || item._thumbnail"
+      class="pb-0"
+    >
       <v-row class="ma-0">
         <v-avatar
           v-if="item._thumbnail"
@@ -20,35 +23,67 @@
         </h5>
       </v-row>
     </v-card-title>
-    <v-card-text class="py-1">
+    <v-card-text class="py-0 px-2">
       <div
-        v-if="item._highlight"
+        v-if="item._highlight && item._highlight['_file.content'] && item._highlight['_file.content'][0]"
         v-html="item._highlight['_file.content'][0].replace(/highlighted/g,'accent--text')"
       />
       <!--<div
         v-if="descriptionField && item[descriptionField.key]"
         :inner-html.prop="(item[descriptionField.key] + '')"
       />-->
-      <div style="flex: 1;" />
       <v-list
         dense
         class="transparent pt-0"
       >
-        <template v-for="field in otherFields">
-          <v-input
-            v-if="item[field.key] !== null && item[field.key] !== undefined && item[field.key] !== ''"
-            :key="field.key"
-            :label="field.title ? field.title : (field['x-originalName'] || field.key)"
-            hide-details
+        <template v-for="(header, i) in otherHeaders">
+          <v-lazy
+            v-if="item[header.value] !== null && item[header.value] !== undefined && item[header.value] !== ''"
+            :key="`input-${header.value}`"
+            height="40"
+            transition=""
+            style="cursor:pointer"
+            @mouseenter="hover(header.value)"
+            @mouseleave="leave(header.value)"
           >
-            <dataset-item-value
-              :item="item"
-              :field="field"
+            <v-input
+              :class="`dataset-item-card-value-${item._id}-${i}`"
+              :label="header.text"
+              hide-details
+              style="line-height:20px;"
+            >
+              <dataset-item-value
+                :item="item"
+                :field="header.field"
+                :filters="filters"
+                :truncate="truncate"
+                :disable-hover="true"
+                :dense="true"
+                @filter="filter => $emit('filter', {field, filter})"
+              />
+              <v-icon
+                v-if="hovered[header.value] || header.value === pagination.sortBy[0]"
+                style="position:absolute;top:12px;right:2px;"
+                :color="header.value === pagination.sortBy[0] ? 'primary' : 'default'"
+              >
+                <template v-if="header.value === pagination.sortBy[0] && !pagination.sortDesc[0]">mdi-sort-ascending</template>
+                <template v-else-if="header.value === pagination.sortBy[0] && pagination.sortDesc[0]">mdi-sort-descending</template>
+                <template v-else>mdi-menu-down</template>
+              </v-icon>
+            </v-input>
+            <dataset-table-header-menu
+              :activator="`.dataset-item-card-value-${item._id}-${i}`"
+              :header="header"
               :filters="filters"
-              :truncate="truncate"
-              @filter="filter => $emit('filter', {field, filter})"
+              :filter-height="filterHeight"
+              :pagination="pagination"
+              no-fix
+              close-on-filter
+              :local-enum="header.field.separator ? item[header.value].split(header.field.separator).map(v => v.trim()) : [item[header.value]]"
+              @filter="filter => $emit('filter', {header, filter})"
+              @hide="$emit('hide', header)"
             />
-          </v-input>
+          </v-lazy>
         </template>
       </v-list>
     </v-card-text>
@@ -62,20 +97,39 @@ export default {
   props: {
     item: { type: Object, required: true },
     filters: { type: Array, required: false, default: () => ([]) },
+    filterHeight: { type: Number, required: true },
+    headers: { type: Array, required: true },
     selectedFields: { type: Array, required: false, default: () => ([]) },
+    pagination: { type: Object, required: true },
     truncate: { type: Number, default: 50 }
+  },
+  data () {
+    return {
+      hovered: {}
+    }
   },
   computed: {
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['labelField', 'descriptionField']),
-    otherFields () {
-      return this.dataset.schema.filter(f => {
-        if (f['x-calculated']) return false
-        if (this.selectedFields.length && !this.selectedFields.includes(f.key)) return false
+    otherHeaders () {
+      return this.headers.filter(h => {
+        if (!h.field) return false
         // if (this.descriptionField && this.descriptionField.key === f.key) return false
-        if (this.labelField && this.labelField.key === f.key) return false
+        if (this.labelField && this.labelField.key === h.value) return false
         return true
       })
+    }
+  },
+  methods: {
+    hover (value) {
+      this._hoverTimeout = setTimeout(() => { this.$set(this.hovered, value, true) }, 60)
+    },
+    leave (value) {
+      if (this._hoverTimeout) {
+        clearTimeout(this._hoverTimeout)
+        delete this._hoverTimeout
+      }
+      this.$delete(this.hovered, value)
     }
   }
 }
@@ -85,12 +139,15 @@ export default {
 
 .dataset-item-card .v-input__slot {
   display: block;
+  overflow: hidden;
+  text-overflow:ellipsis;
 }
 
 .dataset-item-card .v-input__slot .v-label {
   font-size:12px;
   line-height: 16px;
   height: 16px;
-  bottom: -4px;
+  bottom: -2px;
+  white-space:nowrap;
 }
 </style>

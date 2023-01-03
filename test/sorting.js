@@ -11,13 +11,15 @@ describe('Sorting', () => {
     })
     await workers.hook('finalizer/restsort1')
 
-    await ax.post('/api/v1/datasets/restsort1/lines', { attr1: 'aaa', attr2: 1 })
-    await ax.post('/api/v1/datasets/restsort1/lines', { attr1: 'bbb', attr2: 2 })
-    await ax.post('/api/v1/datasets/restsort1/lines', { attr1: 'AAA', attr2: 3 })
-    await ax.post('/api/v1/datasets/restsort1/lines', { attr1: 'BBB', attr2: 4 })
-    await ax.post('/api/v1/datasets/restsort1/lines', { attr1: 'zzz', attr2: 5 })
-    await ax.post('/api/v1/datasets/restsort1/lines', { attr1: 'eee', attr2: 6 })
-    await ax.post('/api/v1/datasets/restsort1/lines', { attr1: 'ééé', attr2: 7 })
+    await ax.post('/api/v1/datasets/restsort1/_bulk_lines', [
+      { attr1: 'aaa', attr2: 1 },
+      { attr1: 'bbb', attr2: 2 },
+      { attr1: 'AAA', attr2: 3 },
+      { attr1: 'BBB', attr2: 4 },
+      { attr1: 'zzz', attr2: 5 },
+      { attr1: 'eee', attr2: 6 },
+      { attr1: 'ééé', attr2: 7 }
+    ])
     await workers.hook('finalizer/restsort1')
 
     let lines = await ax.get('/api/v1/datasets/restsort1/lines', { params: { sort: 'attr1' } })

@@ -189,6 +189,7 @@ exports.run = async () => {
 
     const nuxt = await require('./nuxt')()
     app.set('nuxt', nuxt.instance)
+    app.use(nuxt.trackEmbed)
     app.use(nuxt.render)
     app.set('ui-ready', true)
 

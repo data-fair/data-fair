@@ -1,6 +1,6 @@
 {
   "name": "data-fair",
-  "version": "3.49.0",
+  "version": "3.51.2",
   "description": "",
   "main": "server",
   "scripts": {
@@ -87,6 +87,7 @@
     "nuxt-webpack-optimisations": "^2.2.0",
     "nyc": "^15.1.0",
     "patch-package": "^6.4.7",
+    "perfect-scrollbar": "^1.5.5",
     "raw-loader": "^4.0.2",
     "reconnecting-websocket": "^4.4.0",
     "semver-extract": "^1.2.0",
@@ -188,6 +189,7 @@
     "streamsaver": "^2.0.6",
     "strip-bom-stream": "^4.0.0",
     "terser": "^5.15.0",
+    "throttle-debounce": "^5.0.0",
     "thumbor": "^0.1.5",
     "tmp-promise": "^2.1.1",
     "truncate-html": "^1.0.4",
