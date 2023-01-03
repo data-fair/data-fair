@@ -768,10 +768,10 @@ describe('REST datasets', () => {
       ]
     })
     let dataset = await workers.hook('finalizer/restcsv')
-    const bulkRes = (await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attr1,attr2,attr3,attr4
+    await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attr1,attr2,attr3,attr4
 line1,test1,test1,oui,2015-03-18T00:58:59
 line2,test1,test1,non,
-line3,test1,test1,true,`, { headers: { 'content-type': 'text/csv' } })).data
+line3,test1,test1,true,`, { headers: { 'content-type': 'text/csv' } })
     dataset = await workers.hook('finalizer/restcsv')
     assert.equal(dataset.count, 3)
     let lines = (await ax.get('/api/v1/datasets/restcsv/lines', { params: { sort: '_i' } })).data.results
