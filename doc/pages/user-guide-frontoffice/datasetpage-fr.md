@@ -37,18 +37,17 @@ Le tableau vous permet d'accéder aux 10 000 premières lignes du fichier.
 
 Il contient plusieurs sections :
 1. la recherche  
-2. les pages de navigations  
+2. le mode de visualisations des lignes
 3. le choix des colonnes  
 4. le téléchargement  
 5. les filtres sur une colonne  
 6. le filtre sur une valeur d'une colonne  
-7. la barre de navigation
 
 
 <img src="./images/user-guide-frontoffice/tableau-2.png"
      height="350" style="margin:15px auto;" />
 
-1. Les filtres sur les valeurs d'une colonne vous permettent de réaliser un filtre de type "égal à" ou "commence par" sur les colonnes avec du texte et de réaliser des filtres "supérieur ou égale à" ou "inferieur ou égal à" sur les colonnes avec des nombres. Vous pouvez réaliser plusieurs filtres. Le nombre de lignes filtrées est alors disponible sous la recherche.
+1. Les filtres sur les valeurs d'une colonne vous permettent de réaliser un filtre de type "égal à" ou "commence par" sur les colonnes avec du texte et de réaliser des filtres "supérieur ou égale à" ou "inferieur ou égal à" sur les colonnes avec des nombres ou des dates. Vous pouvez réaliser plusieurs filtres. Le nombre de lignes filtrées est alors disponible à coté de la recherche.
 2. Téléchargement des lignes filtrés sous différents formats.   
 Le téléchargement aux format XLSX, ODS et Geojson sont limités aux 10 000 premières lignes.
 
@@ -67,13 +66,12 @@ Le tableau en plein écran possède les même fonctionnalités que le tableau.
 <img src="./images/user-guide-frontoffice/tableau-full.png"
      height="300" style="margin:15px auto;" />
 
-1. la recherche  
-2. les pages de navigations  
-3. le choix des colonnes  
-4. le téléchargement  
-5. les filtres sur une colonne  
-6. le filtre sur une valeur d'une colonne  
-7. la barre de navigation  
+     1. la recherche  
+     2. le mode de visualisations des lignes
+     3. le choix des colonnes  
+     4. le téléchargement  
+     5. les filtres sur une colonne  
+     6. le filtre sur une valeur d'une colonne  
 
 <p></p>
 
