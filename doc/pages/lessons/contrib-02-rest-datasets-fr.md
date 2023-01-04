@@ -6,6 +6,8 @@ description : Créer un jeu de données éditable
 published: false
 ---
 
+Objectif : créer son premier jeu éditable avec le parcours simplifié
+
 Focus sur la création du schéma, explications sur les types, notamment au niveau du texte.
 
 Présenter le formulaire dans la page d'edition du dataset

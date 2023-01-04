@@ -7,6 +7,9 @@ published: false
 ---
 
 
+
+Objectif : Faire une demande de jeu de données géographique
+
 Bien expliquer les concepts, a quoi ca pourra servir et indiquer que ca sert dans les sections suivantes (config de visu, enrichissement)
 
 On peut parler des groupes aussi.

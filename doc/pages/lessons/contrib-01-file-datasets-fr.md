@@ -6,6 +6,8 @@ description : Créer un jeu de données avec un fichier
 published: false
 ---
 
+Objectif : Créer son premier jeu de données avec le parcours simplifié
+
 Tutoriel pour créer rapidement un jeu de données fichier et le mettre à jour.
 
 Mettre des liens vers le manuel back-office (exemple : formats de fichiers supportés)
