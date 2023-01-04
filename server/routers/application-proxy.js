@@ -246,7 +246,7 @@ ${await serviceWorkers.register()}
   const referer = req.headers.referer || req.headers.referrer
   if (referer) {
     const refererDomain = new URL(referer).hostname
-    const redirectUrl = new URL(`${req.publicBaseUrl}${req.url}`)
+    const redirectUrl = new URL(`${req.publicBaseUrl}${req.originalUrl}`)
     if (refererDomain !== redirectUrl.hostname && refererDomain !== redirectUrl.searchParams.get('referer')) {
       redirectUrl.searchParams.set('referer', refererDomain)
       const iframeRedirect = redirectUrl.href
