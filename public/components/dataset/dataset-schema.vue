@@ -6,7 +6,7 @@
           v-if="notCalculatedProperties"
           class="text-h6"
         >
-          {{ notCalculatedProperties.length.toLocaleString() }} colonne{{ notCalculatedProperties.length > 1 ? 's' : '' }}
+          {{ notCalculatedProperties.length.toLocaleString() }} {{ $t('column') }}{{ notCalculatedProperties.length > 1 ? 's' : '' }}
         </h3>
         <v-btn
           v-if="dataset.isRest && can('writeDescription')"
@@ -142,6 +142,7 @@ fr:
   cancel: Annuler
   validate: Valider
   sortProperties: Vous pouvez changer l'ordre des colonnes par glissé-déposé
+  column: colonne
 en:
   cancelChanges: Cancel modifications
   apply: Apply
@@ -152,6 +153,7 @@ en:
   cancel: Cancel
   validate: Validate
   sortProperties: You can sort the columns by drag and drop
+  column: column
 </i18n>
 
 <script>

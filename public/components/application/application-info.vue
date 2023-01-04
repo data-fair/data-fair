@@ -70,7 +70,7 @@
         :items="topics"
         item-text="title"
         item-key="id"
-        label="Thématiques"
+        :label="$t('topics')"
         multiple
         return-object
         @input="patch({topics: application.topics})"
@@ -104,11 +104,13 @@ fr:
   availableVersion: Version {version} disponible
   unknown: inconnue
   test: de test
+  topics: Thématiques
 en:
   version: version
   availableVersion: Version {version} available
   unknown: unknown
   test: test
+  topics: Topics
 </i18n>
 
 <script>

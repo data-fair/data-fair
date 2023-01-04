@@ -342,7 +342,7 @@ en:
   labelHelp: Short label of the column used in all data applications, the key will be used if you leave this empty.
   description: Description
   descriptionHelp: A markdown or HTML content that will be used to describe this column to the users of data applications and API documentations.
-  distinctValues: Number of istinct values
+  distinctValues: Number of distinct values
   distinctValuesHelp: approximative in the case of a large dataset
   values: "Values: "
   sep: Separator
@@ -354,7 +354,7 @@ en:
   "singleline": "text"
   "textarea": "long text"
   "markdown": "formatted text"
-  group: Groupe
+  group: Group
   groupHelp: Groups help selecting columns. Particularly useful whan there are many columns.
   ignoreDetection: Ignore type detection
   ignoreDetectionHelp: If you check this box the automatic detection of type will be disabled and the column will be processed as a simple string.

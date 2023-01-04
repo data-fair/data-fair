@@ -12,19 +12,19 @@
           v-bind="attrs"
           v-on="on"
         >
-          Ajouter une clé d'API
+          {{ $t('addApiKey') }}
         </v-btn>
       </template>
       <v-card data-iframe-height>
         <v-card-title primary-title>
-          Ajout d'une nouvelle clé d'API
+          {{ $t('addNewApiKey') }}
         </v-card-title>
         <v-card-text>
           <v-form v-model="newApiKeyValid">
             <v-text-field
               v-model="newApiKey.title"
               :rules="[v => !!v || '']"
-              label="Titre"
+              :label="$t('title')"
               required
               hide-details="auto"
             />
@@ -34,7 +34,7 @@
               background-color="admin"
               color="white"
               dark
-              label="Clé de type super-administrateur "
+              :label="$t('superadminKey')"
               hide-details="auto"
             />
             <v-checkbox
@@ -43,7 +43,7 @@
               background-color="admin"
               color="white"
               dark
-              label="Clé permettant de travailler dans le contexte d'autres comptes (nécessaire pour configurer le service de traitements périodiques)"
+              :label="$t('asAccountKey')"
               hide-details="auto"
             />
             <template v-if="filteredScopes.length > 1">
@@ -65,14 +65,14 @@
             text
             @click="createMenu = false"
           >
-            Annuler
+            {{ $t('cancel') }}
           </v-btn>
           <v-btn
             :disabled="!newApiKeyValid"
             color="primary"
             @click="addApiKey"
           >
-            Ajouter
+            {{ $t('add') }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -103,31 +103,31 @@
                 :value="!!apiKey.clearKey"
                 type="warning"
               >
-                Cette clé secrète apparait en clair car vous venez de la créer. Notez là, elle ne sera pas lisible par la suite.
+                {{ $t('newKeyAlert') }}
               </v-alert>
               <v-alert
                 :value="!!apiKey.adminMode"
                 type="warning"
               >
-                Cette clé est de type super-administrateur
+                {{ $t('superadminKeyAlert') }}
               </v-alert>
               <v-alert
                 :value="!!apiKey.asAccount"
                 type="warning"
               >
-                Cette clé permet de travailler dans le contexte d'autres comptes
+                {{ $t('asAccountKeyAlert') }}
               </v-alert>
               <p v-if="!!apiKey.clearKey">
-                Clé secrète : {{ apiKey.clearKey }}
+                {{ $t('secretKey') }} : {{ apiKey.clearKey }}
               </p>
-              <p>Portée : {{ apiKey.scopes.map(scope => scopes.find(s => s.value === scope).text).join(' - ') }}</p>
+              <p>{{ $t('scope') }} }} : {{ apiKey.scopes.map(scope => scopes.find(s => s.value === scope).text).join(' - ') }}</p>
             </v-card-text>
             <v-card-actions>
               <v-spacer />
               <confirm-menu
                 yes-color="warning"
-                tooltip="supprimer cette clé d'API"
-                :text="`Voulez vous vraiment supprimer cette clé d'API ? Si des programmes l'utilisent ils cesseront de fonctionner.`"
+                :tooltip="$t('deleteKey')"
+                :text="$t('deleteKeyDetails')"
                 @confirm="removeApiKey(rowIndex)"
               />
             </v-card-actions>
@@ -137,6 +137,39 @@
     </v-container>
   </div>
 </template>
+
+<i18n lang="yaml">
+fr:
+  addApiKey: Ajouter une clé d'API
+  addNewApiKey: Ajout d'une nouvelle clé d'API
+  title: Titre
+  superadminKey: Clé de type super-administrateur
+  asAccountKey: Clé permettant de travailler dans le contexte d'autres comptes (nécessaire pour configurer le service de traitements périodiques)
+  cancel: Annuler
+  add: Ajouter
+  newKeyAlert: Cette clé secrète apparait en clair car vous venez de la créer. Notez là, elle ne sera pas lisible par la suite.
+  superadminKeyAlert: Cette clé est de type super-administrateur
+  asAccountKeyAlert: Cette clé permet de travailler dans le contexte d'autres comptes
+  secretKey: Clé secrète
+  scope: Portée
+  deleteKey: Supprimer cette clé d'API
+  deleteKeyDetails: Voulez vous vraiment supprimer cette clé d'API ? Si des programmes l'utilisent ils cesseront de fonctionner.
+en:
+  addApiKey: Add an API key
+  addNewApiKey: Add a new API key
+  title: Title
+  superadminKey: Super-admin key type
+  asAccountKey: Key to work in the context of other accounts (required to configure periodic processings service)
+  cancel: Cancel
+  add: Add
+  newKeyAlert: You can view this key because you just created it. Store it in a secure place, it won't be readable again on this platform.
+  superadminKeyAlert: Super-admin key type
+  asAccountKeyAlert: Key to work in the context of other accounts
+  secretKey: Secret key
+  scope: Scope
+  deleteKey: Delete this API key
+  deleteKeyDetails: Do you really want to delete this API key ? Softwares or scripts that use this key won't work anymore.
+</i18n>
 
 <script>
 

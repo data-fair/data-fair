@@ -132,7 +132,7 @@ fr:
 en:
   noApp: You haven't configured any application yet.
   noResult: No result matches your search criterias.
-  configureApp: Configure a application
+  configureApp: Configure an application
   dataset: Dataset
   service: Service
   baseApp: Application

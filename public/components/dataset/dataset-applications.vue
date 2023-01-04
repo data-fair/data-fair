@@ -51,7 +51,7 @@ fr:
 en:
   noApp: You haven't configured a application for this dataset yet. Only the validated configurations appear here.
   reorder: You can change the orger of the applications using drag and drop.
-  configureApp: Configure a application
+  configureApp: Configure an application
 </i18n>
 
 <script>

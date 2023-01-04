@@ -4,12 +4,12 @@
       <v-col>
         <template v-if="authorized">
           <h2 class="mb-2">
-            Statistiques
+            {{ $t('statistics') }}
           </h2>
           <v-sheet :loading="!stats">
             <v-data-table
               :loading="!stats"
-              loading-text="Chargement en cours..."
+              :loading-text="$t('loading')"
               :headers="headers"
               :items="stats ? [stats] : []"
               hide-default-footer
@@ -19,19 +19,19 @@
                   <td>
                     {{ item.limits.nb_datasets.consumption.toLocaleString() }}
                     <template v-if="item.limits.nb_datasets.limit !== -1">
-                      / {{ item.limits.nb_datasets.limit.toLocaleString() }} autorisés
+                      / {{ item.limits.nb_datasets.limit.toLocaleString() }} {{ $t('allowed') }}
                     </template>
                   </td>
                   <td>
                     {{ item.limits.store_bytes.consumption | bytes($i18n.locale) }}
                     <template v-if="item.limits.store_bytes.limit !== -1">
-                      / {{ item.limits.store_bytes.limit | bytes($i18n.locale) }} autorisé
+                      / {{ item.limits.store_bytes.limit | bytes($i18n.locale) }} {{ $t('allowed') }}
                     </template>
                   </td>
                   <td>
                     {{ item.limits.indexed_bytes.consumption | bytes($i18n.locale) }}
                     <template v-if="item.limits.indexed_bytes.limit !== -1">
-                      / {{ item.limits.indexed_bytes.limit | bytes($i18n.locale) }} autorisé
+                      / {{ item.limits.indexed_bytes.limit | bytes($i18n.locale) }} {{ $t('allowed') }}
                     </template>
                   </td>
                   <td>{{ item.applications.toLocaleString() }}</td>
@@ -48,7 +48,7 @@
           />
 
           <h2 class="my-2">
-            Détail par jeu de données
+            {{ $t('details') }}
           </h2>
           <storage-details
             v-if="datasets"
@@ -66,6 +66,19 @@
     </v-row>
   </v-container>
 </template>
+
+<i18n lang="yaml">
+fr:
+  statistics: Statistiques
+  details: Détail par jeu de données
+  loading: Chargement en cours...
+  allowed: autorisés
+en:
+  statistics: Statistics
+  details: Details per dataset
+  loading: Loading...
+  allowed: allowed
+</i18n>
 
 <script>
 import { mapState, mapGetters } from 'vuex'

@@ -5,7 +5,7 @@
       class="mb-3"
       @click="showDialog = true"
     >
-      Ajouter une licence
+      {{ $t('addLicense') }}
     </v-btn>
 
     <v-list
@@ -25,7 +25,7 @@
           <v-btn
             color="warning"
             icon
-            title="Supprimer cette licence"
+            :title="$t('deleteLicense')"
             @click="removeLicense(rowIndex)"
           >
             <v-icon>mdi-delete</v-icon>
@@ -40,7 +40,7 @@
     >
       <v-card outlined>
         <v-card-title primary-title>
-          Ajout d'une nouvelle license
+          {{ $t('addNewLicense') }}
         </v-card-title>
         <v-card-text>
           <v-form v-model="newLicenseValid">
@@ -64,20 +64,35 @@
             text
             @click="showDialog = false"
           >
-            Annuler
+            {{ $t('cancel') }}
           </v-btn>
           <v-btn
             :disabled="!newLicenseValid"
             color="primary"
             @click="addLicense"
           >
-            Ajouter
+            {{ $t('add') }}
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
   </div>
 </template>
+
+<i18n lang="yaml">
+fr:
+  addLicense: Ajouter une licence
+  deleteLicense: Supprimer cette licence
+  addNewLicense: Ajout d'une nouvelle license
+  cancel: Annuler
+  add: Ajouter
+en:
+  addLicense: Add a license
+  deleteLicense: Delete this license
+  addNewLicense: Add a new license
+  cancel: Cancel
+  add: Add
+</i18n>
 
 <script>
 

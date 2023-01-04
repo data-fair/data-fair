@@ -24,7 +24,7 @@
 fr:
   save: Enregistrer
 en:
-  save Save
+  save: Save
 </i18n>
 
 <script>

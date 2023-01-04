@@ -128,7 +128,7 @@ fr:
   missingConcept: "Il faut associer le concept suivant à une de vos colonnes : ${concept}"
 en:
   message: Extend your dataset with new columns taken from master-data sources.
-  addExtensions: Add an extension
+  addExtension: Add an extension
   additionalCols: Additional columns
   allColsOut: All the columns
   confirmDeleteTooltip: Delete the extension

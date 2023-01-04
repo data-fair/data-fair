@@ -13,7 +13,7 @@ fr:
   breadcrumb: Configurer une application
 en:
   apps: Applications
-  breadcrumb: Configure a application
+  breadcrumb: Configure an application
 </i18n>
 
 <script>

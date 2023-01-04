@@ -51,7 +51,6 @@ export default {
   },
   methods: {
     async change () {
-      console.log('change !')
       await new Promise(resolve => setTimeout(resolve, 10))
       if (this.formValid) {
         this.settings.datasetsMetadata = JSON.parse(JSON.stringify(this.wrapper.datasetsMetadata))
