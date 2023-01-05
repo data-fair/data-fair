@@ -923,7 +923,7 @@ const updateDataset = asyncWrap(async (req, res) => {
     } else {
       Object.assign(dataset, req.body)
     }
-    if (req.isNewDataset) permissions.initDatasetPermissions(dataset, req.user)
+    if (req.isNewDataset) permissions.initResourcePermissions(dataset, req.user)
     await db.collection('datasets').replaceOne({ id: req.params.datasetId }, dataset)
     if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'dataset-created' }, 'dataset')
     else if (!dataset.isRest && !dataset.isVirtual) {
