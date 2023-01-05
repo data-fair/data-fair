@@ -20,15 +20,7 @@
               v-for="(site,i) in publicationSites"
               :key="i"
             >
-              <v-list-item-action>
-                <v-checkbox
-                  :input-value="application.publicationSites.includes(`${site.type}:${site.id}`)"
-                  :disabled="!can('writePublicationSites') || (activeAccount.department && activeAccount.department !== site.department)"
-                  @change="toggle(site)"
-                />
-              </v-list-item-action>
-
-              <v-list-item-content>
+              <v-list-item-content style="overflow:visible;">
                 <v-list-item-title>
                   <v-icon
                     v-if="site.private"
@@ -46,13 +38,36 @@
                   <span>{{ application.owner.name }}</span>
                   <span v-if="site.department"> - {{ site.departmentName || site.department }}</span>
                 </v-list-item-subtitle>
-                <v-list-item-subtitle>
-                  <a
-                    v-if="site.applicationUrlTemplate && application.publicationSites.includes(`${site.type}:${site.id}`)"
-                    :href="site.applicationUrlTemplate.replace('{id}', application.id)"
-                  >
-                    {{ site.applicationUrlTemplate.replace('{id}', application.id) }}
+                <v-list-item-subtitle
+                  v-if="site.datasetUrlTemplate && application.publicationSites.includes(`${site.type}:${site.id}`)"
+                  class="mb-2"
+                >
+                  <a :href="site.datasetUrlTemplate.replace('{id}', application.id)">
+                    {{ site.datasetUrlTemplate.replace('{id}', application.id) }}
                   </a>
+                </v-list-item-subtitle>
+                <v-list-item-subtitle>
+                  <v-row class="my-0">
+                    <v-switch
+                      hide-details
+                      dense
+                      :input-value="application.publicationSites.includes(`${site.type}:${site.id}`)"
+                      :disabled="!canPublish(site) && !(site.settings && site.settings.staging)"
+                      :label="$t('published')"
+                      class="mt-0 ml-6"
+                      @change="togglePublicationSites(site)"
+                    />
+                    <v-switch
+                      v-if="application.owner.type === 'organization' && !(site.settings && site.settings.staging) && !application.publicationSites.includes(`${site.type}:${site.id}`)"
+                      hide-details
+                      dense
+                      :input-value="application.requestedPublicationSites.includes(`${site.type}:${site.id}`)"
+                      :disabled="application.publicationSites.includes(`${site.type}:${site.id}`) || canPublish(site) || !canRequestPublication(site)"
+                      :label="$t('publicationRequested')"
+                      class="mt-0 ml-6"
+                      @change="toggleRequestedPublicationSites(site)"
+                    />
+                  </v-row>
                 </v-list-item-subtitle>
               </v-list-item-content>
             </v-list-item>
@@ -82,11 +97,15 @@ fr:
   publishThisApp: Publiez cette application sur un ou plusieurs de vos portails.
   preferLargeDisplay: privilégier un rendu large
   preferLargeDisplayTutorial: En cochant l'option ci-dessous vous indiquez aux portails que cette application est à afficher sur une largeur importante autant que possible. Ceci pourra changer l'affichage dans les pages des jeux de données ou les tableaux de bords par exemple.
+  published: publié
+  publicationRequested: publication demandée par un contributeur
 en:
   noPublicationSite: You haven't configured a portal to publish this application on.
   publishThisApp: Publish this application on one or more of your portals.
   preferLargeDisplay: prefer a large display
   preferLargeDisplayTutorial: By checking the following option you indicate to the portals that this application should be rendered on a large section of page as much as possible. This will change the rendering in dataset pages and dashboards.
+  published: published
+  publicationRequested: publication requested by a contributor
 </i18n>
 
 <script>
@@ -116,6 +135,12 @@ export default {
         this.application.publicationSites.push(key)
       }
       this.patch({ publicationSites: this.application.publicationSites })
+    },
+    canPublish (site) {
+      return this.can('writePublicationSites') && (!this.activeAccount.department || this.activeAccount.department === site.department)
+    },
+    canRequestPublication (site) {
+      return this.can('writeDescription')
     }
   }
 }
