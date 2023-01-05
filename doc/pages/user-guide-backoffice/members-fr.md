@@ -41,7 +41,9 @@ Les organisations suivent certaines règles :
 <p>
 </p>
 
-Chaque rôle possède des permissions différentes :
+Chaque rôle possède des permissions différentes.  
+
+Permissions par défaut de Data Fair :
 
 | Actions | Utilisateur | Contributeur | Administrateur |
 | ----- | ---- | ---- | ---- |
@@ -60,5 +62,8 @@ Chaque rôle possède des permissions différentes :
 L'administration d'un jeu de données (ou une visualisation) consiste dans la suppression et la visibilité.  
 L'administrateur est le seul à pouvoir rendre public ou supprimer un jeu de données (ou une visualisation).  
 Le rôle utilisateur est utilisé pour donner accès aux ressources privées de l'organisation.  
+
+Les permissions pour chaque ressource peuvent être modifiées par les administrateurs de l'organisation.  
+Un administrateur peut supprimer l'accès aux ressources pour les contributeurs ou leur donner les droits de publication sur certains portail comme par exemple un portail de préproduction avant qu'il valide la demande de publication sur un portail en production.
 
 Si vous désirez avoir plus de permissions dans une de vos organisations, contactez un administrateur de cette organisation.

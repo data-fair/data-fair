@@ -43,7 +43,9 @@ Organizations follow this rules:
 <p>
 </p>
 
-Each role has different permissions:
+Each role has different permissions.
+
+Defaut permissions :
 
 | Actions | User  | Contributor | Administrator  |
 | ----- | ---- | ---- | ---- |
@@ -61,5 +63,8 @@ Each role has different permissions:
 Dataset or visualization administration is about deletion and visibility.  
 The administrator is the only one who can publish or delete a dataset or a visualization.  
 The user role is used to provide access to private organization resources.
+
+The permissions for each resource can be modified by the organization's administrators.  
+An admin can remove access to resources for contributors or give them publishing rights on certain portals such as a pre-production portal before he validates the publishing request on a production portal.
 
 If you need more permissions in your organizations, contact an administrator of the organization.
