@@ -1,6 +1,6 @@
 {
   "name": "data-fair",
-  "version": "3.51.2",
+  "version": "3.51.4",
   "description": "",
   "main": "server",
   "scripts": {
@@ -169,7 +169,7 @@
     "object-sizeof": "^1.6.3",
     "ogr2ogr": "^2.1.2",
     "original-url": "^1.2.3",
-    "parse5": "^6.0.1",
+    "parse5": "^7.1.2",
     "piscina": "^3.2.0",
     "proj4": "^2.7.2",
     "prom-client": "^14.0.1",

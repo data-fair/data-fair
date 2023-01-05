@@ -8,6 +8,7 @@ const axios = require('../utils/axios')
 const parse5 = require('parse5')
 const pump = require('util').promisify(require('pump'))
 const CacheableLookup = require('cacheable-lookup')
+const { minify } = require('terser')
 const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
 const permissions = require('../utils/permissions')
@@ -114,6 +115,21 @@ router.get('/_htmlcache', (req, res, next) => {
 })
 
 // Proxy for applications
+const iframeRedirectSrc = `
+function inIframe () {
+  try {
+    return window.self !== window.top;
+  } catch (e) {
+    return true;
+  }
+}
+if (inIframe()) {
+  if (window.history && window.history.replaceState) window.history.replaceState(null, '', "__IFRAME_REDIRECT__");
+  else if (window.location.replace) window.location.replace("__IFRAME_REDIRECT__");
+  else window.location.href = "__IFRAME_REDIRECT__";
+}
+`
+let minifiedIframeRedirectSrc
 router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
 
@@ -201,13 +217,27 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   const body = html.childNodes.find(c => c.tagName === 'body')
   if (!head || !body) throw new Error(req.__('errors.brokenHTML'))
 
+  const pushHeadNode = (node, text) => {
+    node.parentNode = head
+    node.namespaceURI = 'http://www.w3.org/1999/xhtml'
+    if (text) {
+      const textNode = {
+        nodeName: '#text',
+        value: text,
+        parentNode: node
+      }
+      node.childNodes = [textNode]
+    }
+    head.childNodes.push(node)
+  }
+
   // Data-fair generates a manifest per app
   const manifestUrl = new URL(req.application.exposedUrl).pathname + '/manifest.json'
   const manifest = head.childNodes.find(c => c.attrs && c.attrs.find(a => a.name === 'rel' && a.value === 'manifest'))
   if (manifest) {
     manifest.attrs.find(a => a.name === 'href').value = manifestUrl
   } else {
-    head.childNodes.push({
+    pushHeadNode({
       nodeName: 'link',
       tagName: 'link',
       attrs: [
@@ -219,7 +249,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   }
 
   // make sure the referer is available when calling APIs and remote services from inside applications
-  head.childNodes.push({
+  pushHeadNode({
     nodeName: 'meta',
     tagName: 'meta',
     attrs: [
@@ -228,52 +258,30 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
     ]
   })
 
-  // Data-fair also generates a basic service-workers configuration per app
-  head.childNodes.push({
-    nodeName: 'script',
-    tagName: 'script',
-    attrs: [{ name: 'type', value: 'text/javascript' }],
-    childNodes: [{
-      nodeName: '#text',
-      value: `
-// service worker registration
-${await serviceWorkers.register()}
-`
-    }]
-  })
-
   // Data-fair manages tracking of original referer
   const referer = req.headers.referer || req.headers.referrer
+  let iframeRedirect
   if (referer) {
     const refererDomain = new URL(referer).hostname
-    const redirectUrl = new URL(`${req.publicBaseUrl}${req.url}`)
-    if (refererDomain !== redirectUrl.hostname && refererDomain !== redirectUrl.searchParams.get('referer')) {
-      redirectUrl.searchParams.set('referer', refererDomain)
-      const iframeRedirect = redirectUrl.href
-      head.childNodes.push({
+    const iframeRedirectUrl = new URL(`${req.publicBaseUrl}${req.originalUrl}`)
+    if (refererDomain !== iframeRedirectUrl.hostname && refererDomain !== iframeRedirectUrl.searchParams.get('referer')) {
+      iframeRedirectUrl.searchParams.set('referer', refererDomain)
+      iframeRedirect = iframeRedirectUrl.href
+      minifiedIframeRedirectSrc = minifiedIframeRedirectSrc || (await minify(iframeRedirectSrc, { toplevel: true, compress: true, mangle: true })).code
+      pushHeadNode({
         nodeName: 'script',
         tagName: 'script',
-        attrs: [{ name: 'type', value: 'text/javascript' }],
-        childNodes: [{
-          nodeName: '#text',
-          value: `
-    // redirect inside the iframe to track original referer ${refererDomain}
-    function inIframe () {
-      try {
-        return window.self !== window.top
-      } catch (e) {
-        return true
-      }
-    }
-    if (inIframe()) {
-      if (window.location.replace) window.location.replace("${iframeRedirect}");
-      else window.location.href = "${iframeRedirect}"
-    }
-    `
-        }]
-      })
+        attrs: [{ name: 'type', value: 'text/javascript' }]
+      }, minifiedIframeRedirectSrc.replace('__IFRAME_REDIRECT__', iframeRedirect))
     }
   }
+
+  // Data-fair also generates a basic service-workers configuration per app
+  pushHeadNode({
+    nodeName: 'script',
+    tagName: 'script',
+    attrs: [{ name: 'type', value: 'text/javascript' }]
+  }, await serviceWorkers.register())
 
   // add @koumoul/v-iframe/content-window.min.js to support state sync with portals, etc.
   if (baseApp.meta['df:sync-state'] === 'true') {
@@ -283,7 +291,8 @@ ${await serviceWorkers.register()}
       attrs: [
         { name: 'type', value: 'text/javascript' },
         { name: 'src', value: `https://cdn.jsdelivr.net/npm/@koumoul/v-iframe@${vIframeVersion}/content-window.min.js` }
-      ]
+      ],
+      parentNode: body
     })
   }
 
