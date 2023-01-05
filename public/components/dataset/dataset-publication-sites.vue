@@ -170,15 +170,6 @@ export default {
   },
   methods: {
     ...mapActions('dataset', ['patch']),
-    toggle (site, key) {
-      const siteKey = `${site.type}:${site.id}`
-      if (this.dataset[key].includes(siteKey)) {
-        this.dataset[key] = this.dataset[key].filter(s => s !== siteKey)
-      } else {
-        this.dataset[key].push(siteKey)
-      }
-      this.patch({ [key]: this.dataset[key] })
-    },
     togglePublicationSites (site) {
       const siteKey = `${site.type}:${site.id}`
       if (this.dataset.publicationSites.includes(siteKey)) {

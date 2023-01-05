@@ -80,7 +80,8 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
     'base-application': 'url',
     dataset: 'configuration.datasets.href',
     topics: 'topics.id',
-    publicationSites: 'publicationSites'
+    publicationSites: 'publicationSites',
+    requestedPublicationSites: 'requestedPublicationSites'
   }
   const facetFields = {
     ...filterFields,
@@ -196,7 +197,7 @@ const setFullUpdatedAt = asyncWrap(async (req, res, next) => {
 
 router.use('/:applicationId/permissions', readApplication, permissions.router('applications', 'application', async (req, patchedApplication) => {
   // this callback function is called when the resource becomes public
-  await publicationSites.onPublic(req.app.get('db'), patchedApplication)
+  await publicationSites.onPublic(req.app.get('db'), patchedApplication, 'application')
 }))
 
 // retrieve a application by its id
@@ -266,7 +267,7 @@ router.patch('/:applicationId',
     patch.updatedAt = moment().toISOString()
     patch.updatedBy = { id: req.user.id, name: req.user.name }
 
-    await publicationSites.applyPatch(db, req.application, { ...req.application, ...patch }, req.user, 'applications')
+    await publicationSites.applyPatch(db, req.application, { ...req.application, ...patch }, req.user, 'application')
 
     const patchedApplication = (await db.collection('applications')
       .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })).value

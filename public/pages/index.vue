@@ -144,7 +144,7 @@
             cols="12"
             sm="4"
           >
-            <dashboard-requested-publications />
+            <dashboard-datasets-requested-publications />
           </v-col>
           <v-col
             cols="12"
@@ -189,6 +189,20 @@
             <dashboard-storage :stats="stats" />
           </v-col>
         </v-row>-->
+        <v-row class="mx-0 mt-6">
+          <h2
+            v-t="'manageApplications'"
+            class="text-h5"
+          />
+        </v-row>
+        <v-row>
+          <v-col
+            cols="12"
+            sm="4"
+          >
+            <dashboard-applications-requested-publications />
+          </v-col>
+        </v-row>
       </template>
     </template>
   </v-container>
@@ -227,6 +241,7 @@ fr:
   createApp: Configurer une nouvelle application
   manageDatasets: Gérez les jeux de données
   administrate: Administrez
+  manageApplications: Gérez les applications
 en:
   breadcrumb: Share and visualize data
   description: Easily enrich and publish your data. You can use it in dedicated applications and make it available to other people both openly or privately.
@@ -258,6 +273,7 @@ en:
   createApp: Configure an application
   manageDatasets: Manage datasets
   administrate: Administrate
+  manageApplications: Gérez les applications
 </i18n>
 
 <script>

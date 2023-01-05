@@ -52,8 +52,24 @@
       <v-select
         v-model="facetsValues.publicationSites"
         multiple
-        :label="$t('portals')"
+        :label="$t('publicationSites')"
         :items="facets.publicationSites"
+        :item-value="item => item.value || 'null'"
+        :item-text="item => publicationSiteText(item)"
+        outlined
+        dense
+        hide-details
+        rounded
+        class="mb-4"
+      />
+    </template>
+
+    <template v-if="facets.requestedPublicationSites && facets.requestedPublicationSites.find(item => item.value !== null)">
+      <v-select
+        v-model="facetsValues.requestedPublicationSites"
+        multiple
+        :label="$t('requestedPublicationSites')"
+        :items="facets.requestedPublicationSites.filter(item => !item.value || (activeAccountPublicationSitesById && activeAccountPublicationSitesById[item.value]))"
         :item-value="item => item.value || 'null'"
         :item-text="item => publicationSiteText(item)"
         outlined
@@ -87,13 +103,15 @@ fr:
   owner: Propriétaire
   visibility: Visibilité
   topics: Thématiques
-  portals: Portails
+  publicationSites: Portails
+  requestedPublicationSites: Publications à valider
   app: Modèle d'application
 en:
   owner: Owner
   visibility: Visibility
   topics: Topics
-  portals: Portals
+  publicationSites: Portals
+  requestedPublicationSites: Requested publications
   app: Application model
 </i18n>
 

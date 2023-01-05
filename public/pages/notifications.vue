@@ -49,13 +49,13 @@
       <v-iframe :src="requestedDatasetPublicationSitesUrl" />
     </div>
 
-    <!--<div v-if="requestedAppPublicationSitesUrl">
+    <div v-if="requestedApplicationPublicationSitesUrl">
       <h2
         v-t="'appsPubRequested'"
         class="mt-8 mb-2 text-h5"
       />
-      <v-iframe :src="requestedAppPublicationSitesUrl" />
-    </div>-->
+      <v-iframe :src="requestedApplicationPublicationSitesUrl" />
+    </div>
   </v-container>
 </template>
 
@@ -68,11 +68,11 @@ fr:
   appsUserEvents: Événements des applications de votre compte personnel
   pubsEvents: "Événements de publication sur le portail {title}"
   datasetsPubRequested: "Demandes de publications de jeux de données"
-  appsPubRequested: "Demandes de publications de applications"
+  appsPubRequested: "Demandes de publications d'applications"
   datasetPublished: "Un jeu de données a été publié sur {title}"
   datasetPublishedTopic: "Un jeu de données a été publié dans la thématique {topic} sur {title}"
   datasetPublicationRequested: "Un contributeur demande de publier un jeu de données sur {title}"
-  appPublicationRequested: "Un contributeur demande de publier une application sur {title}"
+  applicationPublicationRequested: "Un contributeur demande de publier une application sur {title}"
 </i18n>
 
 <script>
@@ -138,20 +138,20 @@ export default {
       const titlesParam = titles.join(',')
       const urlTemplate = this.env.publicUrl + '/dataset/{id}'
       return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no`
-    }
-    /* requestedAppPublicationSitesUrl () {
+    },
+    requestedApplicationPublicationSitesUrl () {
       if (!this.settingsPublicationSites) return null
       const keys = []
       const titles = []
       this.settingsPublicationSites.forEach(p => {
-        keys.push(`data-fair:app-publication-requested:${p.type}:${p.id}`)
-        titles.push(this.$t('appPublicationRequested', { title: p.title || p.url || p.id }))
+        keys.push(`data-fair:application-publication-requested:${p.type}:${p.id}`)
+        titles.push(this.$t('applicationPublicationRequested', { title: p.title || p.url || p.id }))
       })
       const keysParam = keys.join(',')
       const titlesParam = titles.join(',')
       const urlTemplate = this.env.publicUrl + '/application/{id}'
       return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no`
-    } */
+    }
   },
   async mounted () {
     let publicationSitesUrl = 'api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id

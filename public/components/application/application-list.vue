@@ -97,6 +97,7 @@
               :filter-labels="{dataset: $t('dataset'), service: $t('service'), url: $t('baseApp'), owner: $t('owner')}"
               :filters="filters"
               :sorts="sorts"
+              :facets-values="facetsValues"
               type="applications"
               @apply="filtersInitialized=true; refresh()"
             />
@@ -158,7 +159,8 @@ export default {
       visibility: [],
       'base-application': [],
       topics: [],
-      publicationSites: []
+      publicationSites: [],
+      requestedPublicationSites: []
     },
     lastParams: null,
     graphicSvg: require('~/assets/svg/Graphics and charts_Monochromatic.svg?raw'),
@@ -226,7 +228,7 @@ export default {
         sort: 'createdAt:-1',
         ...fullFilters
       }
-      if (!append) params.facets = 'visibility,base-application,topics,publicationSites,owner'
+      if (!append) params.facets = 'visibility,base-application,topics,publicationSites,requestedPublicationSites,owner'
       if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
         this.lastParams = params
         this.loading = true

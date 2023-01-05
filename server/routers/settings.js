@@ -205,8 +205,8 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async (req, 
     notifications.subscribe(req, {
       ...baseSubscription,
       topic: {
-        key: `data-fair:app-publication-requested:${req.body.type}:${req.body.id}`,
-        title: `Un contributeur demande de publier une visualisation sur ${req.body.title || req.body.url || req.body.id}`
+        key: `data-fair:application-publication-requested:${req.body.type}:${req.body.id}`,
+        title: `Un contributeur demande de publier une application sur ${req.body.title || req.body.url || req.body.id}`
       },
       urlTemplate: config.publicUrl + '/application/{id}'
     })

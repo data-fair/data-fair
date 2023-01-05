@@ -46,13 +46,13 @@ exports.applyPatch = async (db, previousResource, resource, user, resourceType) 
       if (!user.adminMode && resource.owner.type === 'organization' && user.activeAccount.type === 'organization' && user.activeAccount.id === resource.owner.id && !publicationSiteInfo.department && user.activeAccount.department) {
         throw createError(403, 'publication site does not belong to user department')
       }
-      if (!publicationSiteInfo.settings?.staging && !permissions.can(resourceType, resource, 'writePublicationSites', user)) {
+      if (!publicationSiteInfo.settings?.staging && !permissions.can(resourceType + 's', resource, 'writePublicationSites', user)) {
         throw createError(403, 'publication site requires permission to publish')
       }
       const sender = { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
-      webhooks.trigger(db, 'dataset', resource, { type: `published:${publicationSite}` }, sender)
+      webhooks.trigger(db, resourceType, resource, { type: `published:${publicationSite}` }, sender)
       for (const topic of newTopics) {
-        webhooks.trigger(db, 'dataset', resource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender)
+        webhooks.trigger(db, resourceType, resource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender)
       }
     }
   }
@@ -62,7 +62,7 @@ exports.applyPatch = async (db, previousResource, resource, user, resourceType) 
       if (!user.adminMode && resource.owner.type === 'organization' && user.activeAccount.type === 'organization' && user.activeAccount.id === resource.owner.id && !publicationSiteInfo.department && user.activeAccount.department) {
         throw createError(403, 'publication site does not belong to user department')
       }
-      if (publicationSiteInfo && !publicationSiteInfo.settings?.staging && !permissions.can(resourceType, resource, 'writePublicationSites', user)) {
+      if (publicationSiteInfo && !publicationSiteInfo.settings?.staging && !permissions.can(resourceType + 's', resource, 'writePublicationSites', user)) {
         throw createError(403, 'publication site requires permission to unpublish')
       }
     }
@@ -73,7 +73,7 @@ exports.applyPatch = async (db, previousResource, resource, user, resourceType) 
       const publicationSiteInfo = await getPublicationSiteInfo(db, resource.owner, requestedPublicationSite)
       if (!publicationSiteInfo) throw createError(404, 'unknown publication site')
       const sender = { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
-      webhooks.trigger(db, 'dataset', resource, { type: `publication-requested:${requestedPublicationSite}`, body: `${resource.title || resource.id} - ${user.name}` }, sender)
+      webhooks.trigger(db, resourceType, resource, { type: `publication-requested:${requestedPublicationSite}`, body: `${resource.title || resource.id} - ${user.name}` }, sender)
     }
   }
   for (const topic of newTopics) {
@@ -83,18 +83,18 @@ exports.applyPatch = async (db, previousResource, resource, user, resourceType) 
         const publicationSiteInfo = await getPublicationSiteInfo(db, resource.owner, publicationSite)
         if (!publicationSiteInfo) throw createError(404, 'unknown publication site')
         const sender = { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
-        webhooks.trigger(db, 'dataset', resource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender)
+        webhooks.trigger(db, resourceType, resource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender)
       }
     }
   }
 }
 
 // this callback function is called when the resource becomes public
-exports.onPublic = (db, patchedResource) => {
+exports.onPublic = (db, patchedResource, resourceType) => {
   for (const publicationSite of patchedResource.publicationSites || []) {
-    webhooks.trigger(db, 'dataset', patchedResource, { type: `published:${publicationSite}` })
+    webhooks.trigger(db, resourceType, patchedResource, { type: `published:${publicationSite}` })
     for (const topic of patchedResource.topics || []) {
-      webhooks.trigger(db, 'dataset', patchedResource, { type: `published-topic:${publicationSite}:${topic.id}` })
+      webhooks.trigger(db, resourceType, patchedResource, { type: `published-topic:${publicationSite}:${topic.id}` })
     }
   }
 }

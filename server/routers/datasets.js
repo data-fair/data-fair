@@ -334,7 +334,7 @@ const readDataset = (_acceptedStatuses, preserveDraft, ignoreDraft) => asyncWrap
 
 router.use('/:datasetId/permissions', readDataset(), permissions.router('datasets', 'dataset', async (req, patchedDataset) => {
   // this callback function is called when the resource becomes public
-  await publicationSites.onPublic(req.app.get('db'), patchedDataset)
+  await publicationSites.onPublic(req.app.get('db'), patchedDataset, 'dataset')
 }))
 
 // retrieve a dataset by its id
@@ -540,7 +540,7 @@ router.patch('/:datasetId',
 
     const previousDataset = { ...req.dataset }
     const mongoPatch = await datasetUtils.applyPatch(db, req.dataset, patch, false)
-    await publicationSites.applyPatch(db, previousDataset, req.dataset, req.user, 'datasets')
+    await publicationSites.applyPatch(db, previousDataset, req.dataset, req.user, 'dataset')
     await db.collection('datasets').updateOne({ id: req.dataset.id }, mongoPatch)
 
     await syncRemoteService(db, req.dataset)

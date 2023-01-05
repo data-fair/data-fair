@@ -127,14 +127,24 @@ export default {
   },
   methods: {
     ...mapActions('application', ['patch', 'patchAndCommit']),
-    toggle (site) {
-      const key = `${site.type}:${site.id}`
-      if (this.application.publicationSites.includes(key)) {
-        this.application.publicationSites = this.application.publicationSites.filter(s => s !== key)
+    togglePublicationSites (site) {
+      const siteKey = `${site.type}:${site.id}`
+      if (this.application.publicationSites.includes(siteKey)) {
+        this.application.publicationSites = this.application.publicationSites.filter(s => s !== siteKey)
       } else {
-        this.application.publicationSites.push(key)
+        this.application.publicationSites.push(siteKey)
+        this.application.requestedPublicationSites = this.application.requestedPublicationSites.filter(s => s !== siteKey)
       }
-      this.patch({ publicationSites: this.application.publicationSites })
+      this.patch({ publicationSites: this.dataset.publicationSites, requestedPublicationSites: this.dataset.requestedPublicationSites })
+    },
+    toggleRequestedPublicationSites (site) {
+      const siteKey = `${site.type}:${site.id}`
+      if (this.application.requestedPublicationSites.includes(siteKey)) {
+        this.application.requestedPublicationSites = this.application.requestedPublicationSites.filter(s => s !== siteKey)
+      } else {
+        this.application.requestedPublicationSites.push(siteKey)
+      }
+      this.patch({ requestedPublicationSites: this.application.requestedPublicationSites })
     },
     canPublish (site) {
       return this.can('writePublicationSites') && (!this.activeAccount.department || this.activeAccount.department === site.department)
