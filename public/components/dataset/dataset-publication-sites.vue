@@ -58,7 +58,7 @@
                       hide-details
                       dense
                       :input-value="dataset.publicationSites.includes(`${site.type}:${site.id}`)"
-                      :disabled="(hasWarning(site) && !dataset.publicationSites.includes(`${site.type}:${site.id}`)) || (!canPublish(site) && !(site.settings && site.settings.staging))"
+                      :disabled="(hasWarning(site) && !dataset.publicationSites.includes(`${site.type}:${site.id}`)) || (!canPublish(site) && !(site.settings && site.settings.staging)) || !canRequestPublication(site)"
                       :label="$t('published')"
                       class="mt-0 ml-6"
                       @change="togglePublicationSites(site)"

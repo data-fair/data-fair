@@ -52,7 +52,7 @@
                       hide-details
                       dense
                       :input-value="application.publicationSites.includes(`${site.type}:${site.id}`)"
-                      :disabled="!canPublish(site) && !(site.settings && site.settings.staging)"
+                      :disabled="(!canPublish(site) && !(site.settings && site.settings.staging)) || !canRequestPublication(site)"
                       :label="$t('published')"
                       class="mt-0 ml-6"
                       @change="togglePublicationSites(site)"
