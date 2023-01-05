@@ -131,7 +131,7 @@ export default {
   },
   methods: {
     async refresh (resetPagination) {
-      if (resetPagination) {
+      if (resetPagination && this.pagination.page !== 1) {
         this.pagination.page = 1
         return
       }
