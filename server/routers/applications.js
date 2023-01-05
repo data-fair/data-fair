@@ -136,6 +136,7 @@ router.post('', asyncWrap(async (req, res) => {
   const lastUrlPart = toks[toks.length - 1]
   const baseId = application.id || slug(application.title || application.applicationName || lastUrlPart, { lower: true, strict: true })
   application.id = baseId
+  permissions.initResourcePermissions(application, req.user)
   let insertOk = false
   let i = 1
   while (!insertOk) {
@@ -208,7 +209,10 @@ router.get('/:applicationId', readApplication, permissions.middleware('readDescr
 const attemptInsert = asyncWrap(async (req, res, next) => {
   const newApplication = initNew(req)
   newApplication.id = req.params.applicationId
+
   if (!validate(newApplication)) return res.status(400).send(validate.errors)
+
+  permissions.initResourcePermissions(newApplication, req.user)
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (permissions.canDoForOwner(newApplication.owner, 'applications', 'post', req.user)) {

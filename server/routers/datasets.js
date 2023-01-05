@@ -741,7 +741,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       res.write(' ')
       try {
         dataset = await datasetPromise
-        permissions.initDatasetPermissions(dataset, req.user)
+        permissions.initResourcePermissions(dataset, req.user)
       } catch (err) {
         // should not happen too often, but sometimes we get an error after sending the 201 status
         // we return an error object nevertheless, better than to do nothing
@@ -760,7 +760,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         throw createError(400, JSON.stringify(validatePost.errors))
       }
       dataset = await initNew(db, req)
-      permissions.initDatasetPermissions(dataset, req.user)
+      permissions.initResourcePermissions(dataset, req.user)
       dataset.virtual = dataset.virtual || { children: [] }
       dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
       dataset.status = 'indexed'
@@ -777,7 +777,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         throw createError(400, JSON.stringify(validatePost.errors))
       }
       dataset = await initNew(db, req)
-      permissions.initDatasetPermissions(dataset, req.user)
+      permissions.initResourcePermissions(dataset, req.user)
       dataset.rest = dataset.rest || {}
       dataset.schema = dataset.schema || []
       // the dataset will go through a first index/finalize steps, not really necessary
@@ -798,7 +798,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         throw createError(400, JSON.stringify(validatePost.errors))
       }
       dataset = await initNew(db, req)
-      permissions.initDatasetPermissions(dataset, req.user)
+      permissions.initResourcePermissions(dataset, req.user)
       if (dataset.id) {
         await db.collection('datasets').insertOne(dataset)
       } else {
