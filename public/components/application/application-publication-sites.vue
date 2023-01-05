@@ -39,11 +39,11 @@
                   <span v-if="site.department"> - {{ site.departmentName || site.department }}</span>
                 </v-list-item-subtitle>
                 <v-list-item-subtitle
-                  v-if="site.datasetUrlTemplate && application.publicationSites.includes(`${site.type}:${site.id}`)"
+                  v-if="site.applicationUrlTemplate && application.publicationSites.includes(`${site.type}:${site.id}`)"
                   class="mb-2"
                 >
-                  <a :href="site.datasetUrlTemplate.replace('{id}', application.id)">
-                    {{ site.datasetUrlTemplate.replace('{id}', application.id) }}
+                  <a :href="site.applicationUrlTemplate.replace('{id}', application.id)">
+                    {{ site.applicationUrlTemplate.replace('{id}', application.id) }}
                   </a>
                 </v-list-item-subtitle>
                 <v-list-item-subtitle>
@@ -135,7 +135,7 @@ export default {
         this.application.publicationSites.push(siteKey)
         this.application.requestedPublicationSites = this.application.requestedPublicationSites.filter(s => s !== siteKey)
       }
-      this.patch({ publicationSites: this.dataset.publicationSites, requestedPublicationSites: this.dataset.requestedPublicationSites })
+      this.patch({ publicationSites: this.application.publicationSites, requestedPublicationSites: this.application.requestedPublicationSites })
     },
     toggleRequestedPublicationSites (site) {
       const siteKey = `${site.type}:${site.id}`
