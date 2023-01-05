@@ -11,7 +11,8 @@ Elle permet aux visiteurs de rapidement accéder aux données mises en avant, de
 
 ### Page d'accueil
 
-Nous allons vous présenter la page d'accueil du portail [open data de Koumoul](https://opendata.koumoul.com/) en 13 points.
+La page d'accueil d'un portail est configurable.  
+Sur le portail [open data de Koumoul](https://opendata.koumoul.com/), l'accueil contient 13 points.  
 
 <img src="./images/user-guide-frontoffice/homepage.png"
      height="700" style="margin:15px auto;" />

@@ -1,19 +1,21 @@
 ---
-title: Tableau de bord
+title: Accueil
 section: 3
 updated: 2021-09-20
 description : Dashboard
 published: true
 ---
 
-Le **tableau de bord** de votre compte [compte actif](./user-guide-backoffice/organisation) est accessible à l'aide de la barre de navigation.
+L'**Accueil** de votre compte [compte actif](./user-guide-backoffice/organisation) est accessible à l'aide de la barre de navigation.
 
-Cette page présente un résumé des données et des visualisations configurées sur votre espace.
+Selon vos droits dans l'organisation, la page affiche les sections **Contribuer** et **Gérer** les jeux de données.
 
-1. Compte actif
-2. Dernières modifications ou ajout sur le compte
-3. Résumé des jeux de données avec accès aux jeux de données les plus volumineux et la création de jeux de données.
-4. Résumé des visualisations
+**Contribuer** vous permet de créer, de mettre à jour et de publier un jeu de données sur vos portails.
+
+**Gérer** vous permet de valider les publications, de visualiser le nombre de jeux de données en erreur et le nombre de jeux de données en brouillon.  
+Cette section n'est disponible que pour les administrateurs du compte.  
+
+Lorsque vous cliquez sur une des 3 actions, vous êtes redirigés vers la page des jeux de données filtrés.  
 
 
 ![Dashboard](./images/user-guide-backoffice/dashboard.jpg)  

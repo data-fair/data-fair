@@ -88,19 +88,19 @@ The table lets you access the first 10,000 rows of the file.
 
 It contains several sections:
 1. search bar  
-2. navigation pages  
+2. mode of visualization of the lines
 3. columns choice  
 4. download  
 5. filters on a column  
 6. the filter on a value of a column  
-7. navigation bar
+
 
 
 ![Tableau](./images/user-guide-backoffice/edition-tableau-2.png)
 
-1. Filters on the values ​​of a column allow you to perform an "equal to" or "begins with" type filter on columns with text and to perform "greater than or equal to" or "less than or equal to" filters on columns with numbers. You can make multiple filters. The number of filtered rows is then available under the search.  
-2. Download of filtered lines in different formats.  
-Downloading in XLSX, ODS and Geojson formats are limited to the first 10,000 lines.
+1. Filters on column values allow you to perform an "equal to" or "begins with" filter on columns with text and to perform "greater than or equal to" or "less than or equal to" filters on columns with numbers or dates. You can make several filters. The number of filtered rows is then available next to the search.  
+2. Download of the filtered rows in different formats.   
+Downloading in XLSX, ODS and Geojson format is limited to the first 10,000 rows.
 
 ![Tableau](./images/user-guide-backoffice/edition-tableau-3.png)
 

@@ -7,12 +7,13 @@ description: Ajouter un dataset
 published: true
 ---
 
-Vous pouvez créer un jeu de données sur la [page du tableau de bord](./user-guide-backoffice/dashboard) ou sur la [page des jeux de données](./user-guide-backoffice/datasets).
+Vous pouvez créer un jeu de données sur la [page d'accueil'](./user-guide-backoffice/dashboard) ou sur la [page des jeux de données](./user-guide-backoffice/datasets).
 
 Il existe trois jeux de données différents sur Data Fair.
 1. L'import d'un fichier de votre ordinateur
-2. Un jeu éditable
-3. Un jeu virtuel
+2. Un jeu éditable  
+3. Jeu de métadonnées seules
+4. Un jeu virtuel
 
 ### Import d'un fichier
 
@@ -36,6 +37,17 @@ Pour qu'il soit utilisable, l'étape 6 de finalisation doit être validée :
 
 Lorsque la finalisation est terminée, le jeu de données passe en état "disponible". Il peut alors être [édité](./user-guide-backoffice/edition-dataset), enrichi et utilisé dans les différentes visualisations.  
 La plus part des visualisations utilisent [des concepts](./user-guide-backoffice/concept) tels que les concepts **Latitude** et **Longitude** pour une visualisation cartographique.
+
+
+### Jeu de métadonnées seules
+
+Un jeu de métadonnées ne contient pas de données.  
+Il peut être utilisé pour contenir un ensemble de fichiers tels que des fichiers PDF, images ou vidéos.  
+
+Les images peuvent ensuite être utilisées sur vos portails en tant que vignette pour les jeux de données ou utilisées à l'aide de leurs liens.
+
+Les descriptions des pièces jointes peuvent contenir du texte riche au format Markdown pour mieux le formater.
+
 
 ### Jeu éditable
 
