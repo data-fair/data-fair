@@ -12,8 +12,9 @@ You can create a dataset on the [dashbord](./user-guide-backoffice/dashboard) or
 Three differents datasets on Data Fair.  
 
 1. Upload a file from your computer
-2. An editable dataset
-3. A virtual dataset
+2. An editable dataset  
+3. Metadata dataset
+4. A virtual dataset
 
 ### Upload a file
 
@@ -54,6 +55,15 @@ You can then add rows to your dataset either through a form on a page of your si
 
 ![Formulaire](./images/user-guide-backoffice/import-formulaire.jpg)  
 *Feedback form for portal visitors*
+
+### Metadata dataset
+
+A metadata dataset does not contain data.  
+It can be used to contain a set of files such as PDFs, images or videos.  
+
+Images can then be used on your portals as thumbnails for the datasets or used with their links.
+
+Attachment descriptions can contain rich text in Markdown format for better formatting.
 
 ### Virtual dataset
 
