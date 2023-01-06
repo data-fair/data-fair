@@ -1,10 +1,16 @@
 const config = require('config')
 const dir = require('node-dir')
+const fs = require('fs')
+const metaMarked = require('@hackmd/meta-marked')
 
 // Additional dynamic routes for generate
 const langs = ['fr', 'en']
 const paths = dir.files('doc/pages/', { sync: true })
   .filter(f => f.endsWith('.md'))
+  .filter(f => {
+    const markdown = metaMarked(fs.readFileSync(f, 'utf8'))
+    return markdown.meta.published !== false
+  })
   .map(f => {
     let path = f.replace('.md', '').replace('doc/pages/', '')
     for (const lang of langs) path = path.replace(new RegExp(`-${lang}$`), '')
@@ -18,7 +24,7 @@ for (const path of [...new Set(paths)]) {
   }
 }
 
-const base = process.env.DOC_BASE || '/'
+const targetURL = new URL(process.env.TARGET || 'http://localhost:3144/')
 
 module.exports = {
   telemetry: false,
@@ -42,9 +48,9 @@ module.exports = {
     routes
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color
-  router: { base },
+  router: { base: targetURL.pathname },
   env: {
-    base,
+    base: targetURL.pathname,
     theme: config.theme,
     hideDraft: (process.env.HIDE_DRAFT === 'true') || (process.env.GITHUB_REF_NAME && process.env.GITHUB_REF_NAME !== 'master')
   },
@@ -53,7 +59,7 @@ module.exports = {
     { src: '~plugins/moment' }
   ],
   modules: [
-    // '@nuxtjs/sitemap',
+    '@nuxtjs/sitemap',
     ['@nuxtjs/i18n', {
       seo: true,
       locales: ['fr', 'en'],
@@ -64,6 +70,9 @@ module.exports = {
       }
     }]
   ],
+  sitemap: {
+    hostname: targetURL.origin
+  },
   buildModules: ['@nuxtjs/vuetify'],
   vuetify: {
     theme: {
