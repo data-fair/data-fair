@@ -1,5 +1,8 @@
 <template lang="html">
-  <doc-page :content="content" />
+  <doc-page
+    :content="content"
+    :only-french="true"
+  />
 </template>
 
 <script>
@@ -12,7 +15,7 @@ export default {
   computed: {
     content () {
       if (!this.$route) return
-      const content = context(`./${this.$route.params.id}-${this.$i18n.locale}.md`)
+      const content = context(`./${this.$route.params.id}.md`)
       return content.default
     }
   }

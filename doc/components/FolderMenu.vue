@@ -94,6 +94,7 @@ export default {
         .filter(k => {
           if (k.startsWith('./install')) return true
           if (k.startsWith('./interoperate')) return true
+          if (k.startsWith('./lessons')) return true
           if (k.startsWith('./technical-architecture')) return true
           return k.includes(`-${this.$i18n.locale}.md`)
         })

@@ -1,5 +1,8 @@
 <template>
-  <chapter-home :chapter="'lessons'" />
+  <chapter-home
+    :chapter="'lessons'"
+    :ignore-locale="true"
+  />
 </template>
 
 <script>

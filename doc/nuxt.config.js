@@ -52,15 +52,18 @@ module.exports = {
     // { src: '~plugins/mermaid', ssr: false },
     { src: '~plugins/moment' }
   ],
-  modules: [['@nuxtjs/i18n', {
-    seo: true,
-    locales: ['fr', 'en'],
-    defaultLocale: 'fr',
-    vueI18nLoader: true,
-    vueI18n: {
-      fallbackLocale: 'fr'
-    }
-  }]],
+  modules: [
+    // '@nuxtjs/sitemap',
+    ['@nuxtjs/i18n', {
+      seo: true,
+      locales: ['fr', 'en'],
+      defaultLocale: 'fr',
+      vueI18nLoader: true,
+      vueI18n: {
+        fallbackLocale: 'fr'
+      }
+    }]
+  ],
   buildModules: ['@nuxtjs/vuetify'],
   vuetify: {
     theme: {
