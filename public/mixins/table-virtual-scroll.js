@@ -216,7 +216,12 @@ export default {
         if (dense) {
           this.$set(this.headerWidths, header.value, 80)
         } else {
-          const estimatedHeaderSize = (estimateTextSize(header.text) * 0.7) + (dense ? 16 : 32) + 14
+          let estimatedTextSize = estimateTextSize(header.text)
+          if (header.text.match(/\s/) || estimateTextSize > 100) {
+            // on 2 lines except for smalll title with no white spaces
+            estimatedTextSize *= 0.7
+          }
+          const estimatedHeaderSize = estimatedTextSize + (dense ? 16 : 32) + 14
           this.$set(this.headerWidths, header.value, estimatedHeaderSize)
         }
 
