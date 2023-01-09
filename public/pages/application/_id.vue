@@ -68,7 +68,10 @@
                 Partage
               </template>
               <template #tabs>
-                <v-tab href="#share-permissions">
+                <v-tab
+                  v-if="can('getPermissions')"
+                  href="#share-permissions"
+                >
                   <v-icon>mdi-security</v-icon>&nbsp;&nbsp;{{ $t('permissions') }}
                 </v-tab>
 

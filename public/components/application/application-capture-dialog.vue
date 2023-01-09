@@ -142,7 +142,7 @@ export default {
   },
   methods: {
     setState (p) {
-      console.log('state', p)
+      // console.log('state', p)
     },
     async download () {
       this.downloading = true

@@ -27,6 +27,10 @@ mermaid.initialize({
 
 export default {
   layout: 'void',
+  head () {
+    const meta = [{ hid: 'robots', name: 'robots', content: 'noindex' }]
+    return { meta }
+  },
   computed: {
     code () {
       return process.client && window.sessionStorage.getItem('mermaid-' + this.$route.query.key)

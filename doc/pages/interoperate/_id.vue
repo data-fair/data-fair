@@ -12,10 +12,6 @@ const context = require.context('./', true, /\.md$/)
 
 export default {
   components: { DocPage },
-  head () {
-    const meta = [{ hid: 'robots', name: 'robots', content: 'index' }]
-    return { meta }
-  },
   computed: {
     content () {
       if (!this.$route) return
