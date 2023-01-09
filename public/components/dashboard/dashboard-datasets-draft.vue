@@ -41,7 +41,7 @@ export default {
   },
   async created () {
     const res = (await this.$axios.$get('api/v1/datasets', {
-      params: { size: 0, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, draftStatus: this.draftStatusFilter, facets: 'draftStatus' }
+      params: { size: 0, shared: false, draftStatus: this.draftStatusFilter, facets: 'draftStatus' }
     }))
     this.nbDatasets = res.count
     this.draftStatusFacet = res.facets.draftStatus

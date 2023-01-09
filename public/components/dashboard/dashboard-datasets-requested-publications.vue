@@ -46,7 +46,7 @@ export default {
       async handler () {
         if (this.publicationSites) {
           const res = (await this.$axios.$get('api/v1/datasets', {
-            params: { size: 0, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, requestedPublicationSites: this.publicationSitesFilter, facets: 'requestedPublicationSites' }
+            params: { size: 0, shared: false, requestedPublicationSites: this.publicationSitesFilter, facets: 'requestedPublicationSites' }
           }))
 
           this.nbDatasets = res.count

@@ -22,9 +22,13 @@
       />
     </v-card-text>
     <v-card-actions>
-      <owner-department :owner="catalog.owner" />
       <owner-short
         v-if="showOwner"
+        :owner="catalog.owner"
+        :ignore-department="true"
+      />
+      <owner-department
+        v-if="showOwner || !activeAccount.department"
         :owner="catalog.owner"
       />
       <v-spacer />

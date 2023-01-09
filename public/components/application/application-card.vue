@@ -42,12 +42,13 @@
       </v-row>
     </nuxt-link>
     <v-card-actions class="pl-3">
-      <owner-department
-        v-if="showOwner || !activeAccount.department"
-        :owner="application.owner"
-      />
       <owner-short
         v-if="showOwner"
+        :owner="application.owner"
+        :ignore-department="true"
+      />
+      <owner-department
+        v-if="showOwner || !activeAccount.department"
         :owner="application.owner"
       />
       &nbsp;&nbsp;

@@ -39,7 +39,10 @@
       <v-row>
         <v-col cols="12">
           <h2 class="mb-4">
-            <template v-if="activeAccount.type === 'organization'">
+            <template v-if="activeAccount.type === 'organization' && activeAccount.department">
+              {{ $t('departmentSpace', {name: activeAccount.name, departmentName: activeAccount.departmentName || activeAccount.department}) }}
+            </template>
+            <template v-else-if="activeAccount.type === 'organization'">
               {{ $t('organizationSpace', {name: activeAccount.name}) }}
             </template>
             <template v-else>
@@ -81,7 +84,7 @@
           </p>
         </v-col>
       </v-row>
-      <template v-if="canContrib">
+      <template v-if="canContribDep">
         <v-row class="mx-0">
           <h2
             v-t="'contribute'"
@@ -132,7 +135,7 @@
           </v-col>-->
         </v-row>
       </template>
-      <template v-if="canAdmin">
+      <template v-if="canAdminDep">
         <v-row class="mx-0 mt-6">
           <h2
             v-t="'manageDatasets'"
@@ -216,6 +219,7 @@ fr:
   authRequired: Vous devez être authentifié pour utiliser ce service.
   login: Se connecter / S'inscrire
   organizationSpace: Espace de l'organisation {name}
+  departmentSpace: Espace de l'organisation {name} / {departmentName}
   userSpace: Espace de l'utilisateur {name}
   organizationRole: Vous êtes <strong>{role}</strong> dans cette organisation.
   collaborativeMessage: Pour travailler en {collaborativeMode} vous devez ouvrir le menu personnel (en haut à droite) et changer de compte actif. Pour créer une nouvelle organisation rendez vous sur {yourAccountLink}.
@@ -248,6 +252,7 @@ en:
   authRequired: You must be logged in to use this service.
   login: Login / Sign up
   organizationSpace: Space of organization {name}
+  departmentSpace: Space of organization {name} / {departmentName}
   userSpace: Space of user {name}
   organizationRole: You are <strong>{role}</strong> in this organization.
   collaborativeMessage: To work in {collaborativeMode} you must open the personal menu (top right) and change the active account. To create a new organization please visit {yourAccountLink}.
@@ -296,7 +301,7 @@ export default {
   computed: {
     ...mapState('session', ['user', 'initialized']),
     ...mapState(['env']),
-    ...mapGetters(['missingSubscription', 'canContrib', 'canAdmin', 'ownerPublicationSites']),
+    ...mapGetters(['missingSubscription', 'canContribDep', 'canAdmin', 'ownerPublicationSites']),
     ...mapGetters('session', ['activeAccount']),
     sections () {
       return [

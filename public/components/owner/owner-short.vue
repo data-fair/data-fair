@@ -6,7 +6,14 @@
         v-on="on"
       >
         <v-avatar :size="28">
-          <img :src="`${env.directoryUrl}/api/avatars/${owner.type}/${owner.id}/avatar.png`">
+          <img
+            v-if="owner.department && !ignoreDepartment"
+            :src="`${env.directoryUrl}/api/avatars/${owner.type}/${owner.id}/${owner.department}/avatar.png`"
+          >
+          <img
+            v-else
+            :src="`${env.directoryUrl}/api/avatars/${owner.type}/${owner.id}/avatar.png`"
+          >
         </v-avatar>
       </span>
     </template>
@@ -20,11 +27,12 @@
 import { mapState } from 'vuex'
 
 export default {
-  props: ['owner'],
+  props: ['owner', 'ignoreDepartment'],
   computed: {
     ...mapState(['env']),
     label () {
       let label = this.owner.name
+      if (this.owner.department && !this.ignoreDepartment) label += ' - ' + (this.owner.departmentName || this.owner.department)
       if (this.owner.role) label += ` (${this.owner.role})`
       return label
     }

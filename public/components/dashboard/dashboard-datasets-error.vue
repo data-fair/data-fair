@@ -37,7 +37,7 @@ export default {
   },
   async created () {
     this.nbDatasets = (await this.$axios.$get('api/v1/datasets', {
-      params: { size: 0, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, status: 'error' }
+      params: { size: 0, shared: false, status: 'error' }
     })).count
   }
 }
