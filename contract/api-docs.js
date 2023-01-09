@@ -157,7 +157,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         tags: ['Jeux de données'],
         parameters: [
           utils.qParam,
-          utils.ownerParam,
+          ...utils.ownerParams,
           utils.selectParam(Object.keys(dataset.properties)),
           utils.filterParam('ids', 'Restreindre sur les identifiants'),
           utils.filterParam('filename', 'Restreindre sur les noms de fichier'),
@@ -334,7 +334,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         tags: ['Applications'],
         parameters: [
           utils.qParam,
-          utils.ownerParam,
+          ...utils.ownerParams,
           utils.selectParam(Object.keys(application.properties)),
           utils.filterParam('ids', 'Restreindre sur les identifiants'),
           utils.filterParam('dataset', 'Restreindre sur les jeux de données utilisés'),
@@ -660,7 +660,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         tags: ['Catalogues'],
         parameters: [
           utils.qParam,
-          utils.ownerParam,
+          ...utils.ownerParams,
           utils.selectParam(Object.keys(application.properties)),
           ...utils.paginationParams,
           ...utils.visibilityParams

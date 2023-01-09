@@ -81,7 +81,7 @@ exports.query = (req, fieldsMap, globalMode, extraFilters = []) => {
       delete query['owner.id']
       query.$and = query.$and.concat(exports.ownerFilters(req.query, req.user && req.user.activeAccount))
     }
-    if (req.query.shared === 'false' && req.user) {
+    if ((req.query.shared === 'false' || req.query.mine === 'true') && req.user) {
       const accountFilter = { 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id }
       if (req.user.activeAccount.department) accountFilter['owner.department'] = req.user.activeAccount.department
       query.$and.push(accountFilter)
@@ -223,7 +223,7 @@ const basePipeline = (req, extraFilters) => {
       $or: permissions.filter(req.user)
     }
   })
-  if (req.query.shared === 'false' && req.user) {
+  if ((req.query.shared === 'false' || req.query.mine === 'true') && req.user) {
     const accountFilter = { 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id }
     if (req.user.activeAccount.department) accountFilter['owner.department'] = req.user.activeAccount.department
     pipeline.push({ $match: accountFilter })

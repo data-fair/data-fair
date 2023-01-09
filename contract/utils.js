@@ -18,20 +18,37 @@ exports.qParam = {
   }
 }
 
-exports.ownerParam = {
+exports.ownerParams = [/* {
   in: 'query',
-  name: 'owner',
-  description: 'Restreindre sur le propriétaire',
-  required: false,
-  example: ['organization:myorg', 'user:myuser'],
+  name: 'shared',
+  description: 'Voir les ressources partagées par d\'autres comptes',
+  example: false,
   schema: {
-    type: 'array',
-    items: {
-      type: 'string'
+    type: 'boolean',
+    default: false
+  }
+}, */
+  {
+    in: 'query',
+    name: 'mine',
+    description: 'Voir uniquement les ressources de mon compte actif',
+    example: true,
+    schema: {
+      type: 'boolean'
     }
-  },
-  style: 'commaDelimited'
-}
+  }, {
+    in: 'query',
+    name: 'owner',
+    description: 'Restreindre sur le propriétaire (par exemple "organization:myorg" ou "user:myuser")',
+    required: false,
+    schema: {
+      type: 'array',
+      items: {
+        type: 'string'
+      }
+    },
+    style: 'commaDelimited'
+  }]
 
 exports.visibilityParams = [{
   in: 'query',
@@ -64,7 +81,10 @@ exports.visibilityParams = [{
   require: 'false',
   schema: {
     type: 'array',
-    enum: ['public', 'private', 'protected']
+    enum: ['public', 'private', 'protected'],
+    items: {
+      type: 'string'
+    }
   },
   style: 'commaDelimited'
 }]
