@@ -460,8 +460,8 @@ export default {
       if (this.propertiesRefs.find(pr => (pr.prop['x-refersTo'] === item.value) && (pr.key !== prop.key))) return false
       // accept different type if the concept's type is String
       // in this case we will ignore the detected type and apply string
-      if (prop.type !== item.type && item.type !== 'string') return false
       if (prop.type === 'integer' && item.type === 'number') return true
+      if (prop.type !== item.type && item.type !== 'string') return false
       if (item.format === 'date-time' && prop.format !== 'date-time' && prop.format !== 'date') return false
       return true
     },
