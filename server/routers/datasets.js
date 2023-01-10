@@ -295,6 +295,12 @@ const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => 
   }
   throw createError(409, `Une opération bloquante est déjà en cours sur le jeu de données ${req.params.datasetId}.`)
 })
+const lockNewDataset = async (req, res, dataset) => {
+  const db = req.app.get('db')
+  const lockKey = `dataset:${dataset.id}`
+  const ack = await locks.acquire(db, lockKey, `${req.method} - ${req.originalUrl}`)
+  if (ack) res.on('close', () => locks.release(db, lockKey).catch(err => console.warn('failure to release dataset lock', err)))
+}
 // Shared middleware to read dataset in db
 // also checks that the dataset is in a state compatible with some action
 // supports waiting a little bit to be a little permissive with the user
@@ -751,9 +757,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         res.send({ error: err.message })
         throw err
       }
-      const lockKey = `dataset:${dataset.id}`
-      const ack = await locks.acquire(db, lockKey, `${req.method} - ${req.originalUrl}`)
-      if (ack) res.on('close', () => locks.release(db, lockKey).catch(err => console.warn('failure to release dataset lock', err)))
+      await lockNewDataset(req, res, dataset)
       await db.collection('datasets').insertOne(dataset)
       await datasetUtils.updateStorage(db, dataset)
     } else if (req.body.isVirtual) {
@@ -773,6 +777,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         const baseId = slug(req.body.title, { lower: true, strict: true })
         await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
       }
+      await lockNewDataset(req, res, dataset)
     } else if (req.body.isRest) {
       if (!req.body.title) throw createError(400, 'Un jeu de données éditable doit être créé avec un titre')
       if (attachmentsFile) throw createError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
@@ -792,6 +797,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         const baseId = slug(req.body.title, { lower: true, strict: true })
         await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
       }
+      await lockNewDataset(req, res, dataset)
       await restDatasetsUtils.initDataset(db, dataset)
       await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'analyzed' } })
     } else if (req.body.isMetaOnly) {
@@ -808,6 +814,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         const baseId = slug(req.body.title, { lower: true, strict: true })
         await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
       }
+      await lockNewDataset(req, res, dataset)
     } else {
       throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "éditable" ou "métadonnées"')
     }
