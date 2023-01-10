@@ -211,7 +211,7 @@
         </v-list-item>
 
         <v-list-item
-          v-if="canContrib"
+          v-if="canContribDep"
           :nuxt="true"
           dense
           to="/api-doc"
