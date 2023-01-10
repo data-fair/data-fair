@@ -6,7 +6,16 @@
 		"noAppAtUrl": "The page at URL {{url}} doesn't seem to host an application compatible with this service.",
 		"missingDataset": "The dataset {{id}} is unknown or does not belong to you",
 		"extensionShortIdConflict": "The dataset contains 2 extensions that have a conflict on the prefix of the extended columns.",
-		"badContentType": "This API expects a compatible content-type header, most often application/json"
+		"badContentType": "This API expects a compatible content-type header, most often application/json",
+		"exceedLimitStorage": "You exceeded your strorage limit.",
+		"exceedLimitIndexed": "You exceeded your indexed data storage limit.",
+		"exceedLimitNbDatasets": "You exceeded your number of datasets limit.",
+		"missingPermission": "You don't have the permission to perform this action.",
+		"exceedRateLimiting": "Too much requests in a small time interval for this API.",
+		"exceedAnonymousRateLimiting": "Trop many messages in a short interval. Please wait and try again.",
+		"looksLikeSpam": "Message rejected, activity looks like a spam robot.",
+		"requireAnonymousToken": "An anonymous token is required.",
+		"noCrossDomain": "Request from an other domain not supported."
 	},
 	"appRequire": {
 		"noDataset": "does not use a dataset as source.",

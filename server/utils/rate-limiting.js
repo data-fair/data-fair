@@ -27,7 +27,7 @@ exports.middleware = (_limitType) => asyncWrap(async (req, res, next) => {
   try {
     await limiters[limitType].consume(throttlingId, 1)
   } catch (err) {
-    return res.status(429).send('Trop de traffic dans un interval restreint sur cette API.')
+    return res.status(429).send(req.__('errors.exceedRateLimiting'))
   }
 
   res.throttle = (bandwidthType) => {

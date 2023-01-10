@@ -33,17 +33,17 @@ module.exports = asyncWrap(async (req, res, next) => {
           if (req.method !== 'GET' && req.method !== 'HEAD') {
             // 1rst level of anti-spam prevention, no cross origin requests on this route
             if (!matchingHost(req)) {
-              return res.status(405).send('Appel depuis un domaine extérieur non supporté')
+              return res.status(405).send(req.__('errors.noCrossDomain'))
             }
 
             // 2nd level of anti-spam protection, validate that the user was present on the page for a few seconds before sending
             const { verifyToken } = req.app.get('session')
-            if (!req.get('x-anonymousToken')) return res.status(401).send('Un jeton d\'action anonyme est requis')
+            if (!req.get('x-anonymousToken')) return res.status(401).send(req.__('errors.requireAnonymousToken'))
             try {
               await verifyToken(req.get('x-anonymousToken'))
             } catch (err) {
               if (err.name === 'NotBeforeError') {
-                return res.status(429).send('Message refusé, l\'activité ressemble à celle d\'un robot spammeur.')
+                return res.status(429).send(req.__('errors.looksLikeSpam'))
               } else {
                 return res.status(401).send('Invalid token')
               }
@@ -54,7 +54,7 @@ module.exports = asyncWrap(async (req, res, next) => {
               await rateLimiting.postApplicationKey.consume(req.user ? req.user.id : requestIp.getClientIp(req), 1)
             } catch (err) {
               console.warn('Rate limit error for application key', requestIp.getClientIp(req), req.originalUrl, err)
-              return res.status(429).send('Trop de messages dans un bref interval. Veuillez patienter avant d\'essayer de nouveau.')
+              return res.status(429).send(req.__('errors.exceedAnonymousRateLimiting'))
             }
           }
 

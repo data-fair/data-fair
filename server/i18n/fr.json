@@ -6,7 +6,16 @@
 		"noAppAtUrl": "La page à l'adresse {{url}} ne semble pas héberger une application compatible avec ce service.",
 		"missingDataset": "Le jeu de données {{id}} est inconnu ou ne vous appartient pas.",
 		"extensionShortIdConflict": "Le jeu de données contient 2 extensions qui sont en conflit sur le préfixe des colonnes étendus.",
-		"badContentType": "Cette API attend un header content-type compatible, le plus souvent application/json."
+		"badContentType": "Cette API attend un header content-type compatible, le plus souvent application/json.",
+		"exceedLimitStorage": "Vous avez atteint la limite de votre espace de stockage.",
+		"exceedLimitIndexed": "Vous avez atteint la limite de votre espace de données indexées.",
+		"exceedLimitNbDatasets": "Vous avez atteint votre nombre maximal de jeux de données autorisés.",
+		"missingPermission": "Vous n'avez pas la permission d'effectuer cette opération.",
+		"exceedRateLimiting": "Trop de traffic dans un interval restreint sur cette API.",
+		"exceedAnonymousRateLimiting": "Trop de messages dans un bref interval. Veuillez patienter avant d'essayer de nouveau.",
+		"looksLikeSpam": "Message refusé, l'activité ressemble à celle d'un robot spammeur.",
+		"requireAnonymousToken": "Un jeton d'action anonyme est requis.",
+		"noCrossDomain": "Appel depuis un domaine extérieur non supporté."
 	},
 	"appRequire": {
 		"noDataset": "n'utilise pas de jeu de données comme source.",

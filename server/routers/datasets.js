@@ -151,8 +151,8 @@ const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, 
     } catch (err) {
       console.warn('Failure to drain request that was rejected for exceeding storage limit', err)
     }
-    if (!storageOk) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
-    if (!indexedOk) throw createError(429, 'Vous avez atteint la limite de votre espace de données indexées.')
+    if (!storageOk) throw createError(429, req.__('errors.exceedLimitStorage'))
+    if (!indexedOk) throw createError(429, req.__('errors.exceedLimitIndexed'))
   }
   next()
 })
@@ -565,7 +565,22 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
     if (req.body.type === 'organization') {
       const userOrg = req.user.organizations.find(o => o.id === req.body.id)
       if (!userOrg) return res.status(403).send()
-      if (![config.contribRole, config.adminRole].includes(userOrg.role)) return res.status(403).send()
+      if (![config.contribRole, config.adminRole].includes(userOrg.role)) return res.status(403).send(req.__('errors.missingPermission'))
+    }
+  }
+
+  if (req.body.type !== req.dataset.owner.type && req.body.id !== req.dataset.owner.id) {
+    const remaining = await limits.remaining(req.app.get('db'), req.body)
+    if (remaining.nbDatasets === 0) {
+      return res.status(429).send(req.__('errors.exceedLimitNbDatasets'))
+    }
+    if (req.dataset.storage) {
+      if (remaining.storage < req.dataset.storage.size) {
+        return res.status(429).send(req.__('errors.exceedLimitStorage'))
+      }
+      if (req.dataset.storage.indexed && remaining.indexed < req.dataset.storage.indexed.size) {
+        return res.status(429).send(req.__('errors.exceedLimitIndexed'))
+      }
     }
   }
 
@@ -579,10 +594,12 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
     .findOneAndUpdate({ id: req.params.datasetId }, { $set: patch }, { returnDocument: 'after' })).value
 
   // Move all files
-  try {
-    await fs.move(datasetUtils.dir(req.dataset), datasetUtils.dir(patchedDataset))
-  } catch (err) {
-    console.warn('Error while moving dataset directory', err)
+  if (datasetUtils.dir(req.dataset) !== datasetUtils.dir(patchedDataset)) {
+    try {
+      await fs.move(datasetUtils.dir(req.dataset), datasetUtils.dir(patchedDataset))
+    } catch (err) {
+      console.warn('Error while moving dataset directory', err)
+    }
   }
 
   await syncRemoteService(req.app.get('db'), patchedDataset)
@@ -723,7 +740,7 @@ const beforeUpload = asyncWrap(async (req, res, next) => {
   const owner = usersUtils.owner(req)
   if (!permissions.canDoForOwner(owner, 'datasets', 'post', req.user, req.app.get('db'))) return res.sendStatus(403)
   if ((await limits.remaining(req.app.get('db'), owner)).nbDatasets === 0) {
-    return res.status(429).send('Vous avez atteint votre nombre maximal de jeux de données autorisés.')
+    return res.status(429).send(req.__('errors.exceedLimitNbDatasets'))
   }
   next()
 })
@@ -851,7 +868,7 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
       await db.collection('datasets').insertOne(newDataset)
       req.isNewDataset = true
       if ((await limits.remaining(req.app.get('db'), newDataset.owner)).nbDatasets === 0) {
-        return res.status(429, 'Vous avez atteint votre nombre maximal de jeux de données autorisés.')
+        return res.status(429, req.__('errors.exceedLimitNbDatasets'))
       }
       await datasetUtils.updateTotalStorage(req.app.get('db'), newDataset.owner)
     } catch (err) {
