@@ -446,6 +446,7 @@ en:
 import { mapState, mapActions, mapGetters } from 'vuex'
 
 export default {
+  middleware: ['auth-required'],
   data: () => ({
     settingsSvg: require('~/assets/svg/Settings_Monochromatic.svg?raw'),
     dataSvg: require('~/assets/svg/Data storage_Two Color.svg?raw'),

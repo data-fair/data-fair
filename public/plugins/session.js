@@ -10,7 +10,8 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
   })
   store.dispatch('session/init', {
     cookies: app.$cookies,
-    directoryUrl: env.directoryUrl
+    directoryUrl: env.directoryUrl,
+    logoutRedirectUrl: publicUrl
   })
 
   // support opening with active account defined in URL

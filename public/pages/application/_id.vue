@@ -210,6 +210,7 @@ en:
 import { mapState, mapActions, mapGetters } from 'vuex'
 
 export default {
+  middleware: ['auth-required'],
   data: () => ({
     checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
     creativeSvg: require('~/assets/svg/Creative Process_Two Color.svg?raw'),

@@ -84,6 +84,7 @@ en:
 import { mapState, mapGetters } from 'vuex'
 
 export default {
+  middleware: ['auth-required'],
   data: () => ({
     datasets: null,
     stats: null,

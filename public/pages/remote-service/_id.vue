@@ -132,6 +132,7 @@ en:
 import { mapState, mapActions, mapGetters } from 'vuex'
 
 export default {
+  middleware: ['auth-required'],
   data: () => ({
     checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
     settingsSvg: require('~/assets/svg/Settings_Two Color.svg?raw'),

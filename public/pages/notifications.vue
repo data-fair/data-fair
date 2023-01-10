@@ -83,6 +83,7 @@ const webhooksSchema = require('~/../contract/settings').properties.webhooks
 
 export default {
   components: { VIframe },
+  middleware: ['auth-required'],
   data: () => ({
     webhooksSchema,
     settingsPublicationSites: null,

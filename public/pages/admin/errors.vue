@@ -106,6 +106,7 @@
 
 <script>
 export default {
+  middleware: ['admin-required'],
   data () {
     return { datasetsErrors: null, applicationsErrors: null, applicationsDraftErrors: null }
   },

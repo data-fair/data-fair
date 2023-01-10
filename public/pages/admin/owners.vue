@@ -59,6 +59,7 @@
 
 <script>
 export default {
+  middleware: ['admin-required'],
   data () {
     return { owners: null, q: null }
   },

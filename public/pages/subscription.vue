@@ -8,6 +8,7 @@ import VIframe from '@koumoul/v-iframe'
 import { mapState } from 'vuex'
 export default {
   components: { VIframe },
+  middleware: ['auth-required'],
   computed: {
     ...mapState(['env'])
   }

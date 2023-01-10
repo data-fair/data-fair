@@ -13,6 +13,7 @@ import VIframe from '@koumoul/v-iframe'
 import { mapState } from 'vuex'
 export default {
   components: { VIframe },
+  middleware: ['admin-required'],
   computed: {
     ...mapState(['env']),
     iframeUrl () {

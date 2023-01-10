@@ -19,6 +19,7 @@ en:
 <script>
 
 export default {
+  middleware: ['auth-required'],
   async fetch ({ store }) {
     await store.dispatch('fetchVocabulary')
   },

@@ -823,6 +823,7 @@ import { mapState, mapGetters } from 'vuex'
 import eventBus from '~/event-bus'
 
 export default {
+  middleware: ['auth-required'],
   data: () => ({
     file: null,
     attachment: null,

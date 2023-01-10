@@ -13,6 +13,7 @@ import { mapState, mapGetters } from 'vuex'
 
 export default {
   components: { VIframe },
+  middleware: ['auth-required'],
   computed: {
     ...mapState(['env']),
     ...mapState('session', ['user']),

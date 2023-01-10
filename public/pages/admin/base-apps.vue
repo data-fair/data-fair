@@ -186,6 +186,7 @@ import { mapState } from 'vuex'
 import eventBus from '~/event-bus'
 
 export default {
+  middleware: ['admin-required'],
   data () {
     return {
       baseApps: null,

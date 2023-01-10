@@ -195,7 +195,7 @@
       <v-stepper-content step="5">
         <template v-if="dataset && publicationSite">
           <v-btn
-            v-if="(can('writePublicationSites') || (publicationSite.settings && publicationSite.settings.staging)) && (!activeAccount.department || activeAccount.department === site.department)"
+            v-if="(can('writePublicationSites') || (publicationSite.settings && publicationSite.settings.staging)) && (!activeAccount.department || activeAccount.department === publicationSite.department)"
             v-t="'publish'"
             color="primary"
             class="mt-4"
@@ -260,6 +260,7 @@ import eventBus from '~/event-bus'
 import { mapState, mapGetters, mapActions } from 'vuex'
 
 export default {
+  middleware: ['auth-required'],
   data: () => ({
     currentStep: 1,
     publicationSite: null,

@@ -33,6 +33,7 @@
 
 <script>
 export default {
+  middleware: ['admin-required'],
   data () {
     return { info: null, status: null }
   },
