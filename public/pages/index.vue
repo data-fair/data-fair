@@ -301,7 +301,7 @@ export default {
   computed: {
     ...mapState('session', ['user', 'initialized']),
     ...mapState(['env']),
-    ...mapGetters(['missingSubscription', 'canContribDep', 'canAdmin', 'ownerPublicationSites']),
+    ...mapGetters(['missingSubscription', 'canContribDep', 'canAdminDep', 'ownerPublicationSites']),
     ...mapGetters('session', ['activeAccount']),
     sections () {
       return [
