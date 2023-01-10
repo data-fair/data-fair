@@ -459,6 +459,12 @@ export default {
       if (!this.dataset.projection) return
       // Matching object reference, so that the select components works
       this.dataset.projection = this.projections.find(l => l.code === this.dataset.projection.code)
+    },
+    editProjection: {
+      handler () {
+        if (this.editProjection) this.$store.dispatch('fetchProjections')
+      },
+      immediate: true
     }
   },
   async mounted () {
@@ -467,7 +473,6 @@ export default {
       this.$store.dispatch('fetchTopics', this.dataset.owner)
       this.$store.dispatch('fetchDatasetsMetadata', this.dataset.owner)
     }
-    if (this.editProjection) this.$store.dispatch('fetchProjections')
 
     // Ping the data endpoint to check that index is available
     try {

@@ -490,6 +490,9 @@ router.patch('/:datasetId',
       patch.status = 'analyzed'
     }
 
+    const coordXProp = req.dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordX')
+    const coordYProp = req.dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordY')
+
     if (req.dataset.isVirtual) {
       if (patch.schema || patch.virtual) {
         patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...req.dataset, ...patch })
@@ -504,7 +507,7 @@ router.patch('/:datasetId',
     } else if (patch.extensions) {
       // extensions have changed, trigger full re-indexing
       patch.status = 'analyzed'
-    } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code)) {
+    } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code) && coordXProp && coordYProp) {
       // geo projection has changed, trigger full re-indexing
       patch.status = 'analyzed'
     } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.geoFieldsKey(req.dataset.schema)) {

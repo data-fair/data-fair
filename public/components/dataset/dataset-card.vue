@@ -86,12 +86,13 @@
       </v-row>
     </nuxt-link>
     <v-card-actions class="pl-3">
-      <owner-department
-        v-if="showOwner || !activeAccount.department"
-        :owner="dataset.owner"
-      />
       <owner-short
         v-if="showOwner"
+        :owner="dataset.owner"
+        :ignore-department="true"
+      />
+      <owner-department
+        v-if="showOwner || !activeAccount.department"
         :owner="dataset.owner"
       />
       <visibility :visibility="dataset.visibility" />
