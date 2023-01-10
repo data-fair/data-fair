@@ -575,10 +575,10 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
       return res.status(429).send(req.__('errors.exceedLimitNbDatasets'))
     }
     if (req.dataset.storage) {
-      if (remaining.storage < req.dataset.storage.size) {
+      if (remaining.storage !== -1 && remaining.storage < req.dataset.storage.size) {
         return res.status(429).send(req.__('errors.exceedLimitStorage'))
       }
-      if (req.dataset.storage.indexed && remaining.indexed < req.dataset.storage.indexed.size) {
+      if (remaining.indexed !== -1 && req.dataset.storage.indexed && remaining.indexed < req.dataset.storage.indexed.size) {
         return res.status(429).send(req.__('errors.exceedLimitIndexed'))
       }
     }
