@@ -66,7 +66,7 @@ export default {
           q: this.search,
           size: 20,
           select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions,-links,-owner',
-          owner: `${this.activeAccount.type}:${this.activeAccount.id}`,
+          shared: false,
           ...this.extraParams
         }
       })

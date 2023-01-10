@@ -30,14 +30,16 @@
 
       <v-stepper-step
         :step="3"
-        complete
-        :editable="!!dataset && !alreadyPublished"
+        :editable="!!dataset && !alreadyPublished && can('getPermissions')"
       >
         {{ $t('stepPermissions') }}
         <small
           v-if="$refs.permissions && $refs.permissions.visibilityLabel"
         >
           {{ $refs.permissions.visibilityLabel }}
+        </small>
+        <small v-if="dataset && !can('getPermissions')">
+          {{ $t('noCanGetPermissions') }}
         </small>
       </v-stepper-step>
       <v-divider />
@@ -105,8 +107,7 @@
                       v-if="site.department"
                       class="mb-2"
                     >
-                      <span>{{ dataset.owner.name }}</span>
-                      <span v-if="site.department"> - {{ site.departmentName || site.department }}</span>
+                      {{ site.departmentName || site.department }}
                     </v-list-item-subtitle>
                   </v-list-item-content>
                 </v-list-item>
@@ -232,6 +233,7 @@ fr:
   completed: complètes
   alreadyPublished: Ce jeu de données est déjà publié sur ce portail.
   noPublicationSite: Aucun portail n'est configuré sur ce compte.
+  noCanGetPermissions: autorisation manquante
 en:
   shareDataset: Share a dataset
   home: Home
@@ -250,6 +252,7 @@ en:
   completed: completed
   alreadyPublished: This dataset is already published on this portal.
   noPublicationSite: No portal is configured for this account.
+  noCanGetPermissions: missing authorization
 </i18n>
 
 <script>
@@ -289,7 +292,7 @@ export default {
       if (dataset) {
         await this.$store.dispatch('dataset/setId', { datasetId: dataset.id })
         if (!this.alreadyPublished) {
-          this.currentStep = 3
+          this.currentStep = this.can('getPermissions') ? 3 : 4
         }
       } else {
         this.$store.dispatch('dataset/clear')
