@@ -22,7 +22,11 @@ router.get('/info', (req, res) => {
   res.send(info)
 })
 
-router.get('/status', status.status)
+router.get('/status', (req, res, next) => {
+  if (!req.user) return res.status(401).send()
+  if (!req.user.adminMode) return res.status(401).send()
+  status.status(req, res, next)
+})
 router.get('/ping', status.ping)
 
 router.get('/api-docs.json', (req, res) => {

@@ -35,8 +35,15 @@ const router = module.exports = express.Router()
 
 function clean (application, publicUrl, query = {}) {
   const select = query.select ? query.select.split(',') : []
-  if (!select.includes('-public')) application.public = permissions.isPublic('applications', application)
-  if (!select.includes('-visibility')) application.visibility = visibilityUtils.visibility(application)
+  if (query.raw !== 'true') {
+    if (!select.includes('-public')) application.public = permissions.isPublic('applications', application)
+    if (!select.includes('-visibility')) application.visibility = visibilityUtils.visibility(application)
+    if (!query.select || select.includes('description')) {
+      application.description = application.description || ''
+      application.description = prepareMarkdownContent(application.description, query.html === 'true', query.truncate, 'application:' + application.id, application.updatedAt)
+    }
+    if (!select.includes('-links')) findUtils.setResourceLinks(application, 'application', publicUrl)
+  }
 
   delete application.permissions
   delete application._id
@@ -44,11 +51,6 @@ function clean (application, publicUrl, query = {}) {
   delete application.configurationDraft
   if (select.includes('-userPermissions')) delete application.userPermissions
   if (select.includes('-owner')) delete application.owner
-
-  application.description = application.description || ''
-  application.description = prepareMarkdownContent(application.description, query.html === 'true', query.truncate, 'application:' + application.id, application.updatedAt)
-
-  if (!select.includes('-links')) findUtils.setResourceLinks(application, 'application', publicUrl)
   return application
 }
 
@@ -106,12 +108,11 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   else response.results = []
   if (facetsPromise) response.facets = findUtils.parseFacets(facets, nullFacetFields)
 
-  if (req.query.raw !== 'true') {
-    response.results.forEach(r => {
-      r.userPermissions = permissions.list('applications', r, req.user)
-      clean(r, req.publicBaseUrl, req.query)
-    })
-  }
+  response.results.forEach(r => {
+    if (req.query.raw !== 'true') r.userPermissions = permissions.list('applications', r, req.user)
+    clean(r, req.publicBaseUrl, req.query)
+  })
+
   res.json(response)
 }))
 

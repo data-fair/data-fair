@@ -210,6 +210,16 @@
           <v-list-item-title v-t="'storage'" />
         </v-list-item>
 
+        <v-list-item
+          v-if="canContrib"
+          :nuxt="true"
+          dense
+          to="/api-doc"
+        >
+          <v-list-item-action><v-icon>mdi-cloud</v-icon></v-list-item-action>
+          <v-list-item-title v-t="'apiDoc'" />
+        </v-list-item>
+
         <template v-if="env.extraNavigationItems && user">
           <v-list-item
             v-for="extra in env.extraNavigationItems.filter(extra => !extra.can || (extra.can === 'contrib' && canContrib) || (extra.can === 'admin' && canAdmin) || (extra.can === 'contribDep' && canContribDep) || (extra.can === 'adminDep' && canAdminDep))"
@@ -240,7 +250,7 @@
       <v-spacer />
       <span class="text-caption"><a
         href="https://data-fair.github.io/3/"
-        style="color: white;"
+        style="color:white;text-decoration:underline;"
       >Powered by Data Fair</a></span>
     </v-footer>
   </v-navigation-drawer>
@@ -268,6 +278,7 @@ fr:
   catalogsSub: data.gouv.fr ...
   storage: Stockage
   subscription: Abonnement
+  apiDoc: Utiliser l'API
 en:
   admin: Administration
   services: Services
@@ -289,6 +300,7 @@ en:
   catalogsSub: data.gouv.fr ...
   storage: Storage
   subscription: Subscription
+  apiDoc: Use the API
 </i18n>
 
 <script>

@@ -26,11 +26,11 @@ module.exports = {
     description: `
 Cette documentation interactive à destination des développeurs permet de gérer les ressources de ce service de publication de données.
 
-Notez que l'API réelle est plus riche, chaque jeu de données et chaque service distant disposant de sa propre API documentée séparément. Vous trouvez ici les principaux points d'accès pour les opérations de lecture et écriture.
+Notez que l'API réelle est plus riche, chaque jeu de données et chaque service distant disposant de sa propre API documentée séparément.
 
-Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous pouvez créer dans vos paramètres personnels ou dans les paramètres d'une organisation dont vous êtes administrateur (menu en haut à droite).
+Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous pouvez créer dans vos paramètres personnels ou dans les paramètres d'une organisation dont vous êtes administrateur.
 
-Pour des exemples simples de publication de données vous pouvez consulter la [documentation sur ce sujet](${config.publicUrl}/interoperate/api).
+Pour des exemples simples de publication de données vous pouvez consulter la <a href="https://data-fair.github.io/3/interoperate/api" target="blank">documentation sur ce sujet</a>.
 `,
     version: version,
     'x-api-id': 'data-fair'
@@ -158,13 +158,14 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         parameters: [
           utils.qParam,
           ...utils.ownerParams,
+          utils.booleanParam('raw', 'Ne pas inclure les champs calculés'),
           utils.selectParam(Object.keys(dataset.properties)),
           utils.filterParam('ids', 'Restreindre sur les identifiants'),
           utils.filterParam('filename', 'Restreindre sur les noms de fichier'),
           utils.filterParam('concepts', 'Restreindre sur les concepts annotés'),
           utils.filterParam('field-type', 'Restreindre sur les types de colonnes'),
           utils.filterParam('field-format', 'Restreindre sur les formats des colonnes textes'),
-          utils.booleanParam('files', 'Restrieindre aux jeux avec fichiers attachés'),
+          utils.booleanParam('files', 'Restreindre aux jeux avec fichiers attachés'),
           utils.booleanParam('bbox', 'Restreindre aux jeux géographiques'),
           utils.booleanParam('queryable', 'Restreindre aux jeux requêtables et utilisables dans des applications'),
           ...utils.paginationParams,
@@ -320,13 +321,6 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         }
       }
     },
-    '/datasets/{id}/master-data/bulk-searchs/{bulkSearchId}': {
-      post: {
-        tags: ['Données de référence'],
-        summary: 'Accès dédié aux données de référence pour extensions de données',
-        operationId: 'masterData_bulkSearch'
-      }
-    },
     '/applications': {
       get: {
         summary: 'Récupérer la liste des applications.',
@@ -335,6 +329,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
         parameters: [
           utils.qParam,
           ...utils.ownerParams,
+          utils.booleanParam('raw', 'Ne pas inclure les champs calculés'),
           utils.selectParam(Object.keys(application.properties)),
           utils.filterParam('ids', 'Restreindre sur les identifiants'),
           utils.filterParam('dataset', 'Restreindre sur les jeux de données utilisés'),
@@ -827,3 +822,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la [d
     }
   }
 }
+
+// TODO: shoud we keep some of this ?
+delete module.exports.paths['/remote-services']
+delete module.exports.paths['/remote-services/{id}']
+delete module.exports.paths['/catalogs']
+delete module.exports.paths['/catalogs/{id}']
+delete module.exports.paths['/status']

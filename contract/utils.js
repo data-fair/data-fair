@@ -52,38 +52,14 @@ exports.ownerParams = [/* {
 
 exports.visibilityParams = [{
   in: 'query',
-  name: 'public',
-  description: 'Voir uniquement les ressources publiques.',
-  required: false,
-  schema: {
-    type: 'boolean'
-  }
-}, {
-  in: 'query',
-  name: 'public',
-  description: 'Voir uniquement les ressources privées. Celles sur lesquelles aucune permission particulière n\'a été appliquée.',
-  required: false,
-  schema: {
-    type: 'boolean'
-  }
-}, {
-  in: 'query',
-  name: 'protected',
-  description: 'Voir uniquement les ressources protégées. Celles sur lesquelles une permission particulière non publique été appliquée.',
-  required: false,
-  schema: {
-    type: 'boolean'
-  }
-}, {
-  in: 'query',
   name: 'visibility',
-  description: 'Filtrer dans le même paramètre sur public/private/protected',
+  description: 'Filtrer sur la visibilité de la ressource. "public" = voir les ressources publiques, "private" = voir les ressources privées (celles sur lesquelles aucune permission particulière n\'a été appliquée), "protected" = voir les ressources protégées (celles sur lesquelles une permission a été donnée à des utilisateurs).',
   require: 'false',
   schema: {
     type: 'array',
-    enum: ['public', 'private', 'protected'],
     items: {
-      type: 'string'
+      type: 'string',
+      enum: ['public', 'private', 'protected']
     }
   },
   style: 'commaDelimited'
