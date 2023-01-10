@@ -127,7 +127,10 @@
 
       <v-stepper-content step="2">
         <v-row class="my-1 mx-0">
-          <dataset-select @change="toggleDataset" />
+          <dataset-select
+            :owner="{...activeAccount, department: publicationSite && publicationSite.department}"
+            @change="toggleDataset"
+          />
         </v-row>
         <v-row
           v-if="alreadyPublished"
@@ -273,19 +276,26 @@ export default {
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['can', 'resourceUrl', 'hasPublicApplications']),
     publicationSites () {
-      return this.ownerPublicationSites(this.activeAccount)
+      return this.ownerPublicationSites(this.publicationSitesOwner)
     },
     publicationSiteKey () {
       return this.publicationSite && `${this.publicationSite.type}:${this.publicationSite.id}`
     },
     alreadyPublished () {
       return this.publicationSite && this.dataset && this.dataset.publicationSites && this.dataset.publicationSites.includes(this.publicationSiteKey)
+    },
+    publicationSitesOwner () {
+      const publicationSitesOwner = { ...this.activeAccount }
+      if (this.activeAccount.type === 'organization' && !this.activeAccount.department) {
+        publicationSitesOwner.department = '*'
+      }
+      return publicationSitesOwner
     }
   },
   created () {
     this.$store.dispatch('dataset/clear')
     this.$store.dispatch('breadcrumbs', [{ text: this.$t('home'), to: '/' }, { text: this.$t('shareDataset') }])
-    this.$store.dispatch('fetchPublicationSites', this.activeAccount)
+    this.$store.dispatch('fetchPublicationSites', this.publicationSitesOwner)
   },
   methods: {
     ...mapActions('dataset', ['patch']),

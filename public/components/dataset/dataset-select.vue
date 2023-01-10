@@ -43,7 +43,8 @@ import { mapGetters } from 'vuex'
 export default {
   props: {
     label: { type: String, default: '' },
-    extraParams: { type: Object, default: () => ({}) }
+    extraParams: { type: Object, default: () => ({}) },
+    owner: { type: Object, default: null }
   },
   data: () => ({
     loadingDatasets: false,
@@ -56,17 +57,23 @@ export default {
   watch: {
     search () {
       this.searchDatasets()
+    },
+    owner () {
+      this.searchDatasets()
     }
   },
   methods: {
     async searchDatasets () {
       this.loadingDatasets = true
+      const owner = this.owner || this.activeAccount
+      let ownerFilter = `${owner.type}:${owner.id}`
+      if (owner.department) ownerFilter += `:${owner.department}`
       const res = await this.$axios.$get('api/v1/datasets', {
         params: {
           q: this.search,
           size: 20,
           select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions,-links,-owner',
-          shared: false,
+          owner: ownerFilter,
           ...this.extraParams
         }
       })

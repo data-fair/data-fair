@@ -49,7 +49,10 @@ router.use('/:type/:id', (req, res, next) => {
   }
   const [id, department] = req.params.id.split(':')
   req.owner = { type: req.params.type, id }
-  if (department) req.owner.department = department
+  if (department) {
+    req.department = department
+    if (department !== '*') req.owner.department = department
+  }
   req.ownerFilter = { ...req.owner }
   if (!department) req.ownerFilter.department = { $exists: false }
   next()
@@ -162,12 +165,19 @@ router.get('/:type/:id/datasets-metadata', isOwnerMember, asyncWrap(async (req, 
 // Get publication sites as owner (see all) or other use (only public)
 router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async (req, res) => {
   const db = req.app.get('db')
-  const settings = await db.collection('settings').findOne(req.ownerFilter, { projection: { _id: 0 } })
-  let publicationSites = (settings && settings.publicationSites) || []
+  const filter = [req.ownerFilter]
   if (req.owner.department) {
-    for (const publicationSite of publicationSites) publicationSite.department = req.owner.department
-    const orgSettings = await db.collection('settings').findOne({ type: req.owner.type, id: req.owner.id }, { projection: { _id: 0 } })
-    publicationSites = publicationSites.concat((orgSettings && orgSettings.publicationSites) || [])
+    filter.push({ ...req.ownerFilter, department: { $exists: false } })
+  } else if (req.department === '*') {
+    filter[0] = { ...req.ownerFilter, department: undefined }
+  }
+  const settingsArray = await db.collection('settings').find(req.ownerFilter, { projection: { _id: 0 } }).toArray()
+  const publicationSites = []
+  for (const settings of settingsArray) {
+    for (const publicationSite of settings.publicationSites || []) {
+      if (settings.department) publicationSite.department = settings.department
+      publicationSites.push(publicationSite)
+    }
   }
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode && !permissions.getOwnerRole(req.owner, req.user)) {
