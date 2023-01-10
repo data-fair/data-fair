@@ -160,7 +160,7 @@
           <v-select
             v-if="currentPropRef.prop.type === 'string'"
             v-model="currentPropRef.prop.separator"
-            :items="[', ', '; ', ' - ', ' / ']"
+            :items="[', ', '; ', ' - ', ' / ', ' | ']"
             :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
             :label="$t('sep')"
             hide-details
