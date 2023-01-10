@@ -55,8 +55,8 @@ const dataLayers = [{
   'source-layer': 'results',
   type: 'fill',
   paint: {
-    'fill-color': 'rgba(255, 152, 0, 0.2)',
-    'fill-outline-color': 'rgba(255, 152, 0, 0.5)'
+    'fill-color': 'rgba(233, 30, 99, 0.2)',
+    'fill-outline-color': 'rgba(233, 30, 99, 0.5)'
   },
   filter: ['==', '$type', 'Polygon']
 }, {
@@ -75,7 +75,7 @@ const dataLayers = [{
   'source-layer': 'results',
   type: 'line',
   paint: {
-    'line-color': 'rgba(156, 39, 176, 0.5)',
+    'line-color': 'rgba(233, 30, 99, 0.5)',
     'line-width': { stops: [[4, 1], [24, 6]] }
   },
   layout: {
