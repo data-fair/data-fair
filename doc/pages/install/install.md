@@ -43,7 +43,7 @@ Data Fair requires ElasticSearch 7.x with the ingest-attachment plugin. See [ins
 
 This recipe runs Data Fair and its most important dependencies locally on your computer.
 
-  - download files [data-fair.env]({{DOC_BASE}}install-resources/local/data-fair.env), [default.conf]({{DOC_BASE}}install-resources/local/default.conf) and [docker-compose.yaml]({{DOC_BASE}}install-resources/local/docker-compose.yaml) next to each other in a directory.
+  - download files [data-fair.env]({{DOC_BASE}}install-resources/local/data-fair.env), [default.conf]({{DOC_BASE}}install-resources/local/default.conf), [capture-seccomp.json]({{DOC_BASE}}/local/capture-seccomp.json) and [docker-compose.yaml]({{DOC_BASE}}install-resources/local/docker-compose.yaml) next to each other in a directory.
   - run `docker-compose --env-file data-fair.env up -d` in the directory
   - check that all containers are up with `docker-compose ps`
   - you should be able to open [http://localhost](http://localhost)
@@ -53,7 +53,7 @@ This recipe runs Data Fair and its most important dependencies locally on your c
 
 This recipe can run Data Fair on a virtual machine exposed to the internet.
 
-  - download files [data-fair.env]({{DOC_BASE}}install-resources/full/data-fair.env), [default.conf]({{DOC_BASE}}install-resources/full/default.conf) and [docker-compose.yaml]({{DOC_BASE}}install-resources/full/docker-compose.yaml) next to each other in a directory.
+  - download files [data-fair.env]({{DOC_BASE}}install-resources/full/data-fair.env), [default.conf]({{DOC_BASE}}install-resources/full/default.conf), [capture-seccomp.json]({{DOC_BASE}}/local/capture-seccomp.json) and [docker-compose.yaml]({{DOC_BASE}}install-resources/full/docker-compose.yaml) next to each other in a directory.
   - carefully read and edit the *.env* file
   - edit the line *server_name* in default.conf
   - run `docker-compose --env-file data-fair.env up -d` in the directory
