@@ -169,11 +169,11 @@ services:
       - SYSLOG_SECRET=syslog_secret
 
   openapi-viewer:
-    image: koumoul/openapi-viewer:1
+    image: ghcr.io/data-fair/openapi-viewer:1
     restart: 'always'
 
   capture:
-    image: koumoul/capture:3
+    image: ghcr.io/data-fair/capture:3
     restart: 'always'
     shm_size: '1gb'
     security_opt:
