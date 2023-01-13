@@ -247,6 +247,7 @@ module.exports = {
   }, {
     url: 'https://koumoul.com/apps/admin-divs-catchment/0.1/'
   }],
+  applicationsPrivateMapping: ['', ''], // an optional 2 items array mapping url prefixes from application to the local equivalent
   baseAppsCategories: ['carte', 'graphique', 'textuelle', 'SCDL'],
   remoteServices: [{
     title: 'Données Entreprises',
@@ -261,6 +262,7 @@ module.exports = {
     title: 'Service de données cartographiques',
     url: 'https://koumoul.com/s/tileserver/api/v1/api-docs.json'
   }],
+  remoteServicesPrivateMapping: ['', ''], // an optional 2 items array mapping url prefixes from remote service to the local equivalent
   catalogs: [{
     title: 'Data.gouv.fr',
     href: 'https://www.data.gouv.fr',
@@ -273,7 +275,6 @@ module.exports = {
     value: null
   },
   remoteTimeout: 5000,
-  remoteServicesPrivateMapping: ['', ''], // an optional 2 items array mapping url prefixes from remote service to the local equivalent
   disableSharing: false,
   disableApplications: false,
   disableRemoteServices: false,

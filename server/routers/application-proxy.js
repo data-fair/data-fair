@@ -191,7 +191,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
 
   // merge incoming an target URL elements
   const incomingUrl = new URL('http://host' + req.url)
-  const targetUrl = new URL(cleanApplicationUrl)
+  const targetUrl = new URL(cleanApplicationUrl.replace(config.applicationsPrivateMapping[0], config.applicationsPrivateMapping[1]))
   let extraPath = req.params['0']
   if (extraPath === '') extraPath = '/index.html'
   else if (incomingUrl.pathname.endsWith('/')) extraPath += '/index.html'

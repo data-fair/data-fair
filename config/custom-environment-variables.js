@@ -162,6 +162,10 @@ module.exports = {
     __name: 'APPLICATIONS',
     __format: 'json'
   },
+  applicationsPrivateMapping: {
+    __name: 'APPLICATIONS_PRIVATE_MAPPING',
+    __format: 'json'
+  },
   applicationsDirectories: {
     __name: 'APPLICATIONS_DIRECTORIES',
     __format: 'json'
@@ -174,12 +178,12 @@ module.exports = {
     __name: 'REMOTE_SERVICES',
     __format: 'json'
   },
-  defaultRemoteKey: {
-    value: 'DEFAULT_REMOTE_KEY'
-  },
   remoteServicesPrivateMapping: {
     __name: 'REMOTE_SERVICES_PRIVATE_MAPPING',
     __format: 'json'
+  },
+  defaultRemoteKey: {
+    value: 'DEFAULT_REMOTE_KEY'
   },
   catalogs: {
     __name: 'CATALOGS',
