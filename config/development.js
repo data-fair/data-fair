@@ -72,10 +72,21 @@ module.exports = {
   }],
   proxyNuxt: true,
   extraNavigationItems: [
-    { id: 'test', title: { fr: 'Test', en: 'Test en' }, iframe: `http://${host}:5600/data-fair/_dev/extra`, basePath: '/data-fair', icon: 'mdi-link' }
+    {
+      id: 'test',
+      title: { fr: 'Test', en: 'Test en' },
+      iframe: `http://${host}:5600/data-fair/_dev/extra`,
+      basePath: '/data-fair',
+      icon: 'mdi-link'
+    }
   ],
   extraAdminNavigationItems: [
-    { id: 'test', title: { fr: 'Test admin', en: 'Test admin en' }, iframe: 'https://koumoul.com', icon: 'mdi-link' }
+    {
+      id: 'test',
+      title: { fr: 'Test admin', en: 'Test admin en' },
+      iframe: 'https://koumoul.com',
+      icon: 'mdi-link'
+    }
   ],
   disableSharing: false,
   disableApplications: false,

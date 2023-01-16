@@ -366,7 +366,7 @@ export default {
       }
       if (this.resource.owner.type === 'organization') {
         items.push({ value: 'privateOrg', text: this.$t('visibility.privateOrg', { org: this.resource.owner.name || this.resource.owner.id }), disabled: privateDisabled })
-        if (this.resource.owner.department) items.push({ value: 'visibility.sharedInDep', text: this.$t('sharedInDep', { dep: this.resource.owner.departmentName || this.resource.owner.department }), disabled: privateDisabled })
+        if (this.resource.owner.department) items.push({ value: 'sharedInDep', text: this.$t('visibility.sharedInDep', { dep: this.resource.owner.departmentName || this.resource.owner.department }), disabled: privateDisabled })
         items.push({ value: 'sharedInOrg', text: this.$t('visibility.sharedInOrg', { org: this.resource.owner.name || this.resource.owner.id }), disabled: privateDisabled })
       } else {
         items.push({ value: 'privateUser', text: this.$t('visibility.privateUser', { user: this.resource.owner.name || this.resource.owner.id }), disabled: privateDisabled })
