@@ -217,6 +217,59 @@ describe('datasets in draft mode', () => {
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-finalize-end:dataset1')
   })
 
+  it('create a draft when updating the data file and auto-validate if it\'s schema is compatible', async () => {
+    // Send dataset
+    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+    const form = new FormData()
+    form.append('file', datasetFd, 'dataset1.csv')
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let dataset = await workers.hook('finalizer')
+
+    // upload a new file
+    const datasetFd2 = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+    const form2 = new FormData()
+    form2.append('file', datasetFd2, 'dataset1.csv')
+    form2.append('description', 'draft description')
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
+    assert.equal(dataset.status, 'loaded')
+    assert.equal(dataset.draftReason.key, 'file-updated')
+    dataset = await workers.hook('finalizer')
+    assert.equal(dataset.file.name, 'dataset1.csv')
+    assert.equal(dataset.count, 2)
+    // console.log(dataset)
+    assert.ok(!dataset.draft)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
+    assert.equal(res.data.total, 2)
+
+    const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+    journal.reverse()
+    assert.equal(journal[0].type, 'dataset-created')
+    assert.equal(journal[1].type, 'analyze-start')
+    assert.equal(journal[2].type, 'analyze-end')
+    assert.equal(journal[3].type, 'index-start')
+    assert.equal(journal[4].type, 'index-end')
+    assert.equal(journal[5].type, 'finalize-start')
+    assert.equal(journal[6].type, 'finalize-end')
+    assert.equal(journal[7].type, 'data-updated')
+    assert.equal(journal[7].draft, true)
+    assert.equal(journal[8].type, 'analyze-start')
+    assert.equal(journal[8].draft, true)
+    assert.equal(journal[9].type, 'draft-validated')
+    assert.equal(journal[10].type, 'analyze-end')
+    assert.equal(journal[10].draft, undefined)
+    assert.equal(journal[11].type, 'index-start')
+    assert.equal(journal[11].draft, undefined)
+    assert.equal(journal[12].type, 'index-end')
+    assert.equal(journal[12].draft, undefined)
+    assert.equal(journal[13].type, 'finalize-start')
+    assert.equal(journal[13].draft, undefined)
+    assert.equal(journal[14].type, 'finalize-end')
+    assert.equal(journal[14].draft, undefined)
+  })
+
   it('create a draft of a large file and index a sample', async () => {
     let content = 'col'
     for (let i = 0; i < 2000; i++) {

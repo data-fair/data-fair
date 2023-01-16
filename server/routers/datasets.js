@@ -33,7 +33,6 @@ const geo = require('../utils/geo')
 const tiles = require('../utils/tiles')
 const cache = require('../utils/cache')
 const cacheHeaders = require('../utils/cache-headers')
-const webhooks = require('../utils/webhooks')
 const outputs = require('../utils/outputs')
 const limits = require('../utils/limits')
 const locks = require('../utils/locks')
@@ -977,91 +976,10 @@ router.put('/:datasetId', lockDataset(), attemptInsert, readDataset(['finalized'
 
 // validate the draft
 router.post('/:datasetId/draft', lockDataset(), readDataset(['finalized'], true), permissions.middleware('validateDraft', 'write'), asyncWrap(async (req, res, next) => {
-  const db = req.app.get('db')
   if (!req.dataset.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
-  const patch = {
-    ...req.dataset.draft,
-    updatedAt: moment().toISOString(),
-    updatedBy: { id: req.user.id, name: req.user.name }
-  }
-  if (req.dataset.draft.dataUpdatedAt) {
-    patch.dataUpdatedAt = patch.updatedAt
-    patch.dataUpdatedBy = patch.updatedBy
-  }
-  delete patch.status
-  delete patch.finalizedAt
-  delete patch.draftReason
-  delete patch.count
-  delete patch.bbox
-  delete patch.storage
-  const patchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: req.params.datasetId },
-    { $set: patch, $unset: { draft: '' } },
-    { returnDocument: 'after' }
-  )).value
-  if (req.dataset.prod.originalFile) await fs.remove(datasetUtils.originalFilePath(req.dataset.prod))
-  if (req.dataset.prod.file) {
-    await fs.remove(datasetUtils.filePath(req.dataset.prod))
-    await fs.remove(datasetUtils.fullFilePath(req.dataset.prod))
-    webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
-
-    // WARNING, this functionality is kind of a duplicate of the UI in dataset-schema.vue
-    for (const field of req.dataset.prod.schema) {
-      if (field['x-calculated']) continue
-      const patchedField = patchedDataset.schema.find(pf => pf.key === field.key)
-      if (!patchedField) {
-        webhooks.trigger(db, 'dataset', patchedDataset, {
-          type: 'breaking-change',
-          body: require('i18n').getLocales().reduce((a, locale) => {
-            a[locale] = req.__({ phrase: 'breakingChanges.missing', locale }, { title: patchedDataset.title, key: field.key })
-            return a
-          }, {})
-        })
-        continue
-      }
-      if (patchedField.type !== field.type) {
-        webhooks.trigger(db, 'dataset', patchedDataset, {
-          type: 'breaking-change',
-          body: require('i18n').getLocales().reduce((a, locale) => {
-            a[locale] = req.__({ phrase: 'breakingChanges.type', locale }, { title: patchedDataset.title, key: field.key })
-            return a
-          }, {})
-        })
-        continue
-      }
-      const format = (field.format && field.format !== 'uri-reference') ? field.format : null
-      const patchedFormat = (patchedField.format && patchedField.format !== 'uri-reference') ? patchedField.format : null
-      if (patchedFormat !== format) {
-        webhooks.trigger(db, 'dataset', patchedDataset, {
-          type: 'breaking-change',
-          body: require('i18n').getLocales().reduce((a, locale) => {
-            a[locale] = req.__({ phrase: 'breakingChanges.type', locale }, { title: patchedDataset.title, key: field.key })
-            return a
-          }, {})
-        })
-        continue
-      }
-    }
-  }
-  await fs.ensureDir(datasetUtils.dir(patchedDataset))
-  await fs.move(datasetUtils.originalFilePath(req.dataset), datasetUtils.originalFilePath(patchedDataset))
-  if (await fs.pathExists(datasetUtils.attachmentsDir(req.dataset))) {
-    await fs.remove(datasetUtils.attachmentsDir(patchedDataset))
-    await fs.move(datasetUtils.attachmentsDir(req.dataset), datasetUtils.attachmentsDir(patchedDataset))
-  }
-
-  const statusPatch = { status: basicTypes.includes(req.dataset.originalFile.mimetype) ? 'analyzed' : 'uploaded' }
-  const statusPatchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: req.params.datasetId },
-    { $set: statusPatch },
-    { returnDocument: 'after' }
-  )).value
-  await journals.log(req.app, statusPatchedDataset, { type: 'draft-validated' }, 'dataset')
-
-  await esUtils.delete(req.app.get('es'), req.dataset)
-  await fs.remove(datasetUtils.dir(req.dataset))
-  await datasetUtils.updateStorage(db, statusPatchedDataset)
-  return res.send(statusPatchedDataset)
+  return res.send(await datasetUtils.validateDraft(req.app, req.dataset, req.user, req))
 }))
 
 // cancel the draft

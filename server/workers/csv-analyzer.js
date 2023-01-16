@@ -67,6 +67,8 @@ exports.process = async function (app, dataset) {
   datasetUtils.mergeFileSchema(dataset)
   datasetUtils.cleanSchema(dataset)
 
+  if (await datasetUtils.validateCompatibleDraft(app, dataset)) return
+
   debug('store status as analyzed')
   dataset.status = 'analyzed'
 

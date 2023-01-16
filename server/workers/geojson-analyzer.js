@@ -69,6 +69,8 @@ exports.process = async function (app, dataset) {
   datasetUtils.mergeFileSchema(dataset)
   datasetUtils.cleanSchema(dataset)
 
+  if (await datasetUtils.validateCompatibleDraft(app, dataset)) return
+
   const patch = {
     status: 'analyzed',
     file: dataset.file,

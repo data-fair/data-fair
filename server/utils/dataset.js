@@ -23,6 +23,8 @@ const limits = require('./limits')
 const esUtils = require('./es')
 const locks = require('./locks')
 const prometheus = require('./prometheus')
+const webhooks = require('./webhooks')
+const journals = require('./journals')
 const { basicTypes, csvTypes } = require('../workers/converter')
 const equal = require('deep-equal')
 const dataDir = path.resolve(config.dataDir)
@@ -844,7 +846,7 @@ exports.syncApplications = async (db, datasetId) => {
     .updateOne({ id: datasetId }, { $set: { 'extras.applications': applicationsExtras } })
 }
 
-exports.schemasFullyCompatible = (schema1, schema2) => {
+exports.schemasFullyCompatible = (schema1, schema2, ignoreCalculated = false) => {
   // a change in these properties does not consitute a breaking change of the api
   // and does not require a re-finalization of the dataset when patched
   const innocuous = {
@@ -858,7 +860,110 @@ exports.schemasFullyCompatible = (schema1, schema2) => {
     'x-cardinality': '',
     enum: ''
   }
-  const schema1Bare = schema1.map(p => ({ ...p, ...innocuous })).sort((p1, p2) => p1.key.localeCompare(p2.key))
-  const schema2Bare = schema2.map(p => ({ ...p, ...innocuous })).sort((p1, p2) => p1.key.localeCompare(p2.key))
+  const schema1Bare = schema1.filter(p => !(p['x-calculated'] && ignoreCalculated)).map(p => ({ ...p, ...innocuous })).sort((p1, p2) => p1.key.localeCompare(p2.key))
+  const schema2Bare = schema2.filter(p => !(p['x-calculated'] && ignoreCalculated)).map(p => ({ ...p, ...innocuous })).sort((p1, p2) => p1.key.localeCompare(p2.key))
   return equal(schema1Bare, schema2Bare)
+}
+
+exports.validateDraft = async (app, dataset, user, req) => {
+  const db = app.get('db')
+  const patch = {
+    ...dataset.draft
+  }
+  if (user) {
+    patch.updatedAt = (new Date()).toISOString()
+    patch.updatedBy = { id: user.id, name: user.name }
+  }
+  if (dataset.draft.dataUpdatedAt) {
+    patch.dataUpdatedAt = patch.updatedAt
+    patch.dataUpdatedBy = patch.updatedBy
+  }
+  delete patch.status
+  delete patch.finalizedAt
+  delete patch.draftReason
+  delete patch.count
+  delete patch.bbox
+  delete patch.storage
+  const patchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: dataset.id },
+    { $set: patch, $unset: { draft: '' } },
+    { returnDocument: 'after' }
+  )).value
+  if (dataset.prod.originalFile) await fs.remove(exports.originalFilePath(dataset.prod))
+  if (dataset.prod.file) {
+    await fs.remove(exports.filePath(dataset.prod))
+    await fs.remove(exports.fullFilePath(dataset.prod))
+    webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
+
+    if (req) {
+    // WARNING, this functionality is kind of a duplicate of the UI in dataset-schema.vue
+      for (const field of dataset.prod.schema) {
+        if (field['x-calculated']) continue
+        const patchedField = patchedDataset.schema.find(pf => pf.key === field.key)
+        if (!patchedField) {
+          webhooks.trigger(db, 'dataset', patchedDataset, {
+            type: 'breaking-change',
+            body: require('i18n').getLocales().reduce((a, locale) => {
+              a[locale] = req.__({ phrase: 'breakingChanges.missing', locale }, { title: patchedDataset.title, key: field.key })
+              return a
+            }, {})
+          })
+          continue
+        }
+        if (patchedField.type !== field.type) {
+          webhooks.trigger(db, 'dataset', patchedDataset, {
+            type: 'breaking-change',
+            body: require('i18n').getLocales().reduce((a, locale) => {
+              a[locale] = req.__({ phrase: 'breakingChanges.type', locale }, { title: patchedDataset.title, key: field.key })
+              return a
+            }, {})
+          })
+          continue
+        }
+        const format = (field.format && field.format !== 'uri-reference') ? field.format : null
+        const patchedFormat = (patchedField.format && patchedField.format !== 'uri-reference') ? patchedField.format : null
+        if (patchedFormat !== format) {
+          webhooks.trigger(db, 'dataset', patchedDataset, {
+            type: 'breaking-change',
+            body: require('i18n').getLocales().reduce((a, locale) => {
+              a[locale] = req.__({ phrase: 'breakingChanges.type', locale }, { title: patchedDataset.title, key: field.key })
+              return a
+            }, {})
+          })
+          continue
+        }
+      }
+    }
+  }
+  await fs.ensureDir(exports.dir(patchedDataset))
+  await fs.move(exports.originalFilePath(dataset), exports.originalFilePath(patchedDataset))
+  if (await fs.pathExists(exports.attachmentsDir(dataset))) {
+    await fs.remove(exports.attachmentsDir(patchedDataset))
+    await fs.move(exports.attachmentsDir(dataset), exports.attachmentsDir(patchedDataset))
+  }
+
+  const statusPatch = { status: basicTypes.includes(dataset.originalFile.mimetype) ? 'analyzed' : 'uploaded' }
+  const statusPatchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: dataset.id },
+    { $set: statusPatch },
+    { returnDocument: 'after' }
+  )).value
+  await journals.log(app, statusPatchedDataset, { type: 'draft-validated' }, 'dataset')
+  try {
+    await esUtils.delete(app.get('es'), dataset)
+  } catch (err) {
+    if (err.statusCode !== 404) throw err
+  }
+  await fs.remove(exports.dir(dataset))
+  await exports.updateStorage(db, statusPatchedDataset)
+  return statusPatchedDataset
+}
+
+exports.validateCompatibleDraft = async (app, dataset) => {
+  if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {
+    const prodDataset = await app.get('db').collection('datasets').findOne({ id: dataset.id })
+    const fullDataset = { ...dataset, prod: prodDataset, draft: dataset }
+    if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument') && exports.schemasFullyCompatible(fullDataset.prod.schema, dataset.schema, true)) {
+      return await exports.validateDraft(app, fullDataset)
+    }
+  }
+  return null
 }
