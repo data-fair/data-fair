@@ -12,89 +12,8 @@
       <v-divider />
     </v-list>-->
     <v-list
-      v-if="user && user.adminMode"
-      class="py-0 px-1"
-      color="admin"
-      style="background-image: none;"
       nav
-      dense
-    >
-      <v-list-item
-        tile
-        color="admin"
-      >
-        <v-list-item-title v-t="'admin'" />
-      </v-list-item>
-      <v-list-item
-        :nuxt="true"
-        :to="`/remote-services`"
-        :class="routePrefix === 'remote' ? 'v-list-item--active' : ''"
-      >
-        <v-list-item-action><v-icon>mdi-cloud</v-icon></v-list-item-action>
-        <v-list-item-title v-t="'services'" />
-      </v-list-item>
-
-      <v-list-item
-        :nuxt="true"
-        :to="`/admin/info`"
-      >
-        <v-list-item-action><v-icon>mdi-information</v-icon></v-list-item-action>
-        <v-list-item-title v-t="'serviceInfo'" />
-      </v-list-item>
-
-      <v-list-item
-        :nuxt="true"
-        :to="`/admin/owners`"
-      >
-        <v-list-item-action><v-icon>mdi-briefcase</v-icon></v-list-item-action>
-        <v-list-item-title v-t="'owners'" />
-      </v-list-item>
-
-      <v-list-item
-        :nuxt="true"
-        :to="`/admin/errors`"
-      >
-        <v-list-item-action><v-icon>mdi-alert</v-icon></v-list-item-action>
-        <v-list-item-title v-t="'errors'" />
-      </v-list-item>
-
-      <v-list-item
-        v-if="!env.disableApplications"
-        :nuxt="true"
-        :to="`/admin/base-apps`"
-      >
-        <v-list-item-action><v-icon>mdi-apps</v-icon></v-list-item-action>
-        <v-list-item-title v-t="'baseApplications'" />
-      </v-list-item>
-
-      <v-list-item
-        :nuxt="true"
-        :href="env.directoryUrl + '/admin/users'"
-      >
-        <v-list-item-action><v-icon>mdi-account-supervisor</v-icon></v-list-item-action>
-        <v-list-item-title v-t="'accountsManagement'" />
-      </v-list-item>
-
-      <template v-if="env.extraAdminNavigationItems">
-        <v-list-item
-          v-for="extra in env.extraAdminNavigationItems"
-          :key="extra.id"
-          :nuxt="!!extra.iframe"
-          :to="extra.iframe && `/admin-extra/${extra.id}`"
-          :href="extra.href"
-        >
-          <v-list-item-action><v-icon>{{ extra.icon }}</v-icon></v-list-item-action>
-          <v-list-item-title>
-            {{ typeof extra.title === 'string' ? extra.title : (extra.title[$i18n.locale] || extra.title[$i18n.defaultLocale]) }}
-          </v-list-item-title>
-        </v-list-item>
-      </template>
-      <v-divider />
-    </v-list>
-
-    <v-list
-      nav
-      class="pa-1"
+      class="px-1 pt-1 pb-0"
     >
       <v-list-item
         v-if="missingSubscription && canAdmin && env.subscriptionUrl"
@@ -136,7 +55,85 @@
           </v-list-item-content>
         </v-list-item>
 
-        <v-divider class="pb-2" />
+        <v-divider class="pb-1" />
+
+        <template v-if="user && user.adminMode">
+          <v-list-group
+            :style="`background-color:${$vuetify.theme.themes.light.admin}`"
+            color="white"
+            :value="$route.path.startsWith('/admin')"
+          >
+            <template #activator>
+              <v-list-item-action><v-icon>mdi-shield-star</v-icon></v-list-item-action>
+              <v-list-item-title v-t="'admin'" />
+            </template>
+            <v-list-item
+              :nuxt="true"
+              :to="`/remote-services`"
+              :class="routePrefix === 'remote' ? 'v-list-item--active' : ''"
+            >
+              <v-list-item-action><v-icon>mdi-cloud</v-icon></v-list-item-action>
+              <v-list-item-title v-t="'services'" />
+            </v-list-item>
+
+            <v-list-item
+              :nuxt="true"
+              :to="`/admin/info`"
+            >
+              <v-list-item-action><v-icon>mdi-information</v-icon></v-list-item-action>
+              <v-list-item-title v-t="'serviceInfo'" />
+            </v-list-item>
+
+            <v-list-item
+              :nuxt="true"
+              :to="`/admin/owners`"
+            >
+              <v-list-item-action><v-icon>mdi-briefcase</v-icon></v-list-item-action>
+              <v-list-item-title v-t="'owners'" />
+            </v-list-item>
+
+            <v-list-item
+              :nuxt="true"
+              :to="`/admin/errors`"
+            >
+              <v-list-item-action><v-icon>mdi-alert</v-icon></v-list-item-action>
+              <v-list-item-title v-t="'errors'" />
+            </v-list-item>
+
+            <v-list-item
+              v-if="!env.disableApplications"
+              :nuxt="true"
+              :to="`/admin/base-apps`"
+            >
+              <v-list-item-action><v-icon>mdi-apps</v-icon></v-list-item-action>
+              <v-list-item-title v-t="'baseApplications'" />
+            </v-list-item>
+
+            <v-list-item
+              :nuxt="true"
+              :href="env.directoryUrl + '/admin/users'"
+            >
+              <v-list-item-action><v-icon>mdi-account-supervisor</v-icon></v-list-item-action>
+              <v-list-item-title v-t="'accountsManagement'" />
+            </v-list-item>
+
+            <template v-if="env.extraAdminNavigationItems">
+              <v-list-item
+                v-for="extra in env.extraAdminNavigationItems"
+                :key="extra.id"
+                :nuxt="!!extra.iframe"
+                :to="extra.iframe && `/admin-extra/${extra.id}`"
+                :href="extra.href"
+              >
+                <v-list-item-action><v-icon>{{ extra.icon }}</v-icon></v-list-item-action>
+                <v-list-item-title>
+                  {{ typeof extra.title === 'string' ? extra.title : (extra.title[$i18n.locale] || extra.title[$i18n.defaultLocale]) }}
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+          </v-list-group>
+          <v-divider class="pb-1" />
+        </template>
 
         <v-list-item
           v-if="activeAccount && activeAccount.type === 'organization' && user.organization.role === 'admin' && !user.organization.department"
@@ -210,16 +207,6 @@
           <v-list-item-title v-t="'storage'" />
         </v-list-item>
 
-        <v-list-item
-          v-if="canContribDep"
-          :nuxt="true"
-          dense
-          to="/api-doc"
-        >
-          <v-list-item-action><v-icon>mdi-cloud</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'apiDoc'" />
-        </v-list-item>
-
         <template v-if="env.extraNavigationItems && user">
           <v-list-item
             v-for="extra in env.extraNavigationItems.filter(extra => !extra.can || (extra.can === 'contrib' && canContrib) || (extra.can === 'admin' && canAdmin) || (extra.can === 'contribDep' && canContribDep) || (extra.can === 'adminDep' && canAdminDep))"
@@ -243,6 +230,41 @@
       </template>
     </v-list>
 
+    <v-list
+      v-if="!missingSubscription"
+      nav
+      class="px-1 pt-0 pb-1"
+      dense
+    >
+      <v-list-group
+        v-if="canContribDep"
+        color="white"
+        :value="$route.path === '/api-doc'"
+      >
+        <template #activator>
+          <v-list-item-action><v-icon>mdi-information</v-icon></v-list-item-action>
+          <v-list-item-title v-t="'doc'" />
+        </template>
+        <v-list-item
+          :nuxt="true"
+          dense
+          to="/api-doc"
+        >
+          <v-list-item-action><v-icon>mdi-cloud</v-icon></v-list-item-action>
+          <v-list-item-title v-t="'apiDoc'" />
+        </v-list-item>
+        <v-list-item
+          :nuxt="true"
+          dense
+          href="https://data-fair.github.io/3/user-guide-backoffice"
+          target="blank"
+        >
+          <v-list-item-action><v-icon>mdi-book-open-variant</v-icon></v-list-item-action>
+          <v-list-item-title v-t="'userDoc'" />
+        </v-list-item>
+      </v-list-group>
+    </v-list>
+
     <v-footer
       absolute
       color="transparent"
@@ -250,7 +272,7 @@
       <v-spacer />
       <span class="text-caption"><a
         href="https://data-fair.github.io/3/"
-        style="color:white;text-decoration:underline;"
+        style="color:white;"
       >Powered by Data Fair</a></span>
     </v-footer>
   </v-navigation-drawer>
@@ -278,7 +300,9 @@ fr:
   catalogsSub: data.gouv.fr ...
   storage: Stockage
   subscription: Abonnement
+  doc: Documentation
   apiDoc: Utiliser l'API
+  userDoc: Manuel utilisateur
 en:
   admin: Administration
   services: Services
@@ -300,7 +324,9 @@ en:
   catalogsSub: data.gouv.fr ...
   storage: Storage
   subscription: Subscription
+  doc: Documentation
   apiDoc: Use the API
+  userDoc: User manual
 </i18n>
 
 <script>
