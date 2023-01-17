@@ -43,10 +43,13 @@ module.exports = {
     // always the same url to fetch static resource, even in multi-domain mode
     publicPath: config.publicUrl + '/_nuxt/',
     transpile: [/@koumoul/, 'easymde'], // Necessary for "à la carte" import of vuetify components
-    extend (config, { isServer, isDev, isClient }) {
+    extend (webpackConfig, { isServer, isDev, isClient }) {
       const webpack = require('webpack')
       // Ignore all locale files of moment.js, those we want are loaded in plugins/moment.js
-      config.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))
+      webpackConfig.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))
+      console.log(webpackConfig.devtool)
+      // source-map to debug in production
+      webpackConfig.devtool = webpackConfig.devtool || 'source-map'
     },
     splitChunks: {
       // this would be good for chunk sizes, but it causes double loading of embed pages
