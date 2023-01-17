@@ -193,7 +193,6 @@ fr:
     privateOrg: les administrateurs et contributeurs de l'organisation {org}
     privateUser: uniquement l'utilisateur {user}
     sharedInOrg: tous les utilisateurs de l'organisation {org}
-    sharedInDep: tous les utilisateurs du département {dep}
   contribProfileLabel: Qui peut contribuer à cette ressource ?
   contribProfile:
     adminOnly: les administrateurs de l'organisation {org}
@@ -239,7 +238,6 @@ en:
     privateOrg: admins and contributors of the organization {org}
     privateUser: only yourself
     sharedInOrg: any user of the organization {org}
-    sharedInDep: any user of the department {dep}
   contribProfileLabel: Who can contribute to this resource ?
   contribProfile:
     adminOnly: admins of the organization {org}
@@ -327,27 +325,21 @@ export default {
     isSharedInOrg () {
       return !!this.permissions.find(p => this.isSharedInOrgPermission(p))
     },
-    isSharedInDep () {
-      return !!this.permissions.find(p => this.isSharedInDepPermission(p))
-    },
     visibility: {
       get () {
         if (!this.permissions) return
         if (this.isPublic) return 'public'
-        if (this.isSharedInDep) return 'sharedInDep'
         if (this.isSharedInOrg) return 'sharedInOrg'
         if (this.resource.owner.type === 'organization') return 'privateOrg'
         return 'privateUser'
       },
       set (visibility) {
         this.permissions = this.permissions
-          .filter(p => !this.isPublicPermission(p) && !this.isSharedInOrgPermission(p) && !this.isSharedInDepPermission(p))
+          .filter(p => !this.isPublicPermission(p) && !this.isSharedInOrgPermission(p))
         if (visibility === 'privateUser' || visibility === 'privateOrg') {
         // nothing to do
         } else if (visibility === 'sharedInOrg') {
           this.permissions.push({ type: 'organization', id: this.resource.owner.id, name: this.resource.owner.name, operations: [], classes: ['read', 'list'] })
-        } else if (visibility === 'sharedInDep') {
-          this.permissions.push({ type: 'organization', id: this.resource.owner.id, name: this.resource.owner.name, department: this.resource.owner.department, operations: [], classes: ['read', 'list'] })
         } else if (visibility === 'public') {
           this.permissions.push({ operations: [], classes: ['read', 'list'] })
         }
@@ -369,7 +361,6 @@ export default {
       }
       if (this.resource.owner.type === 'organization') {
         items.push({ value: 'privateOrg', text: this.$t('visibility.privateOrg', { org: this.resource.owner.name || this.resource.owner.id }), disabled: privateDisabled })
-        if (this.resource.owner.department) items.push({ value: 'sharedInDep', text: this.$t('visibility.sharedInDep', { dep: this.resource.owner.departmentName || this.resource.owner.department }), disabled: privateDisabled })
         items.push({ value: 'sharedInOrg', text: this.$t('visibility.sharedInOrg', { org: this.resource.owner.name || this.resource.owner.id }), disabled: privateDisabled })
       } else {
         items.push({ value: 'privateUser', text: this.$t('visibility.privateUser', { user: this.resource.owner.name || this.resource.owner.id }), disabled: privateDisabled })
@@ -414,7 +405,7 @@ export default {
       ]
     },
     hasDetailedPermission () {
-      return !!this.permissions.find(p => !this.isPublicPermission(p) && !this.isSharedInOrgPermission(p) && !this.isSharedInDepPermission(p) && !this.isManageOwnLinesPermission(p) && !this.isContribWritePermission(p) && !this.isContribWriteDeletePermission(p))
+      return !!this.permissions.find(p => !this.isPublicPermission(p) && !this.isSharedInOrgPermission(p) && !this.isManageOwnLinesPermission(p) && !this.isContribWritePermission(p) && !this.isContribWriteDeletePermission(p))
     },
     allUsersManageOwnLines: {
       get () {
@@ -448,11 +439,6 @@ export default {
     isSharedInOrgPermission (p) {
       return p.type === 'organization' && this.resource.owner.type === 'organization' &&
         p.id === this.resource.owner.id && !p.department &&
-        p.classes && p.classes.includes('read') && p.classes.includes('list')
-    },
-    isSharedInDepPermission (p) {
-      return p.type === 'organization' && this.resource.owner.type === 'organization' &&
-        p.id === this.resource.owner.id && p.department && p.department === this.resource.owner.department &&
         p.classes && p.classes.includes('read') && p.classes.includes('list')
     },
     isManageOwnLinesPermission (p) {
