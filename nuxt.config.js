@@ -47,7 +47,6 @@ module.exports = {
       const webpack = require('webpack')
       // Ignore all locale files of moment.js, those we want are loaded in plugins/moment.js
       webpackConfig.plugins.push(new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/))
-      console.log(webpackConfig.devtool)
       // source-map to debug in production
       webpackConfig.devtool = webpackConfig.devtool || 'source-map'
     },

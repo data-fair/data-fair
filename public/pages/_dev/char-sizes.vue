@@ -1,11 +1,11 @@
 <template>
   <div style="font-size:14px;">
     <span
-      v-for="char of chars"
-      :key="char"
+      v-for="(char, i) of chars"
+      :key="i"
       style="width:auto;"
       class="char"
-      :data-char="char"
+      :data-char="i"
       v-text="char"
     />
     <br>
@@ -36,7 +36,7 @@ export default {
       const chars = [
         ...letters,
         ...letters.toUpperCase(),
-        ...'0123456789 +=<>%*!/:.;,?&~@\'"_-|#()[]{}°²–\t\\'
+        ...'0123456789 +=<>%*!/:.;,?&~@\'’"_-|#()[]{}°²–\t\\'
       ]
       return chars
     }
@@ -44,7 +44,7 @@ export default {
   async mounted () {
     await new Promise(resolve => setTimeout(resolve, 1000))
     document.querySelectorAll('.char').forEach(elem => {
-      this.$set(this.charSizes, elem.getAttribute('data-char'), Math.ceil(elem.getBoundingClientRect().width * 100) / 100)
+      this.$set(this.charSizes, this.chars[elem.getAttribute('data-char')], Math.ceil(elem.getBoundingClientRect().width * 100) / 100)
     })
     document.querySelectorAll('.test').forEach(elem => {
       let estimatedSize = 0
