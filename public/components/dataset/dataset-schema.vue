@@ -9,7 +9,7 @@
           {{ notCalculatedProperties.length.toLocaleString() }} {{ $t('column') }}{{ notCalculatedProperties.length > 1 ? 's' : '' }}
         </h3>
         <v-btn
-          v-if="dataset.isRest && can('writeDescription')"
+          v-if="dataset.isRest && can('writeDescriptionBreaking')"
           color="primary"
           fab
           x-small
@@ -39,7 +39,7 @@
             @click="resetSchema"
           />
           <v-btn
-            v-if="updated && can('writeDescription')"
+            v-if="updated && can('writeDescriptionBreaking')"
             v-t="'apply'"
             color="primary"
             @click="save"
@@ -55,7 +55,7 @@
           <v-select
             v-model="primaryKey"
             :label="$t('primaryKey')"
-            :disabled="!!dataset.count || !can('writeDescription')"
+            :disabled="!!dataset.count || !can('writeDescriptionBreaking')"
             :messages="dataset.count ? $t('primaryKeyMsgData') : $t('primaryKeyMsgNoData')"
             :items="notCalculatedProperties.map(p => ({text: p.title || p['x-originalName'] || p.key, value: p.key}))"
             style="max-width: 500px;"
@@ -65,7 +65,7 @@
       </v-row>
 
       <tutorial-alert
-        v-if="can('writeDescription') && dataset.isRest"
+        v-if="can('writeDescriptionBreaking') && dataset.isRest"
         id="sort-properties"
       >
         {{ $t('sortProperties') }}
@@ -74,8 +74,8 @@
       <dataset-properties-slide
         v-if="schema && schema.length"
         :properties-refs="filteredProperties"
-        :editable="can('writeDescription')"
-        :sortable="can('writeDescription') && dataset.isRest && !schemaFilter"
+        :editable="can('writeDescriptionBreaking')"
+        :sortable="can('writeDescriptionBreaking') && dataset.isRest && !schemaFilter"
         @sort="applySort"
         @remove="removeProperty"
       />
