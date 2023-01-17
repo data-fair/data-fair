@@ -94,13 +94,6 @@
                 >
                   <v-list-item-content style="overflow:visible;">
                     <v-list-item-title>
-                      <v-icon
-                        v-if="site.private"
-                        small
-                        color="warning"
-                      >
-                        mdi-lock
-                      </v-icon>
                       {{ site.title || site.url || site.id }}
                     </v-list-item-title>
                     <v-list-item-subtitle

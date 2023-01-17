@@ -22,13 +22,6 @@
             >
               <v-list-item-content style="overflow:visible;">
                 <v-list-item-title>
-                  <v-icon
-                    v-if="site.private"
-                    small
-                    color="warning"
-                  >
-                    mdi-lock
-                  </v-icon>
                   <a :href="site.url">{{ site.title || site.url || site.id }}</a>
                 </v-list-item-title>
                 <v-list-item-subtitle

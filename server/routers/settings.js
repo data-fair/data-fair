@@ -162,7 +162,7 @@ router.get('/:type/:id/datasets-metadata', isOwnerMember, asyncWrap(async (req, 
   res.status(200).send((result && result.datasetsMetadata) || {})
 }))
 
-// Get publication sites as owner (see all) or other use (only public)
+// Get publication sites as owner
 router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async (req, res) => {
   const db = req.app.get('db')
   const filter = [req.ownerFilter]
@@ -180,9 +180,6 @@ router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async (req, 
     }
   }
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode && !permissions.getOwnerRole(req.owner, req.user)) {
-    return res.status(200).send(publicationSites.filter(p => !p.private))
-  }
   res.status(200).send(publicationSites)
 }))
 // create/update publication sites as owner (used by data-fair-portals to sync portals)

@@ -31,10 +31,10 @@ module.exports = (admin = false) => ({
       },
       private: {
         type: 'boolean',
-        title: 'Site privé',
+        title: 'Site privé (déprécié)',
         description: 'Dépend de la configuration de l\'authentification sur le portail. Si coché il sera permis de publier des ressources dont les permissions ne permettent pas l\'accès au public.',
         default: false,
-        readOnly: !admin
+        'x-display': 'hidden'
       },
       datasetUrlTemplate: {
         type: 'string',
