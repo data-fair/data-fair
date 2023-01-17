@@ -83,14 +83,14 @@ describe('search', () => {
     // CSV export
     res = await ax.get('/api/v1/datasets/dataset1/lines?format=csv')
     let lines = res.data.split('\n')
-    assert.equal(lines[0].trim(), '"id","adr","some date","loc"')
-    assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526"')
+    assert.equal(lines[0].trim(), '"id","adr","some date","loc","bool"')
+    assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526",0')
     locProp.title = 'Localisation'
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     res = await ax.get('/api/v1/datasets/dataset1/lines?format=csv')
     lines = res.data.split('\n')
-    assert.equal(lines[0].trim(), '"id","adr","some date","loc"')
-    assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526"')
+    assert.equal(lines[0].trim(), '"id","adr","some date","loc","bool"')
+    assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526",0')
   })
 
   it('search lines and collapse on field', async () => {

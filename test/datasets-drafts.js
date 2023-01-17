@@ -32,7 +32,7 @@ describe('datasets in draft mode', () => {
     assert.ok(dataset.draft.file)
     assert.equal(dataset.draft.status, 'analyzed')
     assert.equal(dataset.schema.length, 0)
-    assert.equal(dataset.draft.schema.length, 4)
+    assert.equal(dataset.draft.schema.length, 5)
 
     // ES indexation and finalization
     dataset = await workers.hook('finalizer')
@@ -212,6 +212,7 @@ describe('datasets in draft mode', () => {
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-data-updated:dataset1')
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-data-updated:dataset1')
     // console.log(notifications.shift())
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:dataset1')
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:dataset1')
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:dataset1')
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-finalize-end:dataset1')

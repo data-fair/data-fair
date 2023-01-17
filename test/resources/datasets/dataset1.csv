@@ -1,6 +1,6 @@
-id,adr,some date,loc
-koumoul,19 rue de la voie lactée saint avé,2017-12-12,"47.687375,-2.748526"
-bidule,adresse inconnue,2017-10-10,"45.5,2.6"
+id,adr,some date,loc,bool
+koumoul,19 rue de la voie lactée saint avé,2017-12-12,"47.687375,-2.748526",false
+bidule,adresse inconnue,2017-10-10,"45.5,2.6",true
 
 
 
