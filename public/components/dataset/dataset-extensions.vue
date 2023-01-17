@@ -12,7 +12,7 @@
       >
         <template #activator="{ on }">
           <v-btn
-            v-if="can('writeDescription')"
+            v-if="can('writeDescriptionBreaking')"
             v-t="'addExtension'"
             color="primary"
             v-on="on"
@@ -74,7 +74,7 @@
               <v-autocomplete
                 v-if="extension.active && remoteServicesMap[extension.remoteService] && selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
                 v-model="extension.select"
-                :disabled="!can('writeDescription')"
+                :disabled="!can('writeDescriptionBreaking')"
                 :items="selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
                 item-value="name"
                 item-text="title"
@@ -92,7 +92,7 @@
                 :disabled="hasChanges(extension)"
               />
               <confirm-menu
-                v-if="can('writeDescription')"
+                v-if="can('writeDescriptionBreaking')"
                 yes-color="warning"
                 :text="$t('confirmDeleteText')"
                 :tooltip="$t('confirmDeleteTooltip')"

@@ -3,7 +3,7 @@
     <v-checkbox
       v-model="editExports.restToCSV.active"
       :label="$t('restToCSV.active')"
-      :disabled="!can('writeDescription')"
+      :disabled="!can('writeExports')"
       @change="patchAndApplyRemoteChange({ exports: editExports })"
     />
     <v-alert

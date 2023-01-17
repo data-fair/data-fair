@@ -20,7 +20,7 @@
                   <v-icon>mdi-table-cog</v-icon>&nbsp;&nbsp;{{ $t('schema') }}
                 </v-tab>
 
-                <template v-if="can('writeDescription') && dataset.isVirtual">
+                <template v-if="can('writeDescriptionBreaking') && dataset.isVirtual">
                   <v-tab href="#structure-virtual">
                     <v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon>&nbsp;&nbsp;{{ $t('virtual') }}
                   </v-tab>

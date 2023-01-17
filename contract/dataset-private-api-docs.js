@@ -66,6 +66,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       summary: 'Mettre à jour les informations du jeu de données',
       operationId: 'writeDescription',
       'x-permissionClass': 'write',
+      'x-altPermissions': [{ id: 'writeDescriptionBreaking', class: 'write', title: 'Mettre à jour les informations du jeu de données qui peuvent déclencher une rupture de compatibilité' }],
       tags: ['Métadonnées'],
       requestBody: {
         description: 'Fichier à charger et informations de propriété',

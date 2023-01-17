@@ -314,6 +314,9 @@ export default {
             title: this.api.paths[path][method].summary,
             class: permClass
           })
+          for (const altPermission of this.api.paths[path][method]['x-altPermissions'] || []) {
+            classes[permClass] = (classes[permClass] || []).concat([altPermission])
+          }
         }))
       }
       return classes

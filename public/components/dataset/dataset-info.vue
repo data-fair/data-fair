@@ -82,7 +82,7 @@
               v-t="'noHistory'"
             />
             <dataset-edit-history
-              v-if="can('writeDescription')"
+              v-if="can('writeDescriptionBreaking')"
               :history="dataset.rest.history"
               @change="history => {dataset.rest.history = history; patch({rest: dataset.rest})}"
             />
@@ -105,7 +105,7 @@
               v-t="'noHistoryTTL'"
             />
             <dataset-edit-ttl
-              v-if="can('writeDescription')"
+              v-if="can('writeDescriptionBreaking')"
               :ttl="dataset.rest.historyTTL"
               :schema="dataset.schema"
               :revisions="true"
@@ -130,7 +130,7 @@
               v-t="'noTTL'"
             />
             <dataset-edit-ttl
-              v-if="can('writeDescription')"
+              v-if="can('writeDescriptionBreaking')"
               :ttl="dataset.rest.ttl"
               :schema="dataset.schema"
               @change="ttl => {dataset.rest.ttl = ttl; patch({rest: dataset.rest})}"
@@ -174,7 +174,7 @@
         v-if="editProjection && projections"
         v-model="dataset.projection"
         :items="projections"
-        :disabled="!can('writeDescription')"
+        :disabled="!can('writeDescriptionBreaking')"
         item-text="title"
         item-key="code"
         :label="$t('projection')"

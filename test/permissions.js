@@ -118,4 +118,28 @@ describe('permissions', () => {
     await global.ax.bhazeldean7.get('/api/v1/datasets/' + datasetId)
     await global.ax.bhazeldean7Org.get('/api/v1/datasets/' + datasetId)
   })
+
+  it('give permission to patch a dataset info except for potentiel breaking changes', async () => {
+    // A dataset with restricted permissions
+    let res = await global.ax.dmeadus.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })
+    const datasetId = res.data.id
+    await global.ax.dmeadus.put('/api/v1/datasets/' + datasetId + '/permissions', [
+      { type: 'user', id: 'ngernier4', operations: ['writeDescription', 'readDescription'] },
+      { type: 'user', id: 'ddecruce5', operations: ['writeDescriptionBreaking', 'readDescription'] }
+    ])
+
+    // permission to write except breaking changes
+    res = await global.ax.ngernier4.patch('/api/v1/datasets/' + datasetId, { description: 'Description' })
+    assert.equal(res.status, 200)
+    await assert.rejects(
+      global.ax.ngernier4.patch('/api/v1/datasets/' + datasetId, { primaryKey: ['test'] }),
+      (err) => err.status === 403
+    )
+
+    // permission to write breaking changes
+    res = await global.ax.ddecruce5('/api/v1/datasets/' + datasetId, { description: 'Description' })
+    assert.equal(res.status, 200)
+    res = await global.ax.ddecruce5('/api/v1/datasets/' + datasetId, { primaryKey: ['test'] })
+    assert.equal(res.status, 200)
+  })
 })
