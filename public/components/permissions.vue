@@ -190,7 +190,8 @@ fr:
   visibilityLabel: Qui peut consulter cette ressource ?
   visibility:
     public: tout le monde
-    privateOrg: les administrateurs et contributeurs de l'organisation {org}
+    privateOrg: les administrateurs de l'organisation {org}
+    privateOrgContrib: les administrateurs et contributeurs de l'organisation {org}
     privateUser: uniquement l'utilisateur {user}
     sharedInOrg: tous les utilisateurs de l'organisation {org}
   contribProfileLabel: Qui peut contribuer à cette ressource ?
@@ -235,7 +236,8 @@ en:
   visibilityLabel: Who can read this dataset ?
   visibility:
     public: anyone
-    privateOrg: admins and contributors of the organization {org}
+    privateOrg: admins of the organization {org}
+    privateOrgContrib: admins and contributors of the organization {org}
     privateUser: only yourself
     sharedInOrg: any user of the organization {org}
   contribProfileLabel: Who can contribute to this resource ?
@@ -325,23 +327,29 @@ export default {
     isSharedInOrg () {
       return !!this.permissions.find(p => this.isSharedInOrgPermission(p))
     },
+    isPrivateOrgContrib () {
+      return !!this.permissions.find(p => this.isPrivateOrgContribPermission(p))
+    },
     visibility: {
       get () {
         if (!this.permissions) return
         if (this.isPublic) return 'public'
         if (this.isSharedInOrg) return 'sharedInOrg'
+        if (this.isPrivateOrgContrib) return 'privateOrgContrib'
         if (this.resource.owner.type === 'organization') return 'privateOrg'
         return 'privateUser'
       },
       set (visibility) {
         this.permissions = this.permissions
-          .filter(p => !this.isPublicPermission(p) && !this.isSharedInOrgPermission(p))
+          .filter(p => !this.isPublicPermission(p) && !this.isSharedInOrgPermission(p) && !this.isPrivateOrgContribPermission(p))
         if (visibility === 'privateUser' || visibility === 'privateOrg') {
-        // nothing to do
+          // nothing to do
+        } else if (visibility === 'privateOrgContrib') {
+          this.permissions.push({ type: 'organization', id: this.resource.owner.id, name: this.resource.owner.name, operations: ['contrib'], classes: ['list', 'read', 'readAdvanced'] })
         } else if (visibility === 'sharedInOrg') {
-          this.permissions.push({ type: 'organization', id: this.resource.owner.id, name: this.resource.owner.name, operations: [], classes: ['read', 'list'] })
+          this.permissions.push({ type: 'organization', id: this.resource.owner.id, name: this.resource.owner.name, operations: [], classes: ['list', 'read'] })
         } else if (visibility === 'public') {
-          this.permissions.push({ operations: [], classes: ['read', 'list'] })
+          this.permissions.push({ operations: [], classes: ['list', 'read'] })
         }
         this.save()
       }
@@ -361,6 +369,7 @@ export default {
       }
       if (this.resource.owner.type === 'organization') {
         items.push({ value: 'privateOrg', text: this.$t('visibility.privateOrg', { org: this.resource.owner.name || this.resource.owner.id }), disabled: privateDisabled })
+        items.push({ value: 'privateOrgContrib', text: this.$t('visibility.privateOrgContrib', { org: this.resource.owner.name || this.resource.owner.id }), disabled: privateDisabled })
         items.push({ value: 'sharedInOrg', text: this.$t('visibility.sharedInOrg', { org: this.resource.owner.name || this.resource.owner.id }), disabled: privateDisabled })
       } else {
         items.push({ value: 'privateUser', text: this.$t('visibility.privateUser', { user: this.resource.owner.name || this.resource.owner.id }), disabled: privateDisabled })
@@ -405,7 +414,14 @@ export default {
       ]
     },
     hasDetailedPermission () {
-      return !!this.permissions.find(p => !this.isPublicPermission(p) && !this.isSharedInOrgPermission(p) && !this.isManageOwnLinesPermission(p) && !this.isContribWritePermission(p) && !this.isContribWriteDeletePermission(p))
+      return !!this.permissions.find(p =>
+        !this.isPublicPermission(p) &&
+        !this.isSharedInOrgPermission(p) &&
+        !this.isPrivateOrgContribPermission(p) &&
+        !this.isManageOwnLinesPermission(p) &&
+        !this.isContribWritePermission(p) &&
+        !this.isContribWriteDeletePermission(p)
+      )
     },
     allUsersManageOwnLines: {
       get () {
@@ -433,26 +449,35 @@ export default {
     this.detailedMode = this.hasDetailedPermission
   },
   methods: {
+    isInDepartmentPermission (p) {
+      return (!p.department || (!this.resource.owner.department && p.department === '-') || p.department === this.resource.owner.department)
+    },
     isPublicPermission (p) {
       return !p.type && p.classes && p.classes.includes('read') && p.classes.includes('list')
     },
     isSharedInOrgPermission (p) {
       return p.type === 'organization' && this.resource.owner.type === 'organization' &&
         p.id === this.resource.owner.id && !p.department &&
-        p.classes && p.classes.includes('read') && p.classes.includes('list')
+        p.classes && p.classes.includes('read') && p.classes.includes('list') && !p.roles
+    },
+    isPrivateOrgContribPermission (p) {
+      console.log(p)
+      return p.type === 'organization' && this.resource.owner.type === 'organization' &&
+        p.id === this.resource.owner.id && this.isInDepartmentPermission(p) &&
+        p.classes && p.classes.includes('read') && p.classes.includes('list') && p.roles && p.roles.includes('contrib')
     },
     isManageOwnLinesPermission (p) {
       return p.type === 'user' && p.id === '*' && p.classes && p.classes.includes('manageOwnLines')
     },
     isContribWritePermission (p) {
       return p.type === 'organization' && this.resource.owner.type === 'organization' &&
-        p.id === this.resource.owner.id && (!p.department || (!this.resource.owner.department && p.department === '-') || p.department === this.resource.owner.department) &&
+        p.id === this.resource.owner.id && this.isInDepartmentPermission(p) &&
         p.roles && p.roles.length === 1 && p.roles[0] === 'contrib' &&
         p.classes && p.classes.includes('write') && (!p.operations || !p.operations.length)
     },
     isContribWriteDeletePermission (p) {
       return p.type === 'organization' && this.resource.owner.type === 'organization' &&
-        p.id === this.resource.owner.id && (!p.department || (!this.resource.owner.department && p.department === '-') || p.department === this.resource.owner.department) &&
+        p.id === this.resource.owner.id && this.isInDepartmentPermission(p) &&
         p.roles && p.roles.length === 1 && p.roles[0] === 'contrib' &&
         p.classes && p.classes.includes('write') && p.operations && p.operations.includes('delete')
     },
