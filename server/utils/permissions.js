@@ -222,7 +222,7 @@ exports.initResourcePermissions = async (resource, user) => {
     name: resource.owner.name,
     department: resource.owner.department || '-',
     roles: ['contrib'],
-    classes: ['write']
+    classes: ['list', 'read', 'readAdvanced', 'write']
   }
   if (resource.owner.departmentName) contribPermission.departmentName = resource.owner.departmentName
 
