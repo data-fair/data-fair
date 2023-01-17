@@ -591,9 +591,10 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
   const patch = {
     owner: req.body,
     updatedBy: { id: req.user.id, name: req.user.name },
-    updatedAt: moment().toISOString(),
-    permissions: []
+    updatedAt: moment().toISOString()
   }
+  await permissions.initResourcePermissions(patch)
+
   const patchedDataset = (await req.app.get('db').collection('datasets')
     .findOneAndUpdate({ id: req.params.datasetId }, { $set: patch }, { returnDocument: 'after' })).value
 

@@ -11,7 +11,6 @@ const prometheus = require('./prometheus')
 const captureUrl = config.privateCaptureUrl || config.captureUrl
 
 exports.init = async () => {
-  console.log('init')
   await fs.ensureDir(path.resolve(config.dataDir, 'captures'))
 }
 

@@ -94,15 +94,24 @@ describe('owner roles', () => {
     // admin in org without department restriction -> ok for read and write
     await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}`)
     const initialPermissions = (await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/permissions`)).data
-    assert.equal(initialPermissions.length, 1)
-    assert.deepEqual(initialPermissions[0], {
+    assert.equal(initialPermissions.length, 2)
+    assert.deepEqual(initialPermissions, [{
       type: 'organization',
       id: 'KWqAGZ4mG',
       name: 'Fivechat',
       department: '-',
+      operations: ['delete'],
       roles: ['contrib'],
       classes: ['write']
-    })
+    }, {
+      type: 'organization',
+      id: 'KWqAGZ4mG',
+      name: 'Fivechat',
+      department: '-',
+      operations: [],
+      roles: ['contrib'],
+      classes: ['list', 'read', 'readAdvanced']
+    }])
     await global.ax.dmeadusOrg.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' })
     // outside user -> ko
     await assert.rejects(global.ax.ddecruce5.get(`/api/v1/datasets/${dataset.id}`), err => err.status === 403)
@@ -118,8 +127,24 @@ describe('owner roles', () => {
       name: 'Fivechat',
       department: 'dep1'
     })
-    initialPermissions[0].department = 'dep1'
-    await global.ax.dmeadusOrg.put(`/api/v1/datasets/${dataset.id}/permissions`, initialPermissions)
+    const newOwnerPermissions = (await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/permissions`)).data
+    assert.deepEqual(newOwnerPermissions, [{
+      type: 'organization',
+      id: 'KWqAGZ4mG',
+      name: 'Fivechat',
+      department: 'dep1',
+      operations: ['delete'],
+      roles: ['contrib'],
+      classes: ['write']
+    }, {
+      type: 'organization',
+      id: 'KWqAGZ4mG',
+      name: 'Fivechat',
+      department: 'dep1',
+      operations: [],
+      roles: ['contrib'],
+      classes: ['list', 'read', 'readAdvanced']
+    }])
     // admin in org without department restriction -> ok
     await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}`)
     await global.ax.dmeadusOrg.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' })

@@ -281,8 +281,16 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
   const db = req.app.get('db')
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
   if (!permissions.canDoForOwner(req.body, 'applications', 'post', req.user)) return res.status(403).send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
+
+  const patch = {
+    owner: req.body,
+    updatedBy: { id: req.user.id, name: req.user.name },
+    updatedAt: moment().toISOString()
+  }
+  await permissions.initResourcePermissions(patch)
+
   const patchedApp = (await db.collection('applications')
-    .findOneAndUpdate({ id: req.params.applicationId }, { $set: { owner: req.body } }, { returnDocument: 'after' })).value
+    .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })).value
   await syncDatasets(db, patchedApp)
   res.status(200).json(clean(patchedApp, req.publicBaseUrl))
 }))

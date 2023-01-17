@@ -213,7 +213,7 @@ exports.canDoForOwner = function (owner, resourceType, operationClass, user) {
   return ownerClasses && ownerClasses.includes(operationClass)
 }
 
-exports.initResourcePermissions = async (resource, user) => {
+exports.initResourcePermissions = async (resource) => {
   // initially give owner contribs permissions to write
   if (resource.owner.type === 'user') return
   const contribWritePermission = {
@@ -229,7 +229,7 @@ exports.initResourcePermissions = async (resource, user) => {
   // if the dataset is created by a contrib initially allow them to also destroy it
   contribWritePermission.operations = ['delete']
 
-  resource.permissions = [contribWritePermission, { ...contribWritePermission, classes: ['list', 'read', 'readAdvanced'] }]
+  resource.permissions = [contribWritePermission, { ...contribWritePermission, classes: ['list', 'read', 'readAdvanced'], operations: [] }]
 }
 
 module.exports.router = (resourceType, resourceName, onPublicCallback) => {
