@@ -285,6 +285,7 @@ en:
 import { mapState } from 'vuex'
 import eventBus from '~/event-bus'
 import permissionDialog from './permission-dialog.vue'
+import permissionsUtils from '~/assets/permissions-utils.js'
 
 export default {
   components: { permissionDialog },
@@ -400,7 +401,7 @@ export default {
       },
       set (contribProfile) {
         this.permissions = this.permissions
-          .filter(p => !this.isContribWritePermission(p) && !this.isContribWriteAllPermission(p) && !this.isContribWriteDataPermission(p) && !this.isContribWriteNoBreakingPermission(p))
+          .filter(p => !this.isContribWriteAllPermission(p) && !this.isContribWriteDataPermission(p) && !this.isContribWriteNoBreakingPermission(p))
         const writeDataOperations = this.resource.isRest ? ['writeData', 'createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines'] : ['writeData']
         if (contribProfile === 'adminOnly') {
           // nothing to do
@@ -462,11 +463,12 @@ export default {
       if (!p.type) p.type = null
     })
     this.permissions = permissions
+    this.$emit('permissions', this.permissions)
     this.detailedMode = this.hasDetailedPermission
   },
   methods: {
     isInDepartmentPermission (p) {
-      return (!p.department || (!this.resource.owner.department && p.department === '-') || p.department === this.resource.owner.department)
+      return permissionsUtils.isInDepartmentPermission(p, this.resource)
     },
     isPublicPermission (p) {
       return !p.type && p.classes && p.classes.includes('read') && p.classes.includes('list')
@@ -485,17 +487,8 @@ export default {
     isManageOwnLinesPermission (p) {
       return p.type === 'user' && p.id === '*' && p.classes && p.classes.includes('manageOwnLines')
     },
-    isContribWritePermission (p) {
-      return p.type === 'organization' && this.resource.owner.type === 'organization' &&
-        p.id === this.resource.owner.id && this.isInDepartmentPermission(p) &&
-        p.roles && p.roles.length === 1 && p.roles[0] === 'contrib' &&
-        p.classes && p.classes.includes('write') && (!p.operations || !p.operations.length)
-    },
     isContribWriteAllPermission (p) {
-      return p.type === 'organization' && this.resource.owner.type === 'organization' &&
-        p.id === this.resource.owner.id && this.isInDepartmentPermission(p) &&
-        p.roles && p.roles.length === 1 && p.roles[0] === 'contrib' &&
-        p.classes && p.classes.includes('write') && p.operations && p.operations.includes('delete')
+      return permissionsUtils.isContribWriteAllPermission(p, this.resource)
     },
     isContribWriteDataPermission (p) {
       return p.type === 'organization' && this.resource.owner.type === 'organization' &&
@@ -517,6 +510,7 @@ export default {
         if (!permission.department) delete permission.department
       })
       await this.$axios.$put(this.resourceUrl + '/permissions', permissions)
+      this.$emit('permissions', this.permissions)
       eventBus.$emit('notification', this.$t('permissionsUpdated'))
     },
     async fetchOwnerDetails () {

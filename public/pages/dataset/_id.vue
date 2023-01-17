@@ -279,6 +279,7 @@
                       :resource-url="resourceUrl"
                       :api="api"
                       :has-public-deps="hasPublicApplications"
+                      @permissions="p => permissions = p"
                     />
                   </v-container>
                 </v-tab-item>
@@ -290,7 +291,10 @@
                   >
                     {{ $t('tutorialShare') }}
                   </tutorial-alert>
-                  <dataset-publication-sites :publication-sites="publicationSites" />
+                  <dataset-publication-sites
+                    :permissions="permissions"
+                    :publication-sites="publicationSites"
+                  />
                 </v-tab-item>
 
                 <v-tab-item value="share-publications">
@@ -453,7 +457,8 @@ export default {
     chartSvg: require('~/assets/svg/Graphics and charts_Two Color.svg?raw'),
     shareSvg: require('~/assets/svg/Share_Two Color.svg?raw'),
     checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
-    buildingSvg: require('~/assets/svg/Team building _Two Color.svg?raw')
+    buildingSvg: require('~/assets/svg/Team building _Two Color.svg?raw'),
+    permissions: null
   }),
   async fetch ({ store, route }) {
     store.dispatch('dataset/clear')

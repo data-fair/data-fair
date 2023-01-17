@@ -45,13 +45,19 @@
                 >
                   {{ $t('hasWarning') }}{{ sitesWarnings[`${site.type}:${site.id}`].map(w => $t('warning.' + w)).join(', ') }}
                 </v-list-item-subtitle>
+                <v-list-item-subtitle
+                  v-if="sitesContribPermissionsRisk[`${site.type}:${site.id}`]"
+                  class="warning--text"
+                >
+                  {{ $t('contribPermission') }}
+                </v-list-item-subtitle>
                 <v-list-item-subtitle>
                   <v-row class="my-0">
                     <v-switch
                       hide-details
                       dense
                       :input-value="dataset.publicationSites.includes(`${site.type}:${site.id}`)"
-                      :disabled="(hasWarning(site) && !dataset.publicationSites.includes(`${site.type}:${site.id}`)) || (!canPublish(site) && !(site.settings && site.settings.staging)) || !canRequestPublication(site)"
+                      :disabled="((hasWarning(site) || sitesContribPermissionsRisk[`${site.type}:${site.id}`]) && !dataset.publicationSites.includes(`${site.type}:${site.id}`)) || (!canPublish(site) && !(site.settings && site.settings.staging)) || !canRequestPublication(site)"
                       :label="$t('published')"
                       class="mt-0 ml-6"
                       @change="togglePublicationSites(site)"
@@ -93,6 +99,7 @@ fr:
     spatial: couverture géographique
     keywords: mot clé
     frequency: fréquence des mises à jour
+  contribPermission: permission trop large accordée aux contributeurs (risque de rupture de compatibilité)
 en:
   noPublicationSite: You haven't configured a portal to publish this dataset on.
   publishThisDataset: Publish this dataset on one or more of your portals.
@@ -108,15 +115,22 @@ en:
     smissingSpatial: spatial coverage
     keywords: keyword
     frequency: update frequency
+  contribPermission: too broad permission granted to contribs (risk of compatibility breakage)
 </i18n>
 
 <script>
 import { mapState, mapGetters, mapActions } from 'vuex'
+import permissionsUtils from '~/assets/permissions-utils.js'
+
 export default {
   props: {
     publicationSites: {
       type: Array,
       default: () => []
+    },
+    permissions: {
+      type: Array,
+      default: null
     }
   },
   data: () => ({
@@ -126,7 +140,7 @@ export default {
     ...mapState(['env']),
     ...mapGetters(['ownerPublicationSites']),
     ...mapState('dataset', ['dataset']),
-    ...mapGetters('dataset', ['can']),
+    ...mapGetters('dataset', ['can', 'resourceUrl']),
     ...mapGetters('session', ['activeAccount']),
     settingsPublicationSites () {
       return this.ownerPublicationSites(this.dataset.owner)
@@ -159,6 +173,15 @@ export default {
       return (site) => {
         return this.sitesWarnings[`${site.type}:${site.id}`] && this.sitesWarnings[`${site.type}:${site.id}`].length
       }
+    },
+    sitesContribPermissionsRisk () {
+      const sitesContribPermissionsRisk = {}
+      for (const site of this.publicationSites) {
+        if (!(site.settings && site.settings.contrib) && this.permissions && this.permissions.find(p => permissionsUtils.isContribWriteAllPermission(p, this.dataset))) {
+          sitesContribPermissionsRisk[`${site.type}:${site.id}`] = true
+        }
+      }
+      return sitesContribPermissionsRisk
     }
   },
   methods: {
