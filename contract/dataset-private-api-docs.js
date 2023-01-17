@@ -126,6 +126,33 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     }
   })
 
+  api.paths['/metadata-attachments'] = {
+    post: {
+      summary: 'Charger une pièce jointe aux métadonnées',
+      operationId: 'postMetadataAttachment',
+      'x-permissionClass': 'write',
+      tags: ['Métadonnées']
+    }
+  }
+
+  api.paths['/metadata-attachments/{attachmentId}'] = {
+    delete: {
+      summary: 'Supprimer une pièce jointe aux métadonnées',
+      operationId: 'deleteMetadataAttachment',
+      'x-permissionClass': 'write',
+      tags: ['Métadonnées'],
+      parameters: [{
+        in: 'path',
+        name: 'attachmentId',
+        description: 'Identifiant de la pièce jointe',
+        required: true,
+        schema: {
+          type: 'string'
+        }
+      }]
+    }
+  }
+
   api.paths['/private-api-docs.json'] = {
     get: {
       summary: 'Accéder à la documentation privée de l\'API',

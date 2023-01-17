@@ -190,15 +190,16 @@ fr:
   visibilityLabel: Qui peut consulter cette ressource ?
   visibility:
     public: tout le monde
-    privateOrg: les administrateurs de l'organisation {org}
+    privateOrg: uniquement les administrateurs de l'organisation {org}
     privateOrgContrib: les administrateurs et contributeurs de l'organisation {org}
     privateUser: uniquement l'utilisateur {user}
     sharedInOrg: tous les utilisateurs de l'organisation {org}
   contribProfileLabel: Qui peut contribuer à cette ressource ?
   contribProfile:
-    adminOnly: les administrateurs de l'organisation {org}
-    contribWrite: les administrateurs et contributeurs de l'organisation {org}, sauf la suppression pour les contributeurs
-    contribWriteDelete: les administrateurs et contributeurs de l'organisation {org}, suppression autorisée aux contributeurs
+    adminOnly: uniquement les administrateurs de l'organisation {org}
+    contribWriteData: les contributeurs de l'organisation {org} peuvent modifier uniquement les données et seulement si elles sont compatibles
+    contribWriteNoBreaking: les contributeurs de l'organisation {org} peuvent tout modifier à l'exception de ce qui risquerait de provoquer une rupture de compatibilité
+    contribWriteAll: les contributeurs de l'organisation {org} peuvent tout modifier et supprimer la ressource
   warningPrivateDataset: Vous ne devriez pas rendre ce jeu de données privé tant qu'il est présent dans des applications publiques.
   warningPublicApp: Vous ne devriez pas rendre cette application publique, elle utilise des sources de données privées.
   addPermission: Ajouter des permissions
@@ -236,15 +237,16 @@ en:
   visibilityLabel: Who can read this dataset ?
   visibility:
     public: anyone
-    privateOrg: admins of the organization {org}
+    privateOrg: only admins of the organization {org}
     privateOrgContrib: admins and contributors of the organization {org}
     privateUser: only yourself
     sharedInOrg: any user of the organization {org}
   contribProfileLabel: Who can contribute to this resource ?
   contribProfile:
-    adminOnly: admins of the organization {org}
-    contribWrite: admins and contributors of the organization {org}, but the deletion is not auhtorized for contributors
-    contribWriteDelete: admins and contributors of the organization {org}, the deletion is auhtorized for contributors
+    adminOnly: only admins of the organization {org}
+    contribWriteData: contribs of the organization {org} can update only the data and only if it is compatible
+    contribWriteNoBreaking: contribs of the organization {org} can update anything except for what might constitute a breaking change
+    contribWriteAll: contribs of the organization {org} can update anything and delete the resource
   warningPrivateDataset: You should not make this dataset private as long as it is used in public applications.
   warningPublicApp: You should not make this application public as long as it uses private datasets.
   addPermission: Add permissions
@@ -342,14 +344,16 @@ export default {
       set (visibility) {
         this.permissions = this.permissions
           .filter(p => !this.isPublicPermission(p) && !this.isSharedInOrgPermission(p) && !this.isPrivateOrgContribPermission(p))
+
         if (visibility === 'privateUser' || visibility === 'privateOrg') {
           // nothing to do
-        } else if (visibility === 'privateOrgContrib') {
-          this.permissions.push({ type: 'organization', id: this.resource.owner.id, name: this.resource.owner.name, operations: ['contrib'], classes: ['list', 'read', 'readAdvanced'] })
-        } else if (visibility === 'sharedInOrg') {
-          this.permissions.push({ type: 'organization', id: this.resource.owner.id, name: this.resource.owner.name, operations: [], classes: ['list', 'read'] })
-        } else if (visibility === 'public') {
-          this.permissions.push({ operations: [], classes: ['list', 'read'] })
+        } else {
+          this.permissions.push({ type: 'organization', id: this.resource.owner.id, name: this.resource.owner.name, roles: ['contrib'], operations: [], classes: ['list', 'read', 'readAdvanced'] })
+          if (visibility === 'sharedInOrg') {
+            this.permissions.push({ type: 'organization', id: this.resource.owner.id, name: this.resource.owner.name, operations: [], classes: ['list', 'read'] })
+          } else if (visibility === 'public') {
+            this.permissions.push({ operations: [], classes: ['list', 'read'] })
+          }
         }
         this.save()
       }
@@ -377,27 +381,34 @@ export default {
       items.push({ value: 'public', text: this.$t('visibility.public'), disabled: this.hasPrivateParents && !this.isPublic })
       return items
     },
-    isContribWrite () {
-      return !!this.permissions.find(p => this.isContribWritePermission(p))
+    isContribWriteAll () {
+      return !!this.permissions.find(p => this.isContribWriteAllPermission(p))
     },
-    isContribWriteDelete () {
-      return !!this.permissions.find(p => this.isContribWriteDeletePermission(p))
+    isContribWriteData () {
+      return !!this.permissions.find(p => this.isContribWriteDataPermission(p))
+    },
+    isContribWriteNoBreaking () {
+      return !!this.permissions.find(p => this.isContribWriteNoBreakingPermission(p))
     },
     contribProfile: {
       get () {
         if (!this.permissions) return
-        if (this.isContribWriteDelete) return 'contribWriteDelete'
-        if (this.isContribWrite) return 'contribWrite'
+        if (this.isContribWriteAll) return 'contribWriteAll'
+        if (this.isContribWriteNoBreaking) return 'contribWriteNoBreaking'
+        if (this.isContribWriteData) return 'contribWriteData'
         return 'adminOnly'
       },
       set (contribProfile) {
         this.permissions = this.permissions
-          .filter(p => !this.isContribWritePermission(p) && !this.isContribWriteDeletePermission(p))
+          .filter(p => !this.isContribWritePermission(p) && !this.isContribWriteAllPermission(p) && !this.isContribWriteDataPermission(p) && !this.isContribWriteNoBreakingPermission(p))
+        const writeDataOperations = this.resource.isRest ? ['writeData', 'createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines'] : ['writeData']
         if (contribProfile === 'adminOnly') {
           // nothing to do
-        } else if (contribProfile === 'contribWrite') {
-          this.permissions.push({ type: 'organization', id: this.resource.owner.id, department: this.resource.owner.department || '-', name: this.resource.owner.name, roles: ['contrib'], operations: [], classes: ['write'] })
-        } else if (contribProfile === 'contribWriteDelete') {
+        } else if (contribProfile === 'contribWriteData') {
+          this.permissions.push({ type: 'organization', id: this.resource.owner.id, department: this.resource.owner.department || '-', name: this.resource.owner.name, roles: ['contrib'], operations: writeDataOperations, classes: [] })
+        } else if (contribProfile === 'contribWriteNoBreaking') {
+          this.permissions.push({ type: 'organization', id: this.resource.owner.id, department: this.resource.owner.department || '-', name: this.resource.owner.name, roles: ['contrib'], operations: [...writeDataOperations, 'writeDescription', 'postMetadataAttachment', 'deleteMetadataAttachment'], classes: [] })
+        } else if (contribProfile === 'contribWriteAll') {
           this.permissions.push({ type: 'organization', id: this.resource.owner.id, department: this.resource.owner.department || '-', name: this.resource.owner.name, roles: ['contrib'], operations: ['delete'], classes: ['write'] })
         }
         this.save()
@@ -407,11 +418,15 @@ export default {
       return this.contribProfile && this.$t('contribProfile.' + this.contribProfile)
     },
     contribProfileItems () {
-      return [
-        { value: 'adminOnly', text: this.$t('contribProfile.adminOnly', { org: this.resource.owner.name || this.resource.owner.id }) },
-        { value: 'contribWrite', text: this.$t('contribProfile.contribWrite', { org: this.resource.owner.name || this.resource.owner.id }) },
-        { value: 'contribWriteDelete', text: this.$t('contribProfile.contribWriteDelete', { org: this.resource.owner.name || this.resource.owner.id }) }
+      const items = [
+        { value: 'adminOnly', text: this.$t('contribProfile.adminOnly', { org: this.resource.owner.name || this.resource.owner.id }) }
       ]
+      if (this.permissionClasses.write.find(c => c.id === 'writeData')) {
+        items.push({ value: 'contribWriteData', text: this.$t('contribProfile.contribWriteData', { org: this.resource.owner.name || this.resource.owner.id }) })
+        items.push({ value: 'contribWriteNoBreaking', text: this.$t('contribProfile.contribWriteNoBreaking', { org: this.resource.owner.name || this.resource.owner.id }) })
+      }
+      items.push({ value: 'contribWriteAll', text: this.$t('contribProfile.contribWriteAll', { org: this.resource.owner.name || this.resource.owner.id }) })
+      return items
     },
     hasDetailedPermission () {
       return !!this.permissions.find(p =>
@@ -419,8 +434,9 @@ export default {
         !this.isSharedInOrgPermission(p) &&
         !this.isPrivateOrgContribPermission(p) &&
         !this.isManageOwnLinesPermission(p) &&
-        !this.isContribWritePermission(p) &&
-        !this.isContribWriteDeletePermission(p)
+        !this.isContribWriteDataPermission(p) &&
+        !this.isContribWriteNoBreakingPermission(p) &&
+        !this.isContribWriteAllPermission(p)
       )
     },
     allUsersManageOwnLines: {
@@ -475,11 +491,23 @@ export default {
         p.roles && p.roles.length === 1 && p.roles[0] === 'contrib' &&
         p.classes && p.classes.includes('write') && (!p.operations || !p.operations.length)
     },
-    isContribWriteDeletePermission (p) {
+    isContribWriteAllPermission (p) {
       return p.type === 'organization' && this.resource.owner.type === 'organization' &&
         p.id === this.resource.owner.id && this.isInDepartmentPermission(p) &&
         p.roles && p.roles.length === 1 && p.roles[0] === 'contrib' &&
         p.classes && p.classes.includes('write') && p.operations && p.operations.includes('delete')
+    },
+    isContribWriteDataPermission (p) {
+      return p.type === 'organization' && this.resource.owner.type === 'organization' &&
+        p.id === this.resource.owner.id && this.isInDepartmentPermission(p) &&
+        p.roles && p.roles.length === 1 && p.roles[0] === 'contrib' &&
+        p.operations && p.operations.includes('writeData') && !p.operations.includes('writeDescription')
+    },
+    isContribWriteNoBreakingPermission (p) {
+      return p.type === 'organization' && this.resource.owner.type === 'organization' &&
+        p.id === this.resource.owner.id && this.isInDepartmentPermission(p) &&
+        p.roles && p.roles.length === 1 && p.roles[0] === 'contrib' &&
+        p.operations && p.operations.includes('writeDescription') && !p.operations.includes('writeDescriptionBreaking')
     },
     async save () {
       const permissions = JSON.parse(JSON.stringify(this.permissions))

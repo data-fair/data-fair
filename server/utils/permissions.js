@@ -216,22 +216,20 @@ exports.canDoForOwner = function (owner, resourceType, operationClass, user) {
 exports.initResourcePermissions = async (resource, user) => {
   // initially give owner contribs permissions to write
   if (resource.owner.type === 'user') return
-  const contribPermission = {
+  const contribWritePermission = {
     type: resource.owner.type,
     id: resource.owner.id,
     name: resource.owner.name,
     department: resource.owner.department || '-',
     roles: ['contrib'],
-    classes: ['list', 'read', 'readAdvanced', 'write']
+    classes: ['write']
   }
-  if (resource.owner.departmentName) contribPermission.departmentName = resource.owner.departmentName
+  if (resource.owner.departmentName) contribWritePermission.departmentName = resource.owner.departmentName
 
   // if the dataset is created by a contrib initially allow them to also destroy it
-  if (getOwnerRole(resource.owner, user) === 'contrib') {
-    contribPermission.operations = ['delete']
-  }
+  contribWritePermission.operations = ['delete']
 
-  resource.permissions = [contribPermission]
+  resource.permissions = [contribWritePermission, { ...contribWritePermission, classes: ['list', 'read', 'readAdvanced'] }]
 }
 
 module.exports.router = (resourceType, resourceName, onPublicCallback) => {
