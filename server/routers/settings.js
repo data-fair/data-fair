@@ -172,7 +172,7 @@ router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async (req, 
   } else if (req.department === '*') {
     filter[0] = { ...req.ownerFilter, department: undefined }
   }
-  const settingsArray = await db.collection('settings').find(req.ownerFilter, { projection: { _id: 0 } }).toArray()
+  const settingsArray = await db.collection('settings').find({ $or: filter }, { projection: { _id: 0 } }).toArray()
   const publicationSites = []
   for (const settings of settingsArray) {
     for (const publicationSite of settings.publicationSites || []) {
