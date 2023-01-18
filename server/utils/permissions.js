@@ -50,7 +50,7 @@ exports.middleware = function (operationId, operationClass, trackingCategory) {
   }
 }
 
-const getOwnerRole = exports.getOwnerRole = (owner, user) => {
+const getOwnerRole = exports.getOwnerRole = (owner, user, ignoreDepartment = false) => {
   if (!user || user.isApplicationKey || !user.activeAccount) return null
 
   // user is implicitly admin of his own resources, even if he is currently switched to an organization
@@ -62,7 +62,7 @@ const getOwnerRole = exports.getOwnerRole = (owner, user) => {
   if (user.activeAccount.type !== owner.type || user.activeAccount.id !== owner.id) return null
 
   // user is in a department but the resource belongs either to no department or to another department
-  if (user.activeAccount.department && user.activeAccount.department !== owner.department) return null
+  if (!ignoreDepartment && user.activeAccount.department && user.activeAccount.department !== owner.department) return null
   return user.activeAccount.role
 }
 

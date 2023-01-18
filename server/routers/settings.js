@@ -70,7 +70,8 @@ function isOwnerAdmin (req, res, next) {
 function isOwnerMember (req, res, next) {
   if (!req.user) return res.status(401).send()
   if (req.user.adminMode) return next()
-  if (!permissions.getOwnerRole(req.owner, req.user)) {
+  // do not check belonging to department, some settings are shared from top org to its departments
+  if (!permissions.getOwnerRole(req.owner, req.user, true)) {
     return res.sendStatus(403)
   }
   next()
