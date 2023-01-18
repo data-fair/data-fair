@@ -24,7 +24,7 @@ exports.exec = async (db, debug) => {
     })) {
       debug(`resource ${resourceType} / ${resource.id}`)
       const permissions = initPermissions(resource, ['write'])
-      await db.collection('datasets').updateOne(
+      await db.collection(resourceType).updateOne(
         { id: resource.id },
         { $set: { permissions } }
       )
@@ -35,7 +35,7 @@ exports.exec = async (db, debug) => {
     })) {
       debug(`resource ${resourceType} / ${resource.id}`)
       const permissions = initPermissions(resource, ['list', 'read', 'readAdvanced'])
-      await db.collection('datasets').updateOne(
+      await db.collection(resourceType).updateOne(
         { id: resource.id },
         { $set: { permissions } }
       )
