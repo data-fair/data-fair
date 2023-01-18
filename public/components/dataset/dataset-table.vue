@@ -140,7 +140,7 @@
               v-for="header in selectedHeaders"
               :key="header.value"
               class="pr-0 pl-4"
-              :style="`height: 40px`"
+              :style="`height: 40px;position:relative;`"
             >
               <div
                 v-if="header.value === '_actions'"
@@ -219,54 +219,14 @@
                   :href="item[header.value]"
                 >{{ item[header.value] | truncate(50) }}</a>
               </template>
-              <template v-else>
-                <div
-                  v-if="header.field.type === 'string' && header.field.separator"
-                  :style="`max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`"
-                >
-                  <v-chip-group
-                    v-if="item[header.value]"
-                    style="max-width:500px;"
-                    show-arrows
-                  >
-                    <v-hover
-                      v-for="(value, i) in item[header.value].split(header.field.separator).map(v => v.trim())"
-                      v-slot="{ hover }"
-                      :key="i"
-                    >
-                      <v-chip
-                        :class="{'my-0': true, 'px-4': !hover, 'px-2': hover}"
-                        :color="hover ? 'primary' : 'default'"
-                        @click="addFilter(header.value, value)"
-                      >
-                        <span>
-                          {{ value | cellValues(header.field) }}
-                          <v-icon v-if="hover">mdi-filter-variant</v-icon>
-                        </span>
-                      </v-chip>
-                    </v-hover>
-                  </v-chip-group>
-                </div>
-                <v-hover
-                  v-else
-                  v-slot="{ hover }"
-                >
-                  <div :style="`position: relative; max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
-                    <span>{{ item[header.value] | cellValues(header.field) }}</span>
-                    <v-btn
-                      v-if="hover && !item._tmpState && !filters.find(f => f.field.key === header.value) && isFilterable(header.field, item[header.value])"
-                      fab
-                      x-small
-                      color="primary"
-                      style="right: 0px;top: 50%;transform: translate(0, -50%);"
-                      absolute
-                      @click="addFilter(header.value, item[header.value])"
-                    >
-                      <v-icon>mdi-filter-variant</v-icon>
-                    </v-btn>
-                  </div>
-                </v-hover>
-              </template>
+              <dataset-item-value
+                v-else
+                :item="item"
+                :field="header.field"
+                :filters="filters"
+                :line-height="lineHeight"
+                @filter="value => addFilter(header.value, value)"
+              />
             </td>
           </tr>
         </template>
