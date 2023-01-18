@@ -479,7 +479,6 @@ export default {
         p.classes && p.classes.includes('read') && p.classes.includes('list') && !p.roles
     },
     isPrivateOrgContribPermission (p) {
-      console.log(p)
       return p.type === 'organization' && this.resource.owner.type === 'organization' &&
         p.id === this.resource.owner.id && this.isInDepartmentPermission(p) &&
         p.classes && p.classes.includes('read') && p.classes.includes('list') && p.roles && p.roles.includes('contrib')

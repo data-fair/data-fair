@@ -177,7 +177,7 @@ export default {
     sitesContribPermissionsRisk () {
       const sitesContribPermissionsRisk = {}
       for (const site of this.publicationSites) {
-        if (!(site.settings && site.settings.contrib) && this.permissions && this.permissions.find(p => permissionsUtils.isContribWriteAllPermission(p, this.dataset))) {
+        if (!(site.settings && site.settings.staging) && this.permissions && this.permissions.find(p => permissionsUtils.isContribWriteAllPermission(p, this.dataset))) {
           sitesContribPermissionsRisk[`${site.type}:${site.id}`] = true
         }
       }
