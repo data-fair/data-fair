@@ -402,7 +402,7 @@ export default {
       set (contribProfile) {
         this.permissions = this.permissions
           .filter(p => !this.isContribWriteAllPermission(p) && !this.isContribWriteDataPermission(p) && !this.isContribWriteNoBreakingPermission(p))
-        const writeDataOperations = this.resource.isRest ? ['writeData', 'createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines'] : ['writeData']
+        const writeDataOperations = this.resource.isRest ? ['writeData', 'createLine', 'updateLine', 'patchLine', 'bulkLines', 'deleteLine', 'deleteAllLines'] : ['writeData', 'cancelDraft']
         if (contribProfile === 'adminOnly') {
           // nothing to do
         } else if (contribProfile === 'contribWriteData') {
