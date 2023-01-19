@@ -23,7 +23,7 @@ exports.exec = async (db, debug) => {
       'owner.type': 'organization',
       permissions: { $not: { $elemMatch: { roles: 'contrib', classes: 'write' } } }
     })) {
-      debug(`resource ${resourceType} / ${resource.id}`)
+      debug(`resource ${resourceType} / ${resource.id} add write/delete permission for contrib`)
       const permissions = initPermissions(resource, ['write'], ['delete'])
       await db.collection(resourceType).updateOne(
         { id: resource.id },
@@ -34,7 +34,7 @@ exports.exec = async (db, debug) => {
       'owner.type': 'organization',
       permissions: { $not: { $elemMatch: { roles: 'contrib', classes: 'read' } } }
     })) {
-      debug(`resource ${resourceType} / ${resource.id}`)
+      debug(`resource ${resourceType} / ${resource.id} add read permission for contrib`)
       const permissions = initPermissions(resource, ['list', 'read', 'readAdvanced'])
       await db.collection(resourceType).updateOne(
         { id: resource.id },

@@ -113,6 +113,15 @@
             <p
               v-if="dataset.status === 'finalized'"
               v-t="'draftUpdated2'"
+            />
+            <p
+              v-if="dataset.status === 'finalized' && can('validateDraft')"
+              v-t="'draftUpdatedCan'"
+              class="mb-0"
+            />
+            <p
+              v-if="dataset.status === 'finalized' && !can('validateDraft')"
+              v-t="'draftUpdatedCannot'"
               class="mb-0"
             />
           </v-col>
@@ -126,6 +135,7 @@
             <v-btn
               v-if="dataset.draftReason.key !== 'file-new' && (dataset.status === 'error' || dataset.status === 'finalized')"
               v-t="'cancelDraft'"
+              :disabled="!can('cancelDraft')"
               color="warning"
               class="ma-1"
               @click="cancelDraft"
@@ -133,6 +143,7 @@
             <v-btn
               v-if="dataset.status === 'finalized'"
               v-t="'validateDraft'"
+              :disabled="!can('validateDraft')"
               color="primary"
               class="ma-1"
               @click="validateDraft"
@@ -150,7 +161,9 @@ fr:
   draftNew1: Le jeu de données a été créé en mode brouillon. Cet état vous permet de travailler son paramétrage.
   draftNew2: Vérifiez que le fichier a bien été lu, parcourez les 100 premières lignes de la donnée, ajoutez des concepts au schéma, configurez des extensions, etc. Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
   draftUpdated1: Le jeu de données est passé en mode brouillon suite au chargement d'un nouveau fichier.
-  draftUpdated2: Le brouillon contient au moins une incompatibilité. Vérifiez que le fichier a bien été lu, parcourez les 100 premières lignes de la donnée, etc. Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
+  draftUpdated2: Le brouillon contient au moins une incompatibilité. Vérifiez que le fichier a bien été lu et que le schéma est correct, parcourez les 100 premières lignes de la donnée, etc.
+  draftUpdatedCan: Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
+  draftUpdatedCannot: Vous n'avez pas la permission pour publier ce brouillon, peut-être devriez-vous contacter un administrateur ?
   cancelDraft: Annuler le brouillon
   validateDraft: Valider le brouillon
   loadTitle: Chargement
@@ -188,7 +201,7 @@ en:
 
 <script>
 const events = require('~/../shared/events.json').dataset
-const { mapState, mapActions } = require('vuex')
+const { mapState, mapGetters, mapActions } = require('vuex')
 
 export default {
   data () {
@@ -207,7 +220,8 @@ export default {
   },
   computed: {
     ...mapState(['projections']),
-    ...mapState('dataset', ['dataset', 'journal', 'eventStates'])
+    ...mapState('dataset', ['dataset', 'journal', 'eventStates']),
+    ...mapGetters('dataset', ['can'])
   },
   methods: {
     ...mapActions('dataset', ['patch', 'validateDraft', 'cancelDraft']),
