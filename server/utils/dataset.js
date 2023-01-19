@@ -723,7 +723,7 @@ exports.delete = async (db, es, dataset) => {
 }
 
 exports.applyPatch = async (db, dataset, patch, save = true) => {
-  const mongoPatch = { $set: {}, $unset: {} }
+  const mongoPatch = {}
   Object.assign(dataset, patch)
 
   // if the dataset is in draft mode all patched values are stored in the draft state
@@ -735,8 +735,13 @@ exports.applyPatch = async (db, dataset, patch, save = true) => {
     patch = draftPatch
   }
   Object.keys(patch).forEach(key => {
-    if (patch[key] === null) mongoPatch.$unset[key] = true
-    else mongoPatch.$set[key] = patch[key]
+    if (patch[key] === null) {
+      mongoPatch.$unset = mongoPatch.$unset || {}
+      mongoPatch.$unset[key] = true
+    } else {
+      mongoPatch.$set = mongoPatch.$set || {}
+      mongoPatch.$set[key] = patch[key]
+    }
   })
   if (save) {
     await db.collection('datasets')
