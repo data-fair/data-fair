@@ -1,5 +1,9 @@
 <template lang="html">
   <v-container class="doc-page">
+    <!-- used to extract page tag by web scraper -->
+    <div class="hidden-breadcrumb section-title">
+      {{ breadcrumbs.slice(0, breadcrumbs.length - 1).join(' / ') }}
+    </div>
     <v-row>
       <v-col>
         <h2
@@ -43,7 +47,7 @@
 <i18n locale="en" lang="yaml" src="../i18n/common-en.yaml"></i18n>
 
 <script>
-import { mapState } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 import 'iframe-resizer/js/iframeResizer'
 
 const marked = require('marked')
@@ -70,10 +74,32 @@ export default {
   data: () => ({ ready: false }),
   computed: {
     ...mapState(['env']),
+    ...mapGetters(['navContent']),
     filledContent () {
       const content = metaMarked(this.content)
       content.html = (marked.parse(content.markdown)).replace('<table>', '<div class="v-data-table v-data-table--dense theme--light"><div class="v-data-table__wrapper"><table>').replace('</table>', '</table></div></div>')
       return content
+    },
+    breadcrumbs () {
+      const chapter = this.$route.path.split('/')[1]
+      const localeNavContent = this.navContent(this.$i18n.locale)
+      const currentNavItem = localeNavContent
+        .find(s => s.chapter === chapter && (s.section || null) === (this.filledContent.meta.section || null) && (s.subsection || null) === (this.filledContent.meta.subsection || null))
+      const breadcrumbs = []
+      if (currentNavItem) {
+        breadcrumbs.push(this.$t(currentNavItem.chapter))
+        if (currentNavItem.section) {
+          const sectionItem = localeNavContent
+            .find(s => s.chapter === chapter && s.section === currentNavItem.section && !s.subsection)
+          breadcrumbs.push(sectionItem.title)
+          if (currentNavItem.subsection) {
+            const subsectionItem = localeNavContent
+              .find(s => s.chapter === chapter && s.section === currentNavItem.section && s.subsection === currentNavItem.subsection)
+            breadcrumbs.push(subsectionItem.title)
+          }
+        }
+      }
+      return breadcrumbs
     }
   },
   async mounted () {
@@ -115,6 +141,10 @@ export default {
       margin: 12px auto;
       border: solid;
       border-width: 1px;
+    }
+
+    .hidden-breadcrumb {
+      display: none;
     }
 }
 </style>

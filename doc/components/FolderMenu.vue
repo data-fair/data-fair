@@ -19,7 +19,7 @@
                   <v-icon>mdi-information-outline</v-icon>
                 </v-list-item-action> -->
           <v-list-item-title>
-            {{ chapter.title }}
+            {{ $t(chapter.id) }}
           </v-list-item-title>
         </v-list-item>
         <template v-for="section in content.filter(c => c.chapter === chapter.id && !c.subsection)">
@@ -82,72 +82,15 @@
 <i18n locale="en" lang="yaml" src="../i18n/common-en.yaml"></i18n>
 
 <script>
-const marked = require('@hackmd/meta-marked')
+import { mapState, mapGetters } from 'vuex'
 
 export default {
   props: ['folder'],
   computed: {
+    ...mapState(['chapters']),
+    ...mapGetters(['navContent']),
     content () {
-      if (!this.$route) return
-      const context = require.context('../pages/', true, /\.md$/)
-      const content = context.keys()
-        .filter(k => {
-          if (k.startsWith('./install')) return true
-          if (k.startsWith('./interoperate')) return true
-          if (k.startsWith('./lessons')) return true
-          if (k.startsWith('./technical-architecture')) return true
-          return k.includes(`-${this.$i18n.locale}.md`)
-        })
-        .map(k => Object.assign(marked(context(k).default).meta || {}, {
-          chapter: k.split('/')[1],
-          id: k.split('/')[2].split('.').shift().replace(`-${this.$i18n.locale}`, '')
-        }))
-        .filter(section => section.published || !process.env.hideDraft)
-      content.sort((s1, s2) => {
-        if (this.chapters.findIndex(c => c.id === s1.chapter) < this.chapters.findIndex(c => c.id === s2.chapter)) return -1
-        else if (this.chapters.findIndex(c => c.id === s1.chapter) > this.chapters.findIndex(c => c.id === s2.chapter)) return 1
-        else if (s1.section && !s2.section) return -1
-        else if (!s1.section && s2.section) return 1
-        else if (s1.section < s2.section) return -1
-        else if (s1.section > s2.section) return 1
-        else if (s1.subsection && !s2.subsection) return -1
-        else if (!s1.subsection && s2.subsection) return 1
-        else if (s1.subsection < s2.subsection) return -1
-        else return 1
-      })
-      return content
-    },
-    chapters () {
-      return [
-        {
-          id: 'functional-presentation',
-          title: this.$t('functional-presentation')
-        },
-        {
-          id: 'user-guide-backoffice',
-          title: this.$t('user-guide-backoffice')
-        },
-        {
-          id: 'user-guide-frontoffice',
-          title: this.$t('user-guide-frontoffice')
-        },
-        {
-          id: 'lessons',
-          title: this.$t('lessons')
-        },
-        {
-          id: 'technical-architecture',
-          title: this.$t('technical-architecture')
-        },
-        {
-          id: 'interoperate',
-          title: this.$t('interoperate')
-        },
-        {
-          id: 'install',
-          title: this.$t('install')
-        }
-      ]
+      return this.navContent(this.$i18n.locale)
     }
   }
 }
