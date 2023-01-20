@@ -1,6 +1,7 @@
 <template>
   <v-app>
     <v-navigation-drawer
+      v-model="drawer"
       app
       fixed
       width="300"
@@ -65,6 +66,15 @@
     </v-app-bar> -->
 
     <v-main>
+      <v-btn
+        absolute
+        top
+        left
+        icon
+        @click.stop="drawer = !drawer"
+      >
+        <v-icon>mdi-menu</v-icon>
+      </v-btn>
       <v-speed-dial
         direction="bottom"
         transition="fade-transition"
@@ -106,7 +116,10 @@
 import FolderMenu from '~/components/FolderMenu'
 
 export default {
-  components: { FolderMenu }
+  components: { FolderMenu },
+  data: () => ({
+    drawer: true
+  })
 }
 
 </script>
