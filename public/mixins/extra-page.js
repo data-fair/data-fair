@@ -7,6 +7,9 @@ export default {
     iframeUrl () {
       if (!this.extra || !this.extra.iframe) return
       return new URL(this.extra.iframe, window.location.href)
+    },
+    iframePathName () {
+      return this.iframeUrl.pathname.endsWith('/') ? this.iframeUrl.pathname : this.iframeUrl.pathname + '/'
     }
   },
   mounted () {
@@ -27,7 +30,7 @@ export default {
       let p = to
       if (p.startsWith('/') && this.extra.basePath) p = this.extra.basePath + p
       if (p === this.iframeUrl.pathname) return undefined
-      if (p.startsWith(this.iframeUrl.pathname)) p = p.replace(this.iframeUrl.pathname, './')
+      if (p.startsWith(this.iframePathName)) p = p.replace(this.iframePathName, './')
       return p
     }
   }
