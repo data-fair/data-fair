@@ -29,10 +29,6 @@ module.exports = {
     result: {
       type: 'object',
       description: 'The result of pushing the publication. The structure of this object is permissive and depends on the type of catalog'
-    },
-    addToDataset: {
-      type: 'object',
-      description: 'Present if the publication should be pushed as a resource in a catalog dataset instead of a separate catalog dataset.'
     }
   }
 }

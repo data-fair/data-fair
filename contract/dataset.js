@@ -9,7 +9,20 @@ const publicationSchema = JSON.parse(JSON.stringify(require('./publication')))
 
 publicationSchema.properties.addToDataset = {
   type: 'object',
-  description: 'Fill this object to create a new resource (or community resource) to an existing dataset. If empty a new dataset will be created.',
+  description: 'Fill this object to create a new resource (or community resource) to an existing dataset.',
+  properties: {
+    id: {
+      type: 'string'
+    },
+    title: {
+      type: 'string'
+    }
+  }
+}
+
+publicationSchema.properties.replaceDataset = {
+  type: 'object',
+  description: 'Fill this object to overwrite an existing dataset.',
   properties: {
     id: {
       type: 'string'

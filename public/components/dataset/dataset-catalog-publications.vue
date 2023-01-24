@@ -91,7 +91,7 @@
           v-t="'addPublication'"
           primary-title
         />
-        <v-card-text v-if="catalogs">
+        <v-card-text v-if="catalogs && addPublicationDialog">
           <v-form v-model="newPublicationValid">
             <v-select
               v-model="newPublication.catalog"
@@ -103,21 +103,47 @@
               required
             />
 
-            <v-autocomplete
-              v-model="newPublication.addToDataset"
+            <v-select
+              v-model="newPublicationAction"
               :disabled="!newPublication.catalog"
+              :label="$t('newPublicationAction')"
+              :items="[
+                {text: $t('newPublicationActions.newDataset'), value: 'newDataset'},
+                {text: $t('newPublicationActions.addToDataset'), value: 'addToDataset'},
+                {text: $t('newPublicationActions.replaceDataset'), value: 'replaceDataset'}
+              ]"
+            />
+
+            <v-autocomplete
+              v-if="newPublication.catalog && newPublicationAction === 'addToDataset'"
+              v-model="newPublication.addToDataset"
               :items="catalogDatasets"
               :loading="catalogDatasetsLoading"
               :search-input.sync="searchCatalogDatasets"
               class="mb-4"
-              :label="$t('addToDataset')"
-              :placeholder="$t('search')"
+              :label="$t('searchDataset')"
               return-object
               item-text="title"
               item-value="id"
-              :hint="$t('addToDatasetEmpty')"
               persistent-hint
               :no-data-text="$t('datasetNoMatch')"
+              :rules="[v => !!v]"
+            />
+
+            <v-autocomplete
+              v-if="newPublication.catalog && newPublicationAction === 'replaceDataset'"
+              v-model="newPublication.replaceDataset"
+              :items="catalogDatasets"
+              :loading="catalogDatasetsLoading"
+              :search-input.sync="searchCatalogDatasets"
+              class="mb-4"
+              :label="$t('searchDataset')"
+              return-object
+              item-text="title"
+              item-value="id"
+              persistent-hint
+              :no-data-text="$t('datasetNoMatch')"
+              :rules="[v => !!v]"
             />
           </v-form>
         </v-card-text>
@@ -215,9 +241,12 @@ fr:
   deletePublication: Supprimer cette publication
   deletionMessage: Voulez vous vraiment supprimer la publication ? La suppression est définitive et les données ne pourront pas être récupérées.<br><br><b>Attention</b> les données seront également supprimées dans le catalogue destinataire de la publication.
   catalog: Catalogue
-  addToDataset: Ajouter comme ressource à un jeu de données du catalogue
-  search: Rechercher
-  addToDatasetEmpty: Laissez vide pour créer un nouveau jeu de données dans le catalogue.
+  newPublicationAction: Action à effectuer
+  newPublicationActions:
+    newDataset: Créer un nouveau jeu de données dans le catalogue
+    addToDataset: Ajouter comme ressource à un jeu de données du catalogue
+    replaceDataset: Écraser un jeu de données du catalogue
+  searchDataset: Rechercher un jeu de données
   datasetNoMatch: Aucun jeu de données du catalogue ne correspond
   cancel: Annuler
   add: Ajouter
@@ -238,9 +267,12 @@ en:
   deletePublication: Delete this publication
   deletionMessage: Do you really want to delete the publication ? The deletion is definitive and the data will not be recoverable.<br><br><b>Warning</b> the data will also be delete in the catalog target of the publication.
   catalog: Catalog
-  addToDataset: Add as a resource to a dataset of the catalog
-  search: Search
-  addToDatasetEmpty: Leave empty to create a new dataset in the catalog
+  newPublicationAction: Action
+  newPublicationActions:
+    newDataset: Create a new dataset in the catalog
+    addToDataset: Add as a resource to a dataset of the catalog
+    replaceDataset: Overwirte a dataset of the catalog
+  searchDataset: Search a dataset
   datasetNoMatch: No dataset from the catalog matches this search
   cancel: Cancel
   add: Add
@@ -257,10 +289,8 @@ export default {
     return {
       addPublicationDialog: false,
       newPublicationValid: false,
-      newPublication: {
-        catalog: null,
-        status: 'waiting'
-      },
+      newPublication: { catalog: null, status: 'waiting' },
+      newPublicationAction: 'newDataset',
       deletePublicationInd: null,
       rePublishInd: null,
       showDeleteDialog: false,
@@ -289,6 +319,14 @@ export default {
         .results
         .map(r => ({ id: r.id, title: r.title }))
       this.catalogDatasetsLoading = false
+    },
+    addPublicationDialog () {
+      this.newPublication = { catalog: null, status: 'waiting' }
+      this.newPublicationAction = 'newDataset'
+    },
+    newPublicationAction (v) {
+      delete this.newPublication.addToDataset
+      delete this.newPublication.replaceDataset
     }
   },
   async created () {

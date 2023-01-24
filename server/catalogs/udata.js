@@ -330,7 +330,7 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
     udataDataset.organization = { id: catalog.organization.id }
   }
 
-  const updateDatasetId = publication.result && publication.result.id
+  const updateDatasetId = (publication.result && publication.result.id) || (publication.replaceDataset && publication.replaceDataset.id)
   let existingDataset
   if (updateDatasetId) {
     try {
@@ -344,7 +344,9 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
   try {
     let res
     if (existingDataset) {
-      Object.assign(existingDataset, udataDataset)
+      if (publication.result && publication.result.id) {
+        Object.assign(existingDataset, udataDataset)
+      }
       res = await axios.put(url.resolve(catalog.url, 'api/1/datasets/' + updateDatasetId + '/'), existingDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
     } else {
       res = await axios.post(url.resolve(catalog.url, 'api/1/datasets/'), udataDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
