@@ -38,10 +38,14 @@
 
 <script>
 import VClamp from 'vue-clamp'
+import { mapGetters } from 'vuex'
 
 export default {
   components: { VClamp },
-  props: ['catalog', 'showOwner']
+  props: ['catalog', 'showOwner'],
+  computed: {
+    ...mapGetters('session', ['activeAccount'])
+  }
 }
 </script>
 
