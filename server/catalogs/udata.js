@@ -330,9 +330,10 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
     udataDataset.organization = { id: catalog.organization.id }
   }
 
-  const updateDatasetId = (publication.result && publication.result.id) || (publication.replaceDataset && publication.replaceDataset.id)
+  const updateDatasetId = publication.result && publication.result.id
   let existingDataset
   if (updateDatasetId) {
+    delete publication.replaceDataset
     try {
       existingDataset = (await axios.get(url.resolve(catalog.url, 'api/1/datasets/' + updateDatasetId + '/'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
       if (existingDataset.deleted) existingDataset = null
@@ -343,13 +344,16 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
 
   try {
     let res
-    if (existingDataset) {
-      if (publication.result && publication.result.id) {
-        Object.assign(existingDataset, udataDataset)
-      }
+    if (updateDatasetId && existingDataset) {
+      Object.assign(existingDataset, udataDataset)
       res = await axios.put(url.resolve(catalog.url, 'api/1/datasets/' + updateDatasetId + '/'), existingDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
     } else {
-      res = await axios.post(url.resolve(catalog.url, 'api/1/datasets/'), udataDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
+      const replaceDatasetId = publication.replaceDataset && publication.replaceDataset.id
+      if (replaceDatasetId) {
+        res = await axios.put(url.resolve(catalog.url, 'api/1/datasets/' + replaceDatasetId + '/'), udataDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
+      } else {
+        res = await axios.post(url.resolve(catalog.url, 'api/1/datasets/'), udataDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
+      }
     }
 
     if (!res.data.page || typeof res.data.page !== 'string') {
