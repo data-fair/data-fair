@@ -54,6 +54,7 @@ router.get('/_types', cacheHeaders.noCache, asyncWrap(async (req, res) => {
 // Get the list of catalogs
 router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const catalogs = req.app.get('db').collection('catalogs')
+  req.resourceType = 'catalogs'
   const query = findUtils.query(req, {
     type: 'type',
     url: 'url',

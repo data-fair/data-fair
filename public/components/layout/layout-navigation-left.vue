@@ -106,7 +106,7 @@
         </v-list-item>
 
         <v-list-item
-          v-if="canContrib"
+          v-if="canAdminDep"
           :nuxt="true"
           dense
           :to="`/catalogs`"

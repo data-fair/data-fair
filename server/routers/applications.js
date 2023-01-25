@@ -66,6 +66,7 @@ const syncDatasets = async (db, newApp, oldApp = {}) => {
 // Get the list of applications
 router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   const applications = req.app.get('db').collection('applications')
+  req.resourceType = 'applications'
 
   if (req.query.dataset &&
       !req.query.dataset.startsWith('http://') &&

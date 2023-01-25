@@ -8,7 +8,7 @@
     />
 
     <v-btn
-      v-if="canAdmin"
+      v-if="userOwnerRole(dataset.owner) === 'admin'"
       v-t="'publish'"
       color="primary"
       @click="addPublicationDialog = true"
@@ -59,7 +59,7 @@
         <v-list-item-action>
           <v-row>
             <v-btn
-              v-if="canAdmin && ['error', 'published'].includes(publication.status)"
+              v-if="catalogsById[publication.catalog] && userOwnerRole(catalogsById[publication.catalog].owner) === 'admin' && ['error', 'published'].includes(publication.status)"
               color="warning"
               icon
               :title="$t('republish')"
@@ -69,7 +69,7 @@
               <v-icon>mdi-play</v-icon>
             </v-btn>
             <v-btn
-              v-if="canAdmin"
+              v-if="(!catalogsById[publication.catalog] && can('writePublications')) || (catalogsById[publication.catalog] && userOwnerRole(catalogsById[publication.catalog].owner) === 'admin')"
               color="warning"
               icon
               :title="$t('deletePublication')"
@@ -304,8 +304,8 @@ export default {
   computed: {
     ...mapState(['env']),
     ...mapState('dataset', ['dataset']),
-    ...mapGetters('dataset', ['can', 'journalChannel']),
-    ...mapGetters(['canAdmin']),
+    ...mapGetters('dataset', ['journalChannel', 'can']),
+    ...mapGetters(['userOwnerRole']),
     catalogsById () {
       return this.catalogs.reduce((a, c) => { a[c.id] = c; return a }, {})
     }

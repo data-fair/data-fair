@@ -127,6 +127,18 @@ export default () => {
       canAdmin (state, getters) {
         return getters.canAdminDep && !getters['session/activeAccount'].department
       },
+      userOwnerRole (state, getters) {
+        return (owner) => {
+          const user = state.session.user
+          const activeAccount = getters['session/activeAccount']
+          const activeAccountRole = getters['session/accountRole']
+          if (!activeAccount) return null
+          if (owner.type === 'user' && owner.id === user.id) return 'admin'
+          if (owner.type === activeAccount.type && owner.id === activeAccount.id && (!activeAccount.department || (owner.department || null) === (activeAccount.department || null))) {
+            return activeAccountRole
+          }
+        }
+      },
       missingSubscription (state) {
         return !!(state.limits && state.limits.defaults && state.env.subscriptionUrl)
       },

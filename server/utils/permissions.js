@@ -161,7 +161,8 @@ exports.isPublic = function (resourceType, resource) {
 
 // Manage filters for datasets, applications and remote services
 // this filter ensures that nobody can list something they are not permitted to list
-exports.filter = function (user) {
+exports.filter = function (user, resourceType) {
+  const ignoreDepartment = resourceType === 'catalogs'
   const operationFilter = [{ operations: 'list' }, { classes: 'list' }]
   const or = [visibilityUtils.publicFilter]
 
@@ -179,9 +180,13 @@ exports.filter = function (user) {
       if (user.email) or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', email: user.email } } })
 
       if (user.organization) {
-        // user is privileged member of owner organization with or without department
-        if (['admin', 'contrib'].includes(user.organization.role)) {
-          if (user.organization.department) or.push({ 'owner.type': 'organization', 'owner.id': user.organization.id, 'owner.department': user.organization.department })
+        const listRoles = ['admin']
+        if (resourceType && apiDocsUtil.contribOperationsClasses[resourceType] && apiDocsUtil.contribOperationsClasses[resourceType].includes('list')) {
+          listRoles.push('contrib')
+        }
+        // user is privileged admin of owner organization with or without department
+        if (listRoles.includes(user.organization.role)) {
+          if (user.organization.department && !ignoreDepartment) or.push({ 'owner.type': 'organization', 'owner.id': user.organization.id, 'owner.department': user.organization.department })
           else or.push({ 'owner.type': 'organization', 'owner.id': user.organization.id })
         }
 

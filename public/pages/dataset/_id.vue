@@ -252,7 +252,10 @@
                   <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;{{ $t('portals') }}
                 </v-tab>
 
-                <v-tab href="#share-publications">
+                <v-tab
+                  v-if="['admin', 'contrib'].includes(userOwnerRole(dataset.owner))"
+                  href="#share-publications"
+                >
                   <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
                 </v-tab>
 
@@ -480,7 +483,7 @@ export default {
     ...mapGetters('dataset', ['resourceUrl', 'can', 'hasPublicApplications']),
     ...mapState('session', ['user']),
     ...mapGetters('session', ['activeAccount']),
-    ...mapGetters(['canContrib']),
+    ...mapGetters(['canContrib', 'userOwnerRole']),
     publicationSites () {
       if (!this.dataset) return []
       return this.$store.getters.ownerPublicationSites(this.dataset.owner)

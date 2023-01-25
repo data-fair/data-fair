@@ -71,7 +71,7 @@ exports.query = (req, fieldsMap, globalMode, extraFilters = []) => {
   } else {
     // in normal mode (datasets and applications) the visibility is determined from the owner and permissions
 
-    query.$and.push({ $or: permissions.filter(req.user) })
+    query.$and.push({ $or: permissions.filter(req.user, req.resourceType) })
 
     if (visibility.filters(req.query)) {
       query.$and.push({ $or: visibility.filters(req.query) })
@@ -220,7 +220,7 @@ const basePipeline = (req, extraFilters) => {
   // Apply as early as possible the permissions filter
   pipeline.push({
     $match: {
-      $or: permissions.filter(req.user)
+      $or: permissions.filter(req.user, req.resourceType)
     }
   })
   if ((req.query.shared === 'false' || req.query.mine === 'true') && req.user) {

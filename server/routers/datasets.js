@@ -189,6 +189,7 @@ const prepareExtensions = (req, extensions, oldExtensions = []) => {
 router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   const explain = req.query.explain === 'true' && req.user && (req.user.isAdmin || req.user.asAdmin) && {}
   const datasets = req.app.get('db').collection('datasets')
+  req.resourceType = 'datasets'
   const filterFields = {
     concepts: 'schema.x-refersTo',
     'field-type': 'schema.type',
