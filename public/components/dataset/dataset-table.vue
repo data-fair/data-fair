@@ -224,7 +224,6 @@
                 :item="item"
                 :field="header.field"
                 :filters="filters"
-                :line-height="lineHeight"
                 @filter="value => addFilter(header.value, value)"
               />
             </td>
