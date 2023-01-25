@@ -71,7 +71,7 @@ fr:
   datasetUrlTemplate: Format du lien vers la page d'un jeu de données
   datasetUrlTemplateHelp: "Laissez vide pour créer automatiquement un lien vers la page du jeu de données dans cette instance data-fair. Renseignez pour pointer vers une autre page publique. Par exemple 'https://test.com/datasets/{id}'."
   applicationUrlTemplate: Format du lien vers la page d'une application
-  applicationUrlTemplateHelp: "Laissez vide pour créer automatiquement un lien vers la page de l'application dans cette instance data-fair. Renseignez pour pointer vers une autre page publique. Par exemple 'https://test.com/reuses/{id}'."
+  applicationUrlTemplateHelp: "Laissez vide pour créer automatiquement un lien vers la page de l'application dans cette instance data-fair. Renseignez pour pointer vers une autre page publique. Par exemple 'https://test.com/applications/{id}'."
   dataFairBaseUrl: URL du service de données
   dataFairBaseUrlHelp: "Laissez vide pour utiliser l'exposition principale de ce service, renseignez pour faire passer les utilisateurs par un autre nom de domaine. Par exemple 'https://test.com/data-fair'"
   org: Organisation
@@ -85,7 +85,7 @@ en:
   datasetUrlTemplate: Format of the link to a dataset's page
   datasetUrlTemplateHelp: "Leave empty to automatically create a link to the dataset's page in this data-fair instance. Enter to link to another public page. For example 'https://test.com/datasets/{id}'."
   applicationUrlTemplate: Format of the link to a application's page
-  applicationUrlTemplateHelp: "Leave empty to automatically create a link to the application's page in this data-fair instance. Enter to link to another public page. For example 'https://test.com/reuses/{id}'."
+  applicationUrlTemplateHelp: "Leave empty to automatically create a link to the application's page in this data-fair instance. Enter to link to another public page. For example 'https://test.com/applications/{id}'."
   org: Organization
   orgHelp: Leave empty to work in a personnal account. Otherwise use the id of an organization in which you have write permissions.
   search: Search

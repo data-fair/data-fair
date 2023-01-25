@@ -1,5 +1,6 @@
 const config = require('config')
 const url = require('url')
+const equal = require('deep-equal')
 const axios = require('../utils/axios')
 const debug = require('debug')('catalogs:udata')
 exports.title = 'uData'
@@ -207,28 +208,27 @@ async function addResourceToDataset (catalog, dataset, publication) {
   const catalogDataset = (await axios.get(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}`),
     { params: { page_size: 1000 }, headers: { 'X-API-KEY': catalog.apiKey } })).data
   if (!catalogDataset) throw new Error(`Le jeu de données ${publication.addToDataset.id} n'existe pas dans le catalogue ${catalog.url}`)
-  // matchingResource will be defined if the dataset in data-fair was originally created from a ressource of the catalog's dataset
-  // we use it to prevent create a duplicate
-  /* const matchingResource = dataset.remoteFile ? catalogDataset.resources.find(r => r.url === dataset.remoteFile.url) : null
-  if (!matchingResource && dataset.file) {
-    resources.push({
-      title: `${title}`,
-      description: `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
-      url: `${catalog.dataFairBaseUrl || config.publicUrl}/api/v1/datasets/${dataset.id}/raw`,
-      type: 'main',
-      filetype: 'remote',
-      filesize: dataset.originalFile.size,
-      mime: dataset.originalFile.mimetype,
-      extras: {
-        datafairOrigin: catalog.dataFairBaseUrl || config.publicUrl,
-        datafairDatasetId: dataset.id,
-      },
-    })
-  } */
 
-  // Create new resources
+  // Cleanup resources
+  for (const existingResource of catalogDataset.resources) {
+    existingResource.extras = existingResource.extras || {}
+    if ((existingResource.extras.datafairOrigin === config.publicUrl || existingResource.extras.datafairOrigin === catalog.dataFairBaseUrl) && existingResource.extras.datafairDatasetId === dataset.id) {
+      debug('addToDataset delete existing resource', existingResource.id)
+      await axios.delete(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/${existingResource.id}/`),
+        { headers: { 'X-API-KEY': catalog.apiKey } })
+    }
+  }
+
+  // Create/update resources
   try {
     for (const resource of resources) {
+      // preserve resource id to prevent breaking url
+      const matchingResource = (catalogDataset.resources || []).find(r => r.url === resource.url && equal(r.extras || {}, resource.extras || {}))
+      if (matchingResource) {
+        debug('addToDataset update matching resource', matchingResource.id)
+        resource.id = matchingResource.id
+      }
+      debug('addToDataset create/update resource')
       await axios.post(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/`),
         resource, { headers: { 'X-API-KEY': catalog.apiKey } })
     }
@@ -238,15 +238,6 @@ async function addResourceToDataset (catalog, dataset, publication) {
   } catch (err) {
     if (err.response) throw new Error(`Erreur lors de l'envoi à ${catalog.url} : ${JSON.stringify(err.response.data, null, 2)}`)
     else throw err
-  }
-
-  // Cleanup previous ones
-  for (const existingResource of catalogDataset.resources) {
-    existingResource.extras = existingResource.extras || {}
-    if ((existingResource.extras.datafairOrigin === config.publicUrl || existingResource.extras.datafairOrigin === catalog.dataFairBaseUrl) && existingResource.extras.datafairDatasetId === dataset.id) {
-      await axios.delete(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/${existingResource.id}/`),
-        { headers: { 'X-API-KEY': catalog.apiKey } })
-    }
   }
 }
 
@@ -292,19 +283,10 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
       }
     })
   }
-  const udataDataset = {
-    title: dataset.title,
-    description: dataset.description || dataset.title,
-    private: !dataset.public,
-    extras: {
-      datafairOrigin: catalog.dataFairBaseUrl || config.publicUrl,
-      datafairDatasetId: dataset.id
-    },
-    resources
-  }
+
   // TODO: use data-files ?
   if (dataset.file) {
-    udataDataset.resources.push({
+    resources.push({
       title: `Fichier ${dataset.originalFile.name.split('.').pop()}`,
       description: `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
       url: `${catalog.dataFairBaseUrl || config.publicUrl}/api/v1/datasets/${dataset.id}/raw`,
@@ -314,7 +296,7 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
       mime: dataset.originalFile.mimetype
     })
     if (dataset.file.mimetype !== dataset.originalFile.mimetype) {
-      udataDataset.resources.push({
+      resources.push({
         title: `Fichier ${dataset.file.name.split('.').pop()}`,
         description: `Téléchargez le fichier complet au format ${dataset.file.name.split('.').pop()}.`,
         url: `${catalog.dataFairBaseUrl || config.publicUrl}/api/v1/datasets/${dataset.id}/convert`,
@@ -324,6 +306,17 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
         mime: dataset.file.mimetype
       })
     }
+  }
+
+  const udataDataset = {
+    title: dataset.title,
+    description: dataset.description || dataset.title,
+    private: !dataset.public,
+    extras: {
+      datafairOrigin: catalog.dataFairBaseUrl || config.publicUrl,
+      datafairDatasetId: dataset.id
+    },
+    resources
   }
 
   if (catalog.organization && catalog.organization.id) {
@@ -337,6 +330,15 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
     try {
       existingDataset = (await axios.get(url.resolve(catalog.url, 'api/1/datasets/' + updateDatasetId + '/'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
       if (existingDataset.deleted) existingDataset = null
+
+      // preserving resource id so that URLs are not broken
+      if (existingDataset && existingDataset.resources) {
+        for (const resource of udataDataset.resources) {
+          const matchingResource = existingDataset.resources.find(r => resource.url === r.url && equal(resource.extras || {}, r.extras || {}))
+          console.log('matching ?', !!matchingResource, resource.url, resource.extras)
+          if (matchingResource) resource.id = matchingResource.id
+        }
+      }
     } catch (err) {
       console.warn('Failed to fetch existing dataset', err)
     }
