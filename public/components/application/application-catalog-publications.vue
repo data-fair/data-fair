@@ -8,7 +8,7 @@
     />
 
     <v-btn
-      v-if="canAdmin"
+      v-if="authorizedCatalogs.length"
       v-t="'publish'"
       color="primary"
       @click="addPublicationDialog = true"
@@ -55,7 +55,7 @@
         <v-list-item-action>
           <v-row>
             <v-btn
-              v-if="canAdmin && ['error', 'published'].includes(publication.status)"
+              v-if="catalogsById[publication.catalog] && userOwnerRole(catalogsById[publication.catalog].owner) === 'admin' && ['error', 'published'].includes(publication.status)"
               color="warning"
               icon
               :title="$t('republish')"
@@ -65,7 +65,7 @@
               <v-icon>mdi-play</v-icon>
             </v-btn>
             <v-btn
-              v-if="canAdmin"
+              v-if="(!catalogsById[publication.catalog] && can('writePublications')) || (catalogsById[publication.catalog] && userOwnerRole(catalogsById[publication.catalog].owner) === 'admin')"
               color="warning"
               icon
               :title="$t('deletePublication')"
@@ -93,7 +93,10 @@
               v-model="newPublication.catalog"
               :items="catalogs"
               :item-text="catalogLabel"
-              :rules="[() => !!newPublication.catalog]"
+              :rules="[
+                c => !!c,
+                c => !(application.publications || []).find(p => p.catalog === c) || $t('alreadyPublished')
+              ]"
               item-value="id"
               :label="$t('catalog')"
               required
@@ -198,8 +201,9 @@ fr:
   add: Ajouter
   no: Non
   yes: Oui
+  alreadyPublished: cette application a déjà été publiée sur ce catalogue
 en:
-  message: Publish this dataset onto one or more Open Data catalogs. This publication will make your data easier to find et will allow the Open Data community to interact with you.
+  message: Publish this application onto one or more Open Data catalogs. This publication will make your data easier to find et will allow the Open Data community to interact with you.
   noPublication: There are no publication of this application on a catalog yet.
   publish: Publish on a catalog
   appPublication: Application published on the catalog "{catalog}"
@@ -217,70 +221,24 @@ en:
   add: Add
   no: No
   yes: Yes
+  alreadyPublished: this application was already published on this catalog
 </i18n>
 
 <script>
 import { mapState, mapGetters, mapActions } from 'vuex'
-import eventBus from '~/event-bus'
+import catalogPublicationsMixin from '~/mixins/catalog-publications'
 
 export default {
-  data () {
-    return {
-      addPublicationDialog: false,
-      newPublicationValid: false,
-      newPublication: {
-        catalog: null,
-        status: 'waiting'
-      },
-      deletePublicationInd: null,
-      showDeleteDialog: false,
-      rePublishInd: null,
-      showRepublishDialog: false,
-      catalogs: []
-    }
-  },
+  mixins: [catalogPublicationsMixin],
   computed: {
-    ...mapState(['env']),
     ...mapState('application', ['application']),
     ...mapGetters('application', ['can', 'journalChannel']),
-    ...mapGetters(['canAdmin']),
-    catalogsById () {
-      return this.catalogs.reduce((a, c) => { a[c.id] = c; return a }, {})
+    resource () {
+      return this.application
     }
-  },
-  async created () {
-    const params = { owner: this.application.owner.type + ':' + this.application.owner.id }
-    this.catalogs = (await this.$axios.$get('api/v1/catalogs', { params })).results
-    eventBus.$on(this.journalChannel, this.onJournalEvent)
-  },
-  async destroyed () {
-    eventBus.$off(this.journalChannel, this.onJournalEvent)
   },
   methods: {
-    ...mapActions('application', ['patch', 'fetchInfo']),
-    onJournalEvent (event) {
-      if (event.type === 'publication') this.fetchInfo()
-    },
-    addPublication (publication) {
-      this.application.publications.push(publication)
-      this.patch({ publications: this.application.publications })
-    },
-    deletePublication (publicationInd) {
-      const publication = this.application.publications[publicationInd]
-      publication.status = 'deleted'
-      this.patch({ publications: this.application.publications })
-    },
-    rePublish (publicationInd) {
-      const publication = this.application.publications[publicationInd]
-      publication.status = 'waiting'
-      this.patch({ publications: this.application.publications })
-    },
-    catalogLabel (catalog) {
-      if (!catalog) return 'catalogue inconnu'
-      let label = `${catalog.title} - ${catalog.url}`
-      if (catalog.organization && catalog.organization.id) label += ` (${catalog.organization.name})`
-      return label
-    }
+    ...mapActions('application', ['patch', 'fetchInfo'])
   }
 }
 

@@ -11,7 +11,7 @@
         <template v-if="$vuetify.breakpoint.mdAndDown">
           <div class="actions-buttons">
             <v-btn
-              v-if="canAdmin"
+              v-if="canAdminDep"
               color="primary"
               fab
               small
@@ -82,7 +82,7 @@
 
       <layout-navigation-right v-if="$vuetify.breakpoint.lgAndUp">
         <v-list
-          v-if="canAdmin"
+          v-if="canAdminDep"
           dense
           class="list-actions"
         >
@@ -96,7 +96,7 @@
           </v-list-item>
         </v-list>
         <template v-if="catalogs">
-          <v-row class="px-2">
+          <v-row class="px-2 pt-2">
             <v-col class="py-0">
               <search-filters
                 :filter-labels="{owner: $t('owner')}"
@@ -154,7 +154,7 @@ export default {
     ...mapState('session', ['user']),
     ...mapGetters('session', ['activeAccount']),
     ...mapState(['env']),
-    ...mapGetters(['canAdmin']),
+    ...mapGetters(['canAdminDep']),
     plural () {
       return this.catalogs.count > 1
     },

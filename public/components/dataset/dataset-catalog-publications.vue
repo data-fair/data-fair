@@ -8,7 +8,7 @@
     />
 
     <v-btn
-      v-if="userOwnerRole(dataset.owner) === 'admin'"
+      v-if="authorizedCatalogs.length"
       v-t="'publish'"
       color="primary"
       @click="addPublicationDialog = true"
@@ -95,9 +95,12 @@
           <v-form v-model="newPublicationValid">
             <v-select
               v-model="newPublication.catalog"
-              :items="catalogs"
+              :items="authorizedCatalogs"
               :item-text="catalogLabel"
-              :rules="[() => !!newPublication.catalog]"
+              :rules="[
+                c => !!c,
+                c => !(dataset.publications || []).find(p => p.catalog === c) || $t('alreadyPublished')
+              ]"
               item-value="id"
               :label="$t('catalog')"
               required
@@ -252,6 +255,7 @@ fr:
   add: Ajouter
   no: Non
   yes: Oui
+  alreadyPublished: ce jeu de données a déjà été publié sur ce catalogue
 en:
   message: Publish this dataset onto one or more Open Data catalogs. This publication will make your data easier to find et will allow the Open Data community to interact with you.
   noPublication: There are no publication of this dataset on a catalog yet.
@@ -278,36 +282,27 @@ en:
   add: Add
   no: No
   yes: Yes
+  alreadyPublished: this dataset was already published on this catalog
 </i18n>
 
 <script>
 import { mapState, mapGetters, mapActions } from 'vuex'
-import eventBus from '~/event-bus'
+import catalogPublicationsMixin from '~/mixins/catalog-publications'
 
 export default {
+  mixins: [catalogPublicationsMixin],
   data () {
     return {
-      addPublicationDialog: false,
-      newPublicationValid: false,
-      newPublication: { catalog: null, status: 'waiting' },
-      newPublicationAction: 'newDataset',
-      deletePublicationInd: null,
-      rePublishInd: null,
-      showDeleteDialog: false,
-      showRepublishDialog: false,
-      catalogs: [],
       catalogDatasets: [],
       catalogDatasetsLoading: false,
       searchCatalogDatasets: ''
     }
   },
   computed: {
-    ...mapState(['env']),
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['journalChannel', 'can']),
-    ...mapGetters(['userOwnerRole']),
-    catalogsById () {
-      return this.catalogs.reduce((a, c) => { a[c.id] = c; return a }, {})
+    resource () {
+      return this.dataset
     }
   },
   watch: {
@@ -321,7 +316,6 @@ export default {
       this.catalogDatasetsLoading = false
     },
     addPublicationDialog () {
-      this.newPublication = { catalog: null, status: 'waiting' }
       this.newPublicationAction = 'newDataset'
     },
     newPublicationAction (v) {
@@ -329,37 +323,8 @@ export default {
       delete this.newPublication.replaceDataset
     }
   },
-  async created () {
-    const params = { owner: this.dataset.owner.type + ':' + this.dataset.owner.id }
-    this.catalogs = (await this.$axios.$get('api/v1/catalogs', { params })).results
-    eventBus.$on(this.journalChannel, this.onJournalEvent)
-  },
-  async destroyed () {
-    eventBus.$off(this.journalChannel, this.onJournalEvent)
-  },
   methods: {
-    ...mapActions('dataset', ['patch', 'fetchInfo']),
-    onJournalEvent (event) {
-      if (event.type === 'publication') this.fetchInfo()
-    },
-    addPublication (publication) {
-      this.dataset.publications.push(publication)
-      this.patch({ publications: this.dataset.publications })
-    },
-    deletePublication (publicationInd) {
-      this.dataset.publications[publicationInd].status = 'deleted'
-      this.patch({ publications: this.dataset.publications })
-    },
-    rePublish (publicationInd) {
-      this.dataset.publications[publicationInd].status = 'waiting'
-      this.patch({ publications: this.dataset.publications })
-    },
-    catalogLabel (catalog) {
-      if (!catalog) return 'catalogue inconnu'
-      let label = `${catalog.title} - ${catalog.url}`
-      if (catalog.organization && catalog.organization.id) label += ` (${catalog.organization.name})`
-      return label
-    }
+    ...mapActions('dataset', ['patch', 'fetchInfo'])
   }
 }
 
