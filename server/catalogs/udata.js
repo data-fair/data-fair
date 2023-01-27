@@ -100,9 +100,9 @@ exports.publishApplication = async (catalog, application, publication, datasets)
       res = await axios.post(url.resolve(catalog.url, 'api/1/reuses/'), udataReuse, { headers: { 'X-API-KEY': catalog.apiKey } })
     }
     publication.targetUrl = res.data.page
-    publication.result = res.data
+    publication.result = { id: res.data.id, slug: res.data.slug }
   } catch (err) {
-    if (err.response) throw new Error(`Erreur lors de l'envoi à ${catalog.url} : ${JSON.stringify(err.response.data, null, 2)}`)
+    if (err.response) throw new Error(`Erreur lors de l'envoi à ${catalog.url} : ${err.status} - ${JSON.stringify(err.data, null, 2)}`)
     else throw err
   }
 }
@@ -114,8 +114,11 @@ exports.deleteApplication = async (catalog, application, publication) => {
   try {
     await axios.delete(url.resolve(catalog.url, `api/1/reuses/${udataReuse.id}/`), { headers: { 'X-API-KEY': catalog.apiKey } })
   } catch (err) {
+    debug('failed to delete reuse', err)
     // The reuse was already deleted ?
-    if (!err.response || ![404, 410].includes(err.response.status)) throw err
+    if ([404, 410].includes(err.status)) return
+    if (err.response) throw new Error(`Erreur lors de la suppression de la réutilisation sur ${catalog.url} : ${err.status} - ${JSON.stringify(err.data, null, 2)}`)
+    else throw err
   }
 }
 
@@ -234,15 +237,15 @@ async function addResourceToDataset (catalog, dataset, publication) {
     }
     const udataDataset = (await axios.get(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}`))).data
     publication.targetUrl = udataDataset.page
-    publication.result = udataDataset
+    publication.result = { id: udataDataset.id, slug: udataDataset.slug }
   } catch (err) {
-    if (err.response) throw new Error(`Erreur lors de l'envoi à ${catalog.url} : ${JSON.stringify(err.response.data, null, 2)}`)
+    if (err.response) throw new Error(`Erreur lors de l'envoi à ${catalog.url} : ${err.status} - ${JSON.stringify(err.data, null, 2)}`)
     else throw err
   }
 }
 
 async function createOrUpdateDataset (catalog, dataset, publication) {
-  debug('Create or update dataset', dataset)
+  debug('Create or update dataset', dataset.id, publication)
   const datasetUrl = getDatasetUrl(catalog, dataset)
   const resources = []
   if (!dataset.isMetaOnly) {
@@ -329,31 +332,36 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
     delete publication.replaceDataset
     try {
       existingDataset = (await axios.get(url.resolve(catalog.url, 'api/1/datasets/' + updateDatasetId + '/'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
-      if (existingDataset.deleted) existingDataset = null
+      debug('existing dataset', existingDataset.uri)
+      if (!existingDataset || existingDataset.deleted) throw new Error(`Impossible de récupérer le jeu de données existant depuis ${catalog.url}. A-t-il été supprimé du catalogue ?`)
 
       // preserving resource id so that URLs are not broken
-      if (existingDataset && existingDataset.resources) {
+      if (existingDataset.resources) {
         for (const resource of udataDataset.resources) {
           const matchingResource = existingDataset.resources.find(r => resource.url === r.url && equal(resource.extras || {}, r.extras || {}))
-          console.log('matching ?', !!matchingResource, resource.url, resource.extras)
           if (matchingResource) resource.id = matchingResource.id
         }
       }
     } catch (err) {
-      console.warn('Failed to fetch existing dataset', err)
+      debug('failure to fetch existing dataset', err)
+      if (err.response) throw new Error(`Erreur lors de la récupération jeu de données existant depuis ${catalog.url} : ${err.status} - ${JSON.stringify(err.data, null, 2)}`)
+      else throw err
     }
   }
 
   try {
     let res
     if (updateDatasetId && existingDataset) {
+      debug('merge over existing dataset')
       Object.assign(existingDataset, udataDataset)
       res = await axios.put(url.resolve(catalog.url, 'api/1/datasets/' + updateDatasetId + '/'), existingDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
     } else {
       const replaceDatasetId = publication.replaceDataset && publication.replaceDataset.id
       if (replaceDatasetId) {
+        debug('overwrite existing dataset entirely', replaceDatasetId)
         res = await axios.put(url.resolve(catalog.url, 'api/1/datasets/' + replaceDatasetId + '/'), udataDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
       } else {
+        debug('create dataset')
         res = await axios.post(url.resolve(catalog.url, 'api/1/datasets/'), udataDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
       }
     }
@@ -362,16 +370,22 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
       throw new Error(`Erreur lors de l'envoi à ${catalog.url} : le format de retour n'est pas correct.`)
     }
     publication.targetUrl = res.data.page
-    publication.result = res.data
+    publication.result = { id: res.data.id, slug: res.data.slug }
   } catch (err) {
-    if (err.response) throw new Error(`Erreur lors de l'envoi à ${catalog.url} : ${JSON.stringify(err.response.data, null, 2)}`)
+    debug('failure to push dataset', err)
+    if (err.response) throw new Error(`Erreur lors de l'envoi du jeu de données à ${catalog.url} : ${err.status} - ${JSON.stringify(err.data, null, 2)}`)
     else throw err
   }
 }
 
 async function deleteResourceFromDataset (catalog, dataset, publication) {
-  const udataDataset = publication.result
-  // The dataset was never really created in udata
+  let udataDataset
+  try {
+    udataDataset = (await axios.get(url.resolve(catalog.url, 'api/1/datasets/' + publication.result.id + '/'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
+  } catch (err) {
+    debug('failed to fetch existing dataset to delete resource from', err)
+  }
+  // The dataset was never really created in udata or it was delete
   if (!udataDataset) return
   const resources = (udataDataset.resources || []).filter(resource => {
     return resource.extras && resource.extras.datafairDatasetId === dataset.id
@@ -380,8 +394,11 @@ async function deleteResourceFromDataset (catalog, dataset, publication) {
     try {
       await axios.delete(url.resolve(catalog.url, `api/1/datasets/${udataDataset.id}/resources/${resource.id}/`), { headers: { 'X-API-KEY': catalog.apiKey } })
     } catch (err) {
+      debug('failed to delete resource', err)
       // The resource was already deleted ?
-      if (!err.response || ![404, 410].includes(err.response.status)) throw err
+      if ([404, 410].includes(err.status)) return
+      if (err.response) throw new Error(`Erreur lors de la suppression de la ressource du jeu de données sur ${catalog.url} : ${err.status} - ${JSON.stringify(err.data, null, 2)}`)
+      else throw err
     }
   }
 }
@@ -393,7 +410,10 @@ async function deleteDataset (catalog, dataset, publication) {
   try {
     await axios.delete(url.resolve(catalog.url, `api/1/datasets/${udataDataset.id}/`), { headers: { 'X-API-KEY': catalog.apiKey } })
   } catch (err) {
+    debug('failed to delete dataset', err)
     // The dataset was already deleted ?
-    if (!err.response || ![404, 410].includes(err.response.status)) throw err
+    if ([404, 410].includes(err.status)) return
+    if (err.response) throw new Error(`Erreur lors de la suppression du jeu de données sur ${catalog.url} : ${err.status} - ${JSON.stringify(err.data, null, 2)}`)
+    else throw err
   }
 }
