@@ -89,9 +89,12 @@
                   <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;{{ $t('portals') }}
                 </v-tab>
 
+                <!-- disabled as we have a problem : topic is now a required property in udata
+                     we will need to show a select based on https://www.data.gouv.fr/api/1/topics/?page=1&page_size=20
                 <v-tab href="#share-publications">
                   <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
                 </v-tab>
+                -->
               </template>
               <template #tabs-items>
                 <tutorial-alert id="app-share-portal">
@@ -120,9 +123,9 @@
                   <application-publication-sites :publication-sites="publicationSites" />
                 </v-tab-item>
 
-                <v-tab-item value="share-publications">
+                <!--<v-tab-item value="share-publications">
                   <application-catalog-publications />
-                </v-tab-item>
+                </v-tab-item>-->
               </template>
             </layout-section-tabs>
 
