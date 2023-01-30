@@ -155,7 +155,11 @@
           <div
             class="v-data-table__wrapper"
           >
-            <table :style="{'table-layout': 'fixed'}">
+            <table
+              :style="{'table-layout': 'fixed'}"
+              :summary="$t('fixedTableHeaderSummary', {col: fixedHeader.text})"
+              aria-colcount="1"
+            >
               <thead
                 class="v-data-table-header"
               >
@@ -183,42 +187,46 @@
             </table>
           </div>
         </v-row>
-        <v-data-table
-          class="fixed-data-table"
-          hide-default-header
-          hide-default-footer
-          :height="tableHeight"
-        >
-          <template #body>
-            <tbody :style="{ 'height': virtualScrollVertical.totalHeight + 'px', }">
-              <tr
-                v-for="result in virtualScrollVertical.results"
-                :key="verticalKeys[result._id]"
-                :style="{
-                  display: 'block',
-                  position: 'relative',
-                  width: totalHeaderWidths + 'px',
-                  minWidth: totalHeaderWidths + 'px',
-                  maxWidth: totalHeaderWidths + 'px',
-                  height: lineHeight + 'px',
-                  'will-change': 'transform',
-                  transform: `translateY(${virtualScrollVertical.topPadding}px)`
-                }"
-              >
-                <dataset-table-cell
-                  :item="result"
-                  :line-height="lineHeight"
-                  :header="fixedHeader"
-                  :filters="filters"
-                  :truncate="truncate"
-                  :dense="displayMode === 'table-dense'"
-                  :style="{width: fixedColWidth + 'px', 'min-width': fixedColWidth + 'px', 'max-width': fixedColWidth + 'px'}"
-                  @filter="f => addFilter(fixedHeader.value, f)"
-                />
-              </tr>
-            </tbody>
-          </template>
-        </v-data-table>
+        <div :class="`v-data-table fixed-data-table v-data-table--fixed-height theme--${$vuetify.theme.dark ? 'dark' : 'light'}`">
+          <div
+            class="v-data-table__wrapper"
+            :style="{height: tableHeight + 'px'}"
+          >
+            <table
+              :summary="$t('fixedTableDataSummary', {col: fixedHeader.text})"
+              :aria-rowcount="data.total"
+            >
+              <tbody :style="{ 'height': virtualScrollVertical.totalHeight + 'px', }">
+                <tr
+                  v-for="(result, i) in virtualScrollVertical.results"
+                  :key="verticalKeys[result._id]"
+                  :style="{
+                    display: 'block',
+                    position: 'relative',
+                    width: totalHeaderWidths + 'px',
+                    minWidth: totalHeaderWidths + 'px',
+                    maxWidth: totalHeaderWidths + 'px',
+                    height: lineHeight + 'px',
+                    'will-change': 'transform',
+                    transform: `translateY(${virtualScrollVertical.topPadding}px)`
+                  }"
+                  :aria-rowindex="virtualScrollVertical.index + i + 1"
+                >
+                  <dataset-table-cell
+                    :item="result"
+                    :line-height="lineHeight"
+                    :header="fixedHeader"
+                    :filters="filters"
+                    :truncate="truncate"
+                    :dense="displayMode === 'table-dense'"
+                    :style="{width: fixedColWidth + 'px', 'min-width': fixedColWidth + 'px', 'max-width': fixedColWidth + 'px'}"
+                    @filter="f => addFilter(fixedHeader.value, f)"
+                  />
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </v-navigation-drawer>
 
       <!-- fake table only here to have a fixed position header that follow the scroll on the actual table -->
@@ -227,7 +235,10 @@
           class="v-data-table__wrapper"
           :class="{'elevation-3': elevateTop}"
         >
-          <table :style="{'table-layout': 'fixed'}">
+          <table
+            :style="{'table-layout': 'fixed'}"
+            :summary="$t('tableHeaderSummary', {dataset: dataset.title})"
+          >
             <thead class="v-data-table-header">
               <tr
                 style="position:relative;"
@@ -253,6 +264,7 @@
                       transform: `translateX(${virtualScrollHorizontal.leftPadding}px)`
                     }"
                     :dense="displayMode === 'table-dense'"
+                    :aria-colindex="(renderFullHeader ? h : virtualScrollHorizontal.index + h) + 1"
                   />
                   <dataset-table-header-menu
                     v-if="header.field"
@@ -275,55 +287,61 @@
       </v-row>
 
       <!-- actual data-table the header is hidden, the visible header is in the app bar-->
-      <v-data-table
-        class="real-data-table"
-        hide-default-header
-        hide-default-footer
-        :height="tableHeight"
-      >
-        <template #body>
-          <tbody :style="{ 'height': virtualScrollVertical.totalHeight + 'px'}">
-            <tr v-if="virtualScrollVertical.results.length === 0">
-              <td :style="{minWidth: totalHeaderWidths + 'px'}" />
-            </tr>
-            <tr
-              v-for="result in virtualScrollVertical.results"
-              :key="verticalKeys[result._id]"
-              :style="{
-                display: 'block',
-                position: 'relative',
-                width: totalHeaderWidths + 'px',
-                minWidth: totalHeaderWidths + 'px',
-                maxWidth: totalHeaderWidths + 'px',
-                height: lineHeight + 'px',
-                'will-change': 'transform',
-                transform: `translateY(${virtualScrollVertical.topPadding}px)`
-              }"
-            >
-              <template v-for="header in virtualScrollHorizontal.headers">
-                <dataset-table-cell
-                  :key="horizontalKeys[header.value]"
-                  :item="result"
-                  :line-height="lineHeight"
-                  :header="header"
-                  :filters="filters"
-                  :truncate="truncate"
-                  :dense="displayMode === 'table-dense'"
-                  :style="{
-                    width: headerWidths[header.value] + 'px',
-                    'min-width': headerWidths[header.value] + 'px',
-                    'max-width': headerWidths[header.value] + 'px',
-                    position: 'relative',
-                    'will-change': 'transform',
-                    transform: `translateX(${virtualScrollHorizontal.leftPadding}px)`
-                  }"
-                  @filter="f => addFilter(header.value, f)"
-                />
-              </template>
-            </tr>
-          </tbody>
-        </template>
-      </v-data-table>
+      <div :class="`v-data-table real-data-table v-data-table--fixed-height theme--${$vuetify.theme.dark ? 'dark' : 'light'}`">
+        <div
+          class="v-data-table__wrapper"
+          :style="{height: tableHeight + 'px'}"
+        >
+          <table
+            :summary="$t('tableDataSummary', {dataset: dataset.title})"
+            :aria-rowcount="data.total"
+            :aria-colcount="selectedHeaders.length"
+          >
+            <tbody :style="{ 'height': virtualScrollVertical.totalHeight + 'px'}">
+              <tr v-if="virtualScrollVertical.results.length === 0">
+                <td :style="{minWidth: totalHeaderWidths + 'px'}" />
+              </tr>
+              <tr
+                v-for="(result, v) in virtualScrollVertical.results"
+                :key="verticalKeys[result._id]"
+                :style="{
+                  display: 'block',
+                  position: 'relative',
+                  width: totalHeaderWidths + 'px',
+                  minWidth: totalHeaderWidths + 'px',
+                  maxWidth: totalHeaderWidths + 'px',
+                  height: lineHeight + 'px',
+                  'will-change': 'transform',
+                  transform: `translateY(${virtualScrollVertical.topPadding}px)`
+                }"
+                :aria-rowindex="virtualScrollVertical.index + v + 1"
+              >
+                <template v-for="(header, h) in virtualScrollHorizontal.headers">
+                  <dataset-table-cell
+                    :key="horizontalKeys[header.value]"
+                    :item="result"
+                    :line-height="lineHeight"
+                    :header="header"
+                    :filters="filters"
+                    :truncate="truncate"
+                    :dense="displayMode === 'table-dense'"
+                    :style="{
+                      width: headerWidths[header.value] + 'px',
+                      'min-width': headerWidths[header.value] + 'px',
+                      'max-width': headerWidths[header.value] + 'px',
+                      position: 'relative',
+                      'will-change': 'transform',
+                      transform: `translateX(${virtualScrollHorizontal.leftPadding}px)`
+                    }"
+                    :aria-colindex="virtualScrollHorizontal.index + h + 1"
+                    @filter="f => addFilter(header.value, f)"
+                  />
+                </template>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       <!-- drag and drop handles to resize columns -->
       <template
@@ -427,6 +445,10 @@ fr:
   tutorialFilter: Appliquez des filtres depuis les entêtes de colonnes et en survolant les valeurs. Triez en cliquant sur les entêtes de colonnes. Cliquez sur le bouton en haut à droite pour télécharger dans un fichier le contenu filtré et trié.
   noData: Les données ne sont pas accessibles. Soit le jeu de données n'a pas encore été entièrement traité, soit il y a eu une erreur dans le traitement.
   showMore: Voir plus de lignes
+  fixedTableHeaderSummary: "Cette table contient l'entête de la colonne \"{col}\" fixée sur la gauche de l'écran."
+  fixedTableDataSummary: "Cette table contient les données de la colonne \"{col}\" fixée sur la gauche de l'écran."
+  tableHeaderSummary: "Cette table contient les entêtes de colonnes pour l'exploration des données de \"{dataset}\". Ces entêtes permettent d'ouvrir un menu pour trier, filtrer et masquer les colonnes."
+  tableDataSummary: "Cette table contient les données de \"{dataset}\"."
 en:
   selectDisplay: Chose the type of display
   displayTitle: Type of display
@@ -436,6 +458,10 @@ en:
   tutorialFilter: Apply filters from the headers and by hovering the values. Sort by clicking on the headers. Click on the button on the top to the right to download in a file the filtered and sorted content.
   noData: The data is not accessible. Either the dataset was not yet entirely processed, or there was an error.
   showMore: Show more lines
+  fixedTableHeaderSummary: "This table contains the header for the column \"{col}\" fixed to the left of the screen."
+  fixedTableDataSummary: "This table contains the data for the column \"{col}\" fixed to the left of the screen."
+  tableHeaderSummary: "This table contains the column headers for exploring the data of \"{dataset}\". These headers can be used to open a menu for sorting, filtering, and hiding columns."
+  tableDataSummary: "This table contains the data of \"{dataset}\"."
 </i18n>
 
 <script>

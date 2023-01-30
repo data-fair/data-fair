@@ -66,6 +66,6 @@ exports.status = asyncWrap(async (req, res, next) => {
 
 exports.ping = asyncWrap(async (req, res, next) => {
   const status = await getStatus(req)
-  if (status.status === 'error') res.status(500).send('service is down')
-  else res.send(status.status)
+  if (status.status === 'error') res.status(500)
+  res.send(status.status)
 })
