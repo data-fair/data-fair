@@ -507,7 +507,11 @@ export default {
       if (this.dataset.finalizedAt && !this.dataset.draftReason && !this.env.disableApplications) {
         sections.push({ title: this.$t('uses'), id: 'reuses' })
       }
-      if ((this.dataset.finalizedAt || this.dataset.isMetaOnly) && !this.dataset.draftReason && !this.env.disableSharing) {
+      if (
+        (this.dataset.finalizedAt || this.dataset.isMetaOnly) &&
+        !this.dataset.draftReason && !this.env.disableSharing &&
+         ['admin', 'contrib'].includes(this.userOwnerRole(this.dataset.owner))
+      ) {
         sections.push({ title: this.$t('share'), id: 'share' })
       }
       if (this.can('readJournal') && !this.dataset.isMetaOnly) {
