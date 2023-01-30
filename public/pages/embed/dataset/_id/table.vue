@@ -265,6 +265,7 @@
                     }"
                     :dense="displayMode === 'table-dense'"
                     :aria-colindex="(renderFullHeader ? h : virtualScrollHorizontal.index + h) + 1"
+                    :aria-colindextext="header.text"
                   />
                   <dataset-table-header-menu
                     v-if="header.field"
@@ -315,6 +316,7 @@
                   transform: `translateY(${virtualScrollVertical.topPadding}px)`
                 }"
                 :aria-rowindex="virtualScrollVertical.index + v + 1"
+                :aria-rowindextext="fixedCol ? result[fixedCol] : ''"
               >
                 <template v-for="(header, h) in virtualScrollHorizontal.headers">
                   <dataset-table-cell
@@ -334,6 +336,7 @@
                       transform: `translateX(${virtualScrollHorizontal.leftPadding}px)`
                     }"
                     :aria-colindex="virtualScrollHorizontal.index + h + 1"
+                    :aria-colindextext="header.text"
                     @filter="f => addFilter(header.value, f)"
                   />
                 </template>
