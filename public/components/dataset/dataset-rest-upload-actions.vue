@@ -78,7 +78,7 @@
               v-model="uploadProgress"
               class="my-1"
               style="max-width: 500px;"
-              :color="$readableColor($vuetify.theme.themes.light.primary, true)"
+              :color="$store.getters.readablePrimaryColor"
             />
           </div>
         </v-form>

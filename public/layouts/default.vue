@@ -3,7 +3,6 @@
     :dark="$vuetify.theme.dark"
     class="data-fair"
   >
-    <layout-dynamic-style html-overflow="scroll" />
     <template v-if="isMainDomain">
       <layout-navigation-left :nav-context="navContext" />
       <layout-navigation-top :nav-context="navContext" />
@@ -30,6 +29,13 @@ export default {
       drawer: false
     }
   }),
+  head () {
+    return {
+      htmlAttrs: { lang: this.$i18n.locale }, // TODO: this should be set by nuxt-i18n but it isn't for some reason
+      style: [{ vmid: 'dynamic-style', cssText: this.$store.getters.style('scroll'), type: 'text/css' }],
+      __dangerouslyDisableSanitizers: ['style']
+    }
+  },
   computed: {
     ...mapState(['env']),
     isMainDomain () {

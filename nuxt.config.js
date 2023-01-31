@@ -61,7 +61,6 @@ module.exports = {
     { src: '~plugins/global-components' },
     { src: '~plugins/ws', ssr: false },
     { src: '~plugins/window-size', ssr: false },
-    { src: '~plugins/color' },
     { src: '~plugins/dynamic-theme' },
     { src: '~plugins/moment' },
     { src: '~plugins/truncate' },

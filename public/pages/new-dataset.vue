@@ -349,7 +349,7 @@
               rounded
               height="28"
               style="max-width: 500px;"
-              :color="$readableColor($vuetify.theme.themes.light.primary, true)"
+              :color="$store.getters.readablePrimaryColor"
             >
               {{ file && file.name }}
               <template v-if="uploadProgress.total">

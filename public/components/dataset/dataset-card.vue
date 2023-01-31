@@ -76,7 +76,7 @@
             :key="topic.id"
             small
             outlined
-            :color="$readableColor(topic.color, $vuetify.theme.dark) || 'default'"
+            :color="$store.getters.contrastColor(topic.color) || 'default'"
             class="ml-2"
             style="font-weight: bold"
           >

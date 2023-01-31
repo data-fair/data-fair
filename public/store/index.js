@@ -6,6 +6,7 @@ import remoteService from './remote-service'
 import application from './application'
 import catalog from './catalog'
 import tinycolor from 'tinycolor2'
+import style from './style'
 
 Vue.use(Vuex)
 
@@ -27,7 +28,8 @@ export default () => {
       remoteService: remoteService(),
       application: application(),
       catalog: catalog(),
-      session: sessionStoreBuilder()
+      session: sessionStoreBuilder(),
+      style: style()
     },
     state: {
       vocabulary: null,
@@ -65,8 +67,7 @@ export default () => {
         '.geojson.gz',
         '.csv.gz',
         '.tsv.gz'
-      ],
-      queryPrimary: null
+      ]
     },
     getters: {
       ownerLicenses: (state) => (owner) => {
@@ -141,34 +142,6 @@ export default () => {
       },
       missingSubscription (state) {
         return !!(state.limits && state.limits.defaults && state.env.subscriptionUrl)
-      },
-      primary (state) {
-        if (state.queryPrimary) {
-          // ensure the color will provide a readable contrast with white text in buttons
-          return Vue.prototype.$readableColor(state.queryPrimary)
-        }
-        return state.env.theme.colors.primary
-      },
-      lightPrimary5 (state, getters) {
-        return tinycolor(getters.primary).brighten(5).toHexString()
-      },
-      lightPrimary10 (state, getters) {
-        return tinycolor(getters.primary).brighten(10).toHexString()
-      },
-      darkPrimary5 (state, getters) {
-        return tinycolor(getters.primary).darken(5).toHexString()
-      },
-      darkPrimary10 (state, getters) {
-        return tinycolor(getters.primary).darken(10).toHexString()
-      },
-      darkPrimary20 (state, getters) {
-        return tinycolor(getters.primary).darken(20).toHexString()
-      },
-      lightAccent10 (state) {
-        return tinycolor(state.env.theme.colors.accent).brighten(10).toHexString()
-      },
-      darkAccent10 (state) {
-        return tinycolor(state.env.theme.colors.accent).darken(10).toHexString()
       }
     },
     mutations: {
