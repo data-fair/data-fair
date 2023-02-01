@@ -10,7 +10,7 @@ published: true
 Le catalogue de données est un moteur de recherche permettant d’**accéder rapidement** aux jeux de données susceptibles d'intéresser l'utilisateur. Outre le champ de recherche textuelle, il est possible d'accéder aux jeux de données par thématique ou par concept présent dans les données. Il est par exemple possible de lister tous les jeux de données géographiques en filtrant par concept *Latitude*, ou toutes les données liées à des entreprises en filtrant par *SIREN*.
 
 <img src="./images/functional-presentation/search.jpg"
-     height="100" style="margin:15px auto;" />
+     height="100" style="margin:15px auto;" alt="capture d'écran de la page de catalogue de données d'un portail"/>
 
 
 La liste des jeux de données est parcourue au moyen d’un mécanisme de scroll infini, aussi bien adapté à une utilisation **bureautique ou mobile**. Il est également possible de trier les résultats suivant différent critères (Alphabétique, date de création, ...). La liste des résultats obtenus peut être exportée au format CSV en un clic.
@@ -24,6 +24,6 @@ En plus de permettre de naviguer vers la page de détails d'un jeu de données, 
 * Consulter le **schéma des données**
 
 <img src="./images/functional-presentation/home-dataset.jpg"
-     height="140" style="margin:15px auto;" />
+     height="140" style="margin:15px auto;" alt="capture d'écran de vignettes de jeux de données"/>
 
 Le catalogue présente les jeux de données que l'utilisateur a le droit de voir. Si il n'est pas connecté, il ne verra que les jeux en opendata, si il est connecté et membre de l'organisation propriétaire du portail, il pourra en plus voir des jeux de données privés.

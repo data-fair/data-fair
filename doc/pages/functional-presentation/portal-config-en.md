@@ -13,7 +13,7 @@ Data Fair allows you to configure several data portals which are places for publ
 Just like for data visualizations, the configuration of a data portal is done **graphically** in two stages: we work on a draft which we then publish in current version. The *current version* is the version that is presented to the various visitors to your portal, which allows you to update the portal without impacting users until the draft has been validated. **No knowledge of HTML or CSS** is required and a portal is administered like a CMS like Wordpress.
 
 <img src="./images/functional-presentation/configuration-portail.jpg"
-     height="300" style="margin:40px auto;" />
+     height="300" style="margin:40px auto;" alt="screenshot of a portail configuration edition" />
 
 **Many elements are configurable**: the logo, the home image, the favicon, the color of the navigation bar, the color of the footer, content elements (title, description, visualization to put forward, public or private visibility) and various communication elements (website, contact email, and accounts on social networks).
 
@@ -25,7 +25,7 @@ The content pages are of different types: articles, thematic pages around severa
 It is thus possible to **highlight data** and give them even more context, for example, or to make **dashboards** integrating different data.
 
 <img src="./images/functional-presentation/foncier-edit.jpg"
-     height="300" style="margin:40px auto;" />
+     height="300" style="margin:40px auto;" alt="screenshot of the edition of a page of a portal" />
 
 The creation of a page is done in 3 steps: We first choose the **page template**. Then we fill in the different elements using a form adapted to the chosen page model with a **preview of the result**. We can finally publish the page, which allows you to **prepare pages in advance** and publish them later. In addition to entering free text, it is possible to integrate different types of elements: table of a dataset, visualization, list of datasets, integration of external content, ...
 

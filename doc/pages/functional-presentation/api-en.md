@@ -13,6 +13,6 @@ API documentation is done following the **OpenAPI 3.0** specification. This allo
 Another benefit of using this specification is increased **interoperability**, with some IT systems (e.g. API gateways) being able to understand this specification. APIs made with Data Fair can, for example, be directly integrated by sites such as https://api.gouv.fr.
 
 <img src="./images/functional-presentation/api.jpg"
-     height="500" style="margin:20px auto;" />
+     height="500" style="margin:20px auto;" alt="capture d'écran de la documentation d'API" />
 
 It is possible to use the API to **harvest data from a portal**. For example, the https://opendatarchives.fr/ site regularly harvests data from the https://data.ademe.fr/ portal powered by Data Fair.

@@ -15,7 +15,7 @@ Le fait de pousser les métadonnées vers un catalogue plutôt que de se faire m
 Les connecteurs peuvent éventuellement pousser les données vers ces catalogues mais il est préférable d’éviter cela à cause des problèmes de duplication et synchronisation de données. Comme mentionné précédemment, les données sont indexées de manière très performante avec Data Fair et il est préférable de requêter les données directement à partir des APIs qu'il offre.
 
 <img src="./images/functional-presentation/catalogues.jpg"
-     height="200" style="margin:40px auto;" />
+     height="200" style="margin:40px auto;" alt="capture d'écran d'une configuration de publication sur catalogue" />
 
 En ce qui concerne la **lecture**, l’approche est par contre différente et les connecteurs se comportent plutôt comme des **moissonneurs de métadonnées et de données**. On peut ainsi pour chaque connecteur paramétrer les fréquences de collecte et les types de sources que l’on souhaite moissonner.
 

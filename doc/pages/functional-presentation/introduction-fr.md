@@ -9,7 +9,7 @@ published: true
 Le mot **FAIR** fait référence à de la donnée [« Facile à trouver, Accessible, Interopérable et Réutilisable »](https://fr.wikipedia.org/wiki/Fair_data). Cela est rendu possible grâce à **l'indexation** des données sur la plateforme. Elle permet de réaliser des recherches complexes dans des volumes de plusieurs millions d’enregistrements et d'accéder plus facilement et rapidement à ce qui nous intéresse. L'accès aux données aux travers **d'APIs normalisées et documentées** permet d'interfacer la plateforme avec d'autres systèmes d'information et facilite la réutilisabilité des données.
 
 <img src="./images/functional-presentation/FAIR.jpg"
-     height="160" style="margin:30px auto;" title="détail de l'acronyme FAIR" />
+     height="160" style="margin:30px auto;" alt="illustration de l'acronyme FAIR" />
 
 Les utilisateurs des données accèdent à la plateforme au travers **d'un ou plusieurs portails de données**. Ils permettent d’accéder au catalogue de jeux de données et de l'explorer de différentes manières. Il est possible de consulter directement les jeux de données, que ce soit avec des vues génériques (tableaux, cartes simples, ...) ou des visualisations plus spécifiques préconfigurées. Les données sont diffusées au travers de pages qui les présentent sous la forme d’histoires (data storytelling), **permettant à n'importe qui de les comprendre plus facilement**. Les utilisateurs peuvent s'abonner à des notifications sur les mises à jour et les développeurs peuvent accéder à la documentation interactive des diverses APIs de la plateforme. Les portails peuvent être agrémentés de **pages de contenu** présentant les démarches, contributeurs ou réutilisations mises en avant par exemple.
 

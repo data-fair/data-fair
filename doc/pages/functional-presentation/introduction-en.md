@@ -9,7 +9,7 @@ published: true
 The word **FAIR** refers to data which meet principles of [“Findability, Accessibility, Interoperability and Reusability”](https://fr.wikipedia.org/wiki/Fair_data). This is made possible thanks to the **indexation** of the data on the platform. It makes it possible to carry out complex searches in volumes of several million records and to access more easily and quickly what interests us. Access to data through **standardized and documented APIs** makes it possible to interface the platform with other information systems and facilitates data reusability.
 
 <img src="./images/functional-presentation/FAIR.jpg"
-     height="160" style="margin:30px auto;" />
+     height="160" style="margin:30px auto;" alt="illustration of the FAIR acronym" />
 
 Data users access the platform through **one or more data portals**. They allow you to access the dataset catalog and explore it in different ways. It is possible to consult the datasets directly, whether with generic views (tables, simple maps, etc.) or more specific preconfigured visualizations. Data is disseminated through pages that present it in the form of data storytelling, **making it easier for anyone to understand**. Users can subscribe to notifications about updates and developers can access interactive documentation for various platform APIs. The portals can be embellished with **content pages** presenting the approaches, contributors or reuses put forward, for example.
 

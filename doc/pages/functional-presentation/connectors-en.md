@@ -15,7 +15,7 @@ Pushing metadata to a catalog rather than being harvested by it offers several a
 Connectors can eventually push data to these catalogs but it is best to avoid this because of data duplication and synchronization issues. As mentioned before, data is indexed in a very efficient way with Data Fair and it is better to query the data directly from the APIs it offers.
 
 <img src="./images/functional-presentation/catalogues.jpg"
-     height="200" style="margin:40px auto;" />
+     height="200" style="margin:40px auto;" alt="screenshot of a configuration of a publication on a catalog" />
 
 As far as **reading** is concerned, the approach is however different and the connectors behave more like **metadata and data harvesters**. It is thus possible for each connector to configure the collection frequencies and the types of sources that one wishes to harvest.
 
