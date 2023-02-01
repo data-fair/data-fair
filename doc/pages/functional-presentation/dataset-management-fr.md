@@ -10,7 +10,7 @@ Les jeux de données permettent de mettre à disposition de l'utilisateur des do
 
 <!-- ![Fiche d'un jeu de données](./images/functional-presentation/jeu-2.jpg) -->
 
-### Types de jeux de données
+## Types de jeux de données
 
 Il existe plusieurs types de jeux de données sur la plateforme, les fichiers, les jeux de données éditables, les jeux de données virtuels et des jeux de données externes.
 
@@ -22,7 +22,7 @@ Il existe plusieurs types de jeux de données sur la plateforme, les fichiers, l
 
 * Les **jeux de données externes** n'ont pas de données indexées sur la plateforme. Ils permettent de renseigner des métadonnées (titre, description, licence, ...) et d'y associer des données dans des formats qui ne sont pas exploitables par la plateforme (PDF, Archive Zip, ...) ou de cataloguer des données présentes sur d'autres plateforme en renseignant un lien dans la description.
 
-### Schéma des données
+## Schéma des données
 
 La plateforme supporte l'indexation de données tabulaires. Chaque jeu de données (excepté les jeux de données externes) possède un schéma qui est la description des différentes colonnes (ou champs) qui le composent. A minima, chaque colonne a un identifiant et un type, mais il est possible de renseigner des informations complémentaires.
 
@@ -35,7 +35,7 @@ Le dernier élément qui peut être renseigné, et qui a une importance considé
 
 Ce typage métier **augmente la réutilisabilité** des données et permet 2 choses au sein de la plateforme : **l'enrichissement à partir d'autres données**, et la proposition de **visualisations adaptées** (en simplifiant le paramétrage de celles-ci) : les concepts *latitude* et *longitude* permettent par exemple de paramétrer des cartes avec des marqueurs.
 
-### Métadonnées et pièces jointes
+## Métadonnées et pièces jointes
 
 Certaines métadonnées sont préremplies, comme les dates de mise à jour des métadonnées ou des données, et l'utilisateur qui les a créé ou modifié. La page d’édition d’un jeu de données permet de modifier les différentes métadonnées de ce jeu. Il est possible de modifier le titre et la description, de définir une **licence d'utilisation** et d'associer des **thématiques**. Les listes de licences et thématiques utilisables sont communes à toute l'organisation et peuvent être éditées par les administrateurs.
 
@@ -43,7 +43,7 @@ Il est possible d’associer des **pièces jointes à chaque ligne** d’un jeu 
 
 Les pièces jointes peuvent aussi être **directement attachées à un jeu de données**. On peut par exemple ajouter des fichiers de documentation ou des métadonnées riches. On peut également s'en servir pour publier des données qui ne peuvent pas être indexées par la plateforme dans le cas d'un jeu de données de type *externe*.
 
-### Données maitre et enrichissement
+## Données maitre et enrichissement
 
 Certaines données peuvent être utilisées à différents endroits et dans différents processus par les organisations. Il est possible de définir un jeu de données comme étant des **données maitre** (master-data en anglais). Ce sont des données qui font référence à des concepts particulier, et la plateforme met à disposition de toutes les organisation des données maitre mutualisées.
 
@@ -53,7 +53,7 @@ Ces données maitre sont d'une grande valeur, car elles permettent de **complét
 
 La deuxième possibilité pour compléter les données est de mettre en place des **enrichissements** : des colonnes sont alors automatiquement ajoutées au jeu de données et les valeurs renseignées à partir d'une ou plusieurs autres colonnes. Par exemple des colonnes qui ont les concepts *numéro de rue*, *libellé de rue* et *code postal* peuvent être complétées par les données d'adresse et être géocodées, ce qui permet de projeter les données sur une carte. Quand les données sont mises à jour, les enrichissements sont automatiquement mis à jour, et un jeu de données peut avoir plusieurs enrichissements provenant de données maitres différentes.
 
-### Permissions et publication des données
+## Permissions et publication des données
 
 Un administrateur peut contrôler finement les permissions d’**accès aux données**. Les données sont de base *privées*, c'est à dire que seuls les membres de l'organisation authentifiés peuvent les consulter. Il est possible de rendre les données *publiques*, dans ce cas tout le monde, y compris les utilisateurs non-enregistrés, pourra y accéder. On peut également définir des droits d'accès à certains utilisateurs ou des organisations partenaires. Un mode avancé permet de définir les permissions pour chaque point d'accès de l'API d'un jeu de données : on peut par exemple rendre l'accès aux métadonnées public alors que l'accès aux données reste restreint.
 
@@ -69,6 +69,6 @@ Ce mécanisme de publication permet de travailler de manière agile : on peut pa
 
 Il est aussi possible de publier un jeu de données sur des portails ou catalogues de données externes à la plateforme, cela est décrit plus en détails à la section sur les *connecteurs de catalogues*.
 
-### Journal des événements
+## Journal des événements
 
 Chaque étape du traitement d'un jeu de données laisse des traces dans le journal associé. On peut ainsi retracer les actions, leurs dates, leurs durées et les éventuelles erreurs rencontrées.

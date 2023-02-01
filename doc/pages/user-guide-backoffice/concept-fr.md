@@ -25,7 +25,7 @@ Grace aux concepts, vous pouvez, par exemple, [enrichir](./user-guide-backoffice
 Un concept est unique pour un jeu de données, il ne peut être attribué qu'une seule fois à un jeu de données. Par exemple, si le concept **Latitude** est associé à une colonne de votre jeu de données, il ne pourra pas être associé à une autre colonne de votre jeu de données.
 
 
-### Liste des concepts
+## Liste des concepts
 
 Il est possible de créer ses propres concepts et qu'ils soient utilisés dans vos [données de référence](./user-guide-backoffice/enrichment).  
 Voici la liste par défaut des concepts utilisé par Data Fair :

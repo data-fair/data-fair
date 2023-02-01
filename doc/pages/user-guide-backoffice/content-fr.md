@@ -9,7 +9,7 @@ published: true
 
 Les pages de contenu permettent de mettre en avant certaines données, d'écrire des articles, de faire du data storytelling, ou encore de présenter une licence sur votre portail.
 
-### Création de la page de contenu
+## Création de la page de contenu
 
 La section **Portails** de Data Fair vous permet d'accéder à l'édition de vos portail. Vous pouvez ensuite accéder à l'édition des **pages de contenu** à l'aide du bouton **Editer les pages de contenu** en haut à droite.
 
@@ -33,7 +33,7 @@ Sur notre image la page de contenu s'appelle **Foncier**, possède un modèle de
 Le modèle de **page blanche** permet d'ajouter et de disposer ses éléments librement.  
 Le modèle de **page thématique** permet d'ajouter une première description de la page et une image en bannière.
 
-### Configuration de votre page thématique
+## Configuration de votre page thématique
 
 Sur la partie gauche de la page d'édition se présente le contenu éditorial, il va vous permettre de personnaliser votre page.  
 Sur la partie droite de votre page, vous avez un aperçu de votre page de contenu qui se met à jour en temps réel.

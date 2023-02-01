@@ -12,12 +12,12 @@ Par défaut, toutes les données que vous chargez sont privées, il n'y a que le
 Vous pouvez travailler à plusieurs sur des jeux de données en utilisant une [organisation](./user-guide-backoffice/organisation).
 
 
-### Les meta-données
+## Les meta-données
 
 Les meta-données sont les données qui vont caractériser votre fichier, telles que la taille, le format, la date de modification, etc...  
 Le titre, la description, la provenance, la licence sont des meta-données que vous pouvez modifier dans la page d'édition d'un jeu de données. Elles permettent de mieux identifier et de retrouver vos jeux de données.
 
-### Les concepts
+## Les concepts
 
 Dans la page d'édition d'un jeu de données, vous retrouvez la section **Schéma** qui vous permet de visualiser le model de vos données. Le schéma d'un jeu de données correspond à son architecture (l'ensemble des colonnes). Dans cette section vous pouvez renseigner des [concepts](./user-guide-backoffice/concept). Lorsque vous renseignez un concept sur une colonne, vous associez une notion connue de Data Fair à cette colonne. Vos données ont ainsi plus de sens pour Data Fair.
 

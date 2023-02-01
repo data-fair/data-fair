@@ -10,7 +10,7 @@ application : https://koumoul.com/apps/sunburst/0.2/
 
 Un diagramme **Sunburst** permet de visualiser des données hiérarchiques et permet d'accéder à plusieurs niveaux de ces données en quelques clics.
 
-### Créer un diagramme de Sunburst
+## Créer un diagramme de Sunburst
 
 Pour réaliser la visualisation, cliquez sur **Visualisations** puis sur **Configuration une visualisation**.
 
@@ -34,20 +34,20 @@ Le titre de la visualisation peut être modifié.
 Les **informations** vous donnent un résumé des caractéristiques de votre application.  
 Les boutons d'actions vous permettent d'importer l'application sur un autre site, de dupliquer l'application, de la supprimer et d'accéder à l'application en plein écran.
 
-### Menu de configuration
+## Menu de configuration
 Le menu de configuration est composé de trois sous-menus : **Sources de données**, **Préparation des données** et **Présentation**.
 
-#### 1.Sources de données  
+### 1.Sources de données  
 
 Dans le menu **Sources de données**, choisissez le jeu de données à utiliser.
 
-#### 2.Préparation des données  
+### 2.Préparation des données  
 
 Le menu **Préparation des données** permet de renseigner les colonnes que vous souhaitez afficher et d'avoir votre premier rendu.  
 **Calcul de la valeur** permet de compter le nombre de lignes non nulles d'une colonne pour qu'elle soit représentée ou bien de calculer les sommes des valeurs d'une colonne.  
 Les **Groupes** représentent les niveaux que vous voulez afficher sur votre diagramme sunburst.
 
-#### 3.Présentation  
+### 3.Présentation  
 
 Dans le menu **Présentation**, vous pouvez désactiver l'affichage des descendants uniques, modifier la couleur du texte et modifier la couleur de vos catégories.
 

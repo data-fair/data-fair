@@ -8,9 +8,9 @@
         class="text-center"
         cols="12"
       >
-        <h2 class="text-h3 font-weight-bold grey--text text--darken-3 mb-4">
+        <h1 class="text-h3 font-weight-bold grey--text text--darken-3 mb-4">
           Data Fair
-        </h2>
+        </h1>
         <p
           v-t="'subtitle'"
           class="text-h5 font-weight-regular grey--text text--darken-1 font-italic"
@@ -24,7 +24,7 @@
             color="primary"
             style="text-transform: none;font-weight: bold;"
           >
-            <v-icon color="pink">
+            <v-icon color="pink darken-1">
               mdi-heart-outline
             </v-icon>&nbsp;&nbsp;Sponsor
           </v-btn>
@@ -39,17 +39,18 @@
               mdi-github
             </v-icon>&nbsp;&nbsp;GitHub
           </v-btn>
-          <v-btn
+          <!--<v-btn
             href="https://twitter.com/data_fair"
             icon
             large
             class="ml-2"
             color="#1DA1F2"
+            title="compte twitter"
           >
             <v-icon>
               mdi-twitter
             </v-icon>
-          </v-btn>
+          </v-btn>-->
         </div>
       </v-col>
     </v-row>
@@ -156,9 +157,9 @@
       </v-col>
     </v-row>
 
-    <h3 class="text-h5 grey--text text--darken-3 mb-2 mt-6">
-      Soutiens
-    </h3>
+    <h2 class="text-h5 grey--text text--darken-3 mb-2 mt-6">
+      {{ $t('backers') }}
+    </h2>
     <v-row>
       <v-col
         v-for="sponsor in sponsors"
@@ -197,59 +198,61 @@
 <i18n lang="yaml">
 fr:
   subtitle: Visualisez, exploitez et partagez vos données en quelques clics !
+  backers: Soutiens
   sectionDatasets: |
-    <h3 class="text-h5 grey--text text--darken-3 mb-2">
+    <h2 class="text-h5 grey--text text--darken-3 mb-2">
       Gérez vos sources de données
-    </h3>
+    </h2>
     <p>Chargez directement vos fichiers avec l'interface. Une <strong>grande variété de formats</strong> est supportée (XLS,CSV,SHP,...)</p>
     <p>Configurez des collecteurs permettant les <strong>mises à jour automatiques</strong> des données et l'intégration des données issues l'IOT.</p>
     <p>Mettez en place, facilement et progressivement, une <strong>stratégie data-driven</strong> au sein de votre organisation.</p>
   sectionExtend:
-    <h3 class="text-h5 grey--text text--darken-3 mb-2">
+    <h2 class="text-h5 grey--text text--darken-3 mb-2">
       Enrichissez et structurez
-    </h3>
+    </h2>
     <p>Accédez aux données issues de l'opendata, enrichissez vos données pour leur donner encore plus de valeur et les rendre <strong>hautement réutilisables</strong>.</p>
     <p>Les données sont <strong>normalisées, accessibles par API</strong>, sous forme structurée ou de fonds de cartes vectoriels.</p>
   sectionVisualize:
-    <h3 class="text-h5 grey--text text--darken-3 mb-2">
+    <h2 class="text-h5 grey--text text--darken-3 mb-2">
       Visualisez dynamiquement
-    </h3>
+    </h2>
     <p>Configurez des visualisations de données interactives en quelques clics, <strong>sans avoir besoin de programmer</strong>.</p>
     <p>Vous pouvez <strong>explorer des données volumineuses</strong> en temps réel, avec des cartes, des graphiques, ou des visualisations textuelles.</p>
     <p><a href="https://koumoul.com">Koumoul</a> réalise au besoin des <strong>visualisations personnalisées</strong> pour correspondre au mieux à votre métier</p>
   sectionShare:
-    <h3 class="text-h5 grey--text text--darken-3 mb-2">
+    <h2 class="text-h5 grey--text text--darken-3 mb-2">
       Partagez en interne / opendata
-    </h3>
+    </h2>
     <p><strong>Contrôlez finement les accès</strong> aux données et aux visualisations pour les partager en interne ou les ouvrir vers l'extérieur.</p>
     <p>Vos données sont téléchargeables dans plusieurs formats et vous pouvez les présenter dans un <strong>portail de données personnalisable</strong>.</p>
     <p><strong>Intégrez</strong> vos visualisations dans votre site web.</p>
 en:
   subtitle: Visualize, explore and share your data in a few clicks !
+  backers: Backers
   sectionDatasets: |
-    <h3 class="text-h5 grey--text text--darken-3 mb-2">
+    <h2 class="text-h5 grey--text text--darken-3 mb-2">
       Manage your datasets
-    </h3>
+    </h2>
     <p>Load your files directly in the user interface. A <strong>large variety of formats</strong> is supported (XLS,CSV,SHP,...)</p>
     <p>Configure data collection tools for <strong>automatic updates</strong> of data including from IOT sources.</p>
     <p>Move with ease toward a <strong>data-driven strategy</strong> in your organization.</p>
   sectionExtend:
-    <h3 class="text-h5 grey--text text--darken-3 mb-2">
+    <h2 class="text-h5 grey--text text--darken-3 mb-2">
       Extend and structure
-    </h3>
+    </h2>
     <p>Use open-data sources, extend your data to increase its value and make it <strong>highly reusable</strong>.</p>
     <p>Your data is <strong>normaized and accessible through an API</strong>, as structured textual data or vectorial geographic maps.</p>
   sectionVisualize:
-    <h3 class="text-h5 grey--text text--darken-3 mb-2">
+    <h2 class="text-h5 grey--text text--darken-3 mb-2">
       Visualize dynamically
-    </h3>
+    </h2>
     <p>Configure interactive data visualizations in a few click, <strong>without programming skills</strong>.</p>
     <p>You can <strong>explore large datasets</strong> in real time, using maps, charts, or textual representations.</p>
     <p><a href="https://koumoul.com">Koumoul</a> create on-demande <strong>custom visualizations</strong> to better match your needs</p>
   sectionShare:
-    <h3 class="text-h5 grey--text text--darken-3 mb-2">
+    <h2 class="text-h5 grey--text text--darken-3 mb-2">
       Share privately or as open-data
-    </h3>
+    </h2>
     <p><strong>Control access</strong> to the data and the visualizations to share both inside your organization and with the larger public.</p>
     <p>Your data is downloadable in multiple formats and can be presented in <strong>customizable data portal</strong>.</p>
     <p><strong>Integrate</strong> your visualizations in your web sites.</p>

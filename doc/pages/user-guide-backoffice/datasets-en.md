@@ -12,13 +12,13 @@ On Data Fair, a dataset corresponds to an uploaded [file](./user-guide-backoffic
 By default, all uploaded data is private on your account.  
 You can work with your team using an [organization](./user-guide-backoffice/organisation) account.
 
-### Metadata
+## Metadata
 
 Metadata is the data characterizing your dataset, such as size, format, modification date, etc.  
 The title, description, provenance, license are metadata that you can modify in the edition page of a dataset.  
 With metadata your datasets are easier to find and to identify.
 
-### Concepts  
+## Concepts  
 
 On the dataset edition page, you will find the **Schema** section which allows to view the model of your data. The schema of a dataset corresponds to its architecture (all the columns). In this section you can fill in [concepts](./user-guide-backoffice/concept). When you fill in a concept on a column, you associate a known elements of Data Fair to this column. This makes your data more meaningful for Data Fair.
 

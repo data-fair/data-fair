@@ -8,7 +8,7 @@ published: true
 
 Le service **Notify** permet de gérer les notifications d'une plateforme. Celles-ci peuvent être transmises dans le navigateur, sur un smartphone ou par email.
 
-### Stack technique
+## Stack technique
 
 Le backend de Notify est écrit en NodeJS avec le framework ExpressJS. La persistance est assurée avec MongoDB. Le frontend est réalisé avec les frameworks VueJS, VuetifyJS et NuxtJS.
 

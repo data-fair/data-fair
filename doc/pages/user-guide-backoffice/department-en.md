@@ -18,7 +18,7 @@ Root organization admins and contributors can work on all datasets in the organi
 Administrators-1 and contributors-1 of department-1 will only be able to work on datasets of department-1.  
 Administrators-2 and contributors-2 of department-2 will only be able to work on datasets of department-2.
 
-### Consulting datasets
+## Consulting datasets
 
 The consultation of the data sets can be carried out by API or on the portal
 

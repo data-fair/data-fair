@@ -77,7 +77,9 @@ module.exports = {
   vuetify: {
     theme: {
       themes: {
-        light: config.theme.colors
+        light: {
+          primary: '#1976D2' // blue.darken2
+        }
       }
     },
     defaultAssets: {

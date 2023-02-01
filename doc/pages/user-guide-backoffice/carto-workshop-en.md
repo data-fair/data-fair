@@ -13,11 +13,11 @@ The **Cartographic workshop** visualization allows to project geolocated data on
 You have an example of this visualization on [Move by bike](https://opendata.koumoul.com/reuses/se-deplacer-a-velo/full).
 
 
-### Concepts
+## Concepts
 
 To configure a **Cartographic workshop** visualization, your active account contains at least one dataset with [concepts](./user-guide-backoffice/concept)  **Latitude** et **Longitude** / **Geometry** associated with the columns of its schema.  
 
-### Create a Cartographic Workshop visualization
+## Create a Cartographic Workshop visualization
 
 To create your visualization, click on **Visualizations** then on **Configure a visualization**.
 
@@ -39,11 +39,11 @@ You are redirected to the configuration page of your application with its differ
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.  
 
-### Configuration menu
+## Configuration menu
 
 The configuration menu contains three submenus : **Data layers** and **Other options**.
 
-#### 1.Data Layers
+### 1.Data Layers
 In the **Data Layers** section, you add the layers present in your visualization.  
 A layer corresponds to a dataset containing geographic data.  
 You can add multiple layers, each layer will have its own configuration.
@@ -63,7 +63,7 @@ When working with colors based on values ​​within a range, you have three pa
 The **Field containing values** allows you to define the numeric column represented by the colors.  
 You can then define intervals **of the same size**, by **quantiles** or in **manual adjustment**.
 
-#### 2.Other options
+### 2.Other options
 
 In this section you can:
 * set the **Map Style** among nearly 10 different styles

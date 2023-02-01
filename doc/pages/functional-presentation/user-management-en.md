@@ -11,7 +11,7 @@ By default, there are four different roles: User, Contributor, Admin, and Super 
 
 The other 3 roles are defined by organization: it is for example possible to be *administrator* in one organization and simple *user* in another.
 
-### Roles and associated permissions
+## Roles and associated permissions
 
 Organization admins can manage members:
 
@@ -35,7 +35,7 @@ Default permissions of the different roles of an organization:
 | Acces and Change Settings |             |              |        x       |
 | Create and modify the portal |             |              |        x       |
 
-### Departments
+## Departments
 
 In addition to their role, users can be assigned to a department of the organization. This allows a form of partitioning and to have groups of users who each manage their data on their side. Users who are not restricted to a department can see (or edit if they have a *contributor* or *administrator* role) all resources in the organization.
 

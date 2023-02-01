@@ -9,7 +9,7 @@ published: true
 La page d'accueil permet d'avoir un aperçu des données présentes sur le portail de données.  
 Elle permet aux visiteurs de rapidement accéder aux données mises en avant, de visualiser les chiffres clés, de rechercher des données ou encore de se connecter au portail.
 
-### Page d'accueil
+## Page d'accueil
 
 La page d'accueil d'un portail est configurable.  
 Sur le portail [open data de Koumoul](https://opendata.koumoul.com/), l'accueil contient 13 points.  

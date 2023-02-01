@@ -11,7 +11,7 @@ application : https://koumoul.com/apps/periodic-series/0.1/
 The **Periodic series** visualization is used to visualize a series of data to compare its evolution over time over a period.  
 You have an example of this visualization on the [temperature variation and comparison between oceanic / continental climate](https://opendata.koumoul.com/reuses/variation-de-temperature-comparaison-climat-oceanique-et-continental).
 
-### Create your graph
+## Create your graph
 
 Click on **Visualizations** then on **Configure a visualization**.
 
@@ -34,11 +34,11 @@ You are redirected to the configuration page of your application with its differ
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.
 
-### Configuration menu
+## Configuration menu
 
 The configuration menu contains two submenus: **Data** and **Render**.  
 
-#### 1.Data
+### 1.Data
 
 In the **Data** menu, you choose the data set you want to use.  
 **Filters** are used to restrict the data displayed in the application.  
@@ -49,7 +49,7 @@ The **Metric** allows to perform a calculation on your data according to the per
 The **Category** allows to choose a column to filter the **Mesurement** values of your visualization.
 The **Transform the value** section allows to perform a calculation in the form of a formula on all the values.
 
-#### 2.Render
+### 2.Render
 
 
 In the **Render** menu , you choose the period of the graph and the unit of the graph.

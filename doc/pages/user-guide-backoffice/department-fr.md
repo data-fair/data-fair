@@ -17,7 +17,7 @@ Les administrateurs et contributeurs racines de l'organisation peuvent travaille
 Les administrateurs-1 et contributeurs-1 du département-1 ne pourront travailler que sur les jeux de données du département-1.  
 Les administrateurs-2 et contributeurs-2 du département-2 ne pourront travailler que sur les jeux de données du département-2.
 
-### Consultation des jeux de données
+## Consultation des jeux de données
 
 La consultation des jeux de données peut être réalisée par API ou sur le portail
 

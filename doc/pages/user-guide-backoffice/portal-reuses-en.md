@@ -10,14 +10,14 @@ published: true
 When you set up a portal, you can enable reuses on your datasets.  
 Connected visitors will then be able to submit reuses using your data. You can decide to publish the reuses submited.  
 
-### Enable reuses
+## Enable reuses
 
 In the configuration menu of your portal, you can activate the reuses for all connected users of your portal.
 
 ![Réutilisations](./images/lessons/admin-05-active.jpg)
 
 
-### Manage reuses
+## Manage reuses
 
 In the *portal* section of the back-office, you can access the administration of the reuses using the **manage reuses** button of your portal.
 

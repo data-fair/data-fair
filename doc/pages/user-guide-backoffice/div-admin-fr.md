@@ -15,11 +15,11 @@ Vous avez un exemple de cette visualisation sur notre [carte des résultats aux 
 
 **Divisions administratives** permet de créer des cartes aux niveaux d'IRIS, EPCI, des communes, des départements et/ou des régions.  
 
-### Les concepts
+## Les concepts
 
 Pour configurer une visualisation **Divisions administratives**, votre compte actif contient au moins un jeu de données avec des [concepts](./user-guide-backoffice/concept) **Code IRIS**, **Code EPCI**, **Code Commune**, **Code département** et/ou **Code région**.
 
-### Créer une visualisation Divisions administratives
+## Créer une visualisation Divisions administratives
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configurer une visualisation**.
 
@@ -41,20 +41,20 @@ Vous êtes redirigé vers la page de configuration de votre application avec ses
 Le titre de la visualisation peut être modifié.  
 Les **informations** vous donnent un résumé des caractéristiques de votre application.  
 
-### Menu de configuration
+## Menu de configuration
 Le menu de configuration est composé de quatre sous-menus : **Données**, **Métrique**, **Rendu** et **Navigation**.
 
-#### 1.Données
+### 1.Données
 Dans le menu **Données**, vous pouvez choisir le jeu de données que vous voulez utiliser.  
 Lorsque vous avez choisi un jeu de données compatible avec l'application **Divisions administratives**, un aperçu de carte s'affiche.
 
-#### 2.Métrique
+### 2.Métrique
 
 Dans le menu **Métrique**, la section **Numérateur** vous permet de définir la valeur de votre jeu de données que vous voulez afficher sur votre carte. Il est possible de réaliser un décompte, une somme ou une moyenne sur les valeurs de ce champs.
 
 Le champ **Dénominateur** vous permet de réaliser un ratio. Par exemple, si vous avez les populations des territoires dans une colonne de votre jeu de données, vous pouvez avoir la valeur renseignée dans le **Numérateur** divisée par la population pour avoir le ratio par habitant.
 
-#### 3.Rendu
+### 3.Rendu
 
 Le menu **Rendu** permet de personnaliser votre visualisation.
 
@@ -62,7 +62,7 @@ La **Palette** permet de choisir un ensemble de couleurs qui seront associées a
 
 Le **Calcul des intervalles** permet de définir le type des intervalles que vous souhaitez afficher. Il est possible d'avoir des intervalles de même taille, des intervalles à partir de quantiles ou de les définir soit même.
 
-#### 4.Navigation
+### 4.Navigation
 
 Le menu **Navigation** permet de définir la position initiale de la carte.
 

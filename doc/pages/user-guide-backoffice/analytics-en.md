@@ -13,11 +13,11 @@ There are 2 steps in the  configuration of the user tracking system
 
 You can choose between three different tracking systems, Matotmo, Google Analytics Universal Analytics (old version of GA) and Google Analytics 4 (new version of GA).
 
-### Matomo configuration
+## Matomo configuration
 
 After creating the web site on Matoto, it will provide **tracker url** and **th site id** of your portal. You can then enter these codes on the configuration of your portal.
 
-### Google Analytics UA (old tracking system)
+## Google Analytics UA (old tracking system)
 
 For Google Analytics Universal Analytics you will need the **Tracking ID** which you can find after creating your property on Google Analytics: **Administration**> **Property Settings**> **Tracking ID** .  
 The tracking ID is a code starting with UA- *
@@ -26,7 +26,7 @@ You can then enter this code on the configuration of your portal.
 
 ![Configuration](./images/user-guide-backoffice/config-GA-1.jpg)
 
-### Google Analytics 4 (new tracking system)
+## Google Analytics 4 (new tracking system)
 
 For Google Analytics Universal Analytics you will need the **MEASURE ID** which you can find after creating your property on Google Analytics: **Administration**> **Property settings**> **Data feed** > Add or click on data feed> **MEASUREMENT ID**.  
 The measure ID is a code starting with G- *.
@@ -35,7 +35,7 @@ You can then enter this code on the configuration of your portal.
 
 ![Configuration](./images/user-guide-backoffice/config-GA4.jpg)
 
-### Event configuration
+## Event configuration
 
 The event configuration is available in the Data Fair settings in the **Webhooks** category.
 

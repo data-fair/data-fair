@@ -19,7 +19,7 @@ Sur cette page, vous pouvez gérer les différents membres de votre organisation
 
 Le changement de rôle et la suppression d'un membre peut être accompli grâce aux boutons d'actions de la ligne du membre.
 
-### Invitation
+## Invitation
 Pour inviter un membre dans votre organisation, vous n'avez besoin que de son e-mail.
 
 ![Invitation](./images/user-guide-backoffice/orga-invitation.jpg)  
@@ -29,7 +29,7 @@ Un e-mail d'invitation est envoyé sur l'email renseigné.
 L'email contient un lien pour créer son compte sur la plateforme et faire partie de votre organisation.  
 Une fois connectée, la personne invitée aura accès aux différentes pages de l'organisation selon le rôle que vous lui avez attribué.
 
-### Rôles
+## Rôles
 
 Une organisation permet de travailler à plusieurs sur différents jeux de données et visualisations.  
 

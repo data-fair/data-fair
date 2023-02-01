@@ -15,7 +15,7 @@ Il existe trois jeux de données différents sur Data Fair.
 3. Jeu de métadonnées seules
 4. Un jeu virtuel
 
-### Import d'un fichier
+## Import d'un fichier
 
 L'import de fichiers est réalisable à l'aide des differents boutons d'action **Créer un jeu de données** disponibles dans Data Fair.  
 Le déroulé d'import d'un fichier contient un rappel des [formats](./user-guide-backoffice/file-formats) pris en charge par Data fair.  
@@ -39,7 +39,7 @@ Lorsque la finalisation est terminée, le jeu de données passe en état "dispon
 La plus part des visualisations utilisent [des concepts](./user-guide-backoffice/concept) tels que les concepts **Latitude** et **Longitude** pour une visualisation cartographique.
 
 
-### Jeu de métadonnées seules
+## Jeu de métadonnées seules
 
 Un jeu de métadonnées ne contient pas de données.  
 Il peut être utilisé pour contenir un ensemble de fichiers tels que des fichiers PDF, images ou vidéos.  
@@ -49,7 +49,7 @@ Les images peuvent ensuite être utilisées sur vos portails en tant que vignett
 Les descriptions des pièces jointes peuvent contenir du texte riche au format Markdown pour mieux le formater.
 
 
-### Jeu éditable
+## Jeu éditable
 
 Un **jeu de données éditable** est un jeu de données vide, il est créé sans fichier de données.  
 Vous allez pouvoir définir les colonnes du jeu de données puis ajouter les lignes à partir de Data Fair.
@@ -65,7 +65,7 @@ Vous pouvez ensuite ajouter des lignes à votre jeu de données que ce soit par 
 ![Formulaire](./images/user-guide-backoffice/import-formulaire.jpg)  
 *Formulaire de retours pour les visiteurs de portail*
 
-### Jeu virtuel
+## Jeu virtuel
 
 Un **jeu virtuel** est une vue d'un ou plusieurs jeux de données (jeux enfants).  
 Il permet de présenter un sous ensemble d'un jeu de données ou de concaténer des jeux de données qui possèdent le même schéma.

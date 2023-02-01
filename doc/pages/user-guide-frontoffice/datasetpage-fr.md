@@ -18,10 +18,10 @@ Les visualisations externes peuvent être ajoutées en fin de page du jeu donné
 <img src="./images/user-guide-frontoffice/datasetpage.png"
      height="600" style="margin:15px auto;" />
 
-### Le titre et la description
+## Le titre et la description
 Le titre et la description du jeu de données permette de donner un contexte au données. La description présente les données, les différents traitements réalisés pour obtenir les données ou bien le producteur des données.
 
-### Les metadonnées et les boutons d'actions
+## Les metadonnées et les boutons d'actions
 
 Les metadonnées sont disponibles sous forme de fiche. Elles contiennent le nombre des lignes, la taille du fichier csv, la source des données lorsque celle-ci est externe, la licence ainsi que le producteur des données lorsqu'il est renseigné.
 
@@ -124,12 +124,12 @@ La rupture de compatibilité des données correspond à une modification du sch�
 <img src="./images/user-guide-frontoffice/dataset-notif.png"
      height="200" style="margin:15px auto;" />
 
-### Les icones de partage
+## Les icones de partage
 
 Les icones de partage vous permettent de rapidement partage le lien de la page sur différents réseaux sociaux.  
 La vignette du partage correspond à la vignette de la première visualisation de la page.
 
-### Les visualisations
+## Les visualisations
 
 Les visualisations interactives facilitent l'accès et l'exploration du jeu de données.  
 Les descriptions permettent de mieux comprendre les données et de découvrir certains points mis en avant par le producteur des données.  

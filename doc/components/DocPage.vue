@@ -6,12 +6,12 @@
     </div>
     <v-row>
       <v-col>
-        <h2
+        <h1
           v-if="!hideTitle"
           class="display1 my-4"
         >
           {{ (filledContent.meta && filledContent.meta.title) || $route.params.id }}
-        </h2>
+        </h1>
         <v-alert
           v-if="filledContent.meta && filledContent.meta.published === false"
           v-t="'constructionWarning'"

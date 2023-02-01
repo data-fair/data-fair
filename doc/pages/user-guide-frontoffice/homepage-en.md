@@ -9,7 +9,7 @@ published: true
 The home page provides an overview of the data present on the data portal.  
 It allows visitors to quickly access the data highlighted, view key figures, search for data or connect to the portal.
 
-### Home page
+## Home page
 
 We will describe the home page of the [Koumoul open data portal ](https://opendata.koumoul.com/).
 

@@ -6,7 +6,7 @@ description : Configure a data portal
 published: true
 ---
 
-### Portal settings
+## Portal settings
 
 Data Fair allows you to configure several data portals which are places for publishing datasets, visualizations and content pages that users will be able to consult. There may be **portals for different use cases**: opendata, internal data sharing, sharing with partners, data being consolidated (pre-production portal), ...
 
@@ -19,7 +19,7 @@ Just like for data visualizations, the configuration of a data portal is done **
 
 It is possible to enter a [Google Analytics or Matomo (ex Piwik)](./analytics) account for activity monitoring and thus have **statistics** on the most visited pages and the most downloaded data.
 
-### Editing content pages
+## Editing content pages
 
 The content pages are of different types: articles, thematic pages around several datasets, news pages, data storytelling, licenses, terms of use, ...
 It is thus possible to **highlight data** and give them even more context, for example, or to make **dashboards** integrating different data.

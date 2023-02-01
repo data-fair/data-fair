@@ -8,7 +8,7 @@ published: true
 
 Data Fair expose une API Rest complète. Une partie de cette API est essentiellement à destination des applications et autres réutilisations des jeux de données. Une autre partie concerne principalement les producteurs de contenu qui souhaitent automatiser leur processus. Dans cette page nous proposons un aperçu de quelques méthodes de publication de contenu. Les exemples ci-dessous ne montrent qu'un échantillon des capacités de l'API Data Fair et ne remplacent pas la documentation interactive bien plus complète embarquée dans le service.
 
-### Pré-requis
+## Pré-requis
 
   - Une installation opérationnelle de Data FAIR, soit locale, soit publique comme sur [koumoul.com](https://koumoul.com/data-fair)
   - Un compte et une clé d'API avec la portée "Gestion des jeux de données" (voir vos paramètres personnels ou d'organisation dans le menu en haut à droite)
@@ -27,7 +27,7 @@ export Data Fair_URL="https://koumoul.com/data-fair"
 export Data Fair_URL="http://localhost/data-fair"
 ```
 
-### Jeu de données simple basé fichier
+## Jeu de données simple basé fichier
 
 Téléchargez un fichier CSV d'exemple :
 
@@ -59,7 +59,7 @@ L'attribut page est lui aussi intéressant, il vous permet de naviguer dans un n
 curl -v --header "x-apiKey: $API_KEY" $Data Fair_URL/api/v1/datasets/$DATASET_ID/lines
 ```
 
-### Jeu de données basé fichier avec pièces jointes
+## Jeu de données basé fichier avec pièces jointes
 
 Téléchargez un fichier CSV d'exemple qui contient une colonne de chemins vers des pièces jointes :
 
@@ -82,7 +82,7 @@ export DATASET_ID=identifiant que vous venez de recevoir
 
 Si vous visitez la page de ce jeu de données vous verrez un onglet "Fichiers" supplémentaire qui permet de lister les pièces jointes et d'effectuer des recherches dans leur contenu. En effectuant une requête basique sur le jeu de données vous pouvez constater l'ajout de champs \_file.\* qui sont issus de l'analyse du contenu des pièces jointes.
 
-### Jeu de données éditable
+## Jeu de données éditable
 
 Créez un jeu de données éditable vide avec un schéma minimaliste. Notez l'attribut "isRest" qui est la condition pour créer ce type de jeu de données :
 
@@ -120,7 +120,7 @@ Vérifiez la donnée :
 curl -v --header "x-apiKey: $API_KEY" $Data Fair_URL/api/v1/datasets/$DATASET_ID/lines
 ```
 
-### Jeu de données éditable avec pièces jointes
+## Jeu de données éditable avec pièces jointes
 
 Créez un jeu de données éditable vide avec un schéma qui contient un champ type *pièces jointes* :
 

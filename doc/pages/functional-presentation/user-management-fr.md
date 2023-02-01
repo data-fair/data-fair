@@ -12,7 +12,7 @@ Les **super administrateurs** de la plateforme peuvent gérer l'ensemble des org
 
 Les 3 autres rôles sont définis par organisation : il est par exemple possible d'être *administrateur* dans une organisation et simple *utilisateur* dans une autre.
 
-### Rôles et permissions associées
+## Rôles et permissions associées
 
 Les administrateurs d’une organisation peuvent gérer les membres :
 
@@ -36,7 +36,7 @@ Permissions par défaut des différents rôles d’une organisation :
 | Accès et modification des paramètres |             |              |        x       |
 | Création et modification du portail  |             |              |        x       |
 
-### Départements
+## Départements
 
 En plus de leur rôle, les utilisateurs peuvent être assigné à un département de l'organisation. Cela permet une forme de cloisonnement et d'avoir des groupes d'utilisateurs qui gèrent chacun leurs données de leur coté. Les utilisateurs qui ne sont pas restreints à un département peuvent voir (ou modifier si ils ont un rôle de *contributeur* ou *administrateur*) toutes les ressources de l'organisation.
 

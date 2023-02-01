@@ -11,7 +11,7 @@ These pages make it possible to present a set of data sets, a license or a parti
 
 For the moment, two types of presentations of these pages are available: the thematic pages and the free presentation pages.
 
-### Thematic pages
+## Thematic pages
 
 Theme pages are presented with an image as a banner.
 
@@ -22,7 +22,7 @@ The thematic pages are composed of several blocks, presenting one or more datase
 
 Each blocks are contain a title, a description, a visualization and the datasets associated with the block.
 
-### Free pages
+## Free pages
 
 Free pages are less structured than theme pages and are more easily customizable.
 

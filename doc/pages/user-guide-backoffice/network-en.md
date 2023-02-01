@@ -10,7 +10,7 @@ application : https://koumoul.com/apps/data-fair-networks/0.1/
 
 The **Graphs / Networks** visualization allows to generate dynamic graphs from two datasets, one containing the nodes and the other containing the links. An example is the [tag network in Stackoverflow](https://opendata.koumoul.com/reuses/reseau-de-tags-dans-stackoverflow).
 
-### Create a Graphs / Networks visualization
+## Create a Graphs / Networks visualization
 
 Click on **Visualizations** then on **Configure a visualization**.
 
@@ -33,15 +33,15 @@ You are redirected to the configuration page of your application with its differ
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.
 
-### Configuration menu
+## Configuration menu
 
 The configuration menu contains two submenus: **Data** and **Render**.
 
-#### 1.Dataset
+### 1.Dataset
 
 In the **Data** menu, you choose the two datasets of your vizualization.
 
-#### 2.Render
+### 2.Render
 
 The **Render** menu allows to configure your graph.  
 You can choose the rendering method, SVG or Canvas, the strength of the links to better space the nodes of your graph and the font size of your labels.

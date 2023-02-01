@@ -9,7 +9,7 @@ published: true
 Les pages de contenus sont disponibles dans la barre de navigation sous forma de lien direct vers la page ou de sous menus. Ces pages permettent de présenter un ensemble de jeux de données, une licence ou une démarche en particulier.  
 Pour le moment, deux types présentations de ces pages sont disponibles : les pages thématiques et les pages de présentations libre.  
 
-### Pages thématiques
+## Pages thématiques
 
 Les pages de thématiques sont présentées avec une image sous forme de bannière.
 
@@ -19,7 +19,7 @@ Les pages de thématiques sont présentées avec une image sous forme de banniè
 Les pages thématiques sont décomposées en plusieurs blocs, présentant un ou plusieurs jeux de données par blocs.  
 Les  blocs sont composées d'un titre, d'une description, une visualisation et les jeux de données associés au bloc.
 
-### Pages libres
+## Pages libres
 
 Les pages libres sont moins structurées que les pages thématiques et sont plus facilement personnalisables.
 

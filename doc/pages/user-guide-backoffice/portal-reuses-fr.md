@@ -10,14 +10,14 @@ published: true
 Lorsque vous configurez un portail de données, vous pouvez activer les réutilisations sur vos jeux de données.  
 Les visiteurs connectés pourrons alors soumettre une réutilisation des données de votre portail et vous pourrez décider de la publier.  
 
-### Activer les réutilisations
+## Activer les réutilisations
 
 Dans les menus de configuration de votre portail, vous pouvez activer les réutilisations pour tous les utilisateurs connectés de votre portail.
 
 ![Réutilisations](./images/lessons/admin-05-active.jpg)
 
 
-### Administrer les réutilisations
+## Administrer les réutilisations
 
 Dans la section *portail* du back-office, vous pouvez accéder à l'administration des réutilisation à l'aide du bouton **gérer les réutilisations** du portail.
 

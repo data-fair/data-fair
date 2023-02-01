@@ -15,7 +15,7 @@ Data users access the platform through **one or more data portals**. They allow 
 
 Administrators and data contributors have access to a **back-office** which allows them to manage the various elements of the platform: user accounts, datasets and visualizations. Administrators can set up the environment and manage access permissions to data and visualizations. According to their profile, back-office users will be able to create, edit, enrich, delete datasets, maps and graphs. The back-office makes it possible to create **data portals** (internal or open data) and also to access various portal usage metrics.
 
-### General operation
+## General operation
 **Datasets** are generally created by users by **loading tabular or geographic files**: the service stores the file, analyzes it and derives a data schema. The data is then indexed according to this scheme and can be queried through its own Web API.
 
 In addition to file-based datasets, Data Fair also allows the creation of **editable by form** datasets and virtual datasets which are **configurable views of one or more datasets**.
@@ -26,7 +26,7 @@ The user can semanticize the fields of the datasets by **attributing concepts** 
 
 <!-- ![FAIR](./images/functional-presentation/data_and_settings.png) -->
 
-### Main advantages of the platform
+## Main advantages of the platform
 Data Fair makes it possible to set up an organization centered around data:
 * Ability to load data in different file formats or by entering via form, even allowing crowd sourcing
 * Consultation of data through a wide choice of interactive visualizations (graphs, maps, search engines, ...)

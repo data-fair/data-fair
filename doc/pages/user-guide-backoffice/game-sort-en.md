@@ -12,7 +12,7 @@ The **Sort game** allows to create a game of classification of your data accordi
 A score is assigned to the player based on the number of permutations and the time spent sorting the items.
 
 
-### Create your Sort game
+## Create your Sort game
 
 Click on **Visualizations** then on **Configure a visualization**.
 
@@ -35,11 +35,11 @@ You are redirected to the configuration page of your application with its differ
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.
 
-### Configuration menu
+## Configuration menu
 
 The configuration menu contains two submenus: **Data** and **Presentation**.
 
-#### 1.Data
+### 1.Data
 
 In the **Data** menu, you choose the dataset you want to use.
 
@@ -50,7 +50,7 @@ The **Game Mode** allows to choose your game mode **number of distant elements a
 **Filters** are used to restrict the data displayed in the application.  
 You can **Restrict to Values** from a column, **Restrict to Range of Values​​** from a column, or **Exclude Values​​** from a column.  
 
-#### 2.Presentation
+### 2.Presentation
 
 In the **Presentation** menu, you define the overall description of your game. You can select an image for the game if you have added an image as an attachment on your dataset.
 

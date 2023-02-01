@@ -12,13 +12,13 @@ The **Geo Shapes** visualization display geometric data on a map. It is thus pos
 An example is the [map of the Angers Loire Métropole LUP zones](https://opendata.koumoul.com/reuses/plu-zone-urba-angers-loire-metropole/full).  
 You can click on each zone to get more details and click on a color in the legend to filter by zone type.
 
-### Concepts  
+## Concepts  
 
 To configure a **Geo Shapes** visualization, your active account contains at least one dataset with the [concept](./user-guide-backoffice/concept) **GeoJSON geometry** to be able to project your data on the map.
 
 Once you updated your data schema, you can preview your data using the **generic map** button. This allows to verify that your data is correctly projected on a map.
 
-### Create a Geo Shapes visualization
+## Create a Geo Shapes visualization
 
 Click on **Visualizations** then on **Configure a visualization**.
 
@@ -41,14 +41,14 @@ You are redirected to the configuration page of your application with its differ
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.
 
-### Configuration menu
+## Configuration menu
 The configuration menu contains three submenus: **Data**, **Render** and **Presentation**.
 
-#### 1.Data
+### 1.Data
 In the **Data** menu, you choose the dataset you want to use.
 Once you chose a dataset compatible with the **Geo Shapes** visualization, a map preview is displayed.  
 
-#### 2.Render
+### 2.Render
 
 
 In the **Render** menu, the **Value color** defines the column used for your legend. A legend color can be defined by clicking on the **color** circle or each legend value. You manage the legend order with a drag and drop on the hamburger menu.  
@@ -56,7 +56,7 @@ In the **Render** menu, the **Value color** defines the column used for your leg
 The **Details Fiels** allows to choose the fields to display when a user clicks on a geometric shape. Without any value in this section, the side panel will only be useful for navigation.  
 The **map style** allows to modify your basemap. You can customize the basemap of your application to have a better rendering.
 
-#### 3.Navigation
+### 3.Navigation
 
 The **Navigation** menu is used to activate geolocation and define the initial position of the map.
 

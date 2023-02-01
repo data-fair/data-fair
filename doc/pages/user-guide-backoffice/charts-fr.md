@@ -22,7 +22,7 @@ La visualisation **Graphiques** vous permet de comparer plusieurs colonnes de vo
 Dans cette visualisation, vous pouvez agréger les valeurs de vos données.  
 Il s'agit d'une visualisation assez puissante et c'est pour cela que sa configuration est plus complexe que les autres visualisations.
 
-### Créer un graphique
+## Créer un graphique
 
 Pour réaliser la visualisation, cliquez sur **Visualisations** dans la barre de navigation, puis sur **Configurer une visualisation**.
 
@@ -44,18 +44,18 @@ Vous êtes redirigé vers la page de configuration de votre application avec ses
 Le **titre** de la visualisation peut être modifié.  
 Les **informations** vous donnent un résumé des caractéristiques de votre application.  
 
-### Menu de configuration
+## Menu de configuration
 Le menu de configuration est composé de cinq sous-menus : **Sources de données**, **Type de visualisation**, **Préparation des données**, **Présentation** et **Navigation**.
 
-#### 1.Sources des données
+### 1.Sources des données
 Dans le menu **Sources de données**, vous pouvez choisir le jeu de données que vous voulez utiliser.  
 Lorsque vous choisissez la source de données, vous pouvez configurer des filtres pour restreindre ou exclure des valeurs dans vos données.
 
-#### 2.Type de visualisation
+### 2.Type de visualisation
 Dans ce menu, vous choisissez le type de graphique que vous voulez réaliser.  
 Vous pouvez représenter vos données sous formes d'un histogramme, de diagramme en lignes, en aires, d'un radar ou d'un camembert.
 
-#### 3.Préparation des données
+### 3.Préparation des données
 Le menu **Préparation des données** permet de renseigner les colonnes que vous souhaitez afficher et d'avoir le premier aperçu de votre graphique.
 
 Le paramètre **Type de préparation des données** permet de choisir comment vous allez représenter vos données. Vous avez un menu diffèrent en fonction de l'option que vous avez choisi.
@@ -95,10 +95,10 @@ Cette option permet de grouper les lignes et les compter sur deux niveaux. Le pr
 - **Type de calcul** possibles : moyenne, valeur minimale, valeur maximale, somme.  
 - **Colonne de valeurs** permet de choisir la colonne sur laquelle faire le calcul.
 
-#### 4.Présentation
+### 4.Présentation
 Cette section vous permet de choisir une palette de couleur à utiliser sur votre application.
 
-#### 5.Navigation
+### 5.Navigation
 Cette section vous permet de définir différents types de filtres interactifs. La visualisation avec un filtre interactif sera modifiée en fonction des valeurs fournies dans les filtres.
 
 Lorsque vous avez un aperçu qui vous satisfait, cliquez sur **Enregistrer** pour finaliser votre configuration.  

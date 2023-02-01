@@ -8,27 +8,27 @@ published: true
 
 N'importe qui peut développer une nouvelle application de visualisation de données compatible avec Data Fair. Ces applications sont mises à disposition sous forme de services : ce sont des applications Web disponibles en ligne. Une instance de Data Fair fait office de proxy vers les applications configurées et les réexpose en leur communiquant les informations de contexte dont elles ont besoin. Pour pouvoir être intégrée dans une instance Data Fair, une application doit exposer certaines informations.
 
-### Exemples
+## Exemples
 
   - Un plugin pour [vue-cli](https://cli.vuejs.org/) qui permet de générer une application : [vue-cli-plugin-app](https://github.com/data-fair/vue-cli-plugin-app)
   - Une application statique minimaliste en HTML/JS/CSS pur avec juste un petit peu de jQuery : [app-minimal](https://github.com/data-fair/app-minimal)
   - Une application complète développée avec des frameworks modernes : [app-charts](https://github.com/data-fair/app-charts)
 
-### Métadonnées essentielles
+## Métadonnées essentielles
 
 Une application expose un fichier HTML, typiquement un fichier `ìndex.html` à sa racine. Ce fichier doit contenir certaines informations, renseignées dans des balises de la section HEAD :
  * **title** : Le titre de l'application, dans une balise title.
  * **description** : La description de l'application, dans une balise meta.
 
-### Gestion des configurations
+## Gestion des configurations
 
 Une application doit donner à Data Fair le moyen de créer et éditer des configurations cohérentes avec ses besoins. Les configurations sont décrites à l'aide de JSON schéma, en servant à la racine de l'application un fichier `config-schema.json`. Ce fichier peut avoir des annotations particulières qui permettent d'avoir du contrôle sur le formulaire de configuration qui sera généré.
 
 Ce formulaire est généré à l'aide de la librairie [vuetify-jsonschema-form](https://github.com/koumoul-dev/vuetify-jsonschema-form/) (v-jsf), la documentation des différente annotations JSON schéma utilisée est [disponible ici](https://koumoul-dev.github.io/vuetify-jsonschema-form/latest/).
 
-### Informations de contexte
+## Informations de contexte
 
-#### Côté client
+### Côté client
 
 Par simplicité nous privilégions des applications statiques déployables sur un simple serveur Web comme nos applications exemples. Pour ces applications nous avons prévu un mécanisme simple de transmission des informations contextuelles.
 
@@ -46,7 +46,7 @@ Le proxy Data Fair cherche dans le contenu HTML qui transite la chaîne de carac
  * **captureUrl**: URL vers le service de capture, permet de réaliser des exports image ou impressions PDF
  * **wsUrl**: URL de la web socket Data Fair, utile pour les applications qui manipulent des données mise a jour en temps réel
 
-#### Côté serveur
+### Côté serveur
 
 Il est aussi possible de développer une application avec rendu côté serveur. Dans ce cas le mode de transmission des informations contextuelles est différent.
 
@@ -57,9 +57,9 @@ Ces informations sont transmises à l'aide de headers HTTP que le serveur de l'a
  * **X-Directory-Url**: URL vers le service de gestion des utilisateurs.
 
 
-### Outils de développement
+## Outils de développement
 
-#### Serveur de développement Data Fair
+### Serveur de développement Data Fair
 
 Le projet [df-dev-server](https://github.com/data-fair/dev-server) permet de simplifier le développement des applications Data Fair.
 

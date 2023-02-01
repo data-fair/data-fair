@@ -12,7 +12,7 @@ Une organisation peut avoir plusieurs portails, et il sera bientôt possible de 
 
 L'authentification avec Simple Directory n'étant possible que sur le même domaine (ou sur un sous domaine de celui pour lequel Simple Directory est configuré), les portails de données sur un autre domaine ne peuvent être que des portails open data.
 
-### Stack technique
+## Stack technique
 
 Le backend de Data Fair Portal est écrit en NodeJS avec le framework ExpressJS. La persistance est assurée avec MongoDB. Le frontend est réalisé avec les frameworks VueJS, VuetifyJS et NuxtJS. La configuration des pages est faites à l'aide de JSON schémas interprétés par la librairie VJFS.
 

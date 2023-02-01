@@ -20,7 +20,7 @@ List of triggering events:
 * Error on a visualization
 * Publication of a visualization in a catalog
 
-### Configure the event tracking for Google Analytics
+## Configure the event tracking for Google Analytics
 
 To configure event tracking for Google Analytics, you will need a [Google Analytics account](https://support.google.com/analytics/answer/1008015?hl=fr)
 with a configured property and a UA-XXXXXXXX-X number configured for your site.

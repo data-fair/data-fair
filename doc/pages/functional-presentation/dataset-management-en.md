@@ -9,7 +9,7 @@ published: false
 Datasets make data available to the user, as well as information about the data (metadata) such as the license associated with the data, the date of update, the owner of the data, etc.
 
 
-### Types of datasets
+## Types of datasets
 
 There are several types of datasets on the platform, files, editable datasets, virtual datasets and external datasets.
 
@@ -21,7 +21,7 @@ There are several types of datasets on the platform, files, editable datasets, v
 
 * **External datasets** do not have indexed data on the platform. They allow you to enter metadata (title, description, licence, etc.) and to associate data with it in formats that cannot be used by the platform (PDF, Zip Archive, etc.) or to catalog data present on other platforms by providing a link in the description.
 
-### Data schema
+## Data schema
 
 The platform supports tabular data indexing. Each dataset (except external datasets) has a schema which is the description of the different columns (or fields) that make it up. At a minimum, each column has an identifier and a type, but it is possible to enter additional information.
 
@@ -34,7 +34,7 @@ The last element that can be filled in, and which is of considerable importance,
 
 This business typing **increases the reusability** of the data and allows 2 things within the platform: **enrichment from other data**, and the proposal of **adapted visualizations** (by simplifying the configuration of these): the concepts *latitude* and *longitude* allow for example to configure maps with markers.
 
-### Metadata and attachments
+## Metadata and attachments
 
 Some metadata are filled, such as metadata or data update dates, and the user who created or modified it. The edit page of a dataset allows to modify the various metadata of this set. It is possible to modify the title and the description, to define a **license of use** and to associate **themes**. The lists of usable licenses and themes are common to the entire organization and can be edited by administrators
 
@@ -42,7 +42,7 @@ It is possible to associate **attachments to each row** of a dataset. This is do
 
 Attachments can also be **directly attached to a dataset**. For example, you can add documentation files or rich metadata. It can also be used to publish data that cannot be indexed by the platform in the case of an *external* dataset.
 
-### Master data and enrichment
+## Master data and enrichment
 
 Some data may be used in different places and in different processes by organizations. It is possible to define a dataset as being **master data** (master-data in English). These are data that refer to particular concepts, and the platform makes pooled master data available to all organizations.
 
@@ -52,7 +52,7 @@ These master data are of great value, because they allow you to **easily complet
 
 The second possibility to complete the data is to set up **enrichments**: columns are then automatically added to the dataset and the values ​​filled in from one or more other columns. For example, columns that have the concepts *street number*, *street name* and *postal code* can be completed with address data and be geocoded, which allows the data to be projected on a map. When data is updated, enrichments are automatically updated, and a dataset can have multiple enrichments from different master data.
 
-### Permissions and publication of data
+## Permissions and publication of data
 
 An administrator can finely control **data access permissions**. The data is *private*, ie only authenticated members of the organization can consult them. It is possible to make the data *public*, in this case everyone, including non-registered users, will be able to access it. You can also define access rights for certain users or partner organizations. An advanced mode allows you to define the permissions for each access point of the API of a dataset: you can for example make access to metadata public while access to data remains restricted.
 
@@ -68,6 +68,6 @@ This publication mechanism allows you to work in an agile way: for example, you 
 
 It is also possible to publish a dataset on portals or data catalogs external to the platform, this is described in more detail in the section on *catalog connectors*.
 
-### Event logs
+## Event logs
 
 Each step in the processing of a dataset is registred in the associated log. It is thus possible to trace the actions, their dates, their durations and any errors encountered.

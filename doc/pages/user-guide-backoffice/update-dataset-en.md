@@ -9,7 +9,7 @@ published: true
 
 Updating a dataset can be done manually on the [dataset edition page](./user-guide-backoffice/edition-dataset)  or can be automated with [periodic processing](./user-guide-backoffice/processing).
 
-### Manual update
+## Manual update
 
 Before performing a manual update, check your data schema. For example, if a visualization uses your dataset, verify that the columns used by the visualization are still present in the new file you are importing.
 

@@ -11,12 +11,12 @@ application : https://koumoul.com/apps/bar-chart-race/0.2/
 **Bar Chart Race** represent rankings data over time.  
 An example of this visualization is the [evolution of wages by region between 1966 and 2010 in France](https://opendata.koumoul.com/reuses/evolution-des-salaires-selon-la-region-entre-1966-et-2010)
 
-### Prerequisites
+## Prerequisites
 
 The data you want to visualise must have a column containing a temporality. In the evolution of wages example, the temporality is the years.
 
 
-### Bar Chart Race initialization
+## Bar Chart Race initialization
 
 To configure a **Bar Chart Bace** visualization, click on **Visualizations** in the navigation bar, then on **Configure visualization**.  
 
@@ -39,15 +39,15 @@ You are redirected to the configuration page of your application with its differ
 The title of the visualization can be changed anytime.  
 The **Informations** section shows a summary of the characteristics of your application.  
 
-### Configuration menu
+## Configuration menu
 
 The configuration menu contains three submenus : **Sources**, **Preparation** and **Presentation**.  
 
-#### 1.Sources
+### 1.Sources
 **Sources** allows to choose a dataset and define the **Filters**. **Filters** restrict the data displayed in the visualization.  
 It's possible to **Restrict to Values** from a column, **Restrict to Range of Values** from a column, or **Exclude Values** from a column.  
 
-#### 2.Preparation
+### 2.Preparation
 **Preparation** section define which columns you will use in your visualization.  
 * **Calculation** allows to count rows, sum or average on column values.
 * **Column** allows to choose the column used for the **Calculation**.
@@ -59,7 +59,7 @@ Once all the options are filled in, you have a first glimpse of your visualizati
 ![Premier aperçu](./images/user-guide-backoffice/barchart-preparation.gif)  
 *Evolution of the ranking of Ligue 1 teams for the 2016-2017 season*
 
-#### 3.Presentation
+### 3.Presentation
 The **Presentation** submenu allows to modify the **Maximum number**, the **Duration in seconds**, the **Width**, the **Position**, the colors of the bars of bars and if the visualization starts automatically.
 
 When you are satisfied with the preview click on **Save** to finalize your configuration.  

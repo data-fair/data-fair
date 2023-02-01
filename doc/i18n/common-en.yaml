@@ -9,3 +9,4 @@ install: Install and configure
 lessons: Tutorials
 onlyEnglish:
 onlyFrench: This page is only available in french for the time being
+printChapter: Print this chapter

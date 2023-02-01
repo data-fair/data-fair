@@ -10,7 +10,7 @@ application : https://koumoul.com/apps/data-fair-networks/0.1/
 
 La visualisation **Graphes/Réseaux** permet générer des graphes dynamiques à partir de deux jeux de données, l'un contenant les nœuds et l'autre contenant les liens. Vous avez un exemple de cette visualisation sur le [réseau de tags dans Stackoverflow](https://opendata.koumoul.com/reuses/reseau-de-tags-dans-stackoverflow).
 
-### Créer votre graphe
+## Créer votre graphe
 
 Pour réaliser votre visualisation, cliquez sur **Visualisations** puis sur **Configuration une visualisation**.
 
@@ -33,14 +33,14 @@ Le titre de la visualisation peut être modifié à tout moment.
 Les **informations** vous donnent un résumé des caractéristiques de votre application.  
 Les boutons d'actions vous permettent d'importer l'application sur un autre site, de dupliquer l'application, de la supprimer et d'accéder à l'application en plein écran.
 
-### Menu de configuration
+## Menu de configuration
 Le menu de configuration est composé de deux sous-menus : **Sources** et **Rendu**.
 
-#### 1.Sources de Données
+### 1.Sources de Données
 
 Dans le menu **Sources de Données**, vous choisissez les deux jeux de données que vous voulez utiliser.  
 
-#### 2.Rendu
+### 2.Rendu
 
 Le menu **Rendu** permet de configurer votre graphe.  
 Vous pouvez choisir la méthode de rendu, SVG ou Canevas, la force des liens pour mieux espacer les nœuds de votre graphe et la taille de la police de vos libellés.  

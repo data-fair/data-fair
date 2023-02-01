@@ -9,7 +9,7 @@ published: true
 
 La mise à jour d'un jeu de données peut être réalisée manuellement sur la [page d'édition du jeu de données](./user-guide-backoffice/edition-dataset) ou peut être automatisé à l'aide des [traitements périodiques](./user-guide-backoffice/processing).
 
-### Mise à jour manuelle
+## Mise à jour manuelle
 
 Avant de réaliser une mise à jour manuelle, vérifiez le schéma de vos données. Par exemple, si une visualisation utilise votre jeu de données, vérifiez que les colonnes utilisées par la visualisation sont toujours présentes dans le fichier que vous importez.
 

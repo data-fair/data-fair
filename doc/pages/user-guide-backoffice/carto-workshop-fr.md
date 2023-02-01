@@ -13,11 +13,11 @@ La visualisation **Atelier cartographique** permet de projeter des données géo
 Vous avez un exemple de cette visualisation sur notre [se déplacer à vélo](https://opendata.koumoul.com/reuses/se-deplacer-a-velo/full).
 
 
-### Les concepts
+## Les concepts
 
 Pour configurer une visualisation **Atelier cartographique**, votre compte actif contient au mois un jeu de données avec [les concepts](./user-guide-backoffice/concept)  **Latitude** et **Longitude** / **Géométrie** d'associés aux colonnes de son schéma.  
 
-### Créer une visualisation Atelier cartographique
+## Créer une visualisation Atelier cartographique
 
 Pour réaliser la visualisation, cliquez sur **Visualisations** puis sur **Configurer une visualisation**.
 
@@ -39,10 +39,10 @@ Vous êtes redirigé vers la page de configuration de votre application avec ses
 Le titre de la visualisation peut être modifié.  
 Les **informations** vous donnent un résumé des caractéristiques de votre application.  
 
-### Menu de configuration
+## Menu de configuration
 Le menu de configuration est composé de deux sous-menus : **Couches de données** et **Autres options**.
 
-#### 1.Couches de données
+### 1.Couches de données
 Dans la section **Couches de données**, vous ajoutez les calques présents dans votre visualisation.  
 Un calque correspond à un jeu de données contenant des données géographiques.  
 Vous pouvez ajouter plusieurs calques, chaque calque aura sa propre configuration.
@@ -62,7 +62,7 @@ Lorsque vous utilisez les couleurs en fonction de valeurs dans un intervalle, tr
 Le **Champ contenant les valeurs** vous permet de définir la colonne numérique représentée par les couleurs.  
 Vous alors pouvez définir des intervalles **de même taille**, par **quantiles** ou en **réglage manuel**.  
 
-#### 2.Autres options
+### 2.Autres options
 
 Dans cette section, vous pouvez :
 * définir le **Style de carte** parmi près de 10 style différents

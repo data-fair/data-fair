@@ -21,16 +21,16 @@ L'architecture technique retenu est une plateforme composé de différents servi
 * Les **services distants** ne sont pas développées dans ce projet : ce sont des applications Web développées et déployées de manière autonome qui respectent les règles d’interopérabilité d’OpenAPI 3.0 avec Data Fair. Ils sont disponibles sous forme d'extensions.
 * Les **visualisations de données** : certaines sont open source, d'autres sont propriétaires (extensions en libre accès ou nécessitant un abonnement). Chaque application de base peut être utilisée autant de fois que désiré pour valoriser différents **jeux de données**. Data Fair permet de stocker et éditer les différents paramètres d'une même application de base.
 
-### Architecture technique complète
+## Architecture technique complète
 
 ![Catalogue de données](./images/technical-architecture/architecture.jpg)
 
-### Authentification
+## Authentification
 
 Le mécanisme d'authentification utilisé pour sécuriser les APIs des différents service est le JWT (Json Web Token). La sécurité repose sur des mécanismes de cryptograhie asymétrique (RSA). La session utilisateur est maintenue coté client, ce qui permet d'avoir un backend sans état, et donc scalable. Le backend n'émet pas de JWT : il doit donc être relié à un annuaire [simple directory](https://koumoul-dev.github.io/simple-directory/) qui en émet. Le lien vers cet annuaire permet de télécharger sa clé publique pour ensuite vérifier que les JWT reçus soient valides.
 
 
-### Déploiement
+## Déploiement
 
 Les différents services sont livré avec [Docker](https://www.docker.com/). Nous recommandons de les déployer et de les opérer dans un environnement tel que Kubernetes.
 
@@ -38,6 +38,6 @@ Il est possible de déployer ces différents service à l'aide de docker-compose
 
 Pour plus de détails, vous pouvez consulter la [documentation d'installation](install/install).
 
-### Licences
+## Licences
 
 Les différents services sont *open source*, avec comme licence l'AGPL v3, qui est une licence copyleft : tous ceux mettant le service à disposition d'autres utilisateurs doivent partager les éventuelles améliorations qu'ils y apporteraient. Nous avons choisi de rendre ces services *open source* pour 2 raisons : pour partager des données *open data*, il nous paraît naturel d'utiliser un service *open source*, et quel que soit le type de données, l'ouverture du code offre des garanties de sécurité et de pérennité qui permet aux organisations de déployer ces services sur leurs propres serveurs en toute sérénité.

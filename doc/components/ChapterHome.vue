@@ -5,6 +5,7 @@
       <v-btn
         :to="localePath({name: 'full-id', params: {id: chapter}, query: {print: true}})"
         icon
+        :title="$t('printChapter')"
       >
         <v-icon color="primary">
           mdi-printer

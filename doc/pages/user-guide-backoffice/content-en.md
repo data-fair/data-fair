@@ -9,7 +9,7 @@ published: true
 
 Content pages allow to highlight data, write articles, do data storytelling or even describe a license on your portal.  
 
-### Create a content page
+## Create a content page
 
 The **Portals** section of Data Fair allows you to access the configuration of your portals. You can then access the editing of **content pages** using the **Edit content pages** button at the top right.
 
@@ -33,7 +33,7 @@ On the image, the content page is called **Land**, has a **thematic** page templ
 The **blank page** template allows to add and arrange the elements freely.  
 The **thematic page** template allows to add description of the page and a banner.
 
-### Configuration of your thematic page
+## Configuration of your thematic page
 
 On the left side of the editing page is the editorial content.  
 On the right side of your page, there is a preview of your content page updated in real time.  

@@ -19,7 +19,7 @@ On this page, you can manage the different members of your organization:
 
 Changing roles and removing a member can be accomplished through the action buttons on the member's row.
 
-### Invitation
+## Invitation
 
 To invite a member to your organization, all you need is their email.
 
@@ -30,7 +30,7 @@ An invitation email is sent to their address.
 The email contains a link to validate the account on the platform and be part of your organization.  
 Once logged in, the invited person will have access to the different pages of the organization according to the role you assigned them.
 
-### Role
+## Role
 
 An organization allows people to work together on different datasets and visualizations.
 

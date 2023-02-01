@@ -23,7 +23,7 @@ The dataset edition page allows to select the concepts in the **Schema** section
 
 A concept is unique for a dataset, it can only be attributed once to a dataset. For example, if the **Latitude** concept is associated with a column of your dataset, it cannot be associated with another column.
 
-### List of concepts
+## List of concepts
 
 It is possible to create your own concepts and use them in your [reference data](./user-guide-backoffice/enrichment).  
 Here is the default list of concepts used by Data Fair:

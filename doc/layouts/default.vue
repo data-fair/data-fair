@@ -11,7 +11,10 @@
         nuxt
         exact
       >
-        <v-list-item-avatar class="brand-logo">
+        <v-list-item-avatar
+          class="brand-logo"
+          aria-hidden="true"
+        >
           <v-img src="./logo.png" />
         </v-list-item-avatar>
         <v-list-item-content>
@@ -71,6 +74,7 @@
         top
         left
         icon
+        :title="$t('openDrawer')"
         @click.stop="drawer = !drawer"
       >
         <v-icon>mdi-menu</v-icon>
@@ -105,12 +109,22 @@
       <nuxt />
     </v-main>
 
-    <v-footer class="pa-3">
+    <v-footer
+      class="pa-3"
+      color="white"
+    >
       <v-spacer />
       <div>Maintained by <a href="https://koumoul.com">Koumoul</a></div>
     </v-footer>
   </v-app>
 </template>
+
+<i18N lang="yaml">
+  fr:
+    openDrawer: ouvrir le menu de navigation
+  en:
+    openDrawer: open navigation menu
+</i18N>
 
 <script>
 import FolderMenu from '~/components/FolderMenu'
@@ -119,7 +133,12 @@ export default {
   components: { FolderMenu },
   data: () => ({
     drawer: true
-  })
+  }),
+  head () {
+    return {
+      htmlAttrs: { lang: this.$i18n.locale } // TODO: this should be set by nuxt-i18n but it isn't for some reason
+    }
+  }
 }
 
 </script>

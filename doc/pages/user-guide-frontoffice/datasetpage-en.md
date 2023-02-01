@@ -18,10 +18,10 @@ External visualizations can be added at the end of the dataset page.
 <img src="./images/user-guide-frontoffice/datasetpage.png"
      height="600" style="margin:15px auto;" />)
 
-### Title and description
+## Title and description
 The title and description of the dataset provide context to the data. The description presents the data, differents process to obtain the data or presents the producer of the data.
 
-### Metadata and action buttons
+## Metadata and action buttons
 
 Metadata is available as a card. They contain the number of lines, the size of the csv file, the data source when it is external, the license as well as the data producer when it is filled in.
 
@@ -119,14 +119,14 @@ The data compatibility break corresponds to a modification of the dataset schema
 <img src="./images/user-guide-frontoffice/dataset-notif.png"
      height="200" style="margin:15px auto;" />
 
-### Sharing icons
+## Sharing icons
 
 Sharing icons allow you to quickly share the page link on different social networks.
 The share thumbnail is the thumbnail of the first visualization of the page.
 
 
 
-### Visualization
+## Visualization
 
 Interactive visualizations make it easy to access and explore the dataset.  
 The descriptions provides a better understanding of the data and the producer of the data can put forward some interesting points.

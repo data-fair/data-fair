@@ -16,7 +16,7 @@ Three differents datasets on Data Fair.
 3. Metadata dataset
 4. A virtual dataset
 
-### Upload a file
+## Upload a file
 
 You can import files using any **Create a dataset** action buttons on Data Fair.  
 The upload file process contains a list of the [formats](./user-guide-backoffice/file-formats) supported by Data fair.
@@ -38,7 +38,7 @@ Six have to be validated to use your dataset :
 
 When finalization is complete, the dataset state is set to "available". It can then be [edited](./user-guide-backoffice/edition-dataset), enriched or used in the various visualizations.
 
-### Incremental dataset  
+## Incremental dataset  
 
 An **editable dataset** is an empty editable dataset created without a data file.  
 You will be able to define the columns of the dataset and then add the rows from Data Fair.
@@ -56,7 +56,7 @@ You can then add rows to your dataset either through a form on a page of your si
 ![Formulaire](./images/user-guide-backoffice/import-formulaire.jpg)  
 *Feedback form for portal visitors*
 
-### Metadata dataset
+## Metadata dataset
 
 A metadata dataset does not contain data.  
 It can be used to contain a set of files such as PDFs, images or videos.  
@@ -65,7 +65,7 @@ Images can then be used on your portals as thumbnails for the datasets or used w
 
 Attachment descriptions can contain rich text in Markdown format for better formatting.
 
-### Virtual dataset
+## Virtual dataset
 
 A **virtual dataset** is a view of one or more datasets (children's dataset).  
 It is used to present a portion of a dataset or to concatenate datasets with the same schema.

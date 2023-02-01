@@ -20,7 +20,7 @@ Liste d'événements déclencheurs :
 * Erreur sur une visualisation
 * Publication d'une visualisation sur un catalogue
 
-### Configurer le suivi d'événements pour Google Analytics
+## Configurer le suivi d'événements pour Google Analytics
 
 Pour configurer le suivi d'événements pour Google Analytics, il vous faudra posséder un [compte Google Analytics](https://support.google.com/analytics/answer/1008015?hl=fr) avec une propriété configurée et un numéro UA-XXXXXXXX-X configuré pour votre site.
 

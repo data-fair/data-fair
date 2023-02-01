@@ -15,12 +15,12 @@ An example of this visualization on [the 2019 European election results map](htt
 
 **Administrative divisions** allows to create maps at the levels of IRIS, EPCI, municipalities, departments and / or regions.
 
-### Concepts  
+## Concepts  
 
 
 To configure a **Administrative divisions** visualization, your active account contains a dataset with any of the [concepts](./user-guide-backoffice/concept) **IRIS code**, **EPCI code**, **Municipality code**, **Department code** and / or **Region code**.
 
-### Create an Administrative Divisions visualization
+## Create an Administrative Divisions visualization
 
 Click on **Visualizations** then on **Configure a visualization**.
 
@@ -44,27 +44,27 @@ The title of the visualization can be changed anytime.
 The **Informations** section shows a summary of the characteristics of your application.  
 
 
-### Configuration menu
+## Configuration menu
 
 The configuration menu contains four sub-menus: **Data**, **Metric**, **Render** and **Navigation**.  
 
-#### 1.Data
+### 1.Data
 In the **Data** menu, you can choose the dataset you want to use.  
 Once you chose a dataset compatible with the application **Administrative divisions**, a map preview is displayed.  
 
-#### 2.Metric
+### 2.Metric
 
 In the **Metric** menu, the **Numerator** section allows to define the value of your dataset that you want to display on your map. It is possible to count, sum or average the values ​​of this field.
 
 The **Denominator** section allows you to perform a ratio. For example, if you have the populations of the territories in a column of your dataset, you can enter a value in the **Numerator** divided by the population to have the ratio per capita.
 
-#### 3.Render
+### 3.Render
 
 The **Render** menu allows to customize your visualization.  
 The **Colors** section allows to choose a set of colors that will be associated with the values ​​of your data. You can invert the colors in the palette and set a default color for your values.  
 The **Calculation of intervals** allows to define the type of intervals you want to display. It is possible to have intervals of the same size, from quantiles or to define them yourself.
 
-#### 4.Navigation  
+### 4.Navigation  
 
 The **Navigation** menu is used to define the initial position of the map.
 
