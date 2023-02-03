@@ -16,7 +16,7 @@ describe('thumbnails', () => {
     res = await ax.get('/api/v1/datasets/thumbnails1/lines', { params: { thumbnail: true, select: 'desc' } })
     assert.equal(res.data.results.length, 1)
     assert.equal(res.data.results[0].desc, 'image 1')
-    assert.ok(res.data.results[0]._thumbnail.includes('test.com/image.png'))
+    assert.ok(res.data.results[0]._thumbnail.includes('/300x200/test.com%2Fimage.png'))
   })
 
   it('Manage either encoded or decoded URL', async () => {
@@ -31,18 +31,22 @@ describe('thumbnails', () => {
       { imageUrl: 'http://test.com/imag%C3%A9.png', desc: 'image 1' },
       { imageUrl: 'http://test.com/imagé.png', desc: 'image 2' },
       { imageUrl: 'http://test.com/image (1).png', desc: 'image 3' },
-      { imageUrl: 'http://test.com/image%20%281%29.png', desc: 'image 4' }
+      { imageUrl: 'http://test.com/image%20%281%29.png', desc: 'image 4' },
+      { imageUrl: 'http://test.com/image?format=png', desc: 'image 5' }
     ])
     await workers.hook('finalizer/thumbnails1')
     res = await ax.get('/api/v1/datasets/thumbnails1/lines', { params: { thumbnail: true, select: 'desc', sort: 'desc' } })
-    assert.equal(res.data.results.length, 4)
+    assert.equal(res.data.results.length, 5)
     assert.equal(res.data.results[0].desc, 'image 1')
-    assert.ok(res.data.results[0]._thumbnail.includes('test.com/imag%C3%A9.png'))
+    assert.ok(res.data.results[0]._thumbnail.includes('/300x200/test.com%2Fimag%C3%A9.png'))
     assert.equal(res.data.results[1].desc, 'image 2')
-    assert.ok(res.data.results[1]._thumbnail.includes('test.com/imag%C3%A9.png'))
+    assert.ok(res.data.results[1]._thumbnail.includes('/300x200/test.com%2Fimag%C3%A9.png'))
     assert.equal(res.data.results[2].desc, 'image 3')
-    assert.ok(res.data.results[2]._thumbnail.includes('test.com/image%20(1).png'))
+    assert.ok(res.data.results[2]._thumbnail.includes('/300x200/test.com%2Fimage%20(1).png'))
     assert.equal(res.data.results[3].desc, 'image 4')
-    assert.ok(res.data.results[3]._thumbnail.includes('test.com/image%20(1).png'))
+    assert.ok(res.data.results[3]._thumbnail.includes('/300x200/test.com%2Fimage%20(1).png'))
+    assert.equal(res.data.results[4].desc, 'image 5')
+    console.log(res.data.results[4])
+    assert.ok(res.data.results[4]._thumbnail.includes('/300x200/test.com%2Fimage%3Fformat%3Dpng'))
   })
 })
