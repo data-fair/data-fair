@@ -245,5 +245,9 @@ module.exports = {
       __format: 'json'
     },
     port: 'PROMETHEUS_PORT'
+  },
+  agentkeepaliveOptions: {
+    __name: 'AGENTKEEPALIVE_OPTIONS',
+    __format: 'json'
   }
 }

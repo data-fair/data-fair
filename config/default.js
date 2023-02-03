@@ -315,5 +315,11 @@ module.exports = {
   prometheus: {
     active: true,
     port: 9090
+  },
+  agentkeepaliveOptions: {
+    maxSockets: 128,
+    maxFreeSockets: 128,
+    timeout: 60000,
+    freeSocketTimeout: 30000
   }
 }
