@@ -28,6 +28,7 @@ const cacheHeaders = require('../utils/cache-headers')
 const rateLimiting = require('../utils/rate-limiting')
 const prometheus = require('../utils/prometheus')
 const datasetAPIDocs = require('../../contract/dataset-api-docs')
+const { httpAgent, httpsAgent } = require('./http-agents')
 
 const debug = require('debug')('remote-services')
 
@@ -353,7 +354,8 @@ router.use('/:remoteServiceId/proxy*', rateLimiting.middleware('remoteService'),
     path: targetUrl.pathname + targetUrl.hash + targetUrl.search,
     timeout: config.remoteTimeout,
     headers,
-    lookup: cacheableLookup.lookup
+    lookup: cacheableLookup.lookup,
+    agent: targetUrl.protocol === 'http:' ? httpAgent : httpsAgent
   }
   await new Promise((resolve, reject) => {
     let timedout = false

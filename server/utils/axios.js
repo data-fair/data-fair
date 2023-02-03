@@ -1,15 +1,8 @@
 // prepare an axios instance with improved error management
 
 const axios = require('axios')
-const http = require('http')
-const https = require('https')
-const CacheableLookup = require('cacheable-lookup')
 
-const cacheableLookup = new CacheableLookup()
-const httpAgent = new http.Agent({})
-const httpsAgent = new https.Agent({})
-cacheableLookup.install(httpAgent)
-cacheableLookup.install(httpsAgent)
+const { httpAgent, httpsAgent } = require('./http-agents')
 
 module.exports = axios.create({
   httpAgent,
