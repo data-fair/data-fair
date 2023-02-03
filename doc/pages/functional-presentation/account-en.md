@@ -14,7 +14,7 @@ To limit GDPR-related issues, a **minimum amount of data is collected** and the 
 Account creation is done by entering an email and a password, and there is also the possibility of going through a Gmail, Facebook, LinkedIn or Github account via the **oAuth2 protocol**. A password renewal mechanism is available for users who have lost it or wish to change it.
 
 <img src="./images/functional-presentation/connexion.jpg"
-     height="160" style="margin:15px auto;" />
+     height="160" style="margin:15px auto;" alt="capture d'écran de la page de connexion" />
 
 Users who create accounts by themselves have their data stored in databases. Their password is encrypted with salts and multiple hashes to guarantee maximum security. There are input rules to prevent the creation of weak passwords.
 
