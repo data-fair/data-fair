@@ -274,7 +274,7 @@ module.exports = {
     name: 'x-apiKey',
     value: null
   },
-  remoteTimeout: 5000,
+  remoteTimeout: 10000,
   disableSharing: false,
   disableApplications: false,
   disableRemoteServices: false,

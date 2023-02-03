@@ -360,7 +360,7 @@ router.use('/:remoteServiceId/proxy*', rateLimiting.middleware('remoteService'),
     const reqTimeout = setTimeout(() => {
       timedout = true
       req.destroy()
-    }, config.remoteTimeout)
+    }, config.remoteTimeout * 1.5)
     const req = (targetUrl.protocol === 'http:' ? http.request : https.request)(options, async (appRes) => {
       try {
         ['content-type', 'content-length', 'content-encoding', 'etag', 'pragma', 'cache-control', 'expires', 'last-modified', 'x-taxman-cache-status'].forEach(header => {
@@ -380,7 +380,7 @@ router.use('/:remoteServiceId/proxy*', rateLimiting.middleware('remoteService'),
         resolve()
       } catch (err) {
         if (err.code === 'ERR_STREAM_PREMATURE_CLOSE') {
-          // nothing to do, happens when requests are reinterrupted by browser
+          // nothing to do, happens when requests are interrupted by browser
           resolve()
         } else {
           console.error('(service-proxy-res) Error while proxying remote service', err)
