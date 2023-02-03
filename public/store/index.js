@@ -5,7 +5,6 @@ import dataset from './dataset'
 import remoteService from './remote-service'
 import application from './application'
 import catalog from './catalog'
-import tinycolor from 'tinycolor2'
 import style from './style'
 
 Vue.use(Vuex)
