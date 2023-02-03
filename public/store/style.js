@@ -1,4 +1,3 @@
-import Vue from 'vue'
 import tinycolor from 'tinycolor2'
 
 const isDark = (color) => tinycolor(color).getLuminance() < 0.4
