@@ -5,6 +5,7 @@ const originalUrl = require('original-url')
 const { format: formatUrl } = require('url')
 const cors = require('cors')
 const EventEmitter = require('events')
+const { createHttpTerminator } = require('http-terminator')
 const dbUtils = require('./utils/db')
 const esUtils = require('./utils/es')
 const wsUtils = require('./utils/ws')
@@ -26,7 +27,7 @@ const debugDomain = require('debug')('domain')
 global.events = new EventEmitter()
 
 const app = express()
-let server, wss
+let server, wss, httpTerminator
 
 // a middleware for performance analysis
 app.use((req, res, next) => {
@@ -142,6 +143,7 @@ if (config.mode.includes('server')) {
 
   const WebSocket = require('ws')
   server = require('http').createServer(app)
+  httpTerminator = createHttpTerminator({ server })
   // cf https://connectreport.com/blog/tuning-http-keep-alive-in-node-js/
   // timeout is often 60s on the reverse proxy, better to a have a longer one here
   // so that interruption is managed downstream instead of here
@@ -230,8 +232,7 @@ exports.stop = async () => {
     wss.close()
     wsUtils.stop(wss)
     await eventToPromise(wss, 'close')
-    server.close()
-    await eventToPromise(server, 'close')
+    await httpTerminator.terminate()
   }
 
   if (config.mode.includes('worker')) {
