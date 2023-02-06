@@ -28,7 +28,7 @@ const cacheHeaders = require('../utils/cache-headers')
 const rateLimiting = require('../utils/rate-limiting')
 const prometheus = require('../utils/prometheus')
 const datasetAPIDocs = require('../../contract/dataset-api-docs')
-const { httpAgent, httpsAgent } = require('./http-agents')
+const { httpAgent, httpsAgent } = require('../utils/http-agents')
 
 const debug = require('debug')('remote-services')
 
