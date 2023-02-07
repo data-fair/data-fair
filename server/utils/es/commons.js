@@ -431,21 +431,22 @@ exports.prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicU
       }, {})
   }
 
-  if (query.draft && res._attachment_url) res._attachment_url += '?draft=true'
-
   const imageField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
   if (query.thumbnail) {
     if (!imageField) throw createError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
     if (res[imageField.key]) {
-      const datasetHref = `${publicBaseUrl}/api/v1/datasets/${dataset.id}`
-      const attachmentPrefix = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/`
       let imageUrl = res[imageField.key]
-      if (imageUrl.startsWith(attachmentPrefix)) imageUrl = imageUrl.replace(attachmentPrefix, '/attachments/')
+      if (dataset.attachmentsAsImage) {
+        imageUrl = imageUrl.replace(`${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/`, '/attachments/')
+      }
       const thumbnailId = Buffer.from(imageUrl).toString('hex')
       // TODO: generate a shorter url with _id when it is present and thumbnailId is very long ?
-      res._thumbnail = prepareThumbnailUrl(`${datasetHref}/thumbnail/${encodeURIComponent(thumbnailId)}`, query.thumbnail, !!dataset.draftReason)
+      res._thumbnail = prepareThumbnailUrl(`${publicBaseUrl}/api/v1/datasets/${dataset.id}/thumbnail/${encodeURIComponent(thumbnailId)}`, query.thumbnail, query.draft)
     }
   }
+
+  if (query.draft && res._attachment_url) res._attachment_url += '?draft=true'
+
   // format markdown and sanitize it for XSS prevention
   // either using x-display=markdown info or implicitly for description
   const descriptionField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/description')
