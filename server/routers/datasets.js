@@ -1630,7 +1630,6 @@ router.get('/:datasetId/thumbnail', readDataset(), permissions.middleware('readD
 }))
 router.get('/:datasetId/thumbnail/:thumbnailId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async (req, res, next) => {
   const url = Buffer.from(req.params.thumbnailId, 'hex').toString()
-  console.log(url)
   if (url.startsWith('/attachments')) {
     getThumbnail(req, res, `${config.publicUrl}/api/v1/datasets/${req.dataset.id}${url}`, path.join(datasetUtils.attachmentsDir(req.dataset), url.replace('/attachments/', '')), req.dataset.thumbnails)
   } else {

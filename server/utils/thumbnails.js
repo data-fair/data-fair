@@ -7,6 +7,7 @@ const tmp = require('tmp-promise')
 const { Binary } = require('mongodb')
 const config = require('config')
 const axios = require('./axios')
+const { setNoCache } = require('./cache-headers')
 
 const debug = require('debug')('thumbnails')
 const dataDir = path.resolve(config.dataDir)
@@ -15,47 +16,46 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
   const cacheFilter = { url, ...sharpOptions }
   debug('get thumbnail', cacheFilter, filePath)
 
-  const cacheEntry = await db.collection('thumbnails-cache').findOne(cacheFilter)
-  const newCacheEntry = { ...cacheFilter, lastUpdated: new Date() }
+  const entry = await db.collection('thumbnails-cache').findOne(cacheFilter)
+  const newEntry = { ...cacheFilter, lastUpdated: new Date() }
   let tmpFile
   if (filePath) {
-    console.log((await fs.stat(filePath)).mtime)
-    newCacheEntry.lastModified = (await fs.stat(filePath)).mtime.toUTCString()
-    if (cacheEntry && cacheEntry.lastModified === newCacheEntry.lastModified) {
-      debug('found fresh cache entry for filePath based on lastModified', cacheEntry.lastModified)
-      return cacheEntry
+    newEntry.lastModified = (await fs.stat(filePath)).mtime.toUTCString()
+    if (entry && entry.lastModified === newEntry.lastModified) {
+      debug('found fresh cache entry for filePath based on lastModified', entry.lastModified)
+      return { entry, status: 'HIT' }
     }
   } else {
-    if (cacheEntry && dayjs().diff(cacheEntry.lastUpdated, 'hour', true) < 1) {
-      debug('found fresh cache entry for url based on lastUpdate', cacheEntry.lastUpdated)
-      return cacheEntry
+    if (entry && dayjs().diff(entry.lastUpdated, 'hour', true) < 1) {
+      debug('found fresh cache entry for url based on lastUpdate', entry.lastUpdated)
+      return { entry, status: 'HIT' }
     }
     tmpFile = filePath = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
     // creating empty file before streaming seems to fix some weird bugs with NFS
     await fs.ensureFile(filePath)
     try {
       const headers = {}
-      if (cacheEntry) {
-        if (cacheEntry.lastModified) headers['if-modified-since'] = cacheEntry.lastModified
-        if (cacheEntry.etag) headers['if-none-match'] = cacheEntry.etag
+      if (entry) {
+        if (entry.lastModified) headers['if-modified-since'] = entry.lastModified
+        if (entry.etag) headers['if-none-match'] = entry.etag
         debug('attempt to refresh cache content', headers)
       }
       debug('download image into tmp file')
       const response = await axios({ url, responseType: 'stream', headers })
       await pipeline(response.data, fs.createWriteStream(filePath))
       debug('fetch of image is ok', response.headers)
-      newCacheEntry.lastModified = response.headers['last-modified']
-      newCacheEntry.etag = response.headers.etag
+      newEntry.lastModified = response.headers['last-modified']
+      newEntry.etag = response.headers.etag
     } catch (err) {
       // content did not change
       if (err.status === 304) {
         await debug(`image was not modified since last fetch ${url}`)
         await db.collection('thumbnails-cache').updateOne(cacheFilter, { $set: { lastUpdated: new Date() } })
-        return cacheEntry
+        return { entry, status: 'REVALIDATED' }
       } else {
-        if (cacheEntry) {
+        if (entry) {
           console.warn(`failed to fetch image for thumbnail "${url}", use stale cache entry`, err)
-          return cacheEntry
+          return { entry, status: 'STALE' }
         } else {
           throw err
         }
@@ -64,16 +64,16 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
   }
   const fullSharpOptions = {
     ...sharpOptions,
-    background: { r: 0, g: 0, b: 0, alpha: 0 },
+    background: { r: 0, g: 0, b: 0, alpha: 1 },
     withoutEnlargement: true
   }
   debug('resize using sharp', fullSharpOptions)
-  newCacheEntry.data = Binary(await sharp(filePath)
+  newEntry.data = Binary(await sharp(filePath)
     .resize(fullSharpOptions)
     .toBuffer())
   if (tmpFile) await fs.remove(tmpFile)
-  await db.collection('thumbnails-cache').replaceOne(cacheFilter, newCacheEntry, { upsert: true })
-  return newCacheEntry
+  await db.collection('thumbnails-cache').replaceOne(cacheFilter, newEntry, { upsert: true })
+  return { entry: newEntry, status: 'MISS' }
 }
 
 exports.getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
@@ -86,7 +86,7 @@ exports.getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
       // nothing to do, this is the default
     }
     if (thumbnailsOpts.resizeMode === 'fitIn') {
-      sharpOptions.fit = 'contain'
+      sharpOptions.fit = 'inside'
       sharpOptions.position = 'center'
     }
     if (thumbnailsOpts.resizeMode === 'smartCrop') {
@@ -102,16 +102,24 @@ exports.getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
     sharpOptions.height = 200
   }
 
-  const cacheEntry = await getCacheEntry(db, url, filePath, sharpOptions)
+  const { entry, status } = await getCacheEntry(db, url, filePath, sharpOptions)
 
   const ifModifiedSince = req.get('if-modified-since')
-  if (ifModifiedSince && cacheEntry.lastModified === ifModifiedSince) {
+  if (ifModifiedSince && entry.lastModified === ifModifiedSince) {
     debug('if-modified-since matches local date, return 304')
     return res.status(304).send()
   }
-  if (cacheEntry.lastModified) res.setHeader('Last-Modified', cacheEntry.lastModified)
+  if (entry.lastModified) res.setHeader('Last-Modified', entry.lastModified)
   res.setHeader('content-type', 'image/png')
-  res.send(cacheEntry.data.buffer)
+  res.setHeader('X-Thumbnails-Cache-Status', status)
+  if (req.publicOperation) {
+    // force buffering (necessary for caching) of this response in the reverse proxy
+    res.setHeader('X-Accel-Buffering', 'yes')
+    res.setHeader('Cache-Control', `must-revalidate, public, max-age=${config.cache.publicMaxAge}`)
+  } else {
+    setNoCache(req, res)
+  }
+  res.send(entry.data.buffer)
 }
 
 exports.prepareThumbnailUrl = (baseUrl, thumbnail = '300x200') => {

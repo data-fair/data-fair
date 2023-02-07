@@ -3,7 +3,7 @@ const createError = require('http-errors')
 const useragent = require('useragent')
 const debug = require('debug')('cache-headers')
 
-const noCache = (req, res) => {
+exports.setNoCache = (req, res) => {
   res.setHeader('X-Accel-Buffering', 'no')
   // compatibility with older IE
   // cf https://stackoverflow.com/questions/12205632/express-returns-304-for-ie-repeative-requests
@@ -57,7 +57,7 @@ exports.resourceBased = (req, res, next) => {
     if (cacheVisibility === 'public') {
       res.setHeader('Cache-Control', `must-revalidate, public, max-age=${config.cache.publicMaxAge}`)
     } else {
-      noCache(req, res)
+      exports.setNoCache(req, res)
     }
   }
 
@@ -74,12 +74,12 @@ exports.listBased = (req, res, next) => {
     res.setHeader('X-Accel-Buffering', 'yes')
     res.setHeader('Cache-Control', `must-revalidate, public, max-age=${config.cache.publicMaxAge}`)
   } else {
-    noCache(req, res)
+    exports.setNoCache(req, res)
   }
   next()
 }
 
 exports.noCache = (req, res, next) => {
-  noCache(req, res)
+  exports.setNoCache(req, res)
   next()
 }
