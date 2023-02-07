@@ -170,8 +170,7 @@ describe('CSV cases', () => {
     assert.equal(dataset.file.props.quote, '"')
     assert.equal(dataset.file.props.fieldsDelimiter, ';')
     const objectif3Prop = dataset.schema.find(p => p['x-originalName'] === 'Objectif 3')
-    assert.equal(objectif3Prop.type, 'string')
-    assert.equal(objectif3Prop['x-cardinality'], 0)
+    assert.ok(!objectif3Prop)
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.results[0].SEQ_1_Estimation_Sequestration_nette_CO2, 149300)
   })
@@ -239,5 +238,12 @@ describe('CSV cases', () => {
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 732)
     assert.equal(res.data.results[0].ID_NOEUD, '22004N000')
+  })
+
+  it('CSV with empty column', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/empty-col.csv', ax)
+    console.log(dataset.schema)
+    assert.ok(!dataset.schema.find(p => p.key === 'empty'))
   })
 })

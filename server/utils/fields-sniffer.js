@@ -4,8 +4,8 @@ const moment = require('moment-timezone')
 const config = require('config')
 
 exports.sniff = (values, attachmentsPaths = [], existingField) => {
+  if (!values.length) return { type: 'empty' }
   if (existingField && existingField.ignoreDetection) return { type: 'string' }
-  if (!values.length) return { type: 'string' }
 
   if (attachmentsPaths && attachmentsPaths.length && checkAll(values, isOneOf, attachmentsPaths, 'Vous avez chargé des pièces jointes, et une colonne semble contenir des chemins vers ces pièces jointes. Mais certaines valeurs sont erronées.')) {
     return { type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }

@@ -36,11 +36,12 @@ class AnalyzerWritable extends Writable {
     for (const property in this.samples) {
       const key = fieldsSniffer.escapeKey(property)
       const existingField = this.options.existingSchema.find(f => f.key === key)
-      this.schema.push({
+      const field = {
         key,
         'x-originalName': property,
         ...fieldsSniffer.sniff([...this.samples[property]], this.options.attachments, existingField)
-      })
+      }
+      if (field.type !== 'empty') this.schema.push(field)
     }
     callback()
   }

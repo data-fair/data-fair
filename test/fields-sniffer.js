@@ -46,7 +46,7 @@ describe('field sniffer', () => {
     assert.deepEqual(sniffer.sniff(['id1', 'a text with whitespaces']), { type: 'string' })
   })
 
-  it('Default type is string', () => {
-    assert.deepEqual(sniffer.sniff([]), { type: 'string' })
+  it('Default type is empty (will be removed from schema)', () => {
+    assert.deepEqual(sniffer.sniff([]), { type: 'empty' })
   })
 })
