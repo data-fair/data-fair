@@ -1626,19 +1626,19 @@ router.post('/:datasetId/user-notification', readDataset(), permissions.middlewa
 
 router.get('/:datasetId/thumbnail', readDataset(), permissions.middleware('readDescription', 'read'), asyncWrap(async (req, res, next) => {
   if (!req.dataset.image) return res.status(404).send("dataset doesn't have an image")
-  getThumbnail(req, res, req.dataset.image)
+  await getThumbnail(req, res, req.dataset.image)
 }))
 router.get('/:datasetId/thumbnail/:thumbnailId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async (req, res, next) => {
   const url = Buffer.from(req.params.thumbnailId, 'hex').toString()
   if (url.startsWith('/attachments')) {
-    getThumbnail(req, res, `${config.publicUrl}/api/v1/datasets/${req.dataset.id}${url}`, path.join(datasetUtils.attachmentsDir(req.dataset), url.replace('/attachments/', '')), req.dataset.thumbnails)
+    await getThumbnail(req, res, `${config.publicUrl}/api/v1/datasets/${req.dataset.id}${url}`, path.join(datasetUtils.attachmentsDir(req.dataset), url.replace('/attachments/', '')), req.dataset.thumbnails)
   } else {
     const imageField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
     const count = await esUtils.count(req.app.get('es'), req.dataset, {
       qs: `${esUtils.escapeFilter(imageField.key)}:${esUtils.escapeFilter(url)}`
     })
     if (!count) return res.status(404).send('thumbnail does not match a URL from this dataset')
-    getThumbnail(req, res, url, null, req.dataset.thumbnails)
+    await getThumbnail(req, res, url, null, req.dataset.thumbnails)
   }
 }))
 

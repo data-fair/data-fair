@@ -443,7 +443,7 @@ exports.prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicU
       if (imageUrl.startsWith(attachmentPrefix)) imageUrl = imageUrl.replace(attachmentPrefix, '/attachments/')
       const thumbnailId = Buffer.from(imageUrl).toString('hex')
       // TODO: generate a shorter url with _id when it is present and thumbnailId is very long ?
-      res._thumbnail = prepareThumbnailUrl(`${datasetHref}/thumbnail/${encodeURIComponent(thumbnailId)}`, query.thumbnail)
+      res._thumbnail = prepareThumbnailUrl(`${datasetHref}/thumbnail/${encodeURIComponent(thumbnailId)}`, query.thumbnail, !!dataset.draftReason)
     }
   }
   // format markdown and sanitize it for XSS prevention

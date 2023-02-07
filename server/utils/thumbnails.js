@@ -1,7 +1,7 @@
 const fs = require('fs-extra')
 const path = require('path')
 const sharp = require('sharp')
-const pipeline = require('stream/promises').pipeline
+const pump = require('util').promisify(require('pump'))
 const dayjs = require('dayjs')
 const tmp = require('tmp-promise')
 const { Binary } = require('mongodb')
@@ -42,14 +42,15 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
       }
       debug('download image into tmp file')
       const response = await axios({ url, responseType: 'stream', headers })
-      await pipeline(response.data, fs.createWriteStream(filePath))
+      await pump(response.data, fs.createWriteStream(filePath))
       debug('fetch of image is ok', response.headers)
       newEntry.lastModified = response.headers['last-modified']
       newEntry.etag = response.headers.etag
     } catch (err) {
+      debug('fetch is ko', err)
       // content did not change
       if (err.status === 304) {
-        await debug(`image was not modified since last fetch ${url}`)
+        debug(`image was not modified since last fetch ${url}`)
         await db.collection('thumbnails-cache').updateOne(cacheFilter, { $set: { lastUpdated: new Date() } })
         return { entry, status: 'REVALIDATED' }
       } else {
@@ -68,9 +69,15 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
     withoutEnlargement: true
   }
   debug('resize using sharp', fullSharpOptions)
-  newEntry.data = Binary(await sharp(filePath)
-    .resize(fullSharpOptions)
-    .toBuffer())
+  try {
+    newEntry.data = Binary(await sharp(filePath)
+      .resize(fullSharpOptions)
+      .toBuffer())
+    debug('resize ok')
+  } catch (err) {
+    debug('resize ko', err.message)
+    newEntry.sharpError = err.message
+  }
   if (tmpFile) await fs.remove(tmpFile)
   await db.collection('thumbnails-cache').replaceOne(cacheFilter, newEntry, { upsert: true })
   return { entry: newEntry, status: 'MISS' }
@@ -110,7 +117,6 @@ exports.getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
     return res.status(304).send()
   }
   if (entry.lastModified) res.setHeader('Last-Modified', entry.lastModified)
-  res.setHeader('content-type', 'image/png')
   res.setHeader('X-Thumbnails-Cache-Status', status)
   if (req.publicOperation) {
     // force buffering (necessary for caching) of this response in the reverse proxy
@@ -119,14 +125,20 @@ exports.getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
   } else {
     setNoCache(req, res)
   }
-  res.send(entry.data.buffer)
+  if (entry.sharpError) {
+    res.status(400).send(entry.sharpError)
+  } else {
+    res.setHeader('content-type', 'image/png')
+    res.send(entry.data.buffer)
+  }
 }
 
-exports.prepareThumbnailUrl = (baseUrl, thumbnail = '300x200') => {
+exports.prepareThumbnailUrl = (baseUrl, thumbnail = '300x200', draft) => {
   if (thumbnail === 'true' || thumbnail === '1') thumbnail = '300x200'
   const [width, height] = (thumbnail).split('x')
   const thumbnailUrl = new URL(baseUrl)
   if (width) thumbnailUrl.searchParams.set('width', width)
   if (height) thumbnailUrl.searchParams.set('height', height)
+  if (draft) thumbnailUrl.searchParams.set('draft', true)
   return thumbnailUrl.href
 }

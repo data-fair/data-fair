@@ -250,7 +250,7 @@ router.get('/:id/icon', asyncWrap(async (req, res, next) => {
   const baseApp = await db.collection('base-applications').findOne(query, { url: 1 })
   if (!baseApp) return res.status(404).send()
   const iconUrl = baseApp.url.replace(/\/$/, '') + '/icon.png'
-  getThumbnail(req, res, iconUrl)
+  await getThumbnail(req, res, iconUrl)
 }))
 router.get('/:id/thumbnail', asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
@@ -259,5 +259,5 @@ router.get('/:id/thumbnail', asyncWrap(async (req, res, next) => {
   const baseApp = await db.collection('base-applications').findOne(query, { url: 1 })
   if (!baseApp) return res.status(404).send()
   const imageUrl = baseApp.image || baseApp.url.replace(/\/$/, '') + '/thumbnail.png'
-  getThumbnail(req, res, imageUrl)
+  await getThumbnail(req, res, imageUrl)
 }))

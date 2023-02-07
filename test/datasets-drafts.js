@@ -313,7 +313,7 @@ describe('datasets in draft mode', () => {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'test', draft: true, thumbnail: true } })
     assert.equal(res.data.total, 2)
     assert.ok(res.data.results[0]._attachment_url.endsWith('?draft=true'))
-    assert.equal(res.data.results[0]._attachment_url, res.data.results[0]._thumbnail)
+    assert.ok(res.data.results[0]._thumbnail.endsWith('?width=300&height=200&draft=true'))
     res = await ax.get(res.data.results[1]._attachment_url)
     assert.equal(res.status, 200)
 
