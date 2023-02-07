@@ -159,7 +159,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const countPromise = baseApplications.countDocuments(query)
   const [results, count] = await Promise.all([findPromise, countPromise])
   for (const result of results) {
-    baseAppsUtils.clean(req.publicUrl, result, req.query.thumbnail, req.query.html === 'true')
+    baseAppsUtils.clean(req.publicBaseUrl, result, req.query.thumbnail, req.query.html === 'true')
     // keep only the private access that concerns the current request
     result.privateAccess = (result.privateAccess || []).filter(p => privateAccess.find(p2 => p2.type === p.type && p2.id === p.id))
   }

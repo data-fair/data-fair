@@ -45,7 +45,7 @@
 
 <i18n lang="yaml">
 fr:
-  noApp: Vous n'avez pas encore configuré de application pour ce jeu de données. Seules les configurations validées apparaissent ici.
+  noApp: Vous n'avez pas encore configuré d'application pour ce jeu de données. Seules les configurations validées apparaissent ici.
   reorder: Vous pouvez changer l'ordre des applications par glissé/déposé.
   configureApp: Configurer une application
 en:

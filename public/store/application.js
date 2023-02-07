@@ -189,7 +189,7 @@ export default () => ({
         await this.$axios.$put(getters.resourceUrl + '/configuration-draft', configDraft)
         commit('setAny', { configDraft: JSON.parse(JSON.stringify(configDraft)) })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture du brouillon de application:' })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture du brouillon d\'application:' })
       }
     },
     async cancelConfigDraft ({ state, commit, getters, dispatch }) {
@@ -197,7 +197,7 @@ export default () => ({
         await this.$axios.$delete(getters.resourceUrl + '/configuration-draft')
         commit('setAny', { configDraft: state.config })
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture du brouillon de application:' })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'écriture du brouillon d\'application:' })
       }
     },
     async changeOwner ({ commit, state }, owner) {

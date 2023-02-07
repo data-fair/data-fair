@@ -8,11 +8,10 @@ const sanitizeHtml = require('../../../shared/sanitize-html')
 const truncateMiddle = require('truncate-middle')
 const truncateHTML = require('truncate-html')
 const marked = require('marked')
-const thumbor = require('../thumbor')
+const { prepareThumbnailUrl } = require('../thumbnails')
 const tiles = require('../tiles')
 const geo = require('../geo')
 const { geojsonToWKT } = require('@terraformer/wkt')
-const permissions = require('../permissions')
 
 // From a property in data-fair schema to the property in an elasticsearch mapping
 exports.esProperty = prop => {
@@ -435,12 +434,17 @@ exports.prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicU
   if (query.draft && res._attachment_url) res._attachment_url += '?draft=true'
 
   const imageField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
+  console.log('_id ?', res._id)
   if (query.thumbnail) {
     if (!imageField) throw createError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
     if (res[imageField.key]) {
       const datasetHref = `${publicBaseUrl}/api/v1/datasets/${dataset.id}`
-      const ignoreThumbor = res[imageField.key].startsWith(datasetHref) && !permissions.isPublic('datasets', dataset)
-      res._thumbnail = ignoreThumbor ? res[imageField.key] : thumbor.thumbnail(res[imageField.key], query.thumbnail, dataset.thumbnails)
+      const attachmentPrefix = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/`
+      let imageUrl = res[imageField.key]
+      if (imageUrl.startsWith(attachmentPrefix)) imageUrl = imageUrl.replace(attachmentPrefix, '/attachments/')
+      const thumbnailId = Buffer.from(imageUrl).toString('hex')
+      // TODO: generate a shorter url with _id when it is present and thumbnailId is very long ?
+      res._thumbnail = prepareThumbnailUrl(`${datasetHref}/thumbnail/${encodeURIComponent(thumbnailId)}`, query.thumbnail)
     }
   }
   // format markdown and sanitize it for XSS prevention

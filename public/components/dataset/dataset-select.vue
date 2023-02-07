@@ -11,7 +11,7 @@
     outlined
     dense
     hide-details
-    style="max-width: 500px"
+    style="max-width: 600px"
     clearable
     @change="dataset => $emit('change', dataset)"
   >

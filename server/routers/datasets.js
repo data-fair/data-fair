@@ -44,7 +44,7 @@ const validatePost = ajv.compile(datasetPostSchema.properties.body)
 const userNotificationSchema = require('../../contract/user-notification')
 const validateUserNotification = ajv.compile(userNotificationSchema)
 const debugFiles = require('debug')('files')
-const thumbor = require('../utils/thumbor')
+const { getThumbnail, prepareThumbnailUrl } = require('../utils/thumbnails')
 const datasetFileSample = require('../utils/dataset-file-sample')
 const { bulkSearchStreams } = require('../utils/master-data')
 const applicationKey = require('../utils/application-key')
@@ -90,7 +90,7 @@ function clean (publicUrl, dataset, query = {}, draft = false) {
     }
     if (!select.includes('-links')) findUtils.setResourceLinks(dataset, 'dataset', publicUrl)
     if (dataset.image && dataset.public && !select.includes('-thumbnail')) {
-      dataset.thumbnail = thumbor.thumbnail(dataset.image, thumbnail)
+      dataset.thumbnail = prepareThumbnailUrl(publicUrl + '/api/v1/datasets/' + encodeURIComponent(dataset.id) + '/thumbnail', thumbnail)
     }
     if (dataset.image && publicUrl !== config.publicUrl) {
       dataset.image = dataset.image.replace(config.publicUrl, publicUrl)
@@ -1622,6 +1622,25 @@ router.post('/:datasetId/user-notification', readDataset(), permissions.middlewa
   }
   await notifications.send(notif, true)
   res.send(notif)
+}))
+
+router.get('/:datasetId/thumbnail', readDataset(), permissions.middleware('readDescription', 'read'), asyncWrap(async (req, res, next) => {
+  if (!req.dataset.image) return res.status(404).send("dataset doesn't have an image")
+  getThumbnail(req, res, req.dataset.image)
+}))
+router.get('/:datasetId/thumbnail/:thumbnailId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async (req, res, next) => {
+  const url = Buffer.from(req.params.thumbnailId, 'hex').toString()
+  console.log(url)
+  if (url.startsWith('/attachments')) {
+    getThumbnail(req, res, `${config.publicUrl}/api/v1/datasets/${req.dataset.id}${url}`, path.join(datasetUtils.attachmentsDir(req.dataset), url.replace('/attachments/', '')), req.dataset.thumbnails)
+  } else {
+    const imageField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
+    const count = await esUtils.count(req.app.get('es'), req.dataset, {
+      qs: `${esUtils.escapeFilter(imageField.key)}:${esUtils.escapeFilter(url)}`
+    })
+    if (!count) return res.status(404).send('thumbnail does not match a URL from this dataset')
+    getThumbnail(req, res, url, null, req.dataset.thumbnails)
+  }
 }))
 
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.

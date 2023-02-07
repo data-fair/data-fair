@@ -13,16 +13,23 @@ const dataDir = path.resolve(config.dataDir)
 
 const getCacheEntry = async (db, url, filePath, sharpOptions) => {
   const cacheFilter = { url, ...sharpOptions }
-  debug('get thumbnail', cacheFilter)
+  debug('get thumbnail', cacheFilter, filePath)
 
   const cacheEntry = await db.collection('thumbnails-cache').findOne(cacheFilter)
-  if (cacheEntry && dayjs().diff(cacheEntry.lastUpdated, 'hour', true) < 1) {
-    debug('found fresh cache entry', cacheEntry.lastUpdated)
-    return cacheEntry
-  }
   const newCacheEntry = { ...cacheFilter, lastUpdated: new Date() }
   let tmpFile
-  if (!filePath) {
+  if (filePath) {
+    console.log((await fs.stat(filePath)).mtime)
+    newCacheEntry.lastModified = (await fs.stat(filePath)).mtime.toUTCString()
+    if (cacheEntry && cacheEntry.lastModified === newCacheEntry.lastModified) {
+      debug('found fresh cache entry for filePath based on lastModified', cacheEntry.lastModified)
+      return cacheEntry
+    }
+  } else {
+    if (cacheEntry && dayjs().diff(cacheEntry.lastUpdated, 'hour', true) < 1) {
+      debug('found fresh cache entry for url based on lastUpdate', cacheEntry.lastUpdated)
+      return cacheEntry
+    }
     tmpFile = filePath = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
     // creating empty file before streaming seems to fix some weird bugs with NFS
     await fs.ensureFile(filePath)
@@ -54,8 +61,6 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
         }
       }
     }
-  } else {
-    newCacheEntry.lastModified = (await fs.stat(filePath)).mtime.toUTCString()()
   }
   const fullSharpOptions = {
     ...sharpOptions,
@@ -71,10 +76,25 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
   return newCacheEntry
 }
 
-exports.getThumbnail = async (req, res, url, filePath) => {
+exports.getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
   const db = req.app.get('db')
-
   const sharpOptions = { fit: req.query.fit || 'cover', position: req.query.position || 'center' }
+  // resizeMode was mostlye adapted from thumbor and comes from dataset schema
+  // but it is fairly easy to match it to sharp options
+  if (!req.query.fit && !req.query.position) {
+    if (thumbnailsOpts.resizeMode === 'crop') {
+      // nothing to do, this is the default
+    }
+    if (thumbnailsOpts.resizeMode === 'fitIn') {
+      sharpOptions.fit = 'contain'
+      sharpOptions.position = 'center'
+    }
+    if (thumbnailsOpts.resizeMode === 'smartCrop') {
+      sharpOptions.fit = 'cover'
+      sharpOptions.position = 'attention'
+    }
+  }
+
   if (req.query.width) sharpOptions.width = Number(req.query.width)
   if (req.query.height) sharpOptions.height = Number(req.query.height)
   if (!req.query.width && !req.query.height) {
@@ -92,4 +112,13 @@ exports.getThumbnail = async (req, res, url, filePath) => {
   if (cacheEntry.lastModified) res.setHeader('Last-Modified', cacheEntry.lastModified)
   res.setHeader('content-type', 'image/png')
   res.send(cacheEntry.data.buffer)
+}
+
+exports.prepareThumbnailUrl = (baseUrl, thumbnail = '300x200') => {
+  if (thumbnail === 'true' || thumbnail === '1') thumbnail = '300x200'
+  const [width, height] = (thumbnail).split('x')
+  const thumbnailUrl = new URL(baseUrl)
+  if (width) thumbnailUrl.searchParams.set('width', width)
+  if (height) thumbnailUrl.searchParams.set('height', height)
+  return thumbnailUrl.href
 }
