@@ -118,7 +118,7 @@
 
 <i18n lang="yaml">
 fr:
-  noApp: Vous n'avez pas encore configuré de application.
+  noApp: Vous n'avez pas encore configuré d'application.
   noResult: Aucun résultat ne correspond aux critères de recherche
   configureApp: Configurer une application
   dataset: Jeu de données
