@@ -16,6 +16,7 @@ const findUtils = require('../utils/find')
 const baseAppsUtils = require('../utils/base-apps')
 const cacheHeaders = require('../utils/cache-headers')
 const prometheus = require('../utils/prometheus')
+const { getThumbnail } = require('../utils/thumbnails')
 const router = exports.router = express.Router()
 
 // Fill the collection using the default base applications from config
@@ -92,7 +93,7 @@ async function initBaseApp (db, app) {
 
   const storedBaseApp = (await db.collection('base-applications')
     .findOneAndUpdate({ id: patch.id }, { $set: patch }, { upsert: true, returnDocument: 'after' })).value
-  baseAppsUtils.clean(storedBaseApp)
+  baseAppsUtils.clean(config.publicUrl, storedBaseApp)
   return storedBaseApp
 }
 
@@ -114,9 +115,7 @@ router.patch('/:id', asyncWrap(async (req, res) => {
   res.send(storedBaseApp)
 }))
 
-// Get the list. Non admin users can only see the public and non deprecated ones.
-router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
-  const db = req.app.get('db')
+const getQuery = (req, showAll = false) => {
   const query = { $and: [{ deprecated: { $ne: true } }] }
   const accessFilter = []
 
@@ -137,7 +136,16 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
       accessFilter.push({ privateAccess: { $elemMatch: { type, id } } })
     })
   }
-  query.$and.push({ $or: accessFilter })
+  if (!showAll) {
+    query.$and.push({ $or: accessFilter })
+  }
+  return { query, privateAccess }
+}
+
+// Get the list. Non admin users can only see the public and non deprecated ones.
+router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
+  const db = req.app.get('db')
+  const { query, privateAccess } = getQuery(req)
   if (req.query.applicationName) query.$and.push({ $or: [{ applicationName: req.query.applicationName }, { 'meta.application-name': req.query.applicationName }] })
   if (req.query.q) query.$and.push({ $text: { $search: req.query.q } })
 
@@ -151,7 +159,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const countPromise = baseApplications.countDocuments(query)
   const [results, count] = await Promise.all([findPromise, countPromise])
   for (const result of results) {
-    baseAppsUtils.clean(result, req.query.thumbnail, req.query.html === 'true')
+    baseAppsUtils.clean(req.publicUrl, result, req.query.thumbnail, req.query.html === 'true')
     // keep only the private access that concerns the current request
     result.privateAccess = (result.privateAccess || []).filter(p => privateAccess.find(p2 => p2.type === p.type && p2.id === p.id))
   }
@@ -233,4 +241,23 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   }
 
   res.send({ count, results })
+}))
+
+router.get('/:id/icon', asyncWrap(async (req, res, next) => {
+  const db = req.app.get('db')
+  const { query } = getQuery(req, req.user.adminMode)
+  query.$and.push({ id: req.params.id })
+  const baseApp = await db.collection('base-applications').findOne(query, { url: 1 })
+  if (!baseApp) return res.status(404).send()
+  const iconUrl = baseApp.url.replace(/\/$/, '') + '/icon.png'
+  getThumbnail(req, res, iconUrl)
+}))
+router.get('/:id/thumbnail', asyncWrap(async (req, res, next) => {
+  const db = req.app.get('db')
+  const { query } = getQuery(req, req.user.adminMode)
+  query.$and.push({ id: req.params.id })
+  const baseApp = await db.collection('base-applications').findOne(query, { url: 1 })
+  if (!baseApp) return res.status(404).send()
+  const imageUrl = baseApp.image || baseApp.url.replace(/\/$/, '') + '/thumbnail.png'
+  getThumbnail(req, res, imageUrl)
 }))

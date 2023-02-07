@@ -159,7 +159,7 @@ router.get('/base-applications', asyncWrap(async (req, res) => {
   const aggPromise = baseApps.aggregate(agg).toArray()
   const [count, results] = await Promise.all([baseApps.countDocuments(query), aggPromise])
   for (const result of results) {
-    baseAppsUtils.clean(result, req.query.thumbnail)
+    baseAppsUtils.clean(req.publicBaseUrl, result, req.query.thumbnail)
     result.privateAccess = result.privateAccess || []
   }
   res.send({ count, results })

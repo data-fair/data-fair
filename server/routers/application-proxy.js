@@ -12,7 +12,6 @@ const { minify } = require('terser')
 const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
 const permissions = require('../utils/permissions')
-const thumbor = require('../utils/thumbor')
 const serviceWorkers = require('../utils/service-workers')
 const prometheus = require('../utils/prometheus')
 const router = module.exports = express.Router()
@@ -36,7 +35,8 @@ const setResource = asyncWrap(async (req, res, next) => {
 })
 
 router.get('/:applicationId/manifest.json', setResource, permissions.middleware('readConfig', 'read'), asyncWrap(async (req, res) => {
-  const cleanApplicationUrl = req.application.url.replace(/\/$/, '')
+  const baseApp = await req.app.get('db').collection('base-applications').findOne({ url: req.application.url }, { projection: { id: 1, meta: 1 } })
+  if (!baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
   res.setHeader('Content-Type', 'application/manifest+json')
   res.send({
     name: req.application.title,
@@ -49,10 +49,14 @@ router.get('/:applicationId/manifest.json', setResource, permissions.middleware(
     theme_color: '#1e88e5',
     lang: 'fr',
     icons: ['64x64', '120x120', '144x144', '152x152', '192x192', '384x384', '512x512'].map(sizes => {
+      const iconUrl = new URL(req.publicBaseUrl + '/api/v1/base-applications/' + encodeURIComponent(baseApp.id) + '/icon')
+      const [width, height] = sizes.split('x')
+      iconUrl.searchParams.set('width', width)
+      iconUrl.searchParams.set('height', height)
       return {
         sizes,
         type: 'image/png',
-        src: thumbor.thumbnail(cleanApplicationUrl + '/icon.png', sizes)
+        src: iconUrl.href
       }
     })
   })
@@ -142,9 +146,6 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
     return res.redirect(`${req.publicBaseUrl}/app/${req.application.id}/login`)
   }
 
-  // check owner limits
-  const limitsPromise = db.collection('limits').findOne({ type: req.application.owner.type, id: req.application.owner.id })
-
   delete req.application.permissions
   req.application.apiUrl = req.publicBaseUrl + '/api/v1'
   // TODO: captureUrl should be on same domain too ?
@@ -163,8 +164,6 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
     { public: true },
     { privateAccess: { $elemMatch: { type: req.application.owner.type, id: req.application.owner.id } } }
   ]
-  const baseAppPromise = db.collection('base-applications')
-    .findOne({ url: applicationUrl, $or: accessFilter }, { projection: { id: 1, meta: 1 } })
 
   // Update the config with dates of last finalization of the used datasets
   // this info can then be used to add ?finalizedAt=... to any queries
@@ -185,8 +184,10 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   }
 
   // we await the promises afterwards so that the datasets and baseApp promises were resolved in parallel
-  const limits = await limitsPromise
-  const baseApp = await baseAppPromise
+  const [limits, baseApp] = await Promise.all([
+    db.collection('limits').findOne({ type: req.application.owner.type, id: req.application.owner.id }),
+    db.collection('base-applications').findOne({ url: applicationUrl, $or: accessFilter }, { projection: { id: 1, meta: 1 } })
+  ])
   if (!baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
 
   // merge incoming an target URL elements

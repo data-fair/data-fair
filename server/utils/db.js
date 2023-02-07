@@ -83,7 +83,10 @@ exports.init = async (db) => {
     exports.ensureIndex(db, 'extensions-cache', { extensionKey: 1, input: 1 }, { name: 'main-keys' }),
     exports.ensureIndex(db, 'extensions-cache', { lastUsed: 1 }, { name: 'expiration', expireAfterSeconds: 60 * 60 * 24 * 10 }),
     // journals indexes
-    exports.ensureIndex(db, 'journals', { type: 1, id: 1, 'owner.type': 1, 'owner.id': 1 }, { unique: true })
+    exports.ensureIndex(db, 'journals', { type: 1, id: 1, 'owner.type': 1, 'owner.id': 1 }, { unique: true }),
+    // thumbnails cache with a 10 days expiration delay
+    exports.ensureIndex(db, 'thumbnails-cache', { url: 1, width: 1, height: 1, fit: 1, position: 1 }, { unique: true, name: 'main-keys' }),
+    exports.ensureIndex(db, 'thumbnails-cache', { lastUpdated: 1 }, { name: 'expiration', expireAfterSeconds: 60 * 60 * 24 * 10 })
   ]
   await Promise.all(promises)
 }

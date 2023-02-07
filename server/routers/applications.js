@@ -388,7 +388,7 @@ router.delete('/:applicationId/configuration-draft', readApplication, permission
 }))
 
 router.get('/:applicationId/base-application', readApplication, permissions.middleware('readBaseApp', 'read'), readBaseApp, cacheHeaders.noCache, asyncWrap(async (req, res) => {
-  res.send(baseAppsUtils.clean(req.baseApp, req.publicBaseUrl, req.query.html === 'true'))
+  res.send(baseAppsUtils.clean(req.publicUrl, req.baseApp, req.publicBaseUrl, req.query.html === 'true'))
 }))
 
 router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
