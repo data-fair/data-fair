@@ -1,10 +1,10 @@
 // Index tabular datasets with elasticsearch using available information on dataset schema
-const extensionsUtils = require('../utils/extensions')
-const datasetUtils = require('../utils/dataset')
-
 exports.eventsPrefix = 'extend'
 
 exports.process = async function (app, dataset) {
+  const extensionsUtils = require('../utils/extensions')
+  const datasetUtils = require('../utils/dataset')
+
   const debug = require('debug')(`worker:extender:${dataset.id}`)
 
   const db = app.get('db')

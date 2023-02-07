@@ -1,14 +1,14 @@
 // Analyze dataset data, check validity and extract a few metadata for next workers
-const datasetFileSample = require('../utils/dataset-file-sample')
-const csvSniffer = require('../utils/csv-sniffer')
-
-const iconv = require('iconv-lite')
-const datasetUtils = require('../utils/dataset')
-const fieldsSniffer = require('../utils/fields-sniffer')
-
 exports.eventsPrefix = 'analyze'
 
 exports.process = async function (app, dataset) {
+  const datasetFileSample = require('../utils/dataset-file-sample')
+  const csvSniffer = require('../utils/csv-sniffer')
+
+  const iconv = require('iconv-lite')
+  const datasetUtils = require('../utils/dataset')
+  const fieldsSniffer = require('../utils/fields-sniffer')
+
   const debug = require('debug')(`worker:csv-analyzer:${dataset.id}`)
   debug('extract file sample')
   const db = app.get('db')

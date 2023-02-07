@@ -4,7 +4,7 @@ const prometheus = require('./prometheus')
 const debug = require('debug')('notifications')
 
 exports.send = async (notification, subscribedOnly = false) => {
-  global.events.emit('notification', notification)
+  if (global.events) global.events.emit('notification', notification)
   debug('send notification', notification)
   if (!config.notifyUrl) return
   if (process.env.NODE_ENV !== 'test') {

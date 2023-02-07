@@ -1,15 +1,15 @@
 // Finalize dataset for publication
-const esUtils = require('../utils/es')
-const geoUtils = require('../utils/geo')
-const datasetUtils = require('../utils/dataset')
-const attachmentsUtils = require('../utils/attachments')
-const virtualDatasetsUtils = require('../utils/virtual-datasets')
-const taskProgress = require('../utils/task-progress')
-const restDatasetsUtils = require('../utils/rest-datasets')
-
 exports.eventsPrefix = 'finalize'
 
 exports.process = async function (app, dataset) {
+  const esUtils = require('../utils/es')
+  const geoUtils = require('../utils/geo')
+  const datasetUtils = require('../utils/dataset')
+  const attachmentsUtils = require('../utils/attachments')
+  const virtualDatasetsUtils = require('../utils/virtual-datasets')
+  const taskProgress = require('../utils/task-progress')
+  const restDatasetsUtils = require('../utils/rest-datasets')
+
   const debug = require('debug')(`worker:finalizer:${dataset.id}`)
 
   const db = app.get('db')

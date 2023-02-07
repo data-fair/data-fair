@@ -1,13 +1,6 @@
-// Analyze geojson dataset data, check validity and detect schema
-const util = require('util')
-const fs = require('fs')
 const { Writable } = require('stream')
-const JSONStream = require('JSONStream')
-const pump = util.promisify(require('pump'))
-const iconv = require('iconv-lite')
-const datasetUtils = require('../utils/dataset')
-const fieldsSniffer = require('../utils/fields-sniffer')
 
+// Analyze geojson dataset data, check validity and detect schema
 exports.eventsPrefix = 'analyze'
 
 // This writable stream will receive geojson features, take samples and and deduce a dataset schema
@@ -39,6 +32,7 @@ class AnalyzerWritable extends Writable {
   }
 
   _final (callback) {
+    const fieldsSniffer = require('../utils/fields-sniffer')
     for (const property in this.samples) {
       const key = fieldsSniffer.escapeKey(property)
       const existingField = this.options.existingSchema.find(f => f.key === key)
@@ -53,6 +47,13 @@ class AnalyzerWritable extends Writable {
 }
 
 exports.process = async function (app, dataset) {
+  const util = require('util')
+  const fs = require('fs')
+  const JSONStream = require('JSONStream')
+  const pump = util.promisify(require('pump'))
+  const iconv = require('iconv-lite')
+  const datasetUtils = require('../utils/dataset')
+
   const db = app.get('db')
   const attachments = await datasetUtils.lsAttachments(dataset)
   const analyzer = new AnalyzerWritable({ attachments, existingSchema: dataset.schema || [] })

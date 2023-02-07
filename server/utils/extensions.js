@@ -101,7 +101,7 @@ class RemoteExtensionStream extends Transform {
 
   async _sendBuffer () {
     if (!this.buffer.length) return
-    global.events.emit('extension-inputs', this.buffer.length)
+    if (global.events) global.events.emit('extension-inputs', this.buffer.length)
 
     for (const extension of this.extensions) {
       debug(`Send req with ${this.buffer.length} items`, this.reqOpts)

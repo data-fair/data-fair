@@ -1,12 +1,8 @@
 const config = require('config')
-const spawn = require('child-process-promise').spawn
-const moment = require('moment')
 const locks = require('../utils/locks')
-const journals = require('../utils/journals')
-const datasetUtils = require('../utils/dataset')
 const prometheus = require('../utils/prometheus')
 const debug = require('debug')('workers')
-const debugLoop = require('debug')('worker-loop')
+
 const tasks = exports.tasks = {
   downloader: require('./downloader'),
   converter: require('./converter'),
@@ -51,6 +47,8 @@ exports.clear = async () => {
 /* eslint no-unmodified-loop-condition: 0 */
 // Run main loop !
 exports.start = async (app) => {
+  const debugLoop = require('debug')('worker-loop')
+
   debugLoop('start worker loop with config', config.worker)
   const db = app.get('db')
 
@@ -118,28 +116,33 @@ exports.stop = async () => {
 }
 
 // Filters to select eligible datasets or applications for processing
-const typesFilters = () => ({
-  application: { 'publications.status': { $in: ['waiting', 'deleted'] } },
-  dataset: {
-    isMetaOnly: { $ne: true },
-    $or: [
+const typesFilters = () => {
+  const moment = require('moment')
+  return {
+    application: { 'publications.status': { $in: ['waiting', 'deleted'] } },
+    dataset: {
+      isMetaOnly: { $ne: true },
+      $or: [
       // fetch next processing steps in usual sequence
-      { status: { $nin: ['finalized', 'error', 'draft'] } },
-      // fetch next processing steps in usual sequence, but of the draft version of the dataset
-      { 'draft.status': { $exists: true, $nin: ['finalized', 'error'] } },
-      // fetch datasets that are finalized, but need to update a publication
-      { status: 'finalized', 'publications.status': { $in: ['waiting', 'deleted'] } },
-      // fetch rest datasets with a TTL to process
-      { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } },
-      { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $exists: false } },
-      // fetch rest datasets with an automatic export to do
-      { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: moment().toISOString() } }
-    ]
+        { status: { $nin: ['finalized', 'error', 'draft'] } },
+        // fetch next processing steps in usual sequence, but of the draft version of the dataset
+        { 'draft.status': { $exists: true, $nin: ['finalized', 'error'] } },
+        // fetch datasets that are finalized, but need to update a publication
+        { status: 'finalized', 'publications.status': { $in: ['waiting', 'deleted'] } },
+        // fetch rest datasets with a TTL to process
+        { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } },
+        { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $exists: false } },
+        // fetch rest datasets with an automatic export to do
+        { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: new Date().toISOString() } }
+      ]
+    }
   }
-})
+}
 
 async function iter (app, resource, type) {
   const db = app.get('db')
+  const journals = require('../utils/journals')
+
   let taskKey
   let lastStderr = ''
   let endTask
@@ -147,6 +150,7 @@ async function iter (app, resource, type) {
   try {
     // if there is something to be done in the draft mode of the dataset, it is prioritary
     if (type === 'dataset' && resource.draft && resource.draft.status !== 'finalized' && resource.draft.status !== 'error') {
+      const datasetUtils = require('../utils/dataset')
       datasetUtils.mergeDraft(resource)
     }
 
@@ -162,6 +166,7 @@ async function iter (app, resource, type) {
       // Not much to do on applications.. Just catalog publication
       taskKey = 'applicationPublisher'
     } else if (type === 'dataset') {
+      const moment = require('moment')
       if (resource.status === 'imported') {
         // Load a dataset from a catalog
         taskKey = 'downloader'
@@ -209,7 +214,7 @@ async function iter (app, resource, type) {
       } else if (
         resource.status === 'finalized' &&
         resource.isRest && resource?.exports?.restToCSV?.active &&
-        resource.exports.restToCSV.nextExport < moment().toISOString()
+        resource.exports.restToCSV.nextExport < new Date().toISOString()
       ) {
         taskKey = 'restExporterCSV'
       }
@@ -223,6 +228,7 @@ async function iter (app, resource, type) {
     endTask = prometheus.workersTasks.startTimer({ task: taskKey })
     if (config.worker.spawnTask) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
+      const spawn = require('child-process-promise').spawn
       const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task', DATASET_DRAFT: '' + !!resource.draftReason } })
       spawnPromise.childProcess.stdout.on('data', data => {
         data = data.toString()
@@ -244,7 +250,12 @@ async function iter (app, resource, type) {
 
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
     if (task.eventsPrefix && newResource) {
-      await journals.log(app, resource.draftReason ? datasetUtils.mergeDraft({ ...newResource }) : newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
+      const datasetUtils = require('../utils/dataset')
+      if (resource.draftReason) {
+        await journals.log(app, datasetUtils.mergeDraft({ ...newResource }), { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
+      } else {
+        await journals.log(app, newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
+      }
     }
     hookResolution = newResource
   } catch (err) {

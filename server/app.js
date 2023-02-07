@@ -1,30 +1,17 @@
 const config = require('config')
 const express = require('express')
-const eventToPromise = require('event-to-promise')
-const originalUrl = require('original-url')
-const { format: formatUrl } = require('url')
-const cors = require('cors')
-const EventEmitter = require('events')
-const { createHttpTerminator } = require('http-terminator')
 const dbUtils = require('./utils/db')
 const esUtils = require('./utils/es')
 const wsUtils = require('./utils/ws')
-const limits = require('./utils/limits')
 const locksUtils = require('./utils/locks')
-const rateLimiting = require('./utils/rate-limiting')
-const datasetUtils = require('./utils/dataset')
-const i18n = require('./utils/i18n')
-const expectType = require('./utils/expect-type')
-const workers = require('./workers')
 const prometheus = require('./utils/prometheus')
-const session = require('@koumoul/sd-express')({
-  directoryUrl: config.directoryUrl,
-  privateDirectoryUrl: config.privateDirectoryUrl
-})
 const debugDomain = require('debug')('domain')
 
 // a global event emitter for testing
-global.events = new EventEmitter()
+if (process.env.NODE_ENV === 'test') {
+  const EventEmitter = require('events')
+  global.events = new EventEmitter()
+}
 
 const app = express()
 let server, wss, httpTerminator
@@ -36,6 +23,14 @@ app.use((req, res, next) => {
 })
 
 if (config.mode.includes('server')) {
+  const limits = require('./utils/limits')
+  const rateLimiting = require('./utils/rate-limiting')
+  const session = require('@koumoul/sd-express')({
+    directoryUrl: config.directoryUrl,
+    privateDirectoryUrl: config.privateDirectoryUrl
+  })
+  app.set('session', session)
+
   app.set('trust proxy', 1)
   app.set('json spaces', 2)
 
@@ -55,7 +50,7 @@ if (config.mode.includes('server')) {
     next()
   })
 
-  app.use(cors())
+  app.use(require('cors')())
   app.use((req, res, next) => {
     if (!req.app.get('api-ready')) res.status(503).send('Service indisponible pour cause de maintenance.')
     else next()
@@ -70,15 +65,17 @@ if (config.mode.includes('server')) {
     bodyParser(req, res, next)
   })
   app.use(require('cookie-parser')())
-  app.use(i18n.middleware)
+  app.use(require('./utils/i18n').middleware)
   app.use(session.auth)
 
   // TODO: we could make this better targetted but more verbose by adding it to all routes
-  app.use(expectType(['application/json', 'application/x-ndjson', 'multipart/form-data', 'text/csv', 'text/csv+gzip']))
+  app.use(require('./utils/expect-type')(['application/json', 'application/x-ndjson', 'multipart/form-data', 'text/csv', 'text/csv+gzip']))
 
   // set current baseUrl, i.e. the url of data-fair on the current user's domain
   let basePath = new URL(config.publicUrl).pathname
   if (!basePath.endsWith('/')) basePath += '/'
+  const originalUrl = require('original-url')
+  const { format: formatUrl } = require('url')
   app.use('/', (req, res, next) => {
     const u = originalUrl(req)
     const urlParts = { protocol: u.protocol, hostname: u.hostname, pathname: basePath.slice(0, -1) }
@@ -143,6 +140,7 @@ if (config.mode.includes('server')) {
 
   const WebSocket = require('ws')
   server = require('http').createServer(app)
+  const { createHttpTerminator } = require('http-terminator')
   httpTerminator = createHttpTerminator({ server })
   // cf https://connectreport.com/blog/tuning-http-keep-alive-in-node-js/
   // timeout is often 60s on the reverse proxy, better to a have a longer one here
@@ -156,7 +154,7 @@ if (config.mode.includes('server')) {
 exports.run = async () => {
   if (!config.listenWhenReady && config.mode.includes('server')) {
     server.listen(config.port)
-    await eventToPromise(server, 'listening')
+    await require('event-to-promise')(server, 'listening')
   }
 
   let db, client
@@ -176,13 +174,14 @@ exports.run = async () => {
   app.publish = await wsUtils.initPublisher(db)
 
   if (config.mode.includes('server')) {
+    const limits = require('./utils/limits')
     await Promise.all([
       require('./utils/capture').init(),
       require('./utils/cache').init(db),
       require('./routers/remote-services').init(db),
       require('./routers/base-applications').init(db),
       limits.init(db),
-      wsUtils.initServer(wss, db, session)
+      wsUtils.initServer(wss, db, app.get('session'))
     ])
     // At this stage the server is ready to respond to API requests
     app.set('api-ready', true)
@@ -191,8 +190,7 @@ exports.run = async () => {
       if (!req.app.get('ui-ready')) res.status(503).send('Service indisponible pour cause de maintenance.')
       else next()
     })
-    app.use(session.auth)
-    app.set('session', session)
+    app.use(app.get('session').auth)
 
     const nuxt = await require('./nuxt')()
     app.set('nuxt', nuxt.instance)
@@ -202,12 +200,12 @@ exports.run = async () => {
 
     if (config.listenWhenReady) {
       server.listen(config.port)
-      await eventToPromise(server, 'listening')
+      await require('event-to-promise')(server, 'listening')
     }
   }
 
   if (config.mode.includes('worker')) {
-    workers.start(app)
+    require('./workers').start(app)
   }
 
   await locksUtils.init(db)
@@ -217,9 +215,10 @@ exports.run = async () => {
   if (config.mode === 'task') {
     const resource = await app.get('db').collection(process.argv[3] + 's').findOne({ id: process.argv[4] })
     if (process.env.DATASET_DRAFT === 'true') {
+      const datasetUtils = require('./utils/dataset')
       datasetUtils.mergeDraft(resource)
     }
-    await workers.tasks[process.argv[2]].process(app, resource)
+    await require('./workers').tasks[process.argv[2]].process(app, resource)
   } else if (config.prometheus.active) {
     await prometheus.start(db)
   }
@@ -231,12 +230,12 @@ exports.stop = async () => {
   if (config.mode.includes('server')) {
     wss.close()
     wsUtils.stop(wss)
-    await eventToPromise(wss, 'close')
+    await require('event-to-promise')(wss, 'close')
     await httpTerminator.terminate()
   }
 
   if (config.mode.includes('worker')) {
-    await workers.stop()
+    await require('./workers').stop()
   }
 
   await locksUtils.stop(app.get('db'))

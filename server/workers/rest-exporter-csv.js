@@ -1,18 +1,18 @@
-const path = require('path')
-const util = require('util')
-const fs = require('fs-extra')
-const config = require('config')
-const tmp = require('tmp-promise')
-const CronJob = require('cron').CronJob
-const pump = util.promisify(require('pump'))
-const restUtils = require('../utils/rest-datasets')
-const outputs = require('../utils/outputs')
-const datasetUtils = require('../utils/dataset')
 const prometheus = require('../utils/prometheus')
 
-const dataDir = path.resolve(config.dataDir)
-
 exports.process = async function (app, dataset) {
+  const path = require('path')
+  const util = require('util')
+  const fs = require('fs-extra')
+  const config = require('config')
+  const tmp = require('tmp-promise')
+  const CronJob = require('cron').CronJob
+  const pump = util.promisify(require('pump'))
+  const restUtils = require('../utils/rest-datasets')
+  const outputs = require('../utils/outputs')
+  const datasetUtils = require('../utils/dataset')
+
+  const dataDir = path.resolve(config.dataDir)
   const debug = require('debug')(`worker:rest-exporter-csv:${dataset.id}`)
   const db = app.get('db')
   const date = new Date()

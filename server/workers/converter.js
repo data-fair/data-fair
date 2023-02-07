@@ -1,25 +1,5 @@
 // convert from tabular data to csv or geographical data to geojson
 const config = require('config')
-const path = require('path')
-const fs = require('fs-extra')
-const createError = require('http-errors')
-const ogr2ogr = require('ogr2ogr')
-const util = require('util')
-const pump = util.promisify(require('pump'))
-const csvStringify = require('csv-stringify')
-const tmp = require('tmp-promise')
-const dir = require('node-dir')
-const mime = require('mime-types')
-const pipeline = require('stream/promises').pipeline
-const zlib = require('node:zlib')
-const { displayBytes } = require('../utils/bytes')
-const datasetUtils = require('../utils/dataset')
-const icalendar = require('../utils/icalendar')
-const exec = require('../utils/exec')
-const xlsx = require('../utils/xlsx')
-const i18nUtils = require('../utils/i18n')
-
-const dataDir = path.resolve(config.dataDir)
 
 exports.eventsPrefix = 'convert'
 
@@ -54,10 +34,31 @@ exports.basicTypes = [
 ]
 
 async function decompress (mimetype, filePath, dirPath) {
+  const exec = require('../utils/exec')
   if (mimetype === 'application/zip') await exec('unzip', ['-o', '-q', filePath, '-d', dirPath])
 }
 
 exports.process = async function (app, dataset) {
+  const path = require('path')
+  const fs = require('fs-extra')
+  const createError = require('http-errors')
+  const ogr2ogr = require('ogr2ogr')
+  const util = require('util')
+  const pump = util.promisify(require('pump'))
+  const csvStringify = require('csv-stringify')
+  const tmp = require('tmp-promise')
+  const dir = require('node-dir')
+  const mime = require('mime-types')
+  const pipeline = require('stream/promises').pipeline
+  const zlib = require('node:zlib')
+  const { displayBytes } = require('../utils/bytes')
+  const datasetUtils = require('../utils/dataset')
+  const icalendar = require('../utils/icalendar')
+  const xlsx = require('../utils/xlsx')
+  const i18nUtils = require('../utils/i18n')
+
+  const dataDir = path.resolve(config.dataDir)
+
   const debug = require('debug')(`worker:converter:${dataset.id}`)
   const db = app.get('db')
   const originalFilePath = datasetUtils.originalFilePath(dataset)

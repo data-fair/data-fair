@@ -1,21 +1,22 @@
-// Index tabular datasets with elasticsearch using available information on dataset schema
-const util = require('util')
-const pump = util.promisify(require('pump'))
-const fs = require('fs-extra')
-const { Writable } = require('stream')
-const es = require('../utils/es')
-const datasetUtils = require('../utils/dataset')
-const restDatasetsUtils = require('../utils/rest-datasets')
-const journals = require('../utils/journals')
-const taskProgress = require('../utils/task-progress')
 const prometheus = require('../utils/prometheus')
+const journals = require('../utils/journals')
 
+// Index tabular datasets with elasticsearch using available information on dataset schema
 exports.eventsPrefix = 'index'
 
 exports.process = async function (app, dataset) {
   if (process.env.NODE_ENV === 'test' && dataset.id === 'trigger-test-error') {
     throw new Error('This is a test error')
   }
+
+  const util = require('util')
+  const pump = util.promisify(require('pump'))
+  const fs = require('fs-extra')
+  const { Writable } = require('stream')
+  const es = require('../utils/es')
+  const datasetUtils = require('../utils/dataset')
+  const restDatasetsUtils = require('../utils/rest-datasets')
+  const taskProgress = require('../utils/task-progress')
 
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
   const debugHeap = require('../utils/heap').debug(`worker:indexer:${dataset.id}`)

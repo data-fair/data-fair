@@ -1,16 +1,16 @@
-const datasetFileSample = require('../utils/dataset-file-sample')
-const chardet = require('chardet')
-const request = require('request')
-const fs = require('fs-extra')
-const util = require('util')
-const pump = util.promisify(require('pump'))
-const catalogs = require('../catalogs')
-const datasetUtils = require('../utils/dataset')
-const { basicTypes } = require('../workers/converter')
-
 exports.eventsPrefix = 'download'
 
 exports.process = async function (app, dataset) {
+  const datasetFileSample = require('../utils/dataset-file-sample')
+  const chardet = require('chardet')
+  const request = require('request')
+  const fs = require('fs-extra')
+  const util = require('util')
+  const pump = util.promisify(require('pump'))
+  const catalogs = require('../catalogs')
+  const datasetUtils = require('../utils/dataset')
+  const { basicTypes } = require('../workers/converter')
+
   const debug = require('debug')(`worker:downloader:${dataset.id}`)
 
   const db = app.get('db')
