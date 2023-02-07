@@ -434,7 +434,6 @@ exports.prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicU
   if (query.draft && res._attachment_url) res._attachment_url += '?draft=true'
 
   const imageField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
-  console.log('_id ?', res._id)
   if (query.thumbnail) {
     if (!imageField) throw createError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
     if (res[imageField.key]) {
