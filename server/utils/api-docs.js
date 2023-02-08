@@ -20,7 +20,7 @@ exports.operationsClasses = {
     read: ['readDescription', 'readApiDoc'],
     write: ['writeDescription'],
     admin: ['delete', 'getPermissions', 'setPermissions'],
-    use: ['readDatasets']
+    use: ['readDatasets', 'harvestDataset']
   }
 }
 
