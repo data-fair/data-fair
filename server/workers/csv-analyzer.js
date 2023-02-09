@@ -1,3 +1,5 @@
+const journals = require('../utils/journals')
+
 // Analyze dataset data, check validity and extract a few metadata for next workers
 exports.eventsPrefix = 'analyze'
 
@@ -62,6 +64,13 @@ exports.process = async function (app, dataset) {
     })
   if (attachments.length && !dataset.file.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
     throw new Error(`Vous avez chargé des pièces jointes, mais aucune colonne ne contient les chemins vers ces pièces jointes. Valeurs attendues : ${attachments.slice(0, 3).join(', ')}.`)
+  }
+  const emptyCols = dataset.file.schema.filter(p => p.type === 'empty')
+  if (emptyCols.length) {
+    await journals.log(app, dataset, {
+      type: 'error',
+      data: `le fichier contient une ou plusieurs colonnes vides qui seront ignorées : ${emptyCols.map(c => c['x-originalName' || c.key]).join(', ')}`
+    })
   }
   dataset.file.schema = dataset.file.schema.filter(p => p.type !== 'empty')
   datasetUtils.mergeFileSchema(dataset)
