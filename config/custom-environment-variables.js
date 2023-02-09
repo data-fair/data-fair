@@ -154,10 +154,6 @@ module.exports = {
     __name: 'LISTEN_WHEN_READY',
     __format: 'json'
   },
-  thumbor: {
-    url: 'THUMBOR_URL',
-    key: 'THUMBOR_KEY'
-  },
   applications: {
     __name: 'APPLICATIONS',
     __format: 'json'

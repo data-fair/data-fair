@@ -437,7 +437,7 @@ exports.prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicU
     if (res[imageField.key]) {
       let imageUrl = res[imageField.key]
       if (dataset.attachmentsAsImage) {
-        imageUrl = imageUrl.replace(`${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/`, '/attachments/')
+        imageUrl = imageUrl.replace(`${publicBaseUrl}/api/v1/datasets/${dataset.id}/attachments/`, '/attachments/')
       }
       const thumbnailId = Buffer.from(imageUrl).toString('hex')
       // TODO: generate a shorter url with _id when it is present and thumbnailId is very long ?

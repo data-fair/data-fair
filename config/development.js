@@ -16,10 +16,6 @@ module.exports = {
   notifyUrl: `http://${host}:5600/notify`,
   privateNotifyUrl: 'http://localhost:8088',
   notifyWSUrl: 'ws://localhost:8088',
-  thumbor: {
-    url: 'http://localhost:8000',
-    key: 'thumborkey'
-  },
   // subscriptionUrl: 'https://staging-koumoul.com/s/customers/embed/subscription',
   defaultLimits: {
     totalStorage: 10000000000,

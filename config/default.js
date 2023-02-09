@@ -166,10 +166,6 @@ module.exports = {
   },
   analytics: {}, // a "modules" definition for @koumoul/vue-multianalytics
   browserLogLevel: 'error',
-  thumbor: {
-    url: 'http://thumbor:8000',
-    key: 'thumborkey'
-  },
   nuxtDev: false,
   licenses: [{
     title: 'Licence Ouverte / Open Licence',
