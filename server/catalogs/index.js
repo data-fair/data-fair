@@ -95,6 +95,7 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
       title,
       owner: catalog.owner,
       permissions: [],
+      schema: [],
       remoteFile,
       createdBy: { id: catalog.owner.id, name: catalog.owner.name },
       createdAt: date,

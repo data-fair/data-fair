@@ -20,8 +20,7 @@ exports.process = async function (app, dataset) {
   const patch = {}
   patch.originalFile = {
     name: dataset.remoteFile.name,
-    mimetype: mime.lookup(dataset.remoteFile.name),
-    schema: []
+    mimetype: mime.lookup(dataset.remoteFile.name)
   }
 
   let catalogHttpParams = {}
