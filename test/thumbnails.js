@@ -35,9 +35,6 @@ describe('thumbnails', () => {
     assert.equal(res.headers['x-thumbnails-cache-status'], 'MISS')
     assert.equal(res.headers['cache-control'], 'no-cache, private')
     nockScope.done()
-
-    res = await ax.get('/api/v1/datasets/thumbnails1/lines', { params: { thumbnail: true, select: 'desc', sort: '-desc' }, headers: { host: 'test.com' } })
-    console.log(res.data)
   })
 
   it('should create thumbnails from attachments', async () => {
@@ -51,6 +48,8 @@ describe('thumbnails', () => {
     await workers.hook('finalizer/' + dataset.id)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true } })
     const thumbnail1 = res.data.results[0]._thumbnail
+    await assert.rejects(ax.get(res.data.results[0]._thumbnail), (err) => err.status === 400)
+    await assert.rejects(global.ax.anonymous.get(res.data.results[0]._thumbnail), (err) => err.status === 403)
     assert.ok(thumbnail1.startsWith('http://localhost:5600/data-fair/api/v1/datasets/attachments/thumbnail/'))
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: 'test.com' } })
     assert.equal(thumbnail1.replace('localhost:5600', 'test.com'), res.data.results[0]._thumbnail)

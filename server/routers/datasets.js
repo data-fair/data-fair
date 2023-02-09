@@ -847,6 +847,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         throw createError(400, JSON.stringify(validatePost.errors))
       }
       dataset = await initNew(db, req)
+      req.body.remoteFile.name = req.body.remoteFile.name || path.basename(new URL(req.body.remoteFile.url).pathname)
       dataset.title = dataset.title || titleFromFileName(req.body.remoteFile.name)
       permissions.initResourcePermissions(dataset, req.user)
       dataset.status = 'imported'
@@ -1649,7 +1650,7 @@ router.get('/:datasetId/thumbnail', readDataset(), permissions.middleware('readD
 }))
 router.get('/:datasetId/thumbnail/:thumbnailId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async (req, res, next) => {
   const url = Buffer.from(req.params.thumbnailId, 'hex').toString()
-  if (url.startsWith('/attachments')) {
+  if (req.dataset.attachmentsAsImage) {
     await getThumbnail(req, res, `${config.publicUrl}/api/v1/datasets/${req.dataset.id}${url}`, path.join(datasetUtils.attachmentsDir(req.dataset), url.replace('/attachments/', '')), req.dataset.thumbnails)
   } else {
     const imageField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
