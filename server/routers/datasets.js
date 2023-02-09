@@ -642,6 +642,12 @@ const initNew = async (db, req) => {
   return dataset
 }
 
+const titleFromFileName = (name) => {
+  let baseFileName = path.parse(name).name
+  if (baseFileName.endsWith('.gz')) baseFileName = path.parse(baseFileName).name
+  return path.parse(baseFileName).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')
+}
+
 const setFileInfo = async (db, file, attachmentsFile, dataset, draft, res) => {
   const patch = {
     dataUpdatedBy: dataset.updatedBy,
@@ -656,9 +662,7 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft, res) => {
   }
 
   if (!dataset.id) {
-    let baseFileName = path.parse(file.originalname).name
-    if (file.originalname.endsWith('.gz')) baseFileName = path.parse(baseFileName).name
-    const baseTitle = dataset.title || path.parse(baseFileName).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')
+    const baseTitle = dataset.title || titleFromFileName(file.originalname)
     const baseId = slug(baseTitle, { lower: true, strict: true })
     dataset.id = baseId
     dataset.title = baseTitle
@@ -835,6 +839,21 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         await db.collection('datasets').insertOne(dataset)
       } else {
         const baseId = slug(req.body.title, { lower: true, strict: true })
+        await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
+      }
+      await lockNewDataset(req, res, dataset)
+    } else if (req.body.remoteFile) {
+      if (!validatePost(req.body)) {
+        throw createError(400, JSON.stringify(validatePost.errors))
+      }
+      dataset = await initNew(db, req)
+      dataset.title = dataset.title || titleFromFileName(req.body.remoteFile.name)
+      permissions.initResourcePermissions(dataset, req.user)
+      dataset.status = 'imported'
+      if (dataset.id) {
+        await db.collection('datasets').insertOne(dataset)
+      } else {
+        const baseId = slug(dataset.title, { lower: true, strict: true })
         await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
       }
       await lockNewDataset(req, res, dataset)

@@ -3,7 +3,7 @@ const createError = require('http-errors')
 const { nanoid } = require('nanoid')
 const config = require('config')
 const path = require('path')
-const url = require('url')
+const mime = require('mime')
 const moment = require('moment')
 const slug = require('slugify')
 const journals = require('../utils/journals')
@@ -78,32 +78,47 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
     if (harvestedDataset) continue
 
     const date = moment().toISOString()
-    const fileName = path.basename(url.parse(resource.url).pathname)
+    const pathParsed = path.parse(new URL(resource.url).pathname)
+    const title = path.parse(resource.title).name
+    const remoteFile = {
+      url: resource.url,
+      catalog: catalog.id,
+      size: resource.size,
+      mimetype: resource.mime
+    }
+    if (pathParsed.ext && resource.mime === mime.lookup(pathParsed.base)) {
+      remoteFile.name = pathParsed.base
+    } else {
+      remoteFile.name = title + '.' + mime.extension(resource.mime)
+    }
     const newDataset = {
-      id: `${catalog.id}-${slug(dataset.title, { lower: true, strict: true })}-${slug(resource.title.split('.').shift(), { lower: true, strict: true })}`,
-      title: resource.title.split('.').shift(),
+      title,
       owner: catalog.owner,
       permissions: [],
-      remoteFile: {
-        name: fileName,
-        url: resource.url,
-        catalog: catalog.id,
-        size: resource.size,
-        mimetype: resource.mime
-      },
-      publications: [{
-        catalog: catalog.id,
-        status: 'waiting',
-        targetUrl: dataset.page,
-        addToDataset: { id: dataset.id, title: dataset.title }
-      }],
+      remoteFile,
       createdBy: { id: catalog.owner.id, name: catalog.owner.name },
       createdAt: date,
       updatedBy: { id: catalog.owner.id, name: catalog.owner.name },
       updatedAt: date,
       status: 'imported'
     }
-    await app.get('db').collection('datasets').insertOne(newDataset)
+
+    // try insertion until there is no conflict on id
+    const baseId = slug(dataset.title, { lower: true, strict: true })
+    newDataset.id = baseId
+    let insertOk = false
+    let i = 1
+    while (!insertOk) {
+      try {
+        await app.get('db').collection('datasets').insertOne(newDataset)
+        insertOk = true
+      } catch (err) {
+        if (err.code !== 11000) throw err
+        i += 1
+        newDataset.id = `${baseId}-${i}`
+      }
+    }
+
     await journals.log(app, newDataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + newDataset.id }, 'dataset')
     newDatasets.push(newDataset)
   }

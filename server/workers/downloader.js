@@ -1,12 +1,14 @@
+const mime = require('mime-types')
 exports.eventsPrefix = 'download'
 
 exports.process = async function (app, dataset) {
   const datasetFileSample = require('../utils/dataset-file-sample')
   const chardet = require('chardet')
-  const request = require('request')
+  const axios = require('../utils/axios')
   const fs = require('fs-extra')
   const util = require('util')
   const pump = util.promisify(require('pump'))
+  const limits = require('../utils/limits')
   const catalogs = require('../catalogs')
   const datasetUtils = require('../utils/dataset')
   const { basicTypes } = require('../workers/converter')
@@ -18,8 +20,7 @@ exports.process = async function (app, dataset) {
   const patch = {}
   patch.originalFile = {
     name: dataset.remoteFile.name,
-    mimetype: dataset.remoteFile.mimetype,
-    size: dataset.remoteFile.size
+    mimetype: mime.lookup(dataset.remoteFile.name)
   }
 
   let catalogHttpParams = {}
@@ -31,26 +32,31 @@ exports.process = async function (app, dataset) {
     debug(`Use HTTP params ${JSON.stringify(catalogHttpParams)}`)
   }
 
-  // Manage file size
-  const remaining = await datasetUtils.remainingStorage(app.get('db'), dataset.owner)
-  if (remaining.storage === 0) throw new Error('Vous avez atteint la limite de votre espace de stockage.')
-  if (remaining.indexed === 0) throw new Error('Vous avez atteint la limite de votre espace de données indexées.')
+  const size = dataset.remoteFile.size || 0
+  const remaining = await limits.remaining(db, dataset.owner)
+  if (remaining.storage !== -1 && remaining.storage < size) throw new Error('Vous avez atteint la limite de votre espace de stockage.')
+  if (remaining.indexed !== -1 && remaining.indexed < size) throw new Error('Vous avez atteint la limite de votre espace de données indexées.')
 
   const filePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
+  // creating empty file before streaming seems to fix some weird bugs with NFS
+  await fs.ensureFile(filePath)
+  const response = await axios.get(dataset.remoteFile.url, { responseType: 'stream', ...catalogHttpParams })
   await pump(
-    request({ ...catalogHttpParams, method: 'GET', url: dataset.remoteFile.url }),
+    response.data,
     fs.createWriteStream(filePath)
   )
   debug(`Successfully downloaded file ${filePath}`)
 
-  if (!basicTypes.includes(dataset.originalFile.mimetype)) {
+  patch.originalFile.size = (await fs.promises.stat(filePath)).size
+
+  if (!basicTypes.includes(patch.originalFile.mimetype)) {
     // we first need to convert the file in a textual format easy to index
     patch.status = 'uploaded'
   } else {
     // The format of the original file is already well suited to workers
     patch.status = 'loaded'
-    patch.file = dataset.originalFile
-    const fileSample = await datasetFileSample(dataset)
+    patch.file = patch.originalFile
+    const fileSample = await datasetFileSample({ ...dataset, ...patch })
     patch.file.encoding = chardet.detect(fileSample)
   }
 

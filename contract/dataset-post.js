@@ -2,7 +2,7 @@
 
 const dataset = require('./dataset')
 const datasetPatch = require('./dataset-patch')
-const postKeys = ['isVirtual', 'isRest', 'isMetaOnly', 'owner']
+const postKeys = ['isVirtual', 'isRest', 'isMetaOnly', 'owner', 'remoteFile']
 const body = {
   title: 'Dataset JSON body',
   type: 'object',
