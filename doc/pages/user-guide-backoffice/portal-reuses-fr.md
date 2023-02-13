@@ -1,7 +1,7 @@
 ---
 title: Réutilisations de vos données sur vos portails
 section: 11
-subsection : 3
+subsection : 4
 updated: 2023-01-05
 description : Administrer les réutilisations
 published: true

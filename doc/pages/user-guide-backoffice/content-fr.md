@@ -1,5 +1,5 @@
 ---
-title: Editer les pages de contenu de son portail
+title: Créez une page thèmatique
 section: 11
 subsection : 1
 updated: 2021-09-30
@@ -11,19 +11,18 @@ Les pages de contenu permettent de mettre en avant certaines données, d'écrire
 
 ## Création de la page de contenu
 
-La section **Portails** de Data Fair vous permet d'accéder à l'édition de vos portail. Vous pouvez ensuite accéder à l'édition des **pages de contenu** à l'aide du bouton **Editer les pages de contenu** en haut à droite.
+La section **Portails** de Data Fair vous permet d'accéder à l'édition de vos portails. Vous pouvez ensuite accéder à l'édition des **pages de contenu** à l'aide du bouton **Editer les pages de contenu** en haut à droite.
 
 ![Configurer votre portail](./images/user-guide-backoffice/page-contenu-1.jpg)
 
-Cliquez ensuite sur le bouton de **création d'une nouvelle page de contenu**.
+Cliquez ensuite sur le bouton de **création d'une nouvelle page**.
 
 Un menu s'affiche vous permettant de renseigner les paramètres de votre page:
 
-* Publiée ou/et Publique
+* Le titre de la page
+* Les thématiques : choix des [thématiques de votre portail](./user-guide-backoffice/licences-thematics)
 * Le modèle de la page vous permet de choisir une disposition de page prédéfinie.
 * La disposition dans le menu, en lien direct ou dans un sous-menu
-* Le titre de la page
-* Les thématiques permettent de choisir les différentes thématiques de votre portail abordées sur votre page
 
 ![Configurer votre portail](./images/user-guide-backoffice/page-contenu-2.jpg)  
 *Tous les paramètres de ce menu pourrons être modifié par la suite.*
@@ -31,7 +30,8 @@ Un menu s'affiche vous permettant de renseigner les paramètres de votre page:
 Sur notre image la page de contenu s'appelle **Foncier**, possède un modèle de page **thématique**, une disposition dans un sous-menu et un nom de bloc **Thématiques**.
 
 Le modèle de **page blanche** permet d'ajouter et de disposer ses éléments librement.  
-Le modèle de **page thématique** permet d'ajouter une première description de la page et une image en bannière.
+Le modèle de **page thématique** permet d'ajouter une première description de la page et une image en bannière.  
+Le modèle **d'actualités** permet de créer des [pages d'actualités](./user-guide-backoffice/news)
 
 ## Configuration de votre page thématique
 

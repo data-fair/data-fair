@@ -1,5 +1,5 @@
 ---
-title: Create content pages on your portal
+title: Create thematic pages on your portal
 section: 11
 subsection : 1
 updated: 2021-09-30
@@ -17,12 +17,13 @@ The **Portals** section of Data Fair allows you to access the configuration of y
 
 Then click on the **create a new content page** button.
 
-A menu is displayed allowing you to enter the parameters of your page:
-* Published or/and Public
-* The template allows you to choose a predefined page layout.
-* The position in the menu, in direct link or in a submenu
-* The page title
-* Thematics
+A menu is displayed allowing you to fill in the parameters of your page:
+
+
+* The title of the page
+* Themes: choose the [themes of your portal](./user-guide-backoffice/licences-thematics)
+* The page template allows you to choose a predefined page layout.
+* The layout in the menu, as a direct link or in a sub-menu
 
 ![Configurer votre portail](./images/user-guide-backoffice/page-contenu-2.jpg)  
 *Parameters of this menu can be modified later.*
@@ -31,7 +32,8 @@ A menu is displayed allowing you to enter the parameters of your page:
 On the image, the content page is called **Land**, has a **thematic** page template, a sub-menu layout and a **Thematic** as block name.
 
 The **blank page** template allows to add and arrange the elements freely.  
-The **thematic page** template allows to add description of the page and a banner.
+The **thematic page** template allows to add description of the page and a banner.  
+The **news** template allows you to create [news pages](./user-guide-backoffice/news)
 
 ## Configuration of your thematic page
 

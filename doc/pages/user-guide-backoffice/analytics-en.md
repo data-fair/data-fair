@@ -1,7 +1,7 @@
 ---
 title: Analytics setup
 section: 11
-subsection : 2
+subsection : 3
 updated: 2021-11-09
 description : Configure your analytics
 published: true
