@@ -25,7 +25,7 @@ app.use((req, res, next) => {
 if (config.mode.includes('server')) {
   const limits = require('./utils/limits')
   const rateLimiting = require('./utils/rate-limiting')
-  const session = require('@koumoul/sd-express')({
+  const session = require('@data-fair/sd-express')({
     directoryUrl: config.directoryUrl,
     privateDirectoryUrl: config.privateDirectoryUrl
   })
@@ -190,7 +190,6 @@ exports.run = async () => {
       if (!req.app.get('ui-ready')) res.status(503).send('Service indisponible pour cause de maintenance.')
       else next()
     })
-    app.use(app.get('session').auth)
 
     const nuxt = await require('./nuxt')()
     app.set('nuxt', nuxt.instance)
