@@ -526,6 +526,7 @@ exports.bulkLines = async (req, res, next) => {
     await pump(
       inputStream,
       stripBom(),
+      stripBom(), // double strip BOM because of badly formatted files from some clients
       ...parseStreams,
       transactionStream
     )

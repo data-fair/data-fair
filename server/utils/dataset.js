@@ -303,6 +303,7 @@ exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraft
     }))
   }
   streams.push(stripBom())
+  streams.push(stripBom()) // double strip BOM because of badly formatted files from some clients
   if (!full) streams.push(iconv.decodeStream(dataset.file.encoding))
   streams = streams.concat(exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw))
 
