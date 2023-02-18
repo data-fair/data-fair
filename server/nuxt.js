@@ -40,8 +40,9 @@ module.exports = async () => {
     return {
       trackEmbed,
       render: async (req, res, next) => {
-        // force buffering (necessary for caching) of this response in the reverse proxy
-        res.setHeader('X-Accel-Buffering', 'yes')
+        // no buffering in the reverse proxy
+        // disables caching that creates some unknown problem where sometimes some empty files are put in the cache
+        res.setHeader('X-Accel-Buffering', 'no')
 
         // re-apply the prefix that was removed by our reverse proxy in prod configs
         req.url = (nuxtConfig.router.base + req.url).replace('//', '/')
