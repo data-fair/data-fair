@@ -92,7 +92,7 @@
           </v-list-item>
         </v-list>
         <v-row class="px-2 pt-2">
-          <v-col class="py-0">
+          <v-col>
             <search-filters
               :filter-labels="{dataset: $t('dataset'), service: $t('service'), url: $t('baseApp'), owner: $t('owner')}"
               :filters="filters"

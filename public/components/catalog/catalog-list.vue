@@ -97,7 +97,7 @@
         </v-list>
         <template v-if="catalogs">
           <v-row class="px-2 pt-2">
-            <v-col class="py-0">
+            <v-col>
               <search-filters
                 :filter-labels="{owner: $t('owner')}"
                 :filters="filters"

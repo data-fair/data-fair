@@ -29,6 +29,7 @@ en:
 
 <script>
 import { mapState } from 'vuex'
+import owner from '../../../contract/owner'
 
 export default {
   props: ['value', 'restriction', 'currentOwner'],
@@ -50,17 +51,24 @@ export default {
     if (!this.user) return
 
     this.owners = [{ type: 'user', id: this.user.id, name: this.user.name, label: this.$t('yourself') }]
-    for (const o of this.user.organizations) {
-      this.owners.push({ type: 'organization', id: o.id, name: o.name, label: `${this.$t('org')} ${o.name}` })
-      const org = await this.$axios.$get(`${this.env.directoryUrl}/api/organizations/${o.id}`)
-      if (!org.departments) continue
-      for (const dep of org.departments) {
-        this.owners.push({ type: 'organization', id: o.id, name: o.name, department: dep.id, label: `${this.$t('org')} ${o.name} (${dep.name})` })
+    for (const o of this.user.organizations.filter(o => ['contrib', 'admin'].includes(o.role))) {
+      if (o.department && !this.owners.find(ow => ow.type === 'organization' && ow.id === o.id && ow.department === o.department)) {
+        this.owners.push({ type: 'organization', id: o.id, name: o.name, department: o.department, departmentName: o.departmentName || '', label: `${this.$t('org')} ${o.name} / ${o.departmentName || o.department}` })
+      }
+      if (!o.department) {
+        const org = await this.$axios.$get(`${this.env.directoryUrl}/api/organizations/${o.id}`)
+        this.owners.push({ type: 'organization', id: o.id, name: o.name, label: `${this.$t('org')} ${o.name}` })
+        if (!org.departments) continue
+        for (const dep of org.departments) {
+          if (!this.owners.find(ow => ow.type === 'organization' && ow.id === o.id && ow.department === dep.id)) {
+            this.owners.push({ type: 'organization', id: o.id, name: o.name, department: dep.id, departmentName: dep.name, label: `${this.$t('org')} ${o.name} / ${dep.name || dep.id}` })
+          }
+        }
       }
     }
 
     if (this.currentOwner) {
-      this.selectedOwner = this.owners.find(o => o.type === this.currentOwner.type && o.id === this.currentOwner.id && o.department === this.currentOwner.department)
+      this.selectedOwner = this.owners.find(o => o.type === this.currentOwner.type && o.id === this.currentOwner.id && (o.department || null) === (this.currentOwner.department || null))
     }
     this.selectedOwner = this.selectedOwner || this.owners[0]
   },

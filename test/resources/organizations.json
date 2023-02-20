@@ -29,6 +29,10 @@
       "id": "hlalonde3",
       "role": "admin",
       "department": "dep1"
+    }, {
+      "id": "hlalonde3",
+      "role": "admin",
+      "department": "dep2"
     }]
   },
   {
