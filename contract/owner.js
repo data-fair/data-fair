@@ -24,6 +24,10 @@ module.exports = {
     department: {
       type: 'string',
       description: 'If this is set and owner is an organization, this gives ownership to users of this organization that belong to this department'
+    },
+    departmentName: {
+      type: 'string',
+      description: 'The display name of the department'
     }
   }
 }
