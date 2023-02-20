@@ -29,7 +29,6 @@ en:
 
 <script>
 import { mapState } from 'vuex'
-import owner from '../../../contract/owner'
 
 export default {
   props: ['value', 'restriction', 'currentOwner'],
