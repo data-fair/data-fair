@@ -1,5 +1,6 @@
 <template>
   <v-stepper
+    v-if="ready"
     v-model="currentStep"
     class="elevation-0"
   >
@@ -62,9 +63,18 @@
 
         <v-stepper-step
           :step="(dataset && digitalDocumentField) ? 5 : 4"
-          :editable="!!publicationSite"
+          :complete="imported"
+          :editable="!!dataset"
         >
           {{ $t('stepAction') }}
+        </v-stepper-step>
+        <v-divider />
+
+        <v-stepper-step
+          :step="(dataset && digitalDocumentField) ? 6 : 5"
+          :editable="imported"
+        >
+          {{ $t('stepReview') }}
         </v-stepper-step>
       </template>
 
@@ -260,10 +270,10 @@
                 class="my-1"
                 rounded
                 height="28"
-                style="max-width: 500px;"
+                style="max-width: 600px;"
                 :color="$store.getters.readablePrimaryColor"
               >
-                {{ file && file.name }}
+                {{ file && file.name | truncate(40) }}
                 <template v-if="uploadProgress.total">
                   {{ Math.floor(uploadProgress.percent) }}% {{ $t('of') }} {{ uploadProgress.total | bytes($i18n.locale) }}
                 </template>
@@ -283,6 +293,14 @@
               :disabled="importing"
               @click.native="updateDataset"
             />
+          </template>
+        </v-stepper-content>
+
+        <v-stepper-content :step="(dataset && digitalDocumentField) ? 6 : 5">
+          <template v-if="imported && dataset">
+            <dataset-status :simple-mode="true" />
+            <dataset-schema />
+            <dataset-table />
           </template>
         </v-stepper-content>
       </template>
@@ -329,6 +347,7 @@ fr:
   stepDataset: Jeu de données
   stepAction: Confirmation
   stepAttachment: Pièces jointes
+  stepReview: Résultat
   continue: Continuer
   cancel: Annuler
   loadMainFile: Chargez un fichier de données principal.
@@ -341,7 +360,7 @@ fr:
     Ce fichier est volumineux. Pour économiser du temps et de l'énergie vous pouvez si vous le souhaitez le charger sous forme compressée.
     <br>Pour ce faire vous devez créer soit un fichier "{name}.gz" soit une archive .zip contenant uniquement ce fichier.
   similarDatasets: " | Ce jeu de données a le même nom de fichier : | Ces jeux de données ont le même nom de fichier :"
-  updateMsg: Après la soumission vous serez redirigé vers la page du jeu de données ou vous pourrez observer les changements et valider ou annuler l'opération.
+  updateMsg: Après la soumission vous pourrez observer les changements et vous serez averti si il y a un risque d'incompatibilité.
   update: Mettre à jour
   loaded: chargées
   editTable: Édition des lignes
@@ -360,6 +379,7 @@ en:
   stepDataset: Dataset
   stepAction: Confirmation
   stepAttachment: Attachments
+  stepReview: Review
   continue: Continue
   cancel: Cancel
   loadMainFile: Load the main data file
@@ -372,7 +392,7 @@ en:
     This file is large. To save and time and energy you can if you wish send a compressed version of it.
     <br>To do so you must create a file "{name}.gz" or a zip archive containing only this file.
   similarDatasets: " | This dataset has the same file name: | These datasets have the same file name:"
-  updateMsg: After submitting you will be redirected to the page of dataset where you will be able to review the changes and validate or cancel the operation.
+  updateMsg: After submitting you will be be able to review the changes and you will be warned if there is an incompatibility.
   update: Update
   loaded: loaded
   editTable: Edit lines
@@ -385,13 +405,14 @@ import eventBus from '~/event-bus'
 export default {
   middleware: ['auth-required'],
   data: () => ({
+    ready: false,
     currentStep: 1,
     file: null,
-    publicationSite: null,
     similarDatasets: null,
     attachment: null,
     uploadProgress: { rate: 0 },
     importing: false,
+    imported: false,
     datasetTypes: ['file', 'rest'],
     datasetTypeIcons: {
       file: 'mdi-file-upload',
@@ -416,19 +437,29 @@ export default {
       }
     }
   },
-  created () {
+  async created () {
     this.$store.dispatch('dataset/clear')
     this.$store.dispatch('breadcrumbs', [{ text: this.$t('home'), to: '/' }, { text: this.$t('updateDataset') }])
+    if (this.$route.query.updated) {
+      this.datasetType = 'file'
+      await this.$store.dispatch('dataset/setId', { datasetId: this.$route.query.updated, draftMode: true })
+      this.$store.dispatch('dataset/subscribe')
+      this.imported = true
+      this.currentStep = (this.dataset && this.digitalDocumentField) ? 6 : 5
+    }
+    this.ready = true
   },
   methods: {
     async toggleDataset (dataset, nextStep) {
       if (dataset) {
-        await this.$store.dispatch('dataset/setId', { datasetId: dataset.id })
+        await this.$store.dispatch('dataset/setId', { datasetId: dataset.id, draftMode: true })
         this.$store.dispatch('dataset/subscribe')
         this.currentStep = nextStep
       } else {
         this.$store.dispatch('dataset/clear')
       }
+      this.importing = false
+      this.imported = false
     },
     async updateDataset () {
       this.cancelSource = this.$axios.CancelToken.source()
@@ -453,9 +484,10 @@ export default {
       this.importing = true
       try {
         if (this.file.size > 100000) options.params.draft = 'true'
-        const dataset = await this.$axios.$post('api/v1/datasets/' + this.dataset.id, formData, options)
-        if (dataset.error) throw new Error(dataset.error)
-        this.$router.push({ path: `/dataset/${dataset.id}` })
+        await this.$axios.$post('api/v1/datasets/' + this.dataset.id, formData, options)
+        this.imported = true
+        this.currentStep += 1
+        this.$router.push({ query: { updated: this.dataset.id } })
       } catch (error) {
         const status = error.response && error.response.status
         if (status === 413) {

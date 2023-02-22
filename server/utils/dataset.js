@@ -941,6 +941,7 @@ exports.validateDraft = async (app, dataset, user, req) => {
     }
   }
   await fs.ensureDir(exports.dir(patchedDataset))
+  await fs.remove(exports.originalFilePath(patchedDataset))
   await fs.move(exports.originalFilePath(dataset), exports.originalFilePath(patchedDataset))
   if (await fs.pathExists(exports.attachmentsDir(dataset))) {
     await fs.remove(exports.attachmentsDir(patchedDataset))

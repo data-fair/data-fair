@@ -863,7 +863,7 @@ export default {
       isMetaOnly: true,
       title: ''
     },
-    filenameTitle: false,
+    filenameTitle: true,
     fileParamsForm: false,
     restParamsForm: false,
     virtualParamsForm: false,

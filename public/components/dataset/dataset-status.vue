@@ -3,9 +3,9 @@
     fluid
     class="pa-0"
   >
-    <v-row>
+    <v-row class="mx-0">
       <v-col class="pa-0">
-        <template v-if="(dataset.isVirtual || dataset.isRest) && journal">
+        <template v-if="(dataset.isVirtual || dataset.isRest || simpleMode) && journal">
           <v-list-item
             v-if="journal[0] && dataset.status !== 0"
             :class="`pa-2 event-${journal[0].type}`"
@@ -87,7 +87,7 @@
     </v-alert>
     <v-row
       v-if="dataset.draftReason"
-      class="px-2"
+      class="mx-0 px-2"
     >
       <v-alert
         type="info"
@@ -204,6 +204,9 @@ const events = require('~/../shared/events.json').dataset
 const { mapState, mapGetters, mapActions } = require('vuex')
 
 export default {
+  props: {
+    simpleMode: { type: Boolean, default: false }
+  },
   data () {
     return {
       events,
