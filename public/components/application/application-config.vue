@@ -195,9 +195,12 @@ export default {
       return Math.max(300, Math.min(this.height - 100, 450))
     },
     vjsfOptions () {
+      const owner = this.application.owner
+      let datasetFilter = `owner=${owner.type}:${owner.id}`
+      if (owner.department) datasetFilter += ':' + owner.department
       return {
         disableAll: !this.can('writeConfig'),
-        context: { owner: this.application.owner },
+        context: { datasetFilter, owner },
         locale: 'fr',
         rootDisplay: 'expansion-panels',
         // rootDisplay: 'tabs',
@@ -226,7 +229,6 @@ export default {
     await this.fetchConfigs()
     await this.fetchSchema()
     this.postMessageHandler = msg => {
-      console.log('received message from iframe', msg.data)
       if (msg.data.type === 'set-config') {
         this.editConfig = dotProp.set({ ...this.editConfig }, msg.data.content.field, msg.data.content.value)
         this.saveDraft()
@@ -263,6 +265,18 @@ export default {
       } else {
         if (this.roDataset) {
           datasetsProp.readOnly = true
+        }
+
+        const fixFromUrl = (fromUrl) => {
+          return fromUrl.replace('owner={context.owner.type}:{context.owner.id}', '{context.datasetFilter}')
+        }
+        // manage retro-compatibility of use of "context.owner" to "context.datasetsFilter"
+        if (datasetsProp['x-fromUrl']) datasetsProp['x-fromUrl'] = fixFromUrl(datasetsProp['x-fromUrl'])
+        if (datasetsProp.items['x-fromUrl']) datasetsProp.items['x-fromUrl'] = fixFromUrl(datasetsProp.items['x-fromUrl'])
+        if (Array.isArray(datasetsProp.items)) {
+          for (const item of datasetsProp.items) {
+            if (item['x-fromUrl']) item['x-fromUrl'] = fixFromUrl(item['x-fromUrl'])
+          }
         }
       }
     },
