@@ -97,7 +97,7 @@ const matchPermission = (owner, permission, user) => {
   if (permission.type === 'organization' && user.activeAccount.type === 'organization' && permission.id === user.activeAccount.id) {
     // department does not match
     if (user.activeAccount.department && permission.department && permission.department !== '*' && permission.department !== user.activeAccount.department) return false
-    if (!permission.roles) return true
+    if (!permission.roles || !permission.roles.length) return true
     if (user.activeAccount.role === config.adminRole) return true
     if (permission.roles.includes(user.activeAccount.role)) return true
   }
