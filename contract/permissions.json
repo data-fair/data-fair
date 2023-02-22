@@ -33,6 +33,10 @@
         "type": "string",
         "description": "Identifier of the department or \"*\" for any department (same as empty) or \"-\" for no department"
       },
+      "departmentName": {
+        "type": "string",
+        "description": "Name of the department"
+      },
       "roles": {
         "type": "array",
         "items": {
