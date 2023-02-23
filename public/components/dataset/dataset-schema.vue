@@ -266,7 +266,7 @@ export default {
     }
   },
   methods: {
-    ...mapActions('dataset', ['patchAndCommit', 'fetchRemoteServices']),
+    ...mapActions('dataset', ['patchAndCommit']),
     initSchema () {
       const originalSchema = JSON.stringify(this.dataset && this.dataset.schema)
       if (this.originalSchema === originalSchema) return
@@ -275,7 +275,6 @@ export default {
       this.dataset.primaryKey = this.dataset.primaryKey || []
       this.primaryKey = this.dataset.primaryKey.filter(k => !!this.schema.find(p => p.key === k))
       this.dataset.extensions = this.dataset.extensions || []
-      this.fetchRemoteServices()
     },
     resetSchema () {
       this.schema = JSON.parse(this.originalSchema)
