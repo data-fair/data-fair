@@ -370,7 +370,7 @@ fr:
   update: Mettre à jour
   loaded: chargées
   editTable: Édition des lignes
-  datasetsCount: "vous ne pouvez mettre à jour aucun jeu de données | vous pouvez mettre à jour 1 jeu de données | vous pouvez mettre à jour {count} jeux de données"
+  datasetsCount: "Vous ne pouvez mettre à jour aucun jeu de données | Vous pouvez mettre à jour 1 jeu de données | Vous pouvez mettre à jour {count} jeux de données"
 en:
   updateDataset: Update a dataset
   datasetType: Dataset type
@@ -403,7 +403,7 @@ en:
   update: Update
   loaded: loaded
   editTable: Edit lines
-  datasetsCount: "you can't update any dataset | you can update 1 dataset | you can update {count} datasets"
+  datasetsCount: "You can't update any dataset | You can update 1 dataset | You can update {count} datasets"
 </i18n>
 
 <script>
@@ -484,6 +484,9 @@ export default {
         await this.$store.dispatch('dataset/setId', { datasetId: dataset.id, draftMode: true })
         this.$store.dispatch('dataset/subscribe')
         this.currentStep = nextStep
+        if (this.datasetType === 'rest') {
+          this.$router.push({ query: { ...this.$route.query, updated: this.dataset.id } })
+        }
       } else {
         this.$store.dispatch('dataset/clear')
       }
