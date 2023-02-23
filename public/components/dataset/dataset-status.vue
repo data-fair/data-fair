@@ -11,7 +11,7 @@
             :class="`pa-2 event-${journal[0].type}`"
           >
             <v-list-item-avatar
-              v-if="['finalize-end', 'publication', 'error'].includes(journal[0].type)"
+              v-if="['finalize-end', 'publication', 'error', 'draft-cancelled'].includes(journal[0].type)"
               class="ml-0 my-0"
             >
               <v-icon :color="events[journal[0].type].color || 'primary'">
