@@ -17,7 +17,7 @@
           <v-row class="px-3 ma-0">
             <dataset-nb-results :total="data.total" />
             <v-btn
-              v-if="dataset.isRest && can('writeData')"
+              v-if="dataset.isRest && can('createLine')"
               color="primary"
               fab
               x-small
@@ -29,7 +29,7 @@
               <v-icon>mdi-plus</v-icon>
             </v-btn>
             <dataset-rest-upload-actions
-              v-if="dataset.isRest && can('writeData')"
+              v-if="dataset.isRest && can('bulkLines')"
               :dataset="dataset"
             />
           </v-row>
@@ -148,6 +148,7 @@
               >
                 <template v-if="!item._tmpState">
                   <v-btn
+                    v-if="can('deleteLine')"
                     icon
                     color="warning"
                     :title="$t('deleteLine')"
@@ -156,6 +157,7 @@
                     <v-icon>mdi-delete</v-icon>
                   </v-btn>
                   <v-btn
+                    v-if="can('updateLine')"
                     icon
                     color="primary"
                     :title="$t('editLine')"
@@ -164,7 +166,7 @@
                     <v-icon>mdi-pencil</v-icon>
                   </v-btn>
                   <v-btn
-                    v-if="dataset.rest && dataset.rest.history"
+                    v-if="dataset.rest && dataset.rest.history && can('readLineRevisions')"
                     icon
                     color="primary"
                     :title="$t('showRevisions')"
@@ -419,7 +421,7 @@ export default {
       if (this.imageField) {
         fieldsHeaders.unshift({ text: '', value: '_thumbnail' })
       }
-      if (this.dataset.isRest && this.can('writeData')) {
+      if (this.dataset.isRest && (this.can('updateLine') || this.can('deleteLine') || this.can('readLineRevisions'))) {
         fieldsHeaders.unshift({ text: '', value: '_actions' })
       }
       return fieldsHeaders
