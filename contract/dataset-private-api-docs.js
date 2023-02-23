@@ -193,6 +193,23 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     }
   }
 
+  if (dataset.file) {
+    api.paths['/draft'] = {
+      post: {
+        summary: 'Valider le brouillon',
+        operationId: 'validateDraft',
+        'x-permissionClass': 'write',
+        tags: ['Données']
+      },
+      delete: {
+        summary: 'Annuler le brouillon',
+        operationId: 'cancelDraft',
+        'x-permissionClass': 'write',
+        tags: ['Données']
+      }
+    }
+  }
+
   if (dataset.isRest) {
     const readLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, true, false)
     const writeLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, false, true)

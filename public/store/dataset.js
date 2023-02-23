@@ -305,7 +305,6 @@ export default () => ({
       if (activeAccount && activeAccount.type === state.dataset.owner.type && activeAccount.id === state.dataset.owner.id) {
         params.privateAccess = `${state.dataset.owner.type}:${state.dataset.owner.id}`
       }
-      console.log()
       const data = await this.$axios.$get('api/v1/remote-services', { params })
       remoteServices = data.results
       commit('setAny', { remoteServices })
