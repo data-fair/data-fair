@@ -68,6 +68,7 @@ export default {
       const owner = this.owner || this.activeAccount
       let ownerFilter = `${owner.type}:${owner.id}`
       if (owner.department) ownerFilter += `:${owner.department}`
+      // WARNING: order is important here, extraParams can overwrite the owner filter
       const res = await this.$axios.$get('api/v1/datasets', {
         params: {
           q: this.search,
