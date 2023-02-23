@@ -6,6 +6,12 @@
 </template>
 
 <script>
+import 'iframe-resizer/js/iframeResizer.contentWindow'
+
+global.iFrameResizer = {
+  heightCalculationMethod: 'taggedElement'
+}
+
 export default {
   layout: 'embed',
   middleware: ['auth-required']
