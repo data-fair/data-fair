@@ -167,7 +167,17 @@ exports.filter = function (user, resourceType) {
 
 exports.filterCan = function (user, resourceType, operation = 'list') {
   const ignoreDepartment = resourceType === 'catalogs'
-  const operationFilter = [{ operations: operation }, { classes: operation }]
+
+  const operationFilter = []
+  for (const op of operation.split(',')) {
+    const operationClass = apiDocsUtil.classByOperation[resourceType][op]
+    if (operationClass) {
+      operationFilter.push({ operations: operation })
+      operationFilter.push({ classes: operationClass })
+    } else if (apiDocsUtil.operationsClasses[resourceType][operation]) {
+      operationFilter.push({ classes: op })
+    }
+  }
   const or = []
 
   if (user) {

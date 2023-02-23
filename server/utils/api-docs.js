@@ -38,3 +38,13 @@ exports.operations = (apiDoc) => {
     title: apiDoc.paths[path][method].summary
   }))))) || []
 }
+
+exports.classByOperation = {}
+for (const resourceType of Object.keys(exports.operationsClasses)) {
+  exports.classByOperation[resourceType] = {}
+  for (const classe of Object.keys(exports.operationsClasses[resourceType])) {
+    for (const operation of exports.operationsClasses[resourceType][classe]) {
+      exports.classByOperation[resourceType][operation] = classe
+    }
+  }
+}
