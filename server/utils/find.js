@@ -73,6 +73,10 @@ exports.query = (req, fieldsMap, globalMode, extraFilters = []) => {
 
     query.$and.push({ $or: permissions.filter(req.user, req.resourceType) })
 
+    if (req.query.can) {
+      query.$and.push({ $or: permissions.filterCan(req.user, req.resourceType, req.query.can) })
+    }
+
     if (visibility.filters(req.query)) {
       query.$and.push({ $or: visibility.filters(req.query) })
     }

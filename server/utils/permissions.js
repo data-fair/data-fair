@@ -162,9 +162,13 @@ exports.isPublic = function (resourceType, resource) {
 // Manage filters for datasets, applications and remote services
 // this filter ensures that nobody can list something they are not permitted to list
 exports.filter = function (user, resourceType) {
+  return [visibilityUtils.publicFilter].concat(exports.filterCan(user, resourceType, 'list'))
+}
+
+exports.filterCan = function (user, resourceType, operation = 'list') {
   const ignoreDepartment = resourceType === 'catalogs'
-  const operationFilter = [{ operations: 'list' }, { classes: 'list' }]
-  const or = [visibilityUtils.publicFilter]
+  const operationFilter = [{ operations: operation }, { classes: operation }]
+  const or = []
 
   if (user) {
     or.push({ permissions: { $elemMatch: { $or: operationFilter, type: 'user', id: '*' } } })

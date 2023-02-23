@@ -8,8 +8,8 @@ describe('permissions', () => {
     await global.ax.dmeadus.put('/api/v1/datasets/' + datasetId + '/permissions', [
       { type: 'user', id: 'ngernier4', operations: ['readDescription', 'list'] },
       { type: 'user', id: 'ddecruce5', classes: ['read'] },
-      { type: 'user', email: 'alone@no.org', classes: ['read'] },
-      { type: 'user', id: 'bhazeldean7', classes: ['read'] }
+      { type: 'user', email: 'alone@no.org', classes: ['list', 'read', 'write'] },
+      { type: 'user', id: 'bhazeldean7', classes: ['list', 'read'] }
     ])
 
     // Another one that can be read by all
@@ -41,10 +41,20 @@ describe('permissions', () => {
     // User has permission given using only his email
     res = await global.ax.alone.get('/api/v1/datasets/' + datasetId)
     assert.equal(res.status, 200)
+    res = await global.ax.alone.get('/api/v1/datasets?can=read')
+    assert.equal(res.data.count, 1)
+    res = await global.ax.alone.get('/api/v1/datasets?can=write')
+    assert.equal(res.data.count, 1)
+    res = await global.ax.alone.get('/api/v1/datasets?can=admin')
+    assert.equal(res.data.count, 0)
 
     // Member has individual permission
     res = await global.ax.bhazeldean7.get('/api/v1/datasets/' + datasetId)
     assert.equal(res.status, 200)
+    res = await global.ax.bhazeldean7.get('/api/v1/datasets?can=read')
+    assert.equal(res.data.count, 1)
+    res = await global.ax.bhazeldean7.get('/api/v1/datasets?can=write')
+    assert.equal(res.data.count, 0)
 
     // Read with public and private filters
     res = await global.ax.anonymous.get('/api/v1/datasets')
