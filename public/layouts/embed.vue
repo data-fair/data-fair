@@ -1,6 +1,5 @@
 <template>
   <v-app class="embed">
-    <layout-dynamic-style />
     <v-main>
       <nuxt />
       <layout-notifications />

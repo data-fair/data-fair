@@ -60,6 +60,9 @@ export default {
     },
     owner () {
       this.searchDatasets()
+    },
+    extraParams () {
+      this.searchDatasets()
     }
   },
   methods: {

@@ -2,6 +2,7 @@
   <workflow-update-dataset
     data-iframe-height
     :dataset-params="{publicationSites: $route.query.publicationSite, owner: $route.query.owner}"
+    style="min-height:600px;"
   />
 </template>
 

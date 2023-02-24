@@ -74,6 +74,13 @@ module.exports = {
       iframe: `http://${host}:5600/data-fair/_dev/extra`,
       basePath: '/data-fair',
       icon: 'mdi-link'
+    },
+    {
+      id: 'update-dataset',
+      title: { fr: 'Update dataset' },
+      iframe: `http://${host}:5600/data-fair/embed/workflow/update-dataset`,
+      basePath: '/data-fair',
+      icon: 'mdi-link'
     }
   ],
   extraAdminNavigationItems: [

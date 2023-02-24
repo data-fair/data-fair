@@ -461,6 +461,11 @@ export default {
       if (this.datasetType === 'file' && this.currentStep === 3) {
         this.similarDatasets = (await this.$axios.$get('api/v1/datasets', { params: { filename: this.file.name, select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions,-links,-owner', ...this.fileDatasetsFilter } })).results
       }
+    },
+    '$route.query.updated' () {
+      console.log('UPDATED CHANGED', this.$route.query.updated)
+      // updated from parent window
+      if (this.dataset && !this.$route.query.updated) window.location.reload()
     }
   },
   async created () {
@@ -470,11 +475,16 @@ export default {
     this.datasetsCount.file = (await this.$axios.$get('api/v1/datasets', { params: { size: 0, ...this.fileDatasetsFilter } })).count
     this.datasetsCount.rest = (await this.$axios.$get('api/v1/datasets', { params: { size: 0, ...this.restDatasetsFilter } })).count
     if (this.$route.query.updated) {
-      this.datasetType = 'file'
       await this.$store.dispatch('dataset/setId', { datasetId: this.$route.query.updated, draftMode: true })
       this.$store.dispatch('dataset/subscribe')
       this.imported = true
-      this.currentStep = (this.dataset && this.digitalDocumentField) ? 6 : 5
+      if (this.dataset.isRest) {
+        this.datasetType = 'rest'
+        this.currentStep = 3
+      } else {
+        this.datasetType = 'file'
+        this.currentStep = (this.dataset && this.digitalDocumentField) ? 6 : 5
+      }
     }
     this.ready = true
   },
@@ -489,6 +499,11 @@ export default {
         }
       } else {
         this.$store.dispatch('dataset/clear')
+        if (this.$route.query.updated) {
+          const query = { ...this.$route.query }
+          delete query.updated
+          this.$router.push({ query })
+        }
       }
       this.importing = false
       this.imported = false
