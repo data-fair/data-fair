@@ -74,7 +74,7 @@ services:
       - SECRET_NOTIFICATIONS=${SECRET}
 
   simple-directory:
-    image: ghcr.io/data-fair/simple-directory:4
+    image: ghcr.io/data-fair/simple-directory:6
     restart: ${RESTART}
     volumes:
       - simple-directory-security:/webapp/security
