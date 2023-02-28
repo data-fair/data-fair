@@ -58,7 +58,7 @@ exports.initServer = async (wss, db, session) => {
               let user = req.user
               if (message.apiKey) user = await readApiKey(db, message.apiKey, type, message.account)
               if (!permissions.can(type, resource, `realtime-${subject}`, user)) {
-                return ws.send(JSON.stringify({ type: 'error', status: 403, data: 'Permission manquante.' }))
+                return ws.send(JSON.stringify({ type: 'error', status: 403, data: 'Permission manquante.', channel: message.channel }))
               }
             }
 
