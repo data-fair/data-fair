@@ -4,7 +4,7 @@ section: 6
 subsection : 7
 updated: 2022-06-30
 description : Visualiser différentes données sur une carte
-published: false
+published: true
 application : https://koumoul.com/apps/atelier-carto/1.0/
 ---
 
@@ -62,6 +62,9 @@ Single color can be set in configuration.
 When working with colors based on values ​​within a range, you have three palette type options: **Gradient Between Different Colors**, **Gradient Same Color Tone**, or **Specific Colors**.  
 The **Field containing values** allows you to define the numeric column represented by the colors.  
 You can then define intervals **of the same size**, by **quantiles** or in **manual adjustment**.
+
+![Calques](./images/user-guide-backoffice/calques.jpg)  
+*Each frame represents a layer*
 
 ### 2.Other options
 

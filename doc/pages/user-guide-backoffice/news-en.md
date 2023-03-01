@@ -56,8 +56,8 @@ Once you have made your first news, you can configure your portal so that the li
 
 To display the news button on the navigation bar, choose **infinite scroll list** in the news section of your portal configuration:   
 
-![Configurer votre portail](./images/user-guide-backoffice/news-3.jpg)  
+![Configurer votre portail](./images/user-guide-backoffice/news-4.jpg)  
 
 By clicking on the button in the navigation bar, visitors of your portal will be presented with a list of news items sorted from the most recent to the oldest:  
 
-![Configurer votre portail](./images/user-guide-backoffice/news-4.jpg)
+![Configurer votre portail](./images/user-guide-backoffice/news-5.jpg)

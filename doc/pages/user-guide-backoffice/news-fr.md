@@ -9,7 +9,7 @@ published: true
 
 Les pages d'actualités permettent de communiquer à vos visiteurs les dernières nouvelles que vous souhaitez mettre en avant concernant le domaine de votre portail.
 
-## Création d'une page d'actualité
+## Création de la page de contenu
 
 La section **Portails** de Data Fair vous permet d'accéder à l'édition de vos portails. Vous pouvez ensuite accéder à l'édition des **pages de contenu** à l'aide du bouton **Editer les pages de contenu** en haut à droite.
 
@@ -56,8 +56,8 @@ Une fois que vous avez réalisé votre première news, vous pouvez configurer vo
 
 Pour afficher le bouton d'Actualité sur la barre de navigation, choisissez **liste avec scroll infini** dans la section actualité de la configuration de votre portail :  
 
-![Configurer votre portail](./images/user-guide-backoffice/news-3.jpg)  
+![Configurer votre portail](./images/user-guide-backoffice/news-4.jpg)  
 
 En cliquant sur le bouton de la barre de navigation, les visiteurs de votre portail auront ainsi une liste d'actualités triées de la plus récente à la plus ancienne :  
 
-![Configurer votre portail](./images/user-guide-backoffice/news-4.jpg)
+![Configurer votre portail](./images/user-guide-backoffice/news-5.jpg)

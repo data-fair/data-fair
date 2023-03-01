@@ -4,7 +4,7 @@ section: 6
 subsection : 7
 updated: 2022-06-30
 description : Visualiser différentes données sur une carte
-published: false
+published: true
 application : https://koumoul.com/apps/atelier-carto/1.0/
 ---
 
@@ -61,6 +61,9 @@ La couleur unique peut être définie dans la configuration.
 Lorsque vous utilisez les couleurs en fonction de valeurs dans un intervalle, trois options de types de palettes s'offrent à vous : **Dégradé entre des couleurs différentes**, **Dégradé même ton de couleurs** ou **Couleurs spécifiques**.  
 Le **Champ contenant les valeurs** vous permet de définir la colonne numérique représentée par les couleurs.  
 Vous alors pouvez définir des intervalles **de même taille**, par **quantiles** ou en **réglage manuel**.  
+
+![Calques](./images/user-guide-backoffice/calques.jpg)  
+*Chaque cadre represente un calque*
 
 ### 2.Autres options
 
