@@ -120,7 +120,7 @@
               <p v-if="!!apiKey.clearKey">
                 {{ $t('secretKey') }} : {{ apiKey.clearKey }}
               </p>
-              <p>{{ $t('scope') }} }} : {{ apiKey.scopes.map(scope => scopes.find(s => s.value === scope).text).join(' - ') }}</p>
+              <p>{{ $t('scope') }} : {{ apiKey.scopes.map(scope => scopes.find(s => s.value === scope).text).join(' - ') }}</p>
             </v-card-text>
             <v-card-actions>
               <v-spacer />

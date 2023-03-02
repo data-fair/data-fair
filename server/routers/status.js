@@ -16,7 +16,7 @@ async function esStatus (req) {
 }
 
 async function jwksStatus (req) {
-  const jwksRes = (await axios.get(config.directoryUrl + '/.well-known/jwks.json')).data
+  const jwksRes = (await axios.get((config.privateDirectoryUrl || config.directoryUrl) + '/.well-known/jwks.json')).data
   if (!jwksRes || !jwksRes.keys || !jwksRes.keys.length) throw new Error('Incomplete JWKS response')
 }
 

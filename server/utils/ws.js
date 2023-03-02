@@ -41,9 +41,10 @@ exports.initServer = async (wss, db, session) => {
 
       // Manage subscribe/unsubscribe demands
       ws.on('message', async str => {
+        let message
         try {
           if (stopped) return
-          const message = JSON.parse(str)
+          message = JSON.parse(str)
           if (!message.type || ['subscribe', 'unsubscribe'].indexOf(message.type) === -1) {
             return ws.send(JSON.stringify({ type: 'error', data: 'type should be "subscribe" or "unsubscribe"' }))
           }
@@ -72,7 +73,9 @@ exports.initServer = async (wss, db, session) => {
             return ws.send(JSON.stringify({ type: 'unsubscribe-confirm', channel: message.channel }))
           }
         } catch (err) {
-          return ws.send(JSON.stringify({ type: 'error', data: err.message }))
+          const errorMessage = { type: 'error', status: 500, data: err.message }
+          if (message && message.channel) errorMessage.channel = message.channel
+          return ws.send(JSON.stringify())
         }
       })
 
