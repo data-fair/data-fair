@@ -365,6 +365,9 @@ const sendSchema = (req, res, schema) => {
   if (req.query.calculated === 'false') {
     schema = schema.filter(field => !field['x-calculated'])
   }
+  if (req.query.separator === 'false') {
+    schema = schema.filter(field => !field.separator)
+  }
   if (req.query.capability) {
     schema = schema.filter(field => {
       if (field['x-capabilities'] && field['x-capabilities'][req.query.capability] === false) return false
