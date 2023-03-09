@@ -75,7 +75,7 @@ exports.initServer = async (wss, db, session) => {
         } catch (err) {
           const errorMessage = { type: 'error', status: 500, data: err.message }
           if (message && message.channel) errorMessage.channel = message.channel
-          return ws.send(JSON.stringify())
+          return ws.send(JSON.stringify(errorMessage))
         }
       })
 
