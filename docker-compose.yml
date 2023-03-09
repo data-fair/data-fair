@@ -34,7 +34,7 @@ services:
     profiles:
       - dev
       - test
-    image: ghcr.io/data-fair/simple-directory:master
+    image: ghcr.io/data-fair/simple-directory:6
     network_mode: host
     environment:
       - DEBUG=webhooks,auth
