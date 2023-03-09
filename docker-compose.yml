@@ -21,6 +21,12 @@ services:
       - discovery.type=single-node
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      timeout: 10s
+      interval: 10s
+      retries: 10
+
   mongo:
     profiles:
       - dev
@@ -30,12 +36,15 @@ services:
       - 27017:27017
     volumes:
       - mongo-data:/data/db
+
   sd:
     profiles:
       - dev
       - test
     image: ghcr.io/data-fair/simple-directory:6
     network_mode: host
+    depends_on:
+      - mongo
     environment:
       - DEBUG=webhooks,auth
       - ADMINS=["alban.mouton@koumoul.com", "superadmin@test.com"]
@@ -97,6 +106,8 @@ services:
       - dev
     image: ghcr.io/data-fair/notify:master
     network_mode: host
+    depends_on:
+      - mongo
     environment:
       - PORT=8088
       - PUBLIC_URL=http://localhost:5600/notify
@@ -105,6 +116,7 @@ services:
       - SECRET_NOTIFICATIONS=secret-notifications
       - SECRET_SENDMAILS=secret-sendmails
       - PROMETHEUS_ACTIVE=false
+
 volumes:
   elasticsearch-data:
   mongo-data:

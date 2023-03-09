@@ -16,8 +16,7 @@ jobs:
     # instead work on moving to some images hosted on ghcr.io, it is the fastest
     - name: Run test dependencies
       run: |
-        NO_UI=true docker-compose --profile test up -d
-        docker ps
+        NO_UI=true docker compose --profile test up -d --wait
 
     - name: Prepare docker image tags
       id: docker_meta
@@ -62,7 +61,7 @@ jobs:
         cache-to: type=gha,mode=max
     
     - name: Stop test dependencies
-      run: docker-compose stop
+      run: docker compose stop
 
     - name: Image digest
       run: echo ${{ steps.docker_build.outputs.digest }}
