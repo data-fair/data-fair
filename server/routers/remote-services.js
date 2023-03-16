@@ -8,7 +8,7 @@ const soasLoader = require('soas')
 const marked = require('marked')
 const sanitizeHtml = require('../../shared/sanitize-html')
 const axios = require('../utils/axios')
-const pipeline = require('stream/promises').pipeline
+const pump = require('util').promisify(require('pump'))
 const CacheableLookup = require('cacheable-lookup')
 const remoteServiceAPIDocs = require('../../contract/remote-service-api-docs')
 const mongoEscape = require('mongo-escape')
@@ -378,7 +378,7 @@ router.use('/:remoteServiceId/proxy*', rateLimiting.middleware('remoteService'),
         res.setHeader('X-Accel-Buffering', 'no')
         res.status(appRes.statusCode)
         const throttle = res.throttle('dynamic')
-        await pipeline(appRes, throttle, res)
+        await pump(appRes, throttle, res)
         resolve()
       } catch (err) {
         if (err.code === 'ERR_STREAM_PREMATURE_CLOSE') {

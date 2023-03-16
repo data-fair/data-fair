@@ -49,7 +49,6 @@ exports.process = async function (app, dataset) {
   const tmp = require('tmp-promise')
   const dir = require('node-dir')
   const mime = require('mime-types')
-  const pipeline = require('stream/promises').pipeline
   const zlib = require('node:zlib')
   const { displayBytes } = require('../utils/bytes')
   const datasetUtils = require('../utils/dataset')
@@ -122,7 +121,7 @@ exports.process = async function (app, dataset) {
   if (dataset.originalFile.mimetype === 'application/gzip') {
     const basicTypeFileName = dataset.originalFile.name.slice(0, dataset.originalFile.name.length - 3)
     const filePath = path.join(datasetUtils.dir(dataset), basicTypeFileName)
-    await pipeline(fs.createReadStream(originalFilePath), zlib.createGunzip(), fs.createWriteStream(filePath))
+    await pump(fs.createReadStream(originalFilePath), zlib.createGunzip(), fs.createWriteStream(filePath))
     dataset.file = {
       name: basicTypeFileName,
       size: await fs.stat(filePath).size,
