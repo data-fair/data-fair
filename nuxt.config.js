@@ -2,7 +2,7 @@ const URL = require('url').URL
 let config = require('config')
 config.basePath = new URL(config.publicUrl + '/').pathname
 
-const isBuilding = process.argv.slice(-1)[0] === 'build'
+const isBuilding = process.argv[2] === 'build'
 
 if (process.env.NODE_ENV === 'production') {
   const nuxtConfigInject = require('@koumoul/nuxt-config-inject')
