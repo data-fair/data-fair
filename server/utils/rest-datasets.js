@@ -362,7 +362,7 @@ class TransactionStream extends Writable {
 }
 
 const compileSchema = (dataset, adminMode) => {
-  const schema = datasetUtils.jsonSchema(dataset.schema)
+  const schema = datasetUtils.jsonSchema(dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']))
   schema.additionalProperties = false
   schema.properties._id = { type: 'string' }
   // super-admins can set _updatedAt and so rewrite history

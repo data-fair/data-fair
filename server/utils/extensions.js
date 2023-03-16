@@ -271,8 +271,8 @@ exports.prepareSchema = async (db, schema, extensions) => {
           key,
           'x-originalName': originalName,
           'x-extension': extensionId,
-          title: output.title,
-          description: output.description,
+          title: output.title || '',
+          description: output.description || '',
           type: output.type || 'string'
         }
         // only keep the concept if it does not conflict with existing property
