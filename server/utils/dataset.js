@@ -803,7 +803,6 @@ const cleanProperty = (p, publicBaseUrl, writableId) => {
 
   if (cleanProp['x-calculated']) cleanProp.readOnly = true
   if (cleanProp['x-extension']) cleanProp.readOnly = true
-  if (writableId && cleanProp.key === '_id') delete cleanProp.readOnly
 
   if (p['x-refersTo'] === 'http://schema.org/description') cleanProp['x-display'] = 'markdown'
 
@@ -815,11 +814,10 @@ const cleanProperty = (p, publicBaseUrl, writableId) => {
   return cleanProp
 }
 
-exports.jsonSchema = (schema, publicBaseUrl, keepReadOnly = false, writableId = false) => {
+exports.jsonSchema = (schema, publicBaseUrl) => {
   const properties = {}
   for (const p of schema) {
-    const cleanP = cleanProperty(p, publicBaseUrl, writableId)
-    if (keepReadOnly || !cleanP.readOnly) properties[p.key] = cleanP
+    properties[p.key] = cleanProperty(p, publicBaseUrl)
   }
   return {
     type: 'object',

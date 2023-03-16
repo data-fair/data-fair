@@ -362,7 +362,10 @@ const sendSchema = (req, res, schema) => {
   if (req.query.enum === 'true') {
     schema = schema.filter(field => !!field.enum)
   }
-  if (req.query.calculated === 'false') {
+
+  // in json schema format we remove calculated properties by default (better matches the need of form generation)
+  const filterCalculated = req.query.mimeType === 'application/schema+json' ? req.query.calculated !== 'true' : req.query.calculated === 'false'
+  if (filterCalculated) {
     schema = schema.filter(field => !field['x-calculated'])
   }
   if (req.query.separator === 'false') {

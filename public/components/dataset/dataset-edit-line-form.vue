@@ -45,6 +45,7 @@ export default {
     vjsfOptions: {
       locale: 'fr',
       removeAdditionalProperties: true,
+      hideReadOnly: true,
       textareaProps: {
         outlined: true
       },
