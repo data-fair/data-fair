@@ -70,8 +70,7 @@ ADD contract contract
 
 # Build UI
 ENV NODE_ENV production
-RUN npm run build && \
-    rm -rf dist
+RUN npm run build
 
 # Adding server files
 ADD server server

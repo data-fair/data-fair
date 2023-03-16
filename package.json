@@ -15,7 +15,7 @@
     "dev-server": "DEBUG=upgrade*,i18n*,notifications,worker:*,catalogs:*,thumbnails NODE_ENV=development nodemon server",
     "dev-server-memory": "DEBUG=upgrade*,i18n*,notifications,worker:* DEBUG_HEAP=* NODE_ENV=development nodemon -x \"node --expose-gc\" server",
     "dev-client": "NODE_ENV=development nuxt",
-    "build": "nuxt build",
+    "build": "nuxt build --no-generate",
     "start": "node server",
     "analyze": "nuxt build --analyze",
     "upgrade": "node upgrade",
