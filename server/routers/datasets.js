@@ -13,6 +13,7 @@ const slug = require('slugify')
 const sanitizeHtml = require('../../shared/sanitize-html')
 const CronJob = require('cron').CronJob
 const LinkHeader = require('http-link-header')
+const streamArray = require('stream-array')
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
 const filesUtils = require('../utils/files')
@@ -1318,21 +1319,12 @@ const readLines = asyncWrap(async (req, res) => {
     // add BOM for excel, cf https://stackoverflow.com/a/17879474
     res.write('\ufeff')
     const csvStreams = outputs.result2csv(req.dataset, req.query)
-    const streamPromise = pump(
+    await pump(
+      streamArray(result.results),
       ...csvStreams,
       res.throttle('dynamic'),
       res
     )
-    for (const line of result.results) {
-      await new Promise((resolve, reject) => {
-        csvStreams[0].write(line, (err) => {
-          if (err) reject(err)
-          resolve(err)
-        })
-      })
-    }
-    csvStreams[0].end()
-    await streamPromise
     return
   }
 
