@@ -245,7 +245,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
 
 router.get('/:id/icon', asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
-  const { query } = getQuery(req, req.user.adminMode)
+  const { query } = getQuery(req, req.user && req.user.adminMode)
   query.$and.push({ id: req.params.id })
   const baseApp = await db.collection('base-applications').findOne(query, { url: 1 })
   if (!baseApp) return res.status(404).send()
@@ -254,7 +254,7 @@ router.get('/:id/icon', asyncWrap(async (req, res, next) => {
 }))
 router.get('/:id/thumbnail', asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
-  const { query } = getQuery(req, req.user.adminMode)
+  const { query } = getQuery(req, req.user && req.user.adminMode)
   query.$and.push({ id: req.params.id })
   const baseApp = await db.collection('base-applications').findOne(query, { url: 1 })
   if (!baseApp) return res.status(404).send()
