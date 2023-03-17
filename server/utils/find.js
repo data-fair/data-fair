@@ -22,15 +22,8 @@ exports.query = (req, fieldsMap, globalMode, extraFilters = []) => {
   }
 
   query.$and = [...extraFilters]
-
-  // "standard" field mapping for applications/apis/datasets routes
-  // @deprecated owner-type and owner-id : we shall use the owner parameter bellow : owner=organization:id1,user:id2,organization:id3
-  Object.assign(fieldsMap, {
-    'owner-type': 'owner.type',
-    'owner-id': 'owner.id',
-    status: 'status'
-  })
-  Object.keys(fieldsMap).filter(name => req.query[name] !== undefined).forEach(name => {
+  for (const name of Object.keys(fieldsMap)) {
+    if (req.query[name] === undefined) continue
     const values = req.query[name].split(',').map(queryVal)
     const notNullValues = values.filter(v => v !== 'null')
     const or = []
@@ -40,7 +33,7 @@ exports.query = (req, fieldsMap, globalMode, extraFilters = []) => {
       or.push({ [fieldsMap[name]]: { $size: 0 } })
     }
     query.$and.push({ $or: or })
-  })
+  }
 
   if (globalMode) {
     // in global mode (remote services and base-applications) the resources do not have a owner
@@ -56,7 +49,7 @@ exports.query = (req, fieldsMap, globalMode, extraFilters = []) => {
     // You can use ?privateAccess=user:alban,organization:koumoul
     const privateAccess = []
     if (req.query.privateAccess) {
-      req.query.privateAccess.split(',').forEach(p => {
+      for (const p of req.query.privateAccess.split(',')) {
         const [type, id] = p.split(':')
         if (!req.user) throw createError(401)
         if (!req.user.adminMode) {
@@ -65,7 +58,7 @@ exports.query = (req, fieldsMap, globalMode, extraFilters = []) => {
         }
         privateAccess.push({ type, id })
         accessFilter.push({ privateAccess: { $elemMatch: { type, id } } })
-      })
+      }
     }
     if (accessFilter.length) query.$and.push({ $or: accessFilter })
   } else {
@@ -98,7 +91,7 @@ exports.query = (req, fieldsMap, globalMode, extraFilters = []) => {
 exports.ownerFilters = (reqQuery, activeAccount) => {
   const or = []
   const nor = []
-  reqQuery.owner.split(',').forEach(ownerStr => {
+  for (const ownerStr of reqQuery.owner.split(',')) {
     const [typ, id, dep] = ownerStr.split(':')
     const filter = { 'owner.type': typ.replace('-', ''), 'owner.id': id }
     if (!dep || dep === '*') {
@@ -110,7 +103,7 @@ exports.ownerFilters = (reqQuery, activeAccount) => {
     }
     if (typ.startsWith('-')) nor.push(filter)
     else or.push(filter)
-  })
+  }
   const and = []
   if (or.length) and.push({ $or: or })
   if (nor.length) and.push({ $nor: nor })
@@ -120,10 +113,10 @@ exports.ownerFilters = (reqQuery, activeAccount) => {
 exports.sort = (sortStr) => {
   const sort = {}
   if (!sortStr) return sort
-  sortStr.split(',').forEach(s => {
+  for (const s of sortStr.split(',')) {
     const toks = s.split(':')
     sort[toks[0]] = Number(toks[1])
-  })
+  }
   return sort
 }
 
@@ -148,17 +141,17 @@ exports.pagination = (query, defaultSize = 12) => {
 exports.project = (selectStr, exclude = [], raw = false) => {
   const select = { _id: 0 }
   if (!selectStr) {
-    exclude.forEach(e => {
+    for (const e of exclude) {
       select[e] = 0
-    })
+    }
   } else {
-    selectStr.split(',').forEach(s => {
+    for (const s of selectStr.split(',')) {
       select[s] = 1
-    })
+    }
     if (!raw) Object.assign(select, { permissions: 1, id: 1, owner: 1 })
-    exclude.forEach(e => {
+    for (const e of exclude) {
       delete select[e]
-    })
+    }
   }
   return select
 }
@@ -251,9 +244,11 @@ exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []
     .filter(f => facetFields[f] || f === 'owner' || f === 'visibility')
 
   // Apply all the filters from the current query that do not match a facetted field
-  Object.keys(filterFields).filter(name => req.query[name] !== undefined && !fields.includes(name)).forEach(name => {
-    pipeline.push({ $match: { [filterFields[name]]: { $in: req.query[name].split(',') } } })
-  })
+  for (const name of Object.keys(filterFields)) {
+    if (req.query[name] !== undefined && !fields.includes(name)) {
+      pipeline.push({ $match: { [filterFields[name]]: { $in: req.query[name].split(',') } } })
+    }
+  }
   if (req.query.owner && !fields.includes('owner')) {
     pipeline.push({ $match: { $and: exports.ownerFilters(req.query, req.user && req.user.activeAccount) } })
   }
@@ -263,12 +258,14 @@ exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []
 
   if (fields) {
     const facets = {}
-    fields.forEach(f => {
+    for (const f of fields) {
       const facet = []
       // Apply all the filters from the current query to the facet, except the one concerning current field
-      Object.keys(filterFields).filter(name => req.query[name] !== undefined && fields.includes(name) && name !== f).forEach(name => {
-        facet.push({ $match: { [filterFields[name]]: { $in: req.query[name].split(',') } } })
-      })
+      for (const name of Object.keys(filterFields)) {
+        if (req.query[name] !== undefined && fields.includes(name) && name !== f) {
+          facet.push({ $match: { [filterFields[name]]: { $in: req.query[name].split(',') } } })
+        }
+      }
       if (req.query.owner && fields.includes('owner') && f !== 'owner') {
         facet.push({ $match: { $and: exports.ownerFilters(req.query, req.user && req.user.activeAccount) } })
       }
@@ -308,7 +305,7 @@ exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []
       facet.push({ $project: { [f]: '$_id.' + f, _id: 0 } })
       facet.push({ $sortByCount: '$' + f })
       facets[f] = facet
-    })
+    }
     pipeline.push({ $facet: facets })
     /* pipeline.push({
       $facet: Object.assign({}, ...fields.map(f => ({
@@ -334,7 +331,7 @@ exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []
 exports.parseFacets = (facets, nullFacetFields = []) => {
   if (!facets) return
   const res = {}
-  Object.entries(facets.pop()).forEach(([k, values]) => {
+  for (const [k, values] of Object.entries(facets.pop())) {
     if (k.startsWith('visibility-')) {
       res.visibility = res.visibility || []
       res.visibility.push({ count: values[0] ? values[0].count : 0, value: k.replace('visibility-', '') })
@@ -353,8 +350,8 @@ exports.parseFacets = (facets, nullFacetFields = []) => {
         .filter(r => r._id || nullFacetFields.includes(k))
         .map(r => ({ count: r.count, value: r._id }))
     }
-  })
-  Object.keys(res).forEach(facetKey => {
+  }
+  for (const facetKey of Object.keys(res)) {
     res[facetKey].sort((a, b) => {
       if (a.count < b.count) return 1
       if (a.count > b.count) return -1
@@ -365,15 +362,17 @@ exports.parseFacets = (facets, nullFacetFields = []) => {
       if (titleA < titleB) return -1
       return 1
     })
-  })
+  }
   return res
 }
 
 exports.sumsQuery = (req, sumFields = {}, filterFields, extraFilters) => {
   const pipeline = basePipeline(req, extraFilters)
-  Object.keys(filterFields).filter(name => req.query[name] !== undefined).forEach(name => {
-    pipeline.push({ $match: { [filterFields[name]]: { $in: req.query[name].split(',') } } })
-  })
+  for (const name of Object.keys(filterFields)) {
+    if (req.query[name] !== undefined) {
+      pipeline.push({ $match: { [filterFields[name]]: { $in: req.query[name].split(',') } } })
+    }
+  }
   if (req.query.owner) {
     pipeline.push({ $match: { $and: exports.ownerFilters(req.query, req.user && req.user.activeAccount) } })
   }

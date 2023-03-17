@@ -113,23 +113,23 @@ class IndexStream extends Transform {
       if (this.options.attachments) bulkOpts.pipeline = 'attachment'
       const res = (await this.options.esClient.bulk(bulkOpts)).body
       debug('Bulk sent OK')
-      res.items.forEach((item, i) => {
+      for (let i = 0; i < res.items.length; i++) {
+        const item = res.items[i]
         const _id = (item.index && item.index._id) || (item.update && item.update._id) || (item.delete && item.delete._id)
         const line = this.options.updateMode ? bodyClone[(i * 2) + 1].doc : bodyClone[(i * 2) + 1]
         this.push({ _id, ...line })
-      })
+      }
       if (res.errors) {
-        res.items
-          .map((item, i) => ({
+        for (let i = 0; i < res.items.length; i++) {
+          const item = {
             _i: (this.options.updateMode ? bodyClone[(i * 2) + 1].doc : bodyClone[(i * 2) + 1])._i,
-            error: (item.index && item.index.error) || (item.update && item.update.error),
+            error: (res.items[i].index && res.items[i].index.error) || (res.items[i].update && res.items[i].update.error),
             input: this.body[(i * 2) + 1]
-          }))
-          .filter(item => !!item.error)
-          .forEach(item => {
-            this.nbErroredItems += 1
-            if (this.erroredItems.length < maxErroredItems) this.erroredItems.push(item)
-          })
+          }
+          if (!item.error) continue
+          this.nbErroredItems += 1
+          if (this.erroredItems.length < maxErroredItems) this.erroredItems.push(item)
+        }
       }
       this.body = []
       this.bulkChars = 0
@@ -202,9 +202,11 @@ const applyCalculations = async (dataset, item) => {
   item._rand = randomSeed.create(dataset.id + item._i)(1000000)
 
   // split the fields that have a separator in their schema
-  dataset.schema.filter(field => field.separator && item[field.key]).forEach(field => {
-    item[field.key] = item[field.key].split(field.separator.trim()).map(part => part.trim())
-  })
+  for (const field of dataset.schema) {
+    if (field.separator && item[field.key]) {
+      item[field.key] = item[field.key].split(field.separator.trim()).map(part => part.trim())
+    }
+  }
   return warning
 }
 

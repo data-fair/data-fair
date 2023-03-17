@@ -154,9 +154,9 @@ const getLineId = (line, dataset) => {
 const fillPrimaryKeyFromId = (line, dataset) => {
   if (!dataset.primaryKey || !dataset.primaryKey.length) return
   const primaryKey = JSON.parse('["' + Buffer.from(line._id, 'hex') + '"]')
-  dataset.primaryKey.forEach((key, i) => {
-    if (!(key in line)) line[key] = primaryKey[i]
-  })
+  for (let i = 0; i < dataset.primaryKey.length; i++) {
+    if (!(dataset.primaryKey[i] in line)) line[dataset.primaryKey[i]] = primaryKey[i]
+  }
 }
 
 const linesOwnerCols = (req) => {
@@ -317,7 +317,7 @@ class TransactionStream extends Writable {
       this.options.summary.nbCreated += bulkOpResult.nUpserted
       this.options.summary.nbCreated += bulkOpResult.nInserted
     }
-    results.forEach(res => {
+    for (const res of results) {
       if (res._error || res._status === 500) {
         this.options.summary.nbErrors += 1
         if (this.options.summary.errors.length < 10) {
@@ -333,7 +333,7 @@ class TransactionStream extends Writable {
         }
       }
       this.i += 1
-    })
+    }
     this.emit('batch')
   }
 
@@ -372,14 +372,14 @@ const compileSchema = (dataset, adminMode) => {
 async function manageAttachment (req, keepExisting) {
   if (req.is('multipart/form-data')) {
     // When taken from form-data everything is string.. convert to actual types
-    req.dataset.schema
-      .filter(f => !f['x-calculated'])
-      .forEach(f => {
+    for (const f of req.dataset.schema) {
+      if (!f['x-calculated']) {
         if (req.body[f.key] !== undefined) {
           const value = fieldsSniffer.format(req.body[f.key], f)
           if (value !== null) req.body[f.key] = value
         }
-      })
+      }
+    }
   }
   const lineId = req.params.lineId || req.body._id
   const dir = path.join(datasetUtils.attachmentsDir(req.dataset), lineId)
@@ -601,18 +601,18 @@ exports.readRevisions = async (req, res, next) => {
     revisionsCollection.countDocuments(countFilter),
     revisionsCollection.find(filter).sort({ _i: -1 }).limit(size).toArray()
   ])
-  results.forEach(r => {
+  for (const r of results) {
     r._id = r._lineId
     delete r._lineId
-  })
+  }
 
   const response = { total, results }
 
   if (size && results.length === size) {
     const nextLinkURL = new URL(`${req.publicBaseUrl}${req.originalUrl}`)
-    Object.keys(req.query).filter(key => key !== 'page').forEach(key => {
-      nextLinkURL.searchParams.set(key, req.query[key])
-    })
+    for (const key of Object.keys(req.query)) {
+      if (key !== 'page') nextLinkURL.searchParams.set(key, req.query[key])
+    }
     nextLinkURL.searchParams.set('before', results[results.length - 1]._i)
     const link = new LinkHeader()
     link.set({ rel: 'next', uri: nextLinkURL.href })
@@ -730,7 +730,9 @@ exports.applyTTL = async (app, dataset) => {
             }
           })
           while (body.hits.hits.length) {
-            body.hits.hits.forEach(hit => this.push(hit))
+            for (const hit of body.hits.hits) {
+              this.push(hit)
+            }
             body = (await es.scroll({ scrollId: body._scroll_id, scroll: '15m' })).body
           }
           this.push(null)

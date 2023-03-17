@@ -98,26 +98,24 @@ const getFormBody = (body) => {
       throw createError('400', `Invalid JSON in body part, ${err.message}`)
     }
   }
-  Object.keys(datasetSchema.properties)
-    .filter(key => typeof body[key] === 'string')
-    .filter(key => ['object', 'array'].includes(datasetSchema.properties[key].type))
-    .forEach(key => {
-      if (body[key].trim() === '') {
-        delete body[key]
-      } else {
-        try {
-          body[key] = JSON.parse(body[key])
-        } catch (err) {
-          throw createError('400', `Invalid JSON in part "${key}", ${err.message}`)
+  for (const key of Object.keys(datasetSchema.properties)) {
+    if (typeof body[key] === 'string') {
+      if (['object', 'array'].includes(datasetSchema.properties[key].type)) {
+        if (body[key].trim() === '') {
+          delete body[key]
+        } else {
+          try {
+            body[key] = JSON.parse(body[key])
+          } catch (err) {
+            throw createError('400', `Invalid JSON in part "${key}", ${err.message}`)
+          }
         }
       }
-    })
-  Object.keys(datasetSchema.properties)
-    .filter(key => typeof body[key] === 'string')
-    .filter(key => datasetSchema.properties[key].type === 'boolean')
-    .forEach(key => {
-      body[key] = body[key] === 'true'
-    })
+      if (datasetSchema.properties[key].type === 'boolean') {
+        body[key] = body[key] === 'true'
+      }
+    }
+  }
   return body
 }
 

@@ -46,7 +46,7 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
   const paramsBuilder = (line) => {
     const params = {}
     const qs = []
-    bulkSearch.input.forEach(input => {
+    for (const input of bulkSearch.input) {
       if ([null, undefined].includes(line[input.property.key])) {
         throw createError(400, `la propriété en entrée ${input.property.key} est obligatoire`)
       }
@@ -65,7 +65,7 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
       } else {
         throw createError(400, `input type ${input.type} is not supported`)
       }
-    })
+    }
     if (qs.length) params.qs = qs.map(f => `(${f})`).join(' AND ')
 
     return params

@@ -80,9 +80,9 @@ exports.initServer = async (wss, db, session) => {
       })
 
       ws.on('close', () => {
-        Object.keys(subscribers).forEach(channel => {
+        for (const channel of Object.keys(subscribers)) {
           delete subscribers[channel][clientId]
-        })
+        }
         delete clients[clientId]
       })
 
@@ -96,12 +96,12 @@ exports.initServer = async (wss, db, session) => {
   // standard ping/pong used to detect lost connections
   setInterval(function ping () {
     if (stopped) return
-    wss.clients.forEach(ws => {
+    for (const ws of wss.clients) {
       if (ws.isAlive === false) return ws.terminate()
 
       ws.isAlive = false
       ws.ping('', false, () => {})
-    })
+    }
   }, 30000)
 
   const mongoChannel = await channel(db)
@@ -118,9 +118,9 @@ const initCursor = (db, mongoChannel) => {
     if (doc && doc.type === 'message') {
       if (doc.data.date && doc.data.date < startDate) return
       const subs = subscribers[doc.channel] || {}
-      Object.keys(subs).forEach(sub => {
+      for (const sub of Object.keys(subs)) {
         if (clients[sub]) clients[sub].send(JSON.stringify(doc))
-      })
+      }
     }
   }, async (err) => {
     if (stopped) return

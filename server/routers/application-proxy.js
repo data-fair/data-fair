@@ -170,17 +170,16 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   // and so benefit from better caching
   const datasets = req.application.configuration && req.application.configuration.datasets && req.application.configuration.datasets.filter(d => !!d)
   if (datasets && datasets.length) {
-    datasets.filter(d => d.href).forEach(d => {
-      d.href = d.href.replace(config.publicUrl, req.publicBaseUrl)
-    })
+    for (const d of datasets) {
+      if (d.href) d.href = d.href.replace(config.publicUrl, req.publicBaseUrl)
+    }
     const freshDatasets = await db.collection('datasets')
       .find({ $or: datasets.map(d => ({ id: d.id })) })
       .project({ _id: 0, id: 1, finalizedAt: 1 })
       .toArray()
-
-    freshDatasets.forEach(fd => {
+    for (const fd of freshDatasets) {
       req.application.configuration.datasets.find(d => fd.id === d.id).finalizedAt = fd.finalizedAt
-    })
+    }
   }
 
   // we await the promises afterwards so that the datasets and baseApp promises were resolved in parallel
@@ -312,7 +311,9 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   // add a brand logo somewhere over the applications
   const hideBrand = (limits && limits.hide_brand && limits.hide_brand.limit) || config.defaultLimits.hideBrand
   if (brandEmbed && !hideBrand) {
-    brandEmbed.childNodes.forEach(childNode => body.childNodes.push(childNode))
+    for (const childNode of brandEmbed.childNodes) {
+      body.childNodes.push(childNode)
+    }
   }
 
   res.set('cache-control', 'private, max-age=0, must-revalidate')
@@ -347,11 +348,11 @@ const deprecatedProxy = async (cleanApplicationUrl, targetUrl, req, res) => {
         if (!contentType || targetUrl.pathname.endsWith('.html')) {
           contentType = 'text/html; charset=utf-8'
         }
-        res.set('content-type', contentType);
+        res.set('content-type', contentType)
 
-        ['content-type', 'content-length', 'pragma', 'cache-control', 'expires', 'last-modified'].forEach(header => {
+        for (const header of ['content-type', 'content-length', 'pragma', 'cache-control', 'expires', 'last-modified']) {
           if (appRes.headers[header]) res.set(header, appRes.headers[header])
-        })
+        }
         res.status(appRes.statusCode)
         await pump(appRes, res)
         return resolve()

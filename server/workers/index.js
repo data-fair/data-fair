@@ -262,14 +262,11 @@ async function iter (app, resource, type) {
     // Build back the original error message from the stderr of the child process
     const errorMessage = []
     if (lastStderr) {
-      lastStderr.split('\n')
-        .filter(line => !!line)
-        .filter(line => !line.includes('Warning:'))
-        .filter(line => !line.includes('--trace-warnings'))
-        .filter(line => !line.startsWith('worker:'))
-        .forEach(line => {
+      for (const line of lastStderr.split('\n')) {
+        if (line && !line.includes('Warning:') && !line.includes('--trace-warnings') && !line.startsWith('worker:')) {
           errorMessage.push(line)
-        })
+        }
+      }
     } else {
       errorMessage.push(err.message)
     }

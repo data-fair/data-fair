@@ -6,7 +6,7 @@ const { aliasName, esProperty } = require('./commons')
 exports.indexDefinition = (dataset) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))
   const properties = body.mappings.properties = {}
-  datasetUtils.extendedSchema(dataset).forEach(jsProp => {
+  for (const jsProp of datasetUtils.extendedSchema(dataset)) {
     const esProp = esProperty(jsProp)
     if (esProp) {
       if (jsProp['x-extension']) {
@@ -17,7 +17,7 @@ exports.indexDefinition = (dataset) => {
         properties[jsProp.key] = esProp
       }
     }
-  })
+  }
   return body
 }
 

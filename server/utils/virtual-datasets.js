@@ -21,9 +21,11 @@ async function childrenSchemas (db, owner, children, blackListedFields) {
     if (!child) continue
     if (child.isVirtual) {
       const grandChildrenSchemas = await childrenSchemas(db, owner, child.virtual.children, blackListedFields)
-      grandChildrenSchemas.forEach(s => s.forEach(field => {
-        if (!child.schema.find(f => f.key === field.key)) blackListedFields.add(field.key)
-      }))
+      for (const s of grandChildrenSchemas) {
+        for (const field of s) {
+          if (!child.schema.find(f => f.key === field.key)) blackListedFields.add(field.key)
+        }
+      }
       schemas.push(child.schema)
       schemas = schemas.concat(grandChildrenSchemas)
     } else {
@@ -40,23 +42,25 @@ exports.prepareSchema = async (db, dataset) => {
   const schema = datasetUtils.extendedSchema(dataset)
   const blackListedFields = new Set([])
   const schemas = await childrenSchemas(db, dataset.owner, dataset.virtual.children, blackListedFields)
-  schema.forEach(field => {
+  for (const field of schema) {
     if (blackListedFields.has(field.key)) {
       throw createError(400, `Le champ "${field.key}" est interdit. Il est présent dans un jeu de données enfant mais est protégé.`)
     }
     const matchingFields = []
-    schemas.filter(s => !!s).forEach(s => s.filter(f => f.key === field.key).forEach(f => matchingFields.push(f)))
-    if (!matchingFields.length) {
-      field = null
-      return
+    for (const s of schemas) {
+      if (!s) continue
+      for (const f of s) {
+        if (f.key === field.key) matchingFields.push(f)
+      }
     }
+    if (!matchingFields.length) continue
 
     // we used to have null values, better to just have absent info
-    matchingFields.forEach(f => {
+    for (const f of matchingFields) {
       if (!f.format) delete f.format
       if (!f['x-refersTo']) delete f['x-refersTo']
       if (!f.separator) delete f.separator
-    })
+    }
 
     // we take the first child field as reference
     field.title = field.title || matchingFields[0].title || ''
@@ -75,7 +79,7 @@ exports.prepareSchema = async (db, dataset) => {
 
     // Some attributes of a a fields have to be homogeneous accross all children
     field['x-capabilities'] = {}
-    matchingFields.forEach(f => {
+    for (const f of matchingFields) {
       if (f.type !== field.type) {
         let message = `Le champ "${field.key}" a des types contradictoires (${field.type}, ${f.type}).`
         if (['number', 'integer'].includes(field.type) && ['number', 'integer'].includes(f.type)) {
@@ -91,14 +95,15 @@ exports.prepareSchema = async (db, dataset) => {
       for (const key in f['x-capabilities'] || {}) {
         if (f['x-capabilities'][key] === false) field['x-capabilities'][key] = false
       }
-    })
-  })
+    }
+  }
 
   const fieldsByConcept = {}
-  schema.filter(f => !!f).filter(f => f['x-refersTo']).forEach(f => {
+  for (const f of schema) {
+    if (!f || !f['x-refersTo']) continue
     if (fieldsByConcept[f['x-refersTo']]) throw createError(400, `Le concept "${f['x-refersTo']}" est référencé par plusieurs champs (${fieldsByConcept[f['x-refersTo']]}, ${f.key}).`)
     fieldsByConcept[f['x-refersTo']] = f.key
-  })
+  }
 
   return schema.filter(f => !!f)
 }
@@ -110,7 +115,9 @@ exports.descendants = async (db, dataset, extraProperties) => {
     'descendants.isVirtual': 1,
     'descendants.virtual': 1
   }
-  if (extraProperties) extraProperties.forEach(p => { project['descendants.' + p] = 1 })
+  if (extraProperties) {
+    for (const p of extraProperties) project['descendants.' + p] = 1
+  }
   const res = await db.collection('datasets').aggregate([{
     $match: {
       id: dataset.id

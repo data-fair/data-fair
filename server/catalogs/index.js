@@ -138,7 +138,9 @@ exports.processPublications = async function (app, type, resource) {
   const resourcesCollection = db.collection(type + 's')
   const catalogsCollection = db.collection('catalogs')
   resource.public = permissionsUtil.isPublic(type + 's', resource)
-  resource.publications.filter(p => !p.id).forEach(p => { p.id = nanoid() })
+  for (const p of resource.publications) {
+    if (!p.id) p.id = nanoid()
+  }
   await resourcesCollection.updateOne({ id: resource.id }, { $set: { publications: resource.publications } })
 
   const processedPublication = resource.publications.find(p => ['waiting', 'deleted'].includes(p.status))
@@ -222,9 +224,9 @@ exports.processPublications = async function (app, type, resource) {
 
 async function getApplicationDatasets (db, app) {
   app.configuration = app.configuration || {}
-  const datasetReferences = (app.configuration.datasets || []).filter(d => !!d).map(d => d.href);
-  ['datasetUrl', 'networksDatasetUrl', 'networksMembersDatasetUrl'].forEach(k => {
+  const datasetReferences = (app.configuration.datasets || []).filter(d => !!d).map(d => d.href)
+  for (const k of ['datasetUrl', 'networksDatasetUrl', 'networksMembersDatasetUrl']) {
     if (app.configuration[k]) datasetReferences.push(app.configuration[k])
-  })
+  }
   return db.collection('datasets').find({ id: { $in: datasetReferences.map(r => r.split('/').pop()) } }).toArray()
 }

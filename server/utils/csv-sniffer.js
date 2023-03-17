@@ -23,15 +23,14 @@ exports.sniff = async (sample) => {
 
         const checkChunk = (chunk) => {
           // console.log(chunk)
-
-          Object.keys(chunk).forEach(key => {
+          for (const key of Object.keys(chunk)) {
             // none matching labels and object keys means a failure of csv-parse to parse a line
             if (!labels.includes(key)) {
               score -= 10
               debug('Unmatched object key, score -= 10')
             }
-          })
-          labels.forEach(key => {
+          }
+          for (const key of labels) {
             const val = chunk[key]
             // console.log(key, chunk[key])
             if (val === undefined) {
@@ -62,7 +61,7 @@ exports.sniff = async (sample) => {
                 score -= 2
               }
             }
-          })
+          }
         }
 
         let previousChunk

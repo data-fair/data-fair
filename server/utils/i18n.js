@@ -14,7 +14,7 @@ exports.middleware = i18n.init
 
 exports.vocabularyArray = {}
 exports.vocabulary = {}
-i18n.getLocales().forEach(locale => {
+for (const locale of i18n.getLocales()) {
   exports.vocabularyArray[locale] = require('../../contract/vocabulary.json').map(concept => ({
     ...concept,
     title: concept.title[locale] || concept.title[defaultLocale],
@@ -22,7 +22,9 @@ i18n.getLocales().forEach(locale => {
     tag: concept.tag[locale] || concept.tag[defaultLocale]
   }))
   exports.vocabulary[locale] = {}
-  exports.vocabularyArray[locale].forEach(concept => {
-    concept.identifiers.forEach(id => { exports.vocabulary[locale][id] = concept })
-  })
-})
+  for (const concept of exports.vocabularyArray[locale]) {
+    for (const id of concept.identifiers) {
+      exports.vocabulary[locale][id] = concept
+    }
+  }
+}

@@ -30,6 +30,7 @@ const { validateId } = require('../utils/validation')
 const publicationSites = require('../utils/publication-sites')
 const datasetUtils = require('../utils/dataset')
 const { prepareMarkdownContent } = require('../utils/markdown')
+const { cp } = require('fs')
 
 const router = module.exports = express.Router()
 
@@ -63,6 +64,26 @@ const syncDatasets = async (db, newApp, oldApp = {}) => {
   }
 }
 
+const filterFields = {
+  url: 'url',
+  'base-application': 'url',
+  dataset: 'configuration.datasets.href',
+  topics: 'topics.id',
+  publicationSites: 'publicationSites',
+  requestedPublicationSites: 'requestedPublicationSites'
+}
+const facetFields = {
+  ...filterFields,
+  topics: 'topics'
+}
+const nullFacetFields = ['publicationSites']
+const fieldsMap = {
+  ids: 'id',
+  id: 'id',
+  status: 'status',
+  ...filterFields
+}
+
 // Get the list of applications
 router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   const applications = req.app.get('db').collection('applications')
@@ -78,23 +99,8 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
       !req.query.service.startsWith('https://')) {
     req.query.service = config.publicUrl + '/api/v1/remote-services/' + req.query.service
   }
-  const filterFields = {
-    url: 'url',
-    'base-application': 'url',
-    dataset: 'configuration.datasets.href',
-    topics: 'topics.id',
-    publicationSites: 'publicationSites',
-    requestedPublicationSites: 'requestedPublicationSites'
-  }
-  const facetFields = {
-    ...filterFields,
-    topics: 'topics'
-  }
-  const nullFacetFields = ['publicationSites']
-  const query = findUtils.query(req, Object.assign({
-    ids: 'id',
-    id: 'id'
-  }, filterFields))
+
+  const query = findUtils.query(req, fieldsMap)
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, ['configuration', 'configurationDraft'], req.query.raw === 'true')
   const [skip, size] = findUtils.pagination(req.query)
@@ -109,10 +115,10 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   else response.results = []
   if (facetsPromise) response.facets = findUtils.parseFacets(facets, nullFacetFields)
 
-  response.results.forEach(r => {
+  for (const r of response.results) {
     if (req.query.raw !== 'true') r.userPermissions = permissions.list('applications', r, req.user)
     clean(r, req.publicBaseUrl, req.query)
-  })
+  }
 
   res.json(response)
 }))
@@ -191,7 +197,9 @@ const setFullUpdatedAt = asyncWrap(async (req, res, next) => {
       .find({ $or: datasets.map(d => ({ id: d.id })) })
       .project({ _id: 0, finalizedAt: 1 })
       .toArray()
-    freshDatasets.forEach(fd => updateDates.push(fd.finalizedAt))
+    for (const fd of freshDatasets) {
+      updateDates.push(fd.finalizedAt)
+    }
   }
   req.application.fullUpdatedAt = updateDates.sort().pop()
   next()
@@ -232,11 +240,11 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
 router.put('/:applicationId', attemptInsert, readApplication, permissions.middleware('writeDescription', 'write'), asyncWrap(async (req, res) => {
   const newApplication = req.body
   // preserve all readonly properties, the rest is overwritten
-  Object.keys(req.application).forEach(key => {
+  for (const key of Object.keys(req.application)) {
     if (!applicationPatch.properties[key]) {
       newApplication[key] = req.application[key]
     }
-  })
+  }
   newApplication.updatedAt = moment().toISOString()
   newApplication.updatedBy = { id: req.user.id, name: req.user.name }
   newApplication.created = true
@@ -261,7 +269,9 @@ router.patch('/:applicationId',
     if (!patch.publications) {
       const failedPublications = (req.application.publications || []).filter(p => p.status === 'error')
       if (failedPublications.length) {
-        failedPublications.forEach(p => { p.status = 'waiting' })
+        for (const p of failedPublications) {
+          p.status = 'waiting'
+        }
         patch.publications = req.application.publications
       }
     }
@@ -446,9 +456,9 @@ router.get('/:applicationId/keys', readApplication, permissions.middleware('getK
 router.post('/:applicationId/keys', readApplication, permissions.middleware('setKeys', 'admin'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
   const valid = validateKeys(req.body)
   if (!valid) return res.status(400).send(validateKeys.errors)
-  req.body.forEach((key) => {
+  for (const key of req.body) {
     if (!key.id) key.id = nanoid()
-  })
+  }
   await req.app.get('db').collection('applications-keys').replaceOne({ _id: req.application.id }, { _id: req.application.id, keys: req.body, owner: req.application.owner }, { upsert: true })
   res.send(req.body)
 }))

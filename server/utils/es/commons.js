@@ -83,8 +83,7 @@ exports.aliasName = dataset => {
 exports.parseSort = (sortStr, fields, dataset) => {
   if (!sortStr) return []
   const result = []
-  const keys = sortStr.split(',')
-  keys.forEach(s => {
+  for (const s of sortStr.split(',')) {
     let key, order
     if (s.indexOf('-') === 0) {
       key = s.slice(1)
@@ -97,7 +96,7 @@ exports.parseSort = (sortStr, fields, dataset) => {
       if (!dataset.bbox) throw createError(400, '"geo_distance" filter cannot be used on this dataset. It is not geolocalized.')
       const [lon, lat] = key.replace('_geo_distance:', '').split(':')
       result.push({ _geo_distance: { _geopoint: { lon, lat }, order } })
-      return
+      continue
     }
 
     if (!fields.concat(['_key', '_count', '_time', 'metric', '_i', '_rand', '_score']).includes(key)) {
@@ -115,7 +114,7 @@ exports.parseSort = (sortStr, fields, dataset) => {
     if (capabilities.values !== false) {
       result.push({ [key]: { order } })
     }
-  })
+  }
 
   return result
 }
@@ -151,13 +150,13 @@ function checkQuery (query, schema, esFields) {
   }
   if (!esFields) {
     esFields = ['<implicit>']
-    schema.forEach(prop => {
+    for (const prop of schema) {
       const capabilities = prop['x-capabilities'] || []
       if (capabilities.index !== false) esFields.push(prop.key)
       if (capabilities.text !== false) esFields.push(prop.key + '.text')
       if (capabilities.textStandard !== false) esFields.push(prop.key + '.text_standard')
       if (capabilities.insensitive !== false) esFields.push(prop.key + '.keyword_insensitive')
-    })
+    }
   }
   query.field = query.field && query.field.replace(/\\/g, '')
   if (query.field === '_exists_') {
@@ -230,11 +229,11 @@ exports.prepareQuery = (dataset, query) => {
   // https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-highlighting.html
   if (query.highlight) {
     esQuery.highlight = { fields: {}, no_match_size: 300, fragment_size: 100, pre_tags: ['<em class="highlighted">'], post_tags: ['</em>'] }
-    query.highlight.split(',').forEach(key => {
+    for (const key of query.highlight.split(',')) {
       if (!fields.includes(key)) throw createError(400, `Impossible de demander un "highlight" sur le champ ${key}, il n'existe pas dans le jeu de données.`)
       esQuery.highlight.fields[key + '.text'] = {}
       esQuery.highlight.fields[key + '.text_standard'] = {}
-    })
+    }
   }
 
   const filter = []
@@ -243,10 +242,12 @@ exports.prepareQuery = (dataset, query) => {
 
   // Enforced static filters from virtual datasets
   if (dataset.virtual && dataset.virtual.filters) {
-    dataset.virtual.filters.filter(f => f.values && f.values.length).forEach(f => {
-      if (f.values.length === 1) filter.push({ term: { [f.key]: f.values[0] } })
-      else filter.push({ terms: { [f.key]: f.values } })
-    })
+    for (const f of dataset.virtual.filters) {
+      if (f.values && f.values.length) {
+        if (f.values.length === 1) filter.push({ term: { [f.key]: f.values[0] } })
+        else filter.push({ terms: { [f.key]: f.values } })
+      }
+    }
   }
 
   // Envorced filter in case of rest datasets with line ownership
@@ -257,10 +258,10 @@ exports.prepareQuery = (dataset, query) => {
   // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
   // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
   const searchFields = []
-  dataset.schema.forEach(f => {
+  for (const f of dataset.schema) {
     if (f.key === '_id') {
       searchFields.push('_id')
-      return
+      continue
     }
 
     const esProp = exports.esProperty(f)
@@ -275,7 +276,7 @@ exports.prepareQuery = (dataset, query) => {
       if (esProp.fields.text) searchFields.push(f.key + '.text' + suffix)
       if (esProp.fields.text_standard) searchFields.push(f.key + '.text_standard' + suffix)
     }
-  })
+  }
   if (query.qs) {
     checkQuery(query.qs, dataset.schema)
     must.push({ query_string: { query: query.qs, fields: searchFields } })
@@ -307,23 +308,22 @@ exports.prepareQuery = (dataset, query) => {
       should.push({ simple_query_string: { query: q, fields: qStandardFields } })
     }
   }
-  Object.keys(query)
-    .filter(k => k.endsWith('_in'))
-    .map(key => ({
+  for (const key of Object.keys(query)) {
+    if (!key.endsWith('_in')) continue
+    const inFilter = {
       key: key.slice(0, key.length - 3),
       values: query[key].split(',')
-    }))
-    .forEach(inFilter => {
-      const prop = dataset.schema.find(p => p.key === inFilter.key)
-      if (!prop || (prop['x-capabilities'] && prop['x-capabilities'].index === false)) {
-        throw createError(400, `Impossible de faire une recherche sur le champ ${inFilter.key}, il n'existe pas dans le jeu de données.`)
+    }
+    const prop = dataset.schema.find(p => p.key === inFilter.key)
+    if (!prop || (prop['x-capabilities'] && prop['x-capabilities'].index === false)) {
+      throw createError(400, `Impossible de faire une recherche sur le champ ${inFilter.key}, il n'existe pas dans le jeu de données.`)
+    }
+    filter.push({
+      terms: {
+        [inFilter.key]: inFilter.values
       }
-      filter.push({
-        terms: {
-          [inFilter.key]: inFilter.values
-        }
-      })
     })
+  }
 
   // bounding box filter to restrict results on geo zone: left,bottom,right,top
   const geoShapeProp = dataset.schema.find(p => p.key === '_geoshape')
@@ -404,9 +404,11 @@ exports.getQueryBBOX = (query) => {
 
 exports.prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicUrl) => {
   // re-join splitted items
-  dataset.schema.filter(field => field.separator && hit._source[field.key] && Array.isArray(hit._source[field.key])).forEach(field => {
-    hit._source[field.key] = hit._source[field.key].join(field.separator)
-  })
+  for (const field of dataset.schema) {
+    if (field.separator && hit._source[field.key] && Array.isArray(hit._source[field.key])) {
+      hit._source[field.key] = hit._source[field.key].join(field.separator)
+    }
+  }
 
   const res = flatten(hit._source, { safe: true })
   res._score = hit._score

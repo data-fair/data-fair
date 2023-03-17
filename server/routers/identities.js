@@ -36,11 +36,11 @@ router.post('/:type/:id', asyncWrap(async (req, res) => {
     const cursor = collection.find({ permissions: { $elemMatch: { type: identity.type, id: identity.id } } })
     while (await cursor.hasNext()) {
       const doc = await cursor.next()
-      doc.permissions
-        .filter(permission => permission.type === identity.type && permission.id === identity.id)
-        .forEach(permission => {
+      for (const permission of doc.permissions) {
+        if (permission.type === identity.type && permission.id === identity.id) {
           permission.name = identity.name
-        })
+        }
+      }
       await collection.updateOne({ id: doc.id }, { $set: { permissions: doc.permissions } })
     }
 

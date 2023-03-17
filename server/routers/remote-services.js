@@ -92,7 +92,7 @@ exports.init = async (db) => {
 // TODO: explain ? simplify ? hard to understand piece of code
 const computeActions = (apiDoc) => {
   const actions = soasLoader(apiDoc).actions()
-  actions.forEach(a => {
+  for (const a of actions) {
     a.input = Object.keys(a.input).map(concept => ({ concept, ...a.input[concept] }))
     const outputSchema = a.outputSchema
     if (outputSchema) {
@@ -101,7 +101,7 @@ const computeActions = (apiDoc) => {
     } else {
       a.output = []
     }
-  })
+  }
   return actions
 }
 
@@ -126,7 +126,8 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
     'output-concepts': 'actions.output.concept',
     'api-id': 'apiDoc.info.x-api-id',
     ids: 'id',
-    id: 'id'
+    id: 'id',
+    status: 'status'
   }, true)
 
   delete req.query.owner
@@ -142,7 +143,9 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
     mongoQueries.push(remoteServices.aggregate(findUtils.facetsQuery(req, {})).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
-  results.forEach(r => clean(r, req.user, req.query.html === 'true'))
+  for (const r of results) {
+    clean(r, req.user, req.query.html === 'true')
+  }
   facets = findUtils.parseFacets(facets)
   res.json({ count, results: results.map(result => mongoEscape.unescape(result, true)), facets })
 }))
@@ -222,11 +225,11 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
 router.put('/:remoteServiceId', attemptInsert, readService, asyncWrap(async (req, res) => {
   const newService = req.body
   // preserve all readonly properties, the rest is overwritten
-  Object.keys(req.remoteService).forEach(key => {
+  for (const key of Object.keys(req.remoteService)) {
     if (!servicePatch.properties[key]) {
       newService[key] = req.remoteService[key]
     }
-  })
+  }
   newService.updatedAt = moment().toISOString()
   newService.updatedBy = { id: req.user.id, name: req.user.name }
   if (newService.apiDoc) {
@@ -336,9 +339,9 @@ router.use('/:remoteServiceId/proxy*', rateLimiting.middleware('remoteService'),
     headers[config.defaultRemoteKey.name] = config.defaultRemoteKey.value
   }
   // transmit some useful headers for REST endpoints
-  ['accept', 'accept-encoding', 'accept-language', 'if-none-match', 'if-modified-since'].forEach(header => {
+  for (const header of ['accept', 'accept-encoding', 'accept-language', 'if-none-match', 'if-modified-since']) {
     if (req.headers[header]) headers[header] = req.headers[header]
-  })
+  }
 
   // merge incoming and target URL elements
   const incomingUrl = new URL('http://host' + req.url)
@@ -365,9 +368,9 @@ router.use('/:remoteServiceId/proxy*', rateLimiting.middleware('remoteService'),
     }, config.remoteTimeout * 1.5)
     const req = (targetUrl.protocol === 'http:' ? http.request : https.request)(options, async (appRes) => {
       try {
-        ['content-type', 'content-length', 'content-encoding', 'etag', 'pragma', 'cache-control', 'expires', 'last-modified', 'x-taxman-cache-status'].forEach(header => {
+        for (const header of ['content-type', 'content-length', 'content-encoding', 'etag', 'pragma', 'cache-control', 'expires', 'last-modified', 'x-taxman-cache-status']) {
           if (appRes.headers[header]) res.set(header, appRes.headers[header])
-        })
+        }
         // Prevent caches in front of data-fair
         // otherwise rate limiting is not accurate and we have complicated multi-cache cases
         if (!appRes.headers['cache-control']) {

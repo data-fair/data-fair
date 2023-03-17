@@ -60,7 +60,8 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
     url: 'url',
     organization: 'organization.id',
     ids: 'id',
-    id: 'id'
+    id: 'id',
+    status: 'status'
   })
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select)
@@ -73,10 +74,10 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
     mongoQueries.push(catalogs.aggregate(findUtils.facetsQuery(req, {})).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
-  results.forEach(r => {
+  for (const r of results) {
     r.userPermissions = permissions.list('catalogs', r, req.user)
     clean(r, req.query.html === 'true')
-  })
+  }
   facets = findUtils.parseFacets(facets)
   res.json({ count, results: results.map(result => mongoEscape.unescape(result, true)), facets })
 }))
@@ -154,11 +155,9 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
 router.put('/:catalogId', attemptInsert, readCatalog, permissions.middleware('writeDescription', 'write'), asyncWrap(async (req, res) => {
   const newCatalog = req.body
   // preserve all readonly properties, the rest is overwritten
-  Object.keys(req.catalog).forEach(key => {
-    if (!catalogPatch.properties[key]) {
-      newCatalog[key] = req.catalog[key]
-    }
-  })
+  for (const key of Object.keys(req.catalog)) {
+    if (!catalogPatch.properties[key]) newCatalog[key] = req.catalog[key]
+  }
   newCatalog.updatedAt = moment().toISOString()
   newCatalog.updatedBy = { id: req.user.id, name: req.user.name }
   await req.app.get('db').collection('catalogs').replaceOne({ id: req.params.catalogId }, mongoEscape.escape(newCatalog, true))

@@ -14,6 +14,7 @@ const sanitizeHtml = require('../../shared/sanitize-html')
 const CronJob = require('cron').CronJob
 const LinkHeader = require('http-link-header')
 const streamArray = require('stream-array')
+const stableStringify = require('json-stable-stringify')
 const journals = require('../utils/journals')
 const esUtils = require('../utils/es')
 const filesUtils = require('../utils/files')
@@ -159,9 +160,8 @@ const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, 
 // create short ids for extensions that will be used as prefix of the properties ids in the schema
 // try to make something both readable and with little conflict risk (but not 0 risk)
 const prepareExtensions = (req, extensions, oldExtensions = []) => {
-  extensions
-    .filter(e => !e.shortId && !e.propertyPrefix)
-    .forEach(e => {
+  for (const e of extensions) {
+    if (!e.shortId && !e.propertyPrefix) {
       const oldExtension = oldExtensions.find(oldE => oldE.remoteService === e.remoteService && oldE.action === e.action)
       if (oldExtension) {
         // do not reprocess already assigned shortIds / propertyPrefixes to prevent compatibility break
@@ -169,20 +169,57 @@ const prepareExtensions = (req, extensions, oldExtensions = []) => {
         if (oldExtension.propertyPrefix) e.propertyPrefix = oldExtension.propertyPrefix
       } else {
         // only apply to new extensions to prevent compatibility break
-        let propertyPrefix = e.action.toLowerCase();
-        ['masterdata', 'find', 'bulk', 'search'].forEach(term => { propertyPrefix = propertyPrefix.replace(term, '') });
-        [':', '-', '.', ' '].forEach(char => { propertyPrefix = propertyPrefix.replace(char, '_') })
+        let propertyPrefix = e.action.toLowerCase()
+        for (const term of ['masterdata', 'find', 'bulk', 'search']) {
+          propertyPrefix = propertyPrefix.replace(term, '')
+        }
+        for (const char of [':', '-', '.', ' ']) {
+          propertyPrefix = propertyPrefix.replace(char, '_')
+        }
         if (propertyPrefix.startsWith('post')) propertyPrefix = propertyPrefix.replace('post', '')
         e.propertyPrefix = propertyPrefix.replace(/__/g, '_').replace(/^_/, '').replace(/_$/, '')
         e.propertyPrefix = '_' + e.propertyPrefix
 
         // TODO: also check if there is a conflict with an existing calculate property ?
       }
-    })
+    }
+  }
   const propertyPrefixes = extensions.filter(e => !!e.propertyPrefix).map(e => e.propertyPrefix)
   if (propertyPrefixes.length !== [...new Set(propertyPrefixes)].length) {
     throw createError(400, req.__('errors.extensionShortIdConflict'))
   }
+}
+
+const filterFields = {
+  concepts: 'schema.x-refersTo',
+  'field-type': 'schema.type',
+  'field-format': 'schema.format',
+  children: 'virtual.children',
+  services: 'extensions.remoteService',
+  status: 'status',
+  draftStatus: 'draft.status',
+  topics: 'topics.id',
+  publicationSites: 'publicationSites',
+  requestedPublicationSites: 'requestedPublicationSites',
+  spatial: 'spatial',
+  keywords: 'keywords',
+  title: 'title'
+}
+const facetFields = {
+  ...filterFields,
+  topics: 'topics'
+}
+const sumsFields = { count: 'count' }
+const nullFacetFields = ['publicationSites']
+const fieldsMap = {
+  filename: 'originalFile.name',
+  ids: 'id',
+  id: 'id',
+  rest: 'isRest',
+  virtual: 'isVirtual',
+  metaOnly: 'isMetaOnly',
+  status: 'status',
+  ...filterFields
 }
 
 // Get the list of datasets
@@ -190,27 +227,7 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   const explain = req.query.explain === 'true' && req.user && (req.user.isAdmin || req.user.asAdmin) && {}
   const datasets = req.app.get('db').collection('datasets')
   req.resourceType = 'datasets'
-  const filterFields = {
-    concepts: 'schema.x-refersTo',
-    'field-type': 'schema.type',
-    'field-format': 'schema.format',
-    children: 'virtual.children',
-    services: 'extensions.remoteService',
-    status: 'status',
-    draftStatus: 'draft.status',
-    topics: 'topics.id',
-    publicationSites: 'publicationSites',
-    requestedPublicationSites: 'requestedPublicationSites',
-    spatial: 'spatial',
-    keywords: 'keywords',
-    title: 'title'
-  }
-  const facetFields = {
-    ...filterFields,
-    topics: 'topics'
-  }
-  const sumsFields = { count: 'count' }
-  const nullFacetFields = ['publicationSites']
+
   const extraFilters = []
   if (req.query.bbox === 'true') {
     extraFilters.push({ bbox: { $ne: null } })
@@ -222,14 +239,7 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
 
   if (req.query.file === 'true') extraFilters.push({ file: { $exists: true } })
 
-  const query = findUtils.query(req, Object.assign({
-    filename: 'originalFile.name',
-    ids: 'id',
-    id: 'id',
-    rest: 'isRest',
-    virtual: 'isVirtual',
-    metaOnly: 'isMetaOnly'
-  }, filterFields), null, extraFilters)
+  const query = findUtils.query(req, fieldsMap, null, extraFilters)
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, [], req.query.raw === 'true')
   const [skip, size] = findUtils.pagination(req.query)
@@ -266,10 +276,10 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   if (facetsPromise) response.facets = findUtils.parseFacets(facets, nullFacetFields)
   if (sumsPromise) response.sums = sums
   const t1 = new Date().getTime()
-  response.results.forEach(r => {
+  for (const r of response.results) {
     if (req.query.raw !== 'true') r.userPermissions = permissions.list('datasets', r, req.user)
     clean(req.publicBaseUrl, r, req.query)
-  })
+  }
   if (explain) {
     explain.cleanMS = new Date().getTime() - t1
     response.explain = explain
@@ -400,9 +410,9 @@ const sendSchema = (req, res, schema) => {
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-schema.json"`)
     schema = datasetUtils.jsonSchema(schema, req.publicBaseUrl)
   } else {
-    schema.forEach(field => {
+    for (const field of schema) {
       field.label = field.title || field['x-originalName'] || field.key
-    })
+    }
   }
   res.status(200).send(schema)
 }
@@ -457,9 +467,9 @@ router.patch('/:datasetId',
     }
 
     // Ignore patch that doesn't bring actual change
-    Object.keys(patch).forEach(patchKey => {
-      if (JSON.stringify(patch[patchKey]) === JSON.stringify(req.dataset[patchKey])) { delete patch[patchKey] }
-    })
+    for (const patchKey of Object.keys(patch)) {
+      if (stableStringify(patch[patchKey]) === stableStringify(req.dataset[patchKey])) { delete patch[patchKey] }
+    }
     if (Object.keys(patch).length === 0) return res.status(200).send(clean(req.publicBaseUrl, req.dataset))
 
     patch.updatedAt = moment().toISOString()
@@ -472,7 +482,9 @@ router.patch('/:datasetId',
 
     // Re-publish publications
     if (!patch.publications && req.dataset.publications && req.dataset.publications.length) {
-      req.dataset.publications.filter(p => p.status !== 'deleted').forEach(p => { p.status = 'waiting' })
+      for (const p of req.dataset.publications) {
+        if (p.status !== 'deleted') p.status = 'waiting'
+      }
       patch.publications = req.dataset.publications
     }
 
@@ -1270,9 +1282,9 @@ const readLines = asyncWrap(async (req, res) => {
   let nextLinkURL
   if (size && esResponse.hits.hits.length === size) {
     nextLinkURL = new URL(`${req.publicBaseUrl}/api/v1/datasets/${req.dataset.id}/lines`)
-    Object.keys(req.query).filter(key => key !== 'page').forEach(key => {
-      nextLinkURL.searchParams.set(key, req.query[key])
-    })
+    for (const key of Object.keys(req.query)) {
+      if (key !== 'page') nextLinkURL.searchParams.set(key, req.query[key])
+    }
     const lastHit = esResponse.hits.hits[esResponse.hits.hits.length - 1]
     nextLinkURL.searchParams.set('after', JSON.stringify(lastHit.sort).slice(1, -1))
     const link = new LinkHeader()
@@ -1616,9 +1628,9 @@ router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJou
   if (!journal) return res.send([])
   delete journal.owner
   journal.events.reverse()
-  journal.events.forEach(e => {
+  for (const e of journal.events) {
     if (e.data) e.data = sanitizeHtml(e.data)
-  })
+  }
   res.json(journal.events)
 }))
 

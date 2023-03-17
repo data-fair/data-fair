@@ -34,10 +34,10 @@ exports.process = async function (app, dataset) {
     .filter(field => !!field.key)
 
   const keys = new Set([])
-  dataset.file.schema.forEach(field => {
+  for (const field of dataset.file.schema) {
     if (keys.has(field.key)) throw new Error(`Échec de l'analyse du fichier tabulaire, il contient plusieurs fois la colonne "${field.key}".`)
     keys.add(field.key)
-  })
+  }
 
   dataset.file.props = {
     linesDelimiter: sniffResult.linesDelimiter,
@@ -52,16 +52,14 @@ exports.process = async function (app, dataset) {
   debug('list attachments')
   // Now we can extract infos for each field
   const attachments = await datasetUtils.lsAttachments(dataset)
-  Object.keys(sampleValues)
-    // do not keep columns with empty string as header
-    .filter(field => !!field)
-    .forEach(field => {
-      const escapedKey = fieldsSniffer.escapeKey(field)
-      const fileField = dataset.file.schema.find(f => f.key === escapedKey)
-      if (!fileField) throw new Error(`Champ ${field} présent dans la donnée mais absent de l'analyse initiale du fichier`)
-      const existingField = dataset.schema && dataset.schema.find(f => f.key === escapedKey)
-      Object.assign(fileField, fieldsSniffer.sniff([...sampleValues[field]], attachments, existingField))
-    })
+  for (const field of Object.keys(sampleValues)) {
+    if (!field) continue // do not keep columns with empty string as header
+    const escapedKey = fieldsSniffer.escapeKey(field)
+    const fileField = dataset.file.schema.find(f => f.key === escapedKey)
+    if (!fileField) throw new Error(`Champ ${field} présent dans la donnée mais absent de l'analyse initiale du fichier`)
+    const existingField = dataset.schema && dataset.schema.find(f => f.key === escapedKey)
+    Object.assign(fileField, fieldsSniffer.sniff([...sampleValues[field]], attachments, existingField))
+  }
   if (attachments.length && !dataset.file.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
     throw new Error(`Vous avez chargé des pièces jointes, mais aucune colonne ne contient les chemins vers ces pièces jointes. Valeurs attendues : ${attachments.slice(0, 3).join(', ')}.`)
   }

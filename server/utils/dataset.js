@@ -236,9 +236,9 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
             }
 
             // this should not be necessary, but csv-parser does not return all trailing empty values
-            fileSchema.forEach(prop => {
+            for (const prop of fileSchema) {
               if (chunk[prop['x-originalName']] === undefined) chunk[prop['x-originalName']] = ''
-            })
+            }
           }
           delete chunk._i
           return callback(null, chunk)
@@ -252,11 +252,11 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
             return callback(createError(400, `Colonnes inconnues ${unknownKeys.join(', ')}`))
           }
         }
-        schema.forEach(prop => {
+        for (const prop of schema) {
           const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
           const value = fieldsSniffer.format(chunk[prop['x-originalName'] || prop.key], prop, fileProp)
           if (value !== null) line[prop.key] = value
-        })
+        }
         line._i = chunk._i
         callback(null, line)
       }
@@ -272,11 +272,11 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
         item.geometry = feature.geometry
 
         const line = { _i: this.i = (this.i || 0) + 1 }
-        schema.forEach(prop => {
+        for (const prop of schema) {
           const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
           const value = fieldsSniffer.format(item[prop['x-originalName'] || prop.key], prop, fileProp)
           if (value !== null) line[prop.key] = value
-        })
+        }
         callback(null, line)
       }
     }))
@@ -420,7 +420,7 @@ exports.storage = async (db, dataset) => {
     attachments: { size: 0, count: 0 },
     metadataAttachments: { size: 0, count: 0 }
   }
-  storage.dataFiles.forEach(df => delete df.url)
+  for (const df of storage.dataFiles) delete df.url
 
   // storage used by data-files
   const dataFilesObj = storage.dataFiles.reduce((obj, df) => { obj[df.key] = df; return obj }, {})
@@ -549,7 +549,7 @@ exports.mergeFileSchema = (dataset) => {
 exports.cleanSchema = (dataset) => {
   const schema = dataset.schema = dataset.schema || []
   const fileSchema = dataset.file && dataset.file.schema
-  schema.forEach(f => {
+  for (const f of schema) {
     // restore original type and format, in case of removal of a concept
     // or updated fields in latest file
     const fileField = fileSchema && fileSchema.find(ff => ff.key === f.key)
@@ -574,7 +574,7 @@ exports.cleanSchema = (dataset) => {
         }
       }
     }
-  })
+  }
   return schema
 }
 
@@ -730,12 +730,12 @@ exports.applyPatch = async (db, dataset, patch, save = true) => {
   // if the dataset is in draft mode all patched values are stored in the draft state
   if (dataset.draftReason) {
     const draftPatch = {}
-    Object.keys(patch).forEach(key => {
+    for (const key of Object.keys(patch)) {
       draftPatch['draft.' + key] = patch[key]
-    })
+    }
     patch = draftPatch
   }
-  Object.keys(patch).forEach(key => {
+  for (const key of Object.keys(patch)) {
     if (patch[key] === null) {
       mongoPatch.$unset = mongoPatch.$unset || {}
       mongoPatch.$unset[key] = true
@@ -743,7 +743,7 @@ exports.applyPatch = async (db, dataset, patch, save = true) => {
       mongoPatch.$set = mongoPatch.$set || {}
       mongoPatch.$set[key] = patch[key]
     }
-  })
+  }
   if (save) {
     await db.collection('datasets')
       .updateOne({ id: dataset.id }, mongoPatch)

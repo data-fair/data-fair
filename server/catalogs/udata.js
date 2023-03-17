@@ -55,13 +55,13 @@ exports.deleteDataset = async (catalog, dataset, publication) => {
 
 exports.publishApplication = async (catalog, application, publication, datasets) => {
   const udataDatasets = []
-  datasets.forEach(dataset => {
-    (dataset.publications || []).forEach(publication => {
+  for (const dataset of datasets) {
+    for (const publication of dataset.publications || []) {
       if (publication.catalog === catalog.id && publication.status === 'published') {
         udataDatasets.push(publication.result)
       }
-    })
-  })
+    }
+  }
   const appUrl = catalog.applicationUrlTemplate && catalog.applicationUrlTemplate.replace('{id}', application.id)
 
   const udataReuse = {

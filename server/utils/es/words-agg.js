@@ -78,14 +78,14 @@ async function unstem (client, dataset, field, key) {
   })).body
 
   const words = {}
-  res.hits.hits.forEach(hit => {
-    hit.highlight[field].forEach(w => {
+  for (const hit of res.hits.hits) {
+    for (let w of hit.highlight[field]) {
       w = w.match(/<>(.*)<>/)[1]
       // lowercase only if full uppercase.
       // this way we keep only meaningful uppercase letters
       if (w.toUpperCase() === w) w = w.toLowerCase()
       words[w] = (words[w] || 0) + 1
-    })
-  })
+    }
+  }
   return Object.keys(words).sort((a, b) => words[a] < words[b] ? 1 : -1)[0]
 }

@@ -24,12 +24,12 @@ exports.parse = async (filePath) => {
   }
   const cal = icalendar.parse_calendar(content)
   const infos = {}
-  Object.keys(cal.properties).forEach(p => {
+  for (const p of Object.keys(cal.properties)) {
     let value = cal.properties[p][0].value
     if (Array.isArray(value)) value = value.join(', ')
     if (p.startsWith('DT')) value = moment(value).toISOString()
     infos[p] = value
-  })
+  }
 
   // Do our best to capture main timezone of the whole calendar
   // console.log(cal.timezone('America/Los_Angeles'))
@@ -53,12 +53,12 @@ exports.parse = async (filePath) => {
             const event = events[this.i]
             if (!event) return this.push(null)
             line = {}
-            Object.keys(event.properties).forEach(p => {
+            for (const p of Object.keys(event.properties)) {
               let value = event.properties[p][0].value
               if (Array.isArray(value)) value = value.join(', ')
               if (p.startsWith('DT')) value = parseDate(event.properties[p][0], infos.timeZone)
               line[p] = value
-            })
+            }
             // No DTEND means eaither a full day event, or a single point in time event
             // it depends on if only the date part of the data should be used (no date-time)
             // we do not distinguish date and a date-time in data-fair yet, so we make this explicit
@@ -72,9 +72,9 @@ exports.parse = async (filePath) => {
               const opts = {
                 dtstart: new Date(line.DTSTART)
               }
-              Object.keys(line.RRULE).forEach(k => {
+              for (const k of Object.keys(line.RRULE)) {
                 opts[k.toLowerCase()] = isNaN(line.RRULE[k]) ? line.RRULE[k] : Number(line.RRULE[k])
-              })
+              }
               if (opts.freq) opts.freq = rrule.RRule[opts.freq.toUpperCase()]
               if (!opts.until) opts.until = new Date(Date.UTC(2099, 12, 31))
               if (opts.byday) {
@@ -84,7 +84,7 @@ exports.parse = async (filePath) => {
               const rule = new rrule.RRule(opts)
               const startDates = rule.all().slice(0, 1000)
               const duration = moment(line.DTEND).diff(line.DTSTART)
-              startDates.forEach(startDate => {
+              for (const startDate of startDates) {
                 const duplicateLine = {
                   ...line,
                   DTSTART: startDate.toISOString(),
@@ -92,7 +92,7 @@ exports.parse = async (filePath) => {
                 }
                 delete duplicateLine.RRULE
                 pushOk = this.push(duplicateLine)
-              })
+              }
             } else {
               pushOk = this.push(line)
             }

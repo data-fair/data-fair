@@ -94,7 +94,9 @@ const fillSettings = (owner, user, settings) => {
     if (owner.department) settings.name += ' - ' + owner.department
   }
   settings.apiKeys = settings.apiKeys || []
-  settings.apiKeys.forEach(apiKey => delete apiKey.clearKey)
+  for (const apiKey of settings.apiKeys) {
+    delete apiKey.clearKey
+  }
   settings.publicationSites = settings.publicationSites || []
   delete settings.operationsPermissions // deprecated
 }
@@ -108,7 +110,8 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async (req, res) => {
   const settings = db.collection('settings')
 
   const fullApiKeys = req.body.apiKeys.map(apiKey => ({ ...apiKey }))
-  req.body.apiKeys.forEach((apiKey, i) => {
+  for (let i = 0; i < req.body.apiKeys.length; i++) {
+    const apiKey = req.body.apiKeys[i]
     if (apiKey.adminMode && !req.user.adminMode) {
       throw createError(403, 'Only superadmin can manage api keys with adminMode=true')
     }
@@ -123,12 +126,12 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async (req, res) => {
       hash.update(fullApiKeys[i].clearKey)
       fullApiKeys[i].key = apiKey.key = hash.digest('hex')
     }
-  })
+  }
 
   if (req.body.topics) {
-    req.body.topics.forEach((topic) => {
+    for (const topic of req.body.topics) {
       if (!topic.id) topic.id = nanoid()
-    })
+    }
   }
 
   const oldSettings = (await settings.findOneAndReplace(req.ownerFilter, req.body, { upsert: true })).value

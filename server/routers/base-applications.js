@@ -125,7 +125,7 @@ const getQuery = (req, showAll = false) => {
   // You can use ?privateAccess=user:alban,organization:koumoul
   const privateAccess = []
   if (req.query.privateAccess) {
-    req.query.privateAccess.split(',').forEach(p => {
+    for (const p of req.query.privateAccess.split(',')) {
       const [type, id] = p.split(':')
       if (!req.user) throw createError(401)
       if (!req.user.adminMode) {
@@ -134,7 +134,7 @@ const getQuery = (req, showAll = false) => {
       }
       privateAccess.push({ type, id })
       accessFilter.push({ privateAccess: { $elemMatch: { type, id } } })
-    })
+    }
   }
   if (!showAll) {
     query.$and.push({ $or: accessFilter })
@@ -205,17 +205,17 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
         if (application.datasetsFilters && application.datasetsFilters.length && !datasetCount) {
           requirements.push(req.__('appRequire.aDataset'))
         } else {
-          (application.datasetsFilters || []).forEach(filter => {
+          for (const filter of application.datasetsFilters || []) {
             if (filter.bbox && !datasetBBox) {
               requirements.push(req.__('appRequire.geoData'))
             }
             if (filter.concepts) {
               const foundConcepts = []
-              filter.concepts.forEach(concept => {
+              for (const concept of filter.concepts) {
                 if (datasetVocabulary.includes(concept)) {
                   foundConcepts.push(concept)
                 }
-              })
+              }
               if (!foundConcepts.length) {
                 if (filter.concepts.length === 1) {
                   requirements.push(req.__('appRequire.aConcept', { concept: vocabulary[filter.concepts[0]].title }))
@@ -231,7 +231,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
                 requirements.push(req.__('appRequire.oneOfTypes', { types: filter['field-type'].join(res.__('appRequire.orJoin')) }))
               }
             }
-          })
+          }
         }
         if (requirements.length) {
           application.disabled.push(`${req.__('appRequire.requires')}${requirements.join(req.__('appRequire.requiresJoin'))}.`)
