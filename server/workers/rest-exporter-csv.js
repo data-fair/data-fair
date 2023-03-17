@@ -2,12 +2,11 @@ const prometheus = require('../utils/prometheus')
 
 exports.process = async function (app, dataset) {
   const path = require('path')
-  const util = require('util')
   const fs = require('fs-extra')
   const config = require('config')
   const tmp = require('tmp-promise')
   const CronJob = require('cron').CronJob
-  const pump = util.promisify(require('pump'))
+  const pump = require('../utils/pipe')
   const restUtils = require('../utils/rest-datasets')
   const outputs = require('../utils/outputs')
   const datasetUtils = require('../utils/dataset')

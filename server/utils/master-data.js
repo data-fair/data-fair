@@ -5,7 +5,7 @@ const virtualDatasetsUtils = require('./virtual-datasets')
 const batchStream = require('./batch-stream')
 const esUtils = require('./es')
 const prometheus = require('./prometheus')
-const pump = require('util').promisify(require('pump'))
+const pump = require('./pipe')
 
 exports.bulkSearchPromise = async (streams, data) => {
   const buffers = []

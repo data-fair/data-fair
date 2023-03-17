@@ -48,10 +48,9 @@ class AnalyzerWritable extends Writable {
 }
 
 exports.process = async function (app, dataset) {
-  const util = require('util')
   const fs = require('fs')
   const JSONStream = require('JSONStream')
-  const pump = util.promisify(require('pump'))
+  const pump = require('../utils/pipe')
   const iconv = require('iconv-lite')
   const datasetUtils = require('../utils/dataset')
 

@@ -1,6 +1,6 @@
 const { Writable } = require('stream')
 const csv = require('csv-parser')
-const pump = require('util').promisify(require('pump'))
+const pump = require('../utils/pipe')
 const debug = require('debug')('csv-sniffer')
 
 const possibleLinesDelimiters = ['\r\n', '\n']

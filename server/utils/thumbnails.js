@@ -1,7 +1,7 @@
 const fs = require('fs-extra')
 const path = require('path')
 const sharp = require('sharp')
-const pump = require('util').promisify(require('pump'))
+const pump = require('../utils/pipe')
 const dayjs = require('dayjs')
 const tmp = require('tmp-promise')
 const { Binary } = require('mongodb')

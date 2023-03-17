@@ -1,6 +1,5 @@
 const config = require('config')
-const util = require('util')
-const pump = util.promisify(require('pump'))
+const pump = require('./pipe')
 const fs = require('fs-extra')
 const { Transform } = require('stream')
 const stringify = require('json-stable-stringify')

@@ -9,8 +9,7 @@ exports.process = async function (app, dataset) {
     throw new Error('This is a test error')
   }
 
-  const util = require('util')
-  const pump = util.promisify(require('pump'))
+  const pump = require('../utils/pipe')
   const fs = require('fs-extra')
   const { Writable } = require('stream')
   const es = require('../utils/es')
