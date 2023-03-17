@@ -30,7 +30,6 @@ const { validateId } = require('../utils/validation')
 const publicationSites = require('../utils/publication-sites')
 const datasetUtils = require('../utils/dataset')
 const { prepareMarkdownContent } = require('../utils/markdown')
-const { cp } = require('fs')
 
 const router = module.exports = express.Router()
 
