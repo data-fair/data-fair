@@ -5,7 +5,7 @@
   >
     <template #activator="{on}">
       <span
-        class="text-body-2"
+        class="text-body-2 ml-1"
         v-on="on"
       >
         <v-avatar :size="28">

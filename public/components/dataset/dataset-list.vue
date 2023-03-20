@@ -37,7 +37,7 @@
               <dataset-card
                 :dataset="dataset"
                 :show-topics="datasets.facets.topics.length"
-                :show-owner="filters.owner === null"
+                :show-owner="filters.shared === true"
               />
             </v-col>
           </v-row>
@@ -51,7 +51,7 @@
                 :key="dataset.id"
                 :dataset="dataset"
                 :show-topics="!!datasets.facets.topics.length"
-                :show-owner="filters.owner === null"
+                :show-owner="filters.shared === true"
                 :show-table="true"
               />
               <v-divider :key="dataset.id + '-divider'" />

@@ -41,7 +41,7 @@
             <application-card
               :application="application"
               :show-topics="applications.facets.topics.length"
-              :show-owner="filters.owner === null"
+              :show-owner="filters.shared === true"
             />
           </v-col>
         </v-row>
