@@ -35,7 +35,7 @@ exports.trigger = async (db, type, resource, event, sender) => {
   const settings = await db.collection('settings').findOne(settingsFilter) || {}
   settings.webhooks = settings.webhooks || []
   for (const webhook of settings.webhooks) {
-    if (webhook.events && webhook.events.length && !webhook.events.includes(`${type}-${event.type}`)) return
+    if (webhook.events && webhook.events.length && !webhook.events.includes(`${type}-${event.type}`)) continue
     debug(`Trigger webhook for event ${event.type}`, webhook)
 
     const href = `${config.publicUrl}/api/v1/${type}s/${resource.id}`

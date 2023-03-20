@@ -396,7 +396,7 @@ async function deleteResourceFromDataset (catalog, dataset, publication) {
     } catch (err) {
       debug('failed to delete resource', err)
       // The resource was already deleted ?
-      if ([404, 410].includes(err.status)) return
+      if ([404, 410].includes(err.status)) continue
       if (err.response) throw new Error(`Erreur lors de la suppression de la ressource du jeu de données sur ${catalog.url} : ${err.status} - ${JSON.stringify(err.data, null, 2)}`)
       else throw err
     }
