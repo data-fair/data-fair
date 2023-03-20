@@ -99,7 +99,7 @@
             v-if="dataset.draftReason.key === 'file-new'"
             class="grow"
           >
-            <p v-="'draftNew1'" />
+            <p v-t="'draftNew1'" />
             <p
               v-t="'draftNew2'"
               class="mb-0"
