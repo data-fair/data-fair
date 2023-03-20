@@ -65,26 +65,31 @@
         </v-stepper>
       </v-col>
     </v-row>
-    <v-alert
+    <v-row
       v-if="journal && dataset.status==='error'"
-      type="error"
-      outlined
+      class="mx-0 px-2"
     >
-      <p
-        class="mb-0"
-        v-html="journal[0].data"
-      />
-      <template #append>
-        <v-btn
-          icon
-          title="Relancer"
-          color="primary"
-          @click="patch({})"
-        >
-          <v-icon>mdi-play</v-icon>
-        </v-btn>
-      </template>
-    </v-alert>
+      <v-alert
+        type="error"
+        style="width: 100%"
+        outlined
+      >
+        <p
+          class="mb-0"
+          v-html="journal[0].data"
+        />
+        <template #append>
+          <v-btn
+            icon
+            title="Relancer"
+            color="primary"
+            @click="patch({})"
+          >
+            <v-icon>mdi-play</v-icon>
+          </v-btn>
+        </template>
+      </v-alert>
+    </v-row>
     <v-row
       v-if="dataset.draftReason"
       class="mx-0 px-2"
