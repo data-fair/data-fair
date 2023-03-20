@@ -24,8 +24,8 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9200"]
       timeout: 10s
-      interval: 10s
-      retries: 10
+      interval: 2s
+      retries: 50
 
   mongo:
     profiles:

@@ -9,6 +9,8 @@ const possibleFieldsDelimiters = [',', ';', '\t', '|']
 const possibleQuoteChars = ['"', "'"]
 
 exports.sniff = async (sample) => {
+  const intoStream = (await import('into-stream')).default
+
   // the parameters combination with the most successfully extracted values is probably the best one
   const combinations = []
   for (const ld of possibleLinesDelimiters) {
@@ -66,7 +68,8 @@ exports.sniff = async (sample) => {
 
         let previousChunk
         let i = 0
-        const parsePromise = pump(parser, new Writable({
+
+        await pump(intoStream(sample), parser, new Writable({
           objectMode: true,
           write (chunk, encoding, callback) {
             i++
@@ -76,10 +79,6 @@ exports.sniff = async (sample) => {
             callback()
           }
         }))
-        parser.write(sample)
-        parser.end()
-        await parsePromise
-
         // on larger files prevent checking last chunk as it might be broken by the sampling method
         if (i < 10 && previousChunk) checkChunk(previousChunk)
         debug('score', score)
