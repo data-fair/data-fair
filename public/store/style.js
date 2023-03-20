@@ -52,11 +52,11 @@ export default () => ({
     darkPrimary20 (state, getters) {
       return tinycolor(getters.primary).darken(20).toHexString()
     },
-    lightAccent10 (state) {
-      return tinycolor(state.env.theme.colors.accent).brighten(10).toHexString()
+    lightAccent10 (state, getters, rootState) {
+      return tinycolor(rootState.env.theme.colors.accent).brighten(10).toHexString()
     },
-    darkAccent10 (state) {
-      return tinycolor(state.env.theme.colors.accent).darken(10).toHexString()
+    darkAccent10 (state, getters, rootState) {
+      return tinycolor(rootState.env.theme.colors.accent).darken(10).toHexString()
     },
     readablePrimaryColor (state, getters, rootState) {
       return contrastColor(getters.primary)
