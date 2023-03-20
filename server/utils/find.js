@@ -279,7 +279,7 @@ exports.facetsQuery = (req, facetFields = {}, filterFields, nullFacetFields = []
         facets['visibility-public'] = [...facet, { $match: visibility.publicFilter }, { $count: 'count' }]
         facets['visibility-private'] = [...facet, { $match: visibility.privateFilter }, { $count: 'count' }]
         facets['visibility-protected'] = [...facet, { $match: visibility.protectedFilter }, { $count: 'count' }]
-        return
+        continue
       }
 
       // another special case for base-application.. we perform a join
