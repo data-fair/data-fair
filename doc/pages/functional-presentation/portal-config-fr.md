@@ -6,7 +6,7 @@ description : Portails de données et pages de contenus
 published: true
 ---
 
-## Paramétrage des portails
+### Paramétrage des portails
 
 Data Fair permet de configurer plusieurs portails de données qui sont des lieux de publication des jeux de données, visualisations et pages de contenus que les utilisateurs vont pouvoir consulter. Il peut y avoir **des portails pour différents cas d'usage** : opendata, partage de données en interne, partage avec des partenaires, données en cours de consolidation (portail de préproduction), ...
 
@@ -19,7 +19,7 @@ De **nombreux éléments sont configurables** : le logo, l’image d'accueil, la
 
 Il est possible de renseigner un compte [Google Analytics ou Matomo (ex Piwik)](./analytics) pour le suivi d'activité et ainsi avoir des **statistiques** sur les pages les plus consultées et les données les plus téléchargées.
 
-## Édition des pages de contenus
+### Édition des pages de contenus
 
 Les pages de contenu sont de différents types : articles, pages thématiques autour de plusieurs jeux de données, pages d'actualités, data storytelling, licences, conditions d'utilisation, ...  
 Il est ainsi possible de **mettre en avant certaines données** et de leur donner encore plus de contexte par exemple, ou de faire des **tableaux de bord** intégrants différentes données.

@@ -8,12 +8,12 @@ published: false
 
 Pour améliorer et encadrer l'expérience des contributeurs des parcours standards leurs sont proposés.
 
-## Créer un jeu de données
+### Créer un jeu de données
 
 ```mermaid
 flowchart TD
   start([Bouton créer un jeu de données]) --> type{Quel type ?}
-  
+
   %% fichier
   type -- Fichier --> format[Liste des formats supportés]
   format --> file[/Chargement du fichier/]
@@ -48,7 +48,7 @@ flowchart TD
   class start,dataset primary;
 ```
 
-## Mettre à jour un jeu de données
+### Mettre à jour un jeu de données
 
 ```mermaid
 flowchart TD
@@ -71,7 +71,7 @@ flowchart TD
   class start,dataset primary;
 ```
 
-## Partager un jeu de données sur un portail
+### Partager un jeu de données sur un portail
 
 ```mermaid
 flowchart TD

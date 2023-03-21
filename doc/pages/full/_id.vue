@@ -69,7 +69,7 @@
         </template>
       </div>
     </v-row>
-    <div class="page-break" />
+    <!-- <div class="page-break" /> -->
 
     <template v-for="(section, i) in sections">
       <div

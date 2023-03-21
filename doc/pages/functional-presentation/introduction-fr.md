@@ -15,7 +15,7 @@ Les utilisateurs des données accèdent à la plateforme au travers **d'un ou pl
 
 Les administrateurs et contributeurs de données ont accès à un **back-office** qui permet de gérer les différents éléments de la plateforme : comptes utilisateurs, jeux de données et visualisations. Les administrateurs peuvent paramétrer l'environnement et gérer les permissions d’accès aux données et visualisations. Selon leur profil, les utilisateurs du back-office pourront créer, éditer, enrichir, supprimer les jeux de données, les cartes et les graphiques. Le back-office permet de créer des **portails de données** (interne ou open data) et aussi d’accéder à différentes métriques d’utilisation des portails.
 
-## Fonctionnement général
+### Fonctionnement général
 Les **jeux de données** sont en général créés par les utilisateurs en **chargeant des fichiers tabulaires ou géographiques** : le service stocke le fichier, l'analyse et déduit un schéma de données. Les données sont ensuite indexées suivant ce schéma et peuvent être requêtées au travers d'une API Web propre.
 
 En complément des jeux de données basés fichiers, Data Fair permet également de créer des jeux de données **éditables par formulaire** et des jeux de données virtuels qui sont des **vues configurables d'un ou plusieurs jeux de données**.
@@ -26,7 +26,7 @@ Les **visualisations** permettent d'exploiter au maximum le potentiel des donné
 
 <!-- ![FAIR](./images/functional-presentation/data_and_settings.png) -->
 
-## Principaux atouts de la plateforme
+### Principaux atouts de la plateforme
 Data Fair permet de mettre en place une organisation centrée autour de la donnée :
 * Possibilité de charger des données sous différents formats de fichiers ou par saisie via formulaire, permettant même de faire du crowd sourcing
 * Consultation des données au travers d'un large choix de visualisations interactives (graphiques, cartes, moteurs de recherche, ...)
