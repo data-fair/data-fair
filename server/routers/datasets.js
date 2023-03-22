@@ -1332,7 +1332,7 @@ const readLines = asyncWrap(async (req, res) => {
     const csvStreams = outputs.result2csv(req.dataset, req.query)
     const intoStream = (await import('into-stream')).default
     await pump(
-      intoStream(result.results),
+      intoStream.object(result.results),
       ...csvStreams,
       res.throttle('dynamic'),
       res
