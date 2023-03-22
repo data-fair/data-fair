@@ -28,7 +28,7 @@ The platform supports tabular data indexing. Each dataset (except external datas
 A label and a description allow for more readable and understandable column headers. The field can have a group which allows it to be found more quickly when there are many columns. If the field is text type, you can opt for rich formatting: it will then be possible to put HTML or Markdown in this field. The field can also be defined as being multi-valued, in this case we specify the separator used in the column between the different values.
 
 <img src="./images/functional-presentation/schema.jpg"
-     height="300" style="margin:20px auto;" alt="screenshot of the edition of the schema of a dataset" />
+     height="330" style="margin:20px auto;" alt="screenshot of the edition of the schema of a dataset" />
 
 The last element that can be filled in, and which is of considerable importance, is the **business type** associated with the field. This is done by selecting a **concept from a thesaurus**. There is a base of concepts common to the entire platform, and it is possible to **add your own concepts**. These are generally linked to vocabulary from the Semantic Web, the concept of postal code for example has the identifier `http://schema.org/postalCode`.
 
@@ -57,14 +57,14 @@ The second possibility to complete the data is to set up **enrichments**: column
 An administrator can finely control **data access permissions**. The data is *private*, ie only authenticated members of the organization can consult them. It is possible to make the data *public*, in this case everyone, including non-registered users, will be able to access it. You can also define access rights for certain users or partner organizations. An advanced mode allows you to define the permissions for each access point of the API of a dataset: you can for example make access to metadata public while access to data remains restricted.
 
 <img src="./images/functional-presentation/permissions.jpg"
-     height="300" style="margin:20px auto;" alt="screenshot of the edition of permissions on a dataset"/>
+     height="350" style="margin:20px auto;" alt="screenshot of the edition of permissions on a dataset"/>
 
 When a dataset has just been created, it is not yet available in the various data portals of the organization. It must first be **published in one or more portals**. In the context of opendata portals, the dataset must also have public access permission in addition to being published.
 
 This publication mechanism allows you to work in an agile way: for example, you can have a **recipe portal** on which you publish the datasets that you want to open soon, accompanying them with visualizations. Visualizations can highlight a problem in the data or a bad structuring of it, problem that can be seen by several people because the data is already published on a portal. Once we reach the **desired publication quality**, we unpublish the dataset from the recipe portal and publish it on one or more production portals.
 
 <img src="./images/functional-presentation/portail-publication.jpg"
-     height="300" style="margin:20px auto;" alt="screenshot of the publication of a dataset on portals"/>
+     height="350" style="margin:20px auto;" alt="screenshot of the publication of a dataset on portals"/>
 
 It is also possible to publish a dataset on portals or data catalogs external to the platform, this is described in more detail in the section on *catalog connectors*.
 

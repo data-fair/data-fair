@@ -10,4 +10,6 @@ Les **pages de contenus** peuvent être de différents types : articles, pages t
 
 En plus de la saisie de texte libre, il est possible d'intégrer différents types d'éléments : tableau d'un jeu de données, visualisation, liste de jeux de données, intégration de contenus externe, ...
 
-Pour accéder aux pages de contenus créées, il est possible de renseigner des liens dans la barre de navigation. Les liens peuvent apparaître directement dans la barre, ou dans un menu ajouté à celle-ci. Il est possible de créer des pages **publiques** ou des pages **privées**.
+Pour accéder aux pages de contenus créées, il est possible de renseigner des liens dans la barre de navigation. Les liens peuvent apparaître directement dans la barre, ou dans un menu ajouté à celle-ci. Pour les pages d'actualités, il est possible d'y accéder soit depuis un fil d'actualités en page d'accueil, soit depuis la page qui liste toutes les actualités et qui est accessible depuis la barre de navigation.
+
+Il est possible de créer des pages **publiques** ou des pages **privées**.

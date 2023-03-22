@@ -17,7 +17,7 @@ Il est possible d'utiliser **Matomo Analytics** (anciennement Piwik) ou **Google
 La configuration se fait avec l'*url du tracker* et l'*identifiant de votre site*. Les statistiques sous [Matomo Analytics](https://fr.matomo.org/) sont disponibles sous différentes formes : tableaux, graphiques et cartes. En sélectionnant les différentes représentations des statistiques, il est possible de  personnaliser ses tableaux de bord. Il est également possible d'**anonymiser les données** et d’enregistrer les parcours utilisateurs tout en étant en conformité avec les recommandations de la [CNIL](https://www.cnil.fr/professionnel).
 
 <img src="./images/functional-presentation/matomo.jpg"
-     height="300" style="margin:40px auto;"alt="capture d'écran de Matomo" />
+     height="300" style="margin:40px auto;" alt="capture d'écran de Matomo" />
 
 #### Google Analytics
 

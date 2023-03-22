@@ -14,4 +14,4 @@ The data portal has a **responsive design** and its display is suitable for a wi
 An **authentication screen** is accessible on all the pages of the portal to be able to connect or create an account. The account allows access to private data according to its rights in the case of internal portals, and to subscribe to **notifications** on data sets.
 
 <img src="./images/functional-presentation/portal.jpg"
-     height="450" style="margin:20px auto;" alt="screenshot of the home page of a portal" />
+     height="600" style="margin:20px auto;" alt="screenshot of the home page of a portal" />

@@ -3,7 +3,7 @@ title: Saisie des données par formulaire
 section: 2
 subsection: 2
 description : Créer et mettre à jour un jeu de données éditable
-published: false
+published: true
 ---
 
 ## Créer son premier jeu éditable

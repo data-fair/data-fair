@@ -3,7 +3,7 @@ title: Import de données avec un fichier
 section: 2
 subsection: 1
 description : Créer et mettre à jour un jeu de données avec un fichier
-published: false
+published: true
 ---
 
 ## Prérequis

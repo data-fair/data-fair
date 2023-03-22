@@ -38,6 +38,6 @@ Permissions par défaut des différents rôles d’une organisation :
 
 ### Départements
 
-En plus de leur rôle, les utilisateurs peuvent être assigné à un département de l'organisation. Cela permet une forme de cloisonnement et d'avoir des groupes d'utilisateurs qui gèrent chacun leurs données de leur coté. Les utilisateurs qui ne sont pas restreints à un département peuvent voir (ou modifier si ils ont un rôle de *contributeur* ou *administrateur*) toutes les ressources de l'organisation.
+En plus de leur rôle, les utilisateurs peuvent être assigné à un département de l'organisation. Cela permet une **forme de cloisonnement** et d'avoir des groupes d'utilisateurs qui gèrent chacun leurs données de leur coté. Les utilisateurs qui ne sont pas restreints à un département peuvent voir (ou modifier si ils ont un rôle de *contributeur* ou *administrateur*) toutes les ressources de l'organisation.
 
 Un *contributeur* d'un département ne peut mettre à jour que les jeux de données de ce département, et quand il créé un jeu de données, celui ci est rattaché à son département. De la même manière, un administrateur rattaché à un département ne peut publier des jeux de données que sur un portail rattaché à son département. Par contre, un administrateur général de l'organisation peut publier ce même jeu de données sur un portail plus global à l'organisation.

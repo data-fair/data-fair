@@ -37,6 +37,6 @@ Default permissions of the different roles of an organization:
 
 ### Departments
 
-In addition to their role, users can be assigned to a department of the organization. This allows a form of partitioning and to have groups of users who each manage their data on their side. Users who are not restricted to a department can see (or edit if they have a *contributor* or *administrator* role) all resources in the organization.
+In addition to their role, users can be assigned to a department of the organization. This allows a **form of partitioning** and to have groups of users who each manage their data on their side. Users who are not restricted to a department can see (or edit if they have a *contributor* or *administrator* role) all resources in the organization.
 
 A *contributor* of a department can only update the datasets of this department, and when he creates a dataset, it is attached to his department. Similarly, an administrator attached to a department can only publish datasets on a portal attached to his department. On the other hand, a global administrator of the organization can publish this same dataset on a portal more global to the organization.
