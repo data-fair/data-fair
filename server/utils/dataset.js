@@ -135,7 +135,7 @@ exports.dataFiles = async (dataset) => {
           results.push({
             name: dataset.file.name,
             key: 'normalized',
-            title: `Fichier normalisé (${dataset.file.mimetype.split('/').pop()})`,
+            title: `Fichier normalisé ${dataset.file.mimetype.split('/').pop().replace('+', '').toUpperCase()}`,
             mimetype: dataset.file.mimetype
           })
         }
@@ -149,7 +149,7 @@ exports.dataFiles = async (dataset) => {
           results.push({
             name,
             key: 'full',
-            title: `Fichier étendu (${dataset.file.mimetype.split('/').pop()})`,
+            title: `Fichier enrichi ${dataset.file.mimetype.split('/').pop().replace('+', '').toUpperCase()}`,
             mimetype: dataset.file.mimetype
           })
         }
@@ -164,7 +164,7 @@ exports.dataFiles = async (dataset) => {
       results.push({
         name,
         key: 'export-csv',
-        title: 'Fichier exporté (csv)',
+        title: 'Export CSV',
         mimetype: 'text/csv'
       })
     }
