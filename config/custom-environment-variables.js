@@ -245,5 +245,8 @@ module.exports = {
   agentkeepaliveOptions: {
     __name: 'AGENTKEEPALIVE_OPTIONS',
     __format: 'json'
+  },
+  exportRestDatasets: {
+    cron: 'EXPORT_REST_DATASETS_CRON'
   }
 }
