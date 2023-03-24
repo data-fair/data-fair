@@ -135,7 +135,7 @@ exports.dataFiles = async (dataset) => {
           results.push({
             name: dataset.file.name,
             key: 'normalized',
-            title: `Fichier normalisé ${dataset.file.mimetype.split('/').pop().replace('+', '').toUpperCase()}`,
+            title: `Export ${dataset.file.mimetype.split('/').pop().replace('+', '').toUpperCase()}`,
             mimetype: dataset.file.mimetype
           })
         }
