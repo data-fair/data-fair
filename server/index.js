@@ -8,7 +8,7 @@ app.run().then(app => {
     console.log('Worker loop is running')
   }
   if (config.mode.includes('server')) {
-    console.log('Web socket and HTTP server listening on http://localhost:%s, exposed on %s', config.port, config.publicUrl)
+    console.log('Web socket and HTTP server listening on http://localhost:%s\nExposed on %s', config.port, config.publicUrl)
   }
   if (config.mode === 'task') {
     // console.log(`Ran task ${process.argv[2]} / ${process.argv[3]} / ${process.argv[4]}`)
