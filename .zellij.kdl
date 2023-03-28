@@ -1,0 +1,20 @@
+layout {
+    pane name="data-fair" borderless=true {
+      command "bash"
+      args "-ic" "nvm use && bash"
+    }
+    pane {
+      split_direction "vertical"
+      pane name="client" {
+        command "bash"
+        args "-ic" "nvm use && npm run dev-client"
+      }
+      pane name="server" {
+        command "bash"
+        args "-ic" "nvm use && npm run dev-deps && npm run dev-server"
+      }
+    }
+    pane size=2 borderless=true {
+        plugin location="zellij:status-bar"
+    }
+}

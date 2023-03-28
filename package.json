@@ -15,6 +15,7 @@
     "dev-server": "DEBUG=upgrade*,i18n*,notifications,worker:*,catalogs:*,thumbnails NODE_ENV=development nodemon server",
     "dev-server-memory": "DEBUG=upgrade*,i18n*,notifications,worker:* DEBUG_HEAP=* NODE_ENV=development nodemon -x \"node --expose-gc\" server",
     "dev-client": "NODE_ENV=development nuxt",
+    "dev-zellij": "zellij --layout .zellij.kdl",
     "build": "nuxt build --no-generate",
     "start": "node server",
     "analyze": "nuxt build --analyze",
@@ -22,7 +23,8 @@
     "doc": "nuxt --port 3144 --config-file doc/nuxt.config.js",
     "build-doc": "nuxt generate --config-file ${PWD}/doc/nuxt.config.js",
     "serve-doc": "TARGET=http://localhost:3144/doc-dist/ npm run build-doc && http-server .",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "prepare": "husky install"
   },
   "author": "",
   "license": "AGPL-3.0-only",
@@ -49,6 +51,8 @@
     }
   },
   "devDependencies": {
+    "@commitlint/cli": "^17.5.0",
+    "@commitlint/config-conventional": "^17.4.4",
     "@data-fair/sd-vue": "^2.6.1",
     "@hackmd/meta-marked": "^0.5.0",
     "@koumoul/gh-pages-multi": "^0.7.1",
@@ -77,6 +81,7 @@
     "highlight.js": "^11.4.0",
     "http-proxy-middleware": "^1.0.6",
     "http-server": "^13.0.2",
+    "husky": "^8.0.3",
     "js-file-download": "^0.4.12",
     "less": "^3.12.2",
     "less-loader": "^6.2.0",
