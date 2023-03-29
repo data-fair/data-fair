@@ -123,7 +123,7 @@ exports.dataFiles = async (dataset) => {
       results.push({
         name: dataset.originalFile.name,
         key: 'original',
-        title: 'Fichier original',
+        title: 'Fichier d\'origine',
         mimetype: dataset.originalFile.mimetype
       })
     }
