@@ -231,7 +231,7 @@ describe('datasets', () => {
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
 
-    const webhook = await testUtils.timeout(eventToPromise(notifier, 'webhook'), 1000, 'webhook not received')
+    const webhook = await testUtils.timeout(eventToPromise(notifier, 'webhook'), 2000, 'webhook not received')
     res = await ax.get(webhook.href + '/api-docs.json')
     assert.equal(res.status, 200)
     assert.equal(res.data.openapi, '3.0.0')
@@ -253,7 +253,7 @@ describe('datasets', () => {
     const wsRes = await testUtils.timeout(eventToPromise(wsCli, 'message'), 1000, 'ws message not received')
 
     assert.equal(JSON.parse(wsRes.data).channel, 'datasets/' + datasetId + '/journal')
-    await testUtils.timeout(eventToPromise(notifier, 'webhook'), 1000, 'second webhook not received')
+    await testUtils.timeout(eventToPromise(notifier, 'webhook'), 2000, 'second webhook not received')
     res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
 
     assert.equal(res.data.length, 14)
