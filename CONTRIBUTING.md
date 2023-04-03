@@ -52,7 +52,7 @@ docker run --network=host --env PORT=8081 data-fair-dev
 
 ## Git quality checks
 
-This project uses [husky](https://typicode.github.io/husky/) and  to ensure quality of commits. The pre-commit hook runs the docker image build, this way we get linting, testing, and building all checked in 1 step.
+This project uses [husky](https://typicode.github.io/husky/) to ensure quality of contributions.
 
 The original setup was created like so:
 
