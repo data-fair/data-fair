@@ -3,6 +3,7 @@ const url = require('url')
 const equal = require('deep-equal')
 const axios = require('../utils/axios')
 const debug = require('debug')('catalogs:udata')
+const moment = require('moment')
 exports.title = 'uData'
 exports.description = 'Customizable and skinnable social platform dedicated to (open)data.'
 exports.docUrl = 'https://udata.readthedocs.io/en/latest/'
@@ -322,8 +323,12 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
     resources
   }
   if (dataset.frequency) udataDataset.frequency = dataset.frequency
-  if (dataset.temporal) udataDataset.temporal_coverage = dataset.temporal
-  if (dataset.spatial) udataDataset.spatial = { granularity: dataset.spatial }
+  if (dataset.temporal) {
+    udataDataset.temporal_coverage = {}
+    if (dataset.temporal.start) udataDataset.temporal_coverage.start = moment(dataset.temporal.start).toISOString()
+    if (dataset.temporal.end) udataDataset.temporal_coverage.end = moment(dataset.temporal.end).toISOString()
+  }
+  // if (dataset.spatial) udataDataset.spatial = { granularity: dataset.spatial }
   if (dataset.keywords && dataset.keywords.length) udataDataset.tags = dataset.keywords
   if (dataset.license) {
     const remoteLicenses = (await axios.get(url.resolve(catalog.url, 'api/1/datasets/licenses/'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
