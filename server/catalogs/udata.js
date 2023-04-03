@@ -321,6 +321,15 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
     },
     resources
   }
+  if (dataset.frequency) udataDataset.frequency = dataset.frequency
+  if (dataset.temporal) udataDataset.temporal_coverage = dataset.temporal
+  if (dataset.spatial) udataDataset.spatial = { granularity: dataset.spatial }
+  if (dataset.keywords && dataset.keywords.length) udataDataset.tags = dataset.keywords
+  if (dataset.license) {
+    const remoteLicenses = (await axios.get(url.resolve(catalog.url, 'api/1/datasets/licenses/'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
+    const remoteLicense = remoteLicenses.find(l => l.url === dataset.license.href)
+    if (remoteLicense) udataDataset.license = remoteLicense.id
+  }
 
   if (catalog.organization && catalog.organization.id) {
     udataDataset.organization = { id: catalog.organization.id }
