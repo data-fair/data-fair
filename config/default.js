@@ -172,7 +172,7 @@ module.exports = {
     href: 'https://www.etalab.gouv.fr/licence-ouverte-open-licence'
   }, {
     title: 'Open Database License (ODbL)',
-    href: 'https://opendatacommons.org/licenses/odbl/summary/'
+    href: 'http://opendatacommons.org/licenses/odbl/summary/'
   }],
   // used to configure service workers in cacheFirst mode for common directories of base applications source code
   applicationsDirectories: [
