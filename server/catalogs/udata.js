@@ -328,6 +328,8 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
     if (dataset.temporal.start) udataDataset.temporal_coverage.start = moment(dataset.temporal.start).toISOString()
     if (dataset.temporal.end) udataDataset.temporal_coverage.end = moment(dataset.temporal.end).toISOString()
   }
+  // We do not propagate spatial coverage for the moment as we can't push custom text
+  // See https://www.data.gouv.fr/api/1/spatial/granularities/
   // if (dataset.spatial) udataDataset.spatial = { granularity: dataset.spatial }
   if (dataset.keywords && dataset.keywords.length) udataDataset.tags = dataset.keywords
   if (dataset.license) {
