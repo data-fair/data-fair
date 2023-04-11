@@ -86,7 +86,7 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
 exports.getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
   const db = req.app.get('db')
   const sharpOptions = { fit: req.query.fit || 'cover', position: req.query.position || 'center' }
-  // resizeMode was mostlye adapted from thumbor and comes from dataset schema
+  // resizeMode was mostly adapted from thumbor and comes from dataset schema
   // but it is fairly easy to match it to sharp options
   if (!req.query.fit && !req.query.position) {
     if (thumbnailsOpts.resizeMode === 'crop') {

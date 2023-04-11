@@ -19,7 +19,7 @@
       <v-card-text>
         <v-select
           v-model="permission.type"
-          :items="[{value: null, label: $t('public')}, {value: 'organization', label: $t('organization')}, {value: 'user', label: $t('user')}]"
+          :items="permissionTypes"
           item-text="label"
           item-value="value"
           :label="$t('scope')"
@@ -28,23 +28,40 @@
         />
 
         <template v-if="permission.type === 'organization'">
-          <organization-select
+          <v-select
+            v-model="orgSelectType"
+            :items="orgSelectTypes"
+          />
+          <!--<organization-select
             v-model="organization"
-          />
-          <v-select
-            v-if="owner.type === 'organization' && permission.id === owner.id && owner.departments && owner.departments.length"
-            v-model="permission.department"
-            :items="[{value: null, text: $t('allDeps')}, ...owner.departments.map(d => ({value: d.id, text: `${d.name} (${d.id})`})), {value: '-', text: $t('noDep')}]"
-            :label="$t('department')"
-          />
+          />-->
+          <template v-if="orgSelectType === 'ownerOrg'">
+            <v-select
+              v-if="owner.departments && owner.departments.length"
+              v-model="permission.department"
+              :items="[{value: null, text: $t('allDeps')}, ...owner.departments.map(d => ({value: d.id, text: `${d.name} (${d.id})`})), {value: '-', text: $t('noDep')}]"
+              :label="$t('department')"
+            />
 
-          <v-select
-            v-if="owner.type === 'organization' && permission.id === owner.id && owner.roles && owner.roles.length"
-            v-model="permission.roles"
-            :items="owner.roles"
-            :label="$t('rolesLabel')"
-            multiple
-          />
+            <v-select
+              v-if="owner.roles && owner.roles.length"
+              v-model="permission.roles"
+              :items="owner.roles"
+              :label="$t('rolesLabel')"
+              multiple
+            />
+          </template>
+
+          <template v-if="orgSelectType === 'partner'">
+            <v-select
+              v-model="partner"
+              :items="owner.partners"
+              item-text="name"
+              item-value="id"
+              return-object
+              :label="$t('partner')"
+            />
+          </template>
         </template>
 
         <template v-if="permission.type === 'user'">
@@ -134,6 +151,9 @@ fr:
   memberOf: Parmi les membres de {org}
   userByEmail: Utilisateur désigné par son adresse email
   email: Email
+  amongPartners: Parmi les organisations partenaires
+  partner: Partenaire
+  ownerOrg: Organisation propriétaire
   classNames:
     list: Lister
     read: Lecture
@@ -167,6 +187,9 @@ en:
   memberOf: Among the members of {org}
   userByEmail: User designed by their email
   email: Email
+  amongPartners: Among partner organizations
+  partner: Partner
+  ownerOrg: Owner organization
   classNames:
     list: List
     read: Read
@@ -236,7 +259,46 @@ export default {
         }
       }
     },
-    organization: {
+    orgSelectTypes () {
+      return [{ value: 'ownerOrg', text: this.$t('ownerOrg') }, { value: 'partner', text: this.$t('amongPartners') }]
+    },
+    orgSelectType: {
+      get () {
+        if (this.permission.type !== 'organization') return null
+        if (this.permission.id === this.owner.id) return 'ownerOrg'
+        return 'partner'
+      },
+      set (orgSelectType) {
+        this.$delete(this.permission, 'email')
+        this.$set(this.permission, 'department', null)
+        this.$set(this.permission, 'roles', [])
+        if (orgSelectType === 'ownerOrg') {
+          this.$set(this.permission, 'id', this.owner.id)
+          this.$set(this.permission, 'name', this.owner.name)
+        } else if (orgSelectType === 'partner') {
+          this.$set(this.permission, 'id', null)
+          this.$set(this.permission, 'name', null)
+        }
+      }
+    },
+    partner: {
+      get () {
+        if (this.orgSelectType !== 'partner') return null
+        if (!this.permission.id) return null
+        return this.owner.partners.find(p => p.id === this.permission.id)
+      },
+      set (org) {
+        this.$delete(this.permission, 'email')
+        if (org) {
+          this.$set(this.permission, 'id', org.id)
+          this.$set(this.permission, 'name', org.name)
+        } else {
+          this.$set(this.permission, 'id', null)
+          this.$set(this.permission, 'name', null)
+        }
+      }
+    },
+    /* organization: {
       get () {
         if (this.permission.type !== 'organization') return null
         if (!this.permission.id) return null
@@ -254,7 +316,7 @@ export default {
         this.$set(this.permission, 'department', null)
         this.$set(this.permission, 'roles', [])
       }
-    },
+    }, */
     member: {
       get () {
         if (this.permission.type !== 'user') return null
@@ -289,6 +351,11 @@ export default {
       } else {
         return this.permissionClasses
       }
+    },
+    permissionTypes () {
+      const types = [{ value: null, label: this.$t('public') }, { value: 'user', label: this.$t('user') }]
+      if (this.owner.type === 'organization') types.push({ value: 'organization', label: this.$t('organization') })
+      return types
     }
   },
   watch: {

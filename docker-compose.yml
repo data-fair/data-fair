@@ -41,7 +41,7 @@ services:
     profiles:
       - dev
       - test
-    image: ghcr.io/data-fair/simple-directory:6
+    image: ghcr.io/data-fair/simple-directory:partners
     network_mode: host
     depends_on:
       - mongo
@@ -62,6 +62,7 @@ services:
       - DEFAULT_MAX_CREATED_ORGS=10
       - ANONYMOUS_ACTION_NOT_BEFORE=1s
       - MANAGE_DEPARTMENTS=true
+      - MANAGE_PARTNERS=true
       - LIST_USERS_MODE=admin
       - LIST_ORGANIZATIONS_MODE=authenticated
       - PROMETHEUS_ACTIVE=false
@@ -90,16 +91,6 @@ services:
       - ONLY_SAME_HOST=false
       - PROMETHEUS_ACTIVE=false
       - PUPPETEER_ARGS=["--no-sandbox"]
-
-  thumbor:
-    profiles:
-      - dev
-    image: apsl/thumbor:6.4.2
-    network_mode: host
-    environment:
-      - SECURITY_KEY=thumborkey
-      - STORAGE_EXPIRATION_SECONDS=600
-      - MAX_AGE=600
 
   notify:
     profiles:

@@ -129,6 +129,10 @@
     }, {
       "id": "contrib1",
       "role": "contrib"
+    }],
+    "partners": [{
+      "id": "KWqAGZ4mG",
+      "name": "Fivechat"
     }]
   }
 ]
