@@ -384,8 +384,9 @@ router.use('/:remoteServiceId/proxy*', rateLimiting.middleware('remoteService'),
         await pump(appRes, throttle, res)
         resolve()
       } catch (err) {
-        if (err.code === 'ERR_STREAM_PREMATURE_CLOSE') {
+        if (err.code === 'ERR_STREAM_PREMATURE_CLOSE' || err.message === 'premature close') {
           // nothing to do, happens when requests are interrupted by browser
+          // pretty usual for map tiles for example
           resolve()
         } else {
           console.error('(service-proxy-res) Error while proxying remote service', err)
