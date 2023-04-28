@@ -187,6 +187,16 @@ describe('CSV cases', () => {
     assert.equal(res.data.results[0].COM, 'L\' Abergement-Clémenciat')
   })
 
+  it('Another CSV with single quotes in content', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/ouverture.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    // assert.equal(dataset.file.props.linesDelimiter, '\r\n')
+    assert.equal(dataset.file.props.escapeChar, '"')
+    assert.equal(dataset.file.props.quote, '"')
+    assert.equal(dataset.file.props.fieldsDelimiter, ';')
+  })
+
   it('A CSV with empty values in number properties', async () => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('csv-cases/empty-number-values.csv', ax)
