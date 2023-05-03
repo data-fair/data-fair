@@ -116,7 +116,7 @@ const projCoordinates = (projection, coordinates) => {
     for (const coords of coordinates) {
       projCoordinates(projection, coords)
     }
-  } else {
+  } else if (coordinates.length === 2) {
     const projCoords = proj4(projection.proj4, 'WGS84', coordinates)
     coordinates[0] = projCoords[0]
     coordinates[1] = projCoords[1]
@@ -171,7 +171,6 @@ exports.geometry2fields = async (dataset, doc) => {
 
   // check if simplify is a good idea ? too CPU intensive for our backend ?
   // const simplified = turf.simplify({type: 'Feature', geometry: JSON.parse(doc[prop.key])}, {tolerance: 0.01, highQuality: false})
-
   const point = pointOnFeature(feature)
   const fields = {
     _geopoint: point.geometry.coordinates[1] + ',' + point.geometry.coordinates[0]

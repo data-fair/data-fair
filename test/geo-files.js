@@ -50,6 +50,25 @@ describe('geo files support', () => {
     assert.ok(jsonWkt.results[0].geometry.startsWith('LINESTRING'))
   })
 
+  it('Upload geojson with CRS (projection)', async () => {
+    const datasetFd = fs.readFileSync('./test/resources/geo/geojson-crs.geojson')
+    const form = new FormData()
+    form.append('file', datasetFd, 'geojson-example.geojson')
+    const ax = global.ax.dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+
+    const dataset = await workers.hook('finalizer/' + res.data.id)
+    assert.ok(dataset.projection)
+    assert.equal(dataset.projection.code, 'EPSG:27572')
+    assert.equal(dataset.schema[0]['x-refersTo'], 'http://data.ign.fr/def/geometrie#Geometry')
+
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
+    assert.equal(lines.length, 1)
+    assert.ok(lines[0]._geopoint)
+    assert.ok(lines[0]._geopoint.startsWith('46.19'))
+  })
+
   it('Upload geojson dataset with some schema info', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/geo/geojson-example.geojson')
