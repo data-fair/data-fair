@@ -182,6 +182,7 @@
         hide-details
         class="mb-3"
         clearable
+        :loading="!projections"
         @input="patch({projection: dataset.projection})"
       />
       <v-text-field
@@ -455,12 +456,12 @@ export default {
     licenses () {
       if (!this.dataset.license) return
       // Matching object reference, so that the select components works
-      this.dataset.license = this.licenses.find(l => l.href === this.dataset.license.href)
+      this.$set(this.dataset, 'license', this.licenses.find(l => l.href === this.dataset.license.href))
     },
     projections () {
       if (!this.dataset.projection) return
       // Matching object reference, so that the select components works
-      this.dataset.projection = this.projections.find(l => l.code === this.dataset.projection.code)
+      this.$set(this.dataset, 'projection', this.projections.find(l => l.code === this.dataset.projection.code))
     },
     editProjection: {
       handler () {
