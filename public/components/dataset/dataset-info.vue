@@ -408,6 +408,7 @@ const { mapState, mapActions, mapGetters } = require('vuex')
 
 const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
 const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
+const projectGeomUri = 'http://data.ign.fr/def/geometrie#Geometry'
 
 export default {
   props: {
@@ -439,9 +440,10 @@ export default {
       return this.$store.getters.ownerDatasetsMetadata(this.dataset.owner)
     },
     editProjection () {
-      return !!(this.dataset && this.dataset.schema &&
-          this.dataset.schema.find(p => p['x-refersTo'] === coordXUri) &&
-          this.dataset.schema.find(p => p['x-refersTo'] === coordYUri))
+      return !!(this.dataset && this.dataset.schema && (
+        (this.dataset.schema.find(p => p['x-refersTo'] === coordXUri) && this.dataset.schema.find(p => p['x-refersTo'] === coordYUri)) ||
+        this.dataset.schema.find(p => p['x-refersTo'] === projectGeomUri)
+      ))
     },
     frequencies () {
       // https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/

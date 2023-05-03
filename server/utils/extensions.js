@@ -227,7 +227,7 @@ function prepareInputMapping (action, dataset, extensionKey, selectFields) {
       if (geoUtils.schemaHasGeopoint(dataset.schema)) {
         Object.assign(item, geoUtils.latlon2fields(dataset, item))
       } else if (geoUtils.schemaHasGeometry(dataset.schema)) {
-        Object.assign(item, await geoUtils.geometry2fields(dataset.schema, item))
+        Object.assign(item, await geoUtils.geometry2fields(dataset, item))
       }
     }
     const flatItem = flatten(item) // in case the input comes from another extension

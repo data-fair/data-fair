@@ -24,9 +24,10 @@ const latUri = ['http://schema.org/latitude', 'http://www.w3.org/2003/01/geo/wgs
 const lonUri = ['http://schema.org/longitude', 'http://www.w3.org/2003/01/geo/wgs84_pos#long']
 const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
 const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
+const projectGeomUri = 'http://data.ign.fr/def/geometrie#Geometry'
 const dataDir = path.resolve(config.dataDir)
 
-exports.allGeoConcepts = [geomUri, latlonUri, ...latUri, ...lonUri, coordXUri, coordYUri]
+exports.allGeoConcepts = [geomUri, projectGeomUri, latlonUri, ...latUri, ...lonUri, coordXUri, coordYUri]
 
 exports.schemaHasGeopoint = (schema) => {
   const lat = schema.find(p => latUri.indexOf(p['x-refersTo']) !== -1)
@@ -41,8 +42,11 @@ exports.schemaHasGeopoint = (schema) => {
 }
 
 exports.schemaHasGeometry = (schema) => {
-  const field = schema.find(p => p['x-refersTo'] === geomUri)
-  return (field && field.key) || false
+  const geom = schema.find(p => p['x-refersTo'] === geomUri)
+  if (geom) return geom.key
+  const projectGeom = schema.find(p => p['x-refersTo'] === projectGeomUri)
+  if (projectGeom) return projectGeom.key
+  return false
 }
 
 exports.geoFieldsKey = (schema) => {
@@ -90,7 +94,11 @@ exports.latlon2fields = (dataset, doc) => {
 
 // Geometry can be passed as an object, as a geojson string or as a WKT string
 exports.readGeometry = (value) => {
-  if (typeof value === 'object') return value
+  if (!value || value === 'undefined') return null
+  if (typeof value === 'object') {
+    if (!value.coordinates) return null
+    return JSON.parse(JSON.stringify(value))
+  }
   try {
     return JSON.parse(value)
   } catch (err) {
@@ -103,10 +111,41 @@ exports.readGeometry = (value) => {
   }
 }
 
-exports.geometry2fields = async (schema, doc) => {
-  const prop = schema.find(p => p['x-refersTo'] === geomUri)
-  if (!prop || !doc[prop.key] || doc[prop.key] === '{}' || doc[prop.key] === {} || doc[prop.key] === 'undefined') return {}
-  const geometry = this.readGeometry(doc[prop.key])
+const projCoordinates = (projection, coordinates) => {
+  if (Array.isArray(coordinates[0])) {
+    for (const coords of coordinates) {
+      projCoordinates(projection, coords)
+    }
+  } else {
+    const projCoords = proj4(projection.proj4, 'WGS84', coordinates)
+    coordinates[0] = projCoords[0]
+    coordinates[1] = projCoords[1]
+  }
+}
+
+exports.geometry2fields = async (dataset, doc) => {
+  const schema = dataset.schema
+  let geometry, capabilities
+
+  const projectGeomProp = schema.find(p => p['x-refersTo'] === projectGeomUri)
+  const geomProp = schema.find(p => p['x-refersTo'] === geomUri)
+
+  if (projectGeomProp) {
+    geometry = this.readGeometry(doc[projectGeomProp.key])
+    if (geometry) {
+      const projection = dataset.projection && dataset.projection.code && projections.find(p => p.code === dataset.projection.code)
+      if (dataset.projection && !projection) throw new Error(`La projection ${dataset.projection.code} n'est pas supportée.`)
+      if (projection) {
+        projCoordinates(projection, geometry.coordinates)
+      }
+    }
+    capabilities = projectGeomProp['x-capabilities']
+  } else {
+    geometry = this.readGeometry(doc[geomProp.key])
+    capabilities = geomProp['x-capabilities']
+  }
+  if (!geometry || Object.keys(geometry).length === 0) return {}
+
   const feature = { type: 'Feature', geometry }
   // Do the best we can to fix invalid geojson
   try {
@@ -137,7 +176,7 @@ exports.geometry2fields = async (schema, doc) => {
   const fields = {
     _geopoint: point.geometry.coordinates[1] + ',' + point.geometry.coordinates[0]
   }
-  if (!prop['x-capabilities'] || prop['x-capabilities'].geoCorners !== false) {
+  if (!capabilities || capabilities.geoCorners !== false) {
     const polygon = bboxPolygon(turfBbox(feature))
     fields._geocorners = polygon.geometry.coordinates[0].map(c => c[1] + ',' + c[0])
   }
