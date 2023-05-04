@@ -150,7 +150,7 @@ export default {
         .map(k => {
           const content = context(k).default
           return {
-            id: k.split('/').pop().split('.').shift().replace(`-${this.$i18n.locale}`, ''),
+            id: k.split('/').pop().split('.').shift().replace(`-${this.$i18n.locale}$`, ''),
             ...marked(context(k).default).meta,
             content
           }

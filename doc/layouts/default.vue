@@ -119,12 +119,12 @@
   </v-app>
 </template>
 
-<i18N lang="yaml">
+<i18n lang="yaml">
   fr:
     openDrawer: ouvrir le menu de navigation
   en:
     openDrawer: open navigation menu
-</i18N>
+</i18n>
 
 <script>
 import FolderMenu from '~/components/FolderMenu'
