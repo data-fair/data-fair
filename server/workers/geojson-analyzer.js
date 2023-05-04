@@ -1,9 +1,10 @@
+const projections = require('../../contract/projections')
 const { Writable } = require('stream')
 
 // Analyze geojson dataset data, check validity and detect schema
 exports.eventsPrefix = 'analyze'
 
-// This writable stream will receive geojson features, take samples and and deduce a dataset schema
+// This writable stream will receive geojson features, take samples and and deduce a dataset skeleton
 class AnalyzerWritable extends Writable {
   constructor (options) {
     super({ objectMode: true })
@@ -57,15 +58,34 @@ exports.process = async function (app, dataset) {
   const db = app.get('db')
   const attachments = await datasetUtils.lsAttachments(dataset)
   const analyzer = new AnalyzerWritable({ attachments, existingSchema: dataset.schema || [] })
+  const readableStream = fs.createReadStream(datasetUtils.filePath(dataset))
+  const decodeStream = iconv.decodeStream(dataset.file.encoding)
+
+  // the stream is mainly read to get the features, but we also support extracting the crs property if it is present
+  const parseCRSStream = JSONStream.parse('crs')
+  decodeStream.pipe(parseCRSStream)
+  let crs
+  parseCRSStream.on('data', (data) => {
+    crs = data
+  })
+
   await pump(
-    fs.createReadStream(datasetUtils.filePath(dataset)),
-    iconv.decodeStream(dataset.file.encoding),
+    readableStream,
+    decodeStream,
     JSONStream.parse('features.*'),
     analyzer
   )
 
   dataset.status = 'analyzed'
   dataset.file.schema = analyzer.schema
+
+  if (crs && crs.properties && crs.properties.name) {
+    const code = crs.properties.name.replace('urn:ogc:def:crs:', '').replace('::', ':')
+    const projection = projections.find(p => p.code === code)
+    if (!projection) throw new Error(`La projection ${code} dans la propriété "crs" du geojson n'est pas supportée.`)
+    dataset.projection = { code: projection.code, title: projection.title }
+    dataset.file.schema[0]['x-refersTo'] = 'http://data.ign.fr/def/geometrie#Geometry'
+  }
 
   datasetUtils.mergeFileSchema(dataset)
   datasetUtils.cleanSchema(dataset)
@@ -77,6 +97,7 @@ exports.process = async function (app, dataset) {
     file: dataset.file,
     schema: dataset.schema
   }
+  if (dataset.projection) patch.projection = dataset.projection
 
   await datasetUtils.applyPatch(db, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(db, dataset, false, true)

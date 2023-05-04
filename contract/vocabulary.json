@@ -295,8 +295,8 @@
       "en": "Latitude"
     },
     "description": {
-      "fr": "Coordonné géographique qui permet de se situer par rapport à l'équateur",
-      "en": "Geographic coordinate to locate a position compared to the equator"
+      "fr": "Coordonné géographique qui permet de se situer par rapport à l'équateur (projection WGS 84)",
+      "en": "Geographic coordinate to locate a position compared to the equator (WGS 84 projection)"
     },
     "identifiers": [
       "http://schema.org/latitude",
@@ -314,8 +314,8 @@
       "en": "Longitude"
     },
     "description": {
-      "fr": "Coordonnée géographique qui permet de se situer par rapport au méridien de Greenwich",
-      "en": "Geographic coordinate to locate a position compared to the Prime/Greenwich meridian"
+      "fr": "Coordonnée géographique qui permet de se situer par rapport au méridien de Greenwich (projection WGS 84)",
+      "en": "Geographic coordinate to locate a position compared to the Prime/Greenwich meridian (WGS 84 projection)"
     },
     "identifiers": [
       "http://schema.org/longitude",
@@ -333,8 +333,8 @@
       "en": "Latitude / Longitude"
     },
     "description": {
-      "fr": "Paire latitude / longitude, séparées par une virgule",
-      "en": "Latitude / longitude tuple, joined by a comma"
+      "fr": "Paire latitude / longitude, séparées par une virgule (projection WGS 84)",
+      "en": "Latitude / longitude tuple, joined by a comma (WGS 84 projection)"
     },
     "identifiers": [
       "http://www.w3.org/2003/01/geo/wgs84_pos#lat_long"
@@ -599,8 +599,8 @@
   },
   {
     "title": {
-      "fr": "Coordonnée Y",
-      "en": "Y coordinate"
+      "fr": "Coordonnée Y (projection libre)",
+      "en": "Y coordinate (custom projection)"
     },
     "description": {
       "fr": "Coordonnée géographique Y (Northing) selon une projection à définir sur le jeu de données. Cette information sera utilisée pour calculer les attributs latitude/longitude.",
@@ -610,6 +610,24 @@
       "http://data.ign.fr/def/geometrie#coordY"
     ],
     "type": "number",
+    "tag": {
+      "fr": "Géographie",
+      "en": "Geography"
+    }
+  },
+  {
+    "title": {
+      "fr": "Géométrie GeoJSON ou WKT (projection libre)",
+      "en": "GeoJSON or WKT geometry (custom projection)"
+    },
+    "description": {
+      "fr": "Une géométrie (point, polygone, ligne, etc.) au format GeoJSON ou WKT selon une projection à définir sur le jeu de données. Cette information sera utilisée pour calculer une géométrie dans la projection WGS 84.",
+      "en": "A geometry (point, polygon, line, etc.) in the GeoJSON or WKT format based on a projection defined on the dataset. This information will be used to calculate a geometry on the WGS 84 projection."
+    },
+    "identifiers": [
+      "http://data.ign.fr/def/geometrie#Geometry"
+    ],
+    "type": "string",
     "tag": {
       "fr": "Géographie",
       "en": "Geography"

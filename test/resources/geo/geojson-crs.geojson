@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "test",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::27572" } },
+"features": [
+{ "type": "Feature", "properties": { "prop": 1873.0}, "geometry": { "type": "MultiLineString", "coordinates": [ [ [ 610336, 2132685 ], [ 610346, 2132695 ] ] ] } }
+]
+}

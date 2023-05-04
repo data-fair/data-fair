@@ -182,6 +182,7 @@
         hide-details
         class="mb-3"
         clearable
+        :loading="!projections"
         @input="patch({projection: dataset.projection})"
       />
       <v-text-field
@@ -408,6 +409,7 @@ const { mapState, mapActions, mapGetters } = require('vuex')
 
 const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
 const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
+const projectGeomUri = 'http://data.ign.fr/def/geometrie#Geometry'
 
 export default {
   props: {
@@ -439,9 +441,10 @@ export default {
       return this.$store.getters.ownerDatasetsMetadata(this.dataset.owner)
     },
     editProjection () {
-      return !!(this.dataset && this.dataset.schema &&
-          this.dataset.schema.find(p => p['x-refersTo'] === coordXUri) &&
-          this.dataset.schema.find(p => p['x-refersTo'] === coordYUri))
+      return !!(this.dataset && this.dataset.schema && (
+        (this.dataset.schema.find(p => p['x-refersTo'] === coordXUri) && this.dataset.schema.find(p => p['x-refersTo'] === coordYUri)) ||
+        this.dataset.schema.find(p => p['x-refersTo'] === projectGeomUri)
+      ))
     },
     frequencies () {
       // https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
@@ -453,12 +456,12 @@ export default {
     licenses () {
       if (!this.dataset.license) return
       // Matching object reference, so that the select components works
-      this.dataset.license = this.licenses.find(l => l.href === this.dataset.license.href)
+      this.$set(this.dataset, 'license', this.licenses.find(l => l.href === this.dataset.license.href))
     },
     projections () {
       if (!this.dataset.projection) return
       // Matching object reference, so that the select components works
-      this.dataset.projection = this.projections.find(l => l.code === this.dataset.projection.code)
+      this.$set(this.dataset, 'projection', this.projections.find(l => l.code === this.dataset.projection.code))
     },
     editProjection: {
       handler () {

@@ -191,7 +191,7 @@ const applyCalculations = async (dataset, item) => {
     }
   } else if (geoUtils.schemaHasGeometry(dataset.schema)) {
     try {
-      Object.assign(item, await geoUtils.geometry2fields(dataset.schema, flatItem))
+      Object.assign(item, await geoUtils.geometry2fields(dataset, flatItem))
     } catch (err) {
       console.log('failure to parse geometry', dataset.id, err, flatItem)
       return 'Géométrie non valide - ' + err.message
