@@ -2,7 +2,7 @@
 // It is the part that can be user defined and sent in a patch
 // the rest is read only fields
 
-const patchKeys = ['apiDoc', 'apiKey', 'server', 'description', 'title', 'parameters', 'public', 'privateAccess']
+const patchKeys = ['apiDoc', 'apiKey', 'server', 'description', 'title', 'parameters', 'public', 'privateAccess', 'virtualDatasets']
 const remoteService = require('./remote-service')
 module.exports = {
   title: 'Remote service patch',

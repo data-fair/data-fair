@@ -38,18 +38,36 @@ const router = exports.router = express.Router()
 
 exports.syncDataset = async (db, dataset) => {
   const id = 'dataset:' + dataset.id
-  if (dataset.masterData && ((dataset.masterData.singleSearchs && dataset.masterData.singleSearchs.length) || (dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.length))) {
+  if (dataset.masterData && ((dataset.masterData.singleSearchs && dataset.masterData.singleSearchs.length) || (dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.length) || (dataset.masterData.virtualDatasets && dataset.masterData.virtualDatasets.active))) {
     const settings = await db.collection('settings')
       .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { info: 1 } })
+
+    const existingService = await db.collection('remote-services')
+      .findOne({ id, 'owner.type': dataset.owner.type, 'owner.id': dataset.owner.id })
     const apiDoc = datasetAPIDocs(dataset, config.publicUrl, (settings && settings.info) || {}).api
     const service = initNew({
       id,
       apiDoc,
       url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
       server: apiDoc.servers && apiDoc.servers.length && apiDoc.servers[0].url,
-      privateAccess: [{ type: dataset.owner.type, id: dataset.owner.id, name: dataset.owner.name }]
+      privateAccess: [{ type: dataset.owner.type, id: dataset.owner.id, name: dataset.owner.name }],
+      virtualDatasets: {
+        parent: {
+          id: dataset.id,
+          title: dataset.title
+        },
+        active: !!(dataset.masterData.virtualDatasets && dataset.masterData.virtualDatasets.active),
+        storageRatio: 0
+      }
     })
+    if (existingService) {
+      service.privateAccess = existingService.privateAccess
+      if (existingService.virtualDatasets) {
+        service.virtualDatasets.storageRatio = existingService.virtualDatasets.storageRatio || 0
+      }
+    }
     if (!validate(service)) throw createError(400, JSON.stringify(validate.errors))
+    console.log('sync dataset service', service)
     await db.collection('remote-services').replaceOne({ id }, mongoEscape.escape(service, true), { upsert: true })
   } else {
     await db.collection('remote-services').deleteOne({ id })

@@ -12,7 +12,7 @@ async function childrenSchemas (db, owner, children, blackListedFields) {
         id: childId,
         $or: [
           // the virtual dataset can have children that are either from the same owner
-          // or completely public for the "read" opeations classes
+          // or completely public for the "read" operations classes
           // we could try to manage intermediate cases, but it would be complicated
           { 'owner.id': owner.id, 'owner.type': owner.type },
           { permissions: { $elemMatch: { classes: 'read', type: null, id: null } } }

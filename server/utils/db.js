@@ -52,6 +52,8 @@ exports.init = async (db) => {
     exports.ensureIndex(db, 'remote-services', { id: 1 }, { unique: true }),
     // exports.ensureIndex(db, 'remote-services', { 'apiDoc.info.x-api-id': 1 }, { unique: true })
     exports.ensureIndex(db, 'remote-services', { title: 'text', description: 'text' }, { name: 'fulltext', weights: { title: 2 } }),
+    exports.ensureIndex(db, 'remote-services', { 'virtualDatasets.active': 1 }, { name: 'virtualDatasets-active' }),
+    exports.ensureIndex(db, 'remote-services', { 'virtualDatasets.parent.id': 1 }, { name: 'virtualDatasets-parent' }),
 
     // base applications indexes
     exports.ensureIndex(db, 'base-applications', { url: 1 }, { unique: true }),

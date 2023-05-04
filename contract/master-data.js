@@ -139,6 +139,20 @@ Exemple: ma_colonne,-ma_colonne2`
           }
         }
       }
+    },
+    virtualDatasets: {
+      type: 'object',
+      // title: 'Création de jeux virtuels',
+      'x-slots': {
+        before: 'Vous pouvez activer la mise en avant de ces données de références comme une base à la création de jeux virtuels. C\'est une option intéressante pour faciliter la création de vues filtrées et la mise en avant de ces données dans des contextes variés.'
+      },
+      'x-class': 'mt-8',
+      properties: {
+        active: {
+          type: 'boolean',
+          title: 'Proposer la création de jeux virtuels'
+        }
+      }
     }
   }
 }
