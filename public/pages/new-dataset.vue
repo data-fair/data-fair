@@ -761,6 +761,8 @@ fr:
   virtualDatasetFill: Initialiser le schéma avec toutes les colonnes des jeux enfants
   completed: complétés
   loaded: chargées
+  masterData: Données de référence
+  ownerDatasets: Vos jeux de données
 en:
   datasetType: Dataset type
   newDataset: Create a dataset
@@ -813,6 +815,8 @@ en:
   virtualDatasetFill: Initialize the schema with all columns from children
   completed: completed
   loaded: loaded
+  masterData: Master data
+  ownerDatasets: Your datasets
 </i18n>
 
 <script>
@@ -896,12 +900,12 @@ export default {
     childrenItems () {
       let items = []
       if (this.refDatasets.length) {
-        items.push({ header: 'masterData' })
+        items.push({ header: this.$t('masterData') })
         items = items.concat(this.refDatasets.filter(d => this.virtualChildren.find(c => c.id === d.id)))
         items = items.concat(this.refDatasets.filter(d => !this.virtualChildren.find(c => c.id === d.id)))
       }
       if (this.refDatasets.length) {
-        items.push({ header: 'ownerDatasets' })
+        items.push({ header: this.$t('ownerDatasets') })
       }
       items = items.concat(this.datasets.filter(d => this.virtualChildren.find(c => c.id === d.id)))
       items = items.concat(this.datasets.filter(d => !this.virtualChildren.find(c => c.id === d.id)))
