@@ -197,6 +197,9 @@ module.exports = {
     __name: 'DISABLE_REMOTE_SERVICES',
     __format: 'json'
   },
+  disablePublicationSites: {
+    __name: 'DISABLE_PUBLICATION_SITES'
+  },
   info: {
     termsOfService: 'INFO_TOS',
     contact: {

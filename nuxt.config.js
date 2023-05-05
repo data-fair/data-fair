@@ -129,6 +129,7 @@ module.exports = {
     disableSharing: config.disableSharing,
     disableApplications: config.disableApplications,
     disableRemoteServices: config.disableRemoteServices,
+    disablePublicationSites: config.disablePublicationSites,
     i18n: config.i18n,
     defaultTimeZone: config.defaultTimeZone
   },

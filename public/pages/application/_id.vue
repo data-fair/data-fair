@@ -83,7 +83,7 @@
                 </v-tab>
 
                 <v-tab
-                  v-if="publicationSites"
+                  v-if="!env.disablePublicationSites"
                   href="#share-publication-sites"
                 >
                   <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;{{ $t('portals') }}
@@ -119,7 +119,10 @@
                   </v-container>
                 </v-tab-item>
 
-                <v-tab-item value="share-publication-sites">
+                <v-tab-item
+                  v-if="!env.disablePublicationSites"
+                  value="share-publication-sites"
+                >
                   <application-publication-sites :publication-sites="publicationSites" />
                 </v-tab-item>
 
@@ -236,7 +239,7 @@ export default {
     ...mapState('application', ['application', 'api', 'journal', 'prodBaseApp']),
     ...mapGetters('application', ['resourceUrl', 'can', 'applicationLink', 'hasPrivateDatasets']),
     publicationSites () {
-      if (!this.application) return []
+      if (!this.application || this.env.disablePublicationSites) return []
       return this.$store.getters.ownerPublicationSites(this.application.owner)
     },
     sections () {

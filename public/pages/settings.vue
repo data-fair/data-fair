@@ -408,10 +408,12 @@ export default {
           title: this.$t('privateVocab')
         })
       }
-      sections.push({
-        id: 'publicationSites',
-        title: this.$t('publicationSites')
-      })
+      if (!this.env.disablePublicationSites) {
+        sections.push({
+          id: 'publicationSites',
+          title: this.$t('publicationSites')
+        })
+      }
       sections.push({
         id: 'api-keys',
         title: this.$t('apiKeys')

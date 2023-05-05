@@ -248,7 +248,10 @@
                   <v-icon>mdi-security</v-icon>&nbsp;&nbsp;{{ $t('permissions') }}
                 </v-tab>
 
-                <v-tab href="#share-publication-sites">
+                <v-tab
+                  v-if="!env.disablePublicationSites"
+                  href="#share-publication-sites"
+                >
                   <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;{{ $t('portals') }}
                 </v-tab>
 
@@ -287,7 +290,10 @@
                   </v-container>
                 </v-tab-item>
 
-                <v-tab-item value="share-publication-sites">
+                <v-tab-item
+                  v-if="!env.disablePublicationSites"
+                  value="share-publication-sites"
+                >
                   <tutorial-alert
                     id="dataset-share-portal"
                     class="mx-2"
@@ -485,7 +491,7 @@ export default {
     ...mapGetters('session', ['activeAccount']),
     ...mapGetters(['canContrib', 'userOwnerRole']),
     publicationSites () {
-      if (!this.dataset) return []
+      if (!this.dataset || this.env.disablePublicationSites) return []
       return this.$store.getters.ownerPublicationSites(this.dataset.owner)
     },
     fileProperty () {

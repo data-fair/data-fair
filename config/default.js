@@ -274,6 +274,7 @@ module.exports = {
   disableSharing: false,
   disableApplications: false,
   disableRemoteServices: false,
+  disablePublicationSites: false,
   proxyNuxt: false,
   ogr2ogr: {
     skip: false,
