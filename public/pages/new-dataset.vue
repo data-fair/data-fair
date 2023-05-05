@@ -518,7 +518,7 @@
             />
             <v-autocomplete
               v-model="virtualChildren"
-              :items="datasetsAndChildren"
+              :items="childrenItems"
               :loading="loadingDatasets"
               :search-input.sync="search"
               hide-no-data
@@ -540,15 +540,12 @@
               @change="datasets => {virtualDataset.virtual.children = datasets.map(d => d.id); fillVirtualDataset()}"
             >
               <template #item="{item}">
-                <v-checkbox
-                  readonly
-                  :value="!!virtualDataset.virtual.children.find(d => d === item.id)"
-                />
                 <dataset-list-item
                   :dataset="item"
                   :dense="true"
                   :show-topics="true"
                   :no-link="true"
+                  :checkbox="!!virtualDataset.virtual.children.find(d => d === item.id)"
                 />
               </template>
             </v-autocomplete>
@@ -874,6 +871,7 @@ export default {
     loadingDatasets: false,
     search: '',
     datasets: [],
+    refDatasets: [],
     virtualDatasetFill: false
   }),
   computed: {
@@ -895,12 +893,24 @@ export default {
         }
       }
     },
-    datasetsAndChildren () {
-      return this.virtualChildren.concat(this.datasets.filter(d => !this.virtualChildren.find(c => c.id === d.id)))
+    childrenItems () {
+      let items = []
+      if (this.refDatasets.length) {
+        items.push({ header: 'masterData' })
+        items = items.concat(this.refDatasets.filter(d => this.virtualChildren.find(c => c.id === d.id)))
+        items = items.concat(this.refDatasets.filter(d => !this.virtualChildren.find(c => c.id === d.id)))
+      }
+      if (this.refDatasets.length) {
+        items.push({ header: 'ownerDatasets' })
+      }
+      items = items.concat(this.datasets.filter(d => this.virtualChildren.find(c => c.id === d.id)))
+      items = items.concat(this.datasets.filter(d => !this.virtualChildren.find(c => c.id === d.id)))
+      return items
     },
     suggestArchive () {
       return this.file && this.file.size > 50000000 && (this.file.name.endsWith('.csv') || this.file.name.endsWith('.tsv') || this.file.name.endsWith('.txt') || this.file.name.endsWith('.geojson'))
     }
+
   },
   watch: {
     async currentStep () {
@@ -994,17 +1004,24 @@ export default {
     },
     async searchDatasets () {
       this.loadingDatasets = true
-      const res = await this.$axios.$get('api/v1/datasets', {
+      const remoteServicesRes = await this.$axios.$get('api/v1/remote-services', {
+        params: { q: this.search, size: 1000, select: 'id,title,virtualDatasets', privateAccess: `${this.activeAccount.type}:${this.activeAccount.id}`, 'virtual-datasets': true }
+      })
+      this.refDatasets = remoteServicesRes.results.map(r => r.virtualDatasets.parent)
+
+      const datasetsRes = await this.$axios.$get('api/v1/datasets', {
         params: { q: this.search, size: 20, select: 'id,title,schema,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions,-links,-owner', owner: `${this.activeAccount.type}:${this.activeAccount.id}`, queryable: true }
       })
-      this.datasets = res.results
+
+      this.datasets = datasetsRes.results
       this.loadingDatasets = false
     },
-    fillVirtualDataset () {
+    async fillVirtualDataset () {
       this.virtualDataset.schema = []
       if (this.virtualDatasetFill) {
         for (const dataset of this.virtualChildren) {
-          for (const property of dataset.schema) {
+          const schema = await this.$axios.$get(`api/v1/datasets/${dataset.id}/schema`)
+          for (const property of schema) {
             if (!this.virtualDataset.schema.find(p => p.key === property.key)) {
               this.virtualDataset.schema.push(property)
             }
@@ -1014,7 +1031,7 @@ export default {
     },
     async setRestSource (dataset) {
       if (!dataset) this.restDataset.schema = []
-      else this.restDataset.schema = (await this.$axios.$get('api/v1/datasets/' + dataset.id)).schema
+      else this.restDataset.schema = await this.$axios.$get(`api/v1/datasets/${dataset.id}/schema`)
     }
   }
 }
