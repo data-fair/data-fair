@@ -4,7 +4,6 @@
 const assert = require('assert').strict
 
 const workers = require('../server/workers')
-const testUtils = require('./resources/test-utils')
 
 const initMaster = async (ax, schema, id = 'master') => {
   await ax.put('/api/v1/datasets/' + id, {
