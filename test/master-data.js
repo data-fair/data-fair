@@ -360,239 +360,239 @@ describe('Master data management', () => {
     assert.equal(resultsDesc[1]._key, 1)
     assert.equal(resultsDesc[1].extra, 'Extra information 3')
   })
-})
 
-it('should handle date-in-interval search type', async () => {
-  const ax = global.ax.superadmin
-  await initMaster(
-    ax,
-    [startProperty, endProperty, { key: 'extra', type: 'string' }],
-    [{
-      id: 'date-int',
-      title: 'Fetch extra info when date is in interval',
-      input: [{ type: 'date-in-interval', property: dateProperty }]
-    }]
-  )
+  it('should handle date-in-interval search type', async () => {
+    const ax = global.ax.superadmin
+    await initMaster(
+      ax,
+      [startProperty, endProperty, { key: 'extra', type: 'string' }],
+      [{
+        id: 'date-int',
+        title: 'Fetch extra info when date is in interval',
+        input: [{ type: 'date-in-interval', property: dateProperty }]
+      }]
+    )
 
-  const items = [
-    { start: '2021-05-12T14:23:15.178Z', end: '2021-05-15T14:23:15.178Z', extra: 'Extra information 1' },
-    { start: '2021-05-15T14:23:15.178Z', end: '2021-05-18T14:23:15.178Z', extra: 'Extra information 2' }
-  ]
-  await ax.post('/api/v1/datasets/master/_bulk_lines', items)
-  await workers.hook('finalizer/master')
+    const items = [
+      { start: '2021-05-12T14:23:15.178Z', end: '2021-05-15T14:23:15.178Z', extra: 'Extra information 1' },
+      { start: '2021-05-15T14:23:15.178Z', end: '2021-05-18T14:23:15.178Z', extra: 'Extra information 2' }
+    ]
+    await ax.post('/api/v1/datasets/master/_bulk_lines', items)
+    await workers.hook('finalizer/master')
 
-  const input = [
-    { _date: '2021-05-14T14:23:15.178Z' },
-    { _date: '2021-05-18T14:23:15.178Z' },
-    { _date: '2021-05-25T14:23:15.178Z' }
-  ]
-  const results = (await ax.post(
-    '/api/v1/datasets/master/master-data/bulk-searchs/date-int',
-    input.map(line => JSON.stringify(line)).join('\n'),
-    { headers: { 'Content-Type': 'application/x-ndjson' }, params: { select: 'extra' } })
-  ).data.split('\n').filter(line => !!line).map(line => JSON.parse(line))
-  assert.equal(results[0].extra, 'Extra information 1')
-  assert.equal(results[1].extra, 'Extra information 2')
-  assert.ok(results[2]._error.includes('pas de ligne'))
-})
-
-it('should handle geo-distance search type', async () => {
-  const ax = global.ax.superadmin
-  await initMaster(
-    ax,
-    [latlonProperty, { key: 'extra', type: 'string' }],
-    [{
-      id: 'geo-dist',
-      title: 'Fetch info matching geo shape',
-      input: [{ type: 'geo-distance', distance: 0, property: geopointProperty }]
-    }]
-  )
-
-  const items = [
-    { latlon: '-2.7,47.6', extra: 'Extra information 1' },
-    { latlon: '-2.8,45.5', extra: 'Extra information 2' }
-  ]
-  await ax.post('/api/v1/datasets/master/_bulk_lines', items)
-  await workers.hook('finalizer/master')
-
-  const input = [
-    { _geopoint: '-2.7,47.6' },
-    { _geopoint: '-2.8,45.5' },
-    { _geopoint: '-2.7,49' }
-  ]
-  const results = (await ax.post(
-    '/api/v1/datasets/master/master-data/bulk-searchs/geo-dist',
-    input.map(line => JSON.stringify(line)).join('\n'),
-    { headers: { 'Content-Type': 'application/x-ndjson' }, params: { select: 'extra' } })
-  ).data.split('\n').filter(line => !!line).map(line => JSON.parse(line))
-  assert.equal(results[0].extra, 'Extra information 1')
-  assert.equal(results[1].extra, 'Extra information 2')
-  assert.ok(results[2]._error.includes('pas de ligne'))
-})
-
-it('should prevent using master-data without access to remote service', async () => {
-  const { remoteService } = await initMaster(
-    global.ax.dmeadus,
-    [siretProperty, { key: 'extra', type: 'string' }],
-    [{
-      id: 'siret',
-      title: 'Fetch extra info from siret',
-      description: '',
-      input: [{ type: 'equals', property: siretProperty }]
-    }]
-  )
-
-  // create slave dataset
-  await global.ax.cdurning2.put('/api/v1/datasets/slave', {
-    isRest: true,
-    title: 'slave',
-    schema: [siretProperty],
-    extensions: [{
-      active: true,
-      remoteService: remoteService.id,
-      action: 'masterData_bulkSearch_siret',
-      select: ['extra']
-    }]
+    const input = [
+      { _date: '2021-05-14T14:23:15.178Z' },
+      { _date: '2021-05-18T14:23:15.178Z' },
+      { _date: '2021-05-25T14:23:15.178Z' }
+    ]
+    const results = (await ax.post(
+      '/api/v1/datasets/master/master-data/bulk-searchs/date-int',
+      input.map(line => JSON.stringify(line)).join('\n'),
+      { headers: { 'Content-Type': 'application/x-ndjson' }, params: { select: 'extra' } })
+    ).data.split('\n').filter(line => !!line).map(line => JSON.parse(line))
+    assert.equal(results[0].extra, 'Extra information 1')
+    assert.equal(results[1].extra, 'Extra information 2')
+    assert.ok(results[2]._error.includes('pas de ligne'))
   })
-  await assert.rejects(workers.hook('finalizer/slave'), err => err.message.startsWith('Try to apply extension'))
-})
 
-it('should prevent using master-data without permission on dataset', async () => {
-  const { remoteService } = await initMaster(
-    global.ax.dmeadus,
-    [siretProperty, { key: 'extra', type: 'string' }],
-    [{
-      id: 'siret',
-      title: 'Fetch extra info from siret',
-      description: '',
-      input: [{ type: 'equals', property: siretProperty }]
-    }]
-  )
+  it('should handle geo-distance search type', async () => {
+    const ax = global.ax.superadmin
+    await initMaster(
+      ax,
+      [latlonProperty, { key: 'extra', type: 'string' }],
+      [{
+        id: 'geo-dist',
+        title: 'Fetch info matching geo shape',
+        input: [{ type: 'geo-distance', distance: 0, property: geopointProperty }]
+      }]
+    )
 
-  // only super admin can open remote service to public
-  await assert.rejects(global.ax.dmeadus.patch('/api/v1/remote-services/' + remoteService.id, { public: true }), (err) => err.status === 403)
-  global.ax.superadmin.patch('/api/v1/remote-services/' + remoteService.id, { public: true })
+    const items = [
+      { latlon: '-2.7,47.6', extra: 'Extra information 1' },
+      { latlon: '-2.8,45.5', extra: 'Extra information 2' }
+    ]
+    await ax.post('/api/v1/datasets/master/_bulk_lines', items)
+    await workers.hook('finalizer/master')
 
-  // create slave dataset
-  await global.ax.cdurning2.put('/api/v1/datasets/slave', {
-    isRest: true,
-    title: 'slave',
-    schema: [siretProperty],
-    extensions: [{
-      active: true,
-      remoteService: remoteService.id,
-      action: 'masterData_bulkSearch_siret',
-      select: ['extra']
-    }]
+    const input = [
+      { _geopoint: '-2.7,47.6' },
+      { _geopoint: '-2.8,45.5' },
+      { _geopoint: '-2.7,49' }
+    ]
+    const results = (await ax.post(
+      '/api/v1/datasets/master/master-data/bulk-searchs/geo-dist',
+      input.map(line => JSON.stringify(line)).join('\n'),
+      { headers: { 'Content-Type': 'application/x-ndjson' }, params: { select: 'extra' } })
+    ).data.split('\n').filter(line => !!line).map(line => JSON.parse(line))
+    assert.equal(results[0].extra, 'Extra information 1')
+    assert.equal(results[1].extra, 'Extra information 2')
+    assert.ok(results[2]._error.includes('pas de ligne'))
   })
-  await workers.hook('finalizer/slave')
-  await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
-  await assert.rejects(workers.hook('finalizer/slave'), err => err.message.startsWith('permission manquante'))
-})
 
-it('should support using master-data from other account if visibility is ok', async () => {
-  const { remoteService, master } = await initMaster(
-    global.ax.dmeadus,
-    [siretProperty, { key: 'extra', type: 'string' }],
-    [{
-      id: 'siret',
-      title: 'Fetch extra info from siret',
-      description: '',
-      input: [{ type: 'equals', property: siretProperty }]
-    }]
-  )
-  // feed some data to the master
-  const items = [{ siret: '82898347800011', extra: 'Extra information' }]
-  await global.ax.dmeadus.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
-  await workers.hook('finalizer/master')
+  it('should prevent using master-data without access to remote service', async () => {
+    const { remoteService } = await initMaster(
+      global.ax.dmeadus,
+      [siretProperty, { key: 'extra', type: 'string' }],
+      [{
+        id: 'siret',
+        title: 'Fetch extra info from siret',
+        description: '',
+        input: [{ type: 'equals', property: siretProperty }]
+      }]
+    )
 
-  // only super admin can open remote service to public
-  await assert.rejects(global.ax.dmeadus.patch('/api/v1/remote-services/' + remoteService.id, { public: true }), (err) => err.status === 403)
-  global.ax.superadmin.patch('/api/v1/remote-services/' + remoteService.id, { public: true })
-  // owner of the master-data dataset can open it to public
-  await global.ax.dmeadus.put(`/api/v1/datasets/${master.id}/permissions`, [{ classes: ['read'] }])
-
-  // create slave dataset
-  await global.ax.cdurning2.put('/api/v1/datasets/slave', {
-    isRest: true,
-    title: 'slave',
-    schema: [siretProperty],
-    extensions: [{
-      active: true,
-      remoteService: remoteService.id,
-      action: 'masterData_bulkSearch_siret',
-      select: ['extra']
-    }]
+    // create slave dataset
+    await global.ax.cdurning2.put('/api/v1/datasets/slave', {
+      isRest: true,
+      title: 'slave',
+      schema: [siretProperty],
+      extensions: [{
+        active: true,
+        remoteService: remoteService.id,
+        action: 'masterData_bulkSearch_siret',
+        select: ['extra']
+      }]
+    })
+    await assert.rejects(workers.hook('finalizer/slave'), err => err.message.startsWith('Try to apply extension'))
   })
-  await workers.hook('finalizer/slave')
-  await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
-  await workers.hook('finalizer/slave')
-  const results = (await global.ax.cdurning2.get('/api/v1/datasets/slave/lines')).data.results
-  assert.equal(results[0]['_siret.extra'], 'Extra information')
-})
 
-it('should support chaining extensions', async () => {
-  const ax = global.ax.dmeadus
-  const { remoteService } = await initMaster(
-    ax,
-    [latlonProperty, countryProperty],
-    [{
-      id: 'geo',
-      title: 'Fetch info matching geo shape',
-      input: [{ type: 'geo-distance', distance: 0, property: geopointProperty }]
-    }],
-    'master1'
-  )
-  const { remoteService: remoteService2 } = await initMaster(
-    ax,
-    [countryProperty, { key: 'name', type: 'string' }],
-    [{
-      id: 'country',
-      title: 'Fetch extra info from country',
-      description: '',
-      input: [{ type: 'equals', property: countryProperty }]
-    }],
-    'master2'
-  )
-  await ax.post('/api/v1/datasets/master1/_bulk_lines', [
-    { latlon: '-2.7,47.6', country: 'FRA' },
-    { latlon: '-2.8,45.5', country: 'JPN' }
-  ])
-  await workers.hook('finalizer/master1')
+  it('should prevent using master-data without permission on dataset', async () => {
+    const { remoteService } = await initMaster(
+      global.ax.dmeadus,
+      [siretProperty, { key: 'extra', type: 'string' }],
+      [{
+        id: 'siret',
+        title: 'Fetch extra info from siret',
+        description: '',
+        input: [{ type: 'equals', property: siretProperty }]
+      }]
+    )
 
-  await ax.post('/api/v1/datasets/master2/_bulk_lines', [
-    { country: 'FRA', name: 'France' },
-    { country: 'JPN', name: 'Japan' }
-  ])
-  await workers.hook('finalizer/master2')
+    // only super admin can open remote service to public
+    await assert.rejects(global.ax.dmeadus.patch('/api/v1/remote-services/' + remoteService.id, { public: true }), (err) => err.status === 403)
+    global.ax.superadmin.patch('/api/v1/remote-services/' + remoteService.id, { public: true })
 
-  // create slave dataset
-  await ax.put('/api/v1/datasets/slave', {
-    isRest: true,
-    title: 'slave',
-    schema: [latlonProperty],
-    extensions: [{
-      active: true,
-      remoteService: remoteService.id,
-      action: 'masterData_bulkSearch_geo',
-      select: ['country']
-    }, {
-      active: true,
-      remoteService: remoteService2.id,
-      action: 'masterData_bulkSearch_country',
-      select: ['name']
-    }]
+    // create slave dataset
+    await global.ax.cdurning2.put('/api/v1/datasets/slave', {
+      isRest: true,
+      title: 'slave',
+      schema: [siretProperty],
+      extensions: [{
+        active: true,
+        remoteService: remoteService.id,
+        action: 'masterData_bulkSearch_siret',
+        select: ['extra']
+      }]
+    })
+    await workers.hook('finalizer/slave')
+    await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
+    await assert.rejects(workers.hook('finalizer/slave'), err => err.message.startsWith('permission manquante'))
   })
-  const slave = await workers.hook('finalizer/slave')
-  assert.ok(slave.schema.find(p => p.key === '_geo.country'))
-  assert.ok(slave.schema.find(p => p.key === '_country.name'))
 
-  await ax.post('/api/v1/datasets/slave/_bulk_lines', [
-    { latlon: '-2.7,47.6' },
-    { latlon: '-2.8,45.5' }
-  ])
-  await workers.hook('finalizer/slave')
-  const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
-  assert.equal(results[0]['_geo.country'], 'JPN')
-  assert.equal(results[0]['_country.name'], 'Japan')
+  it('should support using master-data from other account if visibility is ok', async () => {
+    const { remoteService, master } = await initMaster(
+      global.ax.dmeadus,
+      [siretProperty, { key: 'extra', type: 'string' }],
+      [{
+        id: 'siret',
+        title: 'Fetch extra info from siret',
+        description: '',
+        input: [{ type: 'equals', property: siretProperty }]
+      }]
+    )
+    // feed some data to the master
+    const items = [{ siret: '82898347800011', extra: 'Extra information' }]
+    await global.ax.dmeadus.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
+    await workers.hook('finalizer/master')
+
+    // only super admin can open remote service to public
+    await assert.rejects(global.ax.dmeadus.patch('/api/v1/remote-services/' + remoteService.id, { public: true }), (err) => err.status === 403)
+    global.ax.superadmin.patch('/api/v1/remote-services/' + remoteService.id, { public: true })
+    // owner of the master-data dataset can open it to public
+    await global.ax.dmeadus.put(`/api/v1/datasets/${master.id}/permissions`, [{ classes: ['read'] }])
+
+    // create slave dataset
+    await global.ax.cdurning2.put('/api/v1/datasets/slave', {
+      isRest: true,
+      title: 'slave',
+      schema: [siretProperty],
+      extensions: [{
+        active: true,
+        remoteService: remoteService.id,
+        action: 'masterData_bulkSearch_siret',
+        select: ['extra']
+      }]
+    })
+    await workers.hook('finalizer/slave')
+    await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
+    await workers.hook('finalizer/slave')
+    const results = (await global.ax.cdurning2.get('/api/v1/datasets/slave/lines')).data.results
+    assert.equal(results[0]['_siret.extra'], 'Extra information')
+  })
+
+  it('should support chaining extensions', async () => {
+    const ax = global.ax.dmeadus
+    const { remoteService } = await initMaster(
+      ax,
+      [latlonProperty, countryProperty],
+      [{
+        id: 'geo',
+        title: 'Fetch info matching geo shape',
+        input: [{ type: 'geo-distance', distance: 0, property: geopointProperty }]
+      }],
+      'master1'
+    )
+    const { remoteService: remoteService2 } = await initMaster(
+      ax,
+      [countryProperty, { key: 'name', type: 'string' }],
+      [{
+        id: 'country',
+        title: 'Fetch extra info from country',
+        description: '',
+        input: [{ type: 'equals', property: countryProperty }]
+      }],
+      'master2'
+    )
+    await ax.post('/api/v1/datasets/master1/_bulk_lines', [
+      { latlon: '-2.7,47.6', country: 'FRA' },
+      { latlon: '-2.8,45.5', country: 'JPN' }
+    ])
+    await workers.hook('finalizer/master1')
+
+    await ax.post('/api/v1/datasets/master2/_bulk_lines', [
+      { country: 'FRA', name: 'France' },
+      { country: 'JPN', name: 'Japan' }
+    ])
+    await workers.hook('finalizer/master2')
+
+    // create slave dataset
+    await ax.put('/api/v1/datasets/slave', {
+      isRest: true,
+      title: 'slave',
+      schema: [latlonProperty],
+      extensions: [{
+        active: true,
+        remoteService: remoteService.id,
+        action: 'masterData_bulkSearch_geo',
+        select: ['country']
+      }, {
+        active: true,
+        remoteService: remoteService2.id,
+        action: 'masterData_bulkSearch_country',
+        select: ['name']
+      }]
+    })
+    const slave = await workers.hook('finalizer/slave')
+    assert.ok(slave.schema.find(p => p.key === '_geo.country'))
+    assert.ok(slave.schema.find(p => p.key === '_country.name'))
+
+    await ax.post('/api/v1/datasets/slave/_bulk_lines', [
+      { latlon: '-2.7,47.6' },
+      { latlon: '-2.8,45.5' }
+    ])
+    await workers.hook('finalizer/slave')
+    const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
+    assert.equal(results[0]['_geo.country'], 'JPN')
+    assert.equal(results[0]['_country.name'], 'Japan')
+  })
 })
