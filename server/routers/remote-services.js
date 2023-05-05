@@ -139,6 +139,10 @@ function clean (remoteService, user, html = false) {
 // Accessible to anybody
 router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const remoteServices = req.app.get('db').collection('remote-services')
+  const extraFilters = []
+  if (req.query['virtual-datasets'] === 'true') {
+    extraFilters.push({ 'virtualDatasets.active': true })
+  }
   const query = findUtils.query(req, {
     'input-concepts': 'actions.input.concept',
     'output-concepts': 'actions.output.concept',
@@ -146,7 +150,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
     ids: 'id',
     id: 'id',
     status: 'status'
-  }, true)
+  }, true, extraFilters)
 
   delete req.query.owner
   query.owner = { $exists: false } // restrict to the newly centralized remote services
