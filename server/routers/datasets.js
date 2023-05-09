@@ -507,7 +507,7 @@ router.patch('/:datasetId',
         await restDatasetsUtils.collection(db, req.dataset).updateMany({},
           { $unset: removedExtensions.reduce((a, re) => { a[extensions.getExtensionKey(re)] = ''; return a }, {}) }
         )
-        await datasetUtils.updateStorage(db, req.dataset)
+        await datasetUtils.updateStorage(req.app, req.dataset)
       }
     }
 
@@ -518,7 +518,7 @@ router.patch('/:datasetId',
       await restDatasetsUtils.collection(db, req.dataset).updateMany({},
         { $unset: deleteFields.reduce((a, df) => { a[df.key] = ''; return a }, {}) }
       )
-      await datasetUtils.updateStorage(db, req.dataset)
+      await datasetUtils.updateStorage(req.app, req.dataset)
       patch.status = 'analyzed'
     }
 
@@ -560,7 +560,7 @@ router.patch('/:datasetId',
         // we just try in case elasticsearch considers the new mapping compatible
         // so that we might optimize and reindex only when necessary
         await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
-        await datasetUtils.updateStorage(db, { ...req.dataset, schema: patch.schema })
+        await datasetUtils.updateStorage(req.app, { ...req.dataset, schema: patch.schema })
         patch.status = 'indexed'
       } catch (err) {
         // generated ES mappings are not compatible, trigger full re-indexing
@@ -640,9 +640,9 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
 
 // Delete a dataset
 router.delete('/:datasetId', readDataset(null, true, true), permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
-  await datasetUtils.delete(req.app.get('db'), req.app.get('es'), req.dataset)
+  await datasetUtils.delete(req.app, req.dataset)
   if (req.dataset.draftReason && req.dataset.prod && req.dataset.prod.status !== 'draft') {
-    await datasetUtils.delete(req.app.get('db'), req.app.get('es'), req.dataset.prod)
+    await datasetUtils.delete(req.app, req.dataset.prod)
   }
   await syncRemoteService(req.app.get('db'), { ...req.dataset, masterData: null })
   await datasetUtils.updateTotalStorage(req.app.get('db'), req.dataset.owner)
@@ -808,7 +808,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       }
       await lockNewDataset(req, res, dataset)
       await db.collection('datasets').insertOne(dataset)
-      await datasetUtils.updateStorage(db, dataset)
+      await datasetUtils.updateStorage(req.app, dataset)
     } else if (req.body.isVirtual) {
       if (!req.body.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
       if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
@@ -931,6 +931,7 @@ const updateDataset = asyncWrap(async (req, res) => {
   debugFiles('PUT datasets uploaded some files', req.files)
   try {
     const db = req.app.get('db')
+
     // After uploadFile, req.files contains the metadata of an uploaded file, and req.body the content of additional text fields
     const datasetFile = req.files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
     const attachmentsFile = req.files.find(f => f.fieldname === 'attachments')
@@ -1008,7 +1009,7 @@ const updateDataset = asyncWrap(async (req, res) => {
         { type: 'data-updated' }, 'dataset')
     }
     await Promise.all([
-      datasetUtils.updateStorage(db, dataset),
+      datasetUtils.updateStorage(req.app, dataset),
       syncRemoteService(db, dataset)
     ])
     res.status(req.isNewDataset ? 201 : 200).send(clean(req.publicBaseUrl, dataset, {}, req.query.draft === 'true'))
@@ -1042,7 +1043,7 @@ router.delete('/:datasetId/draft', lockDataset(), readDataset(['finalized', 'err
     .findOneAndUpdate({ id: req.params.datasetId }, { $unset: { draft: '' } }, { returnDocument: 'after' })).value
   await fs.remove(datasetUtils.dir(req.dataset))
   await esUtils.delete(req.app.get('es'), req.dataset)
-  await datasetUtils.updateStorage(db, patchedDataset)
+  await datasetUtils.updateStorage(req.app, patchedDataset)
   return res.send(patchedDataset)
 }))
 
@@ -1551,7 +1552,7 @@ router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('do
 router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), asyncWrap(async (req, res, next) => {
   req.body.size = (await fs.promises.stat(req.file.path)).size
   req.body.updatedAt = moment().toISOString()
-  await datasetUtils.updateStorage(req.app.get('db'), req.dataset)
+  await datasetUtils.updateStorage(req.app, req.dataset)
   res.status(200).send(req.body)
 }))
 router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('downloadMetadataAttachment', 'read'), cacheHeaders.noCache, (req, res, next) => {
@@ -1562,7 +1563,7 @@ router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.m
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
   await fs.remove(path.join(datasetUtils.metadataAttachmentsDir(req.dataset), filePath))
-  await datasetUtils.updateStorage(req.app.get('db'), req.dataset)
+  await datasetUtils.updateStorage(req.app, req.dataset)
   res.status(204).send()
 }))
 

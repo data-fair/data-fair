@@ -67,7 +67,6 @@ exports.syncDataset = async (db, dataset) => {
       }
     }
     if (!validate(service)) throw createError(400, JSON.stringify(validate.errors))
-    console.log('sync dataset service', service)
     await db.collection('remote-services').replaceOne({ id }, mongoEscape.escape(service, true), { upsert: true })
   } else {
     await db.collection('remote-services').deleteOne({ id })

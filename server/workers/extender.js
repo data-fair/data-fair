@@ -22,6 +22,6 @@ exports.process = async function (app, dataset) {
   debug('extensions ok')
 
   await datasetUtils.applyPatch(db, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(db, dataset, false, true)
+  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
   debug('done')
 }

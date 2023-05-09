@@ -18,6 +18,7 @@ const { createGunzip } = require('zlib')
 const fieldsSniffer = require('./fields-sniffer')
 const geoUtils = require('./geo')
 const restDatasetsUtils = require('./rest-datasets')
+const virtualDatasetsUtils = require('./virtual-datasets')
 const vocabulary = require('../../contract/vocabulary')
 const limits = require('./limits')
 const esUtils = require('./es')
@@ -412,15 +413,35 @@ exports.sampleValues = async (dataset) => {
   return sampleValues
 }
 
-exports.storage = async (db, dataset) => {
+exports.storage = async (db, es, dataset) => {
   const storage = {
     size: 0,
     dataFiles: await exports.dataFiles(dataset),
     indexed: { size: 0, parts: [] },
     attachments: { size: 0, count: 0 },
-    metadataAttachments: { size: 0, count: 0 }
+    metadataAttachments: { size: 0, count: 0 },
+    masterData: { size: 0, count: 0 }
   }
   for (const df of storage.dataFiles) delete df.url
+
+  if (dataset.isVirtual) {
+    const descendants = await virtualDatasetsUtils.descendants(db, dataset, ['storage', 'owner', 'masterData', 'count'], false)
+    let masterDataSize = 0
+    const masterDataCount = 0
+    for (const descendant of descendants) {
+      if (!descendant?.masterData?.virtualDatasets?.active) continue
+      if (descendant.owner.type === dataset.owner.type && descendant.owner.id === dataset.owner.id) continue
+      let storageRatio = 1
+      const queryableDataset = { ...dataset }
+      queryableDataset.descendants = [descendant.id]
+      const count = await esUtils.count(es, queryableDataset, {})
+      storageRatio *= (descendant.count / count)
+      masterDataSize += descendant.storage.indexed.size * storageRatio
+    }
+    storage.indexed.size = masterDataSize
+    storage.indexed.parts.push('master-data')
+    storage.masterData = { size: masterDataSize, count: masterDataCount }
+  }
 
   // storage used by data-files
   const dataFilesObj = storage.dataFiles.reduce((obj, df) => { obj[df.key] = df; return obj }, {})
@@ -466,7 +487,7 @@ exports.storage = async (db, dataset) => {
 
   // storage used by attachments
   const documentProperty = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
-  if (documentProperty) {
+  if (documentProperty && !dataset.isVirtual) {
     const attachments = await exports.lsAttachments(dataset)
     for (const attachment of attachments) {
       storage.attachments.size += (await fs.promises.stat(path.join(exports.attachmentsDir(dataset), attachment))).size
@@ -491,7 +512,9 @@ exports.storage = async (db, dataset) => {
 }
 
 // After a change that might impact consumed storage, we store the value
-exports.updateStorage = async (db, dataset, deleted = false, checkRemaining = false) => {
+exports.updateStorage = async (app, dataset, deleted = false, checkRemaining = false) => {
+  const db = app.get('db')
+  const es = app.get('es')
   if (dataset.draftReason) {
     console.log(new Error('updateStorage should not be called on a draft dataset'))
     return
@@ -499,7 +522,7 @@ exports.updateStorage = async (db, dataset, deleted = false, checkRemaining = fa
   if (!deleted) {
     await db.collection('datasets').updateOne({ id: dataset.id }, {
       $set: {
-        storage: await exports.storage(db, dataset)
+        storage: await exports.storage(db, es, dataset)
       }
     })
   }
@@ -694,7 +717,9 @@ exports.previews = (dataset, publicUrl = config.publicUrl) => {
   return previews
 }
 
-exports.delete = async (db, es, dataset) => {
+exports.delete = async (app, dataset) => {
+  const db = app.get('db')
+  const es = app.get('es')
   try {
     await fs.remove(exports.dir(dataset))
   } catch (err) {
@@ -718,7 +743,7 @@ exports.delete = async (db, es, dataset) => {
       console.warn('Error while deleting dataset indexes and alias', err)
     }
     if (!dataset.draftReason) {
-      await exports.updateStorage(db, dataset, true)
+      await exports.updateStorage(app, dataset, true)
     }
   }
 }
@@ -958,7 +983,7 @@ exports.validateDraft = async (app, dataset, user, req) => {
     if (err.statusCode !== 404) throw err
   }
   await fs.remove(exports.dir(dataset))
-  await exports.updateStorage(db, statusPatchedDataset)
+  await exports.updateStorage(app, statusPatchedDataset)
   return statusPatchedDataset
 }
 

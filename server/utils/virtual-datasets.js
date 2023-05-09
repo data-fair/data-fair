@@ -109,7 +109,7 @@ exports.prepareSchema = async (db, dataset) => {
 }
 
 // Only non virtual descendants on which to perform the actual ES queries
-exports.descendants = async (db, dataset, extraProperties) => {
+exports.descendants = async (db, dataset, extraProperties, throwEmpty = true) => {
   const project = {
     'descendants.id': 1,
     'descendants.isVirtual': 1,
@@ -150,7 +150,7 @@ exports.descendants = async (db, dataset, extraProperties) => {
     throw createError(501, 'Le jeu de données virtuel ne peut pas être requêté, il agrège un autre jeu de données virtuel avec des filtres dont nous ne pouvons pas garantir l\'application.')
   }
   const physicalDescendants = res[0].descendants.filter(d => !d.isVirtual)
-  if (physicalDescendants.length === 0) {
+  if (physicalDescendants.length === 0 && throwEmpty) {
     throw createError(501, 'Le jeu de données virtuel ne peut pas être requêté, il n\'agrège aucun jeu de données physique.')
   }
   return extraProperties ? physicalDescendants : physicalDescendants.map(d => d.id)
