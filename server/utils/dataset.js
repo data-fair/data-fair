@@ -431,12 +431,14 @@ exports.storage = async (db, es, dataset) => {
     for (const descendant of descendants) {
       if (!descendant?.masterData?.virtualDatasets?.active) continue
       if (descendant.owner.type === dataset.owner.type && descendant.owner.id === dataset.owner.id) continue
-      let storageRatio = 1
+      const remoteService = await db.collection('remote-services').findOne({ id: 'dataset:' + descendant.id })
+      if (!remoteService) throw new Error(`missing remote service dataset:${descendant.id}`)
+      let storageRatio = remoteService.virtualDatasets?.storageRatio || 0
       const queryableDataset = { ...dataset }
       queryableDataset.descendants = [descendant.id]
       const count = await esUtils.count(es, queryableDataset, {})
       storageRatio *= (descendant.count / count)
-      masterDataSize += descendant.storage.indexed.size * storageRatio
+      masterDataSize += Math.round(descendant.storage.indexed.size * storageRatio)
     }
     storage.indexed.size = masterDataSize
     storage.indexed.parts.push('master-data')

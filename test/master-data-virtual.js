@@ -37,6 +37,8 @@ describe('Master data management', () => {
     )
     assert.equal(remoteService.virtualDatasets.parent.id, 'master')
 
+    await global.ax.superadmin.patch(`/api/v1/remote-services/${remoteService.id}`, { virtualDatasets: { ...remoteService.virtualDatasets, storageRatio: 0.5 } })
+
     const remoteServices = (await global.ax.superadmin.get('/api/v1/remote-services', { params: { showAll: true, 'virtual-datasets': true } })).data
     assert.equal(remoteServices.count, 1)
     assert.equal(remoteServices.results[0].virtualDatasets.parent.id, 'master')
@@ -47,7 +49,7 @@ describe('Master data management', () => {
       { str1: 'LINE3' },
       { str1: 'LINE4' }
     ])
-    await workers.hook('finalizer/master')
+    const master = await workers.hook('finalizer/master')
 
     const res = await global.ax.dmeadus.post('/api/v1/datasets', {
       isVirtual: true,
@@ -59,5 +61,6 @@ describe('Master data management', () => {
     const virtualDataset = await workers.hook('finalizer/' + res.data.id)
     assert.equal(virtualDataset.storage.size, 0)
     assert.ok(virtualDataset.storage.indexed.size > 0)
+    assert.equal(virtualDataset.storage.indexed.size, Math.round(master.storage.indexed.size / 2))
   })
 })
