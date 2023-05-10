@@ -126,11 +126,11 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
   return newDatasets
 }
 
-exports.suggestOrganizations = async (type, url, q) => {
+exports.searchOrganizations = async (type, url, q) => {
   const connector = exports.connectors.find(c => c.key === type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + type)
-  if (!connector.suggestOrganizations) throw createError(501, `The connector for the catalog type ${type} cannot do this action`)
-  return connector.suggestOrganizations(url, q)
+  if (!connector.optionalCapabilities.includes('searchOrganizations')) throw createError(501, `The connector for the catalog type ${type} cannot do this action`)
+  return connector.searchOrganizations(url, q)
 }
 
 exports.processPublications = async function (app, type, resource) {
