@@ -1,6 +1,20 @@
 <template lang="html">
-  <div>
+  <div v-if="catalogType">
     <v-text-field
+      v-model="catalog.title"
+      :label="$t('title')"
+      :disabled="readOnly"
+      @change="$emit('change', {title: catalog.title})"
+    />
+    <markdown-editor
+      v-model="catalog.description"
+      :disabled="readOnly"
+      :label="$t('description')"
+      :easymde-config="{minHeight: '150px'}"
+      @change="$emit('change', {description: catalog.description})"
+    />
+    <v-text-field
+      v-if="catalogType.optionalCapabilities.includes('apiKey')"
       v-model="catalog.apiKey"
       :hint="$t('apiKeyHelp', {url: catalog.url})"
       :rules="[() => !!catalog.apiKey || $t('requiredApiKey')]"
@@ -8,7 +22,7 @@
       :label="$t('apiKey')"
       persistent-hint
       required
-      :disabled="!!catalog.createdAt && !can('writeDescription')"
+      :disabled="readOnly"
       @change="changeApiKey"
     >
       <template #message>
@@ -16,34 +30,37 @@
       </template>
     </v-text-field>
     <v-text-field
+      v-if="catalogType.optionalCapabilities.includes('publishDataset')"
       v-model="catalog.datasetUrlTemplate"
       :label="$t('datasetUrlTemplate')"
       :hint="$t('datasetUrlTemplateHelp')"
       class="mb-4"
       persistent-hint
-      :disabled="!!catalog.createdAt && !can('writeDescription')"
+      :disabled="readOnly"
       @change="$emit('change', {datasetUrlTemplate: catalog.datasetUrlTemplate})"
     />
     <v-text-field
+      v-if="catalogType.optionalCapabilities.includes('publishApplication')"
       v-model="catalog.applicationUrlTemplate"
       :label="$t('applicationUrlTemplate')"
       :hint="$t('applicationUrlTemplateHelp')"
       class="mb-4"
       persistent-hint
-      :disabled="!!catalog.createdAt && !can('writeDescription')"
+      :disabled="readOnly"
       @change="$emit('change', {applicationUrlTemplate: catalog.applicationUrlTemplate})"
     />
     <v-text-field
+      v-if="catalogType.optionalCapabilities.includes('publishDataset') || catalogType.optionalCapabilities.includes('publishApplication')"
       v-model="catalog.dataFairBaseUrl"
       :label="$t('dataFairBaseUrl')"
       :hint="$t('dataFairBaseUrlHelp')"
       class="mb-4"
       persistent-hint
-      :disabled="!!catalog.createdAt && !can('writeDescription')"
+      :disabled="readOnly"
       @change="$emit('change', {dataFairBaseUrl: catalog.dataFairBaseUrl})"
     />
     <v-autocomplete
-      v-if="catalogType && catalogType.searchOrganization"
+      v-if="catalogType && catalogType.optionalCapabilities && catalogType.optionalCapabilities.includes('searchOrganizations')"
       v-model="catalog.organization"
       :items="organizations"
       :loading="organizationsLoading"
@@ -57,7 +74,7 @@
       item-value="id"
       persistent-hint
       :no-data-text="$t('noOrgMatch')"
-      :disabled="!!catalog.createdAt && !can('writeDescription')"
+      :disabled="readOnly"
       @change="$emit('change', {organization: catalog.organization})"
     />
   </div>
@@ -105,7 +122,10 @@ export default {
     }
   },
   computed: {
-    ...mapGetters('catalog', ['can'])
+    ...mapGetters('catalog', ['can']),
+    readOnly () {
+      return !!this.catalog.createdAt && !this.can('writeDescription')
+    }
   },
   watch: {
     async searchOrganizations () {

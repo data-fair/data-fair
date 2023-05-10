@@ -7,6 +7,7 @@ export default () => ({
   state: {
     catalogId: null,
     catalog: null,
+    catalogTypes: null,
     api: null,
     // TODO: fetch nbPublications so we can display a warning when deleting
     nbPublications: null
@@ -16,6 +17,10 @@ export default () => ({
     can: (state, getters, rootState) => (operation) => {
       if (rootState.session && rootState.session.user && rootState.session.user.adminMode) return true
       return (state.catalog && state.catalog.userPermissions.includes(operation)) || false
+    },
+    catalogType (state) {
+      if (!state.catalogTypes || !state.catalog) return null
+      return state.catalogTypes.find(ct => ct.key === state.catalog.type)
     }
   },
   mutations: {
@@ -71,6 +76,11 @@ export default () => ({
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant le changement de propriétaire' })
       }
+    },
+    async fetchCatalogTypes ({ commit, state }) {
+      if (state.catalogTypes) return
+      const catalogTypes = await this.$axios.$get('api/v1/catalogs/_types')
+      commit('setAny', { catalogTypes })
     }
   }
 })
