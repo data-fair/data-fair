@@ -399,6 +399,7 @@
             <dataset-select
               :label="$t('restSource')"
               :extra-params="{queryable: true}"
+              master-data="standardSchema"
               @change="setRestSource"
             />
             <v-checkbox
@@ -904,7 +905,7 @@ export default {
         items = items.concat(this.refDatasets.filter(d => this.virtualChildren.find(c => c.id === d.id)))
         items = items.concat(this.refDatasets.filter(d => !this.virtualChildren.find(c => c.id === d.id)))
       }
-      if (this.refDatasets.length) {
+      if (this.refDatasets.length && this.datasets.length) {
         items.push({ header: this.$t('ownerDatasets') })
       }
       items = items.concat(this.datasets.filter(d => this.virtualChildren.find(c => c.id === d.id)))
@@ -1009,7 +1010,7 @@ export default {
     async searchDatasets () {
       this.loadingDatasets = true
       const remoteServicesRes = await this.$axios.$get('api/v1/remote-services', {
-        params: { q: this.search, size: 1000, select: 'id,title,virtualDatasets', privateAccess: `${this.activeAccount.type}:${this.activeAccount.id}`, 'virtual-datasets': true }
+        params: { q: this.search, size: 1000, select: 'id,title,virtualDatasets', privateAccess: `${this.activeAccount.type}:${this.activeAccount.id}`, virtualDatasets: true }
       })
       this.refDatasets = remoteServicesRes.results.map(r => r.virtualDatasets.parent)
 
