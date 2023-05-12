@@ -90,6 +90,26 @@ module.exports = {
         }
       }
     },
+    standardSchema: {
+      type: 'object',
+      properties: {
+        active: {
+          type: 'boolean',
+          title: 'Proposer la création de jeux virtuels'
+        },
+        parent: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string'
+            },
+            title: {
+              type: 'string'
+            }
+          }
+        }
+      }
+    },
     public: {
       type: 'boolean'
     },

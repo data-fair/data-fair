@@ -153,6 +153,19 @@ Exemple: ma_colonne,-ma_colonne2`
           title: 'Proposer la création de jeux virtuels'
         }
       }
+    },
+    standardSchema: {
+      type: 'object',
+      'x-slots': {
+        before: 'Vous pouvez activer la mise en avant du schéma de ces données de références comme une base à la création de jeux éditables. C\'est une option intéressante pour aider les utilisateurs à initialiser rapidement des jeux de données correspondants à des formats standards.'
+      },
+      'x-class': 'mt-8',
+      properties: {
+        active: {
+          type: 'boolean',
+          title: 'Proposer l\'utilisation du schéma pour la création de nouveaux jeux de données'
+        }
+      }
     }
   }
 }

@@ -58,6 +58,13 @@ exports.syncDataset = async (db, dataset) => {
         },
         active: !!(dataset.masterData.virtualDatasets && dataset.masterData.virtualDatasets.active),
         storageRatio: 0
+      },
+      standardSchema: {
+        dataset: {
+          id: dataset.id,
+          title: dataset.title
+        },
+        active: !!(dataset.masterData.standardSchema && dataset.masterData.standardSchema.active)
       }
     })
     if (existingService) {
@@ -139,8 +146,11 @@ function clean (remoteService, user, html = false) {
 router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const remoteServices = req.app.get('db').collection('remote-services')
   const extraFilters = []
-  if (req.query['virtual-datasets'] === 'true') {
+  if (req.query['virtual-datasets'] === 'true' || req.query.virtualDatasets === 'true') {
     extraFilters.push({ 'virtualDatasets.active': true })
+  }
+  if (req.query['standard-schema'] === 'true' || req.query.standardSchema === 'true') {
+    extraFilters.push({ 'standardSchema.active': true })
   }
   const query = findUtils.query(req, {
     'input-concepts': 'actions.input.concept',
