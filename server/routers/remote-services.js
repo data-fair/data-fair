@@ -43,7 +43,7 @@ exports.syncDataset = async (db, dataset) => {
       .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { info: 1 } })
 
     const existingService = await db.collection('remote-services')
-      .findOne({ id, 'owner.type': dataset.owner.type, 'owner.id': dataset.owner.id })
+      .findOne({ id })
     const apiDoc = datasetAPIDocs(dataset, config.publicUrl, (settings && settings.info) || {}).api
     const service = initNew({
       id,
