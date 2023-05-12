@@ -36,6 +36,7 @@
     >
       <catalog-config-form
         :catalog="catalog"
+        :catalog-type="catalogType"
         @change="changes => patch(changes)"
       />
     </v-col>
@@ -57,7 +58,7 @@ import { mapState, mapActions, mapGetters } from 'vuex'
 export default {
   computed: {
     ...mapState('catalog', ['catalog']),
-    ...mapGetters('catalog', ['can'])
+    ...mapGetters('catalog', ['can', 'catalogType'])
   },
   methods: {
     ...mapActions('catalog', ['patch'])
