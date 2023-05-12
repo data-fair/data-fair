@@ -4,6 +4,15 @@
     v-bind="listItemProps"
     @click="e => $emit('click', e)"
   >
+    <v-list-item-action
+      v-if="checkbox !== null"
+      class="my-0 ml-1"
+    >
+      <v-checkbox
+        readonly
+        :value="checkbox"
+      />
+    </v-list-item-action>
     <v-list-item-content v-if="dense">
       <dataset-list-item-title
         :dataset="dataset"
@@ -71,7 +80,8 @@ export default {
     showTable: { type: Boolean, default: false },
     noLink: { type: Boolean, default: false },
     dense: { type: Boolean, default: false },
-    listItemProps: { type: Object, default: () => ({}) }
+    listItemProps: { type: Object, default: () => ({}) },
+    checkbox: { type: Boolean, default: null }
   },
   data: () => ({
     hover: false

@@ -76,6 +76,13 @@
                 <v-tab href="#share-permissions">
                   <v-icon>mdi-security</v-icon>&nbsp;&nbsp;{{ $t('visibility') }}
                 </v-tab>
+
+                <v-tab
+                  v-if="remoteService.virtualDatasets && remoteService.virtualDatasets.active"
+                  href="#virtual-datasets"
+                >
+                  <v-icon>mdi-picture-in-picture-bottom-right-outline</v-icon>&nbsp;&nbsp;{{ $t('virtualDatasets') }}
+                </v-tab>
               </template>
               <template #tabs-items>
                 <tutorial-alert id="dataset-share-portal">
@@ -84,6 +91,12 @@
                 <v-tab-item value="share-permissions">
                   <v-container fluid>
                     <remote-service-access />
+                  </v-container>
+                </v-tab-item>
+
+                <v-tab-item value="virtual-datasets">
+                  <v-container fluid>
+                    <remote-service-virtual-datasets />
                   </v-container>
                 </v-tab-item>
               </template>
@@ -116,6 +129,7 @@ fr:
   metadata: Métadonnées
   configuration: Configuration
   share: Partage
+  virtualDatasets: Jeux virtuels
 en:
   info: Informations
   extensions: Handled extensions
@@ -126,6 +140,7 @@ en:
   metadata: Metadata
   configuration: Configuration
   share: Share
+  virtualDatasets: Virtual datasets
 </i18n>
 
 <script>

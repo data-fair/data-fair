@@ -337,7 +337,7 @@ module.exports = {
               type: 'array',
               items: {
                 type: 'string',
-                enum: ['collection', 'original-file', 'normalized-file', 'full-file', 'attachments']
+                enum: ['collection', 'original-file', 'normalized-file', 'full-file', 'attachments', 'master-data']
               }
             }
           }
@@ -364,6 +364,13 @@ module.exports = {
           }
         },
         revisions: {
+          type: 'object',
+          properties: {
+            count: { type: 'integer' },
+            size: { type: 'integer' }
+          }
+        },
+        masterData: {
           type: 'object',
           properties: {
             count: { type: 'integer' },

@@ -51,8 +51,8 @@ fr:
   metadata-attachments: pièces jointes aux méta-données
   collection: lignes en base de données
   revisions: révisions historisées
+  master-data: d'équivalence en données de référence
   indexed: indexé
-
 en:
   noInfo: (no storage information)
   original-file: original file
@@ -62,6 +62,7 @@ en:
   attachments: attachments
   collection: lines in database
   revisions: revisions
+  master-data: equivalence in master data
   indexed: indexed
 
 </i18n>
@@ -81,6 +82,7 @@ export default {
         if (dataset.storage.metadataAttachments) storageParts.push({ key: 'metadata-attachments', size: dataset.storage.metadataAttachments.size })
         if (dataset.storage.collection) storageParts.push({ key: 'collection', size: dataset.storage.collection.size })
         if (dataset.storage.revisions) storageParts.push({ key: 'revisions', size: dataset.storage.revisions.size })
+        if (dataset.storage.masterData) storageParts.push({ key: 'master-data', size: dataset.storage.masterData.size })
         storageParts.forEach(sp => {
           if (dataset.storage.indexed && dataset.storage.indexed.parts && dataset.storage.indexed.parts.includes(sp.key)) {
             sp.indexed = true

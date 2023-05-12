@@ -64,7 +64,7 @@ router.delete('/:type/:id', asyncWrap(async (req, res) => {
 
   const datasetsCursor = req.app.get('db').collection('datasets').find({ 'owner.type': identity.type, 'owner.id': identity.id })
   for await (const dataset of datasetsCursor) {
-    await datasetUtils.delete(req.app.get('db'), req.app.get('es'), dataset)
+    await datasetUtils.delete(req.app, dataset)
   }
 
   for (const c of collectionNames) {
