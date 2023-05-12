@@ -93,12 +93,13 @@ exports.initDataset = async (db, dataset) => {
   ])
 }
 
-exports.configureHistory = async (db, dataset) => {
+exports.configureHistory = async (app, dataset) => {
+  const db = app.get('db')
   const revisionsCollectionExists = (await db.listCollections({ name: exports.revisionsCollectionName(dataset) }).toArray()).length === 1
   if (!dataset.rest.history) {
     if (revisionsCollectionExists) {
       await exports.revisionsCollection(db, dataset).drop()
-      await datasetUtils.updateStorage(db, dataset)
+      await datasetUtils.updateStorage(app, dataset)
     }
   } else {
     const revisionsCollection = exports.revisionsCollection(db, dataset)
@@ -120,7 +121,7 @@ exports.configureHistory = async (db, dataset) => {
         }
       }
       if (revisionsBulkOp.length) await revisionsBulkOp.execute()
-      await datasetUtils.updateStorage(db, dataset)
+      await datasetUtils.updateStorage(app, dataset)
     }
 
     // manage history TTL
@@ -423,7 +424,7 @@ exports.createLine = async (req, res, next) => {
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(201).send(cleanLine(line))
-  datasetUtils.updateStorage(db, req.dataset)
+  datasetUtils.updateStorage(req.app, req.dataset)
 }
 
 exports.deleteLine = async (req, res, next) => {
@@ -433,7 +434,7 @@ exports.deleteLine = async (req, res, next) => {
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   // TODO: delete the attachment if it is the primary key ?
   res.status(204).send()
-  datasetUtils.updateStorage(db, req.dataset)
+  datasetUtils.updateStorage(req.app, req.dataset)
 }
 
 exports.updateLine = async (req, res, next) => {
@@ -443,7 +444,7 @@ exports.updateLine = async (req, res, next) => {
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
-  datasetUtils.updateStorage(db, req.dataset)
+  datasetUtils.updateStorage(req.app, req.dataset)
 }
 
 exports.patchLine = async (req, res, next) => {
@@ -453,7 +454,7 @@ exports.patchLine = async (req, res, next) => {
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
-  datasetUtils.updateStorage(db, req.dataset)
+  datasetUtils.updateStorage(req.app, req.dataset)
 }
 
 exports.deleteAllLines = async (req, res, next) => {
@@ -464,7 +465,7 @@ exports.deleteAllLines = async (req, res, next) => {
   await esUtils.switchAlias(esClient, req.dataset, indexName)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(204).send()
-  datasetUtils.updateStorage(db, req.dataset)
+  datasetUtils.updateStorage(req.app, req.dataset)
 }
 
 exports.bulkLines = async (req, res, next) => {
@@ -539,7 +540,7 @@ exports.bulkLines = async (req, res, next) => {
   }
   res.write(JSON.stringify(summary, null, 2))
   res.end()
-  datasetUtils.updateStorage(db, req.dataset)
+  datasetUtils.updateStorage(req.app, req.dataset)
 
   for (const key in req.files) {
     if (key === 'attachments') continue
@@ -581,7 +582,7 @@ exports.syncAttachmentsLines = async (req, res, next) => {
   await pump(filesStream, transactionStream)
 
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
-  await datasetUtils.updateStorage(db, req.dataset)
+  await datasetUtils.updateStorage(req.app, req.dataset)
 
   res.send(summary)
 }

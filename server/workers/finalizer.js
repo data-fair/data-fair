@@ -118,10 +118,10 @@ exports.process = async function (app, dataset) {
     delete result.status
   }
   if (dataset.isRest) {
-    await restDatasetsUtils.configureHistory(db, dataset)
+    await restDatasetsUtils.configureHistory(app, dataset)
   }
 
-  // virtual datasets have to be re-counted here (others were implicitly counte ad index step)
+  // virtual datasets have to be re-counted here (others were implicitly counted at index step)
   if (dataset.isVirtual) {
     const descendants = await virtualDatasetsUtils.descendants(db, dataset, ['dataUpdatedAt', 'dataUpdatedBy'])
     dataset.descendants = descendants.map(d => d.id)
@@ -145,6 +145,10 @@ exports.process = async function (app, dataset) {
     for await (const virtualDataset of collection.find({ 'virtual.children': dataset.id })) {
       await collection.updateOne({ id: virtualDataset.id }, { $set: { status: 'indexed' } })
     }
+  }
+
+  if (dataset.isVirtual) {
+    await datasetUtils.updateStorage(app, queryableDataset)
   }
 
   await progress()

@@ -41,16 +41,35 @@ describe('Properties capabilities', () => {
       { str1: 'test3' },
       { str1: 'test2' },
       { str1: 'test1' },
+      { str1: 'test1' },
+      { str1: 'test1' },
+      { str1: 'test1' },
+      { str1: 'Test2' },
+      { str1: 'Test2' },
       { str1: 'Test2' }
     ])
-    await workers.hook('finalizer/rest-values')
+    let dataset = await workers.hook('finalizer/rest-values')
+    let prop = dataset.schema.find(p => p.key === 'str1')
+    assert.equal(prop['x-cardinality'], 4)
+    assert.ok(prop.enum)
     res = await ax.get('/api/v1/datasets/rest-values/lines', { params: { sort: 'str1' } })
-    assert.deepEqual(res.data.results.map(result => result.str1), ['Test2', 'test1', 'test2', 'test3'])
+    assert.deepEqual(res.data.results.map(result => result.str1), ['Test2', 'Test2', 'Test2', 'test1', 'test1', 'test1', 'test1', 'test2', 'test3'])
     res = await ax.get('/api/v1/datasets/rest-values/values_agg', { params: { field: 'str1' } })
-    assert.equal(res.data.total, 4)
+    assert.equal(res.data.total, 9)
 
-    await ax.patch('/api/v1/datasets/rest-values', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { insensitive: false, values: false } }] })
-    await workers.hook('finalizer/rest-values')
+    await ax.patch('/api/v1/datasets/rest-values', {
+      schema: [{
+        key: 'str1',
+        type: 'string',
+        'x-capabilities': {
+          insensitive: false, values: false
+        }
+      }]
+    })
+    dataset = await workers.hook('finalizer/rest-values')
+    prop = dataset.schema.find(p => p.key === 'str1')
+    assert.equal(prop['x-cardinality'], undefined)
+    assert.ok(!prop.enum)
     try {
       await ax.get('/api/v1/datasets/rest-values/lines', { params: { sort: 'str1' } })
       assert.fail()

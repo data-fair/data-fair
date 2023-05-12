@@ -64,6 +64,32 @@ module.exports = {
     actions: {
       type: 'array'
     },
+    virtualDatasets: {
+      type: 'object',
+      properties: {
+        active: {
+          type: 'boolean',
+          title: 'Proposer la création de jeux virtuels'
+        },
+        parent: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string'
+            },
+            title: {
+              type: 'string'
+            }
+          }
+        },
+        storageRatio: {
+          type: 'number',
+          default: 0,
+          minimum: 0,
+          maximum: 1
+        }
+      }
+    },
     public: {
       type: 'boolean'
     },

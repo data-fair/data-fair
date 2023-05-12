@@ -164,7 +164,6 @@
           :items="allColumns.map(c => ({disabled: filtersByKey[c.key], value: c.key, text: c.title || c['x-originalName'] || c.key}))"
           :search-input.sync="searchFilter"
           hide-no-data
-          item-value="id"
           :label="$t('addFilter')"
           style="max-width: 400px;"
           dense
@@ -372,7 +371,8 @@ export default {
         for (const col of this.childrenById[id].schema) {
           if (col.enum) {
             valuesByKey[col.key] = valuesByKey[col.key] || []
-            for (const val of col.enum) {
+            for (let val of col.enum) {
+              val = val + '' // filters always expect a string
               if (!valuesByKey[col.key].includes(val)) valuesByKey[col.key].push(val)
             }
           }
