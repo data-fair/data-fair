@@ -164,7 +164,6 @@
           :items="allColumns.map(c => ({disabled: filtersByKey[c.key], value: c.key, text: c.title || c['x-originalName'] || c.key}))"
           :search-input.sync="searchFilter"
           hide-no-data
-          item-value="id"
           :label="$t('addFilter')"
           style="max-width: 400px;"
           dense
