@@ -34,6 +34,13 @@ The last element that can be filled in, and which is of considerable importance,
 
 This business typing **increases the reusability** of the data and allows 2 things within the platform: **enrichment from other data**, and the proposal of **adapted visualizations** (by simplifying the configuration of these): the concepts *latitude* and *longitude* allow for example to configure maps with markers.
 
+### Schema repository
+
+To improve data acquisition and reuse, we propose a schema repository from https://schema.data.gouv.fr/schemas.html which lists different public data schemas for France.
+
+When creating an editable dataset, it is possible to choose one of the proposed schemas. The data entered will be standardized which will increase their reusability both in terms of uploading different data to a common destination to merge the data but also in the use of visualization.  
+For example, an application allowing to search and visualize deliberations published in SCDL format could be used by any community that publishes its deliberation data with the adapted schema.
+
 ### Metadata and attachments
 
 Some metadata are filled, such as metadata or data update dates, and the user who created or modified it. The edit page of a dataset allows to modify the various metadata of this set. It is possible to modify the title and the description, to define a **license of use** and to associate **themes**. The lists of usable licenses and themes are common to the entire organization and can be edited by administrators
@@ -51,6 +58,10 @@ The data of the **Sirene database** are attached to the concepts of *code siren*
 These master data are of great value, because they allow you to **easily complete the other data**. As part of the incremental game input forms, you can refer to master data by assigning a concept to a certain field, and the **form will propose a list of values** (with a search engine if it is large ) to select what will be put in the field. It is thus possible to constrain the entry in a field and to ensure that the values ​​in it are all valid according to certain business rules!
 
 The second possibility to complete the data is to set up **enrichments**: columns are then automatically added to the dataset and the values ​​filled in from one or more other columns. For example, columns that have the concepts *street number*, *street name* and *postal code* can be completed with address data and be geocoded, which allows the data to be projected on a map. When data is updated, enrichments are automatically updated, and a dataset can have multiple enrichments from different master data.
+
+The reference data can also be used via virtual sets to offer the reference data on its portal.  
+It is then possible to create a virtual set, on the portal of his organization, which will be a view of the reference data set. So when the reference data is updated, the virtual game will also be updated.  
+Virtual sets can have filters on the column values. It is for example possible to filter the data of the **Sirene database** on a territory and on some **APE code** to propose a dataset on an activity sector on your territory. It will then be very easy to configure a cartographic visualization to explore these data.
 
 ### Permissions and publication of data
 

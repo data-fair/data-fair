@@ -35,6 +35,13 @@ Le dernier élément qui peut être renseigné, et qui a une importance considé
 
 Ce typage métier **augmente la réutilisabilité** des données et permet 2 choses au sein de la plateforme : **l'enrichissement à partir d'autres données**, et la proposition de **visualisations adaptées** (en simplifiant le paramétrage de celles-ci) : les concepts *latitude* et *longitude* permettent par exemple de paramétrer des cartes avec des marqueurs.
 
+### Réferentiel de schémas
+
+Pour améliorer la saisie et la réutilisation des données, nous proposont un référentiel de schémas issus de https://schema.data.gouv.fr/schemas.html qui recense differents schémas de données publiques pour la France.  
+
+Lors de la création d'un jeu de données éditable, il est possible de choisir un des schémas proposés. Les données saisies seront standardisées ce qui augementera leur réutilisabilité tant au niveau de la remontée de differentes données vers une destination commune pour fusionner les données mais également dans l'utilisation de visualisation.  
+Par exemple avec une application permettant de rechercher et visualiser des délibérations publiées au format SCDL pourra être utilisée par toute collectivité qui publie ses données de délibérations avec le schéma adapté.
+
 ### Métadonnées et pièces jointes
 
 Certaines métadonnées sont préremplies, comme les dates de mise à jour des métadonnées ou des données, et l'utilisateur qui les a créé ou modifié. La page d’édition d’un jeu de données permet de modifier les différentes métadonnées de ce jeu. Il est possible de modifier le titre et la description, de définir une **licence d'utilisation** et d'associer des **thématiques**. Les listes de licences et thématiques utilisables sont communes à toute l'organisation et peuvent être éditées par les administrateurs.
@@ -52,6 +59,10 @@ Les données de la **base Sirene** sont rattachées aux concepts de *code siren*
 Ces données maitre sont d'une grande valeur, car elles permettent de **compléter facilement les autres données**. Dans le cadre des formulaire de saisie des jeux incrémentaux, on peut faire référence à des données maitres en assignant un concept à un certain champ, et le **formulaire proposera une liste de valeur** (avec un moteur de recherche si elle est grande) pour sélectionner ce qui sera mis dans le champ. Il est ainsi possible de contraindre la saisie dans un champ et de s'assurer que les valeurs dedans soient toutes valides suivant certaines règles métier !
 
 La deuxième possibilité pour compléter les données est de mettre en place des **enrichissements** : des colonnes sont alors automatiquement ajoutées au jeu de données et les valeurs renseignées à partir d'une ou plusieurs autres colonnes. Par exemple des colonnes qui ont les concepts *numéro de rue*, *libellé de rue* et *code postal* peuvent être complétées par les données d'adresse et être géocodées, ce qui permet de projeter les données sur une carte. Quand les données sont mises à jour, les enrichissements sont automatiquement mis à jour, et un jeu de données peut avoir plusieurs enrichissements provenant de données maitres différentes.
+
+Les données de référence peuvent également etre utilisées via les jeux virtuels pour proposer les données de reference sur sont portail.
+Il est alors possible de créer un jeu virtuel, sur le portail de son organisation, qui va etre une vue du jeu de données de référence. Ainsi lorsque les données de réferences seront mise à jour, le jeu virtuel sera égelement mis à jour.  
+Les jeux virtuel peuvent posseder des filtres sur les valeurs de colonnes. Il est par exemple possible de filtrer les données de la **base Sirene** sur un territoire et sur certains **code APE** pour proposer un jeu de données sur un secteur d'activité sur votre territoire. Il sera alors très simple de configurer une visualisation cartographique pour explorer ses données.
 
 ### Permissions et publication des données
 

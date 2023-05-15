@@ -19,3 +19,20 @@ Account creation is done by entering an email and a password, and there is also 
 Users who create accounts by themselves have their data stored in databases. Their password is encrypted with salts and multiple hashes to guarantee maximum security. There are input rules to prevent the creation of weak passwords.
 
 It is also possible to configure a connection to an external user directory through the LDAP protocol.
+
+
+Accounts created on the portal can be used to create partnerships.  
+
+A portal administrator can give contribution rights on one or various datasets to a user account (or an organization account) that has been created on the portal.
+
+Partners will be able to modify the datasets by replacing the entire file or by editing the lines of the dataset from their personal space.
+
+<img src="./images/functional-presentation/contribution.jpg"
+     height="320" style="margin:15px auto;" alt="screenshot of the login page" />
+
+Portals can be configured to accept reuse submissions.   
+Reuse submissions are made from the user's personal account and are subject to moderation, with the administrator choosing whether to publish the reuse or not.
+
+
+<img src="./images/functional-presentation/reutilisation.jpg"
+     height="320" style="margin:15px auto;" alt="screenshot of the login page" />
