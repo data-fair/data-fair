@@ -107,6 +107,7 @@ function prepareDatasetFromCatalog (item) {
     // page: d.page,
     private: false,
     resources: link.map(l => {
+      if (!l) return null
       const [key, title, url, type] = l.split('|')
       if (type !== 'OGC:WFS') return null
       const shapefileUrl = new URL(url)
