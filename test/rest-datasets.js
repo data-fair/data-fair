@@ -799,6 +799,13 @@ update,line2,test2,test2`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(lines[2]._id, 'line2')
     assert.equal(lines[2].attr1, 'test2')
     assert.equal(lines[2].attr2, 'test2')
+
+    // custom separator
+    await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id;attr1;attr2;attr3;attr4
+line3;test1;test1;oui;2015-03-18T00:58:59
+line4;test1;test1;oui,2015-03-18T00:58:59`, { headers: { 'content-type': 'text/csv' }, params: { sep: ';' } })
+    dataset = await workers.hook('finalizer/restcsv')
+    assert.equal(dataset.count, 4)
   })
 
   it('Validate bulk actions sent as csv', async () => {

@@ -484,6 +484,12 @@ exports.bulkLines = async (req, res, next) => {
   // or directly in the body
   let inputStream, parseStreams
   const transactionSchema = [...req.dataset.schema, { key: '_id', type: 'string' }, { key: '_action', type: 'string' }]
+  const fileProps = {
+    fieldsDelimiter: req.query.sep || ',',
+    escape: '"',
+    quote: '"',
+    newline: '\n'
+  }
   if (req.files && req.files.actions && req.files.actions.length) {
     let actionsMime = mime.lookup(req.files.actions[0].originalname)
 
@@ -501,11 +507,11 @@ exports.bulkLines = async (req, res, next) => {
         if (actionsMime) actionsMime += '+gzip'
       }
     }
-    parseStreams = datasetUtils.transformFileStreams(actionsMime || 'application/x-ndjson', transactionSchema, null, {}, false, true)
+    parseStreams = datasetUtils.transformFileStreams(actionsMime || 'application/x-ndjson', transactionSchema, null, fileProps, false, true)
   } else {
     inputStream = req
     const contentType = req.get('Content-Type') && req.get('Content-Type').split(';')[0]
-    parseStreams = datasetUtils.transformFileStreams(contentType || 'application/json', transactionSchema, null, {}, false, true)
+    parseStreams = datasetUtils.transformFileStreams(contentType || 'application/json', transactionSchema, null, fileProps, false, true)
   }
   const summary = initSummary()
   const transactionStream = new TransactionStream({ req, validate, summary })
