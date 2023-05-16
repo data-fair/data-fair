@@ -455,6 +455,8 @@ router.patch('/:datasetId',
     const patch = req.body
     if (!validatePatch(patch)) return res.status(400).send(validatePatch.errors)
 
+    curateDataset(patch)
+
     // Changed a previously failed dataset, retry everything.
     // Except download.. We only try it again if the fetch failed.
     if (req.dataset.status === 'error') {
@@ -661,7 +663,12 @@ const initNew = async (db, req) => {
     prepareExtensions(req, dataset.extensions)
     dataset.schema = await extensions.prepareSchema(db, dataset.schema, dataset.extensions)
   }
+  curateDataset(dataset)
   return dataset
+}
+
+const curateDataset = (dataset) => {
+  if (dataset.title) dataset.title = dataset.title.trim()
 }
 
 const titleFromFileName = (name) => {
@@ -806,6 +813,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         res.send({ error: err.message })
         throw err
       }
+      curateDataset(dataset)
       await lockNewDataset(req, res, dataset)
       await db.collection('datasets').insertOne(dataset)
       await datasetUtils.updateStorage(req.app, dataset)

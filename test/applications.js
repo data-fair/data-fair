@@ -164,4 +164,19 @@ describe('Applications', () => {
       return true
     })
   })
+
+  it('Sort applications by title', async () => {
+    const ax = global.ax.dmeadus
+
+    await ax.post('/api/v1/applications', { title: 'aa', url: 'http://monapp1.com/' })
+    await ax.post('/api/v1/applications', { title: 'bb', url: 'http://monapp1.com/' })
+    await ax.post('/api/v1/applications', { title: 'àb', url: 'http://monapp1.com/' })
+    await ax.post('/api/v1/applications', { title: ' àb', url: 'http://monapp1.com/' })
+    await ax.post('/api/v1/applications', { title: '1a', url: 'http://monapp1.com/' })
+
+    let res = await ax.get('/api/v1/applications', { params: { select: 'title', raw: true, sort: 'title:1' } })
+    assert.deepEqual(res.data.results.map(d => d.title), ['1a', 'aa', 'àb', 'àb', 'bb'])
+    res = await ax.get('/api/v1/applications', { params: { select: 'title', raw: true, sort: 'title:-1' } })
+    assert.deepEqual(res.data.results.map(d => d.title), ['bb', 'àb', 'àb', 'aa', '1a'])
+  })
 })

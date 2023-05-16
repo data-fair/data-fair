@@ -385,4 +385,19 @@ describe('datasets', () => {
     res = await ax.get('/api/v1/datasets/dataset-name')
     assert.equal(res.data.schema.filter(f => f.ignoreDetection).length, 5)
   })
+
+  it('Sort datasets by title', async () => {
+    const ax = global.ax.dmeadus
+
+    await ax.post('/api/v1/datasets', { isRest: true, title: 'aa' })
+    await ax.post('/api/v1/datasets', { isRest: true, title: 'bb' })
+    await ax.post('/api/v1/datasets', { isRest: true, title: 'àb' })
+    await ax.post('/api/v1/datasets', { isRest: true, title: ' àb' })
+    await ax.post('/api/v1/datasets', { isRest: true, title: '1a' })
+
+    let res = await ax.get('/api/v1/datasets', { params: { select: 'title', raw: true, sort: 'title:1' } })
+    assert.deepEqual(res.data.results.map(d => d.title), ['1a', 'aa', 'àb', 'àb', 'bb'])
+    res = await ax.get('/api/v1/datasets', { params: { select: 'title', raw: true, sort: 'title:-1' } })
+    assert.deepEqual(res.data.results.map(d => d.title), ['bb', 'àb', 'àb', 'aa', '1a'])
+  })
 })

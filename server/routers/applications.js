@@ -54,6 +54,10 @@ function clean (application, publicUrl, query = {}) {
   return application
 }
 
+const curateApplication = (application) => {
+  if (application.title) application.title = application.title.trim()
+}
+
 // update references to an application into the datasets it references (or used to reference before a patch)
 const syncDatasets = async (db, newApp, oldApp = {}) => {
   const ids = [...(newApp?.configuration?.datasets || []), ...(oldApp?.configuration?.datasets || [])]
@@ -129,6 +133,7 @@ const initNew = (req) => {
   application.createdAt = application.updatedAt = date
   application.createdBy = application.updatedBy = { id: req.user.id, name: req.user.name }
   application.permissions = []
+  curateApplication(application)
   return application
 }
 
@@ -277,6 +282,7 @@ router.patch('/:applicationId',
 
     patch.updatedAt = moment().toISOString()
     patch.updatedBy = { id: req.user.id, name: req.user.name }
+    curateApplication(patch)
 
     await publicationSites.applyPatch(db, req.application, { ...req.application, ...patch }, req.user, 'application')
 
