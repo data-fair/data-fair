@@ -323,10 +323,15 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
     resources
   }
   if (dataset.frequency) udataDataset.frequency = dataset.frequency
-  if (dataset.temporal) {
-    udataDataset.temporal_coverage = {}
-    if (dataset.temporal.start) udataDataset.temporal_coverage.start = moment(dataset.temporal.start).toISOString()
-    if (dataset.temporal.end) udataDataset.temporal_coverage.end = moment(dataset.temporal.end).toISOString()
+  if (dataset.temporal && dataset.temporal.start) {
+    udataDataset.temporal_coverage = {
+      start: moment(dataset.temporal.start).toISOString()
+    }
+    if (dataset.temporal.end) {
+      udataDataset.temporal_coverage.end = moment(dataset.temporal.end).toISOString()
+    } else {
+      udataDataset.temporal_coverage.end = udataDataset.temporal_coverage.start
+    }
   }
   // We do not propagate spatial coverage for the moment as we can't push custom text
   // See https://www.data.gouv.fr/api/1/spatial/granularities/
