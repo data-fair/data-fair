@@ -28,6 +28,7 @@ exports.result2csv = (dataset, query = {}) => {
       columns: properties.map(field => field['x-originalName'] || field.key),
       header: query.header !== 'false',
       quoted_string: true,
+      delimiter: query.sep || ',',
       cast: {
         boolean: (value) => {
           if (value) return '1'

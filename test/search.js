@@ -91,6 +91,9 @@ describe('search', () => {
     lines = res.data.split('\n')
     assert.equal(lines[0].trim(), '"id","adr","some date","loc","bool"')
     assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526",0')
+    res = await ax.get('/api/v1/datasets/dataset1/lines?format=csv&sep=;')
+    lines = res.data.split('\n')
+    assert.equal(lines[0].trim(), '"id";"adr";"some date";"loc";"bool"')
   })
 
   it('search lines and collapse on field', async () => {
