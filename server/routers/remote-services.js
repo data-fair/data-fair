@@ -38,7 +38,12 @@ const router = exports.router = express.Router()
 
 exports.syncDataset = async (db, dataset) => {
   const id = 'dataset:' + dataset.id
-  if (dataset.masterData && ((dataset.masterData.singleSearchs && dataset.masterData.singleSearchs.length) || (dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.length) || (dataset.masterData.virtualDatasets && dataset.masterData.virtualDatasets.active))) {
+  if (dataset.masterData && (
+    (dataset.masterData.singleSearchs && dataset.masterData.singleSearchs.length) ||
+    (dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.length) ||
+    (dataset.masterData.virtualDatasets && dataset.masterData.virtualDatasets.active) ||
+    (dataset.masterData.standardSchema && dataset.masterData.standardSchema.active)
+  )) {
     const settings = await db.collection('settings')
       .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { info: 1 } })
 
