@@ -1,14 +1,14 @@
 ---
-title: Navigate in Data Fair
+title: Navigate in Data&nbsp;Fair
 section: 2
 updated: 2021-09-20
 description : An intuitive interface
 published: true
 ---
 
-The **Data Fair** interface allows to present your data in the form of APIs, data portal and interactive visualizations **without any code**.
+The **Data&nbsp;Fair** interface allows to present your data in the form of APIs, data portal and interactive visualizations **without any code**.
 
-**Data Fair** pages display various elements:
+**Data&nbsp;Fair** pages display various elements:
 
 1. The navigation bar allows you to access the different sections
 2. The breadcrumb trail allows you to know the section or sub-section displayed and to navigate in them.
@@ -21,4 +21,4 @@ The **Data Fair** interface allows to present your data in the form of APIs, dat
 On the Home page, the available actions allow to initiate simplified paths to create, update or publish a dataset.  
 
 ![Navigation](./images/user-guide-backoffice/navigation.jpg)
-*The Data Fair interface allows to quickly access your resources*
+*The Data&nbsp;Fair interface allows to quickly access your resources*

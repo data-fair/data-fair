@@ -14,7 +14,7 @@ To access the content pages created, it is possible to enter links in the naviga
 
 ### News pages
 
-The news pages allow you to communicate information about events concerning your portal or open data. They allow to establish a first phase of communication with the visitors of your portal.  
+The news pages allow you to communicate information about events concerning your portal or open&nbsp;data. They allow to establish a first phase of communication with the visitors of your portal.  
 
 The news list is available on the news page in the form of a card containing an image and the beginning of the news (or the summary). By clicking on a news card, visitors can access the information about the news.  
 

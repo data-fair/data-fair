@@ -11,7 +11,7 @@ It allows visitors to quickly access the data highlighted, view key figures, sea
 
 ## Home page
 
-We will describe the home page of the [Koumoul open data portal ](https://opendata.koumoul.com/).
+We will describe the home page of the [Koumoul open&nbsp;data portal ](https://opendata.koumoul.com/).
 
 <img src="./images/user-guide-frontoffice/homepage.png"
      height="700" style="margin:15px auto;" />

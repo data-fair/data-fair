@@ -6,9 +6,9 @@ description : Configure your data portal for Open Data or to private share.
 published: true
 ---
 
-Data Fair allows to present your data in a portal.  
+Data&nbsp;Fair allows to present your data in a portal.  
 It is possible to configure **several portals** for the same account.  
-Portals can be **public**, for open data, or **private** to share data internally.  
+Portals can be **public**, for open&nbsp;data, or **private** to share data internally.  
 
 The portal configuration page is accessible through the navigation bar. A list of your portals is available.
 You can **create, delete, configure and duplicate** your portals.
@@ -38,7 +38,7 @@ The **portal configuration** interface is divided into 5 parts:
 ### General
 
 The **General** section allows you to customize the elements common to the different portal pages such as colors, logo, main image and favicon.  
-You can activate or remove the authentication for your portal (open data portal, public portal with certain data in private, private portal).  
+You can activate or remove the authentication for your portal (open&nbsp;data portal, public portal with certain data in private, private portal).  
 
 It is possible to add several links in the footer.
 

@@ -28,11 +28,11 @@ A portal administrator can give contribution rights on one or various datasets t
 Partners will be able to modify the datasets by replacing the entire file or by editing the lines of the dataset from their personal space.
 
 <img src="./images/functional-presentation/contribution.jpg"
-     height="320" style="margin:15px auto;" alt="screenshot of the login page" />
+     height="260" style="margin:15px auto;" alt="screenshot of the contribution workflow" />
 
 Portals can be configured to accept reuse submissions.   
 Reuse submissions are made from the user's personal account and are subject to moderation, with the administrator choosing whether to publish the reuse or not.
 
 
 <img src="./images/functional-presentation/reutilisation.jpg"
-     height="320" style="margin:15px auto;" alt="screenshot of the login page" />
+     height="320" style="margin:15px auto;" alt="screenshot of the reuses management page" />

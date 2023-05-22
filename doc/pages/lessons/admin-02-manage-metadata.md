@@ -17,7 +17,7 @@ Vous retrouvez les *Licences*, les *Thématiques* et les *Métadonnées des jeux
 ## Les licences
 
 Les licences vous permettent de définir les conditions d'utilisations d'un jeu de données.  
-Deux licences sont disponibles par défaut sur Data Fair :  
+Deux licences sont disponibles par défaut sur Data&nbsp;Fair :  
 * [Licence Ouverte / Open Licence](https://www.etalab.gouv.fr/licence-ouverte-open-licence/)
 * [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/1-0/)
 

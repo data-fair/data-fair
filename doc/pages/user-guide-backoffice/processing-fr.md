@@ -11,7 +11,7 @@ Ils peuvent ainsi être utilisé pour la **mise à jour automatique de données*
 
 Les traitements périodiques se différencient des connecteurs de [catalogues](./user-guide-backoffice/catalogues) sur plusieurs points :
 
-* Un traitement est limité à un ensemble réduit de sources en entrée et en sortie. Typiquement, il peut récupérer des données à un endroit, les métadonnées à un autre, et déverser les données dans une source de Data Fair.
+* Un traitement est limité à un ensemble réduit de sources en entrée et en sortie. Typiquement, il peut récupérer des données à un endroit, les métadonnées à un autre, et déverser les données dans une source de Data&nbsp;Fair.
 * Les **fréquences de collecte peuvent être plus élevées** : on peut collecter les données avec quelques secondes d’intervalle, ce qui est adapté à la publication des données IOT.
 * Les traitements périodiques ne peuvent être configurés que par un administrateur de la plateforme. Veuillez [nous contacter](https://koumoul.com/contact) si vous êtes intéressé par un traitement périodique.  
 

@@ -17,7 +17,7 @@ Visualizations can be configured through a graphical interface that **requires n
 A preview renders the visualization. When changes are made in the configuration menu, they are directly represented in the preview. It is thus possible to quickly modify and test different renderings of the visualization, in **draft mode**. When the rendering is satisfactory, saving makes it possible to validate the modifications made. The changes are then visible on all posts in the visualization.
 
 ### Types of visualizations
-Data Fair offers a wide variety of visualizations in constant progression, there are today nearly a **thirty different visualizations**. ([This section](./interoperate/applications) describes in detail how to create them).
+Data&nbsp;Fair offers a wide variety of visualizations in constant progression, there are today nearly a **thirty different visualizations**. ([This section](./interoperate/applications) describes in detail how to create them).
 
 
 #### Map visualizations

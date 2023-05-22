@@ -25,7 +25,7 @@ List of triggering events:
 To configure event tracking for Google Analytics, you will need a [Google Analytics account](https://support.google.com/analytics/answer/1008015?hl=fr)
 with a configured property and a UA-XXXXXXXX-X number configured for your site.
 
-Once you configured your Google Analytics account and got your UA-XXXXXXXX-X number, you can use it on the **Webhooks** section of your Data Fair account.
+Once you configured your Google Analytics account and got your UA-XXXXXXXX-X number, you can use it on the **Webhooks** section of your Data&nbsp;Fair account.
 
 When you are on the settings page, you can add an 'External calls' using the **+** button.  
 A window appears to configure your call.  

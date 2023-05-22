@@ -8,7 +8,7 @@ published: false
 
 ## Gestion des permissions
 
-Par défaut, un jeu de données créé sur Data Fair possède les droits **Accessible aux administrateurs et contributeurs** de l'organisation. Vous pouvez ouvrir l'accessibilité aux utilisateurs de l'organisation (rôle user) ou mettre le jeu de données en public.
+Par défaut, un jeu de données créé sur Data&nbsp;Fair possède les droits **Accessible aux administrateurs et contributeurs** de l'organisation. Vous pouvez ouvrir l'accessibilité aux utilisateurs de l'organisation (rôle user) ou mettre le jeu de données en public.
 
 ![Permissions](./images/lessons/admin-04-permissions-1.jpg)  
 *Les permissions sont définies au niveau de l'API*
@@ -37,6 +37,6 @@ Lorsqu'un administrateur d'organisation créé un portail, il est automatiquemen
 
 ![Publication](./images/lessons/admin-04-notification-1.jpg)
 
-A l'aide du menu d'action de Data Fair, vous pouvez modifier vos notifications.
+A l'aide du menu d'action de Data&nbsp;Fair, vous pouvez modifier vos notifications.
 
 ![Publication](./images/lessons/admin-04-notification-2.jpg)

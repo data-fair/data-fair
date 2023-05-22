@@ -7,7 +7,7 @@ description: Jointures de données
 published: true
 ---
 
-L'enrichissement permet d'importer des colonnes d'une base de référence. Il est ainsi possible de croiser ses données avec des données issues de l'open data telles que la base SIRENE, les données INSEE, le cadastre ou la BAN.
+L'enrichissement permet d'importer des colonnes d'une base de référence. Il est ainsi possible de croiser ses données avec des données issues de l'open&nbsp;data telles que la base SIRENE, les données INSEE, le cadastre ou la BAN.
 
 * La **base SIRENE** rassemble les informations économiques et juridiques de plus de 28 Millions d'établissements d'entreprises, dont plus de 11 Millions établissement actifs.
 * Les **données INSEE** permettent de récupérer diverses informations sur les divisions administrative (communes, départements, régions)
@@ -36,7 +36,7 @@ Lorsque votre jeu de données est créé sur votre compte, il vous faudra associ
 ### Mode super administrateur
 
 Le mode super administrateur n'est disponible que pour les utilisateurs autorisé dans l'instance.  
-Ce mode est disponible dans le menu en haut à droite sur Data Fair.
+Ce mode est disponible dans le menu en haut à droite sur Data&nbsp;Fair.
 
 ![Données de référence](./images/user-guide-backoffice/enrichment-superadmin.jpg)
 

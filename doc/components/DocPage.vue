@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-container class="doc-page">
+  <v-container class="doc-page px-0">
     <!-- used to extract page tag by web scraper -->
     <div class="hidden-breadcrumb section-title">
       {{ breadcrumbs.slice(0, breadcrumbs.length - 1).join(' / ') }}
@@ -139,12 +139,15 @@ export default {
     p img, .v-data-table {
       max-width:100%;
       margin: 12px auto;
-      border: solid;
-      border-width: 1px;
+      border: 1px solid grey;
     }
 
     .hidden-breadcrumb {
       display: none;
+    }
+
+    ul {
+      margin-bottom: 16px;
     }
 }
 </style>

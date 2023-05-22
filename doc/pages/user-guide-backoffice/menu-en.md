@@ -1,5 +1,5 @@
 ---
-title: Data Fair menu
+title: Data&nbsp;Fair menu
 section: 2
 subsection : 1
 updated: 2021-09-20
@@ -33,7 +33,7 @@ The notifications page allows to configure various email or browser alerts you w
 ![Notifications](./images/user-guide-backoffice/notify.jpg)  
 *Select the notifications you want to receive*
 
-When a notification is triggered, a colored dot is present on the bell at the top right of Data Fair.  
+When a notification is triggered, a colored dot is present on the bell at the top right of Data&nbsp;Fair.  
 The bell display the summary of the alerts sent.
 
 ## Storage

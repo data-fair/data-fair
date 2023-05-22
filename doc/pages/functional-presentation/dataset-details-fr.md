@@ -18,7 +18,7 @@ Il est également possible d'accéder aux **pièces jointes** du jeu de données
 
 En plus des visualisations du portail qui sont des réutilisations des données "internes", d'autres réutilisations de données peuvent être mentionnées. Ces réutilisations peuvent être présentées au travers d'une vignette cliquable, ou directement embarquées dans la page en iframe.
 
-Différents boutons permettent de partager la page du jeu de données sur les réseaux sociaux (Facebook, Twitter, Linkedin, ...). La page de données possède des **métadonnées enrichies** qui permettent une meilleure indexation par les moteurs de recherche et un affichage d’une miniature sur les réseaux sociaux. Cette miniature présente la première visualisation associée au jeu de données, et ce côté graphique permet d’**augmenter l’engagement** des utilisateurs des réseaux sociaux.
+Différents boutons permettent de partager la page du jeu de données sur les réseaux sociaux (Facebook, Twitter, LinkedIn, ...). La page de données possède des **métadonnées enrichies** qui permettent une meilleure indexation par les moteurs de recherche et un affichage d’une miniature sur les réseaux sociaux. Cette miniature présente la première visualisation associée au jeu de données, et ce côté graphique permet d’**augmenter l’engagement** des utilisateurs des réseaux sociaux.
 
 <img src="./images/functional-presentation/detail-3.jpg"
      height="160" style="margin:20px auto;" alt="capture d'écran d'un widget de partage de jeu de données sur réseau social" />

@@ -37,7 +37,7 @@ You can then enter this code on the configuration of your portal.
 
 ## Event configuration
 
-The event configuration is available in the Data Fair settings in the **Webhooks** category.
+The event configuration is available in the Data&nbsp;Fair settings in the **Webhooks** category.
 
 You can select which events you want to track in your analytics:
 * A new dataset has been created

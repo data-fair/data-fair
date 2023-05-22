@@ -11,7 +11,7 @@ They can be used for **automatic data update** on regular intervals.
 
 Periodic processing differs from [catalog connectors](./user-guide-backoffice/catalogues) on several points:
 
-* Processing are limited to a small set of input and output sources. Typically, it can retrieve data in one place, metadata in another, and dump the data into a Data Fair source.
+* Processing are limited to a small set of input and output sources. Typically, it can retrieve data in one place, metadata in another, and dump the data into a Data&nbsp;Fair source.
 * **Collection frequencies can be higher**: Data can be collected with a few seconds intervals, which is suitable for publishing IOT data.
 * Periodic processing can only be configured by a platform administrator. Please [contact us](https://koumoul.com/contact) if you are interested in periodic treatment.
 

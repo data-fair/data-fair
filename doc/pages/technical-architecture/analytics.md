@@ -8,7 +8,7 @@ published: true
 
 La gestion des analytics et autres statistiques d'utilisation de la plateforme peut se faire de 2 manières :
  * A l'aide d'un service en ligne externe à la plateforme, tel que Google Analytics
- * Avec un service d'analytics déployé sur la même infrastructure que Data Fair : dans ce cas nous recommandons le logiciel open source [Matomo](https://fr.matomo.org/matomo-on-premise/) (anciennement Piwik).
+ * Avec un service d'analytics déployé sur la même infrastructure que Data&nbsp;Fair : dans ce cas nous recommandons le logiciel open source [Matomo](https://fr.matomo.org/matomo-on-premise/) (anciennement Piwik).
 
 ### Matomo
 

@@ -8,7 +8,7 @@ published: true
 ---
 
 
-Enrichment allows you to import columns from a reference base. It is possible to cross-reference its data with data from open data such as the SIRENE database, INSEE data, the cadastre or the BAN.
+Enrichment allows you to import columns from a reference base. It is possible to cross-reference its data with data from open&nbsp;data such as the SIRENE database, INSEE data, the cadastre or the BAN.
 
 
 * The **SIRENE** database brings together economic and legal information from more than 28 million french business establishments, including more than 11 million active establishments.
@@ -39,7 +39,7 @@ When your dataset is created on your account, you will need to associate a conce
 ### Super admin mode
 
 Super administrator mode is only available for users authorized in the instance.  
-This mode is available in the menu at the top right on Data Fair.
+This mode is available in the menu at the top right on Data&nbsp;Fair.
 
 ![Données de référence](./images/user-guide-backoffice/enrichment-superadmin.jpg)
 

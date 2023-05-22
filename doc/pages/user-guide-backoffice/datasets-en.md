@@ -7,7 +7,7 @@ published: true
 ---
 
 
-On Data Fair, a dataset corresponds to an uploaded [file](./user-guide-backoffice/file-formats) or an [editable or virutal source](./user-guide-backoffice/import-dataset) whith metadata filled in.
+On Data&nbsp;Fair, a dataset corresponds to an uploaded [file](./user-guide-backoffice/file-formats) or an [editable or virutal source](./user-guide-backoffice/import-dataset) whith metadata filled in.
 
 By default, all uploaded data is private on your account.  
 You can work with your team using an [organization](./user-guide-backoffice/organisation) account.
@@ -20,6 +20,6 @@ With metadata your datasets are easier to find and to identify.
 
 ## Concepts  
 
-On the dataset edition page, you will find the **Schema** section which allows to view the model of your data. The schema of a dataset corresponds to its architecture (all the columns). In this section you can fill in [concepts](./user-guide-backoffice/concept). When you fill in a concept on a column, you associate a known elements of Data Fair to this column. This makes your data more meaningful for Data Fair.
+On the dataset edition page, you will find the **Schema** section which allows to view the model of your data. The schema of a dataset corresponds to its architecture (all the columns). In this section you can fill in [concepts](./user-guide-backoffice/concept). When you fill in a concept on a column, you associate a known elements of Data&nbsp;Fair to this column. This makes your data more meaningful for Data&nbsp;Fair.
 
 [Concepts](./user-guide-backoffice/concept) are used in various functions, in some cases, they are essential. For example, if you want to project your data onto a map, the **Latitude / Longitude** or **Geometry** concepts must be present on your schema.

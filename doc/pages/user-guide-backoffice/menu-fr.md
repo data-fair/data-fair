@@ -1,5 +1,5 @@
 ---
-title: Menu de Data Fair
+title: Menu de Data&nbsp;Fair
 section: 2
 subsection : 1
 updated: 2021-09-20
@@ -33,7 +33,7 @@ La page des notifications permet de paramétrer différentes alertes email ou na
 ![Notifications](./images/user-guide-backoffice/notify.jpg)  
 *Sélectionnez les notifications que vous souhaitez recevoir*
 
-Lorsqu’une notification est déclenchée, une pastille colorée est présente sur la cloche en haut à droite de Data Fair.  
+Lorsqu’une notification est déclenchée, une pastille colorée est présente sur la cloche en haut à droite de Data&nbsp;Fair.  
 Un clic sur la cloche permet d'accéder au résumé des alertes envoyées.
 
 

@@ -1,12 +1,12 @@
 ---
-title: Data Fair
+title: Data&nbsp;Fair
 section: 2
 updated: 2020-12-09
-description : Data Fair
+description : Data&nbsp;Fair
 published: true
 ---
 
-Data Fair permet d'exposer facilement ses données via une API web, contractualisée et documentée, ce qui permet aux développeurs de les réutiliser facilement dans leurs **applications**. De plus les données peuvent être sémantisées, ce qui permet ensuite de les enrichir avec d'autres données sémantisées. Ainsi, des données qui ont une adresse peuvent par exemple être complétées par des coordonnées GPS, ce qui permet ensuite de les afficher sur une carte.
+Data&nbsp;Fair permet d'exposer facilement ses données via une API web, contractualisée et documentée, ce qui permet aux développeurs de les réutiliser facilement dans leurs **applications**. De plus les données peuvent être sémantisées, ce qui permet ensuite de les enrichir avec d'autres données sémantisées. Ainsi, des données qui ont une adresse peuvent par exemple être complétées par des coordonnées GPS, ce qui permet ensuite de les afficher sur une carte.
 
 Le coeur de la solution permet
 * d’indexer des données

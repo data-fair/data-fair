@@ -11,7 +11,7 @@ The news pages allow you to communicate to your visitors the latest news that yo
 
 ## Creation of a news page
 
-The **Portals** section of Data Fair allows you to access the editing of your portals. You can then access the editing of the **Content Pages** using the **Edit Content Pages** button at the top right.
+The **Portals** section of Data&nbsp;Fair allows you to access the editing of your portals. You can then access the editing of the **Content Pages** using the **Edit Content Pages** button at the top right.
 
 ![Configurer votre portail](./images/user-guide-backoffice/page-contenu-1.jpg)
 

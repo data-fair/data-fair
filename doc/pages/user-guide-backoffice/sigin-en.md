@@ -1,14 +1,14 @@
 ---
-title: Getting started with Data Fair
+title: Getting started with Data&nbsp;Fair
 section: 1
 updated: 2021-09-20
-description : Connect to Data Fair
+description : Connect to Data&nbsp;Fair
 published: true
 ---
 
-Data Fair allows to **enhance your data and share it internally or in opendata.**  
+Data&nbsp;Fair allows to **enhance your data and share it internally or in opendata.**  
 
-Your account allows to access the various features of Data Fair:
+Your account allows to access the various features of Data&nbsp;Fair:
 
 * [Upload your data](./user-guide-backoffice/datasets)
 * [Enrich your data](./user-guide-backoffice/enrichment) to add even more value.

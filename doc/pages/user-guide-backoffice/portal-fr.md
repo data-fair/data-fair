@@ -6,9 +6,9 @@ description : Apprenez comment configurer votre solution pour diffuser vos donn�
 published: true
 ---
 
-Data Fair vous permet de présenter vos données dans un portail.  
+Data&nbsp;Fair vous permet de présenter vos données dans un portail.  
 Il est possible de configurer **plusieurs portails** pour le même compte.  
-Les portails peuvent être **publics**, pour faire de l'open data, ou bien **privés** pour partager et visualiser les données en interne.  
+Les portails peuvent être **publics**, pour faire de l'open&nbsp;data, ou bien **privés** pour partager et visualiser les données en interne.  
 
 La page de configuration du portail est accessible par la barre de navigation. Une liste de vos portails est alors disponible.  
 Vous pouvez **créer, supprimer, accéder à la configuration et dupliquer** vos portails.
@@ -39,7 +39,7 @@ L'interface de **configuration d'un portail** est divisée en 5 parties :
 
 La section **Général** vous permet de personnaliser les éléments communs aux différentes pages du portail telles que les couleurs, le logo, l'image principale et le favicon.  
 
-Vous pouvez activer ou désactive l'authentification sur votre portail (portail open data, portail public avec certaines données en privé, portail privé).
+Vous pouvez activer ou désactive l'authentification sur votre portail (portail open&nbsp;data, portail public avec certaines données en privé, portail privé).
 
 Il est possible d'ajouter plusieurs liens dans le footer.
 

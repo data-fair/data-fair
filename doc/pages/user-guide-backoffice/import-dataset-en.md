@@ -9,7 +9,7 @@ published: true
 
 You can create a dataset on the [dashbord](./user-guide-backoffice/dashboard) or on the [datasets](./user-guide-backoffice/datasets) pages.
 
-Three differents datasets on Data Fair.  
+Three differents datasets on Data&nbsp;Fair.  
 
 1. Upload a file from your computer
 2. An editable dataset  
@@ -18,11 +18,11 @@ Three differents datasets on Data Fair.
 
 ## Upload a file
 
-You can import files using any **Create a dataset** action buttons on Data Fair.  
+You can import files using any **Create a dataset** action buttons on Data&nbsp;Fair.  
 The upload file process contains a list of the [formats](./user-guide-backoffice/file-formats) supported by Data fair.
 It is possible to add [attachments](./user-guide-backoffice/attachements) in a zip archive to link it to the rows of the dataset.
 
-Once the file is loaded, you are redirected to the dataset edit page. Data Fair continues processing the file on the dataset edit page.
+Once the file is loaded, you are redirected to the dataset edit page. Data&nbsp;Fair continues processing the file on the dataset edit page.
 
 Six have to be validated to use your dataset :
 
@@ -41,7 +41,7 @@ When finalization is complete, the dataset state is set to "available". It can t
 ## Incremental dataset  
 
 An **editable dataset** is an empty editable dataset created without a data file.  
-You will be able to define the columns of the dataset and then add the rows from Data Fair.
+You will be able to define the columns of the dataset and then add the rows from Data&nbsp;Fair.
 
 Each column is defined by its label and its type.
 

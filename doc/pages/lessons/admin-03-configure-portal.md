@@ -7,7 +7,7 @@ published: false
 ---
 
 Les [portails de données](https://opendata.koumoul.com/) permettent de présenter vos données en public ou en interne.  
-Vous pouvez créer plusieurs portails, par exemple un portail open data, un portail de pré-production et un portail en interne.
+Vous pouvez créer plusieurs portails, par exemple un portail open&nbsp;data, un portail de pré-production et un portail en interne.
 
 ![Portails](./images/lessons/admin-03-portail.jpg)  
 *Avoir plusieurs portails permet d'avoir un workflow défini pour la publication de vos données*

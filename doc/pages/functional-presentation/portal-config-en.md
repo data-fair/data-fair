@@ -8,7 +8,7 @@ published: true
 
 ### Portal settings
 
-Data Fair allows you to configure several data portals which are places for publishing datasets, visualizations and content pages that users will be able to consult. There may be **portals for different use cases**: opendata, internal data sharing, sharing with partners, data being consolidated (pre-production portal), ...
+Data&nbsp;Fair allows you to configure several data portals which are places for publishing datasets, visualizations and content pages that users will be able to consult. There may be **portals for different use cases**: open&nbsp;data, internal data sharing, sharing with partners, data being consolidated (pre-production portal), ...
 
 Just like for data visualizations, the configuration of a data portal is done **graphically** in two stages: we work on a draft which we then publish in current version. The *current version* is the version that is presented to the various visitors to your portal, which allows you to update the portal without impacting users until the draft has been validated. **No knowledge of HTML or CSS** is required and a portal is administered like a CMS like Wordpress.
 

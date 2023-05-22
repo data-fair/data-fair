@@ -8,7 +8,7 @@ published: true
 
 ### Paramétrage des portails
 
-Data Fair permet de configurer plusieurs portails de données qui sont des lieux de publication des jeux de données, visualisations et pages de contenus que les utilisateurs vont pouvoir consulter. Il peut y avoir **des portails pour différents cas d'usage** : opendata, partage de données en interne, partage avec des partenaires, données en cours de consolidation (portail de préproduction), ...
+Data&nbsp;Fair permet de configurer plusieurs portails de données qui sont des lieux de publication des jeux de données, visualisations et pages de contenus que les utilisateurs vont pouvoir consulter. Il peut y avoir **des portails pour différents cas d'usage** : opendata, partage de données en interne, partage avec des partenaires, données en cours de consolidation (portail de préproduction), ...
 
 Tout comme pour les visualisations de données, la configuration d'un portail de données se fait **de manière graphique** en deux temps : on travaille sur un brouillon que l'on publie ensuite en version courante. La *version courante* est la version qui est présentée aux différents visiteurs de votre portail, ce qui permet de mettre à jour le portail sans impacter les utilisateurs tant que l'on n'a pas validé le brouillon. **Aucune connaissance en HTML ou CSS** n'est requise et un portail s'administre à la manière d'un CMS comme Wordpress.
 

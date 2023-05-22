@@ -8,11 +8,11 @@ published: true
 
 Les connecteurs permettent d’interagir avec d’autres plateformes ou services de données, en lecture comme en écriture.
 
-En **écriture**, l’idée est de pouvoir pousser des métadonnées dans d’autres **catalogues**. Un exemple de catalogue est le catalogue de données ouvertes national [data.gouv.fr](https://www.data.gouv.fr/fr/) : les jeux de données publiés à l’aide de Data Fair peuvent être synchronisés automatiquement et toute modification dans les métadonnées est propagée vers le catalogue distant.
+En **écriture**, l’idée est de pouvoir pousser des métadonnées dans d’autres **catalogues**. Un exemple de catalogue est le catalogue de données ouvertes national [data.gouv.fr](https://www.data.gouv.fr/fr/) : les jeux de données publiés à l’aide de Data&nbsp;Fair peuvent être synchronisés automatiquement et toute modification dans les métadonnées est propagée vers le catalogue distant.
 
-Le fait de pousser les métadonnées vers un catalogue plutôt que de se faire moissonner par lui offre plusieurs avantages dont le fait de propager immédiatement les modifications. De plus, si il y a des modification de l'API de Data Fair, le connecteur continuera de fonctionner alors qu'un moissonneur pourrait devenir inopérant.
+Le fait de pousser les métadonnées vers un catalogue plutôt que de se faire moissonner par lui offre plusieurs avantages dont le fait de propager immédiatement les modifications. De plus, si il y a des modification de l'API de Data&nbsp;Fair, le connecteur continuera de fonctionner alors qu'un moissonneur pourrait devenir inopérant.
 
-Les connecteurs peuvent éventuellement pousser les données vers ces catalogues mais il est préférable d’éviter cela à cause des problèmes de duplication et synchronisation de données. Comme mentionné précédemment, les données sont indexées de manière très performante avec Data Fair et il est préférable de requêter les données directement à partir des APIs qu'il offre.
+Les connecteurs peuvent éventuellement pousser les données vers ces catalogues mais il est préférable d’éviter cela à cause des problèmes de duplication et synchronisation de données. Comme mentionné précédemment, les données sont indexées de manière très performante avec Data&nbsp;Fair et il est préférable de consommer les données directement à partir des APIs qu'il offre.
 
 <img src="./images/functional-presentation/catalogues.jpg"
      height="200" style="margin:40px auto;" alt="capture d'écran d'une configuration de publication sur catalogue" />

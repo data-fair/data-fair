@@ -32,7 +32,7 @@ Les [concepts](./user-guide-backoffice/concept) sont des notions connues pour la
 
 ### Enrichissement
 
-L'enrichissement permet d'importer des colonnes d'une base de référence. Il est ainsi possible de croiser ses données avec des données issues de l'open data telles que la base SIRENE, les données INSEE, le cadastre ou la BAN.
+L'enrichissement permet d'importer des colonnes d'une base de référence. Il est ainsi possible de croiser ses données avec des données issues de l'open&nbsp;data telles que la base SIRENE, les données INSEE, le cadastre ou la BAN.
 
 Plusieurs étapes sont nécessaires pour créer un enrichissement de données :
 

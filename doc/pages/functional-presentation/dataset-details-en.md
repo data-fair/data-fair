@@ -19,7 +19,7 @@ It is also possible to access the **attachments** of the dataset. These are gene
 
 In addition to portal visualizations that are "internal" data reuses, other data reuses may be mentioned. These reuses can be presented through a clickable thumbnail, or directly embedded in the iframe page.
 
-Different icones are used to share the dataset page on social networks (Facebook, Twitter, Linkedin, ...). The data page has **enriched metadata** which allows better indexing by search engines and display of a thumbnail on social networks. This thumbnail presents the first visualization associated with the dataset, and this graphical side helps to **increase the engagement** of social network users.
+Different icônes are used to share the dataset page on social networks (Facebook, Twitter, LinkedIn, ...). The data page has **enriched metadata** which allows better indexing by search engines and display of a thumbnail on social networks. This thumbnail presents the first visualization associated with the dataset, and this graphical side helps to **increase the engagement** of social network users.
 
 <img src="./images/functional-presentation/detail-3.jpg"
      height="160" style="margin:20px auto;" alt="screenshot of a sharing widget on a social network" />

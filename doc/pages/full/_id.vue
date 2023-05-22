@@ -12,7 +12,7 @@
         class="my-6"
       />
       <h1 class="text-h3 grey--text text--darken-3">
-        Data Fair
+        Data&nbsp;Fair
       </h1>
       <h4>
         Version {{ version }}
@@ -81,7 +81,7 @@
         v-if="!section.subsection"
         :id="section.id"
         :key="'t-'+i"
-        class="text-h4 my-4 grey--text text--darken-3 section-title"
+        class="text-h4 mt-6 mb-4 grey--text text--darken-3 section-title"
       >
         {{ section.section }} - {{ section.title }}
         <v-icon
@@ -96,7 +96,7 @@
         v-else
         :id="section.id"
         :key="'t-'+i"
-        class="text-h5 my-4 grey--text text--darken-3 section-title subsection-title"
+        class="text-h5 mt-4 mb-2 grey--text text--darken-3 section-title subsection-title"
       >
         {{ section.section }}.{{ section.subsection }} - {{ section.title }}
         <v-icon
@@ -133,7 +133,7 @@ export default {
   },
   head () {
     return {
-      title: 'Data Fair - ' + this.$t(this.$route.params.id)
+      title: 'Data&nbsp;Fair - ' + this.$t(this.$route.params.id)
     }
   },
   computed: {

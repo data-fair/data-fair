@@ -8,7 +8,7 @@ published: true
 ---
 
 The concepts are known elements for the platform. Your data is more explicit.  
-Concepts increase the reusability of your data and   **link your data to the functionalities of Data Fair** such as [enrichment](./user-guide-backoffice/enrichment).  
+Concepts increase the reusability of your data and   **link your data to the functionalities of Data&nbsp;Fair** such as [enrichment](./user-guide-backoffice/enrichment).  
 
 The dataset edition page allows to select the concepts in the **Schema** section.
 
@@ -26,7 +26,7 @@ A concept is unique for a dataset, it can only be attributed once to a dataset. 
 ## List of concepts
 
 It is possible to create your own concepts and use them in your [reference data](./user-guide-backoffice/enrichment).  
-Here is the default list of concepts used by Data Fair:
+Here is the default list of concepts used by Data&nbsp;Fair:
 
 * **Label**: An easily readable label
 * **Description**: A small descriptive text (HTML content accepted)

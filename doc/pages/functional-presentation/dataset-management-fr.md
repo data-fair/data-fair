@@ -14,7 +14,7 @@ Les jeux de données permettent de mettre à disposition de l'utilisateur des do
 
 Il existe plusieurs types de jeux de données sur la plateforme, les fichiers, les jeux de données éditables, les jeux de données virtuels et des jeux de données externes.
 
-* Les **jeux de données fichiers** correspondent à des données sous format tabulaire ou cartographique chargés sur la plateforme. Plusieurs formats de fichiers sont supportés tels que le CSV, TSV, OpenDocument, XLS, XLSX, GeoJson, KML, KMZ, ESRI Shapefile, GPX et iCalendar. Suivant les besoins de nouveaux formats de fichiers sont régulièrement ajoutés. Quand un fichier est chargé, il est converti dans un format plus standard en interne, puis analysé automatiquement pour déterminer le schéma du jeu de données. Le contributeur peut ensuite modifier ce schéma, par exemple déterminer qu'une colonne aura sa donnée indexée en tant que chaine de caractère plutôt que nombre entier.
+* Les **jeux de données fichiers** correspondent à des données sous format tabulaire ou cartographique chargés sur la plateforme. Plusieurs formats de fichiers sont supportés tels que le CSV, TSV, OpenDocument, XLS, XLSX, GeoJson, KML, KMZ, ESRI Shapefile, GPX et iCalendar. Suivant les besoins de nouveaux formats de fichiers sont régulièrement ajoutés. Quand un fichier est chargé, il est converti dans un format plus standard en interne, puis analysé automatiquement pour déterminer le schéma du jeu de données. Le contributeur peut ensuite modifier ce schéma, par exemple déterminer qu'une colonne aura sa donnée indexée en tant que chaîne de caractère plutôt que nombre entier.
 
 * Les **jeux de données éditables** sont des données stockées en base et sont plutôt adaptés à des données qui évoluent régulièrement, ou mises à jour par des personnes métier qui veulent juste modifier quelques lignes. La création de ce type de jeu de données se fait en éditant son schéma de données : on défini chaque colonne et son type. Pour des données produites par des systèmes informatiques (données IOT par exemple), ces jeux de données sont généralement mis à jour par API. Dans le cas de mises à jour manuelles par des agents, ils sont mis à jour via un formulaire de saisie.
 
@@ -37,9 +37,9 @@ Ce typage métier **augmente la réutilisabilité** des données et permet 2 cho
 
 ### Réferentiel de schémas
 
-Pour améliorer la saisie et la réutilisation des données, nous proposont un référentiel de schémas issus de https://schema.data.gouv.fr/schemas.html qui recense differents schémas de données publiques pour la France.  
+Pour améliorer la saisie et la réutilisation des données, nous proposons un référentiel de schémas issus de https://schema.data.gouv.fr/schemas.html qui recense différents schémas de données publiques pour la France.  
 
-Lors de la création d'un jeu de données éditable, il est possible de choisir un des schémas proposés. Les données saisies seront standardisées ce qui augementera leur réutilisabilité tant au niveau de la remontée de differentes données vers une destination commune pour fusionner les données mais également dans l'utilisation de visualisation.  
+Lors de la création d'un jeu de données éditable, il est possible de choisir un des schémas proposés. Les données saisies seront standardisées ce qui augmentera leur réutilisabilité tant au niveau de la remontée de différentes données vers une destination commune pour fusionner les données mais également dans l'utilisation de visualisation.  
 Par exemple avec une application permettant de rechercher et visualiser des délibérations publiées au format SCDL pourra être utilisée par toute collectivité qui publie ses données de délibérations avec le schéma adapté.
 
 ### Métadonnées et pièces jointes
@@ -60,9 +60,9 @@ Ces données maitre sont d'une grande valeur, car elles permettent de **complét
 
 La deuxième possibilité pour compléter les données est de mettre en place des **enrichissements** : des colonnes sont alors automatiquement ajoutées au jeu de données et les valeurs renseignées à partir d'une ou plusieurs autres colonnes. Par exemple des colonnes qui ont les concepts *numéro de rue*, *libellé de rue* et *code postal* peuvent être complétées par les données d'adresse et être géocodées, ce qui permet de projeter les données sur une carte. Quand les données sont mises à jour, les enrichissements sont automatiquement mis à jour, et un jeu de données peut avoir plusieurs enrichissements provenant de données maitres différentes.
 
-Les données de référence peuvent également etre utilisées via les jeux virtuels pour proposer les données de reference sur sont portail.
-Il est alors possible de créer un jeu virtuel, sur le portail de son organisation, qui va etre une vue du jeu de données de référence. Ainsi lorsque les données de réferences seront mise à jour, le jeu virtuel sera égelement mis à jour.  
-Les jeux virtuel peuvent posseder des filtres sur les valeurs de colonnes. Il est par exemple possible de filtrer les données de la **base Sirene** sur un territoire et sur certains **code APE** pour proposer un jeu de données sur un secteur d'activité sur votre territoire. Il sera alors très simple de configurer une visualisation cartographique pour explorer ses données.
+Les données de référence peuvent également être utilisées via les jeux virtuels pour proposer les données de reference sur sont portail.
+Il est alors possible de créer un jeu virtuel, sur le portail de son organisation, qui va être une vue du jeu de données de référence. Ainsi lorsque les données de références seront mises à jour, le jeu virtuel sera également mis à jour.  
+Les jeux virtuels peuvent posséder des filtres sur les valeurs de colonnes. Il est par exemple possible de filtrer les données de la **base Sirene** sur un territoire et sur certains **code APE** pour proposer un jeu de données sur un secteur d'activité sur votre territoire. Il sera alors très simple de configurer une visualisation cartographique pour explorer ses données.
 
 ### Permissions et publication des données
 
@@ -73,7 +73,7 @@ On peut également définir des droits d'accès à certains utilisateurs ou des 
 <img src="./images/functional-presentation/permissions.jpg"
      height="350" style="margin:20px auto;" alt="capture d'écran de l'édition des permissions d'un jeu de données" />
 
-Quand un jeu de données vient d'être créé, il n'est pas de encore disponible dans les différents portails de données de l'organisation. Il doit d'abord être **publié dans un ou plusieurs portails**. Dans le cadre de portails opendata, le jeu de données doit aussi avoir une permission d'accès public en plus d'être publié.
+Quand un jeu de données vient d'être créé, il n'est pas de encore disponible dans les différents portails de données de l'organisation. Il doit d'abord être **publié dans un ou plusieurs portails**. Dans le cadre de portails open&nbsp;data, le jeu de données doit aussi avoir une permission d'accès public en plus d'être publié.
 
 Ce mécanisme de publication permet de travailler de manière agile : on peut par exemple avoir un **portail de recette** sur lequel on publie les jeux de données que l’on souhaite ouvrir prochainement, en les accompagnant de visualisations. Les visualisations peuvent mettre en avant un problème dans les données ou une mauvaise structuration de celles-ci, problème qui peut être vu par plusieurs personnes car les données sont déjà publiées sur un portail. Une fois que l’on atteint la **qualité de publication souhaitée**, on dé-publie le jeu de données du portail de recette et on le publie sur un ou plusieurs portails de production.
 

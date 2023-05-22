@@ -8,7 +8,7 @@ published: true
 ---
 Les visualisations interactives permettent de présenter et d'explorer vos données de manière ludique.   
 
-La création d'une visualisation peut être initiée à partir des différents boutons **Configurer une visualisation** disponibles sur Data Fair.
+La création d'une visualisation peut être initiée à partir des différents boutons **Configurer une visualisation** disponibles sur Data&nbsp;Fair.
 
 Remarque : Si certaines visualisations sont en rouge lors de la création, vérifier que vos jeux de données correspondent à ce type de visualisation ou que vous avez bien associer les [concepts](./user-guide-backoffice/concept) à votre jeu de données. Par exemple, pour configurer une carte, les concepts **Latitude** et **Longitude** doivent être associées aux colonnes qui contiennent ces valeurs dans votre jeu de données. N’hésitez pas à nous [contacter](https://koumoul.com/contact) si vous rencontrez des difficultés.
 

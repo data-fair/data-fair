@@ -76,3 +76,5 @@ npm run doc
 ```
 
 Then open http://localhost:3144
+
+To produce a nicer print of the domentation it is possible to use a locally run instance of @data-fair/capture. For example with this URL: http://localhost:5607/api/v1/print?target=http://localhost:3144/full/functional-presentation&footer=true

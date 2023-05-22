@@ -8,7 +8,7 @@ published: true
 ---
 
 Les concepts sont des notions connues pour la plateforme. Les concepts vont donner du sens à vos données.  
-Ils permettent d'augmenter la réutilisabilité de vos données et de faire **le lien entre vos données et les fonctionnalités de Data Fair**.
+Ils permettent d'augmenter la réutilisabilité de vos données et de faire **le lien entre vos données et les fonctionnalités de Data&nbsp;Fair**.
 
 La page d'édition d'un jeu de données permet de renseigner les concepts dans la section **Schéma des données**.
 
@@ -28,7 +28,7 @@ Un concept est unique pour un jeu de données, il ne peut être attribué qu'une
 ## Liste des concepts
 
 Il est possible de créer ses propres concepts et qu'ils soient utilisés dans vos [données de référence](./user-guide-backoffice/enrichment).  
-Voici la liste par défaut des concepts utilisé par Data Fair :
+Voici la liste par défaut des concepts utilisé par Data&nbsp;Fair :
 
 * **Libellé** : Un libellé facilement lisible
 * **Description** : Un petit texte descriptif (contenu HTML accepté)

@@ -9,7 +9,7 @@
         cols="12"
       >
         <h1 class="text-h3 font-weight-bold grey--text text--darken-3 mb-4">
-          Data Fair
+          Data&nbsp;Fair
         </h1>
         <p
           v-t="'subtitle'"
@@ -240,7 +240,7 @@ en:
     <h2 class="text-h5 grey--text text--darken-3 mb-2">
       Extend and structure
     </h2>
-    <p>Use open-data sources, extend your data to increase its value and make it <strong>highly reusable</strong>.</p>
+    <p>Use open&nbsp;data sources, extend your data to increase its value and make it <strong>highly reusable</strong>.</p>
     <p>Your data is <strong>normaized and accessible through an API</strong>, as structured textual data or vectorial geographic maps.</p>
   sectionVisualize:
     <h2 class="text-h5 grey--text text--darken-3 mb-2">
@@ -251,7 +251,7 @@ en:
     <p><a href="https://koumoul.com">Koumoul</a> create on-demande <strong>custom visualizations</strong> to better match your needs</p>
   sectionShare:
     <h2 class="text-h5 grey--text text--darken-3 mb-2">
-      Share privately or as open-data
+      Share privately or as open&nbsp;data
     </h2>
     <p><strong>Control access</strong> to the data and the visualizations to share both inside your organization and with the larger public.</p>
     <p>Your data is downloadable in multiple formats and can be presented in <strong>customizable data portal</strong>.</p>
@@ -272,8 +272,8 @@ export default {
           img: 'https://koumoul.com/static/logo-slogan.png',
           link: 'https://koumoul.com',
           thanks: {
-            fr: 'Koumoul développe l\'écosystème Data Fair et l\'héberge comme service en ligne.',
-            en: 'Koumoul develops the Data Fair ecosystem and hosts it as an online service.'
+            fr: 'Koumoul développe l\'écosystème Data&nbsp;Fair et l\'héberge comme service en ligne.',
+            en: 'Koumoul develops the Data&nbsp;Fair ecosystem and hosts it as an online service.'
           }
         },
         {
@@ -285,8 +285,8 @@ export default {
           img: 'https://dawizz.fr/logo-Dawizz-all-about-your-data-home.png',
           link: 'https://dawizz.fr',
           thanks: {
-            fr: 'Dawizz intègre Data Fair dans sa plateforme et soutient son développement.',
-            en: 'Dawizz uses Data Fair inside its platform and supports its development'
+            fr: 'Dawizz intègre Data&nbsp;Fair dans sa plateforme et soutient son développement.',
+            en: 'Dawizz uses Data&nbsp;Fair inside its platform and supports its development'
           }
         }
       ]

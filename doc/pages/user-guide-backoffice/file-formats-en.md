@@ -7,7 +7,7 @@ description: Supported file formats
 published: true
 ---
 
-The following table shows the file formats supported by Data Fair:
+The following table shows the file formats supported by Data&nbsp;Fair:
 
 Type | Description | Format | Archived format (zip)
 ----------|---------------------------|--------------------|--------------------

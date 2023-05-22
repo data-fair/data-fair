@@ -39,7 +39,7 @@ Vous pourrez ensuite renseigner ce code sur la configuration de votre portail.
 
 ## Configuration des événements
 
-Ce point de configuration est disponible dans les paramètres de Data Fair à la catégorie *Appels exterieurs (webhooks)*.
+Ce point de configuration est disponible dans les paramètres de Data&nbsp;Fair à la catégorie *Appels exterieurs (webhooks)*.
 
 Vous pouvez définir quels événements vous souhaitez suivre dans vos analytics :
 * Un nouveau jeu de données a été créé

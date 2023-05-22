@@ -16,15 +16,15 @@ Il est possible de créer des pages **publiques** ou des pages **privées**.
 
 ### Pages d'actualités
 
-Les pages d'actualités permettent de communiquer les informations sur les événements concernant votre portail ou l'open data. Elles peremettent d'établir une premiere phase de communication avec les visiteur de votre portail.  
+Les pages d'actualités permettent de communiquer les informations sur les événements concernant votre portail ou l'open&nbsp;data. Elles permettent d'établir une premiere phase de communication avec les visiteur de votre portail.  
 
 La liste d'actualité est disponible sur la page des actualités sous forme de fiche contenant une image et le début de l'actualité (ou le résumé). En cliquant sur une fiche les visiteurs accede aux informations concernant l'actualité.  
-Comme pour les pages de contenus, differents elements peuvent etre intégrés tels que des images, vidéos, formulaires, tableaux de jeux de données, pdf, liens, etc ...
+Comme pour les pages de contenus, différents éléments peuvent être intégrés tels que des images, vidéos, formulaires, tableaux de jeux de données, pdf, liens, etc ...
 
 <img src="./images/functional-presentation/actu.jpg"
      height="400" style="margin:20px auto;" alt="Liste des actualités" />
 
-Pour faciliter l'accès aux informations, un fil d'actualités est également disponible en page d'acceuil.
+Pour faciliter l'accès aux informations, un fil d'actualités est également disponible en page d'accueil.
 
 <img src="./images/functional-presentation/fil.jpg"
      height="300" style="margin:20px auto;" alt="Fil d'actualités en page d'accueil" />

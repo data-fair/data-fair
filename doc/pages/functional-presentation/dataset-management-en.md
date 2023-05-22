@@ -70,9 +70,9 @@ An administrator can finely control **data access permissions**. The data is *pr
 <img src="./images/functional-presentation/permissions.jpg"
      height="350" style="margin:20px auto;" alt="screenshot of the edition of permissions on a dataset"/>
 
-When a dataset has just been created, it is not yet available in the various data portals of the organization. It must first be **published in one or more portals**. In the context of opendata portals, the dataset must also have public access permission in addition to being published.
+When a dataset has just been created, it is not yet available in the various data portals of the organization. It must first be **published in one or more portals**. In the context of open&nbsp;data portals, the dataset must also have public access permission in addition to being published.
 
-This publication mechanism allows you to work in an agile way: for example, you can have a **recipe portal** on which you publish the datasets that you want to open soon, accompanying them with visualizations. Visualizations can highlight a problem in the data or a bad structuring of it, problem that can be seen by several people because the data is already published on a portal. Once we reach the **desired publication quality**, we unpublish the dataset from the recipe portal and publish it on one or more production portals.
+This publication mechanism allows you to work in an agile way: for example, you can have a **recipe portal** on which you publish the datasets that you want to open soon, accompanying them with visualizations. Visualizations can highlight a problem in the data or a bad structuring of it, problem that can be seen by several people because the data is already published on a portal. Once we reach the **desired publication quality**, we un-publish the dataset from the recipe portal and publish it on one or more production portals.
 
 <img src="./images/functional-presentation/portail-publication.jpg"
      height="350" style="margin:20px auto;" alt="screenshot of the publication of a dataset on portals"/>
@@ -81,4 +81,4 @@ It is also possible to publish a dataset on portals or data catalogs external to
 
 ### Event logs
 
-Each step in the processing of a dataset is registred in the associated log. It is thus possible to trace the actions, their dates, their durations and any errors encountered.
+Each step in the processing of a dataset is registered in the associated log. It is thus possible to trace the actions, their dates, their durations and any errors encountered.

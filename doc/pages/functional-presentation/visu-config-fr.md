@@ -17,7 +17,7 @@ Les visualisations peuvent être configurées grâce à une interface graphique 
 Un aperçu donne un rendu de la visualisation. Lorsque l’on réalise des modifications sur le menu de configuration, elles sont directement représentées sur l'aperçu. Il est ainsi possible de modifier et tester rapidement différents rendus de la visualisation, en **mode brouillon**. Lorsque le rendu est satisfaisant, l’enregistrement permet de valider les modifications réalisées. Les modifications sont alors visibles sur toutes les publications de la visualisation.
 
 ### Types de visualisations
-Data Fair offre une grande variété de visualisations en constante progression, il y a ce jour près d'une **trentaine de visualisations différentes**. ([Cette section](./interoperate/applications) décrit en détails la manière de les créer).
+Data&nbsp;Fair offre une grande variété de visualisations en constante progression, il y a ce jour près d'une **trentaine de visualisations différentes**. ([Cette section](./interoperate/applications) décrit en détails la manière de les créer).
 
 
 #### Visualisations cartographiques

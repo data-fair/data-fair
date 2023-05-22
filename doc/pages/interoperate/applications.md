@@ -6,7 +6,7 @@ description: Applications de visualisation de données
 published: true
 ---
 
-N'importe qui peut développer une nouvelle application de visualisation de données compatible avec Data Fair. Ces applications sont mises à disposition sous forme de services : ce sont des applications Web disponibles en ligne. Une instance de Data Fair fait office de proxy vers les applications configurées et les réexpose en leur communiquant les informations de contexte dont elles ont besoin. Pour pouvoir être intégrée dans une instance Data Fair, une application doit exposer certaines informations.
+N'importe qui peut développer une nouvelle application de visualisation de données compatible avec Data&nbsp;Fair. Ces applications sont mises à disposition sous forme de services : ce sont des applications Web disponibles en ligne. Une instance de Data&nbsp;Fair fait office de proxy vers les applications configurées et les réexpose en leur communiquant les informations de contexte dont elles ont besoin. Pour pouvoir être intégrée dans une instance Data&nbsp;Fair, une application doit exposer certaines informations.
 
 ## Exemples
 
@@ -22,7 +22,7 @@ Une application expose un fichier HTML, typiquement un fichier `ìndex.html` à 
 
 ## Gestion des configurations
 
-Une application doit donner à Data Fair le moyen de créer et éditer des configurations cohérentes avec ses besoins. Les configurations sont décrites à l'aide de JSON schéma, en servant à la racine de l'application un fichier `config-schema.json`. Ce fichier peut avoir des annotations particulières qui permettent d'avoir du contrôle sur le formulaire de configuration qui sera généré.
+Une application doit donner à Data&nbsp;Fair le moyen de créer et éditer des configurations cohérentes avec ses besoins. Les configurations sont décrites à l'aide de JSON schéma, en servant à la racine de l'application un fichier `config-schema.json`. Ce fichier peut avoir des annotations particulières qui permettent d'avoir du contrôle sur le formulaire de configuration qui sera généré.
 
 Ce formulaire est généré à l'aide de la librairie [vuetify-jsonschema-form](https://github.com/koumoul-dev/vuetify-jsonschema-form/) (v-jsf), la documentation des différente annotations JSON schéma utilisée est [disponible ici](https://koumoul-dev.github.io/vuetify-jsonschema-form/latest/).
 
@@ -32,19 +32,19 @@ Ce formulaire est généré à l'aide de la librairie [vuetify-jsonschema-form](
 
 Par simplicité nous privilégions des applications statiques déployables sur un simple serveur Web comme nos applications exemples. Pour ces applications nous avons prévu un mécanisme simple de transmission des informations contextuelles.
 
-Le proxy Data Fair cherche dans le contenu HTML qui transite la chaîne de caractère %APPLICATION% et la remplace par la configuration d'application complète au format JSON. Le code Javascript peut donc récupérer cet objet et l'utiliser pour effectuer un rendu adapté et consommer l'API de Data FAIR en conséquence. L'objet JSON transmis contient les champs suivants :
+Le proxy Data&nbsp;Fair cherche dans le contenu HTML qui transite la chaîne de caractère %APPLICATION% et la remplace par la configuration d'application complète au format JSON. Le code Javascript peut donc récupérer cet objet et l'utiliser pour effectuer un rendu adapté et consommer l'API de Data FAIR en conséquence. L'objet JSON transmis contient les champs suivants :
 
  * **title**: Titre de la visualisation configurée
  * **url**: URL ou est exposée l'application utilisée pour la configuration
  * **id**: Identifiant de la visualisation
  * **status**: Etat de la configuration (brouillon, publié, ...)
  * **configuration**: La structure de cet objet dépend du schéma de configuration de l'application utilisée
- * **href**: Point d'accès de l'API Data Fair permettant de lire / modifier la configuration d'application
+ * **href**: Point d'accès de l'API Data&nbsp;Fair permettant de lire / modifier la configuration d'application
  * **page**: Page qui présente la visualisation
  * **exposedUrl**: URL d'exposition de la visualisation, peut être utilisée dans une iFrame ou en accès direct
- * **apiUrl**: URL de l'API Data Fair
+ * **apiUrl**: URL de l'API Data&nbsp;Fair
  * **captureUrl**: URL vers le service de capture, permet de réaliser des exports image ou impressions PDF
- * **wsUrl**: URL de la web socket Data Fair, utile pour les applications qui manipulent des données mise a jour en temps réel
+ * **wsUrl**: URL de la web socket Data&nbsp;Fair, utile pour les applications qui manipulent des données mise a jour en temps réel
 
 ### Côté serveur
 
@@ -59,11 +59,11 @@ Ces informations sont transmises à l'aide de headers HTTP que le serveur de l'a
 
 ## Outils de développement
 
-### Serveur de développement Data Fair
+### Serveur de développement Data&nbsp;Fair
 
-Le projet [df-dev-server](https://github.com/data-fair/dev-server) permet de simplifier le développement des applications Data Fair.
+Le projet [df-dev-server](https://github.com/data-fair/dev-server) permet de simplifier le développement des applications Data&nbsp;Fair.
 
- * Il est plus léger que Data Fair car il n'a pas besoin des différents services en local (bases de données, gestion utilisateurs, ...)
+ * Il est plus léger que Data&nbsp;Fair car il n'a pas besoin des différents services en local (bases de données, gestion utilisateurs, ...)
  * Il permet d'avoir déjà des données de disponible en se connectant à des sources distantes
  * Il est plus facile a faire fonctionner sous Windows, car ne nécessite pas Docker
  * Il nécessite par contre une connexion internet pour pouvoir accéder aux données

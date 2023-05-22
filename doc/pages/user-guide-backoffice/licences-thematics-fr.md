@@ -8,7 +8,7 @@ published: true
 ---
 Sur la page des paramètres vous retrouvez les sections des **Licences** et des **Thématiques**.  
 
-Data Fair permet de gérer les listes de licences et thématiques dont vous avez besoin pour vos données.
+Data&nbsp;Fair permet de gérer les listes de licences et thématiques dont vous avez besoin pour vos données.
 
 Une licence est référencée par son nom et l'adresse d'une page qui décrit le contenu de cette licence.  
 Une thématique est définie par son nom et sa couleur.

@@ -11,7 +11,7 @@ A personal account can create an organization.
 
 ## Create an organization
 
-Organizations can be created in the **My Account** space of the the Data Fair menu.  
+Organizations can be created in the **My Account** space of the the Data&nbsp;Fair menu.  
 Click on the **Create an organization** button and fill in the title and description of your organization, you will then be the administrator of this new organization.
 
 If you are an administrator of the organization, you can access [member management](./user-guide-backoffice/members). This allows you to invite members, define their roles, and remove members from your organization.

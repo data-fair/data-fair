@@ -8,7 +8,7 @@ published: true
 ---
 Interactive visualizations present and explore your data in a fun way.
 
-The creation of a visualization can be initiated from the various buttons **Configure a visualization** available on Data Fair
+The creation of a visualization can be initiated from the various buttons **Configure a visualization** available on Data&nbsp;Fair
 
 Remark : Check your datasets to match the type of visualization you want to create and also check [the concepts](./user-guide-backoffice/concept) on your dataset.
 For example, to configure a map, the concepts **Latitude** and **Longitude** must be associated with the columns that contain these values ​​in your dataset. Please do [contact](https://koumoul.com/contact) us if you have any trouble.

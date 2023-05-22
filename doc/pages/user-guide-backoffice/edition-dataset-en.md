@@ -36,7 +36,7 @@ Clicking on a column allows you to access the column information
 
 ### Enrichment  
 
-Enrichment allows to import columns from a reference base. It is possible to improuve you data and cross with data from open data such as the SIRENE database, INSEE data, the cadastre or the BAN.
+Enrichment allows to import columns from a reference base. It is possible to improuve you data and cross with data from open&nbsp;data such as the SIRENE database, INSEE data, the cadastre or the BAN.
 
 Several steps are necessary to create a data enrichment:
 

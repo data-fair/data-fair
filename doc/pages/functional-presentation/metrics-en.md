@@ -29,7 +29,7 @@ The configuration is done using the *ID number*. The statistics under [Google An
 
 ### APIs
 
-Data Fair and the various associated services make extensive use of cache mechanisms to improve access times to resources, the precise statistics of use of the various access points of the platform can only be collected by a service associated with the platform's reverse-proxy.
+Data&nbsp;Fair and the various associated services make extensive use of cache mechanisms to improve access times to resources, the precise statistics of use of the various access points of the platform can only be collected by a service associated with the platform's reverse-proxy.
 
 Regarding the **compliance with the GDPR**, the data collected is anonymized and aggregated on a daily basis. You can access statistics for each dataset: **number of API calls and number of downloads**. The metrics are aggregated by user groups (owner organization, external authenticated users, anonymous, ...) or by call domain. Key figures are presented for the period requested, with a comparison to the previous period, which makes it possible to see whether the use of certain data is increasing or decreasing.
 

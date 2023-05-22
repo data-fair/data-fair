@@ -11,7 +11,7 @@ Les pages d'actualités permettent de communiquer à vos visiteurs les dernière
 
 ## Création de la page de contenu
 
-La section **Portails** de Data Fair vous permet d'accéder à l'édition de vos portails. Vous pouvez ensuite accéder à l'édition des **pages de contenu** à l'aide du bouton **Editer les pages de contenu** en haut à droite.
+La section **Portails** de Data&nbsp;Fair vous permet d'accéder à l'édition de vos portails. Vous pouvez ensuite accéder à l'édition des **pages de contenu** à l'aide du bouton **Editer les pages de contenu** en haut à droite.
 
 ![Configurer votre portail](./images/user-guide-backoffice/page-contenu-1.jpg)
 

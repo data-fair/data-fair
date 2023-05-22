@@ -11,7 +11,7 @@ Content pages allow to highlight data, write articles, do data storytelling or e
 
 ## Create a content page
 
-The **Portals** section of Data Fair allows you to access the configuration of your portals. You can then access the editing of **content pages** using the **Edit content pages** button at the top right.
+The **Portals** section of Data&nbsp;Fair allows you to access the configuration of your portals. You can then access the editing of **content pages** using the **Edit content pages** button at the top right.
 
 ![Configurer votre portail](./images/user-guide-backoffice/page-contenu-1.jpg)
 

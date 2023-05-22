@@ -7,7 +7,7 @@ description : Invite members in your organization through their email.
 published: true
 ---
 
-As an administrator of your organization, the **Organization management** section is accessible in the Data Fair navigation bar.
+As an administrator of your organization, the **Organization management** section is accessible in the Data&nbsp;Fair navigation bar.
 
 On this page, you can manage the different members of your organization:
 * Invite new members with their email

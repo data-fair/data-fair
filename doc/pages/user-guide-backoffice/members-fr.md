@@ -7,7 +7,7 @@ description : Inviter les membres de votre organisation grâce à leur e-mail.
 published: true
 ---
 
-Lorsque vous êtes administrateur de votre organisation, la section **Gestion de l'organisation** est accessible dans la barre de navigation de Data Fair.
+Lorsque vous êtes administrateur de votre organisation, la section **Gestion de l'organisation** est accessible dans la barre de navigation de Data&nbsp;Fair.
 
 Sur cette page, vous pouvez gérer les différents membres de votre organisation :
 * Inviter de nouveaux membres par e-mail
@@ -43,7 +43,7 @@ Les organisations suivent certaines règles :
 
 Chaque rôle possède des permissions différentes.  
 
-Permissions par défaut de Data Fair :
+Permissions par défaut de Data&nbsp;Fair :
 
 | Actions | Utilisateur | Contributeur | Administrateur |
 | ----- | ---- | ---- | ---- |

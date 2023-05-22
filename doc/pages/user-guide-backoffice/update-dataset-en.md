@@ -14,7 +14,7 @@ Updating a dataset can be done manually on the [dataset edition page](./user-gui
 Before performing a manual update, check your data schema. For example, if a visualization uses your dataset, verify that the columns used by the visualization are still present in the new file you are importing.
 
 The update is done using the **Update** action button on the [dataset edit page](./user-guide-backoffice/edition-dataset) you want to update.  
-You need to choose the new file to load on your computer and upload your dataset on Data Fair.
+You need to choose the new file to load on your computer and upload your dataset on Data&nbsp;Fair.
 
 The file will be submitted to 6 processing steps:
 
