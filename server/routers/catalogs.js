@@ -43,12 +43,12 @@ router.get('/_organizations', cacheHeaders.noCache, asyncWrap(async (req, res) =
   if (!req.query.url) return res.status(400).send('"url" query parameter is required')
   if (!req.query.type) return res.status(400).send('"type" query parameter is required')
   if (!req.query.q) return res.status(400).send('"q" query parameter is required')
-  const organizations = await catalogs.suggestOrganizations(req.query.type, req.query.url, req.query.q)
+  const organizations = await catalogs.searchOrganizations(req.query.type, req.query.url, req.query.q)
   res.status(200).json(organizations)
 }))
 
 router.get('/_types', cacheHeaders.noCache, asyncWrap(async (req, res) => {
-  res.send(catalogs.connectors.map(c => ({ key: c.key, title: c.title, searchOrganization: c.searchOrganization })))
+  res.send(catalogs.connectors.map(c => ({ key: c.key, title: c.title, optionalCapabilities: c.optionalCapabilities })))
 }))
 
 // Get the list of catalogs

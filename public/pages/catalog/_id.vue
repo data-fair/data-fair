@@ -28,6 +28,7 @@
             </layout-section-tabs>
 
             <layout-section-tabs
+              v-if="catalogType && catalogType.optionalCapabilities.includes('listDatasets')"
               :min-height="390"
               :svg="progressSvg"
               svg-no-margin
@@ -92,11 +93,12 @@ export default {
   }),
   async fetch ({ store, route }) {
     store.dispatch('catalog/clear')
+    await store.dispatch('catalog/fetchCatalogTypes')
     await store.dispatch('catalog/setId', route.params.id)
   },
   computed: {
     ...mapState('catalog', ['catalog']),
-    ...mapGetters('catalog', ['can']),
+    ...mapGetters('catalog', ['can', 'catalogType']),
     sections () {
       const sections = []
       if (!this.catalog) return sections

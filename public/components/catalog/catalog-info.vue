@@ -34,21 +34,9 @@
       md="6"
       order-md="1"
     >
-      <v-text-field
-        v-model="catalog.title"
-        :label="$t('title')"
-        :disabled="!can('writeDescription')"
-        @change="patch({title: catalog.title})"
-      />
-      <markdown-editor
-        v-model="catalog.description"
-        :disabled="!can('writeDescription')"
-        :label="$t('description')"
-        :easymde-config="{minHeight: '150px'}"
-        @change="patch({description: catalog.description})"
-      />
       <catalog-config-form
         :catalog="catalog"
+        :catalog-type="catalogType"
         @change="changes => patch(changes)"
       />
     </v-col>
@@ -70,7 +58,7 @@ import { mapState, mapActions, mapGetters } from 'vuex'
 export default {
   computed: {
     ...mapState('catalog', ['catalog']),
-    ...mapGetters('catalog', ['can'])
+    ...mapGetters('catalog', ['can', 'catalogType'])
   },
   methods: {
     ...mapActions('catalog', ['patch'])

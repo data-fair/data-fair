@@ -32,11 +32,6 @@
             :label="$t('orUrl')"
             @change="initFromUrl"
           />
-          <v-text-field
-            v-model="catalog.title"
-            :disabled="!catalog.type"
-            :label="$t('title')"
-          />
         </v-sheet>
         <v-btn
           v-t="'continue'"

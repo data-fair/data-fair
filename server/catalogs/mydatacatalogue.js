@@ -1,21 +1,22 @@
 const url = require('url')
+const createError = require('http-errors')
 const axios = require('../utils/axios')
 
 exports.title = 'Mydatacatalogue'
 exports.description = 'Outil de cartographie et de catalogage de vos données'
 exports.docUrl = 'https://www.dawizz.fr/'
+exports.optionalCapabilities = [
+  'apiKey',
+  'publishDataset'
+]
 
 exports.init = async (catalogUrl) => {
   await axios.get(url.resolve(catalogUrl, 'api/v1/status'))
   return { url: catalogUrl, title: 'Mydatacatalogue SaaS' }
 }
 
-exports.suggestOrganizations = async (catalogUrl, q) => {
+exports.searchOrganizations = async (catalogUrl, q) => {
   return { results: [{ id: null, name: 'Organization owning API key' }] }
-}
-
-exports.suggestDatasets = async (catalogUrl, q) => {
-  return { results: [] }
 }
 
 exports.publishDataset = async (catalog, dataset, publication) => {
@@ -23,23 +24,23 @@ exports.publishDataset = async (catalog, dataset, publication) => {
 }
 
 exports.deleteDataset = async (catalog, dataset, publication) => {
-  throw new Error(`Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
+  throw createError(501, `Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
 }
 
 exports.publishApplication = async (catalog, application, publication, datasets) => {
-  throw new Error('La publication d\'applications vers Mydatacatalogue n\'est pas disponible')
+  throw createError(501, 'La publication d\'applications vers Mydatacatalogue n\'est pas disponible')
 }
 
 exports.deleteApplication = async (catalog, application, publication) => {
-  throw new Error('La dépublication d\'applications vers Mydatacatalogue n\'est pas disponible')
+  throw createError(501, 'La dépublication d\'applications vers Mydatacatalogue n\'est pas disponible')
 }
 
 exports.listDatasets = async (catalog, p) => {
-  throw new Error('La récupération d\'une liste de jeux de données depuis Mydacatalogue n\'est pas disponible')
+  throw createError(501, 'La récupération d\'une liste de jeux de données depuis Mydacatalogue n\'est pas disponible')
 }
 
 exports.harvestDataset = async (catalog, datasetId, req) => {
-  throw new Error('La récupération d\'une définition de jeu de données depuis Mydacatalogue n\'est pas disponible')
+  throw createError(501, 'La récupération d\'une définition de jeu de données depuis Mydacatalogue n\'est pas disponible')
 }
 
 function datasetPageDesc (dataset) {
@@ -64,12 +65,12 @@ async function createNewDataset (catalog, dataset, publication) {
   try {
     const res = await axios.post(url.resolve(catalog.url, 'api/v1/sources'), source, { headers: { 'x-apiKey': catalog.apiKey } })
     if (!res.data.id || typeof res.data.id !== 'string') {
-      throw new Error(`Erreur lors de l'envoi à ${catalog.url} : le format de retour n'est pas correct.`)
+      throw createError(501, `Erreur lors de l'envoi à ${catalog.url} : le format de retour n'est pas correct.`)
     }
     publication.targetUrl = url.resolve(catalog.url, `sources/${res.data.id}/view`)
     publication.result = res.data
   } catch (err) {
-    if (err.response) throw new Error(`Erreur lors de l'envoi à ${catalog.url} : ${JSON.stringify(err.response.data, null, 2)}`)
+    if (err.response) throw createError(501, `Erreur lors de l'envoi à ${catalog.url} : ${JSON.stringify(err.response.data, null, 2)}`)
     else throw err
   }
 }

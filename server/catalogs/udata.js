@@ -7,7 +7,13 @@ const moment = require('moment')
 exports.title = 'uData'
 exports.description = 'Customizable and skinnable social platform dedicated to (open)data.'
 exports.docUrl = 'https://udata.readthedocs.io/en/latest/'
-exports.searchOrganization = true
+exports.optionalCapabilities = [
+  'apiKey',
+  'searchOrganizations',
+  'publishDataset',
+  'publishApplication',
+  'listDatasets'
+]
 
 exports.init = async (catalogUrl) => {
   const siteInfo = (await axios.get(url.resolve(catalogUrl, 'api/1/site/'))).data
@@ -38,7 +44,7 @@ exports.listDatasets = async (catalog, params = {}) => {
   }
 }
 
-exports.suggestOrganizations = async (catalogUrl, q) => {
+exports.searchOrganizations = async (catalogUrl, q) => {
   const res = await axios.get(url.resolve(catalogUrl, 'api/1/organizations/suggest/'), { params: { q } })
   return { results: res.data.map(o => ({ id: o.id, name: o.name })) }
 }

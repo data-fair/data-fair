@@ -59,7 +59,7 @@
 <i18n lang="yaml">
 fr:
   datasetsCount: " | 1 jeu de données dans le catalogue | {count} jeux de données dans le catalogue"
-  resources: " | 1 ressource dans le catalogue | {count} ressources dans le catalogue"
+  resources: "Pas de ressource dans le catalogue | 1 ressource dans le catalogue | {count} ressources dans le catalogue"
   harvestable: "aucune importable | 1 importable | {count} importables"
   harvested: "aucune déjà importée | 1 déjà importée | {count} déjà importée"
   harvest: Importer les ressources comme jeux de données locaux
