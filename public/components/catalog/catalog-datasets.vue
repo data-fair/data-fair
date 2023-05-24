@@ -12,7 +12,7 @@
           v-text="$tc('datasetsCount', datasets.count)"
         />
         <v-card>
-          <v-list three-line>
+          <v-list two-line>
             <v-list-item
               v-for="dataset in datasets.results"
               :key="dataset.id"
@@ -31,7 +31,12 @@
                 <v-list-item-subtitle>
                   {{ $tc('resources', dataset.resources.length) }} |
                   {{ $tc('harvestable', dataset.nbHarvestable) }} |
-                  {{ $tc('harvested', dataset.nbHarvested) }}
+                  <a
+                    v-if="dataset.harvestedLink"
+                    :href="dataset.harvestedLink"
+                    target="_blank"
+                  >{{ $tc('harvested', dataset.nbHarvested) }}</a>
+                  <template v-else>{{ $tc('harvested', dataset.nbHarvested) }}</template>
                 </v-list-item-subtitle>
               </v-list-item-content>
 
@@ -98,6 +103,7 @@ export default {
         this.datasets.results.forEach(d => {
           d.nbHarvestable = (d.resources || []).filter(r => r.harvestable).length
           d.nbHarvested = (d.resources || []).filter(r => !!r.harvestedDataset).length
+          if (d.nbHarvested === 1) d.harvestedLink = `${this.env.publicUrl}/dataset/${d.resources.map(r => r.harvestedDataset).find(d => !!d)}`
         })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: this.$t('fetchError') })
