@@ -67,7 +67,11 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
   const connector = exports.connectors.find(c => c.key === catalog.type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
-  const dataset = await connector.getDataset(catalog, datasetId)
+
+  const settings = (await app.get('db').collection('settings').findOne({ type: catalog.owner.type, id: catalog.owner.id })) || {}
+  settings.licenses = [].concat(config.licenses, settings.licenses || [])
+
+  const dataset = await connector.getDataset(catalog, datasetId, settings)
   const harvestableResources = (dataset.resources || []).filter(r => files.allowedTypes.has(r.mime))
   const newDatasets = []
   for (const resource of harvestableResources) {
@@ -103,6 +107,11 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
       updatedAt: date,
       status: 'imported'
     }
+    if (dataset.description) newDataset.description = dataset.description
+    if (dataset.image) newDataset.image = dataset.image
+    if (dataset.frequency) newDataset.frequency = dataset.frequency
+    if (dataset.license) newDataset.license = dataset.license
+    if (dataset.page) newDataset.origin = dataset.page
 
     // try insertion until there is no conflict on id
     const baseId = slug(dataset.title, { lower: true, strict: true })

@@ -39,7 +39,7 @@ exports.listDatasets = async (catalog, p) => {
   throw createError(501, 'La récupération d\'une liste de jeux de données depuis Mydacatalogue n\'est pas disponible')
 }
 
-exports.harvestDataset = async (catalog, datasetId, req) => {
+exports.getDataset = async (catalog, datasetId, req) => {
   throw createError(501, 'La récupération d\'une définition de jeu de données depuis Mydacatalogue n\'est pas disponible')
 }
 
