@@ -51,12 +51,15 @@ exports.listDatasets = async (db, catalog, params) => {
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
   const datasets = await connector.listDatasets(catalog, params)
   for (const dataset of datasets.results) {
+    const harvestedDatasets = await db.collection('datasets').find({
+      'owner.type': catalog.owner.type,
+      'owner.id': catalog.owner.id,
+      origin: dataset.page
+    }, { projection: { id: 1, remoteFile: 1 } }).toArray()
+    dataset.harvestedDatasets = harvestedDatasets.map(hd => hd.id)
     for (const resource of dataset.resources) {
       resource.harvestable = files.allowedTypes.has(resource.mime)
-      const harvestedDataset = await db.collection('datasets').findOne({
-        'remoteFile.url': resource.url,
-        'remoteFile.catalog': catalog.id
-      }, { projection: { id: 1 } })
+      const harvestedDataset = harvestedDatasets.find(hd => hd.remoteFile && hd.remoteFile.url === resource.url)
       if (harvestedDataset) resource.harvestedDataset = harvestedDataset.id
     }
   }
@@ -70,10 +73,33 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
 
   const settings = (await app.get('db').collection('settings').findOne({ type: catalog.owner.type, id: catalog.owner.id })) || {}
   settings.licenses = [].concat(config.licenses, settings.licenses || [])
-
+  const date = moment().toISOString()
   const dataset = await connector.getDataset(catalog, datasetId, settings)
   const harvestableResources = (dataset.resources || []).filter(r => files.allowedTypes.has(r.mime))
   const newDatasets = []
+  // either create a single metadata only dataset
+  if (harvestableResources.length === 0) {
+    const harvestedDataset = await app.get('db').collection('datasets').findOne({
+      'owner.type': catalog.owner.type,
+      'owner.id': catalog.owner.id,
+      origin: dataset.page
+    }, { projection: { id: 1 } })
+    if (!harvestedDataset) {
+      newDatasets.push({
+        id: slug(dataset.title, { lower: true, strict: true }),
+        title: dataset.title,
+        owner: catalog.owner,
+        permissions: [],
+        createdBy: { id: catalog.owner.id, name: catalog.owner.name },
+        createdAt: date,
+        updatedBy: { id: catalog.owner.id, name: catalog.owner.name },
+        updatedAt: date,
+        isMetaOnly: true
+      })
+    }
+  }
+
+  // or create a file based dataset for each resource
   for (const resource of harvestableResources) {
     const harvestedDataset = await app.get('db').collection('datasets').findOne({
       'remoteFile.url': resource.url,
@@ -81,7 +107,6 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
     }, { projection: { id: 1 } })
     if (harvestedDataset) continue
 
-    const date = moment().toISOString()
     const pathParsed = path.parse(new URL(resource.url).pathname)
     const title = path.parse(resource.title).name
     const remoteFile = {
@@ -96,6 +121,7 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
       remoteFile.name = title + '.' + mime.extension(resource.mime)
     }
     const newDataset = {
+      id: slug(dataset.title, { lower: true, strict: true }),
       title,
       owner: catalog.owner,
       permissions: [],
@@ -107,6 +133,10 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
       updatedAt: date,
       status: 'imported'
     }
+    newDatasets.push(newDataset)
+  }
+
+  for (const newDataset of newDatasets) {
     if (dataset.description) newDataset.description = dataset.description
     if (dataset.image) newDataset.image = dataset.image
     if (dataset.frequency) newDataset.frequency = dataset.frequency
@@ -114,8 +144,7 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
     if (dataset.page) newDataset.origin = dataset.page
 
     // try insertion until there is no conflict on id
-    const baseId = slug(dataset.title, { lower: true, strict: true })
-    newDataset.id = baseId
+    const baseId = newDataset.id
     let insertOk = false
     let i = 1
     while (!insertOk) {
@@ -130,8 +159,8 @@ exports.harvestDataset = async (catalog, datasetId, app) => {
     }
 
     await journals.log(app, newDataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + newDataset.id }, 'dataset')
-    newDatasets.push(newDataset)
   }
+
   return newDatasets
 }
 

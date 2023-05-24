@@ -42,7 +42,8 @@
 
               <v-list-item-action>
                 <v-btn
-                  :disabled="dataset.nbHarvestable === dataset.nbHarvested"
+                  v-if="dataset.nbHarvestable"
+                  :disabled="dataset.nbHarvested >= dataset.nbHarvestable"
                   color="primary"
                   class="mr-3"
                   icon
@@ -51,6 +52,18 @@
                   @click="harvest(dataset)"
                 >
                   <v-icon>mdi-file-download</v-icon>
+                </v-btn>
+                <v-btn
+                  v-else
+                  :disabled="!!dataset.nbHarvested"
+                  color="primary"
+                  class="mr-3"
+                  icon
+                  ripple
+                  :title="$t('harvestMetadata')"
+                  @click="harvest(dataset)"
+                >
+                  <v-icon>mdi-download</v-icon>
                 </v-btn>
               </v-list-item-action>
             </v-list-item>
@@ -66,16 +79,18 @@ fr:
   datasetsCount: " | 1 jeu de données dans le catalogue | {count} jeux de données dans le catalogue"
   resources: "Pas de ressource dans le catalogue | 1 ressource dans le catalogue | {count} ressources dans le catalogue"
   harvestable: "aucune importable | 1 importable | {count} importables"
-  harvested: "aucune déjà importée | 1 déjà importée | {count} déjà importée"
+  harvested: "aucun jeu de données créé | 1 jeu de données créé | {count} jeux de données créés"
   harvest: Importer les ressources comme jeux de données locaux
+  harvestMetadata: Importer les métadonnées seules
   fetchError: Erreur pendant la récupération des jeux de données du catalogue
   importError: Erreur pendant l'import du jeu de données
 en:
   datasetsCount: " | 1 dataset in the catalog | {count} datasets in the catalog"
   resources: " | 1 resource in the catalog | {count} resources in the catalog"
   harvestable: "none harvestable | 1 harvestable | {count} harvestable"
-  harvested: "none harvested | 1 harvested | {count} harvested"
+  harvested: "no dataset created | 1 dataset created | {count} datasets created"
   harvest: Import the resources as local datasets
+  harvestMetadata: Import metadata only
   fetchError: Error while fetching datasets from the catalog
   importError: Error while importing the dataset
 </i18n>
@@ -102,8 +117,8 @@ export default {
         this.datasets = await this.$axios.$get('api/v1/catalogs/' + this.$route.params.id + '/datasets')
         this.datasets.results.forEach(d => {
           d.nbHarvestable = (d.resources || []).filter(r => r.harvestable).length
-          d.nbHarvested = (d.resources || []).filter(r => !!r.harvestedDataset).length
-          if (d.nbHarvested === 1) d.harvestedLink = `${this.env.publicUrl}/dataset/${d.resources.map(r => r.harvestedDataset).find(d => !!d)}`
+          d.nbHarvested = d.harvestedDatasets.length
+          if (d.nbHarvested === 1) d.harvestedLink = `${this.env.publicUrl}/dataset/${d.harvestedDatasets[0]}`
         })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: this.$t('fetchError') })
