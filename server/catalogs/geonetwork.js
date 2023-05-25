@@ -119,12 +119,14 @@ const updateFrequenciesMap = {
 function prepareDatasetFromCatalog (catalog, item, settings) {
   const link = Array.isArray(item.link) ? item.link : [item.link]
   const page = url.resolve(catalog.url, `srv/fre/catalog.search#/metadata/${item['geonet:info'].uuid}`)
+  const keywords = (Array.isArray(item.keyword) ? item.keyword : [item.keyword]).filter(k => !!k)
   const dataset = {
     id: item['geonet:info'].uuid,
     createdAt: item.creationDate,
     title: item.title,
     description: item.abstract,
     page,
+    keywords,
     private: false,
     resources: link.map(l => {
       if (!l) return null

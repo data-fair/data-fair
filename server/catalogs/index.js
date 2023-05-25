@@ -78,6 +78,7 @@ const getDatasetProps = (dataset, props = {}) => {
   if (dataset.frequency) props.frequency = dataset.frequency
   if (dataset.license) props.license = dataset.license
   if (dataset.page) props.origin = dataset.page
+  if (dataset.keywords) props.keywords = dataset.keywords
   return props
 }
 
