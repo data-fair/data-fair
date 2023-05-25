@@ -21,6 +21,10 @@ exports.init = async (catalogUrl) => {
   return { url: catalogUrl, title: site['system/site/name'] + ' - ' + site['system/site/organization'] }
 }
 
+exports.httpParams = async (catalog) => {
+  return {}
+}
+
 exports.searchOrganizations = async (catalogUrl, q) => {
   throw createError(501, 'La récupération d\'une liste d\'organisations depuis GeoNetwork n\'est pas disponible')
 }
@@ -148,7 +152,7 @@ function prepareDatasetFromCatalog (catalog, item, settings) {
     dataset.image = thumbnail.split('|')[1]
   }
   if (item.updateFrequency) {
-    debug(`match updateFrequency ${item.updateFrequency} -> ${updateFrequenciesMap[item.updateFrequency]}`)
+    // debug(`match updateFrequency ${item.updateFrequency} -> ${updateFrequenciesMap[item.updateFrequency]}`)
     if (updateFrequenciesMap[item.updateFrequency]) {
       dataset.frequency = updateFrequenciesMap[item.updateFrequency]
     }

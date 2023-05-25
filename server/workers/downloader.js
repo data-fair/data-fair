@@ -29,12 +29,7 @@ exports.process = async function (app, dataset) {
         { id: dataset.remoteFile.catalog, 'owner.type': dataset.owner.type, 'owner.id': dataset.owner.id },
         { projection: { _id: 0 } })
     if (!catalog) throw new Error('Le fichier distant référence un catalogue inexistant. Il a probablement été supprimé.')
-    if (dataset.remoteFile.url.startsWith(catalog.url)) {
-      catalogHttpParams = await catalogs.httpParams(catalog)
-      debug(`Use HTTP params from catalog ${JSON.stringify(catalogHttpParams)}`)
-    } else {
-      debug(`the URL ${dataset.remoteFile.url} is not internal to the catalog ${catalog.url}, do not apply security parameters`)
-    }
+    catalogHttpParams = await catalogs.httpParams(catalog, dataset.remoteFile.url)
   }
 
   const size = dataset.remoteFile.size || 0
