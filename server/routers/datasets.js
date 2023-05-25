@@ -431,7 +431,12 @@ router.get('/:datasetId/safe-schema', readDataset(), applicationKey, permissions
 const permissionsWritePublications = permissions.middleware('writePublications', 'admin')
 const permissionsWriteExports = permissions.middleware('writeExports', 'admin')
 const permissionsWriteDescription = permissions.middleware('writeDescription', 'write')
-const descriptionBreakingKeys = ['schema', 'rest', 'virtual', 'lineOwnership', 'primaryKey', 'projection', 'attachmentsAsImage', 'extensions', 'timeZone'] // a change in these properties is considered a breaking change
+const descriptionBreakingKeys = ['rest', 'virtual', 'lineOwnership', 'primaryKey', 'projection', 'attachmentsAsImage', 'extensions', 'timeZone'] // a change in these properties is considered a breaking change
+const descriptionHasBreakingChanges = (req) => {
+  if (descriptionBreakingKeys.find(key => key in req.body)) return true
+  if (!req.body.schema) return false
+  return datasetUtils.getSchemaBreakingChanges(req.dataset.schema, req.body.schema, true).length > 0
+}
 const permissionsWriteDescriptionBreaking = permissions.middleware('writeDescriptionBreaking', 'write')
 
 // Update a dataset's metadata
@@ -447,7 +452,7 @@ router.patch('/:datasetId',
       return null
     }
   }),
-  (req, res, next) => (descriptionBreakingKeys.find(key => key in req.body)) ? permissionsWriteDescriptionBreaking(req, res, next) : permissionsWriteDescription(req, res, next),
+  (req, res, next) => descriptionHasBreakingChanges(req) ? permissionsWriteDescriptionBreaking(req, res, next) : permissionsWriteDescription(req, res, next),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
   (req, res, next) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),
   asyncWrap(async (req, res) => {

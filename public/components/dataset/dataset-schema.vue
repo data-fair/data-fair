@@ -39,7 +39,7 @@
             @click="resetSchema"
           />
           <v-btn
-            v-if="updated && can('writeDescriptionBreaking')"
+            v-if="updated && can('writeDescription')"
             v-t="'apply'"
             color="primary"
             @click="save"
@@ -74,7 +74,8 @@
       <dataset-properties-slide
         v-if="schema && schema.length"
         :properties-refs="filteredProperties"
-        :editable="can('writeDescriptionBreaking')"
+        :editable="can('writeDescription')"
+        :no-breaking-changes="!can('writeDescriptionBreaking')"
         :sortable="can('writeDescriptionBreaking') && dataset.isRest && !schemaFilter"
         @sort="applySort"
         @remove="removeProperty"

@@ -926,42 +926,15 @@ exports.validateDraft = async (app, dataset, user, req) => {
     webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
 
     if (req) {
-    // WARNING, this functionality is kind of a duplicate of the UI in dataset-schema.vue
-      for (const field of dataset.prod.schema) {
-        if (field['x-calculated']) continue
-        const patchedField = patchedDataset.schema.find(pf => pf.key === field.key)
-        if (!patchedField) {
-          webhooks.trigger(db, 'dataset', patchedDataset, {
-            type: 'breaking-change',
-            body: require('i18n').getLocales().reduce((a, locale) => {
-              a[locale] = req.__({ phrase: 'breakingChanges.missing', locale }, { title: patchedDataset.title, key: field.key })
-              return a
-            }, {})
-          })
-          continue
-        }
-        if (patchedField.type !== field.type) {
-          webhooks.trigger(db, 'dataset', patchedDataset, {
-            type: 'breaking-change',
-            body: require('i18n').getLocales().reduce((a, locale) => {
-              a[locale] = req.__({ phrase: 'breakingChanges.type', locale }, { title: patchedDataset.title, key: field.key })
-              return a
-            }, {})
-          })
-          continue
-        }
-        const format = (field.format && field.format !== 'uri-reference') ? field.format : null
-        const patchedFormat = (patchedField.format && patchedField.format !== 'uri-reference') ? patchedField.format : null
-        if (patchedFormat !== format) {
-          webhooks.trigger(db, 'dataset', patchedDataset, {
-            type: 'breaking-change',
-            body: require('i18n').getLocales().reduce((a, locale) => {
-              a[locale] = req.__({ phrase: 'breakingChanges.type', locale }, { title: patchedDataset.title, key: field.key })
-              return a
-            }, {})
-          })
-          continue
-        }
+      const breakingChanges = this.getSchemaBreakingChanges(dataset.prod.schema, patchedDataset.schema)
+      for (const breakingChange of breakingChanges) {
+        webhooks.trigger(db, 'dataset', patchedDataset, {
+          type: 'breaking-change',
+          body: require('i18n').getLocales().reduce((a, locale) => {
+            a[locale] = req.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { title: patchedDataset.title, key: breakingChange.key })
+            return a
+          }, {})
+        })
       }
     }
   }
@@ -987,6 +960,31 @@ exports.validateDraft = async (app, dataset, user, req) => {
   await fs.remove(exports.dir(dataset))
   await exports.updateStorage(app, statusPatchedDataset)
   return statusPatchedDataset
+}
+
+exports.getSchemaBreakingChanges = (schema, patchedSchema, ignoreExtensions = false) => {
+  const breakingChanges = []
+  // WARNING, this functionality is kind of a duplicate of the UI in dataset-schema.vue
+  for (const field of schema) {
+    if (field['x-calculated']) continue
+    if (field['x-extension'] && ignoreExtensions) continue
+    const patchedField = patchedSchema.find(pf => pf.key === field.key)
+    if (!patchedField) {
+      breakingChanges.push({ type: 'missing', key: field.key })
+      continue
+    }
+    if (patchedField.type !== field.type) {
+      breakingChanges.push({ type: 'type', key: field.key })
+      continue
+    }
+    const format = (field.format && field.format !== 'uri-reference') ? field.format : null
+    const patchedFormat = (patchedField.format && patchedField.format !== 'uri-reference') ? patchedField.format : null
+    if (patchedFormat !== format) {
+      breakingChanges.push({ type: 'type', key: field.key })
+      continue
+    }
+  }
+  return breakingChanges
 }
 
 exports.validateCompatibleDraft = async (app, dataset) => {
