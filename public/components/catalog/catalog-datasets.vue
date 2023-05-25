@@ -16,8 +16,8 @@
           <v-list>
             <template v-for="dataset in datasets.results">
               <v-list-item :key="dataset.id">
-                <v-list-item-avatar>
-                  <v-icon>{{ dataset.private ? 'mdi-lock' : 'mdi-public' }}</v-icon>
+                <v-list-item-avatar v-if="dataset.private !== undefined">
+                  <v-icon>{{ dataset.private ? 'mdi-lock' : 'mdi-lock-open' }}</v-icon>
                 </v-list-item-avatar>
 
                 <v-list-item-content>
@@ -46,7 +46,16 @@
                 </v-list-item-content>
 
                 <v-list-item-action>
+                  <confirm-menu
+                    v-if="dataset.harvestedDataset"
+                    yes-color="warning"
+                    :text="$t('overwriteDataset')"
+                    :tooltip="$t('harvestDataset')"
+                    icon="mdi-download"
+                    @confirm="harvestDataset(dataset)"
+                  />
                   <v-btn
+                    v-else
                     :disabled="!!dataset.resources.find(r => r.harvestedDataset)"
                     color="primary"
                     icon
@@ -63,7 +72,10 @@
                 :key="dataset.id + '-' + resource.id"
                 style="min-height:40px"
               >
-                <v-list-item-avatar class="my-0" />
+                <v-list-item-avatar
+                  v-if="dataset.private !== undefined"
+                  class="my-0"
+                />
                 <v-list-item-content class="py-1">
                   <v-list-item-title>
                     {{ $t('resource') }} - {{ resource.title }}
@@ -86,7 +98,16 @@
                 </v-list-item-content>
 
                 <v-list-item-action class="my-0">
+                  <confirm-menu
+                    v-if="resource.harvestedDataset"
+                    yes-color="warning"
+                    :text="$t('overwriteDataset')"
+                    :tooltip="$t('harvestDataset')"
+                    icon="mdi-download"
+                    @confirm="harvestDatasetResource(dataset, resource)"
+                  />
                   <v-btn
+                    v-else
                     :disabled="dataset.harvestedDataset"
                     color="primary"
                     icon
@@ -121,6 +142,7 @@ fr:
   sizeUnknown: taille inconnue
   fetchError: Erreur pendant la récupération des jeux de données du catalogue
   importError: Erreur pendant l'import du jeu de données
+  overwriteDataset: Souhaitez vous écraser les informations précédement importées ?
 en:
   datasetsCount: " | 1 dataset in the catalog | {count} datasets in the catalog"
   resource: resource
@@ -131,6 +153,7 @@ en:
   sizeUnknown: size unknown
   fetchError: Error while fetching datasets from the catalog
   importError: Error while importing the dataset
+  overwriteDataset: Do you want to overwrite the previously imported information ?
 </i18n>
 
 <script>

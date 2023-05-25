@@ -127,7 +127,7 @@ function prepareDatasetFromCatalog (catalog, item, settings) {
     description: item.abstract,
     page,
     keywords,
-    private: false,
+    // private: false,
     resources: link.map(l => {
       if (!l) return null
       const [key, title, url, type] = l.split('|')

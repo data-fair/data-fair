@@ -10,7 +10,7 @@
         :title="tooltip"
         v-on="on"
       >
-        <v-icon>mdi-delete</v-icon>
+        <v-icon>{{ icon }}</v-icon>
       </v-btn>
     </template>
     <v-card>
@@ -84,6 +84,10 @@ export default {
     alert: {
       type: String,
       default: ''
+    },
+    icon: {
+      type: String,
+      default: 'mdi-delete'
     }
   },
   data () {

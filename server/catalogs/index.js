@@ -144,7 +144,8 @@ exports.harvestDataset = async (app, catalog, datasetId) => {
       createdAt: date,
       updatedBy: { id: catalog.owner.id, name: catalog.owner.name },
       updatedAt: date,
-      isMetaOnly: true
+      isMetaOnly: true,
+      schema: []
     }
     Object.assign(newDataset, getDatasetProps(dataset))
     await insertDataset(app, newDataset)
