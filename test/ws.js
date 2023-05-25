@@ -29,14 +29,16 @@ describe('ws', () => {
     const cli = new WebSocket(config.publicUrl)
     await eventToPromise(cli, 'open')
     cli.send(JSON.stringify({ type: 'subscribe', channel: 'test_channel' }))
-    let msg = await receive(cli)
+    const msg = await receive(cli)
     assert.equal(msg.type, 'subscribe-confirm')
     assert.equal(msg.channel, 'test_channel')
-    await global.app.publish('test_channel', 'test_data')
-    msg = await receive(cli)
-    assert.equal(msg.type, 'message')
-    assert.equal(msg.channel, 'test_channel')
-    assert.equal(msg.data, 'test_data')
+    const [, msg2] = await Promise.all([
+      global.app.publish('test_channel', 'test_data'),
+      receive(cli)
+    ])
+    assert.equal(msg2.type, 'message')
+    assert.equal(msg2.channel, 'test_channel')
+    assert.equal(msg2.data, 'test_data')
   })
 
   it.skip('Send lots of events', async () => {
