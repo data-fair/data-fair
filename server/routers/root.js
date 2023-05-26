@@ -40,7 +40,19 @@ router.get('/vocabulary', asyncWrap(async (req, res) => {
       .findOne({ type: req.user.activeAccount.type, id: req.user.activeAccount.id }, { projection: { _id: 0, id: 0, type: 0 } })
     privateVocabulary = (settings && settings.privateVocabulary) || []
   }
-  res.json(i18nUtils.vocabularyArray[req.locale].concat(privateVocabulary.map(pv => ({ ...pv, private: true }))))
+  res.json(i18nUtils.vocabularyArray[req.locale].concat(privateVocabulary.map(pv => {
+    const id = `${req.user.activeAccount.type.slice(0, 1)}_${req.user.activeAccount.id}_${pv.id}`
+    // apply a owner prefix to make the concept id unique
+    pv.identifiers = pv.identifiers.filter(i => !!i)
+    // we do this to maintain compatibility for pieces of code that expext identifiers to be defined
+    const identifiers = pv.identifiers.length ? pv.identifiers : [id]
+    return {
+      ...pv,
+      id,
+      identifiers,
+      private: true
+    }
+  })))
 }))
 
 router.get('/projections', (req, res) => {

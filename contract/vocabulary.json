@@ -1,5 +1,6 @@
 [
   {
+    "id": "label",
     "title": {
       "fr": "Libellé",
       "en": "Label"
@@ -19,6 +20,7 @@
     }
   },
   {
+    "id": "description",
     "title": {
       "fr": "Description",
       "en": "Description"
@@ -37,6 +39,7 @@
     }
   },
   {
+    "id": "image",
     "title": {
       "fr": "Image",
       "en": "Image"
@@ -55,6 +58,7 @@
     }
   },
   {
+    "id": "tag",
     "title": {
       "fr": "Étiquette",
       "en": "Tag"
@@ -73,6 +77,7 @@
     }
   },
   {
+    "id": "address",
     "title": {
       "fr": "Adresse",
       "en": "Address"
@@ -91,6 +96,7 @@
     }
   },
   {
+    "id": "streetNumber",
     "title": {
       "fr": "Numéro de rue",
       "en": "Street number"
@@ -109,6 +115,7 @@
     }
   },
   {
+    "id": "streetAddress",
     "title": {
       "fr": "Rue ou lieu-dit",
       "en": "Street or place"
@@ -127,6 +134,7 @@
     }
   },
   {
+    "id": "city",
     "title": {
       "fr": "Commune",
       "en": "City"
@@ -145,6 +153,7 @@
     }
   },
   {
+    "id": "postalCode",
     "title": {
       "fr": "Code postal",
       "en": "Postal code"
@@ -163,6 +172,7 @@
     }
   },
   {
+    "id": "country",
     "title": {
       "fr": "Pays",
       "en": "Country"
@@ -181,6 +191,7 @@
     }
   },
   {
+    "id": "codeCommune",
     "title": {
       "fr": "Code commune",
       "en": ""
@@ -199,6 +210,7 @@
     }
   },
   {
+    "id": "codeDepartement",
     "title": {
       "fr": "Code département",
       "en": ""
@@ -217,6 +229,7 @@
     }
   },
   {
+    "id": "codeRegion",
     "title": {
       "fr": "Code région",
       "en": ""
@@ -235,6 +248,7 @@
     }
   },
   {
+    "id": "codeEPCI",
     "title": {
       "fr": "Code EPCI",
       "en": ""
@@ -253,6 +267,7 @@
     }
   },
   {
+    "id": "codeIRIS",
     "title": {
       "fr": "Code IRIS",
       "en": ""
@@ -272,6 +287,7 @@
     }
   },
   {
+    "id": "codePays",
     "title": {
       "fr": "Code pays (COG)",
       "en": ""
@@ -290,6 +306,7 @@
     }
   },
   {
+    "id": "latitude",
     "title": {
       "fr": "Latitude",
       "en": "Latitude"
@@ -309,6 +326,7 @@
     }
   },
   {
+    "id": "longitude",
     "title": {
       "fr": "Longitude",
       "en": "Longitude"
@@ -328,6 +346,7 @@
     }
   },
   {
+    "id": "latLon",
     "title": {
       "fr": "Latitude / Longitude",
       "en": "Latitude / Longitude"
@@ -346,6 +365,7 @@
     }
   },
   {
+    "id": "countryCodeISOAlpha2",
     "title": {
       "fr": "Code pays (ISO, 2 caractères)",
       "en": "Country code (ISO, 2 chars)"
@@ -365,6 +385,7 @@
     }
   },
   {
+    "id": "countryCodeISOAlpha3",
     "title": {
       "fr": "Code pays (ISO, 3 caractères)",
       "en": "Country code (ISO, 3 chars)"
@@ -383,6 +404,7 @@
     }
   },
   {
+    "id": "siret",
     "title": {
       "fr": "SIRET",
       "en": ""
@@ -401,6 +423,7 @@
     }
   },
   {
+    "id": "siren",
     "title": {
       "fr": "SIREN",
       "en": ""
@@ -419,6 +442,7 @@
     }
   },
   {
+    "id": "codeAPE",
     "title": {
       "fr": "Code APE",
       "en": ""
@@ -437,6 +461,7 @@
     }
   },
   {
+    "id": "cjNiveau3",
     "title": {
       "fr": "Catégorie juridique (niveau 3)",
       "en": ""
@@ -455,6 +480,7 @@
     }
   },
   {
+    "id": "date",
     "title": {
       "fr": "Date d'évènement",
       "en": "Event date"
@@ -475,6 +501,7 @@
     }
   },
   {
+    "id": "codeParcelle",
     "title": {
       "fr": "Code parcelle",
       "en": ""
@@ -493,6 +520,7 @@
     }
   },
   {
+    "id": "geometry",
     "title": {
       "fr": "Géométrie GeoJSON ou WKT",
       "en": "GeoJSON or WKT geometry"
@@ -511,6 +539,7 @@
     }
   },
   {
+    "id": "attachment",
     "title": {
       "fr": "Document numérique attaché",
       "en": "Attachment"
@@ -528,6 +557,7 @@
       "en": "Links"
     }
   }, {
+    "id": "webPage",
     "title": {
       "fr": "Page Web",
       "en": "Web page"
@@ -545,6 +575,7 @@
       "en": "Links"
     }
   }, {
+    "id": "email",
     "title": {
       "fr": "Adresse e-mail",
       "en": "Email address"
@@ -562,6 +593,7 @@
       "en": "Contact information"
     }
   }, {
+    "id": "tel",
     "title": {
       "fr": "N° de téléphone",
       "en": "Phone number"
@@ -580,6 +612,7 @@
     }
   },
   {
+    "id": "coordX",
     "title": {
       "fr": "Coordonnée X",
       "en": "X coordinate"
@@ -598,6 +631,7 @@
     }
   },
   {
+    "id": "coordY",
     "title": {
       "fr": "Coordonnée Y (projection libre)",
       "en": "Y coordinate (custom projection)"
@@ -616,6 +650,7 @@
     }
   },
   {
+    "id": "geometryProj",
     "title": {
       "fr": "Géométrie GeoJSON ou WKT (projection libre)",
       "en": "GeoJSON or WKT geometry (custom projection)"
@@ -634,6 +669,7 @@
     }
   },
   {
+    "id": "startDate",
     "title": {
       "fr": "Date de début",
       "en": "Start date"
@@ -653,6 +689,7 @@
     }
   },
   {
+    "id": "endDate",
     "title": {
       "fr": "Date de fin",
       "en": "End date"
@@ -672,6 +709,7 @@
     }
   },
   {
+    "id": "dateCreated",
     "title": {
       "fr": "Date de création",
       "en": "Creation date"
@@ -692,6 +730,7 @@
     }
   },
   {
+    "id": "openingHours",
     "title": {
       "fr": "Horaires d'ouverture",
       "en": "Opening hours"
