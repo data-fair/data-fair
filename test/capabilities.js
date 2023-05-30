@@ -128,7 +128,7 @@ describe('Properties capabilities', () => {
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest-index',
-      schema: [{ key: 'str1', type: 'string' }]
+      schema: [{ key: 'str1', type: 'string', 'x-refersTo': 'http://www.datatourisme.fr/ontology/core/1.0/#siret' }]
     })
     await workers.hook('finalizer/rest-index')
     res = await ax.post('/api/v1/datasets/rest-index/_bulk_lines', [
@@ -141,6 +141,9 @@ describe('Properties capabilities', () => {
     res = await ax.get('/api/v1/datasets/rest-index/lines', { params: { qs: 'str1:test3' } })
     assert.equal(res.data.total, 1)
     res = await ax.get('/api/v1/datasets/rest-index/lines', { params: { str1_in: 'test3,test2' } })
+    assert.equal(res.data.total, 2)
+
+    res = await ax.get('/api/v1/datasets/rest-index/lines', { params: { _c_siret_in: 'test3,test2' } })
     assert.equal(res.data.total, 2)
 
     await ax.patch('/api/v1/datasets/rest-index', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { index: false } }] })
