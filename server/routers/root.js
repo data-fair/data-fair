@@ -5,6 +5,7 @@ const apiDocs = require('../../contract/api-docs')
 const projections = require('../../contract/projections')
 const asyncWrap = require('../utils/async-wrap')
 const i18nUtils = require('../utils/i18n')
+const settingsUtils = require('../utils/settings')
 
 const ajv = require('ajv')()
 const openApiSchema = require('../../contract/openapi-3.1.json')
@@ -34,25 +35,11 @@ router.get('/api-docs.json', (req, res) => {
 })
 
 router.get('/vocabulary', asyncWrap(async (req, res) => {
-  let privateVocabulary = []
-  if (req.user && req.user.activeAccount) {
-    const settings = await req.app.get('db').collection('settings')
-      .findOne({ type: req.user.activeAccount.type, id: req.user.activeAccount.id }, { projection: { _id: 0, id: 0, type: 0 } })
-    privateVocabulary = (settings && settings.privateVocabulary) || []
+  if (!req.user || !req.user.activeAccount) {
+    res.send(i18nUtils.vocabularyArray[req.locale])
+  } else {
+    res.send(await settingsUtils.getFullOwnerVocabulary(req.app.get('db'), req.user.activeAccount, req.locale))
   }
-  res.json(i18nUtils.vocabularyArray[req.locale].concat(privateVocabulary.map(pv => {
-    const id = `${req.user.activeAccount.type.slice(0, 1)}_${req.user.activeAccount.id}_${pv.id}`
-    // apply a owner prefix to make the concept id unique
-    pv.identifiers = pv.identifiers.filter(i => !!i)
-    // we do this to maintain compatibility for pieces of code that expext identifiers to be defined
-    const identifiers = pv.identifiers.length ? pv.identifiers : [id]
-    return {
-      ...pv,
-      id,
-      identifiers,
-      private: true
-    }
-  })))
 }))
 
 router.get('/projections', (req, res) => {

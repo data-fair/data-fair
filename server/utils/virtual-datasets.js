@@ -39,7 +39,7 @@ async function childrenSchemas (db, owner, children, blackListedFields) {
 exports.prepareSchema = async (db, dataset) => {
   if (!dataset.virtual.children || !dataset.virtual.children.length) return []
   dataset.schema = dataset.schema || []
-  const schema = datasetUtils.extendedSchema(dataset)
+  const schema = await datasetUtils.extendedSchema(db, dataset)
   const blackListedFields = new Set([])
   const schemas = await childrenSchemas(db, dataset.owner, dataset.virtual.children, blackListedFields)
   for (const field of schema) {

@@ -227,8 +227,8 @@ module.exports = {
             type: 'array',
             items: [{
               type: 'string',
-              title: 'Identifiant',
-              description: 'Renseignez idéalement une URI issue d\'un vocabulaire standardisé, c\'est à dire un identifiant mondialement unique pour ce concept. Si ce n\'est pas possible vous pouvez laisser cette information vide.'
+              title: 'Identifiant vocabulaire extérieur',
+              description: 'Renseignez idéalement une URI issue d\'un vocabulaire standardisé comme schema.org, c\'est à dire un identifiant mondialement unique pour ce concept. Si ce n\'est pas possible vous pouvez laisser cette information vide.'
             }]
           },
           title: { type: 'string', title: 'Titre' },

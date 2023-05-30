@@ -449,6 +449,7 @@ export default {
       if (field.format && field.format !== 'uri-reference') newField.format = field.format
       if (field['x-display']) newField['x-display'] = field['x-display']
       if (field['x-refersTo']) newField['x-refersTo'] = field['x-refersTo']
+      if (field['x-concept']) newField['x-concept'] = field['x-concept']
       if (field['x-capabilities']) newField['x-capabilities'] = field['x-capabilities']
       this.schema.push(newField)
       this.$set(this.searchCol, child, '')

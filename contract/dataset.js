@@ -45,7 +45,18 @@ const schema = {
       format: { type: ['string', 'null'] },
       'x-originalName': { type: ['string', 'null'] },
       'x-group': { type: 'string' },
-      'x-refersTo': { type: ['string', 'null'] },
+      'x-refersTo': {
+        deprecated: true,
+        type: ['string', 'null']
+      },
+      'x-concept': {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          title: { type: 'string' },
+          primary: { type: 'boolean' }
+        }
+      },
       'x-calculated': { type: 'boolean' },
       'x-capabilities': capabilities,
       'x-labels': {
