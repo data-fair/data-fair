@@ -64,7 +64,6 @@ exports.process = async function (app, dataset) {
   const tmpDir = (await tmp.dir({ dir: path.join(dataDir, 'tmp') })).path
 
   let isShapefile = false
-  let isGTFS
   if (archiveTypes.has(dataset.originalFile.mimetype)) {
     debug('decompress', dataset.originalFile.mimetype, originalFilePath, tmpDir)
     await decompress(dataset.originalFile.mimetype, originalFilePath, tmpDir)
@@ -79,32 +78,6 @@ exports.process = async function (app, dataset) {
         filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.shx')) &&
         filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.dbf'))) {
       isShapefile = true
-    } else if (filePaths.find(f => f.base === 'trips.txt') && filePaths.find(f => f.base === 'stop_times.txt')) {
-      isGTFS = true
-      const filePath = path.join(datasetUtils.dir(dataset), 'stop_times.txt')
-      await fs.move(path.join(tmpDir, 'stop_times.txt'), filePath, { overwrite: true })
-      const metadataAttachmentsDir = datasetUtils.metadataAttachmentsDir(dataset)
-      await fs.ensureDir(metadataAttachmentsDir)
-      dataset.attachments = []
-      for (const filePath of filePaths) {
-        if (filePath.base !== 'stop_times.txt') {
-          await fs.move(path.join(tmpDir, filePath.base), path.join(metadataAttachmentsDir, filePath.base), { overwrite: true })
-          dataset.attachments.push({
-            type: 'file',
-            title: filePath.name,
-            name: filePath.base,
-            size: (await fs.stat(path.join(metadataAttachmentsDir, filePath.base))).size,
-            mimetype: mime.lookup(filePath.base),
-            updatedAt: dataset.updatedAt
-          })
-        }
-      }
-      dataset.file = {
-        name: 'stop_times.txt',
-        size: await fs.stat(filePath).size,
-        mimetype: mime.lookup('stop_times.txt'),
-        encoding: 'utf-8'
-      }
     } else if (filePaths.length === 1 && exports.basicTypes.includes(mime.lookup(filePaths[0].base))) {
       // case of a single data file in an archive
       const filePath = path.join(datasetUtils.dir(dataset), filePaths[0].base)
@@ -219,7 +192,6 @@ exports.process = async function (app, dataset) {
 
   const patch = { status: dataset.status, file: dataset.file, schema: dataset.schema }
   if (dataset.timeZone) patch.timeZone = dataset.timeZone
-  if (isGTFS) patch.attachments = dataset.attachments
 
   await datasetUtils.applyPatch(db, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
