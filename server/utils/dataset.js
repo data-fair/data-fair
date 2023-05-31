@@ -437,7 +437,7 @@ exports.storage = async (db, es, dataset) => {
       const queryableDataset = { ...dataset }
       queryableDataset.descendants = [descendant.id]
       const count = await esUtils.count(es, queryableDataset, {})
-      storageRatio *= (descendant.count / count)
+      storageRatio *= (count / descendant.count)
       masterDataSize += Math.round(descendant.storage.indexed.size * storageRatio)
     }
     storage.indexed.size = masterDataSize
