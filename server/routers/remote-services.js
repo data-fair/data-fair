@@ -193,6 +193,7 @@ actionsRouter.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
     'input-concepts': 'actions.input.concept',
     'output-concepts': 'actions.output.concept',
     inputCollection: 'actions.inputCollection',
+    outputCollection: 'actions.outputCollection',
     'api-id': 'apiDoc.info.x-api-id',
     ids: 'id',
     id: 'id',
