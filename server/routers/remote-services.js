@@ -186,6 +186,59 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   res.json({ count, results: results.map(result => mongoEscape.unescape(result, true)), facets })
 }))
 
+const actionsRouter = exports.actionsRouter = express.Router()
+// get the unpacked list of actions inside the remote services
+actionsRouter.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
+  const query = findUtils.query(req, {
+    'input-concepts': 'actions.input.concept',
+    'output-concepts': 'actions.output.concept',
+    inputCollection: 'actions.inputCollection',
+    'api-id': 'apiDoc.info.x-api-id',
+    ids: 'id',
+    id: 'id',
+    status: 'status'
+  }, true, [{ 'actions.type': 'http://schema.org/SearchAction' }])
+
+  delete req.query.owner
+  query.owner = { $exists: false } // restrict to the newly centralized remote services
+  const sort = findUtils.sort(req.query.sort)
+  const project = findUtils.project(req.query.select, ['apiDoc'])
+  const [skip, size] = findUtils.pagination(req.query)
+
+  /* const countPipeline = [
+    { $match: query }, // filter before the unwind for performance
+    { $project: { _id: 0, 'actions.id': 1 } },
+    { $unwind: '$actions' },
+    { $match: query }, // filter after the unwind to select individual actions
+    { $count: 'count' }
+  ]
+  const countRes = await req.app.get('db').collection('remote-services').aggregate(countPipeline).toArray()
+  console.log('countRes', countRes) */
+
+  const pipeline = [
+    { $match: query }, // filter before the unwind for performance
+    { $project: project },
+    { $unwind: '$actions' },
+    { $match: query } // filter after the unwind to select individual actions
+  ]
+  if (Object.keys(sort).length) pipeline.push({ $sort: sort })
+  pipeline.push({ $skip: skip })
+  pipeline.push({ $limit: size })
+
+  const aggRes = await req.app.get('db').collection('remote-services').aggregate(pipeline).toArray()
+  const results = aggRes.map(remoteService => {
+    const result = {
+      id: `${remoteService.id}--${remoteService.actions.id}`,
+      title: remoteService.actions.summary,
+      action: remoteService.actions
+    }
+    delete remoteService.actions
+    result.remoteService = remoteService
+    return result
+  })
+  res.send({ results })
+}))
+
 const initNew = (body) => {
   const service = { ...body }
   if (service.apiDoc) {

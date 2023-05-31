@@ -6,14 +6,15 @@ const assert = require('assert').strict
 const workers = require('../server/workers')
 const testUtils = require('./resources/test-utils')
 
-const initMaster = async (ax, schema, bulkSearchs, id = 'master') => {
+const initMaster = async (ax, schema, masterData, id = 'master') => {
+  if (Array.isArray(masterData)) {
+    masterData = { bulkSearchs: masterData }
+  }
   await ax.put('/api/v1/datasets/' + id, {
     isRest: true,
     title: id,
     schema,
-    masterData: {
-      bulkSearchs
-    }
+    masterData
   })
   await workers.hook('finalizer/' + id)
   const master = (await ax.get('api/v1/datasets/' + id)).data
@@ -531,6 +532,72 @@ describe('Master data management', () => {
   })
 
   it('should support chaining extensions', async () => {
+    const ax = global.ax.dmeadus
+    const { remoteService } = await initMaster(
+      ax,
+      [latlonProperty, countryProperty],
+      [{
+        id: 'geo',
+        title: 'Fetch info matching geo shape',
+        input: [{ type: 'geo-distance', distance: 0, property: geopointProperty }]
+      }],
+      'master1'
+    )
+    const { remoteService: remoteService2 } = await initMaster(
+      ax,
+      [countryProperty, { key: 'name', type: 'string' }],
+      [{
+        id: 'country',
+        title: 'Fetch extra info from country',
+        description: '',
+        input: [{ type: 'equals', property: countryProperty }]
+      }],
+      'master2'
+    )
+    await ax.post('/api/v1/datasets/master1/_bulk_lines', [
+      { latlon: '-2.7,47.6', country: 'FRA' },
+      { latlon: '-2.8,45.5', country: 'JPN' }
+    ])
+    await workers.hook('finalizer/master1')
+
+    await ax.post('/api/v1/datasets/master2/_bulk_lines', [
+      { country: 'FRA', name: 'France' },
+      { country: 'JPN', name: 'Japan' }
+    ])
+    await workers.hook('finalizer/master2')
+
+    // create slave dataset
+    await ax.put('/api/v1/datasets/slave', {
+      isRest: true,
+      title: 'slave',
+      schema: [latlonProperty],
+      extensions: [{
+        active: true,
+        remoteService: remoteService.id,
+        action: 'masterData_bulkSearch_geo',
+        select: ['country']
+      }, {
+        active: true,
+        remoteService: remoteService2.id,
+        action: 'masterData_bulkSearch_country',
+        select: ['name']
+      }]
+    })
+    const slave = await workers.hook('finalizer/slave')
+    assert.ok(slave.schema.find(p => p.key === '_geo.country'))
+    assert.ok(slave.schema.find(p => p.key === '_country.name'))
+
+    await ax.post('/api/v1/datasets/slave/_bulk_lines', [
+      { latlon: '-2.7,47.6' },
+      { latlon: '-2.8,45.5' }
+    ])
+    await workers.hook('finalizer/slave')
+    const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
+    assert.equal(results[0]['_geo.country'], 'JPN')
+    assert.equal(results[0]['_country.name'], 'Japan')
+  })
+
+  it('should listing remote services actions', async () => {
     const ax = global.ax.dmeadus
     const { remoteService } = await initMaster(
       ax,
