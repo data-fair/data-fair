@@ -218,9 +218,9 @@ actionsRouter.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
 
   const pipeline = [
     { $match: query }, // filter before the unwind for performance
-    { $project: project },
     { $unwind: '$actions' },
-    { $match: query } // filter after the unwind to select individual actions
+    { $match: query }, // filter after the unwind to select individual actions
+    { $project: project }
   ]
   if (Object.keys(sort).length) pipeline.push({ $sort: sort })
   pipeline.push({ $skip: skip })
