@@ -7,6 +7,8 @@ exports.getPrivateOwnerVocabulary = async (db, owner) => {
 }
 
 exports.getFullOwnerVocabulary = async (db, owner, locale) => {
+  if (!owner) return i18nUtils.vocabularyArray[locale]
+
   const privateVocabulary = await exports.getPrivateOwnerVocabulary(db, owner)
 
   return i18nUtils.vocabularyArray[locale].concat(privateVocabulary.map(pv => {

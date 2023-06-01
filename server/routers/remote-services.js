@@ -29,6 +29,7 @@ const rateLimiting = require('../utils/rate-limiting')
 const prometheus = require('../utils/prometheus')
 const datasetAPIDocs = require('../../contract/dataset-api-docs')
 const { httpAgent, httpsAgent } = require('../utils/http-agents')
+const settingsUtils = require('../utils/settings')
 
 const debug = require('debug')('remote-services')
 
@@ -157,6 +158,26 @@ const filterFieldsMap = {
   status: 'status'
 }
 
+// TODO replace this with storing the short id of concepts on remote services ?
+// make output.concept an object as x-concept in datasets schemas ?
+const fixConceptsFilters = async (req) => {
+  let vocabulary
+  for (const key of ['input-concepts', 'output-concepts']) {
+    if (!req.query[key]) continue
+    const values = req.query[key].split(',')
+    for (let i = 0; i < values.length; i++) {
+      const value = values[i]
+      if (value.startsWith('https://') || value.startsWith('http://')) continue
+      vocabulary = vocabulary || await settingsUtils.getFullOwnerVocabulary(req.app.get('db'), req.user && req.user.activeAccount, req.locale)
+      const concept = vocabulary.find(c => c.id === req.query[key])
+      if (concept && concept.identifiers && concept.identifiers.length) {
+        values[i] = concept.identifiers[0]
+      }
+    }
+    req.query[key] = values.join(',')
+  }
+}
+
 // Get the list of remote-services
 // Accessible to anybody
 router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
@@ -168,6 +189,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   if (req.query['standard-schema'] === 'true' || req.query.standardSchema === 'true') {
     extraFilters.push({ 'standardSchema.active': true })
   }
+  await fixConceptsFilters(req)
   const query = findUtils.query(req, filterFieldsMap, true, extraFilters)
 
   delete req.query.owner
@@ -194,6 +216,7 @@ const actionsRouter = exports.actionsRouter = express.Router()
 const actionsExtraFilters = [{ 'actions.type': 'http://schema.org/SearchAction' }]
 // get the unpacked list of actions inside the remote services
 actionsRouter.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
+  await fixConceptsFilters(req)
   const query = findUtils.query(req, filterFieldsMap, true, actionsExtraFilters)
 
   delete req.query.owner

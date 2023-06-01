@@ -4,7 +4,6 @@ const status = require('../routers/status')
 const apiDocs = require('../../contract/api-docs')
 const projections = require('../../contract/projections')
 const asyncWrap = require('../utils/async-wrap')
-const i18nUtils = require('../utils/i18n')
 const settingsUtils = require('../utils/settings')
 
 const ajv = require('ajv')()
@@ -35,11 +34,7 @@ router.get('/api-docs.json', (req, res) => {
 })
 
 router.get('/vocabulary', asyncWrap(async (req, res) => {
-  if (!req.user || !req.user.activeAccount) {
-    res.send(i18nUtils.vocabularyArray[req.locale])
-  } else {
-    res.send(await settingsUtils.getFullOwnerVocabulary(req.app.get('db'), req.user.activeAccount, req.locale))
-  }
+  res.send(await settingsUtils.getFullOwnerVocabulary(req.app.get('db'), req.user && req.user.activeAccount, req.locale))
 }))
 
 router.get('/projections', (req, res) => {
