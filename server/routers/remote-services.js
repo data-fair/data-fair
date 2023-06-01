@@ -146,6 +146,17 @@ function clean (remoteService, user, html = false) {
   return remoteService
 }
 
+const filterFieldsMap = {
+  'input-concepts': 'actions.input.concept',
+  'output-concepts': 'actions.output.concept',
+  inputCollection: 'actions.inputCollection',
+  outputCollection: 'actions.outputCollection',
+  'api-id': 'apiDoc.info.x-api-id',
+  ids: 'id',
+  id: 'id',
+  status: 'status'
+}
+
 // Get the list of remote-services
 // Accessible to anybody
 router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
@@ -157,14 +168,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   if (req.query['standard-schema'] === 'true' || req.query.standardSchema === 'true') {
     extraFilters.push({ 'standardSchema.active': true })
   }
-  const query = findUtils.query(req, {
-    'input-concepts': 'actions.input.concept',
-    'output-concepts': 'actions.output.concept',
-    'api-id': 'apiDoc.info.x-api-id',
-    ids: 'id',
-    id: 'id',
-    status: 'status'
-  }, true, extraFilters)
+  const query = findUtils.query(req, filterFieldsMap, true, extraFilters)
 
   delete req.query.owner
   query.owner = { $exists: false } // restrict to the newly centralized remote services
@@ -187,18 +191,10 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
 }))
 
 const actionsRouter = exports.actionsRouter = express.Router()
+const actionsExtraFilters = [{ 'actions.type': 'http://schema.org/SearchAction' }]
 // get the unpacked list of actions inside the remote services
 actionsRouter.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
-  const query = findUtils.query(req, {
-    'input-concepts': 'actions.input.concept',
-    'output-concepts': 'actions.output.concept',
-    inputCollection: 'actions.inputCollection',
-    outputCollection: 'actions.outputCollection',
-    'api-id': 'apiDoc.info.x-api-id',
-    ids: 'id',
-    id: 'id',
-    status: 'status'
-  }, true, [{ 'actions.type': 'http://schema.org/SearchAction' }])
+  const query = findUtils.query(req, filterFieldsMap, true, actionsExtraFilters)
 
   delete req.query.owner
   query.owner = { $exists: false } // restrict to the newly centralized remote services
@@ -216,10 +212,13 @@ actionsRouter.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const countRes = await req.app.get('db').collection('remote-services').aggregate(countPipeline).toArray()
   console.log('countRes', countRes) */
 
+  const actionsQuery = { ...query }
+  delete actionsQuery.$text
+
   const pipeline = [
     { $match: query }, // filter before the unwind for performance
     { $unwind: '$actions' },
-    { $match: query }, // filter after the unwind to select individual actions
+    { $match: actionsQuery }, // filter after the unwind to select individual actions
     { $project: project }
   ]
   if (Object.keys(sort).length) pipeline.push({ $sort: sort })

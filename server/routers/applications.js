@@ -90,7 +90,6 @@ const fieldsMap = {
   ids: 'id',
   id: 'id',
   status: 'status',
-  syncState: 'baseApp.meta.df:sync-state',
   ...filterFields
 }
 
@@ -112,13 +111,13 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
 
   const query = findUtils.query(req, fieldsMap)
 
-  if (req.query.filterConcepts && req.query.filterConcepts === 'true') {
+  if (req.query.filterConcepts === 'true') {
     query.$and.push({ 'baseApp.meta.df:filter-concepts': 'true' })
   }
-  if (req.query.syncState && req.query.syncState === 'true') {
+  if (req.query.syncState === 'true') {
     query.$and.push({ 'baseApp.meta.df:sync-state': 'true' })
   }
-  if (req.query.syncState && req.query.overflow === 'true') {
+  if (req.query.overflow === 'true') {
     query.$and.push({ 'baseApp.meta.df:overflow': 'true' })
   }
 

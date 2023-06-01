@@ -112,5 +112,9 @@ describe('remote-services', () => {
     res = await ax.get('/api/v1/remote-services-actions?inputCollection=false')
     assert.equal(res.data.results.length, 1)
     assert.ok(res.data.results.find(item => item.id === 'geocoder-koumoul--getCoord'))
+
+    res = await ax.get('/api/v1/remote-services-actions?inputCollection=false&q=geocoder')
+    assert.equal(res.data.results.length, 1)
+    assert.ok(res.data.results.find(item => item.id === 'geocoder-koumoul--getCoord'))
   })
 })
