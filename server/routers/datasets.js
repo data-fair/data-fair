@@ -191,6 +191,7 @@ const prepareExtensions = (req, extensions, oldExtensions = []) => {
 
 const filterFields = {
   concepts: 'schema.x-refersTo',
+  'short-concept': 'schema.concept.id',
   'field-type': 'schema.type',
   'field-format': 'schema.format',
   children: 'virtual.children',
@@ -217,7 +218,6 @@ const fieldsMap = {
   rest: 'isRest',
   virtual: 'isVirtual',
   metaOnly: 'isMetaOnly',
-  status: 'status',
   ...filterFields
 }
 
