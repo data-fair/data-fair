@@ -42,7 +42,8 @@ exports.exec = async (db, debug) => {
           changed = true
           field['x-concept'] = {
             id: concept.id,
-            title: concept.title
+            title: concept.title,
+            primary: true
           }
         }
       }
