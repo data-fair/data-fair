@@ -26,7 +26,7 @@ exports.process = async function (app, dataset) {
 
   // Add the calculated fields to the schema
   debug('prepare extended schema')
-  queryableDataset.schema = result.schema = datasetUtils.extendedSchema(dataset)
+  queryableDataset.schema = result.schema = await datasetUtils.extendedSchema(db, dataset)
 
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
   const geometry = geoUtils.schemaHasGeometry(dataset.schema)

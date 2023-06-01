@@ -101,4 +101,25 @@ describe('remote-services', () => {
       assert.equal(err.status, 405)
     }
   })
+
+  it('Get unpacked actions inside remote services', async () => {
+    const ax = global.ax.anonymous
+    let res = await ax.get('/api/v1/remote-services-actions')
+    assert.equal(res.data.results.length, 4)
+    assert.ok(res.data.results.find(item => item.id === 'geocoder-koumoul--getCoord'))
+    assert.ok(res.data.results.find(item => item.id === 'geocoder-koumoul--postCoords'))
+
+    res = await ax.get('/api/v1/remote-services-actions?inputCollection=false')
+    assert.equal(res.data.results.length, 1)
+    assert.ok(res.data.results.find(item => item.id === 'geocoder-koumoul--getCoord'))
+
+    res = await ax.get('/api/v1/remote-services-actions?inputCollection=false&q=geocoder')
+    assert.equal(res.data.results.length, 1)
+    assert.ok(res.data.results.find(item => item.id === 'geocoder-koumoul--getCoord'))
+
+    res = await ax.get('/api/v1/remote-services-actions', { params: { 'output-concepts': 'http://www.datatourisme.fr/ontology/core/1.0#apeNaf' } })
+    assert.equal(res.data.results.length, 2)
+    res = await ax.get('/api/v1/remote-services-actions', { params: { 'output-concepts': 'codeAPE' } })
+    assert.equal(res.data.results.length, 2)
+  })
 })
