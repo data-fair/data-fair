@@ -191,7 +191,7 @@ const prepareExtensions = (req, extensions, oldExtensions = []) => {
 
 const filterFields = {
   concepts: 'schema.x-refersTo',
-  'short-concept': 'schema.concept.id',
+  'short-concept': 'schema.x-concept.id',
   'field-type': 'schema.type',
   'field-format': 'schema.format',
   children: 'virtual.children',
