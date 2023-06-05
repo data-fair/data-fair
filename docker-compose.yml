@@ -113,11 +113,12 @@ services:
     profiles:
       - dev
       - test
+    healthcheck:
+        test: ["CMD", "nc", "-z", "-v", "localhost", "3310"]
     volumes:
       - ./data:/data/data-fair
     ports:
       - 3310:3310
-    restart: unless-stopped
 
 volumes:
   elasticsearch-data:
