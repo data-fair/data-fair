@@ -3,6 +3,7 @@ const moment = require('moment')
 const axios = require('../utils/axios')
 const fs = require('fs-extra')
 const asyncWrap = require('../utils/async-wrap')
+const clamav = require('../utils/clamav')
 
 async function mongoStatus (req) {
   await req.app.get('db').admin().serverStatus()
@@ -44,13 +45,18 @@ async function singleStatus (req, fn, name) {
 }
 
 async function getStatus (req) {
-  const results = await Promise.all([
+  const promises = [
     singleStatus(req, mongoStatus, 'mongodb'),
     singleStatus(req, esStatus, 'elasticsearch'),
     singleStatus(req, jwksStatus, 'auth-directory'),
     singleStatus(req, nuxtStatus, 'nuxt'),
     singleStatus(req, dataDirStatus, 'data-dir')
-  ])
+  ]
+  if (config.clamav.active) {
+    promises.push(singleStatus(req, clamav.ping, 'clamav'))
+  }
+  const results = await Promise.all(promises)
+
   const errors = results.filter(r => r.status === 'error')
   return {
     status: errors.length ? 'error' : 'ok',

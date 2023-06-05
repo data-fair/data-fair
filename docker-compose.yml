@@ -108,6 +108,17 @@ services:
       - SECRET_SENDMAILS=secret-sendmails
       - PROMETHEUS_ACTIVE=false
 
+  clamav:
+    image: clamav/clamav
+    profiles:
+      - dev
+      - test
+    volumes:
+      - ./data:/data/data-fair
+    ports:
+      - 3310:3310
+    restart: unless-stopped
+
 volumes:
   elasticsearch-data:
   mongo-data:

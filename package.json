@@ -4,7 +4,7 @@
   "description": "",
   "main": "server",
   "scripts": {
-    "test": "NODE_ENV=test mocha --exit --bail --timeout 20000 test/",
+    "test": "NODE_ENV=test mocha --exit --bail --timeout 30000 test/",
     "test-cover": "nyc npm test",
     "test-deps": "docker compose --profile test up -d --wait",
     "coveralls": "nyc report --reporter=text-lcov | coveralls",
@@ -182,6 +182,7 @@
     "piscina": "^3.2.0",
     "proj4": "^2.7.2",
     "prom-client": "^14.0.1",
+    "promise-socket": "^7.0.0",
     "pump": "^3.0.0",
     "random-seed": "^0.3.0",
     "rate-limiter-flexible": "^2.3.5",

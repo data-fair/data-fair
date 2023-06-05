@@ -90,5 +90,9 @@ module.exports = {
   cache: {
     // set cache-control max-age for public GET endpoints (in seconds)
     publicMaxAge: 1
+  },
+  clamav: {
+    active: true,
+    dataDir: '/data/data-fair/test'
   }
 }

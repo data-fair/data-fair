@@ -47,6 +47,12 @@ exports.workersTasks = new client.Histogram({
   labelNames: ['task', 'status'],
   registers: [localRegister]
 })
+exports.infectedFiles = new client.Counter({
+  name: 'df_infected_files',
+  help: 'A warning about uploaded infected files.',
+  labelNames: [],
+  registers: [localRegister]
+})
 
 exports.start = async (db) => {
   // global metrics based on db connection

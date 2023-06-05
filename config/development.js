@@ -90,5 +90,9 @@ module.exports = {
   disablePublicationSites: false,
   elasticsearch: {
     maxPageSize: 10000
+  },
+  clamav: {
+    active: true,
+    dataDir: '/data/data-fair/development'
   }
 }

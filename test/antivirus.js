@@ -1,0 +1,13 @@
+const testUtils = require('./resources/test-utils')
+const assert = require('assert').strict
+
+describe('anti virus integration', () => {
+  it('Reject upload of infected file in dataset', async () => {
+    const ax = global.ax.dmeadus
+    await assert.rejects(testUtils.sendDataset('antivirus/eicar.com.csv', ax), (err) => {
+      assert.equal(err.data, 'malicious file detected')
+      assert.equal(err.status, 400)
+      return true
+    })
+  })
+})
