@@ -191,6 +191,7 @@ const prepareExtensions = (req, extensions, oldExtensions = []) => {
 
 const filterFields = {
   concepts: 'schema.x-refersTo',
+  'short-concept': 'schema.x-concept.id',
   'field-type': 'schema.type',
   'field-format': 'schema.format',
   children: 'virtual.children',
@@ -217,7 +218,6 @@ const fieldsMap = {
   rest: 'isRest',
   virtual: 'isVirtual',
   metaOnly: 'isMetaOnly',
-  status: 'status',
   ...filterFields
 }
 
@@ -567,12 +567,12 @@ router.patch('/:datasetId',
         // we just try in case elasticsearch considers the new mapping compatible
         // so that we might optimize and reindex only when necessary
         await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
-        await datasetUtils.updateStorage(req.app, { ...req.dataset, schema: patch.schema })
         patch.status = 'indexed'
       } catch (err) {
         // generated ES mappings are not compatible, trigger full re-indexing
         patch.status = 'analyzed'
       }
+      await datasetUtils.updateStorage(req.app, { ...req.dataset, schema: patch.schema })
     } else if (patch.thumbnails || patch.masterData) {
       // just change finalizedAt so that cache is invalidated, but the worker doesn't relly need to work on the dataset
       patch.finalizedAt = (new Date()).toISOString()

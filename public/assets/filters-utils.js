@@ -70,55 +70,77 @@ export function escape (val) {
 }
 
 export function writeQueryParams (filters, query) {
-  Object.keys(query).filter(key => key.endsWith('_eq')).forEach(key => delete query[key])
-  filters.filter(f => f.type === 'in' && f.values.length === 1).forEach(f => {
+  for (const key of Object.keys(query)) {
+    if (key.startsWith('_c_')) continue
+    if (key.endsWith('_eq') || key.endsWith('_in') || key.endsWith('_starts') || key.endsWith('_interval')) {
+      delete query[key]
+    }
+  }
+
+  filters.filter(f => f.type === 'in' && f.values.length === 1 && !f.hidden).forEach(f => {
     query[f.field.key + '_eq'] = f.values[0]
   })
-  Object.keys(query).filter(key => key.endsWith('_in')).forEach(key => delete query[key])
-  filters.filter(f => f.type === 'in' && f.values.length > 1).forEach(f => {
+  filters.filter(f => f.type === 'in' && f.values.length > 1 && !f.hidden).forEach(f => {
     query[f.field.key + '_in'] = JSON.stringify(f.values).slice(1, -1)
   })
-  Object.keys(query).filter(key => key.endsWith('_starts')).forEach(key => delete query[key])
-  filters.filter(f => f.type === 'starts').forEach(f => {
+  filters.filter(f => f.type === 'starts' && !f.hidden).forEach(f => {
     query[f.field.key + '_starts'] = f.value
   })
-  Object.keys(query).filter(key => key.endsWith('_interval')).forEach(key => delete query[key])
-  filters.filter(f => f.type === 'interval').forEach(f => {
+  filters.filter(f => f.type === 'interval' && !f.hidden).forEach(f => {
     query[f.field.key + '_interval'] = JSON.stringify([f.minValue || '*', f.maxValue || '*']).slice(1, -1)
   })
 }
 
 export function readQueryParams (query, dataset) {
   const filters = []
-  Object.keys(query).filter(key => key.endsWith('_eq')).forEach(key => {
-    filters.push({
-      type: 'in',
-      field: dataset.schema.find(p => p.key === key.slice(0, -3)),
-      values: [query[key]]
-    })
+
+  Object.keys(query).forEach(key => {
+    let hidden = false
+    let field
+    if (key.startsWith('_c_')) {
+      hidden = true
+      const conceptId = key.split('_')[2]
+      field = dataset.schema.find(p => p['x-concept'] && p['x-concept'].primary && p['x-concept'].id === conceptId)
+      if (!field) console.error('field not found for concept filter', key, conceptId, dataset.schema)
+    } else {
+      const fieldKey = key.split('_').slice(0, -1)
+      field = dataset.schema.find(p => p.key === fieldKey)
+    }
+
+    if (field) {
+      if (key.endsWith('_eq')) {
+        filters.push({
+          hidden,
+          type: 'in',
+          field,
+          values: [query[key]]
+        })
+      } else if (key.endsWith('_in')) {
+        filters.push({
+          hidden,
+          type: 'in',
+          field,
+          values: JSON.parse(`[${query[key]}]`)
+        })
+      } else if (key.endsWith('_starts')) {
+        filters.push({
+          hidden,
+          type: 'starts',
+          field,
+          value: query[key]
+        })
+      } else if (key.endsWith('_interval')) {
+        const values = JSON.parse(`[${query[key]}]`)
+        filters.push({
+          hidden,
+          type: 'interval',
+          field,
+          minValue: values[0],
+          maxValue: values[1]
+        })
+      }
+    }
   })
-  Object.keys(query).filter(key => key.endsWith('_in')).forEach(key => {
-    filters.push({
-      type: 'in',
-      field: dataset.schema.find(p => p.key === key.slice(0, -3)),
-      values: JSON.parse(`[${query[key]}]`)
-    })
-  })
-  Object.keys(query).filter(key => key.endsWith('_starts')).forEach(key => {
-    filters.push({
-      type: 'starts',
-      field: dataset.schema.find(p => p.key === key.slice(0, -7)),
-      value: query[key]
-    })
-  })
-  Object.keys(query).filter(key => key.endsWith('_interval')).forEach(key => {
-    const values = JSON.parse(`[${query[key]}]`)
-    filters.push({
-      type: 'interval',
-      field: dataset.schema.find(p => p.key === key.slice(0, -9)),
-      minValue: values[0],
-      maxValue: values[1]
-    })
-  })
+  console.log('filters', query, filters)
   return filters
 }

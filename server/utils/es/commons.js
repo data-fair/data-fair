@@ -309,18 +309,25 @@ exports.prepareQuery = (dataset, query) => {
     }
   }
   for (const key of Object.keys(query)) {
-    if (!key.endsWith('_in')) continue
-    const inFilter = {
-      key: key.slice(0, key.length - 3),
-      values: query[key].split(',')
+    if (!key.endsWith('_in') && !key.endsWith('_eq')) continue
+    let prop
+    if (key.startsWith('_c_')) {
+      const conceptId = key.slice(3, key.length - 3)
+      prop = dataset.schema.find(p => p['x-concept'] && p['x-concept'].primary && p['x-concept'].id === conceptId)
+    } else {
+      prop = dataset.schema.find(p => p.key === key.slice(0, key.length - 3))
     }
-    const prop = dataset.schema.find(p => p.key === inFilter.key)
+
     if (!prop || (prop['x-capabilities'] && prop['x-capabilities'].index === false)) {
-      throw createError(400, `Impossible de faire une recherche sur le champ ${inFilter.key}, il n'existe pas dans le jeu de données.`)
+      throw createError(400, `Impossible de faire une recherche sur le champ ${key.slice(0, key.length - 3)}.`)
+    }
+    let values = [query[key]]
+    if (key.endsWith('_in')) {
+      values = query[key].startsWith('"') ? JSON.parse(`[${query[key]}]`) : query[key].split(',')
     }
     filter.push({
       terms: {
-        [inFilter.key]: inFilter.values
+        [prop.key]: values
       }
     })
   }

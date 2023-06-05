@@ -62,6 +62,9 @@ describe('datasets in draft mode', () => {
     assert.equal(dataset.status, 'draft')
     assert.equal(dataset.draft.status, 'finalized')
     assert.ok(dataset.draft.bbox)
+    const locProp2 = dataset.draft.schema.find(p => p.key === 'loc')
+    assert.equal(locProp2['x-refersTo'], 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long')
+    assert.equal(locProp2['x-concept'].id, 'latLon')
 
     // reuploading in draft mode is not permitted
     const datasetFd2 = fs.readFileSync('./test/resources/datasets/bad-format.csv')

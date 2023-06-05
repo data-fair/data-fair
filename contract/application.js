@@ -5,6 +5,17 @@ const publicationSchema = require('./publication')
 const configurationSchema = require('./app-configuration')
 const topic = require('./topic')
 
+const baseAppReference = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    url: { type: 'string' },
+    meta: {
+      type: 'object'
+    }
+  }
+}
+
 module.exports = {
   title: 'Application',
   type: 'object',
@@ -61,12 +72,15 @@ module.exports = {
     configurationDraft: configurationSchema,
     url: {
       type: 'string',
-      description: 'The URL the base application is located to'
+      deprecated: true,
+      description: 'The URL the base application is located at (replaced by baseApp.url)'
     },
     urlDraft: {
       type: 'string',
-      description: 'The URL the base application for the draft configuration is located to'
+      description: 'The URL the base application for the draft configuration is located at (replaced by baseAppDraft.url)'
     },
+    baseApp: baseAppReference,
+    baseAppDraft: baseAppReference,
     errorMessage: {
       type: 'string'
     },
