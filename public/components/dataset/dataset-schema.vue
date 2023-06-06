@@ -295,7 +295,14 @@ export default {
       this.schema = this.schema.filter(p => p.key !== property.key)
     },
     save () {
-      this.patchAndCommit({ schema: this.schema.map(field => ({ ...field })), primaryKey: [...this.primaryKey] })
+      const patch = {}
+      if (JSON.stringify(this.schema) !== this.originalSchema) {
+        patch.schema = this.schema.map(field => ({ ...field }))
+      }
+      if (JSON.stringify(this.primaryKey || []) !== JSON.stringify(this.dataset.primaryKey || [])) {
+        patch.primaryKey = [...this.primaryKey]
+      }
+      this.patchAndCommit(patch)
     },
     applySort (sorted) {
       this.schema = sorted.map(s => this.schema.find(p => p.key === s.key))
