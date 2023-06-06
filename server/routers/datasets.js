@@ -431,11 +431,18 @@ router.get('/:datasetId/safe-schema', readDataset(), applicationKey, permissions
 const permissionsWritePublications = permissions.middleware('writePublications', 'admin')
 const permissionsWriteExports = permissions.middleware('writeExports', 'admin')
 const permissionsWriteDescription = permissions.middleware('writeDescription', 'write')
+const debugBreakingChanges = require('debug')('breaking-changes')
 const descriptionBreakingKeys = ['rest', 'virtual', 'lineOwnership', 'primaryKey', 'projection', 'attachmentsAsImage', 'extensions', 'timeZone'] // a change in these properties is considered a breaking change
 const descriptionHasBreakingChanges = (req) => {
-  if (descriptionBreakingKeys.find(key => key in req.body)) return true
+  const breakingChangeKey = descriptionBreakingKeys.find(key => key in req.body)
+  if (breakingChangeKey) {
+    debugBreakingChanges('breaking change on key', breakingChangeKey)
+    return true
+  }
   if (!req.body.schema) return false
-  return datasetUtils.getSchemaBreakingChanges(req.dataset.schema, req.body.schema, true).length > 0
+  const breakingChanges = datasetUtils.getSchemaBreakingChanges(req.dataset.schema, req.body.schema, true)
+  debugBreakingChanges('breaking changes in schema ? ', breakingChanges)
+  return breakingChanges.length > 0
 }
 const permissionsWriteDescriptionBreaking = permissions.middleware('writeDescriptionBreaking', 'write')
 
