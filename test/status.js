@@ -7,7 +7,7 @@ describe('status', () => {
     const res = await global.ax.superadmin.get('/api/v1/status')
     assert.equal(res.status, 200)
     assert.equal(res.data.status, 'ok')
-    assert.equal(res.data.details.length, 6)
+    assert.equal(res.data.details.length, 5)
   })
 
   it('Ping service', async () => {
