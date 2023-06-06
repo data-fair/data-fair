@@ -66,7 +66,7 @@
             <v-spacer />
             <div class="mx-1">
               <confirm-menu
-                v-if="user.adminMode && editable && currentPropRef.editable && dataset.isRest"
+                v-if="user.adminMode && editable && !noBreakingChanges && currentPropRef.editable && dataset.isRest"
                 :property="currentPropRef.prop"
                 :btn-props="{fab: true, small: true, depressed: true, dark: true, color: 'admin'}"
                 :title="$t('deletePropertyTitle')"
@@ -80,7 +80,7 @@
             <div class="mx-1">
               <dataset-property-capabilities
                 :property="currentPropRef.prop"
-                :editable="editable && currentPropRef.editable && !dataset.isVirtual"
+                :editable="editable && !noBreakingChanges && currentPropRef.editable && !dataset.isVirtual"
               />
             </div>
             <div class="mx-1">
@@ -130,13 +130,13 @@
           <template v-if="currentPropRef.prop.type === 'string' && currentFileProp && currentFileProp.dateTimeFormat">
             <lazy-time-zone-select
               v-model="currentPropRef.prop.timeZone"
-              :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
+              :disabled="!editable || noBreakingChanges || !currentPropRef.editable || dataset.isVirtual"
             />
           </template>
           <v-autocomplete
             v-model="currentPropRef.prop['x-refersTo']"
             :items="vocabularyItems.filter(item => filterVocabulary(item))"
-            :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
+            :disabled="!editable || noBreakingChanges || !currentPropRef.editable || dataset.isVirtual"
             :label="$t('concept')"
             :clearable="true"
             hide-details
@@ -161,7 +161,7 @@
             v-if="currentPropRef.prop.type === 'string'"
             v-model="currentPropRef.prop.separator"
             :items="[', ', '; ', ' - ', ' / ', ' | ']"
-            :disabled="!editable || !currentPropRef.editable || dataset.isVirtual"
+            :disabled="!editable || noBreakingChanges || !currentPropRef.editable || dataset.isVirtual"
             :label="$t('sep')"
             hide-details
             class="mb-3"
@@ -174,7 +174,7 @@
           <v-checkbox
             v-if="dataset.file && dataset.file.mimetype === 'text/csv'"
             v-model="currentPropRef.prop.ignoreDetection"
-            :disabled="!editable || !currentPropRef.editable"
+            :disabled="!editable || noBreakingChanges || !currentPropRef.editable"
             :label="$t('ignoreDetection')"
             hide-details
             dense
@@ -186,7 +186,7 @@
           <v-checkbox
             v-if="dataset.file && dataset.file.mimetype === 'text/csv' && ['integer', 'number'].includes(currentPropRef.prop.type)"
             v-model="currentPropRef.prop.ignoreIntegerDetection"
-            :disabled="!editable || !currentPropRef.editable"
+            :disabled="!editable || noBreakingChanges || !currentPropRef.editable"
             :label="$t('ignoreIntegerDetection')"
             hide-details
             dense
@@ -198,7 +198,7 @@
           <v-checkbox
             v-if="dataset.isRest"
             v-model="currentPropRef.prop.readOnly"
-            :disabled="!editable || !currentPropRef.editable"
+            :disabled="!editable || noBreakingChanges || !currentPropRef.editable"
             :label="$t('readOnly')"
             hide-details
             dense
@@ -212,7 +212,7 @@
             v-model="xDisplay"
             :items="[{value: 'singleline', text: $t('singleline')}, {value: 'textarea', text: $t('textarea')}, {value: 'markdown', text: $t('markdown')}]"
             :label="$t('xDisplay')"
-            :disabled="!editable || !currentPropRef.editable"
+            :disabled="!editable || noBreakingChanges || !currentPropRef.editable"
             hide-details
           >
             <template #append-outer>
@@ -222,7 +222,7 @@
           <v-text-field
             v-if="dataset.isRest && currentPropRef.prop.type === 'string' && !currentPropRef.prop.format"
             v-model.number="maxLength"
-            :disabled="!editable || !currentPropRef.editable"
+            :disabled="!editable || noBreakingChanges || !currentPropRef.editable"
             :label="$t('maxLength')"
             hide-details
             type="number"
@@ -233,6 +233,7 @@
           </v-text-field>
           <v-select
             v-if="currentPropRef.prop['x-refersTo'] && availableMasters[currentPropRef.prop['x-refersTo']]"
+            :disabled="!editable || noBreakingChanges || !currentPropRef.editable"
             item-value="id"
             item-text="title"
             :items="availableMasters[currentPropRef.prop['x-refersTo']]"
@@ -375,7 +376,7 @@ const Draggable = require('vuedraggable')
 const datasetSchema = require('~/../contract/dataset.js')
 export default {
   components: { Draggable },
-  props: ['propertiesRefs', 'editable', 'sortable'],
+  props: ['propertiesRefs', 'editable', 'sortable', 'noBreakingChanges'],
   data () {
     return {
       datasetSchema,
