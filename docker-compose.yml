@@ -112,7 +112,6 @@ services:
     image: clamav/clamav
     profiles:
       - dev
-      - test
     healthcheck:
         test: ["CMD", "nc", "-z", "-v", "localhost", "3310"]
     volumes:

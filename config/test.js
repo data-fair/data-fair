@@ -92,7 +92,7 @@ module.exports = {
     publicMaxAge: 1
   },
   clamav: {
-    active: true,
+    active: false,
     dataDir: '/data/data-fair/test'
   }
 }
