@@ -172,7 +172,7 @@ exports.filterCan = function (user, resourceType, operation = 'list') {
   for (const op of operation.split(',')) {
     const operationClass = apiDocsUtil.classByOperation[resourceType][op]
     if (operationClass) {
-      operationFilter.push({ operations: operation })
+      operationFilter.push({ operations: op })
       operationFilter.push({ classes: operationClass })
     } else if (apiDocsUtil.operationsClasses[resourceType][operation]) {
       operationFilter.push({ classes: op })
