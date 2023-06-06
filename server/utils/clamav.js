@@ -9,14 +9,14 @@ const debug = require('debug')('clamav')
 
 // TODO: use a socket pool ? use clamd sessions ?
 const runCommand = async (command) => {
-  debug('run command', command)
+  debug(`run command "${command}"`)
   const rawSocket = new Socket()
   const socket = new PromiseSocket(rawSocket)
   await socket.connect(config.clamav.port, config.clamav.host)
   await socket.write('n' + command + '\n')
   const result = (await socket.readAll()).toString().trim()
   await socket.destroy()
-  debug('response -> ', result)
+  debug(`response -> "${result}"`)
   return result
 }
 
@@ -30,11 +30,14 @@ exports.middleware = asyncWrap(async (req, res, next) => {
   for (const file of req.files || []) {
     const remotePath = path.join(config.clamav.dataDir, path.relative(config.dataDir, file.path))
     const result = await runCommand(`SCAN ${remotePath}`)
-    if (!result.endsWith('OK')) {
+    if (result.endsWith('OK')) continue
+    if (result.endsWith('ERROR')) throw createError('failure while applying antivirus ' + result.slice(0, -6))
+    if (result.endsWith('FOUND')) {
       prometheus.infectedFiles.inc()
       console.warn('[infected-file] a user attempted to upload an infected file', result, req.user, file)
-      return next(createError(400, 'malicious file detected'))
+      throw createError(400, 'malicious file detected')
     }
+    throw createError('Unexpected result from antivirus ' + result)
   }
   next()
 })
