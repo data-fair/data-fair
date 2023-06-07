@@ -40,6 +40,20 @@ describe('markdown contents management', () => {
     assert.equal(res.data.results[0].prop1, '<p>This is a <strong>markdo...</strong></p>')
   })
 
+  it('Dataset description can also contain HTML tags', async () => {
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'Rest dataset markdown',
+      description: 'This is a <span color="blue">html</span><span color="red"> description</span><script>alert("ALERT")</script>.'
+    })
+    assert.equal(res.status, 201)
+    const dataset = res.data
+    await workers.hook('finalizer/' + dataset.id)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}`, { params: { html: true } })
+    assert.equal(res.data.description, '<p>This is a <span>html</span><span> description</span>.</p>')
+  })
+
   it('Get application description as HTML', async () => {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/applications', {
