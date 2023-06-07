@@ -42,7 +42,7 @@ module.exports = {
   build: {
     // always the same url to fetch static resource, even in multi-domain mode
     publicPath: config.publicUrl + '/_nuxt/',
-    transpile: [/@koumoul/, 'easymde'], // Necessary for "à la carte" import of vuetify components
+    transpile: [/@koumoul/, 'easymde', 'htmlparser2'], // Necessary for "à la carte" import of vuetify components
     extend (webpackConfig, { isServer, isDev, isClient }) {
       const webpack = require('webpack')
       // Ignore all locale files of moment.js, those we want are loaded in plugins/moment.js
