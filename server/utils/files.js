@@ -7,6 +7,7 @@ const { nanoid } = require('nanoid')
 const mime = require('mime-types')
 const datasetSchema = require('../../contract/dataset')
 const datasetUtils = require('./dataset')
+const asyncWrap = require('./async-wrap')
 const fallbackMimeTypes = {
   dbf: 'application/dbase',
   dif: 'text/plain',
@@ -127,3 +128,17 @@ exports.fixFormBody = (validate) => (req, res, next) => {
   if (!valid) return res.status(400).send(validate.errors)
   next()
 }
+
+// try to prevent weird bug with NFS by forcing syncing new files before use
+exports.fsyncFile = async (p) => {
+  const fd = await fs.open(p, 'r')
+  await fs.fsync(fd)
+  await fs.close(fd)
+}
+
+exports.fsyncFiles = asyncWrap(async (req, res, next) => {
+  for (const file of req.files || []) {
+    await exports.fsyncFile(file.path)
+  }
+  next()
+})
