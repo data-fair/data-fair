@@ -29,6 +29,7 @@ const rateLimiting = require('../utils/rate-limiting')
 const prometheus = require('../utils/prometheus')
 const datasetAPIDocs = require('../../contract/dataset-api-docs')
 const { httpAgent, httpsAgent } = require('../utils/http-agents')
+const settingsUtils = require('../utils/settings')
 
 const debug = require('debug')('remote-services')
 
@@ -146,6 +147,37 @@ function clean (remoteService, user, html = false) {
   return remoteService
 }
 
+const filterFieldsMap = {
+  'input-concepts': 'actions.input.concept',
+  'output-concepts': 'actions.output.concept',
+  inputCollection: 'actions.inputCollection',
+  outputCollection: 'actions.outputCollection',
+  'api-id': 'apiDoc.info.x-api-id',
+  ids: 'id',
+  id: 'id',
+  status: 'status'
+}
+
+// TODO replace this with storing the short id of concepts on remote services ?
+// make output.concept an object as x-concept in datasets schemas ?
+const fixConceptsFilters = async (req) => {
+  let vocabulary
+  for (const key of ['input-concepts', 'output-concepts']) {
+    if (!req.query[key]) continue
+    const values = req.query[key].split(',')
+    for (let i = 0; i < values.length; i++) {
+      const value = values[i]
+      if (value.startsWith('https://') || value.startsWith('http://')) continue
+      vocabulary = vocabulary || await settingsUtils.getFullOwnerVocabulary(req.app.get('db'), req.user && req.user.activeAccount, req.locale)
+      const concept = vocabulary.find(c => c.id === req.query[key])
+      if (concept && concept.identifiers && concept.identifiers.length) {
+        values[i] = concept.identifiers[0]
+      }
+    }
+    req.query[key] = values.join(',')
+  }
+}
+
 // Get the list of remote-services
 // Accessible to anybody
 router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
@@ -157,14 +189,8 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   if (req.query['standard-schema'] === 'true' || req.query.standardSchema === 'true') {
     extraFilters.push({ 'standardSchema.active': true })
   }
-  const query = findUtils.query(req, {
-    'input-concepts': 'actions.input.concept',
-    'output-concepts': 'actions.output.concept',
-    'api-id': 'apiDoc.info.x-api-id',
-    ids: 'id',
-    id: 'id',
-    status: 'status'
-  }, true, extraFilters)
+  await fixConceptsFilters(req)
+  const query = findUtils.query(req, filterFieldsMap, true, extraFilters)
 
   delete req.query.owner
   query.owner = { $exists: false } // restrict to the newly centralized remote services
@@ -184,6 +210,56 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   }
   facets = findUtils.parseFacets(facets)
   res.json({ count, results: results.map(result => mongoEscape.unescape(result, true)), facets })
+}))
+
+const actionsRouter = exports.actionsRouter = express.Router()
+const actionsExtraFilters = [{ 'actions.type': 'http://schema.org/SearchAction' }]
+// get the unpacked list of actions inside the remote services
+actionsRouter.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
+  await fixConceptsFilters(req)
+  const query = findUtils.query(req, filterFieldsMap, true, actionsExtraFilters)
+
+  delete req.query.owner
+  query.owner = { $exists: false } // restrict to the newly centralized remote services
+  const sort = findUtils.sort(req.query.sort)
+  const project = findUtils.project(req.query.select, ['apiDoc'])
+  const [skip, size] = findUtils.pagination(req.query)
+
+  /* const countPipeline = [
+    { $match: query }, // filter before the unwind for performance
+    { $project: { _id: 0, 'actions.id': 1 } },
+    { $unwind: '$actions' },
+    { $match: query }, // filter after the unwind to select individual actions
+    { $count: 'count' }
+  ]
+  const countRes = await req.app.get('db').collection('remote-services').aggregate(countPipeline).toArray()
+  console.log('countRes', countRes) */
+
+  const actionsQuery = { ...query }
+  delete actionsQuery.$text
+
+  const pipeline = [
+    { $match: query }, // filter before the unwind for performance
+    { $unwind: '$actions' },
+    { $match: actionsQuery }, // filter after the unwind to select individual actions
+    { $project: project }
+  ]
+  if (Object.keys(sort).length) pipeline.push({ $sort: sort })
+  pipeline.push({ $skip: skip })
+  pipeline.push({ $limit: size })
+
+  const aggRes = await req.app.get('db').collection('remote-services').aggregate(pipeline).toArray()
+  const results = aggRes.map(remoteService => {
+    const result = {
+      id: `${remoteService.id}--${remoteService.actions.id}`,
+      title: remoteService.actions.summary,
+      action: remoteService.actions
+    }
+    delete remoteService.actions
+    result.remoteService = remoteService
+    return result
+  })
+  res.send({ results })
 }))
 
 const initNew = (body) => {

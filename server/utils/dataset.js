@@ -26,6 +26,8 @@ const locks = require('./locks')
 const prometheus = require('./prometheus')
 const webhooks = require('./webhooks')
 const journals = require('./journals')
+const settingsUtils = require('./settings')
+const i18nUtils = require('./i18n')
 const { basicTypes, csvTypes } = require('../workers/converter')
 const equal = require('deep-equal')
 const dataDir = path.resolve(config.dataDir)
@@ -437,7 +439,7 @@ exports.storage = async (db, es, dataset) => {
       const queryableDataset = { ...dataset }
       queryableDataset.descendants = [descendant.id]
       const count = await esUtils.count(es, queryableDataset, {})
-      storageRatio *= (descendant.count / count)
+      storageRatio *= (count / descendant.count)
       masterDataSize += Math.round(descendant.storage.indexed.size * storageRatio)
     }
     storage.indexed.size = masterDataSize
@@ -605,7 +607,7 @@ exports.cleanSchema = (dataset) => {
 
 const latlonUri = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
 
-exports.extendedSchema = (dataset) => {
+exports.extendedSchema = async (db, dataset, fixConcept = true) => {
   exports.cleanSchema(dataset)
   const schema = dataset.schema.filter(f => f['x-extension'] || !f.key.startsWith('_'))
   const documentProperty = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
@@ -656,6 +658,25 @@ exports.extendedSchema = (dataset) => {
   schema.push({ 'x-calculated': true, key: '_i', type: 'integer', title: 'Numéro de ligne', description: 'Indice de la ligne dans le fichier d\'origine' })
   schema.push({ 'x-calculated': true, key: '_rand', type: 'integer', title: 'Nombre aléatoire', description: 'Un nombre aléatoire associé à la ligne qui permet d\'obtenir un tri aléatoire par exemple' })
 
+  // maintain coherent x-refersTo and x-concept annotations
+  if (fixConcept) {
+    let ownerVocabulary
+    const standardVocabulary = i18nUtils.vocabularyArray.fr // TODO: how to internalize this ? have a metadata locale info on the dataset ?
+    for (const field of schema) {
+      if (field['x-refersTo']) {
+        let concept = standardVocabulary.find(c => c.identifiers.includes(field['x-refersTo']))
+        if (!concept) {
+          ownerVocabulary = ownerVocabulary || await settingsUtils.getPrivateOwnerVocabulary(db, dataset.owner)
+          concept = ownerVocabulary.find(c => c.identifiers.includes(field['x-refersTo']))
+        }
+        if (concept) {
+          field['x-concept'] = { id: concept.id, title: concept.title, primary: true }
+        }
+      } else {
+        delete field['x-concept']
+      }
+    }
+  }
   return schema
 }
 
@@ -926,42 +947,15 @@ exports.validateDraft = async (app, dataset, user, req) => {
     webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
 
     if (req) {
-    // WARNING, this functionality is kind of a duplicate of the UI in dataset-schema.vue
-      for (const field of dataset.prod.schema) {
-        if (field['x-calculated']) continue
-        const patchedField = patchedDataset.schema.find(pf => pf.key === field.key)
-        if (!patchedField) {
-          webhooks.trigger(db, 'dataset', patchedDataset, {
-            type: 'breaking-change',
-            body: require('i18n').getLocales().reduce((a, locale) => {
-              a[locale] = req.__({ phrase: 'breakingChanges.missing', locale }, { title: patchedDataset.title, key: field.key })
-              return a
-            }, {})
-          })
-          continue
-        }
-        if (patchedField.type !== field.type) {
-          webhooks.trigger(db, 'dataset', patchedDataset, {
-            type: 'breaking-change',
-            body: require('i18n').getLocales().reduce((a, locale) => {
-              a[locale] = req.__({ phrase: 'breakingChanges.type', locale }, { title: patchedDataset.title, key: field.key })
-              return a
-            }, {})
-          })
-          continue
-        }
-        const format = (field.format && field.format !== 'uri-reference') ? field.format : null
-        const patchedFormat = (patchedField.format && patchedField.format !== 'uri-reference') ? patchedField.format : null
-        if (patchedFormat !== format) {
-          webhooks.trigger(db, 'dataset', patchedDataset, {
-            type: 'breaking-change',
-            body: require('i18n').getLocales().reduce((a, locale) => {
-              a[locale] = req.__({ phrase: 'breakingChanges.type', locale }, { title: patchedDataset.title, key: field.key })
-              return a
-            }, {})
-          })
-          continue
-        }
+      const breakingChanges = this.getSchemaBreakingChanges(dataset.prod.schema, patchedDataset.schema)
+      for (const breakingChange of breakingChanges) {
+        webhooks.trigger(db, 'dataset', patchedDataset, {
+          type: 'breaking-change',
+          body: require('i18n').getLocales().reduce((a, locale) => {
+            a[locale] = req.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { title: patchedDataset.title, key: breakingChange.key })
+            return a
+          }, {})
+        })
       }
     }
   }
@@ -987,6 +981,31 @@ exports.validateDraft = async (app, dataset, user, req) => {
   await fs.remove(exports.dir(dataset))
   await exports.updateStorage(app, statusPatchedDataset)
   return statusPatchedDataset
+}
+
+exports.getSchemaBreakingChanges = (schema, patchedSchema, ignoreExtensions = false) => {
+  const breakingChanges = []
+  // WARNING, this functionality is kind of a duplicate of the UI in dataset-schema.vue
+  for (const field of schema) {
+    if (field['x-calculated']) continue
+    if (field['x-extension'] && ignoreExtensions) continue
+    const patchedField = patchedSchema.find(pf => pf.key === field.key)
+    if (!patchedField) {
+      breakingChanges.push({ type: 'missing', key: field.key })
+      continue
+    }
+    if (patchedField.type !== field.type) {
+      breakingChanges.push({ type: 'type', key: field.key })
+      continue
+    }
+    const format = (field.format && field.format !== 'uri-reference') ? field.format : null
+    const patchedFormat = (patchedField.format && patchedField.format !== 'uri-reference') ? patchedField.format : null
+    if (patchedFormat !== format) {
+      breakingChanges.push({ type: 'type', key: field.key })
+      continue
+    }
+  }
+  return breakingChanges
 }
 
 exports.validateCompatibleDraft = async (app, dataset) => {

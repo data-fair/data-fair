@@ -30,31 +30,28 @@
     />
     <v-iframe :src="appsSubscribeUrl" />
 
-    <div
-      v-for="site of publicationSites"
-      :key="site.id"
-    >
-      <h2
-        v-t="{path: 'pubsEvents', args: {title: site.title || site.url || site.id}}"
-        class="mt-8 mb-2 text-h5"
-      />
-      <v-iframe :src="site.subscribeUrl" />
+    <h2
+      v-t="{path: 'sites', args: {name: activeAccount.name}}"
+      class="mt-8 mb-2 text-h5"
+    />
+    <v-select
+      v-model="selectedSite"
+      :items="publicationSites"
+      :item-text="(site) => site.title || site.url || site.id"
+      outlined
+      style="max-width:500px"
+      :label="$t('selectSite')"
+      hide-details
+      class="mt-6 mb-3"
+    />
+    <template v-if="selectedSite">
+      <v-iframe :src="selectedSite.subscribeUrl" />
+    </template>
+    <div v-if="requestedDatasetPublicationSiteUrl">
+      <v-iframe :src="requestedDatasetPublicationSiteUrl" />
     </div>
-
-    <div v-if="requestedDatasetPublicationSitesUrl">
-      <h2
-        v-t="'datasetsPubRequested'"
-        class="mt-8 mb-2 text-h5"
-      />
-      <v-iframe :src="requestedDatasetPublicationSitesUrl" />
-    </div>
-
-    <div v-if="requestedApplicationPublicationSitesUrl">
-      <h2
-        v-t="'appsPubRequested'"
-        class="mt-8 mb-2 text-h5"
-      />
-      <v-iframe :src="requestedApplicationPublicationSitesUrl" />
+    <div v-if="requestedApplicationPublicationSiteUrl">
+      <v-iframe :src="requestedApplicationPublicationSiteUrl" />
     </div>
   </v-container>
 </template>
@@ -73,6 +70,8 @@ fr:
   datasetPublishedTopic: "Un jeu de données a été publié dans la thématique {topic} sur {title}"
   datasetPublicationRequested: "Un contributeur demande de publier un jeu de données sur {title}"
   applicationPublicationRequested: "Un contributeur demande de publier une application sur {title}"
+  sites: "Événements liés à un portail de l'organisation {name}"
+  selectSite: "Sélectionnez un portail"
 </i18n>
 
 <script>
@@ -87,7 +86,8 @@ export default {
   data: () => ({
     webhooksSchema,
     settingsPublicationSites: null,
-    topics: null
+    topics: null,
+    selectedSite: null
   }),
   computed: {
     ...mapState(['env']),
@@ -125,33 +125,21 @@ export default {
         }
       })
     },
-    requestedDatasetPublicationSitesUrl () {
-      if (!this.settingsPublicationSites) return null
-      const keys = []
-      const titles = []
-      this.settingsPublicationSites.forEach(p => {
-        if ((this.activeAccount.department || null) === (p.department || null)) {
-          keys.push(`data-fair:dataset-publication-requested:${p.type}:${p.id}`)
-          titles.push(this.$t('datasetPublicationRequested', { title: p.title || p.url || p.id }))
-        }
-      })
-      const keysParam = keys.join(',')
-      const titlesParam = titles.join(',')
+    requestedDatasetPublicationSiteUrl () {
+      if (!this.selectedSite) return null
+      if ((this.activeAccount.department || null) !== (this.selectedSite.department || null)) return
+      const key = `data-fair:dataset-publication-requested:${this.selectedSite.type}:${this.selectedSite.id}`
+      const title = this.$t('datasetPublicationRequested', { title: this.selectedSite.title || this.selectedSite.url || this.selectedSite.id })
       const urlTemplate = this.env.publicUrl + '/dataset/{id}'
-      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no`
+      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no`
     },
-    requestedApplicationPublicationSitesUrl () {
-      if (!this.settingsPublicationSites) return null
-      const keys = []
-      const titles = []
-      this.settingsPublicationSites.forEach(p => {
-        keys.push(`data-fair:application-publication-requested:${p.type}:${p.id}`)
-        titles.push(this.$t('applicationPublicationRequested', { title: p.title || p.url || p.id }))
-      })
-      const keysParam = keys.join(',')
-      const titlesParam = titles.join(',')
+    requestedApplicationPublicationSiteUrl () {
+      if (!this.selectedSite) return null
+      if ((this.activeAccount.department || null) !== (this.selectedSite.department || null)) return
+      const key = `data-fair:application-publication-requested:${this.selectedSite.type}:${this.selectedSite.id}`
+      const title = this.$t('applicationPublicationRequested', { title: this.selectedSite.title || this.selectedSite.url || this.selectedSite.id })
       const urlTemplate = this.env.publicUrl + '/application/{id}'
-      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no`
+      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no`
     }
   },
   async mounted () {
@@ -162,6 +150,7 @@ export default {
       this.$axios.$get(publicationSitesUrl),
       this.$axios.$get('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id + '/topics')
     ])
+    this.selectedSite = this.publicationSites[0]
   }
 }
 </script>

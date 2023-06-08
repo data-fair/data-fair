@@ -251,5 +251,14 @@ module.exports = {
   },
   exportRestDatasets: {
     cron: 'EXPORT_REST_DATASETS_CRON'
+  },
+  clamav: {
+    active: {
+      __name: 'CLAMAV_ACTIVE',
+      __format: 'json'
+    },
+    host: 'CLAMAV_HOST',
+    port: 'CLAMAV_PORT',
+    dataDir: 'CLAMAV_DATA_DIR'
   }
 }

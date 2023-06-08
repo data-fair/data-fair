@@ -4,7 +4,7 @@ const status = require('../routers/status')
 const apiDocs = require('../../contract/api-docs')
 const projections = require('../../contract/projections')
 const asyncWrap = require('../utils/async-wrap')
-const i18nUtils = require('../utils/i18n')
+const settingsUtils = require('../utils/settings')
 
 const ajv = require('ajv')()
 const openApiSchema = require('../../contract/openapi-3.1.json')
@@ -34,13 +34,7 @@ router.get('/api-docs.json', (req, res) => {
 })
 
 router.get('/vocabulary', asyncWrap(async (req, res) => {
-  let privateVocabulary = []
-  if (req.user && req.user.activeAccount) {
-    const settings = await req.app.get('db').collection('settings')
-      .findOne({ type: req.user.activeAccount.type, id: req.user.activeAccount.id }, { projection: { _id: 0, id: 0, type: 0 } })
-    privateVocabulary = (settings && settings.privateVocabulary) || []
-  }
-  res.json(i18nUtils.vocabularyArray[req.locale].concat(privateVocabulary.map(pv => ({ ...pv, private: true }))))
+  res.send(await settingsUtils.getFullOwnerVocabulary(req.app.get('db'), req.user && req.user.activeAccount, req.locale))
 }))
 
 router.get('/projections', (req, res) => {

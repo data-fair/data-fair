@@ -196,11 +196,13 @@ export default {
     },
     vjsfOptions () {
       const owner = this.application.owner
-      let datasetFilter = `owner=${owner.type}:${owner.id}`
-      if (owner.department) datasetFilter += ':' + owner.department
+      let ownerFilter = `${owner.type}:${owner.id}`
+      if (owner.department) ownerFilter += ':' + owner.department
+      const datasetFilter = `owner=${ownerFilter}`
+      const remoteServiceFilter = `privateAccess=${ownerFilter}`
       return {
         disableAll: !this.can('writeConfig'),
-        context: { datasetFilter, owner },
+        context: { owner, ownerFilter, datasetFilter, remoteServiceFilter },
         locale: 'fr',
         rootDisplay: 'expansion-panels',
         // rootDisplay: 'tabs',

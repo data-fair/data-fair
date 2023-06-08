@@ -3,10 +3,10 @@ const config = require('config')
 const datasetUtils = require('../dataset')
 const { aliasName, esProperty } = require('./commons')
 
-exports.indexDefinition = (dataset) => {
+exports.indexDefinition = async (dataset) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))
   const properties = body.mappings.properties = {}
-  for (const jsProp of datasetUtils.extendedSchema(dataset)) {
+  for (const jsProp of await datasetUtils.extendedSchema(null, dataset, false)) {
     const esProp = esProperty(jsProp)
     if (esProp) {
       if (jsProp['x-extension']) {
@@ -27,7 +27,7 @@ function indexPrefix (dataset) {
 
 exports.initDatasetIndex = async (client, dataset) => {
   const tempId = `${indexPrefix(dataset)}-${Date.now()}`
-  const body = exports.indexDefinition(dataset)
+  const body = await exports.indexDefinition(dataset)
   await client.indices.create({ index: tempId, body })
   return tempId
 }
@@ -37,7 +37,7 @@ exports.initDatasetIndex = async (client, dataset) => {
 // so that we might optimize and reindex only when necessary
 exports.updateDatasetMapping = async (client, dataset) => {
   const index = aliasName(dataset)
-  const body = exports.indexDefinition(dataset).mappings
+  const body = (await exports.indexDefinition(dataset)).mappings
   await client.indices.putMapping({ index, body })
 }
 

@@ -39,7 +39,7 @@
             @click="resetSchema"
           />
           <v-btn
-            v-if="updated && can('writeDescriptionBreaking')"
+            v-if="updated && can('writeDescription')"
             v-t="'apply'"
             color="primary"
             @click="save"
@@ -74,7 +74,8 @@
       <dataset-properties-slide
         v-if="schema && schema.length"
         :properties-refs="filteredProperties"
-        :editable="can('writeDescriptionBreaking')"
+        :editable="can('writeDescription')"
+        :no-breaking-changes="!can('writeDescriptionBreaking')"
         :sortable="can('writeDescriptionBreaking') && dataset.isRest && !schemaFilter"
         @sort="applySort"
         @remove="removeProperty"
@@ -294,7 +295,14 @@ export default {
       this.schema = this.schema.filter(p => p.key !== property.key)
     },
     save () {
-      this.patchAndCommit({ schema: this.schema.map(field => ({ ...field })), primaryKey: [...this.primaryKey] })
+      const patch = {}
+      if (JSON.stringify(this.schema) !== this.originalSchema) {
+        patch.schema = this.schema.map(field => ({ ...field }))
+      }
+      if (JSON.stringify(this.primaryKey || []) !== JSON.stringify(this.dataset.primaryKey || [])) {
+        patch.primaryKey = [...this.primaryKey]
+      }
+      this.patchAndCommit(patch)
     },
     applySort (sorted) {
       this.schema = sorted.map(s => this.schema.find(p => p.key === s.key))

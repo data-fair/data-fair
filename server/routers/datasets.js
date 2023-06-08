@@ -54,6 +54,7 @@ const { validateId } = require('../utils/validation')
 const prometheus = require('../utils/prometheus')
 const publicationSites = require('../utils/publication-sites')
 const { prepareMarkdownContent } = require('../utils/markdown')
+const clamav = require('../utils/clamav')
 const router = express.Router()
 
 function clean (publicUrl, dataset, query = {}, draft = false) {
@@ -191,6 +192,7 @@ const prepareExtensions = (req, extensions, oldExtensions = []) => {
 
 const filterFields = {
   concepts: 'schema.x-refersTo',
+  'short-concept': 'schema.x-concept.id',
   'field-type': 'schema.type',
   'field-format': 'schema.format',
   children: 'virtual.children',
@@ -217,7 +219,6 @@ const fieldsMap = {
   rest: 'isRest',
   virtual: 'isVirtual',
   metaOnly: 'isMetaOnly',
-  status: 'status',
   ...filterFields
 }
 
@@ -431,7 +432,19 @@ router.get('/:datasetId/safe-schema', readDataset(), applicationKey, permissions
 const permissionsWritePublications = permissions.middleware('writePublications', 'admin')
 const permissionsWriteExports = permissions.middleware('writeExports', 'admin')
 const permissionsWriteDescription = permissions.middleware('writeDescription', 'write')
-const descriptionBreakingKeys = ['schema', 'rest', 'virtual', 'lineOwnership', 'primaryKey', 'projection', 'attachmentsAsImage', 'extensions', 'timeZone'] // a change in these properties is considered a breaking change
+const debugBreakingChanges = require('debug')('breaking-changes')
+const descriptionBreakingKeys = ['rest', 'virtual', 'lineOwnership', 'primaryKey', 'projection', 'attachmentsAsImage', 'extensions', 'timeZone'] // a change in these properties is considered a breaking change
+const descriptionHasBreakingChanges = (req) => {
+  const breakingChangeKey = descriptionBreakingKeys.find(key => key in req.body)
+  if (breakingChangeKey) {
+    debugBreakingChanges('breaking change on key', breakingChangeKey)
+    return true
+  }
+  if (!req.body.schema) return false
+  const breakingChanges = datasetUtils.getSchemaBreakingChanges(req.dataset.schema, req.body.schema, true)
+  debugBreakingChanges('breaking changes in schema ? ', breakingChanges)
+  return breakingChanges.length > 0
+}
 const permissionsWriteDescriptionBreaking = permissions.middleware('writeDescriptionBreaking', 'write')
 
 // Update a dataset's metadata
@@ -447,7 +460,7 @@ router.patch('/:datasetId',
       return null
     }
   }),
-  (req, res, next) => (descriptionBreakingKeys.find(key => key in req.body)) ? permissionsWriteDescriptionBreaking(req, res, next) : permissionsWriteDescription(req, res, next),
+  (req, res, next) => descriptionHasBreakingChanges(req) ? permissionsWriteDescriptionBreaking(req, res, next) : permissionsWriteDescription(req, res, next),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
   (req, res, next) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),
   asyncWrap(async (req, res) => {
@@ -562,12 +575,12 @@ router.patch('/:datasetId',
         // we just try in case elasticsearch considers the new mapping compatible
         // so that we might optimize and reindex only when necessary
         await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
-        await datasetUtils.updateStorage(req.app, { ...req.dataset, schema: patch.schema })
         patch.status = 'indexed'
       } catch (err) {
         // generated ES mappings are not compatible, trigger full re-indexing
         patch.status = 'analyzed'
       }
+      await datasetUtils.updateStorage(req.app, { ...req.dataset, schema: patch.schema })
     } else if (patch.thumbnails || patch.masterData) {
       // just change finalizedAt so that cache is invalidated, but the worker doesn't relly need to work on the dataset
       patch.finalizedAt = (new Date()).toISOString()
@@ -739,10 +752,6 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft, res) => {
     if (file) {
       patch.file = patch.originalFile
       const filePath = datasetUtils.filePath({ ...dataset, ...patch })
-      // Try to prevent weird bug with NFS by forcing syncing file before sampling
-      const fd = await fs.open(filePath, 'r')
-      await fs.fsync(fd)
-      await fs.close(fd)
       const fileSample = await datasetFileSample({ ...dataset, ...patch })
       debugFiles(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${filePath}`)
       patch.file.encoding = chardet.detect(fileSample)
@@ -783,7 +792,7 @@ const beforeUpload = asyncWrap(async (req, res, next) => {
   }
   next()
 })
-router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), asyncWrap(async (req, res) => {
+router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), asyncWrap(async (req, res) => {
   req.files = req.files || []
   debugFiles('POST datasets uploaded some files', req.files)
   try {
@@ -1029,8 +1038,8 @@ const updateDataset = asyncWrap(async (req, res) => {
     throw err
   }
 }, { keepalive: true })
-router.post('/:datasetId', lockDataset(), attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
-router.put('/:datasetId', lockDataset(), attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fixFormBody(validatePost), updateDataset)
+router.post('/:datasetId', lockDataset(), attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
+router.put('/:datasetId', lockDataset(), attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
 
 // validate the draft
 router.post('/:datasetId/draft', lockDataset(), readDataset(['finalized'], true), permissions.middleware('validateDraft', 'write'), asyncWrap(async (req, res, next) => {
@@ -1063,11 +1072,11 @@ function isRest (req, res, next) {
   }
   next()
 }
-const writableStatuses = ['finalized', 'updated', 'indexed', 'error']
+const writableStatuses = ['finalized', 'updated', 'extended-updated', 'indexed', 'error']
 router.get('/:datasetId/lines/:lineId', readDataset(), isRest, permissions.middleware('readLine', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
-router.post('/:datasetId/lines', readDataset(writableStatuses), isRest, applicationKey, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
-router.put('/:datasetId/lines/:lineId', readDataset(writableStatuses), isRest, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.updateLine))
-router.patch('/:datasetId/lines/:lineId', readDataset(writableStatuses), isRest, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
+router.post('/:datasetId/lines', readDataset(writableStatuses), isRest, applicationKey, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createLine))
+router.put('/:datasetId/lines/:lineId', readDataset(writableStatuses), isRest, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.updateLine))
+router.patch('/:datasetId/lines/:lineId', readDataset(writableStatuses), isRest, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.patchLine))
 router.post('/:datasetId/_bulk_lines', lockDataset((body, query) => query.lock === 'true'), readDataset(writableStatuses), isRest, permissions.middleware('bulkLines', 'write'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
 router.delete('/:datasetId/lines/:lineId', readDataset(writableStatuses), isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
 router.get('/:datasetId/lines/:lineId/revisions', readDataset(writableStatuses), isRest, permissions.middleware('readLineRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
@@ -1557,7 +1566,7 @@ router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('do
 }))
 
 // Special attachments referenced in dataset metadatas
-router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), asyncWrap(async (req, res, next) => {
+router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, asyncWrap(async (req, res, next) => {
   req.body.size = (await fs.promises.stat(req.file.path)).size
   req.body.updatedAt = moment().toISOString()
   await datasetUtils.updateStorage(req.app, req.dataset)

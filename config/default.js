@@ -318,5 +318,11 @@ module.exports = {
     maxFreeSockets: 128,
     timeout: 60000,
     freeSocketTimeout: 30000
+  },
+  clamav: {
+    active: false,
+    host: 'localhost',
+    port: 3310,
+    dataDir: '/data/data-fair'
   }
 }

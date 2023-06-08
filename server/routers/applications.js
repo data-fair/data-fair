@@ -54,8 +54,14 @@ function clean (application, publicUrl, query = {}) {
   return application
 }
 
-const curateApplication = (application) => {
+const curateApplication = async (db, application) => {
   if (application.title) application.title = application.title.trim()
+  if (application.url) {
+    application.baseApp = await db.collection('base-applications').findOne({ url: application.url }, { projection: { id: 1, url: 1, meta: 1 } })
+  }
+  if (application.urlDraft) {
+    application.baseAppDraft = await db.collection('base-applications').findOne({ url: application.urlDraft }, { projection: { id: 1, url: 1, meta: 1 } })
+  }
 }
 
 // update references to an application into the datasets it references (or used to reference before a patch)
@@ -104,6 +110,17 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   }
 
   const query = findUtils.query(req, fieldsMap)
+
+  if (req.query.filterConcepts === 'true') {
+    query.$and.push({ 'baseApp.meta.df:filter-concepts': 'true' })
+  }
+  if (req.query.syncState === 'true') {
+    query.$and.push({ 'baseApp.meta.df:sync-state': 'true' })
+  }
+  if (req.query.overflow === 'true') {
+    query.$and.push({ 'baseApp.meta.df:overflow': 'true' })
+  }
+
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, ['configuration', 'configurationDraft'], req.query.raw === 'true')
   const [skip, size] = findUtils.pagination(req.query)
@@ -126,20 +143,20 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   res.json(response)
 }))
 
-const initNew = (req) => {
+const initNew = async (req) => {
   const application = { ...req.body }
   application.owner = usersUtils.owner(req)
   const date = moment().toISOString()
   application.createdAt = application.updatedAt = date
   application.createdBy = application.updatedBy = { id: req.user.id, name: req.user.name }
   application.permissions = []
-  curateApplication(application)
+  await curateApplication(req.app.get('db'), application)
   return application
 }
 
 // Create an application configuration
 router.post('', asyncWrap(async (req, res) => {
-  const application = initNew(req)
+  const application = await initNew(req)
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', req.user)) return res.status(403).send()
   if (!validate(application)) return res.status(400).send(validate.errors)
   validateId(application.id)
@@ -222,7 +239,7 @@ router.get('/:applicationId', readApplication, permissions.middleware('readDescr
 
 // PUT used to create or update
 const attemptInsert = asyncWrap(async (req, res, next) => {
-  const newApplication = initNew(req)
+  const newApplication = await initNew(req)
   newApplication.id = req.params.applicationId
 
   if (!validate(newApplication)) return res.status(400).send(validate.errors)
@@ -282,7 +299,7 @@ router.patch('/:applicationId',
 
     patch.updatedAt = moment().toISOString()
     patch.updatedBy = { id: req.user.id, name: req.user.name }
-    curateApplication(patch)
+    await curateApplication(db, patch)
 
     await publicationSites.applyPatch(db, req.application, { ...req.application, ...patch }, req.user, 'application')
 

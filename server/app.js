@@ -94,6 +94,7 @@ if (config.mode.includes('server')) {
   const apiKey = require('./utils/api-key').middleware
   app.use('/api/v1', require('./routers/root'))
   app.use('/api/v1/remote-services', require('./routers/remote-services').router)
+  app.use('/api/v1/remote-services-actions', require('./routers/remote-services').actionsRouter)
   app.use('/api/v1/catalogs', apiKey('catalogs'), require('./routers/catalogs'))
   app.use('/api/v1/base-applications', require('./routers/base-applications').router)
   app.use('/api/v1/applications', apiKey('applications'), require('./routers/applications'))

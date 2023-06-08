@@ -97,12 +97,21 @@ async function initBaseApp (db, app) {
   return storedBaseApp
 }
 
+async function syncBaseApp (db, baseApp) {
+  const baseAppReference = { id: baseApp.id, url: baseApp.url, meta: baseApp.meta }
+  await db.collection('applications').updateMany({ url: baseApp.url }, { $set: { baseApp: baseAppReference } })
+  await db.collection('applications').updateMany({ urlDraft: baseApp.url }, { $set: { baseAppDraft: baseAppReference } })
+}
+
 router.post('', asyncWrap(async (req, res) => {
+  const db = req.app.get('db')
   if (!req.body.url || Object.keys(req.body).length !== 1) {
     return res.status(400).send(req.__('Initializing a base application only accepts the "url" part.'))
   }
   const baseApp = config.applications.find(a => a.url === req.body.url) || req.body
-  res.send(await initBaseApp(req.app.get('db'), baseApp))
+  const fullBaseApp = await initBaseApp(db, baseApp)
+  syncBaseApp(db, fullBaseApp)
+  res.send(fullBaseApp)
 }))
 
 router.patch('/:id', asyncWrap(async (req, res) => {
@@ -112,6 +121,7 @@ router.patch('/:id', asyncWrap(async (req, res) => {
   const storedBaseApp = (await db.collection('base-applications')
     .findOneAndUpdate({ id: req.params.id }, { $set: patch }, { returnDocument: 'after' })).value
   if (!storedBaseApp) return res.status(404).send()
+  syncBaseApp(db, storedBaseApp)
   res.send(storedBaseApp)
 }))
 

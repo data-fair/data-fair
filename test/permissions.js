@@ -1,4 +1,5 @@
 const assert = require('assert').strict
+const workers = require('../server/workers')
 
 describe('permissions', () => {
   it('apply permissions to datasets', async () => {
@@ -131,18 +132,31 @@ describe('permissions', () => {
 
   it('give permission to patch a dataset info except for potentiel breaking changes', async () => {
     // A dataset with restricted permissions
-    let res = await global.ax.dmeadus.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })
+    let res = await global.ax.dmeadus.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'A dataset',
+      schema: [{ key: 'str', title: 'str title', type: 'string' }]
+    })
     const datasetId = res.data.id
+    await workers.hook('finalizer/' + datasetId)
     await global.ax.dmeadus.put('/api/v1/datasets/' + datasetId + '/permissions', [
       { type: 'user', id: 'ngernier4', operations: ['writeDescription', 'readDescription'] },
       { type: 'user', id: 'ddecruce5', operations: ['writeDescriptionBreaking', 'readDescription'] }
     ])
 
     // permission to write except breaking changes
-    res = await global.ax.ngernier4.patch('/api/v1/datasets/' + datasetId, { description: 'Description' })
+    res = await global.ax.ngernier4.patch('/api/v1/datasets/' + datasetId, { description: 'Description', schema: [{ key: 'str', title: 'another title', type: 'string' }] })
     assert.equal(res.status, 200)
+    assert.equal(res.data.status, 'indexed')
+    await workers.hook('finalizer/' + datasetId)
+
     await assert.rejects(
       global.ax.ngernier4.patch('/api/v1/datasets/' + datasetId, { primaryKey: ['test'] }),
+      (err) => err.status === 403
+    )
+
+    await assert.rejects(
+      global.ax.ngernier4.patch('/api/v1/datasets/' + datasetId, { schema: [{ key: 'str', title: 'another title', type: 'number' }] }),
       (err) => err.status === 403
     )
 
@@ -150,6 +164,8 @@ describe('permissions', () => {
     res = await global.ax.ddecruce5('/api/v1/datasets/' + datasetId, { description: 'Description' })
     assert.equal(res.status, 200)
     res = await global.ax.ddecruce5('/api/v1/datasets/' + datasetId, { primaryKey: ['test'] })
+    assert.equal(res.status, 200)
+    res = await global.ax.ddecruce5('/api/v1/datasets/' + datasetId, { schema: [{ key: 'str', title: 'yet another title', type: 'number' }] })
     assert.equal(res.status, 200)
   })
 })

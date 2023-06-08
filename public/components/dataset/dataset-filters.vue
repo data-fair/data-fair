@@ -11,6 +11,7 @@
       v-slot="{toggle}"
     >
       <v-chip
+        v-if="!filter.hidden"
         :class="{'ml-1': i > 0}"
         close
         small
