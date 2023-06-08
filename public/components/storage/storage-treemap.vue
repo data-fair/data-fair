@@ -34,7 +34,8 @@ const d3 = require('d3-hierarchy')
 export default {
   props: {
     datasets: { type: Object, required: true },
-    stats: { type: Object, required: true }
+    stats: { type: Object, required: true },
+    storageType: { type: String, default: 'indexed' }
   },
   data: () => ({
     width: null,
@@ -44,6 +45,11 @@ export default {
   }),
   computed: {
     ...mapGetters(['lightPrimary10', 'lightAccent10', 'darkPrimary10', 'darkAccent10'])
+  },
+  watch: {
+    datasets () {
+      this.refresh()
+    }
   },
   mounted () {
     window.addEventListener('resize', () => this.refresh(), true)
@@ -65,7 +71,7 @@ export default {
           .map(d => ({
             id: d.id,
             title: d.title || d.id,
-            size: d.storage.size,
+            size: this.storageType === 'indexed' ? d.storage.indexed.size : d.storage.size,
             tooltip: `${d.title || d.id} - ${Vue.filter('bytes')(d.storage.size, this.$i18n.locale)} - ${{ public: 'Public', private: 'Privé', protected: 'Protégé' }[d.visibility]}`,
             to: `/dataset/${d.id}`,
             color: this.visibilityColor(d.visibility)
@@ -73,7 +79,7 @@ export default {
       }
       if (this.datasets.count > this.datasets.results.length) {
         const nbOthers = this.datasets.count - this.datasets.results.length
-        const size = this.stats.limits.store_bytes.consumption - this.datasets.results.reduce((a, d) => a + d.storage.size, 0)
+        const size = this.stats.limits[this.storageType === 'indexed' ? 'indexed_bytes' : 'stored_bytes'].consumption - data.children.reduce((a, c) => a + c.size, 0)
         const title = nbOthers === 1 ? '1 autre jeu de donnée' : nbOthers.toLocaleString() + ' autres jeux de données'
         data.children.push({
           id: '_others',

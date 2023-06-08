@@ -8,8 +8,8 @@
               :href="dataset.page"
               target="_top"
             >{{ dataset.title || dataset.id }}</a>
-            <span v-if="dataset.storage"> - <b>{{ dataset.storage.size | bytes($i18n.locale) }}</b> de stockage</span>
             <span v-if="dataset.storage && dataset.storage.indexed"> - <b>{{ dataset.storage.indexed.size | bytes($i18n.locale) }}</b> de données indexées</span>
+            <span v-if="dataset.storage"> - <b>{{ dataset.storage.size | bytes($i18n.locale) }}</b> de données stockées</span>
             <span
               v-if="!dataset.storage"
               v-t="'noInfo'"

@@ -30,6 +30,7 @@
       v-if="stats && datasets && datasets.results.length"
       :stats="stats"
       :datasets="datasets"
+      :storage-type="indexed"
     />
   </v-card>
 </template>
@@ -38,12 +39,12 @@
 fr:
   storage: Stockage
   storageWithLimit: Vous utilisez {bytes} sur un total disponible de {bytesLimit}.
-  storageWithoutLimit: Vous utilisez {bytes} de stockage.
+  storageWithoutLimit: Vous utilisez {bytes}.
   seeDetails: Voir le détail.
 en:
   activity: Storage
   storageWithLimit: You use {bytes} out of {bytesLimit} of total available space.
-  storageWithoutLimit: You use {bytes} of storage space.
+  storageWithoutLimit: You use {bytes}.
   seeDetails: See details.
 </i18n>
 
@@ -66,7 +67,7 @@ export default {
   },
   async created () {
     this.datasets = await this.$axios.$get('api/v1/datasets', {
-      params: { size: 8, shared: false, select: 'id,title,storage', sort: 'storage.size:-1' }
+      params: { size: 8, shared: false, select: 'id,title,storage', sort: 'storage.indexed.size:-1' }
     })
   }
 }
