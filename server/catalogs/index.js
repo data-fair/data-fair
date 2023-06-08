@@ -204,6 +204,8 @@ exports.harvestDatasetResource = async (app, catalog, datasetId, resourceId) => 
       createdAt: date,
       updatedBy: { id: catalog.owner.id, name: catalog.owner.name },
       updatedAt: date,
+      dataUpdatedBy: { id: catalog.owner.id, name: catalog.owner.name },
+      dataUpdatedAt: date,
       status: 'imported'
     }
     Object.assign(newDataset, getDatasetProps(dataset))
