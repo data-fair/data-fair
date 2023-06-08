@@ -25,6 +25,7 @@ exports.sniff = (values, attachmentsPaths = [], existingField) => {
     if (checkAll(values, hasDateFormat(dateFormat))) return { type: 'string', format: 'date', dateFormat }
   }
   if (checkAll(values, val => val.length <= 200)) return { type: 'string' }
+  // TODO: detect color codes ?
   // TODO: detect markdown/html format ?
   return { type: 'string', 'x-display': 'textarea' }
 }

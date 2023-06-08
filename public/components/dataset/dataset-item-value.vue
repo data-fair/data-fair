@@ -46,10 +46,15 @@
 
       <div
         v-else
-        :style="`max-height: ${lineHeight}px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;`"
+        :style="`max-height:${lineHeight}px;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-left: ${(field['x-refersTo'] === 'https://schema.org/color' && itemValue) ? '12px;' : '0'}`"
         @mouseenter="hoverValue(itemValue)"
         @mouseleave="leaveValue(itemValue)"
       >
+        <div
+          v-if="field['x-refersTo'] === 'https://schema.org/color' && itemValue"
+          class="item-value-color-pin"
+          :style="`background-color:${itemValue}`"
+        />
         <span>
           {{ itemValue | cellValues(field, truncate) }}
         </span>
@@ -134,5 +139,15 @@ export default {
 .v-chip-group.dense-value .v-slide-group__content {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
+}
+.item-value-color-pin {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-block;
+  position: absolute;
+  top: 8px;
+  left: 2px;
+  border: 2px solid #ccc;
 }
 </style>
