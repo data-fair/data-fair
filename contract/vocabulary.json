@@ -64,11 +64,30 @@
       "en": "Tag"
     },
     "description": {
-      "fr": "Une petite chaine de caractère utilisable simplement comme critère de classification des lignes",
+      "fr": "Une petite chaîne de caractère utilisable simplement comme critère de classification des lignes",
       "en": "A short string used as classification criteria for the lines"
     },
     "identifiers": [
       "https://schema.org/DefinedTermSet"
+    ],
+    "type": "string",
+    "tag": {
+      "fr": "Présentation",
+      "en": "Presentation"
+    }
+  },
+  {
+    "id": "color",
+    "title": {
+      "fr": "Couleur",
+      "en": "color"
+    },
+    "description": {
+      "fr": "Un code couleur spécifique à chaque ligne",
+      "en": "A color code for each line"
+    },
+    "identifiers": [
+      "https://schema.org/color"
     ],
     "type": "string",
     "tag": {
