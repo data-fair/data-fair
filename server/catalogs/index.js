@@ -139,7 +139,6 @@ exports.harvestDataset = async (app, catalog, datasetId) => {
       id,
       title: dataset.title,
       owner: catalog.owner,
-      permissions: [],
       createdBy: { id: catalog.owner.id, name: catalog.owner.name },
       createdAt: date,
       updatedBy: { id: catalog.owner.id, name: catalog.owner.name },
@@ -148,6 +147,7 @@ exports.harvestDataset = async (app, catalog, datasetId) => {
       schema: []
     }
     Object.assign(newDataset, getDatasetProps(dataset))
+    await permissionsUtil.initResourcePermissions(newDataset)
     await insertDataset(app, newDataset)
   }
 }
