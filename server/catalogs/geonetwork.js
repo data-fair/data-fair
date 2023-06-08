@@ -120,6 +120,7 @@ function prepareDatasetFromCatalog (catalog, item, settings) {
   const link = Array.isArray(item.link) ? item.link : [item.link]
   const page = url.resolve(catalog.url, `srv/fre/catalog.search#/metadata/${item['geonet:info'].uuid}`)
   const keywords = (Array.isArray(item.keyword) ? item.keyword : [item.keyword]).filter(k => !!k)
+  const legalConstraints = (Array.isArray(item.legalConstraints) ? item.legalConstraints : [item.legalConstraints]).filter(k => !!k)
   const dataset = {
     id: item['geonet:info'].uuid,
     createdAt: item.creationDate,
@@ -160,12 +161,10 @@ function prepareDatasetFromCatalog (catalog, item, settings) {
     }
   }
 
-  if (settings && settings.licenses && item.legalConstraints) {
-    const license = settings.licenses.find(l => !!item.legalConstraints.find(lc => lc.includes(l.href)))
-    debug('match legalConstraints to licenses', item.legalConstraints, settings.licenses, license)
-    if (license) {
-      dataset.license = license
-    }
+  if (settings && settings.licenses) {
+    const license = settings.licenses.find(l => !!legalConstraints.find(lc => lc.includes(l.href)))
+    debug('match legalConstraints to licenses', legalConstraints, settings.licenses, license)
+    if (license) dataset.license = license
   }
 
   return dataset
