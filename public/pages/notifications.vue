@@ -42,6 +42,7 @@
       style="max-width:500px"
       :label="$t('selectSite')"
       hide-details
+      return-object
       class="mt-6 mb-3"
     />
     <template v-if="selectedSite">
