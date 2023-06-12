@@ -38,11 +38,18 @@ exports.init = async (catalogUrl) => {
 
 // Used the downloader worker to get credentials (probably API key in a header)
 // to fetch resources
-exports.httpParams = async (catalog) => {
+exports.httpParams = async (catalog, url) => {
   const connector = exports.connectors.find(c => c.key === catalog.type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.httpParams) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
-  return connector.httpParams(catalog)
+  if (url.startsWith(catalog.url)) {
+    const catalogHttpParams = await connector.httpParams(catalog)
+    debug(`Use HTTP params from catalog ${JSON.stringify(catalogHttpParams)}`)
+    return catalogHttpParams
+  } else {
+    debug(`the URL ${url} is not internal to the catalog ${catalog.url}, do not apply security parameters`)
+    return {}
+  }
 }
 
 exports.listDatasets = async (db, catalog, params) => {
@@ -51,79 +58,160 @@ exports.listDatasets = async (db, catalog, params) => {
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
   const datasets = await connector.listDatasets(catalog, params)
   for (const dataset of datasets.results) {
+    const harvestedDatasets = await db.collection('datasets').find({
+      'owner.type': catalog.owner.type,
+      'owner.id': catalog.owner.id,
+      origin: dataset.page
+    }, { projection: { id: 1, remoteFile: 1, isMetaOnly: 1, updatedAt: 1 } }).toArray()
+    dataset.harvestedDataset = harvestedDatasets.find(d => d.isMetaOnly)
     for (const resource of dataset.resources) {
       resource.harvestable = files.allowedTypes.has(resource.mime)
-      const harvestedDataset = await db.collection('datasets').findOne({
-        'remoteFile.url': resource.url,
-        'remoteFile.catalog': catalog.id
-      }, { projection: { id: 1 } })
-      if (harvestedDataset) resource.harvestedDataset = harvestedDataset.id
+      resource.harvestedDataset = harvestedDatasets.find(hd => hd.remoteFile && hd.remoteFile.url === resource.url)
     }
   }
   return datasets
 }
 
-exports.harvestDataset = async (catalog, datasetId, app) => {
+const getDatasetProps = (dataset, props = {}) => {
+  if (dataset.description) props.description = dataset.description
+  if (dataset.image) props.image = dataset.image
+  if (dataset.frequency) props.frequency = dataset.frequency
+  if (dataset.license) props.license = dataset.license
+  if (dataset.page) props.origin = dataset.page
+  if (dataset.keywords) props.keywords = dataset.keywords
+  return props
+}
+
+const getDatasetPatch = (catalog, dataset, props = {}) => {
+  const patch = getDatasetProps(dataset, props)
+  patch.updatedBy = { id: catalog.owner.id, name: catalog.owner.name }
+  patch.updatedAt = new Date().toISOString()
+  return patch
+}
+
+const insertDataset = async (app, newDataset) => {
+// try insertion until there is no conflict on id
+  const baseId = newDataset.id
+  let insertOk = false
+  let i = 1
+  while (!insertOk) {
+    try {
+      await app.get('db').collection('datasets').insertOne(newDataset)
+      insertOk = true
+    } catch (err) {
+      if (err.code !== 11000) throw err
+      i += 1
+      newDataset.id = `${baseId}-${i}`
+    }
+  }
+
+  await journals.log(app, newDataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + newDataset.id }, 'dataset')
+}
+
+// create a simple metadata only dataset
+exports.harvestDataset = async (app, catalog, datasetId) => {
   const connector = exports.connectors.find(c => c.key === catalog.type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
-  const dataset = await connector.getDataset(catalog, datasetId)
-  const harvestableResources = (dataset.resources || []).filter(r => files.allowedTypes.has(r.mime))
-  const newDatasets = []
-  for (const resource of harvestableResources) {
-    const harvestedDataset = await app.get('db').collection('datasets').findOne({
-      'remoteFile.url': resource.url,
-      'remoteFile.catalog': catalog.id
-    }, { projection: { id: 1 } })
-    if (harvestedDataset) continue
 
-    const date = moment().toISOString()
-    const pathParsed = path.parse(new URL(resource.url).pathname)
-    const title = path.parse(resource.title).name
-    const remoteFile = {
-      url: resource.url,
-      catalog: catalog.id,
-      size: resource.size,
-      mimetype: resource.mime
+  const settings = (await app.get('db').collection('settings').findOne({ type: catalog.owner.type, id: catalog.owner.id })) || {}
+  settings.licenses = [].concat(config.licenses, settings.licenses || [])
+  const dataset = await connector.getDataset(catalog, datasetId, settings)
+  if (!dataset) throw createError(404, 'Dataset not found')
+
+  const date = moment().toISOString()
+
+  const harvestedDataset = await app.get('db').collection('datasets').findOne({
+    'owner.type': catalog.owner.type,
+    'owner.id': catalog.owner.id,
+    origin: dataset.page
+  }, { projection: { id: 1 } })
+  if (harvestedDataset) {
+    const patch = getDatasetPatch(catalog, dataset, { title: dataset.title })
+    debug('apply patch to dataset', harvestedDataset.id, patch)
+    if (Object.keys(patch).length) {
+      await app.get('db').collection('datasets').updateOne({ id: harvestedDataset.id }, { $set: patch })
     }
-    if (pathParsed.ext && resource.mime === mime.lookup(pathParsed.base)) {
-      remoteFile.name = pathParsed.base
-    } else {
-      remoteFile.name = title + '.' + mime.extension(resource.mime)
-    }
+  } else {
+    const id = slug(dataset.title, { lower: true, strict: true })
+    debug('create new metadata dataset', id)
     const newDataset = {
+      id,
+      title: dataset.title,
+      owner: catalog.owner,
+      createdBy: { id: catalog.owner.id, name: catalog.owner.name },
+      createdAt: date,
+      updatedBy: { id: catalog.owner.id, name: catalog.owner.name },
+      updatedAt: date,
+      isMetaOnly: true,
+      schema: []
+    }
+    Object.assign(newDataset, getDatasetProps(dataset))
+    await permissionsUtil.initResourcePermissions(newDataset)
+    await insertDataset(app, newDataset)
+  }
+}
+
+// create a file dataset from the resource of a dataset on the remote portal
+exports.harvestDatasetResource = async (app, catalog, datasetId, resourceId) => {
+  const connector = exports.connectors.find(c => c.key === catalog.type)
+  if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
+  if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
+
+  const settings = (await app.get('db').collection('settings').findOne({ type: catalog.owner.type, id: catalog.owner.id })) || {}
+  settings.licenses = [].concat(config.licenses, settings.licenses || [])
+  const dataset = await connector.getDataset(catalog, datasetId, settings)
+  if (!dataset) throw createError(404, 'Dataset not found')
+  const resource = (dataset.resources || []).find(r => r.id === resourceId)
+  if (!resource) throw createError(404, 'Resource not found')
+  if (!files.allowedTypes.has(resource.mime)) throw createError(404, 'Resource format not supported')
+
+  const date = moment().toISOString()
+
+  const harvestedDataset = await app.get('db').collection('datasets').findOne({
+    'remoteFile.url': resource.url,
+    'remoteFile.catalog': catalog.id
+  }, { projection: { id: 1, remoteFile: 1, updatedAt: 1 } })
+  const pathParsed = path.parse(new URL(resource.url).pathname)
+  const title = path.parse(resource.title).name
+  const remoteFile = {
+    url: resource.url,
+    catalog: catalog.id,
+    size: resource.size,
+    mimetype: resource.mime
+  }
+  if (pathParsed.ext && resource.mime === mime.lookup(pathParsed.base)) {
+    remoteFile.name = pathParsed.base
+  } else {
+    remoteFile.name = title + '.' + mime.extension(resource.mime)
+  }
+  if (harvestedDataset) {
+    const patch = getDatasetPatch(catalog, dataset, { title: dataset.title, remoteFile, status: 'imported' })
+    debug('apply patch to existing resource dataset', harvestedDataset.id, patch)
+    if (Object.keys(patch).length) {
+      await app.get('db').collection('datasets').updateOne({ id: harvestedDataset.id }, { $set: patch })
+    }
+  } else {
+    const id = slug(dataset.title, { lower: true, strict: true })
+    debug('create new resource dataset', id)
+    const newDataset = {
+      id,
       title,
       owner: catalog.owner,
-      permissions: [],
       schema: [],
       remoteFile,
       createdBy: { id: catalog.owner.id, name: catalog.owner.name },
       createdAt: date,
       updatedBy: { id: catalog.owner.id, name: catalog.owner.name },
       updatedAt: date,
+      dataUpdatedBy: { id: catalog.owner.id, name: catalog.owner.name },
+      dataUpdatedAt: date,
       status: 'imported'
     }
-
-    // try insertion until there is no conflict on id
-    const baseId = slug(dataset.title, { lower: true, strict: true })
-    newDataset.id = baseId
-    let insertOk = false
-    let i = 1
-    while (!insertOk) {
-      try {
-        await app.get('db').collection('datasets').insertOne(newDataset)
-        insertOk = true
-      } catch (err) {
-        if (err.code !== 11000) throw err
-        i += 1
-        newDataset.id = `${baseId}-${i}`
-      }
-    }
-
-    await journals.log(app, newDataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + newDataset.id }, 'dataset')
-    newDatasets.push(newDataset)
+    Object.assign(newDataset, getDatasetProps(dataset))
+    await permissionsUtil.initResourcePermissions(newDataset)
+    await insertDataset(app, newDataset)
   }
-  return newDatasets
 }
 
 exports.searchOrganizations = async (type, url, q) => {

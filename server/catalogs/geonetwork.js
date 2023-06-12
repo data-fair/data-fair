@@ -21,6 +21,10 @@ exports.init = async (catalogUrl) => {
   return { url: catalogUrl, title: site['system/site/name'] + ' - ' + site['system/site/organization'] }
 }
 
+exports.httpParams = async (catalog) => {
+  return {}
+}
+
 exports.searchOrganizations = async (catalogUrl, q) => {
   throw createError(501, 'La récupération d\'une liste d\'organisations depuis GeoNetwork n\'est pas disponible')
 }
@@ -60,10 +64,10 @@ exports.listDatasets = async (catalog, p) => {
   const res = await axios.get(url.resolve(catalog.url, 'srv/fre/q'), { params })
   const count = res.data.summary['@count']
   const items = Array.isArray(res.data.metadata) ? res.data.metadata : [res.data.metadata]
-  return { count, results: items.map(prepareDatasetFromCatalog) }
+  return { count, results: items.map(item => prepareDatasetFromCatalog(catalog, item)) }
 }
 
-exports.getDataset = async (catalog, datasetId) => {
+exports.getDataset = async (catalog, datasetId, settings) => {
   // https://geocatalogue.lannion-tregor.com/geonetwork/srv/fre/q?_content_type=json&_draft=y+or+n+or+e&_isTemplate=y+or+n&fast=index&uuid=0cf415ff-8334-4658-97f8-c8ca6729fbb8
   const params = {
     _content_type: 'json',
@@ -71,11 +75,8 @@ exports.getDataset = async (catalog, datasetId) => {
     uuid: datasetId
   }
   const res = await axios.get(url.resolve(catalog.url, 'srv/fre/q'), { params })
-  return prepareDatasetFromCatalog(res.data.metadata)
-}
-
-exports.harvestDataset = async (catalog, datasetId, req) => {
-  throw createError(501, 'La récupération d\'une définition de jeu de données depuis GeoNetwork n\'est pas disponible')
+  // console.log(JSON.stringify(res.data.metadata, null, 2))
+  return prepareDatasetFromCatalog(catalog, res.data.metadata, settings)
 }
 
 /*
@@ -98,14 +99,36 @@ exports.rdf2datasets = (rdf) => {
 }
 */
 
-function prepareDatasetFromCatalog (item) {
+// from inspire https://inspire.ec.europa.eu/metadata-codelist/MaintenanceFrequency
+// to dublin core https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
+const updateFrequenciesMap = {
+  annually: 'annual',
+  asNeeded: 'irregular',
+  biannually: 'semiannual',
+  continual: 'continuous',
+  daily: 'daily',
+  fortnightly: 'semimonthly',
+  irregular: 'irregular',
+  monthly: 'monthly',
+  notPlanned: '',
+  quarterly: 'quarterly',
+  unknown: '',
+  weekly: 'weekly'
+}
+
+function prepareDatasetFromCatalog (catalog, item, settings) {
   const link = Array.isArray(item.link) ? item.link : [item.link]
+  const page = url.resolve(catalog.url, `srv/fre/catalog.search#/metadata/${item['geonet:info'].uuid}`)
+  const keywords = (Array.isArray(item.keyword) ? item.keyword : [item.keyword]).filter(k => !!k)
+  const legalConstraints = (Array.isArray(item.legalConstraints) ? item.legalConstraints : [item.legalConstraints]).filter(k => !!k)
   const dataset = {
     id: item['geonet:info'].uuid,
     createdAt: item.creationDate,
     title: item.title,
-    // page: d.page,
-    private: false,
+    description: item.abstract,
+    page,
+    keywords,
+    // private: false,
     resources: link.map(l => {
       if (!l) return null
       const [key, title, url, type] = l.split('|')
@@ -126,5 +149,23 @@ function prepareDatasetFromCatalog (item) {
       }
     }).filter(l => !!l)
   }
+  const image = Array.isArray(item.image) ? item.image : [item.image]
+  const thumbnail = image.find(i => !!i && i.startsWith('thumbnail|'))
+  if (thumbnail) {
+    dataset.image = thumbnail.split('|')[1]
+  }
+  if (item.updateFrequency) {
+    // debug(`match updateFrequency ${item.updateFrequency} -> ${updateFrequenciesMap[item.updateFrequency]}`)
+    if (updateFrequenciesMap[item.updateFrequency]) {
+      dataset.frequency = updateFrequenciesMap[item.updateFrequency]
+    }
+  }
+
+  if (settings && settings.licenses) {
+    const license = settings.licenses.find(l => !!legalConstraints.find(lc => lc.includes(l.href)))
+    debug('match legalConstraints to licenses', legalConstraints, settings.licenses, license)
+    if (license) dataset.license = license
+  }
+
   return dataset
 }

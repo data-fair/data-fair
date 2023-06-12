@@ -126,7 +126,9 @@ exports.getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
     setNoCache(req, res)
   }
   if (entry.sharpError) {
-    res.status(400).send(entry.sharpError)
+    console.warn('Sharp error while processing thumbnail for image ' + url)
+    // res.status(400).send(entry.sharpError)
+    res.redirect(url)
   } else {
     res.setHeader('content-type', 'image/png')
     res.send(entry.data.buffer)

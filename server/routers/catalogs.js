@@ -201,6 +201,9 @@ router.get('/:catalogId/datasets', readCatalog, permissions.middleware('readData
 }))
 
 router.post('/:catalogId/datasets/:datasetId', readCatalog, permissions.middleware('harvestDataset', 'use'), asyncWrap(async (req, res, next) => {
-  await catalogs.harvestDataset(req.catalog, req.params.datasetId, req.app)
-  res.status(201).send()
+  res.status(201).send(await catalogs.harvestDataset(req.app, req.catalog, req.params.datasetId))
+}))
+
+router.post('/:catalogId/datasets/:datasetId/resources/:resourceId', readCatalog, permissions.middleware('harvestDatasetResource', 'use'), asyncWrap(async (req, res, next) => {
+  res.status(201).send(await catalogs.harvestDatasetResource(req.app, req.catalog, req.params.datasetId, req.params.resourceId))
 }))

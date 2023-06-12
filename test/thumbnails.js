@@ -29,12 +29,48 @@ describe('thumbnails', () => {
     const nockScope = nock('http://test-thumbnail.com')
       .get('/image.png').reply(200, () => '')
       .get('/avatar.jpg').reply(200, () => fs.readFileSync('test/resources/avatar.jpeg'))
-    await assert.rejects(ax.get(res.data.results[0]._thumbnail), (err) => err.status === 400)
+      .persist()
+    await assert.rejects(ax.get(res.data.results[0]._thumbnail, { maxRedirects: 0 }), (err) => err.status === 302)
     res = await ax.get(res.data.results[1]._thumbnail)
     assert.equal(res.headers['content-type'], 'image/png')
     assert.equal(res.headers['x-thumbnails-cache-status'], 'MISS')
     assert.equal(res.headers['cache-control'], 'no-cache, private')
     nockScope.done()
+  })
+
+  it('should create thumbnail for the image metadata of a dataset', async () => {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'thumbnail',
+      image: 'http://test-thumbnail.com/dataset-image.jpg'
+    })
+    await workers.hook('finalizer/thumbnail')
+    await ax.put('/api/v1/datasets/thumbnail/permissions', [{ classes: ['read'] }])
+    let res = await ax.get('/api/v1/datasets/thumbnail')
+    assert.ok(res.data.thumbnail)
+    const nockScope = nock('http://test-thumbnail.com')
+      .get('/dataset-image.jpg').reply(200, () => fs.readFileSync('test/resources/avatar.jpeg'))
+    res = await ax.get(res.data.thumbnail)
+    assert.equal(res.headers['content-type'], 'image/png')
+    assert.equal(res.headers['x-thumbnails-cache-status'], 'MISS')
+    nockScope.done()
+  })
+
+  // keep this test skipped most of the time as it depends on an outside service
+  it.skip('should provide a redirect for an unsupported image format', async () => {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'thumbnail',
+      image: 'https://geocatalogue.lannion-tregor.com/geonetwork/srv/api/records/c4576973-28cd-47d5-a082-7871f96d8f14/attachments/reseau_transport_scolaire.JPG'
+    })
+    await workers.hook('finalizer/thumbnail')
+    await ax.put('/api/v1/datasets/thumbnail/permissions', [{ classes: ['read'] }])
+    let res = await ax.get('/api/v1/datasets/thumbnail')
+    assert.ok(res.data.thumbnail)
+    res = await ax.get(res.data.thumbnail)
+    assert.equal(res.headers['content-type'], 'image/jpg')
   })
 
   it('should create thumbnails from attachments', async () => {
@@ -48,7 +84,7 @@ describe('thumbnails', () => {
     await workers.hook('finalizer/' + dataset.id)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true } })
     const thumbnail1 = res.data.results[0]._thumbnail
-    await assert.rejects(ax.get(res.data.results[0]._thumbnail), (err) => err.status === 400)
+    await assert.rejects(ax.get(res.data.results[0]._thumbnail, { maxRedirects: 0 }), (err) => err.status === 302)
     await assert.rejects(global.ax.anonymous.get(res.data.results[0]._thumbnail), (err) => err.status === 403)
     assert.ok(thumbnail1.startsWith('http://localhost:5600/data-fair/api/v1/datasets/attachments/thumbnail/'))
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: 'test.com' } })
