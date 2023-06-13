@@ -625,7 +625,9 @@ exports.extendedSchema = async (db, dataset, fixConcept = true) => {
   if (geoUtils.schemaHasGeopoint(dataset.schema) || geoUtils.schemaHasGeometry(dataset.schema)) {
     const geomProp = dataset.schema.find(p => p.key === geoUtils.schemaHasGeometry(dataset.schema))
     if (geomProp) {
-      schema.push({ 'x-calculated': true, 'x-capabilities': geomProp['x-capabilities'], key: '_geoshape', type: 'object', title: 'Géométrie', description: 'Au format d\'une géométrie GeoJSON' })
+      const geoShape = { 'x-calculated': true, key: '_geoshape', type: 'object', title: 'Géométrie', description: 'Au format d\'une géométrie GeoJSON' }
+      if (geomProp['x-capabilities']) geoShape['x-capabilities'] = geomProp['x-capabilities']
+      schema.push(geoShape)
     }
     if (geomProp && (!geomProp['x-capabilities'] || geomProp['x-capabilities'].geoCorners !== false)) {
       schema.push({ 'x-calculated': true, key: '_geocorners', type: 'array', title: 'Boite englobante de la géométrie', description: 'Sous forme d\'un tableau de coordonnées au format "lat,lon"' })

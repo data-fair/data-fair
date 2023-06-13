@@ -94,10 +94,6 @@ describe('Properties capabilities', () => {
       schema: [{ key: 'str1', type: 'string' }]
     })
     await workers.hook('finalizer/rest-textagg')
-
-    let aggSchema = (await ax.get('/api/v1/datasets/rest-textagg/schema', { params: { capability: 'textAgg' } })).data
-    assert.equal(aggSchema.length, 1)
-
     res = await ax.post('/api/v1/datasets/rest-textagg/_bulk_lines', [
       { str1: 'test3' },
       { str1: 'test2' },
@@ -105,22 +101,18 @@ describe('Properties capabilities', () => {
       { str1: 'Test2' }
     ])
     await workers.hook('finalizer/rest-textagg')
-    res = await ax.get('/api/v1/datasets/rest-textagg/words_agg', { params: { field: 'str1' } })
-    assert.equal(res.data.total, 4)
 
-    await ax.patch('/api/v1/datasets/rest-textagg', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { textAgg: false } }] })
+    let aggSchema = (await ax.get('/api/v1/datasets/rest-textagg/schema', { params: { capability: 'textAgg' } })).data
+    assert.equal(aggSchema.length, 0)
+    await assert.rejects(ax.get('/api/v1/datasets/rest-textagg/words_agg', { params: { field: 'str1' } }), (err) => err.status === 400)
+
+    await ax.patch('/api/v1/datasets/rest-textagg', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { textAgg: true } }] })
     await workers.hook('finalizer/rest-textagg')
 
     aggSchema = (await ax.get('/api/v1/datasets/rest-textagg/schema', { params: { capability: 'textAgg' } })).data
-    assert.equal(aggSchema.length, 0)
-
-    try {
-      await ax.get('/api/v1/datasets/rest-textagg/words_agg', { params: { field: 'str1' } })
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 400)
-      assert.ok(err.data.startsWith('Impossible d\'agréger'))
-    }
+    assert.equal(aggSchema.length, 1)
+    res = await ax.get('/api/v1/datasets/rest-textagg/words_agg', { params: { field: 'str1' } })
+    assert.equal(res.data.total, 4)
   })
 
   it('Disable keyword indexing', async () => {
