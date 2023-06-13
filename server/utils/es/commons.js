@@ -269,6 +269,7 @@ exports.prepareQuery = (dataset, query) => {
   // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
   // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
   const searchFields = []
+  const wildcardFields = []
   for (const f of dataset.schema) {
     if (f.key === '_id') {
       searchFields.push('_id')
@@ -286,6 +287,7 @@ exports.prepareQuery = (dataset, query) => {
 
       if (esProp.fields.text) searchFields.push(f.key + '.text' + suffix)
       if (esProp.fields.text_standard) searchFields.push(f.key + '.text_standard' + suffix)
+      if (esProp.fields.wildcard) wildcardFields.push(f.key + '.wildcard')
     }
   }
   if (query.qs) {
@@ -303,20 +305,32 @@ exports.prepareQuery = (dataset, query) => {
 
       // if the user didn't define wildcards himself, we use wildcard to create a "startsWith" functionality
       // this is performed on the innerfield that uses standard analysis, as language stemming doesn't work well in this case
+      // we also perform a contains filter if some wildcard functionnality is activate
       if (!q.includes('*') && !q.includes('?')) {
-        should.push({ simple_query_string: { query: `${q}*`, fields: qStandardFields } })
+        if (qStandardFields.length) {
+          should.push({ simple_query_string: { query: `${q}*`, fields: qStandardFields } })
+        }
+        if (wildcardFields.length) {
+          should.push({ query_string: { query: `*${q}*`, fields: wildcardFields } })
+        }
       }
       // if the user submitted a multi word query and didn't use quotes
       // we add some quotes to boost results with sequence of words
-      if (q.includes(' ') && !q.includes('"')) {
+      if (qSearchFields.length && q.includes(' ') && !q.includes('"')) {
         should.push({ simple_query_string: { query: `"${q}"`, fields: qSearchFields } })
       }
-      should.push({ simple_query_string: { query: q, fields: qSearchFields } })
+      if (qSearchFields.length) {
+        should.push({ simple_query_string: { query: q, fields: qSearchFields } })
+      }
     } else {
       // default "simple" mode uses ES simple query string directly
       // only tuning is that we match both on stemmed and raw inner fields to boost exact matches
-      should.push({ simple_query_string: { query: q, fields: qSearchFields } })
-      should.push({ simple_query_string: { query: q, fields: qStandardFields } })
+      if (qSearchFields.length) {
+        should.push({ simple_query_string: { query: q, fields: qSearchFields } })
+      }
+      if (qStandardFields) {
+        should.push({ simple_query_string: { query: q, fields: qStandardFields } })
+      }
     }
   }
   for (const key of Object.keys(query)) {
