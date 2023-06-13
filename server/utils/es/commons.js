@@ -33,7 +33,7 @@ exports.esProperty = prop => {
   if (prop.type === 'string' && prop.format === 'date') esProp = { type: 'date', fields: innerFields, index, doc_values: values }
   // uri-reference and full text fields are managed in the same way from now on, because we want to be able to aggregate on small full text fields
   if (prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)) {
-    const textFieldData = capabilities.textAgg !== false
+    const textFieldData = capabilities.textAgg
     if (capabilities.textStandard !== false) {
       innerFields.text_standard.fielddata = textFieldData
     }
@@ -44,6 +44,12 @@ exports.esProperty = prop => {
     if (capabilities.insensitive !== false) {
       // handle case and diacritics for better sorting
       innerFields.keyword_insensitive = { type: 'keyword', ignore_above: 200, normalizer: 'insensitive_normalizer' }
+    }
+    if (capabilities.wildcard) {
+      // support wildcard filters
+      // TODO: depending on the cardinality of the field the wildcard inner field might not be relevant
+      // https://www.elastic.co/fr/blog/find-strings-within-strings-faster-with-the-new-elasticsearch-wildcard-field
+      innerFields.wildcard = { type: 'wildcard', doc_values: false }
     }
     esProp = { type: 'keyword', ignore_above: 200, fields: innerFields, index, doc_values: values }
   }
@@ -129,7 +135,7 @@ exports.parseOrder = (sortStr, fields, dataset) => {
 
 // Check that a query_string query (lucene syntax)
 // does not try to use fields outside the current schema
-function checkQuery (query, schema, esFields) {
+function checkQuery (query, schema, esFields, currentField) {
   if (typeof query === 'string') {
     // lucene-query-parser as a bug where it doesn't accept escaped quotes inside quotes
     if (process.env.NODE_ENV === 'test' && query === '(siret:"test \\" failure")') {
@@ -156,9 +162,11 @@ function checkQuery (query, schema, esFields) {
       if (capabilities.text !== false) esFields.push(prop.key + '.text')
       if (capabilities.textStandard !== false) esFields.push(prop.key + '.text_standard')
       if (capabilities.insensitive !== false) esFields.push(prop.key + '.keyword_insensitive')
+      if (capabilities.wildcard) esFields.push(prop.key + '.wildcard')
     }
   }
   query.field = query.field && query.field.replace(/\\/g, '')
+  if (query.field === '<implicit>' && currentField) query.field = currentField
   if (query.field === '_exists_') {
     const field = query.term.replace(/\\/g, '')
     if (!esFields.includes(field)) {
@@ -170,8 +178,11 @@ function checkQuery (query, schema, esFields) {
     }
     throw createError(400, `Impossible de faire une recherche sur le champ ${query.field}, la fonctionnalité a été désactivée.`)
   }
-  if (query.left) checkQuery(query.left, schema, esFields)
-  if (query.right) checkQuery(query.right, schema, esFields)
+  if (query.term && (query.term.startsWith('*') || query.term.startsWith('?')) && (!query.field || !query.field.endsWith('.wildcard'))) {
+    throw createError(400, `Impossible de faire une recherche de suite de caractères sans préfixe sur le champ ${query.field}, la fonctionnalité n'est pas activée.`)
+  }
+  if (query.left) checkQuery(query.left, schema, esFields, query.field)
+  if (query.right) checkQuery(query.right, schema, esFields, query.field)
 }
 
 exports.prepareQuery = (dataset, query) => {

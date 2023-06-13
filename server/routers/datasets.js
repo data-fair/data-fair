@@ -394,6 +394,7 @@ const sendSchema = (req, res, schema) => {
       if (field.type === 'string' && (field.format === 'date' || field.format === 'date-time')) {
         if (req.query.capability === 'text') return false
         if (req.query.capability === 'textAgg') return false
+        if (req.query.capability === 'wildcard') return false
         if (req.query.capability === 'insensitive') return false
       }
       return true

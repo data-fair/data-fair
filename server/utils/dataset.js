@@ -565,9 +565,8 @@ exports.mergeFileSchema = (dataset) => {
     .map(field => {
       const { dateFormat, dateTimeFormat, ...f } = field
       // manage default capabilities
-      if (field.type === 'string' && !field.format) f['x-capabilities'] = { textAgg: false }
-      if (field.type === 'string' && field['x-display'] === 'textarea') f['x-capabilities'] = { index: false, values: false, textAgg: false, insensitive: false }
-      if (field.type === 'string' && field['x-display'] === 'markdown') f['x-capabilities'] = { index: false, values: false, textAgg: false, insensitive: false }
+      if (field.type === 'string' && field['x-display'] === 'textarea') f['x-capabilities'] = { index: false, values: false, insensitive: false }
+      if (field.type === 'string' && field['x-display'] === 'markdown') f['x-capabilities'] = { index: false, values: false, insensitive: false }
       return f
     })
   dataset.schema = dataset.schema.concat(newFields)
@@ -645,13 +644,13 @@ exports.extendedSchema = async (db, dataset, fixConcept = true) => {
       key: '_owner',
       type: 'string',
       title: 'Propriétaire de la ligne',
-      'x-capabilities': { textAgg: false, insensitive: false, text: false, textStandard: false }
+      'x-capabilities': { insensitive: false, text: false, textStandard: false }
     })
     schema.push({
       key: '_ownerName',
       type: 'string',
       title: 'Nom du propriétaire de la ligne',
-      'x-capabilities': { textAgg: false, text: false }
+      'x-capabilities': { text: false }
     })
   }
   schema.push({ 'x-calculated': true, key: '_id', type: 'string', format: 'uri-reference', title: 'Identifiant', description: 'Identifiant unique parmi toutes les lignes du jeu de données' })

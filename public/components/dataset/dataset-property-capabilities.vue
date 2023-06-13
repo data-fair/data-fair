@@ -69,6 +69,8 @@ en:
 import { mapState } from 'vuex'
 
 const capabilitiesSchema = require('~/../contract/capabilities.js')
+const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter(key => capabilitiesSchema.properties[key].default === false)
+
 export default {
   props: ['editable', 'property'],
   data () {
@@ -92,7 +94,7 @@ export default {
       } else if (this.property['x-refersTo'] === 'http://schema.org/DigitalDocument') {
         return ['indexAttachment']
       } else if (type === 'string') {
-        return ['index', 'text', 'textStandard', 'textAgg', 'values', 'insensitive']
+        return ['index', 'text', 'textStandard', 'textAgg', 'values', 'insensitive', 'wildcard']
       }
       return []
     },
@@ -119,7 +121,10 @@ export default {
       const capabilities = { ...this.editCapabilities }
       // we only keep the values that were toggled to false
       for (const key in capabilities) {
-        if (capabilities[key] === true) delete capabilities[key]
+        if (capabilities[key] === true && !capabilitiesDefaultFalse.includes(key)) delete capabilities[key]
+      }
+      for (const key in capabilities) {
+        if (capabilities[key] === false && capabilitiesDefaultFalse.includes(key)) delete capabilities[key]
       }
       if (Object.keys(capabilities).length) this.$set(this.property, 'x-capabilities', capabilities)
       else this.$delete(this.property, 'x-capabilities')
