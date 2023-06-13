@@ -189,6 +189,30 @@
         </template>
       </v-text-field>
 
+      <v-text-field
+        v-if="showContains"
+        v-model="contains"
+        label="contient des caractères"
+        outlined
+        hide-details
+        dense
+        class="mt-1"
+        @keyup.enter="contains && emitFilter({value: contains, type: 'contains'})"
+      >
+        <template #append-outer>
+          <v-btn
+            icon
+            class="mr-1"
+            :disabled="!contains"
+            color="primary"
+            :title="$t('applyFilter')"
+            @click="emitFilter({value: contains, type: 'contains'})"
+          >
+            <v-icon>mdi-check</v-icon>
+          </v-btn>
+        </template>
+      </v-text-field>
+
       <v-list
         v-if="showBoolEquals"
         dense
@@ -385,6 +409,7 @@ export default {
       equals: [],
       startsWith: '',
       search: '',
+      contains: '',
       equalsBool: null,
       lte: null,
       gte: null,
@@ -450,6 +475,10 @@ export default {
       if (!this.field['x-capabilities'] || this.field['x-capabilities'].textStandard !== false) return 'text_standard'
       return ''
     },
+    showContains () {
+      if (this.field['x-capabilities'] && this.field['x-capabilities'].wildcard) return true
+      return false
+    },
     active () {
       return !!this.filters.find(f => f.field.key === this.field.key)
     }
@@ -475,6 +504,7 @@ export default {
         if ('maxValue' in filter && filter.maxValue !== '*') this.lte = filter.maxValue
         if (filter.type === 'starts') this.startsWith = filter.value
         if (filter.type === 'search') this.search = filter.value
+        if (filter.type === 'contains') this.contains = filter.value
         if (filter.type === 'in' && filter.values && filter.values.length) {
           if (this.field.type === 'string' || this.field.type === 'number' || this.field.type === 'integer') {
             this.equals = [...filter.values]
@@ -506,6 +536,7 @@ export default {
       this.equals = []
       this.startsWith = ''
       this.search = ''
+      this.contains = ''
       this.equalsBool = null
       this.lte = null
       this.gte = null

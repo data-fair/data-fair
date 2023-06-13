@@ -20,7 +20,6 @@ const getRelevantCapabilities = (property) => {
 
 exports.exec = async (db, debug) => {
   for await (const dataset of db.collection('datasets').find({}).project({ schema: 1, id: 1 })) {
-    debug(`work on dataset ${dataset.id}`)
     if (!dataset.schema) continue
     let hasChange = false
     for (const property of dataset.schema) {
@@ -42,6 +41,7 @@ exports.exec = async (db, debug) => {
       }
     }
     if (hasChange) {
+      debug(`work on dataset ${dataset.id}`)
       await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { schema: dataset.schema } })
     }
   }

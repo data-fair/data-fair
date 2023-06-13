@@ -29,6 +29,9 @@ export function filter2qs (filter, locale = 'fr') {
   } else if (filter.type === 'search') {
     if ([null, undefined, ''].includes(filter.value)) return null
     return `${key}:${escape(filter.value)}`
+  } else if (filter.type === 'contains') {
+    if ([null, undefined, ''].includes(filter.value)) return null
+    return `${key}.wildcard:*${escape(filter.value)}*`
   }
 }
 
