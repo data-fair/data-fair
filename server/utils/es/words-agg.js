@@ -7,8 +7,8 @@ module.exports = async (client, dataset, query) => {
   if (!prop) {
     throw createError(400, `Impossible d'agréger sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
   }
-  if (prop['x-capabilities'] && prop['x-capabilities'].textAgg === false) {
-    throw createError(400, `Impossible d'agréger sur le champ ${prop.key}, la fonctionnalité a été désactivée.`)
+  if (prop['x-capabilities'] && !prop['x-capabilities'].textAgg) {
+    throw createError(400, `Impossible d'agréger sur le champ ${prop.key}, la fonctionnalité n'est pas activée.`)
   }
 
   const field = query.analysis === 'standard' ? query.field + '.text_standard' : query.field + '.text'

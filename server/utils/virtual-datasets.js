@@ -1,4 +1,5 @@
 const datasetUtils = require('./dataset')
+const capabilitiesSchema = require('../../contract/capabilities.js')
 const createError = require('http-errors')
 
 // blacklisted fields are fields that are present in a grandchild but not re-exposed
@@ -36,6 +37,7 @@ async function childrenSchemas (db, owner, children, blackListedFields) {
 }
 
 // Validate and fill a virtual dataset schema based on its children
+const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter(key => capabilitiesSchema.properties[key].default === false)
 exports.prepareSchema = async (db, dataset) => {
   if (!dataset.virtual.children || !dataset.virtual.children.length) return []
   dataset.schema = dataset.schema || []
@@ -77,7 +79,7 @@ exports.prepareSchema = async (db, dataset) => {
     if (matchingFields[0]['x-display']) field['x-display'] = matchingFields[0]['x-display']
     else delete field['x-display']
 
-    // Some attributes of a a fields have to be homogeneous accross all children
+    // Some attributes of a field have to be homogeneous accross all children
     field['x-capabilities'] = {}
     for (const f of matchingFields) {
       if (f.type !== field.type) {
@@ -93,8 +95,16 @@ exports.prepareSchema = async (db, dataset) => {
       if (format !== field.format) throw createError(400, `Le champ "${field.key}" a des formats contradictoires (${field.format || 'non défini'}, ${f.format || 'non défini'}).`)
       if (f['x-refersTo'] !== field['x-refersTo']) throw createError(400, `Le champ "${field.key}" a des concepts contradictoires (${field['x-refersTo'] || 'non défini'}, ${f['x-refersTo'] || 'non défini'}).`)
       for (const key in f['x-capabilities'] || {}) {
-        if (f['x-capabilities'][key] === false) field['x-capabilities'][key] = false
+        if (capabilitiesDefaultFalse.includes(key)) {
+          if (f['x-capabilities'][key] === false || !(key in f['x-capabilities'])) field['x-capabilities'][key] = false
+          if (f['x-capabilities'][key] === true && !(key in f['x-capabilities'])) field['x-capabilities'][key] = true
+        } else {
+          if (f['x-capabilities'][key] === false) field['x-capabilities'][key] = false
+        }
       }
+    }
+    for (const key in field['x-capabilities']) {
+      if (capabilitiesDefaultFalse.includes(key) && field['x-capabilities'][key] === false) delete field['x-capabilities'][key]
     }
   }
 

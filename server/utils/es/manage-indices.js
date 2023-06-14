@@ -35,10 +35,26 @@ exports.initDatasetIndex = async (client, dataset) => {
 // this method will routinely throw errors
 // we just try in case elasticsearch considers the new mapping compatible
 // so that we might optimize and reindex only when necessary
-exports.updateDatasetMapping = async (client, dataset) => {
+exports.updateDatasetMapping = async (client, dataset, oldDataset) => {
   const index = aliasName(dataset)
-  const body = (await exports.indexDefinition(dataset)).mappings
-  await client.indices.putMapping({ index, body })
+  const newMapping = (await exports.indexDefinition(dataset)).mappings
+  if (oldDataset) {
+    // new inner fields do not trigger an error in ES but they are ignored if we don't fully reindex
+    const oldMapping = (await exports.indexDefinition(oldDataset)).mappings
+    for (const key of Object.keys(oldMapping.properties)) {
+      const oldProperty = oldMapping.properties[key]
+      const newProperty = newMapping.properties[key]
+      if (newProperty && newProperty.fields) {
+        for (const innerKey of Object.keys(newProperty.fields)) {
+          if (!(oldProperty.fields && oldProperty.fields[innerKey])) {
+            console.log(`the inner field ${key}/${innerKey} is added, simple mapping update will not work`)
+            throw new Error(`the inner field ${key}/${innerKey} is added, simple mapping update will not work`)
+          }
+        }
+      }
+    }
+  }
+  await client.indices.putMapping({ index, body: newMapping })
 }
 
 exports.delete = async (client, dataset) => {

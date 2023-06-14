@@ -43,6 +43,7 @@ const datasetPostSchema = require('../../contract/dataset-post')
 const validatePost = ajv.compile(datasetPostSchema.properties.body)
 const userNotificationSchema = require('../../contract/user-notification')
 const validateUserNotification = ajv.compile(userNotificationSchema)
+const capabilitiesSchema = require('../../contract/capabilities.js')
 const debugFiles = require('debug')('files')
 const { getThumbnail, prepareThumbnailUrl } = require('../utils/thumbnails')
 const datasetFileSample = require('../utils/dataset-file-sample')
@@ -360,6 +361,7 @@ router.get('/:datasetId', readDataset(), applicationKey, permissions.middleware(
 })
 
 // retrieve only the schema.. Mostly useful for easy select fields
+const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter(key => capabilitiesSchema.properties[key].default === false)
 const sendSchema = (req, res, schema) => {
   if (req.query.type) {
     const types = req.query.type.split(',')
@@ -387,13 +389,19 @@ const sendSchema = (req, res, schema) => {
   }
   if (req.query.capability) {
     schema = schema.filter(field => {
-      if (field['x-capabilities'] && field['x-capabilities'][req.query.capability] === false) return false
+      if (capabilitiesDefaultFalse.includes(req.query.capability)) {
+        if (!field['x-capabilities'] || !field['x-capabilities'][req.query.capability]) return false
+      } else {
+        if (field['x-capabilities'] && field['x-capabilities'][req.query.capability] === false) return false
+      }
+
       if (field.key === '_id') return false
       if (req.query.capability.startsWith('text') && field.type !== 'string') return false
       if (req.query.capability === 'insensitive' && field.type !== 'string') return false
       if (field.type === 'string' && (field.format === 'date' || field.format === 'date-time')) {
         if (req.query.capability === 'text') return false
         if (req.query.capability === 'textAgg') return false
+        if (req.query.capability === 'wildcard') return false
         if (req.query.capability === 'insensitive') return false
       }
       return true
@@ -574,7 +582,7 @@ router.patch('/:datasetId',
         // this method will routinely throw errors
         // we just try in case elasticsearch considers the new mapping compatible
         // so that we might optimize and reindex only when necessary
-        await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
+        await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema }, req.dataset)
         patch.status = 'indexed'
       } catch (err) {
         // generated ES mappings are not compatible, trigger full re-indexing
@@ -1001,7 +1009,7 @@ const updateDataset = asyncWrap(async (req, res) => {
           // this method will routinely throw errors
           // we just try in case elasticsearch considers the new mapping compatible
           // so that we might optimize and reindex only when necessary
-          await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: req.body.schema })
+          await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: req.body.schema }, req.dataset)
           // Back to indexed state if schema did not change in significant manner
           req.body.status = 'indexed'
         } catch (err) {

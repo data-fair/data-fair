@@ -464,11 +464,11 @@ describe('virtual datasets', () => {
   it('A virtual dataset has the most restrictive capabilities of its children', async () => {
     const ax = global.ax.dmeadus
     const child1 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
-    child1.schema[0]['x-capabilities'] = { textAgg: false, values: false }
+    child1.schema[0]['x-capabilities'] = { text: false, values: false }
     await ax.patch('/api/v1/datasets/' + child1.id, { schema: child1.schema })
     await workers.hook('finalizer/' + child1.id)
     const child2 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
-    child2.schema[0]['x-capabilities'] = { textAgg: false, insensitive: false }
+    child2.schema[0]['x-capabilities'] = { text: false, insensitive: false }
     await ax.patch('/api/v1/datasets/' + child2.id, { schema: child2.schema })
     await workers.hook('finalizer/' + child2.id)
 
@@ -482,7 +482,7 @@ describe('virtual datasets', () => {
     })
 
     let virtualDataset = await workers.hook('finalizer/' + res.data.id)
-    assert.deepEqual(virtualDataset.schema[0]['x-capabilities'], { textAgg: false, insensitive: false, values: false })
+    assert.deepEqual(virtualDataset.schema[0]['x-capabilities'], { text: false, insensitive: false, values: false })
 
     child1.schema[0]['x-capabilities'] = { values: false }
     await ax.patch('/api/v1/datasets/' + child1.id, { schema: child1.schema })

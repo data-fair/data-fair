@@ -167,7 +167,7 @@ describe('workers', () => {
     await workers.hook(`finalizer/${dataset.id}`)
 
     // changing capabilities requires only refinalizing
-    idProp['x-capabilities'].insensitive = false
+    idProp['x-capabilities'] = { insensitive: false }
     patchedDataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema })).data
     assert.equal(patchedDataset.status, 'indexed')
     await workers.hook(`finalizer/${dataset.id}`)

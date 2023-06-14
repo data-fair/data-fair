@@ -31,10 +31,17 @@ module.exports = {
     },
     textAgg: {
       type: 'boolean',
-      default: true,
+      default: false,
       'x-display': 'switch',
       title: 'Statistiques de mots',
-      description: 'Désactivez cette capacité si vous n\'avez pas l\'intention d\'obtenir des statistiques sur les occurences de mots (par exemple pour construire un nuage de mot).'
+      description: 'Activez cette capacité si avez l\'intention d\'obtenir des statistiques sur les occurences de mots (par exemple pour construire un nuage de mot).'
+    },
+    wildcard: {
+      type: 'boolean',
+      default: false,
+      'x-display': 'switch',
+      title: 'Texte filtrable sur groupe de caractères',
+      description: 'Activez cette capacité si vous avez l\'intention de filtrer ce contenu spécifiquement sur une suite de caractères (par exemple si un filtre sur mots entiers ou sur valeur exacte ne convient pas).'
     },
     insensitive: {
       type: 'boolean',
