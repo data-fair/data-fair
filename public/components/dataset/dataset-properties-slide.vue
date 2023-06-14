@@ -66,7 +66,7 @@
             <v-spacer />
             <div class="mx-1">
               <confirm-menu
-                v-if="user.adminMode && editable && !noBreakingChanges && currentPropRef.editable && dataset.isRest"
+                v-if="editable && !noBreakingChanges && currentPropRef.editable && dataset.isRest"
                 :property="currentPropRef.prop"
                 :btn-props="{fab: true, small: true, depressed: true, dark: true, color: 'admin'}"
                 :title="$t('deletePropertyTitle')"
