@@ -168,9 +168,14 @@ exports.process = async function (app, dataset) {
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
       throw createError(400, `Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
+    const ogrOptions = ['-lco', 'RFC7946=YES', '-t_srs', 'EPSG:4326']
+    if (dataset.originalFile.mimetype === 'application/gpx+xml') {
+      ogrOptions.push('-nln')
+      ogrOptions.push(dataset.id)
+    }
     const geoJsonStream = ogr2ogr(originalFilePath)
       .format('GeoJSON')
-      .options(['-lco', 'RFC7946=YES', '-t_srs', 'EPSG:4326'])
+      .options(ogrOptions)
       .timeout(config.ogr2ogr.timeout)
       // .skipfailures()
       .stream()

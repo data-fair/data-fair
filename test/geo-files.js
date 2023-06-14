@@ -116,7 +116,6 @@ describe('geo files support', () => {
     }
   })
 
-  // skipped, because requires ogr2ogr in the build env
   it('Process uploaded shapefile dataset', async () => {
     if (config.ogr2ogr.skip) {
       return console.log('Skip ogr2ogr test in this environment')
@@ -174,5 +173,34 @@ describe('geo files support', () => {
 
     const wkt = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { format: 'wkt' } })).data
     assert.ok(wkt.startsWith('GEOMETRYCOLLECTION'))
+  })
+
+  it('Process uploaded GPX dataset', async () => {
+    if (config.ogr2ogr.skip) {
+      return console.log('Skip ogr2ogr test in this environment')
+    }
+    const oldLimit = { ...config.defaultLimits }
+    config.defaultLimits.totalStorage = config.defaultLimits.datasetStorage = 10000000
+
+    // Send dataset
+    const datasetFd = fs.readFileSync('./test/resources/geo/paths.gpx')
+    const form = new FormData()
+    form.append('file', datasetFd, 'paths.gpx')
+    const ax = global.ax.dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+
+    // dataset converted
+    let dataset = await workers.hook('converter/' + res.data.id)
+    assert.equal(dataset.status, 'loaded')
+    assert.equal(dataset.file.name, 'paths.geojson')
+
+    assert.equal(dataset.storage.dataFiles.length, 2)
+    assert.equal(dataset.storage.attachments.size, 0)
+
+    dataset = await workers.hook('finalizer/' + dataset.id)
+    assert.equal(dataset.count, 4067)
+
+    config.defaultLimits = oldLimit
   })
 })
