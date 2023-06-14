@@ -57,11 +57,11 @@
 <i18n lang="yaml">
 fr:
   technicalConfig: Configuration technique
-  tutorialCapabilities: Par défaut toutes les options sont cochées pour maximiser les utilisations possibles de vos jeux de données. Pour de petits volumes il n'y a pas d'inconvénient à conserver ce paramétrage. Mais pour des volumes importants désactiver les options inutiles permet de réduire les temps de traitement et de requête.
+  tutorialCapabilities: Par défaut la plupart des options sont cochées pour maximiser les utilisations possibles de vos jeux de données. Pour de petits volumes il n'y a pas d'inconvénient à conserver ce paramétrage. Mais pour des volumes importants désactiver les options inutiles permet de réduire les temps de traitement et de requête.
   tutorialEnergy: Qui dit temps de traitement dit énergie. En désactivant les options inutiles vous contribuez à rendre cette plateforme moins énergivore.
 en:
   technicalConfig: Technical configuration
-  tutorialCapabilities: Every options are active by default to maximize usage possibilities of your datasets. For small volumes of data there is no need to change this. But for larger datasets disabling some options will reduce processing and request times.
+  tutorialCapabilities: Most options are active by default to maximize usage possibilities of your datasets. For small volumes of data there is no need to change this. But for larger datasets disabling some options will reduce processing and request times.
   tutorialEnergy: Processing time is synonymous to energy consumption. By disabling some options you contribute making this platform more energy efficient.
 </i18n>
 
