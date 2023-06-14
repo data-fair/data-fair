@@ -582,7 +582,7 @@ router.patch('/:datasetId',
         // this method will routinely throw errors
         // we just try in case elasticsearch considers the new mapping compatible
         // so that we might optimize and reindex only when necessary
-        await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema })
+        await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema }, req.dataset)
         patch.status = 'indexed'
       } catch (err) {
         // generated ES mappings are not compatible, trigger full re-indexing
@@ -1009,7 +1009,7 @@ const updateDataset = asyncWrap(async (req, res) => {
           // this method will routinely throw errors
           // we just try in case elasticsearch considers the new mapping compatible
           // so that we might optimize and reindex only when necessary
-          await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: req.body.schema })
+          await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: req.body.schema }, req.dataset)
           // Back to indexed state if schema did not change in significant manner
           req.body.status = 'indexed'
         } catch (err) {
