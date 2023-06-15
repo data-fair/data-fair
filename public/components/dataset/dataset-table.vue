@@ -108,7 +108,7 @@
                   v-if="header.value === '_actions'"
                   :key="'_actions-' + h"
                 >
-                  <template v-if="(can('deleteLine') || can('updateLine')) && items.length">
+                  <template v-if="(can('deleteLine') || can('updateLine')) && items.length >= 2">
                     <v-btn
                       v-if="selectedLines.length === data.results.length"
                       icon
@@ -137,13 +137,21 @@
                       <v-icon>mdi-checkbox-blank-outline</v-icon>
                     </v-btn>
                     <v-btn
-                      v-if="can('deleteLine') && selectedLines.length"
+                      v-if="can('deleteLine') && selectedLines.length >=2 "
                       icon
                       color="warning"
                       :title="$t('deleteAllLines')"
                       @click="deletingLines = [...selectedLines]; deleteSelectedLinesDialog = true;"
                     >
                       <v-icon>mdi-trash-can-outline</v-icon>
+                    </v-btn>
+                    <v-btn
+                      v-if="can('updateLine') && selectedLines.length >= 2"
+                      icon
+                      :title="$t('editAllLines')"
+                      @click="editingLines = [...selectedLines]; editSelectedLinesDialog = true;"
+                    >
+                      <v-icon>mdi-pencil</v-icon>
                     </v-btn>
                   </template>
                 </th>
@@ -375,6 +383,45 @@
     </v-dialog>
 
     <v-dialog
+      v-model="editSelectedLinesDialog"
+      max-width="600px"
+    >
+      <v-card outlined>
+        <v-card-title primary-title>
+          {{ $t('editAllLines') }}
+        </v-card-title>
+        <v-form
+          ref="editSelectedLinesForm"
+          v-model="editSelectedLinesValid"
+        >
+          <v-card-text>
+            <dataset-edit-multiple-lines
+              v-if="editSelectedLinesDialog && editingLines.length"
+              v-model="editingLinesPatch"
+              :lines="editingLines"
+              :selected-cols="selectedCols"
+            />
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn
+              v-t="'cancel'"
+              text
+              @click="editSelectedLinesDialog = false"
+            />
+            <v-btn
+              v-t="'save'"
+              color="primary"
+              :loading="saving"
+              :disabled="!editSelectedLinesValid"
+              @click="saveLinesPatch"
+            />
+          </v-card-actions>
+        </v-form>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
       v-model="deleteLineDialog"
       max-width="500px"
     >
@@ -535,9 +582,12 @@ export default {
     editLineValid: false,
     creatingLine: {},
     editingLines: [],
+    editingLine: {},
     deletingLines: [],
     deleteLineDialog: false,
     deleteSelectedLinesDialog: false,
+    editSelectedLinesDialog: false,
+    editSelectedLinesValid: false,
     file: null,
     uploadProgress: 0,
     historyLine: null,
@@ -549,7 +599,8 @@ export default {
     saving: false,
     lastParams: null,
     selectedCols: [],
-    selectedLines: []
+    selectedLines: [],
+    editingLinesPatch: {}
   }),
   computed: {
     ...mapState(['vocabulary', 'env']),
@@ -715,6 +766,9 @@ export default {
       try {
         this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params: this.params })
         this.notFound = false
+        this.updatedLines = []
+        this.deletedLines = []
+        this.createdLines = []
       } catch (error) {
         if (error.response && error.response.status === 404) this.notFound = true
         else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
@@ -755,6 +809,7 @@ export default {
     async createLine () {
       if (!this.$refs.createLineForm.validate()) return
       this.saving = true
+      await new Promise(resolve => setTimeout(resolve, 100))
       const res = await this.$store.dispatch('dataset/saveLine', { line: this.creatingLine, file: this.file })
       this.createdLines.push(res)
       this.saving = false
@@ -763,6 +818,7 @@ export default {
     async updateLine () {
       if (!this.$refs.editLineForm.validate()) return
       this.saving = true
+      await new Promise(resolve => setTimeout(resolve, 100))
       const res = await this.$store.dispatch('dataset/saveLine', { line: this.editingLine, file: this.file, id: this.editingLines[0]._id })
       this.updatedLines.push(res)
       this.saving = false
@@ -775,9 +831,21 @@ export default {
         this.deleteSelectedLinesDialog = false
         this.deletedLines = this.deletedLines.concat(lines)
       } catch (error) {
-        if (error.response && error.response.status === 404) this.notFound = true
-        else eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la ligne\'' })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de ligne' })
       }
+    },
+    async saveLinesPatch () {
+      if (!this.$refs.editSelectedLinesForm.validate()) return
+      this.saving = true
+      await new Promise(resolve => setTimeout(resolve, 100))
+      try {
+        await this.$axios.$post(this.resourceUrl + '/_bulk_lines', this.editingLines.map(line => ({ ...this.editingLinesPatch, _id: line._id, _action: 'patch' })))
+        this.editSelectedLinesDialog = false
+        this.updatedLines = this.updatedLines.concat(this.editingLines.map(line => ({ ...line, ...this.editingLinesPatch })))
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la modification de lignes' })
+      }
+      this.saving = false
     },
     addFilter (key, filter) {
       if (typeof filter !== 'object') filter = { type: 'in', values: [filter] }
