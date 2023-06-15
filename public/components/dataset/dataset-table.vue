@@ -729,10 +729,7 @@ export default {
       deep: true
     },
     items () {
-      this.selectedLines = this.selectedLines.filter(line => {
-        const matchingItem = this.items.find(item => item._id === line._id)
-        return matchingItem && !['deleted', 'edited'].includes(matchingItem._tmpState)
-      })
+      this.selectedLines = this.items.filter(item => this.selectedLines.find(line => item._id === line._id)).map(item => ({ ...item }))
     }
   },
   mounted () {
