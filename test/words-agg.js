@@ -2,7 +2,7 @@ const assert = require('assert').strict
 const testUtils = require('./resources/test-utils')
 const workers = require('../server/workers')
 
-describe('workds aggs', () => {
+describe('words aggs', () => {
   it('Get words buckets', async () => {
     const ax = global.ax.dmeadus
     await testUtils.sendDataset('datasets/dataset1.csv', ax)

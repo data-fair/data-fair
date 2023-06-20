@@ -127,12 +127,7 @@ module.exports = {
   },
   worker: {
     // base interval for polling the database for new resources to work on
-    interval: 500,
-    // additional interval when the worker is inactive (no resource found recently)
-    // prevent polling too frequently during slow activity periods
-    inactiveInterval: 4000,
-    // delay of inactivity before we consider the worker as sleeping
-    inactivityDelay: 60000,
+    interval: 4000,
     concurrency: 4,
     spawnTask: true
   },
