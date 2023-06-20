@@ -54,7 +54,7 @@
     </v-list-item>
     <v-list-item
       v-if="can('readLines') && !error && !dataset.draftReason && !dataset.isMetaOnly"
-      @click="showIntegrationDialog = true; previewId = 'table'"
+      @click="showIntegrationDialog = true"
     >
       <v-list-item-icon>
         <v-icon color="primary">
@@ -162,58 +162,11 @@
       </v-list-item-content>
     </v-list-item>
 
-    <v-dialog
-      v-model="showIntegrationDialog"
-      max-width="1200"
-    >
-      <v-card outlined>
-        <v-toolbar
-          dense
-          flat
-        >
-          <v-toolbar-title v-t="'integrate'" />
-          <v-spacer />
-          <v-btn
-            icon
-            @click.native="showIntegrationDialog = false"
-          >
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </v-toolbar>
-        <v-card-text
-          v-if="showIntegrationDialog"
-          class="pb-0 px-4"
-        >
-          {{ $t('integrationMsg') }}
-          <br>
-          <v-select
-            v-if="dataset.previews && dataset.previews.length > 1"
-            v-model="previewId"
-            :items="dataset.previews"
-            :label="$t('previewType')"
-            item-text="title"
-            item-value="id"
-            style="max-width: 200px;"
-            hide-details
-          />
-          <br>
-          <pre>
-  &lt;iframe
-    src="{{ previewLink }}"
-    width="100%" height="300px" style="background-color: transparent; border: none;"
-  /&gt;&lt;/iframe&gt;
-            </pre>
-          <br>
-          Résultat:
-          <iframe
-            :src="previewLink"
-            width="100%"
-            height="300px"
-            style="background-color: transparent; border: none;"
-          />
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+    <dataset-integration-dialog
+      :show="showIntegrationDialog"
+      :title="$t('integrate')"
+      @hide="showIntegrationDialog = false"
+    />
 
     <v-dialog
       v-model="showAPIDialog"
@@ -473,8 +426,6 @@ fr:
   delete: Supprimer
   deleteAllLines: Supprimer toutes les lignes
   changeOwner: Changer le propriétaire
-  integrationMsg: Pour intégrer une prévisualisation de ce jeu de données dans un site vous pouvez copier le code suivant ou un code similaire dans le code source HTML.
-  previewType: Type de prévisualisation
   deleteDataset: Suppression du jeu de données
   deleteWarning: " | Attention ! Ce jeu de données est utilisé par une application. Si vous le supprimez cette application ne sera plus fonctionnelle. | Attention ! Ce jeu de données est utilisé par {count} applications. Si vous le supprimez ces applications ne seront plus fonctionnelles."
   updateWarning: " | Attention ! Ce jeu de données est utilisé par une application. Si vous modifiez sa structure l'application peut ne plus fonctionner. | Attention ! Ce jeu de données est utilisé par {count} applications. Si vous modifiez sa structure les applications peuvent ne plus fonctionner."
@@ -508,8 +459,6 @@ en:
   delete: Delete
   deleteAllLines: Delete all lines
   changeOwner: Change owner
-  integrationMsg: To integrate a preview of this dataset in a website you can copy the code below or a similar code in your HTML source code.
-  previewType: Preview type
   deleteDataset: Dataset deletion
   deleteWarning: " | Warning ! This dataset is used by a application. If you delete it this application will be broken. | Warning ! This dataset is used by {count} applications. If you delete it these applications will be broken."
   updateWarning: " | Warning ! This dataset is used by a application. If you change its structure this application might be broken. | Warning ! This dataset is used by {count} applications. If you change its structure these applications might be broken."
@@ -562,17 +511,13 @@ export default {
     showAPIDialog: false,
     publicAPIDoc: true,
     showNotifDialog: false,
-    showWebhooksDialog: false,
-    previewId: 'table'
+    showWebhooksDialog: false
   }),
   computed: {
     ...mapState(['env', 'accepted']),
     ...mapState('session', ['user']),
     ...mapState('dataset', ['dataset', 'nbApplications', 'dataFiles', 'error']),
     ...mapGetters('dataset', ['can', 'resourceUrl']),
-    previewLink () {
-      return this.dataset && this.dataset.previews.find(p => p.id === this.previewId).href
-    },
     publicationSitesLinks () {
       if (!this.dataset.publicationSites) return []
       return this.dataset.publicationSites.map(dps => {

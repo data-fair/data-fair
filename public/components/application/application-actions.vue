@@ -100,47 +100,10 @@
       <v-list-item-title v-t="'changeOwner'" />
     </v-list-item>
 
-    <v-dialog
-      v-model="showIntegrationDialog"
-      max-width="1200"
-    >
-      <v-card outlined>
-        <v-toolbar
-          dense
-          flat
-        >
-          <v-toolbar-title v-t="'integrate'" />
-          <v-spacer />
-          <v-btn
-            icon
-            @click.native="showIntegrationDialog = false"
-          >
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </v-toolbar>
-        <v-card-text
-          v-if="showIntegrationDialog"
-          class="pb-0 px-4"
-        >
-          {{ $t('integrationMsg') }}
-          <br>
-          <pre>
-  &lt;iframe
-    src="{{ applicationLink }}?embed=true"
-    width="100%" height="500px" style="background-color: transparent; border: none;"
-  /&gt;&lt;/iframe&gt;
-            </pre>
-          <br>
-          Résultat:
-          <iframe
-            :src="applicationLink + '?embed=true'"
-            width="100%"
-            height="500px"
-            style="background-color: transparent; border: none;"
-          />
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+    <application-integration-dialog
+      :show="showIntegrationDialog"
+      @hide="showIntegrationDialog = false"
+    />
 
     <v-dialog
       v-model="showDeleteDialog"
@@ -239,7 +202,6 @@ fr:
   useAPI: Utiliser l'API
   delete: Supprimer
   changeOwner: Changer le propriétaire
-  integrationMsg: Pour intégrer cette application dans un site vous pouvez copier le code suivant ou un code similaire dans le code source HTML.
   deleteApp: Suppression de l'application
   deleteMsg: Voulez vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
   yes: Oui
@@ -256,7 +218,6 @@ en:
   useAPI: Use the API
   delete: Delete
   changeOwner: Change owner
-  integrationMsg: To integrate this application in a website you can copy the code below or a similar code in your HTML source code.
   deleteApp: Deletion of the application
   deleteMsg: Do you really want to delete the application "{title}" ? Deletion is definitive and data will not be recoverable.
   yes: Yes
