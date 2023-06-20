@@ -168,6 +168,7 @@ export default () => ({
       } else {
         commit('setAny', { validatedDataset: null })
       }
+      return dataset
     },
     async fetchApplications ({ commit, state }) {
       const apps = await this.$axios.$get('api/v1/applications', { params: { dataset: state.dataset.id, size: 10000, select: 'id,title,updatedAt,publicationSites' } })
@@ -194,8 +195,8 @@ export default () => ({
       const dataFiles = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/data-files`, { params: { draft: state.draftMode } })
       commit('setAny', { dataFiles })
     },
-    async fetchJsonSchema ({ commit, state }) {
-      const jsonSchema = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/schema`, { params: { mimeType: 'application/schema+json' } })
+    async fetchJsonSchema ({ commit, state }, safe) {
+      const jsonSchema = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/${safe ? 'safe-' : ''}schema`, { params: { mimeType: 'application/schema+json' } })
       commit('setAny', { jsonSchema })
     },
     subscribe ({ getters, dispatch, state, commit }) {

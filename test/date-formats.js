@@ -48,6 +48,9 @@ describe('Date formats', () => {
     assert.equal(dateProp.dateFormat, undefined)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.results[0].date, '1983-11-28')
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/api-docs.json`)
+    res = await ax.post('/api/v1/_check-api', res.data)
   })
 
   it('Detect date format while ignoring whitespace', async function () {

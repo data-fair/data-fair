@@ -22,6 +22,8 @@ const initMaster = async (ax, schema, masterData, id = 'master') => {
   const apiDocUrl = master.href + '/api-docs.json'
   const apiDoc = (await ax.get(apiDocUrl)).data
 
+  await ax.post('/api/v1/_check-api', apiDoc)
+
   const remoteService = (await global.ax.superadmin.get('/api/v1/remote-services/dataset:' + id, { params: { showAll: true } })).data
 
   return { master, remoteService, apiDoc }

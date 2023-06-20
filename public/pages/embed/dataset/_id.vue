@@ -1,5 +1,5 @@
 <template>
-  <nuxt-child v-if="dataset" />
+  <nuxt-child v-if="dataset || jsonSchema" />
 </template>
 
 <script>
@@ -24,12 +24,16 @@ export default {
         store.dispatch('dataset/fetchDataset')
       ])
     } catch (err) {
-      // in embed mode we prefer a blank page rather than showing an error
-      console.error(err)
+      if (err.response && err.response.status === 403 && route.path.endsWith('/form')) {
+        store.dispatch('dataset/fetchJsonSchema', true)
+      } else {
+        // in embed mode we prefer a blank page rather than showing an error
+        console.error(err)
+      }
     }
   },
   computed: {
-    ...mapState('dataset', ['dataset'])
+    ...mapState('dataset', ['dataset', 'jsonSchema'])
   },
   mounted () {
     // used to track the original referer in case of embeded pages

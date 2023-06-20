@@ -256,4 +256,16 @@ describe('CSV cases', () => {
     console.log(dataset.schema)
     assert.ok(!dataset.schema.find(p => p.key === 'empty'))
   })
+
+  it('A CSV with very long texts containing alternative separators like tabs and ;', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/long-text-tabs.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    console.log(dataset.file.prop)
+    assert.equal(dataset.file.props.escapeChar, '"')
+    assert.equal(dataset.file.props.quote, '"')
+    assert.equal(dataset.file.props.fieldsDelimiter, ',')
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 7)
+  })
 })

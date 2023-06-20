@@ -11,7 +11,7 @@
       @input="val => $emit('input', val)"
     />
 
-    <template v-if="dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')">
+    <template v-if="dataset && dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')">
       <p v-t="'loadAttachment'" />
       <div class="mt-3 mb-3">
         <v-file-input
@@ -40,7 +40,7 @@ en:
 
 import { mapState } from 'vuex'
 export default {
-  props: ['value', 'selectedCols'],
+  props: ['value', 'selectedCols', 'ownLines'],
   data: () => ({
     vjsfOptions: {
       locale: 'fr',
@@ -63,6 +63,10 @@ export default {
     editSchema () {
       if (!this.jsonSchema) return
       const schema = JSON.parse(JSON.stringify(this.jsonSchema))
+      if (this.ownLines) {
+        delete schema.properties._owner
+        delete schema.properties._ownerName
+      }
       Object.keys(schema.properties).forEach(key => {
         if (this.selectedCols && this.selectedCols.length && !this.selectedCols.includes(key)) {
           schema.properties[key].readOnly = true

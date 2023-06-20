@@ -1,14 +1,16 @@
 const { Writable } = require('stream')
 const csv = require('csv-parser')
+const escapeStringRegexp = require('escape-string-regexp')
 const pump = require('../utils/pipe')
 const debug = require('debug')('csv-sniffer')
 
 const possibleLinesDelimiters = ['\r\n', '\n']
 // const possibleLinesDelimiters = ['\n']
 const possibleFieldsDelimiters = [',', ';', '\t', '|']
-// const possibleFieldsDelimiters = [';']
+// const possibleFieldsDelimiters = [',']
 // const possibleEscapeChars = ['"', "'"]
 const possibleQuoteChars = ['"', "'"]
+// const possibleQuoteChars = ["'"]
 // const possibleQuoteChars = ['"']
 
 exports.sniff = async (sample) => {
@@ -19,12 +21,28 @@ exports.sniff = async (sample) => {
   for (const ld of possibleLinesDelimiters) {
     for (const fd of possibleFieldsDelimiters) {
       for (const qc of possibleQuoteChars) {
-        const scoreParts = { lines: 0, values: 0, missingLabels: 0, trimQuotes: 0 }
+        const scoreParts = {
+          lines: 0,
+          values: 0,
+          missingLabels: 0,
+          trimQuotes: 0,
+          headerTrimQuotes: 0,
+          lineBreaksBoost: 0,
+          fullSepCount: 0
+        }
         let labels
         const parserOpts = { separator: fd, quote: qc, escape: qc, newline: ld }
         debug('Evaluate parser opts', JSON.stringify(parserOpts))
         const parser = csv(parserOpts)
-        parser.on('headers', headers => { labels = headers })
+        parser.on('headers', headers => {
+          // debug('headers', headers)
+          for (const header of headers) {
+            // header is prefixed/suffixed with a potential quote, probably missed it
+            if (possibleQuoteChars.includes(header[0])) scoreParts.headerTrimQuotes -= 10
+            if (possibleQuoteChars.includes(header[header.length - 1])) scoreParts.headerTrimQuotes -= 10
+          }
+          labels = headers
+        })
 
         const checkChunk = (chunk) => {
           // console.log(chunk)
@@ -46,9 +64,8 @@ exports.sniff = async (sample) => {
             } else if (val) {
               if (val.includes('\n')) {
                 // if the value contains line breaks quoting was probably good, and we need to compensate for having potentially less lines
-                // const lineBreaksBoost = val.split('\n').length * 0.5
                 // debug('Value contains linebreaks, score += ' + lineBreaksBoost)
-                // score += lineBreaksBoost
+                // scoreParts.lineBreaksBoost += val.split('\n').length * 0.5
               } else {
                 // having many none empty values is a good sign
                 // debug('Filled value, score += 1')
@@ -58,20 +75,19 @@ exports.sniff = async (sample) => {
               scoreParts.values += 1
 
               // value is prefixed/suffixed with a potential quote, probably missed it
-              if (possibleQuoteChars.includes(val[0])) {
-                debug('Starting with potential quote char, score -= 2', val.slice(0, 10))
-                scoreParts.trimQuotes -= 2
-              }
-              if (possibleQuoteChars.includes(val[val.length - 1])) {
-                debug('Ending with potential quote char, score -= 2', val.slice(val.length - 10, val.length))
-                scoreParts.trimQuotes -= 2
-              }
+              if (possibleQuoteChars.includes(val[0])) scoreParts.trimQuotes -= 2
+              if (possibleQuoteChars.includes(val[val.length - 1])) scoreParts.trimQuotes -= 2
             }
           }
         }
 
         let previousChunk
         let i = 0
+
+        // lots of separators surrounded by quotes is a good sign of a strictly formatted CSV
+        // for example '","'
+        const fullSepRegexp = new RegExp(escapeStringRegexp(qc + fd + qc), 'g')
+        scoreParts.fullSepCount += ((sample || '').match(fullSepRegexp) || []).length * 2
 
         await pump(intoStream(sample), parser, new Writable({
           objectMode: true,
@@ -97,6 +113,6 @@ exports.sniff = async (sample) => {
   // debug('combinations', combinations)
   const result = bestCombination.props
   if (!result.labels || !result.labels.length) throw new Error('Échec de l\'analyse du fichier tabulaire, pas de colonne détectée.')
-  debug('result', result)
+  debug('bestCombination', bestCombination)
   return result
 }

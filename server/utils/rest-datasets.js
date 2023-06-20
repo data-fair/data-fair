@@ -200,11 +200,13 @@ const applyTransactions = async (req, transacs, validate) => {
   for (const transac of transacs) {
     let { _action, ...body } = transac
     if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
+
+    Object.assign(body, linesOwnerCols(req))
+
     if (!body._id) body._id = getLineId(body, dataset)
     if (_action === 'create' && !body._id) body._id = nanoid()
     if (!body._id) throw createError(400, '"_id" attribute is required')
 
-    Object.assign(body, linesOwnerCols(req))
     const extendedBody = { ...body }
     extendedBody._needsIndexing = true
     extendedBody._updatedAt = body._updatedAt ? new Date(body._updatedAt) : updatedAt
@@ -418,6 +420,7 @@ exports.readLine = async (req, res, next) => {
 exports.createLine = async (req, res, next) => {
   const db = req.app.get('db')
   const _action = req.body._id ? 'update' : 'create'
+  Object.assign(req.body, linesOwnerCols(req))
   req.body._id = req.body._id || getLineId(req.body, req.dataset) || nanoid()
   await manageAttachment(req, false)
   const line = (await applyTransactions(req, [{ _action, ...req.body }], compileSchema(req.dataset, req.user.adminMode))).results[0]
