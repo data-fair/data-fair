@@ -179,7 +179,8 @@ function checkQuery (query, schema, esFields, currentField) {
     throw createError(400, `Impossible de faire une recherche sur le champ ${query.field}, la fonctionnalité a été désactivée.`)
   }
   if (query.term && (query.term.startsWith('*') || query.term.startsWith('?')) && (!query.field || !query.field.endsWith('.wildcard'))) {
-    throw createError(400, `Impossible de faire une recherche de suite de caractères sans préfixe sur le champ ${query.field}, la fonctionnalité n'est pas activée.`)
+    // throw createError(400, `Impossible de faire une recherche de suite de caractères sans préfixe sur le champ ${query.field}, la fonctionnalité n'est pas activée.`)
+    // console.warn(`Impossible de faire une recherche de suite de caractères sans préfixe sur le champ ${query.field}, la fonctionnalité n'est pas activée.`)
   }
   if (query.left) checkQuery(query.left, schema, esFields, query.field)
   if (query.right) checkQuery(query.right, schema, esFields, query.field)
