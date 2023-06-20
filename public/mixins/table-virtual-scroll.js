@@ -27,9 +27,12 @@ export default {
     headerWidthsAdjusted () {
       return !this.selectedHeaders.find(header => !(header.value in this.headerWidths))
     },
-    totalHeaderWidths () {
+    totalRawHeaderWidths () {
       if (!this.headerWidthsAdjusted) return 0
-      return this.selectedHeaders.map(header => this.headerWidths[header.value]).reduce((sum, width) => sum + width, 0) + 15
+      return this.selectedHeaders.map(header => this.headerWidths[header.value]).reduce((sum, width) => sum + width, 0)
+    },
+    totalHeaderWidths () {
+      return this.totalRawHeaderWidths + 15
     },
     virtualScrollVertical () {
       const linesBuffer = 8
@@ -238,6 +241,12 @@ export default {
           }
           estimatedSize = Math.max(50, estimatedSize) + (dense ? 16 : 32)
           if (estimatedSize > this.headerWidths[header.value]) this.headerWidths[header.value] = estimatedSize
+        }
+      }
+      if (this.windowWidth > this.totalRawHeaderWidths) {
+        const fullWidthRatio = (this.windowWidth - 15) / this.totalRawHeaderWidths
+        for (const header of this.selectedHeaders) {
+          this.headerWidths[header.value] = Math.floor(this.headerWidths[header.value] * fullWidthRatio)
         }
       }
     },
