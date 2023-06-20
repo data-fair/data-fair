@@ -99,6 +99,7 @@ before('scratch all', async () => {
   debug('scratch all')
   await global.db.dropDatabase()
   await fs.remove('./data/test')
+  await global.es.indices.delete({ index: 'dataset-test-*', ignore_unavailable: true }).catch(err => { console.log(err) })
   debug('scratch all ok')
 })
 
@@ -121,7 +122,6 @@ beforeEach('scratch data', async () => {
   ])
   try {
     await Promise.all([
-      global.es.indices.delete({ index: 'dataset-test-*', ignore_unavailable: true }).catch(err => { console.log(err) }),
       global.db.collection('datasets').deleteMany({}),
       global.db.collection('applications').deleteMany({}),
       global.db.collection('applications-keys').deleteMany({}),
