@@ -557,19 +557,20 @@ exports.updateTotalStorage = async (db, owner, checkRemaining = false) => {
 
 exports.mergeFileSchema = (dataset) => {
   dataset.schema = dataset.schema || []
-  // Remove fields present in the stored schema, when absent from the raw file schema and not coming from extension
-  dataset.schema = dataset.schema.filter(field => field['x-extension'] || dataset.file.schema.find(f => f.key === field.key))
-  // Add fields not yet present in the stored schema
-  const newFields = dataset.file.schema
-    .filter(field => !dataset.schema.find(f => f.key === field.key))
+  const fileFields = dataset.file.schema
     .map(field => {
+      // preserve existing fields customization
+      const existingField = dataset.schema.find(f => f.key === field.key)
+      if (existingField) return existingField
       const { dateFormat, dateTimeFormat, ...f } = field
       // manage default capabilities
       if (field.type === 'string' && field['x-display'] === 'textarea') f['x-capabilities'] = { index: false, values: false, insensitive: false }
       if (field.type === 'string' && field['x-display'] === 'markdown') f['x-capabilities'] = { index: false, values: false, insensitive: false }
       return f
     })
-  dataset.schema = dataset.schema.concat(newFields)
+
+  // keep extension fields
+  dataset.schema = fileFields.concat(dataset.schema.filter(field => field['x-extension']))
 }
 
 exports.cleanSchema = (dataset) => {
