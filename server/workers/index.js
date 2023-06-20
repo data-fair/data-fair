@@ -56,16 +56,11 @@ exports.start = async (app) => {
   for (let i = 0; i < config.worker.concurrency; i++) {
     promisePool[i] = null
   }
-  let lastActivity = new Date().getTime()
+  let active = true
 
   while (!stopped) {
-    const now = new Date().getTime()
-    if ((now - lastActivity) > config.worker.inactivityDelay) {
-      // inactive polling interval
-      debugLoop('the worker is inactive wait extra delay', config.worker.inactiveInterval)
-      await new Promise(resolve => setTimeout(resolve, config.worker.inactiveInterval))
-    } else {
-      // base polling interval
+    if (!active) {
+      // polling interval is ignored while we are actively working on resources
       await new Promise(resolve => setTimeout(resolve, config.worker.interval))
     }
 
@@ -88,10 +83,11 @@ exports.start = async (app) => {
       type = 'application'
     }
     if (!resource) {
+      active = false
       continue
     } else {
       debugLoop('work on resource', type, resource.id)
-      lastActivity = new Date().getTime()
+      active = true
     }
 
     if (stopped) continue
@@ -247,6 +243,7 @@ async function iter (app, resource, type) {
       await task.process(app, resource)
     }
     endTask({ status: 'ok' })
+    debug(`finished task ${taskKey} - ${type} / ${resource.id}`)
 
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
     if (task.eventsPrefix && newResource) {

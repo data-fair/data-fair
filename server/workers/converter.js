@@ -170,8 +170,11 @@ exports.process = async function (app, dataset) {
     }
     const ogrOptions = ['-lco', 'RFC7946=YES', '-t_srs', 'EPSG:4326']
     if (dataset.originalFile.mimetype === 'application/gpx+xml') {
+      // specify the layers we want to keep from gpx files (tracks and routes), and rename the output geojson layer
       ogrOptions.push('-nln')
       ogrOptions.push(dataset.id)
+      ogrOptions.push('tracks')
+      ogrOptions.push('routes')
     }
     const geoJsonStream = ogr2ogr(originalFilePath)
       .format('GeoJSON')

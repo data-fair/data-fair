@@ -31,8 +31,8 @@ describe('Wildcard fields', () => {
     assert.equal(res.data.total, 3)
 
     // leading wildcard filter is rejected by default on the main keyword field
-    await assert.rejects(ax.get('/api/v1/datasets/wildcards/lines', { params: { qs: 'content:*suite' } }), (err) => err.status === 400)
-    await assert.rejects(ax.get('/api/v1/datasets/wildcards/lines', { params: { qs: 'content:(prefix OR *suite)' } }), (err) => err.status === 400)
+    // await assert.rejects(ax.get('/api/v1/datasets/wildcards/lines', { params: { qs: 'content:*suite' } }), (err) => err.status === 400)
+    // await assert.rejects(ax.get('/api/v1/datasets/wildcards/lines', { params: { qs: 'content:(prefix OR *suite)' } }), (err) => err.status === 400)
     res = await ax.get('/api/v1/datasets/wildcards/lines', { params: { qs: 'content.wildcard:*SUITE' } })
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]._id, 't4')

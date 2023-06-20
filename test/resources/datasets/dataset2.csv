@@ -1,6 +1,6 @@
-id,adr,somedate,employees
-koumoul,19 rue de la voie lactée saint avé,2017-12-12,3
-koumoul,bureau,2017-12-12,0
-koumoul,bureau,2017-12-12,0
-bidule,adresse inconnue,2017-10-10,11
-bidule,bureau 2,2017-10-10,2
+id,somedate,employees,adr
+koumoul,2017-12-12,3,19 rue de la voie lactée saint avé
+koumoul,2017-12-12,0,bureau
+koumoul,2017-12-12,0,bureau
+bidule,2017-10-10,11,adresse inconnue
+bidule,2017-10-10,2,bureau 2
