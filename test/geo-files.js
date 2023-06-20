@@ -199,7 +199,10 @@ describe('geo files support', () => {
     assert.equal(dataset.storage.attachments.size, 0)
 
     dataset = await workers.hook('finalizer/' + dataset.id)
-    assert.equal(dataset.count, 4067)
+    assert.equal(dataset.count, 1)
+
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
+    assert.equal(lines.results[0].name, 'Tronçon n°1 - de Saint-Brieuc (22) à Saint-Nic (29)')
 
     config.defaultLimits = oldLimit
   })
