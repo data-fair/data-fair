@@ -107,53 +107,65 @@
                 <th
                   v-if="header.value === '_actions'"
                   :key="'_actions-' + h"
+                  :class="{'pr-0': true, 'pl-4': true}"
                 >
-                  <template v-if="(can('deleteLine') || can('updateLine')) && items.length >= 2">
-                    <v-btn
-                      v-if="selectedLines.length === data.results.length"
-                      icon
-                      :title="$t('unselectAllLines')"
-                      color="primary"
-                      @click="selectedLines = []"
-                    >
-                      <v-icon>mdi-checkbox-marked</v-icon>
-                    </v-btn>
-                    <v-btn
-                      v-else-if="selectedLines.length"
-                      icon
-                      :title="$t('unselectAllLines')"
-                      color="grey"
-                      @click="selectedLines = []"
-                    >
-                      <v-icon>mdi-checkbox-marked</v-icon>
-                    </v-btn>
-                    <v-btn
-                      v-else
-                      :key="'header-actions-check2-' + h"
-                      icon
-                      :title="$t('selectAllLines')"
-                      @click="selectedLines = [...data.results]"
-                    >
-                      <v-icon>mdi-checkbox-blank-outline</v-icon>
-                    </v-btn>
-                    <v-btn
-                      v-if="can('deleteLine') && selectedLines.length >=2 "
-                      icon
-                      color="warning"
-                      :title="$t('deleteAllLines')"
-                      @click="deletingLines = [...selectedLines]; deleteSelectedLinesDialog = true;"
-                    >
-                      <v-icon>mdi-trash-can-outline</v-icon>
-                    </v-btn>
-                    <v-btn
-                      v-if="can('updateLine') && selectedLines.length >= 2"
-                      icon
-                      :title="$t('editAllLines')"
-                      @click="editingLines = [...selectedLines]; editSelectedLinesDialog = true;"
-                    >
-                      <v-icon>mdi-pencil</v-icon>
-                    </v-btn>
-                  </template>
+                  <v-card
+                    v-if="(can('deleteLine') || can('updateLine')) && items.length >= 2"
+                    style="display:inline-block;"
+                    :elevation="(can('deleteLine') || can('updateLine')) && selectedLines.length >= 2 ? 4 : 0"
+                  >
+                    <div style="display:flex">
+                      <v-btn
+                        v-if="selectedLines.length === data.results.length"
+                        icon
+                        tile
+                        :title="$t('unselectAllLines')"
+                        color="primary"
+                        @click="selectedLines = []"
+                      >
+                        <v-icon size="20">mdi-checkbox-marked</v-icon>
+                      </v-btn>
+                      <v-btn
+                        v-else-if="selectedLines.length"
+                        icon
+                        tile
+                        :title="$t('unselectAllLines')"
+                        color="grey"
+                        @click="selectedLines = []"
+                      >
+                        <v-icon size="20">mdi-checkbox-marked</v-icon>
+                      </v-btn>
+                      <v-btn
+                        v-else
+                        :key="'header-actions-check2-' + h"
+                        icon
+                        tile
+                        :title="$t('selectAllLines')"
+                        @click="selectedLines = [...data.results]"
+                      >
+                        <v-icon size="20">mdi-checkbox-blank-outline</v-icon>
+                      </v-btn>
+                      <v-btn
+                        v-if="can('deleteLine') && selectedLines.length >=2"
+                        icon
+                        tile
+                        color="warning"
+                        :title="$t('deleteAllLines')"
+                        @click="deletingLines = [...selectedLines]; deleteSelectedLinesDialog = true;"
+                      >
+                        <v-icon size="20">mdi-trash-can-outline</v-icon>
+                      </v-btn>
+                      <v-btn
+                        v-if="can('updateLine') && selectedLines.length >= 2"
+                        icon
+                        tile
+                        :title="$t('editAllLines')"
+                        @click="editingLines = [...selectedLines]; editSelectedLinesDialog = true;"
+                      >
+                        <v-icon size="20">mdi-pencil</v-icon>
+                      </v-btn>
+                    </div>
+                  </v-card>
                 </th>
                 <template v-else>
                   <dataset-table-header-cell
@@ -188,16 +200,16 @@
             :color="{created: 'success', deleted: 'warning', updated: 'primary', editing: 'primary', deleting: 'warning'}[item._tmpState]"
             height="40"
           />
-          <tr>
+          <tr :class="{'active': selectedLines.find(line => line._id === item._id)}">
             <td
               v-for="header in selectedHeaders"
               :key="header.value"
-              class="pr-0 pl-4"
+              :class="{'pr-0': true, 'pl-4': true}"
               :style="`height: 40px;position:relative;`"
             >
               <div
                 v-if="header.value === '_actions'"
-                style="min-width:120px;"
+                style="display:flex;"
               >
                 <template v-if="!item._tmpState">
                   <template
@@ -206,44 +218,49 @@
                     <v-btn
                       v-if="selectedLines.find(line => line._id === item._id)"
                       icon
+                      tile
                       :title="$t('unselectLine')"
                       @click="selectedLines = selectedLines.filter(line => line._id !== item._id)"
                     >
-                      <v-icon>mdi-checkbox-marked</v-icon>
+                      <v-icon size="20">mdi-checkbox-marked</v-icon>
                     </v-btn>
                     <v-btn
                       v-else
                       icon
+                      tile
                       :title="$t('selectLine')"
                       @click="selectedLines.push(item)"
                     >
-                      <v-icon>mdi-checkbox-blank-outline</v-icon>
+                      <v-icon size="20">mdi-checkbox-blank-outline</v-icon>
                     </v-btn>
                   </template>
                   <v-btn
                     v-if="can('deleteLine')"
                     icon
+                    tile
                     color="warning"
                     :title="$t('deleteLine')"
                     @click="deletingLines = [{...item}]; deleteLineDialog = true;"
                   >
-                    <v-icon>mdi-trash-can-outline</v-icon>
+                    <v-icon size="20">mdi-trash-can-outline</v-icon>
                   </v-btn>
                   <v-btn
                     v-if="can('updateLine')"
                     icon
+                    tile
                     :title="$t('editLine')"
                     @click="showEditLineDialog(item);"
                   >
-                    <v-icon>mdi-pencil</v-icon>
+                    <v-icon size="20">mdi-pencil</v-icon>
                   </v-btn>
                   <v-btn
                     v-if="dataset.rest && dataset.rest.history && can('readLineRevisions')"
                     icon
+                    tile
                     :title="$t('showRevisions')"
                     @click="showHistoryDialog(item)"
                   >
-                    <v-icon>mdi-history</v-icon>
+                    <v-icon size="20">mdi-history</v-icon>
                   </v-btn>
                 </template>
               </div>
