@@ -8,7 +8,23 @@
     @change="v => {logEvent('change', v); $emit('change', v)}"
     @input-child="e => logEvent('input-child', e)"
     @change-child="e => logEvent('change-child', e)"
-  />
+  >
+    <template
+      v-for="(index, name) in $slots"
+      #[name]
+    >
+      <slot :name="name" />
+    </template>
+    <template
+      v-for="(index, name) in $scopedSlots"
+      #[name]="data"
+    >
+      <slot
+        :name="name"
+        v-bind="data"
+      />
+    </template>
+  </v-jsf-base>
 </template>
 
 <script>

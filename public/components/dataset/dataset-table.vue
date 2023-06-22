@@ -24,7 +24,7 @@
               class="mx-2"
               :disabled="dataset.schema.filter(f => !f['x-calculated']).length === 0"
               :title="$t('addLine')"
-              @click="editedLine = null; showEditLineDialog();"
+              @click="showCreateLineDialog"
             >
               <v-icon>mdi-plus</v-icon>
             </v-btn>
@@ -93,7 +93,7 @@
         :headers="selectedHeaders"
         :items="items"
         item-key="_id"
-        :server-items-length="data.total"
+        :server-items-length="data.total + createdLines.length"
         :loading="loading"
         :multi-sort="false"
         :options.sync="pagination"
@@ -104,24 +104,89 @@
           <thead class="v-data-table-header">
             <tr>
               <template v-for="(header, h) in selectedHeaders">
-                <dataset-table-header-cell
-                  :id="'header-cell-' + h"
-                  :key="'header-cell-' + h"
-                  :header="header"
-                  :pagination="pagination"
-                />
-                <dataset-table-header-menu
-                  v-if="header.field"
-                  :key="'header-menu-' + h"
-                  :activator="'#header-cell-' + h"
-                  :header="header"
-                  :filters="filters"
-                  :filter-height="420"
-                  :pagination="pagination"
-                  no-fix
-                  @filter="f => addFilter(header.value, f)"
-                  @hide="hideHeader(header)"
-                />
+                <th
+                  v-if="header.value === '_actions'"
+                  :key="'_actions-' + h"
+                  :class="{'pr-0': true, 'pl-4': true}"
+                >
+                  <v-card
+                    v-if="(can('deleteLine') || can('updateLine')) && items.length >= 2"
+                    style="display:inline-block;"
+                    :elevation="(can('deleteLine') || can('updateLine')) && selectedLines.length >= 2 ? 4 : 0"
+                  >
+                    <div style="display:flex">
+                      <v-btn
+                        v-if="selectedLines.length === data.results.length"
+                        icon
+                        tile
+                        :title="$t('unselectAllLines')"
+                        color="primary"
+                        @click="selectedLines = []"
+                      >
+                        <v-icon size="20">mdi-checkbox-marked</v-icon>
+                      </v-btn>
+                      <v-btn
+                        v-else-if="selectedLines.length"
+                        icon
+                        tile
+                        :title="$t('unselectAllLines')"
+                        color="grey"
+                        @click="selectedLines = []"
+                      >
+                        <v-icon size="20">mdi-checkbox-marked</v-icon>
+                      </v-btn>
+                      <v-btn
+                        v-else
+                        :key="'header-actions-check2-' + h"
+                        icon
+                        tile
+                        :title="$t('selectAllLines')"
+                        @click="selectedLines = [...data.results]"
+                      >
+                        <v-icon size="20">mdi-checkbox-blank-outline</v-icon>
+                      </v-btn>
+                      <v-btn
+                        v-if="can('deleteLine') && selectedLines.length >=2"
+                        icon
+                        tile
+                        color="warning"
+                        :title="$t('deleteAllLines')"
+                        @click="deletingLines = [...selectedLines]; deleteSelectedLinesDialog = true;"
+                      >
+                        <v-icon size="20">mdi-trash-can-outline</v-icon>
+                      </v-btn>
+                      <v-btn
+                        v-if="can('updateLine') && selectedLines.length >= 2"
+                        icon
+                        tile
+                        :title="$t('editAllLines')"
+                        @click="editingLines = [...selectedLines]; editSelectedLinesDialog = true;"
+                      >
+                        <v-icon size="20">mdi-pencil</v-icon>
+                      </v-btn>
+                    </div>
+                  </v-card>
+                </th>
+                <template v-else>
+                  <dataset-table-header-cell
+                    :id="'header-cell-' + h"
+                    :key="'header-cell-' + h"
+                    :header="header"
+                    :pagination="pagination"
+                  />
+                  <dataset-table-header-menu
+                    v-if="header.field"
+                    :key="'header-menu-' + h"
+                    :activator="'#header-cell-' + h"
+                    :header="header"
+                    :filters="filters"
+                    :filter-height="420"
+                    :pagination="pagination"
+                    no-fix
+                    @filter="f => addFilter(header.value, f)"
+                    @hide="hideHeader(header)"
+                  />
+                </template>
               </template>
             </tr>
           </thead>
@@ -132,47 +197,70 @@
             style="position: absolute;opacity: 0.2;"
             indeterminate
             background-opacity="0.5"
-            :color="{created: 'success', deleted: 'warning', updated: 'primary', editing: 'primary'}[item._tmpState]"
+            :color="{created: 'success', deleted: 'warning', updated: 'primary', editing: 'primary', deleting: 'warning'}[item._tmpState]"
             height="40"
           />
-          <tr>
+          <tr :class="{'active': selectedLines.find(line => line._id === item._id)}">
             <td
               v-for="header in selectedHeaders"
               :key="header.value"
-              class="pr-0 pl-4"
+              :class="{'pr-0': true, 'pl-4': true}"
               :style="`height: 40px;position:relative;`"
             >
               <div
                 v-if="header.value === '_actions'"
-                style="min-width:120px;"
+                style="display:flex;"
               >
                 <template v-if="!item._tmpState">
+                  <template
+                    v-if="can('deleteLine') || can('updateLine')"
+                  >
+                    <v-btn
+                      v-if="selectedLines.find(line => line._id === item._id)"
+                      icon
+                      tile
+                      :title="$t('unselectLine')"
+                      @click="selectedLines = selectedLines.filter(line => line._id !== item._id)"
+                    >
+                      <v-icon size="20">mdi-checkbox-marked</v-icon>
+                    </v-btn>
+                    <v-btn
+                      v-else
+                      icon
+                      tile
+                      :title="$t('selectLine')"
+                      @click="selectedLines.push(item)"
+                    >
+                      <v-icon size="20">mdi-checkbox-blank-outline</v-icon>
+                    </v-btn>
+                  </template>
                   <v-btn
                     v-if="can('deleteLine')"
                     icon
+                    tile
                     color="warning"
                     :title="$t('deleteLine')"
-                    @click="editedLine = Object.assign({}, item); deleteLineDialog = true;"
+                    @click="deletingLines = [{...item}]; deleteLineDialog = true;"
                   >
-                    <v-icon>mdi-delete</v-icon>
+                    <v-icon size="20">mdi-trash-can-outline</v-icon>
                   </v-btn>
                   <v-btn
                     v-if="can('updateLine')"
                     icon
-                    color="primary"
+                    tile
                     :title="$t('editLine')"
-                    @click="editedLine = Object.assign({}, item); showEditLineDialog();"
+                    @click="showEditLineDialog(item);"
                   >
-                    <v-icon>mdi-pencil</v-icon>
+                    <v-icon size="20">mdi-pencil</v-icon>
                   </v-btn>
                   <v-btn
                     v-if="dataset.rest && dataset.rest.history && can('readLineRevisions')"
                     icon
-                    color="primary"
+                    tile
                     :title="$t('showRevisions')"
                     @click="showHistoryDialog(item)"
                   >
-                    <v-icon>mdi-history</v-icon>
+                    <v-icon size="20">mdi-history</v-icon>
                   </v-btn>
                 </template>
               </div>
@@ -235,12 +323,50 @@
     </template>
 
     <v-dialog
+      v-model="createLineDialog"
+      max-width="600px"
+    >
+      <v-card outlined>
+        <v-card-title primary-title>
+          {{ $t('addLine') }}
+        </v-card-title>
+        <v-form
+          ref="createLineForm"
+          v-model="createLineValid"
+        >
+          <v-card-text>
+            <dataset-edit-line-form
+              v-if="createLineDialog && creatingLine"
+              v-model="creatingLine"
+              @onFileUpload="onFileUpload"
+            />
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn
+              v-t="'cancel'"
+              text
+              @click="createLineDialog = false"
+            />
+            <v-btn
+              v-t="'save'"
+              color="primary"
+              :loading="saving"
+              :disabled="!createLineValid"
+              @click="createLine"
+            />
+          </v-card-actions>
+        </v-form>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
       v-model="editLineDialog"
       max-width="600px"
     >
       <v-card outlined>
         <v-card-title primary-title>
-          {{ editedId ? $t('editLine') : $t('addLine') }}
+          {{ $t('editLine') }}
         </v-card-title>
         <v-form
           ref="editLineForm"
@@ -248,9 +374,9 @@
         >
           <v-card-text>
             <dataset-edit-line-form
-              v-if="editLineDialog && editedLine"
-              v-model="editedLine"
-              :selected-cols="editedId ? selectedCols : []"
+              v-if="editLineDialog && editingLine"
+              v-model="editingLine"
+              :selected-cols="selectedCols"
               @onFileUpload="onFileUpload"
             />
           </v-card-text>
@@ -266,7 +392,46 @@
               color="primary"
               :loading="saving"
               :disabled="!editLineValid"
-              @click="saveLine"
+              @click="updateLine"
+            />
+          </v-card-actions>
+        </v-form>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
+      v-model="editSelectedLinesDialog"
+      max-width="600px"
+    >
+      <v-card outlined>
+        <v-card-title primary-title>
+          {{ $t('editAllLines') }}
+        </v-card-title>
+        <v-form
+          ref="editSelectedLinesForm"
+          v-model="editSelectedLinesValid"
+        >
+          <v-card-text>
+            <dataset-edit-multiple-lines
+              v-if="editSelectedLinesDialog && editingLines.length"
+              v-model="editingLinesPatch"
+              :lines="editingLines"
+              :selected-cols="selectedCols"
+            />
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn
+              v-t="'cancel'"
+              text
+              @click="editSelectedLinesDialog = false"
+            />
+            <v-btn
+              v-t="'save'"
+              color="primary"
+              :loading="saving"
+              :disabled="!editSelectedLinesValid"
+              @click="saveLinesPatch"
             />
           </v-card-actions>
         </v-form>
@@ -299,7 +464,39 @@
           <v-btn
             v-t="'delete'"
             color="warning"
-            @click="deleteLine"
+            @click="deleteLines(deletingLines)"
+          />
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
+      v-model="deleteSelectedLinesDialog"
+      max-width="500px"
+    >
+      <v-card outlined>
+        <v-card-title
+          v-t="'deleteAllLines'"
+          primary-title
+        />
+        <v-card-text>
+          <v-alert
+            v-t="'deleteAllLinesWarning'"
+            :value="true"
+            type="error"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            v-t="'cancel'"
+            text
+            @click="deleteSelectedLinesDialog = false"
+          />
+          <v-btn
+            v-t="'delete'"
+            color="warning"
+            @click="deleteLines(deletingLines)"
           />
         </v-card-actions>
       </v-card>
@@ -345,9 +542,17 @@ fr:
   save: Enregistrer
   deleteLine: Supprimer une ligne
   deleteLineWarning: Attention, la donnée de cette ligne sera perdue définitivement.
+  deleteSelectedLinesDialog: Attention, la donnée de toutes les lignes sélectionnées sera perdue définitivement.
   cancel: Annuler
   delete: Supprimer
   revisionsHistory: Historique des révisions
+  selectLine: Sélectionner la ligne
+  unselectLined: Désélectionner la ligne
+  selectAllLines: Sélectionner toutes les lignes
+  unselectAllLines: Désélectionner toutes les lignes
+  deleteAllLines: Supprimer les lines sélectionnées
+  deleteAllLinesWarning: Attention, la donnée de ces lignes sera perdue définitivement.
+  editAllLines: Éditer les lignes sélectionnées
 en:
   noData: The data is not accessible. Either the dataset was not yet entirely processed, or there was an error.
   tutorialFilter: Apply filters from the headers and by hovering the values. Sort by clicking on the headers. Click on the button on the top to the right to download in a file the filtered and sorted content.
@@ -358,9 +563,17 @@ en:
   save: Save
   deleteLine: Delete a line
   deleteLineWarning: Warning, the data from the line will be lost definitively
+  deleteSelectedLinesDialog: Warning, the data from all the selected lines will be lost definitively
   cancel: Cancel
   delete: Delete
   revisionsHistory: Revisions history
+  selectLine: Select the line
+  unselectLined: Deselect the line
+  selectAllLines: Select all lines
+  unselectAllLines: Deselect all lines
+  deleteAllLines: Delete the selected lines
+  deleteAllLinesWarning: Warning, the data from these lines will be lost definitively
+  editAllLines: Edit the selected lines
 </i18n>
 
 <script>
@@ -380,11 +593,18 @@ export default {
     },
     notFound: false,
     loading: false,
+    createLineDialog: false,
+    createLineValid: false,
     editLineDialog: false,
     editLineValid: false,
-    editedLine: null,
-    editedId: null,
+    creatingLine: {},
+    editingLines: [],
+    editingLine: {},
+    deletingLines: [],
     deleteLineDialog: false,
+    deleteSelectedLinesDialog: false,
+    editSelectedLinesDialog: false,
+    editSelectedLinesValid: false,
     file: null,
     uploadProgress: 0,
     historyLine: null,
@@ -395,7 +615,9 @@ export default {
     deletedLines: [],
     saving: false,
     lastParams: null,
-    selectedCols: []
+    selectedCols: [],
+    selectedLines: [],
+    editingLinesPatch: {}
   }),
   computed: {
     ...mapState(['vocabulary', 'env']),
@@ -467,13 +689,15 @@ export default {
       if (!this.data.results) return []
       const items = [...this.data.results]
       items.forEach(item => {
-        if (this.deletedLines.find(l => l && l._id === item._id)) {
+        if (this.deletedLines.find(line => line._id === item._id)) {
           item._tmpState = 'deleted'
         } else if (this.updatedLines.find(l => l && l._id === item._id)) {
           Object.assign(item, this.updatedLines.find(l => l && l._id === item._id))
           item._tmpState = 'updated'
-        } else if ((this.editLineDialog || this.deleteLineDialog) && this.editedLine && (this.editedLine._id === item._id || this.editedId === item._id)) {
+        } else if ((this.editLineDialog || this.editSelectedLinesDialog) && this.editingLines.find(l => l && l._id === item._id)) {
           item._tmpState = 'editing'
+        } else if ((this.deleteLineDialog || this.deleteSelectedLinesDialog) && this.deletingLines.find(l => l && l._id === item._id)) {
+          item._tmpState = 'deleting'
         } else {
           item._tmpState = null
         }
@@ -520,6 +744,9 @@ export default {
         localStorage.setItem(this.selectedColsStorageKey, JSON.stringify(this.selectedCols))
       },
       deep: true
+    },
+    items () {
+      this.selectedLines = this.items.filter(item => this.selectedLines.find(line => item._id === line._id)).map(item => ({ ...item }))
     }
   },
   mounted () {
@@ -553,6 +780,9 @@ export default {
       try {
         this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params: this.params })
         this.notFound = false
+        this.updatedLines = []
+        this.deletedLines = []
+        this.createdLines = []
       } catch (error) {
         if (error.response && error.response.status === 404) this.notFound = true
         else eventBus.$emit('notification', { error, msg: 'Erreur pendant la récupération des données' })
@@ -568,17 +798,18 @@ export default {
         this.$set(this.pagination.sortDesc, 0, true)
       }
     },
-    showEditLineDialog () {
-      if (!this.editedLine) {
-        this.editedId = null
-        this.file = null
-        this.editedLine = {}
-        this.dataset.schema.filter(f => !f['x-calculated']).forEach(f => {
-          this.$set(this.editedLine, f.key, null)
-        })
-      } else {
-        this.editedId = this.editedLine._id
-      }
+    showCreateLineDialog () {
+      this.file = null
+      this.creatingLine = {}
+      this.dataset.schema.filter(f => !f['x-calculated']).forEach(f => {
+        this.$set(this.creatingLine, f.key, null)
+      })
+      this.uploadProgress = 0
+      this.createLineDialog = true
+    },
+    showEditLineDialog (item) {
+      this.editingLines = [{ ...item }]
+      this.editingLine = { ...item }
       this.uploadProgress = 0
       this.editLineDialog = true
     },
@@ -589,25 +820,46 @@ export default {
     onFileUpload (file) {
       this.file = file
     },
-    async saveLine () {
+    async createLine () {
+      if (!this.$refs.createLineForm.validate()) return
+      this.saving = true
+      await new Promise(resolve => setTimeout(resolve, 100))
+      const res = await this.$store.dispatch('dataset/saveLine', { line: this.creatingLine, file: this.file })
+      this.createdLines.push(res)
+      this.saving = false
+      this.createLineDialog = false
+    },
+    async updateLine () {
       if (!this.$refs.editLineForm.validate()) return
       this.saving = true
       await new Promise(resolve => setTimeout(resolve, 100))
-      const res = await this.$store.dispatch('dataset/saveLine', { line: this.editedLine, file: this.file, id: this.editedId })
-      if (this.editedId) this.updatedLines.push(res)
-      else this.createdLines.push(res)
+      const res = await this.$store.dispatch('dataset/saveLine', { line: this.editingLine, file: this.file, id: this.editingLines[0]._id })
+      this.updatedLines.push(res)
       this.saving = false
       this.editLineDialog = false
     },
-    async deleteLine () {
+    async deleteLines (lines) {
       try {
-        await this.$axios.$delete(this.resourceUrl + '/lines/' + this.editedLine._id)
+        await this.$axios.$post(this.resourceUrl + '/_bulk_lines', lines.map(line => ({ _id: line._id, _action: 'delete' })))
         this.deleteLineDialog = false
-        this.deletedLines.push(this.editedLine)
+        this.deleteSelectedLinesDialog = false
+        this.deletedLines = this.deletedLines.concat(lines)
       } catch (error) {
-        if (error.response && error.response.status === 404) this.notFound = true
-        else eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de la ligne\'' })
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la suppression de ligne' })
       }
+    },
+    async saveLinesPatch () {
+      if (!this.$refs.editSelectedLinesForm.validate()) return
+      this.saving = true
+      await new Promise(resolve => setTimeout(resolve, 100))
+      try {
+        await this.$axios.$post(this.resourceUrl + '/_bulk_lines', this.editingLines.map(line => ({ ...this.editingLinesPatch, _id: line._id, _action: 'patch' })))
+        this.editSelectedLinesDialog = false
+        this.updatedLines = this.updatedLines.concat(this.editingLines.map(line => ({ ...line, ...this.editingLinesPatch })))
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: 'Erreur pendant la modification de lignes' })
+      }
+      this.saving = false
     },
     addFilter (key, filter) {
       if (typeof filter !== 'object') filter = { type: 'in', values: [filter] }
