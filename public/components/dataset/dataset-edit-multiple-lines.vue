@@ -7,23 +7,45 @@
       id="edit-multiple-lines"
       :text="$t('warning')"
     />
-    <tutorial-alert
-      id="edit-multiple-lines2"
-      :text="$t('warning2')"
-    />
     <lazy-v-jsf
       v-model="mergedModel"
       :schema="editSchema"
       :options="vjsfOptions"
       @input="val => $emit('input', val)"
-    />
+    >
+      <template
+        v-for="prop in homogeneity.heterogenousProperties"
+        :slot="`${prop}-before`"
+        slot-scope="slotProps"
+      >
+        <v-alert
+          v-if="mergedModel[prop] === null || mergedModel[prop] === undefined"
+          :key="`null-${prop}`"
+          color="info"
+          dense
+          text
+          class="py-1 px-2 mb-1"
+        >
+          "{{ slotProps.schema.title || prop }}" contient {{ homogeneity.propertyValues[prop].length.toLocaleString() }} valeurs différentes
+        </v-alert>
+        <v-alert
+          v-else
+          :key="`overwrite-${prop}`"
+          color="warning"
+          dense
+          text
+          class="py-1 px-2 mb-1"
+        >
+          {{ homogeneity.propertyValues[prop].length.toLocaleString() }} valeurs différentes de "{{ slotProps.schema.title || prop }}" seront écrasées
+        </v-alert>
+      </template>
+    </lazy-v-jsf>
   </div>
 </template>
 
 <i18n lang="yaml">
 fr:
-  warning: En mode édition de lignes multiples les valeurs sont visibles uniquement si elles sont égales dans toutes les lignes sélectionnées. Les propriétés dont les valeurs sont hétérogènes sont vides et ont un fond gris, si vous les laissez vides elles ne seront pas modifiées à l'enregistrement.
-  warning2: Certains types de champs (date, couleur, etc) ne supportent pas la modification de valeurs hétérogènes et ne sont pas éditables dans ce cas.
+  warning: En mode édition de lignes multiples les valeurs sont visibles uniquement si elles sont égales dans toutes les lignes sélectionnées. Les propriétés dont les valeurs sont hétérogènes sont vides, si vous les laissez vides elles ne seront pas modifiées à l'enregistrement.
 en:
 </i18n>
 
@@ -59,12 +81,12 @@ export default {
         if (this.selectedCols && this.selectedCols.length && !this.selectedCols.includes(key)) {
           schema.properties[key].readOnly = true
         }
-        if (!this.homogenousProperties.includes(key)) {
+        if (!this.homogeneity.homogenousProperties.includes(key)) {
           if (['string', 'number', 'integer'].includes(schema.properties[key].type) && !schema.properties[key].format && !schema.properties[key]['x-display']) {
             schema.properties[key]['x-props'] = schema.properties[key]['x-props'] || {}
             schema.properties[key]['x-props'].filled = true
           } else {
-            schema.properties[key].readOnly = true
+            // schema.properties[key].readOnly = true
           }
         }
         if (schema.properties[key]['x-refersTo'] === 'http://schema.org/DigitalDocument') {
@@ -73,23 +95,27 @@ export default {
       })
       return schema
     },
-    homogenousProperties () {
+    homogeneity () {
       if (!this.jsonSchema) return
       const homogenousProperties = []
+      const heterogenousProperties = []
+      const propertyValues = {}
       for (const key of Object.keys(this.jsonSchema.properties)) {
         const values = []
         for (const line of this.lines) {
           if (!values.includes(line[key])) values.push(line[key])
         }
         if (values.length <= 1) homogenousProperties.push(key)
+        else heterogenousProperties.push(key)
+        propertyValues[key] = values
       }
-      return homogenousProperties
+      return { homogenousProperties, heterogenousProperties, propertyValues }
     }
   },
   async created () {
     if (!this.jsonSchema) await this.$store.dispatch('dataset/fetchJsonSchema')
     const mergedModel = {}
-    for (const prop of this.homogenousProperties) {
+    for (const prop of this.homogeneity.homogenousProperties) {
       mergedModel[prop] = this.lines[0][prop]
     }
     this.mergedModel = mergedModel
