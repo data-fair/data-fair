@@ -57,11 +57,16 @@ exports.start = async (app) => {
     promisePool[i] = null
   }
   let active = true
+  let intervalPromiseResolve
 
   while (!stopped) {
     if (!active) {
       // polling interval is ignored while we are actively working on resources
-      await new Promise(resolve => setTimeout(resolve, config.worker.interval))
+      await new Promise(resolve => {
+        intervalPromiseResolve = resolve
+        setTimeout(resolve, config.worker.interval)
+      })
+      intervalPromiseResolve = null
     }
 
     let resource, type
@@ -99,6 +104,10 @@ exports.start = async (app) => {
     // always empty the slot after the promise is finished
     promisePool[freeSlot].finally(() => {
       promisePool[freeSlot] = null
+      if (intervalPromiseResolve) {
+        debugLoop('slot is freed, shorten interval waiting')
+        intervalPromiseResolve()
+      }
     })
   }
 }
