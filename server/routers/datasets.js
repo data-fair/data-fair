@@ -971,9 +971,9 @@ const updateDataset = asyncWrap(async (req, res) => {
 
     let dataset = req.dataset
     req.body.schema = req.body.schema || dataset.schema || []
-    if (req.body.extensions) {
-      prepareExtensions(req, req.body.extensions, dataset.extensions)
-      req.body.schema = await extensions.prepareSchema(db, req.body.schema, req.body.extensions)
+    if (req.body.extensions) prepareExtensions(req, req.body.extensions, dataset.extensions)
+    if (req.body.extensions || dataset.extensions) {
+      req.body.schema = await extensions.prepareSchema(db, req.body.schema, req.body.extensions || dataset.extensions)
     }
 
     req.body.updatedBy = { id: req.user.id, name: req.user.name }
