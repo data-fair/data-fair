@@ -27,7 +27,7 @@
                 </template>
 
                 <v-tab
-                  v-if="!env.disableRemoteServices"
+                  v-if="!env.disableRemoteServices && !dataset.isVirtual && !dataset.isMetaOnly"
                   href="#structure-extensions"
                 >
                   <v-icon>mdi-merge</v-icon>&nbsp;&nbsp;{{ $t('extension') }}

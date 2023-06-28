@@ -52,6 +52,7 @@ en:
 <script>
 import { mapState } from 'vuex'
 const capabilitiesSchema = require('~/../contract/capabilities.js')
+const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter(key => capabilitiesSchema.properties[key].default === false)
 
 export default {
   props: {
@@ -105,7 +106,9 @@ export default {
         const childCapabilities = field['x-capabilities'] || {}
         const parentCapabilities = parentField['x-capabilities'] || {}
         for (const key in childCapabilities) {
-          if (childCapabilities[key] === false && parentCapabilities[key] !== false) {
+          const parentHasCapability = capabilitiesDefaultFalse.includes(key) ? parentCapabilities[key] === true : parentCapabilities[key] !== false
+          const childHasCapability = capabilitiesDefaultFalse.includes(key) ? childCapabilities[key] === true : childCapabilities[key] !== false
+          if (!childHasCapability && parentHasCapability) {
             messages.warning.push(this.$t('disabledConfig', {
               field: field.title || field['x-originalName'] || field.key,
               param: capabilitiesSchema.properties[key].title
