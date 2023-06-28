@@ -4,7 +4,7 @@ const path = require('path')
 const createError = require('http-errors')
 const { nanoid } = require('nanoid')
 const pump = require('../utils/pipe')
-const ajv = require('ajv')()
+const ajv = require('../utils/ajv')
 const multer = require('multer')
 const mime = require('mime-types')
 const { Readable, Transform, Writable } = require('stream')
@@ -369,7 +369,7 @@ const compileSchema = (dataset, adminMode) => {
   schema.properties._id = { type: 'string' }
   // super-admins can set _updatedAt and so rewrite history
   if (adminMode) schema.properties._updatedAt = { type: 'string', format: 'date-time' }
-  return ajv.compile(schema)
+  return ajv.compile(schema, false)
 }
 
 async function manageAttachment (req, keepExisting) {

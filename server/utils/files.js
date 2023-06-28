@@ -124,8 +124,7 @@ const getFormBody = (body) => {
 exports.fixFormBody = (validate) => (req, res, next) => {
   if (!req.body) return res.status(400).send('Missing body')
   req.body = getFormBody(req.body)
-  const valid = validate(req.body)
-  if (!valid) return res.status(400).send(validate.errors)
+  validate(req.body)
   next()
 }
 

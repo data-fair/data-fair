@@ -8,7 +8,7 @@ const unlink = util.promisify(fs.unlink)
 const sanitizeHtml = require('../../shared/sanitize-html')
 const { nanoid } = require('nanoid')
 const applicationAPIDocs = require('../../contract/application-api-docs')
-const ajv = require('ajv')()
+const ajv = require('../utils/ajv')
 const applicationSchema = require('../../contract/application')
 const validate = ajv.compile(applicationSchema)
 const validateConfiguration = ajv.compile(applicationSchema.properties.configuration)
@@ -158,7 +158,7 @@ const initNew = async (req) => {
 router.post('', asyncWrap(async (req, res) => {
   const application = await initNew(req)
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', req.user)) return res.status(403).send()
-  if (!validate(application)) return res.status(400).send(validate.errors)
+  validate(application)
   validateId(application.id)
 
   // Generate ids and try insertion until there is no conflict on id
@@ -242,7 +242,7 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
   const newApplication = await initNew(req)
   newApplication.id = req.params.applicationId
 
-  if (!validate(newApplication)) return res.status(400).send(validate.errors)
+  validate(newApplication)
 
   permissions.initResourcePermissions(newApplication, req.user)
 
@@ -283,8 +283,7 @@ router.patch('/:applicationId',
   asyncWrap(async (req, res) => {
     const db = req.app.get('db')
     const patch = req.body
-    const valid = validatePatch(patch)
-    if (!valid) return res.status(400).send(validatePatch.errors)
+    validatePatch(patch)
 
     // Retry previously failed publications
     if (!patch.publications) {
@@ -352,8 +351,7 @@ router.get('/:applicationId/configuration', readApplication, permissions.middlew
 // Update only the configuration part of the application
 const writeConfig = asyncWrap(async (req, res) => {
   const db = req.app.get('db')
-  const valid = validateConfiguration(req.body)
-  if (!valid) return res.status(400).send(validateConfiguration.errors)
+  validateConfiguration(req.body)
   await db.collection('applications').updateOne(
     { id: req.params.applicationId },
     {
@@ -381,8 +379,7 @@ router.get('/:applicationId/configuration-draft', readApplication, permissions.m
   res.status(200).send(req.application.configurationDraft || req.application.configuration || {})
 })
 router.put('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), asyncWrap(async (req, res, next) => {
-  const valid = validateConfiguration(req.body)
-  if (!valid) return res.status(400).send(validateConfiguration.errors)
+  validateConfiguration(req.body)
   await req.app.get('db').collection('applications').updateOne(
     { id: req.params.applicationId },
     {
@@ -476,8 +473,7 @@ router.get('/:applicationId/keys', readApplication, permissions.middleware('getK
   res.send((applicationKeys && applicationKeys.keys) || [])
 }))
 router.post('/:applicationId/keys', readApplication, permissions.middleware('setKeys', 'admin'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
-  const valid = validateKeys(req.body)
-  if (!valid) return res.status(400).send(validateKeys.errors)
+  validateKeys(req.body)
   for (const key of req.body) {
     if (!key.id) key.id = nanoid()
   }

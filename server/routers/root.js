@@ -6,7 +6,7 @@ const projections = require('../../contract/projections')
 const asyncWrap = require('../utils/async-wrap')
 const settingsUtils = require('../utils/settings')
 
-const ajv = require('ajv')()
+const ajv = require('../utils/ajv')
 const openApiSchema = require('../../contract/openapi-3.1.json')
 const validateApi = ajv.compile(openApiSchema)
 const config = require('config')
@@ -45,8 +45,7 @@ router.get('/projections', (req, res) => {
 // Check an Api documentation format
 router.post('/_check-api', (req, res, next) => {
   if (!req.user) return res.status(401).send()
-  const valid = validateApi(req.body)
-  if (!valid) return res.status(400).send(validateApi.errors)
+  validateApi(req.body)
   res.sendStatus(200)
 })
 
