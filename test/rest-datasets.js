@@ -177,6 +177,7 @@ describe('REST datasets', () => {
       await ax.post('/api/v1/datasets/rest4/lines', { attr3: 'test1' })
       assert.fail()
     } catch (err) {
+      assert.equal(err.data, ' ne doit pas contenir de propriétés additionnelles (attr3)')
       assert.equal(err.status, 400)
     }
 
@@ -184,6 +185,7 @@ describe('REST datasets', () => {
       await ax.post('/api/v1/datasets/rest4/lines', { attr1: 111 })
       assert.fail()
     } catch (err) {
+      assert.equal(err.data, '/attr1 doit être de type string')
       assert.equal(err.status, 400)
     }
 
@@ -191,6 +193,7 @@ describe('REST datasets', () => {
       await ax.put('/api/v1/datasets/rest4/lines/line1', { attr1: 111 })
       assert.fail()
     } catch (err) {
+      assert.equal(err.data, '/attr1 doit être de type string')
       assert.equal(err.status, 400)
     }
 
@@ -198,6 +201,7 @@ describe('REST datasets', () => {
       await ax.patch('/api/v1/datasets/rest4/lines/line1', { attr1: 111 })
       assert.fail()
     } catch (err) {
+      assert.equal(err.data, '/attr1 doit être de type string')
       assert.equal(err.status, 400)
     }
 
@@ -210,7 +214,7 @@ describe('REST datasets', () => {
     assert.equal(res.data.nbErrors, 1)
     assert.equal(res.data.errors.length, 1)
     assert.equal(res.data.errors[0].line, 1)
-    assert.ok(res.data.errors[0].error)
+    assert.equal(res.data.errors[0].error, '/attr1 doit être de type string')
 
     await workers.hook('finalizer/rest4')
   })

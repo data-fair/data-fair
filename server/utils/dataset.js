@@ -254,6 +254,14 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
           if (unknownKeys.length) {
             return callback(createError(400, `Colonnes inconnues ${unknownKeys.join(', ')}`))
           }
+          const readonlyKeys = Object.keys(chunk)
+            .filter(k => {
+              const prop = schema.find(p => p['x-originalName'] === k || p.key === k)
+              return prop && (prop['x-calculated'] || prop['x-extension'])
+            })
+          if (readonlyKeys.length) {
+            return callback(createError(400, `Colonnes en lecture seule ${readonlyKeys.join(', ')}`))
+          }
         }
         for (const prop of schema) {
           const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)

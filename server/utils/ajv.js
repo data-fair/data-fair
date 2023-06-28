@@ -13,10 +13,20 @@ exports.compile = (schema, throws = true) => {
     if (!valid) {
       if (errorsCallback) errorsCallback(validate.errors);
       (localize[locale] || localize.fr)(validate.errors)
+      // complete message based on extra parameters https://ajv.js.org/api.html#error-parameters
+      for (const error of validate.errors) {
+        if (error.keyword === 'additionalProperties') {
+          error.message += ` (${error.params.additionalProperty})`
+        }
+      }
+      const errors = ajv.errorsText(validate.errors, {
+        separator: ', ',
+        dataVar: ''
+      })
       if (throws) {
-        throw createError(400, ajv.errorsText(validate.errors, { separator: '\n' }))
+        throw createError(400, errors)
       } else {
-        myValidate.errors = ajv.errorsText(validate.errors, { separator: '\n' })
+        myValidate.errors = errors
         return false
       }
     }
