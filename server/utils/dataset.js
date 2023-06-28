@@ -255,6 +255,7 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
             return callback(createError(400, `Colonnes inconnues ${unknownKeys.join(', ')}`))
           }
           const readonlyKeys = Object.keys(chunk)
+            .filter(k => k !== '_i' && k !== '_id')
             .filter(k => {
               const prop = schema.find(p => p['x-originalName'] === k || p.key === k)
               return prop && (prop['x-calculated'] || prop['x-extension'])
