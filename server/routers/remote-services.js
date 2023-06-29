@@ -13,8 +13,7 @@ const CacheableLookup = require('cacheable-lookup')
 const remoteServiceAPIDocs = require('../../contract/remote-service-api-docs')
 const mongoEscape = require('mongo-escape')
 const config = require('config')
-const ajv = require('ajv')()
-const createError = require('http-errors')
+const ajv = require('../utils/ajv')
 const validate = ajv.compile(require('../../contract/remote-service'))
 const servicePatch = require('../../contract/remote-service-patch')
 const validatePatch = ajv.compile(servicePatch)
@@ -80,7 +79,7 @@ exports.syncDataset = async (db, dataset) => {
         service.virtualDatasets.storageRatio = existingService.virtualDatasets.storageRatio || 0
       }
     }
-    if (!validate(service)) throw createError(400, JSON.stringify(validate.errors))
+    validate(service)
     await db.collection('remote-services').replaceOne({ id }, mongoEscape.escape(service, true), { upsert: true })
   } else {
     await db.collection('remote-services').deleteOne({ id })
@@ -282,7 +281,7 @@ router.post('', asyncWrap(async (req, res) => {
   // if title is set, we build id from it
   if (req.body.title && !req.body.id) req.body.id = slug(req.body.title, { lower: true, strict: true })
   const service = initNew(req.body)
-  if (!validate(service)) return res.status(400).send(validate.errors)
+  validate(service)
 
   // Generate ids and try insertion until there is no conflict on id
   const baseId = service.id || slug(service.apiDoc.info['x-api-id'], { lower: true, strict: true })
@@ -331,7 +330,7 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
 
   const newService = initNew(req.body)
   newService.id = req.params.remoteServiceId
-  if (!validate(newService)) return res.status(400).send(validate.errors)
+  validate(newService)
 
   next()
 })
@@ -358,8 +357,7 @@ router.patch('/:remoteServiceId', readService, asyncWrap(async (req, res) => {
   if (!req.user.adminMode) return res.status(403).send()
 
   const patch = req.body
-  const valid = validatePatch(patch)
-  if (!valid) return res.status(400).send(validatePatch.errors)
+  validatePatch(patch)
 
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
@@ -390,8 +388,7 @@ router.post('/:remoteServiceId/_update', readService, asyncWrap(async (req, res)
   if (!req.remoteService.url) return res.sendStatus(204)
 
   const reponse = await axios.get(req.remoteService.url)
-  const valid = validateOpenApi(reponse.data)
-  if (!valid) return res.status(400).send(validateOpenApi.errors)
+  validateOpenApi(reponse.data)
   req.remoteService.updatedAt = moment().toISOString()
   req.remoteService.updatedBy = { id: req.user.id, name: req.user.name }
   req.remoteService.apiDoc = reponse.data

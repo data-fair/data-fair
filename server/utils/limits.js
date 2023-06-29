@@ -1,11 +1,11 @@
 const express = require('express')
 const config = require('config')
 const moment = require('moment')
-const ajv = require('ajv')()
+const ajv = require('../utils/ajv')
 const asyncWrap = require('./async-wrap')
 const dbUtils = require('./db')
 
-const limitTypeSchema = { limit: { type: 'number' }, consumption: { type: 'number' } }
+const limitTypeSchema = { type: 'object', properties: { limit: { type: 'number' }, consumption: { type: 'number' } } }
 const schema = {
   type: 'object',
   required: ['id', 'type', 'lastUpdate'],
@@ -116,8 +116,7 @@ const isAccountMember = (req, res, next) => {
 router.post('/:type/:id', isSuperAdmin, asyncWrap(async (req, res, next) => {
   req.body.type = req.params.type
   req.body.id = req.params.id
-  const valid = validate(req.body)
-  if (!valid) return res.status(400).send(validate.errors)
+  validate(req.body)
   await req.app.get('db').collection('limits')
     .replaceOne({ type: req.params.type, id: req.params.id }, req.body, { upsert: true })
   res.send(req.body)

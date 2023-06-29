@@ -49,7 +49,7 @@
                 v-for="(error, i) in result.errors"
                 :key="i"
               >
-                <span v-if="error.line !== -1">{{ $t('line') }}{{ error.line }}</span>{{ error.error }}
+                <span v-if="error.line !== -1">{{ $t('line') }} {{ error.line }} : </span>{{ error.error }}
               </li>
             </ul>
           </v-alert>

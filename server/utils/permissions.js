@@ -3,7 +3,7 @@ const express = require('express')
 const permissionsSchema = require('../../contract/permissions.json')
 const apiDocsUtil = require('./api-docs')
 const visibilityUtils = require('./visibility')
-const ajv = require('ajv')()
+const ajv = require('./ajv')
 const validate = ajv.compile(permissionsSchema)
 
 exports.middleware = function (operationId, operationClass, trackingCategory) {
@@ -259,9 +259,9 @@ module.exports.router = (resourceType, resourceName, onPublicCallback) => {
   })
 
   router.put('', exports.middleware('setPermissions', 'admin'), async (req, res, next) => {
-    let valid = validate(req.body)
-    if (!valid) return res.status(400).send(validate.errors)
+    validate(req.body)
     req.body = req.body || []
+    let valid = true
     for (const permission of req.body) {
       if ((!permission.type && permission.id) || (permission.type && !(permission.id || permission.email))) valid = false
     }

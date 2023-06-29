@@ -1,6 +1,6 @@
 const crypto = require('crypto')
 const express = require('express')
-const ajv = require('ajv')()
+const ajv = require('../utils/ajv')
 const { nanoid } = require('nanoid')
 const createError = require('http-errors')
 const settingSchema = require('../../contract/settings')
@@ -35,10 +35,8 @@ const validateDepartmentSettings = ajv.compile(departmentSettingsSchema)
 const validate = (settings) => {
   if (settings.department) {
     validateDepartmentSettings(settings)
-    return validateDepartmentSettings.errors
   } else {
     validateSettings(settings)
-    return validateSettings.errors
   }
 }
 
@@ -105,8 +103,7 @@ const fillSettings = (owner, user, settings) => {
 router.put('/:type/:id', isOwnerAdmin, asyncWrap(async (req, res) => {
   const db = req.app.get('db')
   fillSettings(req.owner, req.user, req.body)
-  const errors = validate(req.body)
-  if (errors) return res.status(400).send(errors)
+  validate(req.body)
   const settings = db.collection('settings')
 
   const fullApiKeys = req.body.apiKeys.map(apiKey => ({ ...apiKey }))
@@ -224,11 +221,7 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async (req, 
   } else {
     settings.publicationSites[index] = { ...req.body, settings: settings.publicationSites[index].settings || {} }
   }
-  const errors = validate(settings)
-  if (errors) {
-    debugPublicationSites('bad settings after site update', settings, errors)
-    return res.status(400).send(errors)
-  }
+  validate(settings, errors => debugPublicationSites('bad settings after site update', settings, errors))
   await db.collection('settings').replaceOne(req.owner, settings, { upsert: true })
   res.status(200).send(req.body)
 }))
@@ -243,11 +236,7 @@ router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, as
   }
   settings.publicationSites = settings.publicationSites || []
   settings.publicationSites = settings.publicationSites.filter(ps => ps.type !== req.params.siteType || ps.id !== req.params.siteId)
-  const errors = validate(settings)
-  if (errors) {
-    debugPublicationSites('bad settings after site deletion', settings, errors)
-    return res.status(400).send(errors)
-  }
+  validate(settings, errors => debugPublicationSites('bad settings after site deletion', settings, errors))
   await db.collection('settings').replaceOne(req.ownerFilter, settings, { upsert: true })
   const ref = `${req.params.siteType}:${req.params.siteId}`
   await db.collection('datasets').updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })

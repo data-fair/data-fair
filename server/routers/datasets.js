@@ -1,6 +1,6 @@
 const { Writable } = require('stream')
 const express = require('express')
-const ajv = require('ajv')()
+const ajv = require('../utils/ajv')
 const path = require('path')
 const fs = require('fs-extra')
 const moment = require('moment')
@@ -474,7 +474,7 @@ router.patch('/:datasetId',
   asyncWrap(async (req, res) => {
     const db = req.app.get('db')
     const patch = req.body
-    if (!validatePatch(patch)) return res.status(400).send(validatePatch.errors)
+    validatePatch(patch)
 
     curateDataset(patch)
 
@@ -837,9 +837,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
     } else if (req.body.isVirtual) {
       if (!req.body.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
       if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
-      if (!validatePost(req.body)) {
-        throw createError(400, JSON.stringify(validatePost.errors))
-      }
+      validatePost(req.body)
       dataset = await initNew(db, req)
       permissions.initResourcePermissions(dataset, req.user)
       dataset.virtual = dataset.virtual || { children: [] }
@@ -855,9 +853,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
     } else if (req.body.isRest) {
       if (!req.body.title) throw createError(400, 'Un jeu de données éditable doit être créé avec un titre')
       if (attachmentsFile) throw createError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
-      if (!validatePost(req.body)) {
-        throw createError(400, JSON.stringify(validatePost.errors))
-      }
+      validatePost(req.body)
       dataset = await initNew(db, req)
       permissions.initResourcePermissions(dataset, req.user)
       dataset.rest = dataset.rest || {}
@@ -877,9 +873,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
     } else if (req.body.isMetaOnly) {
       if (!req.body.title) throw createError(400, 'Un jeu de données métadonnées doit être créé avec un titre')
       if (attachmentsFile) throw createError(400, 'Un jeu de données métadonnées ne peut pas être créé avec des pièces jointes')
-      if (!validatePost(req.body)) {
-        throw createError(400, JSON.stringify(validatePost.errors))
-      }
+      validatePost(req.body)
       dataset = await initNew(db, req)
       permissions.initResourcePermissions(dataset, req.user)
       if (dataset.id) {
@@ -890,9 +884,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       }
       await lockNewDataset(req, res, dataset)
     } else if (req.body.remoteFile) {
-      if (!validatePost(req.body)) {
-        throw createError(400, JSON.stringify(validatePost.errors))
-      }
+      validatePost(req.body)
       dataset = await initNew(db, req)
       req.body.remoteFile.name = req.body.remoteFile.name || path.basename(new URL(req.body.remoteFile.url).pathname)
       dataset.title = dataset.title || titleFromFileName(req.body.remoteFile.name)
@@ -989,17 +981,13 @@ const updateDataset = asyncWrap(async (req, res) => {
       if (req.query.skipAnalysis === 'true') req.body.status = 'analyzed'
     } else if (dataset.isVirtual) {
       const { isVirtual, updatedBy, updatedAt, ...patch } = req.body
-      if (!validatePatch(patch)) {
-        throw createError(400, validatePatch.errors)
-      }
+      validatePatch(patch)
       req.body.virtual = req.body.virtual || { children: [] }
       req.body.schema = await virtualDatasetsUtils.prepareSchema(db, { ...dataset, ...req.body })
       req.body.status = 'indexed'
     } else if (dataset.isRest) {
       const { isRest, updatedBy, updatedAt, ...patch } = req.body
-      if (!validatePatch(patch)) {
-        throw createError(400, validatePatch.errors)
-      }
+      validatePatch(patch)
       req.body.rest = req.body.rest || {}
       if (req.isNewDataset) {
         await restDatasetsUtils.initDataset(db, { ...dataset, ...req.body })
@@ -1661,7 +1649,7 @@ router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJou
 
 router.post('/:datasetId/user-notification', readDataset(), permissions.middleware('sendUserNotification', 'write'), asyncWrap(async (req, res, next) => {
   const userNotification = req.body
-  if (!validateUserNotification(userNotification)) return res.status(400).send(validateUserNotification.errors)
+  validateUserNotification(userNotification)
   const urlParams = userNotification.urlParams || {}
   userNotification.visibility = userNotification.visibility || 'private'
   if (userNotification.visibility !== 'private') {
