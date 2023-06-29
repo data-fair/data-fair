@@ -6,15 +6,18 @@ const assert = require('assert').strict
 const workers = require('../server/workers')
 const testUtils = require('./resources/test-utils')
 
-const initMaster = async (ax, schema, masterData, id = 'master') => {
+const initMaster = async (ax, info, masterData, id = 'master') => {
   if (Array.isArray(masterData)) {
     masterData = { bulkSearchs: masterData }
+  }
+  if (Array.isArray(info)) {
+    info = { schema: info }
   }
   await ax.put('/api/v1/datasets/' + id, {
     isRest: true,
     title: id,
-    schema,
-    masterData
+    masterData,
+    ...info
   })
   await workers.hook('finalizer/' + id)
   const master = (await ax.get('api/v1/datasets/' + id)).data
@@ -139,7 +142,7 @@ describe('Master data management', () => {
       }]
     })
     await workers.hook('finalizer/slave')
-    await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
+    await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }, { siret: '82898347800011' }])
     const slave = await workers.hook('finalizer/slave')
     const extraProp = slave.schema.find(p => p.key === '_siret.extra')
     assert.ok(extraProp)
@@ -151,6 +154,7 @@ describe('Master data management', () => {
     assert.ok(!slave.schema.find(p => p.key === '_siret.siret'))
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_siret.extra'], 'Extra information')
+    assert.equal(results[1]['_siret.extra'], 'Extra information')
     assert.ok(!results[0]['_siret.siret'])
 
     // patching the dataset to remove extension
@@ -311,6 +315,76 @@ describe('Master data management', () => {
     assert.ok(slave.schema.find(p => p.key === '_siret._error'))
     assert.ok(slave.schema.find(p => p.key === '_siret.siret'))
     assert.ok(!slave.schema.find(p => p.key === '_siret._rand'))
+  })
+
+  it('return multiple levels of extended properties', async () => {
+    const ax = global.ax.superadmin
+
+    const { remoteService } = await initMaster(
+      ax,
+      [siretProperty, { key: 'extra', type: 'string' }],
+      [{
+        id: 'siret',
+        title: 'Fetch extra info from siret',
+        description: '',
+        input: [{ type: 'equals', property: siretProperty }]
+      }],
+      'master1'
+    )
+
+    const { remoteService: remoteService2 } = await initMaster(
+      ax,
+      {
+        schema: [siretProperty, { key: 'extra2', type: 'string' }],
+        extensions: [{
+          active: true,
+          remoteService: remoteService.id,
+          action: 'masterData_bulkSearch_siret'
+        }]
+      },
+      [{
+        id: 'siret2',
+        title: 'Fetch extra info 2 from siret',
+        description: '',
+        input: [{ type: 'equals', property: siretProperty }]
+      }],
+      'master2'
+    )
+
+    // create slave dataset
+    await ax.put('/api/v1/datasets/slave', {
+      isRest: true,
+      title: 'slave',
+      schema: [siretProperty],
+      extensions: [{
+        active: true,
+        remoteService: remoteService2.id,
+        action: 'masterData_bulkSearch_siret2'
+      }]
+    })
+    const slave = await workers.hook('finalizer/slave')
+
+    // slave schema contains props from both levels of extensions
+    assert.ok(slave.schema.find(p => p.key === '_siret2.extra2'))
+    assert.ok(slave.schema.find(p => p.key === '_siret2.siret'))
+    assert.ok(slave.schema.find(p => p.key === '_siret2._error'))
+    assert.ok(slave.schema.find(p => p.key === '_siret2._siret.extra'))
+    assert.ok(slave.schema.find(p => p.key === '_siret2._siret.siret'))
+    assert.ok(!slave.schema.find(p => p.key === '_siret2._siret._error'))
+
+    // feed some data to the masters
+    const items = [{ siret: '82898347800011', extra: 'Extra information' }]
+    await ax.post('/api/v1/datasets/master1/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
+    await workers.hook('finalizer/master1')
+    const items2 = [{ siret: '82898347800011', extra2: 'Extra information 2' }]
+    await ax.post('/api/v1/datasets/master2/_bulk_lines', items2.map(item => ({ _id: item.siret, ...item })))
+    await workers.hook('finalizer/master2')
+
+    await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }])
+    await workers.hook('finalizer/slave')
+    const lines = (await ax.get('api/v1/datasets/slave/lines')).data
+    assert.equal(lines.results[0]['_siret2._siret.extra'], 'Extra information')
+    assert.equal(lines.results[0]['_siret2.extra2'], 'Extra information 2')
   })
 
   it('should handle sorting to chose ambiguous result', async () => {
