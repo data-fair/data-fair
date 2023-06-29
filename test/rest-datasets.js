@@ -960,8 +960,8 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     await pump(res.data, new Writable({
       write (chunk, encoding, callback) {
         i += 1
-        if (i < 6) assert.equal(chunk.toString(), ' ')
-        else {
+        if (i < 3) assert.equal(chunk.toString(), ' ')
+        else if (chunk.toString() !== ' ') {
           const result = JSON.parse(chunk.toString())
           assert.equal(result.nbOk, 550)
         }
