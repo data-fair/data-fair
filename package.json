@@ -126,6 +126,7 @@
     "@turf/unkink-polygon": "^5.1.5",
     "agentkeepalive": "^4.2.1",
     "ajv": "^8.12.0",
+    "ajv-formats": "^2.1.1",
     "ajv-i18n": "^4.2.0",
     "cacheable-lookup": "^6.0.1",
     "chardet": "^1.5.1",
