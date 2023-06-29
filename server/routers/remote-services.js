@@ -74,6 +74,7 @@ exports.syncDataset = async (db, dataset) => {
       }
     })
     if (existingService) {
+      service.public = existingService.public
       service.privateAccess = existingService.privateAccess
       if (existingService.virtualDatasets) {
         service.virtualDatasets.storageRatio = existingService.virtualDatasets.storageRatio || 0
