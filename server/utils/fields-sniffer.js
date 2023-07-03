@@ -2,6 +2,7 @@ const Ajv = require('ajv')
 const addFormats = require('ajv-formats')
 const moment = require('moment-timezone')
 const config = require('config')
+const slug = require('slugify')
 
 const ajv = new Ajv()
 addFormats(ajv)
@@ -88,13 +89,18 @@ exports.format = (value, prop, fileProp) => {
 }
 
 // WARNING: this code is duplicated in dataset-schema.vue
-exports.escapeKey = (key) => {
-  key = key.replace(/\.|\s|\$|;|,|:|!/g, '_').replace(/"/g, '')
-  // prefixing by _ is reserved to fields calculated by data-fair
-  while (key.startsWith('_')) {
-    key = key.slice(1)
+exports.escapeKey = (key, dataset) => {
+  const algorithm = dataset.analysis?.escapeKeyAlgorithm
+  if (algorithm === 'legacy') {
+    key = key.replace(/\.|\s|\$|;|,|:|!/g, '_').replace(/"/g, '')
+    // prefixing by _ is reserved to fields calculated by data-fair
+    while (key.startsWith('_')) {
+      key = key.slice(1)
+    }
+    return key
+  } else {
+    return slug(key, { lower: true, strict: true, replacement: '_' })
   }
-  return key
 }
 
 function checkAll (values, check, param, throwIfAlmost) {

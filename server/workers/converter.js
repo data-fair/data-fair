@@ -148,6 +148,7 @@ exports.process = async function (app, dataset) {
       encoding: 'utf-8'
     }
     icalendar.prepareSchema(dataset, infos)
+    dataset.analysis = { escapeKeyAlgorithm: 'legacy' }
   } else if (tabularTypes.has(dataset.originalFile.mimetype)) {
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
       throw createError(400, `Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
@@ -200,6 +201,7 @@ exports.process = async function (app, dataset) {
 
   const patch = { status: dataset.status, file: dataset.file, schema: dataset.schema }
   if (dataset.timeZone) patch.timeZone = dataset.timeZone
+  if (dataset.analysis) patch.analysis = dataset.analysis
 
   await datasetUtils.applyPatch(db, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
