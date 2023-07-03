@@ -685,6 +685,17 @@ module.exports = {
       type: 'object',
       description: 'An object for extra content from client services of data-fair'
     },
+    analysis: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        escapeKeyAlgorithm: {
+          type: 'string',
+          default: 'slug',
+          enum: ['legacy', 'slug']
+        }
+      }
+    },
     permissions,
     previews: {
       type: 'array',

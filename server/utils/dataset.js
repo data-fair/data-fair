@@ -188,7 +188,7 @@ exports.dataFiles = async (dataset) => {
 }
 
 // used both by exports.readStream and bulk transactions in rest datasets
-exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false) => {
+exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, dataset) => {
   const streams = []
 
   // file is gzipped
@@ -231,7 +231,7 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
             const unknownKey = Object.keys(chunk)
               .filter(k => k !== '_i')
               .find(k => !fileSchema.find(p => {
-                escapedKeys[k] = escapedKeys[k] || fieldsSniffer.escapeKey(k)
+                escapedKeys[k] = escapedKeys[k] || fieldsSniffer.escapeKey(k, dataset)
                 return p.key === escapedKeys[k]
               }))
             if (unknownKey) {
@@ -317,7 +317,7 @@ exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraft
   streams.push(stripBom())
   streams.push(stripBom()) // double strip BOM because of badly formatted files from some clients
   if (!full) streams.push(iconv.decodeStream(dataset.file.encoding))
-  streams = streams.concat(exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw))
+  streams = streams.concat(exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, false, dataset))
 
   // manage interruption in case of draft mode
   const limit = (dataset.draftReason && !ignoreDraftLimit) ? 100 : -1

@@ -35,7 +35,7 @@ class AnalyzerWritable extends Writable {
   _final (callback) {
     const fieldsSniffer = require('../utils/fields-sniffer')
     for (const property in this.samples) {
-      const key = fieldsSniffer.escapeKey(property)
+      const key = fieldsSniffer.escapeKey(property, this.options.dataset)
       const existingField = this.options.existingSchema.find(f => f.key === key)
       const field = {
         key,
@@ -57,7 +57,7 @@ exports.process = async function (app, dataset) {
 
   const db = app.get('db')
   const attachments = await datasetUtils.lsAttachments(dataset)
-  const analyzer = new AnalyzerWritable({ attachments, existingSchema: dataset.schema || [] })
+  const analyzer = new AnalyzerWritable({ attachments, existingSchema: dataset.schema || [], dataset })
   const readableStream = fs.createReadStream(datasetUtils.filePath(dataset))
   const decodeStream = iconv.decodeStream(dataset.file.encoding)
 

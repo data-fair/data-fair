@@ -107,6 +107,6 @@ describe('search', () => {
     assert.equal(res.data.totalCollapse, 4)
     assert.equal(res.data.total, 10)
     assert.equal(res.data.results[0].group, 'group3')
-    assert.equal(res.data.results[0].groupLabel, 'group 3')
+    assert.equal(res.data.results[0].grouplabel, 'group 3')
   })
 })
