@@ -1,26 +1,15 @@
 const path = require('path')
 const semver = require('semver')
 const fs = require('fs')
-const dbUtils = require('../server/utils/db')
 const debug = require('debug')('upgrade')
 
 const pjson = require('../package.json')
 const scriptsRoot = path.join(__dirname, 'scripts')
 
-// This module is either run as standalone script of exports its main method
-if (require.main === module) {
-  main().then(() => process.exit(), err => {
-    console.error(err)
-    process.exit(-1)
-  })
-} else {
-  module.exports = main
-}
+module.exports = main
 
 // chose the proper scripts to execute, then run them
-async function main () {
-  const { db, client } = await dbUtils.connect()
-
+async function main (db, client) {
   const services = db.collection('services')
   const service = await services.findOne({ id: pjson.name })
   const version = service && service.version ? service.version : '0.0.0'
