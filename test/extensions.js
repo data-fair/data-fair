@@ -424,6 +424,15 @@ koumoul,19 rue de la voie lactée saint avé
   it('Extend a REST dataset', async () => {
     const ax = global.ax.dmeadus
 
+    const getExtensionNock = (result) => nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
+      .post('/geocoder/coords').reply(200, (uri, requestBody) => {
+        const inputs = requestBody.trim().split('\n').map(JSON.parse)
+        assert.equal(inputs.length, 1)
+        assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
+        return inputs.map(input => ({ key: input.key, ...result }))
+          .map(JSON.stringify).join('\n') + '\n'
+      })
+
     let dataset = (await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest-extension',
@@ -433,14 +442,7 @@ koumoul,19 rue de la voie lactée saint avé
     await workers.hook(`finalizer/${dataset.id}`)
 
     // extend first inserted line
-    let nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
-      .post('/geocoder/coords').reply(200, (uri, requestBody) => {
-        const inputs = requestBody.trim().split('\n').map(JSON.parse)
-        assert.equal(inputs.length, 1)
-        assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-        return inputs.map(input => ({ key: input.key, lat: 10, lon: 10 }))
-          .map(JSON.stringify).join('\n') + '\n'
-      })
+    let nockScope = getExtensionNock({ lat: 10, lon: 10 })
     await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: '19 rue de la voie lactée saint avé' })
     let inputsEvent = await eventToPromise(global.events, 'extension-inputs')
     assert.equal(inputsEvent, 1)
@@ -450,25 +452,54 @@ koumoul,19 rue de la voie lactée saint avé
 
     // A search to check results
     const extensionKey = dataset.extensions[0].propertyPrefix
-    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0][extensionKey + '.lat'], 10)
     assert.equal(res.data.results[0][extensionKey + '.lon'], 10)
 
     // extend second inserted line
-    nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
-      .post('/geocoder/coords').reply(200, (uri, requestBody) => {
-        const inputs = requestBody.trim().split('\n').map(JSON.parse)
-        assert.equal(inputs.length, 1)
-        assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-        return inputs.map(input => ({ key: input.key, lat: 10, lon: 10 }))
-          .map(JSON.stringify).join('\n') + '\n'
-      })
+    nockScope = getExtensionNock({ lat: 11, lon: 11 })
+    await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'another address' })
+    inputsEvent = await eventToPromise(global.events, 'extension-inputs')
+    assert.equal(inputsEvent, 1)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    nockScope.done()
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    const anotherAddress = res.data.results.find(r => r.address === 'another address')
+    assert.equal(anotherAddress[extensionKey + '.lat'], 11)
+    assert.equal(anotherAddress[extensionKey + '.lon'], 11)
+
+    // fail to extend an unknown line
+    nockScope = getExtensionNock({ error: 'unknown' })
     await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'unknown address' })
     inputsEvent = await eventToPromise(global.events, 'extension-inputs')
     assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    const unknownAddress = res.data.results.find(r => r.address === 'unknown address')
+    assert.equal(unknownAddress[extensionKey + '.error'], 'unknown')
+
+    // add a line that uses cache
+    await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'another address' })
+    inputsEvent = await eventToPromise(global.events, 'extension-inputs')
+    assert.equal(inputsEvent, 1)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    const anotherAddress2 = res.data.results.sort((a, b) => b._i - a._i)[0]
+    assert.equal(anotherAddress2[extensionKey + '.lat'], 11)
+    assert.equal(anotherAddress2[extensionKey + '.lon'], 11)
+
+    // update a line
+    nockScope = getExtensionNock({ lat: 12, lon: 12 })
+    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ _id: anotherAddress2._id, address: 'yet another address' }])
+    inputsEvent = await eventToPromise(global.events, 'extension-inputs')
+    // assert.equal(inputsEvent, 1)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    const anotherAddress3 = res.data.results.sort((a, b) => b._i - a._i)[0]
+    assert.equal(anotherAddress3[extensionKey + '.lat'], 12)
+    assert.equal(anotherAddress3[extensionKey + '.lon'], 12)
   })
 
   it('Remove extensions when input properties got removed', async () => {

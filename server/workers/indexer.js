@@ -59,7 +59,7 @@ exports.process = async function (app, dataset) {
   await progress(0)
   debugHeap('before-stream')
   if (dataset.isRest) {
-    readStreams = await restDatasetsUtils.readStreams(db, dataset, dataset.status === 'updated' || dataset.status === 'extended-updated', progress)
+    readStreams = await restDatasetsUtils.readStreams(db, dataset, (dataset.status === 'updated' || dataset.status === 'extended-updated') ? { _needsIndexing: true } : {}, progress)
     writeStream = restDatasetsUtils.markIndexedStream(db, dataset)
   } else {
     const extended = dataset.extensions && dataset.extensions.find(e => e.active)
@@ -87,9 +87,12 @@ exports.process = async function (app, dataset) {
 
   // Some data was updated in the interval during which we performed indexation
   // keep dataset as "updated" so that this worker keeps going
-  if ((dataset.status === 'updated' || dataset.status === 'extended-updated') && await restDatasetsUtils.count(db, dataset, { _needsIndexing: true })) {
-    debug('REST dataset indexed, but some data is still fresh, stay in "updated" status')
+  if (dataset.status === 'extended-updated' && await restDatasetsUtils.count(db, dataset, { _needsExtending: true })) {
+    debug('REST dataset indexed, but some data still needs extending, get back in "updated" status')
     result.status = 'updated'
+  } else if ((dataset.status === 'updated' || dataset.status === 'extended-updated') && await restDatasetsUtils.count(db, dataset, { _needsIndexing: true })) {
+    debug(`REST dataset indexed, but some data is still fresh, stay in "${dataset.status}" status`)
+    result.status = dataset.status
   }
 
   await datasetUtils.applyPatch(db, dataset, result)

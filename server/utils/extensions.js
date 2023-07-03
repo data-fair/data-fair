@@ -49,7 +49,7 @@ exports.extend = async (app, dataset, extensions) => {
   const progress = taskProgress(app, dataset.id, 'extend', 100)
   await progress(0)
   if (dataset.isRest) {
-    inputStreams = await restDatasetsUtils.readStreams(db, dataset, dataset.status === 'updated', progress)
+    inputStreams = await restDatasetsUtils.readStreams(db, dataset, dataset.status === 'updated' ? { _needsExtending: true } : {}, progress)
   } else {
     inputStreams = await datasetUtils.readStreams(db, dataset, false, false, false, progress)
   }
