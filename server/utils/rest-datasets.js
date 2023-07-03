@@ -89,8 +89,8 @@ exports.initDataset = async (db, dataset) => {
   }
   const collection = exports.collection(db, dataset)
   await Promise.all([
-    collection.createIndex({ _needsIndexing: 1 }),
-    collection.createIndex({ _needsExtending: 1 }),
+    collection.createIndex({ _needsIndexing: 1 }, { sparse: true }),
+    collection.createIndex({ _needsExtending: 1 }, { sparse: true }),
     collection.createIndex({ _i: -1 }, { unique: true })
   ])
 }
@@ -668,7 +668,7 @@ exports.writeExtendedStreams = (db, dataset) => {
     objectMode: true,
     async write (item, encoding, cb) {
       try {
-        item._needsExtending = false
+        delete item._needsExtending
         item._needsIndexing = true
         await collection.replaceOne({ _id: item._id }, item)
         cb()
@@ -695,7 +695,7 @@ exports.markIndexedStream = (db, dataset) => {
           if (chunk._deleted) {
             this.bulkOp.find({ _id: chunk._id }).deleteOne()
           } else {
-            this.bulkOp.find({ _id: chunk._id }).updateOne({ $set: { _needsIndexing: false } })
+            this.bulkOp.find({ _id: chunk._id }).updateOne({ $unset: { _needsIndexing: '' } })
           }
         }
         if (this.i === config.mongo.maxBulkOps) {
