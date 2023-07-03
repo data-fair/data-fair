@@ -267,4 +267,14 @@ describe('CSV cases', () => {
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 7)
   })
+
+  it('A CSV legacy escape key algorithm', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/weird-keys.csv', ax, null, { analysis: { escapeKeyAlgorithm: 'legacy' } })
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.schema[0].key, 'This_key_has_escaped_quotes_in_it')
+    assert.equal(dataset.schema[0]['x-originalName'], 'This key has "escaped quotes" in it')
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 1)
+  })
 })
