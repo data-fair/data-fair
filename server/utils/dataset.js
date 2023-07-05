@@ -188,7 +188,7 @@ exports.dataFiles = async (dataset) => {
 }
 
 // used both by exports.readStream and bulk transactions in rest datasets
-exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false) => {
+exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, dataset) => {
   const streams = []
 
   // file is gzipped
@@ -231,7 +231,7 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
             const unknownKey = Object.keys(chunk)
               .filter(k => k !== '_i')
               .find(k => !fileSchema.find(p => {
-                escapedKeys[k] = escapedKeys[k] || fieldsSniffer.escapeKey(k)
+                escapedKeys[k] = escapedKeys[k] || fieldsSniffer.escapeKey(k, dataset)
                 return p.key === escapedKeys[k]
               }))
             if (unknownKey) {
@@ -253,6 +253,15 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
             .filter(k => !schema.find(p => p['x-originalName'] === k || p.key === k))
           if (unknownKeys.length) {
             return callback(createError(400, `Colonnes inconnues ${unknownKeys.join(', ')}`))
+          }
+          const readonlyKeys = Object.keys(chunk)
+            .filter(k => k !== '_i' && k !== '_id')
+            .filter(k => {
+              const prop = schema.find(p => p['x-originalName'] === k || p.key === k)
+              return prop && (prop['x-calculated'] || prop['x-extension'])
+            })
+          if (readonlyKeys.length) {
+            return callback(createError(400, `Colonnes en lecture seule ${readonlyKeys.join(', ')}`))
           }
         }
         for (const prop of schema) {
@@ -308,7 +317,7 @@ exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraft
   streams.push(stripBom())
   streams.push(stripBom()) // double strip BOM because of badly formatted files from some clients
   if (!full) streams.push(iconv.decodeStream(dataset.file.encoding))
-  streams = streams.concat(exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw))
+  streams = streams.concat(exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, false, dataset))
 
   // manage interruption in case of draft mode
   const limit = (dataset.draftReason && !ignoreDraftLimit) ? 100 : -1
@@ -609,7 +618,7 @@ const latlonUri = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
 
 exports.extendedSchema = async (db, dataset, fixConcept = true) => {
   exports.cleanSchema(dataset)
-  const schema = dataset.schema.filter(f => f['x-extension'] || !f.key.startsWith('_'))
+  const schema = dataset.schema.filter(f => f['x-extension'] || !f['x-calculated'])
   const documentProperty = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (documentProperty) {
     if (!documentProperty['x-capabilities'] || documentProperty['x-capabilities'].indexAttachment !== false) {

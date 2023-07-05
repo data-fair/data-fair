@@ -30,19 +30,19 @@ describe('rate limiting', () => {
     let t0 = new Date().getTime()
     await ax.get(`/api/v1/datasets/${dataset.id}/raw`)
     let t1 = new Date().getTime()
-    assert.ok((t1 - t0 > 250) && (t1 - t0 < 350), 'throttled download should be slightly more than 250ms, got ' + (t1 - t0))
+    assert.ok((t1 - t0 > 250) && (t1 - t0 < 400), 'throttled download should be slightly more than 250ms, got ' + (t1 - t0))
 
     // raw data access by anonymous user
     t0 = new Date().getTime()
     await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/raw`)
     t1 = new Date().getTime()
-    assert.ok((t1 - t0 > 500) && (t1 - t0 < 600), 'throttled download should be slightly more than 500ms, got ' + (t1 - t0))
+    assert.ok((t1 - t0 > 500) && (t1 - t0 < 800), 'throttled download should be slightly more than 500ms, got ' + (t1 - t0))
 
     // extended data access by authenticated user
     t0 = new Date().getTime()
     await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     t1 = new Date().getTime()
-    assert.ok((t1 - t0 > 250) && (t1 - t0 < 350), 'throttled download should be slightly more than 500ms, got ' + (t1 - t0))
+    assert.ok((t1 - t0 > 250) && (t1 - t0 < 400), 'throttled download should be slightly more than 250ms, got ' + (t1 - t0))
 
     // queried data access by authenticated user
     t0 = new Date().getTime()

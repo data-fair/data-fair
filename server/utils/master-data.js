@@ -1,6 +1,7 @@
 const { Readable, Transform, Writable } = require('stream')
 const createError = require('http-errors')
 const mimeTypeStream = require('mime-type-stream')
+const flatten = require('flat')
 const virtualDatasetsUtils = require('./virtual-datasets')
 const batchStream = require('./batch-stream')
 const esUtils = require('./es')
@@ -27,14 +28,19 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
   if (!bulkSearch) throw createError(404, `Recherche en masse "${bulkSearchId}" inconnue`)
 
   if (dataset.isVirtual) dataset.descendants = await virtualDatasetsUtils.descendants(db, dataset)
+  const _source = (select && select !== '*') ? select.split(',') : dataset.schema.filter(prop => !prop['x-calculated']).map(prop => prop.key)
+  const unknownField = _source.find(s => !dataset.schema.find(p => p.key === s))
+  if (unknownField) throw createError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données.`)
 
-  const { _source } = esUtils.prepareQuery(dataset, { select })
   const finalizeResponseLine = (responseLine, lineKey, error) => {
+    responseLine = flatten(responseLine)
     const fixedLine = {}
     for (const id of _source) {
-      if (id.startsWith('_')) continue
-      if (id in responseLine) fixedLine[id] = responseLine[id]
-      else if (contentType === 'text/csv') fixedLine[id] = '' // complete csv output with empty values so that the generated header is complete
+      if (id in responseLine) {
+        fixedLine[id] = responseLine[id]
+      } else if (contentType === 'text/csv') {
+        fixedLine[id] = '' // complete csv output with empty values so that the generated header is complete
+      }
     }
     fixedLine._key = lineKey
     if (error) fixedLine._error = error

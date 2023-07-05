@@ -27,7 +27,7 @@ exports.process = async function (app, dataset) {
 
   dataset.file.schema = sniffResult.labels
     .map((field, i) => ({
-      key: fieldsSniffer.escapeKey(field),
+      key: fieldsSniffer.escapeKey(field, dataset),
       'x-originalName': field.replace(/""/g, '"').replace(/^"/, '').replace(/"$/, '')
     }))
     // do not keep columns with empty string as header
@@ -54,7 +54,7 @@ exports.process = async function (app, dataset) {
   const attachments = await datasetUtils.lsAttachments(dataset)
   for (const field of Object.keys(sampleValues)) {
     if (!field) continue // do not keep columns with empty string as header
-    const escapedKey = fieldsSniffer.escapeKey(field)
+    const escapedKey = fieldsSniffer.escapeKey(field, dataset)
     const fileField = dataset.file.schema.find(f => f.key === escapedKey)
     if (!fileField) throw new Error(`Champ ${field} présent dans la donnée mais absent de l'analyse initiale du fichier`)
     const existingField = dataset.schema && dataset.schema.find(f => f.key === escapedKey)

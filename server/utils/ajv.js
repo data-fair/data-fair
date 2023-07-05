@@ -1,21 +1,37 @@
-// TODO: ue something like this when upgrading to ajv 8
-
-/* const createError = require('http-errors')
+const createError = require('http-errors')
 const Ajv = require('ajv')
 const localize = require('ajv-i18n')
 const addFormats = require('ajv-formats')
-const ajv = new Ajv({ allErrors: true, messages: false })
+const ajv = new Ajv({ allErrors: true, messages: false, strict: false })
 
 addFormats(ajv)
 
-exports.compile = (schema) => {
+exports.compile = (schema, throws = true) => {
   const validate = ajv.compile(schema)
-  return (data, locale = 'fr') => {
+  const myValidate = (data, locale = 'fr', errorsCallback) => {
     const valid = validate(data)
     if (!valid) {
+      if (errorsCallback) errorsCallback(validate.errors);
       (localize[locale] || localize.fr)(validate.errors)
-      throw createError(400, ajv.errorsText(validate.errors, { separator: '\n' }))
+      // complete message based on extra parameters https://ajv.js.org/api.html#error-parameters
+      for (const error of validate.errors) {
+        if (error.keyword === 'additionalProperties') {
+          error.message += ` (${error.params.additionalProperty})`
+        }
+      }
+      const errors = ajv.errorsText(validate.errors, {
+        separator: ', ',
+        dataVar: ''
+      })
+      if (throws) {
+        throw createError(400, errors)
+      } else {
+        myValidate.errors = errors
+        return false
+      }
     }
+    return true
   }
+
+  return myValidate
 }
- */

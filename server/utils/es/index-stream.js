@@ -17,6 +17,7 @@ const cleanItem = (item) => {
   // these properties are only for internal management of rest dataset
   delete item._hash
   delete item._needsIndexing
+  delete item._needsExtending
   delete item._deleted
   delete item._updatedBy
 }

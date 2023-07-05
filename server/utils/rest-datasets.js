@@ -4,7 +4,7 @@ const path = require('path')
 const createError = require('http-errors')
 const { nanoid } = require('nanoid')
 const pump = require('../utils/pipe')
-const ajv = require('ajv')()
+const ajv = require('../utils/ajv')
 const multer = require('multer')
 const mime = require('mime-types')
 const { Readable, Transform, Writable } = require('stream')
@@ -27,6 +27,7 @@ const actions = ['create', 'update', 'patch', 'delete']
 
 function cleanLine (line) {
   delete line._needsIndexing
+  delete line._needsExtending
   delete line._deleted
   delete line._action
   delete line._error
@@ -88,7 +89,8 @@ exports.initDataset = async (db, dataset) => {
   }
   const collection = exports.collection(db, dataset)
   await Promise.all([
-    collection.createIndex({ _needsIndexing: 1 }),
+    collection.createIndex({ _needsIndexing: 1 }, { sparse: true }),
+    collection.createIndex({ _needsExtending: 1 }, { sparse: true }),
     collection.createIndex({ _i: -1 }, { unique: true })
   ])
 }
@@ -110,6 +112,7 @@ exports.configureHistory = async (app, dataset) => {
       for await (const line of exports.collection(db, dataset).find()) {
         const revision = { ...line, _action: 'create' }
         delete revision._needsIndexing
+        delete revision._needsExtending
         fillPrimaryKeyFromId(revision, dataset)
         revision._lineId = revision._id
         delete revision._id
@@ -208,7 +211,11 @@ const applyTransactions = async (req, transacs, validate) => {
     if (!body._id) throw createError(400, '"_id" attribute is required')
 
     const extendedBody = { ...body }
-    extendedBody._needsIndexing = true
+    if (dataset.extensions && dataset.extensions.find(e => e.active)) {
+      extendedBody._needsExtending = true
+    } else {
+      extendedBody._needsIndexing = true
+    }
     extendedBody._updatedAt = body._updatedAt ? new Date(body._updatedAt) : updatedAt
     extendedBody._i = Number((new Date(extendedBody._updatedAt).getTime() - datasetCreatedAt) + padI(i))
     i++
@@ -254,6 +261,7 @@ const applyTransactions = async (req, transacs, validate) => {
       if (history) {
         const revision = { ...extendedBody, _action }
         delete revision._needsIndexing
+        delete revision._needsExtending
         fillPrimaryKeyFromId(revision, dataset)
         revision._lineId = revision._id
         delete revision._id
@@ -369,7 +377,7 @@ const compileSchema = (dataset, adminMode) => {
   schema.properties._id = { type: 'string' }
   // super-admins can set _updatedAt and so rewrite history
   if (adminMode) schema.properties._updatedAt = { type: 'string', format: 'date-time' }
-  return ajv.compile(schema)
+  return ajv.compile(schema, false)
 }
 
 async function manageAttachment (req, keepExisting) {
@@ -633,10 +641,8 @@ exports.readRevisions = async (req, res, next) => {
   res.send(response)
 }
 
-exports.readStreams = async (db, dataset, onlyUpdated, progress) => {
+exports.readStreams = async (db, dataset, filter = {}, progress) => {
   const collection = exports.collection(db, dataset)
-  const filter = {}
-  if (onlyUpdated) filter._needsIndexing = true
   let inc
   if (progress) {
     const count = await collection.countDocuments(filter)
@@ -662,6 +668,8 @@ exports.writeExtendedStreams = (db, dataset) => {
     objectMode: true,
     async write (item, encoding, cb) {
       try {
+        delete item._needsExtending
+        item._needsIndexing = true
         await collection.replaceOne({ _id: item._id }, item)
         cb()
       } catch (err) {
@@ -687,7 +695,7 @@ exports.markIndexedStream = (db, dataset) => {
           if (chunk._deleted) {
             this.bulkOp.find({ _id: chunk._id }).deleteOne()
           } else {
-            this.bulkOp.find({ _id: chunk._id }).updateOne({ $set: { _needsIndexing: false } })
+            this.bulkOp.find({ _id: chunk._id }).updateOne({ $unset: { _needsIndexing: '' } })
           }
         }
         if (this.i === config.mongo.maxBulkOps) {

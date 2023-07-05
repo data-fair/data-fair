@@ -1,7 +1,11 @@
 const Ajv = require('ajv')
-const ajv = new Ajv()
+const addFormats = require('ajv-formats')
 const moment = require('moment-timezone')
 const config = require('config')
+const slug = require('slugify')
+
+const ajv = new Ajv()
+addFormats(ajv)
 
 exports.sniff = (values, attachmentsPaths = [], existingField) => {
   if (!values.length) return { type: 'empty' }
@@ -16,14 +20,14 @@ exports.sniff = (values, attachmentsPaths = [], existingField) => {
     else return { type: 'integer' }
   }
   if (checkAll(values, val => !isNaN(formatNumber(trimValue(val))))) return { type: 'number' }
-  if (checkAll(values, dateTimeSchema)) return { type: 'string', format: 'date-time' }
-  if (checkAll(values, dateSchema)) return { type: 'string', format: 'date' }
   for (const dateTimeFormat of config.dateTimeFormats) {
     if (checkAll(values, hasDateFormat(dateTimeFormat))) return { type: 'string', format: 'date-time', dateTimeFormat }
   }
+  if (checkAll(values, dateTimeSchema)) return { type: 'string', format: 'date-time' }
   for (const dateFormat of config.dateFormats) {
     if (checkAll(values, hasDateFormat(dateFormat))) return { type: 'string', format: 'date', dateFormat }
   }
+  if (checkAll(values, dateSchema)) return { type: 'string', format: 'date' }
   if (checkAll(values, val => val.length <= 200)) return { type: 'string' }
   // TODO: detect color codes ?
   // TODO: detect markdown/html format ?
@@ -85,13 +89,18 @@ exports.format = (value, prop, fileProp) => {
 }
 
 // WARNING: this code is duplicated in dataset-schema.vue
-exports.escapeKey = (key) => {
-  key = key.replace(/\.|\s|\$|;|,|:|!/g, '_').replace(/"/g, '')
-  // prefixing by _ is reserved to fields calculated by data-fair
-  while (key.startsWith('_')) {
-    key = key.slice(1)
+exports.escapeKey = (key, dataset) => {
+  const algorithm = dataset.analysis?.escapeKeyAlgorithm
+  if (algorithm === 'legacy') {
+    key = key.replace(/\.|\s|\$|;|,|:|!/g, '_').replace(/"/g, '')
+    // prefixing by _ is reserved to fields calculated by data-fair
+    while (key.startsWith('_')) {
+      key = key.slice(1)
+    }
+    return key
+  } else {
+    return slug(key, { lower: true, strict: true, replacement: '_' })
   }
-  return key
 }
 
 function checkAll (values, check, param, throwIfAlmost) {

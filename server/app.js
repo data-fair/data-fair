@@ -162,11 +162,22 @@ exports.run = async () => {
     await require('event-to-promise')(server, 'listening')
   }
 
-  let db, client
+  const { db, client } = await dbUtils.connect()
+
+  await locksUtils.init(db)
   if (config.mode.includes('worker')) {
-    ({ db, client } = await require('../upgrade')())
-  } else {
-    ({ db, client } = await dbUtils.connect())
+    const ack = await locksUtils.acquire(db, 'upgrade', 'worker')
+    if (!ack) {
+      console.warn('upgrade scripts lock is already acquired, skip them')
+      // IMPORTANT: this behaviour of running the worker when the upgrade scripts are still running implies
+      // that they cannot be considered as a pre-requisite. Note that this was already tru for the API anyway.
+      // if we want to consider the upgrade scripts as a pre-requisite we should implement a wait on all
+      // containers for the scripts that are running in only 1 (while loop on "acquire" ?) and a healthcheck so that workers
+      // are not considered "up" and the previous versions keep running in the mean time
+    } else {
+      await require('../upgrade')(db, client)
+      await locksUtils.release(db, 'upgrade')
+    }
   }
 
   await Promise.all([
@@ -211,8 +222,6 @@ exports.run = async () => {
   if (config.mode.includes('worker')) {
     require('./workers').start(app)
   }
-
-  await locksUtils.init(db)
 
   // special mode: run the process to execute a single worker tasks
   // for  extra resiliency to fatal memory exceptions

@@ -65,7 +65,7 @@
           <v-card
             :loading="!ready"
             height="100%"
-            :outlined="!hasChanges(extension)"
+            :outlined="!extensionHasChanges(extension)"
           >
             <v-card-title>
               {{ remoteServicesMap[extension.remoteService] && remoteServicesMap[extension.remoteService].actions[extension.action] && remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
@@ -89,7 +89,7 @@
             <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
               <dataset-extension-details-dialog
                 :extension="extension"
-                :disabled="hasChanges(extension)"
+                :disabled="extensionHasChanges(extension)"
               />
               <confirm-menu
                 v-if="can('writeDescriptionBreaking')"
@@ -98,17 +98,19 @@
                 :tooltip="$t('confirmDeleteTooltip')"
                 @confirm="removeExtension(idx)"
               />
-              <v-spacer />
-              <v-btn
-                v-t="'apply'"
-                color="primary"
-                depressed
-                :disabled="!hasChanges(extension)"
-                @click="applyExtension(idx)"
-              />
             </v-card-actions>
           </v-card>
         </v-col>
+      </v-row>
+      <v-row class="px-2">
+        <v-spacer />
+        <v-btn
+          v-t="'apply'"
+          color="primary"
+          depressed
+          :disabled="!hasChanges"
+          @click="applyExtensions()"
+        />
       </v-row>
     </v-col>
   </v-row>
@@ -216,6 +218,9 @@ export default {
         res[extension.remoteService + '_' + extension.action] = { fields, tags, fieldsAndTags }
       })
       return res
+    },
+    hasChanges () {
+      return JSON.stringify(this.dataset.extensions) !== JSON.stringify(this.localExtensions)
     }
   },
   async created () {
@@ -242,8 +247,8 @@ export default {
     this.ready = true
   },
   methods: {
-    ...mapActions('dataset', ['fetchRemoteServices', 'patch']),
-    hasChanges (extension) {
+    ...mapActions('dataset', ['fetchRemoteServices', 'patchAndCommit']),
+    extensionHasChanges (extension) {
       const savedExtension = this.dataset.extensions.find(e => e.remoteService === extension.remoteService && e.action === extension.action)
       return !savedExtension || JSON.stringify(savedExtension.select) !== JSON.stringify(extension.select)
     },
@@ -261,18 +266,10 @@ export default {
       }
     },
     removeExtension (idx) {
-      const extension = this.localExtensions[idx]
       this.localExtensions.splice(idx, 1)
-      const savedIdx = this.dataset.extensions.findIndex(e => e.remoteService === extension.remoteService && e.action === extension.action)
-      if (savedIdx !== -1) this.dataset.extensions.splice(savedIdx, 1)
-      this.patch({ extensions: this.dataset.extensions })
     },
-    applyExtension (idx) {
-      const extension = JSON.parse(JSON.stringify(this.localExtensions[idx]))
-      const savedIdx = this.dataset.extensions.findIndex(e => e.remoteService === extension.remoteService && e.action === extension.action)
-      if (savedIdx === -1) this.dataset.extensions.push(extension)
-      else this.dataset.extensions[savedIdx] = extension
-      this.patch({ extensions: this.dataset.extensions })
+    applyExtensions () {
+      this.patchAndCommit({ extensions: JSON.parse(JSON.stringify(this.localExtensions)) })
     }
   }
 }

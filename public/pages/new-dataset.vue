@@ -403,6 +403,14 @@
               @change="setRestSource"
             />
             <v-checkbox
+              v-if="restSource && restSource.extensions.length"
+              v-model="restSourceExtensions"
+              hide-details
+              class="pl-2"
+              :label="$t('restSourceExtensions')"
+              @change="setRestSourceExtensions"
+            />
+            <v-checkbox
               v-model="restDataset.rest.history"
               hide-details
               class="pl-2"
@@ -758,6 +766,7 @@ fr:
   history: Conserver un historique complet des révisions des lignes du jeu de données
   lineOwnership: Permet de donner la propriété d'une lignes à des utilisateurs (scénarios collaboratifs)
   restSource: Initialiser le schéma en dupliquant celui d'un jeu de données existant
+  restSourceExtensions: Copier les enrichissements en même temps que le schéma initial
   children: Jeux enfants
   virtualDatasetFill: Initialiser le schéma avec toutes les colonnes des jeux enfants
   completed: complétés
@@ -873,6 +882,7 @@ export default {
     ignoreConflicts: false,
     virtualChildren: [],
     restSource: null,
+    restSourceExtensions: false,
     loadingDatasets: false,
     search: '',
     datasets: [],
@@ -1035,8 +1045,20 @@ export default {
       }
     },
     async setRestSource (dataset) {
-      if (!dataset) this.restDataset.schema = []
-      else this.restDataset.schema = await this.$axios.$get(`api/v1/datasets/${dataset.id}/schema`)
+      this.restSourceExtensions = false
+      if (!dataset) {
+        this.restSource = null
+        this.restDataset.schema = []
+        delete this.restDataset.extensions
+      } else {
+        this.restSource = await this.$axios.$get(`api/v1/datasets/${dataset.id}`)
+        this.restDataset.schema = this.restSource.schema.filter(p => !p['x-calculated'] && !p['x-extension'])
+      }
+    },
+    setRestSourceExtensions () {
+      if (this.restSourceExtensions) {
+        this.restDataset.extensions = this.restSource.extensions
+      }
     }
   }
 }

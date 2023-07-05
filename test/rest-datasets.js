@@ -177,6 +177,7 @@ describe('REST datasets', () => {
       await ax.post('/api/v1/datasets/rest4/lines', { attr3: 'test1' })
       assert.fail()
     } catch (err) {
+      assert.equal(err.data, ' ne doit pas contenir de propriétés additionnelles (attr3)')
       assert.equal(err.status, 400)
     }
 
@@ -184,6 +185,7 @@ describe('REST datasets', () => {
       await ax.post('/api/v1/datasets/rest4/lines', { attr1: 111 })
       assert.fail()
     } catch (err) {
+      assert.equal(err.data, '/attr1 doit être de type string')
       assert.equal(err.status, 400)
     }
 
@@ -191,6 +193,7 @@ describe('REST datasets', () => {
       await ax.put('/api/v1/datasets/rest4/lines/line1', { attr1: 111 })
       assert.fail()
     } catch (err) {
+      assert.equal(err.data, '/attr1 doit être de type string')
       assert.equal(err.status, 400)
     }
 
@@ -198,6 +201,7 @@ describe('REST datasets', () => {
       await ax.patch('/api/v1/datasets/rest4/lines/line1', { attr1: 111 })
       assert.fail()
     } catch (err) {
+      assert.equal(err.data, '/attr1 doit être de type string')
       assert.equal(err.status, 400)
     }
 
@@ -210,7 +214,7 @@ describe('REST datasets', () => {
     assert.equal(res.data.nbErrors, 1)
     assert.equal(res.data.errors.length, 1)
     assert.equal(res.data.errors[0].line, 1)
-    assert.ok(res.data.errors[0].error)
+    assert.equal(res.data.errors[0].error, '/attr1 doit être de type string')
 
     await workers.hook('finalizer/rest4')
   })
@@ -779,7 +783,7 @@ line3,test1,test1,true,`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(lines[0].attr1, 'test1')
     assert.equal(lines[0].attr2, 'test1')
     assert.equal(lines[0].attr3, true)
-    assert.equal(lines[0].attr4, '2015-03-18T00:58:59+01:00')
+    assert.equal(lines[0].attr4, '2015-03-18T00:58:59')
     assert.equal(lines[1]._id, 'line2')
     assert.equal(lines[1].attr1, 'test1')
     assert.equal(lines[1].attr2, 'test1')
@@ -956,8 +960,8 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     await pump(res.data, new Writable({
       write (chunk, encoding, callback) {
         i += 1
-        if (i < 6) assert.equal(chunk.toString(), ' ')
-        else {
+        if (i < 3) assert.equal(chunk.toString(), ' ')
+        else if (chunk.toString() !== ' ') {
           const result = JSON.parse(chunk.toString())
           assert.equal(result.nbOk, 550)
         }
