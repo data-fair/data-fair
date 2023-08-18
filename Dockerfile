@@ -1,17 +1,17 @@
 ######################################################
 # Stage: install prepair that depends on gdal and cgal
-FROM node:16.18.0-alpine3.15 AS geodeps
+FROM node:16.20.1-alpine3.18 AS geodeps
 
 RUN apk add --no-cache curl cmake make g++ linux-headers
 RUN apk add --no-cache gdal gdal-dev
 RUN apk add --no-cache boost-dev gmp gmp-dev mpfr-dev
-RUN apk add --no-cache libressl3.4-libcrypto
+RUN apk add --no-cache libressl3.7-libcrypto
 
 # build CGAL (not yet present in alpine repos)
 WORKDIR /tmp
-RUN curl -L https://github.com/CGAL/cgal/releases/download/releases%2FCGAL-4.14/CGAL-4.14.tar.xz -o cgal.tar.xz
+RUN curl -L https://github.com/CGAL/cgal/releases/download/releases%2FCGAL-4.14.3/CGAL-4.14.3.tar.xz -o cgal.tar.xz
 RUN tar -xf cgal.tar.xz
-WORKDIR /tmp/CGAL-4.14
+WORKDIR /tmp/CGAL-4.14.3
 RUN cmake -D CMAKE_BUILD_TYPE=Release .
 RUN make
 RUN make install
@@ -30,7 +30,7 @@ RUN prepair --help
 ############################################################################################################
 # Stage: prepare a base image with all native utils pre-installed, used both by builder and definitive image
 
-FROM node:16.18.0-alpine3.15 AS nativedeps
+FROM node:16.20.1-alpine3.18 AS nativedeps
 
 # these are also geodeps, but we need to install them here as they pull many dependencies
 RUN apk add --no-cache gmp gdal-tools
@@ -38,7 +38,7 @@ RUN test -f /usr/bin/ogr2ogr
 COPY --from=geodeps /usr/bin/prepair /usr/bin/prepair
 COPY --from=geodeps /usr/local/lib/libCGAL.so.13 /usr/local/lib/libCGAL.so.13
 COPY --from=geodeps /usr/lib/libmpfr.so.6 /usr/lib/libmpfr.so.6
-RUN ln -s /usr/lib/libproj.so.22 /usr/lib/libproj.so
+RUN ln -s /usr/lib/libproj.so.25 /usr/lib/libproj.so
 RUN test -f /usr/lib/libproj.so
 # check that geo execs actually load
 RUN prepair --help
@@ -50,7 +50,6 @@ RUN apk add --no-cache unzip dumb-init
 FROM nativedeps AS builder
 
 RUN apk add --no-cache python3 make g++ curl
-RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN apk add --no-cache sqlite-dev
 
 WORKDIR /webapp
