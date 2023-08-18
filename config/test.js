@@ -41,7 +41,7 @@ module.exports = {
   },
   worker: {
     interval: 10,
-    concurrency: 2,
+    concurrency: 4,
     spawnTask: false
   },
   mongo: {

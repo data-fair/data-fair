@@ -180,7 +180,7 @@
     "nuxt-start": "^2.17.1",
     "object-hash": "^2.2.0",
     "object-sizeof": "^1.6.3",
-    "ogr2ogr": "^2.1.2",
+    "ogr2ogr": "^4.0.1",
     "original-url": "^1.2.3",
     "parse5": "^7.1.2",
     "piscina": "^3.2.0",

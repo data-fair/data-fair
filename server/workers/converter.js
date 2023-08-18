@@ -42,7 +42,7 @@ exports.process = async function (app, dataset) {
   const path = require('path')
   const fs = require('fs-extra')
   const createError = require('http-errors')
-  const ogr2ogr = require('ogr2ogr')
+  const ogr2ogr = require('ogr2ogr').default
   const pump = require('../utils/pipe')
   const csvStringify = require('csv-stringify')
   const tmp = require('tmp-promise')
@@ -177,14 +177,16 @@ exports.process = async function (app, dataset) {
       ogrOptions.push('tracks')
       ogrOptions.push('routes')
     }
-    const geoJsonStream = ogr2ogr(originalFilePath)
-      .format('GeoJSON')
-      .options(ogrOptions)
-      .timeout(config.ogr2ogr.timeout)
-      // .skipfailures()
-      .stream()
+
     const filePath = path.join(datasetUtils.dir(dataset), baseName + '.geojson')
-    await pump(geoJsonStream, fs.createWriteStream(filePath))
+    await ogr2ogr(originalFilePath, {
+      format: 'GeoJSON',
+      options: ogrOptions,
+      timeout: config.ogr2ogr.timeout,
+      destination: filePath
+    })
+
+    // await pump(geoJsonStream, fs.createWriteStream(filePath))
     dataset.file = {
       name: path.parse(dataset.originalFile.name).name + '.geojson',
       size: await fs.stat(filePath).size,
