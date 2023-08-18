@@ -92,16 +92,10 @@ module.exports = {
     // baseURL: `http://localhost:${config.port}/`,
   },
   buildModules: [
-    'nuxt-webpack-optimisations',
     '@nuxtjs/vuetify',
     '@nuxtjs/svg',
     ['@nuxtjs/google-fonts', { download: true, display: 'swap', families: { Nunito: [100, 300, 400, 500, 700, 900] } }]
   ],
-  webpackOptimisations: {
-    // hard source is the riskiest, if you have issues don't enable it
-    hardSourcePlugin: process.env.NODE_ENV === 'development',
-    parallelPlugin: process.env.NODE_ENV === 'development'
-  },
   vuetify: vuetifyOptions,
   env: {
     mainPublicUrl: config.publicUrl,
