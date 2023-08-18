@@ -311,6 +311,7 @@ const lockNewDataset = async (req, res, dataset) => {
   const lockKey = `dataset:${dataset.id}`
   const ack = await locks.acquire(db, lockKey, `${req.method} - ${req.originalUrl}`)
   if (ack) res.on('close', () => locks.release(db, lockKey).catch(err => console.warn('failure to release dataset lock', err)))
+  return ack
 }
 // Shared middleware to read dataset in db
 // also checks that the dataset is in a state compatible with some action
@@ -698,7 +699,8 @@ const titleFromFileName = (name) => {
   return path.parse(baseFileName).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')
 }
 
-const setFileInfo = async (db, file, attachmentsFile, dataset, draft, res) => {
+const setFileInfo = async (req, file, attachmentsFile, dataset, draft, res) => {
+  const db = req.app.get('db')
   const patch = {
     dataUpdatedBy: dataset.updatedBy,
     dataUpdatedAt: dataset.updatedAt
@@ -716,17 +718,17 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft, res) => {
     const baseId = slug(baseTitle, { lower: true, strict: true })
     dataset.id = baseId
     dataset.title = baseTitle
-    let i = 1; let dbExists = false; let fileExists = false
+    let i = 1; let dbExists = false; let fileExists = false; let acquiredLock = false
     do {
       if (i > 1) {
         dataset.id = baseId + i
         dataset.title = baseTitle + ' ' + i
       }
-      // better to check file as well as db entry in case of file currently uploading
+      acquiredLock = await lockNewDataset(req, res, dataset)
       dbExists = await db.collection('datasets').countDocuments({ id: dataset.id })
       fileExists = await fs.exists(datasetUtils.dir(dataset))
       i += 1
-    } while (dbExists || fileExists)
+    } while (dbExists || fileExists || !acquiredLock)
 
     if (draft) {
       dataset.status = 'draft'
@@ -815,7 +817,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
     if (datasetFile) {
       if (req.body.isVirtual) throw createError(400, 'Un jeu de données virtuel ne peut pas être initialisé avec un fichier')
       // TODO: do this in a worker instead ?
-      const datasetPromise = setFileInfo(db, datasetFile, attachmentsFile, await initNew(db, req), req.query.draft === 'true', res)
+      const datasetPromise = setFileInfo(req, datasetFile, attachmentsFile, await initNew(db, req), req.query.draft === 'true', res)
       await Promise.race([datasetPromise, new Promise(resolve => setTimeout(resolve, 5000))])
       // send header at this point, if we are not finished processing files
       // asyncWrap keepalive option will keep request alive
@@ -977,7 +979,7 @@ const updateDataset = asyncWrap(async (req, res) => {
       res.writeHeader(req.isNewDataset ? 201 : 200, { 'Content-Type': 'application/json' })
       res.write(' ')
 
-      dataset = await setFileInfo(db, datasetFile, attachmentsFile, { ...dataset, ...req.body }, req.query.draft === 'true', res)
+      dataset = await setFileInfo(req, datasetFile, attachmentsFile, { ...dataset, ...req.body }, req.query.draft === 'true', res)
       if (req.query.skipAnalysis === 'true') req.body.status = 'analyzed'
     } else if (dataset.isVirtual) {
       const { isVirtual, updatedBy, updatedAt, ...patch } = req.body
