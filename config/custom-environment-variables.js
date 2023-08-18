@@ -42,6 +42,14 @@ module.exports = {
   },
   elasticsearch: {
     host: 'ES_HOST',
+    nodes: {
+      __name: 'ES_NODES',
+      __format: 'json'
+    },
+    auth: {
+      __name: 'ES_AUTH',
+      __format: 'json'
+    },
     defaultAnalyzer: 'ES_DEFAULT_ANALYZER',
     maxBulkLines: {
       __name: 'ES_MAX_BULK_LINES',

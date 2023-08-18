@@ -30,10 +30,14 @@ module.exports = {
   },
   elasticsearch: {
     host: 'localhost:9200',
+    auth: null,
+    nodes: null,
+    options: {
+      requestTimeout: 240000 // same as timeout in bulk indexing requests
+    },
     defaultAnalyzer: 'french',
     maxBulkLines: 2000,
     maxBulkChars: 200000,
-    requestTimeout: 240000, // same as timeout in bulk indexing requests
     maxShardSize: 10000000000, // 10go
     nbReplicas: 1,
     maxPageSize: 10000

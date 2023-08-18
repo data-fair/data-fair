@@ -19,9 +19,12 @@ exports.minAgg = smallAggs.min
 exports.indexStream = require('./index-stream')
 
 exports.init = async () => {
-  let node = config.elasticsearch.host
-  if (!node.startsWith('http')) node = 'http://' + node
-  const client = new elasticsearch.Client(Object.assign({ node }, config.elasticsearch))
+  let node = config.elasticsearch.nodes
+  if (!node) {
+    node = config.elasticsearch.host
+    if (!node.startsWith('http')) node = 'http://' + node
+  }
+  const client = new elasticsearch.Client(Object.assign({ node, auth: config.elasticsearch.auth }, config.elasticsearch.options))
   try {
     await client.ping()
   } catch (err) {
