@@ -24,7 +24,7 @@ exports.init = async () => {
     node = config.elasticsearch.host
     if (!node.startsWith('http')) node = 'http://' + node
   }
-  const client = new elasticsearch.Client(Object.assign({ node, auth: config.elasticsearch.auth }, config.elasticsearch.options))
+  const client = new elasticsearch.Client({ node, auth: config.elasticsearch.auth, ...config.elasticsearch.options })
   try {
     await client.ping()
   } catch (err) {

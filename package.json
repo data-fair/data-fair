@@ -110,7 +110,7 @@
   },
   "dependencies": {
     "@data-fair/sd-express": "^1.4.3",
-    "@elastic/elasticsearch": "~7.10.0",
+    "@elastic/elasticsearch": "~7.17.12",
     "@koumoul/icalendar": "^0.7.3",
     "@koumoul/nuxt-config-inject": "^0.4.10",
     "@koumoul/v-iframe": "^1.1.0",
