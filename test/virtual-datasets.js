@@ -322,9 +322,11 @@ describe('virtual datasets', () => {
         children: [res.data.id]
       }
     })
+    const virtualDataset = res.data
+    await assert.rejects(workers.hook('finalizer/' + virtualDataset.id))
 
     try {
-      await ax.get(`/api/v1/datasets/${res.data.id}/lines`)
+      await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
       assert.fail('filter in child should fail')
     } catch (err) {
       assert.equal(err.status, 501)
@@ -337,22 +339,19 @@ describe('virtual datasets', () => {
     let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
-      virtual: {
-        children: [dataset.id]
-      },
+      virtual: { children: [dataset.id] },
       schema: [{ key: 'some_date' }],
       title: 'a virtual dataset'
     })
     const virtualDataset = res.data
+    await workers.hook('finalizer/' + virtualDataset.id)
 
     let dateField = dataset.schema.find(f => f.key === 'some_date')
     let virtualDateField = virtualDataset.schema.find(f => f.key === 'some_date')
     assert.equal(virtualDateField.format, 'date')
 
     dateField.ignoreDetection = true
-    res = await ax.patch('/api/v1/datasets/' + dataset.id, {
-      schema: dataset.schema
-    })
+    res = await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     dataset = await workers.hook('finalizer/' + dataset.id)
     dateField = dataset.schema.find(f => f.key === 'some_date')
     assert.equal(dateField.format, undefined)
@@ -365,7 +364,7 @@ describe('virtual datasets', () => {
     assert.equal(res.data.total, 2)
   })
 
-  it('A virtual dataset is updated after a child schema changes', async () => {
+  it('A virtual dataset is updated after a child schema changes (2)', async () => {
     const ax = global.ax.dmeadus
     let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
@@ -375,6 +374,7 @@ describe('virtual datasets', () => {
       title: 'a virtual dataset'
     })
     let virtualDataset = res.data
+    await workers.hook('finalizer/' + virtualDataset.id)
 
     let dateField = dataset.schema.find(f => f.key === 'some_date')
     let virtualDateField = virtualDataset.schema.find(f => f.key === 'some_date')

@@ -27,7 +27,7 @@ const initMaster = async (ax, schema, id = 'master') => {
   return { master, remoteService, apiDoc }
 }
 
-describe('Master data management', () => {
+describe('Virtual master data management', () => {
   it('should define and use a dataset as master-data remote-service used for extensions', async () => {
     const ax = global.ax.superadmin
 

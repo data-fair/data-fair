@@ -144,6 +144,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     // accepted because token is the right age
     res = await global.ax.anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } })
     assert.equal(res.status, 201)
+    await workers.hook('finalizer/restcrowd')
 
     // rejected because of simple rate limiting
     await assert.rejects(

@@ -101,7 +101,8 @@ describe('datasets', () => {
     const ax = global.ax.dmeadus
     let form = new FormData()
     form.append('file', Buffer.alloc(110000), 'largedataset1.csv')
-    await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    await assert.rejects(workers.hook('finalizer/' + res.data.id))
 
     form = new FormData()
     form.append('file', Buffer.alloc(110000), 'largedataset2.csv')
@@ -389,11 +390,10 @@ describe('datasets', () => {
   it('Sort datasets by title', async () => {
     const ax = global.ax.dmeadus
 
-    await ax.post('/api/v1/datasets', { isRest: true, title: 'aa' })
-    await ax.post('/api/v1/datasets', { isRest: true, title: 'bb' })
-    await ax.post('/api/v1/datasets', { isRest: true, title: 'àb' })
-    await ax.post('/api/v1/datasets', { isRest: true, title: ' àb' })
-    await ax.post('/api/v1/datasets', { isRest: true, title: '1a' })
+    for (const title of ['aa', 'bb', 'àb', ' àb', '1a']) {
+      const res = await ax.post('/api/v1/datasets', { isRest: true, title })
+      await workers.hook('finalizer/' + res.data.id)
+    }
 
     let res = await ax.get('/api/v1/datasets', { params: { select: 'title', raw: true, sort: 'title:1' } })
     assert.deepEqual(res.data.results.map(d => d.title), ['1a', 'aa', 'àb', 'àb', 'bb'])

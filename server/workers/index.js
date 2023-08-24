@@ -44,6 +44,8 @@ exports.clear = async () => {
   }
 }
 
+exports.hasRunningTasks = () => !!promisePool.filter(p => !!p).length
+
 /* eslint no-unmodified-loop-condition: 0 */
 // Run main loop !
 exports.start = async (app) => {

@@ -114,12 +114,12 @@ before('start app', async function () {
   debug('app ok')
 })
 
-beforeEach('scratch data', async () => {
+afterEach('scratch data', async function () {
   debug('scratch data')
-  await Promise.race([
-    new Promise(resolve => setTimeout(resolve, 5000)),
-    workers.clear()
-  ])
+  if (workers.hasRunningTasks()) {
+    console.error(`the test didn't wait for some running tasks (${this.currentTest.title})`)
+    await workers.clear(this.currentTest.title)
+  }
   try {
     await Promise.all([
       global.db.collection('datasets').deleteMany({}),

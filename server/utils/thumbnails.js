@@ -70,12 +70,12 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
   }
   debug('resize using sharp', fullSharpOptions)
   try {
-    newEntry.data = Binary(await sharp(filePath)
+    newEntry.data = new Binary(await sharp(filePath)
       .resize(fullSharpOptions)
       .toBuffer())
     debug('resize ok')
   } catch (err) {
-    debug('resize ko', err.message)
+    console.warn('Sharp error while processing thumbnail for image ' + url, err)
     newEntry.sharpError = err.message
   }
   if (tmpFile) await fs.remove(tmpFile)
@@ -126,7 +126,6 @@ exports.getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
     setNoCache(req, res)
   }
   if (entry.sharpError) {
-    console.warn('Sharp error while processing thumbnail for image ' + url)
     // res.status(400).send(entry.sharpError)
     res.redirect(url)
   } else {
