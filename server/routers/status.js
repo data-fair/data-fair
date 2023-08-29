@@ -58,6 +58,7 @@ async function getStatus (req) {
   const results = await Promise.all(promises)
 
   const errors = results.filter(r => r.status === 'error')
+  if (errors.length) console.error('status has errors', errors)
   return {
     status: errors.length ? 'error' : 'ok',
     message: errors.length ? ('Problem with : ' + errors.map(s => s.name).join(', ')) : 'Service is ok',
