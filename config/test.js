@@ -49,7 +49,7 @@ module.exports = {
   },
   locks: {
     // in seconds
-    ttl: 0.1
+    ttl: 1
   },
   datasetStateRetries: {
     interval: 1,

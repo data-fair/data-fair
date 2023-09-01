@@ -312,6 +312,7 @@ describe('virtual datasets', () => {
         key: 'adr'
       }]
     })
+    await workers.hook('finalizer/' + res.data.id)
 
     res = await ax.post('/api/v1/datasets', {
       isVirtual: true,

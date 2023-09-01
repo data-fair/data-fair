@@ -33,7 +33,8 @@ describe('locks', () => {
 
   // skipped because of long wait
   // 60s is mongodb's background removal task interval
-  it.skip('Prolongate and expire locks', async () => {
+  it.skip('Prolongate and expire locks', async function () {
+    this.timeout(240000)
     const db = global.db
     // 60s is mongodb's background removal task interval
     let ack = await locks.acquire(db, 'test3')
