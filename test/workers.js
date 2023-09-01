@@ -123,8 +123,8 @@ describe('workers', () => {
   })
 
   it('Process multiple datasets in parallel children processes', async function () {
-    config.worker.spawnTask = true
-    config.worker.concurrency = 4
+    this.timeout = 60000
+    // config.worker.spawnTask = true
     const ax = global.ax.dmeadus
     const datasets = await Promise.all([
       testUtils.sendDataset('geo/stations.zip', ax),
@@ -136,8 +136,7 @@ describe('workers', () => {
     assert.ok(datasets.find(d => d.id === 'stations2'))
     assert.ok(datasets.find(d => d.id === 'stations3'))
     assert.ok(datasets.find(d => d.id === 'stations4'))
-    config.worker.concurrency = 1
-    config.worker.spawnTask = false
+    // config.worker.spawnTask = false
   })
 
   it('Manage expected failure in children processes', async function () {

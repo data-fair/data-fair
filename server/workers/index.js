@@ -44,7 +44,9 @@ exports.clear = async () => {
   }
 }
 
-exports.hasRunningTasks = () => !!promisePool.filter(p => !!p).length
+exports.runningTasks = () => {
+  return promisePool.filter(p => !!p).map(p => p._resource)
+}
 
 /* eslint no-unmodified-loop-condition: 0 */
 // Run main loop !
@@ -99,6 +101,7 @@ exports.start = async (app) => {
 
     if (stopped) continue
     promisePool[freeSlot] = iter(app, resource, type)
+    promisePool[freeSlot]._resource = `${type}/${resource.id}/${resource.status}`
     promisePool[freeSlot].catch(err => {
       prometheus.internalError.inc({ errorCode: 'worker-iter' })
       console.error('(worker-iter) error in worker iter', err)

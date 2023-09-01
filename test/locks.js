@@ -19,6 +19,18 @@ describe('locks', () => {
     assert.equal(ack, true, 'acquire released lock')
   })
 
+  it('Acquiring a single lock from many attemtps', async () => {
+    const db = global.db
+
+    const promises = []
+    for (let i = 0; i < 20; i++) {
+      promises.push(locks.acquire(db, 'test'))
+    }
+    const acks = await Promise.all(promises)
+    assert.equal(acks.length, 20)
+    assert.equal(acks.filter(ack => !!ack).length, 1)
+  })
+
   // skipped because of long wait
   // 60s is mongodb's background removal task interval
   it.skip('Prolongate and expire locks', async () => {

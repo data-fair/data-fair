@@ -45,6 +45,7 @@ describe('REST datasets exported', () => {
     await ax.post('/api/v1/datasets/rest/_bulk_lines', [
       { attr1: 'test3', attr2: 'test3' }
     ])
+    await workers.hook('finalizer/rest')
 
     await assert.rejects(ax.get('/api/v1/datasets/rest/raw'), err => err.status === 404)
 

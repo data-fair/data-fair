@@ -116,9 +116,10 @@ before('start app', async function () {
 
 afterEach('scratch data', async function () {
   debug('scratch data')
-  if (workers.hasRunningTasks()) {
-    console.error(`the test didn't wait for some running tasks (${this.currentTest.title})`)
-    await workers.clear(this.currentTest.title)
+  const runningTasks = workers.runningTasks()
+  if (runningTasks.length) {
+    throw new Error(`the test "${this.currentTest.title}" didn't wait for some running tasks (${runningTasks.join(', ')})`)
+    // await workers.clear(this.currentTest.title)
   }
   try {
     await Promise.all([
