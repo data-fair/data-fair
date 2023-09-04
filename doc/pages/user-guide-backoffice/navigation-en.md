@@ -1,5 +1,5 @@
 ---
-title: Navigate in Data&nbsp;Fair
+title: Navigate in Data Fair
 section: 2
 updated: 2021-09-20
 description : An intuitive interface

@@ -1,5 +1,5 @@
 ---
-title: Menu de Data&nbsp;Fair
+title: Menu de Data Fair
 section: 2
 subsection : 1
 updated: 2021-09-20

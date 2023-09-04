@@ -1,8 +1,8 @@
 ---
-title: Getting started with Data&nbsp;Fair
+title: Getting started with Data Fair
 section: 1
 updated: 2021-09-20
-description : Connect to Data&nbsp;Fair
+description : Connect to Data Fair
 published: true
 ---
 

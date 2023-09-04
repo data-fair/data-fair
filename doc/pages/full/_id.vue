@@ -12,7 +12,7 @@
         class="my-6"
       />
       <h1 class="text-h3 grey--text text--darken-3">
-        Data&nbsp;Fair
+        Data Fair
       </h1>
       <h4>
         Version {{ version }}
@@ -133,7 +133,7 @@ export default {
   },
   head () {
     return {
-      title: 'Data&nbsp;Fair - ' + this.$t(this.$route.params.id)
+      title: 'Data Fair - ' + this.$t(this.$route.params.id)
     }
   },
   computed: {
