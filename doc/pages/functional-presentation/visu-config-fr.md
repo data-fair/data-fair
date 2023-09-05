@@ -6,7 +6,7 @@ description : Paramétrage des visualisations
 published: true
 ---
 
-Les visualisations interactives permettent de présenter les données de manière synthétique et offrent la possibilité à l'utilisateur de les manipuler pour les comprendre plus rapidement. Elle sont servies par des applications Web légères, ceci permet une consultation directe sur tout type de terminal Web, ou une intégration iframe dans des portails ou sites institutionnel.
+Les visualisations interactives permettent de présenter les données de manière synthétique et offrent la possibilité à l'utilisateur de les manipuler pour les comprendre plus rapidement. Elles sont servies par des applications web légères, ce qui permet une consultation directe sur tout type de terminal web, ou une intégration iframe dans des portails ou sites institutionnels.
 
 ### Paramétrage intuitif
 Les visualisations peuvent être configurées grâce à une interface graphique qui ne **requiert pas de compétences en programmation**. Le menu de configuration se compose de différentes sections qui diffèrent selon les applications. La plupart du temps, le menu est composé de trois sections : la source de données, les options de rendu et les éléments liés à la navigation. Il est souvent possible de filtrer les données si on ne souhaite pas représenter le jeu de données en entier.
@@ -17,26 +17,26 @@ Les visualisations peuvent être configurées grâce à une interface graphique 
 Un aperçu donne un rendu de la visualisation. Lorsque l’on réalise des modifications sur le menu de configuration, elles sont directement représentées sur l'aperçu. Il est ainsi possible de modifier et tester rapidement différents rendus de la visualisation, en **mode brouillon**. Lorsque le rendu est satisfaisant, l’enregistrement permet de valider les modifications réalisées. Les modifications sont alors visibles sur toutes les publications de la visualisation.
 
 ### Types de visualisations
-Data&nbsp;Fair offre une grande variété de visualisations en constante progression, il y a ce jour près d'une **trentaine de visualisations différentes**. ([Cette section](./interoperate/applications) décrit en détails la manière de les créer).
+Data&nbsp;Fair offre une grande variété de visualisations en constante progression, il y a aujourd'hui près d'une **trentaine de visualisations différentes**. ([Cette section](./interoperate/applications) décrit en détails la manière de les créer).
 
 
 #### Visualisations cartographiques
 
-Plusieurs applications permettent d'afficher des données géolocalisées. *Infos localisations* permet d'afficher des **marqueurs** qui présentent au clic une **fiche détaillée**, éventuellement accompagnée d'une image. *Carto stats* affiche les données sous forme de **cercles colorés et proportionnels** à une donnée dans une colonne, elle se prête bien à la visualisation d'un **grand nombre de points**. *Géo shapes* est quand à elle adaptée à l'affichage de **géométrie complexes**, par exemple un réseau routier ou un PLU.
+Plusieurs applications permettent d'afficher des données géolocalisées. L'une d'elle permet d'afficher des **marqueurs** qui présentent au clic une **fiche détaillée**, éventuellement accompagnée d'une image. Une autre affiche les données sous forme de **cercles colorés et proportionnels** à une donnée dans une colonne, elle se prête bien à la visualisation d'un **grand nombre de points**. Une troisième est, quant à elle, adaptée à l'affichage de **géométrie complexes**, par exemple, un réseau routier ou un plan local d'urbanisme.
 
 <img src="./images/functional-presentation/visu-carto.jpg"
      height="300" style="margin:10px auto;" />
 
-D'autres applications sont adaptées aux données territorialisées, ce sont les données possédant au moins un code territoire : code commune, département ou même code parcelles. *Infos parcelles* permet de projeter les données sur le **plan cadastral** français. *Cartographie territoriale multi-niveaux* affiche une **carte choroplèthe** des territoires allant de l'IRIS à la région et est adaptée à présenter des données comme les résultats d'élections ou d'autres indicateurs. *Zones de chalandise* permet de **fusionner les géométries des territoires** pour avoir des zones de couverture, par exemple le périmètre d'action des gendarmeries.
+D'autres applications sont adaptées aux données territorialisées, ce sont les données possédant au moins un code territoire : code commune, département ou même code parcelle. On peut, par exemple, projeter les données sur le **plan cadastral** français. Il est également possible d'afficher une **carte choroplèthe** des territoires allant de l'IRIS à la région, adaptée à la présentation des données, comme les résultats d'élections ou d'autres indicateurs. Une application permet de **fusionner les géométries des territoires** pour avoir des zones de couverture, par exemple, le périmètre d'action des gendarmeries.
 
 #### Visualisations en diagrammes
 
-Dès que les données possèdent des colonnes avec des types numériques, il est possible de paramétrer pour elles des visualisations en diagrammes. *Graphiques divers* permet de faire différents type de graphiques communs : **histogrammes, lignes, aires, camemberts**, ... *Diagramme de Sankey* est adapté à la **visualisation de flux**. *Graphique en radar* permet de comparer les lignes de données sur **différents critères**. *Comparaison de proportions* produit des diagrammes en gaufre, pour par exemple comparer la répartitions des éléments suivant différentes catégories.
+Dès que les données possèdent des colonnes avec des types numériques, il est possible de paramétrer pour elles des visualisations en diagrammes. Une application permet de faire différents types de graphiques communs : **histogrammes, lignes, aires, camemberts**, etc. Une autre est adaptée à la **visualisation de flux**. Une troisième permet de comparer les lignes de données sur **différents critères**. Une autre encore produit des diagrammes en gaufre, par exemple, pour comparer la répartitions des éléments suivant différentes catégories.
 
 <img src="./images/functional-presentation/visu-diag.jpg"
      height="360" style="margin:45px auto;" />
 
-*Graphes / Réseaux* et *Réseau de relations* permettent de faire des **graphes**, dans le premiers cas en utilisant des nœuds et des liens, et dans le second cas en se basant sur 2 critères dans 2 colonnes différentes d'un jeu de données. Pour les **données hiérarchiques**, 2 visualisations sont disponibles : *Treemap* et *Diagramme Sunburst*, et sont bien adaptée pour visualiser des données de budget ou d'allocation d'aides.
+Des applications permettent de faire des **graphes**,  en utilisant des nœuds et des liens, ou bien en se basant sur deux critères dans deux colonnes différentes d'un jeu de données. Pour les **données hiérarchiques**, deux visualisations sont disponibles et sont bien adaptée pour visualiser des données de budget ou d'allocation d'aides.
 
 #### Visualisations temporelles
 
