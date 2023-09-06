@@ -322,5 +322,6 @@ async function acquireNext (db, type, filter) {
     // check that there was no race condition and that the resource is still in the state required to work on it
     const updatedResource = await db.collection(type + 's').findOne({ ...filter, id: resource.id })
     if (updatedResource) return updatedResource
+    else await locks.release(db, `${type}:${resource.id}`)
   }
 }
