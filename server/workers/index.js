@@ -133,7 +133,7 @@ const typesFilters = () => {
     dataset: {
       isMetaOnly: { $ne: true },
       $or: [
-      // fetch next processing steps in usual sequence
+        // fetch next processing steps in usual sequence
         { status: { $nin: ['finalized', 'error', 'draft'] } },
         // fetch next processing steps in usual sequence, but of the draft version of the dataset
         { 'draft.status': { $exists: true, $nin: ['finalized', 'error'] } },
@@ -313,11 +313,14 @@ async function iter (app, resource, type) {
 
 async function acquireNext (db, type, filter) {
   // Random sort prevents from insisting on the same failed dataset again and again
-  const cursor = db.collection(type + 's').aggregate([{ $match: filter }, { $sample: { size: 100 } }])
+  const cursor = db.collection(type + 's').aggregate([{ $match: filter }, { $project: { id: 1 } }, { $sample: { size: 100 } }])
   while (await cursor.hasNext()) {
     const resource = await cursor.next()
     // console.log('resource', resource)
     const ack = await locks.acquire(db, `${type}:${resource.id}`, 'worker')
-    if (ack) return resource
+    if (!ack) continue
+    // check that there was no race condition and that the resource is still in the state required to work on it
+    const updatedResource = await db.collection(type + 's').findOne({ ...filter, id: resource.id })
+    if (updatedResource) return updatedResource
   }
 }
