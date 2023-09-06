@@ -35,6 +35,7 @@ module.exports = {
     options: {
       requestTimeout: 240000 // same as timeout in bulk indexing requests
     },
+    caPath: '', // path to a file containing the central authority for the ES cluster certificates
     defaultAnalyzer: 'french',
     maxBulkLines: 2000,
     maxBulkChars: 200000,

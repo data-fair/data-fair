@@ -1,4 +1,5 @@
 const config = require('config')
+const fs = require('fs-extra')
 const elasticsearch = require('@elastic/elasticsearch')
 
 const smallAggs = require('./small-aggs')
@@ -24,7 +25,11 @@ exports.init = async () => {
     node = config.elasticsearch.host
     if (!node.startsWith('http')) node = 'http://' + node
   }
-  const client = new elasticsearch.Client({ node, auth: config.elasticsearch.auth, ...config.elasticsearch.options })
+  const options = { node, auth: config.elasticsearch.auth, ...config.elasticsearch.options }
+  if (config.elasticsearch.caPath) {
+    options.tls = { ca: await fs.readFile(config.elasticsearch.caPath) }
+  }
+  const client = new elasticsearch.Client(options)
   try {
     await client.ping()
   } catch (err) {

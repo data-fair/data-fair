@@ -50,6 +50,7 @@ module.exports = {
       __name: 'ES_AUTH',
       __format: 'json'
     },
+    caPath: 'ES_CA_PATH',
     defaultAnalyzer: 'ES_DEFAULT_ANALYZER',
     maxBulkLines: {
       __name: 'ES_MAX_BULK_LINES',
