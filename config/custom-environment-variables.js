@@ -54,7 +54,7 @@ module.exports = {
       __name: 'ES_OPTIONS',
       __format: 'json'
     },
-    caPath: 'ES_CA_PATH',
+    ca: 'ES_CA',
     defaultAnalyzer: 'ES_DEFAULT_ANALYZER',
     maxBulkLines: {
       __name: 'ES_MAX_BULK_LINES',

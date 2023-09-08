@@ -1,5 +1,4 @@
 const config = require('config')
-const fs = require('fs-extra')
 const elasticsearch = require('@elastic/elasticsearch')
 
 const smallAggs = require('./small-aggs')
@@ -31,9 +30,9 @@ exports.init = async () => {
     requestTimeout: 240000, // same as timeout in bulk indexing requests
     ...config.elasticsearch.options
   }
-  if (config.elasticsearch.caPath) {
-    options.tls = options.tls ?? {}
-    options.tls.ca = await fs.readFile(config.elasticsearch.caPath)
+  if (config.elasticsearch.ca) {
+    options.ssl = options.ssl ?? {} // note, in v8 this becomes "tls"
+    options.ssl.ca = config.elasticsearch.ca
   }
   const client = new elasticsearch.Client(options)
   try {

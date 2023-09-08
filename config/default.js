@@ -33,7 +33,7 @@ module.exports = {
     auth: null,
     nodes: null,
     options: {},
-    caPath: '', // path to a file containing the central authority for the ES cluster certificates
+    ca: null, // the central authority for the ES cluster certificates
     defaultAnalyzer: 'french',
     maxBulkLines: 2000,
     maxBulkChars: 200000,
