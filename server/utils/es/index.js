@@ -25,9 +25,15 @@ exports.init = async () => {
     node = config.elasticsearch.host
     if (!node.startsWith('http')) node = 'http://' + node
   }
-  const options = { node, auth: config.elasticsearch.auth, ...config.elasticsearch.options }
+  const options = {
+    node,
+    auth: config.elasticsearch.auth,
+    requestTimeout: 240000, // same as timeout in bulk indexing requests
+    ...config.elasticsearch.options
+  }
   if (config.elasticsearch.caPath) {
-    options.tls = { ca: await fs.readFile(config.elasticsearch.caPath) }
+    options.tls = options.tls ?? {}
+    options.tls.ca = await fs.readFile(config.elasticsearch.caPath)
   }
   const client = new elasticsearch.Client(options)
   try {

@@ -32,9 +32,7 @@ module.exports = {
     host: 'localhost:9200',
     auth: null,
     nodes: null,
-    options: {
-      requestTimeout: 240000 // same as timeout in bulk indexing requests
-    },
+    options: {},
     caPath: '', // path to a file containing the central authority for the ES cluster certificates
     defaultAnalyzer: 'french',
     maxBulkLines: 2000,
