@@ -5,6 +5,7 @@ const esUtils = require('./utils/es')
 const wsUtils = require('./utils/ws')
 const locksUtils = require('./utils/locks')
 const prometheus = require('./utils/prometheus')
+const sanitizeHtml = require('../shared/sanitize-html')
 const debugDomain = require('debug')('domain')
 
 // a global event emitter for testing
@@ -137,7 +138,11 @@ if (config.mode.includes('server')) {
     if (!res.headersSent) {
       res.set('Cache-Control', 'no-cache')
       res.set('Expires', '-1')
-      res.status(status).send(err.message)
+      // settings content-type as plain text instead of html to prevent XSS attack
+      res.type('text/plain')
+      // sanitize is not strictly necessary as the error is in plain text
+      // but it is added for extra-caution if UI choses to show the error message as html
+      res.status(status).send(sanitizeHtml(err.message))
     } else {
       res.end()
     }
