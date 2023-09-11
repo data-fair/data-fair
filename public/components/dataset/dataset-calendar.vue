@@ -81,7 +81,7 @@
                   :key="event.data._id"
                   v-ripple
                   class="cal-event"
-                  v-html="event.data[titleProp]"
+                  v-text="event.data[titleProp]"
                 />
               </template>
               <template #dayBody="{ date, timeToY, minutesToPixels }">
@@ -91,7 +91,7 @@
                   :key="event.data._id"
                   :style="{ top: timeToY(event.time) + 'px', height: minutesToPixels(event.duration) + 'px' }"
                   class="cal-event with-time"
-                  v-html="event.data[titleProp]"
+                  v-text="event.data[titleProp]"
                 />
               </template>
               <!-- Month only slot -->
@@ -101,7 +101,7 @@
                   :key="event.data._id"
                   v-ripple
                   class="cal-event"
-                  v-html="event.data[titleProp]"
+                  v-text="event.data[titleProp]"
                 />
               </template>
             </v-calendar>

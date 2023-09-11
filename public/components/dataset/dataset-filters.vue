@@ -26,10 +26,16 @@
         <div style="overflow: hidden;">
           <span style="display:inline-block;white-space:nowrap;">{{ (filter.field.title || filter.field['x-originalName'] || filter.field.key) }}</span>
           <br>
-          <span
-            style="display:inline-block"
-            v-html="label(filter)"
-          />
+          <span style="display:inline-block">
+
+            <template v-for="(label, i) of labels(filter)">
+              <span
+                :key="`operator-${i}`"
+                v-html="label.operator"
+              />
+              {{ label.value }}
+              {{ i < labels(filter).length - 1 ? ', ' : '' }}
+            </template></span>
         </div>
       </v-chip>
     </v-slide-item>
@@ -51,25 +57,27 @@ export default {
       this.value.splice(i, 1)
       this.$emit('input', this.value)
     },
-    label (filter) {
+    labels (filter) {
       let operator = '= '
-      if (filter.type === 'starts') operator = 'commence par '
+      if (filter.type === 'starts') operator = 'commence par'
       let value = this.$root.$options.filters.cellValues(filter.values || filter.value, filter.field)
       if (filter.type === 'interval') {
         if (filter.minValue === '*' || !filter.minValue) {
-          operator = '&leq; '
+          operator = '&leq;'
           value = this.$root.$options.filters.cellValues(filter.maxValue, filter.field)
         } else if (filter.maxValue === '*' || !filter.maxValue) {
-          operator = '&GreaterEqual; '
+          operator = '&GreaterEqual;'
           value = this.$root.$options.filters.cellValues(filter.minValue, filter.field)
         } else {
-          operator = ''
-          value = `&GreaterEqual; ${this.$root.$options.filters.cellValues(filter.minValue, filter.field)}, &leq; ${this.$root.$options.filters.cellValues(filter.maxValue, filter.field)}`
+          return [
+            { operator: '&GreaterEqual;', value: this.$root.$options.filters.cellValues(filter.minValue, filter.field) },
+            { operator: '&leq;', value: this.$root.$options.filters.cellValues(filter.maxValue, filter.field) }
+          ]
         }
       }
-      if (filter.type === 'search') operator = 'contient les mots '
-      if (filter.type === 'contains') operator = 'contient les caractères '
-      return `${operator}${value}`
+      if (filter.type === 'search') operator = 'contient les mots'
+      if (filter.type === 'contains') operator = 'contient les caractères'
+      return [{ operator, value }]
     }
   }
 }
