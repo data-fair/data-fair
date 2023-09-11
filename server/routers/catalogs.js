@@ -23,7 +23,7 @@ function clean (catalog, html = false) {
   catalog.public = permissions.isPublic('catalogs', catalog)
   delete catalog.permissions
   if (catalog.apiKey) catalog.apiKey = '**********'
-  catalog.description = prepareMarkdownContent(catalog.description, html, null, `catalog:${catalog.id}`, catalog.updatedAt)
+  if (catalog.description) catalog.description = prepareMarkdownContent(catalog.description, html, null, `catalog:${catalog.id}`, catalog.updatedAt)
   findUtils.setResourceLinks(catalog, 'catalog')
   return catalog
 }
