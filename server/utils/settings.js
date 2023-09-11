@@ -1,3 +1,4 @@
+const sanitizeHtml = require('../../shared/sanitize-html')
 const i18nUtils = require('./i18n')
 
 exports.getPrivateOwnerVocabulary = async (db, owner) => {
@@ -7,6 +8,9 @@ exports.getPrivateOwnerVocabulary = async (db, owner) => {
     // we do this to maintain compatibility for pieces of code that expect identifiers to be defined
     pv.identifiers = pv.identifiers.filter(i => !!i)
     const identifiers = pv.identifiers.length ? pv.identifiers : [pv.id]
+    if (pv.description && typeof pv.description === 'string') {
+      pv.description = sanitizeHtml(pv.description)
+    }
     return { ...pv, identifiers }
   }) || []
 }

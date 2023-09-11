@@ -1,8 +1,7 @@
 const express = require('express')
 const moment = require('moment')
 const slug = require('slugify')
-const marked = require('marked')
-const sanitizeHtml = require('../../shared/sanitize-html')
+const { prepareMarkdownContent } = require('../utils/markdown')
 const catalogAPIDocs = require('../../contract/catalog-api-docs')
 const mongoEscape = require('mongo-escape')
 const catalogs = require('../catalogs')
@@ -24,10 +23,7 @@ function clean (catalog, html = false) {
   catalog.public = permissions.isPublic('catalogs', catalog)
   delete catalog.permissions
   if (catalog.apiKey) catalog.apiKey = '**********'
-  if (catalog.description) {
-    if (html) catalog.description = marked.parse(catalog.description).trim()
-    catalog.description = sanitizeHtml(catalog.description)
-  }
+  catalog.description = prepareMarkdownContent(catalog.description, html, null, `catalog:${catalog.id}`, catalog.updatedAt)
   findUtils.setResourceLinks(catalog, 'catalog')
   return catalog
 }

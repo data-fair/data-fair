@@ -5,8 +5,7 @@ const express = require('express')
 const moment = require('moment')
 const slug = require('slugify')
 const soasLoader = require('soas')
-const marked = require('marked')
-const sanitizeHtml = require('../../shared/sanitize-html')
+const { prepareMarkdownContent } = require('../utils/markdown')
 const axios = require('../utils/axios')
 const pump = require('../utils/pipe')
 const CacheableLookup = require('cacheable-lookup')
@@ -140,8 +139,7 @@ function clean (remoteService, user, html = false) {
   if (remoteService.apiKey && remoteService.apiKey.value) remoteService.apiKey.value = '**********'
   if (!user || !user.adminMode) delete remoteService.privateAccess
   if (remoteService.description) {
-    if (html) remoteService.description = marked.parse(remoteService.description).trim()
-    remoteService.description = sanitizeHtml(remoteService.description)
+    remoteService.description = prepareMarkdownContent(remoteService.description, html, null, `remoteService:${remoteService.id}`, remoteService.updatedAt)
   }
   findUtils.setResourceLinks(remoteService, 'remote-service')
   return remoteService
