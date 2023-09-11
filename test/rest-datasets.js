@@ -961,17 +961,20 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     }
     const res = await ax.post('/api/v1/datasets/rest2/_bulk_lines', bulkLines, { responseType: 'stream' })
     let i = 0
-    await pump(res.data, new Writable({
-      write (chunk, encoding, callback) {
-        i += 1
-        if (i < 3) assert.equal(chunk.toString(), ' ')
-        else if (chunk.toString() !== ' ') {
-          const result = JSON.parse(chunk.toString())
-          assert.equal(result.nbOk, 550)
+    await Promise.all([
+      pump(res.data, new Writable({
+        write (chunk, encoding, callback) {
+          i += 1
+          if (i < 3) assert.equal(chunk.toString(), ' ')
+          else if (chunk.toString() !== ' ') {
+            const result = JSON.parse(chunk.toString())
+            assert.equal(result.nbOk, 550)
+          }
+          callback()
         }
-        callback()
-      }
-    }))
+      })),
+      workers.hook('finalizer/rest2')
+    ])
     assert.equal(i, 6)
   })
 
