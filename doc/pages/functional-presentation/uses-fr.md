@@ -13,6 +13,6 @@ L'intérêt de ces pages est double. Pour le producteur de données, cela **valo
 <img src="./images/functional-presentation/reuses.png"
      height="420" style="margin:15px auto;" alt="Liste des réutilisations" />
 
-Les pages de réutilisations de données peuvent être créées par les administrateurs du portail, mais il est aussi possible de permettre aux utilisateurs enregistrés de soumettre de nouvelles pages. Ces soumissions sont ensuite soumises à modération et c'est l'administrateur qui choisit de publier la réutilisation ou non.
+Les pages de réutilisations de données peuvent être créées par les administrateurs du portail, mais on peut aussi permettre aux utilisateurs enregistrés de soumettre de nouvelles pages. Ces soumissions sont ensuite mises en attente de modération et c'est l'administrateur qui choisit de publier ou non la réutilisation.
 
 

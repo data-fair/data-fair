@@ -6,7 +6,7 @@ description : Gestion des notifications
 published: true
 ---
 
-Les notifications permettent aux utilisateurs enregistrés de recevoir des alertes dans le portail ou par email lorsque certains événements se produisent. Les alertes sont visibles sur la cloche de la barre de navigation et si l'utilisateur l'a choisi, il peut recevoir un **email d'alerte**.
+Les notifications permettent aux utilisateurs enregistrés de recevoir des alertes dans le portail ou par e-mail lorsque certains événements se produisent. Les alertes sont visibles sur la cloche de la barre de navigation et si l'utilisateur l'a choisi, il peut recevoir un **e-mail d'alerte**.
 
 <img src="./images/functional-presentation/notifiy-pf-2.png"
      height="180" style="margin:15px auto;" alt="capture d'écran de la file des notifications d'un utilisateur" />
