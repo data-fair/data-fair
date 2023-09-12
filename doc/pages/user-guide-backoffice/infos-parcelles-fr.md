@@ -34,7 +34,7 @@ Pour créer une visualisation, vous pouvez aller dans la section **visualisation
 Vous êtes redirigé vers la page de configuration de votre application avec ses différentes sections&nbsp;:
 
 1. Informations&nbsp;;
-2. Boutons d'actions (plein écran, intégration sur un site, capture...)&nbsp;;
+2. Boutons d'action (plein écran, intégration sur un site, capture...)&nbsp;;
 3. Menu de configuration&nbsp;;
 4. Aperçu.
 
