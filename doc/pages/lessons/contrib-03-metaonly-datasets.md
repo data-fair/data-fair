@@ -6,7 +6,7 @@ description : Partager tout type de données avec les pièces jointes et publica
 published: false
 ---
 
-Il peut arriver que l'on veuille partager des données qui ne peuvent pas être indexées par la plateforme : images satellite, dump de base de données, ... Nous allons voir dans ce tutoriel comment utiliser les pièces jointes pour y arriver. Comme nous n'allons utiliser que les pièces jointes, nous allons utiliser un jeu de données de type "métadonnées seules".
+Il peut arriver que l'on veuille partager des données qui ne peuvent pas être indexées par la plateforme&nbsp;: images satellite, *dump* de base de données, etc. Nous allons voir dans ce tutoriel comment utiliser les pièces jointes pour y arriver. Comme nous n'allons utiliser que les pièces jointes, nous allons utiliser un jeu de données de type "métadonnées seules".
 
 ## Créer son premier jeu metadonnées
 

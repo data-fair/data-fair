@@ -7,13 +7,13 @@ published: false
 ---
 
 
-Objectif : créer un catalogue vers data.gouv.fr
+Objectif&nbsp;: créer un catalogue vers data.gouv.fr.
 
 Les connecteurs permettent d’interagir avec d’autres plateformes ou services de données.
 
-Vous pouvez ajouter un catalogue pour vous connecter à une autre plateforme telle que data.gouv.fr
+Vous pouvez ajouter un catalogue pour vous connecter à une autre plateforme, telle que data.gouv.fr.
 
-Si vous souhaitez publier vos données sur la plateforme data.gouv.fr, les données resterons sur la plateforme Koumoul, mais les metadonnées seront poussées dans data.gouv.fr.  
+Si vous souhaitez publier vos données sur la plateforme data.gouv.fr, les données resteront sur la plateforme Koumoul, mais les métadonnées seront poussées dans data.gouv.fr.  
 Ainsi, les jeux de données publiés à l’aide de Data&nbsp;Fair sont synchronisés automatiquement avec le catalogue et toute modification des métadonnées est propagée vers data.gouv.fr.
 
 

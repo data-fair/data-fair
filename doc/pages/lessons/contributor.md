@@ -5,4 +5,4 @@ description : Contributeurs
 published: true
 ---
 
-Les contributeurs chargent des données et peuvent configurer des visualisations
+Les contributeurs chargent des données et peuvent configurer des visualisations.
