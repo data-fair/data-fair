@@ -8,7 +8,7 @@ published: true
 
 L'**accueil** de votre [compte actif](./user-guide-backoffice/organisation) est accessible à l'aide de la barre de navigation.
 
-Selon vos droits dans l'organisation, la page affiche les sections **Contribuer** et **Gérer** les jeux de données.
+Selon vos droits dans l'organisation, la page affiche les sections **contribuer** et **gérer** les jeux de données.
 
 **Contribuer** vous permet de créer, mettre à jour et publier un jeu de données sur vos portails.
 

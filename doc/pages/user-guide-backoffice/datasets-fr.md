@@ -19,6 +19,6 @@ Le titre, la description, la provenance, la licence sont des métadonnées que v
 
 ## Les concepts
 
-Dans la page d'édition d'un jeu de données, vous retrouvez la section **Schéma** qui vous permet de visualiser le modèle de vos données. Le schéma d'un jeu de données correspond à son architecture (l'ensemble des colonnes). Dans cette section vous pouvez renseigner des [concepts](./user-guide-backoffice/concept). Lorsque vous renseignez un concept sur une colonne, vous associez une notion connue de Data&nbsp;Fair à cette colonne. Vos données ont ainsi plus de sens pour Data&nbsp;Fair.
+Dans la page d'édition d'un jeu de données, vous retrouvez la section **schéma** qui vous permet de visualiser le modèle de vos données. Le schéma d'un jeu de données correspond à son architecture (l'ensemble des colonnes). Dans cette section vous pouvez renseigner des [concepts](./user-guide-backoffice/concept). Lorsque vous renseignez un concept sur une colonne, vous associez une notion connue de Data&nbsp;Fair à cette colonne. Vos données ont ainsi plus de sens pour Data&nbsp;Fair.
 
-Les [concepts](./user-guide-backoffice/concept) sont utilisés dans diverses fonctionnalités&nbsp;; dans certains cas, ils sont indispensables. Par exemple, si vous souhaitez projeter vos données sur une carte, les concepts **Latitude/Longitude** ou **Géométrie** devront être renseignés dans votre schéma.
+Les [concepts](./user-guide-backoffice/concept) sont utilisés dans diverses fonctionnalités&nbsp;; dans certains cas, ils sont indispensables. Par exemple, si vous souhaitez projeter vos données sur une carte, les concepts **latitude/longitude** ou **géométrie** devront être renseignés dans votre schéma.

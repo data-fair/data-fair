@@ -12,7 +12,7 @@ Les jeux de données sont représentés par une fiche. L'édition d'un jeu de do
 La page d'édition d'un jeu de données contient plusieurs sections&nbsp;: la structure, les métadonnées, les données, les visualisations, le partage des données, l'activité, les boutons d'actions et le contenu.
 
 ## Structure
-La section **Structure** est composé du **Schéma** et de l'**Enrichissement**.
+La section **structure** est composé du **schéma** et de l'**enrichissement**.
 
 ### Schéma
 Le schéma des données vous permet de visualiser l'ensemble des colonnes de votre jeu de données.
@@ -51,7 +51,7 @@ Le rapport d'enrichissement vous permet de vérifier sa qualité et lister les d
 Les colonnes que vous avez ajoutées à votre jeu de données avec l'[enrichissement](./user-guide-backoffice/enrichment) seront automatiquement ajoutées au schéma du jeu de données et il sera possible de télécharger le fichier enrichi avec les colonnes supplémentaires.
 
 ## Métadonnées
-La section **Métadonnées** est composée des **Informations** et des **Pièces&nbsp;jointes**.
+La section **Métadonnées** est composée des **informations** et des **pièces&nbsp;jointes**.
 
 ### Informations
 Dans cette section, vous retrouvez les informations de votre jeu de données, telles que&nbsp;:
@@ -102,19 +102,19 @@ Il est ensuite possible de télécharger le fichier avec seulement les colonnes 
 
 **La carte**
 
-L'onglet **Carte** est disponible si les [concepts](./user-guide-backoffice/concept) de position, tels que des latitudes/longitudes ou des géométries, sont associés à vos données.  
+L'onglet **carte** est disponible si les [concepts](./user-guide-backoffice/concept) de position, tels que des **latitudes/longitudes** ou des **géométries**, sont associés à vos données.  
 La carte va vous permettre de visualiser rapidement vos données sur un territoire et d'accéder aux données brutes de chaque point ou géométrie.
 
 ![Tableau](./images/user-guide-backoffice/edition-map.png)
 
 **Calendrier**  
 
-L'onglet **Calendrier** est disponible si les [concepts](./user-guide-backoffice/concept) **Libellé**, **Date de début** et **Date de fin** sont associés à vos données.  
+L'onglet **calendrier** est disponible si les [concepts](./user-guide-backoffice/concept) **libellé**, **date de début** et **date de fin** sont associés à vos données.  
 Le calendrier vous permet de visualiser vos données chronologiquement.
 
 **Vignettes**  
 
-L'onglet **Calendrier** est disponible si le [concept](./user-guide-backoffice/concept) **Images** est associé à vos données.  
+L'onglet **vignettes** est disponible si le [concept](./user-guide-backoffice/concept) **images** est associé à vos données.  
 
 ![Tableau](./images/user-guide-backoffice/edition-images.png)
 
@@ -126,7 +126,7 @@ Leur ordre peut être modifié avec un simple glissé et déposé des fiches des
 ![Visualisations](./images/user-guide-backoffice/dataset-visualisations-edit.jpg)  
 *Configurez plusieurs visualisations pour mieux comprendre vos données*
 
-Il est possible d'ajouter des **Réutilisations Externes** qui utilisent vos données.  
+Il est possible d'ajouter des **réutilisations externes** qui utilisent vos données.  
 Les réutilisations externes seront affichées sur la page du portail du jeu de données sous la forme d'une fiche récapitulative où la réutilisation sera intégrée à la page si vous possédez le code d'intégration.
 
 ## Partage
@@ -135,8 +135,8 @@ Dans cette section vous pourrez définir les permissions de votre jeu de donnée
 
 
 ### Permissions
-L'option **Accessible publiquement** permet de rendre les données publiques ou privées.  
-Les permissions peuvent être définies plus finement à l'aide de l'**Ajout des permissions** pour ne donner l'accès qu'à un nombre limité de comptes.
+L'option **accessible publiquement** permet de rendre les données publiques ou privées.  
+Les permissions peuvent être définies plus finement à l'aide de l'**ajout des permissions** pour ne donner l'accès qu'à un nombre limité de comptes.
 
 ![Permissions](./images/user-guide-backoffice/dataset-permissions.jpg)  
 *Rendez vos données accessibles*

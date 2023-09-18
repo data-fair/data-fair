@@ -8,8 +8,8 @@ published: true
 
 L'architecture technique retenue est une plateforme composée de différents services web. La plupart de ces services sont open&nbsp;source et décrits ici, mais certaines extensions peuvent être disponibles sous la forme de services distants propriétaires&nbsp;:
 
-* **Data&nbsp;Fair**, le coeur de la solution&nbsp;: indexer, &laquo;&nbsp;Apifier&nbsp;&raquo;, enrichir et partager facilement ses données&nbsp;;
-* **Simple directory**&nbsp;: se connecter au portail et gérer les comptes&nbsp;;
+* **Data&nbsp;Fair**, le coeur de la solution&nbsp;: indexer, &laquo;&nbsp;APIfier&nbsp;&raquo;, enrichir et partager facilement ses données&nbsp;;
+* **Simple Directory**&nbsp;: se connecter au portail et gérer les comptes&nbsp;;
 * **Data&nbsp;Fair Portal**&nbsp;: créer facilement plusieurs portails de données, pour du partage en open&nbsp;data ou en interne&nbsp;;
 * Les **connecteurs de catalogues**&nbsp;: se synchroniser avec d'autres catalogues de données, dans les deux sens&nbsp;;
 * **Data&nbsp;Fair Processings**&nbsp;: programmer des traitements périodiques pour mettre à jour les données et récolter les données issues de l’IOT&nbsp;;
@@ -27,7 +27,7 @@ L'architecture technique retenue est une plateforme composée de différents ser
 
 ## Authentification
 
-Le mécanisme d'authentification utilisé pour sécuriser les API des différents service est le JWT (JSON Web Token). La sécurité repose sur des mécanismes de cryptograhie asymétrique (RSA). La session utilisateur est maintenue côté client, ce qui permet d'avoir un back-end sans état, et donc *scalable*. Le back-end n'émet pas de JWT&nbsp;: il doit donc être relié à un annuaire [simple directory](https://koumoul-dev.github.io/simple-directory/) qui en émet. Le lien vers cet annuaire permet de télécharger sa clé publique pour ensuite vérifier que les JWT reçus sont valides.
+Le mécanisme d'authentification utilisé pour sécuriser les API des différents service est le JWT (JSON Web Token). La sécurité repose sur des mécanismes de cryptograhie asymétrique (RSA). La session utilisateur est maintenue côté client, ce qui permet d'avoir un back-end sans état, et donc *scalable*. Le back-end n'émet pas de JWT&nbsp;: il doit donc être relié à un annuaire [Simple Directory](https://koumoul-dev.github.io/simple-directory/) qui en émet. Le lien vers cet annuaire permet de télécharger sa clé publique pour ensuite vérifier que les JWT reçus sont valides.
 
 
 ## Déploiement

@@ -7,7 +7,7 @@ description : Menu
 published: true
 ---
 
-Le menu permet principalement de changer de compte actif et d'accéder aux pages de **Notifications** et **Stockage** du compte actif.
+Le menu permet principalement de changer de compte actif et d'accéder aux pages de **notifications** et **stockage** du compte actif.
 
 ![Menu](./images/user-guide-backoffice/menu.jpg)  
 *Menu déroulant disponible en haut à droite*
@@ -16,10 +16,10 @@ Sur l'image ci-dessus, le compte actif est le compte **Koumoul**, il est possibl
 
 ## Mon compte
 
-La page **Mon compte** permet d'accéder aux informations de votre compte personnel, telles que votre e-mail d'inscription, votre avatar, le prénom, nom et anniversaire renseignés.  
+La page **mon compte** permet d'accéder aux informations de votre compte personnel, telles que votre adresse e-mail d'inscription, votre avatar, le prénom, nom et anniversaire renseignés.  
 Vous pouvez renouveler votre mot de passe dans cette section.
 
-La section **Mes organisations** affiche un résumé des organisations dont vous êtes membre.
+La section **mes organisations** affiche un résumé des organisations dont vous êtes membre.
 
 Il est aussi possible de supprimer son compte personnel.
 

@@ -10,10 +10,10 @@ L'interface de **Data&nbsp;Fair** vous permet de présenter vos données sous fo
 
 Les pages de **Data&nbsp;Fair** présentent plusieurs éléments&nbsp;:
 
-1. La barre de navigation vous permet d’accéder aux différentes sections&nbsp;;
-2. Le fil d'Ariane vous permet de connaître la section ou sous-section affichée et de naviguer dans celles-ci&nbsp;;
-3. Les actions disponibles sur la page&nbsp;;  
-4. Notifications du compte et menu du compte.
+1. La **barre de navigation** vous permet d’accéder aux différentes sections&nbsp;;
+2. Le **fil d'Ariane** vous permet de connaître la section ou sous-section affichée et de naviguer dans celles-ci&nbsp;;
+3. Les **actions** disponibles sur la page&nbsp;;  
+4. Les **notifications** du compte et menu du compte.
 
 <p>
 </p>

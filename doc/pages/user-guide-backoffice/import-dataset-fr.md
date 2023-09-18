@@ -17,7 +17,7 @@ Il existe trois jeux de données différents sur Data&nbsp;Fair&nbsp;:
 
 ## Import d'un fichier
 
-L'import de fichiers est réalisable à l'aide des différents boutons d'action **Créer un jeu de données** disponibles dans Data&nbsp;Fair.  
+L'import de fichiers est réalisable à l'aide des différents boutons d'action **créer un jeu de données** disponibles dans Data&nbsp;Fair.  
 Le déroulé d'import d'un fichier contient un rappel des [formats](./user-guide-backoffice/file-formats) pris en charge par Data&nbsp;Fair.  
 Il est possible d'ajouter des [pièces jointes](./user-guide-backoffice/attachements) dans une archive ZIP qui sera attachée aux lignes du jeu de données.
 
@@ -36,7 +36,7 @@ Pour qu'il soit utilisable, l'étape&nbsp;6 de finalisation doit être validée&
 </p>
 
 Lorsque la finalisation est terminée, le jeu de données passe en état &laquo;&nbsp;disponible&nbsp;&raquo;. Il peut alors être [édité](./user-guide-backoffice/edition-dataset), enrichi et utilisé dans les différentes visualisations.  
-La plupart des visualisations utilisent [des concepts](./user-guide-backoffice/concept), tels que les concepts **Latitude** et **Longitude** pour une visualisation cartographique.
+La plupart des visualisations utilisent [des concepts](./user-guide-backoffice/concept), tels que les concepts **latitude** et **longitude** pour une visualisation cartographique.
 
 
 ## Jeu de métadonnées seules
@@ -60,7 +60,7 @@ Le schéma de votre **jeu de données éditable** est défini lorsque vous avez 
 ![Choix de l'application](./images/user-guide-backoffice/import-schema-editable.jpg)  
 *Ajoutez des colonnes et créez votre propre jeu de données*
 
-Vous pouvez ensuite ajouter des lignes à votre jeu de données, que ce soit par un formulaire sur une page de votre site, de votre portail, ou par la section **Données** dans l'édition du jeu de données.
+Vous pouvez ensuite ajouter des lignes à votre jeu de données, que ce soit par un formulaire sur une page de votre site, de votre portail, ou par la section **données** dans l'édition du jeu de données.
 
 ![Formulaire](./images/user-guide-backoffice/import-formulaire.jpg)  
 *Formulaire de retours pour les visiteurs de portail*
