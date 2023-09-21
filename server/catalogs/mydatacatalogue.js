@@ -7,7 +7,8 @@ exports.description = 'Outil de cartographie et de catalogage de vos données'
 exports.docUrl = 'https://www.dawizz.fr/'
 exports.optionalCapabilities = [
   'apiKey',
-  'publishDataset'
+  'publishDataset',
+  'listDatasets'
 ]
 
 exports.init = async (catalogUrl) => {
@@ -35,8 +36,13 @@ exports.deleteApplication = async (catalog, application, publication) => {
   throw createError(501, 'La dépublication d\'applications vers Mydatacatalogue n\'est pas disponible')
 }
 
-exports.listDatasets = async (catalog, p) => {
-  throw createError(501, 'La récupération d\'une liste de jeux de données depuis Mydacatalogue n\'est pas disponible')
+exports.listDatasets = async (catalog, params = {}) => {
+  params.page_size = params.page_size || 1000
+  // TODO
+  return {
+    count: 0,
+    results: []
+  }
 }
 
 exports.getDataset = async (catalog, datasetId, req) => {
