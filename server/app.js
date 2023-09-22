@@ -5,6 +5,7 @@ const esUtils = require('./utils/es')
 const wsUtils = require('./utils/ws')
 const locksUtils = require('./utils/locks')
 const prometheus = require('./utils/prometheus')
+const asyncWrap = require('./utils/async-wrap')
 const sanitizeHtml = require('../shared/sanitize-html')
 const debugDomain = require('debug')('domain')
 
@@ -73,15 +74,41 @@ if (config.mode.includes('server')) {
   app.use(require('./utils/expect-type')(['application/json', 'application/x-ndjson', 'multipart/form-data', 'text/csv', 'text/csv+gzip']))
 
   // set current baseUrl, i.e. the url of data-fair on the current user's domain
+  // check for the matching publicationSite, etc
   let basePath = new URL(config.publicUrl).pathname
   if (!basePath.endsWith('/')) basePath += '/'
   const originalUrl = require('original-url')
   const { format: formatUrl } = require('url')
-  app.use('/', (req, res, next) => {
+  app.use('/', asyncWrap(async (req, res, next) => {
     const u = originalUrl(req)
     const urlParts = { protocol: u.protocol, hostname: u.hostname, pathname: basePath.slice(0, -1) }
     if (u.port !== 443 && u.port !== 80) urlParts.port = u.port
     req.publicBaseUrl = u.full ? formatUrl(urlParts) : config.publicUrl
+    if (req.publicBaseUrl !== config.publicUrl) {
+      const publicationSiteUrl = u.protocol + '//' + u.hostname + ((u.port && u.port !== 80 && u.port !== 443) ? ':' + u.port : '')
+      // TODO: a small memory cache as this is queried very often
+      const settings = await req.app.get('db').collection('settings').findOne(
+        { 'publicationSites.url': publicationSiteUrl },
+        {
+          projection: {
+            type: 1,
+            id: 1,
+            department: 1,
+            name: 1,
+            publicationSites: { $elemMatch: { url: publicationSiteUrl } }
+          }
+        }
+      )
+      if (!settings) {
+        console.error('(publication-site-unknown) no publications site is associated to URL ' + publicationSiteUrl)
+        prometheus.internalError.inc({ errorCode: 'publication-site-unknown' })
+        return res.status(404).send('publication site unknown')
+      }
+      req.publicationSite = {
+        owner: { type: settings.type, id: settings.id, department: settings.department, name: settings.name },
+        ...settings.publicationSites[0]
+      }
+    }
     req.directoryUrl = u.full ? formatUrl({ ...urlParts, pathname: '/simple-directory' }) : config.directoryUrl
     debugDomain('req.publicBaseUrl', req.publicBaseUrl)
     req.publicWsBaseUrl = req.publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:') + '/'
@@ -89,7 +116,7 @@ if (config.mode.includes('server')) {
     req.publicBasePath = basePath
     debugDomain('req.publicBasePath', req.publicBasePath)
     next()
-  })
+  }))
 
   // Business routers
   const apiKey = require('./utils/api-key').middleware

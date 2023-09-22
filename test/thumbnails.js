@@ -74,7 +74,7 @@ describe('thumbnails', () => {
   })
 
   it('should create thumbnails from attachments', async () => {
-    const ax = global.ax.dmeadus
+    const ax = global.ax.dmeadusOrg
     const form = new FormData()
     form.append('attachmentsAsImage', 'true')
     form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
@@ -87,7 +87,11 @@ describe('thumbnails', () => {
     await assert.rejects(ax.get(res.data.results[0]._thumbnail, { maxRedirects: 0 }), (err) => err.status === 302)
     await assert.rejects(global.ax.anonymous.get(res.data.results[0]._thumbnail), (err) => err.status === 403)
     assert.ok(thumbnail1.startsWith(`http://localhost:5600/data-fair/api/v1/datasets/${dataset.id}/thumbnail/`))
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: 'test.com' } })
-    assert.equal(thumbnail1.replace('localhost:5600', 'test.com'), res.data.results[0]._thumbnail)
+
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://localhost:5601' }
+    await ax.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: 'localhost:5601' } })
+    assert.equal(thumbnail1.replace('localhost:5600', 'localhost:5601'), res.data.results[0]._thumbnail)
   })
 })

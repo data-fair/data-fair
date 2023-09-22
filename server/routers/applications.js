@@ -33,7 +33,7 @@ const { prepareMarkdownContent } = require('../utils/markdown')
 
 const router = module.exports = express.Router()
 
-function clean (application, publicUrl, query = {}) {
+function clean (application, publicUrl, publicationSite, query = {}) {
   const select = query.select ? query.select.split(',') : []
   if (query.raw !== 'true') {
     if (!select.includes('-public')) application.public = permissions.isPublic('applications', application)
@@ -42,7 +42,7 @@ function clean (application, publicUrl, query = {}) {
       application.description = application.description || ''
       application.description = prepareMarkdownContent(application.description, query.html === 'true', query.truncate, 'application:' + application.id, application.updatedAt)
     }
-    if (!select.includes('-links')) findUtils.setResourceLinks(application, 'application', publicUrl)
+    if (!select.includes('-links')) findUtils.setResourceLinks(application, 'application', publicUrl, publicationSite && publicationSite.applicationUrlTemplate)
   }
 
   delete application.permissions
@@ -109,6 +109,10 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
     req.query.service = config.publicUrl + '/api/v1/remote-services/' + req.query.service
   }
 
+  // TODO make it possible to override this default filter on publication site ?
+  // in this case there should at least be a filter on publication site owner
+  if (req.publicationSite) req.query.publicationSites = req.publicationSite.type + ':' + req.publicationSite.id
+
   const query = findUtils.query(req, fieldsMap)
 
   if (req.query.filterConcepts === 'true') {
@@ -137,7 +141,7 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
 
   for (const r of response.results) {
     if (req.query.raw !== 'true') r.userPermissions = permissions.list('applications', r, req.user)
-    clean(r, req.publicBaseUrl, req.query)
+    clean(r, req.publicBaseUrl, req.publicationSite, req.query)
   }
 
   res.json(response)
@@ -183,14 +187,19 @@ router.post('', asyncWrap(async (req, res) => {
   application.status = 'created'
 
   await journals.log(req.app, application, { type: 'application-created', href: config.publicUrl + '/application/' + application.id }, 'application')
-  res.status(201).json(clean(application, req.publicBaseUrl))
+  res.status(201).json(clean(application, req.publicationSite, req.publicBaseUrl))
 }))
 
 // Shared middleware
 const readApplication = asyncWrap(async (req, res, next) => {
   let filter = { id: req.params.applicationId }
   if (req.publicationSite) {
-    filter = { $or: [filter, { slug: req.params.applicationId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }] }
+    filter = {
+      $or: [
+        { id: req.params.applicationId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id },
+        { slug: req.params.applicationId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }
+      ]
+    }
   }
 
   req.application = req.resource = await req.app.get('db').collection('applications')
@@ -240,7 +249,7 @@ router.use('/:applicationId/permissions', readApplication, permissions.router('a
 // retrieve a application by its id
 router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   req.application.userPermissions = permissions.list('applications', req.application, req.user)
-  res.status(200).send(clean(req.application, req.publicBaseUrl, req.query))
+  res.status(200).send(clean(req.application, req.publicBaseUrl, req.publicationSite, req.query))
 })
 
 // PUT used to create or update
@@ -257,7 +266,7 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
     try {
       await req.app.get('db').collection('applications').insertOne(newApplication)
       await journals.log(req.app, newApplication, { type: 'application-created', href: config.publicUrl + '/application/' + newApplication.id }, 'application')
-      return res.status(201).json(clean(newApplication, req.publicBaseUrl))
+      return res.status(201).json(clean(newApplication, req.publicBaseUrl, req.publicationSite))
     } catch (err) {
       if (err.code !== 11000) throw err
     }
@@ -276,7 +285,7 @@ router.put('/:applicationId', attemptInsert, readApplication, permissions.middle
   newApplication.updatedBy = { id: req.user.id, name: req.user.name }
   newApplication.created = true
   await req.app.get('db').collection('applications').replaceOne({ id: req.params.applicationId }, newApplication)
-  res.status(200).json(clean(newApplication, req.publicBaseUrl))
+  res.status(200).json(clean(newApplication, req.publicBaseUrl, req.publicationSite))
 }))
 
 const permissionsWritePublications = permissions.middleware('writePublications', 'admin')
@@ -311,7 +320,7 @@ router.patch('/:applicationId',
     const patchedApplication = (await db.collection('applications')
       .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })).value
     await syncDatasets(db, patchedApplication, req.application)
-    res.status(200).json(clean(patchedApplication, req.publicBaseUrl))
+    res.status(200).json(clean(patchedApplication, req.publicBaseUrl, req.publicationSite))
   }))
 
 // Change ownership of an application
@@ -330,7 +339,7 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
   const patchedApp = (await db.collection('applications')
     .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })).value
   await syncDatasets(db, patchedApp)
-  res.status(200).json(clean(patchedApp, req.publicBaseUrl))
+  res.status(200).json(clean(patchedApp, req.publicBaseUrl, req.publicationSite))
 }))
 
 // Delete an application configuration

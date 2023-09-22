@@ -195,9 +195,9 @@ exports.parametersDoc = (filterFields) => [
   title: 'Identifiant du propriétaire'
 }]))
 
-exports.setResourceLinks = (resource, resourceType, publicUrl = config.publicUrl) => {
+exports.setResourceLinks = (resource, resourceType, publicUrl = config.publicUrl, pageUrlTemplate) => {
   resource.href = `${publicUrl}/api/v1/${resourceType}s/${resource.id}`
-  resource.page = `${config.publicUrl}/${resourceType}/${resource.id}`
+  resource.page = pageUrlTemplate ? pageUrlTemplate.replace('{id}', resource.slug || resource.id) : `${config.publicUrl}/${resourceType}/${resource.id}`
   if (resourceType === 'application') resource.exposedUrl = `${publicUrl}/app/${resource.id}`
 }
 

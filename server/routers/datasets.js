@@ -59,7 +59,7 @@ const clamav = require('../utils/clamav')
 const nanoid = require('../utils/nanoid')
 const router = express.Router()
 
-function clean (publicUrl, dataset, query = {}, draft = false) {
+function clean (publicUrl, publicationSite, dataset, query = {}, draft = false) {
   const select = query.select ? query.select.split(',') : []
   if (query.raw !== 'true') {
     const thumbnail = query.thumbnail || '300x200'
@@ -91,7 +91,7 @@ function clean (publicUrl, dataset, query = {}, draft = false) {
     if (dataset.schema && !select.includes('-previews')) {
       dataset.previews = datasetUtils.previews(dataset, publicUrl)
     }
-    if (!select.includes('-links')) findUtils.setResourceLinks(dataset, 'dataset', publicUrl)
+    if (!select.includes('-links')) findUtils.setResourceLinks(dataset, 'dataset', publicUrl, publicationSite && publicationSite.datasetUrlTemplate)
     if (dataset.image && dataset.public && !select.includes('-thumbnail')) {
       dataset.thumbnail = prepareThumbnailUrl(publicUrl + '/api/v1/datasets/' + encodeURIComponent(dataset.id) + '/thumbnail', thumbnail)
     }
@@ -104,15 +104,11 @@ function clean (publicUrl, dataset, query = {}, draft = false) {
   if (select.includes('-userPermissions')) delete dataset.userPermissions
   if (select.includes('-owner')) delete dataset.owner
 
-  // TODO: this cleanup of extras.applications.publicationSites should be adapted
-  // when we introduce implicit filtering on publicationSite based on domain name
-  if (query.publicationSites && dataset?.extras?.applications) {
-    const publicationSites = query.publicationSites.split(',')
+  if (publicationSite && dataset.extras?.applications?.length) {
+    const siteKey = publicationSite.type + ':' + publicationSite.id
     dataset.extras.applications = dataset.extras.applications
-      .filter(appRef => appRef.publicationSites && appRef.publicationSites.find(p => publicationSites.includes(p)))
-    if (publicationSites.length === 1) {
-      for (const appRef of dataset.extras.applications) delete appRef.publicationSites
-    }
+      .filter(appRef => appRef.publicationSites && appRef.publicationSites.find(p => p === siteKey))
+    for (const appRef of dataset.extras.applications) delete appRef.publicationSites
   }
   return dataset
 }
@@ -241,6 +237,10 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
 
   if (req.query.file === 'true') extraFilters.push({ file: { $exists: true } })
 
+  // TODO make it possible to override this default filter on publication site ?
+  // in this case there should at least be a filter on publication site owner
+  if (req.publicationSite) req.query.publicationSites = req.publicationSite.type + ':' + req.publicationSite.id
+
   const query = findUtils.query(req, fieldsMap, null, extraFilters)
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, [], req.query.raw === 'true')
@@ -280,7 +280,7 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   const t1 = new Date().getTime()
   for (const r of response.results) {
     if (req.query.raw !== 'true') r.userPermissions = permissions.list('datasets', r, req.user)
-    clean(req.publicBaseUrl, r, req.query)
+    clean(req.publicBaseUrl, req.publicationSite, r, req.query)
   }
   if (explain) {
     explain.cleanMS = new Date().getTime() - t1
@@ -336,7 +336,12 @@ const readDataset = (_acceptedStatuses, preserveDraft, ignoreDraft) => asyncWrap
   const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body) : _acceptedStatuses
   let filter = { id: req.params.datasetId }
   if (req.publicationSite) {
-    filter = { $or: [filter, { slug: req.params.datasetId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }] }
+    filter = {
+      $or: [
+        { id: req.params.datasetId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id },
+        { slug: req.params.datasetId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }
+      ]
+    }
   }
 
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
@@ -377,7 +382,7 @@ router.use('/:datasetId/permissions', readDataset(), permissions.router('dataset
 // retrieve a dataset by its id
 router.get('/:datasetId', readDataset(), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   req.dataset.userPermissions = permissions.list('datasets', req.dataset, req.user, req.bypassPermissions)
-  res.status(200).send(clean(req.publicBaseUrl, req.dataset, req.query))
+  res.status(200).send(clean(req.publicBaseUrl, req.publicationSite, req.dataset, req.query))
 })
 
 // retrieve only the schema.. Mostly useful for easy select fields
@@ -512,7 +517,7 @@ router.patch('/:datasetId',
     for (const patchKey of Object.keys(patch)) {
       if (stableStringify(patch[patchKey]) === stableStringify(req.dataset[patchKey])) { delete patch[patchKey] }
     }
-    if (Object.keys(patch).length === 0) return res.status(200).send(clean(req.publicBaseUrl, req.dataset))
+    if (Object.keys(patch).length === 0) return res.status(200).send(clean(req.publicBaseUrl, req.publicationSite, req.dataset))
 
     patch.updatedAt = moment().toISOString()
     patch.updatedBy = { id: req.user.id, name: req.user.name }
@@ -624,7 +629,7 @@ router.patch('/:datasetId',
 
     await syncRemoteService(db, req.dataset)
 
-    res.status(200).json(clean(req.publicBaseUrl, req.dataset))
+    res.status(200).json(clean(req.publicBaseUrl, req.publicationSite, req.dataset))
   }))
 
 // Change ownership of a dataset
@@ -678,7 +683,7 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
   await datasetUtils.updateTotalStorage(req.app.get('db'), req.dataset.owner)
   await datasetUtils.updateTotalStorage(req.app.get('db'), patch.owner)
 
-  res.status(200).json(clean(req.publicBaseUrl, patchedDataset))
+  res.status(200).json(clean(req.publicBaseUrl, req.publicationSite, patchedDataset))
 }))
 
 // Delete a dataset
@@ -910,7 +915,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
     await datasetUtils.updateTotalStorage(req.app.get('db'), dataset.owner)
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
     await syncRemoteService(db, dataset)
-    res.status(201).send(clean(req.publicBaseUrl, dataset, {}, req.query.draft === 'true'))
+    res.status(201).send(clean(req.publicBaseUrl, req.publicationSite, dataset, {}, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
     for (const file of req.files) {
@@ -1030,7 +1035,7 @@ const updateDataset = asyncWrap(async (req, res) => {
       datasetUtils.updateStorage(req.app, dataset),
       syncRemoteService(db, dataset)
     ])
-    res.status(req.isNewDataset ? 201 : 200).send(clean(req.publicBaseUrl, dataset, {}, req.query.draft === 'true'))
+    res.status(req.isNewDataset ? 201 : 200).send(clean(req.publicBaseUrl, req.publicationSite, dataset, {}, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
     for (const file of req.files) {
