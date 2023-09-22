@@ -280,12 +280,12 @@ other,unknown address
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, forceNext: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }] })
     assert.equal(res.status, 200)
     try {
-      await workers.hook('extender')
+      await workers.hook('extender/' + dataset.id)
       assert.fail()
     } catch (err) {
-      assert.ok(err.message.startsWith('Unexpected token s'))
+      assert.ok(err.message.startsWith('Unexpected token'))
     }
-    dataset = (await ax.get('/api/v1/datasets/dataset2')).data
+    dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
     assert.equal(dataset.status, 'error')
   })
 

@@ -56,6 +56,7 @@ const prometheus = require('../utils/prometheus')
 const publicationSites = require('../utils/publication-sites')
 const { prepareMarkdownContent } = require('../utils/markdown')
 const clamav = require('../utils/clamav')
+const nanoid = require('../utils/nanoid')
 const router = express.Router()
 
 function clean (publicUrl, dataset, query = {}, draft = false) {
@@ -294,7 +295,7 @@ const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => 
   const shouldLock = typeof _shouldLock === 'function' ? _shouldLock(req.body, req.query) : _shouldLock
   if (!shouldLock) return next()
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
-    const lockKey = `dataset:${req.params.datasetId}`
+    const lockKey = `dataset:${req.dataset ? req.dataset.id : req.params.datasetId}`
     const ack = await locks.acquire(db, lockKey, `${req.method} ${req.originalUrl}`)
     if (ack) {
       res.on('close', () => locks.release(db, lockKey).catch(err => console.error('failure to release dataset lock', err)))
@@ -304,14 +305,28 @@ const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => 
       await new Promise(resolve => setTimeout(resolve, config.datasetStateRetries.interval))
     }
   }
-  throw createError(409, `Une opération bloquante est déjà en cours sur le jeu de données ${req.params.datasetId}.`)
+  throw createError(409, `Une opération bloquante est déjà en cours sur le jeu de données ${req.dataset.id}.`)
 })
 const lockNewDataset = async (req, res, dataset) => {
   const db = req.app.get('db')
-  const lockKey = `dataset:${dataset.id}`
-  const ack = await locks.acquire(db, lockKey, `${req.method} - ${req.originalUrl}`)
-  if (ack) res.on('close', () => locks.release(db, lockKey).catch(err => console.warn('failure to release dataset lock', err)))
-  return ack
+  const lockKeys = [`dataset:${dataset.id}`, `dataset:slug:${dataset.owner.type}:${dataset.owner.id}:${dataset.slug}`]
+  const acks = await Promise.all(lockKeys.map(lockKey => locks.acquire(db, lockKey, `${req.method} ${req.originalUrl}`)))
+  res.on('close', () => {
+    for (let i = 0; i < lockKeys.length; i++) {
+      if (acks[i]) {
+        locks.release(db, lockKeys[i]).catch(err => console.error('failure to release dataset lock', err))
+      }
+    }
+  })
+  if (acks.includes(false)) {
+    for (let i = 0; i < lockKeys.length; i++) {
+      if (acks[i]) {
+        await locks.release(db, lockKeys[i])
+      }
+    }
+    return false
+  }
+  return true
 }
 // Shared middleware to read dataset in db
 // also checks that the dataset is in a state compatible with some action
@@ -319,9 +334,13 @@ const lockNewDataset = async (req, res, dataset) => {
 const readDataset = (_acceptedStatuses, preserveDraft, ignoreDraft) => asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
   const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body) : _acceptedStatuses
+  let filter = { id: req.params.datasetId }
+  if (req.publicationSite) {
+    filter = { $or: [filter, { slug: req.params.datasetId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }] }
+  }
+
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
-    req.dataset = req.resource = await db.collection('datasets')
-      .findOne({ id: req.params.datasetId }, { projection: { _id: 0 } })
+    req.dataset = req.resource = await db.collection('datasets').findOne(filter, { projection: { _id: 0 } })
     if (!req.dataset) return res.status(404).send('Dataset not found')
     // in draft mode the draft is automatically merged and all following operations use dataset.draftReason to adapt
     if (preserveDraft) {
@@ -458,9 +477,6 @@ const permissionsWriteDescriptionBreaking = permissions.middleware('writeDescrip
 
 // Update a dataset's metadata
 router.patch('/:datasetId',
-  lockDataset((patch) => {
-    return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)
-  }),
   readDataset((patch) => {
     // accept different statuses of the dataset depending on the content of the patch
     if (patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection) {
@@ -468,6 +484,9 @@ router.patch('/:datasetId',
     } else {
       return null
     }
+  }),
+  lockDataset((patch) => {
+    return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)
   }),
   (req, res, next) => descriptionHasBreakingChanges(req) ? permissionsWriteDescriptionBreaking(req, res, next) : permissionsWriteDescription(req, res, next),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
@@ -643,7 +662,7 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
   await permissions.initResourcePermissions(patch)
 
   const patchedDataset = (await req.app.get('db').collection('datasets')
-    .findOneAndUpdate({ id: req.params.datasetId }, { $set: patch }, { returnDocument: 'after' })).value
+    .findOneAndUpdate({ id: req.dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
 
   // Move all files
   if (datasetUtils.dir(req.dataset) !== datasetUtils.dir(patchedDataset)) {
@@ -714,21 +733,28 @@ const setFileInfo = async (req, file, attachmentsFile, dataset, draft, res) => {
   }
 
   if (!dataset.id) {
+    // TODO: merge this with datasetUtils.insertWithId ?
+    // it would require either inserting the dataset here before finishing analyzing the file
+    // or analyzing the file in a temporary directory, then inserting the dataset afterward and copying file in the directory then
+    dataset.id = nanoid()
     const baseTitle = dataset.title || titleFromFileName(file.originalname)
-    const baseId = slug(baseTitle, { lower: true, strict: true })
-    dataset.id = baseId
+    const baseSlug = slug(baseTitle, { lower: true, strict: true })
+    dataset.slug = baseSlug
     dataset.title = baseTitle
-    let i = 1; let dbExists = false; let fileExists = false; let acquiredLock = false
+    let i = 1; let dbIdExists = false; let dbSlugExists = false; let fileExists = false; let acquiredLock = false
     do {
       if (i > 1) {
-        dataset.id = baseId + i
+        dataset.slug = `${baseSlug}-${i}`
         dataset.title = baseTitle + ' ' + i
       }
-      acquiredLock = await lockNewDataset(req, res, dataset)
-      dbExists = await db.collection('datasets').countDocuments({ id: dataset.id })
+      dbIdExists = await db.collection('datasets').countDocuments({ id: dataset.id })
+      dbSlugExists = await db.collection('datasets').countDocuments({ slug: dataset.slug, 'owner.type': dataset.owner.type, 'owner.id': dataset.owner.id })
       fileExists = await fs.exists(datasetUtils.dir(dataset))
+      if (!dbIdExists && !dbSlugExists && !fileExists) {
+        acquiredLock = await lockNewDataset(req, res, dataset)
+      }
       i += 1
-    } while (dbExists || fileExists || !acquiredLock)
+    } while (dbIdExists || dbSlugExists || fileExists || !acquiredLock)
 
     if (draft) {
       dataset.status = 'draft'
@@ -845,13 +871,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       dataset.virtual = dataset.virtual || { children: [] }
       dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
       dataset.status = 'indexed'
-      if (dataset.id) {
-        await db.collection('datasets').insertOne(dataset)
-      } else {
-        const baseId = slug(req.body.title, { lower: true, strict: true })
-        await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
-      }
-      await lockNewDataset(req, res, dataset)
+      await datasetUtils.insertWithId(db, dataset, res)
     } else if (req.body.isRest) {
       if (!req.body.title) throw createError(400, 'Un jeu de données éditable doit être créé avec un titre')
       if (attachmentsFile) throw createError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
@@ -863,13 +883,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       // the dataset will go through a first index/finalize steps, not really necessary
       // but this way everything will be initialized (journal, index)
       dataset.status = 'analyzed'
-      if (dataset.id) {
-        await db.collection('datasets').insertOne(dataset)
-      } else {
-        const baseId = slug(req.body.title, { lower: true, strict: true })
-        await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
-      }
-      await lockNewDataset(req, res, dataset)
+      await datasetUtils.insertWithId(db, dataset, res)
       await restDatasetsUtils.initDataset(db, dataset)
       await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'analyzed' } })
     } else if (req.body.isMetaOnly) {
@@ -878,13 +892,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       validatePost(req.body)
       dataset = await initNew(db, req)
       permissions.initResourcePermissions(dataset, req.user)
-      if (dataset.id) {
-        await db.collection('datasets').insertOne(dataset)
-      } else {
-        const baseId = slug(req.body.title, { lower: true, strict: true })
-        await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
-      }
-      await lockNewDataset(req, res, dataset)
+      await datasetUtils.insertWithId(db, dataset, res)
     } else if (req.body.remoteFile) {
       validatePost(req.body)
       dataset = await initNew(db, req)
@@ -892,13 +900,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       dataset.title = dataset.title || titleFromFileName(req.body.remoteFile.name)
       permissions.initResourcePermissions(dataset, req.user)
       dataset.status = 'imported'
-      if (dataset.id) {
-        await db.collection('datasets').insertOne(dataset)
-      } else {
-        const baseId = slug(dataset.title, { lower: true, strict: true })
-        await datasetUtils.insertWithBaseId(db, dataset, baseId, res)
-      }
-      await lockNewDataset(req, res, dataset)
+      await datasetUtils.insertWithId(db, dataset, res)
     } else {
       throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "éditable" ou "métadonnées"')
     }
@@ -928,6 +930,7 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
   if (!await db.collection('datasets').countDocuments({ id: newDataset.id })) {
     validateId(newDataset.id)
   }
+  newDataset.slug = newDataset.id || slug(newDataset.title, { lower: true, strict: true })
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (permissions.canDoForOwner(newDataset.owner, 'datasets', 'post', req.user, db)) {
@@ -1015,7 +1018,7 @@ const updateDataset = asyncWrap(async (req, res) => {
       Object.assign(dataset, req.body)
     }
     if (req.isNewDataset) permissions.initResourcePermissions(dataset, req.user)
-    await db.collection('datasets').replaceOne({ id: req.params.datasetId }, dataset)
+    await db.collection('datasets').replaceOne({ id: dataset.id }, dataset)
     if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'dataset-created' }, 'dataset')
     else if (!dataset.isRest && !dataset.isVirtual) {
       await journals.log(
@@ -1040,7 +1043,7 @@ router.post('/:datasetId', lockDataset(), attemptInsert, readDataset(['finalized
 router.put('/:datasetId', lockDataset(), attemptInsert, readDataset(['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
 
 // validate the draft
-router.post('/:datasetId/draft', lockDataset(), readDataset(['finalized'], true), permissions.middleware('validateDraft', 'write'), asyncWrap(async (req, res, next) => {
+router.post('/:datasetId/draft', readDataset(['finalized'], true), permissions.middleware('validateDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
   if (!req.dataset.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
@@ -1048,14 +1051,14 @@ router.post('/:datasetId/draft', lockDataset(), readDataset(['finalized'], true)
 }))
 
 // cancel the draft
-router.delete('/:datasetId/draft', lockDataset(), readDataset(['finalized', 'error'], true), permissions.middleware('cancelDraft', 'write'), asyncWrap(async (req, res, next) => {
+router.delete('/:datasetId/draft', readDataset(['finalized', 'error'], true), permissions.middleware('cancelDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
   if (!req.dataset.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
   await journals.log(req.app, req.dataset, { type: 'draft-cancelled' }, 'dataset')
   const patchedDataset = (await db.collection('datasets')
-    .findOneAndUpdate({ id: req.params.datasetId }, { $unset: { draft: '' } }, { returnDocument: 'after' })).value
+    .findOneAndUpdate({ id: req.dataset.id }, { $unset: { draft: '' } }, { returnDocument: 'after' })).value
   await fs.remove(datasetUtils.dir(req.dataset))
   await esUtils.delete(req.app.get('es'), req.dataset)
   await datasetUtils.updateStorage(req.app, patchedDataset)
@@ -1075,12 +1078,12 @@ router.get('/:datasetId/lines/:lineId', readDataset(), isRest, permissions.middl
 router.post('/:datasetId/lines', readDataset(writableStatuses), isRest, applicationKey, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createLine))
 router.put('/:datasetId/lines/:lineId', readDataset(writableStatuses), isRest, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.updateLine))
 router.patch('/:datasetId/lines/:lineId', readDataset(writableStatuses), isRest, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.patchLine))
-router.post('/:datasetId/_bulk_lines', lockDataset((body, query) => query.lock === 'true'), readDataset(writableStatuses), isRest, permissions.middleware('bulkLines', 'write'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
+router.post('/:datasetId/_bulk_lines', readDataset(writableStatuses), isRest, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
 router.delete('/:datasetId/lines/:lineId', readDataset(writableStatuses), isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
 router.get('/:datasetId/lines/:lineId/revisions', readDataset(writableStatuses), isRest, permissions.middleware('readLineRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
 router.get('/:datasetId/revisions', readDataset(writableStatuses), isRest, permissions.middleware('readRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
 router.delete('/:datasetId/lines', readDataset(writableStatuses), isRest, permissions.middleware('deleteAllLines', 'write'), asyncWrap(restDatasetsUtils.deleteAllLines))
-router.post('/:datasetId/_sync_attachments_lines', lockDataset((body, query) => query.lock === 'true'), readDataset(writableStatuses), isRest, permissions.middleware('bulkLines', 'write'), asyncWrap(restDatasetsUtils.syncAttachmentsLines))
+router.post('/:datasetId/_sync_attachments_lines', readDataset(writableStatuses), isRest, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), asyncWrap(restDatasetsUtils.syncAttachmentsLines))
 
 // specific routes with rest datasets with lineOwnership activated
 router.use('/:datasetId/own/:owner', readDataset(writableStatuses), isRest, (req, res, next) => {
@@ -1166,7 +1169,7 @@ async function manageESError (req, err) {
   // but this can end up storing too many errors when the cluster is in a bad state
   // revert to simply logging
   // if (req.dataset.status === 'finalized' && err.statusCode >= 404 && errBody.type !== 'search_phase_execution_exception') {
-  // await req.app.get('db').collection('datasets').updateOne({ id: req.params.datasetId }, { $set: { status: 'error' } })
+  // await req.app.get('db').collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'error' } })
   // await journals.log(req.app, req.dataset, { type: 'error', data: message })
   // }
   throw createError(status, message)
@@ -1636,7 +1639,7 @@ router.get('/:datasetId/private-api-docs.json', readDataset(), permissions.middl
 router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({
     type: 'dataset',
-    id: req.params.datasetId,
+    id: req.dataset.id,
     'owner.type': req.dataset.owner.type,
     'owner.id': req.dataset.owner.id
   })
@@ -1696,8 +1699,11 @@ router.get('/:datasetId/_diagnose', readDataset(), cacheHeaders.noCache, asyncWr
   if (!req.user.adminMode) return res.status(403).send()
   const esInfos = await esUtils.datasetInfos(req.app.get('es'), req.dataset)
   const filesInfos = await datasetUtils.lsFiles(req.dataset)
-  const lock = await req.app.get('db').collection('locks').findOne({ _id: `dataset:${req.params.datasetId}` })
-  res.json({ filesInfos, esInfos, lock })
+  const locks = [
+    await req.app.get('db').collection('locks').findOne({ _id: `dataset:${req.dataset.id}` }),
+    await req.app.get('db').collection('locks').findOne({ _id: `dataset:slug:${req.dataset.owner.type}:${req.dataset.owner.id}:${req.dataset.slug}` })
+  ]
+  res.json({ filesInfos, esInfos, locks })
 }))
 
 // Special admin route to force reindexing a dataset

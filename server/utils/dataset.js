@@ -10,11 +10,12 @@ const dir = require('node-dir')
 const { Writable } = require('stream')
 const csvStringify = require('csv-stringify')
 const flatten = require('flat')
-const pump = require('../utils/pipe')
 const tmp = require('tmp-promise')
 const mimeTypeStream = require('mime-type-stream')
 const createError = require('http-errors')
 const { createGunzip } = require('zlib')
+const slug = require('slugify')
+const pump = require('./pipe')
 const fieldsSniffer = require('./fields-sniffer')
 const geoUtils = require('./geo')
 const restDatasetsUtils = require('./rest-datasets')
@@ -28,6 +29,7 @@ const webhooks = require('./webhooks')
 const journals = require('./journals')
 const settingsUtils = require('./settings')
 const i18nUtils = require('./i18n')
+const nanoid = require('./nanoid')
 const { basicTypes, csvTypes } = require('../workers/converter')
 const equal = require('deep-equal')
 const dataDir = path.resolve(config.dataDir)
@@ -707,19 +709,34 @@ exports.refinalize = async (db, dataset) => {
 }
 
 // Generate ids and try insertion until there is no conflict on id
-exports.insertWithBaseId = async (db, dataset, baseId, res) => {
-  dataset.id = baseId
+exports.insertWithId = async (db, dataset, res) => {
+  const baseSlug = slug(dataset.title, { lower: true, strict: true })
+  dataset.id = dataset.id ?? nanoid()
+  dataset.slug = baseSlug
   let insertOk = false
   let i = 1
   while (!insertOk) {
     try {
-      const lockKey = `dataset:${dataset.id}`
-      const ack = await locks.acquire(db, lockKey, 'insertWithBaseid')
-      if (ack) {
-        res.on('close', () => locks.release(db, lockKey).catch(err => {
-          prometheus.internalError.inc({ errorCode: 'dataset-lock' })
-          console.error('(dataset-lock) failure to release dataset lock', err)
-        }))
+      const idLockKey = `dataset:${dataset.id}`
+      const slugLockKey = `dataset:slug:${dataset.owner.type}:${dataset.owner.id}:${dataset.slug}`
+      const idAck = locks.acquire(db, idLockKey, 'insertWithBaseid')
+      if (!idAck) throw new Error(`dataset id ${dataset.id} is locked`)
+      else {
+        res.on('close', () => {
+          locks.release(db, idLockKey).catch(err => {
+            prometheus.internalError.inc({ errorCode: 'dataset-lock-id' })
+            console.error('(dataset-lock-id) failure to release dataset lock on id', err)
+          })
+        })
+      }
+      const slugAck = locks.acquire(db, slugLockKey, 'insertWithBaseid')
+      if (slugAck) {
+        res.on('close', () => {
+          locks.release(db, idLockKey).catch(err => {
+            prometheus.internalError.inc({ errorCode: 'dataset-lock-id' })
+            console.error('(dataset-lock-slug) failure to release dataset lock on slug', err)
+          })
+        })
         await db.collection('datasets').insertOne(dataset)
         insertOk = true
         break
@@ -728,7 +745,7 @@ exports.insertWithBaseId = async (db, dataset, baseId, res) => {
       if (err.code !== 11000) throw err
     }
     i += 1
-    dataset.id = `${baseId}-${i}`
+    dataset.slug = `${baseSlug}-${i}`
   }
 }
 

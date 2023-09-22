@@ -38,6 +38,7 @@ exports.init = async (db) => {
   const promises = [
     // datasets indexes
     exports.ensureIndex(db, 'datasets', { id: 1 }, { unique: true }),
+    exports.ensureIndex(db, 'datasets', { slug: 1, 'owner.type': 1, 'owner.id': 1 }, { unique: true, name: 'slug' }),
     // used to fetch list sorted by creation
     exports.ensureIndex(db, 'datasets', { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, { name: 'main-keys' }),
     // full text search
@@ -63,6 +64,7 @@ exports.init = async (db) => {
 
     // applications indexes
     exports.ensureIndex(db, 'applications', { id: 1 }, { unique: true }),
+    exports.ensureIndex(db, 'applications', { slug: 1, 'owner.type': 1, 'owner.id': 1 }, { unique: true, name: 'slug' }),
     // used to fetch list sorted by creation
     exports.ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, { name: 'main-keys' }),
     // full text search

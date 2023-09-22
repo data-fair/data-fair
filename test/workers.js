@@ -132,10 +132,10 @@ describe('workers', () => {
       testUtils.sendDataset('geo/stations.zip', ax),
       testUtils.sendDataset('geo/stations.zip', ax)
     ])
-    assert.ok(datasets.find(d => d.id === 'stations'))
-    assert.ok(datasets.find(d => d.id === 'stations2'))
-    assert.ok(datasets.find(d => d.id === 'stations3'))
-    assert.ok(datasets.find(d => d.id === 'stations4'))
+    assert.ok(datasets.find(d => d.slug === 'stations'))
+    assert.ok(datasets.find(d => d.slug === 'stations-2'))
+    assert.ok(datasets.find(d => d.slug === 'stations-3'))
+    assert.ok(datasets.find(d => d.slug === 'stations-4'))
     // config.worker.spawnTask = false
   })
 
@@ -160,7 +160,7 @@ describe('workers', () => {
   it('Manage unexpected failure in children processes', async function () {
     config.worker.spawnTask = true
     const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', { isRest: true, title: 'trigger test error' })
+    let res = await ax.post('/api/v1/datasets/trigger-test-error', { isRest: true, title: 'trigger test error' })
     await assert.rejects(workers.hook('indexer/trigger-test-error'), () => true)
     // Check that there is an error message in the journal
     res = await ax.get('/api/v1/datasets/trigger-test-error/journal')

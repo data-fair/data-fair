@@ -10,7 +10,7 @@ const workers = require('../server/workers')
 describe('thumbnails', () => {
   it(' should create thumbnails for datasets with illustrations', async () => {
     const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/thumbnails1', {
       isRest: true,
       title: 'thumbnails1',
       schema: [{ key: 'desc', type: 'string' }, { key: 'imageUrl', type: 'string', 'x-refersTo': 'http://schema.org/image' }]
@@ -40,7 +40,7 @@ describe('thumbnails', () => {
 
   it('should create thumbnail for the image metadata of a dataset', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/thumbnail', {
       isRest: true,
       title: 'thumbnail',
       image: 'http://test-thumbnail.com/dataset-image.jpg'
@@ -60,7 +60,7 @@ describe('thumbnails', () => {
   // keep this test skipped most of the time as it depends on an outside service
   it.skip('should provide a redirect for an unsupported image format', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/thumbnail', {
       isRest: true,
       title: 'thumbnail',
       image: 'https://geocatalogue.lannion-tregor.com/geonetwork/srv/api/records/c4576973-28cd-47d5-a082-7871f96d8f14/attachments/reseau_transport_scolaire.JPG'
@@ -86,7 +86,7 @@ describe('thumbnails', () => {
     const thumbnail1 = res.data.results[0]._thumbnail
     await assert.rejects(ax.get(res.data.results[0]._thumbnail, { maxRedirects: 0 }), (err) => err.status === 302)
     await assert.rejects(global.ax.anonymous.get(res.data.results[0]._thumbnail), (err) => err.status === 403)
-    assert.ok(thumbnail1.startsWith('http://localhost:5600/data-fair/api/v1/datasets/attachments/thumbnail/'))
+    assert.ok(thumbnail1.startsWith(`http://localhost:5600/data-fair/api/v1/datasets/${dataset.id}/thumbnail/`))
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: 'test.com' } })
     assert.equal(thumbnail1.replace('localhost:5600', 'test.com'), res.data.results[0]._thumbnail)
   })

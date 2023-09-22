@@ -164,8 +164,9 @@ router.post('', asyncWrap(async (req, res) => {
   // Generate ids and try insertion until there is no conflict on id
   const toks = application.url.split('/').filter(part => !!part)
   const lastUrlPart = toks[toks.length - 1]
-  const baseId = application.id || slug(application.title || application.applicationName || lastUrlPart, { lower: true, strict: true })
-  application.id = baseId
+  application.id = nanoid()
+  const baseslug = application.slug || slug(application.title || application.applicationName || lastUrlPart, { lower: true, strict: true })
+  application.slug = baseslug
   permissions.initResourcePermissions(application, req.user)
   let insertOk = false
   let i = 1
@@ -176,7 +177,7 @@ router.post('', asyncWrap(async (req, res) => {
     } catch (err) {
       if (err.code !== 11000) throw err
       i += 1
-      application.id = `${baseId}-${i}`
+      application.slug = `${baseslug}-${i}`
     }
   }
   application.status = 'created'
@@ -187,8 +188,13 @@ router.post('', asyncWrap(async (req, res) => {
 
 // Shared middleware
 const readApplication = asyncWrap(async (req, res, next) => {
+  let filter = { id: req.params.applicationId }
+  if (req.publicationSite) {
+    filter = { $or: [filter, { slug: req.params.applicationId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }] }
+  }
+
   req.application = req.resource = await req.app.get('db').collection('applications')
-    .findOne({ id: req.params.applicationId }, { projection: { _id: 0 } })
+    .findOne(filter, { projection: { _id: 0 } })
   if (!req.application) return res.status(404).send(req.__('errors.missingApp'))
   req.resourceType = 'applications'
   next()

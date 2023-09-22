@@ -4,7 +4,7 @@ const workers = require('../server/workers')
 describe('Sorting', () => {
   it('Ignore case and diacritics', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/restsort1', {
       isRest: true,
       title: 'restsort1',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'integer' }]
