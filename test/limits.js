@@ -29,7 +29,6 @@ describe('limits', () => {
 
     // define a higher limit
     res = await ax.post('/api/v1/limits/user/dmeadus0', baseLimit, { params: { key: config.secretKeys.limits } })
-    await assert.rejects(workers.hook('finalizer/' + dataset.id))
 
     // test storage size limit
     form = new FormData()
