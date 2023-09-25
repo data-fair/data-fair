@@ -17,7 +17,7 @@ describe('virtual datasets', () => {
     const res = await ax.put('/api/v1/datasets/my-id', { isVirtual: true, title: 'a virtual dataset' })
     await assert.rejects(workers.hook('finalizer/' + res.data.id))
     assert.equal(res.status, 201)
-    assert.equal(res.data.slug, 'my-id')
+    assert.equal(res.data.slug, 'a-virtual-dataset')
   })
 
   it('Create a virtual dataset with a child and query', async () => {
