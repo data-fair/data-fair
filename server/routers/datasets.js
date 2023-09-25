@@ -854,7 +854,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
     const db = req.app.get('db')
 
     validateURLFriendly(req, req.body.id)
-    validateURLFriendly(req, req.bodu.slug)
+    validateURLFriendly(req, req.body.slug)
 
     let dataset
     // After uploadFile, req.files contains the metadata of an uploaded file, and req.body the content of additional text fields
