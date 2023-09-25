@@ -19,7 +19,8 @@ describe('limits', () => {
     form.append('file', Buffer.alloc(150000), 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    await assert.rejects(workers.hook('finalizer/dataset'))
+    const dataset = res.data
+    await assert.rejects(workers.hook('finalizer/' + res.data.id))
 
     // Send dataset applying default limits
     form = new FormData()
@@ -28,12 +29,13 @@ describe('limits', () => {
 
     // define a higher limit
     res = await ax.post('/api/v1/limits/user/dmeadus0', baseLimit, { params: { key: config.secretKeys.limits } })
+    await assert.rejects(workers.hook('finalizer/' + dataset.id))
 
     // test storage size limit
     form = new FormData()
     form.append('file', Buffer.alloc(100000), 'dataset.csv')
     res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    workers.hook('finalizer/' + res.data.id)
+    workers.hook('finalizer/' + dataset.id)
     assert.equal(res.status, 201)
     form = new FormData()
     form.append('file', Buffer.alloc(100000), 'dataset.csv')
