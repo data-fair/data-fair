@@ -307,6 +307,64 @@
         :rules="required.includes('title') ? [(val) => !!val]: []"
         @change="patch({title: dataset.title})"
       />
+      <v-text-field
+        id="slug-input"
+        v-model="dataset.slug"
+        :readonly="true"
+        :disabled="!can('writeDescriptionBreaking')"
+        :label="$t('slug')"
+        outlined
+        dense
+        hide-details
+        class="mb-3"
+      />
+      <v-menu
+        v-if="can('writeDescriptionBreaking')"
+        v-model="slugMenu"
+        activator="#slug-input"
+        offset-y
+        :close-on-content-click="false"
+        max-width="700"
+        @input="newSlug = dataset.slug"
+      >
+        <v-card>
+          <v-card-title primary-title>
+            {{ $t('slug') }}
+          </v-card-title>
+          <v-card-text>
+            <v-alert
+              type="warning"
+              outlined
+            >
+              {{ $t('slugWarning') }}
+            </v-alert>
+            <v-text-field
+              v-model="newSlug"
+              :label="$t('newSlug')"
+              autofocus
+              outlined
+              dense
+              hide-details
+              :required="true"
+              :rules="[(val) => !!val]"
+            />
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn
+              v-t="'cancel'"
+              text
+              @click="slugMenu = false"
+            />
+            <v-btn
+              v-t="'validate'"
+              color="warning"
+              :disabled="newSlug === dataset.slug || !newSlug"
+              @click="patchAndCommit({slug: newSlug}); slugMenu = false"
+            />
+          </v-card-actions>
+        </v-card>
+      </v-menu>
       <markdown-editor
         v-model="dataset.description"
         :disabled="!can('writeDescription')"
@@ -337,6 +395,9 @@ fr:
   temporal: Couverture temporelle
   keywords: Mots clés
   frequency: Fréquence des mises à jour
+  slug: Slug
+  slugWarning: Le slug est un identifiant unique lisible qui est utilisé dans les URLs de pages de portails, d'APIs de données, etc. Attention, si vous le modifiez vous pouvez casser des liens et des applications existantes.
+  newSlug: Nouvelle valeur du slug
   title: Titre
   description: Description
   frequencyItems:
@@ -361,6 +422,8 @@ fr:
   history: Historisation (conserve les révisions des lignes)
   historyTTL: Supprimer automatiquement les révisions de lignes qui datent de plus de {days} jours.
   noHistoryTTL: pas de politique d'expiration des révisions configurée
+  cancel: Annuler
+  validate: Valider
 en:
   updatedAt: last update of metadata
   dataUpdatedAt: last update of data
@@ -378,6 +441,9 @@ en:
   temporal: Temporal coverage
   keywords: Keywords
   frequency: Update frequency
+  slug: Slug
+  slugWarning: "The slug is a readable unique id that is used in portal pages URLs, data APIs, etc. Warning : if you modify it you can break existing links and applications."
+  newSlug: New slug value
   title: Title
   description: Description
   frequencyItems:
@@ -402,6 +468,8 @@ en:
   noHistory: 'No history configured (do not store revisions of lines)'
   historyTTL: Automatically delete revisions more than {days} days old.
   noHistoryTTL: no automatic expiration of revisions configured
+  cancel: Cancel
+  validate: Validate
 </i18n>
 
 <script>
@@ -423,7 +491,9 @@ export default {
       loadingSpatialFacets: false,
       keywordsFacets: null,
       loadingKeywordsFacets: false,
-      temporalMenu: false
+      temporalMenu: false,
+      slugMenu: false,
+      newSlug: ''
     }
   },
   computed: {
@@ -487,7 +557,7 @@ export default {
     }
   },
   methods: {
-    ...mapActions('dataset', ['patch', 'reindex']),
+    ...mapActions('dataset', ['patch', 'patchAndCommit', 'reindex']),
     async fetchSpatialFacets (search) {
       if (this.spatialFacets || !search) return
       this.loadingSpatialFacets = true

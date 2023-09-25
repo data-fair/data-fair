@@ -51,7 +51,7 @@ const { bulkSearchStreams } = require('../utils/master-data')
 const applicationKey = require('../utils/application-key')
 const { syncDataset: syncRemoteService } = require('./remote-services')
 const { basicTypes } = require('../workers/converter')
-const { validateId } = require('../utils/validation')
+const { validateURLFriendly } = require('../utils/validation')
 const prometheus = require('../utils/prometheus')
 const publicationSites = require('../utils/publication-sites')
 const { prepareMarkdownContent } = require('../utils/markdown')
@@ -342,10 +342,18 @@ const readDataset = (_acceptedStatuses, preserveDraft, ignoreDraft) => asyncWrap
         { slug: req.params.datasetId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }
       ]
     }
+  } else if (req.mainPublicationSite) {
+    filter = {
+      $or: [
+        { id: req.params.datasetId },
+        { slug: req.params.datasetId, 'owner.type': req.mainPublicationSite.owner.type, 'owner.id': req.mainPublicationSite.owner.id }
+      ]
+    }
   }
 
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
-    req.dataset = req.resource = await db.collection('datasets').findOne(filter, { projection: { _id: 0 } })
+    const datasets = await db.collection('datasets').find(filter).project({ _id: 0 }).toArray()
+    req.dataset = req.resource = datasets.find(d => d.id === req.params.datasetId) || datasets.find(d => d.slug === req.params.datasetId)
     if (!req.dataset) return res.status(404).send('Dataset not found')
     // in draft mode the draft is automatically merged and all following operations use dataset.draftReason to adapt
     if (preserveDraft) {
@@ -466,7 +474,7 @@ const permissionsWritePublications = permissions.middleware('writePublications',
 const permissionsWriteExports = permissions.middleware('writeExports', 'admin')
 const permissionsWriteDescription = permissions.middleware('writeDescription', 'write')
 const debugBreakingChanges = require('debug')('breaking-changes')
-const descriptionBreakingKeys = ['rest', 'virtual', 'lineOwnership', 'primaryKey', 'projection', 'attachmentsAsImage', 'extensions', 'timeZone'] // a change in these properties is considered a breaking change
+const descriptionBreakingKeys = ['rest', 'virtual', 'lineOwnership', 'primaryKey', 'projection', 'attachmentsAsImage', 'extensions', 'timeZone', 'slug'] // a change in these properties is considered a breaking change
 const descriptionHasBreakingChanges = (req) => {
   const breakingChangeKey = descriptionBreakingKeys.find(key => key in req.body)
   if (breakingChangeKey) {
@@ -500,6 +508,7 @@ router.patch('/:datasetId',
     const db = req.app.get('db')
     const patch = req.body
     validatePatch(patch)
+    validateURLFriendly(req, patch.slug)
 
     curateDataset(patch)
 
@@ -839,7 +848,8 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
   try {
     const db = req.app.get('db')
 
-    validateId(req.body.id)
+    validateURLFriendly(req, req.body.id)
+    validateURLFriendly(req, req.bodu.slug)
 
     let dataset
     // After uploadFile, req.files contains the metadata of an uploaded file, and req.body the content of additional text fields
@@ -933,9 +943,9 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
   const newDataset = await initNew(db, req)
   newDataset.id = req.params.datasetId
   if (!await db.collection('datasets').countDocuments({ id: newDataset.id })) {
-    validateId(newDataset.id)
+    validateURLFriendly(req, newDataset.id)
   }
-  newDataset.slug = newDataset.id || slug(newDataset.title, { lower: true, strict: true })
+  newDataset.slug = slug(newDataset.title || newDataset.id, { lower: true, strict: true })
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (permissions.canDoForOwner(newDataset.owner, 'datasets', 'post', req.user, db)) {
@@ -992,12 +1002,14 @@ const updateDataset = asyncWrap(async (req, res) => {
     } else if (dataset.isVirtual) {
       const { isVirtual, updatedBy, updatedAt, ...patch } = req.body
       validatePatch(patch)
+      validateURLFriendly(req, patch.slug)
       req.body.virtual = req.body.virtual || { children: [] }
       req.body.schema = await virtualDatasetsUtils.prepareSchema(db, { ...dataset, ...req.body })
       req.body.status = 'indexed'
     } else if (dataset.isRest) {
       const { isRest, updatedBy, updatedAt, ...patch } = req.body
       validatePatch(patch)
+      validateURLFriendly(req, patch.slug)
       req.body.rest = req.body.rest || {}
       if (req.isNewDataset) {
         await restDatasetsUtils.initDataset(db, { ...dataset, ...req.body })

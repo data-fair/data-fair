@@ -84,31 +84,46 @@ if (config.mode.includes('server')) {
     const urlParts = { protocol: u.protocol, hostname: u.hostname, pathname: basePath.slice(0, -1) }
     if (u.port !== 443 && u.port !== 80) urlParts.port = u.port
     req.publicBaseUrl = u.full ? formatUrl(urlParts) : config.publicUrl
-    if (req.publicBaseUrl !== config.publicUrl) {
-      const publicationSiteUrl = u.protocol + '//' + u.hostname + ((u.port && u.port !== 80 && u.port !== 443) ? ':' + u.port : '')
-      // TODO: a small memory cache as this is queried very often
-      const settings = await req.app.get('db').collection('settings').findOne(
-        { 'publicationSites.url': publicationSiteUrl },
-        {
-          projection: {
-            type: 1,
-            id: 1,
-            department: 1,
-            name: 1,
-            publicationSites: { $elemMatch: { url: publicationSiteUrl } }
-          }
+
+    const main = req.publicBaseUrl === config.publicUrl
+
+    const publicationSiteUrl = u.protocol + '//' + u.hostname + ((u.port && u.port !== 80 && u.port !== 443) ? ':' + u.port : '')
+    // TODO: a small memory cache as this is queried very often
+    const settings = await req.app.get('db').collection('settings').findOne(
+      { 'publicationSites.url': publicationSiteUrl },
+      {
+        projection: {
+          type: 1,
+          id: 1,
+          department: 1,
+          name: 1,
+          publicationSites: { $elemMatch: { url: publicationSiteUrl } }
         }
-      )
-      if (!settings) {
-        console.error('(publication-site-unknown) no publications site is associated to URL ' + publicationSiteUrl)
-        prometheus.internalError.inc({ errorCode: 'publication-site-unknown' })
-        return res.status(404).send('publication site unknown')
       }
-      req.publicationSite = {
-        owner: { type: settings.type, id: settings.id, department: settings.department, name: settings.name },
-        ...settings.publicationSites[0]
+    )
+    if (!settings && req.publicBaseUrl !== config.publicUrl) {
+      console.error('(publication-site-unknown) no publications site is associated to URL ' + publicationSiteUrl)
+      prometheus.internalError.inc({ errorCode: 'publication-site-unknown' })
+      return res.status(404).send('publication site unknown')
+    }
+    if (settings) {
+      if (main) {
+        req.mainPublicationSite = {
+          owner: { type: settings.type, id: settings.id, department: settings.department, name: settings.name },
+          ...settings.publicationSites[0]
+        }
+        if (req.query.publicationSites === req.mainPublicationSite.type + ':' + req.mainPublicationSite.id) {
+          req.publicationSite = req.mainPublicationSite
+        }
+      } else {
+        req.publicationSite = {
+          owner: { type: settings.type, id: settings.id, department: settings.department, name: settings.name },
+          main,
+          ...settings.publicationSites[0]
+        }
       }
     }
+
     req.directoryUrl = u.full ? formatUrl({ ...urlParts, pathname: '/simple-directory' }) : config.directoryUrl
     debugDomain('req.publicBaseUrl', req.publicBaseUrl)
     req.publicWsBaseUrl = req.publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:') + '/'

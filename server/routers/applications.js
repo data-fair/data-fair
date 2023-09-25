@@ -26,7 +26,7 @@ const journals = require('../utils/journals')
 const capture = require('../utils/capture')
 const visibilityUtils = require('../utils/visibility')
 const cacheHeaders = require('../utils/cache-headers')
-const { validateId } = require('../utils/validation')
+const { validateURLFriendly } = require('../utils/validation')
 const publicationSites = require('../utils/publication-sites')
 const datasetUtils = require('../utils/dataset')
 const { prepareMarkdownContent } = require('../utils/markdown')
@@ -163,7 +163,7 @@ router.post('', asyncWrap(async (req, res) => {
   const application = await initNew(req)
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', req.user)) return res.status(403).send()
   validate(application)
-  validateId(application.id)
+  validateURLFriendly(req, application.slug)
 
   // Generate ids and try insertion until there is no conflict on id
   const toks = application.url.split('/').filter(part => !!part)
@@ -200,10 +200,17 @@ const readApplication = asyncWrap(async (req, res, next) => {
         { slug: req.params.applicationId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }
       ]
     }
+  } else if (req.mainPublicationSite) {
+    filter = {
+      $or: [
+        { id: req.params.applicationId },
+        { slug: req.params.applicationId, 'owner.type': req.mainPublicationSite.owner.type, 'owner.id': req.mainPublicationSite.owner.id }
+      ]
+    }
   }
 
-  req.application = req.resource = await req.app.get('db').collection('applications')
-    .findOne(filter, { projection: { _id: 0 } })
+  const applications = await req.app.get('db').collection('applications').find(filter).project({ _id: 0 }).toArray()
+  req.application = req.resource = applications.find(a => a.id === req.params.applicationId) || applications.find(a => a.slug === req.params.applicationId)
   if (!req.application) return res.status(404).send(req.__('errors.missingApp'))
   req.resourceType = 'applications'
   next()
@@ -299,6 +306,7 @@ router.patch('/:applicationId',
     const db = req.app.get('db')
     const patch = req.body
     validatePatch(patch)
+    validateURLFriendly(req, patch.slug)
 
     // Retry previously failed publications
     if (!patch.publications) {
