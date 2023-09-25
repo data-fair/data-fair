@@ -15,6 +15,7 @@ const workers = require('../server/workers')
 describe('REST datasets', () => {
   it('Create empty REST datasets', async () => {
     const ax = global.ax.dmeadus
+
     let res = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, 'a-rest-dataset')
@@ -27,7 +28,7 @@ describe('REST datasets', () => {
 
     res = await ax.put('/api/v1/datasets/restdataset3', { isRest: true, title: 'a rest dataset' })
     assert.equal(res.status, 201)
-    assert.equal(res.data.slug, 'restdataset3')
+    assert.equal(res.data.slug, 'a-rest-dataset-3')
     await workers.hook('finalizer/' + res.data.id)
   })
 

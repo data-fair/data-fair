@@ -950,20 +950,28 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
   if (!await db.collection('datasets').countDocuments({ id: newDataset.id })) {
     validateURLFriendly(req, newDataset.id)
   }
-  newDataset.slug = slug(newDataset.title || newDataset.id, { lower: true, strict: true })
+  const baseSlug = slug(newDataset.title || newDataset.id, { lower: true, strict: true })
+  let i = 0
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (permissions.canDoForOwner(newDataset.owner, 'datasets', 'post', req.user, db)) {
-    try {
-      await db.collection('datasets').insertOne(newDataset)
-      req.isNewDataset = true
-      if ((await limits.remaining(req.app.get('db'), newDataset.owner)).nbDatasets === 0) {
-        return res.status(429, req.__('errors.exceedLimitNbDatasets'))
+    while (true) {
+      i++
+      try {
+        newDataset.slug = i > 1 ? `${baseSlug}-${i}` : baseSlug
+        await db.collection('datasets').insertOne(newDataset)
+        break
+      } catch (err) {
+        console.log(err)
+        if (err.code !== 11000) throw err
+        if (err.keyValue.id) return next()
       }
-      await datasetUtils.updateTotalStorage(req.app.get('db'), newDataset.owner)
-    } catch (err) {
-      if (err.code !== 11000) throw err
     }
+    req.isNewDataset = true
+    if ((await limits.remaining(req.app.get('db'), newDataset.owner)).nbDatasets === 0) {
+      return res.status(429, req.__('errors.exceedLimitNbDatasets'))
+    }
+    await datasetUtils.updateTotalStorage(req.app.get('db'), newDataset.owner)
   }
   next()
 })
