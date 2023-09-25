@@ -16,7 +16,8 @@
 		"looksLikeSpam": "Message refusé, l'activité ressemble à celle d'un robot spammeur.",
 		"requireAnonymousToken": "Un jeton d'action anonyme est requis.",
 		"noCrossDomain": "Appel depuis un domaine extérieur non supporté.",
-		"urlFriendly": "\"{{value}}\" n'est pas assez lisible pour être utilisé dans une URL, peut-être pourriez vous utiliser \"{{slug}}\" ?"
+		"urlFriendly": "\"{{value}}\" n'est pas assez lisible pour être utilisé dans une URL, peut-être pourriez vous utiliser \"{{slug}}\" ?",
+		"dupSlug": "Ce slug est déjà utilisé"
 	},
 	"appRequire": {
 		"noDataset": "n'utilise pas de jeu de données comme source.",

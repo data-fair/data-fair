@@ -16,7 +16,8 @@
 		"looksLikeSpam": "Message rejected, activity looks like a spam robot.",
 		"requireAnonymousToken": "An anonymous token is required.",
 		"noCrossDomain": "Request from an other domain not supported.",
-		"urlFriendly": "\"{{value}}\" should be more URL friendly, maybe you could use \"{{slug}}\" ?"
+		"urlFriendly": "\"{{value}}\" should be more URL friendly, maybe you could use \"{{slug}}\" ?",
+		"dupSlug": "This slug is already used"
 	},
 	"appRequire": {
 		"noDataset": "does not use a dataset as source.",

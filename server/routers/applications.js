@@ -5,6 +5,7 @@ const config = require('config')
 const fs = require('fs-extra')
 const util = require('util')
 const unlink = util.promisify(fs.unlink)
+const createError = require('http-errors')
 const sanitizeHtml = require('../../shared/sanitize-html')
 const { nanoid } = require('nanoid')
 const applicationAPIDocs = require('../../contract/application-api-docs')
@@ -325,8 +326,14 @@ router.patch('/:applicationId',
 
     await publicationSites.applyPatch(db, req.application, { ...req.application, ...patch }, req.user, 'application')
 
-    const patchedApplication = (await db.collection('applications')
-      .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })).value
+    let patchedApplication
+    try {
+      patchedApplication = (await db.collection('applications')
+        .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })).value
+    } catch (err) {
+      if (err.code !== 11000) throw err
+      throw createError(400, req.__('errors.dupSlug'))
+    }
     await syncDatasets(db, patchedApplication, req.application)
     res.status(200).json(clean(patchedApplication, req.publicBaseUrl, req.publicationSite))
   }))

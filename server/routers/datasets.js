@@ -634,7 +634,12 @@ router.patch('/:datasetId',
     const previousDataset = { ...req.dataset }
     const mongoPatch = await datasetUtils.applyPatch(db, req.dataset, patch, false)
     await publicationSites.applyPatch(db, previousDataset, req.dataset, req.user, 'dataset')
-    await db.collection('datasets').updateOne({ id: req.dataset.id }, mongoPatch)
+    try {
+      await db.collection('datasets').updateOne({ id: req.dataset.id }, mongoPatch)
+    } catch (err) {
+      if (err.code !== 11000) throw err
+      throw createError(400, req.__('errors.dupSlug'))
+    }
 
     await syncRemoteService(db, req.dataset)
 
