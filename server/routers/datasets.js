@@ -24,7 +24,6 @@ const usersUtils = require('../utils/users')
 const datasetUtils = require('../utils/dataset')
 const virtualDatasetsUtils = require('../utils/virtual-datasets')
 const restDatasetsUtils = require('../utils/rest-datasets')
-const visibilityUtils = require('../utils/visibility')
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const extensions = require('../utils/extensions')
@@ -45,7 +44,7 @@ const userNotificationSchema = require('../../contract/user-notification')
 const validateUserNotification = ajv.compile(userNotificationSchema)
 const capabilitiesSchema = require('../../contract/capabilities.js')
 const debugFiles = require('debug')('files')
-const { getThumbnail, prepareThumbnailUrl } = require('../utils/thumbnails')
+const { getThumbnail } = require('../utils/thumbnails')
 const datasetFileSample = require('../utils/dataset-file-sample')
 const { bulkSearchStreams } = require('../utils/master-data')
 const applicationKey = require('../utils/application-key')
@@ -54,64 +53,11 @@ const { basicTypes } = require('../workers/converter')
 const { validateURLFriendly } = require('../utils/validation')
 const prometheus = require('../utils/prometheus')
 const publicationSites = require('../utils/publication-sites')
-const { prepareMarkdownContent } = require('../utils/markdown')
 const clamav = require('../utils/clamav')
 const nanoid = require('../utils/nanoid')
 const router = express.Router()
 
-function clean (publicUrl, publicationSite, dataset, query = {}, draft = false) {
-  const select = query.select ? query.select.split(',') : []
-  if (query.raw !== 'true') {
-    const thumbnail = query.thumbnail || '300x200'
-    if (draft) datasetUtils.mergeDraft(dataset)
-    if (!select.includes('-public')) dataset.public = permissions.isPublic('datasets', dataset)
-    if (!select.includes('-visibility')) dataset.visibility = visibilityUtils.visibility(dataset)
-    if (!query.select || select.includes('description')) {
-      dataset.description = dataset.description || ''
-      dataset.description = prepareMarkdownContent(dataset.description, query.html === 'true', query.truncate, 'dataset:' + dataset.id, dataset.updatedAt)
-    }
-
-    if (dataset.schema) {
-      for (const field of dataset.schema) {
-        field.description = field.description || ''
-        field.description = prepareMarkdownContent(field.description, query.html === 'true', null, `dataset:${dataset.id}:${field.key}`, dataset.updatedAt)
-      }
-    }
-    if (dataset.attachments) {
-      for (let i = 0; i < dataset.attachments.length; i++) {
-        const attachment = dataset.attachments[i]
-        attachment.description = attachment.description || ''
-        attachment.description = prepareMarkdownContent(attachment.description, query.html === 'true', null, `dataset:${dataset.id}:attachment-${i}`, dataset.updatedAt)
-        if (attachment.type === 'file') {
-          attachment.url = `${publicUrl}/api/v1/datasets/${dataset.id}/metadata-attachments/${attachment.name}`
-        }
-      }
-    }
-
-    if (dataset.schema && !select.includes('-previews')) {
-      dataset.previews = datasetUtils.previews(dataset, publicUrl)
-    }
-    if (!select.includes('-links')) findUtils.setResourceLinks(dataset, 'dataset', publicUrl, publicationSite && publicationSite.datasetUrlTemplate)
-    if (dataset.image && dataset.public && !select.includes('-thumbnail')) {
-      dataset.thumbnail = prepareThumbnailUrl(publicUrl + '/api/v1/datasets/' + encodeURIComponent(dataset.id) + '/thumbnail', thumbnail)
-    }
-    if (dataset.image && publicUrl !== config.publicUrl) {
-      dataset.image = dataset.image.replace(config.publicUrl, publicUrl)
-    }
-  }
-  delete dataset.permissions
-  delete dataset._id
-  if (select.includes('-userPermissions')) delete dataset.userPermissions
-  if (select.includes('-owner')) delete dataset.owner
-
-  if (publicationSite && dataset.extras?.applications?.length) {
-    const siteKey = publicationSite.type + ':' + publicationSite.id
-    dataset.extras.applications = dataset.extras.applications
-      .filter(appRef => appRef.publicationSites && appRef.publicationSites.find(p => p === siteKey))
-    for (const appRef of dataset.extras.applications) delete appRef.publicationSites
-  }
-  return dataset
-}
+const clean = datasetUtils.clean
 
 const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
   if (process.env.NO_STORAGE_CHECK === 'true') return next()

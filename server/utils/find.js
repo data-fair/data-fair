@@ -115,7 +115,15 @@ exports.sort = (sortStr) => {
   if (!sortStr) return sort
   for (const s of sortStr.split(',')) {
     const toks = s.split(':')
-    sort[toks[0]] = Number(toks[1])
+    if (toks.length === 1) {
+      if (s.startsWith('-')) {
+        sort[s.substr(1)] = -1
+      } else {
+        sort[s] = 1
+      }
+    } else {
+      sort[toks[0]] = Number(toks[1])
+    }
   }
   return sort
 }
