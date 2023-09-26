@@ -56,3 +56,11 @@ router.get('/api-docs.json', asyncWrap(async (req, res) => {
     .findOne({ type: req.publicationSite.owner.type, id: req.publicationSite.owner.id }, { projection: { info: 1 } })
   res.json(catalogApiDocs(req.publicBaseUrl, req.publicationSite, (settings && settings.info) || {}))
 }))
+
+router.get('/dcat', asyncWrap(async (req, res) => {
+  // mostly useful for harvesting by data.gouv.fr
+  // cf https://doc.data.gouv.fr/moissonnage/dcat/
+
+  // TODO
+  res.json({})
+}))
