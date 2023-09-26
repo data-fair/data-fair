@@ -1,6 +1,7 @@
 const assert = require('assert').strict
 
 const workers = require('../server/workers')
+const app = require('../server/app')
 
 describe('publication sites', () => {
   it('should fail to publish dataset on unknown site', async () => {
@@ -58,6 +59,7 @@ describe('publication sites', () => {
 
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://localhost:5601' }
     await ax.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
+    app.memoizedGetPublicationSiteSettings.clear()
 
     await assert.rejects(ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${otherDataset.id}`), (err) => {
       assert.equal(err.status, 404)

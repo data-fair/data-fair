@@ -94,7 +94,7 @@ if (config.mode.includes('server')) {
       }
     )
   }
-  const memoizedGetPublicationSiteSettings = memoize(getPublicationSiteSettings, {
+  const memoizedGetPublicationSiteSettings = exports.memoizedGetPublicationSiteSettings = memoize(getPublicationSiteSettings, {
     primitive: true,
     max: 10000,
     maxAge: 1000 * 60, // 1 minute
@@ -111,7 +111,7 @@ if (config.mode.includes('server')) {
     const publicationSiteUrl = u.protocol + '//' + u.hostname + ((u.port && u.port !== 80 && u.port !== 443) ? ':' + u.port : '')
     const settings = await memoizedGetPublicationSiteSettings(publicationSiteUrl, req.app.get('db'))
     if (!settings && req.publicBaseUrl !== config.publicUrl) {
-      console.error('(publication-site-unknown) no publications site is associated to URL ' + publicationSiteUrl)
+      console.error('(publication-site-unknown) no publication site is associated to URL ' + publicationSiteUrl)
       prometheus.internalError.inc({ errorCode: 'publication-site-unknown' })
       return res.status(404).send('publication site unknown')
     }
