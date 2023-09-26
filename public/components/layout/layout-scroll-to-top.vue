@@ -42,7 +42,10 @@ export default {
     },
     toTop () {
       if (this.selector) {
-        this._scrollElement.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+        // WARNING: smooth animation was having some sideeffect on virtual scroll management
+        // leave it off
+        // this._scrollElement.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+        this._scrollElement.scrollTo({ top: 0, left: 0 })
       } else {
         if (this.$route.hash) this.$router.push({ hash: '' })
         this.$vuetify.goTo(0)
