@@ -1,5 +1,6 @@
 const config = require('config')
 const express = require('express')
+const memoize = require('memoizee')
 const dbUtils = require('./utils/db')
 const esUtils = require('./utils/es')
 const wsUtils = require('./utils/ws')
@@ -79,17 +80,8 @@ if (config.mode.includes('server')) {
   if (!basePath.endsWith('/')) basePath += '/'
   const originalUrl = require('original-url')
   const { format: formatUrl } = require('url')
-  app.use('/', asyncWrap(async (req, res, next) => {
-    const u = originalUrl(req)
-    const urlParts = { protocol: u.protocol, hostname: u.hostname, pathname: basePath.slice(0, -1) }
-    if (u.port !== 443 && u.port !== 80) urlParts.port = u.port
-    req.publicBaseUrl = u.full ? formatUrl(urlParts) : config.publicUrl
-
-    const main = req.publicBaseUrl === config.publicUrl
-
-    const publicationSiteUrl = u.protocol + '//' + u.hostname + ((u.port && u.port !== 80 && u.port !== 443) ? ':' + u.port : '')
-    // TODO: a small memory cache as this is queried very often
-    const settings = await req.app.get('db').collection('settings').findOne(
+  const getPublicationSiteSettings = async (publicationSiteUrl, db) => {
+    return await db.collection('settings').findOne(
       { 'publicationSites.url': publicationSiteUrl },
       {
         projection: {
@@ -101,6 +93,23 @@ if (config.mode.includes('server')) {
         }
       }
     )
+  }
+  const memoizedGetPublicationSiteSettings = memoize(getPublicationSiteSettings, {
+    primitive: true,
+    max: 10000,
+    maxAge: 1000 * 60, // 1 minute
+    length: 1 // only use publicationSite, not db as cache key
+  })
+  app.use('/', asyncWrap(async (req, res, next) => {
+    const u = originalUrl(req)
+    const urlParts = { protocol: u.protocol, hostname: u.hostname, pathname: basePath.slice(0, -1) }
+    if (u.port !== 443 && u.port !== 80) urlParts.port = u.port
+    req.publicBaseUrl = u.full ? formatUrl(urlParts) : config.publicUrl
+
+    const main = req.publicBaseUrl === config.publicUrl
+
+    const publicationSiteUrl = u.protocol + '//' + u.hostname + ((u.port && u.port !== 80 && u.port !== 443) ? ':' + u.port : '')
+    const settings = await memoizedGetPublicationSiteSettings(publicationSiteUrl, req.app.get('db'))
     if (!settings && req.publicBaseUrl !== config.publicUrl) {
       console.error('(publication-site-unknown) no publications site is associated to URL ' + publicationSiteUrl)
       prometheus.internalError.inc({ errorCode: 'publication-site-unknown' })
