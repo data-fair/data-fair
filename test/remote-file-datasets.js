@@ -19,7 +19,7 @@ describe('datasets based on remote files', () => {
   it('fetch a file and create a dataset', async () => {
     const ax = global.ax.dmeadus
     // fake remote service
-    const nockScope = nock('http://test-remote.com')
+    let nockScope = nock('http://test-remote.com')
       .get('/data.csv').reply(200, 'col\nval1\nval2')
     const res = await ax.post('/api/v1/datasets', { remoteFile: { url: 'http://test-remote.com/data.csv', name: 'data.csv' } })
     let dataset = res.data
@@ -29,6 +29,30 @@ describe('datasets based on remote files', () => {
     assert.equal(dataset.file.name, 'data.csv')
     assert.equal(dataset.count, 2)
     assert.ok(dataset.schema.find(p => p.key === 'col'))
+    nockScope.done()
+
+    // trigger re-downloading but md5 did not change
+    await global.db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'imported' } })
+    nockScope = nock('http://test-remote.com')
+      .get('/data.csv').reply(200, 'col\nval1\nval2')
+    dataset = await workers.hook('downloader/' + dataset.id)
+    assert.equal(dataset.status, 'finalized')
+    nockScope.done()
+
+    // trigger re-downloading but etag matches did not change
+    await global.db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'imported' } })
+    nockScope = nock('http://test-remote.com')
+      .get('/data.csv').reply(304)
+    dataset = await workers.hook('downloader/' + dataset.id)
+    assert.equal(dataset.status, 'finalized')
+    nockScope.done()
+
+    // trigger re-downloading and content changed
+    await global.db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'imported' } })
+    nockScope = nock('http://test-remote.com')
+      .get('/data.csv').reply(200, 'col\nval11\nval22')
+    dataset = await workers.hook('finalizer/' + dataset.id)
+    assert.equal(dataset.status, 'finalized')
     nockScope.done()
   })
 })

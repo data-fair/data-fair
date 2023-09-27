@@ -200,6 +200,10 @@ exports.harvestDatasetResource = async (app, catalog, datasetId, resourceId) => 
     remoteFile.name = title + '.' + mime.extension(resource.mime)
   }
   if (harvestedDataset) {
+    if (harvestedDataset.remoteFile && harvestedDataset.remoteFile.url === remoteFile.url) {
+      if (harvestedDataset.remoteFile.etag) remoteFile.etag = harvestedDataset.remoteFile.etag
+      if (harvestedDataset.remoteFile.lastModified) remoteFile.lastModified = harvestedDataset.remoteFile.lastModified
+    }
     const patch = getDatasetPatch(catalog, dataset, { title: dataset.title, remoteFile, status: 'imported' })
     debug('apply patch to existing resource dataset', harvestedDataset.id, patch)
     if (Object.keys(patch).length) {

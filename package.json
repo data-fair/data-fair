@@ -164,6 +164,7 @@
     "JSONStream": "^1.3.5",
     "lucene-query-parser": "^1.2.0",
     "marked": "^4.2.2",
+    "md5-file": "^5.0.0",
     "memoizee": "^0.4.15",
     "mime-type-stream": "^0.1.4",
     "mime-types": "^2.1.31",

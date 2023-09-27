@@ -61,7 +61,7 @@ exports.process = async function (app, dataset) {
   const db = app.get('db')
   const originalFilePath = datasetUtils.originalFilePath(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
-  const tmpDir = (await tmp.dir({ dir: path.join(dataDir, 'tmp') })).path
+  const tmpDir = (await tmp.dir({ dir: path.join(dataDir, 'tmp'), unsafeCleanup: true })).path
 
   let isShapefile = false
   if (archiveTypes.has(dataset.originalFile.mimetype)) {

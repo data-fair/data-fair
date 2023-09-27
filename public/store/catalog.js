@@ -51,7 +51,6 @@ export default () => ({
         delete patch.silent
         const patched = await this.$axios.$patch(getters.resourceUrl, patch)
         if (!silent) eventBus.$emit('notification', 'La configuration du catalogue a été mise à jour.')
-        console.log('patched', patched)
         return patched
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour de la configuration du catalogue:' })

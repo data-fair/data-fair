@@ -235,6 +235,10 @@ module.exports = {
           type: 'string',
           enum: ['text/csv'],
           description: 'Mime type of the file'
+        },
+        md5: {
+          type: 'string',
+          description: 'MD5 hash of the file content'
         }
       }
     },
@@ -332,6 +336,14 @@ module.exports = {
           type: 'string',
           enum: ['text/csv'],
           description: 'Mime type of the file'
+        },
+        etag: {
+          type: 'string',
+          description: 'content of the "etag" response header if it was provided'
+        },
+        lastModified: {
+          type: 'string',
+          description: 'content of the "last-modified" response header if it was provided'
         }
       }
     },
