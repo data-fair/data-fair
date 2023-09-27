@@ -108,6 +108,20 @@ const insertDataset = async (app, newDataset) => {
   await journals.log(app, newDataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + newDataset.id }, 'dataset')
 }
 
+exports.updateAllHarvestedDatasets = async (app, catalog) => {
+  const datasets = await exports.listDatasets(app.get('db'), catalog, {})
+  for (const dataset of datasets.results) {
+    if (dataset.harvestedDataset) {
+      await exports.harvestDataset(app, catalog, dataset.id)
+    }
+    for (const resource of dataset.resources) {
+      if (resource.harvestedDataset) {
+        await exports.harvestDatasetResource(app, catalog, dataset.id, resource.id)
+      }
+    }
+  }
+}
+
 // create a simple metadata only dataset
 exports.harvestDataset = async (app, catalog, datasetId) => {
   const connector = exports.connectors.find(c => c.key === catalog.type)

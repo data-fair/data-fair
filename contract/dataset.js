@@ -671,7 +671,7 @@ module.exports = {
           properties: {
             active: { type: 'boolean', default: false },
             nextExport: { type: 'string', format: 'date-time' },
-            lastExports: {
+            lastExport: {
               type: 'object',
               properties: {
                 date: { type: 'string', format: 'date-time' }

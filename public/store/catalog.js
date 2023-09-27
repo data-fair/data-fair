@@ -49,9 +49,10 @@ export default () => ({
       try {
         const silent = patch.silent
         delete patch.silent
-        await this.$axios.patch(getters.resourceUrl, patch)
+        const patched = await this.$axios.$patch(getters.resourceUrl, patch)
         if (!silent) eventBus.$emit('notification', 'La configuration du catalogue a été mise à jour.')
-        return true
+        console.log('patched', patched)
+        return patched
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour de la configuration du catalogue:' })
         return false
@@ -60,6 +61,15 @@ export default () => ({
     async patchAndCommit ({ commit, getters, dispatch }, patch) {
       const patched = await dispatch('patch', patch)
       if (patched) commit('patch', patch)
+    },
+    async patchAndApplyRemoteChange ({ commit, getters, dispatch }, patch) {
+      const patched = await dispatch('patch', patch)
+      if (patched) {
+        Object.keys(patch).forEach(k => {
+          patch[k] = patched[k]
+        })
+        commit('patch', patch)
+      }
     },
     async remove ({ state, getters, dispatch }) {
       try {

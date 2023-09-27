@@ -11,7 +11,8 @@ exports.title = 'GeoNetwork'
 exports.description = ''
 exports.docUrl = 'https://geonetwork-opensource.org/'
 exports.optionalCapabilities = [
-  'listDatasets'
+  'listDatasets',
+  'autoUpdate'
 ]
 
 exports.init = async (catalogUrl) => {

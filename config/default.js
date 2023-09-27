@@ -307,6 +307,9 @@ module.exports = {
   exportRestDatasets: {
     cron: '0 6 * * 0'
   },
+  catalogAutoUpdates: {
+    cron: '0 22 * * 0'
+  },
   prometheus: {
     active: true,
     port: 9090

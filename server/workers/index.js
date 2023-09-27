@@ -14,7 +14,8 @@ const tasks = exports.tasks = {
   datasetPublisher: require('./dataset-publisher'),
   ttlManager: require('./ttl-manager'),
   restExporterCSV: require('./rest-exporter-csv'),
-  applicationPublisher: require('./application-publisher')
+  applicationPublisher: require('./application-publisher'),
+  catalogHarvester: require('./catalog-harvester')
 }
 
 // resolve functions that will be filled when we will be asked to stop the workers
@@ -83,14 +84,15 @@ exports.start = async (app) => {
     debugLoop('free slot', freeSlot)
 
     // once we have a free slot, acquire the next resource to work on
-    if (stopped) continue
-    resource = await acquireNext(db, 'dataset', typesFilters().dataset)
-    type = 'dataset'
-    if (!resource) {
-      if (stopped) continue
-      resource = await acquireNext(db, 'application', typesFilters().application)
-      type = 'application'
+    const typesFilters = getTypesFilters()
+    for (const resourceType of Object.keys(typesFilters)) {
+      if (stopped) break
+      resource = await acquireNext(db, resourceType, typesFilters[resourceType])
+      type = resourceType
+      if (resource) break
     }
+    if (stopped) continue
+
     if (!resource) {
       active = false
       continue
@@ -126,10 +128,13 @@ exports.stop = async () => {
 }
 
 // Filters to select eligible datasets or applications for processing
-const typesFilters = () => {
+const getTypesFilters = () => {
   const moment = require('moment')
   return {
     application: { 'publications.status': { $in: ['waiting', 'deleted'] } },
+    catalog: {
+      'autoUpdate.active': true, 'autoUpdate.nextUpdate': { $lt: new Date().toISOString() }
+    },
     dataset: {
       isMetaOnly: { $ne: true },
       $or: [
@@ -175,6 +180,8 @@ async function iter (app, resource, type) {
     if (type === 'application') {
       // Not much to do on applications.. Just catalog publication
       taskKey = 'applicationPublisher'
+    } else if (type === 'catalog') {
+      taskKey = 'catalogHarvester'
     } else if (type === 'dataset') {
       const moment = require('moment')
       if (resource.status === 'imported') {
