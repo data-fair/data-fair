@@ -80,6 +80,7 @@ ADD upgrade upgrade
 ADD .gitignore .gitignore
 ADD test test
 RUN npm run lint
+ENV DEBUG worker*
 RUN npm run test
 
 # Cleanup /webapp/node_modules so it can be copied by next stage
