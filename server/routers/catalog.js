@@ -61,6 +61,97 @@ router.get('/dcat', asyncWrap(async (req, res) => {
   // mostly useful for harvesting by data.gouv.fr
   // cf https://doc.data.gouv.fr/moissonnage/dcat/
 
-  // TODO
-  res.json({})
+  const query = { publicationSites: `${req.publicationSite.type}:${req.publicationSite.id}` }
+
+  // TODO: pagination ?
+
+  const datasets = await req.app.get('db').collection('datasets')
+    .find(query)
+    .limit(10000)
+    .project({
+      _id: 0,
+      id: 1,
+      title: 1,
+      description: 1,
+      keywords: 1,
+      license: 1,
+      temporal: 1,
+      frequency: 1,
+      createdAt: 1,
+      updatedAt: 1,
+      dataUpdatedAt: 1,
+      file: 1,
+      originalFile: 1
+    })
+    .toArray()
+
+  // the context contains aliases
+  // the one provided by udata is a good example: https://www.data.gouv.fr/api/1/site/context.jsonld
+  const context = {
+    dcat: 'http://www.w3.org/ns/dcat#',
+    dct: 'http://purl.org/dc/terms/'
+  }
+
+  const graph = []
+
+  for (const dataset of datasets) {
+    const datasetUrl = req.publicationSite.datasetUrlTemplate.replace('{id}', dataset.slug || dataset.id)
+    const datasetDCAT = {
+      '@id': datasetUrl,
+      'dct:identifier': dataset.slug || dataset.id,
+      'dcat:landingPage': req.publicationSite.datasetUrlTemplate.replace('{id}', dataset.slug || dataset.id),
+      'dct:title': dataset.title,
+      'dct:description': dataset.description,
+      'dcat:keyword': dataset.keywords || [],
+      'dct:issued': dataset.createdAt,
+      'dct:modified': datasets.dataUpdatedAt || datasets.updatedAt
+    }
+    if (dataset.license?.href) datasetDCAT['dct:license'] = dataset.license.href
+    if (dataset.temporal && dataset.temporal.start) {
+      if (dataset.temporal.end) {
+        datasetDCAT['dct:temporal'] = `${dataset.temporal.start}/${dataset.temporal.start}`
+      } else {
+        datasetDCAT['dct:temporal'] = dataset.temporal.start
+      }
+    }
+    if (dataset.frequency) datasetDCAT['dct:accrualPeriodicity'] = dataset.frequency
+
+    const distributions = []
+    if (dataset.file) {
+      const originalRessourceUrl = `${req.publicBaseUrl}/api/v1/datasets/${dataset.slug || dataset.id}/raw`
+      distributions.push(originalRessourceUrl)
+      graph.push({
+        '@id': originalRessourceUrl,
+        'dct:identifier': `${dataset.slug || dataset.id}/raw`,
+        'dct:title': `Fichier ${dataset.originalFile.name.split('.').pop()}`,
+        'dct:description': `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
+        'dcat:downloadURL': originalRessourceUrl,
+        'dcat:mediaType': dataset.originalFile.mimetype,
+        'dcat:bytesSize': dataset.originalFile.size
+      })
+      if (dataset.file.mimetype !== dataset.originalFile.mimetype) {
+        const ressourceUrl = `${req.publicBaseUrl}/api/v1/datasets/${dataset.slug || dataset.id}/convert`
+        distributions.push(ressourceUrl)
+        graph.push({
+          '@id': ressourceUrl,
+          'dct:identifier': `${dataset.slug || dataset.id}/convert`,
+          'dct:title': `Fichier ${dataset.file.name.split('.').pop()}`,
+          'dct:description': `Téléchargez le fichier complet au format ${dataset.file.name.split('.').pop()}.`,
+          'dcat:downloadURL': ressourceUrl,
+          'dcat:mediaType': dataset.file.mimetype,
+          'dcat:bytesSize': dataset.file.size
+        })
+      }
+    }
+
+    if (distributions.length) datasetDCAT['dcat:distribution'] = distributions
+    graph.push(datasetDCAT)
+  }
+
+  const result = {
+    '@context': context,
+    '@graph': graph
+  }
+  res.type('application/ld+json')
+  res.json(result)
 }))
