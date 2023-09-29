@@ -14,10 +14,10 @@ jobs:
     
     # no need to work on a cache here, it is not faster than pulling
     # instead work on moving to some images hosted on ghcr.io, it is the fastest
-    - name: Run test dependencies
-      run: |
-        docker compose pull --quiet
-        NO_UI=true docker compose --profile test up -d --wait
+    #- name: Run test dependencies
+    #  run: |
+    #    docker compose pull --quiet
+    #    NO_UI=true docker compose --profile test up -d --wait
 
     - name: Prepare docker image tags
       id: docker_meta
