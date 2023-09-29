@@ -1556,7 +1556,7 @@ router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissio
 
 // Direct access to data files
 router.get('/:datasetId/data-files', readDataset(), permissions.middleware('listDataFiles', 'read'), asyncWrap(async (req, res, next) => {
-  res.send(await datasetUtils.dataFiles(req.dataset))
+  res.send(await datasetUtils.dataFiles(req.dataset, req.publicBaseUrl))
 }))
 router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadDataFile', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
