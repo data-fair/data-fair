@@ -550,6 +550,16 @@ router.patch('/:datasetId',
     const coordYProp = req.dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordY')
     const projectGeomProp = req.dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#Geometry')
 
+    if (patch.remoteFile) {
+      if (patch.remoteFile?.url !== req.dataset.remoteFile?.url) {
+        delete patch.remoteFile.lastModified
+        delete patch.remoteFile.etag
+        patch.status = 'imported'
+      } else {
+        patch.remoteFile.lastModified = req.dataset.remoteFile.lastModified
+        patch.remoteFile.etag = req.dataset.remoteFile.etag
+      }
+    }
     if (req.dataset.isVirtual) {
       if (patch.schema || patch.virtual) {
         patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...req.dataset, ...patch })
@@ -689,8 +699,15 @@ const initNew = async (db, req) => {
   return dataset
 }
 
-const curateDataset = (dataset) => {
+const curateDataset = (dataset, existingDataset) => {
   if (dataset.title) dataset.title = dataset.title.trim()
+
+  if (dataset.remoteFile?.autoUpdate?.active) {
+    const job = new CronJob(config.catalogAutoUpdates.cron, () => {})
+    dataset.remoteFile.autoUpdate.nextUpdate = job.nextDates().toISOString()
+  } else if (dataset.remoteFile?.autoUpdate) {
+    delete dataset.remoteFile.autoUpdate.nextUpdate
+  }
 }
 
 const titleFromFileName = (name) => {
@@ -1008,6 +1025,7 @@ const updateDataset = asyncWrap(async (req, res) => {
         }
       }
     }
+    curateDataset(req.body, dataset)
     if (draft) {
       delete dataset.draftReason
       Object.assign(dataset.draft, req.body)

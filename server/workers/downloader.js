@@ -9,6 +9,7 @@ exports.process = async function (app, dataset) {
   const fs = require('fs-extra')
   const mime = require('mime-types')
   const md5File = require('md5-file')
+  const CronJob = require('cron').CronJob
   const axios = require('../utils/axios')
   const datasetFileSample = require('../utils/dataset-file-sample')
   const pump = require('../utils/pipe')
@@ -49,8 +50,11 @@ exports.process = async function (app, dataset) {
   // creating empty file before streaming seems to fix some weird bugs with NFS
   await fs.ensureFile(tmpFile.path)
   const headers = catalogHttpParams.headers ? { ...catalogHttpParams.headers } : {}
-  if (dataset.remoteFile?.etag) headers['If-None-Match'] = dataset.remoteFile.etag
-  if (dataset.remoteFile?.lastModified) headers['If-Modified-Since'] = dataset.remoteFile.lastModified
+  const autoUpdating = dataset.status !== 'imported'
+  if (autoUpdating) {
+    if (dataset.remoteFile?.etag) headers['If-None-Match'] = dataset.remoteFile.etag
+    if (dataset.remoteFile?.lastModified) headers['If-Modified-Since'] = dataset.remoteFile.lastModified
+  }
   const response = await axios.get(dataset.remoteFile.url, {
     responseType: 'stream',
     ...catalogHttpParams,
@@ -67,40 +71,48 @@ exports.process = async function (app, dataset) {
 
   const md5 = await md5File(tmpFile.path)
 
-  if (response.status === 304 || (dataset.originalFile && dataset.originalFile.md5 === md5)) {
+  if (response.status === 304 || (autoUpdating && dataset.originalFile && dataset.originalFile.md5 === md5)) {
     // prevent re-indexing when the file didn't change
     debug('content of remote file did not change')
     await tmpFile.cleanup()
-    await datasetUtils.applyPatch(db, dataset, { status: 'finalized' })
-    return
-  }
-
-  if (response.headers.etag) {
-    patch.remoteFile = patch.remoteFile || { ...dataset.remoteFile }
-    patch.remoteFile.etag = response.headers.etag
-    debug('store etag header for future conditional fetch', response.headers.etag)
-  }
-  if (response.headers['last-modified']) {
-    patch.remoteFile = patch.remoteFile || { ...dataset.remoteFile }
-    patch.remoteFile.lastModified = response.headers['last-modified']
-    debug('store last-modified header for future conditional fetch', response.headers['last-modified'])
-  }
-
-  const filePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
-  await fs.move(tmpFile.path, filePath, { overwrite: true })
-
-  patch.originalFile.md5 = md5
-  patch.originalFile.size = (await fs.promises.stat(filePath)).size
-
-  if (!basicTypes.includes(patch.originalFile.mimetype)) {
-    // we first need to convert the file in a textual format easy to index
-    patch.status = 'uploaded'
   } else {
-    // The format of the original file is already well suited to workers
-    patch.status = 'loaded'
-    patch.file = patch.originalFile
-    const fileSample = await datasetFileSample({ ...dataset, ...patch })
-    patch.file.encoding = chardet.detect(fileSample)
+    if (response.headers.etag) {
+      patch.remoteFile = patch.remoteFile || { ...dataset.remoteFile }
+      patch.remoteFile.etag = response.headers.etag
+      debug('store etag header for future conditional fetch', response.headers.etag)
+    }
+    if (response.headers['last-modified']) {
+      patch.remoteFile = patch.remoteFile || { ...dataset.remoteFile }
+      patch.remoteFile.lastModified = response.headers['last-modified']
+      debug('store last-modified header for future conditional fetch', response.headers['last-modified'])
+    }
+
+    const filePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
+    await fs.move(tmpFile.path, filePath, { overwrite: true })
+
+    patch.originalFile.md5 = md5
+    patch.originalFile.size = (await fs.promises.stat(filePath)).size
+
+    if (!basicTypes.includes(patch.originalFile.mimetype)) {
+      // we first need to convert the file in a textual format easy to index
+      patch.status = 'uploaded'
+    } else {
+      // The format of the original file is already well suited to workers
+      patch.status = 'loaded'
+      patch.file = patch.originalFile
+      const fileSample = await datasetFileSample({ ...dataset, ...patch })
+      patch.file.encoding = chardet.detect(fileSample)
+    }
+  }
+
+  if (autoUpdating) {
+    patch.remoteFile = patch.remoteFile || { ...dataset.remoteFile }
+    const job = new CronJob(config.catalogAutoUpdates.cron, () => {})
+    patch.remoteFile.autoUpdate = {
+      ...patch.remoteFile.autoUpdate,
+      lastUpdate: new Date().toISOString(),
+      nextUpdate: job.nextDates().toISOString()
+    }
   }
 
   await datasetUtils.applyPatch(db, dataset, patch)

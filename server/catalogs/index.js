@@ -116,7 +116,7 @@ exports.updateAllHarvestedDatasets = async (app, catalog) => {
     }
     for (const resource of dataset.resources) {
       if (resource.harvestedDataset) {
-        await exports.harvestDatasetResource(app, catalog, dataset.id, resource.id)
+        await exports.harvestDatasetResource(app, catalog, dataset.id, resource.id, false)
       }
     }
   }
@@ -167,7 +167,7 @@ exports.harvestDataset = async (app, catalog, datasetId) => {
 }
 
 // create a file dataset from the resource of a dataset on the remote portal
-exports.harvestDatasetResource = async (app, catalog, datasetId, resourceId) => {
+exports.harvestDatasetResource = async (app, catalog, datasetId, resourceId, forceDownload = true) => {
   const connector = exports.connectors.find(c => c.key === catalog.type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
@@ -200,11 +200,15 @@ exports.harvestDatasetResource = async (app, catalog, datasetId, resourceId) => 
     remoteFile.name = title + '.' + mime.extension(resource.mime)
   }
   if (harvestedDataset) {
+    if (harvestedDataset.remoteFile?.autoUpdate) {
+      remoteFile.autoUpdate = harvestedDataset.remoteFile?.autoUpdate
+    }
     if (harvestedDataset.remoteFile && harvestedDataset.remoteFile.url === remoteFile.url) {
       if (harvestedDataset.remoteFile.etag) remoteFile.etag = harvestedDataset.remoteFile.etag
       if (harvestedDataset.remoteFile.lastModified) remoteFile.lastModified = harvestedDataset.remoteFile.lastModified
     }
-    const patch = getDatasetPatch(catalog, dataset, { title: dataset.title, remoteFile, status: 'imported' })
+    const patch = getDatasetPatch(catalog, dataset, { title: dataset.title, remoteFile })
+    if (harvestedDataset.remoteFile?.url !== remoteFile.url || forceDownload) patch.status = 'imported'
     debug('apply patch to existing resource dataset', harvestedDataset.id, patch)
     if (Object.keys(patch).length) {
       await app.get('db').collection('datasets').updateOne({ id: harvestedDataset.id }, { $set: patch })

@@ -21,7 +21,9 @@ describe('datasets based on remote files', () => {
     // fake remote service
     let nockScope = nock('http://test-remote.com')
       .get('/data.csv').reply(200, 'col\nval1\nval2')
-    const res = await ax.post('/api/v1/datasets', { remoteFile: { url: 'http://test-remote.com/data.csv', name: 'data.csv' } })
+    const res = await ax.post('/api/v1/datasets', {
+      remoteFile: { url: 'http://test-remote.com/data.csv', name: 'data.csv', autoUpdate: { active: true } }
+    })
     let dataset = res.data
     dataset = await workers.hook('finalizer/' + dataset.id)
     assert.equal(dataset.title, 'data')
@@ -31,8 +33,11 @@ describe('datasets based on remote files', () => {
     assert.ok(dataset.schema.find(p => p.key === 'col'))
     nockScope.done()
 
-    // trigger re-downloading but md5 did not change
-    await global.db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'imported' } })
+    // force change of nextExport date to trigger worker
+    // but md5 did not change
+    const nextUpdate = new Date().toISOString()
+    await global.db.collection('datasets').updateOne(
+      { id: dataset.id }, { $set: { 'remoteFile.autoUpdate.nextUpdate': nextUpdate } })
     nockScope = nock('http://test-remote.com')
       .get('/data.csv').reply(200, 'col\nval1\nval2')
     dataset = await workers.hook('downloader/' + dataset.id)
@@ -40,7 +45,8 @@ describe('datasets based on remote files', () => {
     nockScope.done()
 
     // trigger re-downloading but etag matches did not change
-    await global.db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'imported' } })
+    await global.db.collection('datasets').updateOne(
+      { id: dataset.id }, { $set: { 'remoteFile.autoUpdate.nextUpdate': nextUpdate } })
     nockScope = nock('http://test-remote.com')
       .get('/data.csv').reply(304)
     dataset = await workers.hook('downloader/' + dataset.id)
@@ -48,7 +54,8 @@ describe('datasets based on remote files', () => {
     nockScope.done()
 
     // trigger re-downloading and content changed
-    await global.db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'imported' } })
+    await global.db.collection('datasets').updateOne(
+      { id: dataset.id }, { $set: { 'remoteFile.autoUpdate.nextUpdate': nextUpdate } })
     nockScope = nock('http://test-remote.com')
       .get('/data.csv').reply(200, 'col\nval11\nval22')
     dataset = await workers.hook('finalizer/' + dataset.id)

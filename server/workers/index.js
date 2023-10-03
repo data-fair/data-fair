@@ -148,7 +148,9 @@ const getTypesFilters = () => {
         { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } },
         { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $exists: false } },
         // fetch rest datasets with an automatic export to do
-        { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: new Date().toISOString() } }
+        { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: new Date().toISOString() } },
+        // file datasets with remote url that need refreshing
+        { status: { $nin: ['error'] }, 'remoteFile.autoUpdate.active': true, 'remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() } }
       ]
     }
   }
@@ -184,7 +186,7 @@ async function iter (app, resource, type) {
       taskKey = 'catalogHarvester'
     } else if (type === 'dataset') {
       const moment = require('moment')
-      if (resource.status === 'imported') {
+      if (resource.status === 'imported' || (resource.remoteFile?.autoUpdate?.active && resource.remoteFile.autoUpdate.nextUpdate < new Date().toISOString())) {
         // Load a dataset from a catalog
         taskKey = 'downloader'
       } else if (resource.status === 'uploaded') {

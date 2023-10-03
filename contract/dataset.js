@@ -344,6 +344,14 @@ module.exports = {
         lastModified: {
           type: 'string',
           description: 'content of the "last-modified" response header if it was provided'
+        },
+        autoUpdate: {
+          type: 'object',
+          properties: {
+            active: { type: 'boolean', default: false },
+            nextUpdate: { type: 'string', format: 'date-time' },
+            lastUpdate: { type: 'string', format: 'date-time' }
+          }
         }
       }
     },
