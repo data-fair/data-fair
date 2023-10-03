@@ -61,6 +61,15 @@ router.get('/dcat', asyncWrap(async (req, res) => {
   // mostly useful for harvesting by data.gouv.fr
   // cf https://doc.data.gouv.fr/moissonnage/dcat/
 
+  // here is an example: https://github.com/SEMICeu/dcat-ap_validator/blob/master/pages/samples/sample-json-ld.jsonld
+
+  // to test this endpoint from a local udata instance:
+  // > docker exec -it data-fair-udata-1 bash
+  // > nano /usr/local/lib/python3.7/site-packages/udata/commands/dcat.py
+  // > nano /usr/local/lib/python3.7/site-packages/udata/harvest/backends/dcat.py
+  // > udata dcat parse-url http://localhost:5601/data-fair/api/v1/catalog/dcat
+  // > udata dcat parse-url https://opendata.staging-koumoul.com/data-fair/api/v1/catalog/dcat
+
   const query = { publicationSites: `${req.publicationSite.type}:${req.publicationSite.id}` }
 
   // TODO: pagination ?
@@ -98,6 +107,7 @@ router.get('/dcat', asyncWrap(async (req, res) => {
     const datasetUrl = req.publicationSite.datasetUrlTemplate.replace('{id}', dataset.slug || dataset.id)
     const datasetDCAT = {
       '@id': datasetUrl,
+      '@type': 'dcat:Dataset',
       'dct:identifier': dataset.slug || dataset.id,
       'dcat:landingPage': req.publicationSite.datasetUrlTemplate.replace('{id}', dataset.slug || dataset.id),
       'dct:title': dataset.title,
@@ -119,9 +129,10 @@ router.get('/dcat', asyncWrap(async (req, res) => {
     const distributions = []
     if (dataset.file) {
       const originalRessourceUrl = `${req.publicBaseUrl}/api/v1/datasets/${dataset.slug || dataset.id}/raw`
-      distributions.push(originalRessourceUrl)
+      distributions.push({ '@id': originalRessourceUrl })
       graph.push({
         '@id': originalRessourceUrl,
+        '@type': 'dcat:Distribution',
         'dct:identifier': `${dataset.slug || dataset.id}/raw`,
         'dct:title': `Fichier ${dataset.originalFile.name.split('.').pop()}`,
         'dct:description': `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
@@ -131,9 +142,10 @@ router.get('/dcat', asyncWrap(async (req, res) => {
       })
       if (dataset.file.mimetype !== dataset.originalFile.mimetype) {
         const ressourceUrl = `${req.publicBaseUrl}/api/v1/datasets/${dataset.slug || dataset.id}/convert`
-        distributions.push(ressourceUrl)
+        distributions.push({ '@id': ressourceUrl })
         graph.push({
           '@id': ressourceUrl,
+          '@type': 'dcat:Distribution',
           'dct:identifier': `${dataset.slug || dataset.id}/convert`,
           'dct:title': `Fichier ${dataset.file.name.split('.').pop()}`,
           'dct:description': `Téléchargez le fichier complet au format ${dataset.file.name.split('.').pop()}.`,
