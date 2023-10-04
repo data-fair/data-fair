@@ -81,16 +81,16 @@ if (config.mode.includes('server')) {
   const originalUrl = require('original-url')
   const { format: formatUrl } = require('url')
   const getPublicationSiteSettings = async (publicationSiteUrl, publicationSiteQuery, db) => {
-    const filter = publicationSiteQuery
+    const elemMatch = publicationSiteQuery
       ? { type: publicationSiteQuery.split(':')[0], id: publicationSiteQuery.split(':')[1] }
-      : { 'publicationSites.url': publicationSiteUrl }
-    return await db.collection('settings').findOne(filter, {
+      : { url: publicationSiteUrl }
+    return await db.collection('settings').findOne({ publicationSites: { $elemMatch: elemMatch } }, {
       projection: {
         type: 1,
         id: 1,
         department: 1,
         name: 1,
-        publicationSites: { $elemMatch: { url: publicationSiteUrl } }
+        publicationSites: { $elemMatch: elemMatch }
       }
     }
     )
