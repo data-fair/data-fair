@@ -43,7 +43,7 @@ module.exports = (publicUrl, publicationSite, info) => {
       '/api-docs.json': {
         get: {
           summary: 'Cette documentation d\'API au format Open API v3',
-          tags: ['Administration'],
+          tags: ['Catalogue'],
           operationId: 'getApiDoc',
           responses: {
             200: {
@@ -61,7 +61,7 @@ module.exports = (publicUrl, publicationSite, info) => {
         get: {
           summary: 'Récupérer la liste des jeux de données.',
           operationId: 'listDatasets',
-          tags: ['Jeux de données'],
+          tags: ['Catalogue'],
           parameters: [
             utils.qParam,
             utils.selectParam(Object.keys(dataset.properties)),
@@ -90,6 +90,23 @@ module.exports = (publicUrl, publicationSite, info) => {
                       }
                     }
                   }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/dcat': {
+        get: {
+          summary: 'Récupérer la liste des jeux de données au format DCAT (JSON-LD).',
+          operation: 'dcat',
+          tags: ['Catalogue'],
+          responses: {
+            200: {
+              description: 'Liste des jeux de données au format DCAT (JSON-LD)',
+              content: {
+                'application/json': {
+                  schema: { type: 'object' }
                 }
               }
             }
