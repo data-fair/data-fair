@@ -5,10 +5,10 @@ const config = require('config')
 const path = require('path')
 const mime = require('mime')
 const moment = require('moment')
-const slug = require('slugify')
 const journals = require('../utils/journals')
 const files = require('../utils/files')
 const permissionsUtil = require('../utils/permissions')
+const datasetUtils = require('../utils/dataset')
 
 const debug = require('debug')('catalogs')
 
@@ -90,21 +90,7 @@ const getDatasetPatch = (catalog, dataset, props = {}) => {
 }
 
 const insertDataset = async (app, newDataset) => {
-// try insertion until there is no conflict on id
-  const baseId = newDataset.id
-  let insertOk = false
-  let i = 1
-  while (!insertOk) {
-    try {
-      await app.get('db').collection('datasets').insertOne(newDataset)
-      insertOk = true
-    } catch (err) {
-      if (err.code !== 11000) throw err
-      i += 1
-      newDataset.id = `${baseId}-${i}`
-    }
-  }
-
+  await datasetUtils.insertWithId(app.get('db'), newDataset)
   await journals.log(app, newDataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + newDataset.id }, 'dataset')
 }
 
@@ -133,10 +119,8 @@ exports.harvestDataset = async (app, catalog, datasetId) => {
       await app.get('db').collection('datasets').updateOne({ id: harvestedDataset.id }, { $set: patch })
     }
   } else {
-    const id = slug(dataset.title, { lower: true, strict: true })
-    debug('create new metadata dataset', id)
+    debug('create new metadata dataset', dataset.title)
     const newDataset = {
-      id,
       title: dataset.title,
       owner: catalog.owner,
       createdBy: { id: catalog.owner.id, name: catalog.owner.name },
@@ -192,10 +176,8 @@ exports.harvestDatasetResource = async (app, catalog, datasetId, resourceId) => 
       await app.get('db').collection('datasets').updateOne({ id: harvestedDataset.id }, { $set: patch })
     }
   } else {
-    const id = slug(dataset.title, { lower: true, strict: true })
-    debug('create new resource dataset', id)
+    debug('create new resource dataset', title)
     const newDataset = {
-      id,
       title,
       owner: catalog.owner,
       schema: [],

@@ -52,7 +52,15 @@ function clean (application, publicUrl, publicationSite, query = {}) {
   delete application.configurationDraft
   if (select.includes('-userPermissions')) delete application.userPermissions
   if (select.includes('-owner')) delete application.owner
+  delete application._uniqueRefs
   return application
+}
+
+const setUniqueRefs = (application) => {
+  if (application.slug) {
+    application._uniqueRefs = [application.id]
+    if (application.slug !== application.id) application._uniqueRefs.push(application.slug)
+  }
 }
 
 const curateApplication = async (db, application) => {
@@ -63,6 +71,7 @@ const curateApplication = async (db, application) => {
   if (application.urlDraft) {
     application.baseAppDraft = await db.collection('base-applications').findOne({ url: application.urlDraft }, { projection: { id: 1, url: 1, meta: 1 } })
   }
+  setUniqueRefs(application)
 }
 
 // update references to an application into the datasets it references (or used to reference before a patch)
@@ -172,6 +181,7 @@ router.post('', asyncWrap(async (req, res) => {
   application.id = nanoid()
   const baseslug = application.slug || slug(application.title || application.applicationName || lastUrlPart, { lower: true, strict: true })
   application.slug = baseslug
+  setUniqueRefs(application)
   permissions.initResourcePermissions(application, req.user)
   let insertOk = false
   let i = 1
@@ -183,6 +193,7 @@ router.post('', asyncWrap(async (req, res) => {
       if (err.code !== 11000) throw err
       i += 1
       application.slug = `${baseslug}-${i}`
+      setUniqueRefs(application)
     }
   }
   application.status = 'created'
@@ -195,17 +206,12 @@ router.post('', asyncWrap(async (req, res) => {
 const readApplication = asyncWrap(async (req, res, next) => {
   let filter = { id: req.params.applicationId }
   if (req.publicationSite) {
-    filter = {
-      $or: [
-        { id: req.params.applicationId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id },
-        { slug: req.params.applicationId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }
-      ]
-    }
+    filter = { _uniqueRefs: req.params.applicationId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }
   } else if (req.mainPublicationSite) {
     filter = {
       $or: [
         { id: req.params.applicationId },
-        { slug: req.params.applicationId, 'owner.type': req.mainPublicationSite.owner.type, 'owner.id': req.mainPublicationSite.owner.id }
+        { _uniqueRefs: req.params.applicationId, 'owner.type': req.mainPublicationSite.owner.type, 'owner.id': req.mainPublicationSite.owner.id }
       ]
     }
   }
@@ -322,6 +328,8 @@ router.patch('/:applicationId',
 
     patch.updatedAt = moment().toISOString()
     patch.updatedBy = { id: req.user.id, name: req.user.name }
+    patch.id = req.application.id
+    patch.slug = patch.slug || req.application.slug
     await curateApplication(db, patch)
 
     await publicationSites.applyPatch(db, req.application, { ...req.application, ...patch }, req.user, 'application')

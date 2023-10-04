@@ -719,38 +719,49 @@ exports.insertWithId = async (db, dataset, res) => {
   const baseSlug = slug(dataset.title, { lower: true, strict: true })
   dataset.id = dataset.id ?? nanoid()
   dataset.slug = baseSlug
+  exports.setUniqueRefs(dataset)
   let insertOk = false
   let i = 1
   while (!insertOk) {
     const idLockKey = `dataset:${dataset.id}`
-    const slugLockKey = `dataset:slug:${dataset.owner.type}:${dataset.owner.id}:${dataset.slug}`
     const idAck = locks.acquire(db, idLockKey, 'insertWithBaseid')
     if (!idAck) throw new Error(`dataset id ${dataset.id} is locked`)
-    res.on('close', () => {
-      locks.release(db, idLockKey).catch(err => {
-        prometheus.internalError.inc({ errorCode: 'dataset-lock-id' })
-        console.error('(dataset-lock-id) failure to release dataset lock on id', err)
+    if (res) {
+      res.on('close', () => {
+        locks.release(db, idLockKey).catch(err => {
+          prometheus.internalError.inc({ errorCode: 'dataset-lock-id' })
+          console.error('(dataset-lock-id) failure to release dataset lock on id', err)
+        })
       })
-    })
+    }
+
+    const slugLockKey = `dataset:slug:${dataset.owner.type}:${dataset.owner.id}:${dataset.slug}`
     const slugAck = locks.acquire(db, slugLockKey, 'insertWithBaseid')
     if (slugAck) {
       try {
         await db.collection('datasets').insertOne(dataset)
         insertOk = true
-        res.on('close', () => {
-          locks.release(db, slugLockKey).catch(err => {
-            prometheus.internalError.inc({ errorCode: 'dataset-lock-slug' })
-            console.error('(dataset-lock-slug) failure to release dataset lock on slug', err)
+        if (res) {
+          res.on('close', () => {
+            locks.release(db, slugLockKey).catch(err => {
+              prometheus.internalError.inc({ errorCode: 'dataset-lock-slug' })
+              console.error('(dataset-lock-slug) failure to release dataset lock on slug', err)
+            })
           })
-        })
+        } else {
+          await locks.release(db, idLockKey)
+          await locks.release(db, slugLockKey)
+        }
         break
       } catch (err) {
         await locks.release(db, slugLockKey)
         if (err.code !== 11000) throw err
+        if (err.keyValue.id) throw err
       }
     }
     i += 1
     dataset.slug = `${baseSlug}-${i}`
+    exports.setUniqueRefs(dataset)
   }
 }
 
@@ -1105,4 +1116,11 @@ exports.clean = (publicUrl, publicationSite, dataset, query = {}, draft = false)
     for (const appRef of dataset.extras.applications) delete appRef.publicationSites
   }
   return dataset
+}
+
+exports.setUniqueRefs = (resource) => {
+  if (resource.slug) {
+    resource._uniqueRefs = [resource.id]
+    if (resource.slug !== resource.id) resource._uniqueRefs.push(resource.slug)
+  }
 }

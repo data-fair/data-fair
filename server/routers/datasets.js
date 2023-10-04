@@ -282,17 +282,12 @@ const readDataset = (_acceptedStatuses, preserveDraft, ignoreDraft) => asyncWrap
   const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body) : _acceptedStatuses
   let filter = { id: req.params.datasetId }
   if (req.publicationSite) {
-    filter = {
-      $or: [
-        { id: req.params.datasetId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id },
-        { slug: req.params.datasetId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }
-      ]
-    }
+    filter = { _uniqueRefs: req.params.datasetId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }
   } else if (req.mainPublicationSite) {
     filter = {
       $or: [
         { id: req.params.datasetId },
-        { slug: req.params.datasetId, 'owner.type': req.mainPublicationSite.owner.type, 'owner.id': req.mainPublicationSite.owner.id }
+        { _uniqueRefs: req.params.datasetId, 'owner.type': req.mainPublicationSite.owner.type, 'owner.id': req.mainPublicationSite.owner.id }
       ]
     }
   }
@@ -456,6 +451,9 @@ router.patch('/:datasetId',
     validatePatch(patch)
     validateURLFriendly(req, patch.slug)
 
+    patch.id = req.dataset.id
+    patch.slug = patch.slug || req.dataset.slug
+    datasetUtils.setUniqueRefs(patch)
     curateDataset(patch)
 
     // Changed a previously failed dataset, retry everything.
@@ -825,6 +823,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
         throw err
       }
       curateDataset(dataset)
+      datasetUtils.setUniqueRefs(dataset)
       await lockNewDataset(req, res, dataset)
       await db.collection('datasets').insertOne(dataset)
       await datasetUtils.updateStorage(req.app, dataset)
@@ -905,10 +904,10 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
       i++
       try {
         newDataset.slug = i > 1 ? `${baseSlug}-${i}` : baseSlug
+        datasetUtils.setUniqueRefs(newDataset)
         await db.collection('datasets').insertOne(newDataset)
         break
       } catch (err) {
-        console.log(err)
         if (err.code !== 11000) throw err
         if (err.keyValue.id) return next()
       }
