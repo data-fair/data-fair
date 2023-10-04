@@ -10,7 +10,7 @@ module.exports = (publicUrl, publicationSite, info) => {
     description: `Catalogue de données - ${hostname}`
   }]
 
-  module.exports = {
+  return {
     openapi: '3.0.0',
     info: {
       title: 'API de catalogue de données',
