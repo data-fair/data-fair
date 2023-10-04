@@ -16,7 +16,7 @@ const apiRate = (key, label) => {
 const userApiRate = apiRate('user', 'authentifié (session ou clé d\'API)')
 const anonymousApiRate = apiRate('anonymous', 'anonyme')
 
-module.exports = (dataset, publicUrl = config.publicUrl, info) => {
+module.exports = (dataset, publicUrl = config.publicUrl, info, publicationSite) => {
   dataset.schema = dataset.schema || []
   const datasetLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, true)
 
@@ -275,7 +275,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
   } */
 
   let description = `
-Cette documentation interactive à destination des développeurs permet de consommer les ressources du jeu de données "${dataset.title || dataset.id}".
+Cette documentation interactive à destination des développeurs permet de consommer les ressources du jeu de données "${dataset.title || dataset.slug}".
 `
 
   description += `
@@ -353,14 +353,14 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
   })
 
   const servers = [{
-    url: `${publicUrl}/api/v1/datasets/${dataset.id}`,
+    url: `${publicUrl}/api/v1/datasets/${publicationSite ? dataset.slug : dataset.id}`,
     description: `Jeu de données Data Fair - ${new URL(publicUrl).hostname} - ${dataset.title}`
   }]
 
   const api = {
     openapi: '3.0.0',
     info: {
-      title: `API publique du jeu de données : ${dataset.title || dataset.id}`,
+      title: `API publique du jeu de données : ${dataset.title || dataset.slug}`,
       description,
       version,
       'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-dataset-${dataset.id}`,
