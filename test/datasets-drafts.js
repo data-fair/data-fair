@@ -212,15 +212,15 @@ describe('datasets in draft mode', () => {
 
     // the notifications contain the same thing as the journal minus not very interesting events
     // and adding some extra events were triggerred when validating the draft
-    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-dataset-created:' + dataset.id)
-    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-finalize-end:' + dataset.id)
-    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-data-updated:' + dataset.id)
-    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-data-updated:' + dataset.id)
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-dataset-created:' + dataset.slug)
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-finalize-end:' + dataset.slug)
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-data-updated:' + dataset.slug)
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-data-updated:' + dataset.slug)
     // console.log(notifications.shift())
-    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:' + dataset.id)
-    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:' + dataset.id)
-    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:' + dataset.id)
-    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-finalize-end:' + dataset.id)
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:' + dataset.slug)
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:' + dataset.slug)
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:' + dataset.slug)
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-finalize-end:' + dataset.slug)
   })
 
   it('create a draft when updating the data file and auto-validate if it\'s schema is compatible', async () => {

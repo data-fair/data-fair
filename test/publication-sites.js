@@ -108,7 +108,7 @@ describe('publication sites', () => {
     const dataset = (await global.ax.hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
     await workers.hook(`finalizer/${dataset.id}`)
     await global.ax.hlalonde3Org.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
-    assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:' + dataset.id)
+    assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:' + dataset.slug)
     assert.equal(notif.body, 'published dataset - Huntington Lalonde')
     assert.equal(notif.sender.type, 'organization')
     assert.equal(notif.sender.id, 'KWqAGZ4mG')
@@ -152,7 +152,7 @@ describe('publication sites', () => {
     const dataset = (await global.ax.hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
     await workers.hook(`finalizer/${dataset.id}`)
     await global.ax.ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
-    assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:' + dataset.id)
+    assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:' + dataset.slug)
     assert.equal(notif.body, 'published dataset - Duky De Cruce')
     assert.equal(notif.sender.type, 'organization')
     assert.equal(notif.sender.id, 'KWqAGZ4mG')
