@@ -80,18 +80,19 @@ if (config.mode.includes('server')) {
   if (!basePath.endsWith('/')) basePath += '/'
   const originalUrl = require('original-url')
   const { format: formatUrl } = require('url')
-  const getPublicationSiteSettings = async (publicationSiteUrl, db) => {
-    return await db.collection('settings').findOne(
-      { 'publicationSites.url': publicationSiteUrl },
-      {
-        projection: {
-          type: 1,
-          id: 1,
-          department: 1,
-          name: 1,
-          publicationSites: { $elemMatch: { url: publicationSiteUrl } }
-        }
+  const getPublicationSiteSettings = async (publicationSiteUrl, publicationSiteQuery, db) => {
+    const filter = publicationSiteQuery
+      ? { type: publicationSiteQuery.split(':')[0], id: publicationSiteQuery.split(':')[1] }
+      : { 'publicationSites.url': publicationSiteUrl }
+    return await db.collection('settings').findOne(filter, {
+      projection: {
+        type: 1,
+        id: 1,
+        department: 1,
+        name: 1,
+        publicationSites: { $elemMatch: { url: publicationSiteUrl } }
       }
+    }
     )
   }
   const memoizedGetPublicationSiteSettings = exports.memoizedGetPublicationSiteSettings = memoize(getPublicationSiteSettings, {
@@ -106,30 +107,29 @@ if (config.mode.includes('server')) {
     if (u.port !== 443 && u.port !== 80) urlParts.port = u.port
     req.publicBaseUrl = u.full ? formatUrl(urlParts) : config.publicUrl
 
-    const main = req.publicBaseUrl === config.publicUrl
+    const mainDomain = req.publicBaseUrl === config.publicUrl
 
     const publicationSiteUrl = u.protocol + '//' + u.hostname + ((u.port && u.port !== 80 && u.port !== 443) ? ':' + u.port : '')
-    const settings = await memoizedGetPublicationSiteSettings(publicationSiteUrl, req.app.get('db'))
-    if (!settings && req.publicBaseUrl !== config.publicUrl) {
+    const settings = await memoizedGetPublicationSiteSettings(publicationSiteUrl, mainDomain && req.query.publicationSites, req.app.get('db'))
+    if (!settings && !mainDomain) {
       console.error('(publication-site-unknown) no publication site is associated to URL ' + publicationSiteUrl)
       prometheus.internalError.inc({ errorCode: 'publication-site-unknown' })
       return res.status(404).send('publication site unknown')
     }
     if (settings) {
-      if (main) {
-        req.mainPublicationSite = {
-          owner: { type: settings.type, id: settings.id, department: settings.department, name: settings.name },
-          ...settings.publicationSites[0]
+      const publicationSite = {
+        owner: { type: settings.type, id: settings.id, department: settings.department, name: settings.name },
+        ...settings.publicationSites[0]
+      }
+      if (mainDomain) {
+        if (publicationSite.url === publicationSiteUrl) {
+          req.mainPublicationSite = publicationSite
         }
-        if (req.query.publicationSites === req.mainPublicationSite.type + ':' + req.mainPublicationSite.id) {
-          req.publicationSite = req.mainPublicationSite
+        if (req.query.publicationSites === publicationSite.type + ':' + publicationSite.id) {
+          req.publicationSite = publicationSite
         }
       } else {
-        req.publicationSite = {
-          owner: { type: settings.type, id: settings.id, department: settings.department, name: settings.name },
-          main,
-          ...settings.publicationSites[0]
-        }
+        req.publicationSite = publicationSite
       }
     }
 
