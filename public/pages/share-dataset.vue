@@ -308,7 +308,7 @@ export default {
       this.dataset.requestedPublicationSites = (this.dataset.requestedPublicationSites || []).filter(s => s !== this.publicationSiteKey)
       await this.patch({ publicationSites: this.dataset.publicationSites, requestedPublicationSites: this.dataset.requestedPublicationSites })
       if (this.publicationSite.datasetUrlTemplate) {
-        window.location.href = this.publicationSite.datasetUrlTemplate.replace('{id}', this.dataset.id)
+        window.location.href = this.publicationSite.datasetUrlTemplate.replace('{id}', this.dataset.id).replace('{slug}', this.dataset.slug)
       } else {
         this.$router.push({ path: `/dataset/${this.dataset.id}` })
       }

@@ -524,7 +524,7 @@ export default {
         const site = this.publicationSites.find(site => dps === `${site.type}:${site.id}`)
         if (!site?.datasetUrlTemplate) return null
         return {
-          url: site.datasetUrlTemplate.replace('{id}', this.dataset.id),
+          url: site.datasetUrlTemplate.replace('{id}', this.dataset.id).replace('{slug}', this.dataset.slug),
           title: site.title || (site.url && site.url.replace('http://', '').replace('https://', '')) || site.id
         }
       }).filter(ps => !!ps)
@@ -533,9 +533,9 @@ export default {
       const webhooks = webhooksSchema.items.properties.events.items.oneOf
         .filter(item => item.const.startsWith('dataset') && item.const !== 'dataset-dataset-created')
 
-      const keysParam = webhooks.map(w => `data-fair:${w.const}:${this.dataset.id}`).join(',')
+      const keysParam = webhooks.map(w => `data-fair:${w.const}:${this.dataset.slug}`).join(',')
       const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
-      const urlTemplate = `${this.env.publicUrl}/dataset/${this.dataset.id}`
+      const urlTemplate = `${this.env.publicUrl}/dataset/{id}`
       let sender = `${this.dataset.owner.type}:${this.dataset.owner.id}`
       if (this.dataset.owner.department) sender += ':' + this.dataset.owner.department
       return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keysParam)}&title=${encodeURIComponent(titlesParam)}&url-template=${encodeURIComponent(urlTemplate)}&sender=${encodeURIComponent(sender)}&register=false`
@@ -544,7 +544,7 @@ export default {
       const webhooks = webhooksSchema.items.properties.events.items.oneOf
         .filter(item => item.const === 'dataset-data-updated')
 
-      const keysParam = webhooks.map(w => `data-fair:${w.const}:${this.dataset.id}`).join(',')
+      const keysParam = webhooks.map(w => `data-fair:${w.const}:${this.dataset.slug}`).join(',')
       const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
       let sender = `${this.dataset.owner.type}:${this.dataset.owner.id}`
       if (this.dataset.owner.department) sender += ':' + this.dataset.owner.department

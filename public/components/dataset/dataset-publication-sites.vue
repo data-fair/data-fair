@@ -35,8 +35,8 @@
                   v-if="site.datasetUrlTemplate && dataset.publicationSites.includes(`${site.type}:${site.id}`)"
                   class="mb-2"
                 >
-                  <a :href="site.datasetUrlTemplate.replace('{id}', dataset.id)">
-                    {{ site.datasetUrlTemplate.replace('{id}', dataset.id) }}
+                  <a :href="site.datasetUrlTemplate.replace('{id}', dataset.id).replace('{slug}', dataset.slug)">
+                    {{ site.datasetUrlTemplate.replace('{id}', dataset.id).replace('{slug}', dataset.slug) }}
                   </a>
                 </v-list-item-subtitle>
                 <v-list-item-subtitle
