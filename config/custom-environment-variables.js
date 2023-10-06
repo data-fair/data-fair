@@ -19,6 +19,10 @@ module.exports = {
     maxBulkOps: {
       __name: 'MONGO_MAX_BULK_OPS',
       __format: 'json'
+    },
+    options: {
+      __name: 'MONGO_OPTIONS',
+      __format: 'json'
     }
   },
   cache: {

@@ -19,7 +19,8 @@ module.exports = {
   pluginsDir: './plugins',
   mongo: {
     url: 'mongodb://localhost:27017/data-fair-' + (process.env.NODE_ENV || 'development'),
-    maxBulkOps: 1000
+    maxBulkOps: 1000,
+    options: {} // optional mongo client options
   },
   map: {
     // A mapbox style to display geo data
