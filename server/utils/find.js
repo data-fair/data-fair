@@ -204,9 +204,9 @@ exports.parametersDoc = (filterFields) => [
 }]))
 
 exports.setResourceLinks = (resource, resourceType, publicUrl = config.publicUrl, pageUrlTemplate) => {
-  resource.href = `${publicUrl}/api/v1/${resourceType}s/${resource.id}`
-  resource.page = pageUrlTemplate ? pageUrlTemplate.replace('{id}', resource.slug || resource.id) : `${config.publicUrl}/${resourceType}/${resource.id}`
-  if (resourceType === 'application') resource.exposedUrl = `${publicUrl}/app/${resource.id}`
+  resource.href = `${publicUrl}/api/v1/${resourceType}s/${publicUrl === config.publicUrl ? resource.id : resource.slug}`
+  resource.page = pageUrlTemplate ? pageUrlTemplate.replace('{slug}', resource.slug).replace('{id}', resource.id) : `${config.publicUrl}/${resourceType}/${resource.id}`
+  if (resourceType === 'application') resource.exposedUrl = `${publicUrl}/app/${publicUrl === config.publicUrl ? resource.id : resource.slug}`
 }
 
 const basePipeline = (req, extraFilters) => {
