@@ -383,8 +383,8 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
 // Get only the configuration part of the application
 const getConfig = (req, res, next) => res.status(200).send(req.application.configuration || {})
 // 2 paths kept for compatibility.. but /config is deprecated because not homogeneous with the structure of the object
-router.get('/:applicationId/config', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased, getConfig)
-router.get('/:applicationId/configuration', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased, getConfig)
+router.get('/:applicationId/config', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased(), getConfig)
+router.get('/:applicationId/configuration', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased(), getConfig)
 
 // Update only the configuration part of the application
 const writeConfig = asyncWrap(async (req, res) => {
@@ -413,7 +413,7 @@ router.put('/:applicationId/config', readApplication, permissions.middleware('wr
 router.put('/:applicationId/configuration', readApplication, permissions.middleware('writeConfig', 'write'), writeConfig)
 
 // Configuration draft management
-router.get('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'read'), cacheHeaders.resourceBased, (req, res) => {
+router.get('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'read'), cacheHeaders.resourceBased(), (req, res) => {
   res.status(200).send(req.application.configurationDraft || req.application.configuration || {})
 })
 router.put('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), asyncWrap(async (req, res, next) => {
@@ -458,7 +458,7 @@ router.get('/:applicationId/base-application', readApplication, permissions.midd
   res.send(baseAppsUtils.clean(req.publicBaseUrl, req.baseApp, req.publicBaseUrl, req.query.html === 'true'))
 }))
 
-router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
+router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
   const settings = await req.app.get('db').collection('settings')
     .findOne({ type: req.application.owner.type, id: req.application.owner.id }, { projection: { info: 1 } })
   res.send(applicationAPIDocs(req.application, (settings && settings.info) || {}))
@@ -501,16 +501,16 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
   res.status(204).send()
 }))
 
-router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
+router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
   await capture.screenshot(req, res)
 }))
 
 // keys for readonly access to application
-router.get('/:applicationId/keys', readApplication, permissions.middleware('getKeys', 'admin'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
+router.get('/:applicationId/keys', readApplication, permissions.middleware('getKeys', 'admin'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
   const applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ _id: req.application.id })
   res.send((applicationKeys && applicationKeys.keys) || [])
 }))
-router.post('/:applicationId/keys', readApplication, permissions.middleware('setKeys', 'admin'), cacheHeaders.resourceBased, asyncWrap(async (req, res) => {
+router.post('/:applicationId/keys', readApplication, permissions.middleware('setKeys', 'admin'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
   validateKeys(req.body)
   for (const key of req.body) {
     if (!key.id) key.id = nanoid()
