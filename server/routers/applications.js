@@ -119,21 +119,24 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
     req.query.service = config.publicUrl + '/api/v1/remote-services/' + req.query.service
   }
 
-  // TODO make it possible to override this default filter on publication site ?
-  // in this case there should at least be a filter on publication site owner
-  if (req.publicationSite) req.query.publicationSites = req.publicationSite.type + ':' + req.publicationSite.id
+  const extraFilters = []
 
-  const query = findUtils.query(req, fieldsMap)
+  // the api exposed on a secondary domain should not be able to access resources outside of the owner account
+  if (req.publicationSite) {
+    extraFilters.push({ 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id })
+  }
 
   if (req.query.filterConcepts === 'true') {
-    query.$and.push({ 'baseApp.meta.df:filter-concepts': 'true' })
+    extraFilters.push({ 'baseApp.meta.df:filter-concepts': 'true' })
   }
   if (req.query.syncState === 'true') {
-    query.$and.push({ 'baseApp.meta.df:sync-state': 'true' })
+    extraFilters.push({ 'baseApp.meta.df:sync-state': 'true' })
   }
   if (req.query.overflow === 'true') {
-    query.$and.push({ 'baseApp.meta.df:overflow': 'true' })
+    extraFilters.push({ 'baseApp.meta.df:overflow': 'true' })
   }
+
+  const query = findUtils.query(req, fieldsMap, null, extraFilters)
 
   const sort = findUtils.sort(req.query.sort)
   const project = findUtils.project(req.query.select, ['configuration', 'configurationDraft'], req.query.raw === 'true')

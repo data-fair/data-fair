@@ -185,9 +185,10 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
 
   if (req.query.file === 'true') extraFilters.push({ file: { $exists: true } })
 
-  // TODO make it possible to override this default filter on publication site ?
-  // in this case there should at least be a filter on publication site owner
-  if (req.publicationSite) req.query.publicationSites = req.publicationSite.type + ':' + req.publicationSite.id
+  // the api exposed on a secondary domain should not be able to access resources outside of the owner account
+  if (req.publicationSite) {
+    extraFilters.push({ 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id })
+  }
 
   const query = findUtils.query(req, fieldsMap, null, extraFilters)
   const sort = findUtils.sort(req.query.sort)

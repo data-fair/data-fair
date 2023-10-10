@@ -67,7 +67,11 @@ describe('publication sites', () => {
       return true
     })
     assert.ok(await ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${dataset.id}`))
+
+    // dataset is listed (but not otherDatasets) as it belongs to the publication site's owner
     let publishedDatasets = (await ax.get('http://localhost:5601/data-fair/api/v1/datasets')).data
+    assert.equal(publishedDatasets.results.length, 1)
+    publishedDatasets = (await ax.get('http://localhost:5601/data-fair/api/v1/datasets?publicationSites=data-fair-portals:portal1')).data
     assert.equal(publishedDatasets.results.length, 0)
 
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] })
