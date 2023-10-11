@@ -18,7 +18,7 @@ exports.ensureIndex = async (db, collection, key, options = {}) => {
 
 exports.connect = async () => {
   let client
-  const opts = {}
+  const opts = { ...config.mongo.options }
   // workers generate a lot of opened sockets if we do not change this setting
   if (config.mode === 'task') opts.maxPoolSize = 1
   debug('Connecting to mongodb ' + config.mongo.url)

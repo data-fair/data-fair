@@ -106,7 +106,7 @@ export function readQueryParams (query, dataset) {
       field = dataset.schema.find(p => p['x-concept'] && p['x-concept'].primary && p['x-concept'].id === conceptId)
       if (!field) console.error('field not found for concept filter', key, conceptId, dataset.schema)
     } else {
-      const fieldKey = key.split('_').slice(0, -1)
+      const fieldKey = key.split('_').slice(0, -1).join('_')
       field = dataset.schema.find(p => p.key === fieldKey)
     }
 
@@ -144,6 +144,5 @@ export function readQueryParams (query, dataset) {
       }
     }
   })
-  console.log('filters', query, filters)
   return filters
 }
