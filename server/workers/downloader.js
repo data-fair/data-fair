@@ -10,6 +10,7 @@ exports.process = async function (app, dataset) {
   const mime = require('mime-types')
   const md5File = require('md5-file')
   const CronJob = require('cron').CronJob
+  const contentDisposition = require('content-disposition')
   const axios = require('../utils/axios')
   const datasetFileSample = require('../utils/dataset-file-sample')
   const pump = require('../utils/pipe')
@@ -25,12 +26,6 @@ exports.process = async function (app, dataset) {
   const dataDir = path.resolve(config.dataDir)
   await fs.ensureDir(path.join(dataDir, 'tmp'))
   const tmpFile = await tmp.file({ dir: path.join(dataDir, 'tmp') })
-
-  const patch = {}
-  patch.originalFile = {
-    name: dataset.remoteFile.name,
-    mimetype: mime.lookup(dataset.remoteFile.name)
-  }
 
   let catalogHttpParams = {}
   if (dataset.remoteFile.catalog) {
@@ -69,12 +64,39 @@ exports.process = async function (app, dataset) {
   )
   debug(`Successfully downloaded file ${tmpFile.path}`)
 
+  let fileName = dataset.remoteFile.name
+  if (!fileName && response.headers['content-disposition']) {
+    const parsed = contentDisposition.parse(response.headers['content-disposition'])
+    fileName = parsed?.parameters?.filename
+  }
+  if (!fileName) {
+    fileName = path.basename(new URL(dataset.remoteFile.url).pathname)
+  }
+  const mimetype = dataset.remoteFile.mimetype ?? response.headers['content-type'] ?? mime.lookup(fileName)
+  const parsedFileName = path.parse(fileName)
+  if (!parsedFileName.ext || mime.lookup(fileName) !== mimetype) {
+    fileName = parsedFileName.name + '.' + mime.extension(mimetype)
+  }
+
+  const patch = {}
+  patch.originalFile = {
+    name: fileName,
+    mimetype
+  }
+
   const md5 = await md5File(tmpFile.path)
+
+  const oldFilePath = dataset.originalFile && datasetUtils.originalFilePath(dataset)
+  const filePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
 
   if (response.status === 304 || (autoUpdating && dataset.originalFile && dataset.originalFile.md5 === md5)) {
     // prevent re-indexing when the file didn't change
     debug('content of remote file did not change')
     await tmpFile.cleanup()
+    if (oldFilePath !== filePath) {
+      await fs.move(oldFilePath, filePath, { overwrite: true })
+      patch.file = patch.originalFile
+    }
   } else {
     if (response.headers.etag) {
       patch.remoteFile = patch.remoteFile || { ...dataset.remoteFile }
@@ -87,8 +109,10 @@ exports.process = async function (app, dataset) {
       debug('store last-modified header for future conditional fetch', response.headers['last-modified'])
     }
 
-    const filePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
     await fs.move(tmpFile.path, filePath, { overwrite: true })
+    if (oldFilePath && oldFilePath !== filePath) {
+      await fs.remove(oldFilePath)
+    }
 
     patch.originalFile.md5 = md5
     patch.originalFile.size = (await fs.promises.stat(filePath)).size

@@ -314,7 +314,7 @@ module.exports = {
     remoteFile: {
       type: 'object',
       additionalProperties: true, // for properties such as catalogId or resourceId that are specific to kind of remote resources
-      required: ['name', 'url'],
+      required: ['url'],
       properties: {
         name: {
           type: 'string',

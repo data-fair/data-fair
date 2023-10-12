@@ -908,8 +908,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
     } else if (req.body.remoteFile) {
       validatePost(req.body)
       dataset = await initNew(db, req)
-      req.body.remoteFile.name = req.body.remoteFile.name || path.basename(new URL(req.body.remoteFile.url).pathname)
-      dataset.title = dataset.title || titleFromFileName(req.body.remoteFile.name)
+      dataset.title = dataset.title || titleFromFileName(req.body.remoteFile.name || path.basename(new URL(req.body.remoteFile.url).pathname))
       permissions.initResourcePermissions(dataset, req.user)
       dataset.status = 'imported'
       if (dataset.id) {
