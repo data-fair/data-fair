@@ -28,13 +28,13 @@
           <br>
           <span style="display:inline-block">
 
-            <template v-for="(label, i) of labels(filter)">
+            <template v-for="(label, j) of labels(filter)">
               <span
-                :key="`operator-${i}`"
+                :key="`operator-${i}-${j}`"
                 v-html="label.operator"
               />
               {{ label.value }}
-              {{ i < labels(filter).length - 1 ? ', ' : '' }}
+              {{ j < labels(filter).length - 1 ? ', ' : '' }}
             </template></span>
         </div>
       </v-chip>

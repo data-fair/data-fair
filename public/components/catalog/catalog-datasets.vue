@@ -5,13 +5,32 @@
       :indeterminate="true"
       height="2"
     />
-    <v-row v-if="datasets && !loading">
+    <v-row v-if="catalog && datasets && !loading">
       <v-col>
         <h3
           class="text-h5 mb-4"
           v-text="$tc('datasetsCount', datasets.count)"
         />
         <p v-text="$t('harvestDatasetsMessage')" />
+
+        <template v-if="catalogType && catalogType.optionalCapabilities.includes('autoUpdate')">
+          <v-checkbox
+            :input-value="catalog.autoUpdate && catalog.autoUpdate.active"
+            :label="$t('autoUpdate')"
+            color="warning"
+            @change="value => patchAndApplyRemoteChange({autoUpdate: {active: !!value}})"
+          />
+          <v-alert
+            v-if="catalog.autoUpdate && catalog.autoUpdate.nextUpdate"
+            :value="true"
+            type="warning"
+            outlined
+            style="display:inline-block;"
+          >
+            {{ $t('nextUpdate') }} {{ catalog.autoUpdate.nextUpdate | moment("from", "now") }}
+          </v-alert>
+        </template>
+
         <v-card>
           <v-list>
             <template v-for="dataset in datasets.results">
@@ -143,6 +162,8 @@ fr:
   fetchError: Erreur pendant la récupération des jeux de données du catalogue
   importError: Erreur pendant l'import du jeu de données
   overwriteDataset: Souhaitez vous écraser les informations précédement importées ?
+  autoUpdate: Activer la mise à jour automatique des jeux de données importées. Attention les informations seront écrasées.
+  nextUpdate: Prochaine mise à jour
 en:
   datasetsCount: " | 1 dataset in the catalog | {count} datasets in the catalog"
   resource: resource
@@ -154,24 +175,30 @@ en:
   fetchError: Error while fetching datasets from the catalog
   importError: Error while importing the dataset
   overwriteDataset: Do you want to overwrite the previously imported information ?
+  autoUpdate: Activate automatic update. Warning existing information will be overwritten.
+  nextUpdate: Next update
 </i18n>
 
 <script>
 import eventBus from '~/event-bus'
-const { mapState } = require('vuex')
+const { mapState, mapGetters, mapActions } = require('vuex')
 
 export default {
   data: () => ({
     datasets: null,
-    loading: false
+    loading: false,
+    autoUpdateKey: Math.random()
   }),
   computed: {
-    ...mapState(['env'])
+    ...mapState(['env']),
+    ...mapState('catalog', ['catalog']),
+    ...mapGetters('catalog', ['catalogType'])
   },
   mounted () {
     this.refresh()
   },
   methods: {
+    ...mapActions('catalog', ['patchAndApplyRemoteChange']),
     async refresh () {
       this.loading = true
       try {

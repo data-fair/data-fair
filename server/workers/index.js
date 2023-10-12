@@ -14,7 +14,8 @@ const tasks = exports.tasks = {
   datasetPublisher: require('./dataset-publisher'),
   ttlManager: require('./ttl-manager'),
   restExporterCSV: require('./rest-exporter-csv'),
-  applicationPublisher: require('./application-publisher')
+  applicationPublisher: require('./application-publisher'),
+  catalogHarvester: require('./catalog-harvester')
 }
 
 // resolve functions that will be filled when we will be asked to stop the workers
@@ -83,14 +84,15 @@ exports.start = async (app) => {
     debugLoop('free slot', freeSlot)
 
     // once we have a free slot, acquire the next resource to work on
-    if (stopped) continue
-    resource = await acquireNext(db, 'dataset', typesFilters().dataset)
-    type = 'dataset'
-    if (!resource) {
-      if (stopped) continue
-      resource = await acquireNext(db, 'application', typesFilters().application)
-      type = 'application'
+    const typesFilters = getTypesFilters()
+    for (const resourceType of Object.keys(typesFilters)) {
+      if (stopped) break
+      resource = await acquireNext(db, resourceType, typesFilters[resourceType])
+      type = resourceType
+      if (resource) break
     }
+    if (stopped) continue
+
     if (!resource) {
       active = false
       continue
@@ -126,10 +128,13 @@ exports.stop = async () => {
 }
 
 // Filters to select eligible datasets or applications for processing
-const typesFilters = () => {
+const getTypesFilters = () => {
   const moment = require('moment')
   return {
     application: { 'publications.status': { $in: ['waiting', 'deleted'] } },
+    catalog: {
+      'autoUpdate.active': true, 'autoUpdate.nextUpdate': { $lt: new Date().toISOString() }
+    },
     dataset: {
       isMetaOnly: { $ne: true },
       $or: [
@@ -143,7 +148,9 @@ const typesFilters = () => {
         { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } },
         { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $exists: false } },
         // fetch rest datasets with an automatic export to do
-        { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: new Date().toISOString() } }
+        { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: new Date().toISOString() } },
+        // file datasets with remote url that need refreshing
+        { status: { $nin: ['error'] }, 'remoteFile.autoUpdate.active': true, 'remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() } }
       ]
     }
   }
@@ -175,9 +182,11 @@ async function iter (app, resource, type) {
     if (type === 'application') {
       // Not much to do on applications.. Just catalog publication
       taskKey = 'applicationPublisher'
+    } else if (type === 'catalog') {
+      taskKey = 'catalogHarvester'
     } else if (type === 'dataset') {
       const moment = require('moment')
-      if (resource.status === 'imported') {
+      if (resource.status === 'imported' || (resource.remoteFile?.autoUpdate?.active && resource.remoteFile.autoUpdate.nextUpdate < new Date().toISOString())) {
         // Load a dataset from a catalog
         taskKey = 'downloader'
       } else if (resource.status === 'uploaded') {
