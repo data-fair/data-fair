@@ -64,12 +64,18 @@ describe('datasets based on remote files', () => {
     nockScope.done()
 
     // trigger re-downloading and file name changed
-    await global.db.collection('datasets').updateOne(
-      { id: dataset.id }, { $set: { 'remoteFile.autoUpdate.nextUpdate': nextUpdate } })
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { remoteFile: { url: 'http://test-remote.com/data2.csv' } })
     nockScope = nock('http://test-remote.com')
-      .get('/data.csv').reply(200, 'col\nval11\nval22', { 'content-disposition': 'attachment; filename="remote-data.csv"' })
-    dataset = await workers.hook('downloader/' + dataset.id)
-    assert.equal(dataset.status, 'finalized')
+      .get('/data2.csv').reply(200, 'col\nval11\nval22')
+    dataset = await workers.hook('finalizer/' + dataset.id)
+    assert.equal(dataset.originalFile.name, 'data2.csv')
+    nockScope.done()
+
+    // trigger re-downloading and file name is specifid by content-disposition header
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { remoteFile: { url: 'http://test-remote.com/data3.csv' } })
+    nockScope = nock('http://test-remote.com')
+      .get('/data3.csv').reply(200, 'col\nval11\nval22', { 'content-disposition': 'attachment; filename="remote-data.csv"' })
+    dataset = await workers.hook('finalizer/' + dataset.id)
     assert.equal(dataset.originalFile.name, 'remote-data.csv')
     nockScope.done()
   })
