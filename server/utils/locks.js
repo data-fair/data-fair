@@ -49,7 +49,12 @@ exports.acquire = async (db, _id, origin) => {
   }
 }
 
-exports.release = async (db, _id) => {
+exports.release = async (db, _id, delay = 0) => {
   debug('release', _id)
-  await db.collection('locks').deleteOne({ _id, pid })
+  if (delay) {
+    const date = new Date((new Date()).getTime() + delay)
+    await db.collection('locks').updateOne({ _id, pid }, { $unset: { pid: 1 }, $set: { delayed: true, updatedAt: date } })
+  } else {
+    await db.collection('locks').deleteOne({ _id, pid })
+  }
 }

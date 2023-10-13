@@ -157,17 +157,38 @@ describe('workers', () => {
     config.worker.spawnTask = false
   })
 
-  it('Manage unexpected failure in children processes', async function () {
+  it('Manage bad input in children processes', async function () {
     config.worker.spawnTask = true
     const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', { isRest: true, title: 'trigger test error' })
-    await assert.rejects(workers.hook('indexer/trigger-test-error'), () => true)
+    const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'trigger test error 400' })).data
+    await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
     // Check that there is an error message in the journal
-    res = await ax.get('/api/v1/datasets/trigger-test-error/journal')
-    assert.equal(res.status, 200)
-    assert.equal(res.data[0].type, 'error')
-    assert.equal(res.data[0].data, 'This is a test error')
+    const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+    assert.equal(journal[0].type, 'error')
+    assert.equal(journal[0].data, 'This is a test 400 error')
     config.worker.spawnTask = false
+  })
+
+  it('Manage unexpected failure in children processes', async function () {
+    config.worker.spawnTask = true
+    config.worker.errorRetryDelay = 100
+    const ax = global.ax.dmeadus
+    const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'trigger test error' })).data
+    await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
+    let journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+    assert.equal(journal[0].type, 'error-retry')
+    assert.equal(journal[0].data, 'This is a test error')
+
+    await new Promise(resolve => setTimeout(resolve, 100))
+    await global.db.collection('locks').deleteOne({ _id: 'dataset:trigger-test-error' })
+
+    await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
+    journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+    assert.equal(journal[0].type, 'error')
+    assert.equal(journal[0].data, 'This is a test error')
+
+    config.worker.spawnTask = false
+    config.worker.errorRetryDelay = 0
   })
 
   it('Update dataset schema and apply only required worker tasks', async () => {

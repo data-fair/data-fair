@@ -133,7 +133,8 @@ module.exports = {
     // base interval for polling the database for new resources to work on
     interval: 4000,
     concurrency: 4,
-    spawnTask: true
+    spawnTask: true,
+    errorRetryDelay: 600000 // 10 minutes
   },
   adminRole: 'admin',
   contribRole: 'contrib',

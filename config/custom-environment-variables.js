@@ -164,6 +164,10 @@ module.exports = {
     spawnTask: {
       __name: 'WORKER_SPAWN_TASK',
       __format: 'json'
+    },
+    errorRetryDelay: {
+      __name: 'WORKER_ERROR_RETRY_DELAY',
+      __format: 'json'
     }
   },
   browserLogLevel: 'BROWSER_LOG_LEVEL',
