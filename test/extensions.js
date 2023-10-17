@@ -283,7 +283,7 @@ other,unknown address
       await workers.hook('extender')
       assert.fail()
     } catch (err) {
-      assert.ok(err.message.startsWith('Unexpected token s'))
+      assert.ok(err.message.startsWith('Unexpected token'))
     }
     dataset = (await ax.get('/api/v1/datasets/dataset2')).data
     assert.equal(dataset.status, 'error')

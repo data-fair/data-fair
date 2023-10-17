@@ -19,9 +19,22 @@ exports.minAgg = smallAggs.min
 exports.indexStream = require('./index-stream')
 
 exports.init = async () => {
-  let node = config.elasticsearch.host
-  if (!node.startsWith('http')) node = 'http://' + node
-  const client = new elasticsearch.Client(Object.assign({ node }, config.elasticsearch))
+  let node = config.elasticsearch.nodes
+  if (!node) {
+    node = config.elasticsearch.host
+    if (!node.startsWith('http')) node = 'http://' + node
+  }
+  const options = {
+    node,
+    auth: config.elasticsearch.auth,
+    requestTimeout: 240000, // same as timeout in bulk indexing requests
+    ...config.elasticsearch.options
+  }
+  if (config.elasticsearch.ca) {
+    options.ssl = options.ssl ?? {} // note, in v8 this becomes "tls"
+    options.ssl.ca = config.elasticsearch.ca
+  }
+  const client = new elasticsearch.Client(options)
   try {
     await client.ping()
   } catch (err) {

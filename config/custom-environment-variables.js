@@ -19,6 +19,10 @@ module.exports = {
     maxBulkOps: {
       __name: 'MONGO_MAX_BULK_OPS',
       __format: 'json'
+    },
+    options: {
+      __name: 'MONGO_OPTIONS',
+      __format: 'json'
     }
   },
   cache: {
@@ -42,6 +46,19 @@ module.exports = {
   },
   elasticsearch: {
     host: 'ES_HOST',
+    nodes: {
+      __name: 'ES_NODES',
+      __format: 'json'
+    },
+    auth: {
+      __name: 'ES_AUTH',
+      __format: 'json'
+    },
+    options: {
+      __name: 'ES_OPTIONS',
+      __format: 'json'
+    },
+    ca: 'ES_CA',
     defaultAnalyzer: 'ES_DEFAULT_ANALYZER',
     maxBulkLines: {
       __name: 'ES_MAX_BULK_LINES',

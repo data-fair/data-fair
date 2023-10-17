@@ -6,17 +6,17 @@ description : Gérer les (ré)utilisations
 published: false
 ---
 
-Objetctif : Activer les réutilisations et valider une réutilisation d'un portail
+Objectif&nbsp;: activer les réutilisations et valider une réutilisation d'un portail.
 
-Lorsque vous activer les réutilisations dans la configuration de votre portail, les visiteurs connecté sur le portail peuvent soumettre des réutilisations.  
+Lorsque vous activez les réutilisations dans la configuration de votre portail, les visiteurs connectés sur le portail peuvent en soumettre.  
 
-Les réutilisations sont affichées en bas de chaque page des jeux de données et la liste est accessible dans la barre de navigation du portail.  
+Les réutilisations sont affichées en bas de chaque page des jeux de données, la liste est accessible dans la barre de navigation du portail.  
 
 
 ![Réutilisations](./images/lessons/admin-05-reuse-1.jpg)  
 *Liste des réutilisations d'un portail*
 
-Les visiteurs de votre portail peuvent cliquer sur la vignette de la réutilisation et une page presente la réutilisation avec les liens vers le site externe, les liens vers les applications, une image de la réutilisation et les données utilisées dans la réutilisation.  
+Les visiteurs de votre portail peuvent cliquer sur la vignette de la réutilisation&nbsp;: une page présente la réutilisation avec les liens vers le site externe, les liens vers les applications, une image de la réutilisation et les données utilisées dans la réutilisation.  
 
 ![Réutilisations](./images/lessons/admin-05-reuse-2.jpg)  
 *Les réutilisations permettent de mettre en valeur vos données*
@@ -24,7 +24,7 @@ Les visiteurs de votre portail peuvent cliquer sur la vignette de la réutilisat
 
 ## Activer les réutilisations
 
-Dans les menus de configuration de votre portail, vous pouvez activer les réutilisations pour tous les utilisateurs connectés de votre portail.
+Dans les menus de configuration de votre portail, vous pouvez activer les réutilisations pour tous les utilisateurs connectés.
 
 ![Réutilisations](./images/lessons/admin-05-active.jpg)
 
@@ -37,16 +37,16 @@ L'utilisateur renseigne les différents éléments de la réutilisation.
 
 ![Réutilisations](./images/lessons/admin-05-summit-reuse.jpg)
 
-Une fois enregistrée, le visiteur connecté peut encore modifier la réutilisation.  
-Après avoir soumis sa réutilisation, à l'aide de la flèche verte de la fiche, seulement les administrateurs du portail peuvent modifier ou valider sa soumission.  
+Une fois la réutilisation enregistrée, le visiteur connecté peut encore la modifier.  
+Une fois la réutilisation soumise, à l'aide de la flèche verte de la fiche, seuls les administrateurs du portail peuvent modifier ou valider sa soumission.  
 
 
 ## Administrer les réutilisations
 
-Dans la section portail du back-office, vous pouvez accéder à l'administration des réutilisation à l'aide du bouton **gerer les réutilisations** du portail.
+Dans la section portail du back-office, vous pouvez accéder à l'administration des réutilisations à l'aide du bouton **gérer les réutilisations** du portail.
 
-Les éléments des réutilisations peuvent vérifiés ou modifiés par les administrateurs.  
-Une fois la validation effectuée, l'administrateur peut cocher la case de publication puis ensuite enregistrer la réutilisation.  
+Les éléments des réutilisations peuvent être vérifiés ou modifiés par les administrateurs.  
+Une fois la validation effectuée, l'administrateur peut cocher la case de publication, puis enregistrer la réutilisation.  
 La visualisation sera alors disponible sur les pages de données utilisées et sur la liste des réutilisations.  
 
 

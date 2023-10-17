@@ -210,6 +210,25 @@
     }
   },
   {
+    "id": "addressId",
+    "title": {
+      "fr": "Identifiant d'adresse",
+      "en": "Address id"
+    },
+    "description": {
+      "fr": "Identifiant d'adresse dans la BAN",
+      "en": ""
+    },
+    "identifiers": [
+      "http://www.w3.org/ns/locn#addressId"
+    ],
+    "type": "string",
+    "tag": {
+      "fr": "Adresse",
+      "en": "Address"
+    }
+  },
+  {
     "id": "codeCommune",
     "title": {
       "fr": "Code commune",

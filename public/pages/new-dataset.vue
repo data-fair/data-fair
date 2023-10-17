@@ -403,7 +403,7 @@
               @change="setRestSource"
             />
             <v-checkbox
-              v-if="restSource && restSource.extensions.length"
+              v-if="restSource && restSource.extensions && restSource.extensions.length"
               v-model="restSourceExtensions"
               hide-details
               class="pl-2"

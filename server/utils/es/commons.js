@@ -186,7 +186,7 @@ function checkQuery (query, schema, esFields, currentField) {
   if (query.right) checkQuery(query.right, schema, esFields, query.field)
 }
 
-exports.prepareQuery = (dataset, query) => {
+exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) => {
   const esQuery = {}
 
   // Valid "total" value
@@ -271,14 +271,23 @@ exports.prepareQuery = (dataset, query) => {
   // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
   const searchFields = []
   const wildcardFields = []
+  const qSearchFields = []
+  const qStandardFields = []
+  const qWildcardFields = []
+  const q = query.q && query.q.trim()
+
   for (const f of dataset.schema) {
     if (f.key === '_id') {
       searchFields.push('_id')
       continue
     }
 
+    const isQField = q && f.key !== '_id' && (!qFields || qFields.includes(f.key))
     const esProp = exports.esProperty(f)
-    if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') searchFields.push(f.key)
+    if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
+      searchFields.push(f.key)
+      if (isQField) qSearchFields.push(f.key)
+    }
     if (esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) {
       // automatic boost of some special properties well suited for full-text search
       let suffix = ''
@@ -286,20 +295,32 @@ exports.prepareQuery = (dataset, query) => {
       if (f['x-refersTo'] === 'http://schema.org/description') suffix = '^2'
       if (f['x-refersTo'] === 'https://schema.org/DefinedTermSet') suffix = '^2'
 
-      if (esProp.fields.text) searchFields.push(f.key + '.text' + suffix)
-      if (esProp.fields.text_standard) searchFields.push(f.key + '.text_standard' + suffix)
-      if (esProp.fields.wildcard) wildcardFields.push(f.key + '.wildcard')
+      if (esProp.fields.text) {
+        searchFields.push(f.key + '.text' + suffix)
+        if (isQField) qSearchFields.push(f.key + '.text' + suffix)
+      }
+      if (esProp.fields.text_standard) {
+        searchFields.push(f.key + '.text_standard' + suffix)
+        if (isQField) {
+          qSearchFields.push(f.key + '.text_standard' + suffix)
+          qStandardFields.push(f.key + '.text_standard' + suffix)
+        }
+      }
+      if (esProp.fields.wildcard) {
+        wildcardFields.push(f.key + '.wildcard')
+        if (isQField) qWildcardFields.push(f.key + '.wildcard')
+      }
     }
   }
   if (query.qs) {
     checkQuery(query.qs, dataset.schema)
-    must.push({ query_string: { query: query.qs, fields: searchFields } })
+    const qs = { query_string: { query: query.qs, fields: searchFields } }
+    if (qsAsFilter) filter.push(qs)
+    else must.push(qs)
   }
-  if (query.q) {
-    const q = query.q.trim()
-    const qSearchFields = searchFields.filter(f => f !== '_id')
-    const qStandardFields = qSearchFields.filter(f => f.includes('.text_standard'))
-
+  if (q) {
+    const qBool = { bool: { should: [], minimum_should_match: 1 } }
+    const qShould = qBool.bool.should
     if (query.q_mode === 'complete') {
       // "complete" mode, we try to accomodate for most cases and give the most intuitive results
       // to a search query where the user might be using a autocomplete type control
@@ -309,30 +330,31 @@ exports.prepareQuery = (dataset, query) => {
       // we also perform a contains filter if some wildcard functionnality is activate
       if (!q.includes('*') && !q.includes('?')) {
         if (qStandardFields.length) {
-          should.push({ simple_query_string: { query: `${q}*`, fields: qStandardFields } })
+          qShould.push({ simple_query_string: { query: `${q}*`, fields: qStandardFields, ...sqsOptions } })
         }
-        if (wildcardFields.length) {
-          should.push({ query_string: { query: `*${q}*`, fields: wildcardFields } })
+        if (qWildcardFields.length) {
+          qShould.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
         }
       }
       // if the user submitted a multi word query and didn't use quotes
       // we add some quotes to boost results with sequence of words
       if (qSearchFields.length && q.includes(' ') && !q.includes('"')) {
-        should.push({ simple_query_string: { query: `"${q}"`, fields: qSearchFields } })
+        qShould.push({ simple_query_string: { query: `"${q}"`, fields: qSearchFields, ...sqsOptions } })
       }
       if (qSearchFields.length) {
-        should.push({ simple_query_string: { query: q, fields: qSearchFields } })
+        qShould.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
       }
     } else {
       // default "simple" mode uses ES simple query string directly
       // only tuning is that we match both on stemmed and raw inner fields to boost exact matches
       if (qSearchFields.length) {
-        should.push({ simple_query_string: { query: q, fields: qSearchFields } })
+        qShould.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
       }
-      if (qStandardFields) {
-        should.push({ simple_query_string: { query: q, fields: qStandardFields } })
+      if (qStandardFields.length) {
+        qShould.push({ simple_query_string: { query: q, fields: qStandardFields, ...sqsOptions } })
       }
     }
+    must.push(qBool)
   }
   for (const key of Object.keys(query)) {
     if (!key.endsWith('_in') && !key.endsWith('_eq')) continue

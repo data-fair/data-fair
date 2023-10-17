@@ -8,14 +8,14 @@ published: false
 
 ## Gestion des permissions
 
-Par défaut, un jeu de données créé sur Data&nbsp;Fair possède les droits **Accessible aux administrateurs et contributeurs** de l'organisation. Vous pouvez ouvrir l'accessibilité aux utilisateurs de l'organisation (rôle user) ou mettre le jeu de données en public.
+Par défaut, un jeu de données créé sur Data&nbsp;Fair possède les droits **accessible aux administrateurs et contributeurs** de l'organisation. Vous pouvez ouvrir l'accessibilité aux utilisateurs de l'organisation (rôle *user*) ou mettre le jeu de données en public.
 
 ![Permissions](./images/lessons/admin-04-permissions-1.jpg)  
 *Les permissions sont définies au niveau de l'API*
 
 ## Permission avancées
 
-Les permissions avancées (ou **édition détaillée des permissions**) permet de donner des droits plus fin au jeu de données.  
+Les permissions avancées (ou **édition détaillée des permissions**) permettent de donner des droits plus fins au jeu de données.  
 
 Il est ainsi possible de donner accès à une organisation, à un rôle dans une organisation ou à un ou plusieurs utilisateurs.  
 Une règle est définie par organisation ou par utilisateur.
@@ -25,7 +25,7 @@ Une règle est définie par organisation ou par utilisateur.
 
 ## Publication d'un jeu de données
 
-Après avoir défini les permissions du jeu de données, vous allez le publier sur un portail de données, pour que celui-ci soit facilement accessible via un site.
+Après avoir défini les permissions du jeu de données, vous allez le publier sur un portail de données pour que celui-ci soit facilement accessible via un site.
 
 ![Publication](./images/lessons/admin-04-publication.jpg)  
 *Le jeu de données est publié sur le portail opendata.koumoul.com*
@@ -33,10 +33,10 @@ Après avoir défini les permissions du jeu de données, vous allez le publier s
 Seul les administrateurs de l'organisation peuvent publier les jeux de données sur un portail.  
 Les contributeurs peuvent soumettre une publication.
 
-Lorsqu'un administrateur d'organisation créé un portail, il est automatiquement abonné aux notifications de demandes de publications sur le portail.
+Lorsqu'un administrateur d'organisation crée un portail, il est automatiquement abonné aux notifications de demandes de publications sur le portail.
 
 ![Publication](./images/lessons/admin-04-notification-1.jpg)
 
-A l'aide du menu d'action de Data&nbsp;Fair, vous pouvez modifier vos notifications.
+À l'aide du menu d'action de Data&nbsp;Fair, vous pouvez modifier vos notifications.
 
 ![Publication](./images/lessons/admin-04-notification-2.jpg)

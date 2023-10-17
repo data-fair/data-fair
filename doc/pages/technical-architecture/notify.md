@@ -6,10 +6,10 @@ description : Notify
 published: true
 ---
 
-Le service **Notify** permet de gérer les notifications d'une plateforme. Celles-ci peuvent être transmises dans le navigateur, sur un smartphone ou par email.
+Le service **Notify** permet de gérer les notifications d'une plateforme. Celles-ci peuvent être transmises dans le navigateur, sur un smartphone ou par e-mail.
 
 ## Stack technique
 
-Le backend de Notify est écrit en NodeJS avec le framework ExpressJS. La persistance est assurée avec MongoDB. Le frontend est réalisé avec les frameworks VueJS, VuetifyJS et NuxtJS.
+Le back-end de Notify est écrit en Node.js avec le framework Express.js. La persistance est assurée avec MongoDB. Le front-end est réalisé avec les frameworks Vue.js, Vuetify.js et Nuxt.js.
 
 Il n'y a pour l'instant qu'un mode de distribution qui est Docker, et il est recommandé d'opérer ce service dans un environnement tel que Kubernetes.

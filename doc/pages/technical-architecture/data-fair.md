@@ -1,5 +1,5 @@
 ---
-title: Data&nbsp;Fair
+title: Data Fair
 section: 2
 updated: 2020-12-09
 description : Data&nbsp;Fair

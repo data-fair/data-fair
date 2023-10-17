@@ -19,7 +19,8 @@ module.exports = {
   pluginsDir: './plugins',
   mongo: {
     url: 'mongodb://localhost:27017/data-fair-' + (process.env.NODE_ENV || 'development'),
-    maxBulkOps: 1000
+    maxBulkOps: 1000,
+    options: {} // optional mongo client options
   },
   map: {
     // A mapbox style to display geo data
@@ -30,10 +31,13 @@ module.exports = {
   },
   elasticsearch: {
     host: 'localhost:9200',
+    auth: null,
+    nodes: null,
+    options: {},
+    ca: null, // the central authority for the ES cluster certificates
     defaultAnalyzer: 'french',
     maxBulkLines: 2000,
     maxBulkChars: 200000,
-    requestTimeout: 240000, // same as timeout in bulk indexing requests
     maxShardSize: 10000000000, // 10go
     nbReplicas: 1,
     maxPageSize: 10000
@@ -303,6 +307,9 @@ module.exports = {
   },
   exportRestDatasets: {
     cron: '0 6 * * 0'
+  },
+  catalogAutoUpdates: {
+    cron: '0 22 * * 0'
   },
   prometheus: {
     active: true,

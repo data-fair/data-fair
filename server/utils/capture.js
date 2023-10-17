@@ -76,8 +76,6 @@ exports.screenshot = async (req, res) => {
   const reqOpts = exports.requestOpts(req, isDefaultThumbnail)
 
   if (isDefaultThumbnail) {
-    // already cached by data-fair, no need to cache it in reverse proxy
-    res.set('cache-control', res.get('cache-control').replace('public', 'private'))
     if (await fs.pathExists(capturePath)) {
       const stats = await fs.stat(capturePath)
       if (stats.mtime.toISOString() > req.resource.updatedAt) {

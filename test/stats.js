@@ -5,7 +5,7 @@ const testUtils = require('./resources/test-utils')
 const workers = require('../server/workers')
 
 describe('stats', () => {
-  it('Get lines in dataset', async () => {
+  it('Get simple stats', async () => {
     const ax = global.ax.dmeadus
     const datasetData = fs.readFileSync('./test/resources/datasets/dataset1.csv')
     const form = new FormData()

@@ -39,14 +39,14 @@ module.exports = async () => {
     const nuxt = new Nuxt(nuxtConfig)
     return {
       trackEmbed,
-      render: async (req, res, next) => {
+      render: (req, res, next) => {
         // no buffering in the reverse proxy
         // disables caching that creates some unknown problem where sometimes some empty files are put in the cache
         res.setHeader('X-Accel-Buffering', 'no')
 
         // re-apply the prefix that was removed by our reverse proxy in prod configs
         req.url = (nuxtConfig.router.base + req.url).replace('//', '/')
-        nuxt.render(req, res)
+        nuxt.render(req, res, next)
       },
       instance: nuxt
     }

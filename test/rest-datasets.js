@@ -40,19 +40,23 @@ describe('REST datasets', () => {
     })
     await workers.hook('finalizer/rest1')
     res = await ax.post('/api/v1/datasets/rest1/lines', { attr1: 'test1', attr2: 'test1' })
+    await workers.hook('finalizer/rest1')
     assert.equal(res.status, 201)
     assert.ok(res.data._id)
     assert.equal(res.data.attr1, 'test1')
     res = await ax.post('/api/v1/datasets/rest1/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
+    await workers.hook('finalizer/rest1')
     assert.equal(res.data._id, 'id1')
     res = await ax.get('/api/v1/datasets/rest1/lines/id1')
     assert.equal(res.data._id, 'id1')
     assert.equal(res.data.attr1, 'test1')
     await ax.put('/api/v1/datasets/rest1/lines/id1', { attr1: 'test2', attr2: 'test2' })
+    await workers.hook('finalizer/rest1')
     res = await ax.get('/api/v1/datasets/rest1/lines/id1')
     assert.equal(res.data._id, 'id1')
     assert.equal(res.data.attr1, 'test2')
     await ax.patch('/api/v1/datasets/rest1/lines/id1', { attr1: 'test3' })
+    await workers.hook('finalizer/rest1')
     res = await ax.get('/api/v1/datasets/rest1/lines/id1')
     assert.equal(res.data._id, 'id1')
     assert.equal(res.data.attr1, 'test3')
@@ -957,17 +961,20 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     }
     const res = await ax.post('/api/v1/datasets/rest2/_bulk_lines', bulkLines, { responseType: 'stream' })
     let i = 0
-    await pump(res.data, new Writable({
-      write (chunk, encoding, callback) {
-        i += 1
-        if (i < 3) assert.equal(chunk.toString(), ' ')
-        else if (chunk.toString() !== ' ') {
-          const result = JSON.parse(chunk.toString())
-          assert.equal(result.nbOk, 550)
+    await Promise.all([
+      pump(res.data, new Writable({
+        write (chunk, encoding, callback) {
+          i += 1
+          if (i < 3) assert.equal(chunk.toString(), ' ')
+          else if (chunk.toString() !== ' ') {
+            const result = JSON.parse(chunk.toString())
+            assert.equal(result.nbOk, 550)
+          }
+          callback()
         }
-        callback()
-      }
-    }))
+      })),
+      workers.hook('finalizer/rest2')
+    ])
     assert.equal(i, 6)
   })
 

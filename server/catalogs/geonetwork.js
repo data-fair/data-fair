@@ -11,13 +11,15 @@ exports.title = 'GeoNetwork'
 exports.description = ''
 exports.docUrl = 'https://geonetwork-opensource.org/'
 exports.optionalCapabilities = [
-  'listDatasets'
+  'listDatasets',
+  'autoUpdate'
 ]
 
 exports.init = async (catalogUrl) => {
   const siteUrl = url.resolve(catalogUrl, 'srv/api/0.1/site')
   debug('try fetching geonetwork info', siteUrl)
   const site = (await axios.get(siteUrl)).data
+  if (!site['system/site/name']) throw new Error('missing system/site/name in geonetwork site info')
   return { url: catalogUrl, title: site['system/site/name'] + ' - ' + site['system/site/organization'] }
 }
 

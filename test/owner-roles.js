@@ -89,6 +89,7 @@ describe('owner roles', () => {
   it('departments can be used to restrict contrib capabilities', async () => {
     // dataset is not attached to specific department at first
     const dataset = (await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
+    await workers.hook('finalizer/' + dataset.id)
     assert.equal(dataset.owner.department, undefined)
 
     // admin in org without department restriction -> ok for read and write

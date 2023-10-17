@@ -122,6 +122,23 @@ describe('workers', () => {
     config.worker.spawnTask = false
   })
 
+  it('Process multiple datasets in parallel children processes', async function () {
+    this.timeout = 60000
+    // config.worker.spawnTask = true
+    const ax = global.ax.dmeadus
+    const datasets = await Promise.all([
+      testUtils.sendDataset('geo/stations.zip', ax),
+      testUtils.sendDataset('geo/stations.zip', ax),
+      testUtils.sendDataset('geo/stations.zip', ax),
+      testUtils.sendDataset('geo/stations.zip', ax)
+    ])
+    assert.ok(datasets.find(d => d.id === 'stations'))
+    assert.ok(datasets.find(d => d.id === 'stations2'))
+    assert.ok(datasets.find(d => d.id === 'stations3'))
+    assert.ok(datasets.find(d => d.id === 'stations4'))
+    // config.worker.spawnTask = false
+  })
+
   it('Manage expected failure in children processes', async function () {
     config.worker.spawnTask = true
     const datasetFd = fs.readFileSync('./test/resources/geo/geojson-broken.geojson')

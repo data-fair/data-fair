@@ -85,6 +85,19 @@ module.exports = {
       type: 'object',
       description: 'An object for extra content from client services of data-fair'
     },
+    autoUpdate: {
+      type: 'object',
+      properties: {
+        active: { type: 'boolean', default: false },
+        nextUpdate: { type: 'string', format: 'date-time' },
+        lastUpdate: {
+          type: 'object',
+          properties: {
+            date: { type: 'string', format: 'date-time' }
+          }
+        }
+      }
+    },
     permissions
   }
 }

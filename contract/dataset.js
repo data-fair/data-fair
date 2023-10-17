@@ -235,6 +235,10 @@ module.exports = {
           type: 'string',
           enum: ['text/csv'],
           description: 'Mime type of the file'
+        },
+        md5: {
+          type: 'string',
+          description: 'MD5 hash of the file content'
         }
       }
     },
@@ -310,7 +314,7 @@ module.exports = {
     remoteFile: {
       type: 'object',
       additionalProperties: true, // for properties such as catalogId or resourceId that are specific to kind of remote resources
-      required: ['name', 'url'],
+      required: ['url'],
       properties: {
         name: {
           type: 'string',
@@ -332,6 +336,22 @@ module.exports = {
           type: 'string',
           enum: ['text/csv'],
           description: 'Mime type of the file'
+        },
+        etag: {
+          type: 'string',
+          description: 'content of the "etag" response header if it was provided'
+        },
+        lastModified: {
+          type: 'string',
+          description: 'content of the "last-modified" response header if it was provided'
+        },
+        autoUpdate: {
+          type: 'object',
+          properties: {
+            active: { type: 'boolean', default: false },
+            nextUpdate: { type: 'string', format: 'date-time' },
+            lastUpdate: { type: 'string', format: 'date-time' }
+          }
         }
       }
     },
@@ -671,7 +691,7 @@ module.exports = {
           properties: {
             active: { type: 'boolean', default: false },
             nextExport: { type: 'string', format: 'date-time' },
-            lastExports: {
+            lastExport: {
               type: 'object',
               properties: {
                 date: { type: 'string', format: 'date-time' }

@@ -311,6 +311,7 @@ const lockNewDataset = async (req, res, dataset) => {
   const lockKey = `dataset:${dataset.id}`
   const ack = await locks.acquire(db, lockKey, `${req.method} - ${req.originalUrl}`)
   if (ack) res.on('close', () => locks.release(db, lockKey).catch(err => console.warn('failure to release dataset lock', err)))
+  return ack
 }
 // Shared middleware to read dataset in db
 // also checks that the dataset is in a state compatible with some action
@@ -373,6 +374,9 @@ const sendSchema = (req, res, schema) => {
   }
   if (req.query.enum === 'true') {
     schema = schema.filter(field => !!field.enum)
+  }
+  if (req.query.concept === 'true') {
+    schema = schema.filter(field => !!field['x-concept'])
   }
 
   // in json schema format we remove calculated and extended properties by default (better matches the need of form generation)
@@ -549,6 +553,16 @@ router.patch('/:datasetId',
     const coordYProp = req.dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordY')
     const projectGeomProp = req.dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#Geometry')
 
+    if (patch.remoteFile) {
+      if (patch.remoteFile?.url !== req.dataset.remoteFile?.url) {
+        delete patch.remoteFile.lastModified
+        delete patch.remoteFile.etag
+        patch.status = 'imported'
+      } else {
+        patch.remoteFile.lastModified = req.dataset.remoteFile.lastModified
+        patch.remoteFile.etag = req.dataset.remoteFile.etag
+      }
+    }
     if (req.dataset.isVirtual) {
       if (patch.schema || patch.virtual) {
         patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...req.dataset, ...patch })
@@ -688,8 +702,15 @@ const initNew = async (db, req) => {
   return dataset
 }
 
-const curateDataset = (dataset) => {
+const curateDataset = (dataset, existingDataset) => {
   if (dataset.title) dataset.title = dataset.title.trim()
+
+  if (dataset.remoteFile?.autoUpdate?.active) {
+    const job = new CronJob(config.catalogAutoUpdates.cron, () => {})
+    dataset.remoteFile.autoUpdate.nextUpdate = job.nextDates().toISOString()
+  } else if (dataset.remoteFile?.autoUpdate) {
+    delete dataset.remoteFile.autoUpdate.nextUpdate
+  }
 }
 
 const titleFromFileName = (name) => {
@@ -698,7 +719,8 @@ const titleFromFileName = (name) => {
   return path.parse(baseFileName).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')
 }
 
-const setFileInfo = async (db, file, attachmentsFile, dataset, draft, res) => {
+const setFileInfo = async (req, file, attachmentsFile, dataset, draft, res) => {
+  const db = req.app.get('db')
   const patch = {
     dataUpdatedBy: dataset.updatedBy,
     dataUpdatedAt: dataset.updatedAt
@@ -716,17 +738,17 @@ const setFileInfo = async (db, file, attachmentsFile, dataset, draft, res) => {
     const baseId = slug(baseTitle, { lower: true, strict: true })
     dataset.id = baseId
     dataset.title = baseTitle
-    let i = 1; let dbExists = false; let fileExists = false
+    let i = 1; let dbExists = false; let fileExists = false; let acquiredLock = false
     do {
       if (i > 1) {
         dataset.id = baseId + i
         dataset.title = baseTitle + ' ' + i
       }
-      // better to check file as well as db entry in case of file currently uploading
+      acquiredLock = await lockNewDataset(req, res, dataset)
       dbExists = await db.collection('datasets').countDocuments({ id: dataset.id })
       fileExists = await fs.exists(datasetUtils.dir(dataset))
       i += 1
-    } while (dbExists || fileExists)
+    } while (dbExists || fileExists || !acquiredLock)
 
     if (draft) {
       dataset.status = 'draft'
@@ -815,7 +837,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
     if (datasetFile) {
       if (req.body.isVirtual) throw createError(400, 'Un jeu de données virtuel ne peut pas être initialisé avec un fichier')
       // TODO: do this in a worker instead ?
-      const datasetPromise = setFileInfo(db, datasetFile, attachmentsFile, await initNew(db, req), req.query.draft === 'true', res)
+      const datasetPromise = setFileInfo(req, datasetFile, attachmentsFile, await initNew(db, req), req.query.draft === 'true', res)
       await Promise.race([datasetPromise, new Promise(resolve => setTimeout(resolve, 5000))])
       // send header at this point, if we are not finished processing files
       // asyncWrap keepalive option will keep request alive
@@ -886,8 +908,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
     } else if (req.body.remoteFile) {
       validatePost(req.body)
       dataset = await initNew(db, req)
-      req.body.remoteFile.name = req.body.remoteFile.name || path.basename(new URL(req.body.remoteFile.url).pathname)
-      dataset.title = dataset.title || titleFromFileName(req.body.remoteFile.name)
+      dataset.title = dataset.title || titleFromFileName(req.body.remoteFile.name || path.basename(new URL(req.body.remoteFile.url).pathname))
       permissions.initResourcePermissions(dataset, req.user)
       dataset.status = 'imported'
       if (dataset.id) {
@@ -977,7 +998,7 @@ const updateDataset = asyncWrap(async (req, res) => {
       res.writeHeader(req.isNewDataset ? 201 : 200, { 'Content-Type': 'application/json' })
       res.write(' ')
 
-      dataset = await setFileInfo(db, datasetFile, attachmentsFile, { ...dataset, ...req.body }, req.query.draft === 'true', res)
+      dataset = await setFileInfo(req, datasetFile, attachmentsFile, { ...dataset, ...req.body }, req.query.draft === 'true', res)
       if (req.query.skipAnalysis === 'true') req.body.status = 'analyzed'
     } else if (dataset.isVirtual) {
       const { isVirtual, updatedBy, updatedAt, ...patch } = req.body
@@ -1006,6 +1027,7 @@ const updateDataset = asyncWrap(async (req, res) => {
         }
       }
     }
+    curateDataset(req.body, dataset)
     if (draft) {
       delete dataset.draftReason
       Object.assign(dataset.draft, req.body)
@@ -1554,7 +1576,7 @@ router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissio
 
 // Direct access to data files
 router.get('/:datasetId/data-files', readDataset(), permissions.middleware('listDataFiles', 'read'), asyncWrap(async (req, res, next) => {
-  res.send(await datasetUtils.dataFiles(req.dataset))
+  res.send(await datasetUtils.dataFiles(req.dataset, req.publicBaseUrl))
 }))
 router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadDataFile', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package

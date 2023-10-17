@@ -18,7 +18,7 @@ exports.ensureIndex = async (db, collection, key, options = {}) => {
 
 exports.connect = async () => {
   let client
-  const opts = {}
+  const opts = { ...config.mongo.options }
   // workers generate a lot of opened sockets if we do not change this setting
   if (config.mode === 'task') opts.maxPoolSize = 1
   debug('Connecting to mongodb ' + config.mongo.url)
@@ -47,6 +47,7 @@ exports.init = async (db) => {
     exports.ensureIndex(db, 'datasets', { publicationSites: 1 }),
     exports.ensureIndex(db, 'datasets', { 'rest.ttl.checkedAt': 1 }),
     exports.ensureIndex(db, 'datasets', { 'rest.ttl.active': 1 }),
+    exports.ensureIndex(db, 'datasets', { 'remoteFile.autoUpdate.nextUpdate': 1 }),
 
     // remote-services indexes
     exports.ensureIndex(db, 'remote-services', { id: 1 }, { unique: true }),
