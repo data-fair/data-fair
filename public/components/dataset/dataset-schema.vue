@@ -9,7 +9,7 @@
           {{ notCalculatedProperties.length.toLocaleString() }} {{ $t('column') }}{{ notCalculatedProperties.length > 1 ? 's' : '' }}
         </h3>
         <v-btn
-          v-if="dataset.isRest && can('writeDescriptionBreaking')"
+          v-if="can('writeDescriptionBreaking')"
           color="primary"
           fab
           x-small
@@ -39,7 +39,7 @@
             @click="resetSchema"
           />
           <v-btn
-            v-if="updated && can('writeDescription')"
+            v-if="updated && !hasError && can('writeDescription')"
             v-t="'apply'"
             color="primary"
             @click="save"
@@ -88,7 +88,7 @@
     >
       <v-card outlined>
         <v-card-title
-          v-t="'addProperty'"
+          v-t="dataset.isRest ? 'addProperty' : 'addPropertyExpr'"
           primary-title
         />
         <v-card-text>
@@ -140,6 +140,7 @@ fr:
   primaryKeyMsgData: La clé primaire ne peut pas être modifiée une fois que des données ont été insérées.
   primaryKeyMsgNoData: Optionnel. Utilisez une ou plusieurs colonnes du schéma pour construire une clé primaire qui identifiera de manière unique chaque ligne de la donnée.
   addProperty: Ajouter une propriété
+  addPropertyExpr: Ajouter une propriété basée sur une expression
   cancel: Annuler
   validate: Valider
   sortProperties: Vous pouvez changer l'ordre des colonnes par glissé-déposé
@@ -151,6 +152,7 @@ en:
   primaryKeyMsgData: The primary key cannot be changed one data has been inserted.
   primaryKeyMsgNoData: Optional. Use one or more columns of the schéma to build a primary key that will identify in a unique manner each line of the data.
   addProperty: Add a property
+  addPropertyExpr: Add a property based on an expression
   cancel: Cancel
   validate: Validate
   sortProperties: You can sort the columns by drag and drop
@@ -228,7 +230,7 @@ export default {
       }
       return props.concat(this.notCalculatedProperties.map(p => {
         const validatedProp = this.validatedDataset && this.validatedDataset.schema && this.validatedDataset.schema.find(vp => vp.key === p.key)
-        let warning
+        let warning, error
         if (validatedProp) {
           if (validatedProp.type !== p.type) {
             warning = 'Cette colonne a changé de type dans la nouvelle version du fichier.'
@@ -238,15 +240,33 @@ export default {
           if (validatedProp.type === 'string' && p.type === 'string' && validatedFormat !== format) {
             warning = 'Cette colonne a changé de type dans la nouvelle version du fichier.'
           }
+          if (!validatedProp['x-constExpr'] && p['x-constExpr']) {
+            warning = 'Cette colonne est le résultat du calcul d\'une expression dans la nouvelle version du schéma. Tout son contenu sera écrasé.'
+          }
+        }
+        const originalProp = this.originalProperties.find(op => op.key === p.key)
+        if (this.dataset.isRest && originalProp && this.dataset.count) {
+          if (!originalProp['x-constExpr'] && p['x-constExpr']) {
+            warning = 'Cette colonne est le résultat du calcul d\'une expression dans la nouvelle version du schéma. Tout son contenu sera écrasé.'
+          }
+        }
+        let fileProp
+        if (this.dataset.file && this.dataset.file.schema) {
+          fileProp = this.dataset.file.schema.find(fp => fp.key === p.key)
+        }
+        if (this.dataset.file && !fileProp && !p['x-constExpr']) {
+          error = 'La définition d\'une expression pour le calcul de cette colonne est obligatoire'
         }
         return {
           key: p.key,
           search: `${(p.title || '').toLowerCase()} ${(p['x-originalName'] || '').toLowerCase()} ${p.key.toLowerCase()}`,
           prop: p,
-          originalProp: this.originalProperties.find(op => op.key === p.key),
+          originalProp,
           validatedProp,
+          fileProp,
           editable: !p['x-extension'] && !p.key.startsWith('_'),
-          warning
+          warning,
+          error
         }
       }))
     },
@@ -254,6 +274,9 @@ export default {
       const filter = this.schemaFilter && this.schemaFilter.toLowerCase()
       return this.filterableProperties
         .filter(fp => !filter || (fp.search.includes(filter) || JSON.stringify(fp.prop) !== JSON.stringify(fp.originalProp)))
+    },
+    hasError () {
+      return !!this.filterableProperties.find(p => p.error)
     }
   },
   watch: {

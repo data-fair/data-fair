@@ -12,12 +12,12 @@
       >
         <!-- ripple is buggy with draggable -->
         <v-btn
-          v-for="({prop, originalProp, warning}, i) in propertiesRefs"
+          v-for="({prop, originalProp, warning, error}, i) in propertiesRefs"
           :key="prop.key"
           style="text-transform: none;"
           class="ma-0 px-2"
           :class="{'font-weight-black': !!prop['x-refersTo']}"
-          v-bind="btnProps(prop, originalProp, warning, i, currentProperty === i)"
+          v-bind="btnProps(prop, originalProp, warning, error, i, currentProperty === i)"
           :ripple="!sortable"
           @click="switchProperty(i)"
         >
@@ -232,10 +232,13 @@
             </template>-->
           </v-text-field>
           <v-text-field
+            v-if="!currentPropRef.fileProp"
             v-model="currentPropRef.prop['x-constExpr']"
             :disabled="!editable || noBreakingChanges || !currentPropRef.editable"
             :label="$t('constExpr')"
             hide-details
+            :required="!!dataset.file"
+            :error="dataset.file && !currentPropRef.prop['x-constExpr']"
           >
             <template #append-outer>
               <help-tooltip><div v-html="$t('constExprHelp')" /></help-tooltip>
@@ -459,13 +462,16 @@ export default {
   },
   methods: {
     ...mapActions('dataset', ['fetchRemoteServices', 'patch']),
-    btnProps (prop, originalProp, warning, i, active) {
-      if (active) return { color: 'primary', dark: true, depressed: true, small: true }
-      if (warning) return { color: 'warning', dark: true, text: true, small: true }
+    btnProps (prop, originalProp, warning, error, i, active) {
+      const props = { small: true }
+      if (error) props.color = 'error'
+      if (warning) props.color = 'warning'
+      if (active) return { color: 'primary', ...props, dark: true, depressed: true }
+      if (error || warning) return { dark: true, text: true, ...props }
       if (this.editable && JSON.stringify(prop) !== JSON.stringify(originalProp)) {
-        return { color: 'accent', dark: true, text: true, small: true }
+        return { color: 'accent', dark: true, text: true, ...props }
       }
-      return { color: 'transparent', depressed: true, small: true }
+      return { color: 'transparent', depressed: true, ...props }
     },
     filterVocabulary (item) {
       if (item.header) return true
