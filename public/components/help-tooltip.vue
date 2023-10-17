@@ -1,8 +1,8 @@
 <template>
   <v-tooltip
     class="help-tooltip"
-    :left="orientation === 'left'"
-    :bottom="orientation === 'bottom'"
+    left
+    :z-index="1000"
   >
     <template #activator="{attrs, on}">
       <v-btn
@@ -28,8 +28,7 @@
 <script>
 export default {
   props: {
-    small: { type: Boolean, default: false },
-    orientation: { type: String, default: 'left' }
+    small: { type: Boolean, default: false }
   }
 }
 </script>

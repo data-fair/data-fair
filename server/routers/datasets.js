@@ -553,6 +553,8 @@ router.patch('/:datasetId',
     const coordYProp = req.dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordY')
     const projectGeomProp = req.dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#Geometry')
 
+    const schemasCompatibility = patch.schema && datasetUtils.schemasCompatibility(patch.schema, req.dataset.schema)
+
     if (patch.remoteFile) {
       if (patch.remoteFile?.url !== req.dataset.remoteFile?.url) {
         delete patch.remoteFile.lastModified
@@ -591,7 +593,10 @@ router.patch('/:datasetId',
       patch.status = 'analyzed'
     } else if (removedRestProp) {
       patch.status = 'analyzed'
-    } else if (patch.schema && !datasetUtils.schemasFullyCompatible(patch.schema, req.dataset.schema)) {
+    } else if (patch.schema && schemasCompatibility === 'reindex') {
+      patch.status = 'analyzed'
+      await datasetUtils.updateStorage(req.app, { ...req.dataset, schema: patch.schema })
+    } else if (patch.schema && schemasCompatibility === 'incompatible') {
       try {
         // this method will routinely throw errors
         // we just try in case elasticsearch considers the new mapping compatible

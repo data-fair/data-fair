@@ -86,6 +86,9 @@ const schema = {
       },
       'x-display': {
         type: 'string'
+      },
+      'x-constExpr': {
+        type: 'string'
       }
     }
   }

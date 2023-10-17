@@ -866,6 +866,11 @@ const cleanJsonSchemaProperty = (p, publicBaseUrl, writableId) => {
   if (p['x-refersTo'] === 'https://schema.org/description') cleanProp['x-display'] = 'markdown'
   if (p['x-refersTo'] === 'https://schema.org/color') cleanProp['x-display'] = 'color-picker'
 
+  if (p['x-constExpr']) {
+    cleanProp.readOnly = true
+    cleanProp['x-options'] = { evalMethod: 'evalExpr', hideReadOnly: false }
+  }
+
   delete cleanProp.key
   delete cleanProp.ignoreDetection
   delete cleanProp.ignoreIntegerDetection
@@ -910,7 +915,15 @@ exports.syncApplications = async (db, datasetId) => {
     .updateOne({ id: datasetId }, { $set: { 'extras.applications': applicationsExtras } })
 }
 
-exports.schemasFullyCompatible = (schema1, schema2, ignoreCalculated = false) => {
+exports.schemasCompatibility = (newSchema, oldSchema, ignoreCalculated = false) => {
+  // a diff in constExpr is a special case, not only the schema is not compatible, but it requires a full reindexing not just a mapping update
+  if (!equal(
+    newSchema.filter(p => p['x-constExpr']).map(p => ({ key: p.key, constExpr: p['x-constExpr'] })),
+    oldSchema.filter(p => p['x-constExpr']).map(p => ({ key: p.key, constExpr: p['x-constExpr'] }))
+  )) {
+    return 'reindex'
+  }
+
   // a change in these properties does not consitute a breaking change of the api
   // and does not require a re-finalization of the dataset when patched
   const innocuous = {
@@ -924,9 +937,13 @@ exports.schemasFullyCompatible = (schema1, schema2, ignoreCalculated = false) =>
     'x-cardinality': '',
     enum: ''
   }
-  const schema1Bare = schema1.filter(p => !(p['x-calculated'] && ignoreCalculated)).map(p => ({ ...p, ...innocuous })).sort((p1, p2) => p1.key.localeCompare(p2.key))
-  const schema2Bare = schema2.filter(p => !(p['x-calculated'] && ignoreCalculated)).map(p => ({ ...p, ...innocuous })).sort((p1, p2) => p1.key.localeCompare(p2.key))
-  return equal(schema1Bare, schema2Bare)
+  const newSchemaBare = newSchema.filter(p => !(p['x-calculated'] && ignoreCalculated)).map(p => ({ ...p, ...innocuous })).sort((p1, p2) => p1.key.localeCompare(p2.key))
+  const oldSchemaBare = oldSchema.filter(p => !(p['x-calculated'] && ignoreCalculated)).map(p => ({ ...p, ...innocuous })).sort((p1, p2) => p1.key.localeCompare(p2.key))
+  if (equal(newSchemaBare, oldSchemaBare)) {
+    return 'compatible'
+  } else {
+    return 'incompatible'
+  }
 }
 
 exports.validateDraft = async (app, dataset, user, req) => {
@@ -1024,7 +1041,7 @@ exports.validateCompatibleDraft = async (app, dataset) => {
   if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {
     const prodDataset = await app.get('db').collection('datasets').findOne({ id: dataset.id })
     const fullDataset = { ...dataset, prod: prodDataset, draft: dataset }
-    if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument') && exports.schemasFullyCompatible(fullDataset.prod.schema, dataset.schema, true)) {
+    if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument') && exports.schemasCompatibility(dataset.schema, fullDataset.prod.schema, true) !== 'incompatible') {
       return await exports.validateDraft(app, fullDataset)
     }
   }

@@ -33,13 +33,14 @@ class IndexStream extends Transform {
     this.i = 0
     this.nbErroredItems = 0
     this.erroredItems = []
+    this.parsedExpressions = {}
   }
 
   async _transform (item, encoding, callback) {
     try {
       let warning
       if (this.options.updateMode) {
-        warning = await applyCalculations(this.options.dataset, item.doc)
+        warning = await applyCalculations(this.options.dataset, this.parsedExpressions, item.doc)
         const keys = Object.keys(item.doc)
         if (keys.length === 0 || (keys.length === 1 && keys[0] === '_i')) return callback()
         this.body.push({ update: { _index: this.options.indexName, _id: item.id, retry_on_conflict: 3 } })
@@ -58,7 +59,7 @@ class IndexStream extends Transform {
         params.index._id = item._id || nanoid()
         delete item._id
         this.body.push(params)
-        warning = await applyCalculations(this.options.dataset, item)
+        warning = await applyCalculations(this.options.dataset, this.parsedExpressions, item)
         this.body.push(item)
         this.bulkChars += JSON.stringify(item).length
       }
@@ -161,7 +162,7 @@ class IndexStream extends Transform {
   }
 }
 
-const applyCalculations = async (dataset, item) => {
+const applyCalculations = async (dataset, parsedExpressions, item) => {
   let warning = null
   const flatItem = flatten(item, { safe: true })
 
@@ -206,6 +207,14 @@ const applyCalculations = async (dataset, item) => {
   for (const field of dataset.schema) {
     if (field.separator && item[field.key]) {
       item[field.key] = item[field.key].split(field.separator.trim()).map(part => part.trim())
+    }
+  }
+
+  for (const field of dataset.schema) {
+    if (field['x-constExpr']) {
+      const { parser } = require('../expr-eval')
+      parsedExpressions[field.key] = parsedExpressions[field.key] ?? parser.parse(field['x-constExpr'])
+      item[field.key] = parsedExpressions[field.key].evaluate({ data: item })
     }
   }
   return warning

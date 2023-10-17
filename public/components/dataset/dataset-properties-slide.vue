@@ -231,6 +231,16 @@
               <help-tooltip>{{ $t('maxLengthHelp') }}</help-tooltip>
             </template>-->
           </v-text-field>
+          <v-text-field
+            v-model="currentPropRef.prop['x-constExpr']"
+            :disabled="!editable || noBreakingChanges || !currentPropRef.editable"
+            :label="$t('constExpr')"
+            hide-details
+          >
+            <template #append-outer>
+              <help-tooltip><div v-html="$t('constExprHelp')" /></help-tooltip>
+            </template>
+          </v-text-field>
           <v-select
             v-if="currentPropRef.prop['x-refersTo'] && availableMasters[currentPropRef.prop['x-refersTo']]"
             :disabled="!editable || noBreakingChanges || !currentPropRef.editable"
@@ -335,6 +345,8 @@ fr:
   deletePropertyTitle: Supprimer la colonne
   deletePropertyText: Souhaitez vous supprimer cette colonne ? Attention la donnée sera effacée et définitivement perdue !
   maxLength: Nombre maximum de caractères
+  constExpr: Expression pour colonne calculée
+  constExprHelp: "Une expression peut être utilisée pour calculer le contenu d'une colonne en fonction des valeurs des autres colonnes. L'expression doit suivre la syntaxe du module expr-eval.<br>Le contenu de la ligne de donnée courante est passée en paramètre à l'expression sous le nom <code>data</code>.<br>Quelques fonctions ont été ajoutées à la syntaxe expr-eval : <ul><li><code>concatString(arg1, arg2, ...)</code> : retourne une chaîne de caractère résultat de la concaténation de tous les paramètres.</li><li><code>trim(arg1)</code> : enlève les caractères blancs au début et à la fin du paramètre</li><li><code>toUpperCase(arg1)</code> : passe une chaîne de caractère en majuscule</li><li><code>toLowerCase(arg1)</code> : passe une chaîne de caractère en minuscule</li></ul>"
 en:
   detailedInfo: Click on a column title to display its detailed information.
   extension: "Extension: "
