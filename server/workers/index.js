@@ -103,7 +103,7 @@ exports.start = async (app) => {
 
     if (stopped) continue
     promisePool[freeSlot] = iter(app, resource, type)
-    promisePool[freeSlot]._resource = `${type}/${resource.id}/${resource.status}`
+    promisePool[freeSlot]._resource = `${type}/${resource.id} (${resource.slug}) - ${resource.status}`
     promisePool[freeSlot].catch(err => {
       prometheus.internalError.inc({ errorCode: 'worker-iter' })
       console.error('(worker-iter) error in worker iter', err)
@@ -164,6 +164,7 @@ async function iter (app, resource, type) {
   let lastStderr = ''
   let endTask
   let hookResolution, hookRejection
+  let lockReleaseDelay = 0
   try {
     // if there is something to be done in the draft mode of the dataset, it is prioritary
     if (type === 'dataset' && resource.draft && resource.draft.status !== 'finalized' && resource.draft.status !== 'error') {
@@ -280,15 +281,17 @@ async function iter (app, resource, type) {
     hookResolution = newResource
   } catch (err) {
     // Build back the original error message from the stderr of the child process
-    const errorMessage = []
+    let errorMessage
     if (lastStderr) {
+      const errorLines = []
       for (const line of lastStderr.split('\n')) {
         if (line && !line.includes('Warning:') && !line.includes('--trace-warnings') && !line.startsWith('worker:')) {
-          errorMessage.push(line)
+          errorLines.push(line)
         }
       }
+      errorMessage = errorLines.join('\n')
     } else {
-      errorMessage.push(err.message)
+      errorMessage = err.message
     }
 
     if (stopped) {
@@ -302,12 +305,38 @@ async function iter (app, resource, type) {
     prometheus.internalError.inc({ errorCode: 'task' })
 
     console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, err, errorMessage)
-    await journals.log(app, resource, { type: 'error', data: errorMessage.join('\n') }, type)
-    await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { [resource.draftReason ? 'draft.status' : 'status']: 'error' } })
-    resource.status = 'error'
-    hookRejection = { resource, message: errorMessage.join('\n') }
+
+    // some error are caused by bad input, we should not retry these
+    let retry = !errorMessage.startsWith('[noretry] ') && !!config.worker.errorRetryDelay
+    if (!retry) {
+      debug('error message started by [noretry]')
+      errorMessage = errorMessage.replace('[noretry] ', '')
+    }
+    if (retry) {
+      // if this is the second time we get this error, do not retry anymore
+      const hasErrorRetry = await journals.hasErrorRetry(db, resource, type)
+      debug('does the journal have a recent error-retry event', hasErrorRetry)
+      if (hasErrorRetry) {
+        debug('last log in journal was already a retry')
+        retry = false
+      }
+    }
+
+    if (retry) {
+      debug('retry task after lock release delay', config.worker.errorRetryDelay)
+      await journals.log(app, resource, { type: 'error-retry', data: errorMessage }, type)
+      // do not change the resource so that the task can be attempted again
+      // we use the lock system to postpone the retry
+      lockReleaseDelay = config.worker.errorRetryDelay
+    } else {
+      debug('do NOT retry the task, mark the resource status as error')
+      await journals.log(app, resource, { type: 'error', data: errorMessage }, type)
+      await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { [resource.draftReason ? 'draft.status' : 'status']: 'error' } })
+      resource.status = 'error'
+    }
+    hookRejection = { resource, message: errorMessage }
   } finally {
-    await locks.release(db, `${type}:${resource.id}`)
+    await locks.release(db, `${type}:${resource.id}`, lockReleaseDelay)
     if (hookRejection) {
       if (hooks[taskKey]) hooks[taskKey].reject(hookRejection)
       if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject(hookRejection)

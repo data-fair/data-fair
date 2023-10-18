@@ -25,3 +25,21 @@ module.exports.log = async function (app, resource, event, type = 'dataset', noS
     console.warn('Failure when writing event to journal')
   }
 }
+
+module.exports.hasErrorRetry = async function (db, resource, type = 'dataset') {
+  const journal = await db.collection('journals')
+    .findOne(
+      { id: resource.id, type, 'owner.type': resource.owner.type, 'owner.id': resource.owner.id },
+      { projection: { events: 1 } }
+    )
+
+  if (!journal || !journal.events) return false
+
+  // check that we have error-retry message and that no task was succesfully finished since then
+  let hasErrorRetry = false
+  for (const event of journal.events) {
+    if (event.type.endsWith('-end')) hasErrorRetry = false
+    if (event.type === 'error-retry') hasErrorRetry = true
+  }
+  return hasErrorRetry
+}

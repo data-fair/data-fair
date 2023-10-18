@@ -90,7 +90,7 @@ export default {
         })
         return {
           ...dataset,
-          link: (this.urlTemplate || `${this.env.publicUrl}/dataset/{id}`).replace('{id}', dataset.id),
+          link: (this.urlTemplate || `${this.env.publicUrl}/dataset/{id}`).replace('{id}', dataset.id).replace('{slug}', dataset.slug),
           storageParts: storageParts.filter(sp => !!sp.size)
         }
       })

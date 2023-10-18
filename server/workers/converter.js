@@ -90,7 +90,7 @@ exports.process = async function (app, dataset) {
       }
     } else {
       if (await fs.pathExists(datasetUtils.attachmentsDir(dataset))) {
-        throw new Error('Vous avez chargé un fichier zip comme fichier de données principal, mais il y a également des pièces jointes chargées.')
+        throw createError(400, '[noretry] Vous avez chargé un fichier zip comme fichier de données principal, mais il y a également des pièces jointes chargées.')
       }
       await fs.move(tmpDir, datasetUtils.attachmentsDir(dataset))
       const csvFilePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
@@ -132,7 +132,7 @@ exports.process = async function (app, dataset) {
   if (calendarTypes.has(dataset.originalFile.mimetype)) {
     // TODO : store these file size limits in config file ?
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
-      throw createError(400, `Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
+      throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
     const { eventsStream, infos } = await icalendar.parse(originalFilePath)
     const filePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
@@ -151,7 +151,7 @@ exports.process = async function (app, dataset) {
     dataset.analysis = { escapeKeyAlgorithm: 'legacy' }
   } else if (tabularTypes.has(dataset.originalFile.mimetype)) {
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
-      throw createError(400, `Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
+      throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
     const data = await xlsx.getCSV(originalFilePath)
     const filePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
@@ -164,10 +164,10 @@ exports.process = async function (app, dataset) {
     }
   } else if (isShapefile || geographicalTypes.has(dataset.originalFile.mimetype)) {
     if (config.ogr2ogr.skip) {
-      throw createError(400, 'Les fichiers de type shapefile ne sont pas supportés sur ce service.')
+      throw createError(400, '[noretry] Les fichiers de type shapefile ne sont pas supportés sur ce service.')
     }
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
-      throw createError(400, `Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
+      throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
     const ogrOptions = ['-lco', 'RFC7946=YES', '-t_srs', 'EPSG:4326']
     if (dataset.originalFile.mimetype === 'application/gpx+xml') {

@@ -13,7 +13,7 @@ describe('Calculated fields', () => {
     assert.ok(dataset.schema.find(f => f.key === '_i' && f['x-calculated'] === true))
     assert.ok(dataset.schema.find(f => f.key === '_rand' && f['x-calculated'] === true))
 
-    const res = await ax.get('/api/v1/datasets/dataset1/lines', { params: { select: '_id,_i,_rand,id' } })
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: '_id,_i,_rand,id' } })
     assert.equal(res.data.total, 2)
     assert.equal(res.data.results[0]._i, 1)
     assert.equal(res.data.results[1]._i, 2)

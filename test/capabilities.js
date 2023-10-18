@@ -7,7 +7,7 @@ const testUtils = require('./resources/test-utils')
 describe('Properties capabilities', () => {
   it('Disable case-sensitive sort', async () => {
     const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/rest-insensitive', {
       isRest: true,
       title: 'rest-insensitive',
       schema: [{ key: 'str1', type: 'string' }]
@@ -31,7 +31,7 @@ describe('Properties capabilities', () => {
 
   it('Disable values (agg and sort)', async () => {
     const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/rest-values', {
       isRest: true,
       title: 'rest-values',
       schema: [{ key: 'str1', type: 'string', 'x-capabilities': { insensitive: false } }]
@@ -88,7 +88,7 @@ describe('Properties capabilities', () => {
 
   it('Enable text agg', async () => {
     const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/rest-textagg', {
       isRest: true,
       title: 'rest-textagg',
       schema: [{ key: 'str1', type: 'string' }]
@@ -117,7 +117,7 @@ describe('Properties capabilities', () => {
 
   it('Disable keyword indexing', async () => {
     const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/rest-index', {
       isRest: true,
       title: 'rest-index',
       schema: [{ key: 'str1', type: 'string', 'x-refersTo': 'http://www.datatourisme.fr/ontology/core/1.0/#siret' }]
@@ -158,7 +158,7 @@ describe('Properties capabilities', () => {
 
   it('Disable text indexing', async () => {
     const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/rest-text', {
       isRest: true,
       title: 'rest-text',
       schema: [{ key: 'str1', type: 'string' }]
@@ -189,7 +189,7 @@ describe('Properties capabilities', () => {
 
   it('Disable geoshape indexing', async () => {
     const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/rest-geoshape', {
       isRest: true,
       title: 'rest-geoshape',
       schema: [{ key: 'geom', type: 'string', 'x-refersTo': 'https://purl.org/geojson/vocab#geometry' }]

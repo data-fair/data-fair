@@ -11,6 +11,7 @@ exports.process = async function (app, dataset) {
   const md5File = require('md5-file')
   const CronJob = require('cron').CronJob
   const contentDisposition = require('content-disposition')
+  const createError = require('http-errors')
   const axios = require('../utils/axios')
   const datasetFileSample = require('../utils/dataset-file-sample')
   const pump = require('../utils/pipe')
@@ -33,14 +34,14 @@ exports.process = async function (app, dataset) {
       .findOne(
         { id: dataset.remoteFile.catalog, 'owner.type': dataset.owner.type, 'owner.id': dataset.owner.id },
         { projection: { _id: 0 } })
-    if (!catalog) throw new Error('Le fichier distant référence un catalogue inexistant. Il a probablement été supprimé.')
+    if (!catalog) throw createError(400, '[noretry] Le fichier distant référence un catalogue inexistant. Il a probablement été supprimé.')
     catalogHttpParams = await catalogs.httpParams(catalog, dataset.remoteFile.url)
   }
 
   const size = dataset.remoteFile.size || 0
   const remaining = await limits.remaining(db, dataset.owner)
-  if (remaining.storage !== -1 && remaining.storage < size) throw new Error('Vous avez atteint la limite de votre espace de stockage.')
-  if (remaining.indexed !== -1 && remaining.indexed < size) throw new Error('Vous avez atteint la limite de votre espace de données indexées.')
+  if (remaining.storage !== -1 && remaining.storage < size) throw createError(429, '[noretry] Vous avez atteint la limite de votre espace de stockage.')
+  if (remaining.indexed !== -1 && remaining.indexed < size) throw createError(429, '[noretry] Vous avez atteint la limite de votre espace de données indexées.')
 
   // creating empty file before streaming seems to fix some weird bugs with NFS
   await fs.ensureFile(tmpFile.path)

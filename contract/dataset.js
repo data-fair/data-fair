@@ -119,7 +119,11 @@ module.exports = {
   properties: {
     id: {
       type: 'string',
-      description: 'Identifier of the dataset'
+      description: 'Globally unique identifier of the dataset'
+    },
+    slug: {
+      type: 'string',
+      description: 'Identifier of the dataset, usually a slug for URL readability (unique inside the tenant)'
     },
     href: {
       type: 'string',

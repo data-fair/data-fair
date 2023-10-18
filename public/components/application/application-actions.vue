@@ -254,7 +254,7 @@ export default {
         const site = this.publicationSites.find(site => dps === `${site.type}:${site.id}`)
         if (!(site && site.applicationUrlTemplate)) return null
         return {
-          url: site.applicationUrlTemplate.replace('{id}', this.application.id),
+          url: site.applicationUrlTemplate.replace('{id}', this.application.id).replace('{slug}', this.application.slug),
           title: site.title || (site.url && site.url.replace('http://', '').replace('https://', '')) || site.id
         }
       }).filter(ps => !!ps)

@@ -15,25 +15,26 @@ const workers = require('../server/workers')
 describe('REST datasets', () => {
   it('Create empty REST datasets', async () => {
     const ax = global.ax.dmeadus
+
     let res = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
     assert.equal(res.status, 201)
-    assert.equal(res.data.id, 'a-rest-dataset')
+    assert.equal(res.data.slug, 'a-rest-dataset')
     await workers.hook('finalizer/' + res.data.id)
 
     res = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
     assert.equal(res.status, 201)
-    assert.equal(res.data.id, 'a-rest-dataset-2')
+    assert.equal(res.data.slug, 'a-rest-dataset-2')
     await workers.hook('finalizer/' + res.data.id)
 
     res = await ax.put('/api/v1/datasets/restdataset3', { isRest: true, title: 'a rest dataset' })
     assert.equal(res.status, 201)
-    assert.equal(res.data.id, 'restdataset3')
+    assert.equal(res.data.slug, 'a-rest-dataset-3')
     await workers.hook('finalizer/' + res.data.id)
   })
 
   it('Perform CRUD operations on REST datasets', async () => {
     const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/rest1', {
       isRest: true,
       title: 'rest1',
       schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }]
@@ -69,7 +70,7 @@ describe('REST datasets', () => {
 
   it('Reject properly json missing content-type', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/restjson', {
       isRest: true,
       title: 'restjson',
       schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }]
@@ -225,7 +226,7 @@ describe('REST datasets', () => {
 
   it('Send attachment with multipart request', async function () {
     const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/rest5', {
       isRest: true,
       title: 'rest5',
       schema: [
@@ -259,7 +260,7 @@ describe('REST datasets', () => {
 
   it('Send attachments with bulk request', async () => {
     const ax = await global.ax.ngernier4
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/rest6', {
       isRest: true,
       title: 'rest6',
       schema: [
@@ -292,7 +293,7 @@ describe('REST datasets', () => {
 
   it('Synchronize all lines with the content of the attachments directory', async () => {
     const ax = await global.ax.ngernier4
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/restsync', {
       isRest: true,
       title: 'restsync',
       schema: [
@@ -350,7 +351,7 @@ describe('REST datasets', () => {
 
   it('Send bulk requests in ndjson file', async () => {
     const ax = await global.ax.ngernier4
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/restndjson', {
       isRest: true,
       title: 'restndjson',
       schema: [
@@ -389,7 +390,7 @@ describe('REST datasets', () => {
 
   it('Send bulk requests in ndjson file and receive errors', async () => {
     const ax = await global.ax.ngernier4
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/restndjson', {
       isRest: true,
       title: 'restndjson',
       schema: [
@@ -414,7 +415,7 @@ describe('REST datasets', () => {
   it('The size of the mongodb collection is part of storage consumption', async () => {
     // Load a few lines
     const ax = await global.ax.builder('ccherryholme1@icio.us:passwd')
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/rest7', {
       isRest: true,
       title: 'rest7',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
@@ -440,7 +441,7 @@ describe('REST datasets', () => {
 
   it('Use the history mode', async () => {
     const ax = await global.ax.hlalonde3
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/resthist', {
       isRest: true,
       title: 'resthist',
       rest: { history: true },
@@ -496,7 +497,7 @@ describe('REST datasets', () => {
 
   it('Store history with at least primary key info', async () => {
     const ax = await global.ax.hlalonde3
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/resthistprimary', {
       isRest: true,
       title: 'resthistprimary',
       rest: { history: true },
@@ -522,7 +523,7 @@ describe('REST datasets', () => {
   it('Force _updatedAt value to fill existing history', async () => {
     const ax = await global.ax.superadminPersonal
     const axAdmin = await global.ax.superadmin
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/resthistfill', {
       isRest: true,
       title: 'resthistfill',
       rest: { history: true },
@@ -563,7 +564,7 @@ describe('REST datasets', () => {
   it('Define a TTL on revisions in history', async () => {
     const ax = await global.ax.hlalonde3
 
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/resthistttl', {
       isRest: true,
       title: 'resthistttl',
       rest: { history: true, historyTTL: { active: true, delay: { value: 2, unit: 'days' } } },
@@ -599,7 +600,7 @@ describe('REST datasets', () => {
 
   it('Toggle the history mode', async () => {
     const ax = await global.ax.hlalonde3
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/resthisttoggle', {
       isRest: true,
       title: 'resthisttoggle',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
@@ -626,7 +627,7 @@ describe('REST datasets', () => {
 
   it('Apply a TTL on some date-field', async () => {
     const ax = await global.ax.hlalonde3
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/restttl', {
       isRest: true,
       title: 'restttl',
       rest: {
@@ -696,7 +697,7 @@ describe('REST datasets', () => {
 
   it('Applying the exact same data twice in history mode should not duplicate revisions', async () => {
     const ax = await global.ax.hlalonde3
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/resthistidem', {
       isRest: true,
       title: 'resthistidem',
       rest: { history: true },
@@ -741,7 +742,7 @@ describe('REST datasets', () => {
 
   it('Delete all lines from a rest dataset', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/restdel', {
       isRest: true,
       title: 'restdel',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
@@ -765,7 +766,7 @@ describe('REST datasets', () => {
 
   it('Send bulk actions as a CSV', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
       title: 'restcsv',
       schema: [
@@ -818,7 +819,7 @@ line4;test1;test1;oui,2015-03-18T00:58:59`, { headers: { 'content-type': 'text/c
 
   it('Validate bulk actions sent as csv', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
       title: 'restcsv',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'boolean' }]
@@ -836,7 +837,7 @@ line4;test1;test1;oui,2015-03-18T00:58:59`, { headers: { 'content-type': 'text/c
 
   it('Accept date detected as ISO by JS but not by elasticsearch in bulk CSV', async function () {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
       title: 'restcsv',
       schema: [{ key: 'attr1', type: 'string', format: 'date-time' }]
@@ -852,7 +853,7 @@ line4;test1;test1;oui,2015-03-18T00:58:59`, { headers: { 'content-type': 'text/c
 
   it('Send bulk actions as a gzipped CSV', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/restgzcsv', {
       isRest: true,
       title: 'restgzcsv',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
@@ -872,7 +873,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   it('Send bulk as a .csv.gz file', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/restcsvgz', {
       isRest: true,
       title: 'restcsvgz',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
@@ -896,7 +897,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   it('Send bulk as a .zip file', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/restcsvzip', {
       isRest: true,
       title: 'restcsvzip',
       schema: [{ key: 'id', type: 'string' }, { key: 'adr', type: 'string' }, { key: 'some date', type: 'string' }, { key: 'loc', type: 'string' }]
@@ -917,7 +918,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   it('Use the primary key defined by the user', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/restkey', {
       isRest: true,
       title: 'restkey',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'string' }],
@@ -980,7 +981,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
 
   it('Removing a property triggers mongo unset and reindexing', async () => {
     const ax = global.ax.dmeadus
-    let res = await ax.post('/api/v1/datasets', {
+    let res = await ax.post('/api/v1/datasets/restunset', {
       isRest: true,
       title: 'restunset',
       schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }]

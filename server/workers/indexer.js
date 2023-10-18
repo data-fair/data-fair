@@ -5,13 +5,10 @@ const journals = require('../utils/journals')
 exports.eventsPrefix = 'index'
 
 exports.process = async function (app, dataset) {
-  if (process.env.NODE_ENV === 'test' && dataset.id === 'trigger-test-error') {
-    throw new Error('This is a test error')
-  }
-
-  const pump = require('../utils/pipe')
   const fs = require('fs-extra')
+  const createError = require('http-errors')
   const { Writable } = require('stream')
+  const pump = require('../utils/pipe')
   const es = require('../utils/es')
   const datasetUtils = require('../utils/dataset')
   const restDatasetsUtils = require('../utils/rest-datasets')
@@ -19,6 +16,13 @@ exports.process = async function (app, dataset) {
 
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
   const debugHeap = require('../utils/heap').debug(`worker:indexer:${dataset.id}`)
+
+  if (process.env.NODE_ENV === 'test' && dataset.slug === 'trigger-test-error') {
+    throw new Error('This is a test error')
+  }
+  if (process.env.NODE_ENV === 'test' && dataset.slug === 'trigger-test-error-400') {
+    throw createError(400, '[noretry] This is a test 400 error')
+  }
 
   if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape indexation.')
 
