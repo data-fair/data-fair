@@ -435,7 +435,7 @@ exports.createLine = async (req, res, next) => {
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(201).send(cleanLine(line))
-  datasetUtils.updateStorage(req.app, req.dataset)
+  datasetUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after createLine', err))
 }
 
 exports.deleteLine = async (req, res, next) => {
@@ -445,7 +445,7 @@ exports.deleteLine = async (req, res, next) => {
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   // TODO: delete the attachment if it is the primary key ?
   res.status(204).send()
-  datasetUtils.updateStorage(req.app, req.dataset)
+  datasetUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
 }
 
 exports.updateLine = async (req, res, next) => {
@@ -455,7 +455,7 @@ exports.updateLine = async (req, res, next) => {
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
-  datasetUtils.updateStorage(req.app, req.dataset)
+  datasetUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
 }
 
 exports.patchLine = async (req, res, next) => {
@@ -465,7 +465,7 @@ exports.patchLine = async (req, res, next) => {
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
-  datasetUtils.updateStorage(req.app, req.dataset)
+  datasetUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
 }
 
 exports.deleteAllLines = async (req, res, next) => {
@@ -476,7 +476,7 @@ exports.deleteAllLines = async (req, res, next) => {
   await esUtils.switchAlias(esClient, req.dataset, indexName)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(204).send()
-  datasetUtils.updateStorage(req.app, req.dataset)
+  datasetUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
 }
 
 exports.bulkLines = async (req, res, next) => {
@@ -557,7 +557,7 @@ exports.bulkLines = async (req, res, next) => {
   }
   res.write(JSON.stringify(summary, null, 2))
   res.end()
-  datasetUtils.updateStorage(req.app, req.dataset)
+  datasetUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
 
   for (const key in req.files) {
     if (key === 'attachments') continue

@@ -38,6 +38,7 @@ exports.init = async (db) => {
   const promises = [
     // datasets indexes
     exports.ensureIndex(db, 'datasets', { id: 1 }, { unique: true }),
+    exports.ensureIndex(db, 'datasets', { _uniqueRefs: 1, 'owner.type': 1, 'owner.id': 1 }, { unique: true, name: 'unique-refs' }), // used to prevent conflicts accross ids and slugs
     // used to fetch list sorted by creation
     exports.ensureIndex(db, 'datasets', { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, { name: 'main-keys' }),
     // full text search
@@ -64,6 +65,7 @@ exports.init = async (db) => {
 
     // applications indexes
     exports.ensureIndex(db, 'applications', { id: 1 }, { unique: true }),
+    exports.ensureIndex(db, 'datasets', { _uniqueRefs: 1, 'owner.type': 1, 'owner.id': 1 }, { unique: true, name: 'unique-refs' }), // used to prevent conflicts accross ids and slugs
     // used to fetch list sorted by creation
     exports.ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, { name: 'main-keys' }),
     // full text search
@@ -82,6 +84,7 @@ exports.init = async (db) => {
     // settings
     exports.ensureIndex(db, 'settings', { type: 1, id: 1, department: 1 }, { unique: true, name: 'main-keys' }),
     exports.ensureIndex(db, 'settings', { 'apiKeys.key': 1 }, { sparse: true }),
+    exports.ensureIndex(db, 'settings', { 'publicationSites.url': 1 }, { sparse: true }),
 
     // shared extensions cache with a 10 days expiration delay
     exports.ensureIndex(db, 'extensions-cache', { extensionKey: 1, input: 1 }, { name: 'main-keys' }),

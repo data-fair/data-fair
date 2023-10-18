@@ -10,11 +10,12 @@ const dir = require('node-dir')
 const { Writable } = require('stream')
 const csvStringify = require('csv-stringify')
 const flatten = require('flat')
-const pump = require('../utils/pipe')
 const tmp = require('tmp-promise')
 const mimeTypeStream = require('mime-type-stream')
 const createError = require('http-errors')
 const { createGunzip } = require('zlib')
+const slug = require('slugify')
+const pump = require('./pipe')
 const fieldsSniffer = require('./fields-sniffer')
 const geoUtils = require('./geo')
 const restDatasetsUtils = require('./rest-datasets')
@@ -28,7 +29,14 @@ const webhooks = require('./webhooks')
 const journals = require('./journals')
 const settingsUtils = require('./settings')
 const i18nUtils = require('./i18n')
+const nanoid = require('./nanoid')
+const visibilityUtils = require('./visibility')
 const { basicTypes, csvTypes } = require('../workers/converter')
+const { prepareThumbnailUrl } = require('./thumbnails')
+const { prepareMarkdownContent } = require('./markdown')
+const permissions = require('./permissions')
+const findUtils = require('./find')
+
 const equal = require('deep-equal')
 const dataDir = path.resolve(config.dataDir)
 
@@ -707,46 +715,72 @@ exports.refinalize = async (db, dataset) => {
 }
 
 // Generate ids and try insertion until there is no conflict on id
-exports.insertWithBaseId = async (db, dataset, baseId, res) => {
-  dataset.id = baseId
+exports.insertWithId = async (db, dataset, res) => {
+  const baseSlug = slug(dataset.title, { lower: true, strict: true })
+  dataset.id = dataset.id ?? nanoid()
+  dataset.slug = baseSlug
+  exports.setUniqueRefs(dataset)
   let insertOk = false
   let i = 1
   while (!insertOk) {
-    try {
-      const lockKey = `dataset:${dataset.id}`
-      const ack = await locks.acquire(db, lockKey, 'insertWithBaseid')
-      if (ack) {
-        res.on('close', () => locks.release(db, lockKey).catch(err => {
-          prometheus.internalError.inc({ errorCode: 'dataset-lock' })
-          console.error('(dataset-lock) failure to release dataset lock', err)
-        }))
+    const idLockKey = `dataset:${dataset.id}`
+    const idAck = locks.acquire(db, idLockKey, 'insertWithBaseid')
+    if (!idAck) throw new Error(`dataset id ${dataset.id} is locked`)
+    if (res) {
+      res.on('close', () => {
+        locks.release(db, idLockKey).catch(err => {
+          prometheus.internalError.inc({ errorCode: 'dataset-lock-id' })
+          console.error('(dataset-lock-id) failure to release dataset lock on id', err)
+        })
+      })
+    }
+
+    const slugLockKey = `dataset:slug:${dataset.owner.type}:${dataset.owner.id}:${dataset.slug}`
+    const slugAck = locks.acquire(db, slugLockKey, 'insertWithBaseid')
+    if (slugAck) {
+      try {
         await db.collection('datasets').insertOne(dataset)
         insertOk = true
+        if (res) {
+          res.on('close', () => {
+            locks.release(db, slugLockKey).catch(err => {
+              prometheus.internalError.inc({ errorCode: 'dataset-lock-slug' })
+              console.error('(dataset-lock-slug) failure to release dataset lock on slug', err)
+            })
+          })
+        } else {
+          await locks.release(db, idLockKey)
+          await locks.release(db, slugLockKey)
+        }
         break
+      } catch (err) {
+        await locks.release(db, slugLockKey)
+        if (err.code !== 11000) throw err
+        if (err.keyValue.id) throw err
       }
-    } catch (err) {
-      if (err.code !== 11000) throw err
     }
     i += 1
-    dataset.id = `${baseId}-${i}`
+    dataset.slug = `${baseSlug}-${i}`
+    exports.setUniqueRefs(dataset)
   }
 }
 
 exports.previews = (dataset, publicUrl = config.publicUrl) => {
   if (!dataset.schema) return []
-  const previews = [{ id: 'table', title: 'Tableau', href: `${publicUrl}/embed/dataset/${dataset.id}/table` }]
+  const datasetRef = publicUrl === config.publicUrl ? dataset.id : dataset.slug
+  const previews = [{ id: 'table', title: 'Tableau', href: `${publicUrl}/embed/dataset/${datasetRef}/table` }]
   if (!!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate') && !!dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate' && !!dataset.schema.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))) {
-    previews.push({ id: 'calendar', title: 'Calendrier', href: `${publicUrl}/embed/dataset/${dataset.id}/calendar` })
+    previews.push({ id: 'calendar', title: 'Calendrier', href: `${publicUrl}/embed/dataset/${datasetRef}/calendar` })
   }
   if (dataset.bbox) {
-    previews.push({ id: 'map', title: 'Carte', href: `${publicUrl}/embed/dataset/${dataset.id}/map` })
+    previews.push({ id: 'map', title: 'Carte', href: `${publicUrl}/embed/dataset/${datasetRef}/map` })
   }
   const documentProperty = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (documentProperty && (!documentProperty['x-capabilities'] || documentProperty['x-capabilities'].indexAttachment !== false)) {
-    previews.push({ id: 'search-files', title: 'Fichiers', href: `${publicUrl}/embed/dataset/${dataset.id}/search-files` })
+    previews.push({ id: 'search-files', title: 'Fichiers', href: `${publicUrl}/embed/dataset/${datasetRef}/search-files` })
   }
   if (dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')) {
-    previews.push({ id: 'thumbnails', title: 'Vignettes', href: `${publicUrl}/embed/dataset/${dataset.id}/thumbnails` })
+    previews.push({ id: 'thumbnails', title: 'Vignettes', href: `${publicUrl}/embed/dataset/${datasetRef}/thumbnails` })
   }
   return previews
 }
@@ -896,7 +930,7 @@ exports.syncApplications = async (db, datasetId) => {
       'owner.id': dataset.owner.id,
       'configuration.datasets.href': config.publicUrl + '/api/v1/datasets/' + datasetId
     })
-    .project({ id: 1, updatedAt: 1, publicationSites: 1, _id: 0 })
+    .project({ id: 1, slug: 1, updatedAt: 1, publicationSites: 1, _id: 0 })
     .toArray()
   const applicationsExtras = ((dataset.extras && dataset.extras.applications) || [])
     .map(appExtra => applications.find(app => app.id === appExtra.id))
@@ -1029,4 +1063,65 @@ exports.validateCompatibleDraft = async (app, dataset) => {
     }
   }
   return null
+}
+
+exports.clean = (publicUrl, publicationSite, dataset, query = {}, draft = false) => {
+  const select = query.select ? query.select.split(',') : []
+  if (query.raw !== 'true') {
+    const thumbnail = query.thumbnail || '300x200'
+    if (draft) exports.mergeDraft(dataset)
+    if (!select.includes('-public')) dataset.public = permissions.isPublic('datasets', dataset)
+    if (!select.includes('-visibility')) dataset.visibility = visibilityUtils.visibility(dataset)
+    if (!query.select || select.includes('description')) {
+      dataset.description = dataset.description || ''
+      dataset.description = prepareMarkdownContent(dataset.description, query.html === 'true', query.truncate, 'dataset:' + dataset.id, dataset.updatedAt)
+    }
+
+    if (dataset.schema) {
+      for (const field of dataset.schema) {
+        field.description = field.description || ''
+        field.description = prepareMarkdownContent(field.description, query.html === 'true', null, `dataset:${dataset.id}:${field.key}`, dataset.updatedAt)
+      }
+    }
+    if (dataset.attachments) {
+      for (let i = 0; i < dataset.attachments.length; i++) {
+        const attachment = dataset.attachments[i]
+        attachment.description = attachment.description || ''
+        attachment.description = prepareMarkdownContent(attachment.description, query.html === 'true', null, `dataset:${dataset.id}:attachment-${i}`, dataset.updatedAt)
+        if (attachment.type === 'file') {
+          attachment.url = `${publicUrl}/api/v1/datasets/${dataset.id}/metadata-attachments/${attachment.name}`
+        }
+      }
+    }
+
+    if (dataset.schema && !select.includes('-previews')) {
+      dataset.previews = exports.previews(dataset, publicUrl)
+    }
+    if (!select.includes('-links')) findUtils.setResourceLinks(dataset, 'dataset', publicUrl, publicationSite && publicationSite.datasetUrlTemplate)
+    if (dataset.image && dataset.public && !select.includes('-thumbnail')) {
+      dataset.thumbnail = prepareThumbnailUrl(publicUrl + '/api/v1/datasets/' + encodeURIComponent(dataset.id) + '/thumbnail', thumbnail)
+    }
+    if (dataset.image && publicUrl !== config.publicUrl) {
+      dataset.image = dataset.image.replace(config.publicUrl, publicUrl)
+    }
+  }
+  delete dataset.permissions
+  delete dataset._id
+  if (select.includes('-userPermissions')) delete dataset.userPermissions
+  if (select.includes('-owner')) delete dataset.owner
+
+  if (publicationSite && dataset.extras?.applications?.length) {
+    const siteKey = publicationSite.type + ':' + publicationSite.id
+    dataset.extras.applications = dataset.extras.applications
+      .filter(appRef => appRef.publicationSites && appRef.publicationSites.find(p => p === siteKey))
+    for (const appRef of dataset.extras.applications) delete appRef.publicationSites
+  }
+  return dataset
+}
+
+exports.setUniqueRefs = (resource) => {
+  if (resource.slug) {
+    resource._uniqueRefs = [resource.id]
+    if (resource.slug !== resource.id) resource._uniqueRefs.push(resource.slug)
+  }
 }

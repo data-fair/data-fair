@@ -129,7 +129,7 @@ const readCatalog = asyncWrap(async (req, res, next) => {
 router.use('/:catalogId/permissions', readCatalog, permissions.router('catalogs', 'catalog'))
 
 // retrieve a catalog by its id
-router.get('/:catalogId', readCatalog, permissions.middleware('readDescription', 'read'), cacheHeaders.resourceBased, (req, res, next) => {
+router.get('/:catalogId', readCatalog, permissions.middleware('readDescription', 'read'), cacheHeaders.resourceBased(), (req, res, next) => {
   req.catalog.userPermissions = permissions.list('catalogs', req.catalog, req.user)
   res.status(200).send(clean(req.catalog, req.query.html === 'true'))
 })
@@ -203,7 +203,7 @@ router.delete('/:catalogId', readCatalog, permissions.middleware('delete', 'admi
   res.sendStatus(204)
 }))
 
-router.get('/:catalogId/api-docs.json', readCatalog, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased, (req, res) => {
+router.get('/:catalogId/api-docs.json', readCatalog, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), (req, res) => {
   res.send(catalogAPIDocs(req.catalog))
 })
 

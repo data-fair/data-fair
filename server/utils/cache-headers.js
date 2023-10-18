@@ -21,8 +21,8 @@ exports.setNoCache = (req, res) => {
 // only send data if the dataset was finalized since then
 // prevent running expensive queries while always presenting fresh data
 // also set last finalized date into last-modified header
-exports.resourceBased = (req, res, next) => {
-  const dateStr = req.resource.finalizedAt || req.resource.updatedAt
+exports.resourceBased = (dateKey = 'updatedAt') => (req, res, next) => {
+  const dateStr = req.resource[dateKey] || req.resource.updatedAt
   const date = new Date(dateStr)
   const dateUTC = date.toUTCString()
   const cacheVisibility = req.publicOperation ? 'public' : 'private'

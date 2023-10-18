@@ -24,7 +24,11 @@ module.exports = {
   properties: {
     id: {
       type: 'string',
-      description: 'Identifier of the application'
+      description: 'Globally unique identifier of the application'
+    },
+    slug: {
+      type: 'string',
+      description: 'Identifier of the application, usually a slug for URL readability (unique inside the tenant)'
     },
     href: {
       type: 'string',

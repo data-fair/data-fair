@@ -132,10 +132,10 @@ describe('workers', () => {
       testUtils.sendDataset('geo/stations.zip', ax),
       testUtils.sendDataset('geo/stations.zip', ax)
     ])
-    assert.ok(datasets.find(d => d.id === 'stations'))
-    assert.ok(datasets.find(d => d.id === 'stations2'))
-    assert.ok(datasets.find(d => d.id === 'stations3'))
-    assert.ok(datasets.find(d => d.id === 'stations4'))
+    assert.ok(datasets.find(d => d.slug === 'stations'))
+    assert.ok(datasets.find(d => d.slug === 'stations-2'))
+    assert.ok(datasets.find(d => d.slug === 'stations-3'))
+    assert.ok(datasets.find(d => d.slug === 'stations-4'))
     // config.worker.spawnTask = false
   })
 
