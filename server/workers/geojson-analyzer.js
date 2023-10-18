@@ -51,8 +51,9 @@ class AnalyzerWritable extends Writable {
 exports.process = async function (app, dataset) {
   const fs = require('fs')
   const JSONStream = require('JSONStream')
-  const pump = require('../utils/pipe')
+  const createError = require('http-errors')
   const iconv = require('iconv-lite')
+  const pump = require('../utils/pipe')
   const datasetUtils = require('../utils/dataset')
 
   const db = app.get('db')
@@ -82,7 +83,7 @@ exports.process = async function (app, dataset) {
   if (crs && crs.properties && crs.properties.name) {
     const code = crs.properties.name.replace('urn:ogc:def:crs:', '').replace('::', ':')
     const projection = projections.find(p => p.code === code)
-    if (!projection) throw new Error(`La projection ${code} dans la propriété "crs" du geojson n'est pas supportée.`)
+    if (!projection) throw createError(400, `[noretry] La projection ${code} dans la propriété "crs" du geojson n'est pas supportée.`)
     dataset.projection = { code: projection.code, title: projection.title }
     dataset.file.schema[0]['x-refersTo'] = 'http://data.ign.fr/def/geometrie#Geometry'
   }

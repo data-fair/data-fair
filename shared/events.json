@@ -8,6 +8,14 @@
       },
       "color": "error"
     },
+    "error-retry": {
+      "icon": "mdi-reload-alert",
+      "text": {
+        "fr": "le service a rencontré une erreur pendant le traitement du jeu de données, une nouvelle tentative aura lieu après un court délai",
+        "en": "the service failed while processing the dataset"
+      },
+      "color": "warning"
+    },
     "dataset-created": {
       "icon": "mdi-plus-circle-outline",
       "text": {
