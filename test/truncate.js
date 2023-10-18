@@ -5,7 +5,7 @@ const workers = require('../server/workers')
 describe('truncate', () => {
   it('Truncate results for faster previews', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/truncate1', {
       isRest: true,
       title: 'truncate1',
       schema: [{ key: 'str', type: 'string' }]

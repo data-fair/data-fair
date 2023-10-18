@@ -28,7 +28,7 @@ services:
       interval: 2s
       retries: 50
 
-  mongo:
+  mongodb:
     profiles:
       - dev
       - test
@@ -45,7 +45,7 @@ services:
     image: ghcr.io/data-fair/simple-directory:master
     network_mode: host
     depends_on:
-      - mongo
+      - mongodb
     environment:
       - DEBUG=webhooks,auth
       - ADMINS=["alban.mouton@koumoul.com", "superadmin@test.com"]
@@ -99,7 +99,7 @@ services:
     image: ghcr.io/data-fair/notify:master
     network_mode: host
     depends_on:
-      - mongo
+      - mongodb
     environment:
       - PORT=8088
       - PUBLIC_URL=http://localhost:5600/notify
@@ -120,6 +120,34 @@ services:
     ports:
       - 3310:3310
 
+  redis:
+    image: redis
+    profiles:
+      - udata
+    volumes:
+      - redis-data:/data
+    ports:
+    - 6379:6379
+
+  udata:
+    # init udata after running:
+    # docker exec -it data-fair-udata-1 bash
+    # udata init
+    # udata user create
+    # udata user set-admin alban83@gmail.com
+    image: udata/udata
+    network_mode: host
+    profiles:
+      - udata
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - udata-fs:/udata/fs
+      - ./test/resources/udata.cfg:/udata/udata.cfg
+
 volumes:
   elasticsearch-data:
   mongo-data:
+  udata-fs:
+  redis-data:

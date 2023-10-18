@@ -11,7 +11,7 @@ describe('REST datasets with owner specific lines', () => {
       schema: [{ key: 'col1', type: 'string' }]
     })
     assert.equal(res.status, 201)
-    assert.equal(res.data.id, 'a-rest-dataset')
+    assert.equal(res.data.slug, 'a-rest-dataset')
     const dataset = await workers.hook('finalizer/' + res.data.id)
     assert.ok(dataset.schema.find(p => p.key === '_owner'))
     assert.ok(dataset.schema.find(p => p.key === '_ownerName'))

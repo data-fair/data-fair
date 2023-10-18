@@ -136,6 +136,7 @@ afterEach('scratch data', async function () {
       fs.emptyDir('./data/test')
     ])
     await fs.ensureDir('./data/test/captures')
+    app.memoizedGetPublicationSiteSettings.clear()
   } catch (err) {
     console.warn('error while scratching data before test', err)
   }

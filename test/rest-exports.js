@@ -4,7 +4,7 @@ const workers = require('../server/workers')
 describe('REST datasets exported', () => {
   it('Configure automatic export of CSV file from REST dataset', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', {
+    await ax.post('/api/v1/datasets/rest', {
       isRest: true,
       title: 'rest',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]

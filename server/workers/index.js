@@ -103,7 +103,7 @@ exports.start = async (app) => {
 
     if (stopped) continue
     promisePool[freeSlot] = iter(app, resource, type)
-    promisePool[freeSlot]._resource = `${type}/${resource.id}/${resource.status}`
+    promisePool[freeSlot]._resource = `${type}/${resource.id} (${resource.slug}) - ${resource.status}`
     promisePool[freeSlot].catch(err => {
       prometheus.internalError.inc({ errorCode: 'worker-iter' })
       console.error('(worker-iter) error in worker iter', err)

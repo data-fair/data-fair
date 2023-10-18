@@ -17,11 +17,11 @@ exports.trigger = async (db, type, resource, event, sender) => {
   delete sender.role
   const notif = {
     sender,
-    topic: { key: `data-fair:${eventKey}:${resource.id}` },
+    topic: { key: `data-fair:${eventKey}:${resource.slug || resource.id}` },
     title: eventType ? eventType.title : '',
     // body: event.data || '',
     body: event.body || resource.title || resource.id,
-    urlParams: { id: resource.id },
+    urlParams: { id: resource.id, slug: resource.slug },
     visibility: permissions.isPublic(type + 's', resource) ? 'public' : 'private'
   }
   if (event.data) notif.body += ' - ' + event.data

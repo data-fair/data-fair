@@ -35,8 +35,8 @@
                   v-if="site.applicationUrlTemplate && application.publicationSites.includes(`${site.type}:${site.id}`)"
                   class="mb-2"
                 >
-                  <a :href="site.applicationUrlTemplate.replace('{id}', application.id)">
-                    {{ site.applicationUrlTemplate.replace('{id}', application.id) }}
+                  <a :href="site.applicationUrlTemplate.replace('{id}', application.id).replace('{slug}', application.slug)">
+                    {{ site.applicationUrlTemplate.replace('{id}', application.id).replace('{slug}', application.slug) }}
                   </a>
                 </v-list-item-subtitle>
                 <v-list-item-subtitle>

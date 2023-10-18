@@ -1,6 +1,7 @@
 const assert = require('assert').strict
 
 const workers = require('../server/workers')
+const app = require('../server/app')
 
 describe('publication sites', () => {
   it('should fail to publish dataset on unknown site', async () => {
@@ -41,6 +42,45 @@ describe('publication sites', () => {
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] })
   })
 
+  it('should publish dataset on a org site and access it from re-exposition of data-fair', async () => {
+    const ax = global.ax.dmeadusOrg
+
+    const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
+    await workers.hook(`finalizer/${dataset.id}`)
+
+    const otherDataset = (await global.ax.dmeadus.post('/api/v1/datasets', { isRest: true, title: 'other dataset', schema: [] })).data
+    await workers.hook(`finalizer/${otherDataset.id}`)
+
+    await assert.rejects(ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${dataset.id}`), (err) => {
+      assert.equal(err.status, 404)
+      assert.equal(err.data, 'publication site unknown')
+      return true
+    })
+
+    const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://localhost:5601' }
+    await ax.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
+    app.memoizedGetPublicationSiteSettings.clear()
+
+    await assert.rejects(ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${otherDataset.id}`), (err) => {
+      assert.equal(err.status, 404)
+      assert.equal(err.data, 'Dataset not found')
+      return true
+    })
+    assert.ok(await ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${dataset.id}`))
+
+    // dataset is listed (but not otherDatasets) as it belongs to the publication site's owner
+    let publishedDatasets = (await ax.get('http://localhost:5601/data-fair/api/v1/datasets')).data
+    assert.equal(publishedDatasets.results.length, 1)
+    publishedDatasets = (await ax.get('http://localhost:5601/data-fair/api/v1/datasets?publicationSites=data-fair-portals:portal1')).data
+    assert.equal(publishedDatasets.results.length, 0)
+
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] })
+
+    assert.ok(await ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${dataset.id}`))
+    publishedDatasets = (await ax.get('http://localhost:5601/data-fair/api/v1/datasets')).data
+    assert.equal(publishedDatasets.results.length, 1)
+  })
+
   it('should publish application on a org site', async () => {
     const ax = global.ax.dmeadusOrg
 
@@ -72,7 +112,7 @@ describe('publication sites', () => {
     const dataset = (await global.ax.hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
     await workers.hook(`finalizer/${dataset.id}`)
     await global.ax.hlalonde3Org.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
-    assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:published-dataset')
+    assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:' + dataset.slug)
     assert.equal(notif.body, 'published dataset - Huntington Lalonde')
     assert.equal(notif.sender.type, 'organization')
     assert.equal(notif.sender.id, 'KWqAGZ4mG')
@@ -116,7 +156,7 @@ describe('publication sites', () => {
     const dataset = (await global.ax.hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
     await workers.hook(`finalizer/${dataset.id}`)
     await global.ax.ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
-    assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:published-dataset')
+    assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:' + dataset.slug)
     assert.equal(notif.body, 'published dataset - Duky De Cruce')
     assert.equal(notif.sender.type, 'organization')
     assert.equal(notif.sender.id, 'KWqAGZ4mG')

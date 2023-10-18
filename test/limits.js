@@ -19,7 +19,8 @@ describe('limits', () => {
     form.append('file', Buffer.alloc(150000), 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    await assert.rejects(workers.hook('finalizer/dataset'))
+    const dataset = res.data
+    await assert.rejects(workers.hook('finalizer/' + res.data.id))
 
     // Send dataset applying default limits
     form = new FormData()
@@ -33,16 +34,18 @@ describe('limits', () => {
     form = new FormData()
     form.append('file', Buffer.alloc(100000), 'dataset.csv')
     res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    workers.hook('finalizer/' + res.data.id)
+    workers.hook('finalizer/' + dataset.id)
     assert.equal(res.status, 201)
     form = new FormData()
     form.append('file', Buffer.alloc(100000), 'dataset.csv')
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 429)
 
     // test nb datasets size limit
+    let lastDataset
     for (let i = 0; i < 8; i++) {
       const dataset = (await ax.post('/api/v1/datasets/rest-dataset-' + (i + 1), { title: 'rest-dataset', isRest: true })).data
       await workers.hook('finalizer/' + dataset.id)
+      lastDataset = dataset
     }
     await assert.rejects(ax.post('/api/v1/datasets', { title: 'rest-dataset', isRest: true }), err => err.status === 429)
 
@@ -54,7 +57,7 @@ describe('limits', () => {
     assert.equal(res.data.nb_datasets.consumption, 10)
 
     // delete a dataset and check nb_datasets
-    await ax.delete('/api/v1/datasets/rest-dataset-8')
+    await ax.delete('/api/v1/datasets/' + lastDataset.id)
     res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.equal(res.data.nb_datasets.consumption, 9)
   })

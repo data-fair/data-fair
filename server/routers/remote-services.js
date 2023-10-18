@@ -313,7 +313,7 @@ const readService = asyncWrap(async (req, res, next) => {
 })
 
 // retrieve a remoteService by its id as anybody
-router.get('/:remoteServiceId', readService, cacheHeaders.resourceBased, (req, res, next) => {
+router.get('/:remoteServiceId', readService, cacheHeaders.resourceBased(), (req, res, next) => {
   // TODO: allow based on privateAccess ?
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode) return res.status(403).send()
@@ -520,6 +520,6 @@ router.use('/:remoteServiceId/proxy*', rateLimiting.middleware('remoteService'),
 }))
 
 // Anybody can read the API doc
-router.get('/:remoteServiceId/api-docs.json', readService, cacheHeaders.resourceBased, (req, res) => {
+router.get('/:remoteServiceId/api-docs.json', readService, cacheHeaders.resourceBased(), (req, res) => {
   res.send(remoteServiceAPIDocs(req.remoteService))
 })

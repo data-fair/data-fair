@@ -121,7 +121,7 @@ describe('datasets', () => {
     assert.equal(res.data.previews.length, 1)
     assert.equal(res.data.previews[0].id, 'table')
     assert.equal(res.data.previews[0].title, 'Tableau')
-    assert.ok(res.data.previews[0].href.endsWith('/embed/dataset/dataset1/table'))
+    assert.ok(res.data.previews[0].href.endsWith(`/embed/dataset/${res.data.id}/table`))
     assert.equal(res.data.updatedAt, res.data.createdAt)
     assert.equal(res.data.updatedAt, res.data.dataUpdatedAt)
     await workers.hook('finalizer/' + res.data.id)
@@ -134,7 +134,7 @@ describe('datasets', () => {
     form.append('title', 'My title\'')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    assert.equal(res.data.id, 'my-title')
+    assert.equal(res.data.slug, 'my-title')
     assert.equal(res.data.title, 'My title\'')
     await workers.hook('finalizer/' + res.data.id)
   })
@@ -150,14 +150,14 @@ describe('datasets', () => {
     await workers.hook('finalizer/' + res.data.id)
   })
 
-  it('Uploading same file twice should increment id', async () => {
+  it('Uploading same file twice should increment slug', async () => {
     const ax = global.ax.dmeadusOrg
     for (const i of [1, 2, 3]) {
       const form = new FormData()
       form.append('file', datasetFd, 'my-dataset.csv')
       const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
       assert.equal(res.status, 201)
-      assert.equal(res.data.id, 'my-dataset' + (i === 1 ? '' : i))
+      assert.equal(res.data.slug, 'my-dataset' + (i === 1 ? '' : '-' + i))
       await workers.hook('finalizer/' + res.data.id)
     }
   })
@@ -287,7 +287,7 @@ describe('datasets', () => {
     const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset-name.csv')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets/dataset-name', form, { headers: testUtils.formHeaders(form) })
     await workers.hook('finalizer/dataset-name')
     res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.equal(res.data.store_bytes.consumption, 167)
@@ -367,7 +367,7 @@ describe('datasets', () => {
     const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset-name.csv')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets/dataset-name', form, { headers: testUtils.formHeaders(form) })
     await workers.hook('finalizer/dataset-name')
     res = await ax.get('/api/v1/datasets/dataset-name')
     const schema = res.data.schema.filter(f => !f['x-calculated'])
