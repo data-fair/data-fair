@@ -17,10 +17,10 @@ exports.process = async function (app, dataset) {
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
   const debugHeap = require('../utils/heap').debug(`worker:indexer:${dataset.id}`)
 
-  if (process.env.NODE_ENV === 'test' && dataset.id === 'trigger-test-error') {
+  if (process.env.NODE_ENV === 'test' && dataset.slug === 'trigger-test-error') {
     throw new Error('This is a test error')
   }
-  if (process.env.NODE_ENV === 'test' && dataset.id === 'trigger-test-error-400') {
+  if (process.env.NODE_ENV === 'test' && dataset.slug === 'trigger-test-error-400') {
     throw createError(400, '[noretry] This is a test 400 error')
   }
 
