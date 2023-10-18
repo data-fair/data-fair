@@ -307,6 +307,14 @@
         :rules="required.includes('title') ? [(val) => !!val]: []"
         @change="patch({title: dataset.title})"
       />
+      <markdown-editor
+        v-model="dataset.description"
+        :disabled="!can('writeDescription')"
+        :label="$t('description')"
+        :required="required.includes('description')"
+        :rules="required.includes('description') ? [(val) => !!val]: []"
+        @change="patch({description: dataset.description})"
+      />
       <v-text-field
         id="slug-input"
         v-model="dataset.slug"
@@ -365,14 +373,6 @@
           </v-card-actions>
         </v-card>
       </v-menu>
-      <markdown-editor
-        v-model="dataset.description"
-        :disabled="!can('writeDescription')"
-        :label="$t('description')"
-        :required="required.includes('description')"
-        :rules="required.includes('description') ? [(val) => !!val]: []"
-        @change="patch({description: dataset.description})"
-      />
     </v-col>
   </v-row>
 </template>
@@ -395,9 +395,9 @@ fr:
   temporal: Couverture temporelle
   keywords: Mots clés
   frequency: Fréquence des mises à jour
-  slug: Slug
-  slugWarning: Le slug est un identifiant unique lisible qui est utilisé dans les URLs de pages de portails, d'APIs de données, etc. Attention, si vous le modifiez vous pouvez casser des liens et des applications existantes.
-  newSlug: Nouvelle valeur du slug
+  slug: Identifiant de publication
+  slugWarning: Cet identifiant unique et lisible est utilisé dans les URLs de pages de portails, d'APIs de données, etc. Attention, si vous le modifiez vous pouvez casser des liens et des applications existantes.
+  newSlug: Nouvel identifiant de publication
   title: Titre
   description: Description
   frequencyItems:
@@ -441,9 +441,9 @@ en:
   temporal: Temporal coverage
   keywords: Keywords
   frequency: Update frequency
-  slug: Slug
-  slugWarning: "The slug is a readable unique id that is used in portal pages URLs, data APIs, etc. Warning : if you modify it you can break existing links and applications."
-  newSlug: New slug value
+  slug: Publication identifier
+  slugWarning: "This unique and readable id is used in portal pages URLs, data APIs, etc. Warning : if you modify it you can break existing links and applications."
+  newSlug: New publication identifier
   title: Title
   description: Description
   frequencyItems:
