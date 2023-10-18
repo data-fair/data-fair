@@ -936,7 +936,12 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
         break
       } catch (err) {
         if (err.code !== 11000) throw err
-        if (err.keyValue.id) return next()
+        if (err.keyValue) {
+          if (err.keyValue.id) return next()
+        } else {
+          // on older mongo err.keyValue is not provided and we need to use the message
+          if (err.message.includes('id_1')) return next()
+        }
       }
     }
     req.isNewDataset = true
