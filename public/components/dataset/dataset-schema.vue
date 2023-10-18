@@ -9,7 +9,7 @@
           {{ notCalculatedProperties.length.toLocaleString() }} {{ $t('column') }}{{ notCalculatedProperties.length > 1 ? 's' : '' }}
         </h3>
         <v-btn
-          v-if="can('writeDescriptionBreaking')"
+          v-if="can('writeDescriptionBreaking') && (dataset.isRest || user.adminMode)"
           color="primary"
           fab
           x-small
@@ -184,6 +184,7 @@ export default {
     primaryKey: null
   }),
   computed: {
+    ...mapState('session', ['user']),
     ...mapState(['vocabulary', 'propertyTypes']),
     ...mapState('dataset', ['dataset', 'validatedDataset']),
     ...mapGetters('dataset', ['can']),
