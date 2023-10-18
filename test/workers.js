@@ -180,7 +180,7 @@ describe('workers', () => {
     assert.equal(journal[0].data, 'This is a test error')
 
     await new Promise(resolve => setTimeout(resolve, 100))
-    await global.db.collection('locks').deleteOne({ _id: 'dataset:trigger-test-error' })
+    await global.db.collection('locks').deleteOne({ _id: 'dataset:' + dataset.id })
 
     await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
     journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
