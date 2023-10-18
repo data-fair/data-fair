@@ -48,6 +48,7 @@ exports.init = async (db) => {
     exports.ensureIndex(db, 'datasets', { publicationSites: 1 }),
     exports.ensureIndex(db, 'datasets', { 'rest.ttl.checkedAt': 1 }),
     exports.ensureIndex(db, 'datasets', { 'rest.ttl.active': 1 }),
+    exports.ensureIndex(db, 'datasets', { 'remoteFile.autoUpdate.nextUpdate': 1 }),
 
     // remote-services indexes
     exports.ensureIndex(db, 'remote-services', { id: 1 }, { unique: true }),

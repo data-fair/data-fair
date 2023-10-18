@@ -11,7 +11,8 @@ exports.optionalCapabilities = [
 ]
 
 exports.init = async (catalogUrl) => {
-  await axios.get(url.resolve(catalogUrl, 'api/v1/status'))
+  const status = (await axios.get(url.resolve(catalogUrl, 'api/v1/status'))).data
+  if (status.status !== 'ok') throw new Error('mydatacatalogue status is not ok')
   return { url: catalogUrl, title: 'Mydatacatalogue SaaS' }
 }
 

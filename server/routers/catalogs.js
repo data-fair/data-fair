@@ -1,6 +1,8 @@
+const config = require('config')
 const express = require('express')
 const moment = require('moment')
 const slug = require('slugify')
+const CronJob = require('cron').CronJob
 const { prepareMarkdownContent } = require('../utils/markdown')
 const catalogAPIDocs = require('../../contract/catalog-api-docs')
 const mongoEscape = require('mongo-escape')
@@ -25,6 +27,7 @@ function clean (catalog, html = false) {
   if (catalog.apiKey) catalog.apiKey = '**********'
   if (catalog.description) catalog.description = prepareMarkdownContent(catalog.description, html, null, `catalog:${catalog.id}`, catalog.updatedAt)
   findUtils.setResourceLinks(catalog, 'catalog')
+  catalog.autoUpdate = catalog.autoUpdate || { active: false }
   return catalog
 }
 
@@ -166,6 +169,19 @@ router.patch('/:catalogId', readCatalog, permissions.middleware('writeDescriptio
   validatePatch(patch)
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: req.user.id, name: req.user.name }
+
+  // manage automatic export of REST datasets into files
+  if (patch.autoUpdate) {
+    if (patch.autoUpdate.active) {
+      const job = new CronJob(config.catalogAutoUpdates.cron, () => {})
+      patch.autoUpdate.nextUpdate = job.nextDates().toISOString()
+    } else {
+      delete patch.autoUpdate.nextUpdate
+    }
+    if (req.catalog.autoUpdate && req.catalog.autoUpdate.lastUpdate) {
+      patch.autoUpdate.lastUpdate = req.catalog.autoUpdate.lastUpdate
+    }
+  }
 
   const patchedCatalog = (await req.app.get('db').collection('catalogs')
     .findOneAndUpdate({ id: req.params.catalogId }, { $set: mongoEscape.escape(patch, true) }, { returnDocument: 'after' })).value
