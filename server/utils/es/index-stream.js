@@ -213,8 +213,8 @@ const applyCalculations = async (dataset, parsedExpressions, item) => {
   for (const field of dataset.schema) {
     if (field['x-constExpr']) {
       const { parser } = require('../expr-eval')
-      parsedExpressions[field.key] = parsedExpressions[field.key] ?? parser.parse(field['x-constExpr'])
       try {
+        parsedExpressions[field.key] = parsedExpressions[field.key] ?? parser.parse(field['x-constExpr'])
         item[field.key] = parsedExpressions[field.key].evaluate({ data: item })
       } catch (err) {
         throw new Error(`[noretry] échec de l'évaluation de l'expression "${field['x-constExpr']}" : ${err.message}`)
