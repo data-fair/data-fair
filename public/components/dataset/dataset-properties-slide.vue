@@ -232,11 +232,12 @@
             </template>-->
           </v-text-field>
           <v-text-field
-            v-if="!currentPropRef.fileProp"
+            v-if="!currentPropRef.fileProp && (currentPropRef.prop['x-constExpr'] || user.adminMode)"
             v-model="currentPropRef.prop['x-constExpr']"
-            :disabled="!editable || noBreakingChanges || !currentPropRef.editable"
+            :disabled="!editable || noBreakingChanges || !currentPropRef.editable || !user.adminMode"
             :label="$t('constExpr')"
             hide-details
+            color="admin"
             :required="!!dataset.file"
             :error="dataset.file && !currentPropRef.prop['x-constExpr']"
           >
