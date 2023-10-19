@@ -351,7 +351,7 @@
               style="max-width: 500px;"
               :color="$store.getters.readablePrimaryColor"
             >
-              {{ file && file.name }}
+              {{ file && file.name | truncate(30) }}
               <template v-if="uploadProgress.total">
                 {{ Math.floor(uploadProgress.percent) }}% {{ $t('of') }} {{ uploadProgress.total | bytes($i18n.locale) }}
               </template>
