@@ -727,20 +727,22 @@ const setFileInfo = async (req, file, attachmentsFile, dataset, draft, res) => {
     const baseSlug = slug(baseTitle, { lower: true, strict: true })
     dataset.slug = baseSlug
     dataset.title = baseTitle
-    let i = 1; let dbIdExists = false; let dbSlugExists = false; let fileExists = false; let acquiredLock = false
+    let i = 1; let dbIdExists = false; let dbUniqueRefExists = false; let fileExists = false; let acquiredLock = false
     do {
       if (i > 1) {
         dataset.slug = `${baseSlug}-${i}`
         dataset.title = baseTitle + ' ' + i
       }
-      dbIdExists = await db.collection('datasets').countDocuments({ id: dataset.id })
-      dbSlugExists = await db.collection('datasets').countDocuments({ slug: dataset.slug, 'owner.type': dataset.owner.type, 'owner.id': dataset.owner.id })
+      dbIdExists = await db.collection('datasets').countDocuments({ id: { $in: [dataset.id, dataset.slug] } })
+      dbUniqueRefExists = await db.collection('datasets').countDocuments({
+        _uniqueRefs: { $in: [dataset.slug, dataset.id] }, 'owner.type': dataset.owner.type, 'owner.id': dataset.owner.id
+      })
       fileExists = await fs.exists(datasetUtils.dir(dataset))
-      if (!dbIdExists && !dbSlugExists && !fileExists) {
+      if (!dbIdExists && !dbUniqueRefExists && !fileExists) {
         acquiredLock = await lockNewDataset(req, res, dataset)
       }
       i += 1
-    } while (dbIdExists || dbSlugExists || fileExists || !acquiredLock)
+    } while (dbIdExists || dbUniqueRefExists || fileExists || !acquiredLock)
 
     if (draft) {
       dataset.status = 'draft'
