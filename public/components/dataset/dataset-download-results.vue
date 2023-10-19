@@ -212,7 +212,7 @@ export default {
         const { WritableStream } = await import('web-streams-polyfill/ponyfill')
         streamSaver.WritableStream = WritableStream
         streamSaver.mitm = `${this.env.publicUrl}/streamsaver/mitm.html`
-        this.fileStream = streamSaver.createWriteStream(`${this.dataset.id}.csv`)
+        this.fileStream = streamSaver.createWriteStream(`${this.dataset.slug}.csv`)
         this.writer = this.fileStream.getWriter()
         const nbChunks = Math.ceil(this.total / 10000)
         let nextUrl = this.downloadUrls.csv
@@ -261,7 +261,7 @@ export default {
       }
     },
     clickDownload (format) {
-      parent.postMessage({ trackEvent: { action: 'download_filtered', label: `${this.dataset.id} - ${format}` } })
+      parent.postMessage({ trackEvent: { action: 'download_filtered', label: `${this.dataset.slug} - ${format}` } })
       this.menu = false
     }
   }
