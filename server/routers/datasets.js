@@ -1318,14 +1318,14 @@ const readLines = asyncWrap(async (req, res) => {
     const geojson = geo.result2geojson(esResponse)
     // geojson format benefits from bbox info
     geojson.bbox = (await esUtils.bboxAgg(req.app.get('es'), req.dataset, { ...req.query })).bbox
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.geojson"`)
+    res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.geojson"`)
     res.throttleEnd()
     return res.status(200).send(geojson)
   }
 
   if (req.query.format === 'wkt') {
     const wkt = geo.result2wkt(esResponse)
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.wkt"`)
+    res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.wkt"`)
     res.throttleEnd()
     return res.status(200).send(wkt)
   }
@@ -1349,7 +1349,7 @@ const readLines = asyncWrap(async (req, res) => {
   })
 
   if (req.query.format === 'csv') {
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.csv"`)
+    res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.csv"`)
     // add BOM for excel, cf https://stackoverflow.com/a/17879474
     res.write('\ufeff')
     const csvStreams = outputs.result2csv(req.dataset, req.query)
@@ -1366,13 +1366,13 @@ const readLines = asyncWrap(async (req, res) => {
   if (req.query.format === 'xlsx') {
     res.throttleEnd()
     const sheet = outputs.results2sheet(req, result.results)
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.xlsx"`)
+    res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.xlsx"`)
     return res.status(200).send(sheet)
   }
   if (req.query.format === 'ods') {
     res.throttleEnd()
     const sheet = outputs.results2sheet(req, result.results, 'ods')
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.ods"`)
+    res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.ods"`)
     return res.status(200).send(sheet)
   }
 
