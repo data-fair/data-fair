@@ -660,18 +660,22 @@ exports.extendedSchema = async (db, dataset, fixConcept = true) => {
     // schema.push({ 'x-calculated': true, key: '_updatedBy', type: 'object', title: 'Utilisateur de mise à jour', description: 'Utilisateur qui a effectué la e dernière mise à jour de la ligne du jeu de données' })
   }
   if (dataset.isRest && dataset.rest?.lineOwnership) {
-    schema.push({
-      key: '_owner',
-      type: 'string',
-      title: 'Propriétaire de la ligne',
-      'x-capabilities': { insensitive: false, text: false, textStandard: false }
-    })
-    schema.push({
-      key: '_ownerName',
-      type: 'string',
-      title: 'Nom du propriétaire de la ligne',
-      'x-capabilities': { text: false }
-    })
+    if (!schema.find(p => p.key === '_owner')) {
+      schema.push({
+        key: '_owner',
+        type: 'string',
+        title: 'Propriétaire de la ligne',
+        'x-capabilities': { insensitive: false, text: false, textStandard: false }
+      })
+    }
+    if (!schema.find(p => p.key === '_ownerName')) {
+      schema.push({
+        key: '_ownerName',
+        type: 'string',
+        title: 'Nom du propriétaire de la ligne',
+        'x-capabilities': { text: false }
+      })
+    }
   }
   schema.push({ 'x-calculated': true, key: '_id', type: 'string', format: 'uri-reference', title: 'Identifiant', description: 'Identifiant unique parmi toutes les lignes du jeu de données' })
   schema.push({ 'x-calculated': true, key: '_i', type: 'integer', title: 'Numéro de ligne', description: 'Indice de la ligne dans le fichier d\'origine' })

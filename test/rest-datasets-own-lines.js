@@ -12,16 +12,18 @@ describe('REST datasets with owner specific lines', () => {
     })
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, 'a-rest-dataset')
-    const dataset = await workers.hook('finalizer/' + res.data.id)
+    let dataset = await workers.hook('finalizer/' + res.data.id)
     assert.ok(dataset.schema.find(p => p.key === '_owner'))
     assert.ok(dataset.schema.find(p => p.key === '_ownerName'))
+    assert.equal(dataset.schema.length, 7)
 
     res = await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 0)
 
     // owner's admin can use routes to manage his own lines
     await global.ax.dmeadusOrg.post(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`, { _id: 'dmeadusline', col1: 'value 1' })
-    await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalizer/' + dataset.id)
+    assert.equal(dataset.schema.length, 7)
     res = await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/own/user:dmeadus0/lines`)
     assert.equal(res.data.total, 1)
     res = await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines`)
