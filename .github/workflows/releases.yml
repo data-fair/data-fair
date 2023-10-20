@@ -1,0 +1,23 @@
+# for releases we run in sequence the qualityt checks and the build
+
+name: Build release
+
+on:
+  push:
+    tags: [ 'v*.*.*' ]
+
+jobs:
+  quality:
+    uses: ./.github/workflows/reuse-quality.yml
+
+  build:
+    needs: quality
+    uses: ./.github/workflows/reuse-build.yml
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:    
+    - name: Send Keel notification to koumoul.com
+      run: |
+        curl -s --fail --show-error -X POST https://keel.admin.koumoul.com/v1/webhooks/native -u ${{ secrets.KEEL_PROD_USER }}:${{ secrets.KEEL_PROD_PASSWORD }} -d '{"name": "ghcr.io/${{ github.repository }}", "tag": "${{ github.ref_name }}"}'

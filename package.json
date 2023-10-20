@@ -25,7 +25,11 @@
     "build-doc": "nuxt generate --config-file ${PWD}/doc/nuxt.config.js",
     "serve-doc": "TARGET=http://localhost:3144/doc-dist/ npm run build-doc && http-server .",
     "postinstall": "patch-package",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "quality": "npm run test-deps && npm run lint && npm run test && npm audit --omit=dev --audit-level=critical"
+  },
+  "engines": {
+    "node": "v20"
   },
   "author": "",
   "license": "AGPL-3.0-only",

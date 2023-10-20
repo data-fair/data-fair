@@ -1,6 +1,6 @@
 ######################################################
 # Stage: install prepair that depends on gdal and cgal
-FROM node:16.20.1-alpine3.18 AS geodeps
+FROM node:20.8.1-alpine3.18 AS geodeps
 
 RUN apk add --no-cache curl cmake make g++ linux-headers
 RUN apk add --no-cache gdal gdal-dev
@@ -30,7 +30,7 @@ RUN prepair --help
 ############################################################################################################
 # Stage: prepare a base image with all native utils pre-installed, used both by builder and definitive image
 
-FROM node:16.20.1-alpine3.18 AS nativedeps
+FROM node:20.8.1-alpine3.18 AS nativedeps
 
 # these are also geodeps, but we need to install them here as they pull many dependencies
 RUN apk add --no-cache gmp gdal-tools
@@ -70,18 +70,6 @@ ADD contract contract
 # Build UI
 ENV NODE_ENV production
 RUN npm run build
-
-# Adding server files
-ADD server server
-ADD scripts scripts
-ADD upgrade upgrade
-
-# Check quality
-# ADD .gitignore .gitignore
-# ADD test test
-# RUN npm run lint
-# ENV DEBUG worker*
-# RUN npm run test
 
 # Cleanup /webapp/node_modules so it can be copied by next stage
 RUN npm prune --production && \
