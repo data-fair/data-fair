@@ -123,6 +123,10 @@ describe('workers', () => {
   })
 
   it('Process multiple datasets in parallel children processes', async function () {
+    if (config.ogr2ogr.skip) {
+      return console.log('Skip ogr2ogr test in this environment')
+    }
+
     this.timeout = 60000
     // config.worker.spawnTask = true
     const ax = global.ax.dmeadus
