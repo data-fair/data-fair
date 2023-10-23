@@ -281,23 +281,9 @@ const lockNewDataset = async (req, res, dataset) => {
 // also checks that the dataset is in a state compatible with some action
 // supports waiting a little bit to be a little permissive with the user
 const readDataset = (_acceptedStatuses, preserveDraft, ignoreDraft) => asyncWrap(async (req, res, next) => {
-  const db = req.app.get('db')
   const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body) : _acceptedStatuses
-  let filter = { id: req.params.datasetId }
-  if (req.publicationSite) {
-    filter = { _uniqueRefs: req.params.datasetId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }
-  } else if (req.mainPublicationSite) {
-    filter = {
-      $or: [
-        { id: req.params.datasetId },
-        { _uniqueRefs: req.params.datasetId, 'owner.type': req.mainPublicationSite.owner.type, 'owner.id': req.mainPublicationSite.owner.id }
-      ]
-    }
-  }
-
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
-    const datasets = await db.collection('datasets').find(filter).project({ _id: 0 }).toArray()
-    req.dataset = req.resource = datasets.find(d => d.id === req.params.datasetId) || datasets.find(d => d.slug === req.params.datasetId)
+    await findUtils.getByUniqueRef(req, 'dataset')
     if (!req.dataset) return res.status(404).send('Dataset not found')
     // in draft mode the draft is automatically merged and all following operations use dataset.draftReason to adapt
     if (preserveDraft) {

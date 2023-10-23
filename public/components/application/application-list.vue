@@ -124,7 +124,7 @@ fr:
   dataset: Jeu de données
   service: Service
   baseApp: Application
-  applicationsCount: "aucune visulisation | 1 application | {count} applications"
+  applicationsCount: "aucune visualisation | 1 application | {count} applications"
   sortCreatedAtAsc: création plus ancienne
   sortCreatedAtDesc: création plus récente
   sortUpdatedAtAsc: màj plus ancienne

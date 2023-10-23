@@ -32,7 +32,7 @@
 		"requiresJoin": " et "
 	},
 	"breakingChanges": {
-		"missing": "la colonne \"{{key}}\" n'existe plus n'existe plus dans le jeu de données \"{{title}}\"",
+		"missing": "la colonne \"{{key}}\" n'existe plus dans le jeu de données \"{{title}}\"",
 		"type": "la colonne \"{{key}}\" a changé de type dans le jeu de données \"{{title}}\""
 	},
 	"sheets": {

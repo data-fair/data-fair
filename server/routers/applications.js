@@ -207,20 +207,7 @@ router.post('', asyncWrap(async (req, res) => {
 
 // Shared middleware
 const readApplication = asyncWrap(async (req, res, next) => {
-  let filter = { id: req.params.applicationId }
-  if (req.publicationSite) {
-    filter = { _uniqueRefs: req.params.applicationId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }
-  } else if (req.mainPublicationSite) {
-    filter = {
-      $or: [
-        { id: req.params.applicationId },
-        { _uniqueRefs: req.params.applicationId, 'owner.type': req.mainPublicationSite.owner.type, 'owner.id': req.mainPublicationSite.owner.id }
-      ]
-    }
-  }
-
-  const applications = await req.app.get('db').collection('applications').find(filter).project({ _id: 0 }).toArray()
-  req.application = req.resource = applications.find(a => a.id === req.params.applicationId) || applications.find(a => a.slug === req.params.applicationId)
+  await findUtils.getByUniqueRef(req, 'application')
   if (!req.application) return res.status(404).send(req.__('errors.missingApp'))
   req.resourceType = 'applications'
   next()

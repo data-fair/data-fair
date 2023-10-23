@@ -395,3 +395,20 @@ exports.sumsQuery = (req, sumFields = {}, filterFields, extraFilters) => {
   pipeline.push({ $project: { _id: 0 } })
   return pipeline
 }
+
+exports.getByUniqueRef = async (req, resourceType) => {
+  const paramId = req.params[resourceType + 'Id']
+  let filter = { id: paramId }
+  if (req.publicationSite) {
+    filter = { _uniqueRefs: paramId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }
+  } else if (req.mainPublicationSite) {
+    filter = {
+      $or: [
+        { id: paramId },
+        { _uniqueRefs: paramId, 'owner.type': req.mainPublicationSite.owner.type, 'owner.id': req.mainPublicationSite.owner.id }
+      ]
+    }
+  }
+  const resources = await req.app.get('db').collection(resourceType + 's').find(filter).project({ _id: 0 }).toArray()
+  req[resourceType] = req.resource = resources.find(d => d.id === paramId) || resources.find(d => d.slug === paramId)
+}

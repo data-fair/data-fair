@@ -26,8 +26,7 @@ const loginHtml = fs.readFileSync(path.join(__dirname, '../resources/login.html'
 const brandEmbed = config.brand.embed && parse5.parseFragment(config.brand.embed)
 
 const setResource = asyncWrap(async (req, res, next) => {
-  req.application = req.resource = await req.app.get('db').collection('applications')
-    .findOne({ id: req.params.applicationId }, { projection: { _id: 0 } })
+  await findUtils.getByUniqueRef(req, 'application')
   if (!req.application) return res.status(404).send(req.__('errors.missingApp'))
   findUtils.setResourceLinks(req.application, 'application', req.publicBaseUrl)
   req.resourceType = 'applications'
@@ -143,7 +142,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
     matchinApplicationKey = applicationKeys && !!applicationKeys.keys.find(k => k.id === req.query.key)
   }
   if (!permissions.can('applications', req.application, 'readConfig', req.user) && !matchinApplicationKey) {
-    return res.redirect(`${req.publicBaseUrl}/app/${req.application.id}/login`)
+    return res.redirect(`${req.publicBaseUrl}/app/${req.params.applicationId}/login`)
   }
 
   delete req.application.permissions
