@@ -14,7 +14,7 @@
           fab
           x-small
           class="mx-2"
-          @click="newPropertyKey = null; newPropertyType = null; addPropertyDialog = true"
+          @click="addPropertyDialog = true"
         >
           <v-icon>mdi-plus</v-icon>
         </v-btn>
@@ -82,53 +82,11 @@
       />
     </v-col>
 
-    <v-dialog
+    <dataset-add-property-dialog
       v-model="addPropertyDialog"
-      max-width="500px"
-    >
-      <v-card outlined>
-        <v-card-title
-          v-t="'addProperty'"
-          primary-title
-        />
-        <v-card-text>
-          <v-form
-            v-if="addPropertyDialog"
-            ref="addPropertyForm"
-            :lazy-validation="true"
-          >
-            <v-text-field
-              v-model="newPropertyKey"
-              :rules="[v => !!v || '', v => !schema.find(f => f.key === v) || '']"
-              name="key"
-              label="Clé"
-            />
-            <v-select
-              v-model="newPropertyType"
-              :items="propertyTypes"
-              :item-text="item => item.title"
-              :item-value="item => `${item.type}${item.format || item['x-display']}`"
-              :rules="[v => !!v || '']"
-              return-object
-              label="Type"
-            />
-          </v-form>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn
-            v-t="'cancel'"
-            text
-            @click="addPropertyDialog = false"
-          />
-          <v-btn
-            v-t="'validate'"
-            color="primary"
-            @click="addProperty"
-          />
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+      :schema="schema"
+      @add="addProperty"
+    />
   </v-row>
 </template>
 
@@ -139,8 +97,6 @@ fr:
   primaryKey: Clé primaire
   primaryKeyMsgData: La clé primaire ne peut pas être modifiée une fois que des données ont été insérées.
   primaryKeyMsgNoData: Optionnel. Utilisez une ou plusieurs colonnes du schéma pour construire une clé primaire qui identifiera de manière unique chaque ligne de la donnée.
-  addProperty: Ajouter une propriété
-  cancel: Annuler
   validate: Valider
   sortProperties: Vous pouvez changer l'ordre des colonnes par glissé-déposé
   column: colonne
@@ -150,8 +106,6 @@ en:
   primaryKey: Clé primaire
   primaryKeyMsgData: The primary key cannot be changed one data has been inserted.
   primaryKeyMsgNoData: Optional. Use one or more columns of the schéma to build a primary key that will identify in a unique manner each line of the data.
-  addProperty: Add a property
-  cancel: Cancel
   validate: Validate
   sortProperties: You can sort the columns by drag and drop
   column: column
@@ -160,16 +114,6 @@ en:
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex'
 
-// WARNING: this code is duplicated in field-sniffer.js
-const escapeKey = (key) => {
-  key = key.replace(/\.|\s|\$|;|,|:|!/g, '_').replace(/"/g, '')
-  // prefixing by _ is reserved to fields calculated by data-fair
-  while (key.startsWith('_')) {
-    key = key.slice(1)
-  }
-  return key
-}
-
 export default {
   data: () => ({
     schema: [],
@@ -177,12 +121,10 @@ export default {
     editField: null,
     originalSchema: null,
     addPropertyDialog: false,
-    newPropertyKey: null,
-    newPropertyType: null,
     primaryKey: null
   }),
   computed: {
-    ...mapState(['vocabulary', 'propertyTypes']),
+    ...mapState(['vocabulary']),
     ...mapState('dataset', ['dataset', 'validatedDataset']),
     ...mapGetters('dataset', ['can']),
     updated () {
@@ -245,7 +187,7 @@ export default {
           prop: p,
           originalProp: this.originalProperties.find(op => op.key === p.key),
           validatedProp,
-          editable: !p['x-extension'] && !p.key.startsWith('_'),
+          editable: !(p['x-extension'] && p['x-extension'] !== p.key) && !p.key.startsWith('_'),
           warning
         }
       }))
@@ -285,11 +227,8 @@ export default {
       // cf https://learn.jquery.com/using-jquery-core/faq/how-do-i-select-an-element-by-an-id-that-has-characters-used-in-css-notation/
       this.$nextTick(() => document.querySelector('#description-' + key.replace(/(:|\.|\[|\]|,|=|@)/g, '\\$1')).focus())
     },
-    addProperty () {
-      if (this.$refs.addPropertyForm.validate()) {
-        this.schema.push({ key: escapeKey(this.newPropertyKey), ...this.newPropertyType, title: '' })
-        this.addPropertyDialog = false
-      }
+    addProperty (property) {
+      this.schema.push(property)
     },
     removeProperty (property) {
       this.schema = this.schema.filter(p => p.key !== property.key)

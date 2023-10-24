@@ -1,63 +1,68 @@
 <template lang="html">
   <v-row>
     <v-col class="my-4">
-      <p
-        v-if="dataset.extensions && !dataset.extensions.length"
-        v-t="'message'"
-      />
       <!-- 450 matches the size of the container in the embed page, to prevent overflowing iframe -->
-      <v-menu
-        v-model="addExtensionDialog"
-        :max-height="450"
+      <v-row>
+        <v-col>
+          <v-menu
+            v-model="addExtensionDialog"
+            :max-height="450"
+          >
+            <template #activator="{ on }">
+              <v-btn
+                v-if="can('writeDescriptionBreaking')"
+                v-t="'addExtension'"
+                color="primary"
+                v-on="on"
+              />
+            </template>
+
+            <v-list>
+              <template v-if="!availableExtensions">
+                <v-skeleton-loader type="list-item-two-line" />
+                <v-skeleton-loader type="list-item-two-line" />
+                <v-skeleton-loader type="list-item-two-line" />
+              </template>
+
+              <template v-else>
+                <v-list-item
+                  v-for="extension in availableExtensions.filter(e => !e.disabled)"
+                  :key="extension.id"
+                  @click="localExtensions.push({
+                    active: true,
+                    type: extension.type,
+                    remoteService: extension.remoteService,
+                    action: extension.action.id,
+                    select: defaultFields[extension.action.id] || []
+                  })"
+                >
+                  <v-list-item-content>
+                    <v-list-item-title>{{ extension.action.summary }}</v-list-item-title>
+                  </v-list-item-content>
+                </v-list-item>
+                <v-list-item
+                  v-for="extension in availableExtensions.filter(e => e.disabled)"
+                  :key="extension.id"
+                  :color="extension.color"
+                  :input-value="!!extension.disabled"
+                >
+                  <v-list-item-content>
+                    <v-list-item-title>{{ extension.action.summary }}</v-list-item-title>
+                    <v-list-item-subtitle>{{ extension.disabled }}</v-list-item-subtitle>
+                  </v-list-item-content>
+                </v-list-item>
+              </template>
+            </v-list>
+          </v-menu>
+        </v-col>
+      </v-row>
+
+      <v-row
+        v-if="localExtensions"
+        class="mt-0"
       >
-        <template #activator="{ on }">
-          <v-btn
-            v-if="can('writeDescriptionBreaking')"
-            v-t="'addExtension'"
-            color="primary"
-            v-on="on"
-          />
-        </template>
-
-        <v-list>
-          <template v-if="!availableExtensions">
-            <v-skeleton-loader type="list-item-two-line" />
-            <v-skeleton-loader type="list-item-two-line" />
-            <v-skeleton-loader type="list-item-two-line" />
-          </template>
-
-          <template v-else>
-            <v-list-item
-              v-for="extension in availableExtensions.filter(e => !e.disabled)"
-              :key="extension.id"
-              @click="localExtensions.push({
-                active: true,
-                remoteService: extension.remoteService,
-                action: extension.action.id,
-                select: defaultFields[extension.action.id] || []
-              })"
-            >
-              <v-list-item-content>
-                <v-list-item-title>{{ extension.action.summary }}</v-list-item-title>
-              </v-list-item-content>
-            </v-list-item>
-            <v-list-item
-              v-for="extension in availableExtensions.filter(e => e.disabled)"
-              :key="extension.id"
-              :color="extension.color"
-              :input-value="!!extension.disabled"
-            >
-              <v-list-item-content>
-                <v-list-item-title>{{ extension.action.summary }}</v-list-item-title>
-                <v-list-item-subtitle>{{ extension.disabled }}</v-list-item-subtitle>
-              </v-list-item-content>
-            </v-list-item>
-          </template>
-        </v-list>
-      </v-menu>
-      <v-row class="mt-0">
         <v-col
-          v-for="(extension, idx) in localExtensions"
+          v-for="(extension, idx) in localExtensions.filter(e => e.type === 'remoteService')"
           :key="extension.remoteService + '--' + extension.action"
           cols="12"
           md="6"
@@ -102,6 +107,77 @@
           </v-card>
         </v-col>
       </v-row>
+
+      <v-row>
+        <v-col>
+          <v-btn
+            v-if="can('writeDescriptionBreaking')"
+            v-t="'addExprEvalExtension'"
+            color="primary"
+            @click="addPropertyDialog = true"
+          />
+
+          <dataset-add-property-dialog
+            v-model="addPropertyDialog"
+            :schema="dataset.schema"
+            @add="property => localExtensions.push({
+              active: true,
+              type: 'exprEval',
+              expr: '',
+              property
+            })"
+          />
+        </v-col>
+      </v-row>
+
+      <v-row
+        v-if="localExtensions"
+        class="mt-0"
+      >
+        <v-col
+          v-for="(extension, idx) in localExtensions.filter(e => e.type === 'exprEval')"
+          :key="idx"
+          cols="12"
+          md="6"
+        >
+          <v-card
+            :loading="!ready"
+            height="100%"
+            :outlined="!extensionHasChanges(extension)"
+          >
+            <v-card-title>
+              {{ extension.property?.['x-originalName'] || $t('newExprEval') }}
+            </v-card-title>
+            <v-card-text style="margin-bottom:40px;">
+              <v-alert
+                type="info"
+                outlined
+                v-html="$t('exprEvalHelp')"
+              />
+              <v-text-field
+                v-model="extension.expr"
+                :disabled="!can('writeDescriptionBreaking')"
+                :label="$t('expr')"
+                hide-details
+              />
+            </v-card-text>
+            <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
+              <dataset-extension-details-dialog
+                :extension="extension"
+                :disabled="extensionHasChanges(extension)"
+              />
+              <confirm-menu
+                v-if="can('writeDescriptionBreaking')"
+                yes-color="warning"
+                :text="$t('confirmDeleteText')"
+                :tooltip="$t('confirmDeleteTooltip')"
+                @confirm="removeExtension(idx)"
+              />
+            </v-card-actions>
+          </v-card>
+        </v-col>
+      </v-row>
+
       <v-row class="px-2">
         <v-spacer />
         <v-btn
@@ -118,8 +194,8 @@
 
 <i18n lang="yaml">
 fr:
-  message: Étendez votre jeu de données avec de nouvelles colonnes issues de sources de données de référence.
-  addExtension: Ajouter une extension
+  addExtension: Ajouter des colonnes de données de référence
+  addExprEvalExtension: Ajouter une colonne calculée
   additionalCols: Colonnes additionnelles
   allColsOut: Toutes les colonnes
   confirmDeleteTooltip: Supprimer l'extension
@@ -128,9 +204,12 @@ fr:
   extensionExists: Cette extension a déjà été configurée
   missingConcepts: "Il faut associer au moins l'un des concepts suivants à vos colonnes : {concepts}"
   missingConcept: "Il faut associer le concept suivant à une de vos colonnes : ${concept}"
+  newExprEval: Nouvelle colonne calculée
+  expr: Expression
+  exprEvalHelp: "Une expression peut être utilisée pour calculer le contenu d'une colonne en fonction des valeurs des autres colonnes. L'expression doit suivre la syntaxe du module <a href=\"https://github.com/silentmatt/expr-eval\">expr-eval</a>.<br>Le contenu de la ligne de donnée courante est passée en paramètre à l'expression sous le nom <code>data</code>.<br>Quelques fonctions ont été ajoutées à la syntaxe expr-eval : <ul><li><code>concatString(arg1, arg2, ...)</code> : retourne une chaîne de caractère résultat de la concaténation de tous les paramètres.</li><li><code>trim(arg1)</code> : enlève les caractères blancs au début et à la fin du paramètre</li><li><code>toUpperCase(arg1)</code> : passe une chaîne de caractère en majuscule</li><li><code>toLowerCase(arg1)</code> : passe une chaîne de caractère en minuscule</li></ul>"
 en:
-  message: Extend your dataset with new columns taken from master-data sources.
-  addExtension: Add an extension
+  addExtension: Add columns from master-data sources
+  addExprEvalExtension: Add a calculated column
   additionalCols: Additional columns
   allColsOut: All the columns
   confirmDeleteTooltip: Delete the extension
@@ -139,6 +218,7 @@ en:
   extensionExists: This extension was already configured
   missingConcepts: "You must tag your columns with at least one of these concepts: {concepts}"
   missingConcept: "You must tag one of your columns with this concept: ${concept}"
+  newExprEval: New calculated column
 </i18n>
 
 <script>
@@ -150,6 +230,7 @@ export default {
     return {
       ready: false,
       addExtensionDialog: false,
+      addPropertyDialog: false,
       newExtension: null,
       localExtensions: null,
       defaultFields: {
@@ -175,7 +256,7 @@ export default {
       this.remoteServices.forEach(service => {
         service.actions.filter(a => a.inputCollection && a.outputCollection).forEach(a => {
           a.output = a.output.filter(f => f.title)
-          const extension = { id: service.id + '--' + a.id, remoteService: service.id, action: a }
+          const extension = { type: 'remoteService', id: service.id + '--' + a.id, remoteService: service.id, action: a }
           if (this.localExtensions.find(e => extension.id === e.remoteService + '--' + e.action)) {
             extension.disabled = this.$t('extensionExists')
           }
@@ -231,7 +312,7 @@ export default {
     this.dataset.extensions = (this.dataset.extensions || []).filter(e => e.active !== false)
     // remove deprecated extensions based on available extensions
     this.dataset.extensions = this.dataset.extensions.filter(e => {
-      return this.remoteServicesMap[e.remoteService] && this.remoteServicesMap[e.remoteService].actions[e.action]
+      return e.type !== 'remoteService' || (this.remoteServicesMap[e.remoteService] && this.remoteServicesMap[e.remoteService].actions[e.action])
     })
     this.localExtensions = JSON.parse(JSON.stringify(this.dataset.extensions))
 
@@ -249,7 +330,12 @@ export default {
   methods: {
     ...mapActions('dataset', ['fetchRemoteServices', 'patchAndCommit']),
     extensionHasChanges (extension) {
-      const savedExtension = this.dataset.extensions.find(e => e.remoteService === extension.remoteService && e.action === extension.action)
+      let savedExtension
+      if (extension.type === 'remoteService') {
+        savedExtension = this.dataset.extensions.find(e => e.remoteService === extension.remoteService && e.action === extension.action)
+      } else {
+        savedExtension = this.dataset.extensions.find(e => e.property?.['x-originalName'] === extension.property?.['x-originalName'])
+      }
       return !savedExtension || JSON.stringify(savedExtension.select) !== JSON.stringify(extension.select)
     },
     clickExtension (extension) {

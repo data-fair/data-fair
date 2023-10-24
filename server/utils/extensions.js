@@ -43,11 +43,15 @@ exports.extend = async (app, dataset, extensions) => {
       detailedExtensions.push({ ...extension, extensionKey, inputMapping, remoteService, action, errorKey, idInput })
     } else if (extension.type === 'exprEval') {
       const { parser } = require('./expr-eval')
-      const parsedExpression = parser.parse(extension.expr)
-      detailedExtensions.push({
-        ...extension,
-        evaluate: (data) => parsedExpression.evaluate({ data })
-      })
+      try {
+        const parsedExpression = parser.parse(extension.expr)
+        detailedExtensions.push({
+          ...extension,
+          evaluate: (data) => parsedExpression.evaluate({ data })
+        })
+      } catch (err) {
+        throw new Error(`[noretry] échec de l'analyse de l'expression "${extension.expr}" : ${err.message}`)
+      }
     }
   }
   if (!detailedExtensions.length) {
@@ -204,10 +208,13 @@ class ExtensionsStream extends Transform {
           }
         }
       } else if (extension.evaluate && extension.property) {
-        console.log('EVAL ?')
         for (const i in this.buffer) {
-          let value = extension.evaluate(this.buffer[i])
-          console.log('VALUE', value)
+          let value
+          try {
+            value = extension.evaluate(this.buffer[i])
+          } catch (err) {
+            throw new Error(`[noretry] échec de l'évaluation de l'expression "${extension.expr}" : ${err.message}`)
+          }
           if (value !== null && value !== undefined) {
             if (extension.property.type === 'boolean') value = !!(value)
             if (extension.property.type === 'string') value = '' + value
@@ -325,12 +332,9 @@ exports.prepareSchema = async (db, schema, extensions) => {
     } else if (extension.property) {
       const existingProperty = schema.find(p => p.key === extension.property.key)
       if (existingProperty && !existingProperty['x-extension']) throw createError(400, `Une extension essaie de créer la colonne "${extension.property.key}" mais cette clé est déjà utilisée.`)
-      extensionsFields.push({
-        ...(existingProperty ?? {}),
-        key: extension.property.key,
-        type: extension.property.type,
-        'x-extension': extension.property.key
-      })
+      const fullProperty = existingProperty ? { ...existingProperty } : { ...extension.property }
+      fullProperty['x-extension'] = extension.property.key
+      extensionsFields.push(fullProperty)
     }
   }
   return schema.filter(field => !field['x-extension']).concat(extensionsFields)
