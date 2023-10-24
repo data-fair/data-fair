@@ -105,7 +105,7 @@ const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, 
 // try to make something both readable and with little conflict risk (but not 0 risk)
 const prepareExtensions = (req, extensions, oldExtensions = []) => {
   for (const e of extensions) {
-    if (!e.shortId && !e.propertyPrefix) {
+    if (e.type === 'remoteService' && !e.shortId && !e.propertyPrefix) {
       const oldExtension = oldExtensions.find(oldE => oldE.remoteService === e.remoteService && oldE.action === e.action)
       if (oldExtension) {
         // do not reprocess already assigned shortIds / propertyPrefixes to prevent compatibility break

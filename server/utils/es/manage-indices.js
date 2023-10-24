@@ -9,7 +9,7 @@ exports.indexDefinition = async (dataset) => {
   for (const jsProp of await datasetUtils.extendedSchema(null, dataset, false)) {
     const esProp = esProperty(jsProp)
     if (esProp) {
-      if (jsProp['x-extension']) {
+      if (jsProp['x-extension'] && dataset.extensions.find(e => e.type === 'remoteService' && jsProp['x-extension'] === e.remoteService + '/' + e.action)) {
         const extKey = jsProp.key.split('.')[0]
         properties[extKey] = properties[extKey] || { dynamic: 'strict', properties: {} }
         properties[extKey].properties[jsProp.key.replace(extKey + '.', '')] = esProp
