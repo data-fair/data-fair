@@ -7,6 +7,7 @@
       id="permissions-deps"
       :text="$t('readDepPermissionsDoc')"
       href="https://data-fair.github.io/3/user-guide-backoffice/department"
+      persistent
     />
 
     <v-progress-linear

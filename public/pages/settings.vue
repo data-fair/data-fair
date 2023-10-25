@@ -10,6 +10,7 @@
                 id="settings-doc"
                 text="Consultez la documentation sur les paramètres"
                 href="https://data-fair.github.io/3/user-guide-backoffice/parameters"
+                persistent
               />
               <h2 class="mb-4">
                 Paramètres de l'{{ activeAccount.type ==='organization' ? ('organisation ' + organization.name): ('utilisateur ' + user.name) }}

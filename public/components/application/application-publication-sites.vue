@@ -69,9 +69,11 @@
       </v-row>
       <v-row>
         <v-col class="px-0">
-          <tutorial-alert id="app-share-prefer-large">
-            {{ $t('preferLargeDisplayTutorial') }}
-          </tutorial-alert>
+          <tutorial-alert
+            id="app-share-prefer-large"
+            :text="$t('preferLargeDisplayTutorial')"
+            persistent
+          />
           <v-switch
             :input-value="application.preferLargeDisplay"
             :label="$t('preferLargeDisplay')"

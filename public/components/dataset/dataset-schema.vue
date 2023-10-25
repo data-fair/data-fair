@@ -67,9 +67,9 @@
       <tutorial-alert
         v-if="can('writeDescriptionBreaking') && dataset.isRest"
         id="sort-properties"
-      >
-        {{ $t('sortProperties') }}
-      </tutorial-alert>
+        :text="$t('sortProperties')"
+        persistent
+      />
 
       <dataset-properties-slide
         v-if="schema && schema.length"

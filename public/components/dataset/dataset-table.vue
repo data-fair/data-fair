@@ -1,8 +1,9 @@
 <template>
   <v-container fluid>
-    <tutorial-alert id="dataset-table">
-      {{ $t('tutorialFilter') }}
-    </tutorial-alert>
+    <tutorial-alert
+      id="dataset-table"
+      :text="$t('tutorialFilter')"
+    />
     <v-row
       v-if="notFound"
       class="px-3"

@@ -149,10 +149,11 @@
               {{ extension.property?.['x-originalName'] || $t('newExprEval') }}
             </v-card-title>
             <v-card-text style="margin-bottom:40px;">
-              <v-alert
-                type="info"
-                outlined
-                v-html="$t('exprEvalHelp')"
+              <tutorial-alert
+                id="expr-eval"
+                :html="$t('exprEvalHelp')"
+                persistent
+                :initial="false"
               />
               <v-text-field
                 v-model="extension.expr"
