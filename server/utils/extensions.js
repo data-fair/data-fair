@@ -42,12 +42,12 @@ exports.extend = async (app, dataset, extensions) => {
       if (!idInput) throw new Error('A field with concept "http://schema.org/identifier" is required and missing in the remote service action', action)
       detailedExtensions.push({ ...extension, extensionKey, inputMapping, remoteService, action, errorKey, idInput })
     } else if (extension.type === 'exprEval') {
-      const { parser } = require('./expr-eval')
+      const { parser } = require('../../shared/expr-eval')
       try {
         const parsedExpression = parser.parse(extension.expr)
         detailedExtensions.push({
           ...extension,
-          evaluate: (data) => parsedExpression.evaluate({ data })
+          evaluate: (data) => parsedExpression.evaluate(data)
         })
       } catch (err) {
         throw new Error(`[noretry] échec de l'analyse de l'expression "${extension.expr}" : ${err.message}`)
@@ -211,7 +211,11 @@ class ExtensionsStream extends Transform {
         for (const i in this.buffer) {
           let value
           try {
-            value = extension.evaluate(this.buffer[i])
+            const data = { ...this.buffer[i] }
+            for (const prop of this.dataset.schema) {
+              data[prop.key] = data[prop.key] ?? null
+            }
+            value = extension.evaluate(data)
           } catch (err) {
             throw new Error(`[noretry] échec de l'évaluation de l'expression "${extension.expr}" : ${err.message}`)
           }

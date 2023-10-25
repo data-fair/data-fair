@@ -163,10 +163,7 @@
               />
             </v-card-text>
             <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
-              <dataset-extension-details-dialog
-                :extension="extension"
-                :disabled="extensionHasChanges(extension)"
-              />
+              <dataset-extension-expr-eval-preview-dialog :extension="extension" />
               <confirm-menu
                 v-if="can('writeDescriptionBreaking')"
                 yes-color="warning"
@@ -207,7 +204,18 @@ fr:
   missingConcept: "Il faut associer le concept suivant à une de vos colonnes : ${concept}"
   newExprEval: Nouvelle colonne calculée
   expr: Expression
-  exprEvalHelp: "Une expression peut être utilisée pour calculer le contenu d'une colonne en fonction des valeurs des autres colonnes. L'expression doit suivre la syntaxe du module <a href=\"https://github.com/silentmatt/expr-eval\">expr-eval</a>.<br>Le contenu de la ligne de donnée courante est passée en paramètre à l'expression sous le nom <code>data</code>.<br>Quelques fonctions ont été ajoutées à la syntaxe expr-eval : <ul><li><code>concatString(arg1, arg2, ...)</code> : retourne une chaîne de caractère résultat de la concaténation de tous les paramètres.</li><li><code>trim(arg1)</code> : enlève les caractères blancs au début et à la fin du paramètre</li><li><code>toUpperCase(arg1)</code> : passe une chaîne de caractère en majuscule</li><li><code>toLowerCase(arg1)</code> : passe une chaîne de caractère en minuscule</li></ul>"
+  exprEvalHelp: "Une expression (ou formule) est utilisée pour calculer le contenu d'une colonne en fonction des valeurs des autres colonnes.
+  Elle doit suivre la syntaxe du module <a href=\"https://github.com/silentmatt/expr-eval\">expr-eval</a>.
+  Les valeurs des autres colonnes sont passées en paramètre avec leurs clés comme nom du paramètre. <br><br>
+  Quelques fonctions sont disponibles rappelant des fonctionnalités habituelles de tableurs :
+  <ul>
+    <li><code>CONCATENATE ou CONCAT(param1, param2, ...)</code><br>retourne une chaîne de caractère résultat de la concaténation de tous les paramètres. Les paramètres qui ne sont pas des chaînes de caractères seront ignorés.</li>
+    <li><code>TRIM(param)</code><br>enlève les caractères blancs au début et à la fin de la chaine de caractère en paramètre et remplace toutes les séries de caractères blancs dans le contenu par un simple espace.</li>
+    <li><code>UPPER(param)</code><br>passe une chaîne de caractère en majuscule.</li>
+    <li><code>LOWER(param)</code><br>passe une chaîne de caractère en minuscule.</li>
+    <li><code>SUM(param1, param2, ...)</code><br>effectue la somme de tous les paramètres. Les paramètres vides ou qui ne sont pas des nombres seront ignorés.</li>
+    <li><code>AVERAGE ou AVG(param1, param2, ...)</code><br>calcule la moyenne de tous les paramètres. Les paramètres vides ou qui ne sont pas des nombres seront ignorés.</li>
+  </ul>"
 en:
   addExtension: Add columns from master-data sources
   addExprEvalExtension: Add a calculated column

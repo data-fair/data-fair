@@ -377,6 +377,7 @@ exports.writeExtendedStreams = async (db, dataset) => {
     transforms.push(new Transform({
       transform (chunk, encoding, callback) {
         const { geometry, ...properties } = chunk
+        if (!geometry) return callback()
         const feature = { type: 'Feature', properties, geometry: JSON.parse(geometry) }
         callback(null, feature)
       },
