@@ -656,9 +656,30 @@ exports.extendedSchema = async (db, dataset, fixConcept = true) => {
     schema.push(geopoint)
   }
   if (dataset.isRest) {
-    schema.push({ 'x-calculated': true, key: '_updatedAt', type: 'string', format: 'date-time', title: 'Date de mise à jour', description: 'Date de dernière mise à jour de la ligne du jeu de données' })
-    // TODO: add this back based on a setting "rest.storeUpdatedBy" ?
-    // schema.push({ 'x-calculated': true, key: '_updatedBy', type: 'object', title: 'Utilisateur de mise à jour', description: 'Utilisateur qui a effectué la e dernière mise à jour de la ligne du jeu de données' })
+    schema.push({
+      'x-calculated': true,
+      key: '_updatedAt',
+      type: 'string',
+      format: 'date-time',
+      title: 'Date de mise à jour',
+      description: 'Date de dernière mise à jour de la ligne du jeu de données'
+    })
+    if (dataset.rest.storeUpdatedBy) {
+      schema.push({
+        'x-calculated': true,
+        key: '_updatedBy',
+        type: 'string',
+        title: 'Utilisateur de mise à jour',
+        'x-capabilities': { insensitive: false, text: false, textStandard: false }
+      })
+      schema.push({
+        'x-calculated': true,
+        key: '_updatedByName',
+        type: 'string',
+        title: 'Nom de l\'utilisateur de mise à jour',
+        'x-capabilities': { text: false }
+      })
+    }
   }
   if (dataset.isRest && dataset.rest?.lineOwnership) {
     if (!schema.find(p => p.key === '_owner')) {

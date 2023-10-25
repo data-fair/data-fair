@@ -572,6 +572,9 @@ router.patch('/:datasetId',
     } else if (patch.thumbnails || patch.masterData) {
       // just change finalizedAt so that cache is invalidated, but the worker doesn't relly need to work on the dataset
       patch.finalizedAt = (new Date()).toISOString()
+    } else if (patch.rest && req.dataset.rest && patch.rest.storeUpdatedBy !== req.dataset.rest.storeUpdatedBy) {
+      // changes in rest history mode will be processed by the finalizer worker
+      patch.status = 'analyzed'
     } else if (patch.rest) {
       // changes in rest history mode will be processed by the finalizer worker
       patch.status = 'indexed'

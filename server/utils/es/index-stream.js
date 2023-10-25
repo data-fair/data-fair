@@ -19,7 +19,6 @@ const cleanItem = (item) => {
   delete item._needsIndexing
   delete item._needsExtending
   delete item._deleted
-  delete item._updatedBy
 }
 
 const maxErroredItems = 3
