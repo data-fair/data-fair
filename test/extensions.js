@@ -653,7 +653,7 @@ other,unknown address
 
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, type: 'exprEval', expr: 'concatString(data.id, " - ", data.adr)', property: { key: 'calc1', type: 'string' } }]
+      extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(id, " - ", adr)', property: { key: 'calc1', type: 'string' } }]
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
