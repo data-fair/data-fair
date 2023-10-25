@@ -136,6 +136,29 @@
               @change="ttl => {dataset.rest.ttl = ttl; patch({rest: dataset.rest})}"
             />
           </v-list-item>
+          <v-list-item v-if="dataset.isRest">
+            <v-list-item-avatar class="ml-0 my-0">
+              <v-icon
+                :disabled="!dataset.rest.storeUpdatedBy"
+                color="warning"
+              >
+                mdi-account-details
+              </v-icon>
+            </v-list-item-avatar>
+            <span
+              v-if="dataset.rest.storeUpdatedBy"
+              v-t="'storeUpdatedBy'"
+            />
+            <span
+              v-else
+              v-t="'noStoreUpdatedBy'"
+            />
+            <dataset-edit-store-updated-by
+              v-if="can('writeDescriptionBreaking')"
+              :store-updated-by="dataset.rest.storeUpdatedBy"
+              @change="storeUpdatedBy => {dataset.rest.storeUpdatedBy = storeUpdatedBy; patch({rest: dataset.rest})}"
+            />
+          </v-list-item>
         </v-list>
       </v-sheet>
 
@@ -422,6 +445,8 @@ fr:
   history: Historisation (conserve les révisions des lignes)
   historyTTL: Supprimer automatiquement les révisions de lignes qui datent de plus de {days} jours.
   noHistoryTTL: pas de politique d'expiration des révisions configurée
+  storeUpdatedBy: Stocker l'utilisateur responsable d'une modification de ligne
+  noStoreUpdatedBy: Pas de stockage de l'utilisateur responsable d'une modification de ligne
   cancel: Annuler
   validate: Valider
 en:

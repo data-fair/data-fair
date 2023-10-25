@@ -218,12 +218,15 @@ const applyTransactions = async (req, transacs, validate) => {
     }
     extendedBody._updatedAt = body._updatedAt ? new Date(body._updatedAt) : updatedAt
     extendedBody._i = Number((new Date(extendedBody._updatedAt).getTime() - datasetCreatedAt) + padI(i))
+
+    if (req.user && req.dataset.rest.storeUpdatedBy) {
+      extendedBody._updatedBy = req.user.id
+      extendedBody._updatedByName = req.user.name
+    }
+
     i++
 
     const result = { _id: body._id, _action }
-
-    // TODO: add this back based on a setting "rest.storeUpdatedBy" ?
-    // if (req.user) extendedBody._updatedBy = { id: req.user.id, name: req.user.name }
 
     if (_action === 'delete') {
       extendedBody._deleted = true

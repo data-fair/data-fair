@@ -662,7 +662,8 @@ module.exports = {
             }
           }
         },
-        lineOwnership: { type: 'boolean' }
+        lineOwnership: { type: 'boolean' },
+        storeUpdatedBy: { type: 'boolean' }
       }
     },
     isMetaOnly: {

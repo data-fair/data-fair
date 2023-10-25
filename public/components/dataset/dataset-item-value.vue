@@ -50,6 +50,12 @@
         @mouseenter="hoverValue(itemValue)"
         @mouseleave="leaveValue(itemValue)"
       >
+        <v-avatar
+          v-if="field.key === '_updatedByName' && item._updatedBy"
+          :size="28"
+        >
+          <img :src="`${env.directoryUrl}/api/avatars/user/${item._updatedBy}/avatar.png`">
+        </v-avatar>
         <div
           v-if="field['x-refersTo'] === 'https://schema.org/color' && itemValue"
           class="item-value-color-pin"
@@ -84,6 +90,8 @@ en:
 </i18n>
 
 <script>
+import { mapState } from 'vuex'
+
 export default {
   props: {
     item: { type: Object, required: true },
@@ -100,6 +108,7 @@ export default {
     }
   },
   computed: {
+    ...mapState(['env']),
     itemValue () {
       return this.item[this.field.key]
     },
