@@ -504,12 +504,15 @@ router.patch('/:datasetId',
       }
     }
 
-    const removedRestProp = req.dataset.isRest && patch.schema && req.dataset.schema.find(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))
-    if (removedRestProp) {
+    const removedRestProps = (req.dataset.isRest && patch.schema && req.dataset.schema.filter(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))) ?? []
+    if (req.dataset.isRest && req.dataset.rest?.storeUpdatedBy && patch.rest && !patch.rest.storeUpdatedBy) {
+      removedRestProps.push({ key: '_updatedBy' })
+      removedRestProps.push({ key: '_updatedByName' })
+    }
+    if (removedRestProps.length) {
       // some property was removed in rest dataset, trigger full re-indexing
-      const deleteFields = req.dataset.schema.filter(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))
       await restDatasetsUtils.collection(db, req.dataset).updateMany({},
-        { $unset: deleteFields.reduce((a, df) => { a[df.key] = ''; return a }, {}) }
+        { $unset: removedRestProps.reduce((a, df) => { a[df.key] = ''; return a }, {}) }
       )
       await datasetUtils.updateStorage(req.app, req.dataset)
       patch.status = 'analyzed'
@@ -555,7 +558,7 @@ router.patch('/:datasetId',
     } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.timeZone !== f.timeZone))) {
       // some timeZone has changed on a field, trigger full re-indexing
       patch.status = 'analyzed'
-    } else if (removedRestProp) {
+    } else if (removedRestProps.length) {
       patch.status = 'analyzed'
     } else if (patch.schema && !datasetUtils.schemasFullyCompatible(patch.schema, req.dataset.schema)) {
       try {

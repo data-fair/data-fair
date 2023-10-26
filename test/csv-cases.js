@@ -253,7 +253,6 @@ describe('CSV cases', () => {
   it('CSV with empty column', async () => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('csv-cases/empty-col.csv', ax)
-    console.log(dataset.schema)
     assert.ok(!dataset.schema.find(p => p.key === 'empty'))
   })
 

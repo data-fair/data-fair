@@ -1003,4 +1003,58 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.ok(res.data.results[0].attr1)
     assert.ok(!res.data.results[0].attr2)
   })
+
+  it('Activating/deactivating storeUpdatedBy', async () => {
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/datasets/updatedby', {
+      isRest: true,
+      title: 'updatedby',
+      primaryKey: ['attr1'],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+    })
+    await workers.hook('finalizer/updatedby')
+    await ax.post('/api/v1/datasets/updatedby/lines', { attr1: 'test1', attr2: 'test1' })
+    await workers.hook('finalizer/updatedby')
+
+    res = await ax.patch('/api/v1/datasets/updatedby', { rest: { storeUpdatedBy: true } })
+
+    await workers.hook('indexer/updatedby')
+    await workers.hook('finalizer/updatedby')
+
+    res = await ax.get('/api/v1/datasets/updatedby/lines')
+    assert.ok(res.data.results[0].attr1)
+    assert.ok(!res.data.results[0]._updatedBy)
+    const lineId = res.data.results[0]._id
+
+    await ax.post('/api/v1/datasets/updatedby/lines', { attr1: 'test1', attr2: 'test2' })
+    await workers.hook('finalizer/updatedby')
+    res = await ax.get('/api/v1/datasets/updatedby/lines')
+    assert.ok(res.data.results[0].attr1)
+    assert.equal(res.data.results[0]._updatedBy, 'dmeadus0')
+    assert.equal(res.data.results[0]._updatedByName, 'Danna Meadus')
+
+    res = await global.ax.dmeadus.put('/api/v1/settings/user/dmeadus0', { apiKeys: [{ title: 'api key', scopes: ['datasets'] }] })
+    const apiKey = res.data.apiKeys[0].clearKey
+    const axAPIKey = await global.ax.builder(null, null, { headers: { 'x-apiKey': apiKey } })
+    await axAPIKey.post('/api/v1/datasets/updatedby/lines', { attr1: 'test1', attr2: 'test3' })
+    await workers.hook('finalizer/updatedby')
+    res = await ax.get('/api/v1/datasets/updatedby/lines')
+    assert.equal(res.data.results[0]._updatedBy, 'dmeadus0')
+    assert.equal(res.data.results[0]._updatedByName, 'api key')
+
+    res = await ax.patch('/api/v1/datasets/updatedby', { rest: { storeUpdatedBy: true, history: true } })
+    await workers.hook('finalizer/updatedby')
+
+    await ax.post('/api/v1/datasets/updatedby/lines', { attr1: 'test1', attr2: 'test2' })
+    await workers.hook('finalizer/updatedby')
+    res = await ax.get(`/api/v1/datasets/updatedby/lines/${lineId}/revisions`)
+    assert.equal(res.data.results[0]._updatedBy, 'dmeadus0')
+    assert.equal(res.data.results[0]._updatedByName, 'Danna Meadus')
+
+    res = await ax.patch('/api/v1/datasets/updatedby', { rest: { storeUpdatedBy: false, history: true } })
+    await workers.hook('finalizer/updatedby')
+    res = await ax.get('/api/v1/datasets/updatedby/lines')
+    assert.ok(!res.data.results[0]._updatedBy)
+    assert.ok(!res.data.results[0]._updatedByName)
+  })
 })
