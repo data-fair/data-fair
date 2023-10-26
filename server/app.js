@@ -76,7 +76,8 @@ if (config.mode.includes('server')) {
 
   // set current baseUrl, i.e. the url of data-fair on the current user's domain
   // check for the matching publicationSite, etc
-  let basePath = new URL(config.publicUrl).pathname
+  const parsedPublicUrl = new URL(config.publicUrl)
+  let basePath = parsedPublicUrl.pathname
   if (!basePath.endsWith('/')) basePath += '/'
   const originalUrl = require('original-url')
   const { format: formatUrl } = require('url')
@@ -103,13 +104,13 @@ if (config.mode.includes('server')) {
   })
   app.use('/', asyncWrap(async (req, res, next) => {
     const u = originalUrl(req)
-    const urlParts = { protocol: u.protocol, hostname: u.hostname, pathname: basePath.slice(0, -1) }
+    const urlParts = { protocol: parsedPublicUrl.protocol, hostname: u.hostname, pathname: basePath.slice(0, -1) }
     if (u.port !== 443 && u.port !== 80) urlParts.port = u.port
     req.publicBaseUrl = u.full ? formatUrl(urlParts) : config.publicUrl
 
     const mainDomain = req.publicBaseUrl === config.publicUrl
 
-    const publicationSiteUrl = u.protocol + '//' + u.hostname + ((u.port && u.port !== 80 && u.port !== 443) ? ':' + u.port : '')
+    const publicationSiteUrl = parsedPublicUrl.protocol + '//' + u.hostname + ((u.port && u.port !== 80 && u.port !== 443) ? ':' + u.port : '')
     const settings = await memoizedGetPublicationSiteSettings(publicationSiteUrl, mainDomain && req.query.publicationSites, req.app.get('db'))
     if (!settings && !mainDomain) {
       console.error('(publication-site-unknown) no publication site is associated to URL ' + publicationSiteUrl)
