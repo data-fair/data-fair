@@ -12,7 +12,7 @@
             :disabled="disabled"
             v-on="{...onTooltip, ...on}"
           >
-            <v-icon>mdi-eye</v-icon>
+            <v-icon>mdi-pencil</v-icon>
           </v-btn>
         </template>
         <span v-t="'preview'" />
@@ -24,7 +24,7 @@
         dense
         flat
       >
-        {{ extension.property?.['x-originalName'] || $t('newExprEval') }}
+        {{ $t('preview') }}&nbsp;{{ extension.property?.['x-originalName'] || $t('newExprEval') }}
         <v-spacer />
         <v-btn
           icon
@@ -47,10 +47,10 @@
 <i18n lang="yaml">
 fr:
   preview: Prévisualisation
-  newExprEval: Nouvelle colonne calculée
+  newExprEval: nouvelle colonne calculée
 en:
   preview: Preview
-  newExprEval: New calculated column
+  newExprEval: new calculated column
 </i18n>
 
 <script>

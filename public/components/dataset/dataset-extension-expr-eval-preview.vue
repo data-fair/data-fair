@@ -1,13 +1,20 @@
 <template lang="html">
   <v-row>
-    <v-alert
-      v-if="parsingError"
-      type="error"
-      :value="true"
-    >
-      {{ $t('errorParse') }} : {{ parsingError }}
-    </v-alert>
-    <v-col v-else>
+    <v-col>
+      <tutorial-alert
+        id="expr-eval"
+        :html="$t('exprEvalHelp')"
+        persistent
+        :initial="false"
+      />
+      <v-text-field
+        v-model="extension.expr"
+        class="mt-2"
+        :label="$t('expr')"
+        outlined
+        dense
+        :error-messages="parsingError"
+      />
       <h3
         v-if="data.total <= 10000"
         v-text="$tc('linesCount', data.total)"
@@ -119,24 +126,24 @@
             </th>
           </tr>
         </template>
-        <template #item="{item}">
+        <template #item="{item, index}">
           <tr>
             <template v-for="(header, i) in headers">
               <td
-                v-if="i === 0 && item[header.value].result"
+                v-if="i === 0 && extensionResults[index].result"
                 :key="header.value"
                 style="border-right: 2px solid rgba(0,0,0,0.24);font-weight: bold;"
                 class="primary--text"
               >
-                {{ item[header.value].result }}
+                {{ extensionResults[index].result }}
               </td>
               <td
-                v-else-if="i === 0 && item[header.value].error"
+                v-else-if="i === 0 && extensionResults[index].error"
                 :key="header.value"
                 style="border-right: 2px solid rgba(0,0,0,0.24);font-weight: bold;"
                 class="error--text"
               >
-                {{ item[header.value].error }}
+                {{ extensionResults[index].error }}
               </td>
               <td
                 v-else
@@ -161,6 +168,19 @@ fr:
   errorParse: Erreur pendant l'analyse de l'expression
   params: Paramètres
   results: Résultats
+  expr: Expression
+  exprEvalHelp: "Une expression (ou formule) est utilisée pour calculer le contenu d'une colonne en fonction des valeurs des autres colonnes.
+  Elle doit suivre la syntaxe du module <a href=\"https://github.com/silentmatt/expr-eval\">expr-eval</a>.
+  Les valeurs des autres colonnes sont passées en paramètre avec leurs clés comme nom du paramètre. <br><br>
+  Quelques fonctions sont disponibles rappelant des fonctionnalités habituelles de tableurs :
+  <ul>
+    <li><code>CONCATENATE ou CONCAT(param1, param2, ...)</code><br>retourne une chaîne de caractère résultat de la concaténation de tous les paramètres. Les paramètres qui ne sont pas des chaînes de caractères seront ignorés.</li>
+    <li><code>TRIM(param)</code><br>enlève les caractères blancs au début et à la fin de la chaine de caractère en paramètre et remplace toutes les séries de caractères blancs dans le contenu par un simple espace.</li>
+    <li><code>UPPER(param)</code><br>passe une chaîne de caractère en majuscule.</li>
+    <li><code>LOWER(param)</code><br>passe une chaîne de caractère en minuscule.</li>
+    <li><code>SUM(param1, param2, ...)</code><br>effectue la somme de tous les paramètres. Les paramètres vides ou qui ne sont pas des nombres seront ignorés.</li>
+    <li><code>AVERAGE ou AVG(param1, param2, ...)</code><br>calcule la moyenne de tous les paramètres. Les paramètres vides ou qui ne sont pas des nombres seront ignorés.</li>
+  </ul>"
 en:
   linesCount: " | See 1 extension result | See {count} extension results"
   firstLines: See the {lines} first results of the extension
@@ -169,6 +189,7 @@ en:
   errorParse: Error while analyzing the expression
   params: Parameters
   results: Results
+  expr: Expression
 </i18n>
 
 <script>
@@ -210,6 +231,20 @@ export default {
     },
     plural () {
       return this.data.total > 1
+    },
+    extensionResults () {
+      return this.data.results.map(result => {
+        if (!this.parsedExpression) return null
+        try {
+          const data = { ...result }
+          for (const prop of this.dataset.schema) {
+            data[prop.key] = data[prop.key] ?? null
+          }
+          return { result: this.parsedExpression.evaluate(data) }
+        } catch (err) {
+          return { error: err.message }
+        }
+      })
     }
   },
   watch: {
@@ -217,6 +252,7 @@ export default {
       handler () {
         try {
           this.parsedExpression = parser.parse(this.extension.expr)
+          this.parsingError = null
         } catch (err) {
           this.parsingError = err.message
           return null
@@ -253,19 +289,7 @@ export default {
       if (this.query) params.q = this.query
       this.loading = true
       try {
-        const data = await this.$axios.$get(this.resourceUrl + '/lines', { params })
-        for (const result of data.results) {
-          try {
-            const data = { ...result }
-            for (const prop of this.dataset.schema) {
-              data[prop.key] = data[prop.key] ?? null
-            }
-            result[this.extension.property.key] = { result: this.parsedExpression.evaluate(data) }
-          } catch (err) {
-            result[this.extension.property.key] = { error: err.message }
-          }
-        }
-        this.data = data
+        this.data = await this.$axios.$get(this.resourceUrl + '/lines', { params })
         this.notFound = false
       } catch (error) {
         if (error.response && error.response.status === 404) this.notFound = true
