@@ -571,15 +571,12 @@ other,unknown address
     assert.equal(dataset.extensions.length, 1)
     assert.equal(dataset.schema.length, 11)
 
-    console.log(dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']))
-
     const form2 = new FormData()
     form2.append('schema', JSON.stringify(dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension'])))
     form2.append('file', content, 'dataset2.csv')
     res = await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${res.data.id}`)
-    console.log(dataset)
     assert.equal(dataset.extensions.length, 1)
     assert.equal(dataset.schema.length, 11)
   })
