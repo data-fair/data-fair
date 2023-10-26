@@ -88,7 +88,7 @@ exports.format = (value, prop, fileProp) => {
   if (prop.type === 'integer' || prop.type === 'number') return formatNumber(cleanValue)
 }
 
-// WARNING: this code is duplicated in dataset-schema.vue
+// WARNING: this code is duplicated in public/assets/dataset-utils.js
 exports.escapeKey = (key, dataset) => {
   const algorithm = dataset.analysis?.escapeKeyAlgorithm
   if (algorithm === 'legacy') {

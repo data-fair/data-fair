@@ -32,9 +32,11 @@
         </v-btn>
       </v-toolbar>
       <v-card-text class="px-3">
-        <tutorial-alert id="labels">
-          {{ $t('tutorialLabels') }}
-        </tutorial-alert>
+        <tutorial-alert
+          id="labels"
+          :text="$t('tutorialLabels')"
+          persistent
+        />
 
         <v-checkbox
           v-if="isRest"

@@ -377,6 +377,7 @@ exports.writeExtendedStreams = async (db, dataset) => {
     transforms.push(new Transform({
       transform (chunk, encoding, callback) {
         const { geometry, ...properties } = chunk
+        if (!geometry) return callback()
         const feature = { type: 'Feature', properties, geometry: JSON.parse(geometry) }
         callback(null, feature)
       },
@@ -577,7 +578,7 @@ exports.mergeFileSchema = (dataset) => {
   const fileFields = dataset.file.schema
     .map(field => {
       // preserve existing fields customization
-      const existingField = dataset.schema.find(f => f.key === field.key)
+      const existingField = dataset.schema.find(f => f.key === field.key && !f['x-extension'])
       if (existingField) return existingField
       const { dateFormat, dateTimeFormat, ...f } = field
       // manage default capabilities
@@ -587,7 +588,11 @@ exports.mergeFileSchema = (dataset) => {
     })
 
   // keep extension fields
-  dataset.schema = fileFields.concat(dataset.schema.filter(field => field['x-extension']))
+  const extensionFields = dataset.schema.filter(field => field['x-extension'])
+  for (const field of extensionFields) {
+    if (fileFields.find(f => f.key === field.key)) throw createError(400, `[noretry] Une extension essaie de créer la colonne "${field.key}" mais cette clé est déjà utilisée.`)
+  }
+  dataset.schema = fileFields.concat(extensionFields)
 }
 
 exports.cleanSchema = (dataset) => {

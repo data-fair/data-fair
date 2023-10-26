@@ -6,6 +6,7 @@
     <tutorial-alert
       id="edit-multiple-lines"
       :text="$t('warning')"
+      persistent
     />
     <lazy-v-jsf
       v-model="mergedModel"

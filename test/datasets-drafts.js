@@ -455,7 +455,7 @@ other,unknown address
     nock('http://test.com').post('/geocoder/coords').reply(500, 'some error')
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.draft.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+      extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     }, { params: { draft: true } })
     assert.equal(res.status, 200)
     try {
@@ -493,7 +493,7 @@ other,address
     })
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.draft.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+      extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     }, { params: { draft: true } })
     assert.equal(res.status, 200)
     await workers.hook(`finalizer/${dataset.id}`)

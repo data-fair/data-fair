@@ -136,6 +136,7 @@ describe('Master data management', () => {
       schema: [siretProperty],
       extensions: [{
         active: true,
+        type: 'remoteService',
         remoteService: remoteService.id,
         action: 'masterData_bulkSearch_siret',
         select: ['extra']
@@ -189,6 +190,7 @@ describe('Master data management', () => {
       schema: [siretProperty],
       extensions: [{
         active: true,
+        type: 'remoteService',
         remoteService: remoteService.id,
         action: 'masterData_bulkSearch_siret',
         select: ['extra']
@@ -226,6 +228,7 @@ describe('Master data management', () => {
       schema: [siretProperty],
       extensions: [{
         active: true,
+        type: 'remoteService',
         remoteService: remoteService.id,
         action: 'masterData_bulkSearch_siret',
         select: ['extra']
@@ -265,6 +268,7 @@ describe('Master data management', () => {
       schema: geojsonSlave.schema,
       extensions: [{
         active: true,
+        type: 'remoteService',
         remoteService: remoteService.id,
         action: 'masterData_bulkSearch_siret',
         select: ['extra', 'Dénomination']
@@ -304,6 +308,7 @@ describe('Master data management', () => {
       schema: [siretProperty],
       extensions: [{
         active: true,
+        type: 'remoteService',
         remoteService: remoteService.id,
         action: 'masterData_bulkSearch_siret'
       }]
@@ -338,6 +343,7 @@ describe('Master data management', () => {
         schema: [siretProperty, { key: 'extra2', type: 'string' }],
         extensions: [{
           active: true,
+          type: 'remoteService',
           remoteService: remoteService.id,
           action: 'masterData_bulkSearch_siret'
         }]
@@ -358,6 +364,7 @@ describe('Master data management', () => {
       schema: [siretProperty],
       extensions: [{
         active: true,
+        type: 'remoteService',
         remoteService: remoteService2.id,
         action: 'masterData_bulkSearch_siret2'
       }]
@@ -525,6 +532,7 @@ describe('Master data management', () => {
       schema: [siretProperty],
       extensions: [{
         active: true,
+        type: 'remoteService',
         remoteService: remoteService.id,
         action: 'masterData_bulkSearch_siret',
         select: ['extra']
@@ -556,6 +564,7 @@ describe('Master data management', () => {
       schema: [siretProperty],
       extensions: [{
         active: true,
+        type: 'remoteService',
         remoteService: remoteService.id,
         action: 'masterData_bulkSearch_siret',
         select: ['extra']
@@ -595,6 +604,7 @@ describe('Master data management', () => {
       schema: [siretProperty],
       extensions: [{
         active: true,
+        type: 'remoteService',
         remoteService: remoteService.id,
         action: 'masterData_bulkSearch_siret',
         select: ['extra']
@@ -649,11 +659,13 @@ describe('Master data management', () => {
       schema: [latlonProperty],
       extensions: [{
         active: true,
+        type: 'remoteService',
         remoteService: remoteService.id,
         action: 'masterData_bulkSearch_geo',
         select: ['country']
       }, {
         active: true,
+        type: 'remoteService',
         remoteService: remoteService2.id,
         action: 'masterData_bulkSearch_country',
         select: ['name']
@@ -715,11 +727,13 @@ describe('Master data management', () => {
       schema: [latlonProperty],
       extensions: [{
         active: true,
+        type: 'remoteService',
         remoteService: remoteService.id,
         action: 'masterData_bulkSearch_geo',
         select: ['country']
       }, {
         active: true,
+        type: 'remoteService',
         remoteService: remoteService2.id,
         action: 'masterData_bulkSearch_country',
         select: ['name']

@@ -521,32 +521,64 @@ module.exports = {
           active: {
             type: 'boolean',
             description: 'Toggle on and off the extension'
-          },
-          remoteService: {
-            type: 'string',
-            description: "L'identifiant du service distant utilisé pour l'enrichissement"
-          },
-          action: {
-            type: 'string',
-            description: "L'identifiant de l'action du service distant à utiliser pour l'enrichissement"
-          },
-          select: {
-            type: 'array',
-            description: 'La liste des colonnes à sélectionner dans le retour du service distant. Toutes les colonnes si absent ou vide.',
-            items: {
-              type: 'string'
-            }
-          },
-          shortId: {
-            type: 'string',
-            description: 'Id court (déprécié)',
-            readOnly: true
-          },
-          propertyPrefix: {
-            type: 'string',
-            description: 'Chaine à utiliser comme préfixe des clés de champs issus de cette extension'
           }
-        }
+        },
+        oneOf: [{
+          required: ['type', 'expr', 'property'],
+          properties: {
+            type: {
+              type: 'string',
+              const: 'exprEval'
+            },
+            expr: {
+              type: 'string'
+            },
+            property: {
+              type: 'object',
+              required: ['key', 'type'],
+              properties: {
+                key: {
+                  type: 'string'
+                },
+                type: {
+                  type: 'string'
+                }
+              }
+            }
+          }
+        }, {
+          required: ['type', 'remoteService', 'action'],
+          properties: {
+            type: {
+              type: 'string',
+              const: 'remoteService'
+            },
+            remoteService: {
+              type: 'string',
+              description: "L'identifiant du service distant utilisé pour l'enrichissement"
+            },
+            action: {
+              type: 'string',
+              description: "L'identifiant de l'action du service distant à utiliser pour l'enrichissement"
+            },
+            select: {
+              type: 'array',
+              description: 'La liste des colonnes à sélectionner dans le retour du service distant. Toutes les colonnes si absent ou vide.',
+              items: {
+                type: 'string'
+              }
+            },
+            shortId: {
+              type: 'string',
+              description: 'Id court (déprécié)',
+              readOnly: true
+            },
+            propertyPrefix: {
+              type: 'string',
+              description: 'Chaine à utiliser comme préfixe des clés de champs issus de cette extension'
+            }
+          }
+        }]
       }
     },
     masterData: masterData.schema,

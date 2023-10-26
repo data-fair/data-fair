@@ -196,7 +196,7 @@
             </template>
           </v-checkbox>
           <v-checkbox
-            v-if="dataset.isRest"
+            v-if="dataset.isRest && !currentPropRef.prop['x-extension']"
             v-model="currentPropRef.prop.readOnly"
             :disabled="!editable || noBreakingChanges || !currentPropRef.editable"
             :label="$t('readOnly')"
@@ -220,7 +220,7 @@
             </template>
           </v-select>
           <v-text-field
-            v-if="dataset.isRest && currentPropRef.prop.type === 'string' && !currentPropRef.prop.format"
+            v-if="dataset.isRest && !currentPropRef.prop['x-extension'] && currentPropRef.prop.type === 'string' && !currentPropRef.prop.format"
             v-model.number="maxLength"
             :disabled="!editable || noBreakingChanges || !currentPropRef.editable"
             :label="$t('maxLength')"

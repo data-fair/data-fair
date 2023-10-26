@@ -12,10 +12,10 @@
             :disabled="disabled"
             v-on="{...onTooltip, ...on}"
           >
-            <v-icon>mdi-text-box-outline</v-icon>
+            <v-icon>mdi-pencil</v-icon>
           </v-btn>
         </template>
-        <span v-t="'extensionReport'" />
+        <span v-t="'preview'" />
       </v-tooltip>
     </template>
 
@@ -24,7 +24,7 @@
         dense
         flat
       >
-        {{ remoteServicesMap[extension.remoteService] && remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
+        {{ $t('preview') }}&nbsp;{{ extension.property?.['x-originalName'] || $t('newExprEval') }}
         <v-spacer />
         <v-btn
           icon
@@ -34,10 +34,9 @@
         </v-btn>
       </v-toolbar>
       <v-card-text>
-        <lazy-dataset-extension-details
+        <lazy-dataset-extension-expr-eval-preview
           v-if="dialog"
-          :remote-service="extension.remoteService"
-          :action="extension.action"
+          :extension="extension"
         />
       </v-card-text>
       <v-divider />
@@ -47,24 +46,20 @@
 
 <i18n lang="yaml">
 fr:
-  extensionReport: Rapport d'enrichissement
+  preview: Prévisualisation
+  newExprEval: nouvelle colonne calculée
 en:
-  extensionReport: Extension report
+  preview: Preview
+  newExprEval: new calculated column
 </i18n>
 
 <script>
-import { mapGetters } from 'vuex'
-
 export default {
   props: ['extension', 'disabled'],
   data () {
     return {
       dialog: false
     }
-  },
-  computed: {
-    ...mapGetters('dataset', ['remoteServicesMap'])
-
   }
 }
 </script>

@@ -7,6 +7,7 @@
           :id="prodBaseApp.url"
           :text="`Consultez la documentation sur l'application ${prodBaseApp.title}`"
           :href="prodBaseApp.documentation"
+          persistent
         />
         <v-row class="application">
           <v-col>
@@ -26,9 +27,11 @@
                     fluid
                     class="pb-0"
                   >
-                    <tutorial-alert id="app-configure-meta">
-                      {{ $t('tutorialConfigMeta') }}
-                    </tutorial-alert>
+                    <tutorial-alert
+                      id="app-configure-meta"
+                      :text="$t('tutorialConfigMeta')"
+                      persistent
+                    />
                     <application-info />
                   </v-container>
                 </v-tab-item>
@@ -97,9 +100,10 @@
                 -->
               </template>
               <template #tabs-items>
-                <tutorial-alert id="app-share-portal">
-                  {{ $t('tutorialShare') }}
-                </tutorial-alert>
+                <tutorial-alert
+                  id="app-share-portal"
+                  :text="$t('tutorialShare')"
+                />
                 <v-tab-item value="share-permissions">
                   <v-container fluid>
                     <permissions

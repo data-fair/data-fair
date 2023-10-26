@@ -25,7 +25,7 @@ describe('Extensions', () => {
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+      extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
@@ -79,7 +79,7 @@ describe('Extensions', () => {
       return inputs.map(input => ({ key: input.key, lat: 40, lon: 40 }))
         .map(JSON.stringify).join('\n') + '\n'
     })
-    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords', select: ['lat', 'lon'] }] })
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords', select: ['lat', 'lon'] }] })
     assert.equal(res.status, 200)
     await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()
@@ -124,7 +124,7 @@ describe('Extensions', () => {
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+      extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
@@ -164,7 +164,7 @@ describe('Extensions', () => {
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+      extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
@@ -204,6 +204,7 @@ describe('Extensions', () => {
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{
+        type: 'remoteService',
         active: true,
         remoteService: 'sirene-koumoul',
         action: 'findEtablissementsBulk',
@@ -262,7 +263,7 @@ other,unknown address
     nock('http://test.com').post('/geocoder/coords').reply(500, 'some error')
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+      extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
     try {
@@ -277,7 +278,7 @@ other,unknown address
 
     // Prepare for extension failure with bad body in response
     nock('http://test.com').post('/geocoder/coords').reply(200, 'some error')
-    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, forceNext: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }] })
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, type: 'remoteService', forceNext: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }] })
     assert.equal(res.status, 200)
     try {
       await workers.hook('extender/' + dataset.id)
@@ -314,7 +315,7 @@ empty,
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+      extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
     await workers.hook('finalizer')
@@ -343,7 +344,7 @@ koumoul,19 rue de la voie lactée saint avé
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+      extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
     await workers.hook('finalizer')
@@ -357,7 +358,7 @@ koumoul,19 rue de la voie lactée saint avé
     // deactivate extension
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: false, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+      extensions: [{ active: false, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
     await workers.hook('finalizer')
@@ -400,6 +401,7 @@ koumoul,19 rue de la voie lactée saint avé
       schema: dataset.schema,
       extensions: [{
         active: true,
+        type: 'remoteService',
         remoteService: 'sirene-koumoul',
         action: 'findEtablissementsBulk',
         select: [
@@ -437,7 +439,7 @@ koumoul,19 rue de la voie lactée saint avé
       isRest: true,
       title: 'rest-extension',
       schema: [{ key: 'address', type: 'string', 'x-refersTo': 'http://schema.org/address' }],
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+      extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })).data
     await workers.hook(`finalizer/${dataset.id}`)
 
@@ -525,7 +527,7 @@ other,unknown address
     })
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+      extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     await workers.hook(`extender/${dataset.id}`)
     nockScope.done()
@@ -563,7 +565,7 @@ other,unknown address
     })
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
-      extensions: [{ active: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }]
+      extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     await workers.hook(`extender/${dataset.id}`)
     nockScope.done()
@@ -605,6 +607,7 @@ other,unknown address
       schema: dataset.schema,
       extensions: [{
         active: true,
+        type: 'remoteService',
         remoteService: 'sirene-koumoul',
         action: 'findEtablissementsBulk',
         select: [
@@ -638,5 +641,48 @@ other,unknown address
     assert.equal(res.data.features.length, 1)
     assert.equal(res.data.features[0].properties.label, 'koumoul')
     assert.equal(res.data.features[0].properties._etablissements.NOMEN_LONG, 'KOUMOUL')
+  })
+
+  it('Extend dataset using expression', async function () {
+    const ax = global.ax.dmeadus
+    // Initial dataset with addresses
+    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
+    let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(id, " - ", adr)', property: { key: 'calc1', type: 'string' } }]
+    })
+    assert.equal(res.status, 200)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    assert.ok(dataset.schema.find(field => field.key === 'calc1'))
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results[0].calc1, 'koumoul - 19 rue de la voie lactée saint avé')
+    assert.equal(res.data.results[1].calc1, 'bidule - adresse inconnue')
+  })
+
+  it('Fail to add extension with duplicate key', async function () {
+    const ax = global.ax.dmeadus
+    // Initial dataset with addresses
+    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
+    const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(id, " - ", adr)', property: { key: 'employees', type: 'string' } }]
+    })
+    assert.equal(res.status, 200)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    assert.ok(dataset.schema.find(field => field.key === 'employees'))
+
+    const form = new FormData()
+    form.append('file', fs.readFileSync('./test/resources/datasets/dataset2.csv'), 'dataset2.csv')
+    dataset = (await ax.put(`/api/v1/datasets/${dataset.id}?draft=false`, form, { headers: testUtils.formHeaders(form), params: { draft: true } })).data
+    assert.equal(dataset.file.name, 'dataset2.csv')
+
+    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), (err) => {
+      assert.equal(err.message, 'Une extension essaie de créer la colonne "employees" mais cette clé est déjà utilisée.')
+      return true
+    })
   })
 })

@@ -85,9 +85,11 @@
                 </v-tab>
               </template>
               <template #tabs-items>
-                <tutorial-alert id="dataset-share-portal">
-                  {{ $t('permissions') }}
-                </tutorial-alert>
+                <tutorial-alert
+                  id="dataset-share-portal"
+                  :text="$t('permissions')"
+                  persistent
+                />
                 <v-tab-item value="share-permissions">
                   <v-container fluid>
                     <remote-service-access />

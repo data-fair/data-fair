@@ -46,9 +46,11 @@
               <template #tabs-items>
                 <v-tab-item value="structure-schema">
                   <v-container fluid>
-                    <tutorial-alert id="dataset-add-concepts">
-                      {{ $t('tutorialConcepts') }}
-                    </tutorial-alert>
+                    <tutorial-alert
+                      id="dataset-add-concepts"
+                      :text="$t('tutorialConcepts')"
+                      persistent
+                    />
                     <dataset-schema />
                   </v-container>
                 </v-tab-item>
@@ -99,9 +101,11 @@
                     fluid
                     class="py-0"
                   >
-                    <tutorial-alert id="dataset-configure-meta">
-                      {{ $t('tutorialConfigMeta') }}
-                    </tutorial-alert>
+                    <tutorial-alert
+                      id="dataset-configure-meta"
+                      :text="$t('tutorialConfigMeta')"
+                      persistent
+                    />
                     <dataset-info />
                   </v-container>
                 </v-tab-item>
@@ -274,9 +278,8 @@
                   <tutorial-alert
                     id="dataset-share-portal"
                     class="mx-2"
-                  >
-                    {{ $t('tutorialShare') }}
-                  </tutorial-alert>
+                    :text="$t('tutorialShare')"
+                  />
                   <v-container fluid>
                     <permissions
                       v-if="can('getPermissions')"
@@ -297,9 +300,8 @@
                   <tutorial-alert
                     id="dataset-share-portal"
                     class="mx-2"
-                  >
-                    {{ $t('tutorialShare') }}
-                  </tutorial-alert>
+                    :text="$t('tutorialShare')"
+                  />
                   <dataset-publication-sites
                     :permissions="permissions"
                     :publication-sites="publicationSites"
