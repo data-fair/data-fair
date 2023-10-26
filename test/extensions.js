@@ -661,4 +661,28 @@ other,unknown address
     assert.equal(res.data.results[0].calc1, 'koumoul - 19 rue de la voie lactée saint avé')
     assert.equal(res.data.results[1].calc1, 'bidule - adresse inconnue')
   })
+
+  it('Fail to add extension with duplicate key', async function () {
+    const ax = global.ax.dmeadus
+    // Initial dataset with addresses
+    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
+    const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(id, " - ", adr)', property: { key: 'employees', type: 'string' } }]
+    })
+    assert.equal(res.status, 200)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    assert.ok(dataset.schema.find(field => field.key === 'employees'))
+
+    const form = new FormData()
+    form.append('file', fs.readFileSync('./test/resources/datasets/dataset2.csv'), 'dataset2.csv')
+    dataset = (await ax.put(`/api/v1/datasets/${dataset.id}?draft=false`, form, { headers: testUtils.formHeaders(form), params: { draft: true } })).data
+    assert.equal(dataset.file.name, 'dataset2.csv')
+
+    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), (err) => {
+      assert.equal(err.message, 'Une extension essaie de créer la colonne "employees" mais cette clé est déjà utilisée.')
+      return true
+    })
+  })
 })

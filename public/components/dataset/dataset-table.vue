@@ -299,24 +299,6 @@
                   {{ item._ownerName || item._owner }}
                 </v-tooltip>
               </template>
-              <!--<template v-else-if="header.value === '_updatedBy'">
-                <v-tooltip
-                  v-if="item._updatedBy"
-                  top
-                >
-                  <template #activator="{on}">
-                    <span
-                      class="text-body-2"
-                      v-on="on"
-                    >
-                      <v-avatar :size="28">
-                        <img :src="`${env.directoryUrl}/api/avatars/user/${item._updatedBy}/avatar.png`">
-                      </v-avatar>
-                    </span>
-                  </template>
-                  {{ item._updatedByName || item._updatedBy }}
-                </v-tooltip>
-              </template>-->
               <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
                 <!-- attachment_url is empty if the value is an external link -->
                 <a :href="item._attachment_url || item[header.value]">{{ item[header.value]| truncate(50) }}</a>
