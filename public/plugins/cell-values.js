@@ -10,6 +10,7 @@ Vue.filter('cellValues', function (values, property, truncate = 50) {
     if (value === undefined || value === null) return ''
     if (property['x-labels'] && property['x-labels']['' + value]) return property['x-labels']['' + value]
     if (property.format === 'date-time') {
+      if (value.endsWith('Z')) return moment(value).format('lll')
       // we use parseZone to show the data in the originally stored timezone
       return moment.parseZone(value).format('lll')
     }
