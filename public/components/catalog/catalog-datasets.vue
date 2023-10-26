@@ -18,17 +18,14 @@
             :input-value="catalog.autoUpdate && catalog.autoUpdate.active"
             :label="$t('autoUpdate')"
             color="warning"
+            :messages="catalog.autoUpdate && catalog.autoUpdate.nextUpdate"
+            class="mb-2"
             @change="value => patchAndApplyRemoteChange({autoUpdate: {active: !!value}})"
-          />
-          <v-alert
-            v-if="catalog.autoUpdate && catalog.autoUpdate.nextUpdate"
-            :value="true"
-            type="warning"
-            outlined
-            style="display:inline-block;"
           >
-            {{ $t('nextUpdate') }} {{ catalog.autoUpdate.nextUpdate | moment("from", "now") }}
-          </v-alert>
+            <template #message>
+              {{ $t('nextUpdate') }} {{ catalog.autoUpdate.nextUpdate | moment("from", "now") }}
+            </template>
+          </v-checkbox>
         </template>
 
         <v-card>
@@ -112,6 +109,13 @@
                       <nuxt-link :to="`/dataset/${resource.harvestedDataset.id}`">
                         {{ $t('harvestedDataset', {updatedAt: $moment(resource.harvestedDataset.updatedAt).format('LL')}) }}
                       </nuxt-link>
+                      <template v-if="resource.harvestedDataset.remoteFile">
+                        |
+                        <catalog-dataset-auto-update
+                          :dataset="resource.harvestedDataset"
+                          @change="v => toggleDatasetAutoUpdate(resource.harvestedDataset, v)"
+                        />
+                      </template>
                     </template>
                   </v-list-item-subtitle>
                 </v-list-item-content>
@@ -161,8 +165,9 @@ fr:
   sizeUnknown: taille inconnue
   fetchError: Erreur pendant la récupération des jeux de données du catalogue
   importError: Erreur pendant l'import du jeu de données
+  autoUpdateError: Erreur pendant la configuration de la mise à jour automatique des données
   overwriteDataset: Souhaitez vous écraser les informations précédement importées ?
-  autoUpdate: Activer la mise à jour automatique des jeux de données importées. Attention les informations seront écrasées.
+  autoUpdate: Activer la mise à jour automatique des métadonnées importées. Attention les informations seront écrasées.
   nextUpdate: Prochaine mise à jour
 en:
   datasetsCount: " | 1 dataset in the catalog | {count} datasets in the catalog"
@@ -174,6 +179,7 @@ en:
   sizeUnknown: size unknown
   fetchError: Error while fetching datasets from the catalog
   importError: Error while importing the dataset
+  autoUpdateError: Error while configuring data auto-update
   overwriteDataset: Do you want to overwrite the previously imported information ?
   autoUpdate: Activate automatic update. Warning existing information will be overwritten.
   nextUpdate: Next update
@@ -225,6 +231,22 @@ export default {
         await this.refresh()
       } catch (error) {
         eventBus.$emit('notification', { error, msg: this.$t('importError') })
+        this.loading = false
+      }
+    },
+    async toggleDatasetAutoUpdate (dataset, active) {
+      this.loading = true
+      try {
+        const remoteFile = { ...dataset.remoteFile }
+        for (const key in remoteFile) {
+          if (remoteFile[key] === null) delete remoteFile[key]
+        }
+        remoteFile.autoUpdate = { ...(remoteFile.autoUpdate ?? {}) }
+        remoteFile.autoUpdate.active = active
+        await this.$axios.$patch(`api/v1/datasets/${dataset.id}`, { remoteFile })
+        await this.refresh()
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: this.$t('autoUpdateError') })
         this.loading = false
       }
     }

@@ -132,7 +132,7 @@ exports.process = async function (app, dataset) {
 
   if (autoUpdating) {
     patch.remoteFile = patch.remoteFile || { ...dataset.remoteFile }
-    const job = new CronJob(config.catalogAutoUpdates.cron, () => {})
+    const job = new CronJob(config.remoteFilesAutoUpdates.cron, () => {})
     patch.remoteFile.autoUpdate = {
       ...patch.remoteFile.autoUpdate,
       lastUpdate: new Date().toISOString(),

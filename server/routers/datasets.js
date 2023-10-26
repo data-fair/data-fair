@@ -683,7 +683,7 @@ const curateDataset = (dataset, existingDataset) => {
   if (dataset.title) dataset.title = dataset.title.trim()
 
   if (dataset.remoteFile?.autoUpdate?.active) {
-    const job = new CronJob(config.catalogAutoUpdates.cron, () => {})
+    const job = new CronJob(config.remoteFilesAutoUpdates.cron, () => {})
     dataset.remoteFile.autoUpdate.nextUpdate = job.nextDates().toISOString()
   } else if (dataset.remoteFile?.autoUpdate) {
     delete dataset.remoteFile.autoUpdate.nextUpdate

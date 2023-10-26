@@ -312,6 +312,9 @@ module.exports = {
   catalogAutoUpdates: {
     cron: '0 22 * * 0'
   },
+  remoteFilesAutoUpdates: {
+    cron: '0 23 * * 0'
+  },
   prometheus: {
     active: true,
     port: 9090
