@@ -169,6 +169,7 @@ fr:
   params: Paramètres
   results: Résultats
   expr: Expression
+  emptyExpr: Saisissez une expression
   exprEvalHelp: "Une expression (ou formule) est utilisée pour calculer le contenu d'une colonne en fonction des valeurs des autres colonnes.
   Elle doit suivre la syntaxe du module <a href=\"https://github.com/silentmatt/expr-eval\">expr-eval</a>.
   Les valeurs des autres colonnes sont passées en paramètre avec leurs clés comme nom du paramètre. <br><br>
@@ -190,6 +191,7 @@ en:
   params: Parameters
   results: Results
   expr: Expression
+  emptyExpr: Write an expression
 </i18n>
 
 <script>
@@ -250,12 +252,16 @@ export default {
   watch: {
     'extension.expr': {
       handler () {
-        try {
-          this.parsedExpression = parser.parse(this.extension.expr)
-          this.parsingError = null
-        } catch (err) {
-          this.parsingError = err.message
-          return null
+        if (!this.extension.expr.trim()) {
+          this.parsingError = this.$t('emptyExpr')
+        } else {
+          try {
+            this.parsedExpression = parser.parse(this.extension.expr)
+            this.parsingError = null
+          } catch (err) {
+            this.parsingError = err.message
+            return null
+          }
         }
       },
       immediate: true
