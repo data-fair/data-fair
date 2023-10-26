@@ -130,7 +130,7 @@
           <tr>
             <template v-for="(header, i) in headers">
               <td
-                v-if="i === 0 && extensionResults[index]?.result"
+                v-if="i === 0 && extensionResults[index] && 'result' in extensionResults[index]"
                 :key="header.value"
                 style="border-right: 2px solid rgba(0,0,0,0.24);font-weight: bold;"
                 class="primary--text"
@@ -138,7 +138,7 @@
                 {{ extensionResults[index].result }}
               </td>
               <td
-                v-else-if="i === 0 && extensionResults[index]?.error"
+                v-else-if="i === 0 && extensionResults[index] && 'error' in extensionResults[index]"
                 :key="header.value"
                 style="border-right: 2px solid rgba(0,0,0,0.24);font-weight: bold;"
                 class="error--text"
