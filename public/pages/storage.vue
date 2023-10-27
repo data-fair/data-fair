@@ -59,7 +59,7 @@
             v-if="stats && datasets"
             :stats="stats"
             :datasets="{count: datasets.count, results: datasets.results.slice(0, 15)}"
-            :storage-mode="storageType"
+            :storage-type="storageType"
             class="mt-2"
           />
 

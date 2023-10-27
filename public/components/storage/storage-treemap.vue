@@ -82,7 +82,7 @@ export default {
       }
       if (this.datasets.count > this.datasets.results.length) {
         const nbOthers = this.datasets.count - this.datasets.results.length
-        const size = this.stats.limits[this.storageType === 'indexed' ? 'indexed_bytes' : 'stored_bytes'].consumption - data.children.reduce((a, c) => a + c.size, 0)
+        const size = this.stats.limits[this.storageType === 'indexed' ? 'indexed_bytes' : 'store_bytes'].consumption - data.children.reduce((a, c) => a + c.size, 0)
         const title = nbOthers === 1 ? '1 autre jeu de donnée' : nbOthers.toLocaleString() + ' autres jeux de données'
         data.children.push({
           id: '_others',
