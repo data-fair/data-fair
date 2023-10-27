@@ -18,7 +18,7 @@ layout {
       }
       pane name="server" {
         command "bash"
-        args "-ic" "nvm use && npm run dev-server"
+        args "-ic" "nvm use && DEBUG=upgrade*,i18n*,catalogs*,thumbnails,workers* NODE_ENV=development nodemon --exitcrash server"
       }
     }
     pane size=2 borderless=true {

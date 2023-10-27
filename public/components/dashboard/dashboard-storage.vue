@@ -67,7 +67,7 @@ export default {
   },
   async created () {
     this.datasets = await this.$axios.$get('api/v1/datasets', {
-      params: { size: 8, shared: false, select: 'id,title,storage', sort: 'storage.indexed.size:-1' }
+      params: { size: 8, shared: false, select: 'id,title,storage,-userPermissions,-links', sort: 'storage.indexed.size:-1' }
     })
   }
 }

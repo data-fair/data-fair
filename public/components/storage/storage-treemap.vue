@@ -68,14 +68,17 @@ export default {
       const data = {
         children: this.datasets.results
           .filter(d => !!d.storage)
-          .map(d => ({
-            id: d.id,
-            title: d.title || d.id,
-            size: this.storageType === 'indexed' ? d.storage.indexed.size : d.storage.size,
-            tooltip: `${d.title || d.id} - ${Vue.filter('bytes')(d.storage.size, this.$i18n.locale)} - ${{ public: 'Public', private: 'Privé', protected: 'Protégé' }[d.visibility]}`,
-            to: `/dataset/${d.id}`,
-            color: this.visibilityColor(d.visibility)
-          }))
+          .map(d => {
+            const size = this.storageType === 'indexed' ? d.storage.indexed.size : d.storage.size
+            return {
+              id: d.id,
+              title: d.title || d.id,
+              size,
+              tooltip: `${d.title || d.id} - ${Vue.filter('bytes')(size, this.$i18n.locale)} - ${{ public: 'Public', private: 'Privé', protected: 'Protégé' }[d.visibility]}`,
+              to: `/dataset/${d.id}`,
+              color: this.visibilityColor(d.visibility)
+            }
+          })
       }
       if (this.datasets.count > this.datasets.results.length) {
         const nbOthers = this.datasets.count - this.datasets.results.length

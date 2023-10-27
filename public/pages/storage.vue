@@ -140,8 +140,7 @@ export default {
         params: {
           size: 10000,
           owner: `${this.activeAccount.type}:${this.activeAccount.id}`,
-          select: 'id,title,storage',
-          raw: true,
+          select: 'id,title,storage,-userPermissions,-links',
           sort: this.storageType === 'indexed' ? 'storage.indexed.size:-1' : 'storage.size:-1'
         }
       }))
