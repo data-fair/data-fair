@@ -3,6 +3,8 @@ const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
 const baseAppsUtils = require('../utils/base-apps')
 const cacheHeaders = require('../utils/cache-headers')
+const pJson = require('../../package.json')
+
 const router = module.exports = express.Router()
 
 // All routes in the router are only for the super admins of the service
@@ -13,6 +15,10 @@ router.use(asyncWrap(async (req, res, next) => {
 }))
 
 router.use(cacheHeaders.noCache)
+
+router.get('/info', asyncWrap(async (req, res, next) => {
+  res.send({ version: pJson.version })
+}))
 
 router.get('/datasets-errors', asyncWrap(async (req, res, next) => {
   const datasets = req.app.get('db').collection('datasets')

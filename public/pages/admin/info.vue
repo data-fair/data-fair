@@ -19,12 +19,6 @@
               <pre v-if="status">{{ JSON.stringify(status, null, 2) }}</pre>
             </v-expansion-panel-content>
           </v-expansion-panel>
-          <v-expansion-panel>
-            <v-expansion-panel-header>Configuration</v-expansion-panel-header>
-            <v-expansion-panel-content>
-              <pre v-if="status">{{ JSON.stringify(info.config, null, 2) }}</pre>
-            </v-expansion-panel-content>
-          </v-expansion-panel>
         </v-expansion-panels>
       </v-container>
     </v-col>
