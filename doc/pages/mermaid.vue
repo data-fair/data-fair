@@ -11,7 +11,7 @@
 
 <script>
 import 'iframe-resizer/js/iframeResizer.contentWindow'
-import mermaid from 'mermaid/dist/mermaid.esm.min.mjs'
+import mermaid from 'mermaid'
 
 global.iFrameResizer = { heightCalculationMethod: 'taggedElement' }
 

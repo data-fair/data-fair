@@ -34,6 +34,7 @@ module.exports = {
   components: true,
   build: {
     extractCSS: true,
+    transpile: ['mermaid'],
     extend (config, ctx) {
       config.module.rules.push({
         enforce: 'pre',
