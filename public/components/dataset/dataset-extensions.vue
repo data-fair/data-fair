@@ -111,11 +111,15 @@
       <v-row>
         <v-col>
           <v-btn
-            v-if="can('writeDescriptionBreaking')"
-            v-t="'addExprEvalExtension'"
-            color="primary"
+            v-if="user.adminMode"
+            color="admin"
+            outlined
             @click="addPropertyDialog = true"
-          />
+          >
+            <v-icon>
+              mdi-star-four-points
+            </v-icon>&nbsp;&nbsp;{{ $t('addExprEvalExtension') }}
+          </v-btn>
 
           <dataset-add-property-dialog
             v-model="addPropertyDialog"
@@ -242,6 +246,7 @@ export default {
   },
   computed: {
     ...mapState(['vocabulary']),
+    ...mapState('session', ['user']),
     ...mapState('dataset', ['dataset', 'datasetClone', 'remoteServices']),
     ...mapGetters('dataset', ['can', 'remoteServicesMap']),
     datasetConcepts () {

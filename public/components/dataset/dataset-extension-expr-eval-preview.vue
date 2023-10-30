@@ -5,7 +5,7 @@
         id="expr-eval"
         :html="$t('exprEvalHelp')"
         persistent
-        :initial="false"
+        :initial="true"
       />
       <v-text-field
         v-model="extension.expr"
