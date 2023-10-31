@@ -3,6 +3,7 @@
     <tutorial-alert
       id="dataset-table"
       :text="$t('tutorialFilter')"
+      persistent
     />
     <v-row
       v-if="notFound"

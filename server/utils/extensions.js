@@ -171,12 +171,20 @@ class ExtensionsStream extends Transform {
         let data
         if (localMasterData) {
           const masterDatasetId = extension.remoteService.server.replace(`${config.publicUrl}/api/v1/datasets/`, '')
-          const pseudoUser = this.dataset.owner.type === 'user' ? { id: this.dataset.owner.id } : { id: '_master-data', organizations: [{ id: this.dataset.owner.id, role: 'admin' }] }
-          pseudoUser.activeAccount = this.dataset.owner
+          const pseudoUser = { name: 'extension' }
+          if (this.dataset.owner.type === 'user') {
+            pseudoUser.id = this.dataset.owner.id
+            pseudoUser.organizations = []
+            pseudoUser.activeAccount = { ...this.dataset.owner, role: 'admin' }
+          } else {
+            pseudoUser.id = '_master-data'
+            pseudoUser.organizations = [{ ...this.dataset.owner, role: 'user' }]
+            pseudoUser.activeAccount = pseudoUser.organizations[0]
+          }
           const masterDataset = await this.db.collection('datasets').findOne({ id: masterDatasetId })
           if (!masterDataset) throw new Error('jeu de données de référence inconnu ' + masterDatasetId)
           if (!permissionsUtils.list('datasets', masterDataset, pseudoUser).includes('readLines')) {
-            throw new Error('permission manquante sur le jeu de données de référence ' + masterDatasetId)
+            throw new Error(`[noretry] permission manquante sur le jeu de données de référence "${masterDataset.slug}" (${masterDataset.id})`)
           }
           const bulkSearchId = extension.action.id.replace('masterData_bulkSearch_', '')
           data = await bulkSearchPromise(
