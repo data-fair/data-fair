@@ -19,7 +19,7 @@ describe('Catalogs', () => {
   it('Fail to init catalog definition based on bad url', async () => {
     const ax = global.ax.anonymous
     try {
-      await ax.post('/api/v1/catalogs/_init', null, { params: { url: 'http://mycatalogTEST.com' } })
+      await ax.post('/api/v1/catalogs/_init', null, { params: { url: 'http://not-a-catalog.com' } })
     } catch (err) {
       assert.equal(err.status, 400)
     }

@@ -51,7 +51,7 @@
         @mouseleave="leaveValue(itemValue)"
       >
         <v-avatar
-          v-if="field.key === '_updatedByName' && item._updatedBy"
+          v-if="field.key === '_updatedByName' && item._updatedBy && !item._updatedBy.startsWith('apiKey:')"
           :size="28"
         >
           <img :src="`${env.directoryUrl}/api/avatars/user/${item._updatedBy}/avatar.png`">

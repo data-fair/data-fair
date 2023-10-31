@@ -1005,7 +1005,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
   })
 
   it('Activating/deactivating storeUpdatedBy', async () => {
-    const ax = global.ax.dmeadus
+    const ax = global.ax.dmeadusOrg
     let res = await ax.post('/api/v1/datasets/updatedby', {
       isRest: true,
       title: 'updatedby',
@@ -1033,13 +1033,13 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.results[0]._updatedBy, 'dmeadus0')
     assert.equal(res.data.results[0]._updatedByName, 'Danna Meadus')
 
-    res = await global.ax.dmeadus.put('/api/v1/settings/user/dmeadus0', { apiKeys: [{ title: 'api key', scopes: ['datasets'] }] })
-    const apiKey = res.data.apiKeys[0].clearKey
-    const axAPIKey = await global.ax.builder(null, null, { headers: { 'x-apiKey': apiKey } })
+    res = await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { apiKeys: [{ title: 'api key', scopes: ['datasets'] }] })
+    const apiKey = res.data.apiKeys[0]
+    const axAPIKey = await global.ax.builder(null, null, { headers: { 'x-apiKey': apiKey.clearKey } })
     await axAPIKey.post('/api/v1/datasets/updatedby/lines', { attr1: 'test1', attr2: 'test3' })
     await workers.hook('finalizer/updatedby')
     res = await ax.get('/api/v1/datasets/updatedby/lines')
-    assert.equal(res.data.results[0]._updatedBy, 'dmeadus0')
+    assert.equal(res.data.results[0]._updatedBy, 'apiKey:' + apiKey.id)
     assert.equal(res.data.results[0]._updatedByName, 'api key')
 
     res = await ax.patch('/api/v1/datasets/updatedby', { rest: { storeUpdatedBy: true, history: true } })

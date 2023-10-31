@@ -22,6 +22,9 @@ before('global mocks', () => {
     .get('/api/1/site/').reply(200, { title: 'My catalog' })
     .get('/api/1/organizations/suggest/?q=koumoul').reply(200, [{ name: 'Koumoul' }])
     .get('/api/1/datasets/suggest/?q=test').reply(200, [{ title: 'Test dataset' }])
+  // fake catalog
+  nock('http://not-a-catalog.com')
+    .persist()
 
   // fake applications
   const html = `

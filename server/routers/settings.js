@@ -112,7 +112,7 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async (req, res) => {
     if (apiKey.adminMode && !req.user.adminMode) {
       throw createError(403, 'Only superadmin can manage api keys with adminMode=true')
     }
-    if (!apiKey.id) apiKey.id = nanoid()
+    if (!apiKey.id) fullApiKeys[i].id = apiKey.id = nanoid()
 
     if (!apiKey.key) {
       const clearKeyParts = [req.owner.type.slice(0, 1), req.owner.id]

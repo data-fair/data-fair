@@ -35,16 +35,15 @@ exports.readApiKey = async (db, rawApiKey, scope, asAccount) => {
     }
   } else {
     if (asAccount) throw createError(403, 'Cette clé d\'API ne supporte pas de spécifier le compte à incarner')
-    user = {
-      id: settings.id,
-      name: apiKey.title,
-      adminMode: !!apiKey.adminMode,
-      isApiKey: true
-    }
+    user = { adminMode: !!apiKey.adminMode, isApiKey: true }
     if (settings.type === 'user') {
+      user.id = settings.id
+      user.name = `${user.name} (${apiKey.title})`
       user.organizations = []
       user.activeAccount = { type: 'user', id: settings.id, name: user.name }
     } else {
+      user.id = 'apiKey:' + apiKey.id
+      user.name = apiKey.title
       user.organization = { id: settings.id, name: settings.name, role: config.adminRole }
       if (settings.department) user.organization.department = settings.department
       user.organizations = [user.organization]
