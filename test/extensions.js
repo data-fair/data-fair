@@ -662,6 +662,41 @@ other,unknown address
     assert.equal(res.data.results[1].calc1, 'bidule - adresse inconnue')
   })
 
+  it('Extend dataset using expression referencing column from another extension', async function () {
+    const ax = global.ax.dmeadus
+    // Initial dataset with addresses
+    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
+    // Prepare for extension using created remote service and patch dataset to ask for it
+    const nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
+      .post('/geocoder/coords').reply(200, (uri, requestBody) => {
+        const inputs = requestBody.trim().split('\n').map(JSON.parse)
+        assert.equal(inputs.length, 2)
+        assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
+        return inputs.map((input, i) => ({ key: input.key, lat: 10 * i, lon: 10 * i, matchLevel: 'street' }))
+          .map(JSON.stringify).join('\n') + '\n'
+      })
+    dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+
+    let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [
+        { active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' },
+        { active: true, type: 'exprEval', expr: 'CONCAT(id, " - ", adr, " - ", _coords.matchLevel)', property: { key: 'calc1', type: 'string' } }
+      ]
+    })
+    assert.equal(res.status, 200)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    nockScope.done()
+    console.log(dataset.schema)
+    assert.ok(dataset.schema.find(field => field.key === 'calc1'))
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results[0].calc1, 'koumoul - 19 rue de la voie lactée saint avé - street')
+    assert.equal(res.data.results[1].calc1, 'bidule - adresse inconnue - street')
+  })
+
   it('Fail to add extension with duplicate key', async function () {
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
