@@ -198,7 +198,7 @@ class ExtensionsStream extends Transform {
           const i = result[extension.idInput.name]
           this.buffer[i][extension.extensionKey] = selectedResult
           if (!localMasterData) {
-          // TODO: do this in bulk ?
+            // TODO: do this in bulk ?
             await this.db.collection('extensions-cache')
               .replaceOne(
                 { extensionKey: extensionCacheKey, input: inputCacheKeys[i] },
@@ -213,7 +213,15 @@ class ExtensionsStream extends Transform {
           try {
             const data = { ...this.buffer[i] }
             for (const prop of this.dataset.schema) {
-              data[prop.key] = data[prop.key] ?? null
+              const ext = this.dataset.extensions?.find(e => prop.key.startsWith(exports.getExtensionKey(e) + '.'))
+              if (ext) {
+                const extKey = exports.getExtensionKey(ext)
+                data[extKey] = data[extKey] ? { ...data[extKey] } : {}
+                const shortKey = prop.key.replace(extKey + '.', '')
+                data[extKey][shortKey] = data[extKey][shortKey] ?? null
+              } else {
+                data[prop.key] = data[prop.key] ?? null
+              }
             }
             value = extension.evaluate(data)
           } catch (err) {

@@ -673,7 +673,9 @@ other,unknown address
         const inputs = requestBody.trim().split('\n').map(JSON.parse)
         assert.equal(inputs.length, 2)
         assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-        return inputs.map((input, i) => ({ key: input.key, lat: 10 * i, lon: 10 * i, matchLevel: 'street' }))
+        return inputs
+          .filter((input, i) => i !== 0)
+          .map((input, i) => ({ key: input.key, lat: 10 * i, lon: 10 * i, matchLevel: 'street' }))
           .map(JSON.stringify).join('\n') + '\n'
       })
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
@@ -688,12 +690,11 @@ other,unknown address
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()
-    console.log(dataset.schema)
     assert.ok(dataset.schema.find(field => field.key === 'calc1'))
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
-    assert.equal(res.data.results[0].calc1, 'koumoul - 19 rue de la voie lactée saint avé - street')
+    assert.equal(res.data.results[0].calc1, 'koumoul - 19 rue de la voie lactée saint avé -')
     assert.equal(res.data.results[1].calc1, 'bidule - adresse inconnue - street')
   })
 
