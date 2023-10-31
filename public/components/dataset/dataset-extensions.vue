@@ -54,62 +54,7 @@
               </template>
             </v-list>
           </v-menu>
-        </v-col>
-      </v-row>
 
-      <v-row
-        v-if="localExtensions"
-        class="mt-0"
-      >
-        <v-col
-          v-for="(extension, idx) in localExtensions.filter(e => e.type === 'remoteService')"
-          :key="extension.remoteService + '--' + extension.action"
-          cols="12"
-          md="6"
-        >
-          <v-card
-            :loading="!ready"
-            height="100%"
-            :outlined="!extensionHasChanges(extension)"
-          >
-            <v-card-title>
-              {{ remoteServicesMap[extension.remoteService] && remoteServicesMap[extension.remoteService].actions[extension.action] && remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
-            </v-card-title>
-            <v-card-text style="margin-bottom:40px;">
-              <v-autocomplete
-                v-if="extension.active && remoteServicesMap[extension.remoteService] && selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
-                v-model="extension.select"
-                :disabled="!can('writeDescriptionBreaking')"
-                :items="selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
-                item-value="name"
-                item-text="title"
-                :label="$t('additionalCols')"
-                multiple
-                :placeholder="$t('allColsOut')"
-                persistent-hint
-                chips
-                deletable-chips
-              />
-            </v-card-text>
-            <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
-              <dataset-extension-details-dialog
-                :extension="extension"
-                :disabled="extensionHasChanges(extension)"
-              />
-              <confirm-menu
-                v-if="can('writeDescriptionBreaking')"
-                yes-color="warning"
-                :text="$t('confirmDeleteText')"
-                :tooltip="$t('confirmDeleteTooltip')"
-                @confirm="removeExtension(idx)"
-              />
-            </v-card-actions>
-          </v-card>
-        </v-col>
-      </v-row>
-
-      <v-row>
-        <v-col>
           <v-btn
             v-if="user.adminMode"
             color="admin"
@@ -133,13 +78,12 @@
           />
         </v-col>
       </v-row>
-
       <v-row
         v-if="localExtensions"
         class="mt-0"
       >
         <v-col
-          v-for="(extension, idx) in localExtensions.filter(e => e.type === 'exprEval')"
+          v-for="(extension, idx) in localExtensions"
           :key="idx"
           cols="12"
           md="6"
@@ -149,33 +93,69 @@
             height="100%"
             :outlined="!extensionHasChanges(extension)"
           >
-            <v-card-title>
-              {{ extension.property?.['x-originalName'] || $t('newExprEval') }}
-            </v-card-title>
-            <v-card-text style="margin-bottom:40px;">
-              <v-text-field
-                v-model="extension.expr"
-                disabled
-                :label="$t('expr')"
-                hide-details
-              >
-                <template #append>
-                  <dataset-extension-expr-eval-preview-dialog
-                    v-if="can('writeDescriptionBreaking')"
-                    :extension="extension"
-                  />
-                </template>
-              </v-text-field>
-            </v-card-text>
-            <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
-              <confirm-menu
-                v-if="can('writeDescriptionBreaking')"
-                yes-color="warning"
-                :text="$t('confirmDeleteText')"
-                :tooltip="$t('confirmDeleteTooltip')"
-                @confirm="removeExtension(idx)"
-              />
-            </v-card-actions>
+            <template v-if="extension.type === 'remoteService'">
+              <v-card-title>
+                {{ remoteServicesMap[extension.remoteService] && remoteServicesMap[extension.remoteService].actions[extension.action] && remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
+              </v-card-title>
+              <v-card-text style="margin-bottom:40px;">
+                <v-autocomplete
+                  v-if="extension.active && remoteServicesMap[extension.remoteService] && selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
+                  v-model="extension.select"
+                  :disabled="!can('writeDescriptionBreaking')"
+                  :items="selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
+                  item-value="name"
+                  item-text="title"
+                  :label="$t('additionalCols')"
+                  multiple
+                  :placeholder="$t('allColsOut')"
+                  persistent-hint
+                  chips
+                  deletable-chips
+                />
+              </v-card-text>
+              <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
+                <dataset-extension-details-dialog
+                  :extension="extension"
+                  :disabled="extensionHasChanges(extension)"
+                />
+                <confirm-menu
+                  v-if="can('writeDescriptionBreaking')"
+                  yes-color="warning"
+                  :text="$t('confirmDeleteText')"
+                  :tooltip="$t('confirmDeleteTooltip')"
+                  @confirm="removeExtension(idx)"
+                />
+              </v-card-actions>
+            </template>
+            <template v-if="extension.type === 'exprEval'">
+              <v-card-title>
+                {{ extension.property?.['x-originalName'] || $t('newExprEval') }}
+              </v-card-title>
+              <v-card-text style="margin-bottom:40px;">
+                <v-text-field
+                  v-model="extension.expr"
+                  disabled
+                  :label="$t('expr')"
+                  hide-details
+                >
+                  <template #append>
+                    <dataset-extension-expr-eval-preview-dialog
+                      v-if="can('writeDescriptionBreaking')"
+                      :extension="extension"
+                    />
+                  </template>
+                </v-text-field>
+              </v-card-text>
+              <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
+                <confirm-menu
+                  v-if="can('writeDescriptionBreaking')"
+                  yes-color="warning"
+                  :text="$t('confirmDeleteText')"
+                  :tooltip="$t('confirmDeleteTooltip')"
+                  @confirm="removeExtension(idx)"
+                />
+              </v-card-actions>
+            </template>
           </v-card>
         </v-col>
       </v-row>

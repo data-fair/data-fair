@@ -196,7 +196,9 @@ en:
 
 <script>
 import eventBus from '~/event-bus'
+import { unflatten } from 'flat'
 const { parser } = require('../../../shared/expr-eval')
+const { getExtensionKey } = require('../../../shared/utils/extensions')
 const { mapState, mapGetters } = require('vuex')
 
 export default {
@@ -238,10 +240,20 @@ export default {
       return this.data.results.map(result => {
         if (!this.parsedExpression) return null
         try {
-          const data = { ...result }
+          const data = unflatten(result)
+          // WARNING: this code is duplicated in server/utils/extensions.js
           for (const prop of this.dataset.schema) {
-            data[prop.key] = data[prop.key] ?? null
+            const ext = this.dataset.extensions?.find(e => prop.key.startsWith(getExtensionKey(e) + '.'))
+            if (ext) {
+              const extKey = getExtensionKey(ext)
+              data[extKey] = data[extKey] ? { ...data[extKey] } : {}
+              const shortKey = prop.key.replace(extKey + '.', '')
+              data[extKey][shortKey] = data[extKey][shortKey] ?? null
+            } else {
+              data[prop.key] = data[prop.key] ?? null
+            }
           }
+
           return { result: this.parsedExpression.evaluate(data) }
         } catch (err) {
           return { error: err.message }

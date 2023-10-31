@@ -220,6 +220,7 @@ class ExtensionsStream extends Transform {
           let value
           try {
             const data = { ...this.buffer[i] }
+            // WARNING: this code is duplicated in server/utils/extensions.js
             for (const prop of this.dataset.schema) {
               const ext = this.dataset.extensions?.find(e => prop.key.startsWith(exports.getExtensionKey(e) + '.'))
               if (ext) {
@@ -257,13 +258,7 @@ class ExtensionsStream extends Transform {
   }
 }
 
-exports.getExtensionKey = (extension) => {
-  if (extension.propertyPrefix) return extension.propertyPrefix
-  // deprecated
-  if (extension.shortId) return '_ext_' + extension.shortId
-  // also deprecated
-  return `_ext_${extension.remoteService}_${extension.action}`
-}
+exports.getExtensionKey = require('../../shared/utils/extensions').getExtensionKey
 
 // Create a function that will transform items from a dataset into inputs for an action
 function prepareInputMapping (action, dataset, extensionKey, selectFields) {
