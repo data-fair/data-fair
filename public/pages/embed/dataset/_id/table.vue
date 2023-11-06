@@ -9,8 +9,11 @@
     >
       {{ $t('tutorialFilter') }}
     </tutorial-alert>
+
     <!-- this is simply to include the style of v-data-table and related components -->
-    <v-data-table v-if="false" />
+    <v-data-table v-show="false" />
+    <v-simple-table v-show="false" />
+
     <v-app-bar
       :elevate-on-scroll="displayMode === 'list'"
       app
