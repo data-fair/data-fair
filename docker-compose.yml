@@ -117,6 +117,10 @@ services:
         test: ["CMD", "nc", "-z", "-v", "localhost", "3310"]
     volumes:
       - ./data:/data/data-fair
+      - clamav-data:/var/lib/clamav
+    environment:
+      - CLAMAV_NO_FRESHCLAMD=true
+      - CLAMAV_NO_MILTERD=true
     ports:
       - 3310:3310
 
@@ -151,3 +155,4 @@ volumes:
   mongo-data:
   udata-fs:
   redis-data:
+  clamav-data:
