@@ -58,7 +58,7 @@ exports.listDatasets = async (catalog, p) => {
     // bucket: 's101'
     fast: 'index',
     from: 1,
-    to: 20,
+    to: 100,
     resultType: 'details',
     sortBy: 'relevance'
   }
