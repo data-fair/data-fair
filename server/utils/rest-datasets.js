@@ -655,7 +655,7 @@ exports.readStreams = async (db, dataset, filter = {}, progress) => {
     collection.find(filter).batchSize(100).stream(),
     new Transform({
       objectMode: true,
-      async transform (chunk, encoding, cb) {
+      transform (chunk, encoding, cb) {
         if (progress) progress(inc)
         // now _i should always be defined, but keep the OR for retro-compatibility
         chunk._i = chunk._i || chunk._updatedAt.getTime()
@@ -736,9 +736,9 @@ exports.applyTTL = async (app, dataset) => {
     new Readable({
       objectMode: true,
       async read () {
-        if (this.reading) return
-        this.reading = true
         try {
+          if (this.reading) return
+          this.reading = true
           let { body } = await es.search({
             index: esUtils.aliasName(dataset),
             scroll: '15m',
@@ -764,7 +764,7 @@ exports.applyTTL = async (app, dataset) => {
     }),
     new Transform({
       objectMode: true,
-      async transform (hit, encoding, callback) {
+      transform (hit, encoding, callback) {
         return callback(null, { _action: 'delete', _id: hit._id })
       }
     }),

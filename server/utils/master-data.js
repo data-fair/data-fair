@@ -85,40 +85,44 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
     batchStream(1000),
     new Transform({
       async transform (lines, encoding, callback) {
-        const queries = lines.map(line => ({
-          select,
-          sort: bulkSearch.sort,
-          ...paramsBuilder(line),
-          size: 1
-        }))
-        let esResponse
         try {
-          esResponse = await esUtils.multiSearch(es, dataset, queries)
-        } catch (err) {
-          prometheus.internalError.inc({ errorCode: 'masterdata-multi-query' })
-          console.error(`(masterdata-multi-query) master-data multisearch query error ${dataset.id}`, err)
-          const message = esUtils.errorMessage(err)
-          return callback(createError(err.status, message))
-        }
-        for (const i in esResponse.responses) {
-          const line = lines[i]
-          const lineKey = line._key || lineIndex
-          lineIndex += 1
-          const response = esResponse.responses[i]
+          const queries = lines.map(line => ({
+            select,
+            sort: bulkSearch.sort,
+            ...paramsBuilder(line),
+            size: 1
+          }))
+          let esResponse
+          try {
+            esResponse = await esUtils.multiSearch(es, dataset, queries)
+          } catch (err) {
+            prometheus.internalError.inc({ errorCode: 'masterdata-multi-query' })
+            console.error(`(masterdata-multi-query) master-data multisearch query error ${dataset.id}`, err)
+            const message = esUtils.errorMessage(err)
+            throw createError(err.status, message)
+          }
+          for (const i in esResponse.responses) {
+            const line = lines[i]
+            const lineKey = line._key || lineIndex
+            lineIndex += 1
+            const response = esResponse.responses[i]
 
-          if (response.error) {
-            prometheus.internalError.inc({ errorCode: 'masterdata-item-query' })
-            console.error(`(masterdata-item-query) master-data item query error ${dataset.id}`, response.error)
-            this.push(finalizeResponseLine({}, lineKey, esUtils.errorMessage(response.error)))
-            continue
+            if (response.error) {
+              prometheus.internalError.inc({ errorCode: 'masterdata-item-query' })
+              console.error(`(masterdata-item-query) master-data item query error ${dataset.id}`, response.error)
+              this.push(finalizeResponseLine({}, lineKey, esUtils.errorMessage(response.error)))
+              continue
+            }
+            if (response.hits.hits.length === 0) {
+              this.push(finalizeResponseLine({}, lineKey, 'La donnée de référence ne contient pas de ligne correspondante.'))
+              continue
+            }
+            this.push(finalizeResponseLine(response.hits.hits[0]._source, lineKey))
           }
-          if (response.hits.hits.length === 0) {
-            this.push(finalizeResponseLine({}, lineKey, 'La donnée de référence ne contient pas de ligne correspondante.'))
-            continue
-          }
-          this.push(finalizeResponseLine(response.hits.hits[0]._source, lineKey))
+          callback()
+        } catch (err) {
+          callback(err)
         }
-        callback()
       },
       objectMode: true
     }),
