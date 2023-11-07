@@ -69,16 +69,18 @@ const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, 
   const estimatedContentSize = contentLength - 210
 
   const owner = req.dataset ? req.dataset.owner : usersUtils.owner(req)
+  const debugInfo = { owner, estimatedContentSize }
+
   if (config.defaultLimits.datasetStorage !== -1 && config.defaultLimits.datasetStorage < estimatedContentSize) {
-    debugLimits('datasetStorage/checkStorage', owner)
+    debugLimits('datasetStorage/checkStorage', debugInfo)
     throw createError(413, 'Vous avez atteint la limite de votre espace de stockage pour ce jeu de données.')
   }
   if (config.defaultLimits.datasetIndexed !== -1 && config.defaultLimits.datasetIndexed < estimatedContentSize) {
-    debugLimits('datasetIndexed/checkStorage', owner)
+    debugLimits('datasetIndexed/checkStorage', debugInfo)
     throw createError(413, 'Vous dépassez la taille de données indexées autorisée pour ce jeu de données.')
   }
   const remaining = await limits.remaining(req.app.get('db'), owner)
-  const debugInfo = { owner, remaining: { ...remaining } }
+  debugInfo.remaining = { ...remaining }
   if (overwrite && req.dataset && req.dataset.storage) {
     debugInfo.overwriteDataset = req.dataset.storage
     // ignore the size of the dataset we are overwriting
