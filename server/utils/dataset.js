@@ -37,6 +37,8 @@ const { prepareMarkdownContent } = require('./markdown')
 const permissions = require('./permissions')
 const findUtils = require('./find')
 
+const debugLimits = require('debug')('limits')
+
 const equal = require('deep-equal')
 const dataDir = path.resolve(config.dataDir)
 
@@ -566,9 +568,18 @@ exports.updateTotalStorage = async (db, owner, checkRemaining = false) => {
 
   if (checkRemaining && process.env.NO_STORAGE_CHECK !== 'true') {
     const remaining = await limits.remaining(db, owner)
-    if (remaining.storage === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
-    if (remaining.indexed === 0) throw createError(429, 'Vous avez atteint la limite de votre espace de données indexées.')
-    if (remaining.nbDatasets === 0) throw createError(429, 'Vous avez atteint la limite de votre nombre de jeux de données.')
+    if (remaining.storage === 0) {
+      debugLimits('exceedLimitStorage/updateTotalStorage', { owner, remaining })
+      throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
+    }
+    if (remaining.indexed === 0) {
+      debugLimits('exceedLimitIndexed/updateTotalStorage', { owner, remaining })
+      throw createError(429, 'Vous avez atteint la limite de votre espace de données indexées.')
+    }
+    if (remaining.nbDatasets === 0) {
+      debugLimits('exceedLimitNbDatasets/updateTotalStorage', { owner, remaining })
+      throw createError(429, 'Vous avez atteint la limite de votre nombre de jeux de données.')
+    }
   }
   return totalStorage
 }

@@ -59,6 +59,8 @@ const router = express.Router()
 
 const clean = datasetUtils.clean
 
+const debugLimits = require('debug')('limits')
+
 const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
   if (process.env.NO_STORAGE_CHECK === 'true') return next()
   if (!req.get('Content-Length')) throw createError(411, 'Content-Length is mandatory')
@@ -68,13 +70,17 @@ const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, 
 
   const owner = req.dataset ? req.dataset.owner : usersUtils.owner(req)
   if (config.defaultLimits.datasetStorage !== -1 && config.defaultLimits.datasetStorage < estimatedContentSize) {
+    debugLimits('datasetStorage/checkStorage', owner)
     throw createError(413, 'Vous avez atteint la limite de votre espace de stockage pour ce jeu de données.')
   }
   if (config.defaultLimits.datasetIndexed !== -1 && config.defaultLimits.datasetIndexed < estimatedContentSize) {
+    debugLimits('datasetIndexed/checkStorage', owner)
     throw createError(413, 'Vous dépassez la taille de données indexées autorisée pour ce jeu de données.')
   }
   const remaining = await limits.remaining(req.app.get('db'), owner)
+  const debugInfo = { owner, remaining: { ...remaining } }
   if (overwrite && req.dataset && req.dataset.storage) {
+    debugInfo.overwriteDataset = req.dataset.storage
     // ignore the size of the dataset we are overwriting
     if (remaining.storage !== -1) remaining.storage += req.dataset.storage.size
     if (remaining.indexed !== -1) remaining.indexed += req.dataset.storage.size
@@ -87,7 +93,7 @@ const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, 
         req,
         new Writable({
           write (chunk, encoding, callback) {
-          // do nothing wa just want to drain the request
+            // do nothing wa just want to drain the request
             callback()
           }
         })
@@ -95,8 +101,14 @@ const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, 
     } catch (err) {
       console.warn('Failure to drain request that was rejected for exceeding storage limit', err)
     }
-    if (!storageOk) throw createError(429, req.__('errors.exceedLimitStorage'))
-    if (!indexedOk) throw createError(429, req.__('errors.exceedLimitIndexed'))
+    if (!storageOk) {
+      debugLimits('exceedLimitStorage/checkStorage', debugInfo)
+      throw createError(429, req.__('errors.exceedLimitStorage'))
+    }
+    if (!indexedOk) {
+      debugLimits('exceedLimitIndexed/checkStorage', debugInfo)
+      throw createError(429, req.__('errors.exceedLimitIndexed'))
+    }
   }
   next()
 })
@@ -613,13 +625,16 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
   if (req.body.type !== req.dataset.owner.type && req.body.id !== req.dataset.owner.id) {
     const remaining = await limits.remaining(req.app.get('db'), req.body)
     if (remaining.nbDatasets === 0) {
+      debugLimits('exceedLimitNbDatasets/changeOwner', { owner: req.body, remaining })
       return res.status(429).send(req.__('errors.exceedLimitNbDatasets'))
     }
     if (req.dataset.storage) {
       if (remaining.storage !== -1 && remaining.storage < req.dataset.storage.size) {
+        debugLimits('exceedLimitStorage/changeOwner', { owner: req.body, remaining, storage: req.dataset.storage })
         return res.status(429).send(req.__('errors.exceedLimitStorage'))
       }
       if (remaining.indexed !== -1 && req.dataset.storage.indexed && remaining.indexed < req.dataset.storage.indexed.size) {
+        debugLimits('exceedLimitIndexed/changeOwner', { owner: req.body, remaining, storage: req.dataset.storage })
         return res.status(429).send(req.__('errors.exceedLimitIndexed'))
       }
     }
@@ -804,6 +819,7 @@ const beforeUpload = asyncWrap(async (req, res, next) => {
   const owner = usersUtils.owner(req)
   if (!permissions.canDoForOwner(owner, 'datasets', 'post', req.user, req.app.get('db'))) return res.sendStatus(403)
   if ((await limits.remaining(req.app.get('db'), owner)).nbDatasets === 0) {
+    debugLimits('exceedLimitNbDatasets/beforeUpload', { owner })
     return res.status(429).send(req.__('errors.exceedLimitNbDatasets'))
   }
   next()
@@ -935,6 +951,7 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
     }
     req.isNewDataset = true
     if ((await limits.remaining(req.app.get('db'), newDataset.owner)).nbDatasets === 0) {
+      debugLimits('exceedLimitNbDatasets/attemptInsert', { owner: newDataset.owner })
       return res.status(429, req.__('errors.exceedLimitNbDatasets'))
     }
     await datasetUtils.updateTotalStorage(req.app.get('db'), newDataset.owner)

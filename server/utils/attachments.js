@@ -7,7 +7,9 @@ const mime = require('mime-types')
 const datasetUtils = require('./dataset')
 const limits = require('./limits')
 const exec = require('./exec')
+
 const debug = require('debug')('attachments')
+const debugLimits = require('debug')('limits')
 
 exports.addAttachments = async (dataset, attachmentsArchive) => {
   const dir = datasetUtils.attachmentsDir(dataset)
@@ -62,12 +64,19 @@ const metadataUpload = multer({
       const attachmentLimit = config.defaultLimits.attachmentStorage
       if (attachmentLimit !== -1 && attachmentLimit < estimatedFileSize) throw createError(413, 'Attachment size exceeds the authorized limit')
       const remaining = await limits.remaining(req.app.get('db'), req.dataset.owner)
+      const debugInfo = { owner: req.dataset.owner, remaining: { ...remaining }, estimatedFileSize }
       if (remaining.storage !== -1) {
         // Ignore the size of the attachment we are overwriting
         const existingAttachment = (req.dataset.attachments || []).find(a => a.name === file.originalname)
-        if (existingAttachment) remaining.storage += existingAttachment.size
+        if (existingAttachment) {
+          remaining.storage += existingAttachment.size
+          debugInfo.existingAttachment = existingAttachment
+        }
         remaining.storage = Math.max(0, remaining.storage - estimatedFileSize)
-        if (remaining.storage === 0) throw createError(429, req.__('errors.exceedLimitStorage'))
+        if (remaining.storage === 0) {
+          debugLimits('exceedLimitStorage/metadataUpload', debugInfo)
+          throw createError(429, req.__('errors.exceedLimitStorage'))
+        }
       }
       // mime type is broken on windows it seems.. detect based on extension instead
       const mimeType = mime.lookup(file.originalname)

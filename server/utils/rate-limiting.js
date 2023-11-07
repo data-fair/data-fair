@@ -6,6 +6,8 @@ const { promisify } = require('util')
 const finished = promisify(require('stream').finished)
 const asyncWrap = require('./async-wrap')
 
+const debugLimits = require('debug')('limits')
+
 // IMPORTANT NOTE: all rate limiting is based on memory only, to be strictly applied when scaling the service
 // load balancing has to be based on a hash of the rate limiting key i.e the origin IP
 // TODO: optional redis or mongo backend ?
@@ -27,6 +29,7 @@ exports.middleware = (_limitType) => asyncWrap(async (req, res, next) => {
   try {
     await limiters[limitType].consume(throttlingId, 1)
   } catch (err) {
+    debugLimits('exceedRateLimiting', limitType, throttlingId)
     return res.status(429).send(req.__('errors.exceedRateLimiting'))
   }
 
