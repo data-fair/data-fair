@@ -62,7 +62,10 @@ const metadataUpload = multer({
       // Approximate size of multi-part overhead and owner metadata
       const estimatedFileSize = contentLength - 210
       const attachmentLimit = config.defaultLimits.attachmentStorage
-      if (attachmentLimit !== -1 && attachmentLimit < estimatedFileSize) throw createError(413, 'Attachment size exceeds the authorized limit')
+      if (attachmentLimit !== -1 && attachmentLimit < estimatedFileSize) {
+        debugLimits('attachmentStorage/metadataUpload', { attachmentLimit, estimatedFileSize })
+        throw createError(413, 'Attachment size exceeds the authorized limit')
+      }
       const remaining = await limits.remaining(req.app.get('db'), req.dataset.owner)
       const debugInfo = { owner: req.dataset.owner, remaining: { ...remaining }, estimatedFileSize }
       if (remaining.storage !== -1) {
