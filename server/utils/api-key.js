@@ -19,16 +19,15 @@ exports.readApiKey = async (db, rawApiKey, scope, asAccount) => {
   if (apiKey.adminMode && apiKey.asAccount) {
     if (!asAccount) throw createError(403, 'Cette clé d\'API requiert de spécifier le compte à incarner')
     const account = typeof asAccount === 'string' ? JSON.parse(asAccount) : asAccount
-    user = {
-      id: apiKey.id,
-      name: apiKey.title,
-      isApiKey: true
-    }
+    user = { isApiKey: true }
     if (account.type === 'user') {
       user.id = account.id
+      user.name = `${account.name} (${apiKey.title})`
       user.organizations = []
-      user.activeAccount = { ...account, name: user.name }
+      user.activeAccount = { type: 'user', id: user.id, name: user.name }
     } else {
+      user.id = 'apiKey:' + apiKey.id
+      user.name = apiKey.title
       user.organization = { id: account.id, name: account.name, role: config.adminRole }
       if (asAccount.department) user.organization.department = asAccount.department
       user.organizations = [user.organization]
@@ -39,9 +38,9 @@ exports.readApiKey = async (db, rawApiKey, scope, asAccount) => {
     user = { adminMode: !!apiKey.adminMode, isApiKey: true }
     if (settings.type === 'user') {
       user.id = settings.id
-      user.name = `${user.name} (${apiKey.title})`
+      user.name = `${settings.name} (${apiKey.title})`
       user.organizations = []
-      user.activeAccount = { type: 'user', id: settings.id, name: user.name }
+      user.activeAccount = { type: 'user', id: user.id, name: user.name }
     } else {
       user.id = 'apiKey:' + apiKey.id
       user.name = apiKey.title
