@@ -25,6 +25,7 @@ exports.readApiKey = async (db, rawApiKey, scope, asAccount) => {
       isApiKey: true
     }
     if (account.type === 'user') {
+      user.id = account.id
       user.organizations = []
       user.activeAccount = { ...account, name: user.name }
     } else {
