@@ -44,6 +44,43 @@ parser.functions.TRIM = function (arg) {
   return arg.trim().replace(/\W+/g, ' ')
 }
 
+/** parser.functions.SPLIT = parser.functions.TEXTSPLIT = function (arg, separator) {
+  if (typeof arg !== 'string') return arg
+  return arg.split(separator)
+} */
+
+parser.functions.SUBSTRING = function (arg, start, length) {
+  if (typeof arg !== 'string') return arg
+  let res = arg.substring(start)
+  if (length !== undefined && length !== null) res = res.substring(0, length)
+  return res
+}
+
+parser.functions.REPLACE = function (arg, search, replace) {
+  if (typeof arg !== 'string') return arg
+  let res = arg
+  while (res.includes(search)) {
+    res = res.replace(search, replace)
+  }
+  return res
+}
+
+parser.functions.EXTRACT = function (arg, before, after) {
+  if (typeof arg !== 'string') return arg
+  let start = 0
+  if (before) {
+    start = arg.indexOf(before)
+    if (start === -1) return undefined
+    start += before.length
+  }
+  let end = arg.length
+  if (after) {
+    end = arg.indexOf(after, start + before.length)
+    if (end === -1) return undefined
+  }
+  return arg.substring(start, end)
+}
+
 parser.functions.SUM = function () {
   let result = 0
   for (let i = 0; i < arguments.length; i++) {
@@ -61,6 +98,7 @@ parser.functions.AVG = parser.functions.AVERAGE = function () {
       nbValues += 1
     }
   }
+  if (nbValues === 0) return undefined
   return sum / nbValues
 }
 
