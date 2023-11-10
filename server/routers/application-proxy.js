@@ -28,7 +28,7 @@ const brandEmbed = config.brand.embed && parse5.parseFragment(config.brand.embed
 const setResource = asyncWrap(async (req, res, next) => {
   await findUtils.getByUniqueRef(req, 'application')
   if (!req.application) return res.status(404).send(req.__('errors.missingApp'))
-  findUtils.setResourceLinks(req.application, 'application', req.publicBaseUrl)
+  findUtils.setResourceLinks(req.application, 'application', req.publicBaseUrl, null, req.params.applicationId)
   req.resourceType = 'applications'
   next()
 })

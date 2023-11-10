@@ -203,10 +203,10 @@ exports.parametersDoc = (filterFields) => [
   title: 'Identifiant du propriétaire'
 }]))
 
-exports.setResourceLinks = (resource, resourceType, publicUrl = config.publicUrl, pageUrlTemplate) => {
+exports.setResourceLinks = (resource, resourceType, publicUrl = config.publicUrl, pageUrlTemplate, currentAccessId) => {
   resource.href = `${publicUrl}/api/v1/${resourceType}s/${publicUrl === config.publicUrl ? resource.id : resource.slug}`
   resource.page = pageUrlTemplate ? pageUrlTemplate.replace('{slug}', resource.slug).replace('{id}', resource.id) : `${config.publicUrl}/${resourceType}/${resource.id}`
-  if (resourceType === 'application') resource.exposedUrl = `${publicUrl}/app/${publicUrl === config.publicUrl ? resource.id : resource.slug}`
+  if (resourceType === 'application') resource.exposedUrl = `${publicUrl}/app/${currentAccessId || (publicUrl === config.publicUrl ? resource.id : resource.slug)}`
 }
 
 const basePipeline = (req, extraFilters) => {
