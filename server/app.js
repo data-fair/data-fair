@@ -210,6 +210,7 @@ if (config.mode.includes('server')) {
   // so that interruption is managed downstream instead of here
   server.keepAliveTimeout = (60 * 1000) + 1000
   server.headersTimeout = (60 * 1000) + 2000
+  server.requestTimeout = (15 * 60 * 1000)
   wss = new WebSocket.Server({ server })
 }
 

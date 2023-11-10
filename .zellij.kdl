@@ -7,7 +7,7 @@ layout {
       }
       pane name="deps" {
         command "bash"
-        args "-ic" "npm run dev-deps && dc --profile dev logs -f"
+        args "-ic" "npm run dev-deps && docker compose --profile dev logs -f"
       }
     }
     pane {

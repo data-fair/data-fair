@@ -4,7 +4,7 @@ const { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } = re
 module.exports = async (client, dataset, query, addGeoData, publicBaseUrl) => {
   const fields = dataset.schema.map(f => f.key)
   // nested grouping by a serie of fields
-  if (!query.field) throw createError(400, 'La paramètre "field" est obligatoire')
+  if (!query.field) throw createError(400, 'Le paramètre "field" est obligatoire')
   const valuesFields = query.field.split(';')
   // matching properties from the schema
   const props = valuesFields.map(f => dataset.schema.find(p => p.key === f))
