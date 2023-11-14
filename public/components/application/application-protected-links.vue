@@ -65,10 +65,10 @@ export default {
   computed: {
     ...mapState(['env']),
     ...mapState('application', ['application']),
-    ...mapGetters('application', ['can', 'applicationLink']),
+    ...mapGetters('application', ['can']),
     protectedLink () {
       if (!this.applicationKeys || !this.applicationKeys.length) return
-      return this.applicationLink + '?key=' + this.applicationKeys[0].id
+      return this.env.publicUrl + '/app/' + encodeURIComponent(this.applicationKeys[0].id + ':' + this.application.id)
     }
   },
   async created () {

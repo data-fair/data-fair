@@ -26,14 +26,29 @@ const loginHtml = fs.readFileSync(path.join(__dirname, '../resources/login.html'
 const brandEmbed = config.brand.embed && parse5.parseFragment(config.brand.embed)
 
 const setResource = asyncWrap(async (req, res, next) => {
+  // protected application can be given either as /applicationKey:applicationId or /applicationId?key=applicationKey
   await findUtils.getByUniqueRef(req, 'application')
+  let applicationKeyId = req.query.key
+  if (!req.application && !applicationKeyId) {
+    const keys = req.params.applicationId.split(':')
+    applicationKeyId = keys[0]
+    const applicationIdCandidate = req.params.applicationId.replace(keys[0] + ':', '')
+    await findUtils.getByUniqueRef(req, 'application', applicationIdCandidate)
+  }
   if (!req.application) return res.status(404).send(req.__('errors.missingApp'))
-  findUtils.setResourceLinks(req.application, 'application', req.publicBaseUrl, null, req.params.applicationId)
+  if (applicationKeyId) {
+    const applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ _id: req.application.id, 'keys.id': applicationKeyId })
+    req.matchinApplicationKey = !!applicationKeys
+  }
+  findUtils.setResourceLinks(req.application, 'application', req.publicBaseUrl, null, encodeURIComponent(req.params.applicationId))
   req.resourceType = 'applications'
   next()
 })
 
-router.get('/:applicationId/manifest.json', setResource, permissions.middleware('readConfig', 'read'), asyncWrap(async (req, res) => {
+router.get('/:applicationId/manifest.json', setResource, asyncWrap(async (req, res) => {
+  if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchinApplicationKey) {
+    return res.status(403).send()
+  }
   const baseApp = await req.app.get('db').collection('base-applications').findOne({ url: req.application.url }, { projection: { id: 1, meta: 1 } })
   if (!baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
   res.setHeader('Content-Type', 'application/manifest+json')
@@ -136,12 +151,7 @@ let minifiedIframeRedirectSrc
 router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
 
-  let matchinApplicationKey = false
-  if (req.query.key) {
-    const applicationKeys = await db.collection('applications-keys').findOne({ _id: req.application.id })
-    matchinApplicationKey = applicationKeys && !!applicationKeys.keys.find(k => k.id === req.query.key)
-  }
-  if (!permissions.can('applications', req.application, 'readConfig', req.user) && !matchinApplicationKey) {
+  if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchinApplicationKey) {
     return res.redirect(`${req.publicBaseUrl}/app/${req.params.applicationId}/login`)
   }
 

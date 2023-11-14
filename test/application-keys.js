@@ -58,6 +58,9 @@ describe('Applications keys for unauthenticated readOnly access', () => {
 
     res = await global.ax.anonymous.get(`/app/${appId}/?key=${key}`, { maxRedirects: 0 })
     assert.equal(res.status, 200)
+
+    res = await global.ax.anonymous.get(`/app/${encodeURIComponent(key + ':' + appId)}/`, { maxRedirects: 0 })
+    assert.equal(res.status, 200)
   })
 
   it('Use an application key to access datasets referenced in config', async () => {
@@ -83,6 +86,11 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     assert.ok(res.data.userPermissions.includes('readLines'))
     assert.ok(res.data.userPermissions.includes('readDescription'))
     assert.ok(!res.data.userPermissions.includes('writeDescription'))
+
+    res = await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}`, { headers: { referrer: config.publicUrl + `/app/${encodeURIComponent(key + ':' + appId)}/` } })
+    assert.equal(res.status, 200)
+    res = await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/lines`, { headers: { referrer: config.publicUrl + `/app/${encodeURIComponent(key + ':' + appId)}/` } })
+    assert.equal(res.status, 200)
   })
 
   it('Reject an application without the read permission', async () => {

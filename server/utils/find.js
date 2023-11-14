@@ -396,8 +396,8 @@ exports.sumsQuery = (req, sumFields = {}, filterFields, extraFilters) => {
   return pipeline
 }
 
-exports.getByUniqueRef = async (req, resourceType) => {
-  const paramId = req.params[resourceType + 'Id']
+exports.getByUniqueRef = async (req, resourceType, resourceId) => {
+  const paramId = resourceId ?? req.params[resourceType + 'Id']
   let filter = { id: paramId }
   if (req.publicationSite) {
     filter = { _uniqueRefs: paramId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }

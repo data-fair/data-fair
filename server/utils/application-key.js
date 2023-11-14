@@ -12,64 +12,73 @@ const matchingHost = (req) => {
 
 module.exports = asyncWrap(async (req, res, next) => {
   const referer = req.headers.referer || req.headers.referrer
-  if (referer) {
-    const refererUrl = new URL(referer)
-    const key = refererUrl && refererUrl.searchParams && refererUrl.searchParams.get('key')
-    if (key) {
-      const applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ 'keys.id': key })
-      if (applicationKeys) {
-        const datasetHref = `${config.publicUrl}/api/v1/datasets/${req.dataset.id}`
-        const filter = {
-          id: applicationKeys._id,
-          'owner.type': req.dataset.owner.type,
-          'owner.id': req.dataset.owner.id,
-          'configuration.datasets.href': datasetHref
-        }
-        const matchingApplication = await req.app.get('db').collection('applications')
-          .findOne(filter, { projection: { 'configuration.datasets': 1 } })
-        if (matchingApplication) {
-          // this is basically the "crowd-sourcing" use case
-          // we apply some anti-spam protection
-          if (req.method !== 'GET' && req.method !== 'HEAD') {
-            // 1rst level of anti-spam prevention, no cross origin requests on this route
-            if (!matchingHost(req)) {
-              return res.status(405).send(req.__('errors.noCrossDomain'))
-            }
+  if (!referer) return next()
+  const refererUrl = new URL(referer)
+  if (!refererUrl) return next()
+  if (!refererUrl.pathname.startsWith('/data-fair/app/')) return next()
+  const appId = decodeURIComponent(refererUrl.pathname.replace('/data-fair/app/', '').split('/')[0])
+  const key = refererUrl.searchParams && refererUrl.searchParams.get('key')
+  let applicationKeys, applicationKey
+  if (key) {
+    applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ _id: appId, 'keys.id': key })
+    if (applicationKeys) applicationKey = applicationKeys.keys.find(ak => ak.id === key)
+  } else {
+    const keys = appId.split(':')
+    if (keys.length > 1) {
+      applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ _id: appId.replace(keys[0] + ':', ''), 'keys.id': keys[0] })
+      if (applicationKeys) applicationKey = applicationKeys.keys.find(ak => ak.id === keys[0])
+    }
+  }
+  if (!applicationKeys || !applicationKey) return next()
 
-            // 2nd level of anti-spam protection, validate that the user was present on the page for a few seconds before sending
-            const { verifyToken } = req.app.get('session')
-            if (!req.get('x-anonymousToken')) return res.status(401).send(req.__('errors.requireAnonymousToken'))
-            try {
-              await verifyToken(req.get('x-anonymousToken'))
-            } catch (err) {
-              if (err.name === 'NotBeforeError') {
-                return res.status(429).send(req.__('errors.looksLikeSpam'))
-              } else {
-                return res.status(401).send('Invalid token')
-              }
-            }
+  const datasetHref = `${config.publicUrl}/api/v1/datasets/${req.dataset.id}`
+  const filter = {
+    id: applicationKeys._id,
+    'owner.type': req.dataset.owner.type,
+    'owner.id': req.dataset.owner.id,
+    $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': req.dataset.id }]
+  }
+  const matchingApplication = await req.app.get('db').collection('applications')
+    .findOne(filter, { projection: { 'configuration.datasets': 1 } })
+  if (matchingApplication) {
+    // this is basically the "crowd-sourcing" use case
+    // we apply some anti-spam protection
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      // 1rst level of anti-spam prevention, no cross origin requests on this route
+      if (!matchingHost(req)) {
+        return res.status(405).send(req.__('errors.noCrossDomain'))
+      }
 
-            try {
-              // 3rd level of anti-spam protection, simple rate limiting based on ip
-              await rateLimiting.postApplicationKey.consume(req.user ? req.user.id : requestIp.getClientIp(req), 1)
-            } catch (err) {
-              console.warn('Rate limit error for application key', requestIp.getClientIp(req), req.originalUrl, err)
-              return res.status(429).send(req.__('errors.exceedAnonymousRateLimiting'))
-            }
-          }
-
-          // apply some permissions based on app configuration
-          // some dataset might need to be readable, some other writable only for createLine, etc
-          const matchingApplicationDataset = matchingApplication.configuration.datasets.find(d => d.href === datasetHref)
-          req.bypassPermissions = matchingApplicationDataset.applicationKeyPermissions || { classes: ['read'] }
-          const applicationKey = applicationKeys.keys.find(ak => ak.id === key)
-          req.user = req.user || {
-            id: applicationKey.id,
-            name: applicationKey.title,
-            isApplicationKey: true
-          }
+      // 2nd level of anti-spam protection, validate that the user was present on the page for a few seconds before sending
+      const { verifyToken } = req.app.get('session')
+      if (!req.get('x-anonymousToken')) return res.status(401).send(req.__('errors.requireAnonymousToken'))
+      try {
+        await verifyToken(req.get('x-anonymousToken'))
+      } catch (err) {
+        if (err.name === 'NotBeforeError') {
+          return res.status(429).send(req.__('errors.looksLikeSpam'))
+        } else {
+          return res.status(401).send('Invalid token')
         }
       }
+
+      try {
+        // 3rd level of anti-spam protection, simple rate limiting based on ip
+        await rateLimiting.postApplicationKey.consume(req.user ? req.user.id : requestIp.getClientIp(req), 1)
+      } catch (err) {
+        console.warn('Rate limit error for application key', requestIp.getClientIp(req), req.originalUrl, err)
+        return res.status(429).send(req.__('errors.exceedAnonymousRateLimiting'))
+      }
+    }
+
+    // apply some permissions based on app configuration
+    // some dataset might need to be readable, some other writable only for createLine, etc
+    const matchingApplicationDataset = matchingApplication.configuration.datasets.find(d => d.href === datasetHref)
+    req.bypassPermissions = matchingApplicationDataset.applicationKeyPermissions || { classes: ['read'] }
+    req.user = req.user || {
+      id: applicationKey.id,
+      name: applicationKey.title,
+      isApplicationKey: true
     }
   }
   next()
