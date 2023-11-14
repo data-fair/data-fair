@@ -1,7 +1,7 @@
 ---
 title: Sort game
 section: 9
-subsection : 3
+subsection : 4
 updated: 2021-09-20
 description :  Data exploration in a sort game
 published: true

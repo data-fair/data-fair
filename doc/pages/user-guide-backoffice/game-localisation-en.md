@@ -1,7 +1,7 @@
 ---
 title: Localization game
 section: 9
-subsection : 2
+subsection : 3
 updated: 2021-09-20
 description :  Explore the data by locating points on a map.
 published: true

@@ -1,7 +1,7 @@
 ---
 title: Jeu de tri
 section: 9
-subsection : 3
+subsection : 4
 updated: 2021-09-20
 description :  Explorer les données en les triant suivant une valeur numérique.
 published: true

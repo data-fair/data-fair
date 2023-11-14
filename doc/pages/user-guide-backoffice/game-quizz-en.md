@@ -1,7 +1,7 @@
 ---
 title: Quiz game
 section: 9
-subsection : 1
+subsection : 2
 updated: 2021-09-20
 description :  Data exploration with quiz questions.
 published: true
