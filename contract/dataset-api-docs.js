@@ -18,9 +18,9 @@ const anonymousApiRate = apiRate('anonymous', 'anonyme')
 
 module.exports = (dataset, publicUrl = config.publicUrl, info, publicationSite) => {
   dataset.schema = dataset.schema || []
-  const datasetLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, true)
+  const datasetLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl)
 
-  const bulkLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, false, true)
+  const bulkLineSchema = datasetUtils.jsonSchema(dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']), publicUrl)
   bulkLineSchema.properties._action = {
     type: 'string',
     title: 'Action',

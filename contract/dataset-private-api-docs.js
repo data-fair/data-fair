@@ -212,8 +212,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   if (dataset.isRest) {
     const readLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, true, false)
-    const writeLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, false, true)
-    const patchLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, false, false)
+    const writeLineSchema = datasetUtils.jsonSchema(dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']), publicUrl)
+    const patchLineSchema = writeLineSchema
     const lineId = {
       in: 'path',
       name: 'lineId',

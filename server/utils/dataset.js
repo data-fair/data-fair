@@ -930,10 +930,7 @@ const cleanJsonSchemaProperty = (p, publicBaseUrl, writableId) => {
   if (cleanProp['x-fromUrl'] && publicBaseUrl) {
     cleanProp['x-fromUrl'] = cleanProp['x-fromUrl'].replace(config.publicUrl, publicBaseUrl)
   }
-  if (cleanProp.separator) {
-    cleanProp['x-separator'] = cleanProp.separator
-    delete cleanProp.separator
-  }
+  if (cleanProp.separator) cleanProp['x-separator'] = cleanProp.separator
 
   if (cleanProp['x-calculated']) cleanProp.readOnly = true
   if (cleanProp['x-extension']) cleanProp.readOnly = true
@@ -941,6 +938,7 @@ const cleanJsonSchemaProperty = (p, publicBaseUrl, writableId) => {
   if (p['x-refersTo'] === 'https://schema.org/description') cleanProp['x-display'] = 'markdown'
   if (p['x-refersTo'] === 'https://schema.org/color') cleanProp['x-display'] = 'color-picker'
 
+  delete cleanProp.separator
   delete cleanProp.key
   delete cleanProp.ignoreDetection
   delete cleanProp.ignoreIntegerDetection
