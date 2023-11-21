@@ -8,10 +8,14 @@ const sanitizeHtml = require('../../../shared/sanitize-html')
 const truncateMiddle = require('truncate-middle')
 const truncateHTML = require('truncate-html')
 const marked = require('marked')
+const dayjs = require('dayjs')
+const timezone = require('dayjs/plugin/timezone')
 const { prepareThumbnailUrl } = require('../thumbnails')
 const tiles = require('../tiles')
 const geo = require('../geo')
 const { geojsonToWKT } = require('@terraformer/wkt')
+
+dayjs.extend(timezone)
 
 // From a property in data-fair schema to the property in an elasticsearch mapping
 exports.esProperty = prop => {
@@ -224,8 +228,8 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
   // implicitly sort by score after other criteria
   if (!esQuery.sort.find(s => !!s._score) && query.q) esQuery.sort.push('_score')
   // if there is a geo_distance filter, apply a default _geo_distance sort
-  if (query.geo_distance && !esQuery.sort.find(s => !!s._geo_distance)) {
-    const [lon, lat] = query.geo_distance.split(/[,:]/)
+  if ((query.geo_distance ?? query._c_geo_distance) && !esQuery.sort.find(s => !!s._geo_distance)) {
+    const [lon, lat] = (query.geo_distance ?? query._c_geo_distance).split(/[,:]/)
     esQuery.sort.push({ _geo_distance: { _geopoint: { lon, lat }, order: 'asc' } })
   }
   // every other things equal, sort by original line order
@@ -380,6 +384,27 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
     })
   }
 
+  if (query.date_match ?? query._c_date_match) {
+    const dateMatch = query.date_match ?? query._c_date_match
+    const dateField = dataset.schema.find(p => p['x-refersTo'] === 'http://schema.org/Date')
+    const startDateField = dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/startDate') ?? dateField
+    const endDateField = dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/endDate') ?? dateField
+    if (!startDateField || !endDateField) throw createError(400, '"date_match" ne peut pas être utilisé sur ce jeu de données.')
+    let dates = dateMatch.split(',')
+    if (dates.length === 1) dates = [dates[0], dates[0]]
+    const tz = startDateField.timeZone || config.defaultTimeZone
+    const startDate = dayjs(dates[0], 'YYYY-MM-DD', true).isValid() ? dayjs(dates[0]).tz(tz, true).startOf('day').toISOString() : dates[0]
+    const endDate = dayjs(dates[1], 'YYYY-MM-DD', true).isValid() ? dayjs(dates[1]).tz(tz, true).endOf('day').toISOString() : dates[1]
+    const dateRange = {}
+    if (startDate) dateRange.gte = startDate
+    if (endDate) dateRange.lte = endDate
+    if (startDateField.key === endDateField.key) {
+      filter.push({ range: { [startDateField.key]: dateRange } })
+    } else {
+      filter.push({ bool: { should: [{ range: { [startDateField.key]: dateRange } }, { range: { [endDateField.key]: dateRange } }] } })
+    }
+  }
+
   // bounding box filter to restrict results on geo zone: left,bottom,right,top
   const geoShapeProp = dataset.schema.find(p => p.key === '_geoshape')
   const geoShape = geoShapeProp && (!geoShapeProp['x-capabilities'] || geoShapeProp['x-capabilities'].geoShape !== false)
@@ -404,9 +429,9 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
     })
   }
 
-  if (query.geo_distance) {
+  if (query.geo_distance ?? query._c_geo_distance) {
     if (!dataset.bbox) throw createError(400, '"geo_distance" filter cannot be used on this dataset. It is not geolocalized.')
-    let [lon, lat, distance] = query.geo_distance.split(/[,:]/)
+    let [lon, lat, distance] = (query.geo_distance ?? query._c_geo_distance).split(/[,:]/)
     if (!distance || distance === '0') distance = '0m'
     lon = Number(lon)
     lat = Number(lat)
@@ -445,8 +470,8 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
 
 exports.getQueryBBOX = (query) => {
   let bbox
-  if (query.bbox) {
-    bbox = query.bbox.split(',').map(Number)
+  if (query.bbox ?? query._c_bbox_eq) {
+    bbox = (query.bbox ?? query._c_bbox_eq).split(',').map(Number)
   } else if (query.xyz) {
     bbox = tiles.xyz2bbox(...query.xyz.split(',').map(Number))
   }
