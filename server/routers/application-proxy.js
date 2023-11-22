@@ -174,20 +174,31 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
     { privateAccess: { $elemMatch: { type: req.application.owner.type, id: req.application.owner.id } } }
   ]
 
-  // Update the config with dates of last finalization of the used datasets
+  // Update the config with fresh information of the datasets include finalizedAt
   // this info can then be used to add ?finalizedAt=... to any queries
   // and so benefit from better caching
   const datasets = req.application.configuration && req.application.configuration.datasets && req.application.configuration.datasets.filter(d => !!d)
   if (datasets && datasets.length) {
+    const refreshKeys = ['finalizedAt']
     for (const d of datasets) {
       if (d.href) d.href = d.href.replace(config.publicUrl, req.publicBaseUrl)
+      for (const key of Object.keys(d)) {
+        if (!['id', '_id', 'href'].includes(key) && !refreshKeys.includes(key)) refreshKeys.push(key)
+      }
     }
+
+    const projection = { _id: 0, id: 1 }
+    for (const key of refreshKeys) projection[key] = 1
+
     const freshDatasets = await db.collection('datasets')
       .find({ $or: datasets.map(d => ({ id: d.id })) })
-      .project({ _id: 0, id: 1, finalizedAt: 1 })
+      .project(projection)
       .toArray()
     for (const fd of freshDatasets) {
-      req.application.configuration.datasets.find(d => fd.id === d.id).finalizedAt = fd.finalizedAt
+      const d = req.application.configuration.datasets.find(d => fd.id === d.id)
+      for (const key of refreshKeys) {
+        d[key] = fd[key]
+      }
     }
   }
 
