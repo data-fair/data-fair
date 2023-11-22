@@ -482,10 +482,10 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
 
   if (draftMode) {
     // websocket notifications of draft mode errors
-    await req.app.get('db').collection('applications').updateOne({ id: req.params.applicationId }, { $set: { errorMessageDraft: message } })
+    await req.app.get('db').collection('applications').updateOne({ id: req.application.id }, { $set: { errorMessageDraft: message } })
     await req.app.publish(`applications/${req.params.applicationId}/draft-error`, req.body)
-  } else {
-    await req.app.get('db').collection('applications').updateOne({ id: req.params.applicationId }, { $set: { status: 'error', errorMessage: message } })
+  } else if (req.application.configuration) {
+    await req.app.get('db').collection('applications').updateOne({ id: req.application.id }, { $set: { status: 'error', errorMessage: message } })
     await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application')
   }
   res.status(204).send()
