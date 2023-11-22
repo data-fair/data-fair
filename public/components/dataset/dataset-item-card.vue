@@ -42,7 +42,7 @@
             :key="`input-${header.value}`"
             height="40"
             transition=""
-            style="cursor:pointer"
+            :style="noInteraction ? '' : 'cursor:pointer'"
             @mouseenter="hover(header.value)"
             @mouseleave="leave(header.value)"
           >
@@ -72,6 +72,7 @@
               </v-icon>
             </v-input>
             <dataset-table-header-menu
+              v-if="!noInteraction"
               :activator="`.dataset-item-card-value-${item._id}-${i}`"
               :header="header"
               :filters="filters"
@@ -101,7 +102,8 @@ export default {
     headers: { type: Array, required: true },
     selectedFields: { type: Array, required: false, default: () => ([]) },
     pagination: { type: Object, required: true },
-    truncate: { type: Number, default: 50 }
+    truncate: { type: Number, default: 50 },
+    noInteraction: { type: Boolean, default: false }
   },
   data () {
     return {
@@ -122,9 +124,11 @@ export default {
   },
   methods: {
     hover (value) {
+      if (this.noInteraction) return
       this._hoverTimeout = setTimeout(() => { this.$set(this.hovered, value, true) }, 60)
     },
     leave (value) {
+      if (this.noInteraction) return
       if (this._hoverTimeout) {
         clearTimeout(this._hoverTimeout)
         delete this._hoverTimeout

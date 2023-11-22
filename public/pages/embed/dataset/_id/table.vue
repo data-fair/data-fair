@@ -15,6 +15,7 @@
     <!--<v-simple-table v-show="false" />-->
 
     <v-app-bar
+      v-if="!noInteraction"
       :elevate-on-scroll="displayMode === 'list'"
       app
       dense
@@ -175,8 +176,10 @@
                     :pagination="pagination"
                     :width="headerWidths[fixedHeader.value]"
                     :dense="displayMode === 'table-dense'"
+                    :no-interaction="noInteraction"
                   />
                   <dataset-table-header-menu
+                    v-if="!noInteraction"
                     :activator="'#fixed-header-cell'"
                     :header="fixedHeader"
                     :filters="filters"
@@ -271,9 +274,10 @@
                     :dense="displayMode === 'table-dense'"
                     :aria-colindex="(renderFullHeader ? h : virtualScrollHorizontal.index + h) + 1"
                     :aria-colindextext="header.text"
+                    :no-interaction="noInteraction"
                   />
                   <dataset-table-header-menu
-                    v-if="header.field"
+                    v-if="header.field && !noInteraction"
                     :key="'header-menu-' + (renderFullHeader ? h : horizontalKeys[header.value])"
                     :activator="'#header-cell-' + (renderFullHeader ? h : horizontalKeys[header.value])"
                     :header="header"
@@ -342,6 +346,7 @@
                     }"
                     :aria-colindex="virtualScrollHorizontal.index + h + 1"
                     :aria-colindextext="header.text"
+                    :no-interaction="noInteraction"
                     @filter="f => addFilter(header.value, f)"
                   />
                 </template>
@@ -407,6 +412,7 @@
             :headers="selectedHeaders"
             :truncate="truncate"
             :pagination="pagination"
+            :no-interaction="noInteraction"
             @filter="({header, filter}) => addFilter(header.value, filter)"
             @hide="header => hideHeader(header)"
           />
@@ -494,7 +500,8 @@ export default {
     lastParams: null,
     selectedCols: [],
     ready: false,
-    fixedCol: null
+    fixedCol: null,
+    noInteraction: false
   }),
   computed: {
     ...mapState(['vocabulary']),
@@ -580,7 +587,7 @@ export default {
     },
     tableHeight () {
       let height = this.windowHeight
-      height -= 48 // app bar
+      if (!this.noInteraction) height -= 48 // app bar
       height -= this.extensionHeight
       height -= 48 // fixed header
       height -= 1 // header border
@@ -705,6 +712,7 @@ export default {
         this.$set(this.pagination.sortBy, 0, sortBy)
         this.$set(this.pagination.sortDesc, 0, sortDesc === '-1')
       }
+      this.noInteraction = query.interaction === 'false' || query.interaction === '0'
       this.filters = filtersUtils.readQueryParams(query, this.dataset)
     },
     writeQueryParams () {

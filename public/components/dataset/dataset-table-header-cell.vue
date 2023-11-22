@@ -9,7 +9,7 @@
       'max-width': width ? width + 'px' : '',
       position: 'relative',
       overflow: 'hidden',
-      cursor: header.field ? 'pointer' : 'default'
+      cursor: header.field && !noInteraction ? 'pointer' : 'default'
     }"
     role="button"
     aria-haspopup="true"
@@ -44,7 +44,8 @@ export default {
     header: { type: Object, required: true },
     pagination: { type: Object, required: true },
     width: { type: Number, default: null },
-    dense: { type: Boolean, default: false }
+    dense: { type: Boolean, default: false },
+    noInteraction: { type: Boolean, default: false }
   },
   data () {
     return {
@@ -53,9 +54,11 @@ export default {
   },
   methods: {
     hover (value) {
+      if (this.noInteraction) return
       this._hoverTimeout = setTimeout(() => { this.hovered = true }, 60)
     },
     leave (value) {
+      if (this.noInteraction) return
       if (this._hoverTimeout) {
         clearTimeout(this._hoverTimeout)
         delete this._hoverTimeout

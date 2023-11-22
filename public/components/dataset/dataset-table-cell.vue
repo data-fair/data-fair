@@ -36,6 +36,7 @@
       :truncate="truncate"
       :dense="dense"
       :line-height="lineHeight"
+      :no-interaction="noInteraction"
       @filter="f => $emit('filter', f)"
     />
   </td>
@@ -51,7 +52,8 @@ export default {
     lineHeight: { type: Number, required: true },
     filters: { type: Array, required: true },
     truncate: { type: Number, required: true },
-    dense: { type: Boolean, default: false }
+    dense: { type: Boolean, default: false },
+    noInteraction: { type: Boolean, default: false }
   },
   computed: {
     ...mapState(['env'])

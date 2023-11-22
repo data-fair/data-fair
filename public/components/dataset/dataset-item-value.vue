@@ -100,7 +100,8 @@ export default {
     truncate: { type: Number, default: 50 },
     lineHeight: { type: Number, default: 40 },
     disableHover: { type: Boolean, default: false },
-    dense: { type: Boolean, default: false }
+    dense: { type: Boolean, default: false },
+    noInteraction: { type: Boolean, default: false }
   },
   data () {
     return {
@@ -121,6 +122,7 @@ export default {
   },
   methods: {
     isFilterable (value) {
+      if (this.noInteraction) return false
       if (this.field['x-capabilities'] && this.field['x-capabilities'].index === false) return false
       if (this.field['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
       if (value === undefined || value === null || value === '') return false
