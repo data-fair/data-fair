@@ -19,17 +19,6 @@
           md="5"
           xl="4"
         >
-          <v-alert
-            v-if="!!application.errorMessageDraft"
-            type="warning"
-            border="left"
-            outlined
-          >
-            <p
-              class="mb-0"
-              v-html="application.errorMessageDraft"
-            />
-          </v-alert>
           <v-select
             v-model="editUrl"
             :disabled="!can('writeConfig')"
@@ -77,11 +66,22 @@
           xl="8"
           class="pl-0"
         >
+          <v-alert
+            v-if="!!application.errorMessageDraft"
+            type="error"
+            border="left"
+            outlined
+          >
+            <p
+              class="mb-0"
+              v-html="application.errorMessageDraft"
+            />
+          </v-alert>
           <v-card
+            v-else
             light
             class="pa-0"
             outlined
-            :style="!!application.errorMessageDraft ? `border-color: ${$vuetify.theme.themes.light.warning};` : ''"
           >
             <v-iframe
               v-if="showDraftPreview"
@@ -240,9 +240,6 @@ export default {
   },
   destroyed () {
     window.removeEventListener('message', this.postMessageHandler)
-  },
-  mounted () {
-    console.log('mounted application-config')
   },
   methods: {
     ...mapActions('application', ['readConfig', 'writeConfig', 'readConfigDraft', 'writeConfigDraft', 'cancelConfigDraft', 'patchAndCommit', 'fetchProdBaseApp']),
