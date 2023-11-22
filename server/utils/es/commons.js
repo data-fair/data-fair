@@ -255,6 +255,7 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
   const filter = []
   const must = []
   const should = []
+  const mustNot = []
 
   // Enforced static filters from virtual datasets
   if (dataset.virtual && dataset.virtual.filters) {
@@ -395,13 +396,16 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
     const tz = startDateField.timeZone || config.defaultTimeZone
     const startDate = dayjs(dates[0], 'YYYY-MM-DD', true).isValid() ? dayjs(dates[0]).tz(tz, true).startOf('day').toISOString() : dates[0]
     const endDate = dayjs(dates[1], 'YYYY-MM-DD', true).isValid() ? dayjs(dates[1]).tz(tz, true).endOf('day').toISOString() : dates[1]
-    const dateRange = {}
-    if (startDate) dateRange.gte = startDate
-    if (endDate) dateRange.lte = endDate
     if (startDateField.key === endDateField.key) {
+      const dateRange = {}
+      if (startDate) dateRange.gte = startDate
+      if (endDate) dateRange.lte = endDate
       filter.push({ range: { [startDateField.key]: dateRange } })
     } else {
-      filter.push({ bool: { should: [{ range: { [startDateField.key]: dateRange } }, { range: { [endDateField.key]: dateRange } }] } })
+      const outsideRange = []
+      if (startDate) outsideRange.push({ range: { [endDateField.key]: { lt: startDate } } })
+      if (endDate) outsideRange.push({ range: { [startDateField.key]: { gt: endDate } } })
+      mustNot.push({ bool: { should: outsideRange } })
     }
   }
 
@@ -463,7 +467,7 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
   }
 
   const minimumShouldMatch = should.length ? 1 : 0
-  esQuery.query = { bool: { filter, must, should, minimum_should_match: minimumShouldMatch } }
+  esQuery.query = { bool: { filter, must, should, mustNot, minimum_should_match: minimumShouldMatch } }
 
   return esQuery
 }
