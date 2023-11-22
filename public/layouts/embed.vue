@@ -19,7 +19,7 @@ export default {
     }
   },
   created () {
-    global.vIframeOptions = { router: this.$router }
+    global.vIframeOptions = { router: this.$router, reactiveParams: true }
   }
 }
 

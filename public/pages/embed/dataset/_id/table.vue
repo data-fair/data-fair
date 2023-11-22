@@ -633,6 +633,9 @@ export default {
     },
     showTable (value) {
       if (value) this.watchTableScroll()
+    },
+    '$route.query' () {
+      this.readQueryParams()
     }
   },
   async mounted () {
