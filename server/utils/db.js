@@ -65,7 +65,7 @@ exports.init = async (db) => {
 
     // applications indexes
     exports.ensureIndex(db, 'applications', { id: 1 }, { unique: true }),
-    exports.ensureIndex(db, 'datasets', { _uniqueRefs: 1, 'owner.type': 1, 'owner.id': 1 }, { unique: true, name: 'unique-refs' }), // used to prevent conflicts accross ids and slugs
+    exports.ensureIndex(db, 'applications', { _uniqueRefs: 1, 'owner.type': 1, 'owner.id': 1 }, { unique: true, name: 'unique-refs' }), // used to prevent conflicts accross ids and slugs
     // used to fetch list sorted by creation
     exports.ensureIndex(db, 'applications', { 'owner.type': 1, 'owner.id': 1, createdAt: -1 }, { name: 'main-keys' }),
     // full text search
