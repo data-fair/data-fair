@@ -94,6 +94,64 @@
         label="Description"
         @change="patch({description: application.description})"
       />
+      <v-text-field
+        id="slug-input"
+        v-model="application.slug"
+        :readonly="true"
+        :disabled="!can('writeDescriptionBreaking')"
+        :label="$t('slug')"
+        outlined
+        dense
+        hide-details
+        class="mb-3"
+      />
+      <v-menu
+        v-if="can('writeDescription')"
+        v-model="slugMenu"
+        activator="#slug-input"
+        offset-y
+        :close-on-content-click="false"
+        max-width="700"
+        @input="newSlug = application.slug"
+      >
+        <v-card>
+          <v-card-title primary-title>
+            {{ $t('slug') }}
+          </v-card-title>
+          <v-card-text>
+            <v-alert
+              type="warning"
+              outlined
+            >
+              {{ $t('slugWarning') }}
+            </v-alert>
+            <v-text-field
+              v-model="newSlug"
+              :label="$t('newSlug')"
+              autofocus
+              outlined
+              dense
+              hide-details
+              :required="true"
+              :rules="[(val) => !!val]"
+            />
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn
+              v-t="'cancel'"
+              text
+              @click="slugMenu = false"
+            />
+            <v-btn
+              v-t="'validate'"
+              color="warning"
+              :disabled="newSlug === application.slug || !newSlug"
+              @click="patchAndCommit({slug: newSlug}); slugMenu = false"
+            />
+          </v-card-actions>
+        </v-card>
+      </v-menu>
     </v-col>
   </v-row>
 </template>
@@ -105,18 +163,32 @@ fr:
   unknown: inconnue
   test: de test
   topics: Thématiques
+  title: Titre
+  slug: Identifiant de publication
+  slugWarning: Cet identifiant unique et lisible est utilisé dans les URLs de pages de portails, codes d'intégration, etc. Attention, si vous le modifiez vous pouvez casser des liens.
+  newSlug: Nouvel identifiant de publication
 en:
   version: version
   availableVersion: Version {version} available
   unknown: unknown
   test: test
   topics: Topics
+  title: Title
+  slug: Publication identifier
+  slugWarning: "This unique and readable id is used in portal pages URLs, integration codes, etc. Warning : if you modify it you can break existing links."
+  newSlug: New publication identifier
 </i18n>
 
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex'
 
 export default {
+  data () {
+    return {
+      slugMenu: false,
+      newSlug: ''
+    }
+  },
   computed: {
     ...mapState('application', ['application', 'journal', 'prodBaseApp']),
     ...mapGetters('application', ['can', 'availableVersions']),
@@ -148,7 +220,7 @@ export default {
     this.$store.dispatch('fetchTopics', this.application.owner)
   },
   methods: {
-    ...mapActions('application', ['patch'])
+    ...mapActions('application', ['patch', 'patchAndCommit'])
   }
 }
 </script>
