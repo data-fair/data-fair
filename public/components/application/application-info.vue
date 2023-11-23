@@ -98,7 +98,7 @@
         id="slug-input"
         v-model="application.slug"
         :readonly="true"
-        :disabled="!can('writeDescriptionBreaking')"
+        :disabled="!can('writeDescription')"
         :label="$t('slug')"
         outlined
         dense
