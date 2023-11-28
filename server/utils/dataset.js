@@ -797,7 +797,12 @@ exports.insertWithId = async (db, dataset, res) => {
       } catch (err) {
         await locks.release(db, slugLockKey)
         if (err.code !== 11000) throw err
-        if (err.keyValue.id) throw err
+        if (err.keyValue) {
+          if (err.keyValue.id) throw err
+        } else {
+          // on older mongo err.keyValue is not provided and we need to use the message
+          if (err.message.includes('id_1')) throw err
+        }
       }
     }
     i += 1
