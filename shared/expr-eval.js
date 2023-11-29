@@ -1,4 +1,5 @@
 const { Parser } = require('expr-eval')
+const md5 = require('md5')
 
 const parser = new Parser({
   //  Useless in our use case
@@ -100,6 +101,18 @@ parser.functions.AVG = parser.functions.AVERAGE = function () {
   }
   if (nbValues === 0) return undefined
   return sum / nbValues
+}
+
+parser.functions.STRPOS = function (arg, search) {
+  if (typeof arg !== 'string') return -1
+  if (typeof search !== 'string') return -1
+  return arg.indexOf(search)
+}
+
+parser.functions.MD5 = function () {
+  const args = Array.from(arguments)
+  if (args.length === 1 && typeof args[0] === 'string') return md5(args[0])
+  return md5(JSON.stringify(args).slice(1, -1))
 }
 
 exports.parser = parser

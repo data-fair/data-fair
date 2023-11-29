@@ -494,4 +494,55 @@ describe('virtual datasets', () => {
     virtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
     assert.deepEqual(virtualDataset.schema[0]['x-capabilities'], { insensitive: false, values: false })
   })
+
+  it('A virtual dataset of a geo parent can serve tiles', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
+    // Update schema to specify geo point
+    const locProp = dataset.schema.find(p => p.key === 'loc')
+    locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
+    let res = await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
+    assert.equal(res.status, 200)
+    await workers.hook(`finalizer/${dataset.id}`)
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=63,44,7`)
+    assert.equal(res.data.total, 1)
+
+    const virtual1 = (await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [dataset.id]
+      },
+      schema: [{ key: 'id' }, { key: 'loc' }]
+    })).data
+    await workers.hook('finalizer/' + virtual1.id)
+
+    res = await ax.get(`/api/v1/datasets/${virtual1.id}/lines`)
+    assert.equal(res.data.total, 2)
+    res = await ax.get(`/api/v1/datasets/${virtual1.id}/lines?xyz=63,44,7`)
+    assert.equal(res.data.total, 1)
+
+    const virtual2 = (await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [virtual1.id],
+        filters: [{
+          key: 'id',
+          values: ['koumoul']
+        }]
+      },
+      schema: [{ key: 'id' }, { key: 'loc' }]
+    })).data
+    await workers.hook('finalizer/' + virtual2.id)
+
+    res = await ax.get(`/api/v1/datasets/${virtual2.id}/lines`)
+    assert.equal(res.data.total, 1)
+    res = await ax.get(`/api/v1/datasets/${virtual2.id}/lines?xyz=63,44,7`)
+    assert.equal(res.data.total, 1)
+  })
 })
