@@ -1361,18 +1361,10 @@ const readLines = asyncWrap(async (req, res) => {
   })
 
   if (req.query.format === 'csv') {
+    res.throttleEnd()
+    const csv = outputs.results2csv(req, result.results)
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.csv"`)
-    // add BOM for excel, cf https://stackoverflow.com/a/17879474
-    res.write('\ufeff')
-    const csvStreams = outputs.result2csv(req.dataset, req.query)
-    const intoStream = (await import('into-stream')).default
-    await pump(
-      intoStream.object(result.results),
-      ...csvStreams,
-      res.throttle('dynamic'),
-      res
-    )
-    return
+    return res.status(200).send(csv)
   }
 
   if (req.query.format === 'xlsx') {
@@ -1610,7 +1602,7 @@ router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOri
     res.write('\ufeff')
     await pump(
       ...await restDatasetsUtils.readStreams(req.app.get('db'), req.dataset),
-      ...outputs.result2csv(req.dataset, req.query),
+      ...outputs.csvStreams(req.dataset, req.query),
       res
     )
     return

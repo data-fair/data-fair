@@ -24,7 +24,7 @@ exports.process = async function (app, dataset) {
     debug('write into file', tmpFile)
     await pump(
       ...await restUtils.readStreams(db, dataset),
-      ...outputs.result2csv(dataset),
+      ...outputs.csvStreams(dataset),
       fs.createWriteStream(tmpFile)
     )
 

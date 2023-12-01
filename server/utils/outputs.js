@@ -1,4 +1,5 @@
-const csvStringify = require('csv-stringify')
+const { stringify: csvStrStream } = require('csv-stringify')
+const { stringify: csvStrSync } = require('csv-stringify/sync')
 const { Transform } = require('stream')
 const XLSX = require('xlsx')
 
@@ -12,31 +13,37 @@ function fitToColumn (arrayOfArray) {
   return arrayOfArray[0].map((a, i) => ({ wch: Math.min(100, Math.max(...arrayOfArray.map(a2 => val2string(a2[i]).length))) }))
 }
 
-exports.result2csv = (dataset, query = {}) => {
+const csvStringifyOptions = (dataset, query = {}) => {
   const select = (query.select && query.select !== '*') ? query.select.split(',') : dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)
   const properties = select.map(key => dataset.schema.find(prop => prop.key === key))
-
-  return [
-    new Transform({
-      objectMode: true,
-      transform (item, encoding, callback) {
-        callback(null, properties.map(field => item[field.key]))
-      }
-    }),
+  return {
+    columns: properties.map(field => ({ key: field.key, header: field['x-originalName'] || field.key })),
+    header: query.header !== 'false',
     // quoted_string to prevent bugs with strings containing \r or other edge cases
-    csvStringify({
-      columns: properties.map(field => field['x-originalName'] || field.key),
-      header: query.header !== 'false',
-      quoted_string: true,
-      delimiter: query.sep || ',',
-      cast: {
-        boolean: (value) => {
-          if (value) return '1'
-          if (value === false) return '0'
-          return ''
-        }
+    quoted_string: true,
+    delimiter: query.sep || ',',
+    cast: {
+      boolean: (value) => {
+        if (value) return '1'
+        if (value === false) return '0'
+        return ''
       }
-    }),
+    }
+  }
+}
+
+exports.results2csv = (req, results) => {
+  let csv = csvStrSync(results, csvStringifyOptions(req.dataset, req.query))
+  // add BOM for excel, cf https://stackoverflow.com/a/17879474
+  csv += '\ufeff'
+  // escape special null char (see test/resources/csv-cases/rge-null-chars.csv)
+  csv = csv.replace(/\0/g, '')
+  return csv
+}
+
+exports.csvStreams = (dataset, query = {}) => {
+  return [
+    csvStrStream(csvStringifyOptions(dataset, query)),
     new Transform({
       transform (item, encoding, callback) {
         // escape special null char (see test/resources/csv-cases/rge-null-chars.csv)

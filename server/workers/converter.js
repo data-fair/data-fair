@@ -44,7 +44,7 @@ exports.process = async function (app, dataset) {
   const createError = require('http-errors')
   const ogr2ogr = require('ogr2ogr').default
   const pump = require('../utils/pipe')
-  const csvStringify = require('csv-stringify')
+  const { stringify: csvStrStream } = require('csv-stringify')
   const tmp = require('tmp-promise')
   const dir = require('node-dir')
   const mime = require('mime-types')
@@ -138,7 +138,7 @@ exports.process = async function (app, dataset) {
     const filePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
     await pump(
       eventsStream,
-      csvStringify({ columns: ['DTSTART', 'DTEND', 'SUMMARY', 'LOCATION', 'CATEGORIES', 'STATUS', 'DESCRIPTION', 'TRANSP', 'SEQUENCE', 'GEO', 'URL'], header: true }),
+      csvStrStream({ columns: ['DTSTART', 'DTEND', 'SUMMARY', 'LOCATION', 'CATEGORIES', 'STATUS', 'DESCRIPTION', 'TRANSP', 'SEQUENCE', 'GEO', 'URL'], header: true }),
       fs.createWriteStream(filePath)
     )
     dataset.file = {

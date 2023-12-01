@@ -8,7 +8,7 @@ const stripBom = require('strip-bom-stream')
 const JSONStream = require('JSONStream')
 const dir = require('node-dir')
 const { Writable } = require('stream')
-const csvStringify = require('csv-stringify')
+const { stringify: csvStrStream } = require('csv-stringify')
 const flatten = require('flat')
 const tmp = require('tmp-promise')
 const mimeTypeStream = require('mime-type-stream')
@@ -374,7 +374,7 @@ exports.writeExtendedStreams = async (db, dataset) => {
       },
       objectMode: true
     }))
-    transforms.push(csvStringify({ columns: relevantSchema.map(field => field['x-originalName'] || field.key), header: true }))
+    transforms.push(csvStrStream({ columns: relevantSchema.map(field => field['x-originalName'] || field.key), header: true }))
   } else if (dataset.file.mimetype === 'application/geo+json') {
     transforms.push(new Transform({
       transform (chunk, encoding, callback) {

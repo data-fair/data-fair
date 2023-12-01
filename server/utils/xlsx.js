@@ -1,7 +1,7 @@
 const fs = require('fs-extra')
 const XLSX = require('xlsx')
 const Excel = require('exceljs')
-const csvStr = require('csv-stringify/lib/sync')
+const { stringify: csvStr } = require('csv-stringify/sync')
 const csvParse = require('csv-parse/lib/sync')
 
 exports.getCSV = async (filePath) => {
