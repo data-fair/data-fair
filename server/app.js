@@ -159,6 +159,7 @@ if (config.mode.includes('server')) {
   app.use('/api/v1/identities', require('./routers/identities'))
   app.use('/api/v1/activity', require('./routers/activity'))
   app.use('/api/v1/limits', limits.router)
+  app.use('/api/v1/inspector', require('./utils/inspect').router)
 
   app.use('/api/', (req, res) => {
     return res.status(404).send('unknown api endpoint')

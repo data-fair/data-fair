@@ -30,7 +30,7 @@ router.get('/status', (req, res, next) => {
 router.get('/ping', status.ping)
 
 router.get('/api-docs.json', (req, res) => {
-  res.json(apiDocs)
+  res.json(apiDocs(req.user))
 })
 
 router.get('/vocabulary', asyncWrap(async (req, res) => {
