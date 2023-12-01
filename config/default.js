@@ -124,6 +124,10 @@ module.exports = {
         bandwidth: {
           dynamic: 500000 // 500 kb/s
         }
+      },
+      appCaptures: {
+        duration: 60,
+        nb: 5
       }
     },
     hideBrand: 0,

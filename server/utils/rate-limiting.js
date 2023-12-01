@@ -21,6 +21,9 @@ for (const limitType of Object.keys(config.defaultLimits.apiRate)) {
     duration: config.defaultLimits.apiRate[limitType].duration
   })
 }
+
+exports.limiters = limiters
+
 const throttleGroups = {}
 exports.middleware = (_limitType) => asyncWrap(async (req, res, next) => {
   const limitType = _limitType || ((req.user && req.user.id) ? 'user' : 'anonymous')
