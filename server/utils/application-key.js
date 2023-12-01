@@ -62,11 +62,9 @@ module.exports = asyncWrap(async (req, res, next) => {
         }
       }
 
-      try {
-        // 3rd level of anti-spam protection, simple rate limiting based on ip
-        await rateLimiting.postApplicationKey.consume(req.user ? req.user.id : requestIp.getClientIp(req), 1)
-      } catch (err) {
-        console.warn('Rate limit error for application key', requestIp.getClientIp(req), req.originalUrl, err)
+      // 3rd level of anti-spam protection, simple rate limiting based on ip
+      if (!rateLimiting.consume(req, 'postApplicationKey')) {
+        console.warn('Rate limit error for application key', requestIp.getClientIp(req), req.originalUrl)
         return res.status(429).send(req.__('errors.exceedAnonymousRateLimiting'))
       }
     }

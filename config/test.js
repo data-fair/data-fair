@@ -36,6 +36,14 @@ module.exports = {
           dynamic: 200000,
           static: 400000
         }
+      },
+      postApplicationKey: {
+        duration: 60,
+        nb: 1
+      },
+      appCaptures: {
+        duration: 60,
+        nb: 10
       }
     }
   },

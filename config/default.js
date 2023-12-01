@@ -125,6 +125,10 @@ module.exports = {
           dynamic: 500000 // 500 kb/s
         }
       },
+      postApplicationKey: {
+        duration: 60,
+        nb: 1
+      },
       appCaptures: {
         duration: 60,
         nb: 5

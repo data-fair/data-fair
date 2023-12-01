@@ -4,7 +4,6 @@ const path = require('path')
 const request = require('request')
 const eventToPromise = require('event-to-promise')
 const pump = require('../utils/pipe')
-const requestIp = require('request-ip')
 const rateLimiting = require('../utils/rate-limiting')
 const debug = require('debug')('capture')
 const permissionsUtils = require('./permissions')
@@ -112,9 +111,7 @@ exports.screenshot = async (req, res) => {
       return res.redirect(req.publicBaseUrl + '/no-preview.png')
     }
   } else {
-    try {
-      await rateLimiting.limiters.appCaptures.consume(req.user ? req.user.id : requestIp.getClientIp(req), 1)
-    } catch (err) {
+    if (!rateLimiting.consume(req, 'appCaptures')) {
       return res.status(429).send(req.__('errors.exceedRateLimiting'))
     }
     res.set('x-capture-cache-status', 'BYPASS')

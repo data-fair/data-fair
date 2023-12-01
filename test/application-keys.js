@@ -147,7 +147,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     await assert.rejects(
       global.ax.anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } }),
       err => err.status === 429)
-    rateLimitingUtils.postApplicationKey.reward(1)
+    rateLimitingUtils.clear()
     await new Promise(resolve => setTimeout(resolve, 2000))
     // accepted because token is the right age
     res = await global.ax.anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } })
