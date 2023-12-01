@@ -166,13 +166,14 @@ describe('Properties capabilities', () => {
     await workers.hook('finalizer/rest-text')
     res = await ax.post('/api/v1/datasets/rest-text/_bulk_lines', [
       { str1: 'ceci est une phrase pour tester' },
-      { str1: 'ceci est un autre test' }
+      { str1: 'ceci est un autre test' },
+      { str1: 'ceci est un autre têst avec un accent imprévu' }
     ])
     await workers.hook('finalizer/rest-text')
     res = await ax.get('/api/v1/datasets/rest-text/lines', { params: { q: 'test' } })
-    assert.equal(res.data.total, 2)
+    assert.equal(res.data.total, 3)
     res = await ax.get('/api/v1/datasets/rest-text/lines', { params: { q: 'tester' } })
-    assert.equal(res.data.total, 2)
+    assert.equal(res.data.total, 3)
 
     await ax.patch('/api/v1/datasets/rest-text', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { text: false } }] })
     await workers.hook('finalizer/rest-text')

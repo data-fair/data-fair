@@ -35,7 +35,7 @@ module.exports = {
     nodes: null,
     options: {},
     ca: null, // the central authority for the ES cluster certificates
-    defaultAnalyzer: 'french',
+    defaultAnalyzer: 'custom_french',
     maxBulkLines: 2000,
     maxBulkChars: 200000,
     maxShardSize: 10000000000, // 10go
