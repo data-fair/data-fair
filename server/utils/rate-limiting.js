@@ -16,10 +16,10 @@ const tokenBuckets = {}
 // simple cleanup of the limiters every 20 minutes
 setInterval(() => {
   const threshold = Date.now() - 20 * 60 * 1000
-  for (const key of rateLimiters) {
+  for (const key of Object.keys(rateLimiters)) {
     if (rateLimiters[key].lastUsed < threshold) delete rateLimiters[key]
   }
-  for (const key of tokenBuckets) {
+  for (const key of Object.keys(tokenBuckets)) {
     if (tokenBuckets[key].lastUsed < threshold) delete tokenBuckets[key]
   }
 }, 20 * 60 * 1000)
