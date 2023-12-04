@@ -5,6 +5,7 @@ const axios = require('axios')
 const debug = require('debug')('test')
 const app = require('../server/app')
 const workers = require('../server/workers')
+const rateLimiting = require('../server/utils/rate-limiting')
 const axiosAuth = require('@data-fair/sd-express').axiosAuth
 
 before('global mocks', () => {
@@ -140,6 +141,7 @@ afterEach('scratch data', async function () {
     ])
     await fs.ensureDir('./data/test/captures')
     app.memoizedGetPublicationSiteSettings.clear()
+    rateLimiting.clear()
   } catch (err) {
     console.warn('error while scratching data before test', err)
   }

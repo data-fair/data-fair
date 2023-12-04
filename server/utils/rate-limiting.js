@@ -116,9 +116,8 @@ exports.middleware = (_limitType) => asyncWrap(async (req, res, next) => {
       if (!buffer) return res._originalEnd()
       const tokenBucket = exports.getTokenBucket(req, limitType, bandwidthType)
       tokenBucket.lastUsed = Date.now()
-      throttledEnd(res, buffer, tokenBucket).catch((err) => {
-        console.warn('failed to send throttled response', err)
-      })
+      throttledEnd(res, buffer, tokenBucket)
+        .catch(err => console.warn('failed to send throttled response', err))
     }
   }
   next()
