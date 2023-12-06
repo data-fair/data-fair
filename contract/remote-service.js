@@ -30,7 +30,7 @@ module.exports = {
       type: 'string',
       description: 'Detailed description of the configuration for an remote service'
     },
-    apiDoc: { $ref: 'https://spec.openapis.org/oas/3.1/schema/2022-10-07' },
+    apiDoc: { type: 'object' },
     url: {
       type: 'string',
       description: 'The url to fetch the apiDoc. Can be used for refresh purpose'

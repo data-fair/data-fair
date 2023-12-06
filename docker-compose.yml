@@ -75,7 +75,7 @@ services:
   openapi-viewer:
     profiles:
       - dev
-    image: ghcr.io/data-fair/openapi-viewer:1
+    image: ghcr.io/data-fair/openapi-viewer:master
     ports:
       - 5680:8080
 
