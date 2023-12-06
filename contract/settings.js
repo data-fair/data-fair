@@ -226,12 +226,12 @@ module.exports = {
           },
           identifiers: {
             type: 'array',
-            items: [{
+            items: {
               minItems: 1,
               type: 'string',
               title: 'Identifiant vocabulaire extérieur',
               description: 'Renseignez idéalement une URI issue d\'un vocabulaire standardisé comme schema.org, c\'est à dire un identifiant mondialement unique pour ce concept. Si ce n\'est pas possible vous pouvez laisser cette information vide.'
-            }]
+            }
           },
           title: { type: 'string', title: 'Titre' },
           description: { type: 'string', title: 'Description' },

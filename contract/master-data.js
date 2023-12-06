@@ -301,7 +301,8 @@ exports.endpoints = (dataset) => {
               enum: properties
             }
           },
-          style: 'commaDelimited'
+          style: 'form',
+          explode: false
         }],
         requestBody: {
           description: 'Ensemble de filtres à appliquer',

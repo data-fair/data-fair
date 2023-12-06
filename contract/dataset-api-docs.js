@@ -16,7 +16,7 @@ const apiRate = (key, label) => {
 const userApiRate = apiRate('user', 'authentifié (session ou clé d\'API)')
 const anonymousApiRate = apiRate('anonymous', 'anonyme')
 
-module.exports = (dataset, publicUrl = config.publicUrl, info, publicationSite) => {
+module.exports = (dataset, publicUrl = config.publicUrl, ownerInfo, publicationSite) => {
   dataset.schema = dataset.schema || []
   const datasetLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl)
 
@@ -154,7 +154,8 @@ Exemple: ma_colonne,-ma_colonne2`,
           enum: valuesProperties.length ? valuesProperties.map(p => p.key) : undefined
         }
       },
-      style: 'commaDelimited'
+      style: 'form',
+      explode: false
     }, {
       in: 'query',
       name: 'select',
@@ -167,7 +168,8 @@ Exemple: ma_colonne,-ma_colonne2`,
           enum: properties.length ? properties.map(p => p.key) : undefined
         }
       },
-      style: 'commaDelimited'
+      style: 'form',
+      explode: false
     }, {
       in: 'query',
       name: 'highlight',
@@ -183,7 +185,8 @@ La valeur est une liste de colonnes séparées par des virgules.
           enum: textSearchProperties.length ? textSearchProperties.map(p => p.key) : undefined
         }
       },
-      style: 'commaDelimited'
+      style: 'form',
+      explode: false
     }]
     if (imageProperty) {
       params.push({
@@ -357,19 +360,23 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     description: `Jeu de données Data Fair - ${new URL(publicUrl).hostname} - ${dataset.title}`
   }]
 
+  const info = {
+    title: `API publique du jeu de données : ${dataset.title || dataset.slug}`,
+    description,
+    version,
+    'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-dataset-${dataset.id}`,
+    contact: { ...(ownerInfo.contact || {}) }
+  }
+  if (config.info.termsOfService) info.termsOfService = config.info.termsOfService
+
   const api = {
-    openapi: '3.0.0',
-    info: {
-      title: `API publique du jeu de données : ${dataset.title || dataset.slug}`,
-      description,
-      version,
-      'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-dataset-${dataset.id}`,
-      termsOfService: config.info.termsOfService,
-      contact: { ...(info.contact || {}) }
-    },
+    openapi: '3.1.0',
+    info,
     components: {
       securitySchemes: {},
-      schemas: { datasetSchema }
+      schemas: {
+        datasetSchema
+      }
     },
     security: [],
     servers,
@@ -618,7 +625,8 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                   enum: valuesProperties.length ? properties.map(p => p.key) : undefined
                 }
               },
-              style: 'commaDelimited'
+              style: 'form',
+              explode: false
             }
           ].concat(filterParams),
           responses: {

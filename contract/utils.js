@@ -47,7 +47,8 @@ exports.ownerParams = [/* {
         type: 'string'
       }
     },
-    style: 'commaDelimited'
+    style: 'form',
+    explode: false
   }]
 
 exports.visibilityParams = [{
@@ -62,7 +63,8 @@ exports.visibilityParams = [{
       enum: ['public', 'private', 'protected']
     }
   },
-  style: 'commaDelimited'
+  style: 'form',
+  explode: false
 }]
 
 exports.selectParam = (values) => ({
@@ -78,7 +80,8 @@ exports.selectParam = (values) => ({
       enum: values
     }
   },
-  style: 'commaDelimited'
+  style: 'form',
+  explode: false
 })
 
 exports.filterParam = (name, description, values) => {
@@ -93,7 +96,8 @@ exports.filterParam = (name, description, values) => {
         type: 'string'
       }
     },
-    style: 'commaDelimited'
+    style: 'form',
+    explode: false
   }
   if (values) p.schema.items.enum = values
   return p

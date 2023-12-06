@@ -13,12 +13,7 @@ const remoteServiceAPIDocs = require('../../contract/remote-service-api-docs')
 const mongoEscape = require('mongo-escape')
 const config = require('config')
 const ajv = require('../utils/ajv')
-const validate = ajv.compile(require('../../contract/remote-service'))
 const servicePatch = require('../../contract/remote-service-patch')
-const validatePatch = ajv.compile(servicePatch)
-const openApiSchema = require('../../contract/openapi-3.1.json')
-openApiSchema.$id = openApiSchema.$id + '-2' // dirty hack to handle ajv error
-const validateOpenApi = ajv.compile(openApiSchema)
 
 const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
@@ -28,6 +23,10 @@ const prometheus = require('../utils/prometheus')
 const datasetAPIDocs = require('../../contract/dataset-api-docs')
 const { httpAgent, httpsAgent } = require('../utils/http-agents')
 const settingsUtils = require('../utils/settings')
+
+const validate = ajv.compile(require('../../contract/remote-service'))
+const validatePatch = ajv.compile(servicePatch)
+const validateOpenApi = ajv.compile('openapi-3.1')
 
 const debug = require('debug')('remote-services')
 

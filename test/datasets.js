@@ -235,7 +235,7 @@ describe('datasets', () => {
     const webhook = await testUtils.timeout(eventToPromise(notifier, 'webhook'), 2000, 'webhook not received')
     res = await ax.get(webhook.href + '/api-docs.json')
     assert.equal(res.status, 200)
-    assert.equal(res.data.openapi, '3.0.0')
+    assert.equal(res.data.openapi, '3.1.0')
     res = await ax.post('/api/v1/_check-api', res.data)
     const datasetId = webhook.href.split('/').pop()
 

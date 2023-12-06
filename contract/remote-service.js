@@ -1,8 +1,6 @@
 // TODO replace this schema with the official one when available
 // see https://github.com/OAI/OpenAPI-Specification/issues/1032
 // apiDoc: require('swagger2openapi/schemas/openapi-3.0.json'),
-const apiDoc = require('./openapi-3.1.json')
-
 const owner = require('./owner')
 
 module.exports = {
@@ -32,7 +30,7 @@ module.exports = {
       type: 'string',
       description: 'Detailed description of the configuration for an remote service'
     },
-    apiDoc: { $ref: '#/definitions/API' },
+    apiDoc: { $ref: 'https://spec.openapis.org/oas/3.1/schema/2022-10-07' },
     url: {
       type: 'string',
       description: 'The url to fetch the apiDoc. Can be used for refresh purpose'
@@ -133,6 +131,5 @@ module.exports = {
         }
       }
     }
-  },
-  definitions: apiDoc.definitions
+  }
 }

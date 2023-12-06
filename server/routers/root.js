@@ -7,8 +7,7 @@ const asyncWrap = require('../utils/async-wrap')
 const settingsUtils = require('../utils/settings')
 
 const ajv = require('../utils/ajv')
-const openApiSchema = require('../../contract/openapi-3.1.json')
-const validateApi = ajv.compile(openApiSchema)
+const validateApi = ajv.compile('openapi-3.1')
 const config = require('config')
 
 const router = express.Router()

@@ -182,7 +182,7 @@ describe('REST datasets', () => {
       await ax.post('/api/v1/datasets/rest4/lines', { attr3: 'test1' })
       assert.fail()
     } catch (err) {
-      assert.equal(err.data, ' ne doit pas contenir de propriétés additionnelles (attr3)')
+      assert.equal(err.data, 'ne doit pas contenir de propriétés additionnelles (attr3)')
       assert.equal(err.status, 400)
     }
 

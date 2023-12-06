@@ -1,5 +1,5 @@
 {
-  "openapi": "3.0.0",
+  "openapi": "3.1.0",
   "info": {
     "description": "\nCe service permet de récupérer les informations des entreprises de France et de leurs établissements. Les principales clés sont les codes officiels SIRET et SIREN.\n\nLa donnée provient initialement de la base Sirène publiée par l'INSEE et est enrichie avec ces sources : BODACC, Infogreffe, NAF et BAN.\n\nLa documentation de tous les champs disponibles est consultable [ici](https://koumoul.com/s/sirene/schema-doc).\n\nToutes les modifications sont historisées, ce qui permet d'avoir accès à des dynamiques dans le temps, comme par exemple le nombre de créations ou de suppressions d'entreprises dans un secteur particulier.",
     "title": "Données Entreprises",

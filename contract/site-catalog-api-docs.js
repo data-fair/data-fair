@@ -11,7 +11,7 @@ module.exports = (publicUrl, publicationSite, info) => {
   }]
 
   return {
-    openapi: '3.0.0',
+    openapi: '3.1.0',
     info: {
       title: 'API de catalogue de données',
       description: `Cette documentation est à destination de développeurs souhaitant explorer ou moissoner le catalogue de données de ${hostname}.`,

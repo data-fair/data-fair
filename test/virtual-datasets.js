@@ -66,7 +66,7 @@ describe('virtual datasets', () => {
 
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/api-docs.json`)
     assert.equal(res.status, 200)
-    assert.equal(res.data.openapi, '3.0.0')
+    assert.equal(res.data.openapi, '3.1.0')
     res = await ax.post('/api/v1/_check-api', res.data)
 
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)

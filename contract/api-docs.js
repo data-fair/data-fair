@@ -21,7 +21,7 @@ const servers = [{
 
 module.exports = (user) => {
   const doc = {
-    openapi: '3.0.0',
+    openapi: '3.1.0',
     info: Object.assign({
       title: 'API principale',
       description: `
