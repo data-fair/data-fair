@@ -189,6 +189,7 @@ if (config.mode.includes('server')) {
       console.error('(http) Error in express route', req.originalUrl, err)
       prometheus.internalError.inc({ errorCode: 'http' })
     }
+    err.message = err.message?.replace('[noretry] ', '')
     if (!res.headersSent) {
       res.set('Cache-Control', 'no-cache')
       res.set('Expires', '-1')

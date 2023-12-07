@@ -537,9 +537,11 @@ other,unknown address
 
     // if we remove the concept, the extension is removed also
     delete dataset.schema.find(field => field.key === 'adr')['x-refersTo']
-    dataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema })).data
-    assert.equal(dataset.schema.length, 6)
-    await workers.hook(`finalizer/${dataset.id}`)
+    await assert.rejects(ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema }), (err) => {
+      assert.equal(err.status, 400)
+      assert.ok(err.data.startsWith('le concept nécessaire'))
+      return true
+    })
   })
 
   it('Preserve extension when schema is overwritten at file upload ', async () => {

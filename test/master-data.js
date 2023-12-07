@@ -645,7 +645,6 @@ describe('Master data management', () => {
       { latlon: '-2.8,45.5', country: 'JPN' }
     ])
     await workers.hook('finalizer/master1')
-
     await ax.post('/api/v1/datasets/master2/_bulk_lines', [
       { country: 'FRA', name: 'France' },
       { country: 'JPN', name: 'Japan' }
@@ -656,7 +655,7 @@ describe('Master data management', () => {
     await ax.put('/api/v1/datasets/slave', {
       isRest: true,
       title: 'slave',
-      schema: [latlonProperty],
+      schema: [latlonProperty], // countryProperty will be deduced from first level extension
       extensions: [{
         active: true,
         type: 'remoteService',

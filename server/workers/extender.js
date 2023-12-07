@@ -12,14 +12,10 @@ exports.process = async function (app, dataset) {
   const patch = { status: dataset.status === 'updated' ? 'extended-updated' : 'extended' }
 
   debug('check extensions validity')
-  const validExtensions = await extensionsUtils.filterExtensions(db, dataset.schema, dataset.extensions || [])
-  if (validExtensions.length !== (dataset.extensions || []).length) {
-    patch.extensions = validExtensions
-    patch.schema = await extensionsUtils.prepareSchema(db, dataset.schema, dataset.extensions || [])
-  }
+  await extensionsUtils.checkExtensions(db, dataset.schema, dataset.extensions || [])
 
   debug('apply extensions', dataset.extensions)
-  await extensionsUtils.extend(app, dataset, validExtensions)
+  await extensionsUtils.extend(app, dataset, dataset.extensions || [])
   debug('extensions ok')
 
   // Some data was updated in the interval during which we performed indexation

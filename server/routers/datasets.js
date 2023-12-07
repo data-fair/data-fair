@@ -509,10 +509,20 @@ router.patch('/:datasetId',
     }
 
     if (patch.extensions && req.dataset.isRest && req.dataset.extensions) {
-      const removedExtensions = req.dataset.extensions.filter(e => !patch.extensions.find(pe => e.remoteService === pe.remoteService && e.action === pe.action))
+      // TODO: check extension type (remoteService or exprEval)
+      const removedExtensions = req.dataset.extensions.filter(e => {
+        if (e.type === 'remoteService') return !patch.extensions.find(pe => pe.type === 'remoteService' && e.remoteService === pe.remoteService && e.action === pe.action)
+        if (e.type === 'exprEval') return !patch.extensions.find(pe => pe.type === 'exprEval' && e.property?.key === pe.property?.key)
+        return false
+      })
       if (removedExtensions.length) {
+        const unset = {}
+        for (const e of removedExtensions) {
+          if (e.type === 'remoteService') unset[extensions.getExtensionKey(e)] = ''
+          if (e.type === 'exprEval') unset[e.property?.key] = ''
+        }
         await restDatasetsUtils.collection(db, req.dataset).updateMany({},
-          { $unset: removedExtensions.reduce((a, re) => { a[extensions.getExtensionKey(re)] = ''; return a }, {}) }
+          { $unset: unset }
         )
         await datasetUtils.updateStorage(req.app, req.dataset)
       }

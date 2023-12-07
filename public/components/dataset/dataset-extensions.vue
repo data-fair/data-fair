@@ -38,6 +38,7 @@
                 >
                   <v-list-item-content>
                     <v-list-item-title>{{ extension.action.summary }}</v-list-item-title>
+                    <v-list-item-subtitle>{{ extension.linkInfo }}</v-list-item-subtitle>
                   </v-list-item-content>
                 </v-list-item>
                 <v-list-item
@@ -94,38 +95,62 @@
             :outlined="!extensionHasChanges(extension)"
           >
             <template v-if="extension.type === 'remoteService'">
-              <v-card-title>
-                {{ remoteServicesMap[extension.remoteService] && remoteServicesMap[extension.remoteService].actions[extension.action] && remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
-              </v-card-title>
-              <v-card-text style="margin-bottom:40px;">
-                <v-autocomplete
-                  v-if="extension.active && remoteServicesMap[extension.remoteService] && selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
-                  v-model="extension.select"
-                  :disabled="!can('writeDescriptionBreaking')"
-                  :items="selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
-                  item-value="name"
-                  item-text="title"
-                  :label="$t('additionalCols')"
-                  multiple
-                  :placeholder="$t('allColsOut')"
-                  persistent-hint
-                  chips
-                  deletable-chips
-                />
-              </v-card-text>
-              <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
-                <dataset-extension-details-dialog
-                  :extension="extension"
-                  :disabled="extensionHasChanges(extension)"
-                />
-                <confirm-menu
-                  v-if="can('writeDescriptionBreaking')"
-                  yes-color="warning"
-                  :text="$t('confirmDeleteText')"
-                  :tooltip="$t('confirmDeleteTooltip')"
-                  @confirm="removeExtension(idx)"
-                />
-              </v-card-actions>
+              <template v-if="remoteServicesMap[extension.remoteService]?.actions[extension.action]">
+                <v-card-title>
+                  {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
+                </v-card-title>
+                <v-card-text style="margin-bottom:40px;">
+                  Lien : {{ extensionLinkInfo(extension) }}
+                  <v-autocomplete
+                    v-if="selectFields[extension.remoteService + '_' + extension.action]?.fieldsAndTags"
+                    v-model="extension.select"
+                    :disabled="!can('writeDescriptionBreaking')"
+                    :items="selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
+                    item-value="name"
+                    item-text="title"
+                    :label="$t('additionalCols')"
+                    multiple
+                    :placeholder="$t('allColsOut')"
+                    persistent-hint
+                    chips
+                    deletable-chips
+                  />
+                </v-card-text>
+                <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
+                  <dataset-extension-details-dialog
+                    :extension="extension"
+                    :disabled="extensionHasChanges(extension)"
+                  />
+                  <confirm-menu
+                    v-if="can('writeDescriptionBreaking')"
+                    yes-color="warning"
+                    :text="$t('confirmDeleteText')"
+                    :tooltip="$t('confirmDeleteTooltip')"
+                    @confirm="removeExtension(idx)"
+                  />
+                </v-card-actions>
+              </template>
+              <template v-else>
+                <v-card-text style="margin-bottom:40px;">
+                  <v-alert
+                    outlined
+                    type="warning"
+                  >
+                    Donnée de référence non disponible ({{ extension?.action?.replace('masterData_bulkSearch_', '') }}).
+                    <br>
+                    Soit la donnée de référence n'existe plus, soit le concept servant de liaison n'est plus présent dans votre jeu de données.
+                  </v-alert>
+                </v-card-text>
+                <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
+                  <confirm-menu
+                    v-if="can('writeDescriptionBreaking')"
+                    yes-color="warning"
+                    :text="$t('confirmDeleteText')"
+                    :tooltip="$t('confirmDeleteTooltip')"
+                    @confirm="removeExtension(idx)"
+                  />
+                </v-card-actions>
+              </template>
             </template>
             <template v-if="extension.type === 'exprEval'">
               <v-card-title>
@@ -250,6 +275,7 @@ export default {
           if (this.newExtension === extension) extension.color = 'primary'
           if (this.localExtensions.find(e => extension.id === e.remoteService + '--' + e.action)) extension.color = 'green'
           if (!extension.action.input.find(i => this.datasetConcepts.has(i.concept))) extension.color = 'error'
+          if (!extension.disabled) extension.linkInfo = 'Lien possible : ' + this.extensionLinkInfo(extension)
           extensions.push(extension)
         })
       })
@@ -294,9 +320,9 @@ export default {
     // we do not use "active" anymore, just ignore inactive extensions
     this.dataset.extensions = (this.dataset.extensions || []).filter(e => e.active !== false)
     // remove deprecated extensions based on available extensions
-    this.dataset.extensions = this.dataset.extensions.filter(e => {
+    /* this.dataset.extensions = this.dataset.extensions.filter(e => {
       return e.type !== 'remoteService' || (this.remoteServicesMap[e.remoteService] && this.remoteServicesMap[e.remoteService].actions[e.action])
-    })
+    }) */
     this.localExtensions = JSON.parse(JSON.stringify(this.dataset.extensions))
 
     // TODO: remove deprecated extensions based on available extensions
@@ -339,6 +365,17 @@ export default {
     },
     applyExtensions () {
       this.patchAndCommit({ extensions: JSON.parse(JSON.stringify(this.localExtensions)) })
+    },
+    extensionLinkInfo (extension) {
+      const input = this.remoteServicesMap[extension.remoteService].actions[extension.action?.id ?? extension.action].input.filter(i => i.concept !== 'http://schema.org/identifier')
+      return input.map(i => {
+        const concept = this.vocabulary[i.concept]?.title || i.concept
+        const field = this.dataset.schema.find(f => f['x-refersTo'] === i.concept)
+        const fieldTitle = field && (field.title || field['x-originalName'] || field.key)
+        let msg = `concept ${concept}`
+        if (fieldTitle) msg += ` (colonne ${fieldTitle})`
+        return msg
+      }).join(', ')
     }
   }
 }

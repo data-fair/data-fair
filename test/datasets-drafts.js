@@ -469,7 +469,7 @@ other,unknown address
     assert.equal(dataset.status, 'error')
   })
 
-  it('Remove extensions when draft file is missing the input properties', async () => {
+  it('Fails when draft file is missing the input properties', async () => {
     const ax = global.ax.dmeadus
 
     // Initial dataset with addresses
@@ -513,11 +513,10 @@ other
     form2.append('file', content2, 'dataset2-noadr.csv')
     res = await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })
     assert.equal(res.status, 200)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
-    assert.equal(dataset.extensions.length, 1)
-    assert.equal(dataset.schema.length, 11)
-    assert.equal(dataset.draft.extensions.length, 0)
-    assert.equal(dataset.draft.schema.length, 4)
+    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), (err) => {
+      assert.ok(err.message.startsWith('le concept nécessaire'))
+      return true
+    })
   })
 
   it('Delete a dataset in draft state', async () => {

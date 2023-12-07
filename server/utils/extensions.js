@@ -292,6 +292,7 @@ function prepareInputMapping (action, dataset, extensionKey, selectFields) {
 // add properties to the schema based on active extensions
 exports.prepareSchema = async (db, schema, extensions) => {
   let extensionsFields = []
+  await exports.checkExtensions(db, schema, extensions)
   for (const extension of extensions) {
     if (!extension.active) continue
     if (extension.type === 'remoteService') {
@@ -355,21 +356,24 @@ exports.prepareSchema = async (db, schema, extensions) => {
   return schema.filter(field => !field['x-extension']).concat(extensionsFields)
 }
 
-// filter out extensions that don't have the necessary input
-exports.filterExtensions = async (db, schema, extensions = []) => {
-  const validExtensions = []
+// check if and extension dosn't have the necessary input
+exports.checkExtensions = async (db, schema, extensions = []) => {
+  // console.log('schema', schema)
+  const availableConcepts = new Set(schema.map(prop => prop['x-refersTo']).filter(c => c))
+
   for (const extension of extensions) {
     if (extension.type === 'remoteService') {
       const remoteService = await db.collection('remote-services').findOne({ id: extension.remoteService })
-      if (!remoteService) continue
+      if (!remoteService) throw createError(400, '[noretry] source de données de référénce inconnue')
       const action = remoteService.actions.find(action => action.id === extension.action)
-      if (!action) continue
-      if (action.input.find(i => i.concept && schema.find(prop => prop['x-refersTo'] && prop['x-refersTo'] === i.concept))) {
-        validExtensions.push(extension)
+      if (!action) throw createError(400, '[noretry] opération de récupération de données de référénce inconnue')
+      if (!action.input.find(i => i.concept && availableConcepts.has(i.concept))) {
+        throw createError(400, `[noretry] le concept nécessaire à l'utilisation de la donnée de référence n'est pas présent dans le jeu de données (${action.summary})`)
       }
+      for (const concept of action.output.map(i => i.concept).filter(c => c)) availableConcepts.add(concept)
     } else if (extension.type === 'exprEval') {
-      validExtensions.push(extension)
+      return null
     }
   }
-  return validExtensions
+  return null
 }
