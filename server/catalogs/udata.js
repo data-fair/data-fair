@@ -296,24 +296,28 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
 
   // TODO: use data-files ?
   if (dataset.file) {
+    const originalFileFormat = dataset.originalFile.name.split('.').pop()
     resources.push({
-      title: `Fichier ${dataset.originalFile.name.split('.').pop()}`,
-      description: `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
+      title: `Fichier ${originalFileFormat}`,
+      description: `Téléchargez le fichier complet au format ${originalFileFormat}.`,
       url: `${catalog.dataFairBaseUrl || config.publicUrl}/api/v1/datasets/${dataset.id}/raw`,
       type: 'main',
       filetype: 'remote',
       filesize: dataset.originalFile.size,
-      mime: dataset.originalFile.mimetype
+      mime: dataset.originalFile.mimetype,
+      format: originalFileFormat
     })
     if (dataset.file.mimetype !== dataset.originalFile.mimetype) {
+      const fileFormat = dataset.file.name.split('.').pop()
       resources.push({
-        title: `Fichier ${dataset.file.name.split('.').pop()}`,
-        description: `Téléchargez le fichier complet au format ${dataset.file.name.split('.').pop()}.`,
+        title: `Fichier ${fileFormat}`,
+        description: `Téléchargez le fichier complet au format ${fileFormat}.`,
         url: `${catalog.dataFairBaseUrl || config.publicUrl}/api/v1/datasets/${dataset.id}/convert`,
         type: 'main',
         filetype: 'remote',
         filesize: dataset.file.size,
-        mime: dataset.file.mimetype
+        mime: dataset.file.mimetype,
+        format: fileFormat
       })
     }
   }
