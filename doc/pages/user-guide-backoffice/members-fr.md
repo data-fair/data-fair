@@ -20,14 +20,26 @@ Sur cette page, vous pouvez gérer les différents membres de votre organisation
 Le changement de rôle et la suppression d'un membre peuvent être accomplis grâce aux boutons d'actions de la ligne du membre.
 
 ## Invitation
-Pour inviter un membre dans votre organisation, vous n'avez besoin que de son e-mail.
+
+Pour inviter un membre dans votre organisation, vous n'avez besoin que de son adresse e-mail.
+
+Lorsque vous cliquez sur le bouton + de la section des membres, la fenêtre d'invitation d'un membre apparaît.
+
+Renseignez l'adresse e-mail de l'utilisateur, son rôle et le site de redirection.
+
+Il existe 3 rôles dans une organisation : administrateur, contributeur et utilisateur. Les permissions de chaque rôle sont décrits dans la prochaine section de la page.
+
+Le site de redirection permet de choisir le portail sur lequel vous souhaitez rediriger votre nouveau membre.
+En validant le lien d'invitation, le membre que vous avez invité sera redirigé vers le portail choisi. Si vous ne possédez aucun portail, le site de redirection sera par défaut koumoul.com.  
+Selon la [configuration d'authentification](./user-guide-backoffice/authentication-config) de votre portail que vous aurez choisi, le compte sera créé sur le site du portail ou sur le site koumoul.com
 
 ![Invitation](./images/user-guide-backoffice/orga-invitation.jpg)  
 *Invitez les membres de votre organisation par e-mail*
 
 Un e-mail d'invitation est envoyé sur l'adresse renseignée.  
 Le message contient un lien pour créer son compte sur la plateforme et faire partie de votre organisation.  
-Une fois connectée, la personne invitée aura accès aux différentes pages de l'organisation selon le rôle que vous lui aurez attribué.
+Une fois connectée, la personne invitée aura accès aux différentes pages de l'organisation selon le rôle que vous lui aurez attribué.  
+
 
 ## Rôles
 
