@@ -118,9 +118,9 @@
           dense
           class="mt-1"
           clearable
-          @keyup.enter="emitFilter({ type: 'in', values: equals.filter(v => !!v) })"
-          @click:clear="equals[i - 1] = ''; emitFilter({ type: 'in', values: equals.filter(v => !!v) }, false)"
-          @change="emitFilter({ type: 'in', values: equals.filter(v => !!v) }, false)"
+          @keyup.enter="emitFilter({ type: 'in', values: equals })"
+          @click:clear="equals[i - 1] = ''; emitFilter({ type: 'in', values: equals }, false)"
+          @change="emitFilter({ type: 'in', values: equals }, false)"
         >
           <template #append-outer>
             <v-btn
@@ -130,7 +130,7 @@
               :disabled="equals.length <= 1"
               color="primary"
               :title="$t('applyFilter')"
-              @click="emitFilter({ type: 'in', values: equals.filter(v => !!v) })"
+              @click="emitFilter({ type: 'in', values: equals })"
             >
               <v-icon>mdi-check</v-icon>
             </v-btn>
@@ -390,7 +390,6 @@ en:
 </i18n>
 
 <script>
-
 export default {
   props: {
     header: { type: Object, required: true },
@@ -481,6 +480,13 @@ export default {
     },
     active () {
       return !!this.filters.find(f => f.field.key === this.field.key)
+    },
+    reversedLabels () {
+      const reversedLabels = {}
+      for (const key of Object.keys(this.field['x-labels'] || {})) {
+        reversedLabels[this.field['x-labels'][key]] = key
+      }
+      return reversedLabels
     }
   },
   watch: {
@@ -508,6 +514,9 @@ export default {
         if (filter.type === 'in' && filter.values && filter.values.length) {
           if (this.field.type === 'string' || this.field.type === 'number' || this.field.type === 'integer') {
             this.equals = [...filter.values]
+            if (this.field['x-labels']) {
+              this.equals = this.equals.map(v => this.field['x-labels'][v] ?? v)
+            }
           }
           if (this.field.type === 'boolean') this.equalsBool = filter.values[0]
         }
@@ -527,6 +536,12 @@ export default {
       })
     },
     emitFilter (filter, close = true) {
+      if (filter.type === 'in') {
+        filter.values = filter.values.filter(v => !!v)
+        if (this.field['x-labels']) {
+          filter.values = filter.values.map(v => this.reversedLabels[v] ?? v)
+        }
+      }
       this.$emit('filter', filter)
       if (close || this.closeOnFilter) {
         this.showMenu = false
