@@ -86,7 +86,10 @@
           </v-row>
         </v-col>
       </v-row>
-      <v-row v-if="filters.length">
+      <v-row
+        v-if="filters.length"
+        class="ma-0"
+      >
         <v-col class="pa-0">
           <dataset-filters v-model="filters" />
         </v-col>
