@@ -71,6 +71,9 @@ services:
     volumes:
       - ./test/resources/users.json:/webapp/data/users.json
       - ./test/resources/organizations.json:/webapp/data/organizations.json
+    healthcheck:
+      test: ["CMD", "nc", "-z", "-v", "localhost", "8080"]
+      interval: 5s
 
   openapi-viewer:
     profiles:
