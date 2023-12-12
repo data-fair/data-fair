@@ -33,9 +33,9 @@ const csvStringifyOptions = (dataset, query = {}) => {
 }
 
 exports.results2csv = (req, results) => {
-  let csv = csvStrSync(results, csvStringifyOptions(req.dataset, req.query))
   // add BOM for excel, cf https://stackoverflow.com/a/17879474
-  csv += '\ufeff'
+  let csv = '\ufeff' + csvStrSync(results, csvStringifyOptions(req.dataset, req.query))
+
   // escape special null char (see test/resources/csv-cases/rge-null-chars.csv)
   csv = csv.replace(/\0/g, '')
   return csv
