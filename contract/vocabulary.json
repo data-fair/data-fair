@@ -785,5 +785,62 @@
       "fr": "Calendrier",
       "en": "Calendar"
     }
-  }
+  },
+  {
+    "id": "price",
+    "title": {
+      "fr": "Prix",
+      "en": "Price"
+    },
+    "description": {
+      "fr": "Le prix de vente d'un bien ou d'un service.",
+      "en": "The retail price of a product or service."
+    },
+    "identifiers": [
+      "https://schema.org/price"
+    ],
+    "type": "string",
+    "tag": {
+      "fr": "Commerce",
+      "en": "Commerce"
+    }
+  },
+  {
+    "id": "qpv",
+    "title": {
+      "fr": "Quartier prioritaire (QPV)",
+      "en": "Priority district (QPV)"
+    },
+    "description": {
+      "fr": "Quartiers prioritaires de la politique de la ville (QPV) selon les termes de la loi de programmation pour la Ville et la cohésion urbaine du 21 février 2014.",
+      "en": "Priority districts according to french law."
+    },
+    "identifiers": [
+      "https://sig.ville.gouv.fr/qpv"
+    ],
+    "type": "string",
+    "tag": {
+      "fr": "Référentiels administratifs français",
+      "en": "French administrative master-data"
+    }
+  },
+  {
+    "id": "attendeeCapacity",
+    "title": {
+      "fr": "Capacité de participants",
+      "en": "Attendee capacity"
+    },
+    "description": {
+      "fr": "Capacité maximale de participants à un évènement.",
+      "en": "Maximum physical attendee capacity of an event."
+    },
+    "identifiers": [
+      "https://schema.org/maximumPhysicalAttendeeCapacity"
+    ],
+    "type": "string",
+    "tag": {
+      "fr": "Évènements",
+      "en": "Events"
+    }
+  }  
 ]
