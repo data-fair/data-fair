@@ -457,7 +457,7 @@ export default {
       return !this.showEnum && this.field.type === 'boolean'
     },
     showStartsWith () {
-      return this.field.type === 'string' && this.showEquals
+      return this.field.type === 'string' && this.showEquals && !this.field['x-labels']
     },
     showNumCompare () {
       if (this.field['x-capabilities'] && this.field['x-capabilities'].index === false) return false
@@ -469,6 +469,7 @@ export default {
     },
     showSearch () {
       if (this.showEnum) return ''
+      if (this.field['x-labels']) return ''
       if (this.field.type !== 'string') return ''
       if (this.field.format && this.field.format !== 'uri-reference') return ''
       if (!this.field['x-capabilities'] || this.field['x-capabilities'].text !== false) return 'text'
@@ -476,8 +477,7 @@ export default {
       return ''
     },
     showContains () {
-      if (this.field['x-capabilities'] && this.field['x-capabilities'].wildcard) return true
-      return false
+      return this.field['x-capabilities'] && this.field['x-capabilities'].wildcard && !this.field['x-labels']
     },
     active () {
       return !!this.filters.find(f => f.field.key === this.field.key)
