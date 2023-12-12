@@ -61,8 +61,6 @@
         >
           <div
             class="mt-3 mb-3"
-            @drop.prevent="e => {file = e.dataTransfer.files[0]; if (!suggestArchive) currentStep = 3}"
-            @dragover.prevent
           >
             <v-file-input
               v-model="file"
@@ -72,7 +70,22 @@
               hide-details
               accept=".csv,.geojson"
               :rules="[(file) => !!file] || ''"
-            />
+            >
+              <template
+                v-if="file && file.type === 'text/csv'"
+                #append-outer
+              >
+                <v-select
+                  v-model="csvSep"
+                  :items="[',', ';']"
+                  dense
+                  outlined
+                  hide-details
+                  :label="$t('separator')"
+                  template
+                />
+              </template>
+            </v-file-input>
             <v-progress-linear
               v-if="importing"
               v-model="uploadProgress"
@@ -148,7 +161,8 @@ export default {
     file: null,
     importing: false,
     result: null,
-    uploadProgress: 0
+    uploadProgress: 0,
+    csvSep: ','
   }),
   watch: {
     dialog () {
@@ -156,6 +170,7 @@ export default {
       this.file = null
       this.importing = false
       this.uploadProgress = 0
+      this.csvSep = ','
     }
   },
   methods: {
@@ -168,6 +183,9 @@ export default {
           }
         },
         params: { draft: true }
+      }
+      if (this.file.type === 'text/csv') {
+        options.params.sep = this.csvSep
       }
       const formData = new FormData()
       formData.append('actions', this.file)
