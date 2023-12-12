@@ -1210,7 +1210,7 @@ const readLines = asyncWrap(async (req, res) => {
       type: 'tile-count',
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
-      query: esUtils.prepareQuery(req.dataset, query)
+      query
     })
     if (!config.cache.disabled && value !== null) return value
     const newValue = await esUtils.count(req.app.get('es'), req.dataset, query)
@@ -1255,7 +1255,7 @@ const readLines = asyncWrap(async (req, res) => {
       sampling,
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
-      query: esUtils.prepareQuery(req.dataset, req.query)
+      query: req.query
     })
     if (value) {
       res.type('application/x-protobuf')
@@ -1410,7 +1410,7 @@ router.get('/:datasetId/geo_agg', readDataset(), applicationKey, permissions.mid
       type: 'tile-geoagg',
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
-      query: esUtils.prepareQuery(req.dataset, req.query)
+      query: req.query
     })
     if (value) return res.status(200).send(value.buffer)
     cacheHash = hash
@@ -1456,7 +1456,7 @@ router.get('/:datasetId/values_agg', readDataset(), applicationKey, permissions.
       type: 'tile-valuesagg',
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
-      query: esUtils.prepareQuery(req.dataset, req.query)
+      query: req.query
     })
     if (value) return res.status(200).send(value.buffer)
     cacheHash = hash

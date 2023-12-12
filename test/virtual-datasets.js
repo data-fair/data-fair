@@ -223,7 +223,26 @@ describe('virtual datasets', () => {
     assert.ok(!virtualDataset.schema.find(f => f.key === 'id'))
 
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
-    assert.equal(res.data.total, 1, 'return matching line')
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].adr, '19 rue de la voie lactée saint avé')
+
+    // applying another filter should trigger re-finalization
+    await ax.patch('/api/v1/datasets/' + virtualDataset.id, {
+      virtual: {
+        children: [dataset.id],
+        filters: [{
+          key: 'id',
+          values: ['bidule']
+        }]
+      }
+    })
+
+    const newVirtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
+    assert.ok(newVirtualDataset.finalizedAt, virtualDataset.finalizedAt)
+
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].adr, 'adresse inconnue')
   })
 
   it('Add another virtual dataset as child', async () => {
