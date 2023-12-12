@@ -139,6 +139,7 @@ fr:
   resultErrors: "{nb} erreur(s)"
   resultCreated: "{nb} ligne(s) créée(s)"
   resultDeleted: "{nb} ligne(s) supprimées(s)"
+  separator: séparateur
 en:
   loadLines: Load multiple lines from a file
   selectFile: select or drag and drop a file
@@ -150,6 +151,7 @@ en:
   resultErrors: "{nb} error(s)"
   resultCreated: "{nb} created line(s)"
   resultDeleted: "{nb} deleted line(s)"
+  separator: separator
 </i18n>
 
 <script>
