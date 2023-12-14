@@ -40,7 +40,7 @@
     </v-list-item>
     <v-subheader v-t="'actions'" />
     <v-list-item
-      v-if="can('writeData') && !dataset.isRest && !dataset.isVirtual && !dataset.isMetaOnly"
+      v-if="can('writeData') && !dataset.isRest && !dataset.isVirtual && !dataset.isMetaOnly && !dataset.remoteFile"
       @click="showUploadDialog = true"
     >
       <v-list-item-icon>

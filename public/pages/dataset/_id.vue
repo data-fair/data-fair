@@ -26,6 +26,12 @@
                   </v-tab>
                 </template>
 
+                <template v-if="can('writeDescriptionBreaking') && dataset.remoteFile">
+                  <v-tab href="#structure-remote-file">
+                    <v-icon>mdi-cloud-download</v-icon>&nbsp;&nbsp;{{ $t('remoteFile') }}
+                  </v-tab>
+                </template>
+
                 <v-tab
                   v-if="!env.disableRemoteServices && !dataset.isVirtual && !dataset.isMetaOnly"
                   href="#structure-extensions"
@@ -58,6 +64,12 @@
                 <v-tab-item value="structure-virtual">
                   <v-container fluid>
                     <dataset-virtual />
+                  </v-container>
+                </v-tab-item>
+
+                <v-tab-item value="structure-remote-file">
+                  <v-container fluid>
+                    <dataset-remote-file />
                   </v-container>
                 </v-tab-item>
 
@@ -384,6 +396,7 @@ fr:
   schema: Schéma
   extension: Enrichissement
   virtual: Jeu virtuel
+  remoteFile: Fichier distant
   masterData: Données de référence
   tutorialConcepts: Pensez à renseigner des concepts sur les colonnes. Ces concepts seront utilisés pour proposer des applications de données adaptées et des possibilités d'enrichissement.
   docLinkExtend: Consultez la documentation sur l'extension de jeux de données
@@ -418,10 +431,12 @@ fr:
     analyze: analyse
     finalize: finalisation
     convert: conversion
+    download: téléchargement
 en:
   schema: Schema
   extension: Extension
   virtual: Virtual dataset
+  remoteFile: Remote file
   masterData: Master-data
   tutorialConcepts: You should assign concepts to your columns. They will be used to help you configure applications and data extensions.
   docLinkExtend: Read the documentation about extending datasets
@@ -455,6 +470,7 @@ en:
     analyze: analysis
     finalize: finalization
     convert: conversion
+    download: download
 </i18n>
 
 <script>

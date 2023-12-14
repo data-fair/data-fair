@@ -73,7 +73,7 @@ exports.process = async function (app, dataset) {
   if (!fileName) {
     fileName = path.basename(new URL(dataset.remoteFile.url).pathname)
   }
-  const mimetype = dataset.remoteFile.mimetype ?? response.headers['content-type'] ?? mime.lookup(fileName)
+  const mimetype = dataset.remoteFile.mimetype ?? response.headers['content-type']?.split(';').shift() ?? mime.lookup(fileName)
   const parsedFileName = path.parse(fileName)
   if (!parsedFileName.ext || mime.lookup(fileName) !== mimetype) {
     fileName = parsedFileName.name + '.' + mime.extension(mimetype)

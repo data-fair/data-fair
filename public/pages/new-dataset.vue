@@ -376,10 +376,16 @@
             <v-text-field
               v-model="remoteFileDataset.remoteFile.url"
               :label="$t('inputRemoteFile')"
+              hide-details
               outlined
               dense
-              style="max-width: 400px;"
+              style="max-width: 600px;"
               :rules="[val => val && val.startsWith('http://') || val.startsWith('https://')]"
+            />
+            <v-checkbox
+              v-model="remoteFileDataset.remoteFile.autoUpdate.active"
+              :label="$t('autoUpdate')"
+              class="ml-2"
             />
             <v-text-field
               v-model="remoteFileDataset.title"
@@ -387,7 +393,7 @@
               outlined
               dense
               :label="$t('title')"
-              style="max-width: 400px"
+              style="max-width: 600px"
               :rules="[val => val && val.length > 3]"
             />
           </v-form>
@@ -734,6 +740,7 @@ fr:
   ownerDatasets: Vos jeux de données
   remoteFileMessage: Utilisez un lien vers un fichier dont le format est supporté.
   inputRemoteFile: URL du fichier distant
+  autoUpdate: Activer la mise à jour automatique
 en:
   datasetType: Dataset type
   newDataset: Create a dataset
@@ -786,6 +793,7 @@ en:
   loaded: loaded
   masterData: Master data
   ownerDatasets: Your datasets
+  autoUpdate: Activate auto-update
 </i18n>
 
 <script>
@@ -802,7 +810,7 @@ export default {
     importing: false,
     datasetTypeIcons: {
       file: 'mdi-file-upload',
-      remoteFile: 'mdi-download',
+      remoteFile: 'mdi-cloud-download',
       rest: 'mdi-all-inclusive',
       virtual: 'mdi-picture-in-picture-bottom-right-outline',
       metaOnly: 'mdi-information-variant'
@@ -815,7 +823,10 @@ export default {
     remoteFileDataset: {
       title: '',
       remoteFile: {
-        url: ''
+        url: '',
+        autoUpdate: {
+          active: false
+        }
       }
     },
     restDataset: {
