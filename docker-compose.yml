@@ -23,10 +23,8 @@ services:
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200"]
-      timeout: 10s
-      interval: 2s
-      retries: 50
+      test: ["CMD", "nc", "-z", "-v", "localhost", "9200"]
+      interval: 5s
 
   mongodb:
     profiles:

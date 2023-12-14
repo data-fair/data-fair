@@ -297,6 +297,12 @@
         </v-stepper-content>
 
         <v-stepper-content :step="$route.query.simple === 'true' ? 4 : 5">
+          <owner-pick
+            v-model="fileDataset.owner"
+            hide-single
+            :restriction="[activeAccount]"
+            message="Choisissez le propriétaire du nouveau jeu de données :"
+          />
           <template v-if="conflicts && conflicts.length">
             <v-alert
               color="warning"
@@ -367,7 +373,7 @@
           </v-row>
           <v-btn
             v-t="'import'"
-            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts)"
+            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts) || !fileDataset.owner"
             color="primary"
             @click.native="createFileDataset()"
           />
@@ -451,6 +457,12 @@
         </v-stepper-content>
 
         <v-stepper-content step="3">
+          <owner-pick
+            v-model="restDataset.owner"
+            hide-single
+            :restriction="[activeAccount]"
+            message="Choisissez le propriétaire du nouveau jeu de données :"
+          />
           <template v-if="conflicts && conflicts.length">
             <v-alert
               color="warning"
@@ -496,7 +508,7 @@
 
           <v-btn
             v-t="'createDataset'"
-            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts)"
+            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts) || !restDataset.owner"
             color="primary"
             @click.native="createDataset(restDataset)"
           />
@@ -576,6 +588,12 @@
         </v-stepper-content>
 
         <v-stepper-content step="3">
+          <owner-pick
+            v-model="virtualDataset.owner"
+            hide-single
+            :restriction="[activeAccount]"
+            message="Choisissez le propriétaire du nouveau jeu de données :"
+          />
           <template v-if="conflicts && conflicts.length">
             <v-alert
               color="warning"
@@ -621,7 +639,7 @@
 
           <v-btn
             v-t="'createDataset'"
-            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts)"
+            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts) || !virtualDataset.owner"
             color="primary"
             @click.native="createDataset(virtualDataset)"
           />
@@ -661,6 +679,12 @@
         </v-stepper-content>
 
         <v-stepper-content step="3">
+          <owner-pick
+            v-model="metaOnlyDataset.owner"
+            hide-single
+            :restriction="[activeAccount]"
+            message="Choisissez le propriétaire du nouveau jeu de données :"
+          />
           <template v-if="conflicts && conflicts.length">
             <v-alert
               color="warning"
@@ -706,7 +730,7 @@
 
           <v-btn
             v-t="'createDataset'"
-            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts)"
+            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts) || !metaOnlyDataset.owner"
             color="primary"
             @click.native="createDataset(metaOnlyDataset)"
           />

@@ -1,6 +1,7 @@
 exports.owner = (req) => {
-  // super admin can explicitly set owner, for others it is deduced
-  if (req.body && req.body.owner && req.user.adminMode) return req.body.owner
+  // it is possible to specify owner of a new resource
+  // permission canDoForOwner should be checked afterward
+  if (req.body && req.body.owner) return req.body.owner
 
   // for other people it is based on the active account
   const orga = req.user.organization
