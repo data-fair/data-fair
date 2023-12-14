@@ -326,48 +326,12 @@
             :restriction="[activeAccount]"
             message="Choisissez le propriétaire du nouveau jeu de données :"
           />
-          <template v-if="conflicts && conflicts.length">
-            <v-alert
-              color="warning"
-              outlined
-              dense
-              style="max-width:800px;"
-              class="px-0 pb-0"
-            >
-              <span class="px-4">{{ $t('conflicts') }}</span>
-              <v-list
-                class="pb-0"
-                color="transparent"
-              >
-                <v-list-item
-                  v-for="(conflict,i) in conflicts"
-                  :key="i"
-                >
-                  <v-list-item-content class="py-0">
-                    <v-list-item-title>
-                      <a
-                        :href="$router.resolve(`/dataset/${conflict.dataset.id}`).href"
-                        target="_blank"
-                      >
-                        {{ conflict.dataset.title }}
-                      </a>
-                    </v-list-item-title>
-                    <v-list-item-subtitle>
-                      {{ $t('conflict_' + conflict.conflict) }}
-                    </v-list-item-subtitle>
-                  </v-list-item-content>
-                </v-list-item>
-              </v-list>
-            </v-alert>
-
-            <v-checkbox
-              v-model="ignoreConflicts"
-              class="pl-2"
-              :label="$t('ignoreConflicts')"
-              color="warning"
-              dense
-            />
-          </template>
+          <dataset-conflicts
+            v-if="datasetType === 'file' && currentStep === ($route.query.simple === 'true' ? 4 : 5)"
+            v-model="conflictsOk"
+            :dataset="fileDataset"
+            :file="file"
+          />
           <v-row
             v-if="importing"
             class="mx-0 my-3"
@@ -396,7 +360,7 @@
           </v-row>
           <v-btn
             v-t="'import'"
-            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts) || !fileDataset.owner"
+            :disabled="importing || !conflictsOk || !fileDataset.owner"
             color="primary"
             @click.native="createFileDataset()"
           />
@@ -450,51 +414,14 @@
             :restriction="[activeAccount]"
             message="Choisissez le propriétaire du nouveau jeu de données :"
           />
-          <template v-if="conflicts && conflicts.length">
-            <v-alert
-              color="warning"
-              outlined
-              dense
-              style="max-width:800px;"
-              class="px-0 pb-0"
-            >
-              <span class="px-4">{{ $t('conflicts') }}</span>
-              <v-list
-                class="pb-0"
-                color="transparent"
-              >
-                <v-list-item
-                  v-for="(conflict,i) in conflicts"
-                  :key="i"
-                >
-                  <v-list-item-content class="py-0">
-                    <v-list-item-title>
-                      <a
-                        :href="$router.resolve(`/dataset/${conflict.dataset.id}`).href"
-                        target="_blank"
-                      >
-                        {{ conflict.dataset.title }}
-                      </a>
-                    </v-list-item-title>
-                    <v-list-item-subtitle>
-                      {{ $t('conflict_' + conflict.conflict) }}
-                    </v-list-item-subtitle>
-                  </v-list-item-content>
-                </v-list-item>
-              </v-list>
-            </v-alert>
-
-            <v-checkbox
-              v-model="ignoreConflicts"
-              class="pl-2"
-              :label="$t('ignoreConflicts')"
-              color="warning"
-              dense
-            />
-          </template>
+          <dataset-conflicts
+            v-if="datasetType === 'remoteFile' && currentStep === 3"
+            v-model="conflictsOk"
+            :dataset="remoteFileDataset"
+          />
           <v-btn
             v-t="'import'"
-            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts) || !remoteFileDataset.owner"
+            :disabled="!conflictsOk || !remoteFileDataset.owner"
             color="primary"
             @click.native="createDataset(remoteFileDataset)"
           />
@@ -584,52 +511,15 @@
             :restriction="[activeAccount]"
             message="Choisissez le propriétaire du nouveau jeu de données :"
           />
-          <template v-if="conflicts && conflicts.length">
-            <v-alert
-              color="warning"
-              outlined
-              dense
-              style="max-width:800px;"
-              class="px-0 pb-0"
-            >
-              <span class="px-4">{{ $t('conflicts') }}</span>
-              <v-list
-                class="pb-0"
-                color="transparent"
-              >
-                <v-list-item
-                  v-for="(conflict,i) in conflicts"
-                  :key="i"
-                >
-                  <v-list-item-content class="py-0">
-                    <v-list-item-title>
-                      <a
-                        :href="$router.resolve(`/dataset/${conflict.dataset.id}`).href"
-                        target="_blank"
-                      >
-                        {{ conflict.dataset.title }}
-                      </a>
-                    </v-list-item-title>
-                    <v-list-item-subtitle>
-                      {{ $t('conflict_' + conflict.conflict) }}
-                    </v-list-item-subtitle>
-                  </v-list-item-content>
-                </v-list-item>
-              </v-list>
-            </v-alert>
-
-            <v-checkbox
-              v-model="ignoreConflicts"
-              class="pl-2"
-              :label="$t('ignoreConflicts')"
-              color="warning"
-              dense
-            />
-          </template>
+          <dataset-conflicts
+            v-if="datasetType === 'rest' && currentStep === 3"
+            v-model="conflictsOk"
+            :dataset="restDataset"
+          />
 
           <v-btn
             v-t="'createDataset'"
-            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts) || !restDataset.owner"
+            :disabled="importing || !conflictsOk || !restDataset.owner"
             color="primary"
             @click.native="createDataset(restDataset)"
           />
@@ -715,52 +605,15 @@
             :restriction="[activeAccount]"
             message="Choisissez le propriétaire du nouveau jeu de données :"
           />
-          <template v-if="conflicts && conflicts.length">
-            <v-alert
-              color="warning"
-              outlined
-              dense
-              style="max-width:800px;"
-              class="px-0 pb-0"
-            >
-              <span class="px-4">{{ $t('conflicts') }}</span>
-              <v-list
-                class="pb-0"
-                color="transparent"
-              >
-                <v-list-item
-                  v-for="(conflict,i) in conflicts"
-                  :key="i"
-                >
-                  <v-list-item-content class="py-0">
-                    <v-list-item-title>
-                      <a
-                        :href="$router.resolve(`/dataset/${conflict.dataset.id}`).href"
-                        target="_blank"
-                      >
-                        {{ conflict.dataset.title }}
-                      </a>
-                    </v-list-item-title>
-                    <v-list-item-subtitle>
-                      {{ $t('conflict_' + conflict.conflict) }}
-                    </v-list-item-subtitle>
-                  </v-list-item-content>
-                </v-list-item>
-              </v-list>
-            </v-alert>
-
-            <v-checkbox
-              v-model="ignoreConflicts"
-              class="pl-2"
-              :label="$t('ignoreConflicts')"
-              color="warning"
-              dense
-            />
-          </template>
+          <dataset-conflicts
+            v-if="datasetType === 'virtual' && currentStep === 3"
+            v-model="conflictsOk"
+            :dataset="virtualDataset"
+          />
 
           <v-btn
             v-t="'createDataset'"
-            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts) || !virtualDataset.owner"
+            :disabled="importing || !conflictsOk || !virtualDataset.owner"
             color="primary"
             @click.native="createDataset(virtualDataset)"
           />
@@ -806,52 +659,15 @@
             :restriction="[activeAccount]"
             message="Choisissez le propriétaire du nouveau jeu de données :"
           />
-          <template v-if="conflicts && conflicts.length">
-            <v-alert
-              color="warning"
-              outlined
-              dense
-              style="max-width:800px;"
-              class="px-0 pb-0"
-            >
-              <span class="px-4">{{ $t('conflicts') }}</span>
-              <v-list
-                class="pb-0"
-                color="transparent"
-              >
-                <v-list-item
-                  v-for="(conflict,i) in conflicts"
-                  :key="i"
-                >
-                  <v-list-item-content class="py-0">
-                    <v-list-item-title>
-                      <a
-                        :href="$router.resolve(`/dataset/${conflict.dataset.id}`).href"
-                        target="_blank"
-                      >
-                        {{ conflict.dataset.title }}
-                      </a>
-                    </v-list-item-title>
-                    <v-list-item-subtitle>
-                      {{ $t('conflict_' + conflict.conflict) }}
-                    </v-list-item-subtitle>
-                  </v-list-item-content>
-                </v-list-item>
-              </v-list>
-            </v-alert>
-
-            <v-checkbox
-              v-model="ignoreConflicts"
-              class="pl-2"
-              :label="$t('ignoreConflicts')"
-              color="warning"
-              dense
-            />
-          </template>
+          <dataset-conflicts
+            v-if="datasetType === 'metaOnly' && currentStep === 3"
+            v-model="conflictsOk"
+            :dataset="metaOnlyDataset"
+          />
 
           <v-btn
             v-t="'createDataset'"
-            :disabled="importing || !conflicts || (!!conflicts.length && !ignoreConflicts) || !metaOnlyDataset.owner"
+            :disabled="importing || !conflictsOk || !metaOnlyDataset.owner"
             color="primary"
             @click.native="createDataset(metaOnlyDataset)"
           />
@@ -906,10 +722,6 @@ fr:
     Ce fichier est volumineux. Pour économiser du temps et de l'énergie vous pouvez si vous le souhaitez le charger sous forme compressée.
     <br>Pour ce faire vous devez créer soit un fichier "{name}.gz" soit une archive .zip contenant uniquement ce fichier.
   of: de
-  conflicts: Doublons potentiels
-  ignoreConflicts: Ignorer ces doublons potentiels
-  conflict_filename: le nom de fichier est identique
-  conflict_title: le titre est identique
   history: Conserver un historique complet des révisions des lignes du jeu de données
   lineOwnership: Permet de donner la propriété d'une lignes à des utilisateurs (scénarios collaboratifs)
   restSource: Initialiser le schéma en dupliquant celui d'un jeu de données existant
@@ -966,10 +778,6 @@ en:
     This file is large. To save and time and energy you can if you wish send a compressed version of it.
     <br>To do so you must create a file "{name}.gz" or a zip archive containing only this file.
   of: of
-  conflicts: Potential duplicates
-  ignoreConflits: Ignore these potentiel duplicates
-  conflict_filename: the file name is the same
-  conflict_title: the title is the same
   history: Keep a full history of the revisions of the lines of the dataset
   lineOwnership: Accept giving ownership of lines to users (collaborative use-cases)
   children: Children datasets
@@ -991,7 +799,6 @@ export default {
     attachment: null,
     currentStep: 1,
     uploadProgress: { rate: 0 },
-    conflicts: [],
     importing: false,
     datasetTypeIcons: {
       file: 'mdi-file-upload',
@@ -1038,7 +845,6 @@ export default {
     restParamsForm: false,
     virtualParamsForm: false,
     metaParamsForm: false,
-    ignoreConflicts: false,
     virtualChildren: [],
     restSource: null,
     restSourceExtensions: false,
@@ -1046,7 +852,8 @@ export default {
     search: '',
     datasets: [],
     refDatasets: [],
-    virtualDatasetFill: false
+    virtualDatasetFill: false,
+    conflictsOk: false
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -1087,34 +894,6 @@ export default {
 
   },
   watch: {
-    async currentStep () {
-      const conflicts = []
-      if (this.datasetType === 'file' && this.currentStep === 5) {
-        const datasetFilenameConflicts = (await this.$axios.$get('api/v1/datasets', { params: { filename: this.file.name, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
-        for (const dataset of datasetFilenameConflicts) conflicts.push({ dataset, conflict: 'filename' })
-        if (!this.filenameTitle) {
-          const datasetTitleConflicts = (await this.$axios.$get('api/v1/datasets', { params: { title: this.fileDataset.title, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
-          for (const dataset of datasetTitleConflicts) conflicts.push({ dataset, conflict: 'title' })
-        }
-      }
-      if (this.datasetType === 'rest' && this.currentStep === 3) {
-        const datasetTitleConflicts = (await this.$axios.$get('api/v1/datasets', { params: { title: this.remoteFileDataset.title, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
-        for (const dataset of datasetTitleConflicts) conflicts.push({ dataset, conflict: 'title' })
-      }
-      if (this.datasetType === 'rest' && this.currentStep === 3) {
-        const datasetTitleConflicts = (await this.$axios.$get('api/v1/datasets', { params: { title: this.restDataset.title, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
-        for (const dataset of datasetTitleConflicts) conflicts.push({ dataset, conflict: 'title' })
-      }
-      if (this.datasetType === 'virtual' && this.currentStep === 3) {
-        const datasetTitleConflicts = (await this.$axios.$get('api/v1/datasets', { params: { title: this.virtualDataset.title, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
-        for (const dataset of datasetTitleConflicts) conflicts.push({ dataset, conflict: 'title' })
-      }
-      if (this.datasetType === 'metaOnly' && this.currentStep === 3) {
-        const datasetTitleConflicts = (await this.$axios.$get('api/v1/datasets', { params: { title: this.metaOnlyDataset.title, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
-        for (const dataset of datasetTitleConflicts) conflicts.push({ dataset, conflict: 'title' })
-      }
-      this.conflicts = conflicts
-    },
     search () {
       this.searchDatasets()
     }
