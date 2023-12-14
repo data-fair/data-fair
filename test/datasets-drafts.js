@@ -514,7 +514,7 @@ other
     res = await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })
     assert.equal(res.status, 200)
     await assert.rejects(workers.hook(`finalizer/${dataset.id}`), (err) => {
-      assert.ok(err.message.startsWith('le concept nécessaire'))
+      assert.ok(err.message.startsWith('un concept nécessaire'))
       return true
     })
   })

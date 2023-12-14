@@ -136,7 +136,7 @@
                     outlined
                     type="warning"
                   >
-                    Donnée de référence non disponible ({{ extension?.action?.replace('masterData_bulkSearch_', '') }}).
+                    Donnée de référence non disponible ({{ extension.remoteService }} / {{ extension?.action?.replace('masterData_bulkSearch_', '') }}).
                     <br>
                     Soit la donnée de référence n'existe plus, soit le concept servant de liaison n'est plus présent dans votre jeu de données.
                   </v-alert>

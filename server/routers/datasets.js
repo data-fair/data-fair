@@ -60,6 +60,7 @@ const router = express.Router()
 const clean = datasetUtils.clean
 
 const debugLimits = require('debug')('limits')
+const debugMasterData = require('debug')('master-data')
 
 const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
   if (process.env.NO_STORAGE_CHECK === 'true') return next()
@@ -516,6 +517,7 @@ router.patch('/:datasetId',
         return false
       })
       if (removedExtensions.length) {
+        debugMasterData(`PATCH on dataset removed some extensions ${req.dataset.id} (${req.dataset.slug}) by ${req.user?.name} (${req.user?.id})`, removedExtensions)
         const unset = {}
         for (const e of removedExtensions) {
           if (e.type === 'remoteService') unset[extensions.getExtensionKey(e)] = ''
@@ -607,6 +609,9 @@ router.patch('/:datasetId',
       patch.status = 'indexed'
     }
 
+    if (patch.extensions) debugMasterData(`PATCH dataset ${req.dataset.id} (${req.dataset.slug}) extensions by ${req.user?.name} (${req.user?.id})`, req.dataset.extensions, patch.extensions)
+    if (patch.masterData) debugMasterData(`PATCH dataset ${req.dataset.id} (${req.dataset.slug}) masterData by ${req.user?.name} (${req.user?.id})`, req.dataset.masterData, patch.masterData)
+
     const previousDataset = { ...req.dataset }
     const mongoPatch = await datasetUtils.applyPatch(db, req.dataset, patch, false)
     await publicationSites.applyPatch(db, previousDataset, req.dataset, req.user, 'dataset')
@@ -617,7 +622,7 @@ router.patch('/:datasetId',
       throw createError(400, req.__('errors.dupSlug'))
     }
 
-    await syncRemoteService(db, req.dataset)
+    await syncRemoteService(req, req.dataset)
 
     res.status(200).json(clean(req.publicBaseUrl, req.publicationSite, req.dataset))
   }))
@@ -671,7 +676,7 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
     }
   }
 
-  await syncRemoteService(req.app.get('db'), patchedDataset)
+  await syncRemoteService(req, patchedDataset)
 
   await datasetUtils.updateTotalStorage(req.app.get('db'), req.dataset.owner)
   await datasetUtils.updateTotalStorage(req.app.get('db'), patch.owner)
@@ -685,7 +690,7 @@ router.delete('/:datasetId', readDataset(null, true, true), permissions.middlewa
   if (req.dataset.draftReason && req.dataset.prod && req.dataset.prod.status !== 'draft') {
     await datasetUtils.delete(req.app, req.dataset.prod)
   }
-  await syncRemoteService(req.app.get('db'), { ...req.dataset, masterData: null })
+  await syncRemoteService(req, { ...req.dataset, masterData: null })
   await datasetUtils.updateTotalStorage(req.app.get('db'), req.dataset.owner)
   res.sendStatus(204)
 }))
@@ -916,9 +921,12 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
 
     delete dataset._id
 
+    if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${dataset.slug}) with extensions by ${req.user?.name} (${req.user?.id})`, dataset.extensions)
+    if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${dataset.slug}) with masterData by ${req.user?.name} (${req.user?.id})`, dataset.masterData)
+
     await datasetUtils.updateTotalStorage(req.app.get('db'), dataset.owner)
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
-    await syncRemoteService(db, dataset)
+    await syncRemoteService(req, dataset)
     res.status(201).send(clean(req.publicBaseUrl, req.publicationSite, dataset, {}, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
@@ -1037,6 +1045,10 @@ const updateDataset = asyncWrap(async (req, res) => {
       }
     }
     curateDataset(req.body, dataset)
+
+    if (req.body.extensions || dataset.extensions) debugMasterData(`PUT dataset ${dataset.id} (${dataset.slug}) with extensions by ${req.user?.name} (${req.user?.id})`, dataset.extensions, req.body.extensions)
+    if (req.body.masterData || dataset.masterData) debugMasterData(`PUT dataset ${dataset.id} (${dataset.slug}) with masterData by ${req.user?.name} (${req.user?.id})`, dataset.masterData, req.body.masterData)
+
     if (draft) {
       delete dataset.draftReason
       Object.assign(dataset.draft, req.body)
@@ -1044,6 +1056,7 @@ const updateDataset = asyncWrap(async (req, res) => {
       Object.assign(dataset, req.body)
     }
     if (req.isNewDataset) permissions.initResourcePermissions(dataset, req.user)
+
     await db.collection('datasets').replaceOne({ id: dataset.id }, dataset)
     if (req.isNewDataset) await journals.log(req.app, dataset, { type: 'dataset-created' }, 'dataset')
     else if (!dataset.isRest && !dataset.isVirtual) {
@@ -1054,7 +1067,7 @@ const updateDataset = asyncWrap(async (req, res) => {
     }
     await Promise.all([
       datasetUtils.updateStorage(req.app, dataset),
-      syncRemoteService(db, dataset)
+      syncRemoteService(req, dataset)
     ])
     res.status(req.isNewDataset ? 201 : 200).send(clean(req.publicBaseUrl, req.publicationSite, dataset, {}, req.query.draft === 'true'))
   } catch (err) {

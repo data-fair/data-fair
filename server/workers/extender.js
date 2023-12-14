@@ -1,3 +1,5 @@
+const debugMasterData = require('debug')('master-data')
+
 // Index tabular datasets with elasticsearch using available information on dataset schema
 exports.eventsPrefix = 'extend'
 
@@ -25,6 +27,7 @@ exports.process = async function (app, dataset) {
     patch.status = 'updated'
   }
 
+  debugMasterData(`apply patch after extensions ${dataset.id} (${dataset.slug})`, patch)
   await datasetUtils.applyPatch(db, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
   debug('done')

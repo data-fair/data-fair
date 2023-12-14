@@ -29,12 +29,14 @@ const validatePatch = ajv.compile(servicePatch)
 const validateOpenApi = ajv.compile('openapi-3.1')
 
 const debug = require('debug')('remote-services')
+const debugMasterData = require('debug')('master-data')
 
 const cacheableLookup = new CacheableLookup()
 
 const router = exports.router = express.Router()
 
-exports.syncDataset = async (db, dataset) => {
+exports.syncDataset = async (req, dataset) => {
+  const db = req.app.get('db')
   const id = 'dataset:' + dataset.id
   if (dataset.masterData && (
     (dataset.masterData.singleSearchs && dataset.masterData.singleSearchs.length) ||
@@ -42,6 +44,7 @@ exports.syncDataset = async (db, dataset) => {
     (dataset.masterData.virtualDatasets && dataset.masterData.virtualDatasets.active) ||
     (dataset.masterData.standardSchema && dataset.masterData.standardSchema.active)
   )) {
+    debugMasterData(`sync a dataset with master data to a remote service ${dataset.id} (${dataset.slug}) -> ${id}, origin of request = ${req.method} ${req.originalUrl} by ${req.user?.name} (${req.user?.id})`, dataset.masterData)
     const settings = await db.collection('settings')
       .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { info: 1 } })
 
@@ -80,12 +83,14 @@ exports.syncDataset = async (db, dataset) => {
     validate(service)
     await db.collection('remote-services').replaceOne({ id }, mongoEscape.escape(service, true), { upsert: true })
   } else {
-    await db.collection('remote-services').deleteOne({ id })
+    const deleted = await db.collection('remote-services').deleteOne({ id })
+    if (deleted?.deletedCount) debugMasterData(`deleted remote service ${id}, origin of request = ${req.method} ${req.originalUrl} by ${req.user?.name} (${req.user?.id})})`)
   }
 }
 
 // Create default services for the data-fair instance
 exports.init = async (db) => {
+  debugMasterData('init default remote services ?')
   const remoteServices = db.collection('remote-services')
   const existingServices = await remoteServices.find({ owner: { $exists: false } }).limit(1000).project({ url: 1, id: 1 }).toArray()
 
@@ -114,7 +119,12 @@ exports.init = async (db) => {
     public: true,
     privateAccess: []
   }, true)).filter(s => !existingServices.find(es => es.id === s.id))
-  if (servicesToInsert.length) await remoteServices.insertMany(servicesToInsert)
+  if (servicesToInsert.length) {
+    debugMasterData('insert default remote services', servicesToInsert)
+    await remoteServices.insertMany(servicesToInsert)
+  } else {
+    debugMasterData('no default remote services to insert')
+  }
 }
 
 // TODO: explain ? simplify ? hard to understand piece of code
@@ -277,6 +287,7 @@ router.post('', asyncWrap(async (req, res) => {
   if (!req.user.adminMode) return res.status(403).send()
   // if title is set, we build id from it
   if (req.body.title && !req.body.id) req.body.id = slug(req.body.title, { lower: true, strict: true })
+  debugMasterData(`POST remote service manually by ${req.user?.name} (${req.user?.id})`, req.body)
   const service = initNew(req.body)
   validate(service)
 
@@ -295,6 +306,7 @@ router.post('', asyncWrap(async (req, res) => {
       service.id = `${baseId}-${i}`
     }
   }
+  debugMasterData('inserted remote service with id', service.id)
 
   res.status(201).json(clean(service, req.user))
 }))
@@ -333,6 +345,7 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
 })
 router.put('/:remoteServiceId', attemptInsert, readService, asyncWrap(async (req, res) => {
   const newService = req.body
+  debugMasterData(`PUT remote service manually by ${req.user?.name} (${req.user?.id})`, req.params.remoteServiceId, newService.id)
   // preserve all readonly properties, the rest is overwritten
   for (const key of Object.keys(req.remoteService)) {
     if (!servicePatch.properties[key]) {
@@ -345,6 +358,7 @@ router.put('/:remoteServiceId', attemptInsert, readService, asyncWrap(async (req
     newService.actions = computeActions(newService.apiDoc)
   }
   await req.app.get('db').collection('remote-services').replaceOne({ id: req.params.remoteServiceId }, mongoEscape.escape(newService, true))
+  debugMasterData('replaced remote service')
   res.status(200).json(clean(newService, req.user))
 }))
 
@@ -352,6 +366,7 @@ router.put('/:remoteServiceId', attemptInsert, readService, asyncWrap(async (req
 router.patch('/:remoteServiceId', readService, asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode) return res.status(403).send()
+  debugMasterData(`PATCH remote service manually by ${req.user?.name} (${req.user?.id})`, req.params.remoteServiceId, req.body)
 
   const patch = req.body
   validatePatch(patch)
@@ -364,6 +379,7 @@ router.patch('/:remoteServiceId', readService, asyncWrap(async (req, res) => {
 
   const patchedService = (await req.app.get('db').collection('remote-services')
     .findOneAndUpdate({ id: req.params.remoteServiceId }, { $set: mongoEscape.escape(patch, true) }, { returnDocument: 'after' })).value
+  debugMasterData('patched remote service')
   res.status(200).json(clean(mongoEscape.unescape(patchedService, req.user)))
 }))
 
@@ -371,6 +387,7 @@ router.patch('/:remoteServiceId', readService, asyncWrap(async (req, res) => {
 router.delete('/:remoteServiceId', readService, asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).send()
   if (!req.user.adminMode) return res.status(403).send()
+  debugMasterData(`DELETE remote service manually by ${req.user?.name} (${req.user?.id})`, req.params.remoteServiceId)
   await req.app.get('db').collection('remote-services').deleteOne({
     id: req.params.remoteServiceId
   })
@@ -383,6 +400,8 @@ router.post('/:remoteServiceId/_update', readService, asyncWrap(async (req, res)
   if (!req.user.adminMode) return res.status(403).send()
 
   if (!req.remoteService.url) return res.sendStatus(204)
+
+  debugMasterData(`Force update remote service manually by ${req.user?.name} (${req.user?.id})`, req.params.remoteServiceId)
 
   const reponse = await axios.get(req.remoteService.url)
   validateOpenApi(reponse.data)

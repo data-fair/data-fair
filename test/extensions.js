@@ -539,7 +539,7 @@ other,unknown address
     delete dataset.schema.find(field => field.key === 'adr')['x-refersTo']
     await assert.rejects(ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema }), (err) => {
       assert.equal(err.status, 400)
-      assert.ok(err.data.startsWith('le concept nécessaire'))
+      assert.ok(err.data.startsWith('un concept nécessaire'))
       return true
     })
   })

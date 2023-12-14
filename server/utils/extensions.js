@@ -12,12 +12,14 @@ const geoUtils = require('./geo')
 const { bulkSearchPromise, bulkSearchStreams } = require('./master-data')
 const taskProgress = require('./task-progress')
 const permissionsUtils = require('./permissions')
+const debugMasterData = require('debug')('master-data')
 
 const debug = require('debug')('extensions')
 
 // Apply an extension to a dataset: meaning, query a remote service in batches
 // and add the result either to a "full" file or to the collection in case of a rest dataset
 exports.extend = async (app, dataset, extensions) => {
+  debugMasterData(`extend dataset ${dataset.id} (${dataset.slug})`, extensions)
   const db = app.get('db')
   const es = app.get('es')
   const detailedExtensions = []
@@ -55,7 +57,7 @@ exports.extend = async (app, dataset, extensions) => {
     }
   }
   if (!detailedExtensions.length) {
-    console.log('No extension to apply')
+    debugMasterData('no extension to apply')
     return
   }
 
@@ -364,11 +366,11 @@ exports.checkExtensions = async (db, schema, extensions = []) => {
   for (const extension of extensions) {
     if (extension.type === 'remoteService') {
       const remoteService = await db.collection('remote-services').findOne({ id: extension.remoteService })
-      if (!remoteService) throw createError(400, '[noretry] source de données de référénce inconnue')
+      if (!remoteService) throw createError(400, `[noretry] source de données de référénce inconnue "${extension.remoteService}"`)
       const action = remoteService.actions.find(action => action.id === extension.action)
-      if (!action) throw createError(400, '[noretry] opération de récupération de données de référénce inconnue')
+      if (!action) throw createError(400, `[noretry] opération de récupération de données de référénce inconnue "${extension.remoteService} / ${extension.action?.replace('masterData_bulkSearch_', '')}"`)
       if (!action.input.find(i => i.concept && availableConcepts.has(i.concept))) {
-        throw createError(400, `[noretry] le concept nécessaire à l'utilisation de la donnée de référence n'est pas présent dans le jeu de données (${action.summary})`)
+        throw createError(400, `[noretry] un concept nécessaire à l'utilisation de la donnée de référence n'est pas présent dans le jeu de données (${action.input.filter(i => i.concept && i.concept !== 'http://schema.org/identifier').map(i => i.concept).join(', ')})`)
       }
       for (const concept of action.output.map(i => i.concept).filter(c => c)) availableConcepts.add(concept)
     } else if (extension.type === 'exprEval') {
