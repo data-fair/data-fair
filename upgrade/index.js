@@ -12,16 +12,20 @@ module.exports = main
 async function main (db, client) {
   const services = db.collection('services')
   const service = await services.findOne({ id: pjson.name })
-  const version = service && service.version ? service.version : '0.0.0'
-  debug(`Current service version from database : ${version}`)
+  const version = service && service.version
+  if (!version) {
+    debug('No service version found in database, this is probably a fresh install')
+  } else {
+    debug(`Current service version from database : ${version}`)
 
-  const scripts = await listScripts()
-  for (const scriptDef of scripts) {
-    if (semver.gte(scriptDef.version, version)) {
-      for (const scriptName of scriptDef.names) {
-        const script = require(path.join(scriptsRoot, scriptDef.version, scriptName))
-        debug('Apply script %s/%s : %s', scriptDef.version, scriptName, script.description)
-        await script.exec(db, require('debug')(`upgrade:${scriptDef.version}:${scriptName}`))
+    const scripts = await listScripts()
+    for (const scriptDef of scripts) {
+      if (semver.gte(scriptDef.version, version)) {
+        for (const scriptName of scriptDef.names) {
+          const script = require(path.join(scriptsRoot, scriptDef.version, scriptName))
+          debug('Apply script %s/%s : %s', scriptDef.version, scriptName, script.description)
+          await script.exec(db, require('debug')(`upgrade:${scriptDef.version}:${scriptName}`))
+        }
       }
     }
   }
