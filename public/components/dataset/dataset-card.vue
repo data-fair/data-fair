@@ -42,7 +42,7 @@
               <v-icon v-if="dataset.remoteFile">mdi-cloud-download</v-icon>
               <v-icon v-else>mdi-file</v-icon>
             </v-list-item-avatar>
-            <span>{{ (dataset.originalFile || dataset.file).name | truncate(40,4) }} {{ ((dataset.originalFile || dataset.file).size) | bytes($i18n.locale) }}</span>
+            <span>{{ (dataset.originalFile || dataset.file).name | truncate(40,4) }} {{ (dataset.originalFile?.size || dataset.file?.size) | bytes($i18n.locale) }}</span>
           </v-list-item>
           <v-list-item
             v-else-if="dataset.draft && dataset.draft.file"
@@ -51,7 +51,7 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>mdi-file</v-icon>
             </v-list-item-avatar>
-            <span>{{ (dataset.draft.originalFile || dataset.draft.file).name | truncate(40,4) }} {{ ((dataset.draft.originalFile || dataset.draft.file).size) | bytes($i18n.locale) }}</span>
+            <span>{{ (dataset.draft.originalFile || dataset.draft.file).name | truncate(40,4) }} {{ (dataset.draft.originalFile?.size || dataset.draft.file?.size) | bytes($i18n.locale) }}</span>
           </v-list-item>
           <v-list-item v-if="dataset.draft && !dataset.file">
             <v-list-item-avatar class="ml-0 my-0">
