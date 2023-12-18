@@ -2,6 +2,7 @@ const crypto = require('crypto')
 const express = require('express')
 const ajv = require('../utils/ajv')
 const { nanoid } = require('nanoid')
+const slug = require('slugify')
 const createError = require('http-errors')
 const settingSchema = require('../../contract/settings')
 const permissions = require('../utils/permissions')
@@ -122,6 +123,13 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async (req, res) => {
       const hash = crypto.createHash('sha512')
       hash.update(fullApiKeys[i].clearKey)
       fullApiKeys[i].key = apiKey.key = hash.digest('hex')
+    }
+  }
+
+  if (req.body.privateVocabulary) {
+    for (const concept of req.body.privateVocabulary) {
+      if (!concept.id) concept.id = slug(concept.title, { lower: true, strict: true })
+      if (!concept.identifiers || !concept.identifiers.length) concept.identifiers = [concept.id]
     }
   }
 

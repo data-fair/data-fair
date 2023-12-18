@@ -217,23 +217,23 @@ module.exports = {
       title: 'Vocabulaire privé',
       items: {
         type: 'object',
-        required: ['id', 'identifiers', 'title'],
+        required: ['title'],
         properties: {
           id: {
             type: 'string',
             title: 'Identifiant',
-            description: 'Saisissez une chaine de caractère courte et non ambigue.'
+            readOnly: true
           },
           identifiers: {
             type: 'array',
+            'x-display': 'hidden',
             items: {
-              minItems: 1,
               type: 'string',
               title: 'Identifiant vocabulaire extérieur',
               description: 'Renseignez idéalement une URI issue d\'un vocabulaire standardisé comme schema.org, c\'est à dire un identifiant mondialement unique pour ce concept. Si ce n\'est pas possible vous pouvez laisser cette information vide.'
             }
           },
-          title: { type: 'string', title: 'Titre' },
+          title: { type: 'string', title: 'Titre', minLength: 3 },
           description: { type: 'string', title: 'Description' },
           tag: { type: 'string', title: 'Catégorie' },
           type: { type: 'string', const: 'string' }

@@ -2,6 +2,7 @@
   <div style="min-height:60px;">
     <v-form ref="form">
       <lazy-v-jsf
+        :key="randomKey"
         v-model="wrapper"
         :schema="wrapperSchema"
         :options="{locale: 'fr', arrayItemCardProps: {outlined: true, tile: true}, editMode: 'inline'}"
@@ -36,10 +37,16 @@ export default {
     formValid: true,
     wrapper: {
       privateVocabulary: []
-    }
+    },
+    randomKey: Math.random()
   }),
+  watch: {
+    settings () {
+      this.refresh()
+    }
+  },
   created () {
-    this.wrapper.privateVocabulary = JSON.parse(JSON.stringify(this.settings.privateVocabulary || []))
+    this.refresh()
   },
   methods: {
     async change () {
@@ -48,6 +55,10 @@ export default {
         this.settings.privateVocabulary = JSON.parse(JSON.stringify(this.wrapper.privateVocabulary))
         this.$emit('updated')
       }
+    },
+    refresh () {
+      this.wrapper.privateVocabulary = JSON.parse(JSON.stringify(this.settings.privateVocabulary || []))
+      this.randomKey = Math.random()
     }
   }
 }
