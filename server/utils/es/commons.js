@@ -367,6 +367,8 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
     if (key.startsWith('_c_')) {
       const conceptId = key.slice(3, key.length - 3)
       prop = dataset.schema.find(p => p['x-concept'] && p['x-concept'].primary && p['x-concept'].id === conceptId)
+      // concept filters can be applied to any dataset by dashboards, they should be ignored
+      if (!prop) continue
     } else {
       prop = dataset.schema.find(p => p.key === key.slice(0, key.length - 3))
     }
