@@ -84,24 +84,17 @@ export default {
       immediate: true
     }
   },
-  mounted () {
-    console.log('dataset-conflicts mounted')
-  },
   created () {
-    console.log('dataset-conflicts created')
     this.getConflicts()
   },
   methods: {
     async getConflicts () {
       const conflicts = []
-      console.log('get conflicts')
       if (this.file) {
-        console.log('get conflicts based on file name', this.file.name)
         const datasetFilenameConflicts = (await this.$axios.$get('api/v1/datasets', { params: { filename: this.file.name, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
         for (const dataset of datasetFilenameConflicts) conflicts.push({ dataset, conflict: 'filename' })
       }
       if (this.dataset.title) {
-        console.log('get conflicts based on title', this.dataset.title)
         const datasetTitleConflicts = (await this.$axios.$get('api/v1/datasets', { params: { title: this.dataset.title, owner: `${this.activeAccount.type}:${this.activeAccount.id}`, select: 'id,title' } })).results
         for (const dataset of datasetTitleConflicts) conflicts.push({ dataset, conflict: 'title' })
       }

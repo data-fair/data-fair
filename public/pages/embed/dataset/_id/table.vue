@@ -278,7 +278,7 @@
                   />
                   <dataset-table-header-menu
                     v-if="header.field && !noInteraction"
-                    :key="'header-menu-' + (renderFullHeader ? h : horizontalKeys[header.value])"
+                    :key="'header-menu-' + header.value"
                     :activator="'#header-cell-' + (renderFullHeader ? h : horizontalKeys[header.value])"
                     :header="header"
                     :filters="filters"

@@ -181,7 +181,7 @@
                   />
                   <dataset-table-header-menu
                     v-if="header.field"
-                    :key="'header-menu-' + h"
+                    :key="'header-menu-' + header.value"
                     :activator="'#header-cell-' + h"
                     :header="header"
                     :filters="filters"
