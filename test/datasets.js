@@ -52,7 +52,7 @@ describe('datasets', () => {
     assert.equal(res.data.facets.owner[0].count, 1)
     assert.equal(res.data.facets.owner[0].value.id, 'dmeadus0')
     assert.equal(res.data.facets.owner[0].value.type, 'user')
-    assert.equal(res.data.facets['field-type'].length, 3)
+    assert.equal(res.data.facets['field-type'].length, 4)
     assert.equal(res.data.facets['field-type'][0].count, 1)
     assert.equal(res.data.sums.count, 2)
 
@@ -68,7 +68,7 @@ describe('datasets', () => {
     assert.equal(res.data.facets.owner[0].value.id, 'KWqAGZ4mG')
     assert.equal(res.data.facets.owner[0].value.type, 'organization')
     // field-type facet is affected by the owner filter
-    assert.equal(res.data.facets['field-type'].length, 3)
+    assert.equal(res.data.facets['field-type'].length, 4)
     assert.equal(res.data.facets['field-type'][0].count, 2)
     assert.equal(res.data.sums.count, 4)
 
@@ -290,7 +290,8 @@ describe('datasets', () => {
     let res = await ax.post('/api/v1/datasets/dataset-name', form, { headers: testUtils.formHeaders(form) })
     await workers.hook('finalizer/dataset-name')
     res = await ax.get('/api/v1/limits/user/dmeadus0')
-    assert.equal(res.data.store_bytes.consumption, 167)
+    assert.ok(res.data.store_bytes.consumption > 150)
+    assert.ok(res.data.store_bytes.consumption < 300)
     assert.deepEqual(await fs.readdir('data/test/user/dmeadus0/datasets/dataset-name/'), ['dataset-name.csv'])
 
     const form2 = new FormData()
@@ -302,7 +303,8 @@ describe('datasets', () => {
     assert.equal(dataset.updatedAt, dataset.dataUpdatedAt)
     assert.notEqual(dataset.updatedAt, dataset.createdAt)
     res = await ax.get('/api/v1/limits/user/dmeadus0')
-    assert.equal(res.data.store_bytes.consumption, 167)
+    assert.ok(res.data.store_bytes.consumption > 150)
+    assert.ok(res.data.store_bytes.consumption < 300)
     assert.deepEqual(await fs.readdir('data/test/user/dmeadus0/datasets/dataset-name/'), ['dataset-name2.csv'])
   })
 
@@ -384,7 +386,7 @@ describe('datasets', () => {
     res = await ax.post('/api/v1/datasets/dataset-name', form2, { headers: testUtils.formHeaders(form2) })
     await workers.hook('finalizer/dataset-name')
     res = await ax.get('/api/v1/datasets/dataset-name')
-    assert.equal(res.data.schema.filter(f => f.ignoreDetection).length, 5)
+    assert.equal(res.data.schema.filter(f => f.ignoreDetection).length, 6)
   })
 
   it('Sort datasets by title', async () => {

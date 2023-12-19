@@ -28,14 +28,23 @@ describe('search', () => {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?q=lacté`)
     assert.equal(res.data.total, 1)
     // filter on exact values with query params suffixed with _in
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_in=koumoul`)
-    assert.equal(res.status, 200)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_in=koumoul,test`)
     assert.equal(res.data.total, 1)
-    try {
-      res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?BADFIELD_in=koumoul`)
-    } catch (err) {
+    // filter on exact values with query params suffixed with _eq
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_eq=koumoul`)
+    assert.equal(res.data.total, 1)
+    // fail to filter on unknown property
+    assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/lines?BADFIELD_in=koumoul`), (err) => {
       assert.equal(err.status, 400)
-    }
+      return true
+    })
+    // filter on ranges with query params suffixed with _lte, _gte, _lt, _gt
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_gt=cc`)
+    assert.equal(res.data.total, 1)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?some_date_gt=2017-11-12`)
+    assert.equal(res.data.total, 1)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?nb_gt=22`)
+    assert.equal(res.data.total, 1)
 
     // filter on geo info
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?bbox=-2.5,40,3,47`)
@@ -83,18 +92,18 @@ describe('search', () => {
     // CSV export
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?format=csv`)
     let lines = res.data.split('\n')
-    assert.equal(lines[0].trim(), '"id","adr","some date","loc","bool"')
-    assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526",0')
+    assert.equal(lines[0].trim(), '"id","adr","some date","loc","bool","nb"')
+    assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526",0,11')
     locProp.title = 'Localisation'
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     await workers.hook(`finalizer/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?format=csv`)
     lines = res.data.split('\n')
-    assert.equal(lines[0].trim(), '"id","adr","some date","loc","bool"')
-    assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526",0')
+    assert.equal(lines[0].trim(), '"id","adr","some date","loc","bool","nb"')
+    assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526",0,11')
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?format=csv&sep=;`)
     lines = res.data.split('\n')
-    assert.equal(lines[0].trim(), '"id";"adr";"some date";"loc";"bool"')
+    assert.equal(lines[0].trim(), '"id";"adr";"some date";"loc";"bool";"nb"')
   })
 
   it('search lines and collapse on field', async () => {

@@ -362,7 +362,7 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
     must.push(qBool)
   }
   for (const key of Object.keys(query)) {
-    if (!key.endsWith('_in') && !key.endsWith('_eq')) continue
+    if (!['_in', '_eq', '_gt', '_lt', '_gte', '_lte'].find(suffix => key.endsWith(suffix))) continue
     let prop
     if (key.startsWith('_c_')) {
       const conceptId = key.slice(3, key.length - 3)
@@ -376,15 +376,25 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
     if (!prop || (prop['x-capabilities'] && prop['x-capabilities'].index === false)) {
       throw createError(400, `Impossible de faire une recherche sur le champ ${key.slice(0, key.length - 3)}.`)
     }
-    let values = [query[key]]
     if (key.endsWith('_in')) {
-      values = query[key].startsWith('"') ? JSON.parse(`[${query[key]}]`) : query[key].split(',')
+      const values = query[key].startsWith('"') ? JSON.parse(`[${query[key]}]`) : query[key].split(',')
+      filter.push({ terms: { [prop.key]: values } })
     }
-    filter.push({
-      terms: {
-        [prop.key]: values
-      }
-    })
+    if (key.endsWith('_eq')) {
+      filter.push({ term: { [prop.key]: query[key] } })
+    }
+    if (key.endsWith('_gt')) {
+      filter.push({ range: { [prop.key]: { gt: query[key] } } })
+    }
+    if (key.endsWith('_gte')) {
+      filter.push({ range: { [prop.key]: { gte: query[key] } } })
+    }
+    if (key.endsWith('_lt')) {
+      filter.push({ range: { [prop.key]: { lt: query[key] } } })
+    }
+    if (key.endsWith('_lte')) {
+      filter.push({ range: { [prop.key]: { lte: query[key] } } })
+    }
   }
 
   if (query.date_match ?? query._c_date_match) {
