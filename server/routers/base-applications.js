@@ -106,7 +106,7 @@ async function syncBaseApp (db, baseApp) {
 router.post('', asyncWrap(async (req, res) => {
   const db = req.app.get('db')
   if (!req.body.url || Object.keys(req.body).length !== 1) {
-    return res.status(400).send(req.__('Initializing a base application only accepts the "url" part.'))
+    return res.status(400).type('text/plain').send(req.__('Initializing a base application only accepts the "url" part.'))
   }
   const baseApp = config.applications.find(a => a.url === req.body.url) || req.body
   const fullBaseApp = await initBaseApp(db, baseApp)
@@ -116,7 +116,7 @@ router.post('', asyncWrap(async (req, res) => {
 
 router.patch('/:id', asyncWrap(async (req, res) => {
   const db = req.app.get('db')
-  if (!req.user || !req.user.adminMode) return res.status(403).send()
+  if (!req.user || !req.user.adminMode) return res.status(403).type('text/plain').send()
   const patch = req.body
   const storedBaseApp = (await db.collection('base-applications')
     .findOneAndUpdate({ id: req.params.id }, { $set: patch }, { returnDocument: 'after' })).value

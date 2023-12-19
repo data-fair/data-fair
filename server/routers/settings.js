@@ -44,7 +44,7 @@ const validate = (settings) => {
 // Middlewares
 router.use('/:type/:id', (req, res, next) => {
   if (!allowedTypes.has(req.params.type)) {
-    return res.status(400).send('Invalid type, it must be one of the following : ' + Array.from(allowedTypes).join(', '))
+    return res.status(400).type('text/plain').send('Invalid type, it must be one of the following : ' + Array.from(allowedTypes).join(', '))
   }
   const [id, department] = req.params.id.split(':')
   req.owner = { type: req.params.type, id }
@@ -58,7 +58,7 @@ router.use('/:type/:id', (req, res, next) => {
 })
 
 function isOwnerAdmin (req, res, next) {
-  if (!req.user) return res.status(401).send()
+  if (!req.user) return res.status(401).type('text/plain').send()
   if (req.user.adminMode) return next()
   if (permissions.getOwnerRole(req.owner, req.user) !== 'admin') {
     return res.sendStatus(403)
@@ -67,7 +67,7 @@ function isOwnerAdmin (req, res, next) {
 }
 
 function isOwnerMember (req, res, next) {
-  if (!req.user) return res.status(401).send()
+  if (!req.user) return res.status(401).type('text/plain').send()
   if (req.user.adminMode) return next()
   // do not check belonging to department, some settings are shared from top org to its departments
   if (!permissions.getOwnerRole(req.owner, req.user, true)) {
@@ -188,7 +188,7 @@ router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async (req, 
       publicationSites.push(publicationSite)
     }
   }
-  if (!req.user) return res.status(401).send()
+  if (!req.user) return res.status(401).type('text/plain').send()
   res.status(200).send(publicationSites)
 }))
 // create/update publication sites as owner (used by data-fair-portals to sync portals)

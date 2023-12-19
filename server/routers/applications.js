@@ -174,7 +174,7 @@ const initNew = async (req) => {
 // Create an application configuration
 router.post('', asyncWrap(async (req, res) => {
   const application = await initNew(req)
-  if (!permissions.canDoForOwner(application.owner, 'applications', 'post', req.user)) return res.status(403).send()
+  if (!permissions.canDoForOwner(application.owner, 'applications', 'post', req.user)) return res.status(403).type('text/plain').send()
   validate(application)
   validateURLFriendly(req, application.slug)
 
@@ -340,7 +340,7 @@ router.patch('/:applicationId',
 router.put('/:applicationId/owner', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
   const db = req.app.get('db')
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
-  if (!permissions.canDoForOwner(req.body, 'applications', 'post', req.user)) return res.status(403).send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
+  if (!permissions.canDoForOwner(req.body, 'applications', 'post', req.user)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
 
   const patch = {
     owner: req.body,
@@ -473,7 +473,7 @@ router.get('/:applicationId/journal', readApplication, permissions.middleware('r
 
 // Used by applications to declare an error
 router.post('/:applicationId/error', readApplication, permissions.middleware('writeConfig', 'write'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
-  if (!req.body.message) return res.status(400).send('Attribut "message" obligatoire')
+  if (!req.body.message) return res.status(400).type('text/plain').send('Attribut "message" obligatoire')
 
   const referer = req.headers.referer || req.headers.referrer
   const draftMode = referer && referer.includes('draft=true')

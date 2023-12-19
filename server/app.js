@@ -55,7 +55,7 @@ if (config.mode.includes('server')) {
 
   app.use(require('cors')())
   app.use((req, res, next) => {
-    if (!req.app.get('api-ready')) res.status(503).send('Service indisponible pour cause de maintenance.')
+    if (!req.app.get('api-ready')) res.status(503).type('text/plain').send('Service indisponible pour cause de maintenance.')
     else next()
   })
 
@@ -181,7 +181,7 @@ if (config.mode.includes('server')) {
   // Error management
   app.use((err, req, res, next) => {
     if (err.name === 'UnauthorizedError') {
-      return res.status(401).send('invalid token...')
+      return res.status(401).type('text/plain').send('invalid token...')
     }
     if (err.code === 'ECONNRESET') err.statusCode = 400
     const status = err.statusCode || err.status || 500
@@ -264,7 +264,7 @@ exports.run = async () => {
     app.set('api-ready', true)
 
     app.use((req, res, next) => {
-      if (!req.app.get('ui-ready')) res.status(503).send('Service indisponible pour cause de maintenance.')
+      if (!req.app.get('ui-ready')) res.status(503).type('text/plain').send('Service indisponible pour cause de maintenance.')
       else next()
     })
 

@@ -6,7 +6,7 @@ const limitsUtils = require('../utils/limits')
 const router = module.exports = express.Router()
 
 router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
-  if (!req.user) return res.status(401).send()
+  if (!req.user) return res.status(401).type('text/plain').send()
   res.send(await ownerStats(req.app.get('db'), req.user.activeAccount))
 }))
 

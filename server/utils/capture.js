@@ -112,7 +112,7 @@ exports.screenshot = async (req, res) => {
     }
   } else {
     if (!rateLimiting.consume(req, 'appCaptures')) {
-      return res.status(429).send(req.__('errors.exceedRateLimiting'))
+      return res.status(429).type('text/plain').send(req.__('errors.exceedRateLimiting'))
     }
     res.set('x-capture-cache-status', 'BYPASS')
     const captureReq = request(reqOpts)

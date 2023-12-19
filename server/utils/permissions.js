@@ -11,7 +11,7 @@ exports.middleware = function (operationId, operationClass, trackingCategory) {
     if (exports.can(req.resourceType, req.resource, operationId, req.user, req.bypassPermissions)) {
       // nothing to do, user can proceed
     } else {
-      res.status(403)
+      res.status(403).type('text/plain')
       const denomination = {
         datasets: 'Le jeu de données',
         applications: 'L\'application',
@@ -265,7 +265,7 @@ module.exports.router = (resourceType, resourceName, onPublicCallback) => {
     for (const permission of req.body) {
       if ((!permission.type && permission.id) || (permission.type && !(permission.id || permission.email))) valid = false
     }
-    if (!valid) return res.status(400).send('Error in permissions format')
+    if (!valid) return res.status(400).type('text/plain').send('Error in permissions format')
     const resources = req.app.get('db').collection(resourceType)
     try {
       const resource = await req[resourceName]

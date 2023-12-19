@@ -9,8 +9,8 @@ const router = module.exports = express.Router()
 
 // All routes in the router are only for the super admins of the service
 router.use(asyncWrap(async (req, res, next) => {
-  if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode) return res.status(403).send()
+  if (!req.user) return res.status(401).type('text/plain').send()
+  if (!req.user.adminMode) return res.status(403).type('text/plain').send()
   next()
 }))
 

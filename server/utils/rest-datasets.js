@@ -526,7 +526,7 @@ exports.bulkLines = async (req, res, next) => {
     if (req.files.actions[0].mimetype === 'application/zip') {
       // handle .zip archive
       const directory = await unzipper.Open.file(req.files.actions[0].path)
-      if (directory.files.length !== 1) return res.status(400).send('only accept zip archive with a single file inside')
+      if (directory.files.length !== 1) return res.status(400).type('text/plain').send('only accept zip archive with a single file inside')
       actionsMime = mime.lookup(directory.files[0].path)
       inputStream = directory.files[0].stream()
     } else {
@@ -625,7 +625,7 @@ exports.syncAttachmentsLines = async (req, res, next) => {
 
 exports.readRevisions = async (req, res, next) => {
   if (!req.dataset.rest || !req.dataset.rest.history) {
-    return res.status(400).send('L\'historisation des lignes n\'est pas activée pour ce jeu de données.')
+    return res.status(400).type('text/plain').send('L\'historisation des lignes n\'est pas activée pour ce jeu de données.')
   }
   const revisionsCollection = exports.revisionsCollection(req.app.get('db'), req.dataset)
   const filter = req.params.lineId ? { _lineId: req.params.lineId } : {}

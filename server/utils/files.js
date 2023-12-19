@@ -122,7 +122,7 @@ const getFormBody = (body) => {
 
 // Form data fields are sent as strings, some have to be parsed as objects or arrays
 exports.fixFormBody = (validate) => (req, res, next) => {
-  if (!req.body) return res.status(400).send('Missing body')
+  if (!req.body) return res.status(400).type('text/plain').send('Missing body')
   req.body = getFormBody(req.body)
   validate(req.body)
   next()

@@ -99,7 +99,7 @@ exports.middleware = (_limitType) => asyncWrap(async (req, res, next) => {
 
   if (!exports.consume(req, limitType)) {
     debugLimits('exceedRateLimiting', limitType, req.user, requestIp.getClientIp(req))
-    return res.status(429).send(req.__('errors.exceedRateLimiting'))
+    return res.status(429).type('text/plain').send(req.__('errors.exceedRateLimiting'))
   }
 
   res.throttle = (bandwidthType) => {

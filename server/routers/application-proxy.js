@@ -47,7 +47,7 @@ const setResource = asyncWrap(async (req, res, next) => {
 
 router.get('/:applicationId/manifest.json', setResource, asyncWrap(async (req, res) => {
   if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchinApplicationKey) {
-    return res.status(403).send()
+    return res.status(403).type('text/plain').send()
   }
   const baseApp = await req.app.get('db').collection('base-applications').findOne({ url: req.application.url }, { projection: { id: 1, meta: 1 } })
   if (!baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))

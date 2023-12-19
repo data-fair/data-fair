@@ -12,7 +12,7 @@ const router = module.exports = express.Router()
 
 router.use((req, res, next) => {
   if (!config.secretKeys.identities || config.secretKeys.identities !== req.query.key) {
-    return res.status(403).send('Bad secret in "key" parameter')
+    return res.status(403).type('text/plain').send('Bad secret in "key" parameter')
   }
   next()
 })

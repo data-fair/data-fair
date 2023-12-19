@@ -631,11 +631,11 @@ router.patch('/:datasetId',
 router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwner', 'admin'), asyncWrap(async (req, res) => {
   // Must be able to delete the current dataset, and to create a new one for the new owner to proceed
   if (!req.user.adminMode) {
-    if (req.body.type === 'user' && req.body.id !== req.user.id) return res.status(403).send(req.__('errors.missingPermission'))
+    if (req.body.type === 'user' && req.body.id !== req.user.id) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
     if (req.body.type === 'organization') {
       const userOrg = req.user.organizations.find(o => o.id === req.body.id)
-      if (!userOrg) return res.status(403).send(req.__('errors.missingPermission'))
-      if (![config.contribRole, config.adminRole].includes(userOrg.role)) return res.status(403).send(req.__('errors.missingPermission'))
+      if (!userOrg) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
+      if (![config.contribRole, config.adminRole].includes(userOrg.role)) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
     }
   }
 
@@ -643,16 +643,16 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
     const remaining = await limits.remaining(req.app.get('db'), req.body)
     if (remaining.nbDatasets === 0) {
       debugLimits('exceedLimitNbDatasets/changeOwner', { owner: req.body, remaining })
-      return res.status(429).send(req.__('errors.exceedLimitNbDatasets'))
+      return res.status(429).type('text/plain').send(req.__('errors.exceedLimitNbDatasets'))
     }
     if (req.dataset.storage) {
       if (remaining.storage !== -1 && remaining.storage < req.dataset.storage.size) {
         debugLimits('exceedLimitStorage/changeOwner', { owner: req.body, remaining, storage: req.dataset.storage })
-        return res.status(429).send(req.__('errors.exceedLimitStorage'))
+        return res.status(429).type('text/plain').send(req.__('errors.exceedLimitStorage'))
       }
       if (remaining.indexed !== -1 && req.dataset.storage.indexed && remaining.indexed < req.dataset.storage.indexed.size) {
         debugLimits('exceedLimitIndexed/changeOwner', { owner: req.body, remaining, storage: req.dataset.storage })
-        return res.status(429).send(req.__('errors.exceedLimitIndexed'))
+        return res.status(429).type('text/plain').send(req.__('errors.exceedLimitIndexed'))
       }
     }
   }
@@ -832,12 +832,12 @@ const setFileInfo = async (req, file, attachmentsFile, dataset, draft, res) => {
 
 // Create a dataset by uploading data
 const beforeUpload = asyncWrap(async (req, res, next) => {
-  if (!req.user) return res.status(401).send()
+  if (!req.user) return res.status(401).type('text/plain').send()
   const owner = usersUtils.owner(req)
-  if (!permissions.canDoForOwner(owner, 'datasets', 'post', req.user, req.app.get('db'))) return res.status(403).send(req.__('errors.missingPermission'))
+  if (!permissions.canDoForOwner(owner, 'datasets', 'post', req.user, req.app.get('db'))) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
   if ((await limits.remaining(req.app.get('db'), owner)).nbDatasets === 0) {
     debugLimits('exceedLimitNbDatasets/beforeUpload', { owner })
-    return res.status(429).send(req.__('errors.exceedLimitNbDatasets'))
+    return res.status(429).type('text/plain').send(req.__('errors.exceedLimitNbDatasets'))
   }
   next()
 })
@@ -940,7 +940,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
 // PUT or POST with an id to create or update an existing dataset data
 const attemptInsert = asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
-  if (!req.user) return res.status(401).send()
+  if (!req.user) return res.status(401).type('text/plain').send()
 
   const newDataset = await initNew(db, req)
   newDataset.id = req.params.datasetId
@@ -1133,8 +1133,8 @@ router.use('/:datasetId/own/:owner', readDataset(writableStatuses), isRest, (req
   const [type, id, department] = req.params.owner.split(':')
   req.query.owner = req.params.owner
   req.linesOwner = { type, id, department }
-  if (!['organization', 'user'].includes(req.linesOwner.type)) return res.status(400).send('ownerType must be user or organization')
-  if (!req.user) return res.status(401).send('auth required')
+  if (!['organization', 'user'].includes(req.linesOwner.type)) return res.status(400).type('text/plain').send('ownerType must be user or organization')
+  if (!req.user) return res.status(401).type('text/plain').send('auth required')
   if (req.linesOwner.type === 'organization' && req.user.activeAccount.type === 'organization' && req.user.activeAccount.id === req.linesOwner.id && (req.user.activeAccount.department || null) === (req.linesOwner.department || null)) {
     req.linesOwner.name = req.user.activeAccount.name
     return next()
@@ -1144,7 +1144,7 @@ router.use('/:datasetId/own/:owner', readDataset(writableStatuses), isRest, (req
     return next()
   }
   if (req.user.adminMode) return next()
-  res.status(403).send('only owner can manage his own lines')
+  res.status(403).type('text/plain').send('only owner can manage his own lines')
 })
 router.get('/:datasetId/own/:owner/lines/:lineId', readDataset(), isRest, applicationKey, permissions.middleware('readOwnLine', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
 router.post('/:datasetId/own/:owner/lines', readDataset(writableStatuses), isRest, applicationKey, permissions.middleware('createOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
@@ -1246,7 +1246,7 @@ const readLines = asyncWrap(async (req, res) => {
   if (req.dataset.isVirtual) req.dataset.descendants = await virtualDatasetsUtils.descendants(db, req.dataset)
 
   const sampling = req.query.sampling || 'neighbors'
-  if (!['max', 'neighbors'].includes(sampling)) return res.status(400).send('Sampling can be "max" or "neighbors"')
+  if (!['max', 'neighbors'].includes(sampling)) return res.status(400).type('text/plain').send('Sampling can be "max" or "neighbors"')
 
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
 
@@ -1256,7 +1256,7 @@ const readLines = asyncWrap(async (req, res) => {
     req.query.size = req.query.size || config.elasticsearch.maxPageSize + ''
     // sorting by rand provides more homogeneous distribution in tiles
     req.query.sort = req.query.sort || '_rand'
-    if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
+    if (!req.query.xyz) return res.status(400).type('text/plain').send('xyz parameter is required for vector tile format.')
     xyz = req.query.xyz.split(',').map(Number)
   }
 
@@ -1442,7 +1442,7 @@ router.get('/:datasetId/geo_agg', readDataset(), applicationKey, permissions.mid
   }
 
   if (vectorTileRequested) {
-    if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
+    if (!req.query.xyz) return res.status(400).type('text/plain').send('xyz parameter is required for vector tile format.')
     const tile = await tiles.geojson2pbf(geo.aggs2geojson(result), req.query.xyz.split(',').map(Number))
     // 204 = no-content, better than 404
     if (!tile) return res.status(204).send()
@@ -1489,7 +1489,7 @@ router.get('/:datasetId/values_agg', readDataset(), applicationKey, permissions.
   }
 
   if (vectorTileRequested) {
-    if (!req.query.xyz) return res.status(400).send('xyz parameter is required for vector tile format.')
+    if (!req.query.xyz) return res.status(400).type('text/plain').send('xyz parameter is required for vector tile format.')
     const tile = await tiles.geojson2pbf(geo.aggs2geojson(result), req.query.xyz.split(',').map(Number))
     // 204 = no-content, better than 404
     if (!tile) return res.status(204).send()
@@ -1609,7 +1609,7 @@ router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.midd
 })
 router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('deleteMetadataAttachment', 'write'), asyncWrap(async (req, res, next) => {
   const filePath = req.params['0']
-  if (filePath.includes('..')) return res.status(400).send('Unacceptable attachment path')
+  if (filePath.includes('..')) return res.status(400).type('text/plain').send('Unacceptable attachment path')
   await fs.remove(path.join(datasetUtils.metadataAttachmentsDir(req.dataset), filePath))
   await datasetUtils.updateStorage(req.app, req.dataset)
   res.status(204).send()
@@ -1689,7 +1689,7 @@ router.post('/:datasetId/user-notification', readDataset(), permissions.middlewa
   userNotification.visibility = userNotification.visibility || 'private'
   if (userNotification.visibility !== 'private') {
     const ownerRole = permissions.getOwnerRole(req.dataset.owner, req.user)
-    if (!['admin', 'contrib'].includes(ownerRole)) return res.status(403).send('User does not have permission to emit a public notification')
+    if (!['admin', 'contrib'].includes(ownerRole)) return res.status(403).type('text/plain').send('User does not have permission to emit a public notification')
   }
   const notif = {
     sender: req.dataset.owner,
@@ -1725,8 +1725,8 @@ router.get('/:datasetId/thumbnail/:thumbnailId', readDataset(), permissions.midd
 
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.
 router.get('/:datasetId/_diagnose', readDataset(), cacheHeaders.noCache, asyncWrap(async (req, res) => {
-  if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode) return res.status(403).send(req.__('errors.missingPermission'))
+  if (!req.user) return res.status(401).type('text/plain').send()
+  if (!req.user.adminMode) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
   const esInfos = await esUtils.datasetInfos(req.app.get('es'), req.dataset)
   const filesInfos = await datasetUtils.lsFiles(req.dataset)
   const locks = [
@@ -1738,16 +1738,16 @@ router.get('/:datasetId/_diagnose', readDataset(), cacheHeaders.noCache, asyncWr
 
 // Special admin route to force reindexing a dataset
 router.post('/:datasetId/_reindex', readDataset(), asyncWrap(async (req, res) => {
-  if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode) return res.status(403).send(req.__('errors.missingPermission'))
+  if (!req.user) return res.status(401).type('text/plain').send()
+  if (!req.user.adminMode) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
   const patchedDataset = await datasetUtils.reindex(req.app.get('db'), req.dataset)
   res.status(200).send(patchedDataset)
 }))
 
 // Special admin route to force refinalizing a dataset
 router.post('/:datasetId/_refinalize', readDataset(), asyncWrap(async (req, res) => {
-  if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode) return res.status(403).send(req.__('errors.missingPermission'))
+  if (!req.user) return res.status(401).type('text/plain').send()
+  if (!req.user.adminMode) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
   const patchedDataset = await datasetUtils.refinalize(req.app.get('db'), req.dataset)
   res.status(200).send(patchedDataset)
 }))

@@ -32,16 +32,16 @@ function clean (catalog, html = false) {
 }
 
 router.post('/_init', asyncWrap(async (req, res) => {
-  if (!req.query.url) return res.status(400).send('"url" query parameter is required')
+  if (!req.query.url) return res.status(400).type('text/plain').send('"url" query parameter is required')
   const catalog = await catalogs.init(req.query.url)
-  if (!catalog) return res.status(400).send(`Le catalogue à l'url ${req.query.url} est inexistant ou d'un type non supporté.`)
+  if (!catalog) return res.status(400).type('text/plain').send(`Le catalogue à l'url ${req.query.url} est inexistant ou d'un type non supporté.`)
   res.status(200).json(catalog)
 }))
 
 router.get('/_organizations', cacheHeaders.noCache, asyncWrap(async (req, res) => {
-  if (!req.query.url) return res.status(400).send('"url" query parameter is required')
-  if (!req.query.type) return res.status(400).send('"type" query parameter is required')
-  if (!req.query.q) return res.status(400).send('"q" query parameter is required')
+  if (!req.query.url) return res.status(400).type('text/plain').send('"url" query parameter is required')
+  if (!req.query.type) return res.status(400).type('text/plain').send('"type" query parameter is required')
+  if (!req.query.q) return res.status(400).type('text/plain').send('"q" query parameter is required')
   const organizations = await catalogs.searchOrganizations(req.query.type, req.query.url, req.query.q)
   res.status(200).json(organizations)
 }))
@@ -94,7 +94,7 @@ const initNew = (req) => {
 // Create a catalog
 router.post('', asyncWrap(async (req, res) => {
   const catalog = initNew(req)
-  if (!permissions.canDoForOwner(catalog.owner, 'catalogs', 'post', req.user)) return res.status(403).send()
+  if (!permissions.canDoForOwner(catalog.owner, 'catalogs', 'post', req.user)) return res.status(403).type('text/plain').send()
   validate(catalog)
 
   // Generate ids and try insertion until there is no conflict on id

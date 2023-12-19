@@ -51,21 +51,21 @@ module.exports = asyncWrap(async (req, res, next) => {
 
       // 2nd level of anti-spam protection, validate that the user was present on the page for a few seconds before sending
       const { verifyToken } = req.app.get('session')
-      if (!req.get('x-anonymousToken')) return res.status(401).send(req.__('errors.requireAnonymousToken'))
+      if (!req.get('x-anonymousToken')) return res.status(401).type('text/plain').send(req.__('errors.requireAnonymousToken'))
       try {
         await verifyToken(req.get('x-anonymousToken'))
       } catch (err) {
         if (err.name === 'NotBeforeError') {
-          return res.status(429).send(req.__('errors.looksLikeSpam'))
+          return res.status(429).type('text/plain').send(req.__('errors.looksLikeSpam'))
         } else {
-          return res.status(401).send('Invalid token')
+          return res.status(401).type('text/plain').send('Invalid token')
         }
       }
 
       // 3rd level of anti-spam protection, simple rate limiting based on ip
       if (!rateLimiting.consume(req, 'postApplicationKey')) {
         console.warn('Rate limit error for application key', requestIp.getClientIp(req), req.originalUrl)
-        return res.status(429).send(req.__('errors.exceedAnonymousRateLimiting'))
+        return res.status(429).type('text/plain').send(req.__('errors.exceedAnonymousRateLimiting'))
       }
     }
 

@@ -8,12 +8,12 @@ describe('datasets based on remote files', () => {
     const res = await ax.post('/api/v1/datasets', { remoteFile: { url: 'http://localhost:5600/notafile' } })
     const dataset = res.data
     await assert.rejects(workers.hook('finalizer/' + dataset.id), (err) => {
-      assert.equal(err.message, '404 - Not Found')
+      assert.ok(err.message.includes('404 - Not Found'))
       return true
     })
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal[0].type, 'error')
-    assert.equal(journal[0].data, '404 - Not Found')
+    assert.ok(journal[0].data.includes('404 - Not Found'))
   })
 
   it('fetch a file and create a dataset', async () => {
