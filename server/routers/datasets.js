@@ -631,10 +631,10 @@ router.patch('/:datasetId',
 router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwner', 'admin'), asyncWrap(async (req, res) => {
   // Must be able to delete the current dataset, and to create a new one for the new owner to proceed
   if (!req.user.adminMode) {
-    if (req.body.type === 'user' && req.body.id !== req.user.id) return res.status(403).send()
+    if (req.body.type === 'user' && req.body.id !== req.user.id) return res.status(403).send(req.__('errors.missingPermission'))
     if (req.body.type === 'organization') {
       const userOrg = req.user.organizations.find(o => o.id === req.body.id)
-      if (!userOrg) return res.status(403).send()
+      if (!userOrg) return res.status(403).send(req.__('errors.missingPermission'))
       if (![config.contribRole, config.adminRole].includes(userOrg.role)) return res.status(403).send(req.__('errors.missingPermission'))
     }
   }
@@ -834,7 +834,7 @@ const setFileInfo = async (req, file, attachmentsFile, dataset, draft, res) => {
 const beforeUpload = asyncWrap(async (req, res, next) => {
   if (!req.user) return res.status(401).send()
   const owner = usersUtils.owner(req)
-  if (!permissions.canDoForOwner(owner, 'datasets', 'post', req.user, req.app.get('db'))) return res.sendStatus(403)
+  if (!permissions.canDoForOwner(owner, 'datasets', 'post', req.user, req.app.get('db'))) return res.status(403).send(req.__('errors.missingPermission'))
   if ((await limits.remaining(req.app.get('db'), owner)).nbDatasets === 0) {
     debugLimits('exceedLimitNbDatasets/beforeUpload', { owner })
     return res.status(429).send(req.__('errors.exceedLimitNbDatasets'))
@@ -1726,7 +1726,7 @@ router.get('/:datasetId/thumbnail/:thumbnailId', readDataset(), permissions.midd
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.
 router.get('/:datasetId/_diagnose', readDataset(), cacheHeaders.noCache, asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send(req.__('errors.missingPermission'))
   const esInfos = await esUtils.datasetInfos(req.app.get('es'), req.dataset)
   const filesInfos = await datasetUtils.lsFiles(req.dataset)
   const locks = [
@@ -1739,7 +1739,7 @@ router.get('/:datasetId/_diagnose', readDataset(), cacheHeaders.noCache, asyncWr
 // Special admin route to force reindexing a dataset
 router.post('/:datasetId/_reindex', readDataset(), asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send(req.__('errors.missingPermission'))
   const patchedDataset = await datasetUtils.reindex(req.app.get('db'), req.dataset)
   res.status(200).send(patchedDataset)
 }))
@@ -1747,7 +1747,7 @@ router.post('/:datasetId/_reindex', readDataset(), asyncWrap(async (req, res) =>
 // Special admin route to force refinalizing a dataset
 router.post('/:datasetId/_refinalize', readDataset(), asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send(req.__('errors.missingPermission'))
   const patchedDataset = await datasetUtils.refinalize(req.app.get('db'), req.dataset)
   res.status(200).send(patchedDataset)
 }))

@@ -23,7 +23,7 @@ router.get('/info', (req, res) => {
 
 router.get('/status', (req, res, next) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send(req.__('errors.missingPermission'))
   status.status(req, res, next)
 })
 router.get('/ping', status.ping)

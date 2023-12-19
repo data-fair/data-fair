@@ -3,6 +3,7 @@ const config = require('config')
 exports.eventsPrefix = 'download'
 
 exports.process = async function (app, dataset) {
+  const { text: stream2text } = require('node:stream/consumers')
   const path = require('path')
   const chardet = require('chardet')
   const tmp = require('tmp-promise')
@@ -55,10 +56,18 @@ exports.process = async function (app, dataset) {
     responseType: 'stream',
     ...catalogHttpParams,
     headers,
-    validateStatus: function (status) {
-      return status === 200 || status === 304
-    }
+    validateStatus: () => true
   })
+
+  if (response.status !== 200 && response.status !== 304) {
+    let message = `${response.status} - ${response.statusText}`
+    if (response.headers['content-type']?.startsWith('text/plain')) {
+      const data = await stream2text(response.data)
+      if (data) message = data
+    }
+    throw createError('[noretry] Échec de téléchargement du fichier : ' + message)
+  }
+
   await pump(
     response.data,
     fs.createWriteStream(tmpFile.path)

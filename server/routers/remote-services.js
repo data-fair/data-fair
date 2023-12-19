@@ -284,7 +284,7 @@ const initNew = (body) => {
 // Create a remote Api as super admin
 router.post('', asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send(req.__('errors.missingPermission'))
   // if title is set, we build id from it
   if (req.body.title && !req.body.id) req.body.id = slug(req.body.title, { lower: true, strict: true })
   debugMasterData(`POST remote service manually by ${req.user?.name} (${req.user?.id})`, req.body)
@@ -327,7 +327,7 @@ const readService = asyncWrap(async (req, res, next) => {
 router.get('/:remoteServiceId', readService, cacheHeaders.resourceBased(), (req, res, next) => {
   // TODO: allow based on privateAccess ?
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send(req.__('errors.missingPermission'))
 
   res.status(200).send(clean(req.remoteService, req.user, req.query.html === 'true'))
 })
@@ -335,7 +335,7 @@ router.get('/:remoteServiceId', readService, cacheHeaders.resourceBased(), (req,
 // PUT used to create or update as super admin
 const attemptInsert = asyncWrap(async (req, res, next) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send(req.__('errors.missingPermission'))
 
   const newService = initNew(req.body)
   newService.id = req.params.remoteServiceId
@@ -365,7 +365,7 @@ router.put('/:remoteServiceId', attemptInsert, readService, asyncWrap(async (req
 // Update a remote service configuration as super admin
 router.patch('/:remoteServiceId', readService, asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send(req.__('errors.missingPermission'))
   debugMasterData(`PATCH remote service manually by ${req.user?.name} (${req.user?.id})`, req.params.remoteServiceId, req.body)
 
   const patch = req.body
@@ -386,7 +386,7 @@ router.patch('/:remoteServiceId', readService, asyncWrap(async (req, res) => {
 // Delete a remoteService as super admin
 router.delete('/:remoteServiceId', readService, asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send(req.__('errors.missingPermission'))
   debugMasterData(`DELETE remote service manually by ${req.user?.name} (${req.user?.id})`, req.params.remoteServiceId)
   await req.app.get('db').collection('remote-services').deleteOne({
     id: req.params.remoteServiceId
@@ -397,7 +397,7 @@ router.delete('/:remoteServiceId', readService, asyncWrap(async (req, res) => {
 // Force update of API definition as super admin
 router.post('/:remoteServiceId/_update', readService, asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send(req.__('errors.missingPermission'))
 
   if (!req.remoteService.url) return res.sendStatus(204)
 

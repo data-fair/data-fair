@@ -22,7 +22,7 @@ const router = exports.router = express.Router()
 
 router.get('/cpu-profile', asyncWrap(async (req, res, next) => {
   if (!req.user) return res.status(401).send()
-  if (!req.user.adminMode) return res.status(403).send()
+  if (!req.user.adminMode) return res.status(403).send(req.__('errors.missingPermission'))
 
   const duration = req.query.duration ? parseInt(req.query.duration) : 2000
   const profile = await exports.getCPUProfile(duration)

@@ -53,8 +53,8 @@ exports.query = (req, fieldsMap, globalMode, extraFilters = []) => {
         const [type, id] = p.split(':')
         if (!req.user) throw createError(401)
         if (!req.user.adminMode) {
-          if (type === 'user' && id !== req.user.id) throw createError(403)
-          if (type === 'organization' && !req.user.organizations.find(o => o.id === id)) throw createError(403)
+          if (type === 'user' && id !== req.user.id) throw createError(403, req.__('errors.missingPermission'))
+          if (type === 'organization' && !req.user.organizations.find(o => o.id === id)) throw createError(403, req.__('errors.missingPermission'))
         }
         privateAccess.push({ type, id })
         accessFilter.push({ privateAccess: { $elemMatch: { type, id } } })

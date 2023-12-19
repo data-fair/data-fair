@@ -21,5 +21,6 @@ module.exports.interceptors.response.use(response => response, error => {
     messageText = typeof error.response.data === 'string' ? error.response.data : JSON.stringify(error.response.data)
   }
   error.response.message = `${error.response.status} - ${messageText}`
+
   return Promise.reject(error.response)
 })
