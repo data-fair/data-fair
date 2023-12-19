@@ -262,7 +262,7 @@
                         outlined
                         dense
                       >
-                        Attention, si vous supprimez ou changez l'identifiant d'un concept référencé dans des jeux de données vous pouvez causer des dysfonctionnements.
+                        Attention, si vous supprimez un concept référencé dans des jeux de données vous pouvez causer des dysfonctionnements.
                       </v-alert>
                       <v-row>
                         <v-col

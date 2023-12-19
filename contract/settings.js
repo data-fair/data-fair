@@ -236,7 +236,7 @@ module.exports = {
           title: { type: 'string', title: 'Titre', minLength: 3 },
           description: { type: 'string', title: 'Description' },
           tag: { type: 'string', title: 'Catégorie' },
-          type: { type: 'string', const: 'string' }
+          type: { type: 'string', default: 'string', oneOf: [{ title: 'chaîne de caractère', const: 'string' }, { title: 'nombre', const: 'number' }] }
         }
       }
     },
