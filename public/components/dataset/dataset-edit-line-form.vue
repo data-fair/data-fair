@@ -15,14 +15,19 @@
       <p v-t="'loadAttachment'" />
       <div class="mt-3 mb-3">
         <v-file-input
+          v-model="file"
           :label="$t('selectFile')"
           outlined
           dense
-          style="max-width: 300px;"
+          clearable
+          @click:clear="delete value[digitalDocumentField.key]"
           @change="file => $emit('onFileUpload', file)"
         />
       </div>
-      <v-progress-linear v-model="lineUploadProgress" />
+      <v-progress-linear
+        v-if="lineUploadProgress"
+        v-model="lineUploadProgress"
+      />
     </template>
   </div>
 </template>
@@ -37,8 +42,8 @@ en:
 </i18n>
 
 <script>
+import { mapState, mapGetters } from 'vuex'
 
-import { mapState } from 'vuex'
 export default {
   props: ['value', 'selectedCols', 'ownLines'],
   data: () => ({
@@ -56,10 +61,12 @@ export default {
       dialogCardProps: {
         outlined: true
       }
-    }
+    },
+    file: null
   }),
   computed: {
     ...mapState('dataset', ['dataset', 'lineUploadProgress', 'jsonSchema']),
+    ...mapGetters('dataset', ['digitalDocumentField']),
     editSchema () {
       if (!this.jsonSchema) return
       const schema = JSON.parse(JSON.stringify(this.jsonSchema))
@@ -74,7 +81,9 @@ export default {
           schema.properties[key]['x-options'].hideReadOnly = true
         }
         if (schema.properties[key]['x-refersTo'] === 'http://schema.org/DigitalDocument') {
-          delete schema.properties[key]
+          schema.properties[key].readOnly = true
+          schema.properties[key]['x-options'] = schema.properties[key]['x-options'] || {}
+          schema.properties[key]['x-options'].hideReadOnly = true
         }
       })
       return schema
@@ -82,6 +91,11 @@ export default {
   },
   created () {
     if (!this.jsonSchema) this.$store.dispatch('dataset/fetchJsonSchema')
+    if (this.digitalDocumentField && this.value[this.digitalDocumentField.key]) {
+      this.file = { name: this.value[this.digitalDocumentField.key].replace(this.value._id + '/', '') }
+    } else {
+      this.file = null
+    }
   }
 }
 </script>

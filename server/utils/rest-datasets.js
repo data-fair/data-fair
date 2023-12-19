@@ -383,6 +383,19 @@ const compileSchema = (dataset, adminMode) => {
   return ajv.compile(schema, false)
 }
 
+async function checkMatchingAttachment (req, lineId, dir, pathField) {
+  if (pathField && req.body[pathField.key] && req.body[pathField.key].startsWith(lineId + '/')) {
+    const fileName = req.body[pathField.key].replace(lineId + '/', '')
+    try {
+      const fileNames = await fs.readdir(dir)
+      if (fileNames.includes(fileName)) return true
+    } catch (err) {
+      // missing directory, nothing to do
+    }
+  }
+  return false
+}
+
 async function manageAttachment (req, keepExisting) {
   if (req.is('multipart/form-data')) {
     // When taken from form-data everything is string.. convert to actual types
@@ -398,19 +411,22 @@ async function manageAttachment (req, keepExisting) {
   const lineId = req.params.lineId || req.body._id
   const dir = path.join(datasetUtils.attachmentsDir(req.dataset), lineId)
 
+  const pathField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+
   if (req.file) {
     // An attachment was uploaded
     await fs.ensureDir(dir)
     await fs.emptyDir(dir)
     await fs.rename(req.file.path, path.join(dir, req.file.originalname))
     const relativePath = path.join(lineId, req.file.originalname)
-    const pathField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
     if (!pathField) {
       throw createError(400, 'Le schéma ne prévoit pas d\'associer une pièce jointe')
     }
     req.body[pathField.key] = relativePath
   } else if (!keepExisting) {
-    await fs.remove(dir)
+    if (!checkMatchingAttachment(req, lineId, dir, pathField)) {
+      await fs.remove(dir)
+    }
   }
 }
 
