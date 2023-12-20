@@ -1,7 +1,7 @@
 <template>
   <v-row>
     <v-col :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
-      <v-container class="py-0">
+      <v-container class="pa-0">
         <v-subheader
           class="px-0 pr-12 mb-2"
           style="height: auto;"

@@ -1,7 +1,7 @@
 <template>
   <v-row>
     <v-col :style="$vuetify.breakpoint.lgAndUp ? 'padding-right:256px;' : ''">
-      <v-container class="py-0">
+      <v-container class="pa-0">
         <template v-if="$vuetify.breakpoint.mdAndDown">
           <div class="actions-buttons">
             <v-btn
