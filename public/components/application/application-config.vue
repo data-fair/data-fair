@@ -32,6 +32,7 @@
               outlined
               tile
               fixed
+              :style="`max-height:${windowHeight - 74}px;overflow-y:auto;`"
             >
               <v-iframe
                 v-if="showDraftPreview"
@@ -68,24 +69,13 @@
               :options="vjsfOptions"
               @change="saveDraft"
             />
-            <lazy-v-jsf
-              v-model="editConfig"
-              :schema="draftSchema"
-              :options="vjsfOptions"
-              @change="saveDraft"
-            />
-            <lazy-v-jsf
-              v-model="editConfig"
-              :schema="draftSchema"
-              :options="vjsfOptions"
-              @change="saveDraft"
-            />
             <v-row class="mt-3 mb-0">
               <v-spacer />
               <v-btn
                 v-t="'cancel'"
                 :disabled="!hasDraft"
                 color="warning"
+                depressed
                 @click="showCancelDialog = true"
               />
               <v-btn
