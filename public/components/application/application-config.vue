@@ -1,18 +1,45 @@
 <template lang="html">
   <v-container fluid>
-    <v-alert
-      v-if="!!application.errorMessage"
-      type="error"
-      border="left"
-    >
-      <p v-html="$t('validatedError')" />
-      <p
-        class="mb-0"
-        v-html="application.errorMessage"
-      />
-    </v-alert>
     <no-ssr>
       <v-row>
+        <v-col
+          cols="12"
+          sm="6"
+          md="7"
+          xl="8"
+          class="pa-0"
+          style="position:relative;"
+        >
+          <v-col
+            style="position:sticky;top:50px;"
+            class="pr-0"
+          >
+            <v-alert
+              v-if="!!application.errorMessageDraft"
+              type="error"
+              border="left"
+              outlined
+            >
+              <p
+                class="mb-0"
+                v-html="application.errorMessageDraft"
+              />
+            </v-alert>
+            <v-card
+              v-else
+              light
+              class="pa-0"
+              outlined
+              tile
+              fixed
+            >
+              <v-iframe
+                v-if="showDraftPreview"
+                :src="applicationLink + '?embed=true&draft=true'"
+              />
+            </v-card>
+          </v-col>
+        </v-col>
         <v-col
           cols="12"
           sm="6"
@@ -41,53 +68,35 @@
               :options="vjsfOptions"
               @change="saveDraft"
             />
+            <lazy-v-jsf
+              v-model="editConfig"
+              :schema="draftSchema"
+              :options="vjsfOptions"
+              @change="saveDraft"
+            />
+            <lazy-v-jsf
+              v-model="editConfig"
+              :schema="draftSchema"
+              :options="vjsfOptions"
+              @change="saveDraft"
+            />
             <v-row class="mt-3 mb-0">
               <v-spacer />
-              <v-btn
-                v-t="'validate'"
-                :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
-                color="accent"
-                type="submit"
-              />
               <v-btn
                 v-t="'cancel'"
                 :disabled="!hasDraft"
                 color="warning"
-                class="ml-2 mr-3"
                 @click="showCancelDialog = true"
+              />
+              <v-btn
+                v-t="'validate'"
+                :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
+                color="accent"
+                class="ml-2 mr-3"
+                type="submit"
               />
             </v-row>
           </v-form>
-        </v-col>
-        <v-col
-          cols="12"
-          sm="6"
-          md="7"
-          xl="8"
-          class="pl-0"
-        >
-          <v-alert
-            v-if="!!application.errorMessageDraft"
-            type="error"
-            border="left"
-            outlined
-          >
-            <p
-              class="mb-0"
-              v-html="application.errorMessageDraft"
-            />
-          </v-alert>
-          <v-card
-            v-else
-            light
-            class="pa-0"
-            outlined
-          >
-            <v-iframe
-              v-if="showDraftPreview"
-              :src="applicationLink + '?embed=true&draft=true'"
-            />
-          </v-card>
         </v-col>
       </v-row>
 

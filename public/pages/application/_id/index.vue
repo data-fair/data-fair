@@ -42,21 +42,49 @@
               :min-height="390"
               :svg="creativeSvg"
               svg-no-margin
-              :section="sections.find(s => s.id === 'config')"
+              default-tab="render-render"
+              :section="sections.find(s => s.id === 'render')"
             >
-              <template #tabs>
-                <v-tab href="#config-config">
-                  <v-icon>mdi-pencil</v-icon>&nbsp;&nbsp;{{ $t('edit') }}
-                </v-tab>
+              <template #extension>
+                <v-btn
+                  v-if="can('writeConfig')"
+                  text
+                  :to="'/application/' + application.id + '/config'"
+                  color="primary"
+                >
+                  <v-icon
+                    color="primary"
+                    class="mr-2"
+                  >
+                    mdi-square-edit-outline
+                  </v-icon>
+
+                  {{ $t('editConfig') }}
+                </v-btn>
               </template>
               <template #tabs-items>
-                <v-tab-item value="config-config">
-                  <v-container
-                    fluid
-                    class="pa-0"
+                <v-tab-item value="render-render">
+                  <v-alert
+                    v-if="!!application.errorMessage"
+                    type="error"
+                    border="left"
                   >
-                    <application-config />
-                  </v-container>
+                    <p v-html="$t('validatedError')" />
+                    <p
+                      class="mb-0"
+                      v-html="application.errorMessage"
+                    />
+                  </v-alert>
+                  <v-card
+                    light
+                    class="pa-0"
+                    outlined
+                    tile
+                  >
+                    <v-iframe
+                      :src="applicationLink + '?embed=true'"
+                    />
+                  </v-card>
                 </v-tab-item>
               </template>
             </layout-section-tabs>
@@ -197,8 +225,9 @@ fr:
   journal: Journal
   applications: applications
   metadata: Métadonnées
-  config: Configuration
+  render: Rendu
   share: Partage
+  editConfig: Éditer la configuration
 en:
   info: Information
   tutorialConfigMeta: You can configure topics in the parameters.
@@ -212,14 +241,20 @@ en:
   journal: Journal
   applications: applications
   metadata: Metadata
-  config: Configuration
+  render: Render
   share: Share
+  editConfig: Edit configuration
 </i18n>
 
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex'
+import 'iframe-resizer/js/iframeResizer'
+import VIframe from '@koumoul/v-iframe'
 
 export default {
+  components: {
+    VIframe
+  },
   middleware: ['auth-required'],
   data: () => ({
     checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
@@ -250,7 +285,7 @@ export default {
       const sections = []
       if (!this.application) return sections
       sections.push({ title: this.$t('metadata'), id: 'metadata' })
-      sections.push({ title: this.$t('config'), id: 'config' })
+      sections.push({ title: this.$t('render'), id: 'render' })
       if (!this.env.disableSharing) {
         sections.push({ title: this.$t('share'), id: 'share' })
       }
@@ -262,8 +297,6 @@ export default {
   },
   created () {
     // children pages are deprecated
-    const path = `/application/${this.$route.params.id}`
-    if (this.$route.path !== path) return this.$router.push(path)
     if (this.application) {
       this.$store.dispatch('breadcrumbs', [{ text: this.$t('applications'), to: '/applications' }, { text: this.application.title || this.application.id }])
       this.subscribe()

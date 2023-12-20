@@ -20,6 +20,18 @@
 
     <v-list-item
       v-if="can('writeConfig')"
+      :to="'/application/' + application.id + '/config'"
+    >
+      <v-list-item-icon>
+        <v-icon color="primary">
+          mdi-square-edit-outline
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-title v-t="'editConfig'" />
+    </v-list-item>
+
+    <v-list-item
+      v-if="can('writeConfig')"
       @click="showIntegrationDialog = true"
     >
       <v-list-item-icon>
@@ -209,6 +221,7 @@ fr:
   changeOwnerTitle: Changer le propriétaire de l'application
   cancel: Annuler
   confirm: Confirmer
+  editConfig: Éditer la configuration
 en:
   actions: ACTIONS
   fullPage: Open in a fullscreen
@@ -225,6 +238,7 @@ en:
   changeOwnerTitle: Change the owner of the application
   cancel: Cancel
   confirm: Confirm
+  editConfig: Edit configuration
 </i18n>
 
 <script>
