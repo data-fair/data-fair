@@ -296,7 +296,6 @@ const lockNewDataset = async (req, res, dataset) => {
 // also checks that the dataset is in a state compatible with some action
 // supports waiting a little bit to be a little permissive with the user
 const readDataset = (_acceptedStatuses, preserveDraft, ignoreDraft) => asyncWrap(async (req, res, next) => {
-  const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body) : _acceptedStatuses
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
     await findUtils.getByUniqueRef(req, 'dataset')
     if (!req.dataset) return res.status(404).send('Dataset not found')
@@ -312,6 +311,8 @@ const readDataset = (_acceptedStatuses, preserveDraft, ignoreDraft) => asyncWrap
     if (!preserveDraft) {
       delete req.dataset.draft
     }
+
+    const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body, req.dataset) : _acceptedStatuses
 
     req.resourceType = 'datasets'
     if (
@@ -438,9 +439,9 @@ const permissionsWriteDescriptionBreaking = permissions.middleware('writeDescrip
 
 // Update a dataset's metadata
 router.patch('/:datasetId',
-  readDataset((patch) => {
+  readDataset((patch, dataset) => {
     // accept different statuses of the dataset depending on the content of the patch
-    if (patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection) {
+    if (!dataset.isMetaOnly && (patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)) {
       return ['finalized', 'error']
     } else {
       return null

@@ -136,22 +136,27 @@ const getTypesFilters = () => {
       'autoUpdate.active': true, 'autoUpdate.nextUpdate': { $lt: new Date().toISOString() }
     },
     dataset: {
-      isMetaOnly: { $ne: true },
-      $or: [
-        // fetch next processing steps in usual sequence
-        { status: { $nin: ['finalized', 'error', 'draft'] } },
-        // fetch next processing steps in usual sequence, but of the draft version of the dataset
-        { 'draft.status': { $exists: true, $nin: ['finalized', 'error'] } },
-        // fetch datasets that are finalized, but need to update a publication
-        { status: 'finalized', 'publications.status': { $in: ['waiting', 'deleted'] } },
-        // fetch rest datasets with a TTL to process
-        { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } },
-        { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $exists: false } },
-        // fetch rest datasets with an automatic export to do
-        { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: new Date().toISOString() } },
-        // file datasets with remote url that need refreshing
-        { status: { $nin: ['error'] }, 'remoteFile.autoUpdate.active': true, 'remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() } }
-      ]
+      $or: [{
+        isMetaOnly: { $ne: true },
+        $or: [
+          // fetch next processing steps in usual sequence
+          { status: { $nin: ['finalized', 'error', 'draft'] } },
+          // fetch next processing steps in usual sequence, but of the draft version of the dataset
+          { 'draft.status': { $exists: true, $nin: ['finalized', 'error'] } },
+          // fetch datasets that are finalized, but need to update a publication
+          { status: 'finalized', 'publications.status': { $in: ['waiting', 'deleted'] } },
+          // fetch rest datasets with a TTL to process
+          { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } },
+          { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $exists: false } },
+          // fetch rest datasets with an automatic export to do
+          { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: new Date().toISOString() } },
+          // file datasets with remote url that need refreshing
+          { status: { $nin: ['error'] }, 'remoteFile.autoUpdate.active': true, 'remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() } }
+        ]
+      }, {
+        isMetaOnly: true,
+        'publications.status': { $in: ['waiting', 'deleted'] }
+      }]
     }
   }
 }
