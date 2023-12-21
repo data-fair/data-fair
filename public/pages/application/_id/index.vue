@@ -45,21 +45,21 @@
               default-tab="render-render"
               :section="sections.find(s => s.id === 'render')"
             >
-              <template #extension>
+              <template #title="{title}">
+                {{ title }}
                 <v-btn
                   v-if="can('writeConfig')"
-                  text
+                  fab
                   :to="'/application/' + application.id + '/config'"
                   color="primary"
+                  :title="$t('editConfig')"
+                  class="ml-2"
+                  :elevation="0"
+                  small
                 >
-                  <v-icon
-                    color="primary"
-                    class="mr-2"
-                  >
+                  <v-icon>
                     mdi-square-edit-outline
                   </v-icon>
-
-                  {{ $t('editConfig') }}
                 </v-btn>
               </template>
               <template #tabs-items>
@@ -263,7 +263,9 @@ export default {
     settingsSvg: require('~/assets/svg/Settings_Monochromatic.svg?raw')
   }),
   async fetch ({ store, params, route }) {
-    store.dispatch('application/clear')
+    if (store.state.application?.applicationId !== route.params.id) {
+      store.dispatch('application/clear')
+    }
     await store.dispatch('application/setId', route.params.id)
     if (store.state.application.application) {
       try {
