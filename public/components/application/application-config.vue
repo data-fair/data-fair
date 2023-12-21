@@ -70,7 +70,7 @@
               />
             </v-form>
           </v-sheet>
-          <v-row class="mt-3 mb-0 mr-3">
+          <v-row class="mt-3 ml-0 mr-3">
             <v-spacer />
             <v-btn
               v-t="'cancel'"
@@ -83,9 +83,10 @@
               v-t="'validate'"
               :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
               color="accent"
-              class="ml-2 mr-3"
+              class="ml-2"
               type="submit"
             />
+            <v-spacer />
           </v-row>
         </v-col>
       </v-row>
