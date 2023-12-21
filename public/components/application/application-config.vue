@@ -30,6 +30,7 @@
             >
               <v-iframe
                 v-if="showDraftPreview"
+                :aspect-ratio="4/3"
                 :src="applicationLink + '?embed=true&draft=true'"
               />
             </v-sheet>
