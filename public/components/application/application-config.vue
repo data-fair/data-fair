@@ -41,53 +41,54 @@
           lg="4"
           class="pa-0"
         >
-          <v-sheet
-            light
-            class="pa-2"
-            :style="`max-height:${windowHeight - 110}px;overflow-y:auto;scrollbar-gutter: stable;`"
+          <v-form
+            v-if="draftSchema && editConfig"
+            ref="configForm"
+            v-model="formValid"
+            @submit="validateDraft"
           >
-            <v-select
-              v-model="editUrl"
-              :disabled="!can('writeConfig')"
-              :loading="!availableVersions"
-              :items="availableVersions"
-              :item-text="(baseApp => `${baseApp.title} (${baseApp.version})`)"
-              item-value="url"
-              :label="$t('changeVersion')"
-              @change="saveUrlDraft"
-            />
-            <v-form
-              v-if="draftSchema && editConfig"
-              ref="configForm"
-              v-model="formValid"
-              @submit="validateDraft"
+            <v-sheet
+              light
+              class="pa-2"
+              :style="`max-height:${windowHeight - 110}px;overflow-y:auto;scrollbar-gutter: stable;`"
             >
+              <v-select
+                v-model="editUrl"
+                :disabled="!can('writeConfig')"
+                :loading="!availableVersions"
+                :items="availableVersions"
+                :item-text="(baseApp => `${baseApp.title} (${baseApp.version})`)"
+                item-value="url"
+                :label="$t('changeVersion')"
+                @change="saveUrlDraft"
+              />
+
               <lazy-v-jsf
                 v-model="editConfig"
                 :schema="draftSchema"
                 :options="vjsfOptions"
                 @change="saveDraft"
               />
-            </v-form>
-          </v-sheet>
-          <v-row class="mt-3 ml-0 mr-3">
-            <v-spacer />
-            <v-btn
-              v-t="'cancel'"
-              :disabled="!hasDraft"
-              color="warning"
-              depressed
-              @click="showCancelDialog = true"
-            />
-            <v-btn
-              v-t="'validate'"
-              :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
-              color="accent"
-              class="ml-2"
-              type="submit"
-            />
-            <v-spacer />
-          </v-row>
+            </v-sheet>
+            <v-row class="mt-3 ml-0 mr-3">
+              <v-spacer />
+              <v-btn
+                v-t="'cancel'"
+                :disabled="!hasDraft"
+                color="warning"
+                depressed
+                @click="showCancelDialog = true"
+              />
+              <v-btn
+                v-t="'validate'"
+                :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
+                color="accent"
+                class="ml-2"
+                type="submit"
+              />
+              <v-spacer />
+            </v-row>
+          </v-form>
         </v-col>
       </v-row>
 
