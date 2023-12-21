@@ -3,6 +3,7 @@
     :items="datasets"
     :loading="loadingDatasets"
     :search-input.sync="search"
+    no-filter
     item-text="title"
     item-value="id"
     :label="label || $t('selectDataset')"
@@ -100,10 +101,12 @@ export default {
         }
       })
 
-      if (items.length && res.results.length) {
+      const ownerDatasets = res.results.filter(d => !items.find(rd => rd.id === d.id))
+
+      if (items.length && ownerDatasets.length) {
         items.push({ header: this.$t('ownerDatasets') })
       }
-      items = items.concat(res.results)
+      items = items.concat(ownerDatasets)
 
       this.datasets = items
       this.loadingDatasets = false
