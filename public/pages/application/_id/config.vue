@@ -7,9 +7,14 @@ import { mapState } from 'vuex'
 
 export default {
   middleware: ['auth-required'],
+  meta: {
+    htmlScroll: 'auto'
+  },
   async fetch ({ store, params, route }) {
-    store.dispatch('application/clear')
-    await store.dispatch('application/setId', route.params.id)
+    if (store.state.application?.applicationId !== route.params.id) {
+      store.dispatch('application/clear')
+      await store.dispatch('application/setId', route.params.id)
+    }
   },
   computed: {
     ...mapState('application', ['application'])

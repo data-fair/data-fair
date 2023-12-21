@@ -1,19 +1,14 @@
 <template lang="html">
-  <v-container fluid>
+  <v-container :fluid="$vuetify.breakpoint.lgAndDown">
     <no-ssr>
       <v-row>
         <v-col
-          cols="12"
-          sm="6"
+          cols="6"
           md="7"
-          xl="8"
+          lg="8"
           class="pa-0"
-          style="position:relative;"
         >
-          <v-col
-            style="position:sticky;top:50px;"
-            class="pr-0"
-          >
+          <v-col>
             <v-alert
               v-if="!!application.errorMessageDraft"
               type="error"
@@ -25,68 +20,73 @@
                 v-html="application.errorMessageDraft"
               />
             </v-alert>
-            <v-card
+            <v-sheet
               v-else
               light
-              class="pa-0"
+              class="pa-2"
               outlined
               tile
-              fixed
               :style="`max-height:${windowHeight - 74}px;overflow-y:auto;`"
             >
               <v-iframe
                 v-if="showDraftPreview"
                 :src="applicationLink + '?embed=true&draft=true'"
               />
-            </v-card>
+            </v-sheet>
           </v-col>
         </v-col>
         <v-col
-          cols="12"
-          sm="6"
+          cols="6"
           md="5"
-          xl="4"
+          lg="4"
+          class="pa-0"
         >
-          <v-select
-            v-model="editUrl"
-            :disabled="!can('writeConfig')"
-            :loading="!availableVersions"
-            :items="availableVersions"
-            :item-text="(baseApp => `${baseApp.title} (${baseApp.version})`)"
-            item-value="url"
-            :label="$t('changeVersion')"
-            @change="saveUrlDraft"
-          />
-          <v-form
-            v-if="draftSchema && editConfig"
-            ref="configForm"
-            v-model="formValid"
-            @submit="validateDraft"
+          <v-sheet
+            light
+            class="pa-2"
+            :style="`max-height:${windowHeight - 110}px;overflow-y:auto;scrollbar-gutter: stable;`"
           >
-            <lazy-v-jsf
-              v-model="editConfig"
-              :schema="draftSchema"
-              :options="vjsfOptions"
-              @change="saveDraft"
+            <v-select
+              v-model="editUrl"
+              :disabled="!can('writeConfig')"
+              :loading="!availableVersions"
+              :items="availableVersions"
+              :item-text="(baseApp => `${baseApp.title} (${baseApp.version})`)"
+              item-value="url"
+              :label="$t('changeVersion')"
+              @change="saveUrlDraft"
             />
-            <v-row class="mt-3 mb-0">
-              <v-spacer />
-              <v-btn
-                v-t="'cancel'"
-                :disabled="!hasDraft"
-                color="warning"
-                depressed
-                @click="showCancelDialog = true"
+            <v-form
+              v-if="draftSchema && editConfig"
+              ref="configForm"
+              v-model="formValid"
+              @submit="validateDraft"
+            >
+              <lazy-v-jsf
+                v-model="editConfig"
+                :schema="draftSchema"
+                :options="vjsfOptions"
+                @change="saveDraft"
               />
-              <v-btn
-                v-t="'validate'"
-                :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
-                color="accent"
-                class="ml-2 mr-3"
-                type="submit"
-              />
-            </v-row>
-          </v-form>
+            </v-form>
+          </v-sheet>
+          <v-row class="mt-3 mb-0 mr-3">
+            <v-spacer />
+            <v-btn
+              v-t="'cancel'"
+              :disabled="!hasDraft"
+              color="warning"
+              depressed
+              @click="showCancelDialog = true"
+            />
+            <v-btn
+              v-t="'validate'"
+              :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
+              color="accent"
+              class="ml-2 mr-3"
+              type="submit"
+            />
+          </v-row>
         </v-col>
       </v-row>
 
