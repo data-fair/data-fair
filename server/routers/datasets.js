@@ -258,8 +258,9 @@ const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => 
   const db = req.app.get('db')
   const shouldLock = typeof _shouldLock === 'function' ? _shouldLock(req.body, req.query) : _shouldLock
   if (!shouldLock) return next()
+  const datasetId = req.dataset ? req.dataset.id : req.params.datasetId
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
-    const lockKey = `dataset:${req.dataset ? req.dataset.id : req.params.datasetId}`
+    const lockKey = `dataset:${datasetId}`
     const ack = await locks.acquire(db, lockKey, `${req.method} ${req.originalUrl}`)
     if (ack) {
       res.on('close', () => locks.release(db, lockKey).catch(err => console.error('failure to release dataset lock', err)))
@@ -269,7 +270,7 @@ const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => 
       await new Promise(resolve => setTimeout(resolve, config.datasetStateRetries.interval))
     }
   }
-  throw createError(409, `Une opération bloquante est déjà en cours sur le jeu de données ${req.dataset.id}.`)
+  throw createError(409, `Une opération bloquante est déjà en cours sur le jeu de données ${datasetId}.`)
 })
 const lockNewDataset = async (req, res, dataset) => {
   const db = req.app.get('db')
