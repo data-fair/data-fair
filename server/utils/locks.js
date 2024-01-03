@@ -1,3 +1,4 @@
+const { hostname } = require('node:os')
 const { nanoid } = require('nanoid')
 const config = require('config')
 const debug = require('debug')('locks')
@@ -32,7 +33,7 @@ exports.acquire = async (db, _id, origin) => {
   debug('acquire', _id, origin)
   const locks = db.collection('locks')
   try {
-    await locks.insertOne({ _id, pid, origin })
+    await locks.insertOne({ _id, pid, origin, hostname: hostname(), createdAt: new Date() })
     try {
       await locks.updateOne({ _id }, { $currentDate: { updatedAt: true } })
     } catch (err) {

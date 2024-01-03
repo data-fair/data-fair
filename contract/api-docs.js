@@ -824,31 +824,6 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     }
   }
 
-  if (user && user.adminMode) {
-    doc.paths['/inspector/cpu-profile'] = {
-      get: {
-        summary: 'CPU profile',
-        tags: ['Administration'],
-        operationId: 'getCPUProfile',
-        parameters: [
-          { in: 'query', name: 'duration', description: 'Duration of the profile in ms', required: false, schema: { type: 'number' } }
-        ],
-        responses: {
-          200: {
-            description: 'CPU profile',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object'
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
   // TODO: shoud we keep some of this ?
   delete doc.paths['/remote-services']
   delete doc.paths['/remote-services/{id}']

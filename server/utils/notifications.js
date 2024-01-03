@@ -1,6 +1,6 @@
 const config = require('config')
 const axios = require('./axios')
-const prometheus = require('./prometheus')
+const observe = require('./observe')
 const debug = require('debug')('notifications')
 
 exports.send = async (notification, subscribedOnly = false) => {
@@ -10,7 +10,7 @@ exports.send = async (notification, subscribedOnly = false) => {
   if (process.env.NODE_ENV !== 'test') {
     await axios.post(`${config.privateNotifyUrl || config.notifyUrl}/api/v1/notifications`, notification, { params: { key: config.secretKeys.notifications, subscribedOnly } })
       .catch(err => {
-        prometheus.internalError.inc({ errorCode: 'notif-push' })
+        observe.internalError.inc({ errorCode: 'notif-push' })
         console.error('(notif-push) Failure to push notification', notification, err.response || err)
       })
   }
@@ -25,7 +25,7 @@ exports.subscribe = async (req, subscription) => {
   if (!config.notifyUrl) return
   await axios.post(`${config.privateNotifyUrl || config.notifyUrl}/api/v1/subscriptions`, subscription, { headers: { cookie: req.headers.cookie } })
     .catch(err => {
-      prometheus.internalError.inc({ errorCode: 'notif-push' })
+      observe.internalError.inc({ errorCode: 'notif-push' })
       console.error('(notif-push) Failure to push subscription', subscription, err.response || err)
     })
 }

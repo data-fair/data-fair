@@ -19,7 +19,7 @@ const findUtils = require('../utils/find')
 const asyncWrap = require('../utils/async-wrap')
 const cacheHeaders = require('../utils/cache-headers')
 const rateLimiting = require('../utils/rate-limiting')
-const prometheus = require('../utils/prometheus')
+const observe = require('../utils/observe')
 const datasetAPIDocs = require('../../contract/dataset-api-docs')
 const { httpAgent, httpsAgent } = require('../utils/http-agents')
 const settingsUtils = require('../utils/settings')
@@ -102,7 +102,7 @@ exports.init = async (db) => {
     return axios.get(url)
       .then(resp => ({ url, api: resp.data }))
       .catch(err => {
-        prometheus.internalError.inc({ errorCode: 'service-init' })
+        observe.internalError.inc({ errorCode: 'service-init' })
         console.error('(service-init) Failure to init remote service', err)
       })
   })
@@ -516,7 +516,7 @@ router.use('/:remoteServiceId/proxy*', rateLimiting.middleware('remoteService'),
           resolve()
         } else {
           console.error('(service-proxy-res) Error while proxying remote service', err)
-          prometheus.internalError.inc({ errorCode: 'service-proxy-res' })
+          observe.internalError.inc({ errorCode: 'service-proxy-res' })
           reject(err)
         }
       } finally {
@@ -529,7 +529,7 @@ router.use('/:remoteServiceId/proxy*', rateLimiting.middleware('remoteService'),
         resolve()
       } else {
         console.error('(service-proxy-req) Error while proxying remote service', err)
-        prometheus.internalError.inc({ errorCode: 'service-proxy-req' })
+        observe.internalError.inc({ errorCode: 'service-proxy-req' })
         reject(err)
       }
     })

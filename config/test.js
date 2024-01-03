@@ -92,7 +92,7 @@ module.exports = {
     title: 'Sirene',
     url: 'http://test.com/sirene/api-docs.json'
   }],
-  prometheus: {
+  observe: {
     port: 9092
   },
   cache: {

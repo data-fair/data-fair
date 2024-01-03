@@ -51,7 +51,7 @@ const applicationKey = require('../utils/application-key')
 const { syncDataset: syncRemoteService } = require('./remote-services')
 const { basicTypes } = require('../workers/converter')
 const { validateURLFriendly } = require('../utils/validation')
-const prometheus = require('../utils/prometheus')
+const observe = require('../utils/observe')
 const publicationSites = require('../utils/publication-sites')
 const clamav = require('../utils/clamav')
 const nanoid = require('../utils/nanoid')
@@ -1200,9 +1200,9 @@ async function manageESError (req, err) {
   const status = err.status || err.statusCode || 500
   console.error(`(es-query-${status}) elasticsearch query error ${req.dataset.id}`, req.originalUrl, status, req.headers.referer || req.headers.referrer, message, err.stack)
   if (status === 400) {
-    prometheus.esQueryError.inc()
+    observe.esQueryError.inc()
   } else {
-    prometheus.internalError.inc({ errorCode: 'es-query-' + status })
+    observe.internalError.inc({ errorCode: 'es-query-' + status })
   }
 
   // We used to store an error on the data whenever a dataset encountered an elasticsearch error

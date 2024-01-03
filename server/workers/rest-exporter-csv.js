@@ -1,4 +1,4 @@
-const prometheus = require('../utils/prometheus')
+const observe = require('../utils/observe')
 
 exports.process = async function (app, dataset) {
   const path = require('path')
@@ -32,7 +32,7 @@ exports.process = async function (app, dataset) {
     debug('mode to file', exportedFile)
     await fs.move(tmpFile, exportedFile, { overwrite: true })
   } catch (err) {
-    prometheus.internalError.inc({ errorCode: 'rest-exporter' })
+    observe.internalError.inc({ errorCode: 'rest-exporter' })
     console.error('(rest-exporter) failure in rest exporter', err)
     patch.exports.restToCSV.lastExport.error = err.message
   }

@@ -323,7 +323,7 @@ module.exports = {
   remoteFilesAutoUpdates: {
     cron: '0 23 * * 0'
   },
-  prometheus: {
+  observe: {
     active: true,
     port: 9090
   },

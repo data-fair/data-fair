@@ -5,7 +5,7 @@ const dbUtils = require('./utils/db')
 const esUtils = require('./utils/es')
 const wsUtils = require('./utils/ws')
 const locksUtils = require('./utils/locks')
-const prometheus = require('./utils/prometheus')
+const observe = require('./utils/observe')
 const asyncWrap = require('./utils/async-wrap')
 const sanitizeHtml = require('../shared/sanitize-html')
 const debugDomain = require('debug')('domain')
@@ -114,7 +114,7 @@ if (config.mode.includes('server')) {
     const settings = await memoizedGetPublicationSiteSettings(publicationSiteUrl, mainDomain && req.query.publicationSites, req.app.get('db'))
     if (!settings && !mainDomain) {
       console.error('(publication-site-unknown) no publication site is associated to URL ' + publicationSiteUrl)
-      prometheus.internalError.inc({ errorCode: 'publication-site-unknown' })
+      observe.internalError.inc({ errorCode: 'publication-site-unknown' })
       return res.status(404).send('publication site unknown')
     }
     if (settings) {
@@ -159,7 +159,6 @@ if (config.mode.includes('server')) {
   app.use('/api/v1/identities', require('./routers/identities'))
   app.use('/api/v1/activity', require('./routers/activity'))
   app.use('/api/v1/limits', limits.router)
-  app.use('/api/v1/inspector', require('./utils/inspect').router)
 
   app.use('/api/', (req, res) => {
     return res.status(404).send('unknown api endpoint')
@@ -187,7 +186,7 @@ if (config.mode.includes('server')) {
     const status = err.statusCode || err.status || 500
     if (status === 500) {
       console.error('(http) Error in express route', req.originalUrl, err)
-      prometheus.internalError.inc({ errorCode: 'http' })
+      observe.internalError.inc({ errorCode: 'http' })
     }
     err.message = err.message?.replace('[noretry] ', '')
     if (!res.headersSent) {
@@ -293,8 +292,8 @@ exports.run = async () => {
       datasetUtils.mergeDraft(resource)
     }
     await require('./workers').tasks[process.argv[2]].process(app, resource)
-  } else if (config.prometheus.active) {
-    await prometheus.start(db)
+  } else if (config.observe.active) {
+    await observe.start(db)
   }
 
   return app
@@ -314,8 +313,8 @@ exports.stop = async () => {
 
   await locksUtils.stop(app.get('db'))
 
-  if (config.mode !== 'task' && config.prometheus.active) {
-    await prometheus.stop()
+  if (config.mode !== 'task' && config.observe.active) {
+    await observe.stop()
   }
 
   // this timeout is because we can have a few small pending operations after worker and server were closed

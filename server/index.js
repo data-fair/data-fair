@@ -1,6 +1,6 @@
 
 const config = require('config')
-const prometheus = require('./utils/prometheus')
+const observe = require('./utils/observe')
 const app = require('./app')
 
 app.run().then(app => {
@@ -23,10 +23,10 @@ app.run().then(app => {
     } catch (err2) {
       console.debug(err2)
     }
-    prometheus.internalError.inc({ errorCode: 'task-process' })
+    observe.internalError.inc({ errorCode: 'task-process' })
     console.error(err.message)
   } else {
-    prometheus.internalError.inc({ errorCode: 'df-process' })
+    observe.internalError.inc({ errorCode: 'df-process' })
     console.error('Failure in data-fair process', err)
   }
   process.exit(-1)
@@ -38,7 +38,7 @@ process.on('SIGTERM', function onSigterm () {
     console.log('shutting down now')
     process.exit()
   }, err => {
-    prometheus.internalError.inc({ errorCode: 'stop-process' })
+    observe.internalError.inc({ errorCode: 'stop-process' })
     console.error('Failure while stopping service', err)
     process.exit(-1)
   })

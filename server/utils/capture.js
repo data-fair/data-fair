@@ -7,7 +7,7 @@ const pump = require('../utils/pipe')
 const rateLimiting = require('../utils/rate-limiting')
 const debug = require('debug')('capture')
 const permissionsUtils = require('./permissions')
-const prometheus = require('./prometheus')
+const observe = require('./observe')
 
 const captureUrl = config.privateCaptureUrl || config.captureUrl
 
@@ -102,7 +102,7 @@ exports.screenshot = async (req, res) => {
     } catch (err) {
       // catch err locally as this method is called without waiting for result
       console.warn(`(app-thumbnail) failed to capture screenshot for application ${req.application.id}`, err)
-      prometheus.internalError.inc({ errorCode: 'app-thumbnail' })
+      observe.internalError.inc({ errorCode: 'app-thumbnail' })
 
       // In case of error do not keep corrupted or empty file
       await fs.remove(capturePath)

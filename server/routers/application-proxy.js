@@ -13,7 +13,7 @@ const asyncWrap = require('../utils/async-wrap')
 const findUtils = require('../utils/find')
 const permissions = require('../utils/permissions')
 const serviceWorkers = require('../utils/service-workers')
-const prometheus = require('../utils/prometheus')
+const observe = require('../utils/observe')
 const router = module.exports = express.Router()
 // const debug = require('debug')('application-proxy')
 const vIframeVersion = require('../../node_modules/@koumoul/v-iframe/package.json').version
@@ -118,7 +118,7 @@ const fetchHTML = async (cleanApplicationUrl, targetUrl) => {
       return res.data
     }
   } catch (err) {
-    prometheus.internalError.inc({ errorCode: 'app-fetch' })
+    observe.internalError.inc({ errorCode: 'app-fetch' })
     console.error('(app-fetch) failure to fetch HTML from application', err)
     if (cacheEntry) return cacheEntry.content
     throw err

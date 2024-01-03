@@ -4,7 +4,7 @@ const { Socket } = require('node:net')
 const createError = require('http-errors')
 const { PromiseSocket } = require('promise-socket')
 const asyncWrap = require('./async-wrap')
-const prometheus = require('./prometheus')
+const observe = require('./observe')
 const debug = require('debug')('clamav')
 
 // TODO: use a socket pool ? use clamd sessions ?
@@ -33,7 +33,7 @@ exports.middleware = asyncWrap(async (req, res, next) => {
     if (result.endsWith('OK')) continue
     if (result.endsWith('ERROR')) throw createError('failure while applying antivirus ' + result.slice(0, -6))
     if (result.endsWith('FOUND')) {
-      prometheus.infectedFiles.inc()
+      observe.infectedFiles.inc()
       console.warn('[infected-file] a user attempted to upload an infected file', result, req.user, file)
       throw createError(400, 'malicious file detected')
     }

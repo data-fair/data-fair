@@ -6,7 +6,7 @@ const truncateMiddle = require('truncate-middle')
 const flatten = require('flat')
 const datasetUtils = require('../dataset')
 const geoUtils = require('../geo')
-const prometheus = require('../prometheus')
+const observe = require('../observe')
 const randomSeed = require('random-seed')
 const { nanoid } = require('nanoid')
 
@@ -87,7 +87,7 @@ class IndexStream extends Transform {
           // refresh can take some time on large datasets, try one more time
           return new Promise(resolve => setTimeout(resolve, 30000)).finally(() => {
             return this.options.esClient.indices.refresh({ index: this.options.indexName }).catch(err => {
-              prometheus.internalError.inc({ errorCode: 'es-refresh-index' })
+              observe.internalError.inc({ errorCode: 'es-refresh-index' })
               console.error('(es-refresh-index) Failure while refreshing index after indexing', err)
               throw new Error('Échec pendant le rafraichissement de la donnée après indexation.')
             })
@@ -134,7 +134,7 @@ class IndexStream extends Transform {
       this.body = []
       this.bulkChars = 0
     } catch (err) {
-      prometheus.internalError.inc({ errorCode: 'es-bulk-index' })
+      observe.internalError.inc({ errorCode: 'es-bulk-index' })
       console.error(`(es-bulk-index) Failure while sending bulk request for indexing: index=${this.options.indexName}, bulkChars=${sentBulkChars}, nbLines=${bodyClone.length / 2}`, err)
       throw new Error('Échec pendant l\'indexation d\'un paquet de données.')
     }

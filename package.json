@@ -194,7 +194,7 @@
     "parse5": "^7.1.2",
     "piscina": "^3.2.0",
     "proj4": "^2.7.2",
-    "prom-client": "^14.0.1",
+    "prom-client": "^15.1.0",
     "promise-socket": "^7.0.0",
     "pump": "^3.0.0",
     "random-seed": "^0.3.0",

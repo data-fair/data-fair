@@ -259,12 +259,12 @@ module.exports = {
     locales: 'I18N_LOCALES',
     defaultLocale: 'I18N_DEFAULT_LOCALE'
   },
-  prometheus: {
+  observe: {
     active: {
-      __name: 'PROMETHEUS_ACTIVE',
+      __name: 'OBSERVE_ACTIVE',
       __format: 'json'
     },
-    port: 'PROMETHEUS_PORT'
+    port: 'OBSERVE_PORT'
   },
   agentkeepaliveOptions: {
     __name: 'AGENTKEEPALIVE_OPTIONS',

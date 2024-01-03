@@ -4,6 +4,7 @@
 // /metrics serves container/process/pod specific metrics while /global-metrics
 // serves metrics for the whole data-fair installation no matter the scaling
 
+const { hostname } = require('node:os')
 const config = require('config')
 const express = require('express')
 const client = require('prom-client')
@@ -13,6 +14,8 @@ const asyncWrap = require('./async-wrap')
 
 const localRegister = new client.Registry()
 const globalRegister = new client.Registry()
+
+client.collectDefaultMetrics({ register: localRegister })
 
 // metrics server
 const app = express()
@@ -26,6 +29,26 @@ app.get('/metrics', asyncWrap(async (req, res) => {
 app.get('/global-metrics', asyncWrap(async (req, res) => {
   res.set('Content-Type', globalRegister.contentType)
   res.send(await globalRegister.metrics())
+}))
+
+// live CPU performance inspection
+exports.getCPUProfile = async (duration = 2000) => {
+  const { Session } = require('node:inspector/promises')
+  const session = new Session()
+  session.connect()
+  await session.post('Profiler.enable')
+  await session.post('Profiler.start')
+  await new Promise(resolve => setTimeout(resolve, duration))
+  const { profile } = await session.post('Profiler.stop')
+  session.disconnect()
+  return profile
+}
+
+app.get('/cpu-profile', asyncWrap(async (req, res, next) => {
+  const duration = req.query.duration ? parseInt(req.query.duration) : 2000
+  const profile = await exports.getCPUProfile(duration)
+  res.set('Content-Disposition', `attachment; filename="data-fair-${hostname}-${new Date().toISOString()}.cpuprofile"`)
+  res.send(profile)
 }))
 
 // local metrics incremented throughout the code
@@ -75,9 +98,9 @@ exports.start = async (db) => {
     }
   })
 
-  server.listen(config.prometheus.port)
+  server.listen(config.observe.port)
   await eventToPromise(server, 'listening')
-  console.log('Prometheus metrics server listening on http://localhost:' + config.prometheus.port)
+  console.log('Observe server listening on http://localhost:' + config.observe.port)
 }
 
 exports.stop = async () => {

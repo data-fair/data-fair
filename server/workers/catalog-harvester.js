@@ -1,4 +1,4 @@
-const prometheus = require('../utils/prometheus')
+const observe = require('../utils/observe')
 
 exports.process = async function (app, catalog) {
   const config = require('config')
@@ -15,7 +15,7 @@ exports.process = async function (app, catalog) {
   try {
     await catalogs.updateAllHarvestedDatasets(app, catalog)
   } catch (err) {
-    prometheus.internalError.inc({ errorCode: 'catalog-harvester' })
+    observe.internalError.inc({ errorCode: 'catalog-harvester' })
     console.error('(rest-exporter) failure in rest exporter', err)
     patch.autoUpdate.lastUpdate.error = err.message
   }

@@ -24,7 +24,7 @@ const vocabulary = require('../../contract/vocabulary')
 const limits = require('./limits')
 const esUtils = require('./es')
 const locks = require('./locks')
-const prometheus = require('./prometheus')
+const observe = require('./observe')
 const webhooks = require('./webhooks')
 const journals = require('./journals')
 const settingsUtils = require('./settings')
@@ -770,7 +770,7 @@ exports.insertWithId = async (db, dataset, res) => {
     if (res) {
       res.on('close', () => {
         locks.release(db, idLockKey).catch(err => {
-          prometheus.internalError.inc({ errorCode: 'dataset-lock-id' })
+          observe.internalError.inc({ errorCode: 'dataset-lock-id' })
           console.error('(dataset-lock-id) failure to release dataset lock on id', err)
         })
       })
@@ -785,7 +785,7 @@ exports.insertWithId = async (db, dataset, res) => {
         if (res) {
           res.on('close', () => {
             locks.release(db, slugLockKey).catch(err => {
-              prometheus.internalError.inc({ errorCode: 'dataset-lock-slug' })
+              observe.internalError.inc({ errorCode: 'dataset-lock-slug' })
               console.error('(dataset-lock-slug) failure to release dataset lock on slug', err)
             })
           })

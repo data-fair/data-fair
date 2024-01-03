@@ -1,4 +1,4 @@
-const prometheus = require('../utils/prometheus')
+const observe = require('../utils/observe')
 const journals = require('../utils/journals')
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
@@ -37,7 +37,7 @@ exports.process = async function (app, dataset) {
     try {
       indexName = await es.initDatasetIndex(esClient, dataset)
     } catch (err) {
-      prometheus.internalError.inc({ errorCode: 'es-init-index' })
+      observe.internalError.inc({ errorCode: 'es-init-index' })
       console.error('(es-init-index) elasticsearch init index error', err)
       const message = es.errorMessage(err)
       throw new Error(message)
