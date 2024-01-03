@@ -42,21 +42,44 @@
               :min-height="390"
               :svg="creativeSvg"
               svg-no-margin
-              :section="sections.find(s => s.id === 'config')"
+              :section="sections.find(s => s.id === 'render')"
             >
               <template #tabs>
-                <v-tab href="#config-config">
-                  <v-icon>mdi-pencil</v-icon>&nbsp;&nbsp;{{ $t('edit') }}
+                <v-tab href="#render-config">
+                  <v-icon>mdi-square-edit-outline</v-icon>&nbsp;&nbsp;{{ $t('config') }}
                 </v-tab>
               </template>
               <template #tabs-items>
-                <v-tab-item value="config-config">
-                  <v-container
-                    fluid
-                    class="pa-0"
+                <v-tab-item value="render-config">
+                  <v-alert
+                    v-if="!!application.errorMessage"
+                    type="error"
+                    border="left"
                   >
-                    <application-config />
-                  </v-container>
+                    <p v-html="$t('validatedError')" />
+                    <p
+                      class="mb-0"
+                      v-html="application.errorMessage"
+                    />
+                  </v-alert>
+                  <v-btn
+                    v-if="can('writeConfig')"
+                    :to="'/application/' + application.id + '/config'"
+                    color="primary"
+                    class="mt-2 mb-4"
+                  >
+                    {{ $t('editConfig') }}
+                  </v-btn>
+                  <v-card
+                    light
+                    class="pa-0"
+                    outlined
+                    tile
+                  >
+                    <v-iframe
+                      :src="applicationLink + '?embed=true'"
+                    />
+                  </v-card>
                 </v-tab-item>
               </template>
             </layout-section-tabs>
@@ -197,8 +220,11 @@ fr:
   journal: Journal
   applications: applications
   metadata: Métadonnées
-  config: Configuration
+  render: Rendu
   share: Partage
+  config: Configuration
+  editConfig: Éditer la configuration
+  validatedError: Erreur dans la <b>version validée</b>
 en:
   info: Information
   tutorialConfigMeta: You can configure topics in the parameters.
@@ -212,14 +238,22 @@ en:
   journal: Journal
   applications: applications
   metadata: Metadata
-  config: Configuration
+  render: Render
   share: Share
+  config: Configuration
+  editConfig: Edit configuration
+  validatedError: Error in the <b>validated version</b>
 </i18n>
 
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex'
+import 'iframe-resizer/js/iframeResizer'
+import VIframe from '@koumoul/v-iframe'
 
 export default {
+  components: {
+    VIframe
+  },
   middleware: ['auth-required'],
   data: () => ({
     checklistSvg: require('~/assets/svg/Checklist_Two Color.svg?raw'),
@@ -228,7 +262,9 @@ export default {
     settingsSvg: require('~/assets/svg/Settings_Monochromatic.svg?raw')
   }),
   async fetch ({ store, params, route }) {
-    store.dispatch('application/clear')
+    if (store.state.application?.applicationId !== route.params.id) {
+      store.dispatch('application/clear')
+    }
     await store.dispatch('application/setId', route.params.id)
     if (store.state.application.application) {
       try {
@@ -250,7 +286,7 @@ export default {
       const sections = []
       if (!this.application) return sections
       sections.push({ title: this.$t('metadata'), id: 'metadata' })
-      sections.push({ title: this.$t('config'), id: 'config' })
+      sections.push({ title: this.$t('render'), id: 'render' })
       if (!this.env.disableSharing) {
         sections.push({ title: this.$t('share'), id: 'share' })
       }
@@ -262,8 +298,6 @@ export default {
   },
   created () {
     // children pages are deprecated
-    const path = `/application/${this.$route.params.id}`
-    if (this.$route.path !== path) return this.$router.push(path)
     if (this.application) {
       this.$store.dispatch('breadcrumbs', [{ text: this.$t('applications'), to: '/applications' }, { text: this.application.title || this.application.id }])
       this.subscribe()

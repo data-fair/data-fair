@@ -8,7 +8,6 @@
     :text="notification.type === 'default'"
     class="notification"
     tile
-    right
     bottom
     :outlined="$vuetify.theme.dark"
   >

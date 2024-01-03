@@ -21,7 +21,10 @@
         :class="{'text-h5': true, 'admin--text': admin}"
         @click="toggle"
       >
-        <slot name="title">
+        <slot
+          name="title"
+          :title="section.title"
+        >
           {{ section.title }}
         </slot>
       </v-toolbar-title>

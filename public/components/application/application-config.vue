@@ -1,93 +1,95 @@
 <template lang="html">
-  <v-container fluid>
-    <v-alert
-      v-if="!!application.errorMessage"
-      type="error"
-      border="left"
-    >
-      <p v-html="$t('validatedError')" />
-      <p
-        class="mb-0"
-        v-html="application.errorMessage"
-      />
-    </v-alert>
+  <v-container :fluid="$vuetify.breakpoint.lgAndDown">
     <no-ssr>
       <v-row>
         <v-col
-          cols="12"
-          sm="6"
-          md="5"
-          xl="4"
+          cols="6"
+          md="7"
+          lg="8"
+          class="pa-0"
         >
-          <v-select
-            v-model="editUrl"
-            :disabled="!can('writeConfig')"
-            :loading="!availableVersions"
-            :items="availableVersions"
-            :item-text="(baseApp => `${baseApp.title} (${baseApp.version})`)"
-            item-value="url"
-            :label="$t('changeVersion')"
-            @change="saveUrlDraft"
-          />
+          <v-col>
+            <v-alert
+              v-if="!!application.errorMessageDraft"
+              type="error"
+              border="left"
+              outlined
+            >
+              <p
+                class="mb-0"
+                v-html="application.errorMessageDraft"
+              />
+            </v-alert>
+            <v-sheet
+              v-else
+              light
+              class="pa-2"
+              outlined
+              tile
+              :style="`max-height:${windowHeight - 74}px;overflow-y:auto;`"
+            >
+              <v-iframe
+                v-if="showDraftPreview"
+                :aspect-ratio="4/3"
+                :src="applicationLink + '?embed=true&draft=true'"
+              />
+            </v-sheet>
+          </v-col>
+        </v-col>
+        <v-col
+          cols="6"
+          md="5"
+          lg="4"
+          class="pa-0"
+        >
           <v-form
             v-if="draftSchema && editConfig"
             ref="configForm"
             v-model="formValid"
             @submit="validateDraft"
           >
-            <lazy-v-jsf
-              v-model="editConfig"
-              :schema="draftSchema"
-              :options="vjsfOptions"
-              @change="saveDraft"
-            />
-            <v-row class="mt-3 mb-0">
-              <v-spacer />
-              <v-btn
-                v-t="'validate'"
-                :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
-                color="accent"
-                type="submit"
+            <v-sheet
+              light
+              class="pa-2"
+              :style="`max-height:${windowHeight - 110}px;overflow-y:auto;scrollbar-gutter: stable;`"
+            >
+              <v-select
+                v-model="editUrl"
+                :disabled="!can('writeConfig')"
+                :loading="!availableVersions"
+                :items="availableVersions"
+                :item-text="(baseApp => `${baseApp.title} (${baseApp.version})`)"
+                item-value="url"
+                :label="$t('changeVersion')"
+                @change="saveUrlDraft"
               />
+
+              <lazy-v-jsf
+                v-model="editConfig"
+                :schema="draftSchema"
+                :options="vjsfOptions"
+                @change="saveDraft"
+              />
+            </v-sheet>
+            <v-row class="mt-3 ml-0 mr-3">
+              <v-spacer />
               <v-btn
                 v-t="'cancel'"
                 :disabled="!hasDraft"
                 color="warning"
-                class="ml-2 mr-3"
+                depressed
                 @click="showCancelDialog = true"
               />
+              <v-btn
+                v-t="'validate'"
+                :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
+                color="accent"
+                class="ml-2"
+                type="submit"
+              />
+              <v-spacer />
             </v-row>
           </v-form>
-        </v-col>
-        <v-col
-          cols="12"
-          sm="6"
-          md="7"
-          xl="8"
-          class="pl-0"
-        >
-          <v-alert
-            v-if="!!application.errorMessageDraft"
-            type="error"
-            border="left"
-            outlined
-          >
-            <p
-              class="mb-0"
-              v-html="application.errorMessageDraft"
-            />
-          </v-alert>
-          <v-card
-            v-else
-            light
-            class="pa-0"
-            outlined
-          >
-            <v-iframe
-              v-if="showDraftPreview"
-              :src="applicationLink + '?embed=true&draft=true'"
-            />
-          </v-card>
         </v-col>
       </v-row>
 
@@ -128,7 +130,6 @@
 
 <i18n lang="yaml">
 fr:
-  validatedError: Erreur dans la <b>version validée</b>
   changeVersion: Changer de version
   validate: Valider
   cancel: Annuler
@@ -136,7 +137,6 @@ fr:
   removeDraft: Effacer le brouillon
   removeDraftWarning: Attention ! Le brouillon sera perdu et l'application reviendra à son état validé précédent.
 en:
-  validatedError: Error in the <b>validated version</b>
   changeVersion: Change version
   validate: Validate
   cancel: Cancel
