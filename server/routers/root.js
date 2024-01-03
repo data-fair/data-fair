@@ -18,7 +18,7 @@ let info = { version: process.env.NODE_ENV }
 try { info = require('../../BUILD.json') } catch (err) {}
 router.get('/info', (req, res) => {
   if (!req.user) return res.status(401).type('text/plain').send()
-  res.send(info)
+  res.json(info)
 })
 
 router.get('/status', (req, res, next) => {
@@ -33,7 +33,7 @@ router.get('/api-docs.json', (req, res) => {
 })
 
 router.get('/vocabulary', asyncWrap(async (req, res) => {
-  res.send(await settingsUtils.getFullOwnerVocabulary(req.app.get('db'), req.user && req.user.activeAccount, req.locale))
+  res.json(await settingsUtils.getFullOwnerVocabulary(req.app.get('db'), req.user && req.user.activeAccount, req.locale))
 }))
 
 router.get('/projections', (req, res) => {

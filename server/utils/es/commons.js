@@ -210,8 +210,9 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
   // Select fields to return
   const fields = dataset.schema.map(f => f.key)
   // do not include by default heavy calculated fields used for indexing geo data
-  const defaultFields = fields.filter(key => key !== '_geoshape' && key !== '_geocorners')
-  esQuery._source = (query.select && query.select !== '*') ? query.select.split(',') : defaultFields
+  esQuery._source = (query.select && query.select !== '*')
+    ? query.select.split(',')
+    : fields.filter(key => key !== '_geoshape' && key !== '_geocorners')
   const unknownField = esQuery._source.find(s => !fields.includes(s))
   if (unknownField) throw createError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données.`)
 
@@ -226,19 +227,19 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
   // Sort by list of fields (prefixed by - for descending sort)
   esQuery.sort = query.sort ? exports.parseSort(query.sort, fields, dataset) : []
   // implicitly sort by score after other criteria
-  if (!esQuery.sort.find(s => !!s._score) && query.q) esQuery.sort.push('_score')
+  if (!esQuery.sort.some(s => !!s._score) && query.q) esQuery.sort.push('_score')
   // if there is a geo_distance filter, apply a default _geo_distance sort
-  if ((query.geo_distance ?? query._c_geo_distance) && !esQuery.sort.find(s => !!s._geo_distance)) {
+  if ((query.geo_distance ?? query._c_geo_distance) && !esQuery.sort.some(s => !!s._geo_distance)) {
     const [lon, lat] = (query.geo_distance ?? query._c_geo_distance).split(/[,:]/)
     esQuery.sort.push({ _geo_distance: { _geopoint: { lon, lat }, order: 'asc' } })
   }
   // every other things equal, sort by original line order
   // this is very important as it provides a tie-breaker for search_after pagination
   if (fields.includes('_updatedAt')) {
-    if (!esQuery.sort.find(s => !!s._updatedAt)) esQuery.sort.push({ _updatedAt: 'desc' })
-    if (!esQuery.sort.find(s => !!s._i)) esQuery.sort.push({ _i: 'desc' })
+    if (!esQuery.sort.some(s => !!s._updatedAt)) esQuery.sort.push({ _updatedAt: 'desc' })
+    if (!esQuery.sort.some(s => !!s._i)) esQuery.sort.push({ _i: 'desc' })
   } else {
-    if (!esQuery.sort.find(s => !!s._i)) esQuery.sort.push('_i')
+    if (!esQuery.sort.some(s => !!s._i)) esQuery.sort.push('_i')
   }
 
   // Simple highlight management
@@ -272,97 +273,100 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
     filter.push({ term: { _owner: query.owner } })
   }
 
-  // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
-  // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
-  const searchFields = []
-  const wildcardFields = []
-  const qSearchFields = []
-  const qStandardFields = []
-  const qWildcardFields = []
   const q = query.q && query.q.trim()
 
-  for (const f of dataset.schema) {
-    if (f.key === '_id') {
-      searchFields.push('_id')
-      continue
-    }
+  if (q || query.qs) {
+    // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
+  // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
+    const searchFields = []
+    const wildcardFields = []
+    const qSearchFields = []
+    const qStandardFields = []
+    const qWildcardFields = []
 
-    const isQField = q && f.key !== '_id' && (!qFields || qFields.includes(f.key))
-    const esProp = exports.esProperty(f)
-    if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
-      searchFields.push(f.key)
-      if (isQField) qSearchFields.push(f.key)
-    }
-    if (esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) {
-      // automatic boost of some special properties well suited for full-text search
-      let suffix = ''
-      if (f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label') suffix = '^3'
-      if (f['x-refersTo'] === 'http://schema.org/description') suffix = '^2'
-      if (f['x-refersTo'] === 'https://schema.org/DefinedTermSet') suffix = '^2'
-
-      if (esProp.fields.text) {
-        searchFields.push(f.key + '.text' + suffix)
-        if (isQField) qSearchFields.push(f.key + '.text' + suffix)
+    for (const f of dataset.schema) {
+      if (f.key === '_id') {
+        searchFields.push('_id')
+        continue
       }
-      if (esProp.fields.text_standard) {
-        searchFields.push(f.key + '.text_standard' + suffix)
-        if (isQField) {
-          qSearchFields.push(f.key + '.text_standard' + suffix)
-          qStandardFields.push(f.key + '.text_standard' + suffix)
+
+      const isQField = q && f.key !== '_id' && (!qFields || qFields.includes(f.key))
+      const esProp = exports.esProperty(f)
+      if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
+        searchFields.push(f.key)
+        if (isQField) qSearchFields.push(f.key)
+      }
+      if (esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) {
+      // automatic boost of some special properties well suited for full-text search
+        let suffix = ''
+        if (f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label') suffix = '^3'
+        if (f['x-refersTo'] === 'http://schema.org/description') suffix = '^2'
+        if (f['x-refersTo'] === 'https://schema.org/DefinedTermSet') suffix = '^2'
+
+        if (esProp.fields.text) {
+          searchFields.push(f.key + '.text' + suffix)
+          if (isQField) qSearchFields.push(f.key + '.text' + suffix)
+        }
+        if (esProp.fields.text_standard) {
+          searchFields.push(f.key + '.text_standard' + suffix)
+          if (isQField) {
+            qSearchFields.push(f.key + '.text_standard' + suffix)
+            qStandardFields.push(f.key + '.text_standard' + suffix)
+          }
+        }
+        if (esProp.fields.wildcard) {
+          wildcardFields.push(f.key + '.wildcard')
+          if (isQField) qWildcardFields.push(f.key + '.wildcard')
         }
       }
-      if (esProp.fields.wildcard) {
-        wildcardFields.push(f.key + '.wildcard')
-        if (isQField) qWildcardFields.push(f.key + '.wildcard')
-      }
     }
-  }
-  if (query.qs) {
-    checkQuery(query.qs, dataset.schema)
-    const qs = { query_string: { query: query.qs, fields: searchFields } }
-    if (qsAsFilter) filter.push(qs)
-    else must.push(qs)
-  }
-  if (q) {
-    const qBool = { bool: { should: [], minimum_should_match: 1 } }
-    const qShould = qBool.bool.should
-    if (query.q_mode === 'complete') {
+    if (query.qs) {
+      checkQuery(query.qs, dataset.schema)
+      const qs = { query_string: { query: query.qs, fields: searchFields } }
+      if (qsAsFilter) filter.push(qs)
+      else must.push(qs)
+    }
+    if (q) {
+      const qBool = { bool: { should: [], minimum_should_match: 1 } }
+      const qShould = qBool.bool.should
+      if (query.q_mode === 'complete') {
       // "complete" mode, we try to accomodate for most cases and give the most intuitive results
       // to a search query where the user might be using a autocomplete type control
 
-      // if the user didn't define wildcards himself, we use wildcard to create a "startsWith" functionality
-      // this is performed on the innerfield that uses standard analysis, as language stemming doesn't work well in this case
-      // we also perform a contains filter if some wildcard functionnality is activate
-      if (!q.includes('*') && !q.includes('?')) {
-        if (qStandardFields.length) {
-          qShould.push({ simple_query_string: { query: `${q}*`, fields: qStandardFields, ...sqsOptions } })
+        // if the user didn't define wildcards himself, we use wildcard to create a "startsWith" functionality
+        // this is performed on the innerfield that uses standard analysis, as language stemming doesn't work well in this case
+        // we also perform a contains filter if some wildcard functionnality is activate
+        if (!q.includes('*') && !q.includes('?')) {
+          if (qStandardFields.length) {
+            qShould.push({ simple_query_string: { query: `${q}*`, fields: qStandardFields, ...sqsOptions } })
+          }
+          if (qWildcardFields.length) {
+            qShould.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
+          }
         }
-        if (qWildcardFields.length) {
-          qShould.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
+        // if the user submitted a multi word query and didn't use quotes
+        // we add some quotes to boost results with sequence of words
+        if (qSearchFields.length && q.includes(' ') && !q.includes('"')) {
+          qShould.push({ simple_query_string: { query: `"${q}"`, fields: qSearchFields, ...sqsOptions } })
         }
-      }
-      // if the user submitted a multi word query and didn't use quotes
-      // we add some quotes to boost results with sequence of words
-      if (qSearchFields.length && q.includes(' ') && !q.includes('"')) {
-        qShould.push({ simple_query_string: { query: `"${q}"`, fields: qSearchFields, ...sqsOptions } })
-      }
-      if (qSearchFields.length) {
-        qShould.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
-      }
-    } else {
+        if (qSearchFields.length) {
+          qShould.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
+        }
+      } else {
       // default "simple" mode uses ES simple query string directly
       // only tuning is that we match both on stemmed and raw inner fields to boost exact matches
-      if (qSearchFields.length) {
-        qShould.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
+        if (qSearchFields.length) {
+          qShould.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
+        }
+        if (qStandardFields.length) {
+          qShould.push({ simple_query_string: { query: q, fields: qStandardFields, ...sqsOptions } })
+        }
       }
-      if (qStandardFields.length) {
-        qShould.push({ simple_query_string: { query: q, fields: qStandardFields, ...sqsOptions } })
-      }
+      must.push(qBool)
     }
-    must.push(qBool)
   }
   for (const key of Object.keys(query)) {
-    if (!['_in', '_eq', '_gt', '_lt', '_gte', '_lte'].find(suffix => key.endsWith(suffix))) continue
+    if (!['_in', '_eq', '_gt', '_lt', '_gte', '_lte'].some(suffix => key.endsWith(suffix))) continue
     let prop
     if (key.startsWith('_c_')) {
       const conceptId = key.slice(3, key.length - 3)
