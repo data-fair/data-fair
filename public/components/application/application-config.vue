@@ -130,7 +130,6 @@
 
 <i18n lang="yaml">
 fr:
-  validatedError: Erreur dans la <b>version validée</b>
   changeVersion: Changer de version
   validate: Valider
   cancel: Annuler
@@ -138,7 +137,6 @@ fr:
   removeDraft: Effacer le brouillon
   removeDraftWarning: Attention ! Le brouillon sera perdu et l'application reviendra à son état validé précédent.
 en:
-  validatedError: Error in the <b>validated version</b>
   changeVersion: Change version
   validate: Validate
   cancel: Cancel

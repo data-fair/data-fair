@@ -42,28 +42,15 @@
               :min-height="390"
               :svg="creativeSvg"
               svg-no-margin
-              default-tab="render-render"
               :section="sections.find(s => s.id === 'render')"
             >
-              <template #title="{title}">
-                {{ title }}
-                <v-btn
-                  v-if="can('writeConfig')"
-                  fab
-                  :to="'/application/' + application.id + '/config'"
-                  color="primary"
-                  :title="$t('editConfig')"
-                  class="ml-2"
-                  :elevation="0"
-                  small
-                >
-                  <v-icon>
-                    mdi-square-edit-outline
-                  </v-icon>
-                </v-btn>
+              <template #tabs>
+                <v-tab href="#render-config">
+                  <v-icon>mdi-square-edit-outline</v-icon>&nbsp;&nbsp;{{ $t('config') }}
+                </v-tab>
               </template>
               <template #tabs-items>
-                <v-tab-item value="render-render">
+                <v-tab-item value="render-config">
                   <v-alert
                     v-if="!!application.errorMessage"
                     type="error"
@@ -75,6 +62,14 @@
                       v-html="application.errorMessage"
                     />
                   </v-alert>
+                  <v-btn
+                    v-if="can('writeConfig')"
+                    :to="'/application/' + application.id + '/config'"
+                    color="primary"
+                    class="mt-2 mb-4"
+                  >
+                    {{ $t('editConfig') }}
+                  </v-btn>
                   <v-card
                     light
                     class="pa-0"
@@ -227,7 +222,9 @@ fr:
   metadata: Métadonnées
   render: Rendu
   share: Partage
+  config: Configuration
   editConfig: Éditer la configuration
+  validatedError: Erreur dans la <b>version validée</b>
 en:
   info: Information
   tutorialConfigMeta: You can configure topics in the parameters.
@@ -243,7 +240,9 @@ en:
   metadata: Metadata
   render: Render
   share: Share
+  config: Configuration
   editConfig: Edit configuration
+  validatedError: Error in the <b>validated version</b>
 </i18n>
 
 <script>
