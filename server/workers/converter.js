@@ -193,11 +193,13 @@ exports.process = async function (app, dataset) {
       mimetype: 'application/geo+json',
       encoding: 'utf-8'
     }
-  } else {
-    // TODO: throw error ?
   }
 
   await fs.remove(tmpDir)
+
+  if (!dataset.file) {
+    throw createError(400, `[noretry] Le format de ce fichier n'est pas supporté (${dataset.originalFile.mimetype}).`)
+  }
 
   dataset.status = 'loaded'
 

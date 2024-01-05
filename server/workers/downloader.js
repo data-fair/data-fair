@@ -82,8 +82,14 @@ exports.process = async function (app, dataset) {
   if (!fileName) {
     fileName = path.basename(new URL(dataset.remoteFile.url).pathname)
   }
-  const mimetype = dataset.remoteFile.mimetype ?? response.headers['content-type']?.split(';').shift() ?? mime.lookup(fileName)
+
   const parsedFileName = path.parse(fileName)
+  let mimetype = dataset.remoteFile.mimetype ?? response.headers['content-type']?.split(';').shift() ?? mime.lookup(fileName)
+
+  // sometimes geojson is served with simple json mime type, be tolerant, same for csv and text/plain
+  if (mimetype === 'application/json' && parsedFileName.ext === '.geojson') mimetype = 'application/geo+json'
+  if (mimetype === 'text/plain' && parsedFileName.ext === '.csv') mimetype = 'text/csv'
+
   if (!parsedFileName.ext || mime.lookup(fileName) !== mimetype) {
     fileName = parsedFileName.name + '.' + mime.extension(mimetype)
   }
