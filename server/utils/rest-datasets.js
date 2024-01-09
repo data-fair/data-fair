@@ -11,7 +11,6 @@ const { Readable, Transform, Writable } = require('stream')
 const moment = require('moment')
 const { crc32 } = require('crc')
 const stableStringify = require('fast-json-stable-stringify')
-const stripBom = require('strip-bom-stream')
 const LinkHeader = require('http-link-header')
 const unzipper = require('unzipper')
 const dayjs = require('dayjs')
@@ -512,7 +511,7 @@ exports.bulkLines = async (req, res, next) => {
 
   // The list of actions/operations/transactions is either in a "actions" file
   // or directly in the body
-  let inputStream, parseStreams
+  let inputStream, mimeType, skipDecoding
   const transactionSchema = [...req.dataset.schema, { key: '_id', type: 'string' }, { key: '_action', type: 'string' }]
   const fileProps = {
     fieldsDelimiter: req.query.sep || ',',
@@ -521,28 +520,32 @@ exports.bulkLines = async (req, res, next) => {
     newline: '\n'
   }
   if (req.files && req.files.actions && req.files.actions.length) {
-    let actionsMime = mime.lookup(req.files.actions[0].originalname)
+    mimeType = mime.lookup(req.files.actions[0].originalname) || 'application/x-ndjson'
 
     if (req.files.actions[0].mimetype === 'application/zip') {
       // handle .zip archive
       const directory = await unzipper.Open.file(req.files.actions[0].path)
       if (directory.files.length !== 1) return res.status(400).type('text/plain').send('only accept zip archive with a single file inside')
-      actionsMime = mime.lookup(directory.files[0].path)
+      mimeType = mime.lookup(directory.files[0].path)
       inputStream = directory.files[0].stream()
     } else {
       inputStream = fs.createReadStream(req.files.actions[0].path)
       // handle .csv.gz file or other .gz files
       if (req.files.actions[0].originalname.endsWith('.gz')) {
-        actionsMime = mime.lookup(req.files.actions[0].originalname.slice(0, -3))
-        if (actionsMime) actionsMime += '+gzip'
+        mimeType = mime.lookup(req.files.actions[0].originalname.slice(0, -3))
+        if (mimeType) mimeType += '+gzip'
       }
     }
-    parseStreams = datasetUtils.transformFileStreams(actionsMime || 'application/x-ndjson', transactionSchema, null, fileProps, false, true)
   } else {
     inputStream = req
-    const contentType = req.get('Content-Type') && req.get('Content-Type').split(';')[0]
-    parseStreams = datasetUtils.transformFileStreams(contentType || 'application/json', transactionSchema, null, fileProps, false, true)
+    skipDecoding = true
+    mimeType = (req.get('Content-Type') && req.get('Content-Type').split(';')[0]) || 'application/json'
   }
+
+  if (!mimeType) return res.status(400).type('text/plain').send('unknown file extension')
+
+  const parseStreams = datasetUtils.transformFileStreams(mimeType, transactionSchema, null, fileProps, false, true, null, skipDecoding)
+
   const summary = initSummary()
   const transactionStream = new TransactionStream({ req, validate, summary })
 
@@ -561,8 +564,6 @@ exports.bulkLines = async (req, res, next) => {
   try {
     await pump(
       inputStream,
-      stripBom(),
-      stripBom(), // double strip BOM because of badly formatted files from some clients
       ...parseStreams,
       transactionStream
     )

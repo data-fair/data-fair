@@ -1,10 +1,8 @@
 const fs = require('fs-extra')
 const path = require('path')
 const { Transform } = require('stream')
-const iconv = require('iconv-lite')
 const config = require('config')
 const csv = require('csv-parser')
-const stripBom = require('strip-bom-stream')
 const JSONStream = require('JSONStream')
 const dir = require('node-dir')
 const { Writable } = require('stream')
@@ -36,6 +34,7 @@ const { prepareThumbnailUrl } = require('./thumbnails')
 const { prepareMarkdownContent } = require('./markdown')
 const permissions = require('./permissions')
 const findUtils = require('./find')
+const DecodeStream = require('./decode-stream')
 
 const debugLimits = require('debug')('limits')
 
@@ -198,13 +197,16 @@ exports.dataFiles = async (dataset, publicBaseUrl = config.publicUrl) => {
 }
 
 // used both by exports.readStream and bulk transactions in rest datasets
-exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, dataset) => {
+exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, encoding, skipDecoding, dataset) => {
   const streams = []
 
   // file is gzipped
   if (mimeType.endsWith('+gzip')) {
     mimeType = mimeType.replace('+gzip', '')
     streams.push(createGunzip())
+    if (!skipDecoding) streams.push(new DecodeStream())
+  } else {
+    if (!skipDecoding) streams.push(new DecodeStream(encoding))
   }
   if (mimeType === 'application/x-ndjson' || mimeType === 'application/json') {
     streams.push(mimeTypeStream(mimeType).parser())
@@ -324,10 +326,7 @@ exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraft
       }
     }))
   }
-  streams.push(stripBom())
-  streams.push(stripBom()) // double strip BOM because of badly formatted files from some clients
-  if (!full) streams.push(iconv.decodeStream(dataset.file.encoding))
-  streams = streams.concat(exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, false, dataset))
+  streams = streams.concat(exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, false, full ? 'UTF-8' : dataset.file.encoding, false, dataset))
 
   // manage interruption in case of draft mode
   const limit = (dataset.draftReason && !ignoreDraftLimit) ? 100 : -1

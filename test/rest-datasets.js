@@ -5,6 +5,7 @@ const moment = require('moment')
 const zlib = require('zlib')
 const assert = require('assert').strict
 const { Writable } = require('stream')
+const iconv = require('iconv-lite')
 const pump = require('util').promisify(require('pump'))
 
 const testUtils = require('./resources/test-utils')
@@ -764,7 +765,7 @@ describe('REST datasets', () => {
     assert.equal(await collection.countDocuments({}), 0)
   })
 
-  it('Send bulk actions as a CSV', async () => {
+  it('Send bulk actions as a CSV body', async () => {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
@@ -898,6 +899,56 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     assert.equal(lines[0].attr1, 'test1')
     assert.equal(lines[1]._id, 'line2')
     assert.equal(lines[1].attr1, 'test1')
+  })
+
+  it('Send bulk as a .csv file', async () => {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets/restcsvfile', {
+      isRest: true,
+      title: 'restcsvfile',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+    })
+    let dataset = await workers.hook('finalizer/restcsvfile')
+
+    // Create a line with an attached file
+    const form = new FormData()
+    form.append('actions', `_id,attr1,attr2
+    line1,test1,test1
+    line2,test1,test1`, 'actions.csv')
+    await ax.post('/api/v1/datasets/restcsvfile/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
+    dataset = await workers.hook('finalizer/restcsvfile')
+    assert.equal(dataset.count, 2)
+    const lines = (await ax.get('/api/v1/datasets/restcsvfile/lines', { params: { sort: '_i' } })).data.results
+    assert.equal(lines[0]._id, 'line1')
+    assert.equal(lines[0].attr1, 'test1')
+    assert.equal(lines[1]._id, 'line2')
+    assert.equal(lines[1].attr1, 'test1')
+  })
+
+  it('Send bulk as a .csv file with other encoding', async () => {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets/restcsvfile', {
+      isRest: true,
+      title: 'restcsvfile',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'testé2', type: 'string' }]
+    })
+    let dataset = await workers.hook('finalizer/restcsvfile')
+
+    // Create a line with an attached file
+    const form = new FormData()
+    form.append('actions', iconv.encode(`_id,attr1,testé2
+    line1,test1,testé1
+    line2,test1,testé1`, 'ISO-8859-1'), 'actions.csv')
+    await ax.post('/api/v1/datasets/restcsvfile/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
+    dataset = await workers.hook('finalizer/restcsvfile')
+    assert.equal(dataset.count, 2)
+    const lines = (await ax.get('/api/v1/datasets/restcsvfile/lines', { params: { sort: '_i' } })).data.results
+    assert.equal(lines[0]._id, 'line1')
+    assert.equal(lines[0].attr1, 'test1')
+    assert.equal(lines[0].testé2, 'testé1')
+    assert.equal(lines[1]._id, 'line2')
+    assert.equal(lines[1].attr1, 'test1')
+    assert.equal(lines[1].testé2, 'testé1')
   })
 
   it('Send bulk as a .csv.gz file', async () => {
