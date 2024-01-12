@@ -6,7 +6,7 @@ const asyncWrap = require('../utils/async-wrap')
 const clamav = require('../utils/clamav')
 
 async function mongoStatus (req) {
-  await req.app.get('db').admin().serverStatus()
+  await req.app.get('db').command({ ping: 1 })
 }
 
 async function esStatus (req) {
