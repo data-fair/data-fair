@@ -13,6 +13,7 @@ describe('thumbnails', () => {
     let res = await ax.post('/api/v1/datasets/thumbnails1', {
       isRest: true,
       title: 'thumbnails1',
+      attachmentsAsImage: true,
       schema: [{ key: 'desc', type: 'string' }, { key: 'imageUrl', type: 'string', 'x-refersTo': 'http://schema.org/image' }]
     })
     await workers.hook('finalizer/thumbnails1')
