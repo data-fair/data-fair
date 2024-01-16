@@ -78,6 +78,23 @@ module.exports = (dataset, publicUrl = config.publicUrl, ownerInfo, publicationS
     }
   }, {
     in: 'query',
+    name: 'q_fields',
+    description: `
+  Ce paramètre permet de spécifier les colonnes sur lesquelles appliquer le paramètre "q".
+
+  Par défaut toutes les colonnes supportant une recherche textuelle sont utilisées.
+    `,
+    schema: {
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: textSearchProperties.length ? textSearchProperties.map(p => p.key) : undefined
+      }
+    },
+    style: 'form',
+    explode: false
+  }, {
+    in: 'query',
     name: 'qs',
     description: `
 Colonne de filtre et recherche textuelle avancée. Ce paramètre permet d'effectuer des requêtes complexes sur la source de données. Vous pouvez spécifier des filtres par colonne, créer des combinaisons logiques à volonté, etc.

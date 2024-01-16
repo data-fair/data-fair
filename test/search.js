@@ -27,6 +27,11 @@ describe('search', () => {
     // Filter on text field with default french stemming
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?q=lacté`)
     assert.equal(res.data.total, 1)
+    // Filter using q_fields to specify fields to search on
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?q=lacté&q_fields=adr`)
+    assert.equal(res.data.total, 1)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?q=lacté&q_fields=id`)
+    assert.equal(res.data.total, 0)
     // filter on exact values with query params suffixed with _in
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_in=koumoul,test`)
     assert.equal(res.data.total, 1)

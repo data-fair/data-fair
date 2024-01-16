@@ -192,6 +192,7 @@ function checkQuery (query, schema, esFields, currentField) {
 
 exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) => {
   const esQuery = {}
+  qFields = qFields || (query.q_fields && query.q_fields.split(','))
 
   // Valid "total" value
   // TODO: make it optional for perf on large queries ?
