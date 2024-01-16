@@ -13,7 +13,12 @@ const matchingHost = (req) => {
 module.exports = asyncWrap(async (req, res, next) => {
   const referer = req.headers.referer || req.headers.referrer
   if (!referer) return next()
-  const refererUrl = new URL(referer)
+  let refererUrl
+  try {
+    refererUrl = new URL(referer)
+  } catch (err) {
+    // invalid URL in referer header, it happens
+  }
   if (!refererUrl) return next()
   if (!refererUrl.pathname.startsWith('/data-fair/app/')) return next()
   const appId = decodeURIComponent(refererUrl.pathname.replace('/data-fair/app/', '').split('/')[0])
