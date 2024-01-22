@@ -1218,6 +1218,7 @@ async function manageESError (req, err) {
 const readLines = asyncWrap(async (req, res) => {
   observe.reqStep(req, 'middlewares')
   const db = req.app.get('db')
+  res.throttleEnd()
 
   // used later to count items in a tile or tile's neighbor
   async function countWithCache (query) {
@@ -1274,7 +1275,7 @@ const readLines = asyncWrap(async (req, res) => {
       finalizedAt: req.dataset.finalizedAt,
       query: req.query
     })
-    observe.reqStep(req, 'checkCache')
+    observe.reqStep(req, 'checkTileCache')
     if (value) {
       res.type('application/x-protobuf')
       res.setHeader('x-tilesmode', 'cache')
@@ -1364,7 +1365,6 @@ const readLines = asyncWrap(async (req, res) => {
     geojson.bbox = (await esUtils.bboxAgg(req.app.get('es'), req.dataset, { ...req.query })).bbox
     observe.reqStep(req, 'bboxAgg')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.geojson"`)
-    res.throttleEnd()
     return res.status(200).send(geojson)
   }
 
@@ -1372,7 +1372,6 @@ const readLines = asyncWrap(async (req, res) => {
     const wkt = geo.result2wkt(esResponse)
     observe.reqStep(req, 'result2wkt')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.wkt"`)
-    res.throttleEnd()
     return res.status(200).send(wkt)
   }
 
@@ -1384,7 +1383,6 @@ const readLines = asyncWrap(async (req, res) => {
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
     if (!config.cache.disabled) cache.set(db, cacheHash, new mongodb.Binary(tile))
-    res.throttleEnd()
     return res.status(200).send(tile)
   }
 
@@ -1398,7 +1396,6 @@ const readLines = asyncWrap(async (req, res) => {
   observe.reqStep(req, 'prepareResultItems')
 
   if (req.query.format === 'csv') {
-    res.throttleEnd()
     const csv = outputs.results2csv(req, result.results)
     observe.reqStep(req, 'results2csv')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.csv"`)
@@ -1406,23 +1403,20 @@ const readLines = asyncWrap(async (req, res) => {
   }
 
   if (req.query.format === 'xlsx') {
-    res.throttleEnd()
     JSON.stringify(result.results)
     observe.reqStep(req, 'stringify')
-    const sheet = outputs.results2sheet(req, result.results)
+    const sheet = await outputs.results2sheet(req, result.results)
     observe.reqStep(req, 'results2xlsx')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.xlsx"`)
     return res.status(200).send(sheet)
   }
   if (req.query.format === 'ods') {
-    res.throttleEnd()
-    const sheet = outputs.results2sheet(req, result.results, 'ods')
+    const sheet = await outputs.results2sheet(req, result.results, 'ods')
     observe.reqStep(req, 'results2ods')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.ods"`)
     return res.status(200).send(sheet)
   }
 
-  res.throttleEnd()
   res.status(200).send(result)
 })
 router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middleware('readLines', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), readLines)
