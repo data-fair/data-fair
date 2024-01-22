@@ -1230,6 +1230,7 @@ async function countWithCache (req, db, query) {
 
 // Read/search data for a dataset
 const readLines = asyncWrap(async (req, res) => {
+  observe.reqRouteName(req, `${req.route.path}?format=${req.query.format || 'json'}`)
   observe.reqStep(req, 'middlewares')
   const db = req.app.get('db')
   res.throttleEnd()

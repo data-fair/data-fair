@@ -127,7 +127,7 @@ exports.observeReqMiddleware = (req, res, next) => {
   next()
 }
 
-exports.routeName = (req, routeName) => {
+exports.reqRouteName = (req, routeName) => {
   req[reqObserveKey].routeName = routeName
 }
 
