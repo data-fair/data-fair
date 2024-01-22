@@ -28,7 +28,7 @@ const csvStringifyOptions = (dataset, query = {}) => {
   }
 }
 
-const sliceSize = 500
+const sliceSize = 200
 
 exports.results2csv = async (req, results) => {
   // add BOM for excel, cf https://stackoverflow.com/a/17879474

@@ -1214,25 +1214,25 @@ async function manageESError (req, err) {
   throw createError(status, message)
 }
 
+// used later to count items in a tile or tile's neighbor
+async function countWithCache (req, db, query) {
+  const { hash, value } = await cache.get(db, {
+    type: 'tile-count',
+    datasetId: req.dataset.id,
+    finalizedAt: req.dataset.finalizedAt,
+    query
+  })
+  if (!config.cache.disabled && value !== null) return value
+  const newValue = await esUtils.count(req.app.get('es'), req.dataset, query)
+  cache.set(db, hash, newValue)
+  return newValue
+}
+
 // Read/search data for a dataset
 const readLines = asyncWrap(async (req, res) => {
   observe.reqStep(req, 'middlewares')
   const db = req.app.get('db')
   res.throttleEnd()
-
-  // used later to count items in a tile or tile's neighbor
-  async function countWithCache (query) {
-    const { hash, value } = await cache.get(db, {
-      type: 'tile-count',
-      datasetId: req.dataset.id,
-      finalizedAt: req.dataset.finalizedAt,
-      query
-    })
-    if (!config.cache.disabled && value !== null) return value
-    const newValue = await esUtils.count(req.app.get('es'), req.dataset, query)
-    cache.set(db, hash, newValue)
-    return newValue
-  }
 
   // if the output format is geo make sure geoshape is present
   // also manage a default content for geo tiles
@@ -1292,7 +1292,7 @@ const readLines = asyncWrap(async (req, res) => {
     if (sampling === 'neighbors') {
       // count docs in neighboring tiles to perform intelligent sampling
       try {
-        const mainCount = await countWithCache(req.query)
+        const mainCount = await countWithCache(req, db, req.query)
         if (mainCount === 0) return res.status(204).send()
         if (mainCount <= requestedSize / 20) {
           // no sampling on low density tiles
@@ -1300,15 +1300,15 @@ const readLines = asyncWrap(async (req, res) => {
         } else {
           const neighborsCounts = await Promise.all([
             // the 4 that share an edge
-            countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
-            countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
-            countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
-            countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') }),
+            countWithCache(req, db, { ...req.query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
+            countWithCache(req, db, { ...req.query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
+            countWithCache(req, db, { ...req.query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
+            countWithCache(req, db, { ...req.query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') }),
             // Using corners also yields better results
-            countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
-            countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
-            countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
-            countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
+            countWithCache(req, db, { ...req.query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
+            countWithCache(req, db, { ...req.query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
+            countWithCache(req, db, { ...req.query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
+            countWithCache(req, db, { ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
           ])
           const maxCount = Math.max(mainCount, ...neighborsCounts)
           const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
@@ -1389,9 +1389,12 @@ const readLines = asyncWrap(async (req, res) => {
   const result = { total: esResponse.hits.total.value }
   if (nextLinkURL) result.next = nextLinkURL.href
   if (req.query.collapse) result.totalCollapse = esResponse.aggregations.totalCollapse.value
-  result.results = esResponse.hits.hits.map(hit => {
-    return esUtils.prepareResultItem(hit, req.dataset, req.query, req.publicBaseUrl)
-  })
+  result.results = []
+  for (let i = 0; i < esResponse.hits.hits.length; i++) {
+    // avoid blocking the event loop
+    if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
+    result.results.push(esUtils.prepareResultItem(esResponse.hits.hits[i], req.dataset, req.query, req.publicBaseUrl))
+  }
 
   observe.reqStep(req, 'prepareResultItems')
 
