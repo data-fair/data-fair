@@ -20,10 +20,7 @@ const app = express()
 let server, wss, httpTerminator
 
 // a middleware for performance analysis
-app.use((req, res, next) => {
-  req.ts = new Date().getTime()
-  next()
-})
+app.use(observe.observeReqMiddleware)
 
 if (config.mode.includes('server')) {
   const limits = require('./utils/limits')

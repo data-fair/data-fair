@@ -109,6 +109,15 @@ describe('search', () => {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?format=csv&sep=;`)
     lines = res.data.split('\n')
     assert.equal(lines[0].trim(), '"id";"adr";"some date";"loc";"bool";"nb"')
+
+    // Sheets exports
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?format=xlsx`)
+    assert.equal(res.headers['content-disposition'], 'attachment; filename="dataset1.xlsx"')
+    assert.ok(Number(res.headers['content-length']) > 5000)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?format=ods`)
+    console.log(res.headers)
+    assert.equal(res.headers['content-disposition'], 'attachment; filename="dataset1.ods"')
+    assert.ok(Number(res.headers['content-length']) > 5000)
   })
 
   it('search lines and collapse on field', async () => {

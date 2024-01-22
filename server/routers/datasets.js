@@ -210,18 +210,17 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   const project = findUtils.project(req.query.select, [], req.query.raw === 'true')
   const [skip, size] = findUtils.pagination(req.query)
 
-  const t0 = new Date().getTime()
-  if (explain) explain.middlewares = t0 - req.ts
+  const t0 = Date.now()
   const countPromise = req.query.count !== 'false' && datasets.countDocuments(query).then(res => {
-    if (explain) explain.countMS = new Date().getTime() - t0
+    if (explain) explain.countMS = Date.now() - t0
     return res
   })
   const resultsPromise = size > 0 && datasets.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray().then(res => {
-    if (explain) explain.resultsMS = new Date().getTime() - t0
+    if (explain) explain.resultsMS = Date.now() - t0
     return res
   })
   const facetsPromise = req.query.facets && datasets.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields, extraFilters)).toArray().then(res => {
-    if (explain) explain.facetsMS = new Date().getTime() - t0
+    if (explain) explain.facetsMS = Date.now() - t0
     return res
   })
   const sumsPromise = req.query.sums && datasets
@@ -231,7 +230,7 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
       for (const field of req.query.sums.split(',')) {
         res[field] = res[field] || 0
       }
-      if (explain) explain.sumsMS = new Date().getTime() - t0
+      if (explain) explain.sumsMS = Date.now() - t0
       return res
     })
   const [count, results, facets, sums] = await Promise.all([countPromise, resultsPromise, facetsPromise, sumsPromise])
@@ -241,13 +240,13 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   else response.results = []
   if (facetsPromise) response.facets = findUtils.parseFacets(facets, nullFacetFields)
   if (sumsPromise) response.sums = sums
-  const t1 = new Date().getTime()
+  const t1 = Date.now()
   for (const r of response.results) {
     if (req.query.raw !== 'true') r.userPermissions = permissions.list('datasets', r, req.user)
     clean(req.publicBaseUrl, req.publicationSite, r, req.query)
   }
   if (explain) {
-    explain.cleanMS = new Date().getTime() - t1
+    explain.cleanMS = Date.now() - t1
     response.explain = explain
   }
   res.json(response)
@@ -1215,23 +1214,25 @@ async function manageESError (req, err) {
   throw createError(status, message)
 }
 
+// used later to count items in a tile or tile's neighbor
+async function countWithCache (req, db, query) {
+  const { hash, value } = await cache.get(db, {
+    type: 'tile-count',
+    datasetId: req.dataset.id,
+    finalizedAt: req.dataset.finalizedAt,
+    query
+  })
+  if (!config.cache.disabled && value !== null) return value
+  const newValue = await esUtils.count(req.app.get('es'), req.dataset, query)
+  cache.set(db, hash, newValue)
+  return newValue
+}
+
 // Read/search data for a dataset
 const readLines = asyncWrap(async (req, res) => {
+  observe.reqStep(req, 'middlewares')
   const db = req.app.get('db')
-
-  // used later to count items in a tile or tile's neighbor
-  async function countWithCache (query) {
-    const { hash, value } = await cache.get(db, {
-      type: 'tile-count',
-      datasetId: req.dataset.id,
-      finalizedAt: req.dataset.finalizedAt,
-      query
-    })
-    if (!config.cache.disabled && value !== null) return value
-    const newValue = await esUtils.count(req.app.get('es'), req.dataset, query)
-    cache.set(db, hash, newValue)
-    return newValue
-  }
+  res.throttleEnd()
 
   // if the output format is geo make sure geoshape is present
   // also manage a default content for geo tiles
@@ -1262,6 +1263,8 @@ const readLines = asyncWrap(async (req, res) => {
     xyz = req.query.xyz.split(',').map(Number)
   }
 
+  observe.reqStep(req, 'prepare')
+
   // Is the tile cached ?
   let cacheHash
   if (vectorTileRequested && !config.cache.disabled) {
@@ -1272,6 +1275,7 @@ const readLines = asyncWrap(async (req, res) => {
       finalizedAt: req.dataset.finalizedAt,
       query: req.query
     })
+    observe.reqStep(req, 'checkTileCache')
     if (value) {
       res.type('application/x-protobuf')
       res.setHeader('x-tilesmode', 'cache')
@@ -1288,7 +1292,7 @@ const readLines = asyncWrap(async (req, res) => {
     if (sampling === 'neighbors') {
       // count docs in neighboring tiles to perform intelligent sampling
       try {
-        const mainCount = await countWithCache(req.query)
+        const mainCount = await countWithCache(req, db, req.query)
         if (mainCount === 0) return res.status(204).send()
         if (mainCount <= requestedSize / 20) {
           // no sampling on low density tiles
@@ -1296,15 +1300,15 @@ const readLines = asyncWrap(async (req, res) => {
         } else {
           const neighborsCounts = await Promise.all([
             // the 4 that share an edge
-            countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
-            countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
-            countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
-            countWithCache({ ...req.query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') }),
+            countWithCache(req, db, { ...req.query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
+            countWithCache(req, db, { ...req.query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
+            countWithCache(req, db, { ...req.query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
+            countWithCache(req, db, { ...req.query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') }),
             // Using corners also yields better results
-            countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
-            countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
-            countWithCache({ ...req.query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
-            countWithCache({ ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
+            countWithCache(req, db, { ...req.query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
+            countWithCache(req, db, { ...req.query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
+            countWithCache(req, db, { ...req.query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
+            countWithCache(req, db, { ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
           ])
           const maxCount = Math.max(mainCount, ...neighborsCounts)
           const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
@@ -1323,6 +1327,8 @@ const readLines = asyncWrap(async (req, res) => {
       } catch (err) {
         await manageESError(req, err)
       }
+
+      observe.reqStep(req, 'neighborsSampling')
     }
   }
 
@@ -1332,6 +1338,7 @@ const readLines = asyncWrap(async (req, res) => {
   } catch (err) {
     await manageESError(req, err)
   }
+  observe.reqStep(req, 'search')
 
   // manage pagination based on search_after, cd https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
 
@@ -1353,59 +1360,66 @@ const readLines = asyncWrap(async (req, res) => {
 
   if (req.query.format === 'geojson') {
     const geojson = geo.result2geojson(esResponse)
+    observe.reqStep(req, 'result2geojson')
     // geojson format benefits from bbox info
     geojson.bbox = (await esUtils.bboxAgg(req.app.get('es'), req.dataset, { ...req.query })).bbox
+    observe.reqStep(req, 'bboxAgg')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.geojson"`)
-    res.throttleEnd()
     return res.status(200).send(geojson)
   }
 
   if (req.query.format === 'wkt') {
     const wkt = geo.result2wkt(esResponse)
+    observe.reqStep(req, 'result2wkt')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.wkt"`)
-    res.throttleEnd()
     return res.status(200).send(wkt)
   }
 
   if (vectorTileRequested) {
     const tile = await tiles.geojson2pbf(geo.result2geojson(esResponse), xyz)
+    observe.reqStep(req, 'geojson2pbf')
     // 204 = no-content, better than 404
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
     if (!config.cache.disabled) cache.set(db, cacheHash, new mongodb.Binary(tile))
-    res.throttleEnd()
     return res.status(200).send(tile)
   }
 
   const result = { total: esResponse.hits.total.value }
   if (nextLinkURL) result.next = nextLinkURL.href
   if (req.query.collapse) result.totalCollapse = esResponse.aggregations.totalCollapse.value
-  result.results = esResponse.hits.hits.map(hit => {
-    return esUtils.prepareResultItem(hit, req.dataset, req.query, req.publicBaseUrl)
-  })
+  result.results = []
+  for (let i = 0; i < esResponse.hits.hits.length; i++) {
+    // avoid blocking the event loop
+    if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
+    result.results.push(esUtils.prepareResultItem(esResponse.hits.hits[i], req.dataset, req.query, req.publicBaseUrl))
+  }
+
+  observe.reqStep(req, 'prepareResultItems')
 
   if (req.query.format === 'csv') {
-    res.throttleEnd()
-    const csv = outputs.results2csv(req, result.results)
+    const csv = await outputs.results2csv(req, result.results)
+    observe.reqStep(req, 'results2csv')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.csv"`)
     return res.status(200).send(csv)
   }
 
   if (req.query.format === 'xlsx') {
-    res.throttleEnd()
-    const sheet = outputs.results2sheet(req, result.results)
+    JSON.stringify(result.results)
+    observe.reqStep(req, 'stringify')
+    const sheet = await outputs.results2sheet(req, result.results)
+    observe.reqStep(req, 'results2xlsx')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.xlsx"`)
     return res.status(200).send(sheet)
   }
   if (req.query.format === 'ods') {
-    res.throttleEnd()
-    const sheet = outputs.results2sheet(req, result.results, 'ods')
+    const sheet = await outputs.results2sheet(req, result.results, 'ods')
+    observe.reqStep(req, 'results2ods')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.ods"`)
     return res.status(200).send(sheet)
   }
 
-  res.throttleEnd()
   res.status(200).send(result)
 })
 router.get('/:datasetId/lines', readDataset(), applicationKey, permissions.middleware('readLines', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), readLines)

@@ -313,13 +313,11 @@ router.post('', asyncWrap(async (req, res) => {
 
 // Shared middleware
 const readService = asyncWrap(async (req, res, next) => {
-  req.t0 = new Date().getTime()
   const service = await req.app.get('db').collection('remote-services')
     .findOne({ id: req.params.remoteServiceId }, { projection: { _id: 0 } })
   if (!service) return res.status(404).send('Remote Api not found')
   req.remoteService = req.resource = mongoEscape.unescape(service, true)
   req.resourceType = 'remote-services'
-  // console.log('read service', new Date().getTime() - req.t0)
   next()
 })
 
