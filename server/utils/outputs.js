@@ -28,12 +28,29 @@ const csvStringifyOptions = (dataset, query = {}) => {
   }
 }
 
-exports.results2csv = (req, results) => {
-  // add BOM for excel, cf https://stackoverflow.com/a/17879474
-  let csv = '\ufeff' + csvStrSync(results, csvStringifyOptions(req.dataset, req.query))
+const sliceSize = 500
 
-  // escape special null char (see test/resources/csv-cases/rge-null-chars.csv)
-  csv = csv.replace(/\0/g, '')
+exports.results2csv = async (req, results) => {
+  // add BOM for excel, cf https://stackoverflow.com/a/17879474
+  let csv = '\ufeff'
+
+  const options = csvStringifyOptions(req.dataset, req.query)
+
+  if (results.length < sliceSize) {
+    // escape special null char (see test/resources/csv-cases/rge-null-chars.csv)
+    csv += csvStrSync(results, options).replace(/\0/g, '')
+  } else {
+    let i = 0
+    while (i < results.length) {
+      // escape special null char (see test/resources/csv-cases/rge-null-chars.csv)
+      const sliceOptions = i === 0 ? options : { ...options, header: false }
+      csv += csvStrSync(results.slice(i, i + sliceSize), sliceOptions).replace(/\0/g, '')
+      i += sliceSize
+      // avoid blocking the event loop
+      await new Promise(resolve => setTimeout(resolve, 0))
+    }
+  }
+
   return csv
 }
 

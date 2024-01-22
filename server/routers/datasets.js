@@ -1396,7 +1396,7 @@ const readLines = asyncWrap(async (req, res) => {
   observe.reqStep(req, 'prepareResultItems')
 
   if (req.query.format === 'csv') {
-    const csv = outputs.results2csv(req, result.results)
+    const csv = await outputs.results2csv(req, result.results)
     observe.reqStep(req, 'results2csv')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.csv"`)
     return res.status(200).send(csv)
