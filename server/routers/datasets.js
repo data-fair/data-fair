@@ -1223,16 +1223,15 @@ async function manageESError (req, err) {
 
 // used later to count items in a tile or tile's neighbor
 async function countWithCache (req, db, query) {
-  const { hash, value } = await cache.get(db, {
+  if (config.cache.disabled) return esUtils.count(req.app.get('es'), req.dataset, query)
+  return cache.getSet(db, {
     type: 'tile-count',
     datasetId: req.dataset.id,
     finalizedAt: req.dataset.finalizedAt,
     query
+  }, async () => {
+    return esUtils.count(req.app.get('es'), req.dataset, query)
   })
-  if (!config.cache.disabled && value !== null) return value
-  const newValue = await esUtils.count(req.app.get('es'), req.dataset, query)
-  cache.set(db, hash, newValue)
-  return newValue
 }
 
 // Read/search data for a dataset
