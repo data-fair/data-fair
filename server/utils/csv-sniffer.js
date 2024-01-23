@@ -11,7 +11,6 @@ const possibleFieldsDelimiters = [',', ';', '\t', '|']
 // const possibleEscapeChars = ['"', "'"]
 const possibleQuoteChars = ['"', "'"]
 // const possibleQuoteChars = ["'"]
-// const possibleQuoteChars = ['"']
 
 exports.sniff = async (sample) => {
   const intoStream = (await import('into-stream')).default
@@ -27,10 +26,11 @@ exports.sniff = async (sample) => {
           missingLabels: 0,
           trimQuotes: 0,
           headerTrimQuotes: 0,
+          dupHeaders: 0,
           lineBreaksBoost: 0,
           fullSepCount: 0
         }
-        let labels
+        const labels = []
         const parserOpts = { separator: fd, quote: qc, escape: qc, newline: ld }
         debug('Evaluate parser opts', JSON.stringify(parserOpts))
         const parser = csv(parserOpts)
@@ -40,12 +40,13 @@ exports.sniff = async (sample) => {
             // header is prefixed/suffixed with a potential quote, probably missed it
             if (possibleQuoteChars.includes(header[0])) scoreParts.headerTrimQuotes -= 10
             if (possibleQuoteChars.includes(header[header.length - 1])) scoreParts.headerTrimQuotes -= 10
+
+            if (!header || !labels.includes(header)) labels.push(header)
+            else scoreParts.dupHeaders -= 50
           }
-          labels = headers
         })
 
         const checkChunk = (chunk) => {
-          // console.log(chunk)
           for (const key of Object.keys(chunk)) {
             // none matching labels and object keys means a failure of csv-parse to parse a line
             if (!labels.includes(key)) {
@@ -113,6 +114,6 @@ exports.sniff = async (sample) => {
   // debug('combinations', combinations)
   const result = bestCombination.props
   if (!result.labels || !result.labels.length) throw new Error('Échec de l\'analyse du fichier tabulaire, pas de colonne détectée.')
-  debug('bestCombination', bestCombination)
+  debug('bestCombination', JSON.stringify(bestCombination, null, 2))
   return result
 }

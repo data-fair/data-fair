@@ -49,6 +49,10 @@ describe('CSV cases', () => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('csv-cases/formatting-issues.csv', ax)
     assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.file.props.linesDelimiter, '\r\n')
+    assert.equal(dataset.file.props.escapeChar, '"')
+    assert.equal(dataset.file.props.quote, '"')
+    assert.equal(dataset.file.props.fieldsDelimiter, ';')
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 12)
     assert.equal(res.data.results[0].structure_porteuse, 'Struct1')
@@ -275,5 +279,17 @@ describe('CSV cases', () => {
     assert.equal(dataset.schema[0]['x-originalName'], 'This key has "escaped quotes" in it')
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 1)
+  })
+
+  it('A CSV with ; sep', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/CartoLavage_2023_Koumoul_VF_enrichi-v3.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.file.props.escapeChar, '"')
+    assert.equal(dataset.file.props.quote, '"')
+    assert.equal(dataset.file.props.fieldsDelimiter, ';')
+    assert.equal(dataset.file.props.linesDelimiter, '\r\n')
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 56)
   })
 })
