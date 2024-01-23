@@ -26,14 +26,15 @@ const loginHtml = fs.readFileSync(path.join(__dirname, '../resources/login.html'
 const brandEmbed = config.brand.embed && parse5.parseFragment(config.brand.embed)
 
 const setResource = asyncWrap(async (req, res, next) => {
+  const tolerateStale = !!req.publicationSite
   // protected application can be given either as /applicationKey:applicationId or /applicationId?key=applicationKey
-  await findUtils.getByUniqueRef(req, 'application')
+  await findUtils.getByUniqueRef(req, 'application', null, tolerateStale)
   let applicationKeyId = req.query.key
   if (!req.application && !applicationKeyId) {
     const keys = req.params.applicationId.split(':')
     applicationKeyId = keys[0]
     const applicationIdCandidate = req.params.applicationId.replace(keys[0] + ':', '')
-    await findUtils.getByUniqueRef(req, 'application', applicationIdCandidate)
+    await findUtils.getByUniqueRef(req, 'application', applicationIdCandidate, tolerateStale)
   }
   if (!req.application) return res.status(404).send(req.__('errors.missingApp'))
   if (applicationKeyId) {

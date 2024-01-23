@@ -20,7 +20,7 @@ exports.process = async function (app, dataset) {
   const result = { status: 'finalized', schema: dataset.schema }
 
   if (dataset.isVirtual) {
-    queryableDataset.descendants = await virtualDatasetsUtils.descendants(db, dataset)
+    queryableDataset.descendants = await virtualDatasetsUtils.descendants(db, dataset, false)
     queryableDataset.schema = result.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
   }
 
@@ -123,7 +123,7 @@ exports.process = async function (app, dataset) {
 
   // virtual datasets have to be re-counted here (others were implicitly counted at index step)
   if (dataset.isVirtual) {
-    const descendants = await virtualDatasetsUtils.descendants(db, dataset, ['dataUpdatedAt', 'dataUpdatedBy'])
+    const descendants = await virtualDatasetsUtils.descendants(db, dataset, false, ['dataUpdatedAt', 'dataUpdatedBy'])
     dataset.descendants = descendants.map(d => d.id)
     const lastDataUpdate = descendants.filter(d => !!d.dataUpdatedAt).sort((d1, d2) => d1.dataUpdatedAt > d2.dataUpdatedAt ? 1 : -1).pop()
     if (lastDataUpdate) {

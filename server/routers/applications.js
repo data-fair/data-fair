@@ -108,6 +108,9 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   const applications = req.app.get('db').collection('applications')
   req.resourceType = 'applications'
 
+  const tolerateStale = !!req.publicationSite
+  const options = tolerateStale ? { readPreference: 'nearest' } : {}
+
   if (req.query.dataset &&
       !req.query.dataset.startsWith('http://') &&
       !req.query.dataset.startsWith('https://')) {
@@ -142,9 +145,9 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   const project = findUtils.project(req.query.select, ['configuration', 'configurationDraft'], req.query.raw === 'true')
   const [skip, size] = findUtils.pagination(req.query)
 
-  const countPromise = req.query.count !== 'false' && applications.countDocuments(query)
-  const resultsPromise = size > 0 && applications.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
-  const facetsPromise = req.query.facets && applications.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields)).toArray()
+  const countPromise = req.query.count !== 'false' && applications.countDocuments(query, options)
+  const resultsPromise = size > 0 && applications.find(query, options).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
+  const facetsPromise = req.query.facets && applications.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields), options).toArray()
   const [count, results, facets] = await Promise.all([countPromise, resultsPromise, facetsPromise])
   const response = {}
   if (countPromise) response.count = count
@@ -207,7 +210,8 @@ router.post('', asyncWrap(async (req, res) => {
 
 // Shared middleware
 const readApplication = asyncWrap(async (req, res, next) => {
-  await findUtils.getByUniqueRef(req, 'application')
+  const tolerateStale = !!req.publicationSite
+  await findUtils.getByUniqueRef(req, 'application', null, tolerateStale)
   if (!req.application) return res.status(404).send(req.__('errors.missingApp'))
   req.resourceType = 'applications'
   next()

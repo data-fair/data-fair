@@ -396,9 +396,10 @@ exports.sumsQuery = (req, sumFields = {}, filterFields, extraFilters) => {
   return pipeline
 }
 
-exports.getByUniqueRef = async (req, resourceType, resourceId) => {
+exports.getByUniqueRef = async (req, resourceType, resourceId, tolerateStale) => {
   const paramId = resourceId ?? req.params[resourceType + 'Id']
   let filter = { id: paramId }
+  const options = tolerateStale ? { readPreference: 'nearest' } : {}
   if (req.publicationSite) {
     filter = { _uniqueRefs: paramId, 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id }
   } else if (req.mainPublicationSite) {
@@ -409,6 +410,6 @@ exports.getByUniqueRef = async (req, resourceType, resourceId) => {
       ]
     }
   }
-  const resources = await req.app.get('db').collection(resourceType + 's').find(filter).project({ _id: 0 }).toArray()
+  const resources = await req.app.get('db').collection(resourceType + 's').find(filter, options).project({ _id: 0 }).toArray()
   req[resourceType] = req.resource = resources.find(d => d.id === paramId) || resources.find(d => d.slug === paramId)
 }
