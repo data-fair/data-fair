@@ -3,7 +3,7 @@ const express = require('express')
 const status = require('./status')
 const apiDocs = require('../../../contract/api-docs')
 const projections = require('../../../contract/projections')
-const asyncWrap = require('../utils/async-wrap')
+const asyncWrap = require('../utils/async-handler')
 const settingsUtils = require('../utils/settings')
 
 const ajv = require('../utils/ajv')

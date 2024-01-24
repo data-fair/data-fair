@@ -7,7 +7,7 @@ const { nanoid } = require('nanoid')
 const mime = require('mime-types')
 const datasetSchema = require('../../../contract/dataset')
 const datasetUtils = require('../../datasets/utils')
-const asyncWrap = require('./async-wrap')
+const asyncWrap = require('./async-handler')
 const fallbackMimeTypes = {
   dbf: 'application/dbase',
   dif: 'text/plain',

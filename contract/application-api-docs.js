@@ -4,12 +4,19 @@ const journalSchema = require('./journal')
 const permissionsDoc = require('../server/misc/utils/permissions').apiDoc
 const version = require('../package.json').version
 
+/**
+ *
+ * @param {any} application
+ * @param {any} info
+ * @returns any
+ */
 module.exports = (application, info) => {
   const api = {
     openapi: '3.1.0',
     info: {
       title: `Intégration de l'application : ${application.title || application.id}`,
       version,
+      // @ts-ignore
       termsOfService: config.info.termsOfService,
       contact: { ...(info.contact || {}) }
     },
@@ -30,6 +37,7 @@ module.exports = (application, info) => {
     },
     security: [{ apiKey: [] }, { sdCookie: [] }],
     servers: [{
+      // @ts-ignore
       url: `${config.publicUrl}/api/v1/applications/${application.id}`
     }],
     paths: {

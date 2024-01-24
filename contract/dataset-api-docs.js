@@ -1,4 +1,4 @@
-const config = require('config')
+const _config = require('config')
 const prettyBytes = require('pretty-bytes')
 const datasetSchema = require('./dataset')
 const masterData = require('./master-data')
@@ -9,18 +9,34 @@ const { acceptedMetricAggs } = require('../server/datasets/es/metric-agg')
 const utils = require('./utils')
 const version = require('../package.json').version
 
+const config = /** @type {any} */(_config)
+
+/**
+ * @param {string} key
+ * @param {string} label
+ * @returns {string}
+ */
 const apiRate = (key, label) => {
-  return `Un utilisateur ${label} ne peut pas effectuer plus de ${config.defaultLimits.apiRate[key].nb} requêtes par interval de ${config.defaultLimits.apiRate[key].duration} seconde${config.defaultLimits.apiRate[key].duration > 1 ? 's' : ''}.
-  Sa vitesse de téléchargement totale sera limitée à ${prettyBytes(config.defaultLimits.apiRate[key].bandwidth.static)}/s pour les contenus statiques (fichiers de données, pièces jointes, etc.) et à ${prettyBytes(config.defaultLimits.apiRate[key].bandwidth.dynamic)}/s pour les autres appels.`
+  // @ts-ignore
+  const defaultLimits = config.defaultLimits
+  return `Un utilisateur ${label} ne peut pas effectuer plus de ${defaultLimits.apiRate[key].nb} requêtes par interval de ${defaultLimits.apiRate[key].duration} seconde${defaultLimits.apiRate[key].duration > 1 ? 's' : ''}.
+  Sa vitesse de téléchargement totale sera limitée à ${prettyBytes(defaultLimits.apiRate[key].bandwidth.static)}/s pour les contenus statiques (fichiers de données, pièces jointes, etc.) et à ${prettyBytes(defaultLimits.apiRate[key].bandwidth.dynamic)}/s pour les autres appels.`
 }
 const userApiRate = apiRate('user', 'authentifié (session ou clé d\'API)')
 const anonymousApiRate = apiRate('anonymous', 'anonyme')
 
+/**
+ * @param {any} dataset
+ * @param {string} [publicUrl]
+ * @param {any} [ownerInfo]
+ * @param {any} [publicationSite]
+ */
+// @ts-ignore
 module.exports = (dataset, publicUrl = config.publicUrl, ownerInfo, publicationSite) => {
   dataset.schema = dataset.schema || []
   const datasetLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl)
 
-  const bulkLineSchema = datasetUtils.jsonSchema(dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']), publicUrl)
+  const bulkLineSchema = datasetUtils.jsonSchema(dataset.schema.filter((/** @type {any} */ p) => !p['x-calculated'] && !p['x-extension']), publicUrl)
   bulkLineSchema.properties._action = {
     type: 'string',
     title: 'Action',
@@ -35,18 +51,18 @@ module.exports = (dataset, publicUrl = config.publicUrl, ownerInfo, publicationS
 
   const properties = dataset.schema
   const stringProperties = properties
-    .filter(p => !p['x-calculated'] && p.type === 'string' && (!p.format || p.format === 'uri-reference'))
+    .filter((/** @type {any} */ p) => !p['x-calculated'] && p.type === 'string' && (!p.format || p.format === 'uri-reference'))
   const textSearchProperties = stringProperties
-    .filter(p => !p['x-capabilities'] || p['x-capabilities'].text !== false || p['x-capabilities'].textStandard !== false)
+    .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].text !== false || p['x-capabilities'].textStandard !== false)
   const textAggProperties = stringProperties
-    .filter(p => !p['x-capabilities'] || p['x-capabilities'].textAgg !== false)
+    .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].textAgg !== false)
   const stringValuesProperties = stringProperties
-    .filter(p => !p['x-capabilities'] || p['x-capabilities'].values !== false)
+    .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].values !== false)
   const valuesProperties = dataset.schema
-    .filter(p => !p['x-capabilities'] || p['x-capabilities'].values !== false)
+    .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].values !== false)
   const numberProperties = dataset.schema
-    .filter(p => p.type === 'number')
-  const imageProperty = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
+    .filter((/** @type {any} */ p) => p.type === 'number')
+  const imageProperty = dataset.schema.find((/** @type {any} */f) => f['x-refersTo'] === 'http://schema.org/image')
 
   const filterParams = [{
     in: 'query',
@@ -88,7 +104,7 @@ module.exports = (dataset, publicUrl = config.publicUrl, ownerInfo, publicationS
       type: 'array',
       items: {
         type: 'string',
-        enum: textSearchProperties.length ? textSearchProperties.map(p => p.key) : undefined
+        enum: textSearchProperties.length ? textSearchProperties.map((/** @type {any} */ p) => p.key) : undefined
       }
     },
     style: 'form',
@@ -145,6 +161,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
   }
 
   const hitsParams = (defaultSize = 12, maxSize = 10000) => {
+    /** @type {any[]} */
     const params = [{
       in: 'query',
       name: 'size',
@@ -168,7 +185,7 @@ Exemple: ma_colonne,-ma_colonne2`,
         default: [],
         items: {
           type: 'string',
-          enum: valuesProperties.length ? valuesProperties.map(p => p.key) : undefined
+          enum: valuesProperties.length ? valuesProperties.map((/** @type {any} */ p) => p.key) : undefined
         }
       },
       style: 'form',
@@ -182,7 +199,7 @@ Exemple: ma_colonne,-ma_colonne2`,
         type: 'array',
         items: {
           type: 'string',
-          enum: properties.length ? properties.map(p => p.key) : undefined
+          enum: properties.length ? properties.map((/** @type {any} */ p) => p.key) : undefined
         }
       },
       style: 'form',
@@ -199,7 +216,7 @@ La valeur est une liste de colonnes séparées par des virgules.
         type: 'array',
         items: {
           type: 'string',
-          enum: textSearchProperties.length ? textSearchProperties.map(p => p.key) : undefined
+          enum: textSearchProperties.length ? textSearchProperties.map((/** @type {any} */ p) => p.key) : undefined
         }
       },
       style: 'form',
@@ -257,7 +274,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
     description: 'La colonne sur lequel effectuer la calcul de métrique',
     schema: {
       type: 'string',
-      enum: numberProperties.length ? numberProperties.map(p => p.key) : undefined
+      enum: numberProperties.length ? numberProperties.map((/** @type {any} */ p) => p.key) : undefined
     }
   }
 
@@ -305,6 +322,10 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
 - ${userApiRate}
   `
 
+  /**
+   * @param {any} safe
+   * @returns {any}
+   */
   const readSchema = (safe) => ({
     summary: `Récupérer la liste des colonnes${safe ? ' - les indices sur le contenu de la donnée sont purgés' : ''}`,
     operationId: safe ? 'readSafeSchema' : 'readSchema',
@@ -377,6 +398,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     description: `Jeu de données Data Fair - ${new URL(publicUrl).hostname} - ${dataset.title}`
   }]
 
+  /** @type {any} */
   const info = {
     title: `API publique du jeu de données : ${dataset.title || dataset.slug}`,
     description,
@@ -386,6 +408,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
   }
   if (config.info.termsOfService) info.termsOfService = config.info.termsOfService
 
+  /** @type {any} */
   const api = {
     openapi: '3.1.0',
     info,
@@ -440,6 +463,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           operationId: 'readLines',
           'x-permissionClass': 'read',
           tags: ['Données'],
+          // @ts-ignore
           parameters: [{
             in: 'query',
             name: 'page',
@@ -456,13 +480,15 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               default: 1,
               type: 'integer'
             }
+          // @ts-ignore
           }].concat(hitsParams()).concat([formatParam, htmlParam]).concat(filterParams).concat([{
             in: 'query',
             name: 'collapse',
             description: 'Afficher une ligne de résultat par valeur distince d\'un champ',
             schema: {
               type: 'string',
-              enum: [null].concat(stringValuesProperties.map(p => p.key))
+              // @ts-ignore
+              enum: [null].concat(stringValuesProperties.map((/** @type {any} */ p) => p.key))
             }
           }]),
           responses: {
@@ -507,7 +533,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             required: true,
             schema: {
               type: 'string',
-              enum: stringValuesProperties.length ? stringValuesProperties.map(p => p.key) : undefined
+              enum: stringValuesProperties.length ? stringValuesProperties.map((/** @type {any} */ p) => p.key) : undefined
             }
           }, formatParam, htmlParam, {
             in: 'query',
@@ -546,7 +572,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             required: true,
             schema: {
               type: 'string',
-              enum: stringValuesProperties.length ? stringValuesProperties.map(p => p.key) : undefined
+              enum: stringValuesProperties.length ? stringValuesProperties.map((/** @type {any} */ p) => p.key) : undefined
             }
           }, {
             in: 'query',
@@ -557,6 +583,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               type: 'integer',
               maximum: 10000
             }
+          // @ts-ignore
           }].concat(filterParams),
           // TODO: document sort param and interval
           responses: {
@@ -596,7 +623,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               description: 'La colonne sur laquelle calculer la métrique',
               schema: {
                 type: 'string',
-                enum: valuesProperties.length ? properties.map(p => p.key) : undefined
+                enum: valuesProperties.length ? properties.map((/** @type {any} */ p) => p.key) : undefined
               },
               required: true
             },
@@ -609,6 +636,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                 type: 'string'
               }
             }
+          // @ts-ignore
           ].concat(filterParams),
           responses: {
             200: {
@@ -639,12 +667,13 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                 type: 'array',
                 items: {
                   type: 'string',
-                  enum: valuesProperties.length ? properties.map(p => p.key) : undefined
+                  enum: valuesProperties.length ? properties.map((/** @type {any} */ p) => p.key) : undefined
                 }
               },
               style: 'form',
               explode: false
             }
+          // @ts-ignore
           ].concat(filterParams),
           responses: {
             200: {
@@ -673,7 +702,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             required: true,
             schema: {
               type: 'string',
-              enum: textAggProperties.length ? textAggProperties.map(p => p.key) : undefined
+              enum: textAggProperties.length ? textAggProperties.map((/** @type {any} */ p) => p.key) : undefined
             }
           }, {
             in: 'query',
@@ -684,6 +713,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               default: 'lang',
               enum: ['lang', 'standard']
             }
+          // @ts-ignore
           }].concat(filterParams),
           // TODO: document sort param and interval
           responses: {
@@ -808,6 +838,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
         operationId: 'getGeoAgg',
         'x-permissionClass': 'read',
         tags: ['Données'],
+        // @ts-ignore
         parameters: [aggSizeParam].concat(filterParams).concat(hitsParams(0, 100)).concat([formatParam, htmlParam]),
         responses: {
           200: {
@@ -826,7 +857,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
   }
 
   if (dataset.rest && dataset.rest.history) {
-    const size = hitsParams().find(p => p.name === 'size')
+    const size = hitsParams().find((/** @type {any} */ p) => p.name === 'size')
     const before = {
       in: 'query',
       name: 'before',

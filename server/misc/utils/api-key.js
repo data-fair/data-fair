@@ -3,7 +3,7 @@
 const crypto = require('crypto')
 const config = require('config')
 const createError = require('http-errors')
-const asyncWrap = require('../utils/async-wrap')
+const asyncWrap = require('../utils/async-handler')
 
 exports.readApiKey = async (db, rawApiKey, scope, asAccount) => {
   const hash = crypto.createHash('sha512')

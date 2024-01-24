@@ -2,7 +2,7 @@ const config = require('config')
 const { Transform } = require('node:stream')
 const { RateLimiter, TokenBucket } = require('limiter')
 const requestIp = require('request-ip')
-const asyncWrap = require('./async-wrap')
+const asyncWrap = require('./async-handler')
 
 const debugLimits = require('debug')('limits')
 

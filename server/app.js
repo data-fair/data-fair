@@ -6,7 +6,7 @@ const esUtils = require('./datasets//es')
 const wsUtils = require('./misc/utils/ws')
 const locksUtils = require('./misc/utils/locks')
 const observe = require('./misc/utils/observe')
-const asyncWrap = require('./misc/utils/async-wrap')
+const asyncWrap = require('./misc/utils/async-handler')
 const sanitizeHtml = require('../shared/sanitize-html')
 const debugDomain = require('debug')('domain')
 

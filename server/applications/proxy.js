@@ -8,8 +8,7 @@ const axios = require('../misc/utils/axios')
 const parse5 = require('parse5')
 const pump = require('../misc/utils/pipe')
 const CacheableLookup = require('cacheable-lookup')
-const { minify } = require('terser')
-const asyncWrap = require('../misc/utils/async-wrap')
+const asyncWrap = require('../misc/utils/async-handler')
 const findUtils = require('../misc/utils/find')
 const permissions = require('../misc/utils/permissions')
 const serviceWorkers = require('../misc/utils/service-workers')
@@ -148,6 +147,8 @@ if (inIframe()) {
   else window.location.href = "__IFRAME_REDIRECT__";
 }
 `
+
+/** @type {string} */
 let minifiedIframeRedirectSrc
 router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
@@ -288,6 +289,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
     if (refererDomain !== iframeRedirectUrl.hostname && refererDomain !== iframeRedirectUrl.searchParams.get('referer')) {
       iframeRedirectUrl.searchParams.set('referer', refererDomain)
       iframeRedirect = iframeRedirectUrl.href
+      const { minify } = await import('terser')
       minifiedIframeRedirectSrc = minifiedIframeRedirectSrc || (await minify(iframeRedirectSrc, { toplevel: true, compress: true, mangle: true })).code
       pushHeadNode({
         nodeName: 'script',

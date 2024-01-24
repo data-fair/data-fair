@@ -1,6 +1,6 @@
 const express = require('express')
 const createError = require('http-errors')
-const asyncWrap = require('../utils/async-wrap')
+const asyncWrap = require('../utils/async-handler')
 const findUtils = require('../utils/find')
 const datasetUtils = require('../../datasets/utils')
 const catalogApiDocs = require('../../../contract/site-catalog-api-docs')

@@ -1,7 +1,7 @@
 // a midleware to check if the endpoint is called from an application with an unauthenticated readOnly application key
 const requestIp = require('request-ip')
 const config = require('config')
-const asyncWrap = require('./async-wrap')
+const asyncWrap = require('./async-handler')
 const rateLimiting = require('./rate-limiting')
 
 const matchingHost = (req) => {

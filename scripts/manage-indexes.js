@@ -11,9 +11,11 @@ const maxDuration = 60 * 60 * 1000
 const start = new Date().getTime()
 
 async function main () {
-  const { db } = await require('../server/utils/db').connect()
-  const es = await require('../server/utils/es').init()
+  const { db } = await require('../server/misc/utils/db').connect()
+  const es = await require('../server/datasets/es').init()
+  // @ts-ignore
   const indexes = (await es.cat.indices({ index: `${config.indicesPrefix}-*`, format: 'json' })).body
+  // @ts-ignore
   for (const index of indexes) {
     if (new Date().getTime() - start > maxDuration) {
       console.error('Max duration exceeded, stop')
@@ -21,11 +23,12 @@ async function main () {
     }
     const getAliasRes = (await es.indices.getAlias({ index: index.index })).body
     const aliases = getAliasRes[index.index] && getAliasRes[index.index].aliases && Object.keys(getAliasRes[index.index].aliases)
-    const alias = aliases.find(alias => index.index.startsWith(alias))
+    const alias = aliases.find((/** @type {any} */ alias) => index.index.startsWith(alias))
     if (!alias) {
       console.warn(`index ${index.index} does not have matching alias`, index['store.size'])
       continue
     }
+    // @ts-ignore
     const dataset = await db.collection('datasets').findOne({ id: alias.replace(`${config.indicesPrefix}-`, '') })
     if (!dataset) {
       console.warn(`alias ${alias} does not have matching dataset in database`, index['store.size'])

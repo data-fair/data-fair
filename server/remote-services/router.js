@@ -16,7 +16,7 @@ const ajv = require('../misc/utils/ajv')
 const servicePatch = require('../../contract/remote-service-patch')
 
 const findUtils = require('../misc/utils/find')
-const asyncWrap = require('../misc/utils/async-wrap')
+const asyncWrap = require('../misc/utils/async-handler')
 const cacheHeaders = require('../misc/utils/cache-headers')
 const rateLimiting = require('../misc/utils/rate-limiting')
 const observe = require('../misc/utils/observe')

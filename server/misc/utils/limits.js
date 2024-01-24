@@ -2,7 +2,7 @@ const express = require('express')
 const config = require('config')
 const moment = require('moment')
 const ajv = require('../utils/ajv')
-const asyncWrap = require('./async-wrap')
+const asyncWrap = require('./async-handler')
 const dbUtils = require('./db')
 
 const limitTypeSchema = { type: 'object', properties: { limit: { type: 'number' }, consumption: { type: 'number' } } }

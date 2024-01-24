@@ -2,7 +2,7 @@
 // for now we create something similar based on recently updated datasets and applications
 
 const express = require('express')
-const asyncWrap = require('../utils/async-wrap')
+const asyncWrap = require('../utils/async-handler')
 const findUtils = require('../utils/find')
 
 const router = module.exports = express.Router()

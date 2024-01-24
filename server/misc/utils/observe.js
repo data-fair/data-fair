@@ -11,7 +11,7 @@ const client = require('prom-client')
 const eventToPromise = require('event-to-promise')
 const { createHttpTerminator } = require('http-terminator')
 const debugReq = require('debug')('df:observe:req')
-const asyncWrap = require('./async-wrap')
+const asyncWrap = require('./async-handler')
 
 const localRegister = new client.Registry()
 const globalRegister = new client.Registry()

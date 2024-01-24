@@ -4,7 +4,7 @@ const express = require('express')
 const config = require('config')
 const fs = require('fs-extra')
 const path = require('path')
-const asyncWrap = require('../utils/async-wrap')
+const asyncWrap = require('../utils/async-handler')
 const datasetUtils = require('../../datasets/utils')
 const dataDir = path.resolve(config.dataDir)
 

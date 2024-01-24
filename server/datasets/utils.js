@@ -955,7 +955,14 @@ const cleanJsonSchemaProperty = (p, publicBaseUrl, writableId) => {
   return cleanProp
 }
 
+/**
+ *
+ * @param {any} schema
+ * @param {string} publicBaseUrl
+ * @returns {any}
+ */
 exports.jsonSchema = (schema, publicBaseUrl) => {
+  /** @type {any} */
   const properties = {}
   for (const p of schema) {
     properties[p.key] = cleanJsonSchemaProperty(p, publicBaseUrl)

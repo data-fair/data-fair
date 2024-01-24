@@ -26,6 +26,7 @@
     "serve-doc": "TARGET=http://localhost:3144/doc-dist/ npm run build-doc && http-server .",
     "postinstall": "patch-package",
     "prepare": "husky install",
+    "check-types": "tsc",
     "quality": "npm run test-deps && npm run lint && npm run test && npm audit --omit=dev --audit-level=critical"
   },
   "engines": {
@@ -68,6 +69,8 @@
     "@nuxtjs/sitemap": "^2.4.0",
     "@nuxtjs/svg": "^0.1.12",
     "@nuxtjs/vuetify": "^1.12.3",
+    "@types/config": "^3.3.3",
+    "@types/sanitize-html": "^2.9.5",
     "babel-eslint": "^10.1.0",
     "clean-modules": "^2.0.4",
     "coveralls": "^3.1.0",
@@ -105,6 +108,8 @@
     "tableschema": "^1.12.4",
     "timezones.json": "^1.6.0",
     "tinycolor2": "^1.4.2",
+    "tsc": "^2.0.4",
+    "typescript": "^5.3.3",
     "vue-clamp": "^0.4.0",
     "vue-moment": "^4.1.0",
     "vue-window-size": "0.6.2",
@@ -215,6 +220,7 @@
     "tmp-promise": "^2.1.1",
     "truncate-html": "^1.0.4",
     "truncate-middle": "^1.0.6",
+    "uninstall": "^0.0.0",
     "unzipper": "^0.10.11",
     "useragent": "^2.3.0",
     "vt-pbf": "3.1.1",

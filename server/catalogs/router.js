@@ -16,7 +16,7 @@ const validatePatch = ajv.compile(catalogPatch)
 const permissions = require('../misc/utils/permissions')
 const usersUtils = require('../misc/utils/users')
 const findUtils = require('../misc/utils/find')
-const asyncWrap = require('../misc/utils/async-wrap')
+const asyncWrap = require('../misc/utils/async-handler')
 const cacheHeaders = require('../misc/utils/cache-headers')
 
 const router = module.exports = express.Router()

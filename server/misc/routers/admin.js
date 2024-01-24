@@ -1,5 +1,5 @@
 const express = require('express')
-const asyncWrap = require('../utils/async-wrap')
+const asyncWrap = require('../utils/async-handler')
 const findUtils = require('../utils/find')
 const baseAppsUtils = require('../../base-applications/utils')
 const cacheHeaders = require('../utils/cache-headers')

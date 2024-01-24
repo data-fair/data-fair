@@ -2,7 +2,7 @@ const config = require('config')
 const moment = require('moment')
 const axios = require('../utils/axios')
 const fs = require('fs-extra')
-const asyncWrap = require('../utils/async-wrap')
+const asyncWrap = require('../utils/async-handler')
 const clamav = require('../utils/clamav')
 
 async function mongoStatus (req) {

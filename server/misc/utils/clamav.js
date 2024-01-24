@@ -3,7 +3,7 @@ const config = require('config')
 const { Socket } = require('node:net')
 const createError = require('http-errors')
 const { PromiseSocket } = require('promise-socket')
-const asyncWrap = require('./async-wrap')
+const asyncWrap = require('./async-handler')
 const observe = require('./observe')
 const debug = require('debug')('clamav')
 

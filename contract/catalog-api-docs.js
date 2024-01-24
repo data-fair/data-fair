@@ -2,6 +2,11 @@ const config = require('config')
 const catalogSchema = require('./catalog')
 const permissionsDoc = require('../server/misc/utils/permissions').apiDoc
 
+/**
+ *
+ * @param {any} catalog
+ * @returns any
+ */
 module.exports = (catalog) => {
   const api = {
     openapi: '3.1.0',
@@ -9,6 +14,7 @@ module.exports = (catalog) => {
       title: `Intégration du catalogue : ${catalog.url}`
     },
     servers: [{
+      // @ts-ignore
       url: `${config.publicUrl}/api/v1/catalogs/${catalog.id}`
     }],
     components: {
