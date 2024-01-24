@@ -65,7 +65,7 @@ if (config.mode.includes('server')) {
     bodyParser(req, res, next)
   })
   app.use(require('cookie-parser')())
-  app.use(require('./misc/utils/i18n').middleware)
+  app.use(require('./i18n/utils').middleware)
   app.use(session.auth)
 
   // TODO: we could make this better targetted but more verbose by adding it to all routes

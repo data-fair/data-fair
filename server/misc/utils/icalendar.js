@@ -1,7 +1,7 @@
 const config = require('config')
 const fs = require('fs-extra')
 const { Readable } = require('stream')
-const i18nUtils = require('./i18n')
+const i18nUtils = require('../../i18n/utils')
 const icalendar = require('@koumoul/icalendar')
 const moment = require('moment')
 require('moment-timezone')

@@ -1,4 +1,3 @@
-const { Writable } = require('stream')
 const express = require('express')
 const ajv = require('../misc/utils/ajv')
 const path = require('path')
@@ -10,6 +9,7 @@ const mongodb = require('mongodb')
 const config = require('config')
 const chardet = require('chardet')
 const slug = require('slugify')
+const i18n = require('i18n')
 const sanitizeHtml = require('../../shared/sanitize-html')
 const CronJob = require('cron').CronJob
 const LinkHeader = require('http-link-header')
@@ -55,6 +55,8 @@ const observe = require('../misc/utils/observe')
 const publicationSites = require('../misc/utils/publication-sites')
 const clamav = require('../misc/utils/clamav')
 const nanoid = require('../misc/utils/nanoid')
+const { checkStorage } = require('./service')
+
 const router = express.Router()
 
 const clean = datasetUtils.clean
@@ -62,57 +64,22 @@ const clean = datasetUtils.clean
 const debugLimits = require('debug')('limits')
 const debugMasterData = require('debug')('master-data')
 
-const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
+/**
+ *
+ * @param {boolean} overwrite
+ * @param {boolean} indexed
+ * @returns
+ */
+const checkStorageMiddleware = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
   if (process.env.NO_STORAGE_CHECK === 'true') return next()
   if (!req.get('Content-Length')) throw createError(411, 'Content-Length is mandatory')
   const contentLength = Number(req.get('Content-Length'))
   if (Number.isNaN(contentLength)) throw createError(400, 'Content-Length is not a number')
-  const estimatedContentSize = contentLength - 210
-
-  const owner = req.dataset ? req.dataset.owner : usersUtils.owner(req)
-  const debugInfo = { owner, estimatedContentSize }
-
-  if (config.defaultLimits.datasetStorage !== -1 && config.defaultLimits.datasetStorage < estimatedContentSize) {
-    debugLimits('datasetStorage/checkStorage', debugInfo)
-    throw createError(413, 'Vous avez atteint la limite de votre espace de stockage pour ce jeu de données.')
-  }
-  if (config.defaultLimits.datasetIndexed !== -1 && config.defaultLimits.datasetIndexed < estimatedContentSize) {
-    debugLimits('datasetIndexed/checkStorage', debugInfo)
-    throw createError(413, 'Vous dépassez la taille de données indexées autorisée pour ce jeu de données.')
-  }
-  const remaining = await limits.remaining(req.app.get('db'), owner)
-  debugInfo.remaining = { ...remaining }
-  if (overwrite && req.dataset && req.dataset.storage) {
-    debugInfo.overwriteDataset = req.dataset.storage
-    // ignore the size of the dataset we are overwriting
-    if (remaining.storage !== -1) remaining.storage += req.dataset.storage.size
-    if (remaining.indexed !== -1) remaining.indexed += req.dataset.storage.size
-  }
-  const storageOk = remaining.storage === -1 || ((remaining.storage - estimatedContentSize) >= 0)
-  const indexedOk = !indexed || remaining.indexed === -1 || ((remaining.indexed - estimatedContentSize) >= 0)
-  if (!storageOk || !indexedOk) {
-    try {
-      await pump(
-        req,
-        new Writable({
-          write (chunk, encoding, callback) {
-            // do nothing wa just want to drain the request
-            callback()
-          }
-        })
-      )
-    } catch (err) {
-      console.warn('Failure to drain request that was rejected for exceeding storage limit', err)
-    }
-    if (!storageOk) {
-      debugLimits('exceedLimitStorage/checkStorage', debugInfo)
-      throw createError(429, req.__('errors.exceedLimitStorage'))
-    }
-    if (!indexedOk) {
-      debugLimits('exceedLimitIndexed/checkStorage', debugInfo)
-      throw createError(429, req.__('errors.exceedLimitIndexed'))
-    }
-  }
+  // @ts-ignore
+  const dataset = req.dataset
+  const db = req.app.get('db')
+  const owner = dataset ? dataset.owner : usersUtils.owner(req)
+  await checkStorage(db, i18n.getLocale(req), owner, dataset, contentLength, overwrite, indexed)
   next()
 })
 
@@ -850,7 +817,7 @@ const beforeUpload = asyncWrap(async (req, res, next) => {
   }
   next()
 })
-router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), asyncWrap(async (req, res) => {
+router.post('', beforeUpload, checkStorageMiddleware(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), asyncWrap(async (req, res) => {
   req.files = req.files || []
   debugFiles('POST datasets uploaded some files', req.files)
   try {
@@ -1087,8 +1054,8 @@ const updateDataset = asyncWrap(async (req, res) => {
     throw err
   }
 }, { keepalive: true })
-router.post('/:datasetId', lockDataset(), attemptInsert, readDataset(false, ['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
-router.put('/:datasetId', lockDataset(), attemptInsert, readDataset(false, ['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
+router.post('/:datasetId', lockDataset(), attemptInsert, readDataset(false, ['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorageMiddleware(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
+router.put('/:datasetId', lockDataset(), attemptInsert, readDataset(false, ['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorageMiddleware(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
 
 // validate the draft
 router.post('/:datasetId/draft', readDataset(false, ['finalized'], true), permissions.middleware('validateDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
@@ -1123,10 +1090,10 @@ function isRest (req, res, next) {
 }
 const writableStatuses = ['finalized', 'updated', 'extended-updated', 'indexed', 'error']
 router.get('/:datasetId/lines/:lineId', readDataset(), isRest, permissions.middleware('readLine', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
-router.post('/:datasetId/lines', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createLine))
-router.put('/:datasetId/lines/:lineId', readDataset(false, writableStatuses), isRest, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.updateLine))
-router.patch('/:datasetId/lines/:lineId', readDataset(false, writableStatuses), isRest, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.patchLine))
-router.post('/:datasetId/_bulk_lines', readDataset(false, writableStatuses), isRest, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
+router.post('/:datasetId/lines', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('createLine', 'write'), checkStorageMiddleware(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createLine))
+router.put('/:datasetId/lines/:lineId', readDataset(false, writableStatuses), isRest, permissions.middleware('updateLine', 'write'), checkStorageMiddleware(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.updateLine))
+router.patch('/:datasetId/lines/:lineId', readDataset(false, writableStatuses), isRest, permissions.middleware('patchLine', 'write'), checkStorageMiddleware(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.patchLine))
+router.post('/:datasetId/_bulk_lines', readDataset(false, writableStatuses), isRest, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), checkStorageMiddleware(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
 router.delete('/:datasetId/lines/:lineId', readDataset(false, writableStatuses), isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
 router.get('/:datasetId/lines/:lineId/revisions', readDataset(false, writableStatuses), isRest, permissions.middleware('readLineRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
 router.get('/:datasetId/revisions', readDataset(false, writableStatuses), isRest, permissions.middleware('readRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
@@ -1156,10 +1123,10 @@ router.use('/:datasetId/own/:owner', readDataset(false, writableStatuses), isRes
   res.status(403).type('text/plain').send('only owner can manage his own lines')
 })
 router.get('/:datasetId/own/:owner/lines/:lineId', readDataset(), isRest, applicationKey, permissions.middleware('readOwnLine', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
-router.post('/:datasetId/own/:owner/lines', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('createOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
-router.put('/:datasetId/own/:owner/lines/:lineId', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('updateOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.updateLine))
-router.patch('/:datasetId/own/:owner/lines/:lineId', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('patchOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
-router.post('/:datasetId/own/:owner/_bulk_lines', lockDataset((body, query) => query.lock === 'true'), readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('bulkOwnLines', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
+router.post('/:datasetId/own/:owner/lines', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('createOwnLine', 'manageOwnLines'), checkStorageMiddleware(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
+router.put('/:datasetId/own/:owner/lines/:lineId', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('updateOwnLine', 'manageOwnLines'), checkStorageMiddleware(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.updateLine))
+router.patch('/:datasetId/own/:owner/lines/:lineId', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('patchOwnLine', 'manageOwnLines'), checkStorageMiddleware(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
+router.post('/:datasetId/own/:owner/_bulk_lines', lockDataset((body, query) => query.lock === 'true'), readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('bulkOwnLines', 'manageOwnLines'), checkStorageMiddleware(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
 router.delete('/:datasetId/own/:owner/lines/:lineId', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('deleteOwnLine', 'manageOwnLines'), asyncWrap(restDatasetsUtils.deleteLine))
 router.get('/:datasetId/own/:owner/lines/:lineId/revisions', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('readOwnLineRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
 router.get('/:datasetId/own/:owner/revisions', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('readOwnRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
@@ -1609,7 +1576,7 @@ router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('do
 }))
 
 // Special attachments referenced in dataset metadatas
-router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, asyncWrap(async (req, res, next) => {
+router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middleware('postMetadataAttachment', 'write'), checkStorageMiddleware(false), attachments.metadataUpload(), clamav.middleware, asyncWrap(async (req, res, next) => {
   req.body.size = (await fs.promises.stat(req.file.path)).size
   req.body.updatedAt = moment().toISOString()
   await datasetUtils.updateStorage(req.app, req.dataset)

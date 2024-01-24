@@ -1,5 +1,5 @@
 const sanitizeHtml = require('../../../shared/sanitize-html')
-const i18nUtils = require('./i18n')
+const i18nUtils = require('../../i18n/utils')
 
 exports.getPrivateOwnerVocabulary = async (db, owner) => {
   const settings = await db.collection('settings')
@@ -15,6 +15,13 @@ exports.getPrivateOwnerVocabulary = async (db, owner) => {
   }) || []
 }
 
+/**
+ *
+ * @param {import('mongodb').Db} db
+ * @param {any} owner
+ * @param {'en' | 'fr'} locale
+ * @returns
+ */
 exports.getFullOwnerVocabulary = async (db, owner, locale) => {
   if (!owner) return i18nUtils.vocabularyArray[locale]
 

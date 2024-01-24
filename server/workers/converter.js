@@ -53,7 +53,7 @@ exports.process = async function (app, dataset) {
   const datasetUtils = require('../datasets/utils')
   const icalendar = require('../misc/utils/icalendar')
   const xlsx = require('../misc/utils/xlsx')
-  const i18nUtils = require('../misc/utils/i18n')
+  const i18nUtils = require('../i18n/utils')
 
   const dataDir = path.resolve(config.dataDir)
 
