@@ -277,6 +277,40 @@ describe('datasets in draft mode', () => {
     assert.equal(journal[14].draft, undefined)
   })
 
+  it.skip('create a draft and update it with second file upload', async () => {
+    // Send dataset
+    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+    const form = new FormData()
+    form.append('file', datasetFd, 'dataset1.csv')
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let dataset = await workers.hook('finalizer')
+
+    // upload a new file
+    const datasetFd2 = fs.readFileSync('./test/resources/datasets/dataset2.csv')
+    const form2 = new FormData()
+    form2.append('file', datasetFd2, 'dataset1-draft1.csv')
+    form2.append('description', 'draft description')
+    const datasetDraft1 = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
+    assert.equal(datasetDraft1.status, 'loaded')
+    assert.equal(datasetDraft1.draftReason.key, 'file-updated')
+    dataset = await workers.hook('finalizer')
+    assert.equal(dataset.file.name, 'dataset1.csv')
+    assert.equal(dataset.draft.file.name, 'dataset1-draft1.csv')
+
+    // upload a second new file
+    const datasetFd3 = fs.readFileSync('./test/resources/datasets/dataset2.csv')
+    const form3 = new FormData()
+    form3.append('file', datasetFd3, 'dataset1-draft2.csv')
+    form3.append('description', 'draft description')
+    const datasetDraft2 = (await ax.post('/api/v1/datasets/' + dataset.id, form3, { headers: testUtils.formHeaders(form3), params: { draft: true } })).data
+    assert.equal(datasetDraft2.status, 'loaded')
+    assert.equal(datasetDraft2.draftReason.key, 'file-updated')
+    dataset = await workers.hook('finalizer')
+    assert.equal(dataset.file.name, 'dataset1.csv')
+    assert.equal(dataset.draft.file.name, 'dataset1-draft2.csv')
+  })
+
   it('create a draft of a large file and index a sample', async () => {
     let content = 'col'
     for (let i = 0; i < 2000; i++) {
