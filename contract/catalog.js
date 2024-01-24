@@ -1,7 +1,7 @@
 const owner = require('./owner')
 const eventBy = require('./event-by')
 const permissions = require('./permissions')
-const catalogs = require('../server/catalogs')
+const catalogs = require('../server/catalogs/plugins')
 
 module.exports = {
   title: 'Catalog',

@@ -1,4 +1,4 @@
-const journals = require('../utils/journals')
+const journals = require('../misc/utils/journals')
 
 // Analyze dataset data, check validity and extract a few metadata for next workers
 exports.eventsPrefix = 'analyze'
@@ -6,10 +6,10 @@ exports.eventsPrefix = 'analyze'
 exports.process = async function (app, dataset) {
   const createError = require('http-errors')
   const iconv = require('iconv-lite')
-  const datasetFileSample = require('../utils/dataset-file-sample')
-  const csvSniffer = require('../utils/csv-sniffer')
-  const datasetUtils = require('../utils/dataset')
-  const fieldsSniffer = require('../utils/fields-sniffer')
+  const datasetFileSample = require('../misc/utils/dataset-file-sample')
+  const csvSniffer = require('../misc/utils/csv-sniffer')
+  const datasetUtils = require('../datasets/utils')
+  const fieldsSniffer = require('../misc/utils/fields-sniffer')
 
   const debug = require('debug')(`worker:csv-analyzer:${dataset.id}`)
   debug('extract file sample')

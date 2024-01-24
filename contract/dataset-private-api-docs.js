@@ -2,9 +2,9 @@ const config = require('config')
 const datasetAPIDocs = require('./dataset-api-docs')
 const datasetPost = require('./dataset-post')
 const journalSchema = require('./journal')
-const { visibility } = require('../server/utils/visibility')
-const permissionsDoc = require('../server/utils/permissions').apiDoc
-const datasetUtils = require('../server/utils/dataset')
+const { visibility } = require('../server/misc/utils/visibility')
+const permissionsDoc = require('../server/misc/utils/permissions').apiDoc
+const datasetUtils = require('../server/datasets/utils')
 const datasetPatchSchema = require('./dataset-patch')
 
 module.exports = (dataset, publicUrl = config.publicUrl, user, info) => {

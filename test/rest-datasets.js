@@ -9,8 +9,8 @@ const iconv = require('iconv-lite')
 const pump = require('util').promisify(require('pump'))
 
 const testUtils = require('./resources/test-utils')
-const restDatasetsUtils = require('../server/utils/rest-datasets')
-const datasetUtils = require('../server/utils/dataset')
+const restDatasetsUtils = require('../server/misc/utils/rest-datasets')
+const datasetUtils = require('../server/datasets/utils')
 const workers = require('../server/workers')
 
 describe('REST datasets', () => {

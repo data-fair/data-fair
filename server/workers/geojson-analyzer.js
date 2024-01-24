@@ -33,7 +33,7 @@ class AnalyzerWritable extends Writable {
   }
 
   _final (callback) {
-    const fieldsSniffer = require('../utils/fields-sniffer')
+    const fieldsSniffer = require('../misc/utils/fields-sniffer')
     for (const property in this.samples) {
       const key = fieldsSniffer.escapeKey(property, this.options.dataset)
       const existingField = this.options.existingSchema.find(f => f.key === key)
@@ -53,8 +53,8 @@ exports.process = async function (app, dataset) {
   const JSONStream = require('JSONStream')
   const createError = require('http-errors')
   const iconv = require('iconv-lite')
-  const pump = require('../utils/pipe')
-  const datasetUtils = require('../utils/dataset')
+  const pump = require('../misc/utils/pipe')
+  const datasetUtils = require('../datasets/utils')
 
   const db = app.get('db')
   const attachments = await datasetUtils.lsAttachments(dataset)

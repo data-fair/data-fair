@@ -7,7 +7,7 @@ const config = require('config')
 const testUtils = require('./resources/test-utils')
 
 const workers = require('../server/workers')
-const esUtils = require('../server/utils/es')
+const esUtils = require('../server/datasets/es')
 
 // Prepare mock for outgoing HTTP requests
 nock('http://test-catalog.com').persist()

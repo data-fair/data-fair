@@ -5,7 +5,7 @@ const axios = require('axios')
 const debug = require('debug')('test')
 const app = require('../server/app')
 const workers = require('../server/workers')
-const rateLimiting = require('../server/utils/rate-limiting')
+const rateLimiting = require('../server/misc/utils/rate-limiting')
 const axiosAuth = require('@data-fair/sd-express').axiosAuth
 
 before('global mocks', () => {
@@ -51,10 +51,10 @@ before('global mocks', () => {
 
 before('init globals', async () => {
   debug('init globals')
-  const { db, client } = await require('../server/utils/db.js').connect()
+  const { db, client } = await require('../server/misc/utils/db.js').connect()
   global.db = db
   global.mongoClient = client
-  global.es = await require('../server/utils/es').init()
+  global.es = await require('../server/datasets/es').init()
 
   global.ax = {}
   global.ax.builder = async (email, org, opts = {}) => {

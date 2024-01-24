@@ -4,9 +4,9 @@ const debugMasterData = require('debug')('master-data')
 exports.eventsPrefix = 'extend'
 
 exports.process = async function (app, dataset) {
-  const extensionsUtils = require('../utils/extensions')
-  const datasetUtils = require('../utils/dataset')
-  const restDatasetsUtils = require('../utils/rest-datasets')
+  const extensionsUtils = require('../misc/utils/extensions')
+  const datasetUtils = require('../datasets/utils')
+  const restDatasetsUtils = require('../misc/utils/rest-datasets')
 
   const debug = require('debug')(`worker:extender:${dataset.id}`)
 

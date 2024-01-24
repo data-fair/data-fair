@@ -1,6 +1,6 @@
 const config = require('config')
 const catalogSchema = require('./catalog')
-const permissionsDoc = require('../server/utils/permissions').apiDoc
+const permissionsDoc = require('../server/misc/utils/permissions').apiDoc
 
 module.exports = (catalog) => {
   const api = {

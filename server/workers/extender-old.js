@@ -2,8 +2,8 @@
 exports.eventsPrefix = 'extend'
 
 exports.process = async function (app, dataset) {
-  const extensionsUtils = require('../utils/extensions')
-  const datasetUtils = require('../utils/dataset')
+  const extensionsUtils = require('../misc/utils/extensions')
+  const datasetUtils = require('../datasets/utils')
 
   const debug = require('debug')(`worker:extender:${dataset.id}`)
 

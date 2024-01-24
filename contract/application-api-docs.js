@@ -1,7 +1,7 @@
 const config = require('config')
 const applicationSchema = require('./application')
 const journalSchema = require('./journal')
-const permissionsDoc = require('../server/utils/permissions').apiDoc
+const permissionsDoc = require('../server/misc/utils/permissions').apiDoc
 const version = require('../package.json').version
 
 module.exports = (application, info) => {

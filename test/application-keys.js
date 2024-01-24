@@ -2,7 +2,7 @@ const assert = require('assert').strict
 const config = require('config')
 const testUtils = require('./resources/test-utils')
 const workers = require('../server/workers')
-const rateLimitingUtils = require('../server/utils/rate-limiting')
+const rateLimitingUtils = require('../server/misc/utils/rate-limiting')
 
 describe('Applications keys for unauthenticated readOnly access', () => {
   it('Empty array by default', async () => {

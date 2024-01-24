@@ -4,8 +4,8 @@ const datasetSchema = require('./dataset')
 const masterData = require('./master-data')
 const dataFiles = require('./data-files')
 const capabilities = require('./capabilities')
-const datasetUtils = require('../server/utils/dataset')
-const { acceptedMetricAggs } = require('../server/utils/es/metric-agg')
+const datasetUtils = require('../server/datasets/utils')
+const { acceptedMetricAggs } = require('../server/datasets/es/metric-agg')
 const utils = require('./utils')
 const version = require('../package.json').version
 

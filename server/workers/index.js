@@ -1,6 +1,6 @@
 const config = require('config')
-const locks = require('../utils/locks')
-const observe = require('../utils/observe')
+const locks = require('../misc/utils/locks')
+const observe = require('../misc/utils/observe')
 const debug = require('debug')('workers')
 
 const tasks = exports.tasks = {
@@ -163,7 +163,7 @@ const getTypesFilters = () => {
 
 async function iter (app, resource, type) {
   const db = app.get('db')
-  const journals = require('../utils/journals')
+  const journals = require('../misc/utils/journals')
 
   let taskKey
   let lastStderr = ''
@@ -173,7 +173,7 @@ async function iter (app, resource, type) {
   try {
     // if there is something to be done in the draft mode of the dataset, it is prioritary
     if (type === 'dataset' && resource.draft && resource.draft.status !== 'finalized' && resource.draft.status !== 'error') {
-      const datasetUtils = require('../utils/dataset')
+      const datasetUtils = require('../datasets/utils')
       datasetUtils.mergeDraft(resource)
     }
 
@@ -276,7 +276,7 @@ async function iter (app, resource, type) {
 
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
     if (task.eventsPrefix && newResource) {
-      const datasetUtils = require('../utils/dataset')
+      const datasetUtils = require('../datasets/utils')
       if (resource.draftReason) {
         await journals.log(app, datasetUtils.mergeDraft({ ...newResource }), { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
       } else {

@@ -1,9 +1,9 @@
-const observe = require('../utils/observe')
+const observe = require('../misc/utils/observe')
 
 exports.process = async function (app, catalog) {
   const config = require('config')
   const CronJob = require('cron').CronJob
-  const catalogs = require('../catalogs')
+  const catalogs = require('../catalogs/plugins')
 
   const debug = require('debug')(`worker:catalog-harvester:${catalog.id}`)
   const db = app.get('db')
