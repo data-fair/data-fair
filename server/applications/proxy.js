@@ -1,5 +1,5 @@
 const express = require('express')
-const config = require('config')
+const config = /** @type {any} */(require('config'))
 const fs = require('fs')
 const path = require('path')
 const https = require('https')
@@ -25,23 +25,37 @@ const loginHtml = fs.readFileSync(path.join(__dirname, './resources/login.html')
 const brandEmbed = config.brand.embed && parse5.parseFragment(config.brand.embed)
 
 const setResource = asyncWrap(async (req, res, next) => {
-  const tolerateStale = !!req.publicationSite
+  // @ts-ignore
+  const publicationSite = req.publicationSite
+  // @ts-ignore
+  const mainPublicationSite = req.mainPublicationSite
+  // @ts-ignore
+  const publicBaseUrl = req.publicBaseUrl
+
+  const db = req.app.get('db')
+
+  const tolerateStale = !!publicationSite
   // protected application can be given either as /applicationKey:applicationId or /applicationId?key=applicationKey
-  await findUtils.getByUniqueRef(req, 'application', null, tolerateStale)
+  let application = await findUtils.getByUniqueRef(db, publicationSite, mainPublicationSite, req.params, 'application', null, tolerateStale)
   let applicationKeyId = req.query.key
-  if (!req.application && !applicationKeyId) {
+  if (!application && !applicationKeyId) {
     const keys = req.params.applicationId.split(':')
     applicationKeyId = keys[0]
     const applicationIdCandidate = req.params.applicationId.replace(keys[0] + ':', '')
-    await findUtils.getByUniqueRef(req, 'application', applicationIdCandidate, tolerateStale)
+    application = await findUtils.getByUniqueRef(db, publicationSite, mainPublicationSite, req.params, 'application', applicationIdCandidate, tolerateStale)
   }
-  if (!req.application) return res.status(404).send(req.__('errors.missingApp'))
+  if (!application) return res.status(404).send(req.__('errors.missingApp'))
   if (applicationKeyId) {
-    const applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ _id: req.application.id, 'keys.id': applicationKeyId })
+    const applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ _id: application.id, 'keys.id': applicationKeyId })
+    // @ts-ignore
     req.matchinApplicationKey = !!applicationKeys
   }
-  findUtils.setResourceLinks(req.application, 'application', req.publicBaseUrl, null, encodeURIComponent(req.params.applicationId))
+  findUtils.setResourceLinks(application, 'application', publicBaseUrl, null, encodeURIComponent(req.params.applicationId))
+
+  // @ts-ignore
   req.resourceType = 'applications'
+  // @ts-ignore
+  req.application = req.resource = application
   next()
 })
 

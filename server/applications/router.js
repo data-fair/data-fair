@@ -1,7 +1,7 @@
 const express = require('express')
 const slug = require('slugify')
 const moment = require('moment')
-const config = require('config')
+const config = /** @type {any} */(require('config'))
 const fs = require('fs-extra')
 const util = require('util')
 const unlink = util.promisify(fs.unlink)
@@ -25,36 +25,20 @@ const findUtils = require('../misc/utils/find')
 const asyncWrap = require('../misc/utils/async-handler')
 const journals = require('../misc/utils/journals')
 const capture = require('../misc/utils/capture')
-const visibilityUtils = require('../misc/utils/visibility')
+const { clean } = require('./utils')
+const { findApplications } = require('./service')
 const cacheHeaders = require('../misc/utils/cache-headers')
 const { validateURLFriendly } = require('../misc/utils/validation')
 const publicationSites = require('../misc/utils/publication-sites')
 const datasetUtils = require('../datasets/utils')
-const { prepareMarkdownContent } = require('../misc/utils/markdown')
 
 const router = module.exports = express.Router()
 
-function clean (application, publicUrl, publicationSite, query = {}) {
-  const select = query.select ? query.select.split(',') : []
-  if (query.raw !== 'true') {
-    if (!select.includes('-public')) application.public = permissions.isPublic('applications', application)
-    if (!select.includes('-visibility')) application.visibility = visibilityUtils.visibility(application)
-    if (!query.select || select.includes('description')) {
-      application.description = application.description || ''
-      application.description = prepareMarkdownContent(application.description, query.html === 'true', query.truncate, 'application:' + application.id, application.updatedAt)
-    }
-    if (!select.includes('-links')) findUtils.setResourceLinks(application, 'application', publicUrl, publicationSite && publicationSite.applicationUrlTemplate)
-  }
-
-  delete application.permissions
-  delete application._id
-  delete application.configuration
-  delete application.configurationDraft
-  if (select.includes('-userPermissions')) delete application.userPermissions
-  if (select.includes('-owner')) delete application.owner
-  delete application._uniqueRefs
-  return application
-}
+router.use((req, res, next) => {
+  // @ts-ignore
+  req.resourceType = 'applications'
+  next()
+})
 
 const setUniqueRefs = (application) => {
   if (application.slug) {
@@ -83,83 +67,17 @@ const syncDatasets = async (db, newApp, oldApp = {}) => {
   }
 }
 
-const filterFields = {
-  url: 'url',
-  'base-application': 'url',
-  dataset: 'configuration.datasets.href',
-  topics: 'topics.id',
-  publicationSites: 'publicationSites',
-  requestedPublicationSites: 'requestedPublicationSites'
-}
-const facetFields = {
-  ...filterFields,
-  topics: 'topics'
-}
-const nullFacetFields = ['publicationSites']
-const fieldsMap = {
-  ids: 'id',
-  id: 'id',
-  status: 'status',
-  ...filterFields
-}
-
 // Get the list of applications
 router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
-  const applications = req.app.get('db').collection('applications')
-  req.resourceType = 'applications'
+  // @ts-ignore
+  const publicationSite = req.publicationSite
+  // @ts-ignore
+  const publicBaseUrl = req.publicBaseUrl
+  // @ts-ignore
+  const user = req.user
+  const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const tolerateStale = !!req.publicationSite
-  const options = tolerateStale ? { readPreference: 'nearest' } : {}
-
-  if (req.query.dataset &&
-      !req.query.dataset.startsWith('http://') &&
-      !req.query.dataset.startsWith('https://')) {
-    req.query.dataset = config.publicUrl + '/api/v1/datasets/' + req.query.dataset
-  }
-  if (req.query.service &&
-      !req.query.service.startsWith('http://') &&
-      !req.query.service.startsWith('https://')) {
-    req.query.service = config.publicUrl + '/api/v1/remote-services/' + req.query.service
-  }
-
-  const extraFilters = []
-
-  // the api exposed on a secondary domain should not be able to access resources outside of the owner account
-  if (req.publicationSite) {
-    extraFilters.push({ 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id })
-  }
-
-  if (req.query.filterConcepts === 'true') {
-    extraFilters.push({ 'baseApp.meta.df:filter-concepts': 'true' })
-  }
-  if (req.query.syncState === 'true') {
-    extraFilters.push({ 'baseApp.meta.df:sync-state': 'true' })
-  }
-  if (req.query.overflow === 'true') {
-    extraFilters.push({ 'baseApp.meta.df:overflow': 'true' })
-  }
-
-  const query = findUtils.query(req, fieldsMap, null, extraFilters)
-
-  const sort = findUtils.sort(req.query.sort)
-  const project = findUtils.project(req.query.select, ['configuration', 'configurationDraft'], req.query.raw === 'true')
-  const [skip, size] = findUtils.pagination(req.query)
-
-  const countPromise = req.query.count !== 'false' && applications.countDocuments(query, options)
-  const resultsPromise = size > 0 && applications.find(query, options).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
-  const facetsPromise = req.query.facets && applications.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields), options).toArray()
-  const [count, results, facets] = await Promise.all([countPromise, resultsPromise, facetsPromise])
-  const response = {}
-  if (countPromise) response.count = count
-  if (resultsPromise) response.results = results
-  else response.results = []
-  if (facetsPromise) response.facets = findUtils.parseFacets(facets, nullFacetFields)
-
-  for (const r of response.results) {
-    if (req.query.raw !== 'true') r.userPermissions = permissions.list('applications', r, req.user)
-    clean(r, req.publicBaseUrl, req.publicationSite, req.query)
-  }
-
+  const response = await findApplications(req.app.get('db'), req.locale, publicationSite, publicBaseUrl, reqQuery, user)
   res.json(response)
 }))
 
@@ -210,10 +128,19 @@ router.post('', asyncWrap(async (req, res) => {
 
 // Shared middleware
 const readApplication = asyncWrap(async (req, res, next) => {
-  const tolerateStale = !!req.publicationSite
-  await findUtils.getByUniqueRef(req, 'application', null, tolerateStale)
-  if (!req.application) return res.status(404).send(req.__('errors.missingApp'))
+  // @ts-ignore
+  const publicationSite = req.publicationSite
+  // @ts-ignore
+  const mainPublicationSite = req.mainPublicationSite
+
+  const tolerateStale = !!publicationSite
+  const application = await findUtils.getByUniqueRef(req.app.get('db'), publicationSite, mainPublicationSite, req.params, 'application', null, tolerateStale)
+  if (!application) return res.status(404).send(req.__('errors.missingApp'))
+
+  // @ts-ignore
   req.resourceType = 'applications'
+  // @ts-ignore
+  req.resource = req.application = application
   next()
 })
 

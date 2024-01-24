@@ -1,52 +1,119 @@
-const createError = require('http-errors')
-const limits = require('../misc/utils/limits')
-const i18n = require('i18n')
-const config = /** @type {any} */(require('config'))
+const findUtils = require('../misc/utils/find')
+const permissions = require('../misc/utils/permissions')
+const datasetUtils = require('./utils')
 
-const debugLimits = require('debug')('limits')
+const filterFields = {
+  concepts: 'schema.x-refersTo',
+  'short-concept': 'schema.x-concept.id',
+  'field-type': 'schema.type',
+  'field-format': 'schema.format',
+  children: 'virtual.children',
+  services: 'extensions.remoteService',
+  status: 'status',
+  draftStatus: 'draft.status',
+  topics: 'topics.id',
+  publicationSites: 'publicationSites',
+  requestedPublicationSites: 'requestedPublicationSites',
+  spatial: 'spatial',
+  keywords: 'keywords',
+  title: 'title'
+}
+const facetFields = {
+  ...filterFields,
+  topics: 'topics'
+}
+const sumsFields = { count: 'count' }
+const nullFacetFields = ['publicationSites']
+const fieldsMap = {
+  filename: 'originalFile.name',
+  ids: 'id',
+  id: 'id',
+  slugs: 'slug',
+  slug: 'slug',
+  rest: 'isRest',
+  virtual: 'isVirtual',
+  metaOnly: 'isMetaOnly',
+  ...filterFields
+}
 
 /**
+ *
  * @param {import('mongodb').Db} db
  * @param {string} locale
- * @param {any} owner
- * @param {any} dataset
- * @param {number} contentLength
- * @param {boolean} overwrite
- * @param {boolean} indexed
- * @returns
+ * @param {any} publicationSite
+ * @param {string} publicBaseUrl
+ * @param {Record<string, string>} reqQuery
+ * @param {any} user
  */
-exports.checkStorage = async (db, locale, owner, dataset, contentLength, overwrite, indexed = false) => {
-  const estimatedContentSize = contentLength - 210
+exports.findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
+  const explain = reqQuery.explain === 'true' && user && (user.isAdmin || user.asAdmin) && {}
+  const datasets = db.collection('datasets')
 
+  const tolerateStale = !!publicationSite
+
+  /** @type {import('mongodb').AggregateOptions} */
+  const options = tolerateStale ? { readPreference: 'nearest' } : {}
+
+  const extraFilters = []
+  if (reqQuery.bbox === 'true') {
+    extraFilters.push({ bbox: { $ne: null } })
+  }
+  if (reqQuery.queryable === 'true') {
+    extraFilters.push({ isMetaOnly: { $ne: true } })
+    extraFilters.push({ finalizedAt: { $ne: null } })
+  }
+
+  if (reqQuery.file === 'true') extraFilters.push({ file: { $exists: true } })
+
+  // the api exposed on a secondary domain should not be able to access resources outside of the owner account
+  if (publicationSite) {
+    extraFilters.push({ 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id })
+  }
+
+  const query = findUtils.query(reqQuery, locale, user, 'datasets', fieldsMap, false, extraFilters)
+  const sort = findUtils.sort(reqQuery.sort)
+  const project = findUtils.project(reqQuery.select, [], reqQuery.raw === 'true')
+  const [skip, size] = findUtils.pagination(reqQuery)
+
+  const t0 = Date.now()
+  const countPromise = reqQuery.count !== 'false' && datasets.countDocuments(query, options).then(res => {
+    if (explain) explain.countMS = Date.now() - t0
+    return res
+  })
+  const resultsPromise = size > 0 && datasets.find(query, options).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray().then(res => {
+    if (explain) explain.resultsMS = Date.now() - t0
+    return res
+  })
+  const facetsPromise = reqQuery.facets && datasets.aggregate(findUtils.facetsQuery(reqQuery, user, 'datasets', facetFields, filterFields, nullFacetFields, extraFilters), options).toArray().then(res => {
+    if (explain) explain.facetsMS = Date.now() - t0
+    return res
+  })
+  const sumsPromise = reqQuery.sums && datasets
+    .aggregate(findUtils.sumsQuery(reqQuery, user, 'datasets', sumsFields, filterFields, extraFilters), options).toArray()
+    .then(sumsResponse => {
+      const res = sumsResponse[0] || {}
+      for (const field of reqQuery.sums.split(',')) {
+        res[field] = res[field] || 0
+      }
+      if (explain) explain.sumsMS = Date.now() - t0
+      return res
+    })
+  const [count, results, facets, sums] = await Promise.all([countPromise, resultsPromise, facetsPromise, sumsPromise])
   /** @type {any} */
-  const debugInfo = { owner, estimatedContentSize }
-
-  if (config.defaultLimits.datasetStorage !== -1 && config.defaultLimits.datasetStorage < estimatedContentSize) {
-    debugLimits('datasetStorage/checkStorage', debugInfo)
-    throw createError(413, 'Vous avez atteint la limite de votre espace de stockage pour ce jeu de données.')
+  const response = {}
+  if (countPromise) response.count = count
+  if (resultsPromise) response.results = results
+  else response.results = []
+  if (facetsPromise) response.facets = findUtils.parseFacets(facets, nullFacetFields)
+  if (sumsPromise) response.sums = sums
+  const t1 = Date.now()
+  for (const r of response.results) {
+    if (reqQuery.raw !== 'true') r.userPermissions = permissions.list('datasets', r, user)
+    datasetUtils.clean(publicBaseUrl, publicationSite, r, reqQuery)
   }
-  if (config.defaultLimits.datasetIndexed !== -1 && config.defaultLimits.datasetIndexed < estimatedContentSize) {
-    debugLimits('datasetIndexed/checkStorage', debugInfo)
-    throw createError(413, 'Vous dépassez la taille de données indexées autorisée pour ce jeu de données.')
+  if (explain) {
+    explain.cleanMS = Date.now() - t1
+    response.explain = explain
   }
-  const remaining = await limits.remaining(db, owner)
-  debugInfo.remaining = { ...remaining }
-  if (overwrite && dataset && dataset.storage) {
-    debugInfo.overwriteDataset = dataset.storage
-    // ignore the size of the dataset we are overwriting
-    if (remaining.storage !== -1) remaining.storage += dataset.storage.size
-    if (remaining.indexed !== -1) remaining.indexed += dataset.storage.size
-  }
-  const storageOk = remaining.storage === -1 || ((remaining.storage - estimatedContentSize) >= 0)
-  const indexedOk = !indexed || remaining.indexed === -1 || ((remaining.indexed - estimatedContentSize) >= 0)
-  if (!storageOk || !indexedOk) {
-    if (!storageOk) {
-      debugLimits('exceedLimitStorage/checkStorage', debugInfo)
-      throw createError(429, i18n.__({ locale, phrase: 'errors.exceedLimitStorage' }))
-    }
-    if (!indexedOk) {
-      debugLimits('exceedLimitIndexed/checkStorage', debugInfo)
-      throw createError(429, i18n.__({ locale, phrase: 'errors.exceedLimitIndexed' }))
-    }
-  }
+  return response
 }

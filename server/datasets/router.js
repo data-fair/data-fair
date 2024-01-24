@@ -6,7 +6,7 @@ const moment = require('moment')
 const createError = require('http-errors')
 const pump = require('../misc/utils/pipe')
 const mongodb = require('mongodb')
-const config = require('config')
+const config = /** @type {any} */(require('config'))
 const chardet = require('chardet')
 const slug = require('slugify')
 const i18n = require('i18n')
@@ -21,7 +21,8 @@ const datasetAPIDocs = require('../../contract/dataset-api-docs')
 const privateDatasetAPIDocs = require('../../contract/dataset-private-api-docs')
 const permissions = require('../misc/utils/permissions')
 const usersUtils = require('../misc/utils/users')
-const datasetUtils = require('../datasets/utils')
+const datasetUtils = require('./utils')
+const { prepareExtensions } = require('./utils/extensions')
 const virtualDatasetsUtils = require('../misc/utils/virtual-datasets')
 const restDatasetsUtils = require('../misc/utils/rest-datasets')
 const findUtils = require('../misc/utils/find')
@@ -48,14 +49,15 @@ const { getThumbnail } = require('../misc/utils/thumbnails')
 const datasetFileSample = require('../misc/utils/dataset-file-sample')
 const { bulkSearchStreams } = require('../misc/utils/master-data')
 const applicationKey = require('../misc/utils/application-key')
-const { syncDataset: syncRemoteService } = require('../remote-services/router')
+const { syncDataset: syncRemoteService } = require('../remote-services/utils')
 const { basicTypes } = require('../workers/converter')
 const { validateURLFriendly } = require('../misc/utils/validation')
 const observe = require('../misc/utils/observe')
 const publicationSites = require('../misc/utils/publication-sites')
 const clamav = require('../misc/utils/clamav')
 const nanoid = require('../misc/utils/nanoid')
-const { checkStorage } = require('./service')
+const { checkStorage } = require('./utils/storage')
+const { findDatasets } = require('./service')
 
 const router = express.Router()
 
@@ -63,6 +65,12 @@ const clean = datasetUtils.clean
 
 const debugLimits = require('debug')('limits')
 const debugMasterData = require('debug')('master-data')
+
+router.use((req, res, next) => {
+  // @ts-ignore
+  req.resourceType = 'datasets'
+  next()
+})
 
 /**
  *
@@ -83,142 +91,17 @@ const checkStorageMiddleware = (overwrite, indexed = false) => asyncWrap(async (
   next()
 })
 
-// create short ids for extensions that will be used as prefix of the properties ids in the schema
-// try to make something both readable and with little conflict risk (but not 0 risk)
-const prepareExtensions = (req, extensions, oldExtensions = []) => {
-  for (const e of extensions) {
-    if (e.type === 'remoteService' && !e.shortId && !e.propertyPrefix) {
-      const oldExtension = oldExtensions.find(oldE => oldE.remoteService === e.remoteService && oldE.action === e.action)
-      if (oldExtension) {
-        // do not reprocess already assigned shortIds / propertyPrefixes to prevent compatibility break
-        if (oldExtension.shortId) e.shortId = oldExtension.shortId
-        if (oldExtension.propertyPrefix) e.propertyPrefix = oldExtension.propertyPrefix
-      } else {
-        // only apply to new extensions to prevent compatibility break
-        let propertyPrefix = e.action.toLowerCase()
-        for (const term of ['masterdata', 'find', 'bulk', 'search']) {
-          propertyPrefix = propertyPrefix.replace(term, '')
-        }
-        for (const char of [':', '-', '.', ' ']) {
-          propertyPrefix = propertyPrefix.replace(char, '_')
-        }
-        if (propertyPrefix.startsWith('post')) propertyPrefix = propertyPrefix.replace('post', '')
-        e.propertyPrefix = propertyPrefix.replace(/__/g, '_').replace(/^_/, '').replace(/_$/, '')
-        e.propertyPrefix = '_' + e.propertyPrefix
-
-        // TODO: also check if there is a conflict with an existing calculate property ?
-      }
-    }
-  }
-  const propertyPrefixes = extensions.filter(e => !!e.propertyPrefix).map(e => e.propertyPrefix)
-  if (propertyPrefixes.length !== [...new Set(propertyPrefixes)].length) {
-    throw createError(400, req.__('errors.extensionShortIdConflict'))
-  }
-}
-
-const filterFields = {
-  concepts: 'schema.x-refersTo',
-  'short-concept': 'schema.x-concept.id',
-  'field-type': 'schema.type',
-  'field-format': 'schema.format',
-  children: 'virtual.children',
-  services: 'extensions.remoteService',
-  status: 'status',
-  draftStatus: 'draft.status',
-  topics: 'topics.id',
-  publicationSites: 'publicationSites',
-  requestedPublicationSites: 'requestedPublicationSites',
-  spatial: 'spatial',
-  keywords: 'keywords',
-  title: 'title'
-}
-const facetFields = {
-  ...filterFields,
-  topics: 'topics'
-}
-const sumsFields = { count: 'count' }
-const nullFacetFields = ['publicationSites']
-const fieldsMap = {
-  filename: 'originalFile.name',
-  ids: 'id',
-  id: 'id',
-  slugs: 'slug',
-  slug: 'slug',
-  rest: 'isRest',
-  virtual: 'isVirtual',
-  metaOnly: 'isMetaOnly',
-  ...filterFields
-}
-
 // Get the list of datasets
 router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
-  const explain = req.query.explain === 'true' && req.user && (req.user.isAdmin || req.user.asAdmin) && {}
-  const datasets = req.app.get('db').collection('datasets')
-  req.resourceType = 'datasets'
+  // @ts-ignore
+  const publicationSite = req.publicationSite
+  // @ts-ignore
+  const publicBaseUrl = req.publicBaseUrl
+  // @ts-ignore
+  const user = req.user
+  const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const tolerateStale = !!req.publicationSite
-  const options = tolerateStale ? { readPreference: 'nearest' } : {}
-
-  const extraFilters = []
-  if (req.query.bbox === 'true') {
-    extraFilters.push({ bbox: { $ne: null } })
-  }
-  if (req.query.queryable === 'true') {
-    extraFilters.push({ isMetaOnly: { $ne: true } })
-    extraFilters.push({ finalizedAt: { $ne: null } })
-  }
-
-  if (req.query.file === 'true') extraFilters.push({ file: { $exists: true } })
-
-  // the api exposed on a secondary domain should not be able to access resources outside of the owner account
-  if (req.publicationSite) {
-    extraFilters.push({ 'owner.type': req.publicationSite.owner.type, 'owner.id': req.publicationSite.owner.id })
-  }
-
-  const query = findUtils.query(req, fieldsMap, null, extraFilters)
-  const sort = findUtils.sort(req.query.sort)
-  const project = findUtils.project(req.query.select, [], req.query.raw === 'true')
-  const [skip, size] = findUtils.pagination(req.query)
-
-  const t0 = Date.now()
-  const countPromise = req.query.count !== 'false' && datasets.countDocuments(query, options).then(res => {
-    if (explain) explain.countMS = Date.now() - t0
-    return res
-  })
-  const resultsPromise = size > 0 && datasets.find(query, options).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray().then(res => {
-    if (explain) explain.resultsMS = Date.now() - t0
-    return res
-  })
-  const facetsPromise = req.query.facets && datasets.aggregate(findUtils.facetsQuery(req, facetFields, filterFields, nullFacetFields, extraFilters), options).toArray().then(res => {
-    if (explain) explain.facetsMS = Date.now() - t0
-    return res
-  })
-  const sumsPromise = req.query.sums && datasets
-    .aggregate(findUtils.sumsQuery(req, sumsFields, filterFields, extraFilters), options).toArray()
-    .then(sumsResponse => {
-      const res = sumsResponse[0] || {}
-      for (const field of req.query.sums.split(',')) {
-        res[field] = res[field] || 0
-      }
-      if (explain) explain.sumsMS = Date.now() - t0
-      return res
-    })
-  const [count, results, facets, sums] = await Promise.all([countPromise, resultsPromise, facetsPromise, sumsPromise])
-  const response = {}
-  if (countPromise) response.count = count
-  if (resultsPromise) response.results = results
-  else response.results = []
-  if (facetsPromise) response.facets = findUtils.parseFacets(facets, nullFacetFields)
-  if (sumsPromise) response.sums = sums
-  const t1 = Date.now()
-  for (const r of response.results) {
-    if (req.query.raw !== 'true') r.userPermissions = permissions.list('datasets', r, req.user)
-    clean(req.publicBaseUrl, req.publicationSite, r, req.query)
-  }
-  if (explain) {
-    explain.cleanMS = Date.now() - t1
-    response.explain = explain
-  }
+  const response = await findDatasets(req.app.get('db'), i18n.getLocale(req), publicationSite, publicBaseUrl, reqQuery, user)
   res.json(response)
 }))
 
@@ -266,41 +149,50 @@ const lockNewDataset = async (req, res, dataset) => {
 // also checks that the dataset is in a state compatible with some action
 // supports waiting a little bit to be a little permissive with the user
 const readDataset = (fillDescendants, _acceptedStatuses, preserveDraft, ignoreDraft) => asyncWrap(async (req, res, next) => {
-  const tolerateStale = !!req.publicationSite
+  // @ts-ignore
+  const publicationSite = req.publicationSite
+  // @ts-ignore
+  const mainPublicationSite = req.mainPublicationSite
+  // @ts-ignore
+  const isNewDataset = req.isNewDataset
+
+  const tolerateStale = !!publicationSite
+  let dataset
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
-    await findUtils.getByUniqueRef(req, 'dataset', null, tolerateStale)
-    if (!req.dataset) return res.status(404).send('Dataset not found')
+    dataset = await findUtils.getByUniqueRef(req.app.get('db'), publicationSite, mainPublicationSite, req.params, 'dataset', null, tolerateStale)
+    if (!dataset) return res.status(404).send('Dataset not found')
     // in draft mode the draft is automatically merged and all following operations use dataset.draftReason to adapt
     if (preserveDraft) {
-      req.dataset.prod = { ...req.dataset }
+      dataset.prod = { ...dataset }
     }
-    if ((preserveDraft || req.query.draft === 'true') && req.dataset.draft) {
-      Object.assign(req.dataset, req.dataset.draft)
-      if (!req.dataset.draft.finalizedAt) delete req.dataset.finalizedAt
-      if (!req.dataset.draft.bbox) delete req.dataset.bbox
+    if ((preserveDraft || req.query.draft === 'true') && dataset.draft) {
+      Object.assign(dataset, dataset.draft)
+      if (!dataset.draft.finalizedAt) delete dataset.finalizedAt
+      if (!dataset.draft.bbox) delete dataset.bbox
     }
     if (!preserveDraft) {
-      delete req.dataset.draft
+      delete dataset.draft
     }
 
-    const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body, req.dataset) : _acceptedStatuses
+    const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body, dataset) : _acceptedStatuses
 
-    req.resourceType = 'datasets'
-
-    const isStatusOk = req.dataset.status !== 'draft' && (req.isNewDataset || !acceptedStatuses || acceptedStatuses.includes(req.dataset.status))
-    const isDraftOk = req.dataset.status === 'draft' && ignoreDraft
+    const isStatusOk = dataset.status !== 'draft' && (isNewDataset || !acceptedStatuses || acceptedStatuses.includes(dataset.status))
+    const isDraftOk = dataset.status === 'draft' && ignoreDraft
 
     if (isStatusOk || isDraftOk) {
-      if (fillDescendants && req.dataset.isVirtual) {
-        req.dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), req.dataset, tolerateStale)
+      if (fillDescendants && dataset.isVirtual) {
+        dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), dataset, tolerateStale)
       }
+
+      // @ts-ignore
+      req.dataset = req.resource = dataset
       return next()
     }
 
     // dataset found but not in proper state.. wait a little while
     await new Promise(resolve => setTimeout(resolve, config.datasetStateRetries.interval))
   }
-  throw createError(409, `Le jeu de données n'est pas dans un état permettant l'opération demandée. État courant : ${req.dataset.status}.`)
+  throw createError(409, `Le jeu de données n'est pas dans un état permettant l'opération demandée. État courant : ${dataset?.status}.`)
 })
 
 router.use('/:datasetId/permissions', readDataset(), permissions.router('datasets', 'dataset', async (req, patchedDataset) => {
@@ -458,7 +350,7 @@ router.patch('/:datasetId',
     patch.updatedAt = moment().toISOString()
     patch.updatedBy = { id: req.user.id, name: req.user.name }
 
-    if (patch.extensions) prepareExtensions(req, patch.extensions, req.dataset.extensions)
+    if (patch.extensions) prepareExtensions(i18n.getLocale(req), patch.extensions, req.dataset.extensions)
     if (patch.extensions || req.dataset.extensions) {
       patch.schema = await extensions.prepareSchema(db, patch.schema || req.dataset.schema, patch.extensions || req.dataset.extensions)
     }
@@ -680,7 +572,7 @@ const initNew = async (db, req) => {
   dataset.permissions = []
   dataset.schema = dataset.schema || []
   if (dataset.extensions) {
-    prepareExtensions(req, dataset.extensions)
+    prepareExtensions(i18n.getLocale(req), dataset.extensions)
     dataset.schema = await extensions.prepareSchema(db, dataset.schema, dataset.extensions)
   }
   curateDataset(dataset)
@@ -975,7 +867,7 @@ const updateDataset = asyncWrap(async (req, res) => {
 
     let dataset = req.dataset
     req.body.schema = req.body.schema || dataset.schema || []
-    if (req.body.extensions) prepareExtensions(req, req.body.extensions, dataset.extensions)
+    if (req.body.extensions) prepareExtensions(i18n.getLocale(req), req.body.extensions, dataset.extensions)
     if (req.body.extensions || dataset.extensions) {
       req.body.schema = await extensions.prepareSchema(db, req.body.schema, req.body.extensions || dataset.extensions)
     }

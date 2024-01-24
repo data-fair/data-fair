@@ -251,7 +251,7 @@ exports.run = async () => {
     await Promise.all([
       require('./misc/utils/capture').init(),
       require('./misc/utils/cache').init(db),
-      require('./remote-services/router').init(db),
+      require('./remote-services/utils').init(db),
       require('./base-applications/router').init(db),
       limits.init(db),
       wsUtils.initServer(wss, db, app.get('session'))

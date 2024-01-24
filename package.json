@@ -78,6 +78,7 @@
     "@types/http-link-header": "^1.0.5",
     "@types/i18n": "^0.13.10",
     "@types/json-stable-stringify": "^1.0.36",
+    "@types/nanoid": "^3.0.0",
     "@types/original-url": "^1.2.3",
     "@types/sanitize-html": "^2.9.5",
     "babel-eslint": "^10.1.0",

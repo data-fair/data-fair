@@ -2,10 +2,10 @@ const config = require('config')
 const express = require('express')
 const moment = require('moment')
 const slug = require('slugify')
-const CronJob = require('cron').CronJob
-const { prepareMarkdownContent } = require('../misc/utils/markdown')
-const catalogAPIDocs = require('../../contract/catalog-api-docs')
+const i18n = require('i18n')
 const mongoEscape = require('mongo-escape')
+const CronJob = require('cron').CronJob
+const catalogAPIDocs = require('../../contract/catalog-api-docs')
 const catalogs = require('./plugins')
 
 const ajv = require('../misc/utils/ajv')
@@ -15,21 +15,18 @@ const validatePatch = ajv.compile(catalogPatch)
 
 const permissions = require('../misc/utils/permissions')
 const usersUtils = require('../misc/utils/users')
-const findUtils = require('../misc/utils/find')
 const asyncWrap = require('../misc/utils/async-handler')
 const cacheHeaders = require('../misc/utils/cache-headers')
+const { clean } = require('./utils')
+const { findCatalogs } = require('./service')
 
 const router = module.exports = express.Router()
 
-function clean (catalog, html = false) {
-  catalog.public = permissions.isPublic('catalogs', catalog)
-  delete catalog.permissions
-  if (catalog.apiKey) catalog.apiKey = '**********'
-  if (catalog.description) catalog.description = prepareMarkdownContent(catalog.description, html, null, `catalog:${catalog.id}`, catalog.updatedAt)
-  findUtils.setResourceLinks(catalog, 'catalog')
-  catalog.autoUpdate = catalog.autoUpdate || { active: false }
-  return catalog
-}
+router.use((req, res, next) => {
+  // @ts-ignore
+  req.resourceType = 'catalogs'
+  next()
+})
 
 router.post('/_init', asyncWrap(async (req, res) => {
   if (!req.query.url) return res.status(400).type('text/plain').send('"url" query parameter is required')
@@ -52,33 +49,12 @@ router.get('/_types', cacheHeaders.noCache, asyncWrap(async (req, res) => {
 
 // Get the list of catalogs
 router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
-  const catalogs = req.app.get('db').collection('catalogs')
-  req.resourceType = 'catalogs'
-  const query = findUtils.query(req, {
-    type: 'type',
-    url: 'url',
-    organization: 'organization.id',
-    ids: 'id',
-    id: 'id',
-    status: 'status'
-  })
-  const sort = findUtils.sort(req.query.sort)
-  const project = findUtils.project(req.query.select)
-  const [skip, size] = findUtils.pagination(req.query)
-  const mongoQueries = [
-    size > 0 ? catalogs.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray() : Promise.resolve([]),
-    catalogs.countDocuments(query)
-  ]
-  if (req.query.facets) {
-    mongoQueries.push(catalogs.aggregate(findUtils.facetsQuery(req, {})).toArray())
-  }
-  let [results, count, facets] = await Promise.all(mongoQueries)
-  for (const r of results) {
-    r.userPermissions = permissions.list('catalogs', r, req.user)
-    clean(r, req.query.html === 'true')
-  }
-  facets = findUtils.parseFacets(facets)
-  res.json({ count, results: results.map(result => mongoEscape.unescape(result, true)), facets })
+  // @ts-ignore
+  const user = req.user
+  const reqQuery = /** @type {Record<string, string>} */(req.query)
+
+  const response = await findCatalogs(req.app.get('db'), i18n.getLocale(req), reqQuery, user)
+  res.json(response)
 }))
 
 const initNew = (req) => {
