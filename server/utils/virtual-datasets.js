@@ -120,12 +120,13 @@ exports.prepareSchema = async (db, dataset) => {
 }
 
 // Only non virtual descendants on which to perform the actual ES queries
-exports.descendants = async (db, dataset, extraProperties, throwEmpty = true) => {
+exports.descendants = async (db, dataset, tolerateStale = false, extraProperties = null, throwEmpty = true) => {
   const project = {
     'descendants.id': 1,
     'descendants.isVirtual': 1,
     'descendants.virtual': 1
   }
+  const options = tolerateStale ? { readPreference: 'nearest' } : {}
   if (extraProperties) {
     for (const p of extraProperties) project['descendants.' + p] = 1
   }
@@ -153,7 +154,7 @@ exports.descendants = async (db, dataset, extraProperties, throwEmpty = true) =>
     }
   }, {
     $project: project
-  }]).toArray()
+  }], options).toArray()
   if (!res[0]) return []
   const virtualDescendantsWithFilters = res[0].descendants
     .filter(d => d.isVirtual && d.virtual.filters && d.virtual.filters.length)
