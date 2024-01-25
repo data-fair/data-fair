@@ -100,5 +100,5 @@ exports.process = async function (app, dataset) {
     result.status = dataset.status
   }
 
-  await datasetsService.applyPatch(db, dataset, result)
+  await datasetsService.applyPatch(app, dataset, result)
 }

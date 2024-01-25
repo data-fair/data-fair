@@ -41,7 +41,7 @@ exports.process = async function (app, dataset) {
   const job = new CronJob(config.exportRestDatasets.cron, () => {})
   patch.exports.restToCSV.nextExport = job.nextDates().toISOString()
 
-  await datasetsService.applyPatch(db, dataset, patch)
+  await datasetsService.applyPatch(app, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
   debug('done')
 }

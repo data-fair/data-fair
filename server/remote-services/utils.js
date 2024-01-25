@@ -55,8 +55,11 @@ exports.fixConceptsFilters = async (db, locale, reqQuery, user) => {
   }
 }
 
-exports.syncDataset = async (req, dataset) => {
-  const db = req.app.get('db')
+exports.syncDataset = async (db, dataset) => {
+  if (dataset.draftReason) return
+
+  // console.log('SYNC ko', JSON.stringify(dataset, null, 2))
+
   const id = 'dataset:' + dataset.id
   if (dataset.masterData && (
     (dataset.masterData.singleSearchs && dataset.masterData.singleSearchs.length) ||
@@ -64,7 +67,7 @@ exports.syncDataset = async (req, dataset) => {
     (dataset.masterData.virtualDatasets && dataset.masterData.virtualDatasets.active) ||
     (dataset.masterData.standardSchema && dataset.masterData.standardSchema.active)
   )) {
-    debugMasterData(`sync a dataset with master data to a remote service ${dataset.id} (${dataset.slug}) -> ${id}, origin of request = ${req.method} ${req.originalUrl} by ${req.user?.name} (${req.user?.id})`, dataset.masterData)
+    debugMasterData(`sync a dataset with master data to a remote service ${dataset.id} (${dataset.slug}) -> ${id}`, dataset.masterData)
     const settings = await db.collection('settings')
       .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { info: 1 } })
 
@@ -104,7 +107,7 @@ exports.syncDataset = async (req, dataset) => {
     await db.collection('remote-services').replaceOne({ id }, mongoEscape.escape(service, true), { upsert: true })
   } else {
     const deleted = await db.collection('remote-services').deleteOne({ id })
-    if (deleted?.deletedCount) debugMasterData(`deleted remote service ${id}, origin of request = ${req.method} ${req.originalUrl} by ${req.user?.name} (${req.user?.id})})`)
+    if (deleted?.deletedCount) debugMasterData(`deleted remote service ${id}`)
   }
 }
 

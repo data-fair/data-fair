@@ -6,6 +6,7 @@ const fs = require('fs-extra')
 const util = require('util')
 const unlink = util.promisify(fs.unlink)
 const createError = require('http-errors')
+const i18n = require('i18n')
 const sanitizeHtml = require('../../shared/sanitize-html')
 const { nanoid } = require('nanoid')
 const applicationAPIDocs = require('../../contract/application-api-docs')
@@ -97,7 +98,7 @@ router.post('', asyncWrap(async (req, res) => {
   const application = await initNew(req)
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', req.user)) return res.status(403).type('text/plain').send()
   validate(application)
-  validateURLFriendly(req, application.slug)
+  validateURLFriendly(i18n.getLocale(req), application.slug)
 
   // Generate ids and try insertion until there is no conflict on id
   const toks = application.url.split('/').filter(part => !!part)
@@ -234,7 +235,7 @@ router.patch('/:applicationId',
     const db = req.app.get('db')
     const patch = req.body
     validatePatch(patch)
-    validateURLFriendly(req, patch.slug)
+    validateURLFriendly(i18n.getLocale(req), patch.slug)
 
     // Retry previously failed publications
     if (!patch.publications) {

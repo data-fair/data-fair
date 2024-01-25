@@ -156,6 +156,6 @@ exports.process = async function (app, dataset) {
     }
   }
 
-  await datasetService.applyPatch(db, dataset, patch)
+  await datasetService.applyPatch(app, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
 }

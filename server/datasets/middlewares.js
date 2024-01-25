@@ -28,6 +28,11 @@ exports.checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res
 })
 
 // Shared middleware to apply a lock on the modified resource
+/**
+ *
+ * @param {boolean | ((patch: any) => boolean)} _shouldLock
+ * @returns
+ */
 exports.lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
   const shouldLock = typeof _shouldLock === 'function' ? _shouldLock(req.body, req.query) : _shouldLock

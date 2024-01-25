@@ -11,9 +11,7 @@ const chardet = require('chardet')
 const slug = require('slugify')
 const i18n = require('i18n')
 const sanitizeHtml = require('../../shared/sanitize-html')
-const CronJob = require('cron').CronJob
 const LinkHeader = require('http-link-header')
-const stableStringify = require('json-stable-stringify')
 const journals = require('../misc/utils/journals')
 const esUtils = require('./es')
 const filesUtils = require('../misc/utils/files')
@@ -22,6 +20,7 @@ const privateDatasetAPIDocs = require('../../contract/dataset-private-api-docs')
 const permissions = require('../misc/utils/permissions')
 const usersUtils = require('../misc/utils/users')
 const datasetUtils = require('./utils')
+const { curateDataset } = require('./utils')
 const { prepareExtensions } = require('./utils/extensions')
 const virtualDatasetsUtils = require('./utils/virtual')
 const restDatasetsUtils = require('./utils/rest')
@@ -36,8 +35,6 @@ const cacheHeaders = require('../misc/utils/cache-headers')
 const outputs = require('./utils/outputs')
 const limits = require('../misc/utils/limits')
 const notifications = require('../misc/utils/notifications')
-const datasetPatchSchema = require('../../contract/dataset-patch')
-const validatePatch = ajv.compile(datasetPatchSchema)
 const datasetPostSchema = require('../../contract/dataset-post')
 const validatePost = ajv.compile(datasetPostSchema.properties.body)
 const userNotificationSchema = require('../../contract/user-notification')
@@ -47,17 +44,18 @@ const { getThumbnail } = require('../misc/utils/thumbnails')
 const datasetFileSample = require('./utils/file-sample')
 const { bulkSearchStreams } = require('./utils/master-data')
 const applicationKey = require('../misc/utils/application-key')
-const { syncDataset: syncRemoteService } = require('../remote-services/utils')
 const { basicTypes } = require('../workers/converter')
 const { validateURLFriendly } = require('../misc/utils/validation')
 const observe = require('../misc/utils/observe')
 const publicationSites = require('../misc/utils/publication-sites')
 const clamav = require('../misc/utils/clamav')
 const nanoid = require('../misc/utils/nanoid')
+const { syncDataset: syncRemoteService } = require('../remote-services/utils')
 const { findDatasets, applyPatch, validateDraft, deleteDataset } = require('./service')
 const { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } = require('./utils/schema')
-const { dir, filePath, exportedFilePath, originalFilePath, attachmentsDir } = require('./utils/files')
-const { updateStorage, updateTotalStorage } = require('./utils/storage')
+const { dir, filePath, originalFilePath, attachmentsDir } = require('./utils/files')
+const { preparePatch, validatePatch } = require('./utils/patch')
+const { updateTotalStorage } = require('./utils/storage')
 const { checkStorage, lockDataset, lockNewDataset, readDataset } = require('./middlewares')
 
 const router = express.Router()
@@ -157,185 +155,42 @@ router.patch('/:datasetId',
       }
     }
   }),
-  lockDataset((patch) => {
+  lockDataset((/** @type {any} */ patch) => {
     return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)
   }),
   (req, res, next) => descriptionHasBreakingChanges(req) ? permissionsWriteDescriptionBreaking(req, res, next) : permissionsWriteDescription(req, res, next),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
   (req, res, next) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),
   asyncWrap(async (req, res) => {
-    const db = req.app.get('db')
+    // @ts-ignore
+    const dataset = req.dataset
+    // @ts-ignore
+    const user = req.user
+    // @ts-ignore
+    const publicBaseUrl = req.publicBaseUrl
+    // @ts-ignore
+    const publicationSite = req.publicationSite
+
     const patch = req.body
+    const db = req.app.get('db')
+    const locale = i18n.getLocale(req)
+
     validatePatch(patch)
-    validateURLFriendly(req, patch.slug)
 
-    patch.id = req.dataset.id
-    patch.slug = patch.slug || req.dataset.slug
-    datasetUtils.setUniqueRefs(patch)
-    curateDataset(patch)
+    validateURLFriendly(locale, patch.slug)
 
-    // Changed a previously failed dataset, retry everything.
-    // Except download.. We only try it again if the fetch failed.
-    if (req.dataset.status === 'error') {
-      if (req.dataset.isVirtual) patch.status = 'indexed'
-      else if (req.dataset.isRest) patch.status = 'analyzed'
-      else if (req.dataset.remoteFile && !req.dataset.originalFile) patch.status = 'imported'
-      else if (!basicTypes.includes(req.dataset.originalFile.mimetype)) patch.status = 'uploaded'
-      else patch.status = 'loaded'
-    }
-
-    // Ignore patch that doesn't bring actual change
-    for (const patchKey of Object.keys(patch)) {
-      if (stableStringify(patch[patchKey]) === stableStringify(req.dataset[patchKey])) { delete patch[patchKey] }
-    }
-    if (Object.keys(patch).length === 0) return res.status(200).send(clean(req.publicBaseUrl, req.publicationSite, req.dataset))
-
-    patch.updatedAt = moment().toISOString()
-    patch.updatedBy = { id: req.user.id, name: req.user.name }
-
-    if (patch.extensions) prepareExtensions(i18n.getLocale(req), patch.extensions, req.dataset.extensions)
-    if (patch.extensions || req.dataset.extensions) {
-      patch.schema = await extensions.prepareSchema(db, patch.schema || req.dataset.schema, patch.extensions || req.dataset.extensions)
-    }
-
-    // Re-publish publications
-    if (!patch.publications && req.dataset.publications && req.dataset.publications.length) {
-      for (const p of req.dataset.publications) {
-        if (p.status !== 'deleted') p.status = 'waiting'
-      }
-      patch.publications = req.dataset.publications
-    }
-
-    // manage automatic export of REST datasets into files
-    if (patch.exports && patch.exports.restToCSV) {
-      if (patch.exports.restToCSV.active) {
-        const job = new CronJob(config.exportRestDatasets.cron, () => {})
-        patch.exports.restToCSV.nextExport = job.nextDates().toISOString()
-      } else {
-        delete patch.exports.restToCSV.nextExport
-        if (await fs.pathExists(exportedFilePath(req.dataset, '.csv'))) {
-          await fs.remove(exportedFilePath(req.dataset, '.csv'))
-        }
-      }
-      patch.exports.restToCSV.lastExport = req.dataset?.exports?.restToCSV?.lastExport
-    }
-
-    if (patch.extensions && req.dataset.isRest && req.dataset.extensions) {
-      // TODO: check extension type (remoteService or exprEval)
-      const removedExtensions = req.dataset.extensions.filter(e => {
-        if (e.type === 'remoteService') return !patch.extensions.find(pe => pe.type === 'remoteService' && e.remoteService === pe.remoteService && e.action === pe.action)
-        if (e.type === 'exprEval') return !patch.extensions.find(pe => pe.type === 'exprEval' && e.property?.key === pe.property?.key)
-        return false
+    const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, req.body, dataset, user, locale)
+      .catch(err => {
+        if (err.code !== 11000) throw err
+        throw createError(400, req.__('errors.dupSlug'))
       })
-      if (removedExtensions.length) {
-        debugMasterData(`PATCH on dataset removed some extensions ${req.dataset.id} (${req.dataset.slug}) by ${req.user?.name} (${req.user?.id})`, removedExtensions)
-        const unset = {}
-        for (const e of removedExtensions) {
-          if (e.type === 'remoteService') unset[extensions.getExtensionKey(e)] = ''
-          if (e.type === 'exprEval') unset[e.property?.key] = ''
-        }
-        await restDatasetsUtils.collection(db, req.dataset).updateMany({},
-          { $unset: unset }
-        )
-        await updateStorage(req.app, req.dataset)
-      }
+    if (!isEmpty) {
+      await publicationSites.applyPatch(db, dataset, { ...dataset, ...patch }, user, 'dataset')
+      await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
+      await syncRemoteService(db, dataset)
     }
 
-    const removedRestProps = (req.dataset.isRest && patch.schema && req.dataset.schema.filter(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))) ?? []
-    if (req.dataset.isRest && req.dataset.rest?.storeUpdatedBy && patch.rest && !patch.rest.storeUpdatedBy) {
-      removedRestProps.push({ key: '_updatedBy' })
-      removedRestProps.push({ key: '_updatedByName' })
-    }
-    if (removedRestProps.length) {
-      // some property was removed in rest dataset, trigger full re-indexing
-      await restDatasetsUtils.collection(db, req.dataset).updateMany({},
-        { $unset: removedRestProps.reduce((a, df) => { a[df.key] = ''; return a }, {}) }
-      )
-      await datasetUtils.updateStorage(req.app, req.dataset)
-      patch.status = 'analyzed'
-    }
-
-    const coordXProp = req.dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordX')
-    const coordYProp = req.dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordY')
-    const projectGeomProp = req.dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#Geometry')
-
-    if (patch.remoteFile) {
-      if (patch.remoteFile?.url !== req.dataset.remoteFile?.url) {
-        delete patch.remoteFile.lastModified
-        delete patch.remoteFile.etag
-        patch.status = 'imported'
-      } else {
-        patch.remoteFile.lastModified = req.dataset.remoteFile.lastModified
-        patch.remoteFile.etag = req.dataset.remoteFile.etag
-      }
-    }
-    if (req.dataset.isVirtual) {
-      if (patch.schema || patch.virtual) {
-        patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...req.dataset, ...patch })
-        patch.status = 'indexed'
-      }
-    } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.ignoreDetection !== f.ignoreDetection))) {
-      // some ignoreDetection param has changed on a field, trigger full analysis / re-indexing
-      patch.status = 'loaded'
-    } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.ignoreIntegerDetection !== f.ignoreIntegerDetection))) {
-      // some ignoreIntegerDetection param has changed on a field, trigger full analysis / re-indexing
-      patch.status = 'loaded'
-    } else if (patch.extensions) {
-      // extensions have changed, trigger full re-indexing
-      patch.status = 'analyzed'
-    } else if (patch.projection && (!req.dataset.projection || patch.projection.code !== req.dataset.projection.code) && ((coordXProp && coordYProp) || projectGeomProp)) {
-      // geo projection has changed, trigger full re-indexing
-      patch.status = 'analyzed'
-    } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.geoFieldsKey(req.dataset.schema)) {
-      // geo concepts haved changed, trigger full re-indexing
-      patch.status = 'analyzed'
-    } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.separator !== f.separator))) {
-      // some separator has changed on a field, trigger full re-indexing
-      patch.status = 'analyzed'
-    } else if (patch.schema && patch.schema.find(f => req.dataset.schema.find(df => df.key === f.key && df.timeZone !== f.timeZone))) {
-      // some timeZone has changed on a field, trigger full re-indexing
-      patch.status = 'analyzed'
-    } else if (removedRestProps.length) {
-      patch.status = 'analyzed'
-    } else if (patch.schema && !datasetUtils.schemasFullyCompatible(patch.schema, req.dataset.schema)) {
-      try {
-        // this method will routinely throw errors
-        // we just try in case elasticsearch considers the new mapping compatible
-        // so that we might optimize and reindex only when necessary
-        await esUtils.updateDatasetMapping(req.app.get('es'), { id: req.dataset.id, schema: patch.schema }, req.dataset)
-        patch.status = 'indexed'
-      } catch (err) {
-        // generated ES mappings are not compatible, trigger full re-indexing
-        patch.status = 'analyzed'
-      }
-      await datasetUtils.updateStorage(req.app, { ...req.dataset, schema: patch.schema })
-    } else if (patch.thumbnails || patch.masterData) {
-      // just change finalizedAt so that cache is invalidated, but the worker doesn't relly need to work on the dataset
-      patch.finalizedAt = (new Date()).toISOString()
-    } else if (patch.rest && req.dataset.rest && patch.rest.storeUpdatedBy !== req.dataset.rest.storeUpdatedBy) {
-      // changes in rest history mode will be processed by the finalizer worker
-      patch.status = 'analyzed'
-    } else if (patch.rest) {
-      // changes in rest history mode will be processed by the finalizer worker
-      patch.status = 'indexed'
-    }
-
-    if (patch.extensions) debugMasterData(`PATCH dataset ${req.dataset.id} (${req.dataset.slug}) extensions by ${req.user?.name} (${req.user?.id})`, req.dataset.extensions, patch.extensions)
-    if (patch.masterData) debugMasterData(`PATCH dataset ${req.dataset.id} (${req.dataset.slug}) masterData by ${req.user?.name} (${req.user?.id})`, req.dataset.masterData, patch.masterData)
-
-    const previousDataset = { ...req.dataset }
-    const mongoPatch = await applyPatch(db, req.dataset, patch, false)
-    await publicationSites.applyPatch(db, previousDataset, req.dataset, req.user, 'dataset')
-    try {
-      await db.collection('datasets').updateOne({ id: req.dataset.id }, mongoPatch)
-    } catch (err) {
-      if (err.code !== 11000) throw err
-      throw createError(400, req.__('errors.dupSlug'))
-    }
-
-    await syncRemoteService(req, req.dataset)
-
-    res.status(200).json(clean(req.publicBaseUrl, req.publicationSite, req.dataset))
+    res.status(200).json(clean(publicBaseUrl, publicationSite, dataset))
   }))
 
 // Change ownership of a dataset
@@ -387,7 +242,7 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
     }
   }
 
-  await syncRemoteService(req, patchedDataset)
+  await syncRemoteService(req.app.get('db'), patchedDataset)
 
   await updateTotalStorage(req.app.get('db'), req.dataset.owner)
   await updateTotalStorage(req.app.get('db'), patch.owner)
@@ -401,7 +256,7 @@ router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft:
   if (req.dataset.draftReason && req.datasetFull.status !== 'draft') {
     await deleteDataset(req.app, req.datasetFull)
   }
-  await syncRemoteService(req, { ...req.datasetFull, masterData: null })
+  await syncRemoteService(req.app.get('db'), { ...req.datasetFull, masterData: null })
   await updateTotalStorage(req.app.get('db'), req.datasetFull.owner)
   res.sendStatus(204)
 }))
@@ -420,17 +275,6 @@ const initNew = async (db, req) => {
   }
   curateDataset(dataset)
   return dataset
-}
-
-const curateDataset = (dataset, existingDataset) => {
-  if (dataset.title) dataset.title = dataset.title.trim()
-
-  if (dataset.remoteFile?.autoUpdate?.active) {
-    const job = new CronJob(config.remoteFilesAutoUpdates.cron, () => {})
-    dataset.remoteFile.autoUpdate.nextUpdate = job.nextDates().toISOString()
-  } else if (dataset.remoteFile?.autoUpdate) {
-    delete dataset.remoteFile.autoUpdate.nextUpdate
-  }
 }
 
 const titleFromFileName = (name) => {
@@ -558,8 +402,8 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
   try {
     const db = req.app.get('db')
 
-    validateURLFriendly(req, req.body.id)
-    validateURLFriendly(req, req.body.slug)
+    validateURLFriendly(i18n.getLocale(req), req.body.id)
+    validateURLFriendly(i18n.getLocale(req), req.body.slug)
 
     let dataset
     // After uploadFile, req.files contains the metadata of an uploaded file, and req.body the content of additional text fields
@@ -637,7 +481,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
 
     await updateTotalStorage(req.app.get('db'), dataset.owner)
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
-    await syncRemoteService(req, dataset)
+    await syncRemoteService(req.app.get('db'), dataset)
     res.status(201).send(clean(req.publicBaseUrl, req.publicationSite, dataset, {}, req.query.draft === 'true'))
   } catch (err) {
     // Wrapped the whole thing in a try/catch to remove files in case of failure
@@ -656,7 +500,7 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
   const newDataset = await initNew(db, req)
   newDataset.id = req.params.datasetId
   if (!await db.collection('datasets').countDocuments({ id: newDataset.id })) {
-    validateURLFriendly(req, newDataset.id)
+    validateURLFriendly(i18n.getLocale(req), newDataset.id)
   }
   const baseSlug = slug(newDataset.title || newDataset.id, { lower: true, strict: true })
   let i = 0
@@ -729,14 +573,14 @@ const updateDataset = asyncWrap(async (req, res) => {
     } else if (dataset.isVirtual) {
       const { isVirtual, updatedBy, updatedAt, ...patch } = req.body
       validatePatch(patch)
-      validateURLFriendly(req, patch.slug)
+      validateURLFriendly(i18n.getLocale(req), patch.slug)
       req.body.virtual = req.body.virtual || { children: [] }
       req.body.schema = await virtualDatasetsUtils.prepareSchema(db, { ...dataset, ...req.body })
       req.body.status = 'indexed'
     } else if (dataset.isRest) {
       const { isRest, updatedBy, updatedAt, ...patch } = req.body
       validatePatch(patch)
-      validateURLFriendly(req, patch.slug)
+      validateURLFriendly(i18n.getLocale(req), patch.slug)
       req.body.rest = req.body.rest || {}
       if (req.isNewDataset) {
         await restDatasetsUtils.initDataset(db, { ...dataset, ...req.body })
@@ -778,7 +622,7 @@ const updateDataset = asyncWrap(async (req, res) => {
     }
     await Promise.all([
       datasetUtils.updateStorage(req.app, dataset),
-      syncRemoteService(req, dataset)
+      syncRemoteService(req.app.get('db'), dataset)
     ])
     res.status(req.isNewDataset ? 201 : 200).send(clean(req.publicBaseUrl, req.publicationSite, dataset, {}, req.query.draft === 'true'))
   } catch (err) {

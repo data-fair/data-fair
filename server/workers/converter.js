@@ -59,7 +59,6 @@ exports.process = async function (app, dataset) {
   const dataDir = path.resolve(config.dataDir)
 
   const debug = require('debug')(`worker:converter:${dataset.id}`)
-  const db = app.get('db')
   const originalFilePath = datasetUtils.originalFilePath(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
   const tmpDir = (await tmp.dir({ dir: path.join(dataDir, 'tmp'), unsafeCleanup: true })).path
@@ -208,6 +207,6 @@ exports.process = async function (app, dataset) {
   if (dataset.timeZone) patch.timeZone = dataset.timeZone
   if (dataset.analysis) patch.analysis = dataset.analysis
 
-  await datasetService.applyPatch(db, dataset, patch)
+  await datasetService.applyPatch(app, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
 }

@@ -1,5 +1,6 @@
 const config = /** @type {any} */(require('config'))
 const slug = require('slugify')
+const CronJob = require('cron').CronJob
 const locks = require('../../misc/utils/locks')
 const observe = require('../../misc/utils/observe')
 const nanoid = require('../../misc/utils/nanoid')
@@ -188,5 +189,16 @@ exports.setUniqueRefs = (resource) => {
   if (resource.slug) {
     resource._uniqueRefs = [resource.id]
     if (resource.slug !== resource.id) resource._uniqueRefs.push(resource.slug)
+  }
+}
+
+exports.curateDataset = (dataset, existingDataset) => {
+  if (dataset.title) dataset.title = dataset.title.trim()
+
+  if (dataset.remoteFile?.autoUpdate?.active) {
+    const job = new CronJob(config.remoteFilesAutoUpdates.cron, () => {})
+    dataset.remoteFile.autoUpdate.nextUpdate = job.nextDates().toISOString()
+  } else if (dataset.remoteFile?.autoUpdate) {
+    delete dataset.remoteFile.autoUpdate.nextUpdate
   }
 }

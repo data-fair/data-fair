@@ -57,7 +57,6 @@ exports.process = async function (app, dataset) {
   const datasetUtils = require('../datasets/utils')
   const datasetService = require('../datasets/service')
 
-  const db = app.get('db')
   const attachments = await datasetUtils.lsAttachments(dataset)
   const analyzer = new AnalyzerWritable({ attachments, existingSchema: dataset.schema || [], dataset })
   const readableStream = fs.createReadStream(datasetUtils.filePath(dataset))
@@ -101,6 +100,6 @@ exports.process = async function (app, dataset) {
   }
   if (dataset.projection) patch.projection = dataset.projection
 
-  await datasetService.applyPatch(db, dataset, patch)
+  await datasetService.applyPatch(app, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
 }

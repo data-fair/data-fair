@@ -14,7 +14,6 @@ exports.process = async function (app, dataset) {
 
   const debug = require('debug')(`worker:csv-analyzer:${dataset.id}`)
   debug('extract file sample')
-  const db = app.get('db')
   const fileSample = await datasetFileSample(dataset, dataset.file.encoding === 'UTF-8')
   if (!fileSample) throw createError(400, '[noretry] Échec d\'échantillonage du fichier tabulaire, il est vide')
   let decodedSample
@@ -86,6 +85,6 @@ exports.process = async function (app, dataset) {
     schema: dataset.schema
   }
 
-  await datasetsService.applyPatch(db, dataset, patch)
+  await datasetsService.applyPatch(app, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
 }

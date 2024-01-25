@@ -29,7 +29,7 @@ exports.process = async function (app, dataset) {
   }
 
   debugMasterData(`apply patch after extensions ${dataset.id} (${dataset.slug})`, patch)
-  await datasetService.applyPatch(db, dataset, patch)
+  await datasetService.applyPatch(app, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
   debug('done')
 }

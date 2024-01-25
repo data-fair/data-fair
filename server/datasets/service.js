@@ -9,8 +9,11 @@ const webhooks = require('../misc/utils/webhooks')
 const journals = require('../misc/utils/journals')
 const { basicTypes } = require('../workers/converter')
 const { updateStorage } = require('./utils/storage')
-const { dir, filePath, fullFilePath, originalFilePath, attachmentsDir } = require('./utils/files')
+const { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath } = require('./utils/files')
 const { schemasFullyCompatible, getSchemaBreakingChanges } = require('./utils/schema')
+const { getExtensionKey } = require('./utils/extensions')
+
+const debugMasterData = require('debug')('master-data')
 
 const filterFields = {
   concepts: 'schema.x-refersTo',
@@ -159,9 +162,70 @@ exports.deleteDataset = async (app, dataset) => {
   }
 }
 
-exports.applyPatch = async (db, dataset, patch, save = true) => {
+/**
+ *
+ * @param {any} app
+ * @param {any} dataset
+ * @param {any} patch
+ * @param {any[]} [removedRestProps]
+ * @param {boolean} [attemptMappingUpdate]
+ */
+exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappingUpdate) => {
+  if (patch.extensions) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) extensions`, dataset.extensions, patch.extensions)
+  if (patch.masterData) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) masterData`, dataset.masterData, patch.masterData)
+
+  const db = app.get('db')
+
+  // manage automatic export of REST datasets into files
+  if (patch.exports && patch.exports.restToCSV) {
+    if (!patch.exports.restToCSV.active && await fs.pathExists(exportedFilePath(dataset, '.csv'))) {
+      await fs.remove(exportedFilePath(dataset, '.csv'))
+    }
+  }
+
+  if (patch.extensions && dataset.isRest && dataset.extensions) {
+    // TODO: check extension type (remoteService or exprEval)
+    const removedExtensions = dataset.extensions.filter(e => {
+      if (e.type === 'remoteService') return !patch.extensions.find(pe => pe.type === 'remoteService' && e.remoteService === pe.remoteService && e.action === pe.action)
+      if (e.type === 'exprEval') return !patch.extensions.find(pe => pe.type === 'exprEval' && e.property?.key === pe.property?.key)
+      return false
+    })
+    if (removedExtensions.length) {
+      debugMasterData(`PATCH on dataset removed some extensions ${dataset.id} (${dataset.slug})`, removedExtensions)
+      const unset = {}
+      for (const e of removedExtensions) {
+        if (e.type === 'remoteService') unset[getExtensionKey(e)] = ''
+        if (e.type === 'exprEval') unset[e.property?.key] = ''
+      }
+      await restDatasetsUtils.collection(db, dataset).updateMany({},
+        { $unset: unset }
+      )
+    }
+  }
+
+  if (removedRestProps && removedRestProps.length) {
+    // some property was removed in rest dataset, trigger full re-indexing
+    await restDatasetsUtils.collection(db, dataset).updateMany({},
+      { $unset: removedRestProps.reduce((a, df) => { a[df.key] = ''; return a }, {}) }
+    )
+  }
+
+  if (attemptMappingUpdate) {
+    try {
+      // this method will routinely throw errors
+      // we just try in case elasticsearch considers the new mapping compatible
+      // so that we might optimize and reindex only when necessary
+      await esUtils.updateDatasetMapping(app.get('es'), { id: dataset.id, schema: patch.schema }, dataset)
+      patch.status = 'indexed'
+    } catch (err) {
+      // generated ES mappings are not compatible, trigger full re-indexing
+    }
+  }
+
   const mongoPatch = {}
   Object.assign(dataset, patch)
+
+  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset)
 
   // if the dataset is in draft mode all patched values are stored in the draft state
   if (dataset.draftReason) {
@@ -180,11 +244,8 @@ exports.applyPatch = async (db, dataset, patch, save = true) => {
       mongoPatch.$set[key] = patch[key]
     }
   }
-  if (save) {
-    await db.collection('datasets')
-      .updateOne({ id: dataset.id }, mongoPatch)
-  }
-  return mongoPatch
+
+  await db.collection('datasets').updateOne({ id: dataset.id }, mongoPatch)
 }
 
 // synchronize the list of application references stored in dataset.extras.applications

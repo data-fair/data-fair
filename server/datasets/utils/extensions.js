@@ -331,7 +331,13 @@ function prepareInputMapping (action, dataset, extensionKey, selectFields) {
   }
 }
 
-// add properties to the schema based on active extensions
+/**
+ * add properties to the schema based on active extensions
+ * @param {import('mongodb').Db} db
+ * @param {any[]} schema
+ * @param {any[]} extensions
+ * @returns
+ */
 exports.prepareSchema = async (db, schema, extensions) => {
   let extensionsFields = []
   await exports.checkExtensions(db, schema, extensions)

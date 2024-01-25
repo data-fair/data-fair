@@ -134,7 +134,7 @@ exports.process = async function (app, dataset) {
     result.count = dataset.count = await esUtils.count(es, queryableDataset, {})
   }
 
-  await datasetService.applyPatch(db, dataset, result)
+  await datasetService.applyPatch(app, dataset, result)
 
   // Remove attachments if the schema does not refer to their existence
   if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
