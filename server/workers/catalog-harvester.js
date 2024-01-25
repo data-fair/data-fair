@@ -1,7 +1,7 @@
 const observe = require('../misc/utils/observe')
 
 exports.process = async function (app, catalog) {
-  const config = require('config')
+  const config = /** @type {any} */(require('config'))
   const CronJob = require('cron').CronJob
   const catalogs = require('../catalogs/plugins')
 

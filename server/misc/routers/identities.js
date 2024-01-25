@@ -5,7 +5,7 @@ const config = require('config')
 const fs = require('fs-extra')
 const path = require('path')
 const asyncWrap = require('../utils/async-handler')
-const datasetUtils = require('../../datasets/utils')
+const datasetsService = require('../../datasets/service')
 const dataDir = path.resolve(config.dataDir)
 
 const router = module.exports = express.Router()
@@ -64,7 +64,7 @@ router.delete('/:type/:id', asyncWrap(async (req, res) => {
 
   const datasetsCursor = req.app.get('db').collection('datasets').find({ 'owner.type': identity.type, 'owner.id': identity.id })
   for await (const dataset of datasetsCursor) {
-    await datasetUtils.delete(req.app, dataset)
+    await datasetsService.deleteDataset(req.app, dataset)
   }
 
   for (const c of collectionNames) {

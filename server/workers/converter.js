@@ -1,5 +1,5 @@
 // convert from tabular data to csv or geographical data to geojson
-const config = require('config')
+const config = /** @type {any} */(require('config'))
 
 exports.eventsPrefix = 'convert'
 
@@ -51,6 +51,7 @@ exports.process = async function (app, dataset) {
   const zlib = require('node:zlib')
   const { displayBytes } = require('../misc/utils/bytes')
   const datasetUtils = require('../datasets/utils')
+  const datasetService = require('../datasets/service')
   const icalendar = require('../misc/utils/icalendar')
   const xlsx = require('../misc/utils/xlsx')
   const i18nUtils = require('../i18n/utils')
@@ -207,6 +208,6 @@ exports.process = async function (app, dataset) {
   if (dataset.timeZone) patch.timeZone = dataset.timeZone
   if (dataset.analysis) patch.analysis = dataset.analysis
 
-  await datasetUtils.applyPatch(db, dataset, patch)
+  await datasetService.applyPatch(db, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
 }

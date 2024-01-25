@@ -27,10 +27,10 @@ const journals = require('../misc/utils/journals')
 const capture = require('../misc/utils/capture')
 const { clean } = require('./utils')
 const { findApplications } = require('./service')
+const { syncApplications } = require('../datasets/service')
 const cacheHeaders = require('../misc/utils/cache-headers')
 const { validateURLFriendly } = require('../misc/utils/validation')
 const publicationSites = require('../misc/utils/publication-sites')
-const datasetUtils = require('../datasets/utils')
 
 const router = module.exports = express.Router()
 
@@ -63,7 +63,7 @@ const syncDatasets = async (db, newApp, oldApp = {}) => {
   const ids = [...(newApp?.configuration?.datasets || []), ...(oldApp?.configuration?.datasets || [])]
     .map(dataset => dataset.href.replace(config.publicUrl + '/api/v1/datasets/', ''))
   for (const id of [...new Set(ids)]) {
-    await datasetUtils.syncApplications(db, id)
+    await syncApplications(db, id)
   }
 }
 

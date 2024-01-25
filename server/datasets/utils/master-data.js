@@ -2,11 +2,11 @@ const { Readable, Transform, Writable } = require('stream')
 const createError = require('http-errors')
 const mimeTypeStream = require('mime-type-stream')
 const flatten = require('flat')
-const virtualDatasetsUtils = require('./virtual-datasets')
-const batchStream = require('./batch-stream')
-const esUtils = require('../../datasets/es')
-const observe = require('./observe')
-const pump = require('./pipe')
+const virtualDatasetsUtils = require('./virtual')
+const batchStream = require('../../misc/utils/batch-stream')
+const esUtils = require('../es')
+const observe = require('../../misc/utils/observe')
+const pump = require('../../misc/utils/pipe')
 
 exports.bulkSearchPromise = async (streams, data) => {
   const buffers = []

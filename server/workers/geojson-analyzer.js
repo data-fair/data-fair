@@ -33,7 +33,7 @@ class AnalyzerWritable extends Writable {
   }
 
   _final (callback) {
-    const fieldsSniffer = require('../misc/utils/fields-sniffer')
+    const fieldsSniffer = require('../datasets/utils/fields-sniffer')
     for (const property in this.samples) {
       const key = fieldsSniffer.escapeKey(property, this.options.dataset)
       const existingField = this.options.existingSchema.find(f => f.key === key)
@@ -55,6 +55,7 @@ exports.process = async function (app, dataset) {
   const iconv = require('iconv-lite')
   const pump = require('../misc/utils/pipe')
   const datasetUtils = require('../datasets/utils')
+  const datasetService = require('../datasets/service')
 
   const db = app.get('db')
   const attachments = await datasetUtils.lsAttachments(dataset)
@@ -91,7 +92,7 @@ exports.process = async function (app, dataset) {
   datasetUtils.mergeFileSchema(dataset)
   datasetUtils.cleanSchema(dataset)
 
-  if (await datasetUtils.validateCompatibleDraft(app, dataset)) return
+  if (await datasetService.validateCompatibleDraft(app, dataset)) return
 
   const patch = {
     status: 'analyzed',
@@ -100,6 +101,6 @@ exports.process = async function (app, dataset) {
   }
   if (dataset.projection) patch.projection = dataset.projection
 
-  await datasetUtils.applyPatch(db, dataset, patch)
+  await datasetService.applyPatch(db, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
 }

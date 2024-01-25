@@ -1,25 +1,25 @@
+const config = /** @type {any} */(require('config'))
 const fs = require('fs-extra')
 const path = require('path')
 const multer = require('multer')
-const config = require('config')
 const createError = require('http-errors')
 const mime = require('mime-types')
-const datasetUtils = require('../../datasets/utils')
-const limits = require('./limits')
-const exec = require('./exec')
+const { attachmentsDir, metadataAttachmentsDir } = require('./files')
+const limits = require('../../misc/utils/limits')
+const exec = require('../../misc/utils/exec')
 
 const debug = require('debug')('attachments')
 const debugLimits = require('debug')('limits')
 
 exports.addAttachments = async (dataset, attachmentsArchive) => {
-  const dir = datasetUtils.attachmentsDir(dataset)
+  const dir = attachmentsDir(dataset)
   await fs.ensureDir(dir)
   await exec('unzip', ['-o', '-q', attachmentsArchive.path, '-d', dir])
   await fs.remove(attachmentsArchive.path)
 }
 
 exports.replaceAllAttachments = async (dataset, attachmentsArchive) => {
-  const dir = datasetUtils.attachmentsDir(dataset)
+  const dir = attachmentsDir(dataset)
   await fs.ensureDir(dir)
   await fs.emptyDir(dir)
   await exec('unzip', ['-o', '-q', attachmentsArchive.path, '-d', dir])
@@ -27,13 +27,13 @@ exports.replaceAllAttachments = async (dataset, attachmentsArchive) => {
 }
 
 exports.removeAll = async (dataset) => {
-  await fs.remove(datasetUtils.attachmentsDir(dataset))
+  await fs.remove(attachmentsDir(dataset))
 }
 
 const metadataStorage = multer.diskStorage({
   destination: async function (req, file, cb) {
     try {
-      const dir = datasetUtils.metadataAttachmentsDir(req.dataset)
+      const dir = metadataAttachmentsDir(req.dataset)
       await fs.ensureDir(dir)
       cb(null, dir)
     } catch (err) {
@@ -43,7 +43,7 @@ const metadataStorage = multer.diskStorage({
   filename: async function (req, file, cb) {
     try {
       // creating empty file before streaming seems to fix some weird bugs with NFS
-      await fs.ensureFile(path.join(datasetUtils.metadataAttachmentsDir(req.dataset), file.originalname))
+      await fs.ensureFile(path.join(metadataAttachmentsDir(req.dataset), file.originalname))
       cb(null, file.originalname)
     } catch (err) {
       cb(err)

@@ -1,3 +1,4 @@
+const config = /** @type {any} */(require('config'))
 const express = require('express')
 const ajv = require('../misc/utils/ajv')
 const path = require('path')
@@ -6,7 +7,6 @@ const moment = require('moment')
 const createError = require('http-errors')
 const pump = require('../misc/utils/pipe')
 const mongodb = require('mongodb')
-const config = /** @type {any} */(require('config'))
 const chardet = require('chardet')
 const slug = require('slugify')
 const i18n = require('i18n')
@@ -15,7 +15,7 @@ const CronJob = require('cron').CronJob
 const LinkHeader = require('http-link-header')
 const stableStringify = require('json-stable-stringify')
 const journals = require('../misc/utils/journals')
-const esUtils = require('../datasets/es')
+const esUtils = require('./es')
 const filesUtils = require('../misc/utils/files')
 const datasetAPIDocs = require('../../contract/dataset-api-docs')
 const privateDatasetAPIDocs = require('../../contract/dataset-private-api-docs')
@@ -23,19 +23,18 @@ const permissions = require('../misc/utils/permissions')
 const usersUtils = require('../misc/utils/users')
 const datasetUtils = require('./utils')
 const { prepareExtensions } = require('./utils/extensions')
-const virtualDatasetsUtils = require('../misc/utils/virtual-datasets')
-const restDatasetsUtils = require('../misc/utils/rest-datasets')
+const virtualDatasetsUtils = require('./utils/virtual')
+const restDatasetsUtils = require('./utils/rest')
 const findUtils = require('../misc/utils/find')
 const asyncWrap = require('../misc/utils/async-handler')
-const extensions = require('../misc/utils/extensions')
-const attachments = require('../misc/utils/attachments')
-const geo = require('../misc/utils/geo')
-const tiles = require('../misc/utils/tiles')
+const extensions = require('./utils/extensions')
+const attachments = require('./utils/attachments')
+const geo = require('./utils/geo')
+const tiles = require('./utils/tiles')
 const cache = require('../misc/utils/cache')
 const cacheHeaders = require('../misc/utils/cache-headers')
-const outputs = require('../misc/utils/outputs')
+const outputs = require('./utils/outputs')
 const limits = require('../misc/utils/limits')
-const locks = require('../misc/utils/locks')
 const notifications = require('../misc/utils/notifications')
 const datasetPatchSchema = require('../../contract/dataset-patch')
 const validatePatch = ajv.compile(datasetPatchSchema)
@@ -43,11 +42,10 @@ const datasetPostSchema = require('../../contract/dataset-post')
 const validatePost = ajv.compile(datasetPostSchema.properties.body)
 const userNotificationSchema = require('../../contract/user-notification')
 const validateUserNotification = ajv.compile(userNotificationSchema)
-const capabilitiesSchema = require('../../contract/capabilities.js')
 const debugFiles = require('debug')('files')
 const { getThumbnail } = require('../misc/utils/thumbnails')
-const datasetFileSample = require('../misc/utils/dataset-file-sample')
-const { bulkSearchStreams } = require('../misc/utils/master-data')
+const datasetFileSample = require('./utils/file-sample')
+const { bulkSearchStreams } = require('./utils/master-data')
 const applicationKey = require('../misc/utils/application-key')
 const { syncDataset: syncRemoteService } = require('../remote-services/utils')
 const { basicTypes } = require('../workers/converter')
@@ -56,8 +54,11 @@ const observe = require('../misc/utils/observe')
 const publicationSites = require('../misc/utils/publication-sites')
 const clamav = require('../misc/utils/clamav')
 const nanoid = require('../misc/utils/nanoid')
-const { checkStorage } = require('./utils/storage')
-const { findDatasets } = require('./service')
+const { findDatasets, applyPatch, validateDraft, deleteDataset } = require('./service')
+const { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } = require('./utils/schema')
+const { dir, filePath, exportedFilePath, originalFilePath, attachmentsDir } = require('./utils/files')
+const { updateStorage, updateTotalStorage } = require('./utils/storage')
+const { checkStorage, lockDataset, lockNewDataset, readDataset } = require('./middlewares')
 
 const router = express.Router()
 
@@ -69,25 +70,6 @@ const debugMasterData = require('debug')('master-data')
 router.use((req, res, next) => {
   // @ts-ignore
   req.resourceType = 'datasets'
-  next()
-})
-
-/**
- *
- * @param {boolean} overwrite
- * @param {boolean} indexed
- * @returns
- */
-const checkStorageMiddleware = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
-  if (process.env.NO_STORAGE_CHECK === 'true') return next()
-  if (!req.get('Content-Length')) throw createError(411, 'Content-Length is mandatory')
-  const contentLength = Number(req.get('Content-Length'))
-  if (Number.isNaN(contentLength)) throw createError(400, 'Content-Length is not a number')
-  // @ts-ignore
-  const dataset = req.dataset
-  const db = req.app.get('db')
-  const owner = dataset ? dataset.owner : usersUtils.owner(req)
-  await checkStorage(db, i18n.getLocale(req), owner, dataset, contentLength, overwrite, indexed)
   next()
 })
 
@@ -105,96 +87,6 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
   res.json(response)
 }))
 
-// Shared middleware to apply a lock on the modified resource
-const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => {
-  const db = req.app.get('db')
-  const shouldLock = typeof _shouldLock === 'function' ? _shouldLock(req.body, req.query) : _shouldLock
-  if (!shouldLock) return next()
-  const datasetId = req.dataset ? req.dataset.id : req.params.datasetId
-  for (let i = 0; i < config.datasetStateRetries.nb; i++) {
-    const lockKey = `dataset:${datasetId}`
-    const ack = await locks.acquire(db, lockKey, `${req.method} ${req.originalUrl}`)
-    if (ack) {
-      res.on('close', () => locks.release(db, lockKey).catch(err => console.error('failure to release dataset lock', err)))
-      return next()
-    } else {
-      // dataset found but locked : we cannot safely work on it, wait a little while before failing
-      await new Promise(resolve => setTimeout(resolve, config.datasetStateRetries.interval))
-    }
-  }
-  throw createError(409, `Une opération bloquante est déjà en cours sur le jeu de données ${datasetId}.`)
-})
-const lockNewDataset = async (req, res, dataset) => {
-  const db = req.app.get('db')
-  const lockKeys = [`dataset:${dataset.id}`, `dataset:slug:${dataset.owner.type}:${dataset.owner.id}:${dataset.slug}`]
-  const acks = await Promise.all(lockKeys.map(lockKey => locks.acquire(db, lockKey, `${req.method} ${req.originalUrl}`)))
-  res.on('close', () => {
-    for (let i = 0; i < lockKeys.length; i++) {
-      if (acks[i]) {
-        locks.release(db, lockKeys[i]).catch(err => console.error('failure to release dataset lock', err))
-      }
-    }
-  })
-  if (acks.includes(false)) {
-    for (let i = 0; i < lockKeys.length; i++) {
-      if (acks[i]) {
-        await locks.release(db, lockKeys[i])
-      }
-    }
-    return false
-  }
-  return true
-}
-// Shared middleware to read dataset in db
-// also checks that the dataset is in a state compatible with some action
-// supports waiting a little bit to be a little permissive with the user
-const readDataset = (fillDescendants, _acceptedStatuses, preserveDraft, ignoreDraft) => asyncWrap(async (req, res, next) => {
-  // @ts-ignore
-  const publicationSite = req.publicationSite
-  // @ts-ignore
-  const mainPublicationSite = req.mainPublicationSite
-  // @ts-ignore
-  const isNewDataset = req.isNewDataset
-
-  const tolerateStale = !!publicationSite
-  let dataset
-  for (let i = 0; i < config.datasetStateRetries.nb; i++) {
-    dataset = await findUtils.getByUniqueRef(req.app.get('db'), publicationSite, mainPublicationSite, req.params, 'dataset', null, tolerateStale)
-    if (!dataset) return res.status(404).send('Dataset not found')
-    // in draft mode the draft is automatically merged and all following operations use dataset.draftReason to adapt
-    if (preserveDraft) {
-      dataset.prod = { ...dataset }
-    }
-    if ((preserveDraft || req.query.draft === 'true') && dataset.draft) {
-      Object.assign(dataset, dataset.draft)
-      if (!dataset.draft.finalizedAt) delete dataset.finalizedAt
-      if (!dataset.draft.bbox) delete dataset.bbox
-    }
-    if (!preserveDraft) {
-      delete dataset.draft
-    }
-
-    const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body, dataset) : _acceptedStatuses
-
-    const isStatusOk = dataset.status !== 'draft' && (isNewDataset || !acceptedStatuses || acceptedStatuses.includes(dataset.status))
-    const isDraftOk = dataset.status === 'draft' && ignoreDraft
-
-    if (isStatusOk || isDraftOk) {
-      if (fillDescendants && dataset.isVirtual) {
-        dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), dataset, tolerateStale)
-      }
-
-      // @ts-ignore
-      req.dataset = req.resource = dataset
-      return next()
-    }
-
-    // dataset found but not in proper state.. wait a little while
-    await new Promise(resolve => setTimeout(resolve, config.datasetStateRetries.interval))
-  }
-  throw createError(409, `Le jeu de données n'est pas dans un état permettant l'opération demandée. État courant : ${dataset?.status}.`)
-})
-
 router.use('/:datasetId/permissions', readDataset(), permissions.router('datasets', 'dataset', async (req, patchedDataset) => {
   // this callback function is called when the resource becomes public
   await publicationSites.onPublic(req.app.get('db'), patchedDataset, 'dataset')
@@ -207,65 +99,14 @@ router.get('/:datasetId', readDataset(), applicationKey, permissions.middleware(
 })
 
 // retrieve only the schema.. Mostly useful for easy select fields
-const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter(key => capabilitiesSchema.properties[key].default === false)
 const sendSchema = (req, res, schema) => {
-  if (req.query.type) {
-    const types = req.query.type.split(',')
-    schema = schema.filter(field => types.includes(field.type))
-  }
-  if (req.query.format) {
-    const formats = req.query.format.split(',')
-    schema = schema.filter(field => formats.includes(field.format))
-  }
-  if (req.query.enum === 'true') {
-    schema = schema.filter(field => !!field.enum)
-  }
-  if (req.query.concept === 'true') {
-    schema = schema.filter(field => !!field['x-concept'])
-  }
-
-  // in json schema format we remove calculated and extended properties by default (better matches the need of form generation)
-  const filterCalculated = req.query.mimeType === 'application/schema+json' ? req.query.calculated !== 'true' : req.query.calculated === 'false'
-  if (filterCalculated) {
-    schema = schema.filter(field => !field['x-calculated'])
-  }
-  const filterExtension = req.query.mimeType === 'application/schema+json' ? req.query.extension !== 'true' : req.query.extension === 'false'
-  if (filterExtension) {
-    schema = schema.filter(field => !field['x-extension'])
-  }
-  if (req.query.separator === 'false') {
-    schema = schema.filter(field => !field.separator)
-  }
-  if (req.query.capability) {
-    schema = schema.filter(field => {
-      if (capabilitiesDefaultFalse.includes(req.query.capability)) {
-        if (!field['x-capabilities'] || !field['x-capabilities'][req.query.capability]) return false
-      } else {
-        if (field['x-capabilities'] && field['x-capabilities'][req.query.capability] === false) return false
-      }
-
-      if (field.key === '_id') return false
-      if (req.query.capability.startsWith('text') && field.type !== 'string') return false
-      if (req.query.capability === 'insensitive' && field.type !== 'string') return false
-      if (field.type === 'string' && (field.format === 'date' || field.format === 'date-time')) {
-        if (req.query.capability === 'text') return false
-        if (req.query.capability === 'textAgg') return false
-        if (req.query.capability === 'wildcard') return false
-        if (req.query.capability === 'insensitive') return false
-      }
-      return true
-    })
-  }
-  if (req.query.maxCardinality) {
-    const maxCardinality = Number(req.query.maxCardinality)
-    schema = schema.filter(field => field['x-cardinality'] != null && field['x-cardinality'] <= maxCardinality)
-  }
+  schema = filterSchema(schema, req.query)
   if (req.query.mimeType === 'application/tableschema+json') {
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-tableschema.json"`)
-    schema = datasetUtils.tableSchema(schema)
+    schema = tableSchema(schema)
   } else if (req.query.mimeType === 'application/schema+json') {
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-schema.json"`)
-    schema = datasetUtils.jsonSchema(schema, req.publicBaseUrl)
+    schema = jsonSchema(schema, req.publicBaseUrl)
   } else {
     for (const field of schema) {
       field.label = field.title || field['x-originalName'] || field.key
@@ -298,7 +139,7 @@ const descriptionHasBreakingChanges = (req) => {
     return true
   }
   if (!req.body.schema) return false
-  const breakingChanges = datasetUtils.getSchemaBreakingChanges(req.dataset.schema, req.body.schema, true)
+  const breakingChanges = getSchemaBreakingChanges(req.dataset.schema, req.body.schema, true)
   debugBreakingChanges('breaking changes in schema ? ', breakingChanges)
   return breakingChanges.length > 0
 }
@@ -370,8 +211,8 @@ router.patch('/:datasetId',
         patch.exports.restToCSV.nextExport = job.nextDates().toISOString()
       } else {
         delete patch.exports.restToCSV.nextExport
-        if (await fs.pathExists(datasetUtils.exportedFilePath(req.dataset, '.csv'))) {
-          await fs.remove(datasetUtils.exportedFilePath(req.dataset, '.csv'))
+        if (await fs.pathExists(exportedFilePath(req.dataset, '.csv'))) {
+          await fs.remove(exportedFilePath(req.dataset, '.csv'))
         }
       }
       patch.exports.restToCSV.lastExport = req.dataset?.exports?.restToCSV?.lastExport
@@ -394,7 +235,7 @@ router.patch('/:datasetId',
         await restDatasetsUtils.collection(db, req.dataset).updateMany({},
           { $unset: unset }
         )
-        await datasetUtils.updateStorage(req.app, req.dataset)
+        await updateStorage(req.app, req.dataset)
       }
     }
 
@@ -481,7 +322,7 @@ router.patch('/:datasetId',
     if (patch.masterData) debugMasterData(`PATCH dataset ${req.dataset.id} (${req.dataset.slug}) masterData by ${req.user?.name} (${req.user?.id})`, req.dataset.masterData, patch.masterData)
 
     const previousDataset = { ...req.dataset }
-    const mongoPatch = await datasetUtils.applyPatch(db, req.dataset, patch, false)
+    const mongoPatch = await applyPatch(db, req.dataset, patch, false)
     await publicationSites.applyPatch(db, previousDataset, req.dataset, req.user, 'dataset')
     try {
       await db.collection('datasets').updateOne({ id: req.dataset.id }, mongoPatch)
@@ -536,9 +377,9 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
     .findOneAndUpdate({ id: req.dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
 
   // Move all files
-  if (datasetUtils.dir(req.dataset) !== datasetUtils.dir(patchedDataset)) {
+  if (dir(req.dataset) !== dir(patchedDataset)) {
     try {
-      await fs.move(datasetUtils.dir(req.dataset), datasetUtils.dir(patchedDataset))
+      await fs.move(dir(req.dataset), dir(patchedDataset))
     } catch (err) {
       console.warn('Error while moving dataset directory', err)
     }
@@ -546,20 +387,20 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
 
   await syncRemoteService(req, patchedDataset)
 
-  await datasetUtils.updateTotalStorage(req.app.get('db'), req.dataset.owner)
-  await datasetUtils.updateTotalStorage(req.app.get('db'), patch.owner)
+  await updateTotalStorage(req.app.get('db'), req.dataset.owner)
+  await updateTotalStorage(req.app.get('db'), patch.owner)
 
   res.status(200).json(clean(req.publicBaseUrl, req.publicationSite, patchedDataset))
 }))
 
 // Delete a dataset
 router.delete('/:datasetId', readDataset(false, null, true, true), permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
-  await datasetUtils.delete(req.app, req.dataset)
+  await deleteDataset(req.app, req.dataset)
   if (req.dataset.draftReason && req.dataset.prod && req.dataset.prod.status !== 'draft') {
-    await datasetUtils.delete(req.app, req.dataset.prod)
+    await deleteDataset(req.app, req.dataset.prod)
   }
   await syncRemoteService(req, { ...req.dataset, masterData: null })
-  await datasetUtils.updateTotalStorage(req.app.get('db'), req.dataset.owner)
+  await updateTotalStorage(req.app.get('db'), req.dataset.owner)
   res.sendStatus(204)
 }))
 
@@ -629,7 +470,7 @@ const setFileInfo = async (req, file, attachmentsFile, dataset, draft, res) => {
       dbUniqueRefExists = await db.collection('datasets').countDocuments({
         _uniqueRefs: { $in: [dataset.slug, dataset.id] }, 'owner.type': dataset.owner.type, 'owner.id': dataset.owner.id
       })
-      fileExists = await fs.exists(datasetUtils.dir(dataset))
+      fileExists = await fs.exists(dir(dataset))
       if (!dbIdExists && !dbUniqueRefExists && !fileExists) {
         acquiredLock = await lockNewDataset(req, res, dataset)
       }
@@ -641,8 +482,8 @@ const setFileInfo = async (req, file, attachmentsFile, dataset, draft, res) => {
       patch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon' }
     }
 
-    await fs.ensureDir(datasetUtils.dir({ ...dataset, ...patch }))
-    await fs.move(file.path, datasetUtils.originalFilePath({ ...dataset, ...patch }))
+    await fs.ensureDir(dir({ ...dataset, ...patch }))
+    await fs.move(file.path, originalFilePath({ ...dataset, ...patch }))
   } else {
     if (draft) {
       patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant' }
@@ -652,8 +493,8 @@ const setFileInfo = async (req, file, attachmentsFile, dataset, draft, res) => {
 
   // in draft mode this file replacement will occur later, when draft is validated
   if (!draft) {
-    const oldoriginalFilePath = dataset.originalFile && datasetUtils.originalFilePath({ ...dataset, ...patch, originalFile: dataset.originalFile })
-    const neworiginalFilePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
+    const oldoriginalFilePath = dataset.originalFile && originalFilePath({ ...dataset, ...patch, originalFile: dataset.originalFile })
+    const neworiginalFilePath = originalFilePath({ ...dataset, ...patch })
     if (oldoriginalFilePath && oldoriginalFilePath !== neworiginalFilePath) {
       await fs.remove(oldoriginalFilePath)
     }
@@ -667,23 +508,23 @@ const setFileInfo = async (req, file, attachmentsFile, dataset, draft, res) => {
     patch.status = 'loaded'
     if (file) {
       patch.file = patch.originalFile
-      const filePath = datasetUtils.filePath({ ...dataset, ...patch })
+      const newFilePath = filePath({ ...dataset, ...patch })
       const fileSample = await datasetFileSample({ ...dataset, ...patch })
-      debugFiles(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${filePath}`)
+      debugFiles(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${newFilePath}`)
       patch.file.encoding = chardet.detect(fileSample)
-      debugFiles(`Detected encoding ${patch.file.encoding} for file ${filePath}`)
+      debugFiles(`Detected encoding ${patch.file.encoding} for file ${newFilePath}`)
     }
   }
 
-  if (draft && !file && !await fs.pathExists(datasetUtils.filePath({ ...dataset, ...patch }))) {
+  if (draft && !file && !await fs.pathExists(filePath({ ...dataset, ...patch }))) {
     // this happens if we upload only the attachments, not the data file itself
     // in this case copy the one from prod
-    await fs.copy(datasetUtils.filePath(dataset), datasetUtils.filePath({ ...dataset, ...patch }))
+    await fs.copy(filePath(dataset), filePath({ ...dataset, ...patch }))
   }
-  if (draft && !attachmentsFile && await fs.pathExists(datasetUtils.attachmentsDir(dataset)) && !await fs.pathExists(datasetUtils.attachmentsDir({ ...dataset, ...patch }))) {
+  if (draft && !attachmentsFile && await fs.pathExists(attachmentsDir(dataset)) && !await fs.pathExists(attachmentsDir({ ...dataset, ...patch }))) {
     // this happens if we upload only the main data file and not the attachments
     // in this case copy the attachments directory from prod
-    await fs.copy(datasetUtils.attachmentsDir(dataset), datasetUtils.attachmentsDir({ ...dataset, ...patch }))
+    await fs.copy(attachmentsDir(dataset), attachmentsDir({ ...dataset, ...patch }))
   }
 
   if (attachmentsFile) {
@@ -709,7 +550,7 @@ const beforeUpload = asyncWrap(async (req, res, next) => {
   }
   next()
 })
-router.post('', beforeUpload, checkStorageMiddleware(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), asyncWrap(async (req, res) => {
+router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), asyncWrap(async (req, res) => {
   req.files = req.files || []
   debugFiles('POST datasets uploaded some files', req.files)
   try {
@@ -792,7 +633,7 @@ router.post('', beforeUpload, checkStorageMiddleware(true, true), filesUtils.upl
     if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${dataset.slug}) with extensions by ${req.user?.name} (${req.user?.id})`, dataset.extensions)
     if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${dataset.slug}) with masterData by ${req.user?.name} (${req.user?.id})`, dataset.masterData)
 
-    await datasetUtils.updateTotalStorage(req.app.get('db'), dataset.owner)
+    await updateTotalStorage(req.app.get('db'), dataset.owner)
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
     await syncRemoteService(req, dataset)
     res.status(201).send(clean(req.publicBaseUrl, req.publicationSite, dataset, {}, req.query.draft === 'true'))
@@ -842,7 +683,7 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
       debugLimits('exceedLimitNbDatasets/attemptInsert', { owner: newDataset.owner })
       return res.status(429, req.__('errors.exceedLimitNbDatasets'))
     }
-    await datasetUtils.updateTotalStorage(req.app.get('db'), newDataset.owner)
+    await updateTotalStorage(req.app.get('db'), newDataset.owner)
   }
   next()
 })
@@ -946,15 +787,15 @@ const updateDataset = asyncWrap(async (req, res) => {
     throw err
   }
 }, { keepalive: true })
-router.post('/:datasetId', lockDataset(), attemptInsert, readDataset(false, ['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorageMiddleware(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
-router.put('/:datasetId', lockDataset(), attemptInsert, readDataset(false, ['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorageMiddleware(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
+router.post('/:datasetId', lockDataset(), attemptInsert, readDataset(false, ['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
+router.put('/:datasetId', lockDataset(), attemptInsert, readDataset(false, ['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
 
 // validate the draft
 router.post('/:datasetId/draft', readDataset(false, ['finalized'], true), permissions.middleware('validateDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
   if (!req.dataset.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
-  return res.send(await datasetUtils.validateDraft(req.app, req.dataset, req.user, req))
+  return res.send(await validateDraft(req.app, req.dataset, req.user, req))
 }))
 
 // cancel the draft
@@ -966,7 +807,7 @@ router.delete('/:datasetId/draft', readDataset(false, ['finalized', 'error'], tr
   await journals.log(req.app, req.dataset, { type: 'draft-cancelled' }, 'dataset')
   const patchedDataset = (await db.collection('datasets')
     .findOneAndUpdate({ id: req.dataset.id }, { $unset: { draft: '' } }, { returnDocument: 'after' })).value
-  await fs.remove(datasetUtils.dir(req.dataset))
+  await fs.remove(dir(req.dataset))
   await esUtils.delete(req.app.get('es'), req.dataset)
   await datasetUtils.updateStorage(req.app, patchedDataset)
   return res.send(patchedDataset)
@@ -982,10 +823,10 @@ function isRest (req, res, next) {
 }
 const writableStatuses = ['finalized', 'updated', 'extended-updated', 'indexed', 'error']
 router.get('/:datasetId/lines/:lineId', readDataset(), isRest, permissions.middleware('readLine', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
-router.post('/:datasetId/lines', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('createLine', 'write'), checkStorageMiddleware(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createLine))
-router.put('/:datasetId/lines/:lineId', readDataset(false, writableStatuses), isRest, permissions.middleware('updateLine', 'write'), checkStorageMiddleware(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.updateLine))
-router.patch('/:datasetId/lines/:lineId', readDataset(false, writableStatuses), isRest, permissions.middleware('patchLine', 'write'), checkStorageMiddleware(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.patchLine))
-router.post('/:datasetId/_bulk_lines', readDataset(false, writableStatuses), isRest, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), checkStorageMiddleware(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
+router.post('/:datasetId/lines', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createLine))
+router.put('/:datasetId/lines/:lineId', readDataset(false, writableStatuses), isRest, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.updateLine))
+router.patch('/:datasetId/lines/:lineId', readDataset(false, writableStatuses), isRest, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.patchLine))
+router.post('/:datasetId/_bulk_lines', readDataset(false, writableStatuses), isRest, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
 router.delete('/:datasetId/lines/:lineId', readDataset(false, writableStatuses), isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
 router.get('/:datasetId/lines/:lineId/revisions', readDataset(false, writableStatuses), isRest, permissions.middleware('readLineRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
 router.get('/:datasetId/revisions', readDataset(false, writableStatuses), isRest, permissions.middleware('readRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
@@ -1015,10 +856,10 @@ router.use('/:datasetId/own/:owner', readDataset(false, writableStatuses), isRes
   res.status(403).type('text/plain').send('only owner can manage his own lines')
 })
 router.get('/:datasetId/own/:owner/lines/:lineId', readDataset(), isRest, applicationKey, permissions.middleware('readOwnLine', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
-router.post('/:datasetId/own/:owner/lines', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('createOwnLine', 'manageOwnLines'), checkStorageMiddleware(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
-router.put('/:datasetId/own/:owner/lines/:lineId', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('updateOwnLine', 'manageOwnLines'), checkStorageMiddleware(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.updateLine))
-router.patch('/:datasetId/own/:owner/lines/:lineId', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('patchOwnLine', 'manageOwnLines'), checkStorageMiddleware(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
-router.post('/:datasetId/own/:owner/_bulk_lines', lockDataset((body, query) => query.lock === 'true'), readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('bulkOwnLines', 'manageOwnLines'), checkStorageMiddleware(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
+router.post('/:datasetId/own/:owner/lines', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('createOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
+router.put('/:datasetId/own/:owner/lines/:lineId', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('updateOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.updateLine))
+router.patch('/:datasetId/own/:owner/lines/:lineId', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('patchOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
+router.post('/:datasetId/own/:owner/_bulk_lines', lockDataset((body, query) => query.lock === 'true'), readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('bulkOwnLines', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
 router.delete('/:datasetId/own/:owner/lines/:lineId', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('deleteOwnLine', 'manageOwnLines'), asyncWrap(restDatasetsUtils.deleteLine))
 router.get('/:datasetId/own/:owner/lines/:lineId/revisions', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('readOwnLineRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
 router.get('/:datasetId/own/:owner/revisions', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('readOwnRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
@@ -1455,7 +1296,7 @@ router.get('/:datasetId/min/:fieldKey', readDataset(true), applicationKey, permi
 // For datasets with attached files
 router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissions.middleware('downloadAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
-  res.download(req.params['0'], null, { transformStream: res.throttle('static'), root: datasetUtils.attachmentsDir(req.dataset) })
+  res.download(req.params['0'], null, { transformStream: res.throttle('static'), root: attachmentsDir(req.dataset) })
 })
 
 // Direct access to data files
@@ -1464,11 +1305,11 @@ router.get('/:datasetId/data-files', readDataset(), permissions.middleware('list
 }))
 router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadDataFile', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
-  res.download(req.params['0'], null, { transformStream: res.throttle('static'), root: datasetUtils.dir(req.dataset) })
+  res.download(req.params['0'], null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
 }))
 
 // Special attachments referenced in dataset metadatas
-router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middleware('postMetadataAttachment', 'write'), checkStorageMiddleware(false), attachments.metadataUpload(), clamav.middleware, asyncWrap(async (req, res, next) => {
+router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, asyncWrap(async (req, res, next) => {
   req.body.size = (await fs.promises.stat(req.file.path)).size
   req.body.updatedAt = moment().toISOString()
   await datasetUtils.updateStorage(req.app, req.dataset)
@@ -1503,7 +1344,7 @@ router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOri
   }
   if (!req.dataset.originalFile) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
   // the transform stream option was patched into "send" module using patch-package
-  res.download(req.dataset.originalFile.name, null, { transformStream: res.throttle('static'), root: datasetUtils.dir(req.dataset) })
+  res.download(req.dataset.originalFile.name, null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
 }))
 
 // Download the dataset in various formats
@@ -1511,7 +1352,7 @@ router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloa
   if (!req.dataset.file) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
 
   // the transform stream option was patched into "send" module using patch-package
-  res.download(req.dataset.file.name, null, { transformStream: res.throttle('static'), root: datasetUtils.dir(req.dataset) })
+  res.download(req.dataset.file.name, null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
 })
 
 // Download the full dataset with extensions
@@ -1519,9 +1360,9 @@ router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloa
 router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFullData', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   if (await fs.pathExists(datasetUtils.fullFilePath(req.dataset))) {
-    res.download(datasetUtils.fullFileName(req.dataset), null, { transformStream: res.throttle('static'), root: datasetUtils.dir(req.dataset) })
+    res.download(datasetUtils.fullFileName(req.dataset), null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
   } else {
-    res.download(req.dataset.file.name, null, { transformStream: res.throttle('static'), root: datasetUtils.dir(req.dataset) })
+    res.download(req.dataset.file.name, null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
   }
 }))
 
@@ -1583,7 +1424,7 @@ router.get('/:datasetId/thumbnail', readDataset(), permissions.middleware('readD
 router.get('/:datasetId/thumbnail/:thumbnailId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async (req, res, next) => {
   const url = Buffer.from(req.params.thumbnailId, 'hex').toString()
   if (req.dataset.attachmentsAsImage && url.startsWith('/attachments/')) {
-    await getThumbnail(req, res, `${config.publicUrl}/api/v1/datasets/${req.dataset.id}${url}`, path.join(datasetUtils.attachmentsDir(req.dataset), url.replace('/attachments/', '')), req.dataset.thumbnails)
+    await getThumbnail(req, res, `${config.publicUrl}/api/v1/datasets/${req.dataset.id}${url}`, path.join(attachmentsDir(req.dataset), url.replace('/attachments/', '')), req.dataset.thumbnails)
   } else {
     const imageField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
     const count = await esUtils.count(req.app.get('es'), req.dataset, {

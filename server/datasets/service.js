@@ -1,6 +1,16 @@
+const config = /** @type {any} */(require('config'))
+const fs = require('fs-extra')
 const findUtils = require('../misc/utils/find')
 const permissions = require('../misc/utils/permissions')
 const datasetUtils = require('./utils')
+const restDatasetsUtils = require('./utils/rest')
+const esUtils = require('./es')
+const webhooks = require('../misc/utils/webhooks')
+const journals = require('../misc/utils/journals')
+const { basicTypes } = require('../workers/converter')
+const { updateStorage } = require('./utils/storage')
+const { dir, filePath, fullFilePath, originalFilePath, attachmentsDir } = require('./utils/files')
+const { schemasFullyCompatible, getSchemaBreakingChanges } = require('./utils/schema')
 
 const filterFields = {
   concepts: 'schema.x-refersTo',
@@ -116,4 +126,165 @@ exports.findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQue
     response.explain = explain
   }
   return response
+}
+
+exports.deleteDataset = async (app, dataset) => {
+  const db = app.get('db')
+  const es = app.get('es')
+  try {
+    await fs.remove(dir(dataset))
+  } catch (err) {
+    console.warn('Error while deleting dataset draft directory', err)
+  }
+  if (dataset.isRest) {
+    try {
+      await restDatasetsUtils.deleteDataset(db, dataset)
+    } catch (err) {
+      console.warn('Error while removing mongodb collection for REST dataset', err)
+    }
+  }
+
+  await db.collection('datasets').deleteOne({ id: dataset.id })
+  await db.collection('journals').deleteOne({ type: 'dataset', id: dataset.id })
+
+  if (!dataset.isVirtual) {
+    try {
+      await esUtils.delete(es, dataset)
+    } catch (err) {
+      console.warn('Error while deleting dataset indexes and alias', err)
+    }
+    if (!dataset.draftReason) {
+      await updateStorage(app, dataset, true)
+    }
+  }
+}
+
+exports.applyPatch = async (db, dataset, patch, save = true) => {
+  const mongoPatch = {}
+  Object.assign(dataset, patch)
+
+  // if the dataset is in draft mode all patched values are stored in the draft state
+  if (dataset.draftReason) {
+    const draftPatch = {}
+    for (const key of Object.keys(patch)) {
+      draftPatch['draft.' + key] = patch[key]
+    }
+    patch = draftPatch
+  }
+  for (const key of Object.keys(patch)) {
+    if (patch[key] === null) {
+      mongoPatch.$unset = mongoPatch.$unset || {}
+      mongoPatch.$unset[key] = true
+    } else {
+      mongoPatch.$set = mongoPatch.$set || {}
+      mongoPatch.$set[key] = patch[key]
+    }
+  }
+  if (save) {
+    await db.collection('datasets')
+      .updateOne({ id: dataset.id }, mongoPatch)
+  }
+  return mongoPatch
+}
+
+// synchronize the list of application references stored in dataset.extras.applications
+// used for quick access to capture, and default sorting in dataset pages
+exports.syncApplications = async (db, datasetId) => {
+  const dataset = await db.collection('datasets').findOne({ id: datasetId }, { projection: { owner: 1, extras: 1 } })
+  if (!dataset) return
+  const applications = await db.collection('applications')
+    .find({
+      'owner.type': dataset.owner.type,
+      'owner.id': dataset.owner.id,
+      'configuration.datasets.href': config.publicUrl + '/api/v1/datasets/' + datasetId
+    })
+    .project({ id: 1, slug: 1, updatedAt: 1, publicationSites: 1, _id: 0 })
+    .toArray()
+  const applicationsExtras = ((dataset.extras && dataset.extras.applications) || [])
+    .map(appExtra => applications.find(app => app.id === appExtra.id))
+    .filter(appExtra => !!appExtra)
+  for (const app of applications) {
+    if (!applicationsExtras.find(appExtra => appExtra.id === app.id)) {
+      applicationsExtras.push(app)
+    }
+  }
+  await db.collection('datasets')
+    .updateOne({ id: datasetId }, { $set: { 'extras.applications': applicationsExtras } })
+}
+
+exports.validateDraft = async (app, dataset, user, req) => {
+  const db = app.get('db')
+  const patch = {
+    ...dataset.draft
+  }
+  if (user) {
+    patch.updatedAt = (new Date()).toISOString()
+    patch.updatedBy = { id: user.id, name: user.name }
+  }
+  if (dataset.draft.dataUpdatedAt) {
+    patch.dataUpdatedAt = patch.updatedAt
+    patch.dataUpdatedBy = patch.updatedBy
+  }
+  delete patch.status
+  delete patch.finalizedAt
+  delete patch.draftReason
+  delete patch.count
+  delete patch.bbox
+  delete patch.storage
+  const patchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: dataset.id },
+    { $set: patch, $unset: { draft: '' } },
+    { returnDocument: 'after' }
+  )).value
+  if (dataset.prod.originalFile) await fs.remove(originalFilePath(dataset.prod))
+  if (dataset.prod.file) {
+    await fs.remove(filePath(dataset.prod))
+    await fs.remove(fullFilePath(dataset.prod))
+    webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
+
+    if (req) {
+      const breakingChanges = getSchemaBreakingChanges(dataset.prod.schema, patchedDataset.schema)
+      for (const breakingChange of breakingChanges) {
+        webhooks.trigger(db, 'dataset', patchedDataset, {
+          type: 'breaking-change',
+          body: require('i18n').getLocales().reduce((a, locale) => {
+            a[locale] = req.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { title: patchedDataset.title, key: breakingChange.key })
+            return a
+          }, {})
+        })
+      }
+    }
+  }
+  await fs.ensureDir(dir(patchedDataset))
+  await fs.remove(originalFilePath(patchedDataset))
+  await fs.move(originalFilePath(dataset), originalFilePath(patchedDataset))
+  if (await fs.pathExists(attachmentsDir(dataset))) {
+    await fs.remove(attachmentsDir(patchedDataset))
+    await fs.move(attachmentsDir(dataset), attachmentsDir(patchedDataset))
+  }
+
+  const statusPatch = { status: basicTypes.includes(dataset.originalFile.mimetype) ? 'analyzed' : 'uploaded' }
+  const statusPatchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: dataset.id },
+    { $set: statusPatch },
+    { returnDocument: 'after' }
+  )).value
+  await journals.log(app, statusPatchedDataset, { type: 'draft-validated' }, 'dataset')
+  try {
+    await esUtils.delete(app.get('es'), dataset)
+  } catch (err) {
+    if (err.statusCode !== 404) throw err
+  }
+  await fs.remove(dir(dataset))
+  await updateStorage(app, statusPatchedDataset)
+  return statusPatchedDataset
+}
+
+exports.validateCompatibleDraft = async (app, dataset) => {
+  if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {
+    const prodDataset = await app.get('db').collection('datasets').findOne({ id: dataset.id })
+    const fullDataset = { ...dataset, prod: prodDataset, draft: dataset }
+    if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument') && schemasFullyCompatible(fullDataset.prod.schema, dataset.schema, true)) {
+      return await exports.validateDraft(app, fullDataset)
+    }
+  }
+  return null
 }

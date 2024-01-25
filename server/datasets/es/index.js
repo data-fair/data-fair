@@ -1,9 +1,21 @@
-const config = require('config')
+const config = /** @type {any} */(require('config'))
 const elasticsearch = require('@elastic/elasticsearch')
+const commons = require('./commons')
+const manageIndices = require('./manage-indices')
 
 const smallAggs = require('./small-aggs')
-Object.assign(exports, require('./commons'))
-Object.assign(exports, require('./manage-indices'))
+
+exports.delete = manageIndices.delete
+exports.initDatasetIndex = manageIndices.initDatasetIndex
+exports.switchAlias = manageIndices.switchAlias
+exports.datasetInfos = manageIndices.datasetInfos
+exports.updateDatasetMapping = manageIndices.updateDatasetMapping
+
+exports.aliasName = commons.aliasName
+exports.errorMessage = commons.errorMessage
+exports.prepareResultItem = commons.prepareResultItem
+exports.escapeFilter = commons.escapeFilter
+
 exports.search = require('./search')
 exports.multiSearch = require('./multi-search')
 exports.count = require('./count')

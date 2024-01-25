@@ -7,9 +7,10 @@ exports.process = async function (app, dataset) {
   const tmp = require('tmp-promise')
   const CronJob = require('cron').CronJob
   const pump = require('../misc/utils/pipe')
-  const restUtils = require('../misc/utils/rest-datasets')
-  const outputs = require('../misc/utils/outputs')
+  const restUtils = require('../datasets/utils/rest')
+  const outputs = require('../datasets/utils/outputs')
   const datasetUtils = require('../datasets/utils')
+  const datasetsService = require('../datasets/service')
 
   const dataDir = path.resolve(config.dataDir)
   const debug = require('debug')(`worker:rest-exporter-csv:${dataset.id}`)
@@ -40,7 +41,7 @@ exports.process = async function (app, dataset) {
   const job = new CronJob(config.exportRestDatasets.cron, () => {})
   patch.exports.restToCSV.nextExport = job.nextDates().toISOString()
 
-  await datasetUtils.applyPatch(db, dataset, patch)
+  await datasetsService.applyPatch(db, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
   debug('done')
 }

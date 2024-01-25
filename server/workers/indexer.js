@@ -11,8 +11,9 @@ exports.process = async function (app, dataset) {
   const pump = require('../misc/utils/pipe')
   const es = require('../datasets/es')
   const datasetUtils = require('../datasets/utils')
-  const restDatasetsUtils = require('../misc/utils/rest-datasets')
-  const taskProgress = require('../misc/utils/task-progress')
+  const datasetsService = require('../datasets/service')
+  const restDatasetsUtils = require('../datasets/utils/rest')
+  const taskProgress = require('../datasets/utils/task-progress')
 
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
   const debugHeap = require('../misc/utils/heap').debug(`worker:indexer:${dataset.id}`)
@@ -99,5 +100,5 @@ exports.process = async function (app, dataset) {
     result.status = dataset.status
   }
 
-  await datasetUtils.applyPatch(db, dataset, result)
+  await datasetsService.applyPatch(db, dataset, result)
 }

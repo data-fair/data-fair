@@ -1,10 +1,10 @@
-const config = require('config')
+const config = /** @type {any} */(require('config'))
 const fs = require('fs-extra')
 const path = require('path')
 const createError = require('http-errors')
 const { nanoid } = require('nanoid')
-const pump = require('../utils/pipe')
-const ajv = require('../utils/ajv')
+const pump = require('../../misc/utils/pipe')
+const ajv = require('../../misc/utils/ajv')
 const multer = require('multer')
 const mime = require('mime-types')
 const { Readable, Transform, Writable } = require('stream')
@@ -16,10 +16,13 @@ const unzipper = require('unzipper')
 const dayjs = require('dayjs')
 const duration = require('dayjs/plugin/duration')
 dayjs.extend(duration)
-const datasetUtils = require('../../datasets/utils')
+const storageUtils = require('./storage')
 const attachmentsUtils = require('./attachments')
-const findUtils = require('./find')
+const findUtils = require('../../misc/utils/find')
 const fieldsSniffer = require('./fields-sniffer')
+const { transformFileStreams } = require('./data-streams')
+const { attachmentsDir, lsAttachments } = require('./files')
+const { jsonSchema } = require('./schema')
 const esUtils = require('../../datasets/es')
 
 const actions = ['create', 'update', 'patch', 'delete']
@@ -34,7 +37,7 @@ function cleanLine (line) {
   return line
 }
 
-const tmpDir = path.join(config.dataDir, 'tmp')
+const tmpDir = path.join(path.resolve(config.dataDir), 'tmp')
 const destination = async (req, file, cb) => {
   try {
     await fs.ensureDir(tmpDir)
@@ -100,7 +103,7 @@ exports.configureHistory = async (app, dataset) => {
   if (!dataset.rest.history) {
     if (revisionsCollectionExists) {
       await exports.revisionsCollection(db, dataset).drop()
-      await datasetUtils.updateStorage(app, dataset)
+      await storageUtils.updateStorage(app, dataset)
     }
   } else {
     const revisionsCollection = exports.revisionsCollection(db, dataset)
@@ -123,7 +126,7 @@ exports.configureHistory = async (app, dataset) => {
         }
       }
       if (revisionsBulkOp.length) await revisionsBulkOp.execute()
-      await datasetUtils.updateStorage(app, dataset)
+      await storageUtils.updateStorage(app, dataset)
     }
 
     // manage history TTL
@@ -374,7 +377,7 @@ class TransactionStream extends Writable {
 }
 
 const compileSchema = (dataset, adminMode) => {
-  const schema = datasetUtils.jsonSchema(dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']))
+  const schema = jsonSchema(dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']))
   schema.additionalProperties = false
   schema.properties._id = { type: 'string' }
   // super-admins can set _updatedAt and so rewrite history
@@ -408,7 +411,7 @@ async function manageAttachment (req, keepExisting) {
     }
   }
   const lineId = req.params.lineId || req.body._id
-  const dir = path.join(datasetUtils.attachmentsDir(req.dataset), lineId)
+  const dir = path.join(attachmentsDir(req.dataset), lineId)
 
   const pathField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
 
@@ -453,7 +456,7 @@ exports.createLine = async (req, res, next) => {
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(201).send(cleanLine(line))
-  datasetUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after createLine', err))
+  storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after createLine', err))
 }
 
 exports.deleteLine = async (req, res, next) => {
@@ -463,7 +466,7 @@ exports.deleteLine = async (req, res, next) => {
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   // TODO: delete the attachment if it is the primary key ?
   res.status(204).send()
-  datasetUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
+  storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
 }
 
 exports.updateLine = async (req, res, next) => {
@@ -473,7 +476,7 @@ exports.updateLine = async (req, res, next) => {
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
-  datasetUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
+  storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
 }
 
 exports.patchLine = async (req, res, next) => {
@@ -483,7 +486,7 @@ exports.patchLine = async (req, res, next) => {
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
-  datasetUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
+  storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
 }
 
 exports.deleteAllLines = async (req, res, next) => {
@@ -494,7 +497,7 @@ exports.deleteAllLines = async (req, res, next) => {
   await esUtils.switchAlias(esClient, req.dataset, indexName)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(204).send()
-  datasetUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
+  storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
 }
 
 exports.bulkLines = async (req, res, next) => {
@@ -544,7 +547,7 @@ exports.bulkLines = async (req, res, next) => {
 
   if (!mimeType) return res.status(400).type('text/plain').send('unknown file extension')
 
-  const parseStreams = datasetUtils.transformFileStreams(mimeType, transactionSchema, null, fileProps, false, true, null, skipDecoding)
+  const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, false, true, null, skipDecoding)
 
   const summary = initSummary()
   const transactionStream = new TransactionStream({ req, validate, summary })
@@ -577,7 +580,7 @@ exports.bulkLines = async (req, res, next) => {
   }
   res.write(JSON.stringify(summary, null, 2))
   res.end()
-  datasetUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
+  storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
 
   for (const key in req.files) {
     if (key === 'attachments') continue
@@ -600,7 +603,7 @@ exports.syncAttachmentsLines = async (req, res, next) => {
     throw createError(400, 'Le schéma ne définit par le chemin de la pièce jointe comme clé primaire')
   }
 
-  const files = await datasetUtils.lsAttachments(dataset)
+  const files = await lsAttachments(dataset)
   const toDelete = await exports.collection(db, dataset)
     .find({ [pathField.key]: { $nin: files } })
     .limit(10000).project({ [pathField.key]: 1 }).toArray()
@@ -619,7 +622,7 @@ exports.syncAttachmentsLines = async (req, res, next) => {
   await pump(filesStream, transactionStream)
 
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
-  await datasetUtils.updateStorage(req.app, req.dataset)
+  await storageUtils.updateStorage(req.app, req.dataset)
 
   res.send(summary)
 }

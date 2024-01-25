@@ -2,6 +2,7 @@ const config = require('config')
 const locks = require('../misc/utils/locks')
 const observe = require('../misc/utils/observe')
 const debug = require('debug')('workers')
+const mergeDraft = require('../datasets/utils/merge-draft')
 
 const tasks = exports.tasks = {
   downloader: require('./downloader'),
@@ -173,8 +174,7 @@ async function iter (app, resource, type) {
   try {
     // if there is something to be done in the draft mode of the dataset, it is prioritary
     if (type === 'dataset' && resource.draft && resource.draft.status !== 'finalized' && resource.draft.status !== 'error') {
-      const datasetUtils = require('../datasets/utils')
-      datasetUtils.mergeDraft(resource)
+      mergeDraft(resource)
     }
 
     // REST datasets trigger too many events
@@ -276,9 +276,8 @@ async function iter (app, resource, type) {
 
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
     if (task.eventsPrefix && newResource) {
-      const datasetUtils = require('../datasets/utils')
       if (resource.draftReason) {
-        await journals.log(app, datasetUtils.mergeDraft({ ...newResource }), { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
+        await journals.log(app, mergeDraft({ ...newResource }), { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
       } else {
         await journals.log(app, newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
       }
