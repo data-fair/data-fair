@@ -72,7 +72,11 @@ exports.lockNewDataset = async (req, res, dataset) => {
 // Shared middleware to read dataset in db
 // also checks that the dataset is in a state compatible with some action
 // supports waiting a little bit to be a little permissive with the user
-exports.readDataset = (fillDescendants, _acceptedStatuses, preserveDraft, ignoreDraft) => asyncWrap(async (req, res, next) => {
+/**
+ * @param {{acceptedStatuses?: string[] | ((body: any, dataset: any) => string[] | null), fillDescendants?: boolean, alwaysDraft?: boolean}} fillDescendants
+ * @returns
+ */
+exports.readDataset = ({ acceptedStatuses: _acceptedStatuses, fillDescendants, alwaysDraft } = {}) => asyncWrap(async (req, res, next) => {
   // @ts-ignore
   const publicationSite = req.publicationSite
   // @ts-ignore
@@ -85,25 +89,27 @@ exports.readDataset = (fillDescendants, _acceptedStatuses, preserveDraft, ignore
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
     dataset = await findUtils.getByUniqueRef(req.app.get('db'), publicationSite, mainPublicationSite, req.params, 'dataset', null, tolerateStale)
     if (!dataset) return res.status(404).send('Dataset not found')
+    // @ts-ignore
+    req.datasetFull = { ...dataset }
+
+    const useDraft = req.query.draft === 'true' || alwaysDraft
+
     // in draft mode the draft is automatically merged and all following operations use dataset.draftReason to adapt
-    if (preserveDraft) {
-      dataset.prod = { ...dataset }
-    }
-    if ((preserveDraft || req.query.draft === 'true') && dataset.draft) {
+    if (useDraft && dataset.draft) {
       Object.assign(dataset, dataset.draft)
       if (!dataset.draft.finalizedAt) delete dataset.finalizedAt
       if (!dataset.draft.bbox) delete dataset.bbox
     }
-    if (!preserveDraft) {
-      delete dataset.draft
-    }
+    delete dataset.draft
 
     const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body, dataset) : _acceptedStatuses
 
-    const isStatusOk = dataset.status !== 'draft' && (isNewDataset || !acceptedStatuses || acceptedStatuses.includes(dataset.status))
-    const isDraftOk = dataset.status === 'draft' && ignoreDraft
+    let isStatusOk = false
+    if (isNewDataset) isStatusOk = true
+    else if (acceptedStatuses) isStatusOk = acceptedStatuses.includes('*') || acceptedStatuses.includes(dataset.status)
+    else isStatusOk = dataset.status !== 'draft'
 
-    if (isStatusOk || isDraftOk) {
+    if (isStatusOk) {
       if (fillDescendants && dataset.isVirtual) {
         dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), dataset, tolerateStale)
       }

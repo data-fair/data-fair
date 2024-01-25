@@ -147,12 +147,14 @@ const permissionsWriteDescriptionBreaking = permissions.middleware('writeDescrip
 
 // Update a dataset's metadata
 router.patch('/:datasetId',
-  readDataset(false, (patch, dataset) => {
-    // accept different statuses of the dataset depending on the content of the patch
-    if (!dataset.isMetaOnly && (patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)) {
-      return ['finalized', 'error']
-    } else {
-      return null
+  readDataset({
+    acceptedStatuses: (patch, dataset) => {
+      // accept different statuses of the dataset depending on the content of the patch
+      if (!dataset.isMetaOnly && (patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)) {
+        return ['finalized', 'error']
+      } else {
+        return null
+      }
     }
   }),
   lockDataset((patch) => {
@@ -394,13 +396,13 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
 }))
 
 // Delete a dataset
-router.delete('/:datasetId', readDataset(false, null, true, true), permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
+router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft: true }), permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
   await deleteDataset(req.app, req.dataset)
-  if (req.dataset.draftReason && req.dataset.prod && req.dataset.prod.status !== 'draft') {
-    await deleteDataset(req.app, req.dataset.prod)
+  if (req.dataset.draftReason && req.datasetFull.status !== 'draft') {
+    await deleteDataset(req.app, req.datasetFull)
   }
-  await syncRemoteService(req, { ...req.dataset, masterData: null })
-  await updateTotalStorage(req.app.get('db'), req.dataset.owner)
+  await syncRemoteService(req, { ...req.datasetFull, masterData: null })
+  await updateTotalStorage(req.app.get('db'), req.datasetFull.owner)
   res.sendStatus(204)
 }))
 
@@ -787,21 +789,21 @@ const updateDataset = asyncWrap(async (req, res) => {
     throw err
   }
 }, { keepalive: true })
-router.post('/:datasetId', lockDataset(), attemptInsert, readDataset(false, ['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
-router.put('/:datasetId', lockDataset(), attemptInsert, readDataset(false, ['finalized', 'error']), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
+router.post('/:datasetId', lockDataset(), attemptInsert, readDataset({ acceptedStatuses: ['finalized', 'error'] }), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
+router.put('/:datasetId', lockDataset(), attemptInsert, readDataset({ acceptedStatuses: ['finalized', 'error'] }), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
 
 // validate the draft
-router.post('/:datasetId/draft', readDataset(false, ['finalized'], true), permissions.middleware('validateDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
-  if (!req.dataset.draft) {
+router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], alwaysDraft: true }), permissions.middleware('validateDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
+  if (!req.datasetFull.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
-  return res.send(await validateDraft(req.app, req.dataset, req.user, req))
+  return res.send(await validateDraft(req.app, req.datasetFull, req.dataset, req.user, req))
 }))
 
 // cancel the draft
-router.delete('/:datasetId/draft', readDataset(false, ['finalized', 'error'], true), permissions.middleware('cancelDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
+router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'finalized', 'error'], alwaysDraft: true }), permissions.middleware('cancelDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
-  if (!req.dataset.draft) {
+  if (!req.datasetFull.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
   await journals.log(req.app, req.dataset, { type: 'draft-cancelled' }, 'dataset')
@@ -821,20 +823,21 @@ function isRest (req, res, next) {
   }
   next()
 }
-const writableStatuses = ['finalized', 'updated', 'extended-updated', 'indexed', 'error']
+
+const readWritableDataset = readDataset({ acceptedStatuses: ['finalized', 'updated', 'extended-updated', 'indexed', 'error'] })
 router.get('/:datasetId/lines/:lineId', readDataset(), isRest, permissions.middleware('readLine', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
-router.post('/:datasetId/lines', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createLine))
-router.put('/:datasetId/lines/:lineId', readDataset(false, writableStatuses), isRest, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.updateLine))
-router.patch('/:datasetId/lines/:lineId', readDataset(false, writableStatuses), isRest, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.patchLine))
-router.post('/:datasetId/_bulk_lines', readDataset(false, writableStatuses), isRest, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
-router.delete('/:datasetId/lines/:lineId', readDataset(false, writableStatuses), isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
-router.get('/:datasetId/lines/:lineId/revisions', readDataset(false, writableStatuses), isRest, permissions.middleware('readLineRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
-router.get('/:datasetId/revisions', readDataset(false, writableStatuses), isRest, permissions.middleware('readRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
-router.delete('/:datasetId/lines', readDataset(false, writableStatuses), isRest, permissions.middleware('deleteAllLines', 'write'), asyncWrap(restDatasetsUtils.deleteAllLines))
-router.post('/:datasetId/_sync_attachments_lines', readDataset(false, writableStatuses), isRest, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), asyncWrap(restDatasetsUtils.syncAttachmentsLines))
+router.post('/:datasetId/lines', readWritableDataset, isRest, applicationKey, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createLine))
+router.put('/:datasetId/lines/:lineId', readWritableDataset, isRest, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.updateLine))
+router.patch('/:datasetId/lines/:lineId', readWritableDataset, isRest, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.patchLine))
+router.post('/:datasetId/_bulk_lines', readWritableDataset, isRest, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
+router.delete('/:datasetId/lines/:lineId', readWritableDataset, isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
+router.get('/:datasetId/lines/:lineId/revisions', readWritableDataset, isRest, permissions.middleware('readLineRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
+router.get('/:datasetId/revisions', readWritableDataset, isRest, permissions.middleware('readRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
+router.delete('/:datasetId/lines', readWritableDataset, isRest, permissions.middleware('deleteAllLines', 'write'), asyncWrap(restDatasetsUtils.deleteAllLines))
+router.post('/:datasetId/_sync_attachments_lines', readWritableDataset, isRest, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), asyncWrap(restDatasetsUtils.syncAttachmentsLines))
 
 // specific routes with rest datasets with lineOwnership activated
-router.use('/:datasetId/own/:owner', readDataset(false, writableStatuses), isRest, (req, res, next) => {
+router.use('/:datasetId/own/:owner', readWritableDataset, isRest, (req, res, next) => {
   if (!req.dataset.rest?.lineOwnership) {
     return res.status(501)
       .send('Les opérations de gestion des lignes par propriétaires ne sont pas supportées pour ce jeu de données.')
@@ -856,16 +859,16 @@ router.use('/:datasetId/own/:owner', readDataset(false, writableStatuses), isRes
   res.status(403).type('text/plain').send('only owner can manage his own lines')
 })
 router.get('/:datasetId/own/:owner/lines/:lineId', readDataset(), isRest, applicationKey, permissions.middleware('readOwnLine', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
-router.post('/:datasetId/own/:owner/lines', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('createOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
-router.put('/:datasetId/own/:owner/lines/:lineId', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('updateOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.updateLine))
-router.patch('/:datasetId/own/:owner/lines/:lineId', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('patchOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
-router.post('/:datasetId/own/:owner/_bulk_lines', lockDataset((body, query) => query.lock === 'true'), readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('bulkOwnLines', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
-router.delete('/:datasetId/own/:owner/lines/:lineId', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('deleteOwnLine', 'manageOwnLines'), asyncWrap(restDatasetsUtils.deleteLine))
-router.get('/:datasetId/own/:owner/lines/:lineId/revisions', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('readOwnLineRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
-router.get('/:datasetId/own/:owner/revisions', readDataset(false, writableStatuses), isRest, applicationKey, permissions.middleware('readOwnRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
+router.post('/:datasetId/own/:owner/lines', readWritableDataset, isRest, applicationKey, permissions.middleware('createOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
+router.put('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRest, applicationKey, permissions.middleware('updateOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.updateLine))
+router.patch('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRest, applicationKey, permissions.middleware('patchOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
+router.post('/:datasetId/own/:owner/_bulk_lines', lockDataset((body, query) => query.lock === 'true'), readWritableDataset, isRest, applicationKey, permissions.middleware('bulkOwnLines', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
+router.delete('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRest, applicationKey, permissions.middleware('deleteOwnLine', 'manageOwnLines'), asyncWrap(restDatasetsUtils.deleteLine))
+router.get('/:datasetId/own/:owner/lines/:lineId/revisions', readWritableDataset, isRest, applicationKey, permissions.middleware('readOwnLineRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
+router.get('/:datasetId/own/:owner/revisions', readWritableDataset, isRest, applicationKey, permissions.middleware('readOwnRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
 
 // Specific routes for datasets with masterData functionalities enabled
-router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset(true), permissions.middleware('readLines', 'read', 'readDataAPI'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset({ fillDescendants: true }), permissions.middleware('readLines', 'read', 'readDataAPI'), asyncWrap(async (req, res) => {
   const singleSearch = req.dataset.masterData && req.dataset.masterData.singleSearchs && req.dataset.masterData.singleSearchs.find(ss => ss.id === req.params.singleSearchId)
   if (!singleSearch) return res.status(404).send(`Recherche unitaire "${req.params.singleSearchId}" inconnue`)
 
@@ -889,7 +892,7 @@ router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset
   }
   res.send(result)
 }))
-router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset(true), permissions.middleware('bulkSearch', 'read'), asyncWrap(async (req, res) => {
+router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset({ fillDescendants: true }), permissions.middleware('bulkSearch', 'read'), asyncWrap(async (req, res) => {
   // no buffering of this response in the reverse proxy
   res.setHeader('X-Accel-Buffering', 'no')
   await pump(
@@ -1126,11 +1129,11 @@ const readLines = asyncWrap(async (req, res) => {
 
   res.status(200).send(result)
 })
-router.get('/:datasetId/lines', readDataset(true), applicationKey, permissions.middleware('readLines', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), readLines)
-router.get('/:datasetId/own/:owner/lines', readDataset(true), isRest, applicationKey, permissions.middleware('readOwnLines', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, readLines)
+router.get('/:datasetId/lines', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('readLines', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), readLines)
+router.get('/:datasetId/own/:owner/lines', readDataset({ fillDescendants: true }), isRest, applicationKey, permissions.middleware('readOwnLines', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, readLines)
 
 // Special geo aggregation
-router.get('/:datasetId/geo_agg', readDataset(true), applicationKey, permissions.middleware('getGeoAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('getGeoAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
   res.throttleEnd()
   const db = req.app.get('db')
 
@@ -1175,7 +1178,7 @@ router.get('/:datasetId/geo_agg', readDataset(true), applicationKey, permissions
 }))
 
 // Standard aggregation to group items by value and perform an optional metric calculation on each group
-router.get('/:datasetId/values_agg', readDataset(true), applicationKey, permissions.middleware('getValuesAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('getValuesAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
   res.throttleEnd()
   const db = req.app.get('db')
 
@@ -1222,7 +1225,7 @@ router.get('/:datasetId/values_agg', readDataset(true), applicationKey, permissi
 
 // Simpler values list and filter (q is applied only to the selected field, not all fields)
 // mostly useful for selects/autocompletes on values
-router.get('/:datasetId/values/:fieldKey', readDataset(true), applicationKey, permissions.middleware('getValues', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/values/:fieldKey', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('getValues', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
   res.throttleEnd()
   let result
   try {
@@ -1234,7 +1237,7 @@ router.get('/:datasetId/values/:fieldKey', readDataset(true), applicationKey, pe
 }))
 
 // Simple metric aggregation to calculate 1 value (sum, avg, etc.) about 1 column
-router.get('/:datasetId/metric_agg', readDataset(true), applicationKey, permissions.middleware('getMetricAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/metric_agg', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('getMetricAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
   res.throttleEnd()
   let result
   try {
@@ -1246,7 +1249,7 @@ router.get('/:datasetId/metric_agg', readDataset(true), applicationKey, permissi
 }))
 
 // Simple metric aggregation to calculate some basic values about a list of columns
-router.get('/:datasetId/simple_metrics_agg', readDataset(true), applicationKey, permissions.middleware('getSimpleMetricsAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/simple_metrics_agg', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('getSimpleMetricsAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
   res.throttleEnd()
   let result
   try {
@@ -1258,7 +1261,7 @@ router.get('/:datasetId/simple_metrics_agg', readDataset(true), applicationKey, 
 }))
 
 // Simple words aggregation for significant terms extraction
-router.get('/:datasetId/words_agg', readDataset(true), applicationKey, permissions.middleware('getWordsAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/words_agg', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('getWordsAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
   res.throttleEnd()
   let result
   try {
@@ -1271,7 +1274,7 @@ router.get('/:datasetId/words_agg', readDataset(true), applicationKey, permissio
 
 // DEPRECATED, replaced by metric_agg
 // Get max value of a field
-router.get('/:datasetId/max/:fieldKey', readDataset(true), applicationKey, permissions.middleware('getMaxAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/max/:fieldKey', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('getMaxAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
   let result
   try {
     result = await esUtils.maxAgg(req.app.get('es'), req.dataset, req.params.fieldKey, req.query)
@@ -1283,7 +1286,7 @@ router.get('/:datasetId/max/:fieldKey', readDataset(true), applicationKey, permi
 
 // DEPRECATED, replaced by metric_agg
 // Get min value of a field
-router.get('/:datasetId/min/:fieldKey', readDataset(true), applicationKey, permissions.middleware('getMinAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/min/:fieldKey', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('getMinAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
   let result
   try {
     result = await esUtils.minAgg(req.app.get('es'), req.dataset, req.params.fieldKey, req.query)

@@ -212,16 +212,14 @@ exports.syncApplications = async (db, datasetId) => {
     .updateOne({ id: datasetId }, { $set: { 'extras.applications': applicationsExtras } })
 }
 
-exports.validateDraft = async (app, dataset, user, req) => {
+exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
   const db = app.get('db')
-  const patch = {
-    ...dataset.draft
-  }
+  const patch = { ...datasetFull.draft }
   if (user) {
     patch.updatedAt = (new Date()).toISOString()
     patch.updatedBy = { id: user.id, name: user.name }
   }
-  if (dataset.draft.dataUpdatedAt) {
+  if (datasetFull.draft.dataUpdatedAt) {
     patch.dataUpdatedAt = patch.updatedAt
     patch.dataUpdatedBy = patch.updatedBy
   }
@@ -231,18 +229,18 @@ exports.validateDraft = async (app, dataset, user, req) => {
   delete patch.count
   delete patch.bbox
   delete patch.storage
-  const patchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: dataset.id },
+  const patchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: datasetFull.id },
     { $set: patch, $unset: { draft: '' } },
     { returnDocument: 'after' }
   )).value
-  if (dataset.prod.originalFile) await fs.remove(originalFilePath(dataset.prod))
-  if (dataset.prod.file) {
-    await fs.remove(filePath(dataset.prod))
-    await fs.remove(fullFilePath(dataset.prod))
+  if (datasetFull.originalFile) await fs.remove(originalFilePath(datasetFull))
+  if (datasetFull.file) {
+    await fs.remove(filePath(datasetFull))
+    await fs.remove(fullFilePath(datasetFull))
     webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
 
     if (req) {
-      const breakingChanges = getSchemaBreakingChanges(dataset.prod.schema, patchedDataset.schema)
+      const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema)
       for (const breakingChange of breakingChanges) {
         webhooks.trigger(db, 'dataset', patchedDataset, {
           type: 'breaking-change',
@@ -256,34 +254,33 @@ exports.validateDraft = async (app, dataset, user, req) => {
   }
   await fs.ensureDir(dir(patchedDataset))
   await fs.remove(originalFilePath(patchedDataset))
-  await fs.move(originalFilePath(dataset), originalFilePath(patchedDataset))
-  if (await fs.pathExists(attachmentsDir(dataset))) {
+  await fs.move(originalFilePath(datasetDraft), originalFilePath(patchedDataset))
+  if (await fs.pathExists(attachmentsDir(datasetDraft))) {
     await fs.remove(attachmentsDir(patchedDataset))
-    await fs.move(attachmentsDir(dataset), attachmentsDir(patchedDataset))
+    await fs.move(attachmentsDir(datasetDraft), attachmentsDir(patchedDataset))
   }
 
-  const statusPatch = { status: basicTypes.includes(dataset.originalFile.mimetype) ? 'analyzed' : 'uploaded' }
-  const statusPatchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: dataset.id },
+  const statusPatch = { status: basicTypes.includes(datasetDraft.originalFile.mimetype) ? 'analyzed' : 'uploaded' }
+  const statusPatchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: datasetFull.id },
     { $set: statusPatch },
     { returnDocument: 'after' }
   )).value
   await journals.log(app, statusPatchedDataset, { type: 'draft-validated' }, 'dataset')
   try {
-    await esUtils.delete(app.get('es'), dataset)
+    await esUtils.delete(app.get('es'), datasetDraft)
   } catch (err) {
     if (err.statusCode !== 404) throw err
   }
-  await fs.remove(dir(dataset))
+  await fs.remove(dir(datasetDraft))
   await updateStorage(app, statusPatchedDataset)
   return statusPatchedDataset
 }
 
 exports.validateCompatibleDraft = async (app, dataset) => {
   if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {
-    const prodDataset = await app.get('db').collection('datasets').findOne({ id: dataset.id })
-    const fullDataset = { ...dataset, prod: prodDataset, draft: dataset }
-    if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument') && schemasFullyCompatible(fullDataset.prod.schema, dataset.schema, true)) {
-      return await exports.validateDraft(app, fullDataset)
+    const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
+    if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument') && schemasFullyCompatible(datasetFull.schema, dataset.schema, true)) {
+      return await exports.validateDraft(app, datasetFull, dataset)
     }
   }
   return null
