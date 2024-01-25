@@ -1,5 +1,5 @@
 const assert = require('assert').strict
-const sniffer = require('../server/utils/fields-sniffer')
+const sniffer = require('../server/datasets/utils/fields-sniffer')
 
 describe('field sniffer', () => {
   it('Work with booleans', () => {

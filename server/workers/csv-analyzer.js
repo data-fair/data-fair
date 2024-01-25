@@ -1,4 +1,4 @@
-const journals = require('../utils/journals')
+const journals = require('../misc/utils/journals')
 
 // Analyze dataset data, check validity and extract a few metadata for next workers
 exports.eventsPrefix = 'analyze'
@@ -6,14 +6,14 @@ exports.eventsPrefix = 'analyze'
 exports.process = async function (app, dataset) {
   const createError = require('http-errors')
   const iconv = require('iconv-lite')
-  const datasetFileSample = require('../utils/dataset-file-sample')
-  const csvSniffer = require('../utils/csv-sniffer')
-  const datasetUtils = require('../utils/dataset')
-  const fieldsSniffer = require('../utils/fields-sniffer')
+  const datasetFileSample = require('../datasets/utils/file-sample')
+  const csvSniffer = require('../misc/utils/csv-sniffer')
+  const datasetUtils = require('../datasets/utils')
+  const datasetsService = require('../datasets/service')
+  const fieldsSniffer = require('../datasets/utils/fields-sniffer')
 
   const debug = require('debug')(`worker:csv-analyzer:${dataset.id}`)
   debug('extract file sample')
-  const db = app.get('db')
   const fileSample = await datasetFileSample(dataset, dataset.file.encoding === 'UTF-8')
   if (!fileSample) throw createError(400, '[noretry] Échec d\'échantillonage du fichier tabulaire, il est vide')
   let decodedSample
@@ -74,7 +74,7 @@ exports.process = async function (app, dataset) {
   datasetUtils.mergeFileSchema(dataset)
   datasetUtils.cleanSchema(dataset)
 
-  if (await datasetUtils.validateCompatibleDraft(app, dataset)) return
+  if (await datasetsService.validateCompatibleDraft(app, dataset)) return
 
   debug('store status as analyzed')
   dataset.status = 'analyzed'
@@ -85,6 +85,6 @@ exports.process = async function (app, dataset) {
     schema: dataset.schema
   }
 
-  await datasetUtils.applyPatch(db, dataset, patch)
+  await datasetsService.applyPatch(app, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
 }

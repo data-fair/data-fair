@@ -2,13 +2,14 @@
 exports.eventsPrefix = 'finalize'
 
 exports.process = async function (app, dataset) {
-  const esUtils = require('../utils/es')
-  const geoUtils = require('../utils/geo')
-  const datasetUtils = require('../utils/dataset')
-  const attachmentsUtils = require('../utils/attachments')
-  const virtualDatasetsUtils = require('../utils/virtual-datasets')
-  const taskProgress = require('../utils/task-progress')
-  const restDatasetsUtils = require('../utils/rest-datasets')
+  const esUtils = require('../datasets/es')
+  const geoUtils = require('../datasets/utils/geo')
+  const datasetUtils = require('../datasets/utils')
+  const datasetService = require('../datasets/service')
+  const attachmentsUtils = require('../datasets/utils/attachments')
+  const virtualDatasetsUtils = require('../datasets/utils/virtual')
+  const taskProgress = require('../datasets/utils/task-progress')
+  const restDatasetsUtils = require('../datasets/utils/rest')
 
   const debug = require('debug')(`worker:finalizer:${dataset.id}`)
 
@@ -133,7 +134,7 @@ exports.process = async function (app, dataset) {
     result.count = dataset.count = await esUtils.count(es, queryableDataset, {})
   }
 
-  await datasetUtils.applyPatch(db, dataset, result)
+  await datasetService.applyPatch(app, dataset, result)
 
   // Remove attachments if the schema does not refer to their existence
   if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {

@@ -1,11 +1,11 @@
-const dbUtils = require('../server/utils/db')
-const datasetUtils = require('../server/utils/dataset')
+const dbUtils = require('../server/misc/utils/db')
+const datasetUtils = require('../server/datasets/utils')
 async function main () {
   const { db } = await dbUtils.connect()
   const cursor = await db.collection('datasets').find({})
   while (await cursor.hasNext()) {
     const dataset = await cursor.next()
-    if (dataset.status === 'error') {
+    if (dataset?.status === 'error') {
       await datasetUtils.reindex(db, dataset)
     }
   }

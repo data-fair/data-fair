@@ -1,7 +1,7 @@
 const owner = require('./owner')
 const eventBy = require('./event-by')
-const permissions = require('./permissions')
-const catalogs = require('../server/catalogs')
+const permissions = require('./permissions.json')
+const catalogs = require('../server/catalogs/plugins')
 
 module.exports = {
   title: 'Catalog',
@@ -50,7 +50,7 @@ module.exports = {
     type: {
       type: 'string',
       description: 'The type of catalog',
-      enum: catalogs.connectors.map(i => i.key)
+      enum: catalogs.connectors.map((/** @type {any} */i) => i.key)
     },
     logo: {
       type: 'string',

@@ -1,5 +1,5 @@
 const assert = require('assert').strict
-const xlsx = require('../server/utils/xlsx')
+const xlsx = require('../server/misc/utils/xlsx')
 const testUtils = require('./resources/test-utils')
 
 describe('Spreadsheets conversions', () => {

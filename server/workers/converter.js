@@ -1,5 +1,5 @@
 // convert from tabular data to csv or geographical data to geojson
-const config = require('config')
+const config = /** @type {any} */(require('config'))
 
 exports.eventsPrefix = 'convert'
 
@@ -34,7 +34,7 @@ exports.basicTypes = [
 ]
 
 async function decompress (mimetype, filePath, dirPath) {
-  const exec = require('../utils/exec')
+  const exec = require('../misc/utils/exec')
   if (mimetype === 'application/zip') await exec('unzip', ['-o', '-q', filePath, '-d', dirPath])
 }
 
@@ -43,22 +43,22 @@ exports.process = async function (app, dataset) {
   const fs = require('fs-extra')
   const createError = require('http-errors')
   const ogr2ogr = require('ogr2ogr').default
-  const pump = require('../utils/pipe')
+  const pump = require('../misc/utils/pipe')
   const { stringify: csvStrStream } = require('csv-stringify')
   const tmp = require('tmp-promise')
   const dir = require('node-dir')
   const mime = require('mime-types')
   const zlib = require('node:zlib')
-  const { displayBytes } = require('../utils/bytes')
-  const datasetUtils = require('../utils/dataset')
-  const icalendar = require('../utils/icalendar')
-  const xlsx = require('../utils/xlsx')
-  const i18nUtils = require('../utils/i18n')
+  const { displayBytes } = require('../misc/utils/bytes')
+  const datasetUtils = require('../datasets/utils')
+  const datasetService = require('../datasets/service')
+  const icalendar = require('../misc/utils/icalendar')
+  const xlsx = require('../misc/utils/xlsx')
+  const i18nUtils = require('../i18n/utils')
 
   const dataDir = path.resolve(config.dataDir)
 
   const debug = require('debug')(`worker:converter:${dataset.id}`)
-  const db = app.get('db')
   const originalFilePath = datasetUtils.originalFilePath(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
   const tmpDir = (await tmp.dir({ dir: path.join(dataDir, 'tmp'), unsafeCleanup: true })).path
@@ -207,6 +207,6 @@ exports.process = async function (app, dataset) {
   if (dataset.timeZone) patch.timeZone = dataset.timeZone
   if (dataset.analysis) patch.analysis = dataset.analysis
 
-  await datasetUtils.applyPatch(db, dataset, patch)
+  await datasetService.applyPatch(app, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
 }

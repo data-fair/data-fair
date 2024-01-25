@@ -1,6 +1,6 @@
 
 const config = require('config')
-const observe = require('./utils/observe')
+const observe = require('./misc/utils/observe')
 const app = require('./app')
 
 app.run().then(app => {

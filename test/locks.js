@@ -1,5 +1,5 @@
 const assert = require('assert').strict
-const locks = require('../server/utils/locks')
+const locks = require('../server/misc/utils/locks')
 
 describe('locks', () => {
   it('Acquire and release locks', async () => {

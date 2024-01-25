@@ -1,4 +1,4 @@
-const observe = require('../utils/observe')
+const observe = require('../misc/utils/observe')
 
 exports.process = async function (app, dataset) {
   const path = require('path')
@@ -6,10 +6,11 @@ exports.process = async function (app, dataset) {
   const config = require('config')
   const tmp = require('tmp-promise')
   const CronJob = require('cron').CronJob
-  const pump = require('../utils/pipe')
-  const restUtils = require('../utils/rest-datasets')
-  const outputs = require('../utils/outputs')
-  const datasetUtils = require('../utils/dataset')
+  const pump = require('../misc/utils/pipe')
+  const restUtils = require('../datasets/utils/rest')
+  const outputs = require('../datasets/utils/outputs')
+  const datasetUtils = require('../datasets/utils')
+  const datasetsService = require('../datasets/service')
 
   const dataDir = path.resolve(config.dataDir)
   const debug = require('debug')(`worker:rest-exporter-csv:${dataset.id}`)
@@ -40,7 +41,7 @@ exports.process = async function (app, dataset) {
   const job = new CronJob(config.exportRestDatasets.cron, () => {})
   patch.exports.restToCSV.nextExport = job.nextDates().toISOString()
 
-  await datasetUtils.applyPatch(db, dataset, patch)
+  await datasetsService.applyPatch(app, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
   debug('done')
 }

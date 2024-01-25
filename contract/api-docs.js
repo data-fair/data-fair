@@ -1,11 +1,10 @@
 const config = require('config')
-const status = require('./status')
+const status = require('./status.json')
 const version = require('../package.json').version
 const dataset = require('./dataset')
 const datasetPatch = require('./dataset-patch')
 const datasetPost = require('./dataset-post')
 const remoteService = { ...require('./remote-service') }
-delete remoteService.definitions
 const remoteServicePatch = { ...require('./remote-service-patch') }
 delete remoteServicePatch.definitions
 const catalog = require('./catalog')
@@ -15,11 +14,13 @@ const applicationPatch = require('./application-patch')
 const utils = require('./utils')
 
 const servers = [{
+  // @ts-ignore
   url: `${config.publicUrl}/api/v1`,
+  // @ts-ignore
   description: `Instance DataFair - ${new URL(config.publicUrl).hostname}`
 }]
 
-module.exports = (user) => {
+module.exports = () => {
   const doc = {
     openapi: '3.1.0',
     info: Object.assign({
@@ -35,6 +36,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
 `,
       version: version,
       'x-api-id': 'data-fair'
+    // @ts-ignore
     }, config.info),
     servers,
     components: {
@@ -825,10 +827,15 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
   }
 
   // TODO: shoud we keep some of this ?
+  // @ts-ignore
   delete doc.paths['/remote-services']
+  // @ts-ignore
   delete doc.paths['/remote-services/{id}']
+  // @ts-ignore
   delete doc.paths['/catalogs']
+  // @ts-ignore
   delete doc.paths['/catalogs/{id}']
+  // @ts-ignore
   delete doc.paths['/status']
 
   return doc

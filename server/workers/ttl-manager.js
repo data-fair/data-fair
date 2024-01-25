@@ -1,4 +1,4 @@
 exports.process = async function (app, dataset) {
-  const restUtils = require('../utils/rest-datasets')
+  const restUtils = require('../datasets/utils/rest')
   return restUtils.applyTTL(app, dataset)
 }

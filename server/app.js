@@ -1,12 +1,12 @@
 const config = require('config')
 const express = require('express')
 const memoize = require('memoizee')
-const dbUtils = require('./utils/db')
-const esUtils = require('./utils/es')
-const wsUtils = require('./utils/ws')
-const locksUtils = require('./utils/locks')
-const observe = require('./utils/observe')
-const asyncWrap = require('./utils/async-wrap')
+const dbUtils = require('./misc/utils/db')
+const esUtils = require('./datasets//es')
+const wsUtils = require('./misc/utils/ws')
+const locksUtils = require('./misc/utils/locks')
+const observe = require('./misc/utils/observe')
+const asyncWrap = require('./misc/utils/async-handler')
 const sanitizeHtml = require('../shared/sanitize-html')
 const debugDomain = require('debug')('domain')
 
@@ -23,8 +23,8 @@ let server, wss, httpTerminator
 app.use(observe.observeReqMiddleware)
 
 if (config.mode.includes('server')) {
-  const limits = require('./utils/limits')
-  const rateLimiting = require('./utils/rate-limiting')
+  const limits = require('./misc/utils/limits')
+  const rateLimiting = require('./misc/utils/rate-limiting')
   const session = require('@data-fair/sd-express')({
     directoryUrl: config.directoryUrl,
     privateDirectoryUrl: config.privateDirectoryUrl
@@ -65,11 +65,11 @@ if (config.mode.includes('server')) {
     bodyParser(req, res, next)
   })
   app.use(require('cookie-parser')())
-  app.use(require('./utils/i18n').middleware)
+  app.use(require('./i18n/utils').middleware)
   app.use(session.auth)
 
   // TODO: we could make this better targetted but more verbose by adding it to all routes
-  app.use(require('./utils/expect-type')(['application/json', 'application/x-ndjson', 'multipart/form-data', 'text/csv', 'text/csv+gzip']))
+  app.use(require('./misc/utils/expect-type')(['application/json', 'application/x-ndjson', 'multipart/form-data', 'text/csv', 'text/csv+gzip']))
 
   // set current baseUrl, i.e. the url of data-fair on the current user's domain
   // check for the matching publicationSite, etc
@@ -141,20 +141,20 @@ if (config.mode.includes('server')) {
   }))
 
   // Business routers
-  const apiKey = require('./utils/api-key').middleware
-  app.use('/api/v1', require('./routers/root'))
-  app.use('/api/v1/remote-services', require('./routers/remote-services').router)
-  app.use('/api/v1/remote-services-actions', require('./routers/remote-services').actionsRouter)
-  app.use('/api/v1/catalog', apiKey('datasets'), require('./routers/catalog'))
-  app.use('/api/v1/catalogs', apiKey('catalogs'), require('./routers/catalogs'))
-  app.use('/api/v1/base-applications', require('./routers/base-applications').router)
-  app.use('/api/v1/applications', apiKey('applications'), require('./routers/applications'))
-  app.use('/api/v1/datasets', rateLimiting.middleware(), apiKey('datasets'), require('./routers/datasets'))
-  app.use('/api/v1/stats', apiKey('stats'), require('./routers/stats'))
-  app.use('/api/v1/settings', require('./routers/settings'))
-  app.use('/api/v1/admin', require('./routers/admin'))
-  app.use('/api/v1/identities', require('./routers/identities'))
-  app.use('/api/v1/activity', require('./routers/activity'))
+  const apiKey = require('./misc/utils/api-key').middleware
+  app.use('/api/v1', require('./misc/routers/root'))
+  app.use('/api/v1/remote-services', require('./remote-services/router').router)
+  app.use('/api/v1/remote-services-actions', require('./remote-services/router').actionsRouter)
+  app.use('/api/v1/catalog', apiKey('datasets'), require('./misc/routers/catalog'))
+  app.use('/api/v1/catalogs', apiKey('catalogs'), require('./catalogs/router'))
+  app.use('/api/v1/base-applications', require('./base-applications/router').router)
+  app.use('/api/v1/applications', apiKey('applications'), require('./applications/router'))
+  app.use('/api/v1/datasets', rateLimiting.middleware(), apiKey('datasets'), require('./datasets/router'))
+  app.use('/api/v1/stats', apiKey('stats'), require('./misc/routers/stats'))
+  app.use('/api/v1/settings', require('./misc/routers/settings'))
+  app.use('/api/v1/admin', require('./misc/routers/admin'))
+  app.use('/api/v1/identities', require('./misc/routers/identities'))
+  app.use('/api/v1/activity', require('./misc/routers/activity'))
   app.use('/api/v1/limits', limits.router)
 
   app.use('/api/', (req, res) => {
@@ -162,12 +162,12 @@ if (config.mode.includes('server')) {
   })
 
   // External applications proxy
-  const serviceWorkers = require('./utils/service-workers')
+  const serviceWorkers = require('./misc/utils/service-workers')
   app.get('/app-sw.js', (req, res) => {
     res.setHeader('Content-Type', 'application/javascript')
     res.send(serviceWorkers.sw(req.application))
   })
-  app.use('/app', require('./routers/application-proxy'))
+  app.use('/app', require('./applications/proxy'))
 
   // self hosting of streamsaver man in the middle service worker
   // see https://github.com/jimmywarting/StreamSaver.js/issues/183
@@ -247,12 +247,12 @@ exports.run = async () => {
   app.publish = await wsUtils.initPublisher(db)
 
   if (config.mode.includes('server')) {
-    const limits = require('./utils/limits')
+    const limits = require('./misc/utils/limits')
     await Promise.all([
-      require('./utils/capture').init(),
-      require('./utils/cache').init(db),
-      require('./routers/remote-services').init(db),
-      require('./routers/base-applications').init(db),
+      require('./misc/utils/capture').init(),
+      require('./misc/utils/cache').init(db),
+      require('./remote-services/utils').init(db),
+      require('./base-applications/router').init(db),
       limits.init(db),
       wsUtils.initServer(wss, db, app.get('session'))
     ])

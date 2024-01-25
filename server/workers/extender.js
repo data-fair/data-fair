@@ -4,9 +4,10 @@ const debugMasterData = require('debug')('master-data')
 exports.eventsPrefix = 'extend'
 
 exports.process = async function (app, dataset) {
-  const extensionsUtils = require('../utils/extensions')
-  const datasetUtils = require('../utils/dataset')
-  const restDatasetsUtils = require('../utils/rest-datasets')
+  const extensionsUtils = require('../datasets/utils/extensions')
+  const datasetUtils = require('../datasets/utils')
+  const datasetService = require('../datasets/service')
+  const restDatasetsUtils = require('../datasets/utils/rest')
 
   const debug = require('debug')(`worker:extender:${dataset.id}`)
 
@@ -28,7 +29,7 @@ exports.process = async function (app, dataset) {
   }
 
   debugMasterData(`apply patch after extensions ${dataset.id} (${dataset.slug})`, patch)
-  await datasetUtils.applyPatch(db, dataset, patch)
+  await datasetService.applyPatch(app, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
   debug('done')
 }

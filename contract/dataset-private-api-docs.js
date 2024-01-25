@@ -2,11 +2,20 @@ const config = require('config')
 const datasetAPIDocs = require('./dataset-api-docs')
 const datasetPost = require('./dataset-post')
 const journalSchema = require('./journal')
-const { visibility } = require('../server/utils/visibility')
-const permissionsDoc = require('../server/utils/permissions').apiDoc
-const datasetUtils = require('../server/utils/dataset')
+const { visibility } = require('../server/misc/utils/visibility')
+const permissionsDoc = require('../server/misc/utils/permissions').apiDoc
+const datasetUtils = require('../server/datasets/utils')
 const datasetPatchSchema = require('./dataset-patch')
 
+/**
+ *
+ * @param {any} dataset
+ * @param {string} publicUrl
+ * @param {any} user
+ * @param {any} info
+ * @returns
+ */
+// @ts-ignore
 module.exports = (dataset, publicUrl = config.publicUrl, user, info) => {
   const { api, userApiRate, anonymousApiRate, bulkLineSchema } = datasetAPIDocs(dataset, publicUrl, info)
 
@@ -211,8 +220,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   }
 
   if (dataset.isRest) {
-    const readLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl, true, false)
-    const writeLineSchema = datasetUtils.jsonSchema(dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']), publicUrl)
+    const readLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl)
+    const writeLineSchema = datasetUtils.jsonSchema(dataset.schema.filter((/** @type {any} */p) => !p['x-calculated'] && !p['x-extension']), publicUrl)
     const patchLineSchema = writeLineSchema
     const lineId = {
       in: 'path',
@@ -394,7 +403,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     }
 
     if (dataset.rest.lineOwnership) {
-      const convertOwnLineApiPath = (apiPath) => {
+      const convertOwnLineApiPath = (/** @type {string} */apiPath) => {
         if (!api.paths[apiPath]) return
         api.paths['/own/{owner}' + apiPath] = JSON.parse(JSON.stringify(api.paths[apiPath]))
         api.paths['/own/{owner}' + apiPath].parameters = api.paths['/own/{owner}' + apiPath].parameters || []

@@ -9,8 +9,8 @@ const iconv = require('iconv-lite')
 const pump = require('util').promisify(require('pump'))
 
 const testUtils = require('./resources/test-utils')
-const restDatasetsUtils = require('../server/utils/rest-datasets')
-const datasetUtils = require('../server/utils/dataset')
+const restDatasetsUtils = require('../server/datasets/utils/rest')
+const { attachmentsDir, lsAttachments } = require('../server/datasets/utils/files')
 const workers = require('../server/workers')
 
 describe('REST datasets', () => {
@@ -248,7 +248,7 @@ describe('REST datasets', () => {
     assert.ok(res.data._id)
     assert.equal(res.data.attachmentPath, `${res.data._id}/test.pdf`)
     await workers.hook('finalizer/rest5')
-    const ls = await datasetUtils.lsAttachments(dataset)
+    const ls = await lsAttachments(dataset)
     assert.equal(ls.length, 1)
     assert.equal(ls[0], res.data.attachmentPath)
 
@@ -284,7 +284,7 @@ describe('REST datasets', () => {
     assert.equal(res.status, 200)
     assert.equal(res.data.nbOk, 2)
     await workers.hook('finalizer/rest6')
-    const ls = await datasetUtils.lsAttachments(dataset)
+    const ls = await lsAttachments(dataset)
     assert.equal(ls.length, 2)
 
     res = await ax.get('/api/v1/datasets/rest6/lines')
@@ -317,7 +317,7 @@ describe('REST datasets', () => {
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook('finalizer/restsync')
-    const ls = await datasetUtils.lsAttachments(dataset)
+    const ls = await lsAttachments(dataset)
     assert.equal(ls.length, 2)
 
     res = await ax.get('/api/v1/datasets/restsync/lines')
@@ -340,7 +340,7 @@ describe('REST datasets', () => {
     dataset = await workers.hook('finalizer/restsync')
 
     // remove a file a resync, we sould have 1 line
-    await fs.remove(path.join(datasetUtils.attachmentsDir(dataset), 'test.odt'))
+    await fs.remove(path.join(attachmentsDir(dataset), 'test.odt'))
     res = await ax.post('/api/v1/datasets/restsync/_sync_attachments_lines', null, { params: { lock: 'true' } })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbCreated, 0)

@@ -1,5 +1,5 @@
 const config = require('config')
-const asyncWrap = require('./utils/async-wrap')
+const asyncWrap = require('./misc/utils/async-handler')
 
 module.exports = async () => {
   const trackEmbed = asyncWrap(async (req, res, next) => {

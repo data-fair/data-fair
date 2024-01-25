@@ -1,4 +1,4 @@
-const config = require('config')
+const config = /** @type {any} */(require('config'))
 
 exports.eventsPrefix = 'download'
 
@@ -13,12 +13,13 @@ exports.process = async function (app, dataset) {
   const CronJob = require('cron').CronJob
   const contentDisposition = require('content-disposition')
   const createError = require('http-errors')
-  const axios = require('../utils/axios')
-  const datasetFileSample = require('../utils/dataset-file-sample')
-  const pump = require('../utils/pipe')
-  const limits = require('../utils/limits')
-  const catalogs = require('../catalogs')
-  const datasetUtils = require('../utils/dataset')
+  const axios = require('../misc/utils/axios')
+  const datasetFileSample = require('../datasets/utils/file-sample')
+  const pump = require('../misc/utils/pipe')
+  const limits = require('../misc/utils/limits')
+  const catalogs = require('../catalogs/plugins')
+  const datasetUtils = require('../datasets/utils')
+  const datasetService = require('../datasets/service')
   const { basicTypes } = require('../workers/converter')
 
   const debug = require('debug')(`worker:downloader:${dataset.id}`)
@@ -155,6 +156,6 @@ exports.process = async function (app, dataset) {
     }
   }
 
-  await datasetUtils.applyPatch(db, dataset, patch)
+  await datasetService.applyPatch(app, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
 }

@@ -1,5 +1,5 @@
-const observe = require('../utils/observe')
-const journals = require('../utils/journals')
+const observe = require('../misc/utils/observe')
+const journals = require('../misc/utils/journals')
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
 exports.eventsPrefix = 'index'
@@ -8,14 +8,15 @@ exports.process = async function (app, dataset) {
   const fs = require('fs-extra')
   const createError = require('http-errors')
   const { Writable } = require('stream')
-  const pump = require('../utils/pipe')
-  const es = require('../utils/es')
-  const datasetUtils = require('../utils/dataset')
-  const restDatasetsUtils = require('../utils/rest-datasets')
-  const taskProgress = require('../utils/task-progress')
+  const pump = require('../misc/utils/pipe')
+  const es = require('../datasets/es')
+  const datasetUtils = require('../datasets/utils')
+  const datasetsService = require('../datasets/service')
+  const restDatasetsUtils = require('../datasets/utils/rest')
+  const taskProgress = require('../datasets/utils/task-progress')
 
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
-  const debugHeap = require('../utils/heap').debug(`worker:indexer:${dataset.id}`)
+  const debugHeap = require('../misc/utils/heap').debug(`worker:indexer:${dataset.id}`)
 
   if (process.env.NODE_ENV === 'test' && dataset.slug === 'trigger-test-error') {
     throw new Error('This is a test error')
@@ -99,5 +100,5 @@ exports.process = async function (app, dataset) {
     result.status = dataset.status
   }
 
-  await datasetUtils.applyPatch(db, dataset, result)
+  await datasetsService.applyPatch(app, dataset, result)
 }

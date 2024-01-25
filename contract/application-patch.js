@@ -8,6 +8,7 @@ module.exports = {
   title: 'Application patch',
   type: 'object',
   additionalProperties: false,
+  /** @type {any} */
   properties: {}
 }
 patchKeys.forEach(k => {

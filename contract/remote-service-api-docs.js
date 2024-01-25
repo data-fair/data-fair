@@ -3,7 +3,7 @@ const remoteServiceSchema = { ...require('./remote-service') }
 const remoteServicePatchSchema = { ...require('./remote-service-patch') }
 delete remoteServiceSchema.definitions
 delete remoteServicePatchSchema.definitions
-const permissionsDoc = require('../server/utils/permissions').apiDoc
+const permissionsDoc = require('../server/misc/utils/permissions').apiDoc
 
 module.exports = (remoteService) => {
   const api = {

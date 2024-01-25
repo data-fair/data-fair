@@ -1,4 +1,4 @@
-const i18nUtils = require('../../../server/utils/i18n')
+const i18nUtils = require('../../../server/i18n/utils')
 
 exports.description = 'missing primary in x-concept of datasets upgraded by previous scripts'
 

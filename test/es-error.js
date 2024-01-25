@@ -1,7 +1,7 @@
 const assert = require('assert').strict
 const config = require('config')
 const testUtils = require('./resources/test-utils')
-const { aliasName, errorMessage } = require('../server/utils/es/commons')
+const { aliasName, errorMessage } = require('../server/datasets/es/commons')
 
 describe('Elasticsearch errors management', () => {
   it('Extract simple message from a full ES error', async function () {
