@@ -110,12 +110,14 @@ services:
   #########################
 
   elasticsearch:
-    image: ghcr.io/data-fair/elasticsearch:7.17.1
+    image: ghcr.io/data-fair/elasticsearch:7.17.12
     restart: ${RESTART}
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     environment:
       - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ingest.geoip.downloader.enabled=false
 
   mongo:
     image: mongo:4.4

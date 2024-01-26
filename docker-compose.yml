@@ -20,6 +20,7 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
+      - ingest.geoip.downloader.enabled=false
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     healthcheck:
