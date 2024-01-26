@@ -83,7 +83,7 @@ exports.revisionsCollection = (db, dataset) => {
 }
 
 exports.initDataset = async (db, dataset) => {
-  // just in case of badly cleaned data from previous dataset with same if
+  // just in case of badly cleaned data from previous dataset with same id
   try {
     await exports.deleteDataset(db, dataset)
   } catch (err) {

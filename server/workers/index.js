@@ -5,6 +5,7 @@ const debug = require('debug')('workers')
 const mergeDraft = require('../datasets/utils/merge-draft')
 
 const tasks = exports.tasks = {
+  restInitializer: require('./rest-initializer'),
   downloader: require('./downloader'),
   converter: require('./converter'),
   csvAnalyzer: require('./csv-analyzer'),
@@ -192,7 +193,10 @@ async function iter (app, resource, type) {
       taskKey = 'catalogHarvester'
     } else if (type === 'dataset') {
       const moment = require('moment')
-      if (resource.status === 'imported' || (resource.remoteFile?.autoUpdate?.active && resource.remoteFile.autoUpdate.nextUpdate < new Date().toISOString())) {
+      if (resource.status === 'created' && resource.isRest) {
+        // Initialize a REST dataset
+        taskKey = 'restInitializer'
+      } else if (resource.status === 'imported' || (resource.remoteFile?.autoUpdate?.active && resource.remoteFile.autoUpdate.nextUpdate < new Date().toISOString())) {
         // Load a dataset from a catalog
         taskKey = 'downloader'
       } else if (resource.status === 'uploaded') {

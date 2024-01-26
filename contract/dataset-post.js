@@ -8,7 +8,24 @@ const body = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    ...datasetPatch.properties
+    ...datasetPatch.properties,
+    initFrom: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['dataset', 'parts'],
+      properties: {
+        dataset: {
+          type: 'string'
+        },
+        parts: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: ['data', 'description', 'schema', 'attachments']
+          }
+        }
+      }
+    }
   }
 }
 postKeys.forEach(k => {

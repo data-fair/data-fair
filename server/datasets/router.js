@@ -450,12 +450,11 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       permissions.initResourcePermissions(dataset, req.user)
       dataset.rest = dataset.rest || {}
       dataset.schema = dataset.schema || []
-      // the dataset will go through a first index/finalize steps, not really necessary
-      // but this way everything will be initialized (journal, index)
-      dataset.status = 'analyzed'
+      dataset.status = 'created'
+      if (dataset.initFrom) {
+        // TODO: check that user has access to the dataset he wants to init from
+      }
       await datasetUtils.insertWithId(db, dataset, res)
-      await restDatasetsUtils.initDataset(db, dataset)
-      await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'analyzed' } })
     } else if (req.body.isMetaOnly) {
       if (!req.body.title) throw createError(400, 'Un jeu de données métadonnées doit être créé avec un titre')
       if (attachmentsFile) throw createError(400, 'Un jeu de données métadonnées ne peut pas être créé avec des pièces jointes')
@@ -583,8 +582,10 @@ const updateDataset = asyncWrap(async (req, res) => {
       validateURLFriendly(i18n.getLocale(req), patch.slug)
       req.body.rest = req.body.rest || {}
       if (req.isNewDataset) {
-        await restDatasetsUtils.initDataset(db, { ...dataset, ...req.body })
-        dataset.status = 'analyzed'
+        dataset.status = 'created'
+        if (dataset.initFrom) {
+          // TODO: check that user has access to the dataset he wants to init from
+        }
       } else {
         try {
           // this method will routinely throw errors
