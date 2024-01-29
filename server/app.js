@@ -1,4 +1,4 @@
-const config = require('config')
+const config = /** @type {any} */(require('config'))
 const express = require('express')
 const memoize = require('memoizee')
 const dbUtils = require('./misc/utils/db')
@@ -285,7 +285,7 @@ exports.run = async () => {
   if (config.mode === 'task') {
     const resource = await app.get('db').collection(process.argv[3] + 's').findOne({ id: process.argv[4] })
     if (process.env.DATASET_DRAFT === 'true') {
-      const datasetUtils = require('./utils/dataset')
+      const datasetUtils = require('./datasets/utils')
       datasetUtils.mergeDraft(resource)
     }
     await require('./workers').tasks[process.argv[2]].process(app, resource)
