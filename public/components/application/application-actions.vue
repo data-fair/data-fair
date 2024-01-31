@@ -215,7 +215,7 @@ fr:
   delete: Supprimer
   changeOwner: Changer le propriétaire
   deleteApp: Suppression de l'application
-  deleteMsg: Voulez vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
+  deleteMsg: Voulez vous vraiment supprimer l'application "{title}" ? La suppression est définitive et la configuration de l'application ne pourra pas être récupérées.
   yes: Oui
   no: Non
   changeOwnerTitle: Changer le propriétaire de l'application
@@ -232,7 +232,7 @@ en:
   delete: Delete
   changeOwner: Change owner
   deleteApp: Deletion of the application
-  deleteMsg: Do you really want to delete the application "{title}" ? Deletion is definitive and data will not be recoverable.
+  deleteMsg: Do you really want to delete the application "{title}" ? Deletion is definitive and application configuration will not be recoverable.
   yes: Yes
   no: No
   changeOwnerTitle: Change the owner of the application
