@@ -56,6 +56,7 @@ const { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } = requ
 const { dir, filePath, originalFilePath, attachmentsDir } = require('./utils/files')
 const { preparePatch, validatePatch } = require('./utils/patch')
 const { updateTotalStorage } = require('./utils/storage')
+const { prepareInitFrom } = require('./utils/init-from')
 const { checkStorage, lockDataset, lockNewDataset, readDataset } = require('./middlewares')
 
 const router = express.Router()
@@ -451,9 +452,7 @@ router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(),
       dataset.rest = dataset.rest || {}
       dataset.schema = dataset.schema || []
       dataset.status = 'created'
-      if (dataset.initFrom) {
-        // TODO: check that user has access to the dataset he wants to init from
-      }
+      if (dataset.initFrom) prepareInitFrom(dataset, req.user)
       await datasetUtils.insertWithId(db, dataset, res)
     } else if (req.body.isMetaOnly) {
       if (!req.body.title) throw createError(400, 'Un jeu de données métadonnées doit être créé avec un titre')
@@ -583,9 +582,7 @@ const updateDataset = asyncWrap(async (req, res) => {
       req.body.rest = req.body.rest || {}
       if (req.isNewDataset) {
         dataset.status = 'created'
-        if (dataset.initFrom) {
-          // TODO: check that user has access to the dataset he wants to init from
-        }
+        if (dataset.initFrom) prepareInitFrom(dataset, req.user)
       } else {
         try {
           // this method will routinely throw errors

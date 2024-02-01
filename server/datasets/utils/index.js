@@ -173,6 +173,8 @@ exports.clean = (publicUrl, publicationSite, dataset, query = {}, draft = false)
   }
   delete dataset.permissions
   delete dataset._id
+  delete dataset._uniqueRefs
+  delete dataset.initFrom
   if (select.includes('-userPermissions')) delete dataset.userPermissions
   if (select.includes('-owner')) delete dataset.owner
 
@@ -182,6 +184,7 @@ exports.clean = (publicUrl, publicationSite, dataset, query = {}, draft = false)
       .filter(appRef => appRef.publicationSites && appRef.publicationSites.find(p => p === siteKey))
     for (const appRef of dataset.extras.applications) delete appRef.publicationSites
   }
+
   return dataset
 }
 
