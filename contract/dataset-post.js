@@ -21,7 +21,7 @@ const body = {
           type: 'array',
           items: {
             type: 'string',
-            enum: ['data', 'description', 'schema', 'metadataAttachments']
+            enum: ['data', 'description', 'schema', 'metadataAttachments', 'primaryKey', 'extensions']
           }
         }
       }

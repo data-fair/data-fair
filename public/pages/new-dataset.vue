@@ -109,6 +109,13 @@
           :step="3"
           :editable="restParamsForm"
         >
+          {{ $t('stepInit') }}
+        </v-stepper-step>
+        <v-divider />
+        <v-stepper-step
+          :step="4"
+          :editable="restParamsForm"
+        >
           {{ $t('stepAction') }}
         </v-stepper-step>
       </template>
@@ -456,20 +463,7 @@
               :rules="[val => val && val.length > 3]"
               class="mt-5"
             />
-            <dataset-select
-              :label="$t('restSource')"
-              :extra-params="{queryable: true}"
-              master-data="standardSchema"
-              @change="setRestSource"
-            />
-            <v-checkbox
-              v-if="restSource && restSource.extensions && restSource.extensions.length"
-              v-model="restSourceExtensions"
-              hide-details
-              class="pl-2"
-              :label="$t('restSourceExtensions')"
-              @change="setRestSourceExtensions"
-            />
+
             <v-checkbox
               v-model="restDataset.rest.history"
               hide-details
@@ -511,6 +505,65 @@
         </v-stepper-content>
 
         <v-stepper-content step="3">
+          <dataset-select
+            v-model="initFromDataset"
+            :label="$t('restInitFromDataset')"
+            :extra-params="{queryable: true}"
+            master-data="standardSchema"
+            class="mt-2"
+            @change="setInitFrom"
+          />
+
+          <template v-if="restDataset.initFrom">
+            <v-checkbox
+              :value="restDataset.initFrom.parts.includes('data')"
+              hide-details
+              class="pl-2"
+              :label="$t('initFromData')"
+              @change="toggleInitFromPart('data')"
+            />
+            <v-checkbox
+              :value="restDataset.initFrom.parts.includes('schema')"
+              hide-details
+              class="pl-2"
+              :label="$t('initFromSchema')"
+              :disabled="restDataset.initFrom.parts.includes('data')"
+              @change="toggleInitFromPart('schema')"
+            />
+            <v-checkbox
+              v-if="initFromDataset.primaryKey?.length"
+              :value="restDataset.initFrom.parts.includes('primaryKey')"
+              hide-details
+              class="pl-2"
+              :label="$t('initFromPrimaryKey')"
+              @change="toggleInitFromPart('primaryKey')"
+            />
+            <v-checkbox
+              v-if="initFromDataset.extensions?.length"
+              :value="restDataset.initFrom.parts.includes('extensions')"
+              hide-details
+              class="pl-2"
+              :label="$t('initFromPrimaryKey')"
+              @change="toggleInitFromPart('extensions')"
+            />
+            <v-checkbox
+              :value="restDataset.initFrom.parts.includes('description')"
+              hide-details
+              class="pl-2"
+              :label="$t('initFromDescription')"
+              @change="toggleInitFromPart('description')"
+            />
+          </template>
+
+          <v-btn
+            v-t="'continue'"
+            color="primary"
+            class="ml-2 mt-4"
+            @click.native="currentStep = 4"
+          />
+        </v-stepper-content>
+
+        <v-stepper-content step="4">
           <owner-pick
             v-model="restDataset.owner"
             hide-single
@@ -518,7 +571,7 @@
             message="Choisissez le propriétaire du nouveau jeu de données :"
           />
           <dataset-conflicts
-            v-if="datasetType === 'rest' && currentStep === 3"
+            v-if="datasetType === 'rest' && currentStep === 4"
             v-model="conflictsOk"
             :dataset="restDataset"
           />
@@ -703,6 +756,7 @@ fr:
   stepFile: Sélection du fichier
   stepAttachment: Pièces jointes
   stepParams: Paramètres
+  stepInit: Initialisation
   stepAction: Confirmation
   loadMainFile: Chargez un fichier de données principal.
   selectFile: sélectionnez ou glissez/déposez un fichier
@@ -731,8 +785,7 @@ fr:
   of: de
   history: Conserver un historique complet des révisions des lignes du jeu de données
   lineOwnership: Permet de donner la propriété d'une lignes à des utilisateurs (scénarios collaboratifs)
-  restSource: Initialiser le schéma en dupliquant celui d'un jeu de données existant
-  restSourceExtensions: Copier les enrichissements en même temps que le schéma initial
+  restInitFromDataset: Utiliser un jeu de données existant pour initialiser le nouveau
   children: Jeux enfants
   virtualDatasetFill: Initialiser le schéma avec toutes les colonnes des jeux enfants
   completed: complétés
@@ -742,6 +795,11 @@ fr:
   remoteFileMessage: Utilisez un lien vers un fichier dont le format est supporté.
   inputRemoteFile: URL du fichier distant
   autoUpdate: Activer la mise à jour automatique
+  initFromData: copier la donnée
+  initFromSchema: copier le schéma
+  initFromPrimaryKey: copier la clé primaire
+  initFromExtensions: copier les extensions
+  initFromDescription: copier la description
 en:
   datasetType: Dataset type
   newDataset: Create a dataset
@@ -761,6 +819,7 @@ en:
   stepFile: File selection
   stepAttachment: Attachments
   stepParams: Parameters
+  stepInit: Initialization
   stepAction: Confirmation
   loadMainFile: Load the main data file
   selectFile: select or drag and drop a file
@@ -789,6 +848,7 @@ en:
   of: of
   history: Keep a full history of the revisions of the lines of the dataset
   lineOwnership: Accept giving ownership of lines to users (collaborative use-cases)
+  restInitFromDataset: Use an existing dataset to initialize the new one
   children: Children datasets
   virtualDatasetFill: Initialize the schema with all columns from children
   completed: completed
@@ -796,6 +856,11 @@ en:
   masterData: Master data
   ownerDatasets: Your datasets
   autoUpdate: Activate auto-update
+  initFromData: copy data
+  initFromSchema: copy schema
+  initFromPrimaryKey: copy primary key
+  initFromExtensions: copy extensions
+  initFromDescription: copy description
 </i18n>
 
 <script>
@@ -866,7 +931,8 @@ export default {
     datasets: [],
     refDatasets: [],
     virtualDatasetFill: false,
-    conflictsOk: false
+    conflictsOk: false,
+    initFromDataset: null
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -999,20 +1065,23 @@ export default {
         }
       }
     },
-    async setRestSource (dataset) {
-      this.restSourceExtensions = false
-      if (!dataset) {
-        this.restSource = null
-        this.restDataset.schema = []
-        delete this.restDataset.extensions
+    setInitFrom (dataset) {
+      if (dataset) {
+        const initFrom = { dataset: dataset.id, parts: [] }
+        this.$set(this.restDataset, 'initFrom', initFrom)
       } else {
-        this.restSource = await this.$axios.$get(`api/v1/datasets/${dataset.id}`)
-        this.restDataset.schema = this.restSource.schema.filter(p => !p['x-calculated'] && !p['x-extension'])
+        delete this.restDataset.initFrom
       }
     },
-    setRestSourceExtensions () {
-      if (this.restSourceExtensions) {
-        this.restDataset.extensions = this.restSource.extensions
+    toggleInitFromPart (part) {
+      const initFrom = this.restDataset.initFrom
+      if (initFrom.parts.includes(part)) {
+        initFrom.parts = initFrom.parts.filter(p => p !== part)
+      } else {
+        initFrom.parts.push(part)
+        if (part === 'data' && !initFrom.parts.includes('schema')) {
+          initFrom.parts.push('schema')
+        }
       }
     }
   }

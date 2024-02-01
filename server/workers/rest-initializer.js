@@ -85,6 +85,12 @@ exports.process = async function (app, dataset) {
         return newProperty
       })
     }
+    if (dataset.initFrom.parts.includes('extensions')) {
+      patch.extensions = parentDataset.extensions
+    }
+    if (dataset.initFrom.parts.includes('primaryKey')) {
+      patch.primaryKey = parentDataset.primaryKey
+    }
     if (dataset.initFrom.parts.includes('description')) {
       patch.description = parentDataset.description
     }

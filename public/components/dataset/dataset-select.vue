@@ -1,5 +1,6 @@
 <template>
   <v-autocomplete
+    :value="value"
     :items="datasets"
     :loading="loadingDatasets"
     :search-input.sync="search"
@@ -14,7 +15,7 @@
     hide-details
     style="max-width: 600px"
     clearable
-    @change="dataset => $emit('change', dataset)"
+    @change="dataset => {$emit('change', dataset); $emit('input', dataset)}"
   >
     <template #item="{item}">
       <dataset-list-item
@@ -47,6 +48,7 @@ import { mapGetters } from 'vuex'
 
 export default {
   props: {
+    value: { type: Object, default: null },
     label: { type: String, default: '' },
     extraParams: { type: Object, default: () => ({}) },
     owner: { type: Object, default: null },
@@ -77,6 +79,7 @@ export default {
       const owner = this.owner || this.activeAccount
 
       let items = []
+      if (this.value) items.push(this.value)
       if (this.masterData) {
         const remoteServicesRes = await this.$axios.$get('api/v1/remote-services', {
           params: { q: this.search, size: 1000, select: 'id,title,' + this.masterData, privateAccess: `${owner.type}:${owner.id}`, [this.masterData]: true }
