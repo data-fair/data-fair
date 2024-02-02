@@ -35,7 +35,12 @@ exports.process = async function (app, dataset) {
     patch.status = 'normalized'
   }
 
-  await fs.move(loadingFilePath, datasetUtils.originalFilePath({ ...dataset, ...patch }), { overwrite: true })
+  const newFilePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
+  await fs.move(loadingFilePath, newFilePath, { overwrite: true })
+  if (dataset.originalFile) {
+    const oldFilePath = datasetUtils.originalFilePath(dataset)
+    if (oldFilePath !== newFilePath) await fs.remove(oldFilePath)
+  }
   const attachmentsFilePath = datasetUtils.loadingDattachmentsFilePath(dataset)
   if (fs.pathExistsSync(attachmentsFilePath)) {
     await replaceAllAttachments(dataset, attachmentsFilePath)

@@ -153,7 +153,6 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
   validateURLFriendly(locale, body.id)
   validateURLFriendly(locale, body.slug)
 
-  // After uploadFile, files contains the metadata of an uploaded file, and body the content of additional text fields
   const datasetFile = files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
   const attachmentsFile = files.find(f => f.fieldname === 'attachments')
 
@@ -324,7 +323,6 @@ exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappin
     }
   }
 
-  const mongoPatch = {}
   Object.assign(dataset, patch)
 
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset)
@@ -337,6 +335,8 @@ exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappin
     }
     patch = draftPatch
   }
+
+  const mongoPatch = {}
   for (const key of Object.keys(patch)) {
     if (patch[key] === null) {
       mongoPatch.$unset = mongoPatch.$unset || {}

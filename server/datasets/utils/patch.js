@@ -18,9 +18,10 @@ exports.validatePatch = ajv.compile(datasetPatchSchema)
  * @param {any} dataset
  * @param {any} user
  * @param {string} locale
+ * @param {any[]} [files]
  * @returns {Promise<{removedRestProps?: any[], attemptMappingUpdate?: boolean, isEmpty?: boolean}>}
  */
-exports.preparePatch = async (app, patch, dataset, user, locale) => {
+exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
   const db = app.get('db')
 
   patch.id = dataset.id
@@ -36,6 +37,16 @@ exports.preparePatch = async (app, patch, dataset, user, locale) => {
     else if (dataset.remoteFile && !dataset.originalFile) patch.status = 'imported'
     else if (!basicTypes.includes(dataset.originalFile.mimetype)) patch.status = 'uploaded'
     else patch.status = 'loaded'
+  }
+
+  const datasetFile = files && files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
+
+  if (datasetFile) {
+    patch.loadingFile = {
+      name: datasetFile.originalname,
+      size: datasetFile.size,
+      mimetype: datasetFile.mimetype
+    }
   }
 
   // Ignore patch that doesn't bring actual change
@@ -83,7 +94,11 @@ exports.preparePatch = async (app, patch, dataset, user, locale) => {
 
   let attemptMappingUpdate = false
 
-  if (patch.remoteFile) {
+  if (datasetFile) {
+    patch.dataUpdatedBy = patch.updatedBy
+    patch.dataUpdatedAt = patch.updatedAt
+    patch.status = 'loaded'
+  } else if (patch.remoteFile) {
     if (patch.remoteFile?.url !== dataset.remoteFile?.url) {
       delete patch.remoteFile.lastModified
       delete patch.remoteFile.etag
@@ -92,8 +107,7 @@ exports.preparePatch = async (app, patch, dataset, user, locale) => {
       patch.remoteFile.lastModified = dataset.remoteFile.lastModified
       patch.remoteFile.etag = dataset.remoteFile.etag
     }
-  }
-  if (dataset.isVirtual) {
+  } else if (dataset.isVirtual) {
     if (patch.schema || patch.virtual) {
       patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...dataset, ...patch })
       patch.status = 'indexed'
