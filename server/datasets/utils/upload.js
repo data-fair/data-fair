@@ -1,13 +1,13 @@
 const fs = require('fs-extra')
-const config = require('config')
+const config = /** @type {any} */(require('config'))
 const path = require('path')
 const multer = require('multer')
 const createError = require('http-errors')
 const { nanoid } = require('nanoid')
 const mime = require('mime-types')
 const datasetSchema = require('../../../contract/dataset')
-const datasetUtils = require('../../datasets/utils')
-const asyncWrap = require('./async-handler')
+const datasetUtils = require('./')
+const asyncWrap = require('../../misc/utils/async-handler')
 const fallbackMimeTypes = {
   dbf: 'application/dbase',
   dif: 'text/plain',

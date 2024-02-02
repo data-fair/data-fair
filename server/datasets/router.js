@@ -14,7 +14,7 @@ const sanitizeHtml = require('../../shared/sanitize-html')
 const LinkHeader = require('http-link-header')
 const journals = require('../misc/utils/journals')
 const esUtils = require('./es')
-const filesUtils = require('../misc/utils/files')
+const uploadUtils = require('./utils/upload')
 const datasetAPIDocs = require('../../contract/dataset-api-docs')
 const privateDatasetAPIDocs = require('../../contract/dataset-private-api-docs')
 const permissions = require('../misc/utils/permissions')
@@ -397,7 +397,7 @@ const beforeUpload = asyncWrap(async (req, res, next) => {
   }
   next()
 })
-router.post('', beforeUpload, checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), asyncWrap(async (req, res) => {
+router.post('', beforeUpload, checkStorage(true, true), uploadUtils.uploadFile(), uploadUtils.fsyncFiles, clamav.middleware, uploadUtils.fixFormBody(validatePost), asyncWrap(async (req, res) => {
   req.files = req.files || []
   debugFiles('POST datasets uploaded some files', req.files)
   try {
@@ -631,8 +631,8 @@ const updateDataset = asyncWrap(async (req, res) => {
     throw err
   }
 }, { keepalive: true })
-router.post('/:datasetId', lockDataset(), attemptInsert, readDataset({ acceptedStatuses: ['finalized', 'error'] }), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
-router.put('/:datasetId', lockDataset(), attemptInsert, readDataset({ acceptedStatuses: ['finalized', 'error'] }), permissions.middleware('writeData', 'write'), checkStorage(true, true), filesUtils.uploadFile(), filesUtils.fsyncFiles, clamav.middleware, filesUtils.fixFormBody(validatePost), updateDataset)
+router.post('/:datasetId', lockDataset(), attemptInsert, readDataset({ acceptedStatuses: ['finalized', 'error'] }), permissions.middleware('writeData', 'write'), checkStorage(true, true), uploadUtils.uploadFile(), uploadUtils.fsyncFiles, clamav.middleware, uploadUtils.fixFormBody(validatePost), updateDataset)
+router.put('/:datasetId', lockDataset(), attemptInsert, readDataset({ acceptedStatuses: ['finalized', 'error'] }), permissions.middleware('writeData', 'write'), checkStorage(true, true), uploadUtils.uploadFile(), uploadUtils.fsyncFiles, clamav.middleware, uploadUtils.fixFormBody(validatePost), updateDataset)
 
 // validate the draft
 router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], alwaysDraft: true }), permissions.middleware('validateDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
@@ -668,9 +668,9 @@ function isRest (req, res, next) {
 
 const readWritableDataset = readDataset({ acceptedStatuses: ['finalized', 'updated', 'extended-updated', 'indexed', 'error'] })
 router.get('/:datasetId/lines/:lineId', readDataset(), isRest, permissions.middleware('readLine', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
-router.post('/:datasetId/lines', readWritableDataset, isRest, applicationKey, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createLine))
-router.put('/:datasetId/lines/:lineId', readWritableDataset, isRest, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.updateLine))
-router.patch('/:datasetId/lines/:lineId', readWritableDataset, isRest, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, filesUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.patchLine))
+router.post('/:datasetId/lines', readWritableDataset, isRest, applicationKey, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createLine))
+router.put('/:datasetId/lines/:lineId', readWritableDataset, isRest, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.updateLine))
+router.patch('/:datasetId/lines/:lineId', readWritableDataset, isRest, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.patchLine))
 router.post('/:datasetId/_bulk_lines', readWritableDataset, isRest, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
 router.delete('/:datasetId/lines/:lineId', readWritableDataset, isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
 router.get('/:datasetId/lines/:lineId/revisions', readWritableDataset, isRest, permissions.middleware('readLineRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
@@ -1145,7 +1145,7 @@ router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissio
 })
 
 // Direct access to data files
-router.get('/:datasetId/data-files', readDataset(), permissions.middleware('listDataFiles', 'read'), asyncWrap(async (req, res, next) => {
+router.get('/:datasetId/data-files', readDataset(), permissions.middleware('listDataFiles', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   res.send(await datasetUtils.dataFiles(req.dataset, req.publicBaseUrl))
 }))
 router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadDataFile', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
