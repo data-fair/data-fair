@@ -20,7 +20,7 @@ const privateDatasetAPIDocs = require('../../contract/dataset-private-api-docs')
 const permissions = require('../misc/utils/permissions')
 const usersUtils = require('../misc/utils/users')
 const datasetUtils = require('./utils')
-const { curateDataset } = require('./utils')
+const { curateDataset, titleFromFileName } = require('./utils')
 const { prepareExtensions } = require('./utils/extensions')
 const virtualDatasetsUtils = require('./utils/virtual')
 const restDatasetsUtils = require('./utils/rest')
@@ -51,7 +51,7 @@ const publicationSites = require('../misc/utils/publication-sites')
 const clamav = require('../misc/utils/clamav')
 const nanoid = require('../misc/utils/nanoid')
 const { syncDataset: syncRemoteService } = require('../remote-services/utils')
-const { findDatasets, applyPatch, validateDraft, deleteDataset } = require('./service')
+const { findDatasets, applyPatch, validateDraft, deleteDataset, createDataset } = require('./service')
 const { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } = require('./utils/schema')
 const { dir, filePath, originalFilePath, attachmentsDir } = require('./utils/files')
 const { preparePatch, validatePatch } = require('./utils/patch')
@@ -278,12 +278,6 @@ const initNew = async (db, req) => {
   return dataset
 }
 
-const titleFromFileName = (name) => {
-  let baseFileName = path.parse(name).name
-  if (baseFileName.endsWith('.gz')) baseFileName = path.parse(baseFileName).name
-  return path.parse(baseFileName).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')
-}
-
 const setFileInfo = async (req, file, attachmentsFile, dataset, draft, res) => {
   const db = req.app.get('db')
   const patch = {
@@ -386,106 +380,42 @@ const setFileInfo = async (req, file, attachmentsFile, dataset, draft, res) => {
   return dataset
 }
 
-// Create a dataset by uploading data
-const beforeUpload = asyncWrap(async (req, res, next) => {
-  if (!req.user) return res.status(401).type('text/plain').send()
+// Create a dataset
+router.post('', checkStorage(true, true), clamav.middleware, uploadUtils.fixFormBody(validatePost), asyncWrap(async (req, res) => {
+  const db = req.app.get('db')
+  const locale = i18n.getLocale(req)
+  // @ts-ignore
+  const user = /** @type {any} */(req.user)
+
+  if (!user) throw createError(401)
+
   const owner = usersUtils.owner(req)
-  if (!permissions.canDoForOwner(owner, 'datasets', 'post', req.user, req.app.get('db'))) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
-  if ((await limits.remaining(req.app.get('db'), owner)).nbDatasets === 0) {
-    debugLimits('exceedLimitNbDatasets/beforeUpload', { owner })
-    return res.status(429).type('text/plain').send(req.__('errors.exceedLimitNbDatasets'))
+  if (!permissions.canDoForOwner(owner, 'datasets', 'post', user)) {
+    throw createError(403, req.__('errors.missingPermission'))
   }
-  next()
-})
-router.post('', beforeUpload, checkStorage(true, true), uploadUtils.uploadFile(), uploadUtils.fsyncFiles, clamav.middleware, uploadUtils.fixFormBody(validatePost), asyncWrap(async (req, res) => {
-  req.files = req.files || []
-  debugFiles('POST datasets uploaded some files', req.files)
+  if ((await limits.remaining(db, owner)).nbDatasets === 0) {
+    debugLimits('exceedLimitNbDatasets/beforeUpload', { owner })
+    throw createError(429, req.__('errors.exceedLimitNbDatasets'))
+  }
+
+  const files = await uploadUtils.getFiles(req, res)
   try {
-    const db = req.app.get('db')
+    const body = uploadUtils.getFormBody(req.body)
+    validatePost(body)
 
-    validateURLFriendly(i18n.getLocale(req), req.body.id)
-    validateURLFriendly(i18n.getLocale(req), req.body.slug)
+    debugFiles('POST datasets uploaded some files', files)
 
-    let dataset
-    // After uploadFile, req.files contains the metadata of an uploaded file, and req.body the content of additional text fields
-    const datasetFile = req.files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
-    const attachmentsFile = req.files.find(f => f.fieldname === 'attachments')
-    if (datasetFile) {
-      if (req.body.isVirtual) throw createError(400, 'Un jeu de données virtuel ne peut pas être initialisé avec un fichier')
-      // TODO: do this in a worker instead ?
-      const datasetPromise = setFileInfo(req, datasetFile, attachmentsFile, await initNew(db, req), req.query.draft === 'true', res)
-      await Promise.race([datasetPromise, new Promise(resolve => setTimeout(resolve, 5000))])
-      // send header at this point, if we are not finished processing files
-      // asyncWrap keepalive option will keep request alive
-      res.writeHeader(201, { 'Content-Type': 'application/json' })
-      res.write(' ')
-      try {
-        dataset = await datasetPromise
-        permissions.initResourcePermissions(dataset, req.user)
-      } catch (err) {
-        // should not happen too often, but sometimes we get an error after sending the 201 status
-        // we return an error object nevertheless, better than to do nothing
-        res.send({ error: err.message })
-        throw err
-      }
-      curateDataset(dataset)
-      datasetUtils.setUniqueRefs(dataset)
-      await lockNewDataset(req, res, dataset)
-      await db.collection('datasets').insertOne(dataset)
-      await datasetUtils.updateStorage(req.app, dataset)
-    } else if (req.body.isVirtual) {
-      if (!req.body.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
-      if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
-      validatePost(req.body)
-      dataset = await initNew(db, req)
-      permissions.initResourcePermissions(dataset, req.user)
-      dataset.virtual = dataset.virtual || { children: [] }
-      dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
-      dataset.status = 'indexed'
-      await datasetUtils.insertWithId(db, dataset, res)
-    } else if (req.body.isRest) {
-      if (!req.body.title) throw createError(400, 'Un jeu de données éditable doit être créé avec un titre')
-      if (attachmentsFile) throw createError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
-      validatePost(req.body)
-      dataset = await initNew(db, req)
-      permissions.initResourcePermissions(dataset, req.user)
-      dataset.rest = dataset.rest || {}
-      dataset.schema = dataset.schema || []
-      dataset.status = 'created'
-      if (dataset.initFrom) prepareInitFrom(dataset, req.user)
-      await datasetUtils.insertWithId(db, dataset, res)
-    } else if (req.body.isMetaOnly) {
-      if (!req.body.title) throw createError(400, 'Un jeu de données métadonnées doit être créé avec un titre')
-      if (attachmentsFile) throw createError(400, 'Un jeu de données métadonnées ne peut pas être créé avec des pièces jointes')
-      validatePost(req.body)
-      dataset = await initNew(db, req)
-      permissions.initResourcePermissions(dataset, req.user)
-      await datasetUtils.insertWithId(db, dataset, res)
-    } else if (req.body.remoteFile) {
-      validatePost(req.body)
-      dataset = await initNew(db, req)
-      dataset.title = dataset.title || titleFromFileName(req.body.remoteFile.name || path.basename(new URL(req.body.remoteFile.url).pathname))
-      permissions.initResourcePermissions(dataset, req.user)
-      dataset.status = 'imported'
-      await datasetUtils.insertWithId(db, dataset, res)
-    } else {
-      throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "éditable" ou "métadonnées"')
-    }
+    const onClose = (callback) => res.on('close', callback)
 
-    delete dataset._id
+    const dataset = await createDataset(db, locale, user, owner, body, files, onClose)
 
-    if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${dataset.slug}) with extensions by ${req.user?.name} (${req.user?.id})`, dataset.extensions)
-    if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${dataset.slug}) with masterData by ${req.user?.name} (${req.user?.id})`, dataset.masterData)
-
-    await updateTotalStorage(req.app.get('db'), dataset.owner)
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
-    await syncRemoteService(req.app.get('db'), dataset)
+    await syncRemoteService(db, dataset)
+
     res.status(201).send(clean(req.publicBaseUrl, req.publicationSite, dataset, {}, req.query.draft === 'true'))
   } catch (err) {
-    // Wrapped the whole thing in a try/catch to remove files in case of failure
-    for (const file of req.files) {
-      await fs.remove(file.path)
-    }
+    for (const file of files) await fs.remove(file.path)
+    // TODO: use temp files and replace this catch by a finally
     throw err
   }
 }, { keepalive: true }))

@@ -1,3 +1,4 @@
+const path = require('path')
 const config = /** @type {any} */(require('config'))
 const slug = require('slugify')
 const CronJob = require('cron').CronJob
@@ -56,7 +57,7 @@ exports.refinalize = async (db, dataset) => {
 }
 
 // Generate ids and try insertion until there is no conflict on id
-exports.insertWithId = async (db, dataset, res) => {
+exports.insertWithId = async (db, dataset, onClose) => {
   const baseSlug = slug(dataset.title, { lower: true, strict: true })
   dataset.id = dataset.id ?? nanoid()
   dataset.slug = baseSlug
@@ -67,8 +68,9 @@ exports.insertWithId = async (db, dataset, res) => {
     const idLockKey = `dataset:${dataset.id}`
     const idAck = locks.acquire(db, idLockKey, 'insertWithBaseid')
     if (!idAck) throw new Error(`dataset id ${dataset.id} is locked`)
-    if (res) {
-      res.on('close', () => {
+    if (onClose) {
+      onClose(() => {
+        console.log('releasing dataset lock on id', idLockKey)
         locks.release(db, idLockKey).catch(err => {
           observe.internalError.inc({ errorCode: 'dataset-lock-id' })
           console.error('(dataset-lock-id) failure to release dataset lock on id', err)
@@ -82,8 +84,9 @@ exports.insertWithId = async (db, dataset, res) => {
       try {
         await db.collection('datasets').insertOne(dataset)
         insertOk = true
-        if (res) {
-          res.on('close', () => {
+        if (onClose) {
+          onClose(() => {
+            console.log('releasing dataset lock on slug', slugLockKey)
             locks.release(db, slugLockKey).catch(err => {
               observe.internalError.inc({ errorCode: 'dataset-lock-slug' })
               console.error('(dataset-lock-slug) failure to release dataset lock on slug', err)
@@ -175,6 +178,7 @@ exports.clean = (publicUrl, publicationSite, dataset, query = {}, draft = false)
   delete dataset._id
   delete dataset._uniqueRefs
   delete dataset.initFrom
+  delete dataset.loadedFile
   if (select.includes('-userPermissions')) delete dataset.userPermissions
   if (select.includes('-owner')) delete dataset.owner
 
@@ -204,4 +208,10 @@ exports.curateDataset = (dataset, existingDataset) => {
   } else if (dataset.remoteFile?.autoUpdate) {
     delete dataset.remoteFile.autoUpdate.nextUpdate
   }
+}
+
+exports.titleFromFileName = (name) => {
+  let baseFileName = path.parse(name).name
+  if (baseFileName.endsWith('.gz')) baseFileName = path.parse(baseFileName).name
+  return path.parse(baseFileName).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')
 }

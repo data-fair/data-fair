@@ -5,7 +5,6 @@ exports.eventsPrefix = 'download'
 exports.process = async function (app, dataset) {
   const { text: stream2text } = require('node:stream/consumers')
   const path = require('path')
-  const chardet = require('chardet')
   const tmp = require('tmp-promise')
   const fs = require('fs-extra')
   const mime = require('mime-types')
@@ -14,13 +13,11 @@ exports.process = async function (app, dataset) {
   const contentDisposition = require('content-disposition')
   const createError = require('http-errors')
   const axios = require('../misc/utils/axios')
-  const datasetFileSample = require('../datasets/utils/file-sample')
   const pump = require('../misc/utils/pipe')
   const limits = require('../misc/utils/limits')
   const catalogs = require('../catalogs/plugins')
   const datasetUtils = require('../datasets/utils')
   const datasetService = require('../datasets/service')
-  const { basicTypes } = require('../workers/converter')
 
   const debug = require('debug')(`worker:downloader:${dataset.id}`)
 
@@ -96,7 +93,7 @@ exports.process = async function (app, dataset) {
   }
 
   const patch = {}
-  patch.originalFile = {
+  patch.loadedFile = {
     name: fileName,
     mimetype
   }
@@ -110,10 +107,6 @@ exports.process = async function (app, dataset) {
     // prevent re-indexing when the file didn't change
     debug('content of remote file did not change')
     await tmpFile.cleanup()
-    if (oldFilePath !== filePath) {
-      await fs.move(oldFilePath, filePath, { overwrite: true })
-      patch.file = patch.originalFile
-    }
   } else {
     if (response.headers.etag) {
       patch.remoteFile = patch.remoteFile || { ...dataset.remoteFile }
@@ -131,19 +124,9 @@ exports.process = async function (app, dataset) {
       await fs.remove(oldFilePath)
     }
 
-    patch.originalFile.md5 = md5
-    patch.originalFile.size = (await fs.promises.stat(filePath)).size
-
-    if (!basicTypes.includes(patch.originalFile.mimetype)) {
-      // we first need to convert the file in a textual format easy to index
-      patch.status = 'uploaded'
-    } else {
-      // The format of the original file is already well suited to workers
-      patch.status = 'loaded'
-      patch.file = patch.originalFile
-      const fileSample = await datasetFileSample({ ...dataset, ...patch })
-      patch.file.encoding = chardet.detect(fileSample)
-    }
+    patch.loadedFile.md5 = md5
+    patch.loadedFile.size = (await fs.promises.stat(filePath)).size
+    patch.status = 'loaded'
   }
 
   if (autoUpdating) {

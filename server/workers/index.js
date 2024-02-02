@@ -7,6 +7,7 @@ const mergeDraft = require('../datasets/utils/merge-draft')
 const tasks = exports.tasks = {
   restInitializer: require('./rest-initializer'),
   downloader: require('./downloader'),
+  fileLoader: require('./file-loader'),
   converter: require('./converter'),
   csvAnalyzer: require('./csv-analyzer'),
   geojsonAnalyzer: require('./geojson-analyzer'),
@@ -199,13 +200,16 @@ async function iter (app, resource, type) {
       } else if (resource.status === 'imported' || (resource.remoteFile?.autoUpdate?.active && resource.remoteFile.autoUpdate.nextUpdate < new Date().toISOString())) {
         // Load a dataset from a catalog
         taskKey = 'downloader'
-      } else if (resource.status === 'uploaded') {
+      } else if (resource.status === 'loaded') {
+        // File was either uploaded or downloded, it needs to be copied to the storage
+        taskKey = 'fileLoader'
+      } else if (resource.status === 'stored') {
         // XLS to csv of other transformations
         taskKey = 'converter'
-      } else if (resource.status === 'loaded' && resource.file && tasks.converter.csvTypes.includes(resource.file.mimetype)) {
+      } else if (resource.status === 'normalized' && resource.file && tasks.converter.csvTypes.includes(resource.file.mimetype)) {
         // Quickly parse a CSV file
         taskKey = 'csvAnalyzer'
-      } else if (resource.status === 'loaded' && resource.file && resource.file.mimetype === 'application/geo+json') {
+      } else if (resource.status === 'normalized' && resource.file && resource.file.mimetype === 'application/geo+json') {
         // Deduce a schema from geojson properties
         taskKey = 'geojsonAnalyzer'
       } else if (resource.isRest && resource.status === 'extended-updated') {

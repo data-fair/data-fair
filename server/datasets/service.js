@@ -1,5 +1,7 @@
 const config = /** @type {any} */(require('config'))
 const fs = require('fs-extra')
+const path = require('path')
+const createError = require('http-errors')
 const findUtils = require('../misc/utils/find')
 const permissions = require('../misc/utils/permissions')
 const datasetUtils = require('./utils')
@@ -11,7 +13,11 @@ const { basicTypes } = require('../workers/converter')
 const { updateStorage } = require('./utils/storage')
 const { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath } = require('./utils/files')
 const { schemasFullyCompatible, getSchemaBreakingChanges } = require('./utils/schema')
-const { getExtensionKey } = require('./utils/extensions')
+const { getExtensionKey, prepareExtensions, prepareExtensionsSchema } = require('./utils/extensions')
+const { validateURLFriendly } = require('../misc/utils/validation')
+const { curateDataset, titleFromFileName } = require('./utils')
+const virtualDatasetsUtils = require('./utils/virtual')
+const { prepareInitFrom } = require('./utils/init-from')
 
 const debugMasterData = require('debug')('master-data')
 
@@ -129,6 +135,86 @@ exports.findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQue
     response.explain = explain
   }
   return response
+}
+
+/**
+ *
+ * @param {import('mongodb').Db} db
+ * @param {string} locale
+ * @param {any} user
+ * @param {any} owner
+ * @param {any} body
+ * @param {any[]} files
+ * @param {(callback) => void} onClose
+ * @returns {Promise<any>}
+ */
+exports.createDataset = async (db, locale, user, owner, body, files, onClose) => {
+  validateURLFriendly(locale, body.id)
+  validateURLFriendly(locale, body.slug)
+
+  // After uploadFile, files contains the metadata of an uploaded file, and body the content of additional text fields
+  const datasetFile = files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
+  const attachmentsFile = files.find(f => f.fieldname === 'attachments')
+
+  if ([!!datasetFile, !!body.remoteFile, body.isVirtual, body.isRest, body.isMetaOnly].filter(b => b).length > 1) {
+    throw createError(400, 'Un jeu de données ne peut pas être de plusieurs types à la fois')
+  }
+
+  const dataset = { ...body }
+  dataset.owner = owner
+  const date = new Date().toISOString()
+  dataset.createdAt = dataset.updatedAt = date
+  dataset.createdBy = dataset.updatedBy = { id: user.id, name: user.name }
+  dataset.permissions = []
+  dataset.schema = dataset.schema || []
+  if (dataset.extensions) {
+    prepareExtensions(locale, dataset.extensions)
+    dataset.schema = await prepareExtensionsSchema(db, dataset.schema, dataset.extensions)
+  }
+  curateDataset(dataset)
+  permissions.initResourcePermissions(dataset)
+
+  if (datasetFile) {
+    dataset.status = 'loaded'
+    dataset.title = titleFromFileName(datasetFile.originalname)
+    dataset.dataUpdatedBy = dataset.updatedBy
+    dataset.dataUpdatedAt = dataset.updatedAt
+    dataset.loadedFile = {
+      name: datasetFile.originalname,
+      size: datasetFile.size,
+      mimetype: datasetFile.mimetype
+    }
+  } else if (body.isVirtual) {
+    if (!body.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
+    if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
+    dataset.virtual = dataset.virtual || { children: [] }
+    dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
+    dataset.status = 'indexed'
+  } else if (body.isRest) {
+    if (!body.title) throw createError(400, 'Un jeu de données éditable doit être créé avec un titre')
+    if (attachmentsFile) throw createError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
+    dataset.rest = dataset.rest || {}
+    dataset.schema = dataset.schema || []
+    dataset.status = 'created'
+    if (dataset.initFrom) prepareInitFrom(dataset, user)
+  } else if (body.isMetaOnly) {
+    if (!body.title) throw createError(400, 'Un jeu de données métadonnées doit être créé avec un titre')
+    if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
+  } else if (body.remoteFile) {
+    dataset.title = dataset.title || titleFromFileName(body.remoteFile.name || path.basename(new URL(body.remoteFile.url).pathname))
+    dataset.status = 'imported'
+  } else {
+    throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "éditable" ou "métadonnées"')
+  }
+
+  await datasetUtils.insertWithId(db, dataset, onClose)
+
+  delete dataset._id
+
+  if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${dataset.slug}) with extensions by ${user?.name} (${user?.id})`, dataset.extensions)
+  if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${dataset.slug}) with masterData by ${user?.name} (${user?.id})`, dataset.masterData)
+
+  return dataset
 }
 
 exports.deleteDataset = async (app, dataset) => {

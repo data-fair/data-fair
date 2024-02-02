@@ -201,7 +201,7 @@ exports.process = async function (app, dataset) {
     throw createError(400, `[noretry] Le format de ce fichier n'est pas supporté (${dataset.originalFile.mimetype}).`)
   }
 
-  dataset.status = 'loaded'
+  dataset.status = 'normalized'
 
   const patch = { status: dataset.status, file: dataset.file, schema: dataset.schema }
   if (dataset.timeZone) patch.timeZone = dataset.timeZone

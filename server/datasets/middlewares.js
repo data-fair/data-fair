@@ -52,6 +52,7 @@ exports.lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) =
   throw createError(409, `Une opération bloquante est déjà en cours sur le jeu de données ${datasetId}.`)
 })
 
+// TODO: replaced by lockNewDataset
 exports.lockNewDataset = async (req, res, dataset) => {
   const db = req.app.get('db')
   const lockKeys = [`dataset:${dataset.id}`, `dataset:slug:${dataset.owner.type}:${dataset.owner.id}:${dataset.slug}`]
