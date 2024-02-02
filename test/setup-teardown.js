@@ -35,6 +35,13 @@ before('global mocks', () => {
         <script type="text/javascript">window.APPLICATION=%APPLICATION%;</script>
       </head>
       <body>My app body</body>
+      <script>
+        setTimeout(() => {
+          if (window.triggerCapture) {
+            window.triggerCapture()
+          }
+        }, 10)
+      </script>
     </html>
   `
   nock('http://monapp1.com/')
