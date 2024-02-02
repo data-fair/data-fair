@@ -252,7 +252,7 @@
             dense
             style="max-width:400px;"
           >
-            {{ $t('attachmentInfo') }}
+            {{ $t('optionalStep') }}
           </v-alert>
           <p v-t="'attachmentsMsg1'" />
           <p v-t="'attachmentsMsg2'" />
@@ -505,6 +505,15 @@
         </v-stepper-content>
 
         <v-stepper-content step="3">
+          <v-alert
+            type="info"
+            outlined
+            dense
+            style="max-width:400px;"
+          >
+            {{ $t('optionalStep') }}
+          </v-alert>
+
           <dataset-select
             v-model="initFromDataset"
             :label="$t('restInitFromDataset')"
@@ -766,7 +775,7 @@ fr:
   continue: Continuer
   formats: Formats supportés
   attachment: Document numérique attaché
-  attachmentInfo: Cette étape est optionnelle
+  optionalStep: Cette étape est optionnelle
   attachmentsMsg1: Vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal.
   attachmentsMsg2: Le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
   attachments: Accepter des pièces jointes
@@ -829,7 +838,7 @@ en:
   continue: Continue
   formats: Supported formats
   attachment: Attachment
-  attachmentInfo: This step is optional
+  optionalStep: This step is optional
   attachmentsMsg1: You can load a zip archive containing files to be used as attachments to the lines of the main dataset file.
   attachmentsMsg2: The main data file must have a column that contains paths of the attachments in the archive.
   attachments: Accept attachments
