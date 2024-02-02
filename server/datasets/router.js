@@ -381,7 +381,7 @@ const setFileInfo = async (req, file, attachmentsFile, dataset, draft, res) => {
 }
 
 // Create a dataset
-router.post('', checkStorage(true, true), clamav.middleware, uploadUtils.fixFormBody(validatePost), asyncWrap(async (req, res) => {
+router.post('', checkStorage(true, true), asyncWrap(async (req, res) => {
   const db = req.app.get('db')
   const locale = i18n.getLocale(req)
   // @ts-ignore
@@ -400,7 +400,10 @@ router.post('', checkStorage(true, true), clamav.middleware, uploadUtils.fixForm
   }
 
   const files = await uploadUtils.getFiles(req, res)
+
   try {
+    await clamav.checkFiles(files, user)
+
     const body = uploadUtils.getFormBody(req.body)
     validatePost(body)
 
