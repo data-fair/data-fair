@@ -32,8 +32,9 @@ exports.process = async function (app, dataset) {
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
   const geometry = geoUtils.schemaHasGeometry(dataset.schema)
 
-  const startDateField = dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate')
-  const endDateField = dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate')
+  const dateField = dataset.schema.find(p => p['x-refersTo'] === 'http://schema.org/Date')
+  const startDateField = dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate') ?? dateField
+  const endDateField = dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate') ?? dateField
 
   // Try to calculate enum values
   const cardinalityProps = dataset.schema
