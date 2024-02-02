@@ -111,6 +111,9 @@ exports.middleware = (_limitType) => asyncWrap(async (req, res, next) => {
     return throttle
   }
   res.throttleEnd = (bandwidthType = 'dynamic') => {
+    // prevent inifinite loop if res.throttleEnd is called twice
+    if (res._originalEnd) return
+
     res._originalEnd = res.end
     res.end = function (buffer) {
       if (!buffer) return res._originalEnd()
