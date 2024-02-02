@@ -56,15 +56,15 @@
             </v-list>
           </v-menu>
 
+          <br>
+
           <v-btn
-            v-if="user.adminMode"
-            color="admin"
-            outlined
+            v-if="can('writeDescriptionBreaking')"
+            color="primary"
+            class="mt-2"
             @click="addPropertyDialog = true"
           >
-            <v-icon>
-              mdi-star-four-points
-            </v-icon>&nbsp;&nbsp;{{ $t('addExprEvalExtension') }}
+            {{ $t('addExprEvalExtension') }}
           </v-btn>
 
           <dataset-add-property-dialog
