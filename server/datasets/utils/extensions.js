@@ -14,6 +14,7 @@ const geoUtils = require('./geo')
 const { bulkSearchPromise, bulkSearchStreams } = require('./master-data')
 const taskProgress = require('./task-progress')
 const permissionsUtils = require('../../misc/utils/permissions')
+const { getPseudoUser } = require('../../misc/utils/users')
 const debugMasterData = require('debug')('master-data')
 
 const debug = require('debug')('extensions')
@@ -213,16 +214,7 @@ class ExtensionsStream extends Transform {
         let data
         if (localMasterData) {
           const masterDatasetId = extension.remoteService.server.replace(`${config.publicUrl}/api/v1/datasets/`, '')
-          const pseudoUser = { name: 'extension' }
-          if (this.dataset.owner.type === 'user') {
-            pseudoUser.id = this.dataset.owner.id
-            pseudoUser.organizations = []
-            pseudoUser.activeAccount = { ...this.dataset.owner, role: 'admin' }
-          } else {
-            pseudoUser.id = '_master-data'
-            pseudoUser.organizations = [{ ...this.dataset.owner, role: 'user' }]
-            pseudoUser.activeAccount = pseudoUser.organizations[0]
-          }
+          const pseudoUser = getPseudoUser(this.dataset.owner, 'extension', '_master-data', 'user')
           const masterDataset = await this.db.collection('datasets').findOne({ id: masterDatasetId })
           if (!masterDataset) throw new Error('jeu de données de référence inconnu ' + masterDatasetId)
           if (!permissionsUtils.list('datasets', masterDataset, pseudoUser).includes('readLines')) {

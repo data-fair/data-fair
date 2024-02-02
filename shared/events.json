@@ -30,6 +30,20 @@
         "en": "the data as updated"
       }
     },
+    "initialize-start": {
+      "icon": "mdi-file-swap",
+      "text": {
+        "fr": "début de l'initialisation du jeu de données",
+        "en": "start of dataset initialization"
+      }
+    },
+    "initialize-end": {
+      "icon": "mdi-file-swap",
+      "text": {
+        "fr": "fin de l'initialisation du jeu de données",
+        "en": "end of dataset initialization"
+      }
+    },
     "convert-start": {
       "icon": "mdi-file-swap",
       "text": {

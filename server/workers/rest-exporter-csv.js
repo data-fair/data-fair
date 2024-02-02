@@ -1,6 +1,5 @@
-const observe = require('../misc/utils/observe')
-
 exports.process = async function (app, dataset) {
+  const observe = require('../misc/utils/observe')
   const path = require('path')
   const fs = require('fs-extra')
   const config = require('config')

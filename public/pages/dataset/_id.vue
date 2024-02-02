@@ -426,6 +426,7 @@ fr:
   uses: Utilisations
   datasets: jeux de données
   tasks:
+    initialize: initialisation
     index: indexation
     extend: extensions
     analyze: analyse
@@ -465,6 +466,7 @@ en:
   uses: Uses
   datasets: datasets
   tasks:
+    initialize: initialization
     index: indexing
     extend: extensions
     analyze: analysis

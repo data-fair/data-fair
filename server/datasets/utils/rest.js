@@ -83,7 +83,7 @@ exports.revisionsCollection = (db, dataset) => {
 }
 
 exports.initDataset = async (db, dataset) => {
-  // just in case of badly cleaned data from previous dataset with same if
+  // just in case of badly cleaned data from previous dataset with same id
   try {
     await exports.deleteDataset(db, dataset)
   } catch (err) {
@@ -165,9 +165,8 @@ const fillPrimaryKeyFromId = (line, dataset) => {
   }
 }
 
-const linesOwnerCols = (req) => {
-  const linesOwner = req.linesOwner
-  if (!req.linesOwner) return {}
+const linesOwnerCols = (linesOwner) => {
+  if (!linesOwner) return {}
   const cols = { _owner: linesOwner.type + ':' + linesOwner.id }
   if (linesOwner.department) cols._owner += ':' + linesOwner.department
   if (linesOwner.name) {
@@ -176,15 +175,13 @@ const linesOwnerCols = (req) => {
   }
   return cols
 }
-const linesOwnerFilter = (req) => {
-  if (!req.linesOwner) return {}
-  const cols = linesOwnerCols(req)
+const linesOwnerFilter = (linesOwner) => {
+  if (!linesOwner) return {}
+  const cols = linesOwnerCols(linesOwner)
   return { _owner: cols._owner }
 }
 
-const applyTransactions = async (req, transacs, validate) => {
-  const db = req.app.get('db')
-  const dataset = req.dataset
+exports.applyTransactions = async (db, dataset, user, transacs, validate, linesOwner) => {
   const datasetCreatedAt = new Date(dataset.createdAt).getTime()
   const updatedAt = new Date()
   const collection = exports.collection(db, dataset)
@@ -206,7 +203,7 @@ const applyTransactions = async (req, transacs, validate) => {
     let { _action, ...body } = transac
     if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
 
-    Object.assign(body, linesOwnerCols(req))
+    Object.assign(body, linesOwnerCols(linesOwner))
 
     if (!body._id) body._id = getLineId(body, dataset)
     if (_action === 'create' && !body._id) body._id = nanoid()
@@ -221,9 +218,9 @@ const applyTransactions = async (req, transacs, validate) => {
     extendedBody._updatedAt = body._updatedAt ? new Date(body._updatedAt) : updatedAt
     extendedBody._i = Number((new Date(extendedBody._updatedAt).getTime() - datasetCreatedAt) + padI(i))
 
-    if (req.user && req.dataset.rest.storeUpdatedBy) {
-      extendedBody._updatedBy = req.user.id
-      extendedBody._updatedByName = req.user.name
+    if (user && dataset.rest.storeUpdatedBy) {
+      extendedBody._updatedBy = user.id
+      extendedBody._updatedByName = user.name
     }
 
     i++
@@ -233,12 +230,12 @@ const applyTransactions = async (req, transacs, validate) => {
     if (_action === 'delete') {
       extendedBody._deleted = true
       extendedBody._hash = null
-      bulkOp.find({ _id: body._id, ...linesOwnerFilter(req) }).replaceOne(extendedBody)
+      bulkOp.find({ _id: body._id, ...linesOwnerFilter(linesOwner) }).replaceOne(extendedBody)
       hasBulkOp = true
     } else {
       extendedBody._deleted = false
       if (_action === 'patch') {
-        const previousBody = await collection.findOne({ _id: body._id, ...linesOwnerFilter(req) }, { projection: patchProjection })
+        const previousBody = await collection.findOne({ _id: body._id, ...linesOwnerFilter(linesOwner) }, { projection: patchProjection })
         if (previousBody) {
           body = { ...previousBody, ...body }
           Object.assign(extendedBody, body)
@@ -250,7 +247,7 @@ const applyTransactions = async (req, transacs, validate) => {
         result._status = 400
       } else {
         extendedBody._hash = crc32(stableStringify(body)).toString(16)
-        const filter = { _id: body._id, _hash: { $ne: extendedBody._hash }, ...linesOwnerFilter(req) }
+        const filter = { _id: body._id, _hash: { $ne: extendedBody._hash }, ...linesOwnerFilter(linesOwner) }
         bulkOp.find(filter).upsert().replaceOne(extendedBody)
         hasBulkOp = true
       }
@@ -308,12 +305,16 @@ const applyTransactions = async (req, transacs, validate) => {
     }
   }
 
-  if (req.user && hasBulkOp) {
+  if (user && hasBulkOp) {
     db.collection('datasets').updateOne(
       { id: dataset.id },
-      { $set: { dataUpdatedAt: updatedAt.toISOString(), dataUpdatedBy: { id: req.user.id, name: req.user.name } } })
+      { $set: { dataUpdatedAt: updatedAt.toISOString(), dataUpdatedBy: { id: user.id, name: user.name } } })
   }
   return { results, bulkOpResult }
+}
+
+const applyReqTransactions = (req, transacs, validate) => {
+  return exports.applyTransactions(req.app.get('db'), req.dataset, req.user, transacs, validate, req.linesOwner)
 }
 
 const initSummary = () => ({ nbOk: 0, nbNotModified: 0, nbErrors: 0, nbCreated: 0, nbModified: 0, nbDeleted: 0, errors: [] })
@@ -327,7 +328,7 @@ class TransactionStream extends Writable {
   }
 
   async _applyTransactions () {
-    const { results, bulkOpResult } = await applyTransactions(this.options.req, this.transactions, this.options.validate)
+    const { results, bulkOpResult } = await applyReqTransactions(this.options.req, this.transactions, this.options.validate)
     this.transactions = []
     if (bulkOpResult) {
       this.options.summary.nbCreated += bulkOpResult.nUpserted
@@ -435,7 +436,7 @@ async function manageAttachment (req, keepExisting) {
 exports.readLine = async (req, res, next) => {
   const db = req.app.get('db')
   const collection = exports.collection(db, req.dataset)
-  const line = await collection.findOne({ _id: req.params.lineId, ...linesOwnerFilter(req) })
+  const line = await collection.findOne({ _id: req.params.lineId, ...linesOwnerFilter(req.linesOwner) })
   if (!line) return res.status(404).send('Identifiant de ligne inconnu')
   if (line._deleted) return res.status(404).send('Identifiant de ligne inconnu')
   cleanLine(line)
@@ -449,10 +450,10 @@ exports.readLine = async (req, res, next) => {
 exports.createLine = async (req, res, next) => {
   const db = req.app.get('db')
   const _action = req.body._id ? 'update' : 'create'
-  Object.assign(req.body, linesOwnerCols(req))
+  Object.assign(req.body, linesOwnerCols(req.linesOwner))
   req.body._id = req.body._id || getLineId(req.body, req.dataset) || nanoid()
   await manageAttachment(req, false)
-  const line = (await applyTransactions(req, [{ _action, ...req.body }], compileSchema(req.dataset, req.user.adminMode))).results[0]
+  const line = (await applyReqTransactions(req, [{ _action, ...req.body }], compileSchema(req.dataset, req.user.adminMode))).results[0]
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(201).send(cleanLine(line))
@@ -461,7 +462,7 @@ exports.createLine = async (req, res, next) => {
 
 exports.deleteLine = async (req, res, next) => {
   const db = req.app.get('db')
-  const line = (await applyTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset, req.user.adminMode))).results[0]
+  const line = (await applyReqTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset, req.user.adminMode))).results[0]
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   // TODO: delete the attachment if it is the primary key ?
@@ -472,7 +473,7 @@ exports.deleteLine = async (req, res, next) => {
 exports.updateLine = async (req, res, next) => {
   const db = req.app.get('db')
   await manageAttachment(req, false)
-  const line = (await applyTransactions(req, [{ _action: 'update', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset, req.user.adminMode))).results[0]
+  const line = (await applyReqTransactions(req, [{ _action: 'update', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset, req.user.adminMode))).results[0]
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
@@ -482,7 +483,7 @@ exports.updateLine = async (req, res, next) => {
 exports.patchLine = async (req, res, next) => {
   const db = req.app.get('db')
   await manageAttachment(req, true)
-  const line = (await applyTransactions(req, [{ _action: 'patch', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset, req.user.adminMode))).results[0]
+  const line = (await applyReqTransactions(req, [{ _action: 'patch', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset, req.user.adminMode))).results[0]
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   res.status(200).send(cleanLine(line))
@@ -633,7 +634,7 @@ exports.readRevisions = async (req, res, next) => {
   }
   const revisionsCollection = exports.revisionsCollection(req.app.get('db'), req.dataset)
   const filter = req.params.lineId ? { _lineId: req.params.lineId } : {}
-  Object.assign(filter, linesOwnerFilter(req))
+  Object.assign(filter, linesOwnerFilter(req.linesOwner))
   const countFilter = { ...filter }
   if (req.query.before) filter._i = { $lt: parseInt(req.query.before) }
   // eslint-disable-next-line no-unused-vars
