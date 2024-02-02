@@ -16,6 +16,14 @@ exports.dir = (dataset) => {
   return path.join(...parts)
 }
 
+exports.loadingDir = (dataset) => {
+  return path.join(exports.dir(dataset), 'loading')
+}
+
+exports.loadingFilePath = (dataset) => {
+  return path.join(exports.loadingDir(dataset), dataset.loadingFile.name)
+}
+
 exports.filePath = (dataset) => {
   return path.join(exports.dir(dataset), dataset.file.name)
 }
@@ -35,6 +43,10 @@ exports.fullFilePath = (dataset) => {
 
 exports.exportedFilePath = (dataset, ext) => {
   return path.join(exports.dir(dataset), `${dataset.id}-last-export${ext}`)
+}
+
+exports.loadingDattachmentsDir = (dataset) => {
+  return path.join(exports.loadingFilePath(dataset), 'attachments')
 }
 
 exports.attachmentsDir = (dataset) => {

@@ -23,13 +23,11 @@ const storage = multer.diskStorage({
   destination: async function (req, file, cb) {
     try {
       if (req.dataset) {
-        req.uploadDir = datasetUtils.dir({ ...req.dataset, draftReason: req.query.draft === 'true' })
+        req.uploadDir = datasetUtils.loadingDir({ ...req.dataset, draftReason: req.query.draft === 'true' })
       } else {
         // a tmp dir in case of new dataset, it will be moved into the actual dataset directory
         // after upload completion and final id atttribution
         req.uploadDir = path.join(config.dataDir, 'tmp', nanoid())
-        // const owner = req.dataset ? req.dataset.owner : usersUtils.owner(req)
-        // return path.join(config.dataDir, owner.type, owner.id, 'datasets', req.dataset.id)
       }
       debug('Create destination directory', req.uploadDir)
       await fs.ensureDir(req.uploadDir)

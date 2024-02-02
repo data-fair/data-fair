@@ -93,7 +93,7 @@ exports.process = async function (app, dataset) {
   }
 
   const patch = {}
-  patch.loadedFile = {
+  patch.loadingFile = {
     name: fileName,
     mimetype
   }
@@ -124,8 +124,8 @@ exports.process = async function (app, dataset) {
       await fs.remove(oldFilePath)
     }
 
-    patch.loadedFile.md5 = md5
-    patch.loadedFile.size = (await fs.promises.stat(filePath)).size
+    patch.loadingFile.md5 = md5
+    patch.loadingFile.size = (await fs.promises.stat(filePath)).size
     patch.status = 'loaded'
   }
 

@@ -115,7 +115,6 @@ describe('datasets', () => {
     form.append('file', datasetFd, 'dataset1.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    console.log(res.data)
     assert.equal(res.data.owner.type, 'user')
     assert.equal(res.data.owner.id, 'dmeadus0')
     assert.equal(res.data.previews.length, 1)
@@ -126,6 +125,7 @@ describe('datasets', () => {
     assert.equal(res.data.updatedAt, res.data.dataUpdatedAt)
     const dataset = await workers.hook('finalizer/' + res.data.id)
     assert.equal(dataset.file.encoding, 'UTF-8')
+    assert.equal(dataset.count, 2)
   })
 
   it('Upload new dataset in user zone with title', async () => {

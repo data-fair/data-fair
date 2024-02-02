@@ -27,6 +27,8 @@ exports.dir = filesUtils.dir
 exports.fullFilePath = filesUtils.fullFilePath
 exports.fullFileName = filesUtils.fullFileName
 exports.exportedFilePath = filesUtils.exportedFilePath
+exports.loadingFilePath = filesUtils.loadingFilePath
+exports.loadingDir = filesUtils.loadingDir
 
 exports.mergeFileSchema = schemaUtils.mergeFileSchema
 exports.cleanSchema = schemaUtils.cleanSchema
@@ -178,7 +180,7 @@ exports.clean = (publicUrl, publicationSite, dataset, query = {}, draft = false)
   delete dataset._id
   delete dataset._uniqueRefs
   delete dataset.initFrom
-  delete dataset.loadedFile
+  delete dataset.loadingFile
   if (select.includes('-userPermissions')) delete dataset.userPermissions
   if (select.includes('-owner')) delete dataset.owner
 

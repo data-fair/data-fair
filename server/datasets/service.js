@@ -176,10 +176,10 @@ exports.createDataset = async (db, locale, user, owner, body, files, onClose) =>
 
   if (datasetFile) {
     dataset.status = 'loaded'
-    dataset.title = titleFromFileName(datasetFile.originalname)
+    dataset.title = dataset.title || titleFromFileName(datasetFile.originalname)
     dataset.dataUpdatedBy = dataset.updatedBy
     dataset.dataUpdatedAt = dataset.updatedAt
-    dataset.loadedFile = {
+    dataset.loadingFile = {
       name: datasetFile.originalname,
       size: datasetFile.size,
       mimetype: datasetFile.mimetype
@@ -208,6 +208,10 @@ exports.createDataset = async (db, locale, user, owner, body, files, onClose) =>
   }
 
   await datasetUtils.insertWithId(db, dataset, onClose)
+
+  if (datasetFile) {
+    await fs.move(datasetFile.destination, datasetUtils.loadingDir(dataset))
+  }
 
   delete dataset._id
 
