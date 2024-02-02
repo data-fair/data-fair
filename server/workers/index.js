@@ -1,4 +1,4 @@
-const config = require('config')
+const config = /** @type {any} */(require('config'))
 const locks = require('../misc/utils/locks')
 const observe = require('../misc/utils/observe')
 const debug = require('debug')('workers')
@@ -312,7 +312,8 @@ async function iter (app, resource, type) {
 
     observe.internalError.inc({ errorCode: 'task' })
 
-    console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, err, errorMessage)
+    console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, errorMessage)
+    if (!config.worker.spawnTask || !errorMessage) console.debug(err)
 
     // some error are caused by bad input, we should not retry these
     let retry = !errorMessage.startsWith('[noretry] ') && !!config.worker.errorRetryDelay
