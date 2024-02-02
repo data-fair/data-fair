@@ -1,3 +1,5 @@
+exports.eventsPrefix = 'load'
+
 exports.process = async function (app, dataset) {
   const fs = require('fs-extra')
   const datasetUtils = require('../datasets/utils')
@@ -9,8 +11,6 @@ exports.process = async function (app, dataset) {
 
   const debug = require('debug')(`worker:file-loader:${dataset.id}`)
   // const db = app.get('db')
-
-  exports.eventsPrefix = 'load'
 
   const patch = { loadingFile: null }
   const file = dataset.loadingFile

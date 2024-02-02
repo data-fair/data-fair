@@ -145,10 +145,11 @@ exports.findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQue
  * @param {any} owner
  * @param {any} body
  * @param {any[]} files
+ * @param {boolean} draft
  * @param {(callback) => void} onClose
  * @returns {Promise<any>}
  */
-exports.createDataset = async (db, locale, user, owner, body, files, onClose) => {
+exports.createDataset = async (db, locale, user, owner, body, files, draft, onClose) => {
   validateURLFriendly(locale, body.id)
   validateURLFriendly(locale, body.slug)
 
@@ -175,14 +176,23 @@ exports.createDataset = async (db, locale, user, owner, body, files, onClose) =>
   permissions.initResourcePermissions(dataset)
 
   if (datasetFile) {
-    dataset.status = 'loaded'
     dataset.title = dataset.title || titleFromFileName(datasetFile.originalname)
-    dataset.dataUpdatedBy = dataset.updatedBy
-    dataset.dataUpdatedAt = dataset.updatedAt
-    dataset.loadingFile = {
-      name: datasetFile.originalname,
-      size: datasetFile.size,
-      mimetype: datasetFile.mimetype
+    const filePatch = {
+      status: 'loaded',
+      dataUpdatedBy: dataset.updatedBy,
+      dataUpdatedAt: dataset.updatedAt,
+      loadingFile: {
+        name: datasetFile.originalname,
+        size: datasetFile.size,
+        mimetype: datasetFile.mimetype
+      }
+    }
+    if (draft) {
+      dataset.status = 'draft'
+      filePatch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon' }
+      dataset.draft = filePatch
+    } else {
+      Object.assign(dataset, filePatch)
     }
   } else if (body.isVirtual) {
     if (!body.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
@@ -207,18 +217,18 @@ exports.createDataset = async (db, locale, user, owner, body, files, onClose) =>
     throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "éditable" ou "métadonnées"')
   }
 
-  await datasetUtils.insertWithId(db, dataset, onClose)
+  const insertedDatasetFull = await datasetUtils.insertWithId(db, dataset, onClose)
+  const insertedDataset = datasetUtils.mergeDraft(insertedDatasetFull)
 
   if (datasetFile) {
-    await fs.move(datasetFile.destination, datasetUtils.loadingDir(dataset))
+    console.log('move', datasetFile.destination, datasetUtils.loadingDir(insertedDataset))
+    await fs.move(datasetFile.destination, datasetUtils.loadingDir(insertedDataset))
   }
 
-  delete dataset._id
+  if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with extensions by ${user?.name} (${user?.id})`, insertedDataset.extensions)
+  if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with masterData by ${user?.name} (${user?.id})`, insertedDataset.masterData)
 
-  if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${dataset.slug}) with extensions by ${user?.name} (${user?.id})`, dataset.extensions)
-  if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${dataset.slug}) with masterData by ${user?.name} (${user?.id})`, dataset.masterData)
-
-  return dataset
+  return insertedDataset
 }
 
 exports.deleteDataset = async (app, dataset) => {

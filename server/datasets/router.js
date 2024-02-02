@@ -39,7 +39,6 @@ const datasetPostSchema = require('../../contract/dataset-post')
 const validatePost = ajv.compile(datasetPostSchema.properties.body)
 const userNotificationSchema = require('../../contract/user-notification')
 const validateUserNotification = ajv.compile(userNotificationSchema)
-const debugFiles = require('debug')('files')
 const { getThumbnail } = require('../misc/utils/thumbnails')
 const datasetFileSample = require('./utils/file-sample')
 const { bulkSearchStreams } = require('./utils/master-data')
@@ -63,6 +62,7 @@ const router = express.Router()
 
 const clean = datasetUtils.clean
 
+const debugFiles = require('debug')('files')
 const debugLimits = require('debug')('limits')
 const debugMasterData = require('debug')('master-data')
 
@@ -386,6 +386,7 @@ router.post('', checkStorage(true, true), clamav.middleware, uploadUtils.fixForm
   const locale = i18n.getLocale(req)
   // @ts-ignore
   const user = /** @type {any} */(req.user)
+  const draft = req.query.draft === 'true'
 
   if (!user) throw createError(401)
 
@@ -407,7 +408,7 @@ router.post('', checkStorage(true, true), clamav.middleware, uploadUtils.fixForm
 
     const onClose = (callback) => res.on('close', callback)
 
-    const dataset = await createDataset(db, locale, user, owner, body, files, onClose)
+    const dataset = await createDataset(db, locale, user, owner, body, files, draft, onClose)
 
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
     await syncRemoteService(db, dataset)

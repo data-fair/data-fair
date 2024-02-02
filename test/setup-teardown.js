@@ -126,6 +126,10 @@ before('start app', async function () {
 })
 
 afterEach('scratch data', async function () {
+  if (this.currentTest.state === 'failed') {
+    // not scratching in case of failure can be handy to state the data
+    return
+  }
   debug('scratch data')
   const runningTasks = workers.runningTasks()
   if (runningTasks.length) {

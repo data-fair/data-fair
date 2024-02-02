@@ -1,3 +1,5 @@
+exports.eventsPrefix = 'initialize'
+
 exports.process = async function (app, dataset) {
   const fs = require('fs-extra')
   const path = require('path')
@@ -13,8 +15,6 @@ exports.process = async function (app, dataset) {
 
   const debug = require('debug')(`worker:rest-initializer:${dataset.id}`)
   const db = app.get('db')
-
-  exports.eventsPrefix = 'initialize'
 
   const patch = { status: 'analyzed' }
   await restUtils.initDataset(db, dataset)

@@ -61,6 +61,7 @@ exports.refinalize = async (db, dataset) => {
 // Generate ids and try insertion until there is no conflict on id
 exports.insertWithId = async (db, dataset, onClose) => {
   const baseSlug = slug(dataset.title, { lower: true, strict: true })
+  const owner = dataset.owner
   dataset.id = dataset.id ?? nanoid()
   dataset.slug = baseSlug
   exports.setUniqueRefs(dataset)
@@ -80,7 +81,7 @@ exports.insertWithId = async (db, dataset, onClose) => {
       })
     }
 
-    const slugLockKey = `dataset:slug:${dataset.owner.type}:${dataset.owner.id}:${dataset.slug}`
+    const slugLockKey = `dataset:slug:${owner.type}:${owner.id}:${dataset.slug}`
     const slugAck = locks.acquire(db, slugLockKey, 'insertWithBaseid')
     if (slugAck) {
       try {
@@ -114,6 +115,7 @@ exports.insertWithId = async (db, dataset, onClose) => {
     dataset.slug = `${baseSlug}-${i}`
     exports.setUniqueRefs(dataset)
   }
+  return dataset
 }
 
 exports.previews = (dataset, publicUrl = config.publicUrl) => {
