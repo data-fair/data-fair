@@ -18,12 +18,12 @@ exports.addAttachments = async (dataset, attachmentsArchive) => {
   await fs.remove(attachmentsArchive.path)
 }
 
-exports.replaceAllAttachments = async (dataset, attachmentsArchive) => {
+exports.replaceAllAttachments = async (dataset, attachmentsFilePath) => {
   const dir = attachmentsDir(dataset)
   await fs.ensureDir(dir)
   await fs.emptyDir(dir)
-  await exec('unzip', ['-o', '-q', attachmentsArchive.path, '-d', dir])
-  await fs.remove(attachmentsArchive.path)
+  await exec('unzip', ['-o', '-q', attachmentsFilePath, '-d', dir])
+  await fs.remove(attachmentsFilePath)
 }
 
 exports.removeAll = async (dataset) => {

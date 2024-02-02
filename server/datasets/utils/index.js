@@ -29,6 +29,7 @@ exports.fullFileName = filesUtils.fullFileName
 exports.exportedFilePath = filesUtils.exportedFilePath
 exports.loadingFilePath = filesUtils.loadingFilePath
 exports.loadingDir = filesUtils.loadingDir
+exports.loadingDattachmentsFilePath = filesUtils.loadingDattachmentsFilePath
 
 exports.mergeFileSchema = schemaUtils.mergeFileSchema
 exports.cleanSchema = schemaUtils.cleanSchema

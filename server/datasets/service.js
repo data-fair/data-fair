@@ -221,10 +221,12 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
   const insertedDataset = datasetUtils.mergeDraft(insertedDatasetFull)
 
   if (datasetFile) {
-    console.log('move', datasetFile.destination, datasetUtils.loadingDir(insertedDataset))
-    await fs.move(datasetFile.destination, datasetUtils.loadingDir(insertedDataset))
+    await fs.emptyDir(datasetUtils.loadingDir(insertedDataset))
+    await fs.move(datasetFile.path, datasetUtils.loadingFilePath(insertedDataset))
+    if (attachmentsFile) {
+      await fs.move(attachmentsFile.path, datasetUtils.loadingDattachmentsFilePath(insertedDataset))
+    }
   }
-
   if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with extensions by ${user?.name} (${user?.id})`, insertedDataset.extensions)
   if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with masterData by ${user?.name} (${user?.id})`, insertedDataset.masterData)
 

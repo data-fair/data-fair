@@ -4,6 +4,7 @@ exports.process = async function (app, dataset) {
   const fs = require('fs-extra')
   const datasetUtils = require('../datasets/utils')
   const datasetsService = require('../datasets/service')
+  const { replaceAllAttachments } = require('../datasets/utils/attachments')
   const { basicTypes } = require('./converter')
   const datasetFileSample = require('../datasets/utils/file-sample')
   const chardet = require('chardet')
@@ -35,6 +36,11 @@ exports.process = async function (app, dataset) {
   }
 
   await fs.move(loadingFilePath, datasetUtils.originalFilePath({ ...dataset, ...patch }), { overwrite: true })
+  const attachmentsFilePath = datasetUtils.loadingDattachmentsFilePath(dataset)
+  if (fs.pathExistsSync(attachmentsFilePath)) {
+    await replaceAllAttachments(dataset, attachmentsFilePath)
+  }
+
   /* TODO
   if (attachmentsFile) {
     await attachments.replaceAllAttachments({ ...dataset, ...patch }, attachmentsFile)

@@ -127,7 +127,7 @@ before('start app', async function () {
 
 afterEach('scratch data', async function () {
   if (this.currentTest.state === 'failed') {
-    // not scratching in case of failure can be handy to state the data
+    // not scratching in case of failure can be handy to check the data
     return
   }
   debug('scratch data')
