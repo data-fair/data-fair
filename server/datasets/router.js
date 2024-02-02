@@ -315,6 +315,7 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
   const publicBaseUrl = req.publicBaseUrl
   // @ts-ignore
   const publicationSite = req.publicationSite
+  const draft = req.query.draft === 'true'
 
   const db = req.app.get('db')
   const locale = i18n.getLocale(req)
@@ -328,6 +329,10 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
 
     validatePatch(patch)
     validateURLFriendly(locale, patch.slug)
+
+    if (draft) {
+      patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant' }
+    }
 
     const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, user, locale, files)
       .catch(err => {

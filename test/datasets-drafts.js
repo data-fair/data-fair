@@ -264,7 +264,7 @@ describe('datasets in draft mode', () => {
     assert.equal(journal[14].draft, undefined)
   })
 
-  it.skip('create a draft and update it with second file upload', async () => {
+  it('create a draft and update it with second file upload', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
     const form = new FormData()
