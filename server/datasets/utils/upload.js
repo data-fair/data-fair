@@ -17,7 +17,7 @@ const fallbackMimeTypes = {
 }
 const debug = require('debug')('files')
 
-const { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } = require('../../workers/converter')
+const { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } = require('../../workers/file-normalizer')
 
 const storage = multer.diskStorage({
   destination: async function (req, file, cb) {
@@ -69,7 +69,7 @@ const middleware = multer({
       if (file.fieldname === 'file' || file.fieldname === 'dataset') {
         if (!allowedTypes.has(file.mimetype)) {
           if (file.mimetype === 'application/gzip' && basicTypes.includes(mime.lookup(file.originalname.slice(0, file.originalname.length - 3)))) {
-            // gzip of a csv or other basic type is also accepted, converter will proceed
+            // gzip of a csv or other basic type is also accepted, file-normalizer will proceed
           } else {
             throw createError(400, file.mimetype + ' type is not supported')
           }

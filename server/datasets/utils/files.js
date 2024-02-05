@@ -21,7 +21,7 @@ exports.loadingDir = (dataset) => {
 }
 
 exports.loadedFilePath = (dataset) => {
-  return path.join(exports.loadingDir(dataset), dataset.loadedFile.name)
+  return path.join(exports.loadingDir(dataset), dataset.loaded?.dataset?.name)
 }
 
 exports.filePath = (dataset) => {
@@ -45,7 +45,7 @@ exports.exportedFilePath = (dataset, ext) => {
   return path.join(exports.dir(dataset), `${dataset.id}-last-export${ext}`)
 }
 
-exports.loadingDattachmentsFilePath = (dataset) => {
+exports.loadedAttachmentsFilePath = (dataset) => {
   return path.join(exports.loadingDir(dataset), 'attachments.zip')
 }
 

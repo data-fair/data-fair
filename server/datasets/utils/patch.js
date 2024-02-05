@@ -38,13 +38,20 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
   }
 
   const datasetFile = files && files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
+  const attachmentsFile = files?.find(f => f.fieldname === 'attachments')
 
   if (datasetFile) {
-    patch.loadedFile = {
-      name: datasetFile.originalname,
-      size: datasetFile.size,
-      mimetype: datasetFile.mimetype
+    patch.loaded = {
+      dataset: {
+        name: datasetFile.originalname,
+        size: datasetFile.size,
+        mimetype: datasetFile.mimetype
+      }
     }
+  }
+  if (attachmentsFile) {
+    patch.loaded = patch.loaded || {}
+    patch.loaded.attachments = true
   }
 
   // Ignore patch that doesn't bring actual change
@@ -92,7 +99,7 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
 
   let attemptMappingUpdate = false
 
-  if (datasetFile) {
+  if (datasetFile || attachmentsFile) {
     patch.dataUpdatedBy = patch.updatedBy
     patch.dataUpdatedAt = patch.updatedAt
     patch.status = 'loaded'

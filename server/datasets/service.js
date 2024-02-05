@@ -180,10 +180,13 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
       status: 'loaded',
       dataUpdatedBy: dataset.updatedBy,
       dataUpdatedAt: dataset.updatedAt,
-      loadedFile: {
-        name: datasetFile.originalname,
-        size: datasetFile.size,
-        mimetype: datasetFile.mimetype
+      loaded: {
+        dataset: {
+          name: datasetFile.originalname,
+          size: datasetFile.size,
+          mimetype: datasetFile.mimetype
+        },
+        attachments: !!attachmentsFile
       }
     }
     if (draft) {
@@ -223,7 +226,7 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
     await fs.emptyDir(datasetUtils.loadingDir(insertedDataset))
     await fs.move(datasetFile.path, datasetUtils.loadedFilePath(insertedDataset))
     if (attachmentsFile) {
-      await fs.move(attachmentsFile.path, datasetUtils.loadingDattachmentsFilePath(insertedDataset))
+      await fs.move(attachmentsFile.path, datasetUtils.loadedAttachmentsFilePath(insertedDataset))
     }
   }
   if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with extensions by ${user?.name} (${user?.id})`, insertedDataset.extensions)

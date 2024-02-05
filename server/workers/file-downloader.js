@@ -92,10 +92,13 @@ exports.process = async function (app, dataset) {
     fileName = parsedFileName.name + '.' + mime.extension(mimetype)
   }
 
+  /** @type {any} */
   const patch = {}
-  patch.loadedFile = {
-    name: fileName,
-    mimetype
+  patch.loaded = {
+    dataset: {
+      name: fileName,
+      mimetype
+    }
   }
 
   const md5 = await md5File(tmpFile.path)
@@ -124,8 +127,8 @@ exports.process = async function (app, dataset) {
       await fs.remove(oldFilePath)
     }
 
-    patch.loadedFile.md5 = md5
-    patch.loadedFile.size = (await fs.promises.stat(filePath)).size
+    patch.loaded.dataset.md5 = md5
+    patch.loaded.dataset.size = (await fs.promises.stat(filePath)).size
     patch.status = 'loaded'
   }
 

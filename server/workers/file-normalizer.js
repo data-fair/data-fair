@@ -58,7 +58,7 @@ exports.process = async function (app, dataset) {
 
   const dataDir = path.resolve(config.dataDir)
 
-  const debug = require('debug')(`worker:converter:${dataset.id}`)
+  const debug = require('debug')(`worker:file-normalizer:${dataset.id}`)
   const originalFilePath = datasetUtils.originalFilePath(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
   const tmpDir = (await tmp.dir({ dir: path.join(dataDir, 'tmp'), unsafeCleanup: true })).path

@@ -6,9 +6,9 @@ const mergeDraft = require('../datasets/utils/merge-draft')
 
 const tasks = exports.tasks = {
   restInitializer: require('./rest-initializer'),
-  downloader: require('./downloader'),
+  fileDownloader: require('./file-downloader'),
   fileStorer: require('./file-storer'),
-  converter: require('./converter'),
+  fileNormalizer: require('./file-normalizer'),
   csvAnalyzer: require('./csv-analyzer'),
   geojsonAnalyzer: require('./geojson-analyzer'),
   indexer: require('./indexer'),
@@ -195,21 +195,21 @@ async function iter (app, resource, type) {
     } else if (type === 'dataset') {
       const moment = require('moment')
 
-      const normalized = (resource.status === 'stored' && tasks.converter.basicTypes.includes(resource.originalFile?.mimetype)) || resource.status === 'normalized'
+      const normalized = (resource.status === 'stored' && tasks.fileNormalizer.basicTypes.includes(resource.originalFile?.mimetype)) || resource.status === 'normalized'
 
       if (resource.status === 'created' && resource.isRest) {
         // Initialize a REST dataset
         taskKey = 'restInitializer'
       } else if (resource.status === 'imported' || (resource.remoteFile?.autoUpdate?.active && resource.remoteFile.autoUpdate.nextUpdate < new Date().toISOString())) {
         // Load a dataset from a catalog
-        taskKey = 'downloader'
+        taskKey = 'fileDownloader'
       } else if (resource.status === 'loaded') {
         // File was either uploaded or downloded, it needs to be copied to the storage
         taskKey = 'fileStorer'
       } else if (resource.status === 'stored' && !normalized) {
         // XLS to csv of other transformations
-        taskKey = 'converter'
-      } else if (normalized && resource.file && tasks.converter.csvTypes.includes(resource.file.mimetype)) {
+        taskKey = 'fileNormalizer'
+      } else if (normalized && resource.file && tasks.fileNormalizer.csvTypes.includes(resource.file.mimetype)) {
         // Quickly parse a CSV file
         taskKey = 'csvAnalyzer'
       } else if (normalized && resource.file && resource.file.mimetype === 'application/geo+json') {

@@ -5,40 +5,43 @@ exports.process = async function (app, dataset) {
   const datasetUtils = require('../datasets/utils')
   const datasetsService = require('../datasets/service')
   const { replaceAllAttachments } = require('../datasets/utils/attachments')
-  const { basicTypes } = require('./converter')
+  const { basicTypes } = require('./file-normalizer')
   const datasetFileSample = require('../datasets/utils/file-sample')
   const chardet = require('chardet')
   const md5File = require('md5-file')
 
   const debug = require('debug')(`worker:file-storer:${dataset.id}`)
-  // const db = app.get('db')
 
-  const patch = { loadedFile: null }
-  const file = dataset.loadedFile
+  /** @type {any} */
+  const patch = { loaded: null, status: 'stored' }
 
   const loadingDir = datasetUtils.loadingDir(dataset)
-  const loadedFilePath = datasetUtils.loadedFilePath(dataset)
-  file.md5 = await md5File(loadedFilePath)
-  const fileSample = await datasetFileSample(loadedFilePath)
-  debug(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${loadedFilePath}`)
-  file.encoding = chardet.detect(fileSample)
-  debug(`Detected encoding ${file.encoding} for file ${loadedFilePath}`)
 
-  patch.originalFile = file
-  patch.status = 'stored'
-  if (basicTypes.includes(file.mimetype)) {
-    patch.file = patch.originalFile
-  }
+  const datasetFile = dataset.loaded?.dataset
+  if (datasetFile) {
+    const loadedFilePath = datasetUtils.loadedFilePath(dataset)
+    datasetFile.md5 = await md5File(loadedFilePath)
+    const fileSample = await datasetFileSample(loadedFilePath)
+    debug(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${loadedFilePath}`)
+    datasetFile.encoding = chardet.detect(fileSample)
+    debug(`Detected encoding ${datasetFile.encoding} for file ${loadedFilePath}`)
 
-  const newFilePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
-  await fs.move(loadedFilePath, newFilePath, { overwrite: true })
-  if (dataset.originalFile) {
-    const oldFilePath = datasetUtils.originalFilePath(dataset)
-    if (oldFilePath !== newFilePath) await fs.remove(oldFilePath)
+    patch.originalFile = datasetFile
+    if (basicTypes.includes(datasetFile.mimetype)) {
+      patch.file = patch.originalFile
+    }
+
+    const newFilePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
+    await fs.move(loadedFilePath, newFilePath, { overwrite: true })
+    if (dataset.originalFile) {
+      const oldFilePath = datasetUtils.originalFilePath(dataset)
+      if (oldFilePath !== newFilePath) {
+        await fs.remove(oldFilePath)
+      }
+    }
   }
-  const attachmentsFilePath = datasetUtils.loadingDattachmentsFilePath(dataset)
-  if (fs.pathExistsSync(attachmentsFilePath)) {
-    await replaceAllAttachments(dataset, attachmentsFilePath)
+  if (dataset.loaded?.attachments) {
+    await replaceAllAttachments(dataset, datasetUtils.loadedAttachmentsFilePath(dataset))
   }
 
   await fs.remove(loadingDir)
