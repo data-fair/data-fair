@@ -329,7 +329,9 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
   const files = await uploadUtils.getFiles(req, res)
 
   try {
-    await clamav.checkFiles(files, user)
+    if (files) {
+      await clamav.checkFiles(files, user)
+    }
 
     const patch = uploadUtils.getFormBody(req.body)
 
@@ -349,11 +351,13 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
     if (!isEmpty) {
       await publicationSites.applyPatch(db, dataset, { ...dataset, ...patch }, user, 'dataset')
       await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
+      if (files) await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset')
       await syncRemoteService(db, dataset)
     }
   } catch (err) {
-    for (const file of files) await fs.remove(file.path)
-    // TODO: use temp files and replace this catch by a finally
+    if (files) {
+      for (const file of files) await fs.remove(file.path)
+    }
     throw err
   }
 

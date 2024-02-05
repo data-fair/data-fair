@@ -130,7 +130,7 @@ describe('geo files support', () => {
     assert.equal(res.status, 201)
 
     // dataset converted
-    const dataset = await workers.hook('converter/' + res.data.id)
+    const dataset = await workers.hook('fileNormalizer/' + res.data.id)
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.file.name, 'stations.geojson')
 
@@ -153,7 +153,7 @@ describe('geo files support', () => {
     assert.equal(res.status, 201)
 
     // dataset converted
-    const dataset = await workers.hook('converter/' + res.data.id)
+    const dataset = await workers.hook('fileNormalizer/' + res.data.id)
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.file.name, 'stations2.geojson')
     await workers.hook('finalizer/' + dataset.id)
@@ -191,7 +191,7 @@ describe('geo files support', () => {
     assert.equal(res.status, 201)
 
     // dataset converted
-    let dataset = await workers.hook('converter/' + res.data.id)
+    let dataset = await workers.hook('fileNormalizer/' + res.data.id)
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.file.name, 'paths.geojson')
 

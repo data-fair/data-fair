@@ -1,7 +1,7 @@
 // convert from tabular data to csv or geographical data to geojson
 const config = /** @type {any} */(require('config'))
 
-exports.eventsPrefix = 'convert'
+exports.eventsPrefix = 'normalize'
 
 const archiveTypes = exports.archiveTypes = new Set([
   'application/zip' // .zip

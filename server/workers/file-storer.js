@@ -1,4 +1,4 @@
-exports.eventsPrefix = 'load'
+exports.eventsPrefix = 'store'
 
 exports.process = async function (app, dataset) {
   const fs = require('fs-extra')
@@ -14,8 +14,10 @@ exports.process = async function (app, dataset) {
 
   /** @type {any} */
   const patch = { loaded: null, status: 'stored' }
-
+  const draft = !!dataset.draftReason
   const loadingDir = datasetUtils.loadingDir(dataset)
+
+  const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
 
   const datasetFile = dataset.loaded?.dataset
   if (datasetFile) {
@@ -39,9 +41,18 @@ exports.process = async function (app, dataset) {
         await fs.remove(oldFilePath)
       }
     }
+  } else if (draft && !await fs.pathExists(datasetUtils.originalFilePath(dataset))) {
+    // this happens if we upload only the attachments, not the data file itself
+    // in this case copy the one from prod
+    await fs.copy(datasetUtils.originalFilePath(datasetFull), datasetUtils.originalFilePath(dataset))
   }
+
   if (dataset.loaded?.attachments) {
     await replaceAllAttachments(dataset, datasetUtils.loadedAttachmentsFilePath(dataset))
+  } else if (draft && await fs.pathExists(datasetUtils.attachmentsDir(datasetFull)) && !await fs.pathExists(datasetUtils.attachmentsDir(dataset))) {
+    // this happens if we upload only the main data file and not the attachments
+    // in this case copy the attachments directory from prod
+    await fs.copy(datasetUtils.attachmentsDir(datasetFull), datasetUtils.attachmentsDir(dataset))
   }
 
   await fs.remove(loadingDir)

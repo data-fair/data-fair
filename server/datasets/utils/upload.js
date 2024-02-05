@@ -88,9 +88,6 @@ const middleware = multer({
   }
 }).any()
 
-// TODO: remove deprecated
-exports.uploadFile = () => middleware
-
 const getMulterFiles = promisifyMiddleware(middleware, 'files')
 
 exports.getFiles = async (req, res) => {
@@ -131,15 +128,6 @@ exports.getFormBody = (body) => {
   return body
 }
 
-// TODO: remove deprecated
-// Form data fields are sent as strings, some have to be parsed as objects or arrays
-exports.fixFormBody = (validate) => (req, res, next) => {
-  if (!req.body) return res.status(400).type('text/plain').send('Missing body')
-  req.body = exports.getFormBody(req.body)
-  validate(req.body)
-  next()
-}
-
 // try to prevent weird bug with NFS by forcing syncing new files before use
 const fsyncFile = async (p) => {
   const fd = await fs.open(p, 'r')
@@ -147,7 +135,6 @@ const fsyncFile = async (p) => {
   await fs.close(fd)
 }
 
-// TODO: remove deprecated
 exports.fsyncFiles = asyncWrap(async (req, res, next) => {
   for (const file of req.files || []) {
     await fsyncFile(file.path)

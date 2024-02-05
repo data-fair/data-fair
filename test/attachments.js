@@ -19,7 +19,7 @@ describe('Attachments', () => {
     assert.equal(dataset.status, 'loaded')
 
     // dataset converted
-    dataset = await workers.hook(`converter/${dataset.id}`)
+    dataset = await workers.hook(`fileNormalizer/${dataset.id}`)
     assert.equal(dataset.status, 'normalized')
     assert.equal(dataset.file.name, 'files.csv')
 
