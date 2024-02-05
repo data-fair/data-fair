@@ -9,7 +9,6 @@ const restDatasetsUtils = require('./utils/rest')
 const esUtils = require('./es')
 const webhooks = require('../misc/utils/webhooks')
 const journals = require('../misc/utils/journals')
-const { basicTypes } = require('../workers/converter')
 const { updateStorage } = require('./utils/storage')
 const { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath } = require('./utils/files')
 const { schemasFullyCompatible, getSchemaBreakingChanges } = require('./utils/schema')
@@ -180,7 +179,7 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
       status: 'loaded',
       dataUpdatedBy: dataset.updatedBy,
       dataUpdatedAt: dataset.updatedAt,
-      loadingFile: {
+      loadedFile: {
         name: datasetFile.originalname,
         size: datasetFile.size,
         mimetype: datasetFile.mimetype
@@ -221,7 +220,7 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
 
   if (datasetFile) {
     await fs.emptyDir(datasetUtils.loadingDir(insertedDataset))
-    await fs.move(datasetFile.path, datasetUtils.loadingFilePath(insertedDataset))
+    await fs.move(datasetFile.path, datasetUtils.loadedFilePath(insertedDataset))
     if (attachmentsFile) {
       await fs.move(attachmentsFile.path, datasetUtils.loadingDattachmentsFilePath(insertedDataset))
     }
@@ -423,7 +422,7 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
     await fs.move(attachmentsDir(datasetDraft), attachmentsDir(patchedDataset))
   }
 
-  const statusPatch = { status: basicTypes.includes(datasetDraft.originalFile.mimetype) ? 'analyzed' : 'uploaded' }
+  const statusPatch = { status: 'analyzed' }
   const statusPatchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: datasetFull.id },
     { $set: statusPatch },
     { returnDocument: 'after' }

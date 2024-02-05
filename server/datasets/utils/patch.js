@@ -8,7 +8,6 @@ const datasetUtils = require('./')
 const extensions = require('./extensions')
 const datasetPatchSchema = require('../../../contract/dataset-patch')
 const virtualDatasetsUtils = require('./virtual')
-const { basicTypes } = require('../../workers/converter')
 
 exports.validatePatch = ajv.compile(datasetPatchSchema)
 
@@ -35,14 +34,13 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
     if (dataset.isVirtual) patch.status = 'indexed'
     else if (dataset.isRest) patch.status = 'analyzed'
     else if (dataset.remoteFile && !dataset.originalFile) patch.status = 'imported'
-    else if (!basicTypes.includes(dataset.originalFile.mimetype)) patch.status = 'uploaded'
-    else patch.status = 'loaded'
+    else patch.status = 'stored'
   }
 
   const datasetFile = files && files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
 
   if (datasetFile) {
-    patch.loadingFile = {
+    patch.loadedFile = {
       name: datasetFile.originalname,
       size: datasetFile.size,
       mimetype: datasetFile.mimetype

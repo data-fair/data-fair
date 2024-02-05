@@ -10,33 +10,28 @@ exports.process = async function (app, dataset) {
   const chardet = require('chardet')
   const md5File = require('md5-file')
 
-  const debug = require('debug')(`worker:file-loader:${dataset.id}`)
+  const debug = require('debug')(`worker:file-storer:${dataset.id}`)
   // const db = app.get('db')
 
-  const patch = { loadingFile: null }
-  const file = dataset.loadingFile
+  const patch = { loadedFile: null }
+  const file = dataset.loadedFile
 
   const loadingDir = datasetUtils.loadingDir(dataset)
-  const loadingFilePath = datasetUtils.loadingFilePath(dataset)
-  file.md5 = await md5File(loadingFilePath)
-  const fileSample = await datasetFileSample(loadingFilePath)
-  debug(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${loadingFilePath}`)
+  const loadedFilePath = datasetUtils.loadedFilePath(dataset)
+  file.md5 = await md5File(loadedFilePath)
+  const fileSample = await datasetFileSample(loadedFilePath)
+  debug(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${loadedFilePath}`)
   file.encoding = chardet.detect(fileSample)
-  debug(`Detected encoding ${file.encoding} for file ${loadingFilePath}`)
+  debug(`Detected encoding ${file.encoding} for file ${loadedFilePath}`)
 
-  if (!basicTypes.includes(file.mimetype)) {
-    // we first need to convert the file in a textual format easy to index
-    patch.originalFile = file
-    patch.status = 'stored'
-  } else {
-    // The format of the original file is already well suited to workers
-    patch.originalFile = file
-    patch.file = file
-    patch.status = 'normalized'
+  patch.originalFile = file
+  patch.status = 'stored'
+  if (basicTypes.includes(file.mimetype)) {
+    patch.file = patch.originalFile
   }
 
   const newFilePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
-  await fs.move(loadingFilePath, newFilePath, { overwrite: true })
+  await fs.move(loadedFilePath, newFilePath, { overwrite: true })
   if (dataset.originalFile) {
     const oldFilePath = datasetUtils.originalFilePath(dataset)
     if (oldFilePath !== newFilePath) await fs.remove(oldFilePath)
@@ -45,11 +40,6 @@ exports.process = async function (app, dataset) {
   if (fs.pathExistsSync(attachmentsFilePath)) {
     await replaceAllAttachments(dataset, attachmentsFilePath)
   }
-
-  /* TODO
-  if (attachmentsFile) {
-    await attachments.replaceAllAttachments({ ...dataset, ...patch }, attachmentsFile)
-  } */
 
   await fs.remove(loadingDir)
 

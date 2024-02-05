@@ -7,7 +7,7 @@ const mergeDraft = require('../datasets/utils/merge-draft')
 const tasks = exports.tasks = {
   restInitializer: require('./rest-initializer'),
   downloader: require('./downloader'),
-  fileLoader: require('./file-loader'),
+  fileStorer: require('./file-storer'),
   converter: require('./converter'),
   csvAnalyzer: require('./csv-analyzer'),
   geojsonAnalyzer: require('./geojson-analyzer'),
@@ -194,6 +194,9 @@ async function iter (app, resource, type) {
       taskKey = 'catalogHarvester'
     } else if (type === 'dataset') {
       const moment = require('moment')
+
+      const normalized = (resource.status === 'stored' && tasks.converter.basicTypes.includes(resource.originalFile?.mimetype)) || resource.status === 'normalized'
+
       if (resource.status === 'created' && resource.isRest) {
         // Initialize a REST dataset
         taskKey = 'restInitializer'
@@ -202,14 +205,14 @@ async function iter (app, resource, type) {
         taskKey = 'downloader'
       } else if (resource.status === 'loaded') {
         // File was either uploaded or downloded, it needs to be copied to the storage
-        taskKey = 'fileLoader'
-      } else if (resource.status === 'stored') {
+        taskKey = 'fileStorer'
+      } else if (resource.status === 'stored' && !normalized) {
         // XLS to csv of other transformations
         taskKey = 'converter'
-      } else if (resource.status === 'normalized' && resource.file && tasks.converter.csvTypes.includes(resource.file.mimetype)) {
+      } else if (normalized && resource.file && tasks.converter.csvTypes.includes(resource.file.mimetype)) {
         // Quickly parse a CSV file
         taskKey = 'csvAnalyzer'
-      } else if (resource.status === 'normalized' && resource.file && resource.file.mimetype === 'application/geo+json') {
+      } else if (normalized && resource.file && resource.file.mimetype === 'application/geo+json') {
         // Deduce a schema from geojson properties
         taskKey = 'geojsonAnalyzer'
       } else if (resource.isRest && resource.status === 'extended-updated') {
@@ -252,6 +255,7 @@ async function iter (app, resource, type) {
         taskKey = 'restExporterCSV'
       }
     }
+
     if (!taskKey) return
     const task = tasks[taskKey]
     debug(`run task ${taskKey} - ${type} / ${resource.id}`)

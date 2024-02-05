@@ -6,7 +6,6 @@ const locks = require('../../misc/utils/locks')
 const observe = require('../../misc/utils/observe')
 const nanoid = require('../../misc/utils/nanoid')
 const visibilityUtils = require('../../misc/utils/visibility')
-const { basicTypes } = require('../../workers/converter')
 const { prepareThumbnailUrl } = require('../../misc/utils/thumbnails')
 const { prepareMarkdownContent } = require('../../misc/utils/markdown')
 const permissions = require('../../misc/utils/permissions')
@@ -27,7 +26,7 @@ exports.dir = filesUtils.dir
 exports.fullFilePath = filesUtils.fullFilePath
 exports.fullFileName = filesUtils.fullFileName
 exports.exportedFilePath = filesUtils.exportedFilePath
-exports.loadingFilePath = filesUtils.loadingFilePath
+exports.loadedFilePath = filesUtils.loadedFilePath
 exports.loadingDir = filesUtils.loadingDir
 exports.loadingDattachmentsFilePath = filesUtils.loadingDattachmentsFilePath
 
@@ -45,10 +44,9 @@ exports.sampleValues = dataStreamsUtils.sampleValues
 exports.readStreams = dataStreamsUtils.readStreams
 
 exports.reindex = async (db, dataset) => {
-  const patch = { status: 'loaded' }
+  const patch = { status: 'stored' }
   if (dataset.isVirtual) patch.status = 'indexed'
   else if (dataset.isRest) patch.status = 'analyzed'
-  else if (dataset.originalFile && !basicTypes.includes(dataset.originalFile.mimetype)) patch.status = 'uploaded'
   return (await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
 }
@@ -74,7 +72,7 @@ exports.insertWithId = async (db, dataset, onClose) => {
     if (!idAck) throw new Error(`dataset id ${dataset.id} is locked`)
     if (onClose) {
       onClose(() => {
-        console.log('releasing dataset lock on id', idLockKey)
+        // console.log('releasing dataset lock on id', idLockKey)
         locks.release(db, idLockKey).catch(err => {
           observe.internalError.inc({ errorCode: 'dataset-lock-id' })
           console.error('(dataset-lock-id) failure to release dataset lock on id', err)
@@ -90,7 +88,7 @@ exports.insertWithId = async (db, dataset, onClose) => {
         insertOk = true
         if (onClose) {
           onClose(() => {
-            console.log('releasing dataset lock on slug', slugLockKey)
+            // console.log('releasing dataset lock on slug', slugLockKey)
             locks.release(db, slugLockKey).catch(err => {
               observe.internalError.inc({ errorCode: 'dataset-lock-slug' })
               console.error('(dataset-lock-slug) failure to release dataset lock on slug', err)
@@ -183,7 +181,7 @@ exports.clean = (publicUrl, publicationSite, dataset, query = {}, draft = false)
   delete dataset._id
   delete dataset._uniqueRefs
   delete dataset.initFrom
-  delete dataset.loadingFile
+  delete dataset.loadedFile
   if (select.includes('-userPermissions')) delete dataset.userPermissions
   if (select.includes('-owner')) delete dataset.owner
 

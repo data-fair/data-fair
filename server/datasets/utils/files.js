@@ -20,8 +20,8 @@ exports.loadingDir = (dataset) => {
   return path.join(exports.dir(dataset), 'loading')
 }
 
-exports.loadingFilePath = (dataset) => {
-  return path.join(exports.loadingDir(dataset), dataset.loadingFile.name)
+exports.loadedFilePath = (dataset) => {
+  return path.join(exports.loadingDir(dataset), dataset.loadedFile.name)
 }
 
 exports.filePath = (dataset) => {
