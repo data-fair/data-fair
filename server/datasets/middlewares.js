@@ -15,10 +15,13 @@ const virtualDatasetsUtils = require('./utils/virtual')
  * @returns
  */
 exports.checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
+  // @ts-ignore
+  if (!req.user) throw createError(401)
   if (process.env.NO_STORAGE_CHECK === 'true') return next()
   if (!req.get('Content-Length')) throw createError(411, 'Content-Length is mandatory')
   const contentLength = Number(req.get('Content-Length'))
   if (Number.isNaN(contentLength)) throw createError(400, 'Content-Length is not a number')
+
   // @ts-ignore
   const dataset = req.dataset
   const db = req.app.get('db')

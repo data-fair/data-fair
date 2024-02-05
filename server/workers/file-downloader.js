@@ -103,8 +103,7 @@ exports.process = async function (app, dataset) {
 
   const md5 = await md5File(tmpFile.path)
 
-  const oldFilePath = dataset.originalFile && datasetUtils.originalFilePath(dataset)
-  const filePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
+  const filePath = datasetUtils.loadedFilePath({ ...dataset, ...patch })
 
   if (response.status === 304 || (autoUpdating && dataset.originalFile && dataset.originalFile.md5 === md5)) {
     // prevent re-indexing when the file didn't change
@@ -123,9 +122,6 @@ exports.process = async function (app, dataset) {
     }
 
     await fs.move(tmpFile.path, filePath, { overwrite: true })
-    if (oldFilePath && oldFilePath !== filePath) {
-      await fs.remove(oldFilePath)
-    }
 
     patch.loaded.dataset.md5 = md5
     patch.loaded.dataset.size = (await fs.promises.stat(filePath)).size
