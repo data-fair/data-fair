@@ -143,17 +143,17 @@ exports.findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQue
  * @param {any} user
  * @param {any} owner
  * @param {any} body
- * @param {any[]} files
+ * @param {undefined | any[]} files
  * @param {boolean} draft
- * @param {(callback) => void} onClose
+ * @param {(callback: () => {}) => void} onClose
  * @returns {Promise<any>}
  */
 exports.createDataset = async (db, locale, user, owner, body, files, draft, onClose) => {
   validateURLFriendly(locale, body.id)
   validateURLFriendly(locale, body.slug)
 
-  const datasetFile = files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
-  const attachmentsFile = files.find(f => f.fieldname === 'attachments')
+  const datasetFile = files?.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
+  const attachmentsFile = files?.find(f => f.fieldname === 'attachments')
 
   if ([!!datasetFile, !!body.remoteFile, body.isVirtual, body.isRest, body.isMetaOnly].filter(b => b).length > 1) {
     throw createError(400, 'Un jeu de données ne peut pas être de plusieurs types à la fois')
@@ -175,6 +175,7 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
 
   if (datasetFile) {
     dataset.title = dataset.title || titleFromFileName(datasetFile.originalname)
+    /** @type {any} */
     const filePatch = {
       status: 'loaded',
       dataUpdatedBy: dataset.updatedBy,

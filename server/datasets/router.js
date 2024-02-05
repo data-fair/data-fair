@@ -269,10 +269,14 @@ const createDatasetRoute = asyncWrap(async (req, res) => {
     throw createError(429, req.__('errors.exceedLimitNbDatasets'))
   }
 
+  /** @type {undefined | any[]} */
   const files = await uploadUtils.getFiles(req, res)
 
   try {
-    await clamav.checkFiles(files, user)
+    if (files) {
+      await clamav.checkFiles(files, user)
+      debugFiles('POST datasets uploaded some files', files)
+    }
 
     const body = uploadUtils.getFormBody(req.body)
     validatePost(body)
@@ -282,8 +286,9 @@ const createDatasetRoute = asyncWrap(async (req, res) => {
     // there is a reason why we use a unique id generator and a slug system)
     if (req.params.datasetId) body.id = req.params.datasetId
 
-    debugFiles('POST datasets uploaded some files', files)
-
+    /**
+     * @param {() => {}} callback
+     */
     const onClose = (callback) => res.on('close', callback)
 
     const dataset = await createDataset(db, locale, user, owner, body, files, draft, onClose)
@@ -293,8 +298,9 @@ const createDatasetRoute = asyncWrap(async (req, res) => {
 
     res.status(201).send(clean(req.publicBaseUrl, req.publicationSite, dataset, {}, req.query.draft === 'true'))
   } catch (err) {
-    for (const file of files) await fs.remove(file.path)
-    // TODO: use temp files and replace this catch by a finally
+    if (files) {
+      for (const file of files) await fs.remove(file.path)
+    }
     throw err
   }
 })

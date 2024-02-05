@@ -4,7 +4,7 @@
     "module": "nodenext",
     "moduleResolution": "NodeNext",
     "noEmit": true,
-    "strict": false,
+    "strict": true,
     "allowJs": true,
     "checkJs": true,
     "skipLibCheck": true,
