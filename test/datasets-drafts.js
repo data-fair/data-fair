@@ -440,7 +440,7 @@ describe('datasets in draft mode', () => {
     // dataset converted
     let dataset = await workers.hook('fileNormalizer')
     assert.equal(dataset.status, 'draft')
-    assert.equal(dataset.draft.status, 'loaded')
+    assert.equal(dataset.draft.status, 'normalized')
     assert.equal(dataset.draft.file.name, 'stations.geojson')
 
     dataset = await workers.hook('finalizer')

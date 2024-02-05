@@ -379,6 +379,13 @@ exports.syncApplications = async (db, datasetId) => {
 }
 
 exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
+  /* TODO: draft validation shoud be performed in a worker
+    - the workers shoud keep working on the draft dataset one last time but fully (all data, extensions, et)
+    - go until finalizer, then perform the final replacement operation as atomically as possible
+
+    Another option for greater simplication would be to remove the draft system and always work on the full dataset,
+    consider the dataset as immutable and use the slug system to switch between versions
+  */
   const db = app.get('db')
   const patch = { ...datasetFull.draft }
   if (user) {
@@ -399,12 +406,9 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
     { $set: patch, $unset: { draft: '' } },
     { returnDocument: 'after' }
   )).value
-  if (datasetFull.originalFile) await fs.remove(originalFilePath(datasetFull))
-  if (datasetFull.file) {
-    await fs.remove(filePath(datasetFull))
-    await fs.remove(fullFilePath(datasetFull))
-    webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
 
+  if (datasetFull.file) {
+    webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
     if (req) {
       const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema)
       for (const breakingChange of breakingChanges) {
@@ -418,9 +422,22 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
       }
     }
   }
+
   await fs.ensureDir(dir(patchedDataset))
-  await fs.remove(originalFilePath(patchedDataset))
-  await fs.move(originalFilePath(datasetDraft), originalFilePath(patchedDataset))
+
+  if (patchedDataset.originalFile && patchedDataset.originalFile.name !== patchedDataset.file?.name) {
+    await fs.move(originalFilePath(datasetDraft), originalFilePath(patchedDataset), { overwrite: true })
+  }
+  if (datasetFull.originalFile && datasetFull.originalFile.name !== datasetFull.file?.name && originalFilePath(patchedDataset) !== originalFilePath(datasetFull)) {
+    await fs.remove(originalFilePath(datasetFull))
+  }
+
+  await fs.move(filePath(datasetDraft), filePath(patchedDataset), { overwrite: true })
+  if (datasetFull.file && filePath(patchedDataset) !== filePath(datasetFull)) {
+    await fs.remove(filePath(datasetFull))
+  }
+  if (datasetFull.file) await fs.remove(fullFilePath(datasetFull))
+
   if (await fs.pathExists(attachmentsDir(datasetDraft))) {
     await fs.remove(attachmentsDir(patchedDataset))
     await fs.move(attachmentsDir(datasetDraft), attachmentsDir(patchedDataset))
