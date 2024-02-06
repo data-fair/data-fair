@@ -50,4 +50,28 @@ describe('REST datasets with auto-initialization', () => {
     assert.equal(res.status, 201)
     assert.rejects(workers.hook('finalizer/' + res.data.id), err => err.message.includes('permission manquante'))
   })
+
+  it('Initialize dataset in a department from dataset in orga', async () => {
+    const ax = global.ax.dmeadusOrg
+
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
+    const res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'init from schema',
+      initFrom: {
+        dataset: dataset.id, parts: ['schema', 'metadataAttachments', 'description', 'data']
+      },
+      owner: {
+        type: 'organization',
+        id: 'KWqAGZ4mG',
+        name: 'Fivechat',
+        department: 'dep1'
+      }
+    })
+    assert.equal(res.status, 201)
+    const initFromDataset = await workers.hook('finalizer/' + res.data.id)
+    assert.equal(initFromDataset.owner.department, 'dep1')
+    assert.equal(initFromDataset.count, 2)
+  })
 })

@@ -22,7 +22,7 @@ exports.process = async function (app, dataset) {
   await restUtils.initDataset(db, dataset)
 
   if (dataset.initFrom) {
-    const pseudoUser = getPseudoUser(dataset.owner, 'initializer', '_init_from', dataset.initFrom.role)
+    const pseudoUser = getPseudoUser(dataset.owner, 'initializer', '_init_from', dataset.initFrom.role, dataset.initFrom.department)
     const parentDataset = await db.collection('datasets').findOne({ id: dataset.initFrom.dataset })
     if (!parentDataset) throw new Error('[noretry] jeu de données d\'initialisation inconnu ' + dataset.initFrom.dataset)
     const parentDatasetPermissions = permissionsUtils.list('datasets', parentDataset, pseudoUser)

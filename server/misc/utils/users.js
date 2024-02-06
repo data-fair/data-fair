@@ -14,7 +14,7 @@ exports.owner = (req) => {
   return { type: 'user', id: req.user.id, name: req.user.name }
 }
 
-exports.getPseudoUser = (owner, name, defaultId, defaultRole) => {
+exports.getPseudoUser = (owner, name, defaultId, defaultRole, department) => {
   const pseudoUser = { name: 'extension' }
   if (owner.type === 'user') {
     pseudoUser.id = owner.id
@@ -22,8 +22,15 @@ exports.getPseudoUser = (owner, name, defaultId, defaultRole) => {
     pseudoUser.activeAccount = { ...owner, role: 'admin' }
   } else {
     pseudoUser.id = defaultId
-    pseudoUser.organizations = [{ ...owner, role: defaultRole }]
-    pseudoUser.activeAccount = pseudoUser.organizations[0]
+    pseudoUser.activeAccount = { ...owner, role: defaultRole }
+    if (department) {
+      if (department === '-') {
+        delete pseudoUser.activeAccount.department
+      } else {
+        pseudoUser.activeAccount.department = department
+      }
+    }
+    pseudoUser.organizations = [pseudoUser.activeAccount]
   }
   return pseudoUser
 }
