@@ -260,6 +260,55 @@ describe('datasets in draft mode', () => {
     assert.equal(journal.pop().type, 'finalize-end')
   })
 
+  it('create a draft at creation and update it with multiple follow-up uploads', async () => {
+    // Send dataset
+    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+    const form = new FormData()
+    form.append('file', datasetFd, 'dataset1.csv')
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    let dataset = await workers.hook('finalizer')
+    assert.ok(!dataset.file)
+    assert.equal(dataset.status, 'draft')
+    assert.ok(dataset.draft.draftReason.key, 'file-new')
+    assert.equal(dataset.draft.file.name, 'dataset1.csv')
+    dataset = await ax.get(`/api/v1/datasets/${dataset.id}`)
+    assert.ok(dataset.status, 'draft')
+
+    // upload a new file
+    const datasetFd2 = fs.readFileSync('./test/resources/datasets/dataset2.csv')
+    const form2 = new FormData()
+    form2.append('file', datasetFd2, 'dataset1-draft2.csv')
+    form2.append('description', 'draft description 2')
+    const datasetDraft2 = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
+    assert.equal(datasetDraft2.status, 'loaded')
+    dataset = await workers.hook('finalizer')
+    assert.ok(!dataset.file)
+    assert.equal(dataset.status, 'draft')
+    assert.ok(dataset.draft.draftReason.key, 'file-new')
+    assert.equal(dataset.draft.file.name, 'dataset1-draft2.csv')
+
+    // upload a new file
+    const datasetFd3 = fs.readFileSync('./test/resources/datasets/dataset2.csv')
+    const form3 = new FormData()
+    form3.append('file', datasetFd3, 'dataset1-draft3.csv')
+    form3.append('description', 'draft description 3')
+    const datasetDraft3 = (await ax.post('/api/v1/datasets/' + dataset.id, form3, { headers: testUtils.formHeaders(form3), params: { draft: true } })).data
+    assert.equal(datasetDraft3.status, 'loaded')
+    dataset = await workers.hook('finalizer')
+    assert.ok(!dataset.file)
+    assert.equal(dataset.status, 'draft')
+    assert.ok(dataset.draft.draftReason.key, 'file-new')
+    assert.equal(dataset.draft.file.name, 'dataset1-draft3.csv')
+
+    // validate the last file
+    await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
+    dataset = await workers.hook('finalizer')
+    assert.ok(!dataset.draft)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.file.name, 'dataset1-draft3.csv')
+  })
+
   it('create a draft and update it with second file upload', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
@@ -281,7 +330,7 @@ describe('datasets in draft mode', () => {
     assert.equal(dataset.file.name, 'dataset1.csv')
     assert.equal(dataset.draft.file.name, 'dataset1-draft1.csv')
 
-    // upload a second new file
+    // upload a third file
     const datasetFd3 = fs.readFileSync('./test/resources/datasets/dataset2.csv')
     const form3 = new FormData()
     form3.append('file', datasetFd3, 'dataset1-draft2.csv')
@@ -292,6 +341,12 @@ describe('datasets in draft mode', () => {
     dataset = await workers.hook('finalizer')
     assert.equal(dataset.file.name, 'dataset1.csv')
     assert.equal(dataset.draft.file.name, 'dataset1-draft2.csv')
+
+    // validate the third file
+    await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
+    dataset = await workers.hook('finalizer')
+    assert.ok(!dataset.draft)
+    assert.equal(dataset.file.name, 'dataset1-draft2.csv')
   })
 
   it('create a draft of a large file and index a sample', async () => {

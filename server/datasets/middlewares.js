@@ -59,10 +59,10 @@ exports.lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) =
 // also checks that the dataset is in a state compatible with some action
 // supports waiting a little bit to be a little permissive with the user
 /**
- * @param {{acceptedStatuses?: string[] | ((body: any, dataset: any) => string[] | null), fillDescendants?: boolean, alwaysDraft?: boolean, acceptMissing?: boolean}} fillDescendants
+ * @param {{acceptedStatuses?: string[] | ((body: any, dataset: any) => string[] | null), fillDescendants?: boolean, alwaysDraft?: boolean, acceptMissing?: boolean, acceptInitialDraft?: boolean}} fillDescendants
  * @returns
  */
-exports.readDataset = ({ acceptedStatuses: _acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing } = {}) => asyncWrap(async (req, res, next) => {
+exports.readDataset = ({ acceptedStatuses: _acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing, acceptInitialDraft } = {}) => asyncWrap(async (req, res, next) => {
   // @ts-ignore
   const publicationSite = req.publicationSite
   // @ts-ignore
@@ -96,7 +96,7 @@ exports.readDataset = ({ acceptedStatuses: _acceptedStatuses, fillDescendants, a
     let isStatusOk = false
     if (isNewDataset) isStatusOk = true
     else if (acceptedStatuses) isStatusOk = acceptedStatuses.includes('*') || acceptedStatuses.includes(dataset.status)
-    else isStatusOk = dataset.status !== 'draft'
+    else isStatusOk = acceptInitialDraft || dataset.status !== 'draft'
 
     if (isStatusOk) {
       if (fillDescendants && dataset.isVirtual) {

@@ -81,7 +81,7 @@ router.use('/:datasetId/permissions', readDataset(), permissions.router('dataset
 }))
 
 // retrieve a dataset by its id
-router.get('/:datasetId', readDataset(), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId', readDataset({ acceptInitialDraft: true }), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   req.dataset.userPermissions = permissions.list('datasets', req.dataset, req.user, req.bypassPermissions)
   res.status(200).send(clean(req.publicBaseUrl, req.publicationSite, req.dataset, req.query))
 })
@@ -339,7 +339,11 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
     validateURLFriendly(locale, patch.slug)
 
     if (draft) {
-      patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant' }
+      if (req.datasetFull.status === 'draft') {
+        patch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon' }
+      } else {
+        patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant' }
+      }
     }
 
     const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, user, locale, files)
@@ -378,6 +382,9 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
 // cancel the draft
 router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'finalized', 'error'], alwaysDraft: true }), permissions.middleware('cancelDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
+  if (req.datasetFull.status === 'draft') {
+    return res.status(409).send('Impossible d\'annuler un brouillon si aucune version du jeu de données n\'a été validée.')
+  }
   if (!req.datasetFull.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
