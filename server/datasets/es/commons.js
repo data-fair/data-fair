@@ -10,11 +10,13 @@ const truncateHTML = require('truncate-html')
 const marked = require('marked')
 const dayjs = require('dayjs')
 const timezone = require('dayjs/plugin/timezone')
+const utc = require('dayjs/plugin/utc')
 const { prepareThumbnailUrl } = require('../../misc/utils/thumbnails')
 const tiles = require('../utils/tiles')
 const geo = require('../utils/geo')
 const { geojsonToWKT } = require('@terraformer/wkt')
 
+dayjs.extend(utc)
 dayjs.extend(timezone)
 
 // From a property in data-fair schema to the property in an elasticsearch mapping
