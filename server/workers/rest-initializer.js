@@ -16,7 +16,9 @@ exports.process = async function (app, dataset) {
   const debug = require('debug')(`worker:rest-initializer:${dataset.id}`)
   const db = app.get('db')
 
-  const patch = { status: 'analyzed' }
+  /** @type {any} */
+  const patch = { status: 'analyzed', updatedAt: (new Date()).toISOString() }
+
   await restUtils.initDataset(db, dataset)
 
   if (dataset.initFrom) {
@@ -29,7 +31,9 @@ exports.process = async function (app, dataset) {
     }
 
     let count = 0
+    /** @type {any[]} */
     let attachments = []
+    /** @type {any[]} */
     let metadataAttachments = []
 
     if (dataset.initFrom.parts.includes('data')) {

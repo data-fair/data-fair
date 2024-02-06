@@ -214,7 +214,7 @@ export default () => ({
           eventBus.$emit('notification', { error: event.data, msg: 'Le service a rencontré une erreur pendant le traitement du jeu de données:' })
         }
 
-        if (event.type === 'draft-validated' || event.type === 'draft-cancelled' || event.type === 'data-updated') {
+        if (['initialize-end', 'draft-validated', 'draft-cancelled', 'data-updated'].includes(event.type)) {
           return dispatch('fetchInfo')
         }
 
