@@ -1,12 +1,12 @@
 const fs = require('fs-extra')
 const createError = require('http-errors')
 const { nanoid } = require('nanoid')
-const config = require('config')
+const config = /** @type {any} */(require('config'))
 const path = require('path')
 const mime = require('mime')
 const moment = require('moment')
 const journals = require('../../misc/utils/journals')
-const files = require('../../misc/utils/files')
+const uploadUtils = require('../../datasets/utils/upload')
 const permissionsUtil = require('../../misc/utils/permissions')
 const datasetUtils = require('../../datasets/utils')
 
@@ -65,7 +65,7 @@ exports.listDatasets = async (db, catalog, params) => {
     }, { projection: { id: 1, remoteFile: 1, isMetaOnly: 1, updatedAt: 1 } }).toArray()
     dataset.harvestedDataset = harvestedDatasets.find(d => d.isMetaOnly)
     for (const resource of dataset.resources) {
-      resource.harvestable = files.allowedTypes.has(resource.mime)
+      resource.harvestable = uploadUtils.allowedTypes.has(resource.mime)
       resource.harvestedDataset = harvestedDatasets.find(hd => hd.remoteFile && hd.remoteFile.url === resource.url)
     }
   }
@@ -162,7 +162,7 @@ exports.harvestDatasetResource = async (app, catalog, datasetId, resourceId, for
   if (!dataset) throw createError(404, 'Dataset not found')
   const resource = (dataset.resources || []).find(r => r.id === resourceId)
   if (!resource) throw createError(404, 'Resource not found')
-  if (!files.allowedTypes.has(resource.mime)) throw createError(404, 'Resource format not supported')
+  if (!uploadUtils.allowedTypes.has(resource.mime)) throw createError(404, 'Resource format not supported')
 
   const date = moment().toISOString()
 

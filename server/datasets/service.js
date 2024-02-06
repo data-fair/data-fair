@@ -1,5 +1,7 @@
 const config = /** @type {any} */(require('config'))
 const fs = require('fs-extra')
+const path = require('path')
+const createError = require('http-errors')
 const findUtils = require('../misc/utils/find')
 const permissions = require('../misc/utils/permissions')
 const datasetUtils = require('./utils')
@@ -7,11 +9,14 @@ const restDatasetsUtils = require('./utils/rest')
 const esUtils = require('./es')
 const webhooks = require('../misc/utils/webhooks')
 const journals = require('../misc/utils/journals')
-const { basicTypes } = require('../workers/converter')
 const { updateStorage } = require('./utils/storage')
 const { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath } = require('./utils/files')
 const { schemasFullyCompatible, getSchemaBreakingChanges } = require('./utils/schema')
-const { getExtensionKey } = require('./utils/extensions')
+const { getExtensionKey, prepareExtensions, prepareExtensionsSchema } = require('./utils/extensions')
+const { validateURLFriendly } = require('../misc/utils/validation')
+const { curateDataset, titleFromFileName } = require('./utils')
+const virtualDatasetsUtils = require('./utils/virtual')
+const { prepareInitFrom } = require('./utils/init-from')
 
 const debugMasterData = require('debug')('master-data')
 
@@ -131,6 +136,105 @@ exports.findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQue
   return response
 }
 
+/**
+ *
+ * @param {import('mongodb').Db} db
+ * @param {string} locale
+ * @param {any} user
+ * @param {any} owner
+ * @param {any} body
+ * @param {undefined | any[]} files
+ * @param {boolean} draft
+ * @param {(callback: () => {}) => void} onClose
+ * @returns {Promise<any>}
+ */
+exports.createDataset = async (db, locale, user, owner, body, files, draft, onClose) => {
+  validateURLFriendly(locale, body.id)
+  validateURLFriendly(locale, body.slug)
+
+  const datasetFile = files?.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
+  const attachmentsFile = files?.find(f => f.fieldname === 'attachments')
+
+  if ([!!datasetFile, !!body.remoteFile, body.isVirtual, body.isRest, body.isMetaOnly].filter(b => b).length > 1) {
+    throw createError(400, 'Un jeu de données ne peut pas être de plusieurs types à la fois')
+  }
+
+  const dataset = { ...body }
+  dataset.owner = owner
+  const date = new Date().toISOString()
+  dataset.createdAt = dataset.updatedAt = date
+  dataset.createdBy = dataset.updatedBy = { id: user.id, name: user.name }
+  dataset.permissions = []
+  dataset.schema = dataset.schema || []
+  if (dataset.extensions) {
+    prepareExtensions(locale, dataset.extensions)
+    dataset.schema = await prepareExtensionsSchema(db, dataset.schema, dataset.extensions)
+  }
+  curateDataset(dataset)
+  permissions.initResourcePermissions(dataset)
+
+  if (datasetFile) {
+    dataset.title = dataset.title || titleFromFileName(datasetFile.originalname)
+    /** @type {any} */
+    const filePatch = {
+      status: 'loaded',
+      dataUpdatedBy: dataset.updatedBy,
+      dataUpdatedAt: dataset.updatedAt,
+      loaded: {
+        dataset: {
+          name: datasetFile.originalname,
+          size: datasetFile.size,
+          mimetype: datasetFile.mimetype
+        },
+        attachments: !!attachmentsFile
+      }
+    }
+    if (draft) {
+      dataset.status = 'draft'
+      filePatch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon' }
+      dataset.draft = filePatch
+    } else {
+      Object.assign(dataset, filePatch)
+    }
+  } else if (body.isVirtual) {
+    if (!body.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
+    if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
+    dataset.virtual = dataset.virtual || { children: [] }
+    dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
+    dataset.status = 'indexed'
+  } else if (body.isRest) {
+    if (!body.title) throw createError(400, 'Un jeu de données éditable doit être créé avec un titre')
+    if (attachmentsFile) throw createError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
+    dataset.rest = dataset.rest || {}
+    dataset.schema = dataset.schema || []
+    dataset.status = 'created'
+    if (dataset.initFrom) prepareInitFrom(dataset, user)
+  } else if (body.isMetaOnly) {
+    if (!body.title) throw createError(400, 'Un jeu de données métadonnées doit être créé avec un titre')
+    if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
+  } else if (body.remoteFile) {
+    dataset.title = dataset.title || titleFromFileName(body.remoteFile.name || path.basename(new URL(body.remoteFile.url).pathname))
+    dataset.status = 'imported'
+  } else {
+    throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "éditable" ou "métadonnées"')
+  }
+
+  const insertedDatasetFull = await datasetUtils.insertWithId(db, dataset, onClose)
+  const insertedDataset = datasetUtils.mergeDraft(insertedDatasetFull)
+
+  if (datasetFile) {
+    await fs.emptyDir(datasetUtils.loadingDir(insertedDataset))
+    await fs.move(datasetFile.path, datasetUtils.loadedFilePath(insertedDataset))
+    if (attachmentsFile) {
+      await fs.move(attachmentsFile.path, datasetUtils.loadedAttachmentsFilePath(insertedDataset))
+    }
+  }
+  if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with extensions by ${user?.name} (${user?.id})`, insertedDataset.extensions)
+  if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with masterData by ${user?.name} (${user?.id})`, insertedDataset.masterData)
+
+  return insertedDataset
+}
+
 exports.deleteDataset = async (app, dataset) => {
   const db = app.get('db')
   const es = app.get('es')
@@ -222,7 +326,6 @@ exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappin
     }
   }
 
-  const mongoPatch = {}
   Object.assign(dataset, patch)
 
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset)
@@ -235,6 +338,8 @@ exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappin
     }
     patch = draftPatch
   }
+
+  const mongoPatch = {}
   for (const key of Object.keys(patch)) {
     if (patch[key] === null) {
       mongoPatch.$unset = mongoPatch.$unset || {}
@@ -274,6 +379,13 @@ exports.syncApplications = async (db, datasetId) => {
 }
 
 exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
+  /* TODO: draft validation shoud be performed in a worker
+    - the workers shoud keep working on the draft dataset one last time but fully (all data, extensions, et)
+    - go until finalizer, then perform the final replacement operation as atomically as possible
+
+    Another option for greater simplication would be to remove the draft system and always work on the full dataset,
+    consider the dataset as immutable and use the slug system to switch between versions
+  */
   const db = app.get('db')
   const patch = { ...datasetFull.draft }
   if (user) {
@@ -294,12 +406,9 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
     { $set: patch, $unset: { draft: '' } },
     { returnDocument: 'after' }
   )).value
-  if (datasetFull.originalFile) await fs.remove(originalFilePath(datasetFull))
-  if (datasetFull.file) {
-    await fs.remove(filePath(datasetFull))
-    await fs.remove(fullFilePath(datasetFull))
-    webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
 
+  if (datasetFull.file) {
+    webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
     if (req) {
       const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema)
       for (const breakingChange of breakingChanges) {
@@ -313,15 +422,28 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
       }
     }
   }
+
   await fs.ensureDir(dir(patchedDataset))
-  await fs.remove(originalFilePath(patchedDataset))
-  await fs.move(originalFilePath(datasetDraft), originalFilePath(patchedDataset))
+
+  if (patchedDataset.originalFile && patchedDataset.originalFile.name !== patchedDataset.file?.name) {
+    await fs.move(originalFilePath(datasetDraft), originalFilePath(patchedDataset), { overwrite: true })
+  }
+  if (datasetFull.originalFile && datasetFull.originalFile.name !== datasetFull.file?.name && originalFilePath(patchedDataset) !== originalFilePath(datasetFull)) {
+    await fs.remove(originalFilePath(datasetFull))
+  }
+
+  await fs.move(filePath(datasetDraft), filePath(patchedDataset), { overwrite: true })
+  if (datasetFull.file && filePath(patchedDataset) !== filePath(datasetFull)) {
+    await fs.remove(filePath(datasetFull))
+  }
+  if (datasetFull.file) await fs.remove(fullFilePath(datasetFull))
+
   if (await fs.pathExists(attachmentsDir(datasetDraft))) {
     await fs.remove(attachmentsDir(patchedDataset))
     await fs.move(attachmentsDir(datasetDraft), attachmentsDir(patchedDataset))
   }
 
-  const statusPatch = { status: basicTypes.includes(datasetDraft.originalFile.mimetype) ? 'analyzed' : 'uploaded' }
+  const statusPatch = { status: 'analyzed' }
   const statusPatchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: datasetFull.id },
     { $set: statusPatch },
     { returnDocument: 'after' }

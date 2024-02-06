@@ -114,10 +114,17 @@ const isAccountMember = (req, res, next) => {
 
 // Endpoint for customers service to create/update limits
 router.post('/:type/:id', isSuperAdmin, asyncWrap(async (req, res, next) => {
+  const db = req.app.get('db')
   req.body.type = req.params.type
   req.body.id = req.params.id
   validate(req.body)
-  await req.app.get('db').collection('limits')
+  const existingLimits = await db.collection('limits').findOne({ type: req.params.type, id: req.params.id })
+  if (existingLimits) {
+    for (const key of ['store_bytes', 'indexed_bytes', 'nb_datasets']) {
+      if (req.body[key] && existingLimits[key]?.consumption) req.body[key].consumption = existingLimits[key].consumption
+    }
+  }
+  await db.collection('limits')
     .replaceOne({ type: req.params.type, id: req.params.id }, req.body, { upsert: true })
   res.send(req.body)
 }))

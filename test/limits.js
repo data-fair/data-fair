@@ -5,6 +5,7 @@ const workers = require('../server/workers')
 const config = require('config')
 
 const baseLimit = {
+  indexed_bytes: { limit: 300000, consumption: 0 },
   store_bytes: { limit: 300000, consumption: 0 },
   nb_datasets: { limit: 10, consumption: 0 },
   lastUpdate: new Date().toISOString()
@@ -19,7 +20,6 @@ describe('limits', () => {
     form.append('file', Buffer.alloc(150000), 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    const dataset = res.data
     await assert.rejects(workers.hook('finalizer/' + res.data.id))
 
     // Send dataset applying default limits
@@ -34,10 +34,10 @@ describe('limits', () => {
     form = new FormData()
     form.append('file', Buffer.alloc(100000), 'dataset.csv')
     res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    workers.hook('finalizer/' + dataset.id)
+    await assert.rejects(workers.hook('finalizer/' + res.data.id))
     assert.equal(res.status, 201)
     form = new FormData()
-    form.append('file', Buffer.alloc(100000), 'dataset.csv')
+    form.append('file', Buffer.alloc(100004), 'dataset.csv')
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 429)
 
     // test nb datasets size limit

@@ -1,13 +1,14 @@
 const fs = require('fs-extra')
-const config = require('config')
+const config = /** @type {any} */(require('config'))
 const path = require('path')
 const multer = require('multer')
 const createError = require('http-errors')
 const { nanoid } = require('nanoid')
 const mime = require('mime-types')
 const datasetSchema = require('../../../contract/dataset')
-const datasetUtils = require('../../datasets/utils')
-const asyncWrap = require('./async-handler')
+const datasetUtils = require('./')
+const asyncWrap = require('../../misc/utils/async-handler')
+const promisifyMiddleware = require('../../misc/utils/promisify-middleware')
 const fallbackMimeTypes = {
   dbf: 'application/dbase',
   dif: 'text/plain',
@@ -16,19 +17,17 @@ const fallbackMimeTypes = {
 }
 const debug = require('debug')('files')
 
-const { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } = require('../../workers/converter')
+const { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } = require('../../workers/file-normalizer')
 
 const storage = multer.diskStorage({
   destination: async function (req, file, cb) {
     try {
       if (req.dataset) {
-        req.uploadDir = datasetUtils.dir({ ...req.dataset, draftReason: req.query.draft === 'true' })
+        req.uploadDir = datasetUtils.loadingDir({ ...req.dataset, draftReason: req.query.draft === 'true' })
       } else {
         // a tmp dir in case of new dataset, it will be moved into the actual dataset directory
         // after upload completion and final id atttribution
         req.uploadDir = path.join(config.dataDir, 'tmp', nanoid())
-        // const owner = req.dataset ? req.dataset.owner : usersUtils.owner(req)
-        // return path.join(config.dataDir, owner.type, owner.id, 'datasets', req.dataset.id)
       }
       debug('Create destination directory', req.uploadDir)
       await fs.ensureDir(req.uploadDir)
@@ -56,42 +55,51 @@ const storage = multer.diskStorage({
 
 const allowedTypes = exports.allowedTypes = new Set([...basicTypes, ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes])
 
-exports.uploadFile = () => {
-  return multer({
-    limits: {
-      files: 2 // no more than the dataset file + attachments archive
-    },
-    storage,
-    fileFilter: async function fileFilter (req, file, cb) {
-      try {
-        debug('Accept file ?', file.originalname)
-        // mime type is broken on windows it seems.. detect based on extension instead
-        file.mimetype = mime.lookup(file.originalname) || fallbackMimeTypes[file.originalname.split('.').pop()] || file.originalname.split('.').pop()
+const middleware = multer({
+  limits: {
+    files: 2 // no more than the dataset file + attachments archive
+  },
+  storage,
+  fileFilter: async function fileFilter (req, file, cb) {
+    try {
+      debug('Accept file ?', file.originalname)
+      // mime type is broken on windows it seems.. detect based on extension instead
+      file.mimetype = mime.lookup(file.originalname) || fallbackMimeTypes[file.originalname.split('.').pop()] || file.originalname.split('.').pop()
 
-        if (file.fieldname === 'file' || file.fieldname === 'dataset') {
-          if (!allowedTypes.has(file.mimetype)) {
-            if (file.mimetype === 'application/gzip' && basicTypes.includes(mime.lookup(file.originalname.slice(0, file.originalname.length - 3)))) {
-              // gzip of a csv or other basic type is also accepted, converter will proceed
-            } else {
-              throw createError(400, file.mimetype + ' type is not supported')
-            }
+      if (file.fieldname === 'file' || file.fieldname === 'dataset') {
+        if (!allowedTypes.has(file.mimetype)) {
+          if (file.mimetype === 'application/gzip' && basicTypes.includes(mime.lookup(file.originalname.slice(0, file.originalname.length - 3)))) {
+            // gzip of a csv or other basic type is also accepted, file-normalizer will proceed
+          } else {
+            throw createError(400, file.mimetype + ' type is not supported')
           }
-        } else if (file.fieldname === 'attachments') {
-          if (file.mimetype !== 'application/zip') throw createError(400, 'Les fichiers joints doivent être embarqués dans une archive zip')
-        } else {
-          throw createError(400, `Fichier dans un champ non supporté: "${file.fieldname}"`)
         }
-        debug('File accepted', file.originalname)
-        cb(null, true)
-      } catch (err) {
-        debug('File rejected', err)
-        cb(err)
+      } else if (file.fieldname === 'attachments') {
+        if (file.mimetype !== 'application/zip') throw createError(400, 'Les fichiers joints doivent être embarqués dans une archive zip')
+      } else {
+        throw createError(400, `Fichier dans un champ non supporté: "${file.fieldname}"`)
       }
+      debug('File accepted', file.originalname)
+      cb(null, true)
+    } catch (err) {
+      debug('File rejected', err)
+      cb(err)
     }
-  }).any()
+  }
+}).any()
+
+const getMulterFiles = promisifyMiddleware(middleware, 'files')
+
+exports.getFiles = async (req, res) => {
+  const files = await getMulterFiles(req, res)
+  for (const file of files || []) {
+    await fsyncFile(file.path)
+  }
+  return files
 }
 
-const getFormBody = (body) => {
+exports.getFormBody = (body) => {
+  if (!body) throw createError(400, 'Missing body')
   if (body.body) {
     try {
       return JSON.parse(body.body)
@@ -120,16 +128,8 @@ const getFormBody = (body) => {
   return body
 }
 
-// Form data fields are sent as strings, some have to be parsed as objects or arrays
-exports.fixFormBody = (validate) => (req, res, next) => {
-  if (!req.body) return res.status(400).type('text/plain').send('Missing body')
-  req.body = getFormBody(req.body)
-  validate(req.body)
-  next()
-}
-
 // try to prevent weird bug with NFS by forcing syncing new files before use
-exports.fsyncFile = async (p) => {
+const fsyncFile = async (p) => {
   const fd = await fs.open(p, 'r')
   await fs.fsync(fd)
   await fs.close(fd)
@@ -137,7 +137,7 @@ exports.fsyncFile = async (p) => {
 
 exports.fsyncFiles = asyncWrap(async (req, res, next) => {
   for (const file of req.files || []) {
-    await exports.fsyncFile(file.path)
+    await fsyncFile(file.path)
   }
   next()
 })

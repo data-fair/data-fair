@@ -117,14 +117,15 @@ describe('datasets', () => {
     assert.equal(res.status, 201)
     assert.equal(res.data.owner.type, 'user')
     assert.equal(res.data.owner.id, 'dmeadus0')
-    assert.equal(res.data.file.encoding, 'UTF-8')
     assert.equal(res.data.previews.length, 1)
     assert.equal(res.data.previews[0].id, 'table')
     assert.equal(res.data.previews[0].title, 'Tableau')
     assert.ok(res.data.previews[0].href.endsWith(`/embed/dataset/${res.data.id}/table`))
     assert.equal(res.data.updatedAt, res.data.createdAt)
     assert.equal(res.data.updatedAt, res.data.dataUpdatedAt)
-    await workers.hook('finalizer/' + res.data.id)
+    const dataset = await workers.hook('finalizer/' + res.data.id)
+    assert.equal(dataset.file.encoding, 'UTF-8')
+    assert.equal(dataset.count, 2)
   })
 
   it('Upload new dataset in user zone with title', async () => {
@@ -243,7 +244,7 @@ describe('datasets', () => {
     wsCli.send(JSON.stringify({ type: 'subscribe', channel: 'datasets/' + datasetId + '/journal' }))
     res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
     assert.equal(res.status, 200)
-    assert.equal(res.data.length, 7)
+    assert.equal(res.data.length, 9)
 
     // Send again the data to the same dataset
     form = new FormData()
@@ -257,7 +258,7 @@ describe('datasets', () => {
     await testUtils.timeout(eventToPromise(notifier, 'webhook'), 2000, 'second webhook not received')
     res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
 
-    assert.equal(res.data.length, 14)
+    assert.equal(res.data.length, 18)
     // testing permissions
     await assert.rejects(global.ax.dmeadus.get(webhook.href), err => err.status === 403)
     await assert.rejects(global.ax.anonymous.get(webhook.href), err => err.status === 403)
@@ -297,9 +298,9 @@ describe('datasets', () => {
     const form2 = new FormData()
     form2.append('file', datasetFd, 'dataset-name2.csv')
     res = await ax.put('/api/v1/datasets/dataset-name', form2, { headers: testUtils.formHeaders(form2) })
-    assert.equal(res.data.originalFile.name, 'dataset-name2.csv')
-    assert.equal(res.data.file.name, 'dataset-name2.csv')
     const dataset = await workers.hook('finalizer/dataset-name')
+    assert.equal(dataset.originalFile.name, 'dataset-name2.csv')
+    assert.equal(dataset.file.name, 'dataset-name2.csv')
     assert.equal(dataset.updatedAt, dataset.dataUpdatedAt)
     assert.notEqual(dataset.updatedAt, dataset.createdAt)
     res = await ax.get('/api/v1/limits/user/dmeadus0')

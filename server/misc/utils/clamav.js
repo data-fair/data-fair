@@ -1,5 +1,5 @@
 const path = require('path')
-const config = require('config')
+const config = /** @type {any} */(require('config'))
 const { Socket } = require('node:net')
 const createError = require('http-errors')
 const { PromiseSocket } = require('promise-socket')
@@ -26,18 +26,24 @@ exports.ping = async () => {
 }
 
 exports.middleware = asyncWrap(async (req, res, next) => {
-  if (!config.clamav.active) return next()
-  for (const file of req.files || []) {
+  await exports.checkFiles(req.files, req.user)
+  next()
+})
+
+exports.checkFiles = async (files, user) => {
+  if (!config.clamav.active) return true
+  for (const file of files || []) {
     const remotePath = path.join(config.clamav.dataDir, path.relative(config.dataDir, file.path))
     const result = await runCommand(`SCAN ${remotePath}`)
+    console.log(result)
     if (result.endsWith('OK')) continue
     if (result.endsWith('ERROR')) throw createError('failure while applying antivirus ' + result.slice(0, -6))
     if (result.endsWith('FOUND')) {
       observe.infectedFiles.inc()
-      console.warn('[infected-file] a user attempted to upload an infected file', result, req.user, file)
+      console.warn('[infected-file] a user attempted to upload an infected file', result, user, file)
       throw createError(400, 'malicious file detected')
     }
     throw createError('Unexpected result from antivirus ' + result)
   }
-  next()
-})
+  return true
+}

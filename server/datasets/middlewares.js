@@ -15,10 +15,13 @@ const virtualDatasetsUtils = require('./utils/virtual')
  * @returns
  */
 exports.checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
+  // @ts-ignore
+  if (!req.user) throw createError(401)
   if (process.env.NO_STORAGE_CHECK === 'true') return next()
   if (!req.get('Content-Length')) throw createError(411, 'Content-Length is mandatory')
   const contentLength = Number(req.get('Content-Length'))
   if (Number.isNaN(contentLength)) throw createError(400, 'Content-Length is not a number')
+
   // @ts-ignore
   const dataset = req.dataset
   const db = req.app.get('db')
@@ -52,36 +55,14 @@ exports.lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) =
   throw createError(409, `Une opération bloquante est déjà en cours sur le jeu de données ${datasetId}.`)
 })
 
-exports.lockNewDataset = async (req, res, dataset) => {
-  const db = req.app.get('db')
-  const lockKeys = [`dataset:${dataset.id}`, `dataset:slug:${dataset.owner.type}:${dataset.owner.id}:${dataset.slug}`]
-  const acks = await Promise.all(lockKeys.map(lockKey => locks.acquire(db, lockKey, `${req.method} ${req.originalUrl}`)))
-  res.on('close', () => {
-    for (let i = 0; i < lockKeys.length; i++) {
-      if (acks[i]) {
-        locks.release(db, lockKeys[i]).catch(err => console.error('failure to release dataset lock', err))
-      }
-    }
-  })
-  if (acks.includes(false)) {
-    for (let i = 0; i < lockKeys.length; i++) {
-      if (acks[i]) {
-        await locks.release(db, lockKeys[i])
-      }
-    }
-    return false
-  }
-  return true
-}
-
 // Shared middleware to read dataset in db
 // also checks that the dataset is in a state compatible with some action
 // supports waiting a little bit to be a little permissive with the user
 /**
- * @param {{acceptedStatuses?: string[] | ((body: any, dataset: any) => string[] | null), fillDescendants?: boolean, alwaysDraft?: boolean}} fillDescendants
+ * @param {{acceptedStatuses?: string[] | ((body: any, dataset: any) => string[] | null), fillDescendants?: boolean, alwaysDraft?: boolean, acceptMissing?: boolean}} fillDescendants
  * @returns
  */
-exports.readDataset = ({ acceptedStatuses: _acceptedStatuses, fillDescendants, alwaysDraft } = {}) => asyncWrap(async (req, res, next) => {
+exports.readDataset = ({ acceptedStatuses: _acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing } = {}) => asyncWrap(async (req, res, next) => {
   // @ts-ignore
   const publicationSite = req.publicationSite
   // @ts-ignore
@@ -93,7 +74,10 @@ exports.readDataset = ({ acceptedStatuses: _acceptedStatuses, fillDescendants, a
   let dataset
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
     dataset = await findUtils.getByUniqueRef(req.app.get('db'), publicationSite, mainPublicationSite, req.params, 'dataset', null, tolerateStale)
-    if (!dataset) return res.status(404).send('Dataset not found')
+    if (!dataset) {
+      if (acceptMissing) return next()
+      return res.status(404).send('Dataset not found')
+    }
     // @ts-ignore
     req.datasetFull = { ...dataset }
 

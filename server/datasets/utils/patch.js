@@ -8,7 +8,6 @@ const datasetUtils = require('./')
 const extensions = require('./extensions')
 const datasetPatchSchema = require('../../../contract/dataset-patch')
 const virtualDatasetsUtils = require('./virtual')
-const { basicTypes } = require('../../workers/converter')
 
 exports.validatePatch = ajv.compile(datasetPatchSchema)
 
@@ -18,9 +17,10 @@ exports.validatePatch = ajv.compile(datasetPatchSchema)
  * @param {any} dataset
  * @param {any} user
  * @param {string} locale
+ * @param {any[]} [files]
  * @returns {Promise<{removedRestProps?: any[], attemptMappingUpdate?: boolean, isEmpty?: boolean}>}
  */
-exports.preparePatch = async (app, patch, dataset, user, locale) => {
+exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
   const db = app.get('db')
 
   patch.id = dataset.id
@@ -34,8 +34,24 @@ exports.preparePatch = async (app, patch, dataset, user, locale) => {
     if (dataset.isVirtual) patch.status = 'indexed'
     else if (dataset.isRest) patch.status = 'analyzed'
     else if (dataset.remoteFile && !dataset.originalFile) patch.status = 'imported'
-    else if (!basicTypes.includes(dataset.originalFile.mimetype)) patch.status = 'uploaded'
-    else patch.status = 'loaded'
+    else patch.status = 'stored'
+  }
+
+  const datasetFile = files && files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
+  const attachmentsFile = files?.find(f => f.fieldname === 'attachments')
+
+  if (datasetFile) {
+    patch.loaded = {
+      dataset: {
+        name: datasetFile.originalname,
+        size: datasetFile.size,
+        mimetype: datasetFile.mimetype
+      }
+    }
+  }
+  if (attachmentsFile) {
+    patch.loaded = patch.loaded || {}
+    patch.loaded.attachments = true
   }
 
   // Ignore patch that doesn't bring actual change
@@ -83,8 +99,12 @@ exports.preparePatch = async (app, patch, dataset, user, locale) => {
 
   let attemptMappingUpdate = false
 
-  if (patch.remoteFile) {
-    if (patch.remoteFile?.url !== dataset.remoteFile?.url) {
+  if (datasetFile || attachmentsFile) {
+    patch.dataUpdatedBy = patch.updatedBy
+    patch.dataUpdatedAt = patch.updatedAt
+    patch.status = 'loaded'
+  } else if (patch.remoteFile) {
+    if (patch.remoteFile?.url !== dataset.remoteFile?.url || patch.remoteFile?.name !== dataset.remoteFile?.name) {
       delete patch.remoteFile.lastModified
       delete patch.remoteFile.etag
       patch.status = 'imported'
@@ -92,8 +112,7 @@ exports.preparePatch = async (app, patch, dataset, user, locale) => {
       patch.remoteFile.lastModified = dataset.remoteFile.lastModified
       patch.remoteFile.etag = dataset.remoteFile.etag
     }
-  }
-  if (dataset.isVirtual) {
+  } else if (dataset.isVirtual) {
     if (patch.schema || patch.virtual) {
       patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...dataset, ...patch })
       patch.status = 'indexed'

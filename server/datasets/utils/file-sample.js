@@ -1,13 +1,11 @@
 const fs = require('fs')
 const util = require('util')
-const { filePath } = require('./files')
 
 const stat = util.promisify(fs.stat)
 const open = util.promisify(fs.open)
 const read = util.promisify(fs.read)
 
-module.exports = async function (dataset, removeBOM) {
-  const p = filePath(dataset)
+module.exports = async function (p, removeBOM) {
   const st = await stat(p)
   const fd = await open(p, 'r')
   const size = Math.min(st.size, 1024 * 1024)

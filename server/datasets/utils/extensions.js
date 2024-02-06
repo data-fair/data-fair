@@ -330,7 +330,7 @@ function prepareInputMapping (action, dataset, extensionKey, selectFields) {
  * @param {any[]} extensions
  * @returns
  */
-exports.prepareSchema = async (db, schema, extensions) => {
+exports.prepareExtensionsSchema = exports.prepareSchema = async (db, schema, extensions) => {
   let extensionsFields = []
   await exports.checkExtensions(db, schema, extensions)
   for (const extension of extensions) {

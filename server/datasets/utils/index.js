@@ -1,3 +1,4 @@
+const path = require('path')
 const config = /** @type {any} */(require('config'))
 const slug = require('slugify')
 const CronJob = require('cron').CronJob
@@ -5,7 +6,6 @@ const locks = require('../../misc/utils/locks')
 const observe = require('../../misc/utils/observe')
 const nanoid = require('../../misc/utils/nanoid')
 const visibilityUtils = require('../../misc/utils/visibility')
-const { basicTypes } = require('../../workers/converter')
 const { prepareThumbnailUrl } = require('../../misc/utils/thumbnails')
 const { prepareMarkdownContent } = require('../../misc/utils/markdown')
 const permissions = require('../../misc/utils/permissions')
@@ -26,6 +26,9 @@ exports.dir = filesUtils.dir
 exports.fullFilePath = filesUtils.fullFilePath
 exports.fullFileName = filesUtils.fullFileName
 exports.exportedFilePath = filesUtils.exportedFilePath
+exports.loadedFilePath = filesUtils.loadedFilePath
+exports.loadingDir = filesUtils.loadingDir
+exports.loadedAttachmentsFilePath = filesUtils.loadedAttachmentsFilePath
 
 exports.mergeFileSchema = schemaUtils.mergeFileSchema
 exports.cleanSchema = schemaUtils.cleanSchema
@@ -41,10 +44,9 @@ exports.sampleValues = dataStreamsUtils.sampleValues
 exports.readStreams = dataStreamsUtils.readStreams
 
 exports.reindex = async (db, dataset) => {
-  const patch = { status: 'loaded' }
+  const patch = { status: 'stored' }
   if (dataset.isVirtual) patch.status = 'indexed'
   else if (dataset.isRest) patch.status = 'analyzed'
-  else if (dataset.originalFile && !basicTypes.includes(dataset.originalFile.mimetype)) patch.status = 'uploaded'
   return (await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
 }
@@ -56,8 +58,9 @@ exports.refinalize = async (db, dataset) => {
 }
 
 // Generate ids and try insertion until there is no conflict on id
-exports.insertWithId = async (db, dataset, res) => {
+exports.insertWithId = async (db, dataset, onClose) => {
   const baseSlug = slug(dataset.title, { lower: true, strict: true })
+  const owner = dataset.owner
   dataset.id = dataset.id ?? nanoid()
   dataset.slug = baseSlug
   exports.setUniqueRefs(dataset)
@@ -67,8 +70,9 @@ exports.insertWithId = async (db, dataset, res) => {
     const idLockKey = `dataset:${dataset.id}`
     const idAck = locks.acquire(db, idLockKey, 'insertWithBaseid')
     if (!idAck) throw new Error(`dataset id ${dataset.id} is locked`)
-    if (res) {
-      res.on('close', () => {
+    if (onClose) {
+      onClose(() => {
+        // console.log('releasing dataset lock on id', idLockKey)
         locks.release(db, idLockKey).catch(err => {
           observe.internalError.inc({ errorCode: 'dataset-lock-id' })
           console.error('(dataset-lock-id) failure to release dataset lock on id', err)
@@ -76,14 +80,15 @@ exports.insertWithId = async (db, dataset, res) => {
       })
     }
 
-    const slugLockKey = `dataset:slug:${dataset.owner.type}:${dataset.owner.id}:${dataset.slug}`
+    const slugLockKey = `dataset:slug:${owner.type}:${owner.id}:${dataset.slug}`
     const slugAck = locks.acquire(db, slugLockKey, 'insertWithBaseid')
     if (slugAck) {
       try {
         await db.collection('datasets').insertOne(dataset)
         insertOk = true
-        if (res) {
-          res.on('close', () => {
+        if (onClose) {
+          onClose(() => {
+            // console.log('releasing dataset lock on slug', slugLockKey)
             locks.release(db, slugLockKey).catch(err => {
               observe.internalError.inc({ errorCode: 'dataset-lock-slug' })
               console.error('(dataset-lock-slug) failure to release dataset lock on slug', err)
@@ -109,6 +114,7 @@ exports.insertWithId = async (db, dataset, res) => {
     dataset.slug = `${baseSlug}-${i}`
     exports.setUniqueRefs(dataset)
   }
+  return dataset
 }
 
 exports.previews = (dataset, publicUrl = config.publicUrl) => {
@@ -175,6 +181,7 @@ exports.clean = (publicUrl, publicationSite, dataset, query = {}, draft = false)
   delete dataset._id
   delete dataset._uniqueRefs
   delete dataset.initFrom
+  delete dataset.loaded
   if (select.includes('-userPermissions')) delete dataset.userPermissions
   if (select.includes('-owner')) delete dataset.owner
 
@@ -204,4 +211,10 @@ exports.curateDataset = (dataset, existingDataset) => {
   } else if (dataset.remoteFile?.autoUpdate) {
     delete dataset.remoteFile.autoUpdate.nextUpdate
   }
+}
+
+exports.titleFromFileName = (name) => {
+  let baseFileName = path.parse(name).name
+  if (baseFileName.endsWith('.gz')) baseFileName = path.parse(baseFileName).name
+  return path.parse(baseFileName).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')
 }

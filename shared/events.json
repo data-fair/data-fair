@@ -44,14 +44,28 @@
         "en": "end of dataset initialization"
       }
     },
-    "convert-start": {
+    "store-start": {
+      "icon": "mdi-content-save",
+      "text": {
+        "fr": "début de l'ajout dans l'espace de stockage",
+        "en": "start adding to storage space"
+      }
+    },
+    "store-end": {
+      "icon": "mdi-content-save",
+      "text": {
+        "fr": "fin de l'ajout dans l'espace de stockage",
+        "en": "end of adding to storage space"
+      }
+    },
+    "normalize-start": {
       "icon": "mdi-file-swap",
       "text": {
         "fr": "début de la conversion du fichier",
         "en": "start of file conversion"
       }
     },
-    "convert-end": {
+    "normalize-end": {
       "icon": "mdi-file-swap",
       "text": {
         "fr": "fin de la conversion du fichier",

@@ -70,7 +70,7 @@ describe('datasets based on remote files', () => {
       { id: dataset.id }, { $set: { 'remoteFile.autoUpdate.nextUpdate': nextUpdate } })
     nockScope = nock('http://test-remote.com')
       .get('/data.csv').reply(200, 'col\nval1\nval2')
-    dataset = await workers.hook('downloader/' + dataset.id)
+    dataset = await workers.hook('fileDownloader/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
     nockScope.done()
 
@@ -79,7 +79,7 @@ describe('datasets based on remote files', () => {
       { id: dataset.id }, { $set: { 'remoteFile.autoUpdate.nextUpdate': nextUpdate } })
     nockScope = nock('http://test-remote.com')
       .get('/data.csv').reply(304)
-    dataset = await workers.hook('downloader/' + dataset.id)
+    dataset = await workers.hook('fileDownloader/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
     nockScope.done()
 

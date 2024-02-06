@@ -16,11 +16,11 @@ describe('Attachments', () => {
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     let dataset = res.data
     assert.equal(res.status, 201)
-    assert.equal(dataset.status, 'uploaded')
+    assert.equal(dataset.status, 'loaded')
 
     // dataset converted
-    dataset = await workers.hook(`converter/${dataset.id}`)
-    assert.equal(dataset.status, 'loaded')
+    dataset = await workers.hook(`fileNormalizer/${dataset.id}`)
+    assert.equal(dataset.status, 'normalized')
     assert.equal(dataset.file.name, 'files.csv')
 
     // ES indexation and finalization

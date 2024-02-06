@@ -1,27 +1,27 @@
 {
   "dataset": {
-    "uploaded": {
-      "title": {
-        "fr": "Chargé (à convertir)",
-        "en": "Loaded (waiting conversion)"
-      }
-    },
     "loaded": {
       "title": {
         "fr": "Chargé",
         "en": "Loaded"
       }
     },
-    "analyzed": {
+    "stored": {
       "title": {
-        "fr": "Analyse initiale ok",
-        "en": "Initial analysis ok"
+        "fr": "Ajouté à l'espace de stockage",
+        "en": "Added to storage space"
       }
     },
-    "schematized": {
+    "normalized": {
       "title": {
-        "fr": "Schéma ok",
-        "en": "Schema ok"
+        "fr": "Format normalisé",
+        "en": "Normalized format"
+      }
+    },
+    "analyzed": {
+      "title": {
+        "fr": "Analyse de la structure ok",
+        "en": "Structure analysis ok"
       }
     },
     "indexed": {

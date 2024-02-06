@@ -6,8 +6,9 @@ const visibilityUtils = require('./visibility')
 const ajv = require('./ajv')
 const validate = ajv.compile(permissionsSchema)
 
-exports.middleware = function (operationId, operationClass, trackingCategory) {
+exports.middleware = function (operationId, operationClass, trackingCategory, acceptMissing) {
   return function (req, res, next) {
+    if ((acceptMissing && !req.resource)) return next()
     if (exports.can(req.resourceType, req.resource, operationId, req.user, req.bypassPermissions)) {
       // nothing to do, user can proceed
     } else {

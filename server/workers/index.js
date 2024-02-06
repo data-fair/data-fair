@@ -1,4 +1,4 @@
-const config = require('config')
+const config = /** @type {any} */(require('config'))
 const locks = require('../misc/utils/locks')
 const observe = require('../misc/utils/observe')
 const debug = require('debug')('workers')
@@ -6,8 +6,9 @@ const mergeDraft = require('../datasets/utils/merge-draft')
 
 const tasks = exports.tasks = {
   restInitializer: require('./rest-initializer'),
-  downloader: require('./downloader'),
-  converter: require('./converter'),
+  fileDownloader: require('./file-downloader'),
+  fileStorer: require('./file-storer'),
+  fileNormalizer: require('./file-normalizer'),
   csvAnalyzer: require('./csv-analyzer'),
   geojsonAnalyzer: require('./geojson-analyzer'),
   indexer: require('./indexer'),
@@ -193,19 +194,25 @@ async function iter (app, resource, type) {
       taskKey = 'catalogHarvester'
     } else if (type === 'dataset') {
       const moment = require('moment')
+
+      const normalized = (resource.status === 'stored' && tasks.fileNormalizer.basicTypes.includes(resource.originalFile?.mimetype)) || resource.status === 'normalized'
+
       if (resource.status === 'created' && resource.isRest) {
         // Initialize a REST dataset
         taskKey = 'restInitializer'
       } else if (resource.status === 'imported' || (resource.remoteFile?.autoUpdate?.active && resource.remoteFile.autoUpdate.nextUpdate < new Date().toISOString())) {
         // Load a dataset from a catalog
-        taskKey = 'downloader'
-      } else if (resource.status === 'uploaded') {
+        taskKey = 'fileDownloader'
+      } else if (resource.status === 'loaded') {
+        // File was either uploaded or downloded, it needs to be copied to the storage
+        taskKey = 'fileStorer'
+      } else if (resource.status === 'stored' && !normalized) {
         // XLS to csv of other transformations
-        taskKey = 'converter'
-      } else if (resource.status === 'loaded' && resource.file && tasks.converter.csvTypes.includes(resource.file.mimetype)) {
+        taskKey = 'fileNormalizer'
+      } else if (normalized && resource.file && tasks.fileNormalizer.csvTypes.includes(resource.file.mimetype)) {
         // Quickly parse a CSV file
         taskKey = 'csvAnalyzer'
-      } else if (resource.status === 'loaded' && resource.file && resource.file.mimetype === 'application/geo+json') {
+      } else if (normalized && resource.file && resource.file.mimetype === 'application/geo+json') {
         // Deduce a schema from geojson properties
         taskKey = 'geojsonAnalyzer'
       } else if (resource.isRest && resource.status === 'extended-updated') {
@@ -248,6 +255,7 @@ async function iter (app, resource, type) {
         taskKey = 'restExporterCSV'
       }
     }
+
     if (!taskKey) return
     const task = tasks[taskKey]
     debug(`run task ${taskKey} - ${type} / ${resource.id}`)
@@ -312,7 +320,8 @@ async function iter (app, resource, type) {
 
     observe.internalError.inc({ errorCode: 'task' })
 
-    console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, err, errorMessage)
+    console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, errorMessage)
+    if (!config.worker.spawnTask || !errorMessage) console.debug(err)
 
     // some error are caused by bad input, we should not retry these
     let retry = !errorMessage.startsWith('[noretry] ') && !!config.worker.errorRetryDelay

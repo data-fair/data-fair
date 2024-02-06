@@ -35,6 +35,13 @@ before('global mocks', () => {
         <script type="text/javascript">window.APPLICATION=%APPLICATION%;</script>
       </head>
       <body>My app body</body>
+      <script>
+        setTimeout(() => {
+          if (window.triggerCapture) {
+            window.triggerCapture()
+          }
+        }, 10)
+      </script>
     </html>
   `
   nock('http://monapp1.com/')
@@ -119,6 +126,10 @@ before('start app', async function () {
 })
 
 afterEach('scratch data', async function () {
+  if (this.currentTest.state === 'failed') {
+    // not scratching in case of failure can be handy to check the data
+    return
+  }
   debug('scratch data')
   const runningTasks = workers.runningTasks()
   if (runningTasks.length) {

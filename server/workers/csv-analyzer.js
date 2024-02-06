@@ -14,7 +14,7 @@ exports.process = async function (app, dataset) {
 
   const debug = require('debug')(`worker:csv-analyzer:${dataset.id}`)
   debug('extract file sample')
-  const fileSample = await datasetFileSample(dataset, dataset.file.encoding === 'UTF-8')
+  const fileSample = await datasetFileSample(datasetUtils.filePath(dataset), dataset.file.encoding === 'UTF-8')
   if (!fileSample) throw createError(400, '[noretry] Échec d\'échantillonage du fichier tabulaire, il est vide')
   let decodedSample
   try {

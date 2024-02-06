@@ -1,7 +1,7 @@
 // convert from tabular data to csv or geographical data to geojson
 const config = /** @type {any} */(require('config'))
 
-exports.eventsPrefix = 'convert'
+exports.eventsPrefix = 'normalize'
 
 const archiveTypes = exports.archiveTypes = new Set([
   'application/zip' // .zip
@@ -58,7 +58,7 @@ exports.process = async function (app, dataset) {
 
   const dataDir = path.resolve(config.dataDir)
 
-  const debug = require('debug')(`worker:converter:${dataset.id}`)
+  const debug = require('debug')(`worker:file-normalizer:${dataset.id}`)
   const originalFilePath = datasetUtils.originalFilePath(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
   const tmpDir = (await tmp.dir({ dir: path.join(dataDir, 'tmp'), unsafeCleanup: true })).path
@@ -201,7 +201,7 @@ exports.process = async function (app, dataset) {
     throw createError(400, `[noretry] Le format de ce fichier n'est pas supporté (${dataset.originalFile.mimetype}).`)
   }
 
-  dataset.status = 'loaded'
+  dataset.status = 'normalized'
 
   const patch = { status: dataset.status, file: dataset.file, schema: dataset.schema }
   if (dataset.timeZone) patch.timeZone = dataset.timeZone
