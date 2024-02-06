@@ -5,7 +5,7 @@
   >
     <v-row class="mx-0">
       <v-col class="pa-0">
-        <template v-if="(dataset.isVirtual || dataset.isRest || simpleMode) && journal">
+        <template v-if="(dataset.isVirtual || dataset.isRest || dataset.isMetaOnly || simpleMode) && journal">
           <v-list-item
             v-if="journal[0] && dataset.status !== 0"
             :class="`pa-2 event-${journal[0].type}`"
@@ -35,7 +35,7 @@
         <v-stepper
           v-else
           id="status-stepper"
-          :value="stateFromStatus(dataset.status)"
+          :value="currentStep"
           alt-labels
           class="elevation-0"
           style="background: transparent"
@@ -48,10 +48,10 @@
               />
               <v-stepper-step
                 :key="i"
-                :rules="[() => stateFromStatus(dataset.status) !== i+1 || dataset.status !== 'error']"
-                :step="i+1"
-                :complete="stateFromStatus(dataset.status) > i+1"
-                :color="stateFromStatus(dataset.status) === i+1 ? 'accent' : (step.color || 'primary')"
+                :rules="[() => !(dataset.status === 'error' && currentStep === i)]"
+                :step="i"
+                :complete="currentStep > i"
+                :color="currentStep === i ? 'accent' : (step.color || 'primary')"
               >
                 <v-tooltip top>
                   <template #activator="{on}">
@@ -222,26 +222,36 @@ export default {
         { title: this.$t('extensionTitle'), description: this.$t('extensionDesc') },
         { title: this.$t('indexingTitle'), description: this.$t('indexingDesc') },
         { title: this.$t('finalizingTitle'), description: this.$t('finalizingDesc'), color: 'success' }
-      ],
-      states: ['remote', 'uploaded', 'loaded', 'analyzed', 'extended', 'indexed', 'finalized']
+      ]
     }
   },
   computed: {
     ...mapState(['projections']),
     ...mapState('dataset', ['dataset', 'journal', 'eventStates']),
-    ...mapGetters('dataset', ['can'])
+    ...mapGetters('dataset', ['can']),
+    nonErrorStatus () {
+      // is status is in error, get the previous state from the journal
+      if (this.dataset.status === 'error') {
+        const idx = (this.journal || []).findIndex(e => e.type === 'error')
+        if (idx < 0) return 'loaded' // this should not happen ?
+        return this.eventStates[this.journal[idx + 1].type] ?? 'loaded'
+      } else {
+        return this.dataset.status
+      }
+    },
+    currentStep () {
+      const status = this.nonErrorStatus
+      if (status === 'stored') return 1
+      if (status === 'normalized') return 2
+      if (status === 'analyzed') return 3
+      if (status === 'extended') return 4
+      if (status === 'indexed') return 5
+      if (status === 'finalized') return 6
+      return 0
+    }
   },
   methods: {
-    ...mapActions('dataset', ['patch', 'validateDraft', 'cancelDraft']),
-    stateFromStatus (status) {
-      if (status === 'updated-extended') status = 'extended'
-      if (status !== 'error') return this.states.indexOf(status) + 1
-      else {
-        const idx = (this.journal || []).findIndex(e => e.type === 'error')
-        if (idx < 0) return 0
-        return this.states.indexOf(this.eventStates[this.journal[idx + 1].type]) + 1
-      }
-    }
+    ...mapActions('dataset', ['patch', 'validateDraft', 'cancelDraft'])
   }
 }
 </script>

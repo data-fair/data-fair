@@ -427,11 +427,12 @@ fr:
   datasets: jeux de données
   tasks:
     initialize: initialisation
+    store: chargement
     index: indexation
     extend: extensions
     analyze: analyse
     finalize: finalisation
-    convert: conversion
+    normalize: conversion
     download: téléchargement
 en:
   schema: Schema
@@ -467,11 +468,12 @@ en:
   datasets: datasets
   tasks:
     initialize: initialization
+    store: loading
     index: indexing
     extend: extensions
     analyze: analysis
     finalize: finalization
-    convert: conversion
+    normalize: conversion
     download: download
 </i18n>
 
