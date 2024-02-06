@@ -501,7 +501,8 @@ export default {
     selectedCols: [],
     ready: false,
     fixedCol: null,
-    noInteraction: false
+    noInteraction: false,
+    conceptsFilters: {}
   }),
   computed: {
     ...mapState(['vocabulary']),
@@ -554,6 +555,7 @@ export default {
     },
     params () {
       const params = {
+        ...this.conceptsFilters,
         size: this.pagination.itemsPerPage,
         page: this.pagination.page,
         q_mode: this.qMode,
@@ -574,6 +576,7 @@ export default {
       }
       if (this.dataset.finalizedAt) params.finalizedAt = this.dataset.finalizedAt
       // if (this.displayMode === 'list') params.html = true
+
       return params
     },
     downloadParams () {
@@ -714,6 +717,9 @@ export default {
       }
       this.noInteraction = query.interaction === 'false' || query.interaction === '0'
       this.filters = filtersUtils.readQueryParams(query, this.dataset)
+      this.conceptsFilters = Object.keys(query)
+        .filter(key => key.startsWith('_c_'))
+        .reduce((a, key) => { a[key] = query[key]; return a }, {})
     },
     writeQueryParams () {
       const query = { ...this.$route.query }

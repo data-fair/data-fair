@@ -98,36 +98,24 @@ export function readQueryParams (query, dataset) {
   const filters = []
 
   Object.keys(query).forEach(key => {
-    let hidden = false
-    let field
-    if (key.startsWith('_c_')) {
-      hidden = true
-      const conceptId = key.split('_')[2]
-      field = dataset.schema.find(p => p['x-concept'] && p['x-concept'].primary && p['x-concept'].id === conceptId)
-      if (!field) console.error('field not found for concept filter', key, conceptId, dataset.schema)
-    } else {
-      const fieldKey = key.split('_').slice(0, -1).join('_')
-      field = dataset.schema.find(p => p.key === fieldKey)
-    }
+    const fieldKey = key.split('_').slice(0, -1).join('_')
+    const field = dataset.schema.find(p => p.key === fieldKey)
 
     if (field) {
       if (key.endsWith('_eq')) {
         filters.push({
-          hidden,
           type: 'in',
           field,
           values: [query[key]]
         })
       } else if (key.endsWith('_in')) {
         filters.push({
-          hidden,
           type: 'in',
           field,
           values: JSON.parse(`[${query[key]}]`)
         })
       } else if (key.endsWith('_starts')) {
         filters.push({
-          hidden,
           type: 'starts',
           field,
           value: query[key]
@@ -135,7 +123,6 @@ export function readQueryParams (query, dataset) {
       } else if (key.endsWith('_interval')) {
         const values = JSON.parse(`[${query[key]}]`)
         filters.push({
-          hidden,
           type: 'interval',
           field,
           minValue: values[0],
