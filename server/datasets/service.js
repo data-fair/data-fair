@@ -433,15 +433,22 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
   }
 
   if (patchedDataset.originalFile && patchedDataset.originalFile.name !== patchedDataset.file?.name) {
-    await fs.move(originalFilePath(datasetDraft), originalFilePath(patchedDataset), { overwrite: true })
-    await fsyncFile(originalFilePath(patchedDataset))
+    // creating empty file before moving seems to fix some weird bugs with NFS
+    const newOriginalFilePath = originalFilePath(patchedDataset)
+    // ensureFile and fsync to try and fix weird nfs bugs
+    await fs.ensureFile(newOriginalFilePath)
+    await fs.move(originalFilePath(datasetDraft), newOriginalFilePath, { overwrite: true })
+    await fsyncFile(newOriginalFilePath)
   }
   if (datasetFull.originalFile && datasetFull.originalFile.name !== datasetFull.file?.name && originalFilePath(patchedDataset) !== originalFilePath(datasetFull)) {
     await fs.remove(originalFilePath(datasetFull))
   }
 
-  await fs.move(filePath(datasetDraft), filePath(patchedDataset), { overwrite: true })
-  await fsyncFile(filePath(patchedDataset))
+  const newFilePath = filePath(patchedDataset)
+  // ensureFile and fsync to try and fix weird nfs bugs
+  await fs.ensureFile(newFilePath)
+  await fs.move(filePath(datasetDraft), newFilePath, { overwrite: true })
+  await fsyncFile(newFilePath)
 
   if (datasetFull.file && filePath(patchedDataset) !== filePath(datasetFull)) {
     await fs.remove(filePath(datasetFull))
