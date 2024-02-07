@@ -1,6 +1,5 @@
 exports.process = async function (app, dataset) {
   const observe = require('../misc/utils/observe')
-  const path = require('path')
   const fs = require('fs-extra')
   const config = require('config')
   const tmp = require('tmp-promise')
@@ -10,15 +9,15 @@ exports.process = async function (app, dataset) {
   const outputs = require('../datasets/utils/outputs')
   const datasetUtils = require('../datasets/utils')
   const datasetsService = require('../datasets/service')
+  const { tmpDir } = require('../datasets/utils/files')
 
-  const dataDir = path.resolve(config.dataDir)
   const debug = require('debug')(`worker:rest-exporter-csv:${dataset.id}`)
   const db = app.get('db')
   const date = new Date()
   const patch = { exports: JSON.parse(JSON.stringify(dataset.exports)) }
   patch.exports.restToCSV.lastExport = { date }
   try {
-    const tmpFile = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
+    const tmpFile = await tmp.tmpName({ dir: tmpDir })
     // creating empty file before streaming seems to fix some weird bugs with NFS
     await fs.ensureFile(tmpFile)
     debug('write into file', tmpFile)

@@ -8,15 +8,18 @@ const rateLimiting = require('../utils/rate-limiting')
 const debug = require('debug')('capture')
 const permissionsUtils = require('./permissions')
 const observe = require('./observe')
+const resolvePath = require('resolve-path')
 
 const captureUrl = config.privateCaptureUrl || config.captureUrl
 
+const capturesDir = path.resolve(config.dataDir, 'captures')
+
 exports.init = async () => {
-  await fs.ensureDir(path.resolve(config.dataDir, 'captures'))
+  await fs.ensureDir(capturesDir)
 }
 
 exports.pathDefault = async (application) => {
-  return path.resolve(config.dataDir, 'captures', application.id + '.png')
+  return resolvePath(capturesDir, application.id + '.png')
 }
 
 exports.requestOpts = (req, isDefaultThumbnail) => {
@@ -70,7 +73,7 @@ const stream2file = async (reqOpts, capturePath) => {
 }
 
 exports.screenshot = async (req, res) => {
-  const capturePath = path.resolve(config.dataDir, 'captures', req.application.id + '.png')
+  const capturePath = resolvePath(capturesDir, req.application.id + '.png')
 
   const isDefaultThumbnail = Object.keys(req.query).filter(k => k !== 'updatedAt' && k !== 'app_capture-test-error').length === 0
 

@@ -30,6 +30,8 @@ exports.exportedFilePath = filesUtils.exportedFilePath
 exports.loadedFilePath = filesUtils.loadedFilePath
 exports.loadingDir = filesUtils.loadingDir
 exports.loadedAttachmentsFilePath = filesUtils.loadedAttachmentsFilePath
+exports.attachmentPath = filesUtils.attachmentPath
+exports.metadataAttachmentPath = filesUtils.metadataAttachmentPath
 
 exports.mergeFileSchema = schemaUtils.mergeFileSchema
 exports.cleanSchema = schemaUtils.cleanSchema

@@ -49,19 +49,19 @@ exports.process = async function (app, dataset) {
   const dir = require('node-dir')
   const mime = require('mime-types')
   const zlib = require('node:zlib')
+  const resolvePath = require('resolve-path')
   const { displayBytes } = require('../misc/utils/bytes')
   const datasetUtils = require('../datasets/utils')
   const datasetService = require('../datasets/service')
+  const { tmpDir: mainTmpDir } = require('../datasets/utils/files')
   const icalendar = require('../misc/utils/icalendar')
   const xlsx = require('../misc/utils/xlsx')
   const i18nUtils = require('../i18n/utils')
 
-  const dataDir = path.resolve(config.dataDir)
-
   const debug = require('debug')(`worker:file-normalizer:${dataset.id}`)
   const originalFilePath = datasetUtils.originalFilePath(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
-  const tmpDir = (await tmp.dir({ dir: path.join(dataDir, 'tmp'), unsafeCleanup: true })).path
+  const tmpDir = (await tmp.dir({ dir: mainTmpDir, unsafeCleanup: true })).path
 
   let isShapefile = false
   if (archiveTypes.has(dataset.originalFile.mimetype)) {
@@ -80,8 +80,8 @@ exports.process = async function (app, dataset) {
       isShapefile = true
     } else if (filePaths.length === 1 && exports.basicTypes.includes(mime.lookup(filePaths[0].base))) {
       // case of a single data file in an archive
-      const filePath = path.join(datasetUtils.dir(dataset), filePaths[0].base)
-      await fs.move(path.join(tmpDir, files[0]), filePath, { overwrite: true })
+      const filePath = resolvePath(datasetUtils.dir(dataset), filePaths[0].base)
+      await fs.move(resolvePath(tmpDir, files[0]), filePath, { overwrite: true })
       dataset.file = {
         name: filePaths[0].base,
         size: await fs.stat(filePath).size,
@@ -93,7 +93,7 @@ exports.process = async function (app, dataset) {
         throw createError(400, '[noretry] Vous avez chargé un fichier zip comme fichier de données principal, mais il y a également des pièces jointes chargées.')
       }
       await fs.move(tmpDir, datasetUtils.attachmentsDir(dataset))
-      const csvFilePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
+      const csvFilePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
       // Either there is a data.csv in this archive and we use it as the main source for data related to the files, or we create it
       const csvContent = 'file\n' + files.map(f => `"${f}"`).join('\n') + '\n'
       await fs.writeFile(csvFilePath, csvContent)
@@ -119,7 +119,7 @@ exports.process = async function (app, dataset) {
 
   if (dataset.originalFile.mimetype === 'application/gzip') {
     const basicTypeFileName = dataset.originalFile.name.slice(0, dataset.originalFile.name.length - 3)
-    const filePath = path.join(datasetUtils.dir(dataset), basicTypeFileName)
+    const filePath = resolvePath(datasetUtils.dir(dataset), basicTypeFileName)
     await pump(fs.createReadStream(originalFilePath), zlib.createGunzip(), fs.createWriteStream(filePath))
     dataset.file = {
       name: basicTypeFileName,
@@ -135,7 +135,7 @@ exports.process = async function (app, dataset) {
       throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
     const { eventsStream, infos } = await icalendar.parse(originalFilePath)
-    const filePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
+    const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
     await pump(
       eventsStream,
       csvStrStream({ columns: ['DTSTART', 'DTEND', 'SUMMARY', 'LOCATION', 'CATEGORIES', 'STATUS', 'DESCRIPTION', 'TRANSP', 'SEQUENCE', 'GEO', 'URL'], header: true }),
@@ -154,7 +154,7 @@ exports.process = async function (app, dataset) {
       throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
     const data = await xlsx.getCSV(originalFilePath)
-    const filePath = path.join(datasetUtils.dir(dataset), baseName + '.csv')
+    const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
     await fs.writeFile(filePath, data)
     dataset.file = {
       name: path.parse(dataset.originalFile.name).name + '.csv',
@@ -178,7 +178,7 @@ exports.process = async function (app, dataset) {
       ogrOptions.push('routes')
     }
 
-    const filePath = path.join(datasetUtils.dir(dataset), baseName + '.geojson')
+    const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.geojson')
     await ogr2ogr(originalFilePath, {
       format: 'GeoJSON',
       options: ogrOptions,

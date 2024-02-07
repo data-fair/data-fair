@@ -18,14 +18,14 @@ exports.process = async function (app, dataset) {
   const catalogs = require('../catalogs/plugins')
   const datasetUtils = require('../datasets/utils')
   const datasetService = require('../datasets/service')
+  const { tmpDir } = require('../datasets/utils/files')
 
   const debug = require('debug')(`worker:downloader:${dataset.id}`)
 
   const db = app.get('db')
 
-  const dataDir = path.resolve(config.dataDir)
-  await fs.ensureDir(path.join(dataDir, 'tmp'))
-  const tmpFile = await tmp.file({ dir: path.join(dataDir, 'tmp') })
+  await fs.ensureDir(tmpDir)
+  const tmpFile = await tmp.file({ dir: tmpDir })
 
   let catalogHttpParams = {}
   if (dataset.remoteFile.catalog) {

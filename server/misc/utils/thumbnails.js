@@ -1,5 +1,4 @@
 const fs = require('fs-extra')
-const path = require('path')
 const sharp = require('sharp')
 const pump = require('../utils/pipe')
 const dayjs = require('dayjs')
@@ -8,9 +7,9 @@ const { Binary } = require('mongodb')
 const config = require('config')
 const axios = require('./axios')
 const { setNoCache } = require('./cache-headers')
+const { tmpDir } = require('../../datasets/utils/files')
 
 const debug = require('debug')('thumbnails')
-const dataDir = path.resolve(config.dataDir)
 
 const getCacheEntry = async (db, url, filePath, sharpOptions) => {
   const cacheFilter = { url, ...sharpOptions }
@@ -30,7 +29,7 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
       debug('found fresh cache entry for url based on lastUpdate', entry.lastUpdated)
       return { entry, status: 'HIT' }
     }
-    tmpFile = filePath = await tmp.tmpName({ dir: path.join(dataDir, 'tmp') })
+    tmpFile = filePath = await tmp.tmpName({ dir: tmpDir })
     // creating empty file before streaming seems to fix some weird bugs with NFS
     await fs.ensureFile(filePath)
     try {

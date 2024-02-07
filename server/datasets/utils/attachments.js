@@ -1,10 +1,9 @@
 const config = /** @type {any} */(require('config'))
 const fs = require('fs-extra')
-const path = require('path')
 const multer = require('multer')
 const createError = require('http-errors')
 const mime = require('mime-types')
-const { attachmentsDir, metadataAttachmentsDir } = require('./files')
+const { attachmentsDir, metadataAttachmentsDir, metadataAttachmentPath } = require('./files')
 const limits = require('../../misc/utils/limits')
 const exec = require('../../misc/utils/exec')
 
@@ -43,7 +42,7 @@ const metadataStorage = multer.diskStorage({
   filename: async function (req, file, cb) {
     try {
       // creating empty file before streaming seems to fix some weird bugs with NFS
-      await fs.ensureFile(path.join(metadataAttachmentsDir(req.dataset), file.originalname))
+      await fs.ensureFile(metadataAttachmentPath(req.dataset, file.originalname))
       cb(null, file.originalname)
     } catch (err) {
       cb(err)
