@@ -540,14 +540,6 @@
               @change="toggleInitFromPart('schema')"
             />
             <v-checkbox
-              v-if="initFromDataset.primaryKey?.length"
-              :value="restDataset.initFrom.parts.includes('primaryKey')"
-              hide-details
-              class="pl-2"
-              :label="$t('initFromPrimaryKey')"
-              @change="toggleInitFromPart('primaryKey')"
-            />
-            <v-checkbox
               v-if="initFromDataset.extensions?.length"
               :value="restDataset.initFrom.parts.includes('extensions')"
               hide-details
