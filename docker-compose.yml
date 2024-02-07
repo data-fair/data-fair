@@ -25,7 +25,9 @@ services:
       - elasticsearch-data:/usr/share/elasticsearch/data
     healthcheck:
       test: ["CMD", "nc", "-z", "-v", "localhost", "9200"]
+      start_period: 10s
       interval: 5s
+      retries: 5
 
   mongodb:
     profiles:

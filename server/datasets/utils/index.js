@@ -22,6 +22,7 @@ exports.lsAttachments = filesUtils.lsAttachments
 exports.fullFilePath = filesUtils.fullFilePath
 exports.originalFilePath = filesUtils.originalFilePath
 exports.attachmentsDir = filesUtils.attachmentsDir
+exports.metadataAttachmentsDir = filesUtils.metadataAttachmentsDir
 exports.dir = filesUtils.dir
 exports.fullFilePath = filesUtils.fullFilePath
 exports.fullFileName = filesUtils.fullFileName

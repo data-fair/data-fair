@@ -27,12 +27,14 @@ describe('REST datasets with auto-initialization', () => {
     assert.equal(res.status, 201)
     const initFromDataset = await workers.hook('finalizer/' + res.data.id)
 
+    assert.ok(!initFromDataset.initFrom)
     assert.ok(initFromDataset.schema.find(p => p.key === 'adr'), 2)
     assert.equal(initFromDataset.description, 'A description')
     assert.equal(initFromDataset.attachments.length, 1)
-    assert.ok(initFromDataset.attachments.find(a => a.name === 'avatar.jpeg'))
     assert.ok(initFromDataset.storage.metadataAttachments.size > 1000)
-    assert.ok(!initFromDataset.initFrom)
+    assert.ok(initFromDataset.attachments.find(a => a.name === 'avatar.jpeg'))
+    const downloadAttachmentRes = await ax.get(`/api/v1/datasets/${initFromDataset.id}/metadata-attachments/avatar.jpeg`)
+    assert.equal(downloadAttachmentRes.status, 200)
   })
 
   it('Prevent initializing a dataset when missing permissions', async () => {

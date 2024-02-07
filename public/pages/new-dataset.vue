@@ -517,7 +517,7 @@
           <dataset-select
             v-model="initFromDataset"
             :label="$t('restInitFromDataset')"
-            :extra-params="{queryable: true}"
+            :extra-params="{queryable: true, select: ''}"
             master-data="standardSchema"
             class="mt-2"
             @change="setInitFrom"
