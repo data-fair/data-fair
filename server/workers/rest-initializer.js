@@ -75,6 +75,7 @@ exports.process = async function (app, dataset) {
         const dir = attachmentsDir(dataset)
         await fs.ensureDir(dir)
         for (const attachment of attachments) {
+          await fs.ensureDir(path.dirname(path.join(dir, attachment)))
           await fs.copyFile(path.join(attachmentsDir(parentDataset), attachment), path.join(dir, attachment))
           await progress()
         }
@@ -88,12 +89,14 @@ exports.process = async function (app, dataset) {
         delete newProperty['x-cardinality']
         return newProperty
       })
+
+      // a few extra properties implicitly accompany the schema
+      if (parentDataset.primaryKey?.length) patch.primaryKey = parentDataset.primaryKey
+      if (parentDataset.attachmentsAsImage) patch.attachmentsAsImage = parentDataset.attachmentsAsImage
+      if (parentDataset.timeZone) patch.timeZone = parentDataset.timeZone
     }
     if (dataset.initFrom.parts.includes('extensions')) {
       patch.extensions = parentDataset.extensions
-    }
-    if (dataset.initFrom.parts.includes('primaryKey')) {
-      patch.primaryKey = parentDataset.primaryKey
     }
     if (dataset.initFrom.parts.includes('description')) {
       patch.description = parentDataset.description
@@ -102,6 +105,7 @@ exports.process = async function (app, dataset) {
       const dir = metadataAttachmentsDir(dataset)
       await fs.ensureDir(dir)
       for (const metadataAttachment of metadataAttachments) {
+        await fs.ensureDir(path.dirname(path.join(dir, metadataAttachment)))
         await fs.copyFile(path.join(metadataAttachmentsDir(parentDataset), metadataAttachment), path.join(dir, metadataAttachment))
         await progress()
       }

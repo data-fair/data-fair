@@ -517,7 +517,7 @@
           <dataset-select
             v-model="initFromDataset"
             :label="$t('restInitFromDataset')"
-            :extra-params="{queryable: true}"
+            :extra-params="{queryable: true, select: ''}"
             master-data="standardSchema"
             class="mt-2"
             @change="setInitFrom"
@@ -540,20 +540,20 @@
               @change="toggleInitFromPart('schema')"
             />
             <v-checkbox
-              v-if="initFromDataset.primaryKey?.length"
-              :value="restDataset.initFrom.parts.includes('primaryKey')"
-              hide-details
-              class="pl-2"
-              :label="$t('initFromPrimaryKey')"
-              @change="toggleInitFromPart('primaryKey')"
-            />
-            <v-checkbox
               v-if="initFromDataset.extensions?.length"
               :value="restDataset.initFrom.parts.includes('extensions')"
               hide-details
               class="pl-2"
-              :label="$t('initFromPrimaryKey')"
+              :label="$t('initFromExtensions')"
               @change="toggleInitFromPart('extensions')"
+            />
+            <v-checkbox
+              v-if="initFromDataset.attachments?.length"
+              :value="restDataset.initFrom.parts.includes('metadataAttachments')"
+              hide-details
+              class="pl-2"
+              :label="$t('initFromAttachments')"
+              @change="toggleInitFromPart('metadataAttachments')"
             />
             <v-checkbox
               :value="restDataset.initFrom.parts.includes('description')"
@@ -809,6 +809,7 @@ fr:
   initFromPrimaryKey: copier la clé primaire
   initFromExtensions: copier les extensions
   initFromDescription: copier la description
+  initFromAttachments: copier les pièces jointes
 en:
   datasetType: Dataset type
   newDataset: Create a dataset
@@ -870,6 +871,7 @@ en:
   initFromPrimaryKey: copy primary key
   initFromExtensions: copy extensions
   initFromDescription: copy description
+  initFromAttachments: copy attachments
 </i18n>
 
 <script>
