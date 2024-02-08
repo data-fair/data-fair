@@ -28,22 +28,14 @@ exports.set = async (db, hash, value) => {
   }
 }
 
-const getSetPendingPromises = {}
-
 exports.getSet = async (db, params, getter) => {
   const hash = objectHash(params)
-  if (getSetPendingPromises[hash]) {
-    debug('getSet return already pending promise', hash)
-    return getSetPendingPromises[hash]
-  }
   const result = await db.collection('cache').findOne({ _id: hash }, { readPreference: 'nearest' })
   if (result) {
     debug('getSet return from mongo cache', hash, !!result)
     return result.value
   }
-  const promise = getSetPendingPromises[hash] = getter(params)
-  promise.finally(() => delete getSetPendingPromises[hash])
-  const value = await promise
+  const value = await getter(params)
   debug('getSet used getter and set value in cache', hash)
   try {
     await db.collection('cache').insertOne({ value, _id: hash })
