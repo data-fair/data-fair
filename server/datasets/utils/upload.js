@@ -9,6 +9,8 @@ const datasetUtils = require('./')
 const { tmpDir } = require('./files')
 const asyncWrap = require('../../misc/utils/async-handler')
 const promisifyMiddleware = require('../../misc/utils/promisify-middleware')
+const { fsyncFile } = require('./files')
+
 const fallbackMimeTypes = {
   dbf: 'application/dbase',
   dif: 'text/plain',
@@ -126,13 +128,6 @@ exports.getFormBody = (body) => {
     }
   }
   return body
-}
-
-// try to prevent weird bug with NFS by forcing syncing new files before use
-const fsyncFile = async (p) => {
-  const fd = await fs.open(p, 'r')
-  await fs.fsync(fd)
-  await fs.close(fd)
 }
 
 exports.fsyncFiles = asyncWrap(async (req, res, next) => {

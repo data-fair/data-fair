@@ -7,7 +7,7 @@ const { Transform } = require('stream')
 const stringify = require('json-stable-stringify')
 const flatten = require('flat')
 const axios = require('../../misc/utils/axios')
-const { fullFilePath } = require('./files')
+const { fullFilePath, fsyncFile } = require('./files')
 const { readStreams, writeExtendedStreams } = require('./data-streams')
 const restDatasetsUtils = require('./rest')
 const geoUtils = require('./geo')
@@ -118,7 +118,10 @@ exports.extend = async (app, dataset, extensions) => {
     ...writeStreams
   )
   const filePath = writeStreams[writeStreams.length - 1].path
-  if (filePath) await fs.move(filePath, fullFilePath(dataset), { overwrite: true })
+  if (filePath) {
+    await fs.move(filePath, fullFilePath(dataset), { overwrite: true })
+    await fsyncFile(fullFilePath(dataset))
+  }
 
   debug('Extension is over')
 }

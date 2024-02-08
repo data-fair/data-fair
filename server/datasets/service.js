@@ -10,7 +10,7 @@ const esUtils = require('./es')
 const webhooks = require('../misc/utils/webhooks')
 const journals = require('../misc/utils/journals')
 const { updateStorage } = require('./utils/storage')
-const { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath } = require('./utils/files')
+const { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile } = require('./utils/files')
 const { schemasFullyCompatible, getSchemaBreakingChanges } = require('./utils/schema')
 const { getExtensionKey, prepareExtensions, prepareExtensionsSchema } = require('./utils/extensions')
 const { validateURLFriendly } = require('../misc/utils/validation')
@@ -225,8 +225,10 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
   if (datasetFile) {
     await fs.emptyDir(datasetUtils.loadingDir(insertedDataset))
     await fs.move(datasetFile.path, datasetUtils.loadedFilePath(insertedDataset))
+    await fsyncFile(datasetUtils.loadedFilePath(insertedDataset))
     if (attachmentsFile) {
       await fs.move(attachmentsFile.path, datasetUtils.loadedAttachmentsFilePath(insertedDataset))
+      await fsyncFile(datasetUtils.loadedAttachmentsFilePath(insertedDataset))
     }
   }
   if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with extensions by ${user?.name} (${user?.id})`, insertedDataset.extensions)
@@ -425,23 +427,33 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
 
   await fs.ensureDir(dir(patchedDataset))
 
+  if (await fs.pathExists(attachmentsDir(datasetDraft))) {
+    await fs.remove(attachmentsDir(patchedDataset))
+    await fs.move(attachmentsDir(datasetDraft), attachmentsDir(patchedDataset))
+  }
+
   if (patchedDataset.originalFile && patchedDataset.originalFile.name !== patchedDataset.file?.name) {
-    await fs.move(originalFilePath(datasetDraft), originalFilePath(patchedDataset), { overwrite: true })
+    // creating empty file before moving seems to fix some weird bugs with NFS
+    const newOriginalFilePath = originalFilePath(patchedDataset)
+    // ensureFile and fsync to try and fix weird nfs bugs
+    await fs.ensureFile(newOriginalFilePath)
+    await fs.move(originalFilePath(datasetDraft), newOriginalFilePath, { overwrite: true })
+    await fsyncFile(newOriginalFilePath)
   }
   if (datasetFull.originalFile && datasetFull.originalFile.name !== datasetFull.file?.name && originalFilePath(patchedDataset) !== originalFilePath(datasetFull)) {
     await fs.remove(originalFilePath(datasetFull))
   }
 
-  await fs.move(filePath(datasetDraft), filePath(patchedDataset), { overwrite: true })
+  const newFilePath = filePath(patchedDataset)
+  // ensureFile and fsync to try and fix weird nfs bugs
+  await fs.ensureFile(newFilePath)
+  await fs.move(filePath(datasetDraft), newFilePath, { overwrite: true })
+  await fsyncFile(newFilePath)
+
   if (datasetFull.file && filePath(patchedDataset) !== filePath(datasetFull)) {
     await fs.remove(filePath(datasetFull))
   }
   if (datasetFull.file) await fs.remove(fullFilePath(datasetFull))
-
-  if (await fs.pathExists(attachmentsDir(datasetDraft))) {
-    await fs.remove(attachmentsDir(patchedDataset))
-    await fs.move(attachmentsDir(datasetDraft), attachmentsDir(patchedDataset))
-  }
 
   const statusPatch = { status: 'analyzed' }
   const statusPatchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: datasetFull.id },
