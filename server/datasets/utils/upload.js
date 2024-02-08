@@ -1,12 +1,12 @@
 const fs = require('fs-extra')
-const config = /** @type {any} */(require('config'))
-const path = require('path')
 const multer = require('multer')
 const createError = require('http-errors')
 const { nanoid } = require('nanoid')
 const mime = require('mime-types')
+const resolvePath = require('resolve-path')
 const datasetSchema = require('../../../contract/dataset')
 const datasetUtils = require('./')
+const { tmpDir } = require('./files')
 const asyncWrap = require('../../misc/utils/async-handler')
 const promisifyMiddleware = require('../../misc/utils/promisify-middleware')
 const { fsyncFile } = require('./files')
@@ -29,7 +29,7 @@ const storage = multer.diskStorage({
       } else {
         // a tmp dir in case of new dataset, it will be moved into the actual dataset directory
         // after upload completion and final id atttribution
-        req.uploadDir = path.join(config.dataDir, 'tmp', nanoid())
+        req.uploadDir = resolvePath(tmpDir, nanoid())
       }
       debug('Create destination directory', req.uploadDir)
       await fs.ensureDir(req.uploadDir)
@@ -42,12 +42,12 @@ const storage = multer.diskStorage({
     try {
       if (file.fieldname === 'attachments') {
         // creating empty file before streaming seems to fix some weird bugs with NFS
-        await fs.ensureFile(path.join(req.uploadDir, 'attachments.zip'))
+        await fs.ensureFile(resolvePath(req.uploadDir, 'attachments.zip'))
         return cb(null, 'attachments.zip')
       }
 
       // creating empty file before streaming seems to fix some weird bugs with NFS
-      await fs.ensureFile(path.join(req.uploadDir, file.originalname))
+      await fs.ensureFile(resolvePath(req.uploadDir, file.originalname))
       cb(null, file.originalname)
     } catch (err) {
       cb(err)

@@ -1,6 +1,4 @@
-const config = /** @type {any} */(require('config'))
 const fs = require('fs-extra')
-const path = require('path')
 const { Writable } = require('stream')
 const { Transform } = require('stream')
 const csv = require('csv-parser')
@@ -16,7 +14,7 @@ const observe = require('../../misc/utils/observe')
 const { csvTypes } = require('../../workers/file-normalizer')
 const fieldsSniffer = require('./fields-sniffer')
 const restDatasetsUtils = require('./rest')
-const { filePath, fullFilePath } = require('./files')
+const { filePath, fullFilePath, tmpDir } = require('./files')
 const pump = require('../../misc/utils/pipe')
 
 // used both by exports.readStream and bulk transactions in rest datasets
@@ -185,7 +183,7 @@ exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraft
 // Used by extender worker to produce the "full" version of the file
 exports.writeExtendedStreams = async (db, dataset) => {
   if (dataset.isRest) return restDatasetsUtils.writeExtendedStreams(db, dataset)
-  const tmpFullFile = await tmp.tmpName({ dir: path.join(path.resolve(config.dataDir), 'tmp') })
+  const tmpFullFile = await tmp.tmpName({ dir: tmpDir })
   // creating empty file before streaming seems to fix some weird bugs with NFS
   await fs.ensureFile(tmpFullFile)
 

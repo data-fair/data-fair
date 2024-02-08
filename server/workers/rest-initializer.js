@@ -8,7 +8,7 @@ exports.process = async function (app, dataset) {
   const datasetsService = require('../datasets/service')
   const { getPseudoUser } = require('../misc/utils/users')
   const permissionsUtils = require('../misc/utils/permissions')
-  const { lsMetadataAttachments, metadataAttachmentsDir, lsAttachments, attachmentsDir } = require('../datasets/utils/files')
+  const { lsMetadataAttachments, metadataAttachmentPath, lsAttachments, attachmentPath } = require('../datasets/utils/files')
   const { applyTransactions } = require('../datasets/utils/rest')
   const iterHits = require('../datasets/es/iter-hits')
   const taskProgress = require('../datasets/utils/task-progress')
@@ -72,11 +72,10 @@ exports.process = async function (app, dataset) {
       }
       // also copy attachments
       if (attachments.length) {
-        const dir = attachmentsDir(dataset)
-        await fs.ensureDir(dir)
         for (const attachment of attachments) {
-          await fs.ensureDir(path.dirname(path.join(dir, attachment)))
-          await fs.copyFile(path.join(attachmentsDir(parentDataset), attachment), path.join(dir, attachment))
+          const newPath = attachmentPath(dataset, attachment)
+          await fs.ensureDir(path.dirname(newPath))
+          await fs.copyFile(attachmentPath(parentDataset, attachment), newPath)
           await progress()
         }
       }
@@ -102,11 +101,10 @@ exports.process = async function (app, dataset) {
       patch.description = parentDataset.description
     }
     if (dataset.initFrom.parts.includes('metadataAttachments')) {
-      const dir = metadataAttachmentsDir(dataset)
-      await fs.ensureDir(dir)
       for (const metadataAttachment of metadataAttachments) {
-        await fs.ensureDir(path.dirname(path.join(dir, metadataAttachment)))
-        await fs.copyFile(path.join(metadataAttachmentsDir(parentDataset), metadataAttachment), path.join(dir, metadataAttachment))
+        const newPath = metadataAttachmentPath(dataset, metadataAttachment)
+        await fs.ensureDir(path.dirname(newPath))
+        await fs.copyFile(metadataAttachmentPath(parentDataset, metadataAttachment), newPath)
         await progress()
       }
       patch.attachments = parentDataset.attachments

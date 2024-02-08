@@ -3,10 +3,9 @@
 const express = require('express')
 const config = require('config')
 const fs = require('fs-extra')
-const path = require('path')
 const asyncWrap = require('../utils/async-handler')
 const datasetsService = require('../../datasets/service')
-const dataDir = path.resolve(config.dataDir)
+const { ownerDir } = require('../../datasets/utils/files')
 
 const router = module.exports = express.Router()
 
@@ -91,7 +90,7 @@ router.delete('/:type/:id', asyncWrap(async (req, res) => {
   await req.app.get('db').collection('limits').deleteOne({ type: identity.type, id: identity.id })
 
   // whole data directory
-  await fs.remove(path.join(dataDir, identity.type, identity.id))
+  await fs.remove(ownerDir(identity))
 
   res.send()
 }))

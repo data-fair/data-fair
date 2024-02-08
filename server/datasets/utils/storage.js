@@ -3,12 +3,11 @@ const esUtils = require('../es')
 const restDatasetsUtils = require('./rest')
 const createError = require('http-errors')
 const i18n = require('i18n')
-const path = require('path')
 const fs = require('fs-extra')
 const limits = require('../../misc/utils/limits')
 const config = /** @type {any} */(require('config'))
 const debugLimits = require('debug')('limits')
-const { dataFiles, lsAttachments, lsMetadataAttachments, attachmentsDir, metadataAttachmentsDir } = require('./files')
+const { dataFiles, lsAttachments, lsMetadataAttachments, attachmentPath, metadataAttachmentPath } = require('./files')
 
 /**
  * @param {import('mongodb').Db} db
@@ -139,7 +138,7 @@ exports.storage = async (db, es, dataset) => {
   if (documentProperty && !dataset.isVirtual) {
     const attachments = await lsAttachments(dataset)
     for (const attachment of attachments) {
-      storage.attachments.size += (await fs.promises.stat(path.join(attachmentsDir(dataset), attachment))).size
+      storage.attachments.size += (await fs.promises.stat(attachmentPath(dataset, attachment))).size
       storage.attachments.count++
     }
     storage.size += storage.attachments.size
@@ -153,7 +152,7 @@ exports.storage = async (db, es, dataset) => {
   // storage used by metadata attachments
   const metadataAttachments = await lsMetadataAttachments(dataset)
   for (const metadataAttachment of metadataAttachments) {
-    storage.metadataAttachments.size += (await fs.promises.stat(path.join(metadataAttachmentsDir(dataset), metadataAttachment))).size
+    storage.metadataAttachments.size += (await fs.promises.stat(metadataAttachmentPath(dataset, metadataAttachment))).size
     storage.metadataAttachments.count++
   }
   storage.size += storage.metadataAttachments.size

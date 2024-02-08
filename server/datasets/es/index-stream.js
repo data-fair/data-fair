@@ -1,5 +1,4 @@
 const { Transform } = require('stream')
-const path = require('path')
 const fs = require('fs-extra')
 const config = require('config')
 const truncateMiddle = require('truncate-middle')
@@ -167,7 +166,7 @@ const applyCalculations = async (dataset, item) => {
   // Add base64 content of attachments
   const attachmentField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (attachmentField && flatItem[attachmentField.key]) {
-    const filePath = path.join(datasetUtils.attachmentsDir(dataset), flatItem[attachmentField.key])
+    const filePath = datasetUtils.attachmentPath(dataset, flatItem[attachmentField.key])
     if (await fs.pathExists(filePath)) {
       const stats = await fs.stat(filePath)
       if (stats.size > config.defaultLimits.attachmentIndexed) {

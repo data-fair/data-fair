@@ -1,5 +1,3 @@
-const path = require('path')
-const config = require('config')
 const util = require('util')
 const fs = require('fs')
 const pointOnFeature = require('@turf/point-on-feature').default
@@ -16,6 +14,7 @@ const writeFile = util.promisify(fs.writeFile)
 const proj4 = require('proj4')
 const { wktToGeoJSON, geojsonToWKT } = require('@terraformer/wkt')
 const debug = require('debug')('geo')
+const { tmpDir } = require('./files')
 
 const projections = require('../../../contract/projections')
 const geomUri = 'https://purl.org/geojson/vocab#geometry'
@@ -25,7 +24,6 @@ const lonUri = ['http://schema.org/longitude', 'http://www.w3.org/2003/01/geo/wg
 const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
 const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 const projectGeomUri = 'http://data.ign.fr/def/geometrie#Geometry'
-const dataDir = path.resolve(config.dataDir)
 
 exports.allGeoConcepts = [geomUri, projectGeomUri, latlonUri, ...latUri, ...lonUri, coordXUri, coordYUri]
 
@@ -273,7 +271,7 @@ const prepair = async (feature) => {
   let tmpFile
   try {
     // const wkt = wktParser.convert(feature.geometry)
-    tmpFile = await tmp.file({ postfix: '.geojson', dir: path.join(dataDir, 'tmp') })
+    tmpFile = await tmp.file({ postfix: '.geojson', dir: tmpDir })
     await writeFile(tmpFile.fd, JSON.stringify(feature))
     const repaired = await exec(`prepair --ogr '${tmpFile.path}'`, { maxBuffer: 100000000 })
     feature.geometry = wktToGeoJSON(repaired.stdout)

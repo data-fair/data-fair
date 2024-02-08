@@ -1,7 +1,6 @@
 const config = /** @type {any} */(require('config'))
 const express = require('express')
 const ajv = require('../misc/utils/ajv')
-const path = require('path')
 const fs = require('fs-extra')
 const moment = require('moment')
 const createError = require('http-errors')
@@ -907,7 +906,7 @@ router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.midd
 router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('deleteMetadataAttachment', 'write'), asyncWrap(async (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).type('text/plain').send('Unacceptable attachment path')
-  await fs.remove(path.join(datasetUtils.metadataAttachmentsDir(req.dataset), filePath))
+  await fs.remove(datasetUtils.metadataAttachmentPath(req.dataset, filePath))
   await datasetUtils.updateStorage(req.app, req.dataset)
   res.status(204).send()
 }))
@@ -1009,7 +1008,7 @@ router.get('/:datasetId/thumbnail', readDataset(), permissions.middleware('readD
 router.get('/:datasetId/thumbnail/:thumbnailId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async (req, res, next) => {
   const url = Buffer.from(req.params.thumbnailId, 'hex').toString()
   if (req.dataset.attachmentsAsImage && url.startsWith('/attachments/')) {
-    await getThumbnail(req, res, `${config.publicUrl}/api/v1/datasets/${req.dataset.id}${url}`, path.join(attachmentsDir(req.dataset), url.replace('/attachments/', '')), req.dataset.thumbnails)
+    await getThumbnail(req, res, `${config.publicUrl}/api/v1/datasets/${req.dataset.id}${url}`, datasetUtils.attachmentPath(req.dataset, url.replace('/attachments/', '')), req.dataset.thumbnails)
   } else {
     const imageField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
     const count = await esUtils.count(req.app.get('es'), req.dataset, {

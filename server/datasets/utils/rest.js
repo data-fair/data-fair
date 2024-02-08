@@ -21,8 +21,9 @@ const attachmentsUtils = require('./attachments')
 const findUtils = require('../../misc/utils/find')
 const fieldsSniffer = require('./fields-sniffer')
 const { transformFileStreams } = require('./data-streams')
-const { attachmentsDir, lsAttachments } = require('./files')
+const { attachmentPath, lsAttachments } = require('./files')
 const { jsonSchema } = require('./schema')
+const { tmpDir } = require('./files')
 const esUtils = require('../../datasets/es')
 
 const actions = ['create', 'update', 'patch', 'delete']
@@ -37,7 +38,6 @@ function cleanLine (line) {
   return line
 }
 
-const tmpDir = path.join(path.resolve(config.dataDir), 'tmp')
 const destination = async (req, file, cb) => {
   try {
     await fs.ensureDir(tmpDir)
@@ -412,7 +412,7 @@ async function manageAttachment (req, keepExisting) {
     }
   }
   const lineId = req.params.lineId || req.body._id
-  const dir = path.join(attachmentsDir(req.dataset), lineId)
+  const dir = attachmentPath(req.dataset, lineId)
 
   const pathField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
 
@@ -420,8 +420,8 @@ async function manageAttachment (req, keepExisting) {
     // An attachment was uploaded
     await fs.ensureDir(dir)
     await fs.emptyDir(dir)
-    await fs.rename(req.file.path, path.join(dir, req.file.originalname))
     const relativePath = path.join(lineId, req.file.originalname)
+    await fs.rename(req.file.path, attachmentPath(req.dataset, relativePath))
     if (!pathField) {
       throw createError(400, 'Le schéma ne prévoit pas d\'associer une pièce jointe')
     }
