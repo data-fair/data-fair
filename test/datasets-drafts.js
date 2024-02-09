@@ -77,6 +77,8 @@ describe('datasets in draft mode', () => {
     // except in draft mode
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
     assert.equal(res.data.total, 2)
+    assert.equal(res.data.results[0].id, 'koumoul')
+    assert.equal(res.data.results[1].id, 'bidule')
 
     // validate the draft
     assert.ok(await fs.pathExists(`data/test/user/dmeadus0/datasets-drafts/${dataset.id}`))
@@ -87,8 +89,11 @@ describe('datasets in draft mode', () => {
     assert.ok(dataset.bbox)
     assert.ok(!await fs.pathExists(`data/test/user/dmeadus0/datasets-drafts/${dataset.id}`))
 
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
+    // querying lines is now possible
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
+    assert.equal(res.data.results[0].id, 'koumoul')
+    assert.equal(res.data.results[1].id, 'bidule')
 
     // the journal kept traces of all changes (draft and not)
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
@@ -162,6 +167,7 @@ describe('datasets in draft mode', () => {
     assert.equal(dataset.dataUpdatedAt, dataset.updatedAt)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 5)
+    assert.equal(res.data.results[0].id, 'koumoul')
 
     // the journal kept traces of all changes (draft and not)
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
@@ -229,10 +235,16 @@ describe('datasets in draft mode', () => {
     assert.equal(dataset.count, 2)
     // console.log(dataset)
     assert.ok(!dataset.draft)
+    assert.ok(dataset.file.schema.length, 6)
+    assert.ok(dataset.schema.length, 6)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
+    assert.equal(res.data.results[0].id, 'koumoul')
+    assert.equal(res.data.results[1].id, 'bidule')
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
     assert.equal(res.data.total, 2)
+    assert.equal(res.data.results[0].id, 'koumoul')
+    assert.equal(res.data.results[1].id, 'bidule')
 
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal.pop().type, 'dataset-created')

@@ -469,11 +469,20 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
   return statusPatchedDataset
 }
 
-exports.validateCompatibleDraft = async (app, dataset) => {
+/**
+ *
+ * @param {any} app
+ * @param {any} dataset
+ * @param {any} patch
+ * @returns {Promise<any>}
+ */
+exports.validateCompatibleDraft = async (app, dataset, patch) => {
   if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {
     const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
-    if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument') && schemasFullyCompatible(datasetFull.schema, dataset.schema, true)) {
-      return await exports.validateDraft(app, datasetFull, dataset)
+    Object.assign(datasetFull.draft, patch)
+    const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
+    if (!datasetDraft.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument') && schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
+      return await exports.validateDraft(app, datasetFull, datasetDraft)
     }
   }
   return null

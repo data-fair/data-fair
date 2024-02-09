@@ -74,16 +74,13 @@ exports.process = async function (app, dataset) {
   datasetUtils.mergeFileSchema(dataset)
   datasetUtils.cleanSchema(dataset)
 
-  if (await datasetsService.validateCompatibleDraft(app, dataset)) return
-
-  debug('store status as analyzed')
-  dataset.status = 'analyzed'
-
   const patch = {
     status: 'analyzed',
     file: dataset.file,
     schema: dataset.schema
   }
+
+  if (await datasetsService.validateCompatibleDraft(app, dataset, patch)) return
 
   await datasetsService.applyPatch(app, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
