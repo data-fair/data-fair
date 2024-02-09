@@ -435,8 +435,7 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
   if (patchedDataset.originalFile && patchedDataset.originalFile.name !== patchedDataset.file?.name) {
     // creating empty file before moving seems to fix some weird bugs with NFS
     const newOriginalFilePath = originalFilePath(patchedDataset)
-    // ensureFile and fsync to try and fix weird nfs bugs
-    await fs.ensureFile(newOriginalFilePath)
+    // fsync to try and fix weird nfs bugs
     await fs.move(originalFilePath(datasetDraft), newOriginalFilePath, { overwrite: true })
     await fsyncFile(newOriginalFilePath)
   }
@@ -445,8 +444,7 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
   }
 
   const newFilePath = filePath(patchedDataset)
-  // ensureFile and fsync to try and fix weird nfs bugs
-  await fs.ensureFile(newFilePath)
+  // fsync to try and fix weird nfs bugs
   await fs.move(filePath(datasetDraft), newFilePath, { overwrite: true })
   await fsyncFile(newFilePath)
 
