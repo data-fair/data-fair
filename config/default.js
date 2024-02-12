@@ -89,7 +89,7 @@ module.exports = {
     // maximum number of datasets
     nbDatasets: -1,
     // Maximum storage space for 1 attachment
-    attachmentStorage: 100 * 1000 * 1000,
+    attachmentStorage: -1,
     // Maximum size for attachment to be indexed
     attachmentIndexed: 5 * 1000 * 1000,
     // Limits applied to all API requests
