@@ -40,11 +40,11 @@ exports.initServer = async (wss, db, session) => {
       clients[clientId] = ws
 
       // Manage subscribe/unsubscribe demands
-      ws.on('message', async str => {
+      ws.on('message', async buf => {
         let message
         try {
           if (stopped) return
-          message = JSON.parse(str)
+          message = JSON.parse(buf.toString())
           if (!message.type || ['subscribe', 'unsubscribe'].indexOf(message.type) === -1) {
             return ws.send(JSON.stringify({ type: 'error', data: 'type should be "subscribe" or "unsubscribe"' }))
           }
