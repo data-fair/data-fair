@@ -74,6 +74,9 @@
 
                 <v-tab-item value="structure-extensions">
                   <v-container fluid>
+                    <p>
+                      Enrichissez ce jeu de données en définissant des colonnes supplémentaires issues de données de référence ou calculées à partir des colonnes existantes.
+                    </p>
                     <dataset-extensions />
                   </v-container>
                 </v-tab-item>
@@ -396,7 +399,7 @@ fr:
   extension: Enrichissement
   virtual: Jeu virtuel
   remoteFile: Fichier distant
-  masterData: Données de référence
+  masterData: Donnée de référence
   tutorialConcepts: Pensez à renseigner des concepts sur les colonnes. Ces concepts seront utilisés pour proposer des applications de données adaptées et des possibilités d'enrichissement.
   docLinkExtend: Consultez la documentation sur l'extension de jeux de données
   info: Informations
