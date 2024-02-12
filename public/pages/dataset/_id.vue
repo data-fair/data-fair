@@ -40,11 +40,10 @@
                 </v-tab>
 
                 <v-tab
-                  v-if="user.adminMode && !dataset.draftReason"
+                  v-if="!dataset.draftReason && !dataset.isMetaOnly"
                   href="#structure-masterdata"
-                  class="admin--text"
                 >
-                  <v-icon color="admin">
+                  <v-icon>
                     mdi-star-four-points
                   </v-icon>&nbsp;&nbsp;{{ $t('masterData') }}
                 </v-tab>
