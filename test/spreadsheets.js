@@ -39,8 +39,8 @@ describe('Spreadsheets conversions', () => {
   it('should manage another XLSX file created by excel', async () => {
     const csv = await xlsx.getCSV('test/resources/datasets/date-time.xlsx')
     const dates = csv.split('\n').map(line => line.split(',')[1])
-    assert.equal(dates[1], '2050-01-01T00:00:00Z')
-    assert.equal(dates[2], '2050-01-01T01:00:00Z')
+    assert.equal(dates[1], '2050-01-01T00:00:00.000Z')
+    assert.equal(dates[2], '2050-01-01T01:00:00.000Z')
   })
 
   it('should manage a sparse XLSX file', async () => {
@@ -57,5 +57,21 @@ describe('Spreadsheets conversions', () => {
     assert.equal(res.data.results[2].col3, 'g')
     assert.equal(res.data.results[3].col1, 'h')
     assert.equal(res.data.results[2].col5, 'i')
+  })
+
+  it('should manage a XLSX with formula and links', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/misc.xlsx', ax)
+    assert.equal(dataset.schema.find(p => p.key === 'col1').type, 'integer')
+    assert.equal(dataset.schema.find(p => p.key === 'col2').type, 'integer')
+    assert.equal(dataset.schema.find(p => p.key === 'col3').type, 'string')
+    assert.equal(dataset.schema.find(p => p.key === 'col4').type, 'integer')
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 4)
+    assert.equal(res.data.results[0].col1, 1)
+    assert.equal(res.data.results[0].col2, 2)
+    assert.equal(res.data.results[0].col3, 'https://koumoul.com/')
+    assert.equal(res.data.results[0].col4, 3)
   })
 })
