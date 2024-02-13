@@ -68,7 +68,7 @@
               outlined
               dense
               hide-details
-              accept=".csv,.geojson"
+              accept=".csv,.geojson,.xlsx,.ods,.xls"
               :rules="[(file) => !!file] || ''"
             >
               <template

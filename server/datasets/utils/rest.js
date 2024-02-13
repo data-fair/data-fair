@@ -25,6 +25,13 @@ const { attachmentPath, lsAttachments } = require('./files')
 const { jsonSchema } = require('./schema')
 const { tmpDir } = require('./files')
 const esUtils = require('../../datasets/es')
+const { tabularTypes } = require('../../workers/file-normalizer')
+const Piscina = require('piscina')
+
+const sheet2csvPiscina = new Piscina({
+  filename: path.resolve(__dirname, '../threads/sheet2csv.js'),
+  maxThreads: 1
+})
 
 const actions = ['create', 'update', 'patch', 'delete']
 
@@ -502,90 +509,99 @@ exports.deleteAllLines = async (req, res, next) => {
 }
 
 exports.bulkLines = async (req, res, next) => {
-  const db = req.app.get('db')
-  const validate = compileSchema(req.dataset, req.user.adminMode)
-
-  // no buffering of this response in the reverse proxy
-  res.setHeader('X-Accel-Buffering', 'no')
-
-  // If attachments are sent, add them to the existing ones
-  if (req.files && req.files.attachments && req.files.attachments[0]) {
-    await attachmentsUtils.addAttachments(req.dataset, req.files.attachments[0])
-  }
-
-  // The list of actions/operations/transactions is either in a "actions" file
-  // or directly in the body
-  let inputStream, mimeType, skipDecoding
-  const transactionSchema = [...req.dataset.schema, { key: '_id', type: 'string' }, { key: '_action', type: 'string' }]
-  const fileProps = {
-    fieldsDelimiter: req.query.sep || ',',
-    escape: '"',
-    quote: '"',
-    newline: '\n'
-  }
-  if (req.files && req.files.actions && req.files.actions.length) {
-    mimeType = mime.lookup(req.files.actions[0].originalname) || 'application/x-ndjson'
-
-    if (req.files.actions[0].mimetype === 'application/zip') {
-      // handle .zip archive
-      const directory = await unzipper.Open.file(req.files.actions[0].path)
-      if (directory.files.length !== 1) return res.status(400).type('text/plain').send('only accept zip archive with a single file inside')
-      mimeType = mime.lookup(directory.files[0].path)
-      inputStream = directory.files[0].stream()
-    } else {
-      inputStream = fs.createReadStream(req.files.actions[0].path)
-      // handle .csv.gz file or other .gz files
-      if (req.files.actions[0].originalname.endsWith('.gz')) {
-        mimeType = mime.lookup(req.files.actions[0].originalname.slice(0, -3))
-        if (mimeType) mimeType += '+gzip'
-      }
-    }
-  } else {
-    inputStream = req
-    skipDecoding = true
-    mimeType = (req.get('Content-Type') && req.get('Content-Type').split(';')[0]) || 'application/json'
-  }
-
-  if (!mimeType) return res.status(400).type('text/plain').send('unknown file extension')
-
-  const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, false, true, null, skipDecoding)
-
-  const summary = initSummary()
-  const transactionStream = new TransactionStream({ req, validate, summary })
-
-  // we try both to have a HTTP failure if the transactions are clearly badly formatted
-  // and also to start writing in the HTTP response as soon as possible to limit the timeout risks
-  // this is accomplished partly by the keepalive option to async-wrap (see in the datasets router)
-  let firstBatch = true
-  transactionStream.on('batch', () => {
-    if (firstBatch) {
-      res.writeHeader(!summary.nbOk && summary.nbErrors ? 400 : 200, { 'Content-Type': 'application/json' })
-      firstBatch = false
-    } else {
-      res.write(' ')
-    }
-  })
   try {
-    await pump(
-      inputStream,
-      ...parseStreams,
-      transactionStream
-    )
-    await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
-  } catch (err) {
-    if (firstBatch) {
-      res.writeHeader(err.statusCode || 500, { 'Content-Type': 'application/json' })
-    }
-    summary.nbErrors += 1
-    summary.errors.push({ line: -1, error: err.message })
-  }
-  res.write(JSON.stringify(summary, null, 2))
-  res.end()
-  storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
+    const db = req.app.get('db')
+    const validate = compileSchema(req.dataset, req.user.adminMode)
 
-  for (const key in req.files) {
-    if (key === 'attachments') continue
-    for (const file of req.files[key]) {
+    // no buffering of this response in the reverse proxy
+    res.setHeader('X-Accel-Buffering', 'no')
+
+    // If attachments are sent, add them to the existing ones
+    if (req.files && req.files.attachments && req.files.attachments[0]) {
+      await attachmentsUtils.addAttachments(req.dataset, req.files.attachments[0])
+    }
+
+    // The list of actions/operations/transactions is either in a "actions" file
+    // or directly in the body
+    let inputStream, mimeType, skipDecoding
+    const transactionSchema = [...req.dataset.schema, { key: '_id', type: 'string' }, { key: '_action', type: 'string' }]
+    let fileProps = {
+      fieldsDelimiter: req.query.sep || ',',
+      escape: '"',
+      quote: '"',
+      newline: '\n'
+    }
+    if (req.files && req.files.actions && req.files.actions.length) {
+      mimeType = mime.lookup(req.files.actions[0].originalname) || 'application/x-ndjson'
+
+      if (req.files.actions[0].mimetype === 'application/zip') {
+        // handle .zip archive
+        const directory = await unzipper.Open.file(req.files.actions[0].path)
+        if (directory.files.length !== 1) return res.status(400).type('text/plain').send('only accept zip archive with a single file inside')
+        mimeType = mime.lookup(directory.files[0].path)
+        inputStream = directory.files[0].stream()
+      } else if (tabularTypes.has(req.files.actions[0].mimetype)) {
+        const destination = req.files.actions[0].path + '.csv'
+        await sheet2csvPiscina.run({
+          source: req.files.actions[0].path,
+          destination
+        })
+        req.files.actions.push({ path: destination })
+        inputStream = fs.createReadStream(destination)
+        mimeType = 'text/csv'
+        fileProps = { fieldsDelimiter: ',', escape: '"', quote: '"', newline: '\n' }
+      } else {
+        inputStream = fs.createReadStream(req.files.actions[0].path)
+        // handle .csv.gz file or other .gz files
+        if (req.files.actions[0].originalname.endsWith('.gz')) {
+          mimeType = mime.lookup(req.files.actions[0].originalname.slice(0, -3))
+          if (mimeType) mimeType += '+gzip'
+        }
+      }
+    } else {
+      inputStream = req
+      skipDecoding = true
+      mimeType = (req.get('Content-Type') && req.get('Content-Type').split(';')[0]) || 'application/json'
+    }
+
+    if (!mimeType) return res.status(400).type('text/plain').send('unknown file extension')
+
+    const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, false, true, null, skipDecoding)
+
+    const summary = initSummary()
+    const transactionStream = new TransactionStream({ req, validate, summary })
+
+    // we try both to have a HTTP failure if the transactions are clearly badly formatted
+    // and also to start writing in the HTTP response as soon as possible to limit the timeout risks
+    // this is accomplished partly by the keepalive option to async-wrap (see in the datasets router)
+    let firstBatch = true
+    transactionStream.on('batch', () => {
+      if (firstBatch) {
+        res.writeHeader(!summary.nbOk && summary.nbErrors ? 400 : 200, { 'Content-Type': 'application/json' })
+        firstBatch = false
+      } else {
+        res.write(' ')
+      }
+    })
+    try {
+      await pump(
+        inputStream,
+        ...parseStreams,
+        transactionStream
+      )
+      await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+    } catch (err) {
+      if (firstBatch) {
+        res.writeHeader(err.statusCode || 500, { 'Content-Type': 'application/json' })
+      }
+      summary.nbErrors += 1
+      summary.errors.push({ line: -1, error: err.message })
+    }
+    res.write(JSON.stringify(summary, null, 2))
+    res.end()
+    storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
+  } finally {
+    for (const file of req.files.actions) {
       await fs.unlink(file.path)
     }
   }

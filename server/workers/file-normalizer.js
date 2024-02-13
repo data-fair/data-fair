@@ -1,6 +1,5 @@
 // convert from tabular data to csv or geographical data to geojson
 const config = /** @type {any} */(require('config'))
-const { pipeline } = require('node:stream').promises
 
 exports.eventsPrefix = 'normalize'
 
@@ -40,6 +39,7 @@ async function decompress (mimetype, filePath, dirPath) {
 }
 
 exports.process = async function (app, dataset) {
+  const { pipeline } = require('node:stream').promises
   const path = require('path')
   const fs = require('fs-extra')
   const createError = require('http-errors')
