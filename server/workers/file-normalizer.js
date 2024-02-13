@@ -1,5 +1,6 @@
 // convert from tabular data to csv or geographical data to geojson
 const config = /** @type {any} */(require('config'))
+const { pipeline } = require('node:stream').promises
 
 exports.eventsPrefix = 'normalize'
 
@@ -153,9 +154,8 @@ exports.process = async function (app, dataset) {
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
       throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
-    const data = await xlsx.getCSV(originalFilePath)
     const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
-    await fs.writeFile(filePath, data)
+    await pipeline(xlsx.iterCSV(originalFilePath), fs.createWriteStream(filePath))
     dataset.file = {
       name: path.parse(dataset.originalFile.name).name + '.csv',
       size: await fs.stat(filePath).size,

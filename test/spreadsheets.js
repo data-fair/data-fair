@@ -30,15 +30,19 @@ describe('Spreadsheets conversions', () => {
   })
 
   it('should manage XLSX file create by excel', async () => {
-    const csv = await xlsx.getCSV('test/resources/datasets/Les aides financières ADEME.xlsx')
-    const dates = csv.split('\n').map(line => line.split(',')[2])
+    const dates = []
+    for await (const line of xlsx.iterCSV('test/resources/datasets/Les aides financières ADEME.xlsx')) {
+      dates.push(line.split(',')[2])
+    }
     assert.equal(dates[1], '2019-03-20')
     assert.equal(dates[2], '2018-04-05')
   })
 
   it('should manage another XLSX file created by excel', async () => {
-    const csv = await xlsx.getCSV('test/resources/datasets/date-time.xlsx')
-    const dates = csv.split('\n').map(line => line.split(',')[1])
+    const dates = []
+    for await (const line of xlsx.iterCSV('test/resources/datasets/date-time.xlsx')) {
+      dates.push(line.split(',')[1])
+    }
     assert.equal(dates[1], '2050-01-01T00:00:00.000Z')
     assert.equal(dates[2], '2050-01-01T01:00:00.000Z')
   })

@@ -1,8 +1,6 @@
+const { stringify: csvStr } = require('csv-stringify/sync')
 const dayjs = require('dayjs')
 const utc = require('dayjs/plugin/utc')
-const XLSX = require('xlsx')
-const Excel = require('exceljs')
-const { stringify: csvStr } = require('csv-stringify/sync')
 
 dayjs.extend(utc)
 
@@ -125,20 +123,25 @@ const mapCellValue = (value) => {
 
 /**
  * @param {string} filePath
- * @returns {Promise<string>}
  */
-exports.getCSV = async (filePath) => {
+exports.iterCSV = async function * (filePath) {
+  const Excel = require('exceljs')
+
   const workbook = new Excel.Workbook()
   try {
     await workbook.xlsx.readFile(filePath)
   } catch (err) {
     console.log('failed to use Excel module to parse file, use older parser', err)
-    return await getCSVOld(filePath)
+    yield * iterCSVOld(filePath)
+    return
   }
   const worksheet = workbook.getWorksheet(1)
 
   // fallback to previous implementation
-  if (!worksheet) return await getCSVOld(filePath)
+  if (!worksheet) {
+    yield * iterCSVOld(filePath)
+    return
+  }
 
   const json = /** @type {((string | number | Date | undefined)[])[]} */(worksheet.getSheetValues().filter(row => !!row))
 
@@ -165,23 +168,25 @@ exports.getCSV = async (filePath) => {
   for (let lineNb = 0; lineNb < json.length; lineNb++) {
     const row = json[lineNb]
     if (!row) continue
-    for (let colNb = 0; colNb < row.length; colNb++) {
-      row[colNb] = mapCellValue(row[colNb])
-      // @ts-ignore
-      if (hasSimpleDate[colNb]) row[colNb] = row[colNb].replace('T00:00:00.000Z', '')
+    if (lineNb > 0) {
+      for (let colNb = 0; colNb < row.length; colNb++) {
+        row[colNb] = mapCellValue(row[colNb])
+        // @ts-ignore
+        if (hasSimpleDate[colNb]) row[colNb] = row[colNb].replace('T00:00:00.000Z', '')
+      }
     }
     row.splice(0, ignoredStartingCols)
+    yield csvStr([row])
   }
-
-  return csvStr(json)
 }
 
 // previous implementation using xlsx module.. kept around as a fallback and for ODS format
 /**
  * @param {string} filePath
- * @returns {Promise<string>}
  */
-const getCSVOld = async (filePath) => {
+const iterCSVOld = async function * (filePath) {
+  const XLSX = require('xlsx')
+
   const workbook = XLSX.readFile(filePath, { cellDates: true })
   const worksheet = workbook.Sheets[workbook.SheetNames[0]]
 
@@ -229,11 +234,8 @@ const getCSVOld = async (filePath) => {
     return !!row.find(cell => cell !== null && cell !== undefined && cell !== '')
   })
 
-  // remove empty headers
-  /* TODO: uncomment after adding a test case
-  let emptyHeader
-  while ((emptyHeader = json[0].findIndex(header => header === '')) !== -1) {
-    json.forEach(row => row.splice(emptyHeader, 1))
-  } */
-  return csvStr(json)
+  for (const row of json) {
+    if (!row || !row.find(cell => cell !== null && cell !== undefined && cell !== '')) continue
+    yield csvStr([row])
+  }
 }
