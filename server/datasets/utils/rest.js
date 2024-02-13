@@ -566,7 +566,7 @@ exports.bulkLines = async (req, res, next) => {
 
     if (!mimeType) return res.status(400).type('text/plain').send('unknown file extension')
 
-    const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, false, true, null, skipDecoding)
+    const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, false, true, null, skipDecoding, null, true)
 
     const summary = initSummary()
     const transactionStream = new TransactionStream({ req, validate, summary })
@@ -601,7 +601,7 @@ exports.bulkLines = async (req, res, next) => {
     res.end()
     storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
   } finally {
-    for (const file of req.files.actions) {
+    for (const file of req.files?.actions || []) {
       await fs.unlink(file.path)
     }
   }

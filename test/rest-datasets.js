@@ -818,6 +818,29 @@ line4;test1;test1;oui,2015-03-18T00:58:59`, { headers: { 'content-type': 'text/c
     assert.equal(dataset.count, 4)
   })
 
+  it('Send bulk actions as a CSV body with automatic adjustment of keys', async () => {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets/restcsv', {
+      isRest: true,
+      title: 'restcsv',
+      schema: [
+        { key: 'attr1', type: 'string' },
+        { key: 'attr2', type: 'string' }
+      ]
+    })
+    let dataset = await workers.hook('finalizer/restcsv')
+    await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `Attr1,Attr2
+test1,test1
+test2,test2`, { headers: { 'content-type': 'text/csv' } })
+    dataset = await workers.hook('finalizer/restcsv')
+    assert.equal(dataset.count, 2)
+    const lines = (await ax.get('/api/v1/datasets/restcsv/lines', { params: { sort: '_i' } })).data.results
+    assert.equal(lines[0].attr1, 'test1')
+    assert.equal(lines[0].attr2, 'test1')
+    assert.equal(lines[1].attr1, 'test2')
+    assert.equal(lines[1].attr2, 'test2')
+  })
+
   it('Resend downloaded csv as bulk actions', async () => {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets/restcsv', {
