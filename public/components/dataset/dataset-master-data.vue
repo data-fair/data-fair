@@ -8,7 +8,7 @@
         v-if="editMasterData"
         v-model="editMasterData"
         :schema="schema"
-        :options="{context, locale: 'fr'}"
+        :options="{context, locale: 'fr', disableAll: userOwnerRole(dataset.owner) !== 'admin'}"
       >
         <template #singleSearchs-before>
           <tutorial-alert
@@ -64,7 +64,7 @@ en:
 </i18n>
 
 <script>
-import { mapState, mapActions } from 'vuex'
+import { mapState, mapActions, mapGetters } from 'vuex'
 const datasetSchema = require('~/../contract/dataset.js')
 
 const defaultMasterData = { standardSchema: {}, virtualDatasets: {}, singleSearchs: [], bulkSearchs: [] }
@@ -77,6 +77,7 @@ export default {
   },
   computed: {
     ...mapState('dataset', ['dataset']),
+    ...mapGetters(['userOwnerRole']),
     schema () {
       return JSON.parse(JSON.stringify(datasetSchema.properties.masterData))
     },

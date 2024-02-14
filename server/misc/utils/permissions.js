@@ -51,6 +51,15 @@ exports.middleware = function (operationId, operationClass, trackingCategory, ac
   }
 }
 
+exports.canDoForOwnerMiddleware = function (operationClass) {
+  return function (req, res, next) {
+    if (!exports.canDoForOwner(req.resource.owner, req.resourceType, operationClass, req.user)) {
+      return res.status(403).type('text/plain').send('Permission manquante pour l\'opération.')
+    }
+    next()
+  }
+}
+
 const getOwnerRole = exports.getOwnerRole = (owner, user, ignoreDepartment = false) => {
   if (!user || user.isApplicationKey || !user.activeAccount) return null
 
@@ -73,7 +82,9 @@ const getOwnerClasses = (owner, user, resourceType) => {
   if (!ownerRole) return null
   // classes of operations the user can do based on him being member of the resource's owner
   if (ownerRole === config.adminRole || (user && user.adminMode)) {
-    return Object.keys(operationsClasses).concat(['post'])
+    return Object.keys(operationsClasses)
+      .concat(apiDocsUtil.contribOperationsClasses[resourceType] || [])
+      .concat(apiDocsUtil.adminOperationsClasses[resourceType] || [])
   }
   if (ownerRole === config.contribRole) {
     return apiDocsUtil.contribOperationsClasses[resourceType] || []
