@@ -151,6 +151,19 @@ describe('datasets', () => {
     await workers.hook('finalizer/' + res.data.id)
   })
 
+  it('Upload new dataset in organization zone with explicit department', async () => {
+    const ax = global.ax.dmeadusOrg
+    const form = new FormData()
+    form.append('file', datasetFd, 'dataset2.csv')
+    form.append('body', JSON.stringify({ owner: { type: 'organization', id: 'KWqAGZ4mG', department: 'dep1' } }))
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+    assert.equal(res.data.owner.type, 'organization')
+    assert.equal(res.data.owner.id, 'KWqAGZ4mG')
+    assert.equal(res.data.owner.department, 'dep1')
+    await workers.hook('finalizer/' + res.data.id)
+  })
+
   it('Uploading same file twice should increment slug', async () => {
     const ax = global.ax.dmeadusOrg
     for (const i of [1, 2, 3]) {

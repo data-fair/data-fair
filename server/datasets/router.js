@@ -261,15 +261,6 @@ const createDatasetRoute = asyncWrap(async (req, res) => {
 
   if (!user) throw createError(401)
 
-  const owner = usersUtils.owner(req)
-  if (!permissions.canDoForOwner(owner, 'datasets', 'post', user)) {
-    throw createError(403, req.__('errors.missingPermission'))
-  }
-  if ((await limits.remaining(db, owner)).nbDatasets === 0) {
-    debugLimits('exceedLimitNbDatasets/beforeUpload', { owner })
-    throw createError(429, req.__('errors.exceedLimitNbDatasets'))
-  }
-
   /** @type {undefined | any[]} */
   const files = await uploadUtils.getFiles(req, res)
 
@@ -279,8 +270,17 @@ const createDatasetRoute = asyncWrap(async (req, res) => {
       debugFiles('POST datasets uploaded some files', files)
     }
 
-    const body = uploadUtils.getFormBody(req.body)
+    const body = req.body = uploadUtils.getFormBody(req.body)
     validatePost(body)
+
+    const owner = usersUtils.owner(req)
+    if (!permissions.canDoForOwner(owner, 'datasets', 'post', user)) {
+      throw createError(403, req.__('errors.missingPermission'))
+    }
+    if ((await limits.remaining(db, owner)).nbDatasets === 0) {
+      debugLimits('exceedLimitNbDatasets/beforeUpload', { owner })
+      throw createError(429, req.__('errors.exceedLimitNbDatasets'))
+    }
 
     // this is kept for retro-compatibility, but we should think of deprecating it
     // self chosen ids are not a good idea
