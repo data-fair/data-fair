@@ -289,7 +289,7 @@ exports.run = async () => {
       datasetUtils.mergeDraft(resource)
     }
     await require('./workers').tasks[process.argv[2]].process(app, resource)
-  } else if (config.observe.active) {
+  } else if (config.observer.active) {
     await observe.start(db)
   }
 
@@ -310,7 +310,7 @@ exports.stop = async () => {
 
   await locksUtils.stop(app.get('db'))
 
-  if (config.mode !== 'task' && config.observe.active) {
+  if (config.mode !== 'task' && config.observer.active) {
     await observe.stop()
   }
 

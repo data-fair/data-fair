@@ -259,12 +259,12 @@ module.exports = {
     locales: 'I18N_LOCALES',
     defaultLocale: 'I18N_DEFAULT_LOCALE'
   },
-  observe: {
+  observer: {
     active: {
-      __name: 'OBSERVE_ACTIVE',
+      __name: 'OBSERVER_ACTIVE',
       __format: 'json'
     },
-    port: 'OBSERVE_PORT'
+    port: 'OBSERVER_PORT'
   },
   agentkeepaliveOptions: {
     __name: 'AGENTKEEPALIVE_OPTIONS',

@@ -323,7 +323,7 @@ module.exports = {
   remoteFilesAutoUpdates: {
     cron: '0 23 * * 0'
   },
-  observe: {
+  observer: {
     active: true,
     port: 9090
   },
