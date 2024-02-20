@@ -106,9 +106,9 @@ exports.start = async (db) => {
     }
   })
 
-  server.listen(config.observe.port)
+  server.listen(config.observer.port)
   await eventToPromise(server, 'listening')
-  console.log('Observe server listening on http://localhost:' + config.observe.port)
+  console.log('Observe server listening on http://localhost:' + config.observer.port)
 }
 
 exports.stop = async () => {

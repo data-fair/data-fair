@@ -244,6 +244,10 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
   } else {
     if (!esQuery.sort.some(s => !!s._i)) esQuery.sort.push('_i')
   }
+  if (dataset.isVirtual) {
+    // _i is not a good enough tie-breaker in the case of virtual datasets
+    if (!esQuery.sort.some(s => !!s._rand)) esQuery.sort.push('_rand')
+  }
 
   // Simple highlight management
   // https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-highlighting.html
