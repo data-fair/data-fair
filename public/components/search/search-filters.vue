@@ -42,7 +42,7 @@
       </v-card>
     </v-col>
     <v-col
-      v-if="Object.keys(filterLabels).filter(f => filters[f]).length"
+      v-if="filterLabels && Object.keys(filterLabels).filter(f => filters[f]).length"
       cols="12"
       md="6"
       lg="12"
@@ -97,7 +97,7 @@ en:
 import { mapState, mapGetters } from 'vuex'
 
 export default {
-  props: ['filters', 'filterLabels', 'type', 'sorts', 'facetsValues'],
+  props: ['filters', 'filterLabels', 'sorts', 'facetsValues'],
   computed: {
     ...mapState('session', ['user']),
     ...mapGetters('session', ['activeAccount']),
@@ -130,9 +130,11 @@ export default {
           this.$set(this.facetsValues, key, query[key] ? query[key].split(',') : [])
         })
       }
-      Object.keys(this.filterLabels).forEach(key => {
-        this.$set(this.filters, key, query[key])
-      })
+      if (this.filterLabels) {
+        Object.keys(this.filterLabels).forEach(key => {
+          this.$set(this.filters, key, query[key])
+        })
+      }
       this.$set(this.filters, 'q', query.q)
       this.$set(this.filters, 'shared', query.shared === 'true')
       if (this.sorts) this.$set(this.filters, 'sort', query.sort || 'createdAt:-1')
@@ -152,8 +154,8 @@ export default {
       })
       if (this.filters.shared) query.shared = 'true'
       else delete query.shared
-      if (this.filters.owners) query.owner = this.filters.owners
-      else delete query.owner
+      if (this.filters.ownerExt) query.ownerExt = this.filters.ownerExt
+      else delete query.ownerExt
       if (this.sorts && this.filters.sort) query.sort = this.filters.sort
       else delete query.sort
 

@@ -23,9 +23,7 @@
           </div>
 
           <search-filters
-            :filter-labels="{owner: $t('owner')}"
             :filters="filters"
-            type="catalogs"
             class="mr-6"
             @apply="refresh()"
           />
@@ -99,10 +97,7 @@
           <v-row class="px-2 pt-2">
             <v-col>
               <search-filters
-                :filter-labels="{owner: $t('owner')}"
                 :filters="filters"
-                :facets="catalogs && catalogs.facets"
-                type="catalogs"
                 @apply="refresh()"
               />
             </v-col>
@@ -191,7 +186,7 @@ export default {
         sort: 'createdAt:-1',
         html: 'true'
       }
-      if (!append) params.facets = 'owner'
+      // if (!append) params.facets = 'owner'
       if (JSON.stringify(params) !== JSON.stringify(this.lastParams)) {
         this.lastParams = params
         this.loading = true
