@@ -51,9 +51,10 @@ exports.middleware = function (operationId, operationClass, trackingCategory, ac
   }
 }
 
-exports.canDoForOwnerMiddleware = function (operationClass) {
+exports.canDoForOwnerMiddleware = function (operationClass, ignoreDepartment = false) {
   return function (req, res, next) {
-    if (!exports.canDoForOwner(req.resource.owner, req.resourceType, operationClass, req.user)) {
+    const owner = ignoreDepartment ? { ...req.resource.owner, department: null } : req.resource.owner
+    if (!exports.canDoForOwner(owner, req.resourceType, operationClass, req.user)) {
       return res.status(403).type('text/plain').send('Permission manquante pour l\'opération.')
     }
     next()

@@ -131,7 +131,7 @@ const descriptionHasBreakingChanges = (req) => {
   return breakingChanges.length > 0
 }
 const permissionsWriteDescriptionBreaking = permissions.middleware('writeDescriptionBreaking', 'write')
-const permissionsManageMasterData = permissions.canDoForOwnerMiddleware('manageMasterData')
+const permissionsManageMasterData = permissions.canDoForOwnerMiddleware('manageMasterData', true)
 
 // Update a dataset's metadata
 router.patch('/:datasetId',

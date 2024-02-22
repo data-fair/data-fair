@@ -40,7 +40,7 @@
                 </v-tab>
 
                 <v-tab
-                  v-if="!dataset.draftReason && !dataset.isMetaOnly && userOwnerRole(dataset.owner) === 'admin'"
+                  v-if="!dataset.draftReason && !dataset.isMetaOnly && userOwnerRole(dataset.owner, true) === 'admin'"
                   href="#structure-masterdata"
                 >
                   <v-icon>
