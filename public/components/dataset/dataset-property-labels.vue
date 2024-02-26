@@ -39,7 +39,6 @@
         />
 
         <v-checkbox
-          v-if="isRest"
           v-model="property['x-labelsRestricted']"
           :label="$t('restricted')"
           :disabled="!editable"
@@ -63,11 +62,11 @@
 fr:
   labels: Libellés
   tutorialLabels: Saisissez des libellés associés à des valeurs présentes dans la donnée pour améliorer la présentation dans les applications.
-  restricted: cochez cette case pour restreindre les futures saisies aux valeurs ci-dessous
+  restricted: cochez cette case pour restreindre les futures données aux valeurs ci-dessous
 en:
   labels: Labels
   tutorialLabels: Enter some labels associate to values present in the data to improve the display in applications.
-  restricted: check this box to restrict future values to the values below
+  restricted: check this box to restrict future data to the values below
 </i18n>
 
 <script>

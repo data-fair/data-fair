@@ -302,12 +302,20 @@ exports.schemasFullyCompatible = (schema1, schema2, ignoreCalculated = false) =>
   const innocuous = {
     title: '',
     description: '',
+    icon: '',
     'x-display': '',
     'x-master': '',
     'x-labelsRestricted': '',
     'x-labels': '',
     'x-group': '',
     'x-cardinality': '',
+    'x-required': '',
+    minimum: '',
+    maximum: '',
+    minLength: '',
+    maxLength: '',
+    pattern: '',
+    readOnly: '',
     enum: ''
   }
   const schema1Bare = schema1.filter(p => !(p['x-calculated'] && ignoreCalculated)).map(p => ({ ...p, ...innocuous })).sort((p1, p2) => p1.key.localeCompare(p2.key))
