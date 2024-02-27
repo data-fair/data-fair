@@ -155,11 +155,24 @@ const getLineId = (line, dataset) => {
     return Buffer.from(JSON.stringify(primaryKey).slice(2, -2)).toString('hex')
   }
 }
+
+/**
+ * @param {string} id
+ * @returns {string[]}
+ */
+const parsePrimaryKey = (id) => {
+  try {
+    return JSON.parse('["' + Buffer.from(id, 'hex') + '"]')
+  } catch (err) {
+    throw createError(400, 'primary key is malformed')
+  }
+}
+
 // make sure that the primary properties are present
 // even when they were not given and only _id was given
 const fillPrimaryKeyFromId = (line, dataset) => {
   if (!dataset.primaryKey || !dataset.primaryKey.length) return
-  const primaryKey = JSON.parse('["' + Buffer.from(line._id, 'hex') + '"]')
+  const primaryKey = parsePrimaryKey(line._id)
   for (let i = 0; i < dataset.primaryKey.length; i++) {
     if (!(dataset.primaryKey[i] in line)) line[dataset.primaryKey[i]] = primaryKey[i]
   }
