@@ -15,6 +15,7 @@ const { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedF
 const { schemasFullyCompatible, getSchemaBreakingChanges } = require('./utils/schema')
 const { getExtensionKey, prepareExtensions, prepareExtensionsSchema } = require('./utils/extensions')
 const { validateURLFriendly } = require('../misc/utils/validation')
+const assertImmutable = require('../misc/utils/assert-immutable')
 const { curateDataset, titleFromFileName } = require('./utils')
 const virtualDatasetsUtils = require('./utils/virtual')
 const { prepareInitFrom } = require('./utils/init-from')
@@ -148,7 +149,7 @@ exports.findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQue
  * @param {boolean | undefined} [tolerateStale]
  * @param {string[] | ((body: any, dataset: any) => string[] | null)} [_acceptedStatuses]
  * @param {any} [reqBody]
- * @returns
+ * @returns {Promise<{dataset?: any, datasetFull?: any}>}
  */
 exports.getDataset = async (datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, tolerateStale, _acceptedStatuses, reqBody) => {
   let dataset, datasetFull
@@ -176,7 +177,7 @@ exports.getDataset = async (datasetId, publicationSite, mainPublicationSite, use
         dataset.descendants = await virtualDatasetsUtils.descendants(db, dataset, tolerateStale)
       }
 
-      return { dataset, datasetFull }
+      return !_acceptedStatuses ? assertImmutable({ dataset, datasetFull }, `dataset ${dataset.id}`) : { dataset, datasetFull }
     }
 
     // dataset found but not in proper state.. wait a little while

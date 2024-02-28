@@ -20,6 +20,7 @@ const datasetUtils = require('./utils')
 const restDatasetsUtils = require('./utils/rest')
 const findUtils = require('../misc/utils/find')
 const asyncWrap = require('../misc/utils/async-handler')
+const clone = require('../misc/utils/clone')
 const attachments = require('./utils/attachments')
 const geo = require('./utils/geo')
 const tiles = require('./utils/tiles')
@@ -81,8 +82,10 @@ router.use('/:datasetId/permissions', readDataset(), permissions.router('dataset
 
 // retrieve a dataset by its id
 router.get('/:datasetId', readDataset({ acceptInitialDraft: true }), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
-  req.dataset.userPermissions = permissions.list('datasets', req.dataset, req.user, req.bypassPermissions)
-  res.status(200).send(clean(req.publicBaseUrl, req.publicationSite, req.dataset, req.query))
+  // @ts-ignore
+  const dataset = clone(req.dataset)
+  dataset.userPermissions = permissions.list('datasets', dataset, req.user, req.bypassPermissions)
+  res.status(200).send(clean(req.publicBaseUrl, req.publicationSite, dataset, req.query))
 })
 
 // retrieve only the schema.. Mostly useful for easy select fields
@@ -102,11 +105,11 @@ const sendSchema = (req, res, schema) => {
   res.status(200).send(schema)
 }
 router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.middleware('readSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
-  sendSchema(req, res, req.dataset.schema)
+  sendSchema(req, res, clone(req.dataset.schema))
 })
 // alternate read schema route that does not return clues about the data (cardinality and enums)
 router.get('/:datasetId/safe-schema', readDataset(), applicationKey, permissions.middleware('readSafeSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
-  const schema = req.dataset.schema
+  const schema = clone(req.dataset.schema)
   for (const p of schema) {
     delete p['x-cardinality']
     delete p.enum
