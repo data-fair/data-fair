@@ -24,6 +24,11 @@ exports.operationsClasses = {
   }
 }
 
+exports.adminOperationsClasses = {
+  datasets: ['manageMasterData'],
+  catalogs: ['post']
+}
+
 exports.contribOperationsClasses = {
   datasets: ['post'],
   applications: ['post'],

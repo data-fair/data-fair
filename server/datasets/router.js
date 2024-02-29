@@ -134,6 +134,7 @@ const descriptionHasBreakingChanges = (req) => {
   return breakingChanges.length > 0
 }
 const permissionsWriteDescriptionBreaking = permissions.middleware('writeDescriptionBreaking', 'write')
+const permissionsManageMasterData = permissions.canDoForOwnerMiddleware('manageMasterData', true)
 
 // Update a dataset's metadata
 router.patch('/:datasetId',
@@ -150,6 +151,7 @@ router.patch('/:datasetId',
   lockDataset((/** @type {any} */ patch) => {
     return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)
   }),
+  (req, res, next) => req.body.masterData ? permissionsManageMasterData(req, res, next) : next(),
   (req, res, next) => descriptionHasBreakingChanges(req) ? permissionsWriteDescriptionBreaking(req, res, next) : permissionsWriteDescription(req, res, next),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
   (req, res, next) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),

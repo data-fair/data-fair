@@ -128,14 +128,16 @@ export default () => {
         return getters.canAdminDep && !getters['session/activeAccount'].department
       },
       userOwnerRole (state, getters) {
-        return (owner) => {
+        return (owner, ignoreOwnerDepartment = false) => {
           const user = state.session.user
           const activeAccount = getters['session/activeAccount']
           const activeAccountRole = getters['session/accountRole']
           if (!activeAccount) return null
           if (owner.type === 'user' && owner.id === user.id) return 'admin'
-          if (owner.type === activeAccount.type && owner.id === activeAccount.id && (!activeAccount.department || (owner.department || null) === (activeAccount.department || null))) {
-            return activeAccountRole
+          if (owner.type === activeAccount.type && owner.id === activeAccount.id) {
+            if (!activeAccount.department) return activeAccountRole
+            if (activeAccount.department && ignoreOwnerDepartment) return null
+            if ((owner.department || null) === (activeAccount.department || null)) return activeAccountRole
           }
         }
       },
