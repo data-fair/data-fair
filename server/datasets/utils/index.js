@@ -214,6 +214,17 @@ exports.curateDataset = (dataset, existingDataset) => {
   } else if (dataset.remoteFile?.autoUpdate) {
     delete dataset.remoteFile.autoUpdate.nextUpdate
   }
+
+  if (dataset.masterData?.bulkSearchs?.length) {
+    for (const bulkSearch of dataset.masterData.bulkSearchs) {
+      if (!bulkSearch.id) bulkSearch.id = slug(bulkSearch.title, { lower: true, strict: true })
+    }
+  }
+  if (dataset.masterData?.singleSearchs?.length) {
+    for (const singleSearch of dataset.masterData.singleSearchs) {
+      if (!singleSearch.id) singleSearch.id = slug(singleSearch.title, { lower: true, strict: true })
+    }
+  }
 }
 
 exports.titleFromFileName = (name) => {

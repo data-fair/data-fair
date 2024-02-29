@@ -33,10 +33,10 @@ const anonymousApiRate = apiRate('anonymous', 'anonyme')
  */
 // @ts-ignore
 module.exports = (dataset, publicUrl = config.publicUrl, ownerInfo, publicationSite) => {
-  dataset.schema = dataset.schema || []
-  const datasetLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl)
+  const schema = dataset.schema || []
+  const datasetLineSchema = datasetUtils.jsonSchema(schema, publicUrl)
 
-  const bulkLineSchema = datasetUtils.jsonSchema(dataset.schema.filter((/** @type {any} */ p) => !p['x-calculated'] && !p['x-extension']), publicUrl)
+  const bulkLineSchema = datasetUtils.jsonSchema(schema.filter((/** @type {any} */ p) => !p['x-calculated'] && !p['x-extension']), publicUrl)
   bulkLineSchema.properties._action = {
     type: 'string',
     title: 'Action',
@@ -49,8 +49,7 @@ module.exports = (dataset, publicUrl = config.publicUrl, ownerInfo, publicationS
     `
   }
 
-  const properties = dataset.schema
-  const stringProperties = properties
+  const stringProperties = schema
     .filter((/** @type {any} */ p) => !p['x-calculated'] && p.type === 'string' && (!p.format || p.format === 'uri-reference'))
   const textSearchProperties = stringProperties
     .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].text !== false || p['x-capabilities'].textStandard !== false)
@@ -58,11 +57,11 @@ module.exports = (dataset, publicUrl = config.publicUrl, ownerInfo, publicationS
     .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].textAgg !== false)
   const stringValuesProperties = stringProperties
     .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].values !== false)
-  const valuesProperties = dataset.schema
+  const valuesProperties = schema
     .filter((/** @type {any} */ p) => !p['x-capabilities'] || p['x-capabilities'].values !== false)
-  const numberProperties = dataset.schema
+  const numberProperties = schema
     .filter((/** @type {any} */ p) => p.type === 'number')
-  const imageProperty = dataset.schema.find((/** @type {any} */f) => f['x-refersTo'] === 'http://schema.org/image')
+  const imageProperty = schema.find((/** @type {any} */f) => f['x-refersTo'] === 'http://schema.org/image')
 
   const filterParams = [{
     in: 'query',
@@ -199,7 +198,7 @@ Exemple: ma_colonne,-ma_colonne2`,
         type: 'array',
         items: {
           type: 'string',
-          enum: properties.length ? properties.map((/** @type {any} */ p) => p.key) : undefined
+          enum: schema.length ? schema.map((/** @type {any} */ p) => p.key) : undefined
         }
       },
       style: 'form',
@@ -623,7 +622,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               description: 'La colonne sur laquelle calculer la métrique',
               schema: {
                 type: 'string',
-                enum: valuesProperties.length ? properties.map((/** @type {any} */ p) => p.key) : undefined
+                enum: valuesProperties.length ? schema.map((/** @type {any} */ p) => p.key) : undefined
               },
               required: true
             },
@@ -667,7 +666,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                 type: 'array',
                 items: {
                   type: 'string',
-                  enum: valuesProperties.length ? properties.map((/** @type {any} */ p) => p.key) : undefined
+                  enum: valuesProperties.length ? schema.map((/** @type {any} */ p) => p.key) : undefined
                 }
               },
               style: 'form',

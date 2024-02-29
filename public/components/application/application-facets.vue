@@ -119,7 +119,7 @@ en:
 import { mapState, mapGetters } from 'vuex'
 
 export default {
-  props: ['facets', 'facetsValues', 'showShared'],
+  props: ['facets', 'facetsValues'],
   data () {
     return { visibleFacet: 'visibility' }
   },
@@ -129,7 +129,6 @@ export default {
     ...mapGetters('session', ['activeAccount']),
     showOwnerFacets () {
       if (!this.facets.owner) return false
-      if (this.showShared) return true
       if (!this.activeAccount.department && this.facets.owner.find(o => !!o.value.department)) return true
       return false
     }

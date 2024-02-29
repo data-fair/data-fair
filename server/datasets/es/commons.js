@@ -204,7 +204,11 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
   esQuery.size = query.size ? Number(query.size) : 12
   if (esQuery.size > config.elasticsearch.maxPageSize) throw createError(400, `"size" cannot be more than ${config.elasticsearch.maxPageSize}`)
   if (query.after) {
-    esQuery.search_after = JSON.parse(`[${query.after}]`)
+    try {
+      esQuery.search_after = JSON.parse(`[${query.after}]`)
+    } catch (err) {
+      throw createError(400, '"after" parameter is malformed')
+    }
   } else {
     esQuery.from = (query.page ? Number(query.page) - 1 : 0) * esQuery.size
   }
@@ -243,6 +247,10 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
     if (!esQuery.sort.some(s => !!s._i)) esQuery.sort.push({ _i: 'desc' })
   } else {
     if (!esQuery.sort.some(s => !!s._i)) esQuery.sort.push('_i')
+  }
+  if (dataset.isVirtual) {
+    // _i is not a good enough tie-breaker in the case of virtual datasets
+    if (!esQuery.sort.some(s => !!s._rand)) esQuery.sort.push('_rand')
   }
 
   // Simple highlight management
@@ -384,8 +392,12 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
       throw createError(400, `Impossible de faire une recherche sur le champ ${key.slice(0, key.length - 3)}.`)
     }
     if (key.endsWith('_in')) {
-      const values = query[key].startsWith('"') ? JSON.parse(`[${query[key]}]`) : query[key].split(',')
-      filter.push({ terms: { [prop.key]: values } })
+      try {
+        const values = query[key].startsWith('"') ? JSON.parse(`[${query[key]}]`) : query[key].split(',')
+        filter.push({ terms: { [prop.key]: values } })
+      } catch (err) {
+        throw createError(400, `"${key}" parameter is malformed`)
+      }
     }
     if (key.endsWith('_eq')) {
       filter.push({ term: { [prop.key]: query[key] } })

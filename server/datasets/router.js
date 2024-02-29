@@ -20,6 +20,7 @@ const datasetUtils = require('./utils')
 const restDatasetsUtils = require('./utils/rest')
 const findUtils = require('../misc/utils/find')
 const asyncWrap = require('../misc/utils/async-handler')
+const clone = require('../misc/utils/clone')
 const attachments = require('./utils/attachments')
 const geo = require('./utils/geo')
 const tiles = require('./utils/tiles')
@@ -81,8 +82,10 @@ router.use('/:datasetId/permissions', readDataset(), permissions.router('dataset
 
 // retrieve a dataset by its id
 router.get('/:datasetId', readDataset({ acceptInitialDraft: true }), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
-  req.dataset.userPermissions = permissions.list('datasets', req.dataset, req.user, req.bypassPermissions)
-  res.status(200).send(clean(req.publicBaseUrl, req.publicationSite, req.dataset, req.query))
+  // @ts-ignore
+  const dataset = clone(req.dataset)
+  dataset.userPermissions = permissions.list('datasets', dataset, req.user, req.bypassPermissions)
+  res.status(200).send(clean(req.publicBaseUrl, req.publicationSite, dataset, req.query))
 })
 
 // retrieve only the schema.. Mostly useful for easy select fields
@@ -102,11 +105,11 @@ const sendSchema = (req, res, schema) => {
   res.status(200).send(schema)
 }
 router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.middleware('readSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
-  sendSchema(req, res, req.dataset.schema)
+  sendSchema(req, res, clone(req.dataset.schema))
 })
 // alternate read schema route that does not return clues about the data (cardinality and enums)
 router.get('/:datasetId/safe-schema', readDataset(), applicationKey, permissions.middleware('readSafeSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
-  const schema = req.dataset.schema
+  const schema = clone(req.dataset.schema)
   for (const p of schema) {
     delete p['x-cardinality']
     delete p.enum
@@ -131,6 +134,7 @@ const descriptionHasBreakingChanges = (req) => {
   return breakingChanges.length > 0
 }
 const permissionsWriteDescriptionBreaking = permissions.middleware('writeDescriptionBreaking', 'write')
+const permissionsManageMasterData = permissions.canDoForOwnerMiddleware('manageMasterData', true)
 
 // Update a dataset's metadata
 router.patch('/:datasetId',
@@ -147,6 +151,7 @@ router.patch('/:datasetId',
   lockDataset((/** @type {any} */ patch) => {
     return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)
   }),
+  (req, res, next) => req.body.masterData ? permissionsManageMasterData(req, res, next) : next(),
   (req, res, next) => descriptionHasBreakingChanges(req) ? permissionsWriteDescriptionBreaking(req, res, next) : permissionsWriteDescription(req, res, next),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
   (req, res, next) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),
@@ -259,15 +264,6 @@ const createDatasetRoute = asyncWrap(async (req, res) => {
 
   if (!user) throw createError(401)
 
-  const owner = usersUtils.owner(req)
-  if (!permissions.canDoForOwner(owner, 'datasets', 'post', user)) {
-    throw createError(403, req.__('errors.missingPermission'))
-  }
-  if ((await limits.remaining(db, owner)).nbDatasets === 0) {
-    debugLimits('exceedLimitNbDatasets/beforeUpload', { owner })
-    throw createError(429, req.__('errors.exceedLimitNbDatasets'))
-  }
-
   /** @type {undefined | any[]} */
   const files = await uploadUtils.getFiles(req, res)
 
@@ -277,8 +273,17 @@ const createDatasetRoute = asyncWrap(async (req, res) => {
       debugFiles('POST datasets uploaded some files', files)
     }
 
-    const body = uploadUtils.getFormBody(req.body)
+    const body = req.body = uploadUtils.getFormBody(req.body)
     validatePost(body)
+
+    const owner = usersUtils.owner(req)
+    if (!permissions.canDoForOwner(owner, 'datasets', 'post', user)) {
+      throw createError(403, req.__('errors.missingPermission'))
+    }
+    if ((await limits.remaining(db, owner)).nbDatasets === 0) {
+      debugLimits('exceedLimitNbDatasets/beforeUpload', { owner })
+      throw createError(429, req.__('errors.exceedLimitNbDatasets'))
+    }
 
     // this is kept for retro-compatibility, but we should think of deprecating it
     // self chosen ids are not a good idea
