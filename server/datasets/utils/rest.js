@@ -1,4 +1,5 @@
 const config = /** @type {any} */(require('config'))
+const crypto = require('node:crypto')
 const fs = require('fs-extra')
 const path = require('path')
 const createError = require('http-errors')
@@ -158,7 +159,12 @@ exports.deleteDataset = async (db, dataset) => {
 const getLineId = (line, dataset) => {
   if (dataset.primaryKey && dataset.primaryKey.length) {
     const primaryKey = dataset.primaryKey.map(p => line[p] + '')
-    return Buffer.from(JSON.stringify(primaryKey).slice(2, -2)).toString('hex')
+    if (dataset.rest?.primaryKeyMode === 'sha256') {
+      return crypto.createHash('sha256').update(JSON.stringify(primaryKey)).digest('hex')
+    } else {
+      // base64 by default for retro-compatibility
+      return Buffer.from(JSON.stringify(primaryKey).slice(2, -2)).toString('hex')
+    }
   }
 }
 
