@@ -818,6 +818,29 @@ line4;test1;test1;oui,2015-03-18T00:58:59`, { headers: { 'content-type': 'text/c
     assert.equal(dataset.count, 4)
   })
 
+  it('Send bulk actions as a CSV body with automatic adjustment of keys', async () => {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets/restcsv', {
+      isRest: true,
+      title: 'restcsv',
+      schema: [
+        { key: 'attr1', type: 'string' },
+        { key: 'attr2', type: 'string' }
+      ]
+    })
+    let dataset = await workers.hook('finalizer/restcsv')
+    await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `Attr1,Attr2
+test1,test1
+test2,test2`, { headers: { 'content-type': 'text/csv' } })
+    dataset = await workers.hook('finalizer/restcsv')
+    assert.equal(dataset.count, 2)
+    const lines = (await ax.get('/api/v1/datasets/restcsv/lines', { params: { sort: '_i' } })).data.results
+    assert.equal(lines[0].attr1, 'test1')
+    assert.equal(lines[0].attr2, 'test1')
+    assert.equal(lines[1].attr1, 'test2')
+    assert.equal(lines[1].attr2, 'test2')
+  })
+
   it('Resend downloaded csv as bulk actions', async () => {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets/restcsv', {
@@ -973,6 +996,48 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     assert.equal(lines[0].attr1, 'test1')
     assert.equal(lines[1]._id, 'line2')
     assert.equal(lines[1].attr1, 'test1')
+  })
+
+  it('Send bulk as a .xlsx file', async () => {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets/restxlsxfile', {
+      isRest: true,
+      title: 'restxlsxfile',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+    })
+    let dataset = await workers.hook('finalizer/restxlsxfile')
+
+    const form = new FormData()
+    form.append('actions', fs.readFileSync('./test/resources/datasets/actions.xlsx'), 'actions.xlsx')
+    await ax.post('/api/v1/datasets/restxlsxfile/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
+    dataset = await workers.hook('finalizer/restxlsxfile')
+    assert.equal(dataset.count, 2)
+    const lines = (await ax.get('/api/v1/datasets/restxlsxfile/lines', { params: { sort: '_i' } })).data.results
+    assert.equal(lines[0].attr1, 'test1')
+    assert.equal(lines[0].attr2, 'Test1-2')
+    assert.equal(lines[1].attr1, 'test2')
+    assert.equal(lines[1].attr2, 'Test2-2')
+  })
+
+  it('Send bulk as a .ods file', async () => {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets/restodsfile', {
+      isRest: true,
+      title: 'restodsfile',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+    })
+    let dataset = await workers.hook('finalizer/restodsfile')
+
+    const form = new FormData()
+    form.append('actions', fs.readFileSync('./test/resources/datasets/actions.xlsx'), 'actions.ods')
+    await ax.post('/api/v1/datasets/restodsfile/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
+    dataset = await workers.hook('finalizer/restodsfile')
+    assert.equal(dataset.count, 2)
+    const lines = (await ax.get('/api/v1/datasets/restodsfile/lines', { params: { sort: '_i' } })).data.results
+    assert.equal(lines[0].attr1, 'test1')
+    assert.equal(lines[0].attr2, 'Test1-2')
+    assert.equal(lines[1].attr1, 'test2')
+    assert.equal(lines[1].attr2, 'Test2-2')
   })
 
   it('Send bulk as a .zip file', async () => {

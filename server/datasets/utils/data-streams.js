@@ -18,7 +18,7 @@ const { filePath, fullFilePath, tmpDir } = require('./files')
 const pump = require('../../misc/utils/pipe')
 
 // used both by exports.readStream and bulk transactions in rest datasets
-exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, encoding, skipDecoding, dataset) => {
+exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, encoding, skipDecoding, dataset, autoAdjustKeys = false) => {
   const streams = []
 
   // file is gzipped
@@ -54,6 +54,8 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
 
     // small local cache for perf
     const escapedKeys = {}
+    /** @type {Record<string, string>} */
+    const adjustedKeys = {}
 
     // Fix the objects based on schema
     streams.push(new Transform({
@@ -80,6 +82,19 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
           return callback(null, chunk)
         }
         const line = {}
+        if (autoAdjustKeys) {
+          for (const key of Object.keys(chunk)) {
+            if (!adjustedKeys[key]) {
+              adjustedKeys[key] = fieldsSniffer.escapeKey(key, dataset)
+              for (const prop of schema) {
+                if (prop.key === adjustedKeys[key] && !prop['x-originalName']) {
+                  prop['x-originalName'] = key
+                  break
+                }
+              }
+            }
+          }
+        }
         if (noExtra) {
           const unknownKeys = Object.keys(chunk)
             .filter(k => k !== '_i')
