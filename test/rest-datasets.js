@@ -63,10 +63,16 @@ describe('REST datasets', () => {
     assert.equal(res.data._id, 'id1')
     assert.equal(res.data.attr1, 'test3')
     assert.equal(res.data.attr2, 'test2')
+    await assert.rejects(ax.put('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4', _action: 'create' }), err => err.status === 409)
+    await assert.rejects(ax.post('/api/v1/datasets/rest1/lines', { _id: 'id1', attr1: 'test4', _action: 'create' }), err => err.status === 409)
+
     await ax.delete('/api/v1/datasets/rest1/lines/id1')
     await workers.hook('finalizer/rest1')
     await assert.rejects(ax.get('/api/v1/datasets/rest1/lines/id1'), err => err.status === 404)
     await assert.rejects(ax.patch('/api/v1/datasets/rest1/lines/id1', { _i: 10 }), err => err.status === 400)
+    await assert.rejects(ax.patch('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4' }), err => err.status === 404)
+    await assert.rejects(ax.put('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4', _action: 'update' }), err => err.status === 404)
+    await assert.rejects(ax.post('/api/v1/datasets/rest1/lines', { _id: 'id1', attr1: 'test4', _action: 'update' }), err => err.status === 404)
   })
 
   it('Reject properly json missing content-type', async () => {

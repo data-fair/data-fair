@@ -33,7 +33,7 @@ const sheet2csvPiscina = new Piscina({
   maxThreads: 1
 })
 
-const actions = ['create', 'update', 'patch', 'delete']
+const actions = ['create', 'update', 'createOrUpdate', 'patch', 'delete']
 
 function cleanLine (line) {
   delete line._needsIndexing
@@ -122,7 +122,6 @@ exports.configureHistory = async (app, dataset) => {
         const revision = { ...line, _action: 'create' }
         delete revision._needsIndexing
         delete revision._needsExtending
-        fillPrimaryKeyFromId(revision, dataset)
         revision._lineId = revision._id
         delete revision._id
         if (!revision._deleted) delete revision._deleted
@@ -163,28 +162,6 @@ const getLineId = (line, dataset) => {
   }
 }
 
-/**
- * @param {string} id
- * @returns {string[]}
- */
-const parsePrimaryKey = (id) => {
-  try {
-    return JSON.parse('["' + Buffer.from(id, 'hex') + '"]')
-  } catch (err) {
-    throw createError(400, 'primary key is malformed')
-  }
-}
-
-// make sure that the primary properties are present
-// even when they were not given and only _id was given
-const fillPrimaryKeyFromId = (line, dataset) => {
-  if (!dataset.primaryKey || !dataset.primaryKey.length) return
-  const primaryKey = parsePrimaryKey(line._id)
-  for (let i = 0; i < dataset.primaryKey.length; i++) {
-    if (!(dataset.primaryKey[i] in line)) line[dataset.primaryKey[i]] = primaryKey[i]
-  }
-}
-
 const linesOwnerCols = (linesOwner) => {
   if (!linesOwner) return {}
   const cols = { _owner: linesOwner.type + ':' + linesOwner.id }
@@ -211,22 +188,17 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
     .filter(f => !f['x-calculated'])
     .filter(f => !f['x-extension'])
     .reduce((a, p) => { a[p.key] = 1; return a }, {})
-  const results = []
 
-  const bulkOp = collection.initializeUnorderedBulkOp()
-  let bulkOpResult
+  // fill patch lines with existing data, perform validation and calculate hash
+  const results = []
   let i = 0
-  let hasBulkOp = false
-  const bulkOpMatchingResults = []
-  const bulkOpMatchingRevisions = []
   for (const transac of transacs) {
     let { _action, ...body } = transac
     if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
-
     Object.assign(body, linesOwnerCols(linesOwner))
 
     if (!body._id) body._id = getLineId(body, dataset)
-    if (_action === 'create' && !body._id) body._id = nanoid()
+    if (['create', 'createOrUpdate'].includes(_action) && !body._id) body._id = nanoid()
     if (!body._id) throw createError(400, '"_id" attribute is required')
 
     const extendedBody = { ...body }
@@ -237,21 +209,25 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
     }
     extendedBody._updatedAt = body._updatedAt ? new Date(body._updatedAt) : updatedAt
     extendedBody._i = Number((new Date(extendedBody._updatedAt).getTime() - datasetCreatedAt) + padI(i))
+    i++
 
     if (user && dataset.rest.storeUpdatedBy) {
       extendedBody._updatedBy = user.id
       extendedBody._updatedByName = user.name
     }
 
-    i++
-
     const result = { _id: body._id, _action }
 
     if (_action === 'delete') {
       extendedBody._deleted = true
       extendedBody._hash = null
-      bulkOp.find({ _id: body._id, ...linesOwnerFilter(linesOwner) }).replaceOne(extendedBody)
-      hasBulkOp = true
+
+      if (history && dataset.primaryKey) {
+        const projection = {}
+        for (const key of dataset.primaryKey) projection[key] = 1
+        const previousBody = await collection.findOne({ _id: body._id, ...linesOwnerFilter(linesOwner) }, { projection })
+        if (previousBody) Object.assign(extendedBody, previousBody)
+      }
     } else {
       extendedBody._deleted = false
       if (_action === 'patch') {
@@ -267,44 +243,76 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
         result._status = 400
       } else {
         extendedBody._hash = crc32(stableStringify(body)).toString(16)
-        const filter = { _id: body._id, _hash: { $ne: extendedBody._hash }, ...linesOwnerFilter(linesOwner) }
-        bulkOp.find(filter).upsert().replaceOne(extendedBody)
-        hasBulkOp = true
       }
     }
 
-    // disable this systematic broadcasting of transactions, not a good idea when doing large bulk inserts
-    // and not really used anyway
-    // if (!result._error) await req.app.publish('datasets/' + dataset.id + '/transactions', transac)
-    const fullResult = { ...result, ...extendedBody }
-    results.push(fullResult)
-    if (fullResult._status !== 400) {
-      bulkOpMatchingResults.push(fullResult)
-      if (history) {
-        const revision = { ...extendedBody, _action }
-        delete revision._needsIndexing
-        delete revision._needsExtending
-        fillPrimaryKeyFromId(revision, dataset)
-        revision._lineId = revision._id
-        delete revision._id
-        if (!revision._deleted) delete revision._deleted
-        bulkOpMatchingRevisions.push(revision)
+    result.body = extendedBody
+    results.push(result)
+  }
+
+  // check for "null" operations (hash not changed) and 404 (line not found)
+  const filters = []
+  for (const result of results) {
+    if (result._status) continue
+    filters.push({ _id: result._id, ...linesOwnerFilter(linesOwner) })
+  }
+  if (filters.length) {
+    const existingLines = await collection.find({ $or: filters }).project({ _id: 1, _hash: 1, _deleted: 1 }).toArray()
+    for (const result of results) {
+      if (result._status) continue
+      const existingLine = existingLines.find(l => l._id === result._id)
+      if (!existingLine || existingLine._deleted) {
+        if (result._action === 'create' || result._action === 'createOrUpdate') {
+          result._status = 201
+        } else {
+          result._status = 404
+          result._error = 'line not found'
+        }
+      } else {
+        if (result._action === 'create') {
+          result._status = 409
+          result._error = 'line already exists'
+        } else if (result._action !== 'delete' && existingLine._hash === result.body._hash) {
+          result._status = 304
+        } else {
+          result._status = 200
+        }
       }
     }
   }
 
-  if (hasBulkOp) {
+  // actually perform the operations and flag errors
+  const bulkOp = collection.initializeUnorderedBulkOp()
+  const bulkOpMatchingResults = []
+  for (const result of results) {
+    if (result._status && result._status >= 300) continue
+    bulkOpMatchingResults.push(result)
+    const filter = { _id: result._id, ...linesOwnerFilter(linesOwner) }
+    if (result._action === 'delete') {
+      result.body._deleted = true
+      result.body._hash = null
+      bulkOp.find(filter).replaceOne(result.body)
+    } else {
+      result.body._deleted = false
+      if (result._action === 'create') {
+        bulkOp.insert(result.body)
+      } else if (result._action === 'update' || result._action === 'patch') {
+        bulkOp.find(filter).replaceOne(result.body)
+      } else { // 'createOrUpdate'
+        bulkOp.find(filter).upsert().replaceOne(result.body)
+      }
+    }
+  }
+  if (bulkOpMatchingResults.length) {
     try {
-      bulkOpResult = (await bulkOp.execute()).result
+      await bulkOp.execute()
     } catch (err) {
       if (!err.writeErrors) throw err
-      bulkOpResult = err.result
       for (const writeError of err.writeErrors) {
         const result = bulkOpMatchingResults[writeError.err.index]
-        if (history) delete bulkOpMatchingRevisions[writeError.err.index]
         if (writeError.err.code === 11000) {
-          // this conflict means that the hash was unchanged
-          result._status = 304
+          result._status = 409
+          result._error = 'line already exists'
         } else {
           result._status = 500
           result._error = writeError.err.errmsg
@@ -312,25 +320,35 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
       }
     }
   }
+
+  // merge results bodies into themselves
+  for (const result of results) {
+    Object.assign(result, result.body)
+    delete result.body
+  }
+
+  // insert revisions for lines that were actually modified
   if (history) {
-    const revisionsBulkOp = revisionsCollection.initializeUnorderedBulkOp()
     let hasRevisionsBulkOp = false
-    for (const revision of bulkOpMatchingRevisions) {
-      if (!revision) continue
-      hasRevisionsBulkOp = true
+    const revisionsBulkOp = revisionsCollection.initializeUnorderedBulkOp()
+    for (const result of results) {
+      if (result._status && result._status >= 300) continue
+      const revision = { ...result, _lineId: result._id }
+      delete revision._id
       revisionsBulkOp.insert(revision)
+      hasRevisionsBulkOp = true
     }
     if (hasRevisionsBulkOp) {
       await revisionsBulkOp.execute()
     }
   }
 
-  if (user && hasBulkOp) {
+  if (user && bulkOpMatchingResults.length) {
     db.collection('datasets').updateOne(
       { id: dataset.id },
       { $set: { dataUpdatedAt: updatedAt.toISOString(), dataUpdatedBy: { id: user.id, name: user.name } } })
   }
-  return { results, bulkOpResult }
+  return { results }
 }
 
 const applyReqTransactions = (req, transacs, validate) => {
@@ -348,12 +366,8 @@ class TransactionStream extends Writable {
   }
 
   async _applyTransactions () {
-    const { results, bulkOpResult } = await applyReqTransactions(this.options.req, this.transactions, this.options.validate)
+    const { results } = await applyReqTransactions(this.options.req, this.transactions, this.options.validate)
     this.transactions = []
-    if (bulkOpResult) {
-      this.options.summary.nbCreated += bulkOpResult.nUpserted
-      this.options.summary.nbCreated += bulkOpResult.nInserted
-    }
     for (const res of results) {
       if (res._error || res._status === 500) {
         this.options.summary.nbErrors += 1
@@ -368,6 +382,12 @@ class TransactionStream extends Writable {
         if (res._deleted) {
           this.options.summary.nbDeleted += 1
         }
+        if (res._status === 201) {
+          this.options.summary.nbCreated += 1
+        }
+        if (res._status === 200 && !res._deleted) {
+          this.options.summary.nbUpdated += 1
+        }
       }
       this.i += 1
     }
@@ -376,7 +396,7 @@ class TransactionStream extends Writable {
 
   async _write (chunk, encoding, cb) {
     try {
-      chunk._action = chunk._action || (chunk._id ? 'update' : 'create')
+      chunk._action = chunk._action || 'createOrUpdate'
       delete chunk._i
       // prevent working twice on a line in the same bulk, this way sequentiality doesn't matter and we can use mongodb unordered bulk
       if (chunk._id && this.transactions.find(c => c._id === chunk._id)) await this._applyTransactions()
@@ -467,19 +487,6 @@ exports.readLine = async (req, res, next) => {
   res.send(line)
 }
 
-exports.createLine = async (req, res, next) => {
-  const db = req.app.get('db')
-  const _action = req.body._id ? 'update' : 'create'
-  Object.assign(req.body, linesOwnerCols(req.linesOwner))
-  req.body._id = req.body._id || getLineId(req.body, req.dataset) || nanoid()
-  await manageAttachment(req, false)
-  const line = (await applyReqTransactions(req, [{ _action, ...req.body }], compileSchema(req.dataset, req.user.adminMode))).results[0]
-  if (line._error) return res.status(line._status).send(line._error)
-  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
-  res.status(201).send(cleanLine(line))
-  storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after createLine', err))
-}
-
 exports.deleteLine = async (req, res, next) => {
   const db = req.app.get('db')
   const line = (await applyReqTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset, req.user.adminMode))).results[0]
@@ -490,13 +497,17 @@ exports.deleteLine = async (req, res, next) => {
   storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
 }
 
-exports.updateLine = async (req, res, next) => {
+exports.createOrUpdateLine = async (req, res, next) => {
   const db = req.app.get('db')
+  req.body._action = req.body._action ?? 'createOrUpdate'
+  req.body._id = req.params.lineId || req.body._id || getLineId(req.body, req.dataset) || nanoid()
+  Object.assign(req.body, linesOwnerCols(req.linesOwner))
   await manageAttachment(req, false)
-  const line = (await applyReqTransactions(req, [{ _action: 'update', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset, req.user.adminMode))).results[0]
+  const transacResponse = await applyReqTransactions(req, [req.body], compileSchema(req.dataset, req.user.adminMode))
+  const line = (transacResponse).results[0]
   if (line._error) return res.status(line._status).send(line._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
-  res.status(200).send(cleanLine(line))
+  res.status(line._status).send(cleanLine(line))
   storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
 }
 
