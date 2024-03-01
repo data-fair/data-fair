@@ -26,11 +26,11 @@ exports.protectedFilter = {
 }
 
 exports.visibility = (resource) => {
-  resource.permissions = resource.permissions || []
-  if (resource.permissions.find(p => ((p.operations && p.operations.includes('list')) || (p.classes && p.classes.includes('list'))) && !p.type && !p.id)) {
+  const permissions = resource.permissions || []
+  if (permissions.find(p => ((p.operations && p.operations.includes('list')) || (p.classes && p.classes.includes('list'))) && !p.type && !p.id)) {
     return 'public'
   }
-  if (resource.permissions.length === 0) {
+  if (permissions.length === 0) {
     return 'private'
   }
   return 'protected'
