@@ -232,9 +232,6 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
     const { _action, ...body } = transac
     if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
     Object.assign(body, linesOwnerCols(linesOwner))
-
-    if (!body._id) body._id = getLineId(body, dataset)
-    if (['create', 'createOrUpdate'].includes(_action) && !body._id) body._id = nanoid()
     if (!body._id) throw createError(400, '"_id" attribute is required')
 
     const operation = {
@@ -296,7 +293,7 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
       const operation = operations.find(op => op._id === _id)
       if (operation) {
         operation._status = 404
-        operation._error = 'line not found'
+        operation._error = 'ligne non trouvée'
       }
     }
   }
@@ -318,7 +315,7 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
       const operation = operations.find(op => op._id === _id)
       if (operation) {
         operation._status = 404
-        operation._error = 'line not found'
+        operation._error = 'ligne non trouvée'
       }
     }
   }
@@ -333,7 +330,11 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
       // validation can be CPU intensive, so we yield to the event loop every 100 lines
       if (v % 100 === 0) await new Promise(resolve => setImmediate(resolve))
     }
-    if (validate && !validate(operation.body)) {
+    const primaryKeyId = getLineId(operation.body, dataset)
+    if (primaryKeyId && operation._id !== primaryKeyId) {
+      operation._status = 400
+      operation._error = 'identifiant de ligne incompatible avec la clé primaire'
+    } else if (validate && !validate(operation.body)) {
       operation._error = validate.errors
       operation._status = 400
     } else if (operation._action !== 'patch') {
@@ -356,7 +357,7 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
         if (operation) {
           if (operation._action === 'create') {
             operation._status = 409
-            operation._error = 'line already exists'
+            operation._error = 'cet identifiant de ligne est déjà utilisé'
           } else {
             if (operation.fullBody._hash === _hash) {
               operation._status = 304
@@ -374,7 +375,7 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
           operation._status = 201
         } else {
           operation._status = 404
-          operation._error = 'line not found'
+          operation._error = 'ligne non trouvée'
         }
       }
     }
@@ -406,7 +407,7 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
         if (writeError.err.code === 11000) {
           if (operation._action === 'create') {
             operation._status = 409
-            operation._error = 'line already exists'
+            operation._error = 'cet identifiant de ligne est déjà utilisé'
           }
           if (operation._action === 'createOrUpdate') {
             // this conflict means that the hash was unchanged
@@ -446,6 +447,7 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
       { id: dataset.id },
       { $set: { dataUpdatedAt: updatedAt.toISOString(), dataUpdatedBy: { id: user.id, name: user.name } } })
   }
+
   return { operations, bulkOpResult }
 }
 
@@ -504,6 +506,13 @@ class TransactionStream extends Writable {
     try {
       chunk._action = chunk._action || 'createOrUpdate'
       delete chunk._i
+      if (['create', 'createOrUpdate'].includes(chunk._action) && !chunk._id) {
+        chunk._id = getLineId(chunk, this.options.req.dataset) || nanoid()
+      }
+      if (chunk._action === 'delete' && !chunk._id) { // delete by primary key
+        chunk._id = getLineId(chunk, this.options.req.dataset)
+      }
+
       // prevent working twice on a line in the same bulk, this way sequentiality doesn't matter and we can use mongodb unordered bulk
       if (chunk._id && this.transactions.find(c => c._id === chunk._id)) await this._applyTransactions()
 
