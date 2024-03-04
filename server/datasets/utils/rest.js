@@ -20,6 +20,7 @@ dayjs.extend(duration)
 const storageUtils = require('./storage')
 const attachmentsUtils = require('./attachments')
 const findUtils = require('../../misc/utils/find')
+const observe = require('../../misc/utils/observe')
 const fieldsSniffer = require('./fields-sniffer')
 const { transformFileStreams } = require('./data-streams')
 const { attachmentPath, lsAttachments } = require('./files')
@@ -81,14 +82,11 @@ exports.uploadBulk = multer({
   storage: multer.diskStorage({ destination, filename })
 }).fields([{ name: 'attachments', maxCount: 1 }, { name: 'actions', maxCount: 1 }])
 
-exports.collection = (db, dataset) => {
-  return db.collection('dataset-data-' + dataset.id)
-}
+exports.collectionName = (dataset) => 'dataset-data-' + dataset.id
+exports.collection = (db, dataset) => db.collection(exports.collectionName(dataset))
 
 exports.revisionsCollectionName = (dataset) => 'dataset-revisions-' + dataset.id
-exports.revisionsCollection = (db, dataset) => {
-  return db.collection(exports.revisionsCollectionName(dataset))
-}
+exports.revisionsCollection = (db, dataset) => db.collection(exports.revisionsCollectionName(dataset))
 
 exports.initDataset = async (db, dataset) => {
   // just in case of badly cleaned data from previous dataset with same id
@@ -194,7 +192,6 @@ const getLineHash = (body) => {
 /** @typedef {{_id: string, _action: string, body: any, fullBody: any, filter: {_id: string}, _status?: number, _error?: string}} Operation */
 
 /**
- *
  * @param {Operation} operation
  * @returns {any}
  */
@@ -202,13 +199,87 @@ const getLineFromOperation = (operation) => {
   const line = { ...operation, ...operation.fullBody }
   delete line.body
   delete line.fullBody
+  delete line.filter
   return line
 }
 
-exports.applyTransactions = async (db, dataset, user, transacs, validate, linesOwner) => {
+/**
+ * @param {import('mongodb').Db} db
+ * @param {any} tmpDataset
+ * @param {any} dataset
+ * @param {string[]} existingIds
+ * @param {any} user
+ */
+const checkMissingIdsRevisions = async (db, tmpDataset, dataset, existingIds, user) => {
+  const missingIds = new Set(existingIds)
+  for await (const stillExistingDoc of exports.collection(db, tmpDataset).find({ _id: { $in: existingIds } })) {
+    missingIds.delete(stillExistingDoc._id)
+  }
+  if (missingIds.size) {
+    const updatedAt = new Date()
+    const datasetCreatedAt = new Date(dataset.createdAt).getTime()
+    let i = 0
+    const revisionsBulkOp = exports.revisionsCollection(db, dataset).initializeUnorderedBulkOp()
+    for await (const missingDoc of exports.collection(db, dataset).find({ _id: { $in: [...missingIds] } }).project(getPrimaryKeyProjection(dataset))) {
+      i++
+      if (missingDoc._deleted) continue
+      const revision = {
+        _action: 'delete',
+        _updatedAt: updatedAt,
+        ...missingDoc,
+        _i: Number((updatedAt.getTime() - datasetCreatedAt) + padI(i)),
+        _deleted: true,
+        _hash: null,
+        _lineId: missingDoc._id
+      }
+      delete revision._id
+      if (user && dataset.rest.storeUpdatedBy) {
+        revision._updatedBy = user.id
+        revision._updatedByName = user.name
+      }
+      delete revision._needsIndexing
+      delete revision._needsExtending
+      revisionsBulkOp.insert(revision)
+    }
+    await revisionsBulkOp.execute()
+  }
+}
+
+/**
+ * @param {import('mongodb').Db} db
+ * @param {any} tmpDataset
+ * @param {any} dataset
+* @param {any} user
+ */
+const createTmpMissingRevisions = async (db, tmpDataset, dataset, user) => {
+  /** @type {string[]} */
+  let existingIds = []
+
+  for await (const existingDoc of exports.collection(db, dataset).find({}).project({ _id: 1 })) {
+    existingIds.push(existingDoc._id)
+    if (existingIds.length === 1000) {
+      await checkMissingIdsRevisions(db, tmpDataset, dataset, existingIds, user)
+      existingIds = []
+    }
+  }
+  if (existingIds.length) await checkMissingIdsRevisions(db, tmpDataset, dataset, existingIds, user)
+}
+
+/**
+ * @param {any} dataset
+ */
+const getPrimaryKeyProjection = (dataset) => {
+  const primaryKeyProjection = { _id: 1, _hash: 1, _deleted: 1 }
+  if (dataset.primaryKey && dataset.primaryKey.length) {
+    for (const key of dataset.primaryKey) primaryKeyProjection[key] = 1
+  }
+  return primaryKeyProjection
+}
+
+exports.applyTransactions = async (db, dataset, user, transacs, validate, linesOwner, tmpDataset) => {
   const datasetCreatedAt = new Date(dataset.createdAt).getTime()
   const updatedAt = new Date()
-  const collection = exports.collection(db, dataset)
+  const collection = exports.collection(db, tmpDataset || dataset)
   const revisionsCollection = exports.revisionsCollection(db, dataset)
   const history = dataset.rest && dataset.rest.history
   const patchProjection = { _id: 1, _hash: 1, _deleted: 1 }
@@ -217,10 +288,7 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
       patchProjection[prop.key] = 1
     }
   }
-  const primaryKeyProjection = { _id: 1, _hash: 1, _deleted: 1 }
-  if (dataset.primaryKey && dataset.primaryKey.length) {
-    for (const key of dataset.primaryKey) primaryKeyProjection[key] = 1
-  }
+  const primaryKeyProjection = getPrimaryKeyProjection(dataset)
 
   // prepare future results that will be completed by the following loops
   /** @type {Operation[]} */
@@ -434,6 +502,8 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
       const revision = getLineFromOperation(operation)
       delete revision._id
       revision._lineId = operation._id
+      delete revision._needsIndexing
+      delete revision._needsExtending
       revisionsBulkOp.insert(revision)
       hasRevisionsBulkOp = true
     }
@@ -455,10 +525,11 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
  * @param {*} req
  * @param {*} transacs
  * @param {*} validate
+ * @param {any} [tmpDataset]
  * @returns {{operations: Operation[], bulkOpResult: any}}
  */
-const applyReqTransactions = (req, transacs, validate) => {
-  return exports.applyTransactions(req.app.get('db'), req.dataset, req.user, transacs, validate, req.linesOwner)
+const applyReqTransactions = (req, transacs, validate, tmpDataset) => {
+  return exports.applyTransactions(req.app.get('db'), req.dataset, req.user, transacs, validate, req.linesOwner, tmpDataset)
 }
 
 const initSummary = () => ({ nbOk: 0, nbNotModified: 0, nbErrors: 0, nbCreated: 0, nbModified: 0, nbDeleted: 0, errors: [] })
@@ -472,7 +543,7 @@ class TransactionStream extends Writable {
   }
 
   async _applyTransactions () {
-    const { operations, bulkOpResult } = await applyReqTransactions(this.options.req, this.transactions, this.options.validate)
+    const { operations, bulkOpResult } = await applyReqTransactions(this.options.req, this.transactions, this.options.validate, this.options.tmpDataset)
 
     this.transactions = []
     if (bulkOpResult) {
@@ -653,6 +724,7 @@ exports.bulkLines = async (req, res, next) => {
   try {
     const db = req.app.get('db')
     const validate = compileSchema(req.dataset, req.user.adminMode)
+    const drop = req.query.drop === 'true'
 
     // no buffering of this response in the reverse proxy
     res.setHeader('X-Accel-Buffering', 'no')
@@ -707,10 +779,16 @@ exports.bulkLines = async (req, res, next) => {
 
     if (!mimeType) return res.status(400).type('text/plain').send('unknown file extension')
 
+    let tmpDataset
+    if (drop) {
+      tmpDataset = { ...req.dataset, id: req.dataset.id + '-' + nanoid() + '-tmp-bulk' }
+      await exports.initDataset(db, tmpDataset)
+    }
+
     const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, false, true, null, skipDecoding, null, true)
 
     const summary = initSummary()
-    const transactionStream = new TransactionStream({ req, validate, summary })
+    const transactionStream = new TransactionStream({ req, validate, summary, tmpDataset })
 
     // we try both to have a HTTP failure if the transactions are clearly badly formatted
     // and also to start writing in the HTTP response as soon as possible to limit the timeout risks
@@ -724,22 +802,45 @@ exports.bulkLines = async (req, res, next) => {
         res.write(' ')
       }
     })
+
     try {
       await pump(
         inputStream,
         ...parseStreams,
         transactionStream
       )
-      await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+      if (drop) {
+        if (summary.nbErrors) {
+          summary.dropCancelled = true
+          await exports.collection(db, tmpDataset).drop()
+        } else {
+          await createTmpMissingRevisions(db, tmpDataset, req.dataset, req.user)
+          await exports.collection(db, req.dataset).drop()
+          await exports.collection(db, tmpDataset).rename(exports.collectionName(req.dataset))
+          summary.dropped = true
+          await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'analyzed' } })
+        }
+      } else {
+        await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+      }
     } catch (err) {
+      observe.internalError.inc({ errorCode: 'bulk-lines' })
+      console.error(`[bulk-lines] failure to apply bulk operation on dataset ${req.dataset.id}`, err)
       if (firstBatch) {
         res.writeHeader(err.statusCode || 500, { 'Content-Type': 'application/json' })
       }
       summary.nbErrors += 1
       summary.errors.push({ line: -1, error: err.message })
+
+      if (drop) {
+        summary.dropCancelled = true
+        await exports.collection(db, tmpDataset).drop()
+      }
     }
+
     res.write(JSON.stringify(summary, null, 2))
     res.end()
+
     storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
   } finally {
     for (const file of req.files?.actions || []) {
