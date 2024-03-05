@@ -21,6 +21,7 @@ module.exports = (target, label) => {
   const proxyHandler = {
     get (target, key) {
       if (key === '__isProxy') return true
+      if (key === '__proxyTarget') return target
       return typeof target[key] === 'object' && !(target[key] instanceof Date)
         ? new Proxy(target[key], proxyHandler)
         : target[key]

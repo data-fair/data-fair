@@ -3,7 +3,6 @@ const { stringify: csvStrSync } = require('csv-stringify/sync')
 const { Transform } = require('stream')
 const path = require('path')
 const Piscina = require('piscina')
-const clone = require('../../misc/utils/clone')
 
 const results2sheetPiscina = new Piscina({
   filename: path.resolve(__dirname, '../../datasets/threads/results2sheet.js'),
@@ -72,7 +71,7 @@ exports.results2sheet = async (req, results, bookType) => {
     results,
     bookType,
     query: req.query,
-    dataset: req.dataset.__isProxy ? clone(req.dataset) : req.dataset,
+    dataset: req.dataset.__isProxy ? req.dataset.__proxyTarget : req.dataset,
     downloadUrl: req.publicBaseUrl + req.originalUrl,
     labels: req.__('sheets')
   }))

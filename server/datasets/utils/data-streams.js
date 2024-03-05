@@ -98,6 +98,7 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
         if (noExtra) {
           const unknownKeys = Object.keys(chunk)
             .filter(k => k !== '_i')
+            .filter(k => k !== '')
             .filter(k => !schema.find(p => p['x-originalName'] === k || p.key === k))
           if (unknownKeys.length) {
             return callback(createError(400, `Colonnes inconnues ${unknownKeys.join(', ')}`))
