@@ -2,6 +2,7 @@ const config = /** @type {any} */(require('config'))
 const express = require('express')
 const ajv = require('../misc/utils/ajv')
 const fs = require('fs-extra')
+const path = require('path')
 const moment = require('moment')
 const createError = require('http-errors')
 const pump = require('../misc/utils/pipe')
@@ -885,7 +886,14 @@ router.get('/:datasetId/min/:fieldKey', readDataset({ fillDescendants: true }), 
 // For datasets with attached files
 router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissions.middleware('downloadAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
-  res.download(req.params['0'], null, { transformStream: res.throttle('static'), root: attachmentsDir(req.dataset) })
+  res.sendFile(
+    req.params['0'],
+    {
+      transformStream: res.throttle('static'),
+      root: attachmentsDir(req.dataset),
+      headers: { 'Content-Disposition': `inline; filename="${path.basename(req.params['0'])}"` }
+    }
+  )
 })
 
 // Direct access to data files
@@ -906,7 +914,16 @@ router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middl
 }))
 router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('downloadMetadataAttachment', 'read'), cacheHeaders.noCache, (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
-  res.download(req.params['0'], null, { transformStream: res.throttle('static'), root: datasetUtils.metadataAttachmentsDir(req.dataset) })
+  // res.set('content-disposition', `inline; filename="${req.params['0']}"`)
+  res.sendFile(
+    req.params['0'],
+    {
+      transformStream: res.throttle('static'),
+      root: datasetUtils.metadataAttachmentsDir(req.dataset),
+      headers: { 'Content-Disposition': `inline; filename="${path.basename(req.params['0'])}"` }
+    }
+  )
+  // res.sendFile(req.params[0])
 })
 router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('deleteMetadataAttachment', 'write'), asyncWrap(async (req, res, next) => {
   const filePath = req.params['0']
