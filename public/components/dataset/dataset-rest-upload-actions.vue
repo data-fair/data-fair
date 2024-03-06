@@ -181,7 +181,7 @@ fr:
   separator: séparateur
   drop: Cochez pour supprimer toutes les lignes existantes avant d'importer les nouvelles
   dropped: "Toutes les lignes existantes ont été supprimées"
-  cancelled: "Suppression des lignes existantes annulée à cause des erreurs"
+  cancelled: "Suppression des lignes existantes et autres opérations annulées à cause des erreurs"
 en:
   loadLines: Load multiple lines from a file
   selectFile: select or drag and drop a file
@@ -197,7 +197,7 @@ en:
   separator: separator
   drop: Check to delete all existing lines before importing new ones
   dropped: "All existing lines have been deleted"
-  cancelled: "Deletion of existing lines cancelled because of errors"
+  cancelled: "Deletion of existing lines and other operations cancelled because of errors"
 </i18n>
 
 <script>
