@@ -382,6 +382,7 @@
               v-if="editLineDialog && editingLine"
               v-model="editingLine"
               :selected-cols="selectedCols"
+              :readonly-cols="dataset.primaryKey || []"
               @onFileUpload="onFileUpload"
             />
           </v-card-text>
@@ -831,7 +832,7 @@ export default {
       this.saving = true
       await new Promise(resolve => setTimeout(resolve, 100))
       const res = await this.$store.dispatch('dataset/saveLine', { line: this.creatingLine, file: this.file })
-      this.createdLines.push(res)
+      if (res) this.createdLines.push(res)
       this.saving = false
       this.createLineDialog = false
     },

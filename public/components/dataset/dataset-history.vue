@@ -30,7 +30,7 @@
       :loading="loading"
       hide-default-footer
     >
-      <template #item="{item}">
+      <template #item="{item, index}">
         <tr>
           <td
             v-for="header in headers"
@@ -46,7 +46,7 @@
                 mdi-delete-circle
               </v-icon>
               <v-icon
-                v-else-if="item._action === 'create'"
+                v-else-if="item._action === 'create' || (item._action === 'createOrUpdate' && index === history.results.length - 1)"
                 color="success"
                 :title="$t('created')"
               >

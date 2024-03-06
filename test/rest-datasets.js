@@ -63,10 +63,16 @@ describe('REST datasets', () => {
     assert.equal(res.data._id, 'id1')
     assert.equal(res.data.attr1, 'test3')
     assert.equal(res.data.attr2, 'test2')
+    await assert.rejects(ax.put('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4', _action: 'create' }), err => err.status === 409)
+    await assert.rejects(ax.post('/api/v1/datasets/rest1/lines', { _id: 'id1', attr1: 'test4', _action: 'create' }), err => err.status === 409)
+
     await ax.delete('/api/v1/datasets/rest1/lines/id1')
     await workers.hook('finalizer/rest1')
     await assert.rejects(ax.get('/api/v1/datasets/rest1/lines/id1'), err => err.status === 404)
     await assert.rejects(ax.patch('/api/v1/datasets/rest1/lines/id1', { _i: 10 }), err => err.status === 400)
+    await assert.rejects(ax.patch('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4' }), err => err.status === 404)
+    await assert.rejects(ax.put('/api/v1/datasets/rest1/lines/id1', { attr1: 'test4', _action: 'update' }), err => err.status === 404)
+    await assert.rejects(ax.post('/api/v1/datasets/rest1/lines', { _id: 'id1', attr1: 'test4', _action: 'update' }), err => err.status === 404)
   })
 
   it('Reject properly json missing content-type', async () => {
@@ -1078,9 +1084,14 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(dataset.count, 2)
     let lines = (await ax.get('/api/v1/datasets/restkey/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0].attr1, 'test1')
-    // lines 2 and 3 of the CSV ha the same primary key, so 3 overwrote 2
+    // lines 2 and 3 of the CSV has the same primary key, so 3 overwrote 2
     assert.equal(lines[1].attr1, 'test2')
     assert.equal(lines[1].attr3, 'test3')
+
+    // updating the primary key of a line is not allowed
+    await assert.rejects(ax.post('/api/v1/datasets/restkey/lines', { _id: lines[0]._id, attr1: 'test2', attr2: 'test2', attr3: 'test3' }), (err) => err.status === 400)
+    await assert.rejects(ax.put('/api/v1/datasets/restkey/lines/' + lines[0]._id, { attr1: 'test2', attr2: 'test2', attr3: 'test3' }), (err) => err.status === 400)
+    await assert.rejects(ax.patch('/api/v1/datasets/restkey/lines/' + lines[0]._id, { attr1: 'test2' }), (err) => err.status === 400)
 
     // the primary key can also be used to delete lines
     await ax.post('/api/v1/datasets/restkey/_bulk_lines', [
@@ -1201,5 +1212,119 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     res = await ax.get('/api/v1/datasets/updatedby/lines')
     assert.ok(!res.data.results[0]._updatedBy)
     assert.ok(!res.data.results[0]._updatedByName)
+  })
+
+  it('Use drop option to recreate all data', async () => {
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/datasets/restdrop', {
+      isRest: true,
+      title: 'restdrop',
+      schema: [{ key: 'attr1', type: 'string' }]
+    })
+    let dataset = await workers.hook('finalizer/restdrop')
+
+    res = await ax.post('/api/v1/datasets/restdrop/_bulk_lines', [
+      { attr1: 'test1-1' },
+      { attr1: 'test1-2' }
+    ])
+    assert.equal(res.data.nbCreated, 2)
+    dataset = await workers.hook('finalizer/restdrop')
+    assert.equal(dataset.count, 2)
+
+    res = await ax.post('/api/v1/datasets/restdrop/_bulk_lines', [
+      { attr1: 'test2-1' },
+      { attr1: 'test2-2' }
+    ])
+    assert.equal(res.data.nbCreated, 2)
+    dataset = await workers.hook('finalizer/restdrop')
+    assert.equal(dataset.count, 4)
+
+    res = await ax.post('/api/v1/datasets/restdrop/_bulk_lines', [
+      { attr1: 'test3-1' },
+      { attr1: 'test3-2' }
+    ], { params: { drop: true } })
+    assert.equal(res.data.nbCreated, 2)
+    assert.equal(res.data.dropped, true)
+    dataset = await workers.hook('finalizer/restdrop')
+    assert.equal(dataset.count, 2)
+
+    res = await ax.get('/api/v1/datasets/restdrop/lines')
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results[0].attr1, 'test3-2')
+    assert.equal(res.data.results[1].attr1, 'test3-1')
+
+    await assert.rejects(ax.post('/api/v1/datasets/restdrop/_bulk_lines', [
+      { attrko: 'ko' }
+    ], { params: { drop: true } }), (res) => {
+      assert.equal(res.status, 400)
+      assert.equal(res.data.nbErrors, 1)
+      assert.equal(res.data.cancelled, true)
+      return true
+    })
+
+    res = await ax.get('/api/v1/datasets/restdrop')
+    assert.equal(res.data.status, 'finalized')
+    res = await ax.get('/api/v1/datasets/restdrop/lines')
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results[0].attr1, 'test3-2')
+    assert.equal(res.data.results[1].attr1, 'test3-1')
+  })
+
+  it('Use drop option to recreate all data and manage history', async () => {
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/datasets/restdrophist', {
+      isRest: true,
+      title: 'restdrophist',
+      primaryKey: ['attr1'],
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
+      rest: { history: true }
+    })
+    let dataset = await workers.hook('finalizer/restdrophist')
+
+    res = await ax.post('/api/v1/datasets/restdrophist/_bulk_lines', [
+      { attr1: 'test1', attr2: 'v1' },
+      { attr1: 'test2', attr2: 'v1' },
+      { attr1: 'test3', attr2: 'v1' }
+    ])
+    dataset = await workers.hook('finalizer/restdrophist')
+
+    const lines = (await ax.get('/api/v1/datasets/restdrophist/lines')).data.results
+    const line2 = lines.find(l => l.attr1 === 'test2')
+    const line3 = lines.find(l => l.attr1 === 'test3')
+    await ax.delete('/api/v1/datasets/restdrophist/lines/' + line3._id)
+    dataset = await workers.hook('finalizer/restdrophist')
+
+    res = await ax.post('/api/v1/datasets/restdrophist/_bulk_lines', [
+      { attr1: 'test1', attr2: 'v2' },
+      { attr1: 'test2', attr2: 'v2' }
+    ])
+    dataset = await workers.hook('finalizer/restdrophist')
+
+    res = await ax.post('/api/v1/datasets/restdrophist/_bulk_lines', [
+      { attr1: 'test1', attr2: 'v3' },
+      { attr1: 'test3', attr2: 'v2' },
+      { attr1: 'test4', attr2: 'v1' }
+    ], { params: { drop: true } })
+    assert.equal(res.data.nbCreated, 3)
+    assert.equal(res.data.dropped, true)
+    dataset = await workers.hook('finalizer/restdrophist')
+    assert.equal(dataset.count, 3)
+
+    res = await ax.get(`/api/v1/datasets/restdrophist/lines/${line3._id}/revisions`)
+    assert.equal(res.data.results.length, 3)
+    assert.equal(res.data.results[0]._action, 'createOrUpdate')
+    assert.equal(res.data.results[0].attr2, 'v2')
+    assert.equal(res.data.results[1]._action, 'delete')
+    assert.equal(res.data.results[2]._action, 'createOrUpdate')
+    assert.equal(res.data.results[2].attr2, 'v1')
+
+    res = await ax.get(`/api/v1/datasets/restdrophist/lines/${line2._id}/revisions`)
+    assert.equal(res.data.results.length, 3)
+    assert.equal(res.data.results[0]._action, 'delete')
+    assert.equal(res.data.results[0].attr1, 'test2')
+    assert.equal(res.data.results[1]._action, 'createOrUpdate')
+    assert.equal(res.data.results[1].attr2, 'v2')
+    assert.equal(res.data.results[2]._action, 'createOrUpdate')
+    assert.equal(res.data.results[2].attr2, 'v1')
   })
 })

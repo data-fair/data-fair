@@ -265,6 +265,7 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
     if (!body.title) throw createError(400, 'Un jeu de données éditable doit être créé avec un titre')
     if (attachmentsFile) throw createError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
     dataset.rest = dataset.rest || {}
+    dataset.rest.primaryKeyMode = dataset.rest.primaryKeyMode || 'sha256'
     dataset.schema = dataset.schema || []
     dataset.status = 'created'
     if (dataset.initFrom) prepareInitFrom(dataset, user)
