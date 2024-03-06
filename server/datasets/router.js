@@ -886,12 +886,12 @@ router.get('/:datasetId/min/:fieldKey', readDataset({ fillDescendants: true }), 
 // For datasets with attached files
 router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissions.middleware('downloadAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
-  res.sendFile(
+  res.download(
     req.params['0'],
+    null,
     {
       transformStream: res.throttle('static'),
-      root: attachmentsDir(req.dataset),
-      headers: { 'Content-Disposition': `inline; filename="${path.basename(req.params['0'])}"` }
+      root: attachmentsDir(req.dataset)
     }
   )
 })
