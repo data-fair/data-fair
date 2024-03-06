@@ -40,6 +40,9 @@
             <p v-if="result.nbCreated">
               {{ $t('resultCreated', {nb: result.nbCreated.toLocaleString()}) }}
             </p>
+            <p v-if="result.nbModified">
+              {{ $t('resultModified', {nb: result.nbModified.toLocaleString()}) }}
+            </p>
             <p v-if="result.nbNotModified">
               {{ $t('resultNotModified', {nb: result.nbNotModified.toLocaleString()}) }}
             </p>
@@ -170,6 +173,7 @@ fr:
   load: Charger
   ok: Ok
   resultOk: "{nb} ligne(s) OK"
+  resultModified: "{nb} ligne(s) modifiée(s)"
   resultNotModified: "{nb} ligne(s) sans modification"
   resultErrors: "{nb} erreur(s)"
   resultCreated: "{nb} ligne(s) créée(s)"
@@ -185,6 +189,7 @@ en:
   load: Load
   ok: Ok
   resultOk: "{nb} OK line(s)"
+  resultModified: "{nb} modified line(s)"
   resultNotModified: "{nb} line(s) without modifications"
   resultErrors: "{nb} error(s)"
   resultCreated: "{nb} created line(s)"
