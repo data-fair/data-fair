@@ -1258,7 +1258,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     ], { params: { drop: true } }), (res) => {
       assert.equal(res.status, 400)
       assert.equal(res.data.nbErrors, 1)
-      assert.equal(res.data.dropCancelled, true)
+      assert.equal(res.data.cancelled, true)
       return true
     })
 

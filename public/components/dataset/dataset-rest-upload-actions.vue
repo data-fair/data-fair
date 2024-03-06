@@ -25,34 +25,36 @@
       />
       <v-card-text>
         <template v-if="result">
-          <p v-if="result.nbOk">
-            {{ $t('resultOk', {nb: result.nbOk.toLocaleString()}) }}
-          </p>
-          <p v-if="result.nbCreated">
-            {{ $t('resultCreated', {nb: result.nbCreated.toLocaleString()}) }}
-          </p>
-          <p v-if="result.nbNotModified">
-            {{ $t('resultNotModified', {nb: result.nbNotModified.toLocaleString()}) }}
-          </p>
-          <p v-if="result.nbDeleted">
-            {{ $t('resultDeleted', {nb: result.nbDeleted.toLocaleString()}) }}
-          </p>
           <v-alert
-            v-if="result.dropped"
-            type="warning"
-            :value="true"
-            outlined
-          >
-            {{ $t('dropped') }}
-          </v-alert>
-          <v-alert
-            v-if="result.dropCancelled"
+            v-if="result.cancelled"
             type="error"
             :value="true"
             outlined
           >
-            {{ $t('dropCancelled') }}
+            {{ $t('cancelled') }}
           </v-alert>
+          <template v-else>
+            <p v-if="result.nbOk">
+              {{ $t('resultOk', {nb: result.nbOk.toLocaleString()}) }}
+            </p>
+            <p v-if="result.nbCreated">
+              {{ $t('resultCreated', {nb: result.nbCreated.toLocaleString()}) }}
+            </p>
+            <p v-if="result.nbNotModified">
+              {{ $t('resultNotModified', {nb: result.nbNotModified.toLocaleString()}) }}
+            </p>
+            <p v-if="result.nbDeleted">
+              {{ $t('resultDeleted', {nb: result.nbDeleted.toLocaleString()}) }}
+            </p>
+            <v-alert
+              v-if="result.dropped"
+              type="warning"
+              :value="true"
+              outlined
+            >
+              {{ $t('dropped') }}
+            </v-alert>
+          </template>
           <v-alert
             v-if="result.nbErrors"
             type="error"
@@ -175,7 +177,7 @@ fr:
   separator: séparateur
   drop: Cochez pour supprimer toutes les lignes existantes avant d'importer les nouvelles
   dropped: "Toutes les lignes existantes ont été supprimées"
-  dropCancelled: "Suppression des lignes existantes annulée à cause des erreurs"
+  cancelled: "Suppression des lignes existantes annulée à cause des erreurs"
 en:
   loadLines: Load multiple lines from a file
   selectFile: select or drag and drop a file
@@ -190,7 +192,7 @@ en:
   separator: separator
   drop: Check to delete all existing lines before importing new ones
   dropped: "All existing lines have been deleted"
-  dropCancelled: "Deletion of existing lines cancelled because of errors"
+  cancelled: "Deletion of existing lines cancelled because of errors"
 </i18n>
 
 <script>

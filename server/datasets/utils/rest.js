@@ -811,7 +811,7 @@ exports.bulkLines = async (req, res, next) => {
       )
       if (drop) {
         if (summary.nbErrors) {
-          summary.dropCancelled = true
+          summary.cancelled = true
           await exports.collection(db, tmpDataset).drop()
         } else {
           await createTmpMissingRevisions(db, tmpDataset, req.dataset, req.user)
@@ -833,7 +833,7 @@ exports.bulkLines = async (req, res, next) => {
       summary.errors.push({ line: -1, error: err.message })
 
       if (drop) {
-        summary.dropCancelled = true
+        summary.cancelled = true
         await exports.collection(db, tmpDataset).drop()
       }
     }
