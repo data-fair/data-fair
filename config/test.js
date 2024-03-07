@@ -103,5 +103,5 @@ module.exports = {
     active: false,
     dataDir: '/data/data-fair/test'
   },
-  assertImmutable: false
+  assertImmutable: true
 }
