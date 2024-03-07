@@ -425,8 +425,8 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
     let dates = dateMatch.split(',')
     if (dates.length === 1) dates = [dates[0], dates[0]]
     const tz = startDateField.timeZone || config.defaultTimeZone
-    const startDate = dayjs(dates[0], 'YYYY-MM-DD', true).isValid() ? dayjs(dates[0]).tz(tz, true).startOf('day').toISOString() : dates[0]
-    const endDate = dayjs(dates[1], 'YYYY-MM-DD', true).isValid() ? dayjs(dates[1]).tz(tz, true).endOf('day').toISOString() : dates[1]
+    const startDate = (dates[0].length === 10 && dayjs(dates[0], 'YYYY-MM-DD', true).isValid()) ? dayjs(dates[0]).tz(tz, true).startOf('day').toISOString() : dates[0]
+    const endDate = (dates[1].length === 10 && dayjs(dates[1], 'YYYY-MM-DD', true).isValid()) ? dayjs(dates[1]).tz(tz, true).endOf('day').toISOString() : dates[1]
     if (startDateField.key === endDateField.key) {
       const dateRange = {}
       if (startDate) dateRange.gte = startDate

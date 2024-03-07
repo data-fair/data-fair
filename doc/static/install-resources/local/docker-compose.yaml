@@ -18,7 +18,7 @@ services:
   #########################
 
   data-fair:
-    image: ghcr.io/data-fair/data-fair:3
+    image: ghcr.io/data-fair/data-fair:4
     restart: ${RESTART}
     volumes:
       - data-fair-data:/data
