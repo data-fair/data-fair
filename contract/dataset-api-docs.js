@@ -40,11 +40,12 @@ module.exports = (dataset, publicUrl = config.publicUrl, ownerInfo, publicationS
   bulkLineSchema.properties._action = {
     type: 'string',
     title: 'Action',
-    enum: ['create', 'delete', 'update', 'patch'],
+    enum: ['create', 'delete', 'update', 'createOrUpdate', 'patch'],
     description: `
 - create: créé la ligne
 - delete: supprime la ligne, nécessite la présence de _id
 - update: remplate la ligne, nécessite la présence de _id
+- createOrUpdate: créé la ligne si elle n'existe pas, sinon la remplace
 - patch: modifie la ligne, nécessite la présence de _id
     `
   }

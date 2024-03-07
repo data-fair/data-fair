@@ -1000,28 +1000,35 @@ router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJou
   res.json(journal.events)
 }))
 
-router.post('/:datasetId/user-notification', readDataset(), permissions.middleware('sendUserNotification', 'write'), asyncWrap(async (req, res, next) => {
-  const userNotification = req.body
-  validateUserNotification(userNotification)
-  const urlParams = userNotification.urlParams || {}
-  userNotification.visibility = userNotification.visibility || 'private'
-  if (userNotification.visibility !== 'private') {
-    const ownerRole = permissions.getOwnerRole(req.dataset.owner, req.user)
-    if (!['admin', 'contrib'].includes(ownerRole)) return res.status(403).type('text/plain').send('User does not have permission to emit a public notification')
-  }
-  const notif = {
-    sender: req.dataset.owner,
-    topic: { key: `data-fair:dataset-user-notification:${req.dataset.slug}:${userNotification.topic}` },
-    title: userNotification.title,
-    body: userNotification.body,
-    urlParams: { ...urlParams, datasetId: req.dataset.id, datasetSlug: req.dataset.slug, userId: req.user.id },
-    visibility: userNotification.visibility,
-    recipient: userNotification.recipient,
-    extra: { user: { id: req.user.id, name: req.user.name } }
-  }
-  await notifications.send(notif, true)
-  res.send(notif)
-}))
+const sendUserNotificationPermissions = permissions.middleware('sendUserNotification', 'write')
+const sendUserNotificationPublicPermissions = permissions.middleware('sendUserNotificationPublic', 'write')
+router.post(
+  '/:datasetId/user-notification',
+  readDataset(),
+  (req, res, next) => req.body.visibility === 'public' ? sendUserNotificationPublicPermissions(req, res, next) : sendUserNotificationPermissions(req, res, next),
+  asyncWrap(async (req, res, next) => {
+    const userNotification = req.body
+    validateUserNotification(userNotification)
+    const urlParams = userNotification.urlParams || {}
+    userNotification.visibility = userNotification.visibility || 'private'
+    if (userNotification.visibility !== 'private') {
+      const ownerRole = permissions.getOwnerRole(req.dataset.owner, req.user)
+      if (!['admin', 'contrib'].includes(ownerRole)) return res.status(403).type('text/plain').send('User does not have permission to emit a public notification')
+    }
+    const notif = {
+      sender: req.dataset.owner,
+      topic: { key: `data-fair:dataset-user-notification:${req.dataset.slug}:${userNotification.topic}` },
+      title: userNotification.title,
+      body: userNotification.body,
+      urlParams: { ...urlParams, datasetId: req.dataset.id, datasetSlug: req.dataset.slug, userId: req.user.id },
+      visibility: userNotification.visibility,
+      recipient: userNotification.recipient,
+      extra: { user: { id: req.user.id, name: req.user.name } }
+    }
+    await notifications.send(notif, true)
+    res.send(notif)
+  })
+)
 
 router.get('/:datasetId/thumbnail', readDataset(), permissions.middleware('readDescription', 'read'), asyncWrap(async (req, res, next) => {
   if (!req.dataset.image) return res.status(404).send("dataset doesn't have an image")
