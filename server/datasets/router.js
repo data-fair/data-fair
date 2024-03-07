@@ -84,7 +84,7 @@ router.use('/:datasetId/permissions', readDataset(), permissions.router('dataset
 // retrieve a dataset by its id
 router.get('/:datasetId', readDataset({ acceptInitialDraft: true }), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   // @ts-ignore
-  const dataset = req.dataset.__isProxy ? req.dataset.__proxyTarget : req.dataset
+  const dataset = clone(req.dataset)
   dataset.userPermissions = permissions.list('datasets', dataset, req.user, req.bypassPermissions)
   res.status(200).send(clean(req.publicBaseUrl, req.publicationSite, dataset, req.query))
 })

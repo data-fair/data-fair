@@ -1,3 +1,5 @@
+const config = require('config')
+
 class MutationError extends Error {
   /**
    * @param {string} message
@@ -16,7 +18,7 @@ class MutationError extends Error {
  */
 module.exports = (target, label) => {
   // this is not enforced in production, only during test and dev
-  if (process.env.NODE_ENV === 'production') return target
+  if (!config.assertImmutable) return target
 
   const proxyHandler = {
     get (target, key) {
