@@ -182,40 +182,47 @@ describe('REST datasets', () => {
     await ax.put('/api/v1/datasets/rest4', {
       isRest: true,
       title: 'rest4',
-      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+      schema: [{ key: 'attr1', type: 'string', 'x-required': true }, { key: 'attr2', type: 'string', pattern: '^test[0-9]$' }]
     })
     await workers.hook('finalizer/rest4')
-    try {
-      await ax.post('/api/v1/datasets/rest4/lines', { attr3: 'test1' })
-      assert.fail()
-    } catch (err) {
+
+    await assert.rejects(ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', attr3: 'test1' }), (err) => {
       assert.equal(err.data, 'ne doit pas contenir de propriétés additionnelles (attr3)')
       assert.equal(err.status, 400)
-    }
+      return true
+    })
 
-    try {
-      await ax.post('/api/v1/datasets/rest4/lines', { attr1: 111 })
-      assert.fail()
-    } catch (err) {
+    await assert.rejects(ax.post('/api/v1/datasets/rest4/lines', { attr1: 111 }), (err) => {
       assert.equal(err.data, '/attr1 doit être de type string')
       assert.equal(err.status, 400)
-    }
+      return true
+    })
 
-    try {
-      await ax.put('/api/v1/datasets/rest4/lines/line1', { attr1: 111 })
-      assert.fail()
-    } catch (err) {
+    await ax.put('/api/v1/datasets/rest4/lines/line1', { attr1: 'test', attr2: 'test1' })
+
+    await assert.rejects(ax.put('/api/v1/datasets/rest4/lines/line1', { attr1: 111 }), (err) => {
       assert.equal(err.data, '/attr1 doit être de type string')
       assert.equal(err.status, 400)
-    }
+      return true
+    })
 
-    try {
-      await ax.patch('/api/v1/datasets/rest4/lines/line1', { attr1: 111 })
-      assert.fail()
-    } catch (err) {
+    await assert.rejects(ax.patch('/api/v1/datasets/rest4/lines/line1', { attr1: 111 }), (err) => {
       assert.equal(err.data, '/attr1 doit être de type string')
       assert.equal(err.status, 400)
-    }
+      return true
+    })
+
+    await assert.rejects(ax.patch('/api/v1/datasets/rest4/lines/line1', { attr2: 'testko' }), (err) => {
+      assert.ok(err.data.startsWith('/attr2 doit correspondre au format'))
+      assert.equal(err.status, 400)
+      return true
+    })
+
+    await assert.rejects(ax.post('/api/v1/datasets/rest4/lines', { attr2: 'test1' }), (err) => {
+      assert.ok(err.data.startsWith('requiert la propriété attr1'))
+      assert.equal(err.status, 400)
+      return true
+    })
 
     const res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
       { _id: 'line1', attr1: 'test' },

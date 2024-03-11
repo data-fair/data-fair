@@ -292,6 +292,7 @@ exports.jsonSchema = (schema, publicBaseUrl) => {
   }
   return {
     type: 'object',
+    required: schema.filter(p => p['x-required']).map(p => p.key),
     properties
   }
 }

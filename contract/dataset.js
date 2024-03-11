@@ -86,15 +86,9 @@ const schema = {
       maximum: {
         type: 'number'
       },
-      'x-format': {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          title: { type: 'string' }
-        }
-      },
       pattern: {
-        type: 'string'
+        type: 'string',
+        format: 'regex'
       },
       'x-master': {
         type: 'object',
