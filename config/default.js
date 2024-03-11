@@ -338,5 +338,6 @@ module.exports = {
     host: 'localhost',
     port: 3310,
     dataDir: '/data/data-fair'
-  }
+  },
+  assertImmutable: false
 }

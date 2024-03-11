@@ -204,7 +204,11 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
   esQuery.size = query.size ? Number(query.size) : 12
   if (esQuery.size > config.elasticsearch.maxPageSize) throw createError(400, `"size" cannot be more than ${config.elasticsearch.maxPageSize}`)
   if (query.after) {
-    esQuery.search_after = JSON.parse(`[${query.after}]`)
+    try {
+      esQuery.search_after = JSON.parse(`[${query.after}]`)
+    } catch (err) {
+      throw createError(400, '"after" parameter is malformed')
+    }
   } else {
     esQuery.from = (query.page ? Number(query.page) - 1 : 0) * esQuery.size
   }
@@ -388,8 +392,12 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
       throw createError(400, `Impossible de faire une recherche sur le champ ${key.slice(0, key.length - 3)}.`)
     }
     if (key.endsWith('_in')) {
-      const values = query[key].startsWith('"') ? JSON.parse(`[${query[key]}]`) : query[key].split(',')
-      filter.push({ terms: { [prop.key]: values } })
+      try {
+        const values = query[key].startsWith('"') ? JSON.parse(`[${query[key]}]`) : query[key].split(',')
+        filter.push({ terms: { [prop.key]: values } })
+      } catch (err) {
+        throw createError(400, `"${key}" parameter is malformed`)
+      }
     }
     if (key.endsWith('_eq')) {
       filter.push({ term: { [prop.key]: query[key] } })
@@ -417,8 +425,8 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
     let dates = dateMatch.split(',')
     if (dates.length === 1) dates = [dates[0], dates[0]]
     const tz = startDateField.timeZone || config.defaultTimeZone
-    const startDate = dayjs(dates[0], 'YYYY-MM-DD', true).isValid() ? dayjs(dates[0]).tz(tz, true).startOf('day').toISOString() : dates[0]
-    const endDate = dayjs(dates[1], 'YYYY-MM-DD', true).isValid() ? dayjs(dates[1]).tz(tz, true).endOf('day').toISOString() : dates[1]
+    const startDate = (dates[0].length === 10 && dayjs(dates[0], 'YYYY-MM-DD', true).isValid()) ? dayjs(dates[0]).tz(tz, true).startOf('day').toISOString() : dates[0]
+    const endDate = (dates[1].length === 10 && dayjs(dates[1], 'YYYY-MM-DD', true).isValid()) ? dayjs(dates[1]).tz(tz, true).endOf('day').toISOString() : dates[1]
     if (startDateField.key === endDateField.key) {
       const dateRange = {}
       if (startDate) dateRange.gte = startDate

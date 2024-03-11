@@ -2,31 +2,153 @@ exports.schema = {
   type: 'object',
   title: 'Données de référence',
   properties: {
+    bulkSearchs: {
+      type: 'array',
+      title: 'Récupération de lignes en masse',
+      'x-class': 'my-4',
+      'x-options': { editMode: 'dialog' },
+      items: {
+        type: 'object',
+        required: ['title'],
+        properties: {
+          id: {
+            type: 'string',
+            title: 'Identifiant',
+            'x-if': 'parent.value.id',
+            readOnly: true
+          },
+          title: {
+            type: 'string',
+            title: 'Titre',
+            'x-props': {
+              placeholder: 'exemple "récupérer les informations de plusieurs produits"'
+            },
+            minLength: 3
+          },
+          description: {
+            type: 'string',
+            title: 'Description',
+            'x-display': 'textarea',
+            'x-props': {
+              placeholder: 'exemple "cet enrichissement vous permet de récupérer les informations de plusieurs produits à partir d\'une liste de codes produits."'
+            }
+          },
+          input: {
+            type: 'array',
+            title: 'Méthodes de correspondance',
+            'x-class': 'mb-4',
+            minItems: 1,
+            'x-options': { editMode: 'inline' },
+            items: {
+              type: 'object',
+              required: ['type', 'property'],
+              oneOf: [{
+                title: 'Valeurs exactement égales',
+                required: ['type', 'property'],
+                properties: {
+                  type: { type: 'string', const: 'equals', title: 'Type de méthode de correspondance' },
+                  property: {
+                    type: 'object',
+                    title: 'Propriété comparée',
+                    'x-fromData': 'context.propertiesWithConcepts',
+                    'x-itemTitle': 'title',
+                    'x-itemKey': 'key'
+                  }
+                }
+              }, {
+                title: 'Date dans un interval',
+                'x-if': 'context.hasDateIntervalConcepts',
+                properties: {
+                  type: { type: 'string', const: 'date-in-interval' },
+                  property: {
+                    type: 'object',
+                    title: 'Date à renseigner',
+                    properties: {
+                      'x-refersTo': { type: 'string', const: 'http://schema.org/Date' },
+                      key: { type: 'string', const: '_date' },
+                      type: { type: 'string', const: 'string' },
+                      format: { type: 'string', const: 'date-time' }
+                    }
+                  }
+                }
+              }, {
+                title: 'Coordonnée géographique à proximité',
+                'x-if': 'context.dataset.bbox',
+                required: ['type', 'distance'],
+                properties: {
+                  type: { type: 'string', const: 'geo-distance' },
+                  distance: {
+                    type: 'integer',
+                    title: 'Distance',
+                    default: 0
+                  },
+                  property: {
+                    type: 'object',
+                    title: 'Point à renseigner',
+                    properties: {
+                      'x-refersTo': { type: 'string', const: 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long' },
+                      key: { type: 'string', const: '_geopoint' },
+                      type: { type: 'string', const: 'string' }
+                    }
+                  }
+                }
+              }]
+            }
+          },
+          sort: {
+            type: 'string',
+            title: 'Tri pour choisir parmi des résultats ambigus',
+            description: `
+Remarque : ce paramètre est optionnel et utile uniquement si la manière d'établir une correspondance est susceptible de retourner plusieurs résultats par ligne.
+
+Le tri est exprimé sous forme d'une liste de clés de colonnes séparées par des virgules. Par défaut le tri est ascendant, si un nom de colonne est préfixé par un "-" alors le tri sera descendant.
+
+Exemple: ma_colonne,-ma_colonne2`
+          }
+        }
+      }
+    },
     singleSearchs: {
       type: 'array',
-      title: 'Recherches unitaires',
-      'x-slots': {
-        before: 'Les recherches unitaires sont utilisables pour récupérer plusieurs lignes du jeu de données de référence à partir d\'une recherche sur 1 critère. Elles servent notamment à construire des champs de recherche dans les formulaires d\'édition de ligne des jeux incrémentaux.'
-      },
+      title: 'Recherche de paires code / libellé',
       'x-class': 'mb-4',
       'x-options': { editMode: 'dialog' },
       items: {
         type: 'object',
-        required: ['id', 'title', 'output'],
+        required: ['title', 'output'],
         properties: {
-          id: { type: 'string', title: 'Identifiant' },
-          title: { type: 'string', title: 'Titre' },
-          description: { type: 'string', title: 'Description', 'x-display': 'textarea' },
+          id: {
+            type: 'string',
+            title: 'Identifiant',
+            'x-if': 'parent.value.id',
+            readOnly: true
+          },
+          title: {
+            type: 'string',
+            title: 'Titre',
+            'x-props': {
+              placeholder: 'exemple "recherche d\'un produit"'
+            },
+            minLength: 3
+          },
+          description: {
+            type: 'string',
+            title: 'Description',
+            'x-display': 'textarea',
+            'x-props': {
+              placeholder: 'exemple "récupérez un code produit en effectuant une recherche dans son code ou son libellé"'
+            }
+          },
           output: {
             type: 'object',
-            title: 'Propriété à retourner',
+            title: 'Propriété à retourner (code)',
             'x-fromData': 'context.propertiesWithConcepts',
             'x-itemTitle': 'title',
             'x-itemKey': 'key'
           },
           label: {
             type: 'object',
-            title: 'Propriété utilisée pour représenter les résultats',
+            title: 'Propriété utilisée pour la recherche (libellé)',
             'x-fromData': 'context.stringProperties',
             'x-itemTitle': 'title',
             'x-itemKey': 'key'
@@ -53,117 +175,23 @@ exports.schema = {
         }
       }
     },
-    bulkSearchs: {
-      type: 'array',
-      title: 'Recherches en masse',
-      'x-slots': {
-        before: 'Les recherches en masse sont utilisables pour enrichir des données de multiples lignes avec 1 résultat par ligne.'
-      },
-      'x-class': 'mt-4',
-      'x-options': { editMode: 'dialog' },
-      items: {
-        type: 'object',
-        required: ['id', 'title'],
-        properties: {
-          id: { type: 'string', title: 'Identifiant' },
-          title: { type: 'string', title: 'Titre' },
-          description: { type: 'string', title: 'Description', 'x-display': 'textarea' },
-          input: {
-            type: 'array',
-            title: 'Filtres',
-            minItems: 1,
-            'x-options': { editMode: 'inline' },
-            items: {
-              type: 'object',
-              required: ['type', 'property'],
-              oneOf: [{
-                title: 'Valeur exacte',
-                properties: {
-                  type: { type: 'string', const: 'equals', title: 'Type de filtre' },
-                  property: {
-                    type: 'object',
-                    title: 'Propriété comparée',
-                    'x-fromData': 'context.propertiesWithConcepts',
-                    'x-itemTitle': 'title',
-                    'x-itemKey': 'key'
-                  }
-                }
-              }, {
-                title: 'Date dans l\'interval',
-                'x-if': 'context.hasDateIntervalConcepts',
-                properties: {
-                  type: { type: 'string', const: 'date-in-interval' },
-                  property: {
-                    type: 'object',
-                    title: 'Date à renseigner',
-                    properties: {
-                      'x-refersTo': { type: 'string', const: 'http://schema.org/Date' },
-                      key: { type: 'string', const: '_date' },
-                      type: { type: 'string', const: 'string' },
-                      format: { type: 'string', const: 'date-time' }
-                    }
-                  }
-                }
-              }, {
-                title: 'Coordonnée géographique à une distance',
-                'x-if': 'context.dataset.bbox',
-                properties: {
-                  type: { type: 'string', const: 'geo-distance' },
-                  distance: {
-                    type: 'integer',
-                    title: 'Distance',
-                    default: 0
-                  },
-                  property: {
-                    type: 'object',
-                    title: 'Point à renseigner',
-                    properties: {
-                      'x-refersTo': { type: 'string', const: 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long' },
-                      key: { type: 'string', const: '_geopoint' },
-                      type: { type: 'string', const: 'string' }
-                    }
-                  }
-                }
-              }]
-            }
-          },
-          sort: {
-            type: 'string',
-            title: 'Tri pour choisir le meilleur résultat',
-            description: `
-Le tri à effectuer sous forme d'une liste de clés de colonnes séparées par des virgules.
-
-Par défaut le tri est ascendant, si un nom de colonne est préfixé par un "-" alors le tri sera descendant.
-
-Exemple: ma_colonne,-ma_colonne2`
-          }
-        }
-      }
-    },
     virtualDatasets: {
       type: 'object',
-      // title: 'Création de jeux virtuels',
-      'x-slots': {
-        before: 'Vous pouvez activer la mise en avant de ces données de références comme une base à la création de jeux virtuels. C\'est une option intéressante pour faciliter la création de vues filtrées et la mise en avant de ces données dans des contextes variés.'
-      },
-      'x-class': 'mt-8',
+      'x-class': 'mt-4',
       properties: {
         active: {
           type: 'boolean',
-          title: 'Proposer la création de jeux virtuels'
+          title: 'Création de jeux virtuels'
         }
       }
     },
     standardSchema: {
       type: 'object',
-      'x-slots': {
-        before: 'Vous pouvez activer la mise en avant du schéma de ces données de références comme une base à la création de jeux éditables. C\'est une option intéressante pour aider les utilisateurs à initialiser rapidement des jeux de données correspondants à des formats standards.'
-      },
-      'x-class': 'mt-8',
+      'x-class': 'mt-4',
       properties: {
         active: {
           type: 'boolean',
-          title: 'Proposer l\'utilisation du schéma pour la création de nouveaux jeux de données'
+          title: 'Initialisation de jeux éditables'
         }
       }
     }

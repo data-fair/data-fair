@@ -1,6 +1,7 @@
 const config = /** @type {any} */(require('config'))
 const stableStringify = require('json-stable-stringify')
 const moment = require('moment')
+const createError = require('http-errors')
 const CronJob = require('cron').CronJob
 const geo = require('./geo')
 const ajv = require('../../misc/utils/ajv')
@@ -91,6 +92,14 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
       if (p.status !== 'deleted') p.status = 'waiting'
     }
     patch.publications = dataset.publications
+  }
+
+  if (patch.rest) {
+    // be extra sure that primaryKeyMode is preserved
+    patch.rest.primaryKeyMode = patch.rest.primaryKeyMode || dataset.rest.primaryKeyMode
+    if (patch.rest.primaryKeyMode !== dataset.rest.primaryKeyMode) {
+      throw createError(400, 'Impossible de changer le mode de clé primaire')
+    }
   }
 
   const coordXProp = dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordX')

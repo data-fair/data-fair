@@ -102,5 +102,6 @@ module.exports = {
   clamav: {
     active: false,
     dataDir: '/data/data-fair/test'
-  }
+  },
+  assertImmutable: true
 }

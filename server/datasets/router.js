@@ -2,6 +2,7 @@ const config = /** @type {any} */(require('config'))
 const express = require('express')
 const ajv = require('../misc/utils/ajv')
 const fs = require('fs-extra')
+const path = require('path')
 const moment = require('moment')
 const createError = require('http-errors')
 const pump = require('../misc/utils/pipe')
@@ -20,6 +21,7 @@ const datasetUtils = require('./utils')
 const restDatasetsUtils = require('./utils/rest')
 const findUtils = require('../misc/utils/find')
 const asyncWrap = require('../misc/utils/async-handler')
+const clone = require('../misc/utils/clone')
 const attachments = require('./utils/attachments')
 const geo = require('./utils/geo')
 const tiles = require('./utils/tiles')
@@ -81,8 +83,10 @@ router.use('/:datasetId/permissions', readDataset(), permissions.router('dataset
 
 // retrieve a dataset by its id
 router.get('/:datasetId', readDataset({ acceptInitialDraft: true }), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
-  req.dataset.userPermissions = permissions.list('datasets', req.dataset, req.user, req.bypassPermissions)
-  res.status(200).send(clean(req.publicBaseUrl, req.publicationSite, req.dataset, req.query))
+  // @ts-ignore
+  const dataset = clone(req.dataset)
+  dataset.userPermissions = permissions.list('datasets', dataset, req.user, req.bypassPermissions)
+  res.status(200).send(clean(req.publicBaseUrl, req.publicationSite, dataset, req.query))
 })
 
 // retrieve only the schema.. Mostly useful for easy select fields
@@ -102,11 +106,11 @@ const sendSchema = (req, res, schema) => {
   res.status(200).send(schema)
 }
 router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.middleware('readSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
-  sendSchema(req, res, req.dataset.schema)
+  sendSchema(req, res, clone(req.dataset.schema))
 })
 // alternate read schema route that does not return clues about the data (cardinality and enums)
 router.get('/:datasetId/safe-schema', readDataset(), applicationKey, permissions.middleware('readSafeSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
-  const schema = req.dataset.schema
+  const schema = clone(req.dataset.schema)
   for (const p of schema) {
     delete p['x-cardinality']
     delete p.enum
@@ -131,6 +135,7 @@ const descriptionHasBreakingChanges = (req) => {
   return breakingChanges.length > 0
 }
 const permissionsWriteDescriptionBreaking = permissions.middleware('writeDescriptionBreaking', 'write')
+const permissionsManageMasterData = permissions.canDoForOwnerMiddleware('manageMasterData', true)
 
 // Update a dataset's metadata
 router.patch('/:datasetId',
@@ -147,6 +152,7 @@ router.patch('/:datasetId',
   lockDataset((/** @type {any} */ patch) => {
     return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)
   }),
+  (req, res, next) => req.body.masterData ? permissionsManageMasterData(req, res, next) : next(),
   (req, res, next) => descriptionHasBreakingChanges(req) ? permissionsWriteDescriptionBreaking(req, res, next) : permissionsWriteDescription(req, res, next),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
   (req, res, next) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),
@@ -407,8 +413,8 @@ function isRest (req, res, next) {
 
 const readWritableDataset = readDataset({ acceptedStatuses: ['finalized', 'updated', 'extended-updated', 'indexed', 'error'] })
 router.get('/:datasetId/lines/:lineId', readDataset(), isRest, permissions.middleware('readLine', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
-router.post('/:datasetId/lines', readWritableDataset, isRest, applicationKey, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createLine))
-router.put('/:datasetId/lines/:lineId', readWritableDataset, isRest, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.updateLine))
+router.post('/:datasetId/lines', readWritableDataset, isRest, applicationKey, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createOrUpdateLine))
+router.put('/:datasetId/lines/:lineId', readWritableDataset, isRest, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createOrUpdateLine))
 router.patch('/:datasetId/lines/:lineId', readWritableDataset, isRest, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.patchLine))
 router.post('/:datasetId/_bulk_lines', readWritableDataset, isRest, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
 router.delete('/:datasetId/lines/:lineId', readWritableDataset, isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
@@ -440,8 +446,8 @@ router.use('/:datasetId/own/:owner', readWritableDataset, isRest, (req, res, nex
   res.status(403).type('text/plain').send('only owner can manage his own lines')
 })
 router.get('/:datasetId/own/:owner/lines/:lineId', readDataset(), isRest, applicationKey, permissions.middleware('readOwnLine', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
-router.post('/:datasetId/own/:owner/lines', readWritableDataset, isRest, applicationKey, permissions.middleware('createOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createLine))
-router.put('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRest, applicationKey, permissions.middleware('updateOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.updateLine))
+router.post('/:datasetId/own/:owner/lines', readWritableDataset, isRest, applicationKey, permissions.middleware('createOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createOrUpdateLine))
+router.put('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRest, applicationKey, permissions.middleware('updateOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createOrUpdateLine))
 router.patch('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRest, applicationKey, permissions.middleware('patchOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
 router.post('/:datasetId/own/:owner/_bulk_lines', lockDataset((body, query) => query.lock === 'true'), readWritableDataset, isRest, applicationKey, permissions.middleware('bulkOwnLines', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
 router.delete('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRest, applicationKey, permissions.middleware('deleteOwnLine', 'manageOwnLines'), asyncWrap(restDatasetsUtils.deleteLine))
@@ -880,7 +886,14 @@ router.get('/:datasetId/min/:fieldKey', readDataset({ fillDescendants: true }), 
 // For datasets with attached files
 router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissions.middleware('downloadAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
-  res.download(req.params['0'], null, { transformStream: res.throttle('static'), root: attachmentsDir(req.dataset) })
+  res.download(
+    req.params['0'],
+    null,
+    {
+      transformStream: res.throttle('static'),
+      root: attachmentsDir(req.dataset)
+    }
+  )
 })
 
 // Direct access to data files
@@ -901,7 +914,16 @@ router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middl
 }))
 router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('downloadMetadataAttachment', 'read'), cacheHeaders.noCache, (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
-  res.download(req.params['0'], null, { transformStream: res.throttle('static'), root: datasetUtils.metadataAttachmentsDir(req.dataset) })
+  // res.set('content-disposition', `inline; filename="${req.params['0']}"`)
+  res.sendFile(
+    req.params['0'],
+    {
+      transformStream: res.throttle('static'),
+      root: datasetUtils.metadataAttachmentsDir(req.dataset),
+      headers: { 'Content-Disposition': `inline; filename="${path.basename(req.params['0'])}"` }
+    }
+  )
+  // res.sendFile(req.params[0])
 })
 router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('deleteMetadataAttachment', 'write'), asyncWrap(async (req, res, next) => {
   const filePath = req.params['0']
@@ -978,28 +1000,35 @@ router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJou
   res.json(journal.events)
 }))
 
-router.post('/:datasetId/user-notification', readDataset(), permissions.middleware('sendUserNotification', 'write'), asyncWrap(async (req, res, next) => {
-  const userNotification = req.body
-  validateUserNotification(userNotification)
-  const urlParams = userNotification.urlParams || {}
-  userNotification.visibility = userNotification.visibility || 'private'
-  if (userNotification.visibility !== 'private') {
-    const ownerRole = permissions.getOwnerRole(req.dataset.owner, req.user)
-    if (!['admin', 'contrib'].includes(ownerRole)) return res.status(403).type('text/plain').send('User does not have permission to emit a public notification')
-  }
-  const notif = {
-    sender: req.dataset.owner,
-    topic: { key: `data-fair:dataset-user-notification:${req.dataset.slug}:${userNotification.topic}` },
-    title: userNotification.title,
-    body: userNotification.body,
-    urlParams: { ...urlParams, datasetId: req.dataset.id, datasetSlug: req.dataset.slug, userId: req.user.id },
-    visibility: userNotification.visibility,
-    recipient: userNotification.recipient,
-    extra: { user: { id: req.user.id, name: req.user.name } }
-  }
-  await notifications.send(notif, true)
-  res.send(notif)
-}))
+const sendUserNotificationPermissions = permissions.middleware('sendUserNotification', 'write')
+const sendUserNotificationPublicPermissions = permissions.middleware('sendUserNotificationPublic', 'write')
+router.post(
+  '/:datasetId/user-notification',
+  readDataset(),
+  (req, res, next) => req.body.visibility === 'public' ? sendUserNotificationPublicPermissions(req, res, next) : sendUserNotificationPermissions(req, res, next),
+  asyncWrap(async (req, res, next) => {
+    const userNotification = req.body
+    validateUserNotification(userNotification)
+    const urlParams = userNotification.urlParams || {}
+    userNotification.visibility = userNotification.visibility || 'private'
+    if (userNotification.visibility !== 'private') {
+      const ownerRole = permissions.getOwnerRole(req.dataset.owner, req.user)
+      if (!['admin', 'contrib'].includes(ownerRole)) return res.status(403).type('text/plain').send('User does not have permission to emit a public notification')
+    }
+    const notif = {
+      sender: req.dataset.owner,
+      topic: { key: `data-fair:dataset-user-notification:${req.dataset.slug}:${userNotification.topic}` },
+      title: userNotification.title,
+      body: userNotification.body,
+      urlParams: { ...urlParams, datasetId: req.dataset.id, datasetSlug: req.dataset.slug, userId: req.user.id },
+      visibility: userNotification.visibility,
+      recipient: userNotification.recipient,
+      extra: { user: { id: req.user.id, name: req.user.name } }
+    }
+    await notifications.send(notif, true)
+    res.send(notif)
+  })
+)
 
 router.get('/:datasetId/thumbnail', readDataset(), permissions.middleware('readDescription', 'read'), asyncWrap(async (req, res, next) => {
   if (!req.dataset.image) return res.status(404).send("dataset doesn't have an image")

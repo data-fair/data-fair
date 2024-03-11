@@ -4,9 +4,8 @@ const i18n = require('i18n')
 const asyncWrap = require('../misc/utils/async-handler')
 const locks = require('../misc/utils/locks')
 const usersUtils = require('../misc/utils/users')
-const findUtils = require('../misc/utils/find')
 const { checkStorage } = require('./utils/storage')
-const virtualDatasetsUtils = require('./utils/virtual')
+const service = require('./service')
 
 /**
  *
@@ -14,6 +13,7 @@ const virtualDatasetsUtils = require('./utils/virtual')
  * @param {boolean} indexed
  * @returns
  */
+// @ts-ignore
 exports.checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
   // @ts-ignore
   if (!req.user) throw createError(401)
@@ -38,8 +38,10 @@ exports.checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res
  */
 exports.lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
+  // @ts-ignore
   const shouldLock = typeof _shouldLock === 'function' ? _shouldLock(req.body, req.query) : _shouldLock
   if (!shouldLock) return next()
+  // @ts-ignore
   const datasetId = req.dataset ? req.dataset.id : req.params.datasetId
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
     const lockKey = `dataset:${datasetId}`
@@ -62,54 +64,31 @@ exports.lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) =
  * @param {{acceptedStatuses?: string[] | ((body: any, dataset: any) => string[] | null), fillDescendants?: boolean, alwaysDraft?: boolean, acceptMissing?: boolean, acceptInitialDraft?: boolean}} fillDescendants
  * @returns
  */
-exports.readDataset = ({ acceptedStatuses: _acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing, acceptInitialDraft } = {}) => asyncWrap(async (req, res, next) => {
+exports.readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing, acceptInitialDraft } = {}) => asyncWrap(async (req, res, next) => {
   // @ts-ignore
   const publicationSite = req.publicationSite
   // @ts-ignore
   const mainPublicationSite = req.mainPublicationSite
-  // @ts-ignore
-  const isNewDataset = req.isNewDataset
+  const tolerateStale = !!publicationSite && !acceptedStatuses
+  const useDraft = req.query.draft === 'true' || alwaysDraft
 
-  const tolerateStale = !!publicationSite
-  let dataset
-  for (let i = 0; i < config.datasetStateRetries.nb; i++) {
-    dataset = await findUtils.getByUniqueRef(req.app.get('db'), publicationSite, mainPublicationSite, req.params, 'dataset', null, tolerateStale)
-    if (!dataset) {
-      if (acceptMissing) return next()
-      return res.status(404).send('Dataset not found')
-    }
-    // @ts-ignore
-    req.datasetFull = { ...dataset }
+  const { dataset, datasetFull } = tolerateStale
+    ? await service.memoizedGetDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, req.app.get('db'), tolerateStale, acceptedStatuses, req.body)
+    : await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, req.app.get('db'), tolerateStale, acceptedStatuses, req.body)
 
-    const useDraft = req.query.draft === 'true' || alwaysDraft
-
-    // in draft mode the draft is automatically merged and all following operations use dataset.draftReason to adapt
-    if (useDraft && dataset.draft) {
-      Object.assign(dataset, dataset.draft)
-      if (!dataset.draft.finalizedAt) delete dataset.finalizedAt
-      if (!dataset.draft.bbox) delete dataset.bbox
-    }
-    delete dataset.draft
-
-    const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(req.body, dataset) : _acceptedStatuses
-
-    let isStatusOk = false
-    if (isNewDataset) isStatusOk = true
-    else if (acceptedStatuses) isStatusOk = acceptedStatuses.includes('*') || acceptedStatuses.includes(dataset.status)
-    else isStatusOk = acceptInitialDraft || dataset.status !== 'draft'
-
-    if (isStatusOk) {
-      if (fillDescendants && dataset.isVirtual) {
-        dataset.descendants = await virtualDatasetsUtils.descendants(req.app.get('db'), dataset, tolerateStale)
-      }
-
-      // @ts-ignore
-      req.dataset = req.resource = dataset
-      return next()
-    }
-
-    // dataset found but not in proper state.. wait a little while
-    await new Promise(resolve => setTimeout(resolve, config.datasetStateRetries.interval))
+  /**
+   * can be used to check the memoizee cache usage, first import memoizee/profile on top of app.js
+   * if (tolerateStale) {
+    console.log('memProfile', require('memoizee/profile').log())
+  } */
+  if (!dataset) {
+    if (acceptMissing) return next()
+    return res.status(404).send('Dataset not found')
   }
-  throw createError(409, `Le jeu de données n'est pas dans un état permettant l'opération demandée. État courant : ${dataset?.status}.`)
+  // @ts-ignore
+  req.dataset = req.resource = dataset
+  // @ts-ignore
+  req.datasetFull = datasetFull
+
+  next()
 })

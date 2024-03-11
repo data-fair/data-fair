@@ -504,7 +504,7 @@ exports.sumsQuery = (reqQuery, user, resourceType, sumFields = {}, filterFields,
  * @param {Record<string, string>} reqParams
  * @param {string} resourceType
  * @param {string | null} resourceId
- * @param {boolean} tolerateStale
+ * @param {boolean | undefined} tolerateStale
  */
 exports.getByUniqueRef = async (db, publicationSite, mainPublicationSite, reqParams, resourceType, resourceId, tolerateStale) => {
   const paramId = resourceId ?? reqParams[resourceType + 'Id']

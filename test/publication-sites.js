@@ -77,6 +77,7 @@ describe('publication sites', () => {
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] })
 
     assert.ok(await ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${dataset.id}`))
+    assert.ok(await ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${dataset.id}/lines`))
     publishedDatasets = (await ax.get('http://localhost:5601/data-fair/api/v1/datasets')).data
     assert.equal(publishedDatasets.results.length, 1)
   })

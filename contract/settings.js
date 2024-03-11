@@ -222,6 +222,7 @@ module.exports = {
           id: {
             type: 'string',
             title: 'Identifiant',
+            'x-if': 'parent.value.id',
             readOnly: true
           },
           identifiers: {

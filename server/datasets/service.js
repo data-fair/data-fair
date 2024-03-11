@@ -2,6 +2,7 @@ const config = /** @type {any} */(require('config'))
 const fs = require('fs-extra')
 const path = require('path')
 const createError = require('http-errors')
+const memoize = require('memoizee')
 const findUtils = require('../misc/utils/find')
 const permissions = require('../misc/utils/permissions')
 const datasetUtils = require('./utils')
@@ -14,6 +15,7 @@ const { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedF
 const { schemasFullyCompatible, getSchemaBreakingChanges } = require('./utils/schema')
 const { getExtensionKey, prepareExtensions, prepareExtensionsSchema } = require('./utils/extensions')
 const { validateURLFriendly } = require('../misc/utils/validation')
+const assertImmutable = require('../misc/utils/assert-immutable')
 const { curateDataset, titleFromFileName } = require('./utils')
 const virtualDatasetsUtils = require('./utils/virtual')
 const { prepareInitFrom } = require('./utils/init-from')
@@ -137,6 +139,63 @@ exports.findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQue
 }
 
 /**
+ * @param {string} datasetId
+ * @param {string} publicationSite
+ * @param {string} mainPublicationSite
+ * @param {boolean | undefined} useDraft
+ * @param {boolean | undefined} fillDescendants
+ * @param {boolean | undefined} acceptInitialDraft
+ * @param {import('mongodb').Db} db
+ * @param {boolean | undefined} [tolerateStale]
+ * @param {string[] | ((body: any, dataset: any) => string[] | null)} [_acceptedStatuses]
+ * @param {any} [reqBody]
+ * @returns {Promise<{dataset?: any, datasetFull?: any}>}
+ */
+exports.getDataset = async (datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, tolerateStale, _acceptedStatuses, reqBody) => {
+  let dataset, datasetFull
+  for (let i = 0; i < config.datasetStateRetries.nb; i++) {
+    dataset = await findUtils.getByUniqueRef(db, publicationSite, mainPublicationSite, {}, 'dataset', datasetId, tolerateStale)
+    if (!dataset) return { }
+    datasetFull = { ...dataset }
+
+    // in draft mode the draft is automatically merged and all following operations use dataset.draftReason to adapt
+    if (useDraft && dataset.draft) {
+      Object.assign(dataset, dataset.draft)
+      if (!dataset.draft.finalizedAt) delete dataset.finalizedAt
+      if (!dataset.draft.bbox) delete dataset.bbox
+    }
+    delete dataset.draft
+
+    const acceptedStatuses = typeof _acceptedStatuses === 'function' ? _acceptedStatuses(reqBody, dataset) : _acceptedStatuses
+
+    let isStatusOk = false
+    if (acceptedStatuses) isStatusOk = acceptedStatuses.includes('*') || acceptedStatuses.includes(dataset.status)
+    else isStatusOk = acceptInitialDraft || dataset.status !== 'draft'
+
+    if (isStatusOk) {
+      if (fillDescendants && dataset.isVirtual) {
+        dataset.descendants = await virtualDatasetsUtils.descendants(db, dataset, tolerateStale)
+      }
+
+      return !_acceptedStatuses ? assertImmutable({ dataset, datasetFull }, `dataset ${dataset.id}`) : { dataset, datasetFull }
+    }
+
+    // dataset found but not in proper state.. wait a little while
+    await new Promise(resolve => setTimeout(resolve, config.datasetStateRetries.interval))
+  }
+  throw createError(409, `Le jeu de données n'est pas dans un état permettant l'opération demandée. État courant : ${dataset?.status}.`)
+}
+
+exports.memoizedGetDataset = memoize(exports.getDataset, {
+  profileName: 'getDataset',
+  promise: true,
+  primitive: true,
+  max: 10000,
+  maxAge: 1000 * 60, // 1 minute
+  length: 6 // in memoized mode ignore db, acceptedStatuses and reqBody
+})
+
+/**
  *
  * @param {import('mongodb').Db} db
  * @param {string} locale
@@ -206,6 +265,7 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
     if (!body.title) throw createError(400, 'Un jeu de données éditable doit être créé avec un titre')
     if (attachmentsFile) throw createError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
     dataset.rest = dataset.rest || {}
+    dataset.rest.primaryKeyMode = dataset.rest.primaryKeyMode || 'sha256'
     dataset.schema = dataset.schema || []
     dataset.status = 'created'
     if (dataset.initFrom) prepareInitFrom(dataset, user)

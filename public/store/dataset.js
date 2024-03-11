@@ -339,15 +339,21 @@ export default () => ({
       })
       if (id) {
         formData.append('_id', id)
+        formData.append('_action', 'update')
+      } else {
+        formData.append('_action', 'create')
       }
 
       try {
         const res = await this.$axios.$post(getters.resourceUrl + '/lines', formData, options)
         return res
       } catch (error) {
-        eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'enregistrement de la ligne\'' })
+        if (error.status !== 304) {
+          eventBus.$emit('notification', { error, msg: 'Erreur pendant l\'enregistrement de la ligne' })
+        }
+      } finally {
+        state.lineUploadProgress = 0
       }
-      state.lineUploadProgress = 0
     }
   }
 })

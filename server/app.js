@@ -82,7 +82,7 @@ if (config.mode.includes('server')) {
     const elemMatch = publicationSiteQuery
       ? { type: publicationSiteQuery.split(':')[0], id: publicationSiteQuery.split(':')[1] }
       : { url: publicationSiteUrl }
-    return await db.collection('settings').findOne({ publicationSites: { $elemMatch: elemMatch } }, {
+    return db.collection('settings').findOne({ publicationSites: { $elemMatch: elemMatch } }, {
       projection: {
         type: 1,
         id: 1,
@@ -90,14 +90,15 @@ if (config.mode.includes('server')) {
         name: 1,
         publicationSites: { $elemMatch: elemMatch }
       }
-    }
-    )
+    })
   }
   const memoizedGetPublicationSiteSettings = exports.memoizedGetPublicationSiteSettings = memoize(getPublicationSiteSettings, {
+    profileName: 'getPublicationSiteSettings',
+    promise: true,
     primitive: true,
     max: 10000,
     maxAge: 1000 * 60, // 1 minute
-    length: 1 // only use publicationSite, not db as cache key
+    length: 2 // only use publicationSite, not db as cache key
   })
   app.use('/', asyncWrap(async (req, res, next) => {
     const u = originalUrl(req)

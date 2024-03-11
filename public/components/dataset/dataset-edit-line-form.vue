@@ -45,7 +45,7 @@ en:
 import { mapState, mapGetters } from 'vuex'
 
 export default {
-  props: ['value', 'selectedCols', 'ownLines'],
+  props: ['value', 'selectedCols', 'ownLines', 'readonlyCols'],
   data: () => ({
     vjsfOptions: {
       locale: 'fr',
@@ -75,6 +75,11 @@ export default {
         delete schema.properties._ownerName
       }
       Object.keys(schema.properties).forEach(key => {
+        if (this.readonlyCols && this.readonlyCols.includes(key)) {
+          schema.properties[key].readOnly = true
+          schema.properties[key]['x-options'] = schema.properties[key]['x-options'] || {}
+          schema.properties[key]['x-options'].hideReadOnly = false
+        }
         if (this.selectedCols && this.selectedCols.length && !this.selectedCols.includes(key)) {
           schema.properties[key].readOnly = true
           schema.properties[key]['x-options'] = schema.properties[key]['x-options'] || {}

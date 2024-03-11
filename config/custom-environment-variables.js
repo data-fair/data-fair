@@ -281,5 +281,9 @@ module.exports = {
     host: 'CLAMAV_HOST',
     port: 'CLAMAV_PORT',
     dataDir: 'CLAMAV_DATA_DIR'
+  },
+  assertImmutable: {
+    __name: 'ASSERT_IMMUTABLE',
+    __format: 'json'
   }
 }

@@ -71,7 +71,7 @@ exports.results2sheet = async (req, results, bookType) => {
     results,
     bookType,
     query: req.query,
-    dataset: req.dataset,
+    dataset: req.dataset.__isProxy ? req.dataset.__proxyTarget : req.dataset,
     downloadUrl: req.publicBaseUrl + req.originalUrl,
     labels: req.__('sheets')
   }))
