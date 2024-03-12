@@ -694,7 +694,11 @@ module.exports = {
           }
         },
         lineOwnership: { type: 'boolean' },
-        storeUpdatedBy: { type: 'boolean' }
+        storeUpdatedBy: { type: 'boolean' },
+        primaryKeyMode: {
+          type: 'string',
+          enum: ['base64', 'sha256']
+        }
       }
     },
     isMetaOnly: {

@@ -92,7 +92,7 @@ module.exports = {
     title: 'Sirene',
     url: 'http://test.com/sirene/api-docs.json'
   }],
-  observe: {
+  observer: {
     port: 9092
   },
   cache: {
@@ -102,5 +102,6 @@ module.exports = {
   clamav: {
     active: false,
     dataDir: '/data/data-fair/test'
-  }
+  },
+  assertImmutable: true
 }

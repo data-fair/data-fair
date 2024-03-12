@@ -323,7 +323,7 @@ module.exports = {
   remoteFilesAutoUpdates: {
     cron: '0 23 * * 0'
   },
-  observe: {
+  observer: {
     active: true,
     port: 9090
   },
@@ -338,5 +338,6 @@ module.exports = {
     host: 'localhost',
     port: 3310,
     dataDir: '/data/data-fair'
-  }
+  },
+  assertImmutable: false
 }

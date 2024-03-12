@@ -259,12 +259,12 @@ module.exports = {
     locales: 'I18N_LOCALES',
     defaultLocale: 'I18N_DEFAULT_LOCALE'
   },
-  observe: {
+  observer: {
     active: {
-      __name: 'OBSERVE_ACTIVE',
+      __name: 'OBSERVER_ACTIVE',
       __format: 'json'
     },
-    port: 'OBSERVE_PORT'
+    port: 'OBSERVER_PORT'
   },
   agentkeepaliveOptions: {
     __name: 'AGENTKEEPALIVE_OPTIONS',
@@ -281,5 +281,9 @@ module.exports = {
     host: 'CLAMAV_HOST',
     port: 'CLAMAV_PORT',
     dataDir: 'CLAMAV_DATA_DIR'
+  },
+  assertImmutable: {
+    __name: 'ASSERT_IMMUTABLE',
+    __format: 'json'
   }
 }

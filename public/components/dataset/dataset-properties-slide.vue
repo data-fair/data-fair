@@ -105,7 +105,7 @@
             </v-list-item>
             <v-list-item>
               <span :class="labelClass">{{ $t('key') }}</span>&nbsp;
-              {{ currentPropRef.prop['x-originalName'] || currentPropRef.prop.key }}
+              {{ currentPropRef.prop.key }}
             </v-list-item>
             <v-list-item>
               <span :class="labelClass">Type :</span>&nbsp;

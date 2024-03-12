@@ -90,7 +90,7 @@ exports.format = (value, prop, fileProp) => {
 
 // WARNING: this code is duplicated in public/assets/dataset-utils.js
 exports.escapeKey = (key, dataset) => {
-  const algorithm = dataset.analysis?.escapeKeyAlgorithm
+  const algorithm = dataset?.analysis?.escapeKeyAlgorithm
   if (algorithm === 'legacy') {
     key = key.replace(/\.|\s|\$|;|,|:|!/g, '_').replace(/"/g, '')
     // prefixing by _ is reserved to fields calculated by data-fair

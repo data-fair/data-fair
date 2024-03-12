@@ -12,7 +12,7 @@
           </layout-actions-button>
 
           <search-filters
-            :filter-labels="{children: $t('childDataset'), owner: $t('owner')}"
+            :filter-labels="{children: $t('childDataset'), ownerExt: $t('owner')}"
             :filters="filters"
             :facets-values="facetsValues"
             :sorts="sorts"
@@ -92,7 +92,7 @@
         <v-row class="px-2 pt-2">
           <v-col>
             <search-filters
-              :filter-labels="{children: $t('childDataset'), owner: $t('owner')}"
+              :filter-labels="{children: $t('childDataset'), ownerExt: $t('owner')}"
               :filters="filters"
               :sorts="sorts"
               :facets-values="facetsValues"
@@ -104,7 +104,6 @@
                 v-if="datasets"
                 :facets="datasets.facets"
                 :facets-values="facetsValues"
-                :show-shared="filters.shared"
               />
             </v-row>
           </v-col>
@@ -255,6 +254,10 @@ export default {
           fullFilters[facetKey] = facetFilter
         }
       })
+      if (fullFilters.ownerExt) {
+        fullFilters.owner = fullFilters.owner ? fullFilters.owner + ',' + fullFilters.ownerExt : fullFilters.ownerExt
+        delete fullFilters.ownerExt
+      }
       if (append) this.page += 1
       else this.page = 1
       const params = {

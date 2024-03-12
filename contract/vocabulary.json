@@ -799,7 +799,7 @@
     "identifiers": [
       "https://schema.org/price"
     ],
-    "type": "string",
+    "type": "number",
     "tag": {
       "fr": "Commerce",
       "en": "Commerce"
