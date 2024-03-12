@@ -134,24 +134,24 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
     patch.status = 'loaded'
   } else if (patch.extensions) {
     // extensions have changed, trigger full re-indexing
-    patch.status = 'analyzed'
+    patch.status = dataset.file ? 'validated' : 'analyzed'
   } else if (patch.projection && (!dataset.projection || patch.projection.code !== dataset.projection.code) && ((coordXProp && coordYProp) || projectGeomProp)) {
     // geo projection has changed, trigger full re-indexing
-    patch.status = 'analyzed'
+    patch.status = dataset.file ? 'validated' : 'analyzed'
   } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.geoFieldsKey(dataset.schema)) {
     // geo concepts haved changed, trigger full re-indexing
-    patch.status = 'analyzed'
+    patch.status = dataset.file ? 'validated' : 'analyzed'
   } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && df.separator !== f.separator))) {
     // some separator has changed on a field, trigger full re-indexing
-    patch.status = 'analyzed'
+    patch.status = dataset.file ? 'validated' : 'analyzed'
   } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && df.timeZone !== f.timeZone))) {
     // some timeZone has changed on a field, trigger full re-indexing
-    patch.status = 'analyzed'
+    patch.status = dataset.file ? 'validated' : 'analyzed'
   } else if (removedRestProps.length) {
     patch.status = 'analyzed'
   } else if (patch.schema && !datasetUtils.schemasFullyCompatible(patch.schema, dataset.schema)) {
     attemptMappingUpdate = true
-    patch.status = 'analyzed'
+    patch.status = dataset.file ? 'validated' : 'analyzed'
   } else if (patch.thumbnails || patch.masterData) {
     // just change finalizedAt so that cache is invalidated, but the worker doesn't relly need to work on the dataset
     patch.finalizedAt = (new Date()).toISOString()
