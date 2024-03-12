@@ -10,7 +10,7 @@ const mimeTypeStream = require('mime-type-stream')
 const createError = require('http-errors')
 const { createGunzip } = require('zlib')
 const DecodeStream = require('../../misc/utils/decode-stream')
-const observe = require('../../misc/utils/observe')
+const metrics = require('../../misc/utils/metrics')
 const { csvTypes } = require('../../workers/file-normalizer')
 const fieldsSniffer = require('./fields-sniffer')
 const restDatasetsUtils = require('./rest')
@@ -157,8 +157,7 @@ exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraft
     // we should not have to do this
     // this is a weird thing, maybe an unsolved race condition ?
     // let's wait a bit and try again to mask this problem temporarily
-    observe.internalError.inc({ errorCode: 'indexer-missing-file' })
-    console.error('(indexer-missing-file) file missing when indexer started working', p)
+    metrics.internalError('indexer-missing-file', 'file missing when indexer started working ' + p)
     await new Promise(resolve => setTimeout(resolve, 10000))
   }
 

@@ -3,9 +3,15 @@ const config = /** @type {any} */(require('config'))
 const { Socket } = require('node:net')
 const createError = require('http-errors')
 const { PromiseSocket } = require('promise-socket')
+const { Counter } = require('prom-client')
 const asyncWrap = require('./async-handler')
-const observe = require('./observe')
 const debug = require('debug')('clamav')
+
+const infectedFilesCounter = new Counter({
+  name: 'df_infected_files',
+  help: 'A warning about uploaded infected files.',
+  labelNames: []
+})
 
 // TODO: use a socket pool ? use clamd sessions ?
 const runCommand = async (command) => {
@@ -39,7 +45,7 @@ exports.checkFiles = async (files, user) => {
     if (result.endsWith('OK')) continue
     if (result.endsWith('ERROR')) throw createError('failure while applying antivirus ' + result.slice(0, -6))
     if (result.endsWith('FOUND')) {
-      observe.infectedFiles.inc()
+      infectedFilesCounter.inc()
       console.warn('[infected-file] a user attempted to upload an infected file', result, user, file)
       throw createError(400, 'malicious file detected')
     }

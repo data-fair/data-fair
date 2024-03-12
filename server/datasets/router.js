@@ -4,6 +4,7 @@ const ajv = require('../misc/utils/ajv')
 const fs = require('fs-extra')
 const path = require('path')
 const moment = require('moment')
+const { Counter } = require('prom-client')
 const createError = require('http-errors')
 const pump = require('../misc/utils/pipe')
 const mongodb = require('mongodb')
@@ -39,6 +40,7 @@ const { bulkSearchStreams } = require('./utils/master-data')
 const applicationKey = require('../misc/utils/application-key')
 const { validateURLFriendly } = require('../misc/utils/validation')
 const observe = require('../misc/utils/observe')
+const metrics = require('../misc/utils/metrics')
 const publicationSites = require('../misc/utils/publication-sites')
 const clamav = require('../misc/utils/clamav')
 const { syncDataset: syncRemoteService } = require('../remote-services/utils')
@@ -489,15 +491,20 @@ router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset({ 
   )
 }))
 
+const esQueryErrorCounter = new Counter({
+  name: 'df_es_query_error',
+  help: 'Errors in elasticearch queries'
+})
+
 // Error from ES backend should be stored in the journal
 async function manageESError (req, err) {
   const message = esUtils.errorMessage(err)
   const status = err.status || err.statusCode || 500
-  console.error(`(es-query-${status}) elasticsearch query error ${req.dataset.id}`, req.originalUrl, status, req.headers.referer || req.headers.referrer, message, err.stack)
   if (status === 400) {
-    observe.esQueryError.inc()
+    console.error(`(es-query-${status}) elasticsearch query error ${req.dataset.id}`, req.originalUrl, status, req.headers.referer || req.headers.referrer, message, err.stack)
+    esQueryErrorCounter.inc()
   } else {
-    observe.internalError.inc({ errorCode: 'es-query-' + status })
+    metrics.internalError('es-query-' + status, err)
   }
 
   // We used to store an error on the data whenever a dataset encountered an elasticsearch error

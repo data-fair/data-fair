@@ -20,7 +20,7 @@ dayjs.extend(duration)
 const storageUtils = require('./storage')
 const attachmentsUtils = require('./attachments')
 const findUtils = require('../../misc/utils/find')
-const observe = require('../../misc/utils/observe')
+const metrics = require('../../misc/utils/metrics')
 const fieldsSniffer = require('./fields-sniffer')
 const { transformFileStreams } = require('./data-streams')
 const { attachmentPath, lsAttachments } = require('./files')
@@ -824,8 +824,7 @@ exports.bulkLines = async (req, res, next) => {
         await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
       }
     } catch (err) {
-      observe.internalError.inc({ errorCode: 'bulk-lines' })
-      console.error(`[bulk-lines] failure to apply bulk operation on dataset ${req.dataset.id}`, err)
+      metrics.internalError('bulk-lines', err)
       if (firstBatch) {
         res.writeHeader(err.statusCode || 500, { 'Content-Type': 'application/json' })
       }

@@ -5,7 +5,7 @@ const flatten = require('flat')
 const virtualDatasetsUtils = require('./virtual')
 const batchStream = require('../../misc/utils/batch-stream')
 const esUtils = require('../es')
-const observe = require('../../misc/utils/observe')
+const metrics = require('../../misc/utils/metrics')
 const pump = require('../../misc/utils/pipe')
 
 exports.bulkSearchPromise = async (streams, data) => {
@@ -96,8 +96,7 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
           try {
             esResponse = await esUtils.multiSearch(es, dataset, queries)
           } catch (err) {
-            observe.internalError.inc({ errorCode: 'masterdata-multi-query' })
-            console.error(`(masterdata-multi-query) master-data multisearch query error ${dataset.id}`, err)
+            metrics.internalError('masterdata-multi-query', err)
             const message = esUtils.errorMessage(err)
             throw createError(err.status, message)
           }
@@ -108,8 +107,7 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
             const response = esResponse.responses[i]
 
             if (response.error) {
-              observe.internalError.inc({ errorCode: 'masterdata-item-query' })
-              console.error(`(masterdata-item-query) master-data item query error ${dataset.id}`, response.error)
+              metrics.internalError('masterdata-item-query', response.error)
               this.push(finalizeResponseLine({}, lineKey, esUtils.errorMessage(response.error)))
               continue
             }

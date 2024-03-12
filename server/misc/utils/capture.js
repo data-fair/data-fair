@@ -7,7 +7,7 @@ const pump = require('../utils/pipe')
 const rateLimiting = require('../utils/rate-limiting')
 const debug = require('debug')('capture')
 const permissionsUtils = require('./permissions')
-const observe = require('./observe')
+const metrics = require('./metrics')
 const resolvePath = require('resolve-path')
 
 const captureUrl = config.privateCaptureUrl || config.captureUrl
@@ -104,8 +104,8 @@ exports.screenshot = async (req, res) => {
       return res.sendFile(capturePath)
     } catch (err) {
       // catch err locally as this method is called without waiting for result
-      console.warn(`(app-thumbnail) failed to capture screenshot for application ${req.application.id}`, err)
-      observe.internalError.inc({ errorCode: 'app-thumbnail' })
+
+      metrics.internalError('app-thumbnail', err)
 
       // In case of error do not keep corrupted or empty file
       await fs.remove(capturePath)

@@ -15,7 +15,7 @@ const asyncWrap = require('../misc/utils/async-handler')
 const findUtils = require('../misc/utils/find')
 const baseAppsUtils = require('./utils')
 const cacheHeaders = require('../misc/utils/cache-headers')
-const observe = require('../misc/utils/observe')
+const metrics = require('../misc/utils/metrics')
 const { getThumbnail } = require('../misc/utils/thumbnails')
 const router = exports.router = express.Router()
 
@@ -45,8 +45,7 @@ async function failSafeInitBaseApp (db, app) {
   try {
     await initBaseApp(db, app)
   } catch (err) {
-    observe.internalError.inc({ errorCode: 'app-init' })
-    console.error(`(app-init) Failure to initialize base application ${app.url}`, err.stack)
+    metrics.internalError('app-init', err)
   }
 }
 
@@ -81,8 +80,7 @@ async function initBaseApp (db, app) {
     patch.datasetsFilters = datasetsQueries.map(prepareQuery)
   } catch (err) {
     patch.hasConfigSchema = false
-    observe.internalError.inc({ errorCode: 'app-config-schema' })
-    console.error(`(app-config-schema) Failed to fetch a config schema for application ${app.url}`, err.message)
+    metrics.internalError('app-config-schema', err)
   }
 
   if (!patch.hasConfigSchema && !(patch.meta && patch.meta['application-name'])) {

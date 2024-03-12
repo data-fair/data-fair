@@ -20,7 +20,7 @@ describe('Elasticsearch errors management', () => {
       assert.fail()
     } catch (err) {
       assert.equal(err.status, 404)
-      assert.ok(err.data.startsWith('no such index'))
+      assert.ok(err.data.includes('no such index'))
     }
 
     // cache headers are not filled, we do not want to store errors

@@ -1,4 +1,4 @@
-const observe = require('../misc/utils/observe')
+const metrics = require('../misc/utils/metrics')
 const journals = require('../misc/utils/journals')
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
@@ -38,8 +38,7 @@ exports.process = async function (app, dataset) {
     try {
       indexName = await es.initDatasetIndex(esClient, dataset)
     } catch (err) {
-      observe.internalError.inc({ errorCode: 'es-init-index' })
-      console.error('(es-init-index) elasticsearch init index error', err)
+      metrics.internalError('es-init-index', err)
       const message = es.errorMessage(err)
       throw new Error(message)
     }
