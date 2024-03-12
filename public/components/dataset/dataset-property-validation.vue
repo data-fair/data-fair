@@ -2,7 +2,6 @@
   <v-dialog
     v-model="dialog"
     max-width="800px"
-    @input="toggle"
   >
     <template #activator="{on, attrs}">
       <v-btn
@@ -34,6 +33,18 @@
       </v-toolbar>
       <v-card-text class="px-3 pb-0">
         <v-form ref="form">
+          <tutorial-alert
+            v-if="dataset.isRest"
+            id="validation-rest"
+            :text="$t('validationRestMessage')"
+            persistent
+          />
+          <tutorial-alert
+            v-else
+            id="validation-file"
+            :text="$t('validationFileMessage')"
+            persistent
+          />
           <v-checkbox
             v-model="property['x-required']"
             :label="$t('required')"
@@ -46,40 +57,55 @@
             :disabled="!editable"
           />
           <v-text-field
-            v-if="property.type === 'string' && !property.format"
-            v-model="property.pattern"
-            :label="$t('pattern')"
-            :disabled="!editable"
-          />
-          <v-text-field
             v-if="property.type === 'number'"
-            v-model="property.minimum"
+            :value="property.minimum"
             :label="$t('minimum')"
             :disabled="!editable"
             type="number"
+            clearable
+            @input="setNumberProp('minimum', $event)"
           />
           <v-text-field
             v-if="property.type === 'number'"
-            v-model="property.maximum"
+            :value="property.maximum"
             :label="$t('maximum')"
             :disabled="!editable"
             type="number"
+            clearable
+            @input="setNumberProp('maximum', $event)"
           />
           <v-text-field
             v-if="property.type === 'string' && !property.format"
-            v-model="property.minLength"
-            :label="$t('multipleOf')"
+            :value="property.minLength"
+            :label="$t('minLength')"
             :disabled="!editable"
             type="number"
             min="0"
+            clearable
+            @input="setNumberProp('minLength', $event)"
           />
           <v-text-field
             v-if="property.type === 'string' && !property.format"
-            v-model="property.maxLength"
+            :value="property.maxLength"
             :label="$t('maxLength')"
             :disabled="!editable"
             type="number"
             min="0"
+            clearable
+            @input="setNumberProp('maxLength', $event)"
+          />
+          <tutorial-alert
+            id="validation-regexp"
+            :text="$t('validationRegexpMessage')"
+            persistent
+          />
+          <v-text-field
+            v-if="property.type === 'string' && !property.format"
+            v-model="property.pattern"
+            :label="$t('pattern')"
+            :disabled="!editable"
+            clearable
+            @click:clear="delete property.pattern"
           />
         </v-form>
       </v-card-text>
@@ -97,6 +123,9 @@ fr:
   maximum: Maximum
   minLength: Longueur minimale
   maxLength: Longueur maximale
+  validationRestMessage: Ces règles de validation seront appliquées dans les formulaires d'édition et vérifiées au moment de la réception de la donnée par la plateforme.
+  validationFileMessage: Ces règles de validation seront appliquées lors de l'analyse des nouvelles versions de fichier. Les brouillons ne seront pas automatiquement validés si des erreurs sont détectées.
+  validationRegexpMessage: La définition du format est basée sur une expression régulière. Il s'agit d'un paramétrage avancé.
 en:
   validationConfig: Data validation configuration
   required: required information
@@ -106,9 +135,13 @@ en:
   maximum: Maximum
   minLength: Minimum length
   maxLength: Maximum length
+  validationRestMessage: These validation rules will be applied in the edition forms and checked when the data is received by the platform.
+  validationFileMessage: These validation rules will be applied when analyzing new file versions. Drafts will not be automatically validated if errors are detected.
+  validationRegexpMessage: The format definition is based on a regular expression. This is an advanced setting.
 </i18n>
 
 <script>
+import { mapState } from 'vuex'
 
 export default {
   props: ['editable', 'property'],
@@ -118,8 +151,17 @@ export default {
       editCapabilities: null
     }
   },
-  computed: { },
-  methods: { }
+  computed: {
+    ...mapState('dataset', ['dataset'])
+  },
+  methods: {
+    setNumberProp (prop, value) {
+      this.$set(this.property, prop, parseInt(value))
+      if (isNaN(this.property[prop])) {
+        delete this.property[prop]
+      }
+    }
+  }
 }
 </script>
 
