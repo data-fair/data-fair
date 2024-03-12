@@ -98,8 +98,6 @@ exports.process = async function (app, dataset) {
   }
   if (dataset.projection) patch.projection = dataset.projection
 
-  if (await datasetService.validateCompatibleDraft(app, dataset, patch)) return
-
   await datasetService.applyPatch(app, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
 }

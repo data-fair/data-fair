@@ -281,7 +281,7 @@ const cleanJsonSchemaProperty = (p, publicBaseUrl, writableId) => {
 /**
  *
  * @param {any} schema
- * @param {string} publicBaseUrl
+ * @param {string} [publicBaseUrl]
  * @returns {any}
  */
 exports.jsonSchema = (schema, publicBaseUrl) => {

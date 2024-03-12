@@ -272,6 +272,33 @@ describe('datasets in draft mode', () => {
     assert.equal(journal.pop().type, 'finalize-end')
   })
 
+  it('create a draft when updating the data file but not auto-validate if there are some validation errors', async () => {
+    // Send dataset
+    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+    const form = new FormData()
+    form.append('file', datasetFd, 'dataset1.csv')
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let dataset = await workers.hook('finalizer')
+
+    const schema = dataset.schema
+    schema[0].pattern = '^[a-z]+$'
+    await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
+
+    // upload a new file
+    const datasetFd2 = fs.readFileSync('./test/resources/datasets/dataset1-invalid.csv')
+    const form2 = new FormData()
+    form2.append('file', datasetFd2, 'dataset1-invalid.csv')
+    form2.append('description', 'draft description')
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
+    assert.equal(dataset.status, 'loaded')
+    assert.equal(dataset.draftReason.key, 'file-updated')
+    dataset = await workers.hook('finalizer')
+    assert.equal(dataset.file.name, 'dataset1.csv')
+    assert.equal(dataset.draft.file.name, 'dataset1-invalid.csv')
+    assert.equal(dataset.draft.count, 2)
+  })
+
   it('create a draft at creation and update it with multiple follow-up uploads', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')

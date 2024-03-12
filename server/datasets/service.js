@@ -513,7 +513,7 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
   }
   if (datasetFull.file) await fs.remove(fullFilePath(datasetFull))
 
-  const statusPatch = { status: 'analyzed' }
+  const statusPatch = { status: 'validated' }
   const statusPatchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: datasetFull.id },
     { $set: statusPatch },
     { returnDocument: 'after' }
