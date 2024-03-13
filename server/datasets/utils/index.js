@@ -127,6 +127,7 @@ exports.previews = (dataset, publicUrl = config.publicUrl) => {
   }
   if (dataset.bbox) {
     previews.push({ id: 'map', title: 'Carte', href: `${publicUrl}/embed/dataset/${datasetRef}/map` })
+    previews.push({ id: 'map-bounds', title: 'Enveloppe géographique', href: `${publicUrl}/embed/dataset/${datasetRef}/map-bounds` })
   }
   const documentProperty = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (documentProperty && (!documentProperty['x-capabilities'] || documentProperty['x-capabilities'].indexAttachment !== false)) {
