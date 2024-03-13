@@ -43,22 +43,6 @@ module.exports = {
     spawnTask: false
   },
   browserLogLevel: 'debug',
-  remoteServices: [{
-    title: 'Données Entreprises',
-    url: 'https://koumoul.com/s/sirene/api-docs.json'
-  }, {
-    title: 'Géocoder',
-    url: 'https://koumoul.com/s/geocoder/api/v1/api-docs.json'
-  }, {
-    title: 'Cadastre',
-    url: 'https://koumoul.com/s/cadastre/api-docs.json'
-  }, {
-    title: 'Divisions administratives',
-    url: 'https://koumoul.com/s/insee-mapping/api/v1/api-docs.json'
-  }, {
-    title: 'Service de données cartographiques',
-    url: 'https://koumoul.com/s/tileserver/api/v1/api-docs.json'
-  }],
   catalogs: [{
     title: 'Data.gouv.fr',
     href: 'https://www.data.gouv.fr'

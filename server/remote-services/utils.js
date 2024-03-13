@@ -117,10 +117,12 @@ exports.init = async (db) => {
   const remoteServices = db.collection('remote-services')
   const existingServices = await remoteServices.find({ owner: { $exists: false } }).limit(1000).project({ url: 1, id: 1 }).toArray()
 
-  const servicesToAdd = config.remoteServices
-    .filter(s => !existingServices.find(es => es.url === s.url))
+  console.log(existingServices)
 
-  const apisToFetch = new Set(servicesToAdd.map(s => s.url))
+  const servicesToAdd = config.remoteServices
+    .filter(s => !existingServices.find(es => es.url === s.url || es.id === s.id))
+
+  const apisToFetch = new Set(servicesToAdd.map(s => s.url).filter(Boolean))
   const apisPromises = [...apisToFetch].map(url => {
     return axios.get(url)
       .then(resp => ({ url, api: resp.data }))
@@ -141,6 +143,22 @@ exports.init = async (db) => {
     public: true,
     privateAccess: []
   }, true)).filter(s => !existingServices.find(es => es.id === s.id))
+
+  for (const service of servicesToAdd) {
+    if (!service.url && service.server && service.id) {
+      servicesToInsert.push({
+        id: service.id,
+        title: service.title,
+        description: service.description ?? '',
+        url: null,
+        apiDoc: null,
+        server: service.server,
+        actions: [],
+        public: true,
+        privateAccess: []
+      })
+    }
+  }
   if (servicesToInsert.length) {
     debugMasterData('insert default remote services', servicesToInsert)
     await remoteServices.insertMany(servicesToInsert)

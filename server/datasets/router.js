@@ -185,7 +185,7 @@ router.patch('/:datasetId',
       await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
 
       await import('@data-fair/lib/express/events-log.js')
-        .then((eventsLog) => eventsLog.default.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}) keys ${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner }))
+        .then((eventsLog) => eventsLog.default.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner }))
 
       await syncRemoteService(db, dataset)
     }

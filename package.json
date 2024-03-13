@@ -247,6 +247,8 @@
     "@data-fair/lib": {
       "vue": "2.7.16",
       "vuetify": "$vuetify",
+      "vue-i18n": "8.28.2",
+      "vue-router": "3.6.5",
       "mongodb": "$mongodb",
       "prom-client": "$prom-client"
     }

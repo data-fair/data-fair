@@ -24,10 +24,11 @@ app.run().then(app => {
       console.debug(err2)
     }
     console.error(err.message)
+    process.exit(-1)
   } else {
     metrics.internalError('df-process', err)
+      .finally(() => process.exit(-1))
   }
-  process.exit(-1)
 })
 
 process.on('SIGTERM', function onSigterm () {
