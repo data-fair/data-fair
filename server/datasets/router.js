@@ -183,6 +183,10 @@ router.patch('/:datasetId',
     if (!isEmpty) {
       await publicationSites.applyPatch(db, dataset, { ...dataset, ...patch }, user, 'dataset')
       await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
+
+      await import('@data-fair/lib/express/events-log.js')
+        .then((eventsLog) => eventsLog.default.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}) keys ${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner }))
+
       await syncRemoteService(db, dataset)
     }
 
@@ -191,6 +195,9 @@ router.patch('/:datasetId',
 
 // Change ownership of a dataset
 router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwner', 'admin'), asyncWrap(async (req, res) => {
+  // @ts-ignore
+  const dataset = req.dataset
+
   // Must be able to delete the current dataset, and to create a new one for the new owner to proceed
   if (!req.user.adminMode) {
     if (req.body.type === 'user' && req.body.id !== req.user.id) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
@@ -238,6 +245,12 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
     }
   }
 
+  const eventLogMessage = `changed owner of dataset ${dataset.slug} (${dataset.id}), ${dataset.owner.name} (${dataset.owner.type}:${dataset.owner.id}) -> ${req.body.name} (${req.body.type}:${req.body.id})`
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.datasets.changeOwnerFrom', eventLogMessage, { req, account: dataset.owner }))
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.datasets.changeOwnerTo', eventLogMessage, { req, account: req.body }))
+
   await syncRemoteService(req.app.get('db'), patchedDataset)
 
   await updateTotalStorage(req.app.get('db'), req.dataset.owner)
@@ -248,12 +261,21 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
 
 // Delete a dataset
 router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft: true }), permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
-  await deleteDataset(req.app, req.dataset)
-  if (req.dataset.draftReason && req.datasetFull.status !== 'draft') {
-    await deleteDataset(req.app, req.datasetFull)
+  // @ts-ignore
+  const dataset = req.dataset
+  // @ts-ignore
+  const datasetFull = req.datasetFull
+
+  await deleteDataset(req.app, dataset)
+  if (dataset.draftReason && datasetFull.status !== 'draft') {
+    await deleteDataset(req.app, datasetFull)
   }
-  await syncRemoteService(req.app.get('db'), { ...req.datasetFull, masterData: null })
-  await updateTotalStorage(req.app.get('db'), req.datasetFull.owner)
+
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.datasets.delete', `deleted dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
+
+  await syncRemoteService(req.app.get('db'), { ...datasetFull, masterData: null })
+  await updateTotalStorage(req.app.get('db'), datasetFull.owner)
   res.sendStatus(204)
 }))
 
@@ -299,6 +321,9 @@ const createDatasetRoute = asyncWrap(async (req, res) => {
     const onClose = (callback) => res.on('close', callback)
 
     const dataset = await createDataset(db, locale, user, owner, body, files, draft, onClose)
+
+    await import('@data-fair/lib/express/events-log.js')
+      .then((eventsLog) => eventsLog.default.info('df.datasets.create', `created a dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
     await syncRemoteService(db, dataset)
@@ -362,6 +387,10 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
     if (!isEmpty) {
       await publicationSites.applyPatch(db, dataset, { ...dataset, ...patch }, user, 'dataset')
       await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
+
+      await import('@data-fair/lib/express/events-log.js')
+        .then((eventsLog) => eventsLog.default.info('df.datasets.update', `updated dataset ${dataset.slug} (${dataset.id}) keys ${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner }))
+
       if (files) await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset')
       await syncRemoteService(db, dataset)
     }
@@ -380,26 +409,44 @@ router.put('/:datasetId', lockDataset(), readDataset({ acceptedStatuses: ['final
 
 // validate the draft
 router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], alwaysDraft: true }), permissions.middleware('validateDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
+  // @ts-ignore
+  const dataset = req.dataset
+
   if (!req.datasetFull.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
-  return res.send(await validateDraft(req.app, req.datasetFull, req.dataset, req.user, req))
+
+  const validatedDataset = await validateDraft(req.app, req.datasetFull, req.dataset, req.user, req)
+
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
+
+  return res.send(validatedDataset)
 }))
 
 // cancel the draft
 router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'finalized', 'error'], alwaysDraft: true }), permissions.middleware('cancelDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
+  // @ts-ignore
+  const dataset = req.dataset
+  // @ts-ignore
+  const datasetFull = req.datasetFull
+
   const db = req.app.get('db')
-  if (req.datasetFull.status === 'draft') {
+  if (datasetFull.status === 'draft') {
     return res.status(409).send('Impossible d\'annuler un brouillon si aucune version du jeu de données n\'a été validée.')
   }
-  if (!req.datasetFull.draft) {
+  if (!datasetFull.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
-  await journals.log(req.app, req.dataset, { type: 'draft-cancelled' }, 'dataset')
+  await journals.log(req.app, dataset, { type: 'draft-cancelled' }, 'dataset')
   const patchedDataset = (await db.collection('datasets')
-    .findOneAndUpdate({ id: req.dataset.id }, { $unset: { draft: '' } }, { returnDocument: 'after' })).value
-  await fs.remove(dir(req.dataset))
-  await esUtils.delete(req.app.get('es'), req.dataset)
+    .findOneAndUpdate({ id: dataset.id }, { $unset: { draft: '' } }, { returnDocument: 'after' })).value
+  await fs.remove(dir(dataset))
+  await esUtils.delete(req.app.get('es'), dataset)
+
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.datasets.cancelDraft', `cancelled dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
+
   await datasetUtils.updateStorage(req.app, patchedDataset)
   return res.send(patchedDataset)
 }))
