@@ -35,7 +35,7 @@ exports.init = async (db) => {
  * @param {any} message
  */
 exports.internalError = (code, message) => {
-  import('@data-fair/lib/node/observer.js').then(({ internalError }) => {
+  return import('@data-fair/lib/node/observer.js').then(({ internalError }) => {
     internalError(code, message)
   })
 }
