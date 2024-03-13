@@ -1,5 +1,5 @@
 exports.process = async function (app, dataset) {
-  const observe = require('../misc/utils/observe')
+  const metrics = require('../misc/utils/metrics')
   const fs = require('fs-extra')
   const config = require('config')
   const tmp = require('tmp-promise')
@@ -31,8 +31,7 @@ exports.process = async function (app, dataset) {
     debug('mode to file', exportedFile)
     await fs.move(tmpFile, exportedFile, { overwrite: true })
   } catch (err) {
-    observe.internalError.inc({ errorCode: 'rest-exporter' })
-    console.error('(rest-exporter) failure in rest exporter', err)
+    metrics.internalError('rest-exporter', err)
     patch.exports.restToCSV.lastExport.error = err.message
   }
 

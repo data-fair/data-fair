@@ -3,7 +3,7 @@ const config = /** @type {any} */(require('config'))
 const slug = require('slugify')
 const CronJob = require('cron').CronJob
 const locks = require('../../misc/utils/locks')
-const observe = require('../../misc/utils/observe')
+const metrics = require('../../misc/utils/metrics')
 const nanoid = require('../../misc/utils/nanoid')
 const visibilityUtils = require('../../misc/utils/visibility')
 const { prepareThumbnailUrl } = require('../../misc/utils/thumbnails')
@@ -77,8 +77,7 @@ exports.insertWithId = async (db, dataset, onClose) => {
       onClose(() => {
         // console.log('releasing dataset lock on id', idLockKey)
         locks.release(db, idLockKey).catch(err => {
-          observe.internalError.inc({ errorCode: 'dataset-lock-id' })
-          console.error('(dataset-lock-id) failure to release dataset lock on id', err)
+          metrics.internalError('dataset-lock-id', err)
         })
       })
     }
@@ -93,8 +92,7 @@ exports.insertWithId = async (db, dataset, onClose) => {
           onClose(() => {
             // console.log('releasing dataset lock on slug', slugLockKey)
             locks.release(db, slugLockKey).catch(err => {
-              observe.internalError.inc({ errorCode: 'dataset-lock-slug' })
-              console.error('(dataset-lock-slug) failure to release dataset lock on slug', err)
+              metrics.internalError('dataset-lock-slug', err)
             })
           })
         } else {

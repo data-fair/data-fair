@@ -12,7 +12,7 @@ const asyncWrap = require('../misc/utils/async-handler')
 const findUtils = require('../misc/utils/find')
 const permissions = require('../misc/utils/permissions')
 const serviceWorkers = require('../misc/utils/service-workers')
-const observe = require('../misc/utils/observe')
+const metrics = require('../misc/utils/metrics')
 const router = module.exports = express.Router()
 // const debug = require('debug')('application-proxy')
 const vIframeVersion = require('../../node_modules/@koumoul/v-iframe/package.json').version
@@ -132,8 +132,7 @@ const fetchHTML = async (cleanApplicationUrl, targetUrl) => {
       return res.data
     }
   } catch (err) {
-    observe.internalError.inc({ errorCode: 'app-fetch' })
-    console.error('(app-fetch) failure to fetch HTML from application', err)
+    metrics.internalError('app-fetch', err)
     if (cacheEntry) return cacheEntry.content
     throw err
     // in case of failure, serve from simple cache

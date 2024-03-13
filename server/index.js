@@ -1,6 +1,6 @@
 
 const config = require('config')
-const observe = require('./misc/utils/observe')
+const metrics = require('./misc/utils/metrics')
 const app = require('./app')
 
 app.run().then(app => {
@@ -23,11 +23,9 @@ app.run().then(app => {
     } catch (err2) {
       console.debug(err2)
     }
-    observe.internalError.inc({ errorCode: 'task-process' })
     console.error(err.message)
   } else {
-    observe.internalError.inc({ errorCode: 'df-process' })
-    console.error('Failure in data-fair process', err)
+    metrics.internalError('df-process', err)
   }
   process.exit(-1)
 })
@@ -38,8 +36,7 @@ process.on('SIGTERM', function onSigterm () {
     console.log('shutting down now')
     process.exit()
   }, err => {
-    observe.internalError.inc({ errorCode: 'stop-process' })
-    console.error('Failure while stopping service', err)
+    metrics.internalError('stop-process', err)
     process.exit(-1)
   })
 })

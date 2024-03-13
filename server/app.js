@@ -7,7 +7,7 @@ const wsUtils = require('./misc/utils/ws')
 const locksUtils = require('./misc/utils/locks')
 const observe = require('./misc/utils/observe')
 const asyncWrap = require('./misc/utils/async-handler')
-const sanitizeHtml = require('../shared/sanitize-html')
+const metrics = require('./misc/utils/metrics')
 const debugDomain = require('debug')('domain')
 
 // a global event emitter for testing
@@ -111,8 +111,7 @@ if (config.mode.includes('server')) {
     const publicationSiteUrl = parsedPublicUrl.protocol + '//' + u.hostname + ((u.port && u.port !== 80 && u.port !== 443) ? ':' + u.port : '')
     const settings = await memoizedGetPublicationSiteSettings(publicationSiteUrl, mainDomain && req.query.publicationSites, req.app.get('db'))
     if (!settings && !mainDomain) {
-      console.error('(publication-site-unknown) no publication site is associated to URL ' + publicationSiteUrl)
-      observe.internalError.inc({ errorCode: 'publication-site-unknown' })
+      metrics.internalError('publication-site-unknown', 'no publication site is associated to URL ' + publicationSiteUrl)
       return res.status(404).send('publication site unknown')
     }
     if (settings) {
@@ -175,31 +174,6 @@ if (config.mode.includes('server')) {
   app.use('/streamsaver/mitm.html', express.static('node_modules/streamsaver/mitm.html'))
   app.use('/streamsaver/sw.js', express.static('node_modules/streamsaver/sw.js'))
 
-  // Error management
-  app.use((err, req, res, next) => {
-    if (err.name === 'UnauthorizedError') {
-      return res.status(401).type('text/plain').send('invalid token...')
-    }
-    if (err.code === 'ECONNRESET') err.statusCode = 400
-    const status = err.statusCode || err.status || 500
-    if (status === 500) {
-      console.error('(http) Error in express route', req.originalUrl, err)
-      observe.internalError.inc({ errorCode: 'http' })
-    }
-    err.message = err.message?.replace('[noretry] ', '')
-    if (!res.headersSent) {
-      res.set('Cache-Control', 'no-cache')
-      res.set('Expires', '-1')
-      // settings content-type as plain text instead of html to prevent XSS attack
-      res.type('text/plain')
-      // sanitize is not strictly necessary as the error is in plain text
-      // but it is added for extra-caution if UI choses to show the error message as html
-      res.status(status).send(sanitizeHtml(err.message))
-    } else {
-      res.end()
-    }
-  })
-
   const WebSocket = require('ws')
   server = require('http').createServer(app)
   const { createHttpTerminator } = require('http-terminator')
@@ -248,6 +222,11 @@ exports.run = async () => {
   app.publish = await wsUtils.initPublisher(db)
 
   if (config.mode.includes('server')) {
+    const errorHandler = (await import('@data-fair/lib/express/error-handler.js')).default
+
+    // Error management
+    app.use(errorHandler)
+
     const limits = require('./misc/utils/limits')
     await Promise.all([
       require('./misc/utils/capture').init(),
@@ -291,7 +270,9 @@ exports.run = async () => {
     }
     await require('./workers').tasks[process.argv[2]].process(app, resource)
   } else if (config.observer.active) {
-    await observe.start(db)
+    const { startObserver } = await import('@data-fair/lib/node/observer.js')
+    await metrics.init(db)
+    await startObserver()
   }
 
   return app
@@ -312,7 +293,8 @@ exports.stop = async () => {
   await locksUtils.stop(app.get('db'))
 
   if (config.mode !== 'task' && config.observer.active) {
-    await observe.stop()
+    const { stopObserver } = await import('@data-fair/lib/node/observer.js')
+    await stopObserver()
   }
 
   // this timeout is because we can have a few small pending operations after worker and server were closed

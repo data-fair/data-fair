@@ -1,8 +1,16 @@
 const config = /** @type {any} */(require('config'))
+const { Histogram } = require('prom-client')
+const metrics = require('../misc/utils/metrics')
 const locks = require('../misc/utils/locks')
-const observe = require('../misc/utils/observe')
 const debug = require('debug')('workers')
 const mergeDraft = require('../datasets/utils/merge-draft')
+
+const workersTasksHistogram = new Histogram({
+  name: 'df_datasets_workers_tasks',
+  help: 'Number and duration in seconds of tasks run by the workers',
+  buckets: [0.1, 1, 10, 60, 600],
+  labelNames: ['task', 'status']
+})
 
 const tasks = exports.tasks = {
   restInitializer: require('./rest-initializer'),
@@ -108,8 +116,7 @@ exports.start = async (app) => {
     promisePool[freeSlot] = iter(app, resource, type)
     promisePool[freeSlot]._resource = `${type}/${resource.id} (${resource.slug}) - ${resource.status}`
     promisePool[freeSlot].catch(err => {
-      observe.internalError.inc({ errorCode: 'worker-iter' })
-      console.error('(worker-iter) error in worker iter', err)
+      metrics.internalError('worker-iter', err)
     })
     // always empty the slot after the promise is finished
     promisePool[freeSlot].finally(() => {
@@ -262,7 +269,7 @@ async function iter (app, resource, type) {
 
     if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
 
-    endTask = observe.workersTasks.startTimer({ task: taskKey })
+    endTask = workersTasksHistogram.startTimer({ task: taskKey })
     if (config.worker.spawnTask) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
       const spawn = require('child-process-promise').spawn
@@ -318,7 +325,7 @@ async function iter (app, resource, type) {
 
     if (endTask) endTask({ status: 'error' })
 
-    observe.internalError.inc({ errorCode: 'task' })
+    // metrics.internalError('task', errorMessage)
 
     console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, errorMessage)
     if (!config.worker.spawnTask || !errorMessage) console.debug(err)
