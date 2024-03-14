@@ -42,7 +42,7 @@ class ValidateStream extends Writable {
     msg += this.errors.map(err => truncateMiddle(err, 80, 60, '...')).join('\n<br>')
     if (leftOutErrors > 0) msg += `\n<br>${leftOutErrors} autres erreurs...`
     // blocking if more than 50% lines are broken in a way
-    if (this.nbErrors > this.i / 2) throw new Error(msg)
+    if (this.nbErrors > this.i / 2) throw new Error('[noretry] ' + msg)
     return msg
   }
 }

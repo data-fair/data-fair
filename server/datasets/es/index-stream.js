@@ -151,7 +151,7 @@ class IndexStream extends Transform {
 
     if (leftOutErrors > 0) msg += `\n<br>${leftOutErrors} autres erreurs...`
     // blocking if more than 50% lines are broken in a way
-    if (this.nbErroredItems > this.i / 2) throw new Error(msg)
+    if (this.nbErroredItems > this.i / 2) throw new Error('[noretry] ' + msg)
     return msg
   }
 }
