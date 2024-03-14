@@ -57,7 +57,7 @@
             :disabled="!editable"
           />
           <v-text-field
-            v-if="property.type === 'number'"
+            v-if="property.type === 'number' || property.type === 'integer'"
             :value="property.minimum"
             :label="$t('minimum')"
             :disabled="!editable"
@@ -66,7 +66,7 @@
             @input="setNumberProp('minimum', $event)"
           />
           <v-text-field
-            v-if="property.type === 'number'"
+            v-if="property.type === 'number' || property.type === 'integer'"
             :value="property.maximum"
             :label="$t('maximum')"
             :disabled="!editable"
@@ -94,19 +94,20 @@
             clearable
             @input="setNumberProp('maxLength', $event)"
           />
-          <tutorial-alert
-            id="validation-regexp"
-            :text="$t('validationRegexpMessage')"
-            persistent
-          />
-          <v-text-field
-            v-if="property.type === 'string' && !property.format"
-            v-model="property.pattern"
-            :label="$t('pattern')"
-            :disabled="!editable"
-            clearable
-            @click:clear="delete property.pattern"
-          />
+          <template v-if="property.type === 'string' && !property.format">
+            <tutorial-alert
+              id="validation-regexp"
+              :text="$t('validationRegexpMessage')"
+              persistent
+            />
+            <v-text-field
+              v-model="property.pattern"
+              :label="$t('pattern')"
+              :disabled="!editable"
+              clearable
+              @click:clear="delete property.pattern"
+            />
+          </template>
         </v-form>
       </v-card-text>
     </v-card>
