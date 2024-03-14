@@ -7,6 +7,7 @@ exports.process = async function (app, dataset) {
   const { replaceAllAttachments } = require('../datasets/utils/attachments')
   const { basicTypes } = require('./file-normalizer')
   const datasetFileSample = require('../datasets/utils/file-sample')
+  const metrics = require('../misc/utils/metrics')
   const chardet = require('chardet')
   const md5File = require('md5-file')
 
@@ -22,6 +23,15 @@ exports.process = async function (app, dataset) {
   const datasetFile = dataset.loaded?.dataset
   if (datasetFile) {
     const loadedFilePath = datasetUtils.loadedFilePath(dataset)
+
+    if (!await fs.pathExists(loadedFilePath)) {
+      // we should not have to do this
+      // this is a weird thing, maybe an unsolved race condition ?
+      // let's wait a bit and try again to mask this problem temporarily
+      metrics.internalError('storer-missing-file', 'file missing when storer started working ' + loadedFilePath)
+      await new Promise(resolve => setTimeout(resolve, 10000))
+    }
+
     datasetFile.md5 = await md5File(loadedFilePath)
     const fileSample = await datasetFileSample(loadedFilePath)
     debug(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${loadedFilePath}`)
