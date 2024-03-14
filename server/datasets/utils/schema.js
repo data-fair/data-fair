@@ -299,6 +299,15 @@ exports.jsonSchema = (schema, publicBaseUrl) => {
 
 const validationProps = ['x-labelsRestricted', 'x-required', 'minimum', 'maximum', 'minLength', 'maxLength', 'pattern']
 
+exports.schemaHasValidationRules = (schema) => {
+  for (const prop of schema) {
+    for (const validationProp of validationProps) {
+      if (validationProp in prop && prop[validationProp] !== false) return true
+    }
+  }
+  return false
+}
+
 /**
  * @param {any[]} newSchema
  * @param {any[]} oldSchema

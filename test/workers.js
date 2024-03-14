@@ -205,7 +205,7 @@ describe('workers', () => {
     // changing separator requires a full redindexing
     idProp.separator = ','
     let patchedDataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema })).data
-    assert.equal(patchedDataset.status, 'validated')
+    assert.equal(patchedDataset.status, 'analyzed')
     await workers.hook(`finalizer/${dataset.id}`)
 
     // changing capabilities requires only refinalizing

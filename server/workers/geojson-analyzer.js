@@ -55,7 +55,7 @@ exports.process = async function (app, dataset) {
   const iconv = require('iconv-lite')
   const pump = require('../misc/utils/pipe')
   const datasetUtils = require('../datasets/utils')
-  const datasetService = require('../datasets/service')
+  const datasetsService = require('../datasets/service')
 
   const attachments = await datasetUtils.lsAttachments(dataset)
   const analyzer = new AnalyzerWritable({ attachments, existingSchema: dataset.schema || [], dataset })
@@ -98,6 +98,10 @@ exports.process = async function (app, dataset) {
   }
   if (dataset.projection) patch.projection = dataset.projection
 
-  await datasetService.applyPatch(app, dataset, patch)
+  if (!datasetUtils.schemaHasValidationRules(dataset.schema) && await datasetsService.validateCompatibleDraft(app, dataset, patch)) {
+    return
+  }
+
+  await datasetsService.applyPatch(app, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
 }
