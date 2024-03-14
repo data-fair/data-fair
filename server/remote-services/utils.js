@@ -6,7 +6,7 @@ const ajv = require('../misc/utils/ajv')
 const config = /** @type {any} */(require('config'))
 const mongoEscape = require('mongo-escape')
 const slug = require('slugify')
-const observe = require('../misc/utils/observe')
+const metrics = require('../misc/utils/metrics')
 const settingsUtils = require('../misc/utils/settings')
 const servicePatch = require('../../contract/remote-service-patch')
 const datasetAPIDocs = require('../../contract/dataset-api-docs')
@@ -117,16 +117,17 @@ exports.init = async (db) => {
   const remoteServices = db.collection('remote-services')
   const existingServices = await remoteServices.find({ owner: { $exists: false } }).limit(1000).project({ url: 1, id: 1 }).toArray()
 
-  const servicesToAdd = config.remoteServices
-    .filter(s => !existingServices.find(es => es.url === s.url))
+  console.log(existingServices)
 
-  const apisToFetch = new Set(servicesToAdd.map(s => s.url))
+  const servicesToAdd = config.remoteServices
+    .filter(s => !existingServices.find(es => es.url === s.url || es.id === s.id))
+
+  const apisToFetch = new Set(servicesToAdd.map(s => s.url).filter(Boolean))
   const apisPromises = [...apisToFetch].map(url => {
     return axios.get(url)
       .then(resp => ({ url, api: resp.data }))
       .catch(err => {
-        observe.internalError.inc({ errorCode: 'service-init' })
-        console.error('(service-init) Failure to init remote service', err)
+        metrics.internalError('service-init', err)
       })
   })
   const apis = (await Promise.all(apisPromises)).filter(a => a && a.api)
@@ -142,6 +143,22 @@ exports.init = async (db) => {
     public: true,
     privateAccess: []
   }, true)).filter(s => !existingServices.find(es => es.id === s.id))
+
+  for (const service of servicesToAdd) {
+    if (!service.url && service.server && service.id) {
+      servicesToInsert.push({
+        id: service.id,
+        title: service.title,
+        description: service.description ?? '',
+        url: null,
+        apiDoc: null,
+        server: service.server,
+        actions: [],
+        public: true,
+        privateAccess: []
+      })
+    }
+  }
   if (servicesToInsert.length) {
     debugMasterData('insert default remote services', servicesToInsert)
     await remoteServices.insertMany(servicesToInsert)

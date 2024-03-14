@@ -20,7 +20,7 @@ dayjs.extend(duration)
 const storageUtils = require('./storage')
 const attachmentsUtils = require('./attachments')
 const findUtils = require('../../misc/utils/find')
-const observe = require('../../misc/utils/observe')
+const metrics = require('../../misc/utils/metrics')
 const fieldsSniffer = require('./fields-sniffer')
 const { transformFileStreams } = require('./data-streams')
 const { attachmentPath, lsAttachments } = require('./files')
@@ -675,8 +675,15 @@ exports.readLine = async (req, res, next) => {
 }
 
 exports.deleteLine = async (req, res, next) => {
+  // @ts-ignore
+  const dataset = req.dataset
+
   const db = req.app.get('db')
   const [operation] = (await applyReqTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset, req.user.adminMode))).operations
+
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
+
   if (operation._error) return res.status(operation._status).send(operation._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   // TODO: delete the attachment if it is the primary key ?
@@ -685,6 +692,9 @@ exports.deleteLine = async (req, res, next) => {
 }
 
 exports.createOrUpdateLine = async (req, res, next) => {
+  // @ts-ignore
+  const dataset = req.dataset
+
   const db = req.app.get('db')
   req.body._action = req.body._action ?? 'createOrUpdate'
   const definedId = req.params.lineId || req.body._id || getLineId(req.body, req.dataset)
@@ -692,6 +702,10 @@ exports.createOrUpdateLine = async (req, res, next) => {
   Object.assign(req.body, linesOwnerCols(req.linesOwner))
   await manageAttachment(req, false)
   const [operation] = (await applyReqTransactions(req, [req.body], compileSchema(req.dataset, req.user.adminMode))).operations
+
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
+
   if (operation._error) return res.status(operation._status).send(operation._error)
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   const line = getLineFromOperation(operation)
@@ -700,10 +714,17 @@ exports.createOrUpdateLine = async (req, res, next) => {
 }
 
 exports.patchLine = async (req, res, next) => {
+  // @ts-ignore
+  const dataset = req.dataset
+
   const db = req.app.get('db')
   await manageAttachment(req, true)
   const [operation] = (await applyReqTransactions(req, [{ _action: 'patch', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset, req.user.adminMode))).operations
   if (operation._error) return res.status(operation._status).send(operation._error)
+
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
+
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   const line = getLineFromOperation(operation)
   res.status(200).send(cleanLine(line))
@@ -711,17 +732,28 @@ exports.patchLine = async (req, res, next) => {
 }
 
 exports.deleteAllLines = async (req, res, next) => {
+  // @ts-ignore
+  const dataset = req.dataset
+
   const db = req.app.get('db')
   const esClient = req.app.get('es')
   await exports.initDataset(db, req.dataset)
   const indexName = await esUtils.initDatasetIndex(esClient, req.dataset)
   await esUtils.switchAlias(esClient, req.dataset, indexName)
+
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
+
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+
   res.status(204).send()
   storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
 }
 
 exports.bulkLines = async (req, res, next) => {
+  // @ts-ignore
+  const dataset = req.dataset
+
   try {
     const db = req.app.get('db')
     const validate = compileSchema(req.dataset, req.user.adminMode)
@@ -825,8 +857,7 @@ exports.bulkLines = async (req, res, next) => {
         await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
       }
     } catch (err) {
-      observe.internalError.inc({ errorCode: 'bulk-lines' })
-      console.error(`[bulk-lines] failure to apply bulk operation on dataset ${req.dataset.id}`, err)
+      metrics.internalError('bulk-lines', err)
       if (firstBatch) {
         res.writeHeader(err.statusCode || 500, { 'Content-Type': 'application/json' })
       }
@@ -838,6 +869,9 @@ exports.bulkLines = async (req, res, next) => {
         await exports.collection(db, tmpDataset).drop()
       }
     }
+
+    await import('@data-fair/lib/express/events-log.js')
+      .then((eventsLog) => eventsLog.default.info('df.datasets.rest.bulkLines', `applied operations in bulk to dataset ${dataset.slug} (${dataset.id}), ${JSON.stringify(summary)}`, { req, account: dataset.owner }))
 
     res.write(JSON.stringify(summary, null, 2))
     res.end()

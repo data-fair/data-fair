@@ -123,6 +123,9 @@ router.post('', asyncWrap(async (req, res) => {
   }
   application.status = 'created'
 
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.applications.create', `created application ${application.slug} (${application.id})`, { req, account: application.owner }))
+
   await journals.log(req.app, application, { type: 'application-created', href: config.publicUrl + '/application/' + application.id }, 'application')
   res.status(201).json(clean(application, req.publicationSite, req.publicBaseUrl))
 }))
@@ -201,6 +204,12 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
   if (permissions.canDoForOwner(newApplication.owner, 'applications', 'post', req.user)) {
     try {
       await req.app.get('db').collection('applications').insertOne(newApplication)
+
+      await import('@data-fair/lib/express/events-log.js')
+        .then((eventsLog) => eventsLog.default.info('df.applications.create', `created application ${newApplication.slug} (${newApplication.id})`, { req, account: newApplication.owner }))
+
+      req.isNewApplication = true
+
       await journals.log(req.app, newApplication, { type: 'application-created', href: config.publicUrl + '/application/' + newApplication.id }, 'application')
       return res.status(201).json(clean(newApplication, req.publicBaseUrl, req.publicationSite))
     } catch (err) {
@@ -220,6 +229,12 @@ router.put('/:applicationId', attemptInsert, readApplication, permissions.middle
   newApplication.updatedAt = moment().toISOString()
   newApplication.updatedBy = { id: req.user.id, name: req.user.name }
   newApplication.created = true
+
+  if (!req.isNewApplication) {
+    await import('@data-fair/lib/express/events-log.js')
+      .then((eventsLog) => eventsLog.default.info('df.applications.update', `updated application ${newApplication.slug} (${newApplication.id})`, { req, account: newApplication.owner }))
+  }
+
   await req.app.get('db').collection('applications').replaceOne({ id: req.params.applicationId }, newApplication)
   res.status(200).json(clean(newApplication, req.publicBaseUrl, req.publicationSite))
 }))
@@ -264,12 +279,19 @@ router.patch('/:applicationId',
       if (err.code !== 11000) throw err
       throw createError(400, req.__('errors.dupSlug'))
     }
+
+    await import('@data-fair/lib/express/events-log.js')
+      .then((eventsLog) => eventsLog.default.info('df.applications.patch', `patched application ${patchedApplication.slug} (${patchedApplication.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: patchedApplication.owner }))
+
     await syncDatasets(db, patchedApplication, req.application)
     res.status(200).json(clean(patchedApplication, req.publicBaseUrl, req.publicationSite))
   }))
 
 // Change ownership of an application
 router.put('/:applicationId/owner', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
+  // @ts-ignore
+  const application = req.application
+
   const db = req.app.get('db')
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
   if (!permissions.canDoForOwner(req.body, 'applications', 'post', req.user)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
@@ -283,21 +305,35 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
 
   const patchedApp = (await db.collection('applications')
     .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })).value
+
+  const eventLogMessage = `changed owner of application ${application.slug} (${application.id}), ${application.owner.name} (${application.owner.type}:${application.owner.id}) -> ${req.body.name} (${req.body.type}:${req.body.id})`
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.applications.changeOwnerFrom', eventLogMessage, { req, account: application.owner }))
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.applications.changeOwnerTo', eventLogMessage, { req, account: req.body }))
+
   await syncDatasets(db, patchedApp)
   res.status(200).json(clean(patchedApp, req.publicBaseUrl, req.publicationSite))
 }))
 
 // Delete an application configuration
 router.delete('/:applicationId', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
+  // @ts-ignore
+  const application = req.application
+
   const db = req.app.get('db')
   await db.collection('applications').deleteOne({ id: req.params.applicationId })
   await db.collection('journals').deleteOne({ type: 'application', id: req.params.applicationId })
-  await db.collection('applications-keys').deleteOne({ _id: req.application.id })
+  await db.collection('applications-keys').deleteOne({ _id: application.id })
   try {
-    await unlink(await capture.path(req.application))
+    await unlink(await capture.path(application))
   } catch (err) {
     console.warn('Failure to remove capture file')
   }
+
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.applications.delete', `deleted application ${application.slug} (${application.id})`, { req, account: application.owner }))
+
   await syncDatasets(db, req.application)
   res.sendStatus(204)
 }))
@@ -310,6 +346,9 @@ router.get('/:applicationId/configuration', readApplication, permissions.middlew
 
 // Update only the configuration part of the application
 const writeConfig = asyncWrap(async (req, res) => {
+  // @ts-ignore
+  const application = req.application
+
   const db = req.app.get('db')
   validateConfiguration(req.body)
   await db.collection('applications').updateOne(
@@ -327,7 +366,11 @@ const writeConfig = asyncWrap(async (req, res) => {
       }
     }
   )
-  await journals.log(req.app, req.application, { type: 'config-updated' }, 'application')
+
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.applications.writeConfig', `wrote application config ${application.slug} (${application.id})`, { req, account: application.owner }))
+
+  await journals.log(req.app, application, { type: 'config-updated' }, 'application')
   await syncDatasets(db, { configuration: req.body })
   res.status(200).json(req.body)
 })
@@ -339,6 +382,9 @@ router.get('/:applicationId/configuration-draft', readApplication, permissions.m
   res.status(200).send(req.application.configurationDraft || req.application.configuration || {})
 })
 router.put('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), asyncWrap(async (req, res, next) => {
+  // @ts-ignore
+  const application = req.application
+
   validateConfiguration(req.body)
   await req.app.get('db').collection('applications').updateOne(
     { id: req.params.applicationId },
@@ -354,10 +400,16 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
       }
     }
   )
-  await journals.log(req.app, req.application, { type: 'config-draft-updated' }, 'application')
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.applications.validateDraft', `vaidated application config draft ${application.slug} (${application.id})`, { req, account: application.owner }))
+
+  await journals.log(req.app, application, { type: 'config-draft-updated' }, 'application')
   res.status(200).json(req.body)
 }))
 router.delete('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), asyncWrap(async (req, res, next) => {
+  // @ts-ignore
+  const application = req.application
+
   await req.app.get('db').collection('applications').updateOne(
     { id: req.params.applicationId },
     {
@@ -368,11 +420,15 @@ router.delete('/:applicationId/configuration-draft', readApplication, permission
       $set: {
         updatedAt: moment().toISOString(),
         updatedBy: { id: req.user.id, name: req.user.name },
-        status: req.application.configuration ? 'configured' : 'created'
+        status: application.configuration ? 'configured' : 'created'
       }
     }
   )
-  await journals.log(req.app, req.application, { type: 'config-draft-cancelled' }, 'application')
+
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.applications.cancelDraft', `cancelled application config draft ${application.slug} (${application.id})`, { req, account: application.owner }))
+
+  await journals.log(req.app, application, { type: 'config-draft-cancelled' }, 'application')
   res.status(200).json(req.body)
 }))
 
@@ -433,10 +489,17 @@ router.get('/:applicationId/keys', readApplication, permissions.middleware('getK
   res.send((applicationKeys && applicationKeys.keys) || [])
 }))
 router.post('/:applicationId/keys', readApplication, permissions.middleware('setKeys', 'admin'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
+  // @ts-ignore
+  const application = req.application
+
   validateKeys(req.body)
   for (const key of req.body) {
     if (!key.id) key.id = nanoid()
   }
-  await req.app.get('db').collection('applications-keys').replaceOne({ _id: req.application.id }, { _id: req.application.id, keys: req.body, owner: req.application.owner }, { upsert: true })
+  await req.app.get('db').collection('applications-keys').replaceOne({ _id: application.id }, { _id: application.id, keys: req.body, owner: application.owner }, { upsert: true })
+
+  await import('@data-fair/lib/express/events-log.js')
+    .then((eventsLog) => eventsLog.default.info('df.applications.writeKeys', `wrote application keys ${application.slug} (${application.id})`, { req, account: application.owner }))
+
   res.send(req.body)
 }))

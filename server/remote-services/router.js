@@ -16,7 +16,7 @@ const servicePatch = require('../../contract/remote-service-patch')
 const asyncWrap = require('../misc/utils/async-handler')
 const cacheHeaders = require('../misc/utils/cache-headers')
 const rateLimiting = require('../misc/utils/rate-limiting')
-const observe = require('../misc/utils/observe')
+const metrics = require('../misc/utils/metrics')
 const { httpAgent, httpsAgent } = require('../misc/utils/http-agents')
 const { clean, validate, validateOpenApi, validatePatch, initNew, computeActions } = require('./utils')
 const { findRemoteServices, findActions } = require('./service')
@@ -296,8 +296,7 @@ router.use('/:remoteServiceId/proxy*', rateLimiting.middleware('remoteService'),
           // pretty usual for map tiles for example
           resolve()
         } else {
-          console.error('(service-proxy-res) Error while proxying remote service', err)
-          observe.internalError.inc({ errorCode: 'service-proxy-res' })
+          metrics.internalError('service-proxy-res', err)
           reject(err)
         }
       } finally {
@@ -309,8 +308,7 @@ router.use('/:remoteServiceId/proxy*', rateLimiting.middleware('remoteService'),
         res.status(504).type('text/plain').send('remote-service timed out')
         resolve()
       } else {
-        console.error('(service-proxy-req) Error while proxying remote service', err)
-        observe.internalError.inc({ errorCode: 'service-proxy-req' })
+        metrics.internalError('service-proxy-req', err)
         reject(err)
       }
     })

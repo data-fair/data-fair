@@ -1,6 +1,6 @@
 const config = require('config')
 const axios = require('./axios')
-const observe = require('./observe')
+const metrics = require('./metrics')
 const debug = require('debug')('notifications')
 
 exports.send = async (notification, subscribedOnly = false) => {
@@ -11,8 +11,7 @@ exports.send = async (notification, subscribedOnly = false) => {
   if (process.env.NODE_ENV !== 'test') {
     await axios.post(`${notifyUrl}/api/v1/notifications`, notification, { params: { key: config.secretKeys.notifications, subscribedOnly } })
       .catch(err => {
-        observe.internalError.inc({ errorCode: 'notif-push' })
-        console.error('(notif-push) Failure to push notification', notification, err.response || err)
+        metrics.internalError('notif-push', err)
       })
   }
 }
@@ -27,7 +26,6 @@ exports.subscribe = async (req, subscription) => {
   if (!notifyUrl) return
   await axios.post(`${notifyUrl}/api/v1/subscriptions`, subscription, { headers: { cookie: req.headers.cookie } })
     .catch(err => {
-      observe.internalError.inc({ errorCode: 'notif-push' })
-      console.error('(notif-push) Failure to push subscription', subscription, err.response || err)
+      metrics.internalError('notif-push', err)
     })
 }

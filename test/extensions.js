@@ -284,7 +284,7 @@ other,unknown address
       await workers.hook('extender/' + dataset.id)
       assert.fail()
     } catch (err) {
-      assert.ok(err.message.startsWith('Unexpected token'))
+      assert.ok(err.message.includes('Unexpected token'))
     }
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
     assert.equal(dataset.status, 'error')
@@ -539,7 +539,7 @@ other,unknown address
     delete dataset.schema.find(field => field.key === 'adr')['x-refersTo']
     await assert.rejects(ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema }), (err) => {
       assert.equal(err.status, 400)
-      assert.ok(err.data.startsWith('un concept nécessaire'))
+      assert.ok(err.data.includes('un concept nécessaire'))
       return true
     })
   })

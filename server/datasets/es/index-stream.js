@@ -5,7 +5,7 @@ const truncateMiddle = require('truncate-middle')
 const flatten = require('flat')
 const datasetUtils = require('../utils')
 const geoUtils = require('..//utils/geo')
-const observe = require('../../misc/utils/observe')
+const metrics = require('../../misc/utils/metrics')
 const randomSeed = require('random-seed')
 const { nanoid } = require('nanoid')
 
@@ -86,8 +86,7 @@ class IndexStream extends Transform {
           // refresh can take some time on large datasets, try one more time
           return new Promise(resolve => setTimeout(resolve, 30000)).finally(() => {
             return this.options.esClient.indices.refresh({ index: this.options.indexName }).catch(err => {
-              observe.internalError.inc({ errorCode: 'es-refresh-index' })
-              console.error('(es-refresh-index) Failure while refreshing index after indexing', err)
+              metrics.internalError('es-refresh-index', err)
               throw new Error('Échec pendant le rafraichissement de la donnée après indexation.')
             })
           })
@@ -100,7 +99,6 @@ class IndexStream extends Transform {
     if (this.body.length === 0) return
     debug(`Send ${this.body.length} lines to bulk indexing`)
     const bodyClone = [].concat(this.body)
-    const sentBulkChars = this.bulkChars
     const bulkOpts = {
       // ES does not want the doc along with a delete instruction,
       // but we put it in body anyway for our outgoing/reporting logic
@@ -133,8 +131,7 @@ class IndexStream extends Transform {
       this.body = []
       this.bulkChars = 0
     } catch (err) {
-      observe.internalError.inc({ errorCode: 'es-bulk-index' })
-      console.error(`(es-bulk-index) Failure while sending bulk request for indexing: index=${this.options.indexName}, bulkChars=${sentBulkChars}, nbLines=${bodyClone.length / 2}`, err)
+      metrics.internalError('es-bulk-index', err)
       throw new Error('Échec pendant l\'indexation d\'un paquet de données.')
     }
   }

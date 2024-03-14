@@ -4,7 +4,7 @@
   "description": "",
   "main": "server",
   "scripts": {
-    "test": "NODE_ENV=test mocha --exit --bail --timeout 30000 test/",
+    "test": "NODE_ENV=test EVENTS_LOG_LEVEL=warn mocha --exit --bail --timeout 30000 test/",
     "test-cover": "nyc npm test",
     "test-deps": "docker compose --profile test up -d --wait",
     "coveralls": "nyc report --reporter=text-lcov | coveralls",
@@ -134,6 +134,7 @@
     "web-streams-polyfill": "^3.2.0"
   },
   "dependencies": {
+    "@data-fair/lib": "^0.29.0",
     "@data-fair/sd-express": "^1.4.3",
     "@elastic/elasticsearch": "~7.17.12",
     "@koumoul/icalendar": "^0.7.3",
@@ -242,7 +243,17 @@
     "unzipper": "^0.10.11",
     "useragent": "^2.3.0",
     "vt-pbf": "3.1.1",
-    "ws": "^7.4.1",
+    "ws": "^8.16.0",
     "xlsx": "^0.18.0"
+  },
+  "overrides": {
+    "@data-fair/lib": {
+      "vue": "2.7.16",
+      "vuetify": "$vuetify",
+      "vue-i18n": "8.28.2",
+      "vue-router": "3.6.5",
+      "mongodb": "$mongodb",
+      "prom-client": "$prom-client"
+    }
   }
 }

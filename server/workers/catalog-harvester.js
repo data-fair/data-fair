@@ -1,4 +1,4 @@
-const observe = require('../misc/utils/observe')
+const metrics = require('../misc/utils/metrics')
 
 exports.process = async function (app, catalog) {
   const config = /** @type {any} */(require('config'))
@@ -15,8 +15,7 @@ exports.process = async function (app, catalog) {
   try {
     await catalogs.updateAllHarvestedDatasets(app, catalog)
   } catch (err) {
-    observe.internalError.inc({ errorCode: 'catalog-harvester' })
-    console.error('(rest-exporter) failure in rest exporter', err)
+    metrics.internalError('catalog-harvester', err)
     patch.autoUpdate.lastUpdate.error = err.message
   }
 
