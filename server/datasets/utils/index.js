@@ -37,6 +37,7 @@ exports.mergeFileSchema = schemaUtils.mergeFileSchema
 exports.cleanSchema = schemaUtils.cleanSchema
 exports.extendedSchema = schemaUtils.extendedSchema
 exports.schemasFullyCompatible = schemaUtils.schemasFullyCompatible
+exports.schemasValidationCompatible = schemaUtils.schemasValidationCompatible
 exports.jsonSchema = schemaUtils.jsonSchema
 
 exports.mergeDraft = require('./merge-draft')

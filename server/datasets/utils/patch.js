@@ -149,8 +149,15 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
     patch.status = dataset.file ? 'validated' : 'analyzed'
   } else if (removedRestProps.length) {
     patch.status = 'analyzed'
-  } else if (patch.schema && !datasetUtils.schemasFullyCompatible(patch.schema, dataset.schema)) {
+  } else if (dataset.file && patch.schema && ['validation-updated', 'finalized'].includes(dataset.status) && datasetUtils.schemasFullyCompatible(patch.schema, dataset.schema, true) && !datasetUtils.schemasValidationCompatible(patch.schema, dataset.schema)) {
+    patch.status = 'validation-updated'
+  } else if (patch.schema && !datasetUtils.schemasFullyCompatible(patch.schema, dataset.schema, true)) {
     attemptMappingUpdate = true
+    if (dataset.file && datasetUtils.schemasValidationCompatible(patch.schema, dataset.schema)) {
+      patch.status = 'validated'
+    } else {
+      patch.status = 'analyzed'
+    }
     patch.status = dataset.file ? 'validated' : 'analyzed'
   } else if (patch.thumbnails || patch.masterData) {
     // just change finalizedAt so that cache is invalidated, but the worker doesn't relly need to work on the dataset

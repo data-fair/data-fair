@@ -41,8 +41,7 @@ class ValidateStream extends Writable {
     let msg = `${Math.round(100 * (this.nbErrors / this.i))}% des lignes ont une erreur de validation.\n<br>`
     msg += this.errors.map(err => truncateMiddle(err, 80, 60, '...')).join('\n<br>')
     if (leftOutErrors > 0) msg += `\n<br>${leftOutErrors} autres erreurs...`
-    // blocking if more than 50% lines are broken in a way
-    if (this.nbErrors > this.i / 2) throw new Error('[noretry] ' + msg)
+    if (this.nbErrors) throw new Error('[noretry] ' + msg)
     return msg
   }
 }
@@ -68,7 +67,7 @@ exports.process = async function (app, dataset) {
   await pump(...readStreams, validateStream)
   debug('Validator stream ok')
 
-  const patch = { status: 'validated' }
+  const patch = { status: dataset.status === 'validation-updated' ? 'finalized' : 'validated' }
 
   const errorsSummary = validateStream.errorsSummary()
   if (errorsSummary) {
@@ -77,5 +76,5 @@ exports.process = async function (app, dataset) {
     if (await datasetsService.validateCompatibleDraft(app, dataset, patch)) return
   }
 
-  await datasetsService.applyPatch(app, dataset, { status: 'validated' })
+  await datasetsService.applyPatch(app, dataset, patch)
 }
