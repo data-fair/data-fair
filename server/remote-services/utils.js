@@ -117,8 +117,6 @@ exports.init = async (db) => {
   const remoteServices = db.collection('remote-services')
   const existingServices = await remoteServices.find({ owner: { $exists: false } }).limit(1000).project({ url: 1, id: 1 }).toArray()
 
-  console.log(existingServices)
-
   const servicesToAdd = config.remoteServices
     .filter(s => !existingServices.find(es => es.url === s.url || es.id === s.id))
 

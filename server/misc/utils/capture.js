@@ -18,12 +18,8 @@ exports.init = async () => {
   await fs.ensureDir(capturesDir)
 }
 
-exports.pathDefault = async (application) => {
-  return resolvePath(capturesDir, application.id + '.png')
-}
-
-exports.requestOpts = (req, isDefaultThumbnail) => {
-  const screenShortUrl = (captureUrl + '/api/v1/screenshot')
+const screenshotRequestOpts = (req, isDefaultThumbnail) => {
+  const screenshotUrl = (captureUrl + '/api/v1/screenshot')
   const targetUrl = new URL(`${config.publicUrl}/app/${req.application.id}`)
   if (isDefaultThumbnail) targetUrl.searchParams.set('thumbnail', true)
   const cookieText = Object.keys(req.cookies).map(c => `${c}=${req.cookies[c]}`).join('; ')
@@ -31,14 +27,14 @@ exports.requestOpts = (req, isDefaultThumbnail) => {
   for (const key of Object.keys(req.query)) {
     if (key.startsWith('app_')) targetUrl.searchParams.set(key.replace('app_', ''), req.query[key])
   }
-  debug(`Screenshot ${screenShortUrl}?target=${encodeURIComponent(targetUrl)} - ${cookieText}`)
+  debug(`Screenshot ${screenshotUrl}?target=${encodeURIComponent(targetUrl.href)} - ${cookieText}`)
 
   const qs = {
     target: targetUrl.href,
     type: 'png',
     width: 1050, // 21/9 resolution
     height: 450,
-    filename: req.application.id + '.png'
+    filename: (req.application.id || req.application.slug) + '.png'
   }
   if (req.query.width) qs.width = req.query.width
   if (req.query.height) qs.height = req.query.height
@@ -53,7 +49,37 @@ exports.requestOpts = (req, isDefaultThumbnail) => {
 
   return {
     method: 'GET',
-    url: screenShortUrl,
+    url: screenshotUrl,
+    qs,
+    headers
+  }
+}
+
+const printRequestOpts = (req) => {
+  const printUrl = (captureUrl + '/api/v1/print')
+  const targetUrl = new URL(`${config.publicUrl}/app/${req.application.id}`)
+  const cookieText = Object.keys(req.cookies).map(c => `${c}=${req.cookies[c]}`).join('; ')
+  // forward query params to open application in specific state
+  for (const key of Object.keys(req.query)) {
+    if (key.startsWith('app_')) targetUrl.searchParams.set(key.replace('app_', ''), req.query[key])
+  }
+  debug(`Print ${printUrl}?target=${encodeURIComponent(targetUrl.href)} - ${cookieText}`)
+
+  const qs = {
+    target: targetUrl.href,
+    filename: (req.application.id || req.application.slug) + '.pdf'
+  }
+  if (req.query.landscape) qs.landscape = req.query.landscape
+  const headers = {}
+  if (permissionsUtils.isPublic('applications', req.application)) {
+    qs.cookies = false
+  } else {
+    headers.Cookie = cookieText
+  }
+
+  return {
+    method: 'GET',
+    url: printUrl,
     qs,
     headers
   }
@@ -77,7 +103,7 @@ exports.screenshot = async (req, res) => {
 
   const isDefaultThumbnail = Object.keys(req.query).filter(k => k !== 'updatedAt' && k !== 'app_capture-test-error').length === 0
 
-  const reqOpts = exports.requestOpts(req, isDefaultThumbnail)
+  const reqOpts = screenshotRequestOpts(req, isDefaultThumbnail)
 
   if (isDefaultThumbnail) {
     if (await fs.pathExists(capturePath)) {
@@ -127,4 +153,20 @@ exports.screenshot = async (req, res) => {
     })
     await pump(captureReq, res)
   }
+}
+
+exports.print = async (req, res) => {
+  const reqOpts = printRequestOpts(req)
+
+  if (!rateLimiting.consume(req, 'appCaptures')) {
+    return res.status(429).type('text/plain').send(req.__('errors.exceedRateLimiting'))
+  }
+  const captureReq = request(reqOpts)
+  captureReq.on('response', (captureRes) => {
+    if (captureRes.statusCode >= 400) {
+      res.set('Cache-Control', 'no-cache')
+      res.set('Expires', '-1')
+    }
+  })
+  await pump(captureReq, res)
 }

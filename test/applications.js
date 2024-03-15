@@ -106,7 +106,7 @@ describe('Applications', () => {
     assert.equal(res.data.image, 'http://monapp1.com/thumbnail.png')
   })
 
-  it('Read capture of application', async () => {
+  it('Read capture of application', async function () {
     const ax = global.ax.dmeadus
     try {
       await ax.get(config.captureUrl + '/api/v1/api-docs.json')
@@ -163,6 +163,11 @@ describe('Applications', () => {
       assert.ok(err.headers.location.endsWith('/no-preview.png'))
       return true
     })
+
+    // use /print to get a PDF print instead of image capture
+    res = await ax.get('/api/v1/applications/' + app.id + '/print?app_test=ok')
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['content-type'], 'application/pdf')
   })
 
   it('Sort applications by title', async () => {

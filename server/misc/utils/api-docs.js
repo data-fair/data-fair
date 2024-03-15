@@ -10,7 +10,7 @@ exports.operationsClasses = {
   },
   applications: {
     list: ['list'],
-    read: ['readDescription', 'readConfig', 'readApiDoc', 'readBaseApp'],
+    read: ['readDescription', 'readConfig', 'readApiDoc', 'readBaseApp', 'readCapture', 'readPrint'],
     readAdvanced: ['readJournal', 'realtime-draft-error'],
     write: ['writeDescription', 'writeConfig'],
     admin: ['delete', 'getPermissions', 'setPermissions', 'getKeys', 'setKeys', 'writePublications', 'writePublicationSites']

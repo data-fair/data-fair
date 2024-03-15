@@ -198,6 +198,22 @@ module.exports = (application, info) => {
           }
         }
       },
+      '/print': {
+        get: {
+          summary: 'Une impression PDF',
+          operationId: 'readPrint',
+          'x-permissionClass': 'read',
+          tags: ['Informations'],
+          responses: {
+            200: {
+              description: 'La capture',
+              content: {
+                'application/pdf': {}
+              }
+            }
+          }
+        }
+      },
       '/permissions': permissionsDoc
     },
     externalDocs: {

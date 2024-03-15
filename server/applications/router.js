@@ -479,8 +479,11 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
   res.status(204).send()
 }))
 
-router.get('/:applicationId/capture', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
+router.get('/:applicationId/capture', readApplication, permissions.middleware('readCapture', 'read'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
   await capture.screenshot(req, res)
+}))
+router.get('/:applicationId/print', readApplication, permissions.middleware('readPrint', 'read'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
+  await capture.print(req, res)
 }))
 
 // keys for readonly access to application
