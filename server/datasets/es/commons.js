@@ -105,7 +105,7 @@ exports.parseSort = (sortStr, fields, dataset) => {
       order = 'asc'
     }
     if (key.startsWith('_geo_distance:')) {
-      if (!dataset.bbox) throw createError(400, '"geo_distance" filter cannot be used on this dataset. It is not geolocalized.')
+      if (!dataset.bbox) throw createError(400, '"geo_distance" sorting cannot be used on this dataset. It is not geolocalized.')
       const [lon, lat] = key.replace('_geo_distance:', '').split(':')
       result.push({ _geo_distance: { _geopoint: { lon, lat }, order } })
       continue
@@ -421,22 +421,29 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
     const dateField = dataset.schema.find(p => p['x-refersTo'] === 'http://schema.org/Date')
     const startDateField = dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/startDate') ?? dateField
     const endDateField = dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/endDate') ?? dateField
-    if (!startDateField || !endDateField) throw createError(400, '"date_match" ne peut pas être utilisé sur ce jeu de données.')
-    let dates = dateMatch.split(',')
-    if (dates.length === 1) dates = [dates[0], dates[0]]
-    const tz = startDateField.timeZone || config.defaultTimeZone
-    const startDate = (dates[0].length === 10 && dayjs(dates[0], 'YYYY-MM-DD', true).isValid()) ? dayjs(dates[0]).tz(tz, true).startOf('day').toISOString() : dates[0]
-    const endDate = (dates[1].length === 10 && dayjs(dates[1], 'YYYY-MM-DD', true).isValid()) ? dayjs(dates[1]).tz(tz, true).endOf('day').toISOString() : dates[1]
-    if (startDateField.key === endDateField.key) {
-      const dateRange = {}
-      if (startDate) dateRange.gte = startDate
-      if (endDate) dateRange.lte = endDate
-      filter.push({ range: { [startDateField.key]: dateRange } })
+    if (!startDateField || !endDateField) {
+      if (query.date_match) {
+        throw createError(400, '"date_match" ne peut pas être utilisé sur ce jeu de données.')
+      } else {
+        // silently ignore filters prefixed by _c_ if they are not used
+      }
     } else {
-      const outsideRange = []
-      if (startDate) outsideRange.push({ range: { [endDateField.key]: { lt: startDate } } })
-      if (endDate) outsideRange.push({ range: { [startDateField.key]: { gt: endDate } } })
-      mustNot.push({ bool: { should: outsideRange } })
+      let dates = dateMatch.split(',')
+      if (dates.length === 1) dates = [dates[0], dates[0]]
+      const tz = startDateField.timeZone || config.defaultTimeZone
+      const startDate = (dates[0].length === 10 && dayjs(dates[0], 'YYYY-MM-DD', true).isValid()) ? dayjs(dates[0]).tz(tz, true).startOf('day').toISOString() : dates[0]
+      const endDate = (dates[1].length === 10 && dayjs(dates[1], 'YYYY-MM-DD', true).isValid()) ? dayjs(dates[1]).tz(tz, true).endOf('day').toISOString() : dates[1]
+      if (startDateField.key === endDateField.key) {
+        const dateRange = {}
+        if (startDate) dateRange.gte = startDate
+        if (endDate) dateRange.lte = endDate
+        filter.push({ range: { [startDateField.key]: dateRange } })
+      } else {
+        const outsideRange = []
+        if (startDate) outsideRange.push({ range: { [endDateField.key]: { lt: startDate } } })
+        if (endDate) outsideRange.push({ range: { [startDateField.key]: { gt: endDate } } })
+        mustNot.push({ bool: { should: outsideRange } })
+      }
     }
   }
 
@@ -465,35 +472,42 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
   }
 
   if (query.geo_distance ?? query._c_geo_distance) {
-    if (!dataset.bbox) throw createError(400, '"geo_distance" filter cannot be used on this dataset. It is not geolocalized.')
-    let [lon, lat, distance] = (query.geo_distance ?? query._c_geo_distance).split(/[,:]/)
-    if (!distance || distance === '0') distance = '0m'
-    lon = Number(lon)
-    lat = Number(lat)
-    if (geoShape && (distance === '0m' || distance === '0km')) {
-      filter.push({
-        geo_shape: {
-          _geoshape: {
-            relation: 'contains',
-            shape: {
-              type: 'point',
-              coordinates: [lon, lat]
+    if (!dataset.bbox) {
+      if (query.geo_distance) {
+        throw createError(400, '"geo_distance" filter cannot be used on this dataset. It is not geolocalized.')
+      } else {
+        // silently ignore filters prefixed by _c_ if they are not used
+      }
+    } else {
+      let [lon, lat, distance] = (query.geo_distance ?? query._c_geo_distance).split(/[,:]/)
+      if (!distance || distance === '0') distance = '0m'
+      lon = Number(lon)
+      lat = Number(lat)
+      if (geoShape && (distance === '0m' || distance === '0km')) {
+        filter.push({
+          geo_shape: {
+            _geoshape: {
+              relation: 'contains',
+              shape: {
+                type: 'point',
+                coordinates: [lon, lat]
+              }
             }
           }
-        }
-      })
-    } else {
+        })
+      } else {
       // TODO: use _geoshape after upgrading ES
 
-      // distance of 0 is not accepted
-      if (distance === '0m' || distance === '0km') distance = '1m'
+        // distance of 0 is not accepted
+        if (distance === '0m' || distance === '0km') distance = '1m'
 
-      filter.push({
-        geo_distance: {
-          distance,
-          _geopoint: { lat, lon }
-        }
-      })
+        filter.push({
+          geo_distance: {
+            distance,
+            _geopoint: { lat, lon }
+          }
+        })
+      }
     }
   }
 
