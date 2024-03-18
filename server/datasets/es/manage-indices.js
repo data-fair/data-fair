@@ -47,7 +47,6 @@ exports.updateDatasetMapping = async (client, dataset, oldDataset) => {
       if (newProperty && newProperty.fields) {
         for (const innerKey of Object.keys(newProperty.fields)) {
           if (!(oldProperty.fields && oldProperty.fields[innerKey])) {
-            console.log(`the inner field ${key}/${innerKey} is added, simple mapping update will not work`)
             throw new Error(`the inner field ${key}/${innerKey} is added, simple mapping update will not work`)
           }
         }

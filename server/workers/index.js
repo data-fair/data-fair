@@ -280,15 +280,15 @@ async function iter (app, resource, type) {
       const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task', DATASET_DRAFT: '' + !!resource.draftReason } })
       spawnPromise.childProcess.stdout.on('data', data => {
         data = data.toString()
-        debug('[spawned task stdout] ' + data)
+        console.log(`[${type}/${resource.id}/${taskKey}/stdout] ${data}`)
         lastStderr = ''
-        if (stopped) console.log('[spawned task stdout after stopping]', data)
+        if (stopped) console.error(`[spawn/${type}/${resource.id}/${taskKey}/stdout] AFTER STOP ${data}`)
       })
       spawnPromise.childProcess.stderr.on('data', data => {
         data = data.toString()
-        debug('[spawned task stderr] ' + data)
+        console.error(`[${type}/${resource.id}/${taskKey}/stderr] ${data}`)
         lastStderr += data
-        if (stopped) console.log('[spawned task stderr after stopping]', data)
+        if (stopped) console.error(`[spawn/${type}/${resource.id}/${taskKey}/stdout] AFTER STOP ${data}`)
       })
       await spawnPromise
     } else {
