@@ -44,6 +44,9 @@ const schema = {
       type: { type: 'string' },
       format: { type: ['string', 'null'] },
       'x-originalName': { type: ['string', 'null'] },
+      title: { type: 'string' },
+      description: { type: 'string' },
+      icon: { type: 'string' },
       'x-group': { type: 'string' },
       'x-refersTo': {
         deprecated: true,
@@ -64,6 +67,28 @@ const schema = {
       },
       'x-labelsRestricted': {
         type: 'boolean'
+      },
+      readOnly: {
+        type: 'boolean'
+      },
+      'x-required': {
+        type: 'boolean'
+      },
+      minLength: {
+        type: 'integer'
+      },
+      maxLength: {
+        type: 'integer'
+      },
+      minimum: {
+        type: 'number'
+      },
+      maximum: {
+        type: 'number'
+      },
+      pattern: {
+        type: 'string',
+        format: 'regex'
       },
       'x-master': {
         type: 'object',
@@ -86,6 +111,15 @@ const schema = {
       },
       'x-display': {
         type: 'string'
+      },
+      enum: {
+        type: 'array',
+        readOnly: true,
+        description: 'This differs from JSON schema. It is not a restriction, just and observation of the values that are present in the dataset.'
+      },
+      'x-cardinality': {
+        type: 'integer',
+        description: 'The number of distinct values for this field'
       }
     }
   }

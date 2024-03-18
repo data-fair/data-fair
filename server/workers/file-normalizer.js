@@ -58,11 +58,20 @@ exports.process = async function (app, dataset) {
   const icalendar = require('../misc/utils/icalendar')
   const xlsx = require('../misc/utils/xlsx')
   const i18nUtils = require('../i18n/utils')
+  const metrics = require('../misc/utils/metrics')
 
   const debug = require('debug')(`worker:file-normalizer:${dataset.id}`)
   const originalFilePath = datasetUtils.originalFilePath(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
   const tmpDir = (await tmp.dir({ dir: mainTmpDir, unsafeCleanup: true })).path
+
+  if (!await fs.pathExists(originalFilePath)) {
+    // we should not have to do this
+    // this is a weird thing, maybe an unsolved race condition ?
+    // let's wait a bit and try again to mask this problem temporarily
+    metrics.internalError('normalizer-missing-file', 'file missing when normalizer started working ' + originalFilePath)
+    await new Promise(resolve => setTimeout(resolve, 10000))
+  }
 
   let isShapefile = false
   if (archiveTypes.has(dataset.originalFile.mimetype)) {

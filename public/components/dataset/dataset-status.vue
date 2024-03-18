@@ -129,6 +129,11 @@
               v-t="'draftUpdatedCannot'"
               class="mb-0"
             />
+            <p
+              v-if="draftError"
+              class="mt-4 mb-0 error--text"
+              v-html="draftError.data"
+            />
           </v-col>
           <v-col
             v-else
@@ -238,6 +243,17 @@ export default {
       } else {
         return this.dataset.status
       }
+    },
+    draftError () {
+      let draftError
+      if (this.dataset.status === 'finalized' && this.dataset.draftReason) {
+        for (const event of this.journal) {
+          console.log(event)
+          if (!event.draft || event.type === 'analyze-start') break
+          if (event.type === 'error') draftError = event
+        }
+      }
+      return draftError
     },
     currentStep () {
       const status = this.nonErrorStatus

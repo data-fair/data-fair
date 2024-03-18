@@ -393,6 +393,7 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
   let v = 0
   for (const operation of operations) {
     if (operation._action === 'delete') continue
+    if (operation._status) continue
     if (validate) {
       v++
       // validation can be CPU intensive, so we yield to the event loop every 100 lines

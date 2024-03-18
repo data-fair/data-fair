@@ -24,6 +24,12 @@
         "en": "Structure analysis ok"
       }
     },
+    "validated": {
+      "title": {
+        "fr": "Validation ok",
+        "en": "Validation ok"
+      }
+    },
     "indexed": {
       "title": {
         "fr": "Indexé",

@@ -433,6 +433,7 @@ fr:
     index: indexation
     extend: extensions
     analyze: analyse
+    validate: validation
     finalize: finalisation
     normalize: conversion
     download: téléchargement
@@ -474,6 +475,7 @@ en:
     index: indexing
     extend: extensions
     analyze: analysis
+    validate: validation
     finalize: finalization
     normalize: conversion
     download: download

@@ -281,7 +281,7 @@ const cleanJsonSchemaProperty = (p, publicBaseUrl, writableId) => {
 /**
  *
  * @param {any} schema
- * @param {string} publicBaseUrl
+ * @param {string} [publicBaseUrl]
  * @returns {any}
  */
 exports.jsonSchema = (schema, publicBaseUrl) => {
@@ -292,26 +292,57 @@ exports.jsonSchema = (schema, publicBaseUrl) => {
   }
   return {
     type: 'object',
+    required: schema.filter(p => p['x-required']).map(p => p.key),
     properties
   }
+}
+
+const validationProps = ['x-labelsRestricted', 'x-required', 'minimum', 'maximum', 'minLength', 'maxLength', 'pattern']
+
+exports.schemaHasValidationRules = (schema) => {
+  for (const prop of schema) {
+    for (const validationProp of validationProps) {
+      if (validationProp in prop && prop[validationProp] !== false) return true
+    }
+  }
+  return false
+}
+
+/**
+ * @param {any[]} newSchema
+ * @param {any[]} oldSchema
+ */
+exports.schemasValidationCompatible = (newSchema, oldSchema) => {
+  for (const prop of newSchema) {
+    const existingProp = oldSchema.find(p => p.key === prop.key)
+    if (existingProp) {
+      for (const validationProp of validationProps) {
+        if (validationProp in prop && prop[validationProp] !== existingProp[validationProp]) return false
+      }
+      if (prop['x-labelsRestricted'] && existingProp['x-labelsRestricted'] && JSON.stringify(prop['x-labels'] !== JSON.stringify(existingProp['x-labels']))) {
+        return false
+      }
+    }
+  }
+  return true
+}
+
+/** @type {(p1:any, p2:any) => boolean} */
+const sortSchema = (p1, p2) => p1.key.localeCompare(p2.key)
+
+const innociousSchemaProps = validationProps.concat(['title', 'description', 'icon', 'x-display', 'x-master', 'x-labels', 'x-group', 'x-cardinality', 'readOnly', 'enum', 'x-originalName'])
+
+const removeInnocuous = (p) => {
+  const cleanProp = { ...p }
+  for (const prop of innociousSchemaProps) delete cleanProp[prop]
+  return cleanProp
 }
 
 exports.schemasFullyCompatible = (schema1, schema2, ignoreCalculated = false) => {
   // a change in these properties does not consitute a breaking change of the api
   // and does not require a re-finalization of the dataset when patched
-  const innocuous = {
-    title: '',
-    description: '',
-    'x-display': '',
-    'x-master': '',
-    'x-labelsRestricted': '',
-    'x-labels': '',
-    'x-group': '',
-    'x-cardinality': '',
-    enum: ''
-  }
-  const schema1Bare = schema1.filter(p => !(p['x-calculated'] && ignoreCalculated)).map(p => ({ ...p, ...innocuous })).sort((p1, p2) => p1.key.localeCompare(p2.key))
-  const schema2Bare = schema2.filter(p => !(p['x-calculated'] && ignoreCalculated)).map(p => ({ ...p, ...innocuous })).sort((p1, p2) => p1.key.localeCompare(p2.key))
+  const schema1Bare = schema1.filter(p => !(p['x-calculated'] && ignoreCalculated)).map(removeInnocuous).sort(sortSchema)
+  const schema2Bare = schema2.filter(p => !(p['x-calculated'] && ignoreCalculated)).map(removeInnocuous).sort(sortSchema)
   return equal(schema1Bare, schema2Bare)
 }
 

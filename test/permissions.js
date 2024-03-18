@@ -153,8 +153,7 @@ describe('permissions', () => {
     // permission to write except breaking changes
     res = await global.ax.ngernier4.patch('/api/v1/datasets/' + datasetId, { description: 'Description', schema: [{ key: 'str', title: 'another title', type: 'string' }] })
     assert.equal(res.status, 200)
-    assert.equal(res.data.status, 'indexed')
-    await workers.hook('finalizer/' + datasetId)
+    assert.equal(res.data.status, 'finalized')
 
     await assert.rejects(
       global.ax.ngernier4.patch('/api/v1/datasets/' + datasetId, { primaryKey: ['test'] }),

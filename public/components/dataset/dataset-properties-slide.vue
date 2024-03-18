@@ -84,6 +84,12 @@
               />
             </div>
             <div class="mx-1">
+              <dataset-property-validation
+                :property="currentPropRef.prop"
+                :editable="editable && !noBreakingChanges && currentPropRef.editable && !dataset.isVirtual"
+              />
+            </div>
+            <div class="mx-1">
               <dataset-property-labels
                 v-if="(currentPropRef.prop.type === 'string' && (!currentPropRef.prop.format || currentPropRef.prop.format === 'uri-reference') || currentPropRef.prop.type === 'boolean')"
                 :property="currentPropRef.prop"

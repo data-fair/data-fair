@@ -4,6 +4,7 @@ const metrics = require('../misc/utils/metrics')
 const locks = require('../misc/utils/locks')
 const debug = require('debug')('workers')
 const mergeDraft = require('../datasets/utils/merge-draft')
+const { schemaHasValidationRules } = require('../datasets/utils/schema')
 
 const workersTasksHistogram = new Histogram({
   name: 'df_datasets_workers_tasks',
@@ -19,8 +20,9 @@ const tasks = exports.tasks = {
   fileNormalizer: require('./file-normalizer'),
   csvAnalyzer: require('./csv-analyzer'),
   geojsonAnalyzer: require('./geojson-analyzer'),
-  indexer: require('./indexer'),
+  fileValidator: require('./file-validator'),
   extender: require('./extender'),
+  indexer: require('./indexer'),
   finalizer: require('./finalizer'),
   datasetPublisher: require('./dataset-publisher'),
   ttlManager: require('./ttl-manager'),
@@ -224,7 +226,9 @@ async function iter (app, resource, type) {
         taskKey = 'geojsonAnalyzer'
       } else if (resource.isRest && resource.status === 'extended-updated') {
         taskKey = 'indexer'
-      } else if (resource.status === 'analyzed' || (resource.isRest && resource.status === 'updated')) {
+      } else if (resource.file && ['analyzed', 'validation-updated'].includes(resource.status) && schemaHasValidationRules(resource.schema)) {
+        taskKey = 'fileValidator'
+      } else if ((resource.file && resource.status === (schemaHasValidationRules(resource.schema) ? 'validated' : 'analyzed')) || (resource.isRest && ['analyzed', 'updated'].includes(resource.status))) {
         if (resource.extensions && resource.extensions.find(e => e.active)) {
           // Perform extensions from remote services for dataset that have at least one active extension
           taskKey = 'extender'
