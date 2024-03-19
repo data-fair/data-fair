@@ -64,7 +64,14 @@
                 @change="saveUrlDraft"
               />
 
+              <v-checkbox
+                v-if="application.owner?.department"
+                v-model="showFullOrg"
+                :label="`Voir les sources de données de l'organisation ${application.owner.name} entière`"
+              />
+
               <lazy-v-jsf
+                :key="`vjsf-${showFullOrg}`"
                 v-model="editConfig"
                 :schema="draftSchema"
                 :options="vjsfOptions"
@@ -157,7 +164,6 @@ export default {
   props: ['roDataset'],
   data () {
     return {
-      showConfigIframe: false,
       showForm: false,
       showDraftPreview: true,
       showProdPreview: true,
@@ -168,7 +174,8 @@ export default {
       editUrl: null,
       eventBus,
       showCancelDialog: false,
-      expansion: [0]
+      expansion: [0],
+      showFullOrg: false
     }
   },
   computed: {
@@ -197,7 +204,7 @@ export default {
     vjsfOptions () {
       const owner = this.application.owner
       let ownerFilter = `${owner.type}:${owner.id}`
-      if (owner.department) ownerFilter += ':' + owner.department
+      if (owner.department && !this.showFullOrg) ownerFilter += ':' + owner.department
       const datasetFilter = `owner=${ownerFilter}`
       const remoteServiceFilter = `privateAccess=${ownerFilter}`
       return {
@@ -289,7 +296,6 @@ export default {
 
         if (typeof this.draftSchema !== 'object') {
           console.error(`Schema fetched at ${draftSchemaUrl} is not a valid JSON`)
-          this.showConfigIframe = true
         } else {
           this.completeSchema(this.draftSchema)
           // console.log(JSON.stringify(this.draftSchema, null, 1))
@@ -298,7 +304,6 @@ export default {
       } catch (error) {
         if (error.response && error.response.status === 404) {
           console.error(`Schema not found at ${draftSchemaUrl}`)
-          this.showConfigIframe = true
         } else {
           eventBus.$emit('notification', { error })
         }
