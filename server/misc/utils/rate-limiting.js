@@ -1,4 +1,4 @@
-const config = require('config')
+const config = /** @type {any} */(require('config'))
 const { Transform } = require('node:stream')
 const { RateLimiter, TokenBucket } = require('limiter')
 const requestIp = require('request-ip')
@@ -97,7 +97,9 @@ const throttledEnd = async (res, buffer, tokenBucket) => {
 exports.middleware = (_limitType) => asyncWrap(async (req, res, next) => {
   const limitType = _limitType || ((req.user && req.user.id) ? 'user' : 'anonymous')
 
-  if (!exports.consume(req, limitType)) {
+  if (config.secretKeys.ignoreRateLimiting && req.get('x-ignore-rate-limiting') === config.secretKeys.ignoreRateLimiting) {
+    // ignore rate limiting from SSR
+  } else if (!exports.consume(req, limitType)) {
     debugLimits('exceedRateLimiting', limitType, req.user, requestIp.getClientIp(req))
     return res.status(429).type('text/plain').send(req.__('errors.exceedRateLimiting'))
   }

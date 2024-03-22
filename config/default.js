@@ -151,7 +151,8 @@ module.exports = {
   secretKeys: {
     identities: null,
     limits: null,
-    notifications: null
+    notifications: null,
+    ignoreRateLimiting: null
   },
   // Configure outgoing http calls
   globalWebhooks: {
