@@ -1,11 +1,11 @@
-group,groupLabel,user
-group1,group 1,user1
-group1,group 1,user2
-group1,group 1,user3
-group1,group 1,user4
-group2,group 2,user1
-group2,group 2,user2
-group2,group 2,user4
-group3,group 3,user5
-group4,group 4,user5
-group1,group 1,user5
+group,groupLabel,user,roles
+group1,group 1,user1,admin;contrib
+group1,group 1,user2,admin
+group1,group 1,user3,admin
+group1,group 1,user4,admin
+group2,group 2,user1,admin
+group2,group 2,user2,admin
+group2,group 2,user4,admin
+group3,group 3,user5,admin
+group4,group 4,user5,admin
+group1,group 1,user5,admin
