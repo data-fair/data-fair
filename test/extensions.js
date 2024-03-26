@@ -715,7 +715,7 @@ other,unknown address
 
     const form = new FormData()
     form.append('file', fs.readFileSync('./test/resources/datasets/dataset2.csv'), 'dataset2.csv')
-    dataset = (await ax.put(`/api/v1/datasets/${dataset.id}?draft=false`, form, { headers: testUtils.formHeaders(form), params: { draft: true } })).data
+    dataset = (await ax.put(`/api/v1/datasets/${dataset.id}`, form, { headers: testUtils.formHeaders(form), params: { draft: true } })).data
 
     await assert.rejects(workers.hook(`finalizer/${dataset.id}`), (err) => {
       assert.equal(err.message, 'Une extension essaie de créer la colonne "employees" mais cette clé est déjà utilisée.')

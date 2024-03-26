@@ -34,6 +34,16 @@ if (config.mode.includes('server')) {
   app.set('trust proxy', 1)
   app.set('json spaces', 2)
 
+  app.set('query parser', 'simple')
+  app.use((req, res, next) => {
+    for (const key of Object.keys(req.query)) {
+      if (Array.isArray(req.query[key])) {
+        return res.status(400).send(`query parameter "${key}" is defined multiple times`)
+      }
+    }
+    next()
+  })
+
   app.use((req, res, next) => {
     // We use custom "X-Private-If-Modified-Since" and "X-Private-If-None-Match" headers as
     // alternatives to "If-Modified-Since" and "If-None-Match"

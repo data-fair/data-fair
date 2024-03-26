@@ -97,9 +97,8 @@ const throttledEnd = async (res, buffer, tokenBucket) => {
 exports.middleware = (_limitType) => asyncWrap(async (req, res, next) => {
   const limitType = _limitType || ((req.user && req.user.id) ? 'user' : 'anonymous')
 
-  if (config.secretKeys.ignoreRateLimiting && req.get('x-ignore-rate-limiting') === config.secretKeys.ignoreRateLimiting) {
-    // ignore rate limiting from SSR
-  } else if (!exports.consume(req, limitType)) {
+  const ignoreRateLimiting = config.secretKeys.ignoreRateLimiting && req.get('x-ignore-rate-limiting') === config.secretKeys.ignoreRateLimiting
+  if (!ignoreRateLimiting && !exports.consume(req, limitType)) {
     debugLimits('exceedRateLimiting', limitType, req.user, requestIp.getClientIp(req))
     return res.status(429).type('text/plain').send(req.__('errors.exceedRateLimiting'))
   }
@@ -113,6 +112,8 @@ exports.middleware = (_limitType) => asyncWrap(async (req, res, next) => {
     return throttle
   }
   res.throttleEnd = (bandwidthType = 'dynamic') => {
+    if (ignoreRateLimiting) return
+
     // prevent inifinite loop if res.throttleEnd is called twice
     if (res._originalEnd) return
 
