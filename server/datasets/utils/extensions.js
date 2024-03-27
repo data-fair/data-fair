@@ -217,7 +217,7 @@ class ExtensionsStream extends Transform {
         let data
         if (localMasterData) {
           const masterDatasetId = extension.remoteService.server.replace(`${config.publicUrl}/api/v1/datasets/`, '')
-          const pseudoUser = getPseudoUser(this.dataset.owner, 'extension', '_master-data', 'user')
+          const pseudoUser = getPseudoUser(this.dataset.owner, 'extension', '_master-data', 'admin')
           const masterDataset = await this.db.collection('datasets').findOne({ id: masterDatasetId })
           if (!masterDataset) throw new Error('jeu de données de référence inconnu ' + masterDatasetId)
           if (!permissionsUtils.list('datasets', masterDataset, pseudoUser).includes('readLines')) {
