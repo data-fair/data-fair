@@ -173,7 +173,7 @@
         hide-details
         dense
         class="mt-1"
-        @keyup.enter="search && emitFilter({value: search, type: 'search', nested: showSearch})"
+        @keyup.enter="search && emitFilter({value: search, type: 'search'})"
       >
         <template #append-outer>
           <v-btn
@@ -182,7 +182,7 @@
             :disabled="!search"
             color="primary"
             :title="$t('applyFilter')"
-            @click="emitFilter({value: search, type: 'search', nested: showSearch})"
+            @click="emitFilter({value: search, type: 'search'})"
           >
             <v-icon>mdi-check</v-icon>
           </v-btn>
@@ -467,13 +467,12 @@ export default {
       return this.field.type === 'string' && (this.field.format === 'date' || this.field.format === 'date-time')
     },
     showSearch () {
-      if (this.showEnum) return ''
-      if (this.field['x-labels']) return ''
-      if (this.field.type !== 'string') return ''
-      if (this.field.format && this.field.format !== 'uri-reference') return ''
-      if (!this.field['x-capabilities'] || this.field['x-capabilities'].text !== false) return 'text'
-      if (!this.field['x-capabilities'] || this.field['x-capabilities'].textStandard !== false) return 'text_standard'
-      return ''
+      if (this.showEnum) return false
+      if (this.field['x-labels']) return false
+      if (this.field.type !== 'string') return false
+      if (this.field.format && this.field.format !== 'uri-reference') return false
+      if (!this.field['x-capabilities'] || this.field['x-capabilities'].text !== false || this.field['x-capabilities'].textStandard !== false) return true
+      return false
     },
     showContains () {
       return this.field['x-capabilities'] && this.field['x-capabilities'].wildcard && !this.field['x-labels']
