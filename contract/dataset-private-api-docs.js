@@ -491,6 +491,18 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             }
           }
         }
+      },
+      '/_lock': {
+        delete: {
+          summary: 'Supprimer les locks',
+          tags: ['Administration'],
+          'x-permissionClass': 'superadmin',
+          responses: {
+            204: {
+              description: 'accusé de réception de la demande de suppression des locks'
+            }
+          }
+        }
       }
     })
   }

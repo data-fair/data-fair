@@ -43,6 +43,7 @@ const observe = require('../misc/utils/observe')
 const metrics = require('../misc/utils/metrics')
 const publicationSites = require('../misc/utils/publication-sites')
 const clamav = require('../misc/utils/clamav')
+const locks = require('../misc/utils/locks')
 const { syncDataset: syncRemoteService } = require('../remote-services/utils')
 const { findDatasets, applyPatch, validateDraft, deleteDataset, createDataset } = require('./service')
 const { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } = require('./utils/schema')
@@ -1129,6 +1130,15 @@ router.post('/:datasetId/_refinalize', readDataset(), asyncWrap(async (req, res)
   if (!req.user.adminMode) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
   const patchedDataset = await datasetUtils.refinalize(req.app.get('db'), req.dataset)
   res.status(200).send(patchedDataset)
+}))
+
+// Special admin route to clear all locks on a dataset
+router.delete('/:datasetId/_lock', readDataset(), asyncWrap(async (req, res) => {
+  if (!req.user) return res.status(401).type('text/plain').send()
+  if (!req.user.adminMode) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
+  await locks.release(req.app.get('db'), `dataset:${req.dataset.id}`)
+  await locks.release(req.app.get('db'), `dataset:slug:${req.dataset.owner.type}:${req.dataset.owner.id}:${req.dataset.slug}`)
+  res.status(204).send()
 }))
 
 module.exports = router
