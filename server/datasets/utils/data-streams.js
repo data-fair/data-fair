@@ -45,7 +45,7 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
     streams.push(new Transform({
       objectMode: true,
       transform (item, encoding, callback) {
-        const hasContent = Object.keys(item).reduce((a, b) => a || ![undefined, '\n', '\r', '\r\n'].includes(item[b]), false)
+        const hasContent = Object.keys(item).reduce((a, b) => a || ![undefined, '\n', '\r', '\r\n', ''].includes(item[b]), false)
         item._i = this.i = (this.i || 0) + 1
         if (hasContent) callback(null, item)
         else callback()
