@@ -22,7 +22,7 @@ exports.exec = async (db, debug) => {
   for await (const dataset of db.collection('datasets').find({ file: { $exists: 1 } }).project({ id: 1, slug: 1, schema: 1, file: 1 })) {
     debug('check dataset', dataset.id, dataset.slug)
     let hasChanged = false
-    for (const schema of [dataset.schema, dataset.file.schema]) {
+    for (const schema of [dataset.schema, dataset.file?.schema]) {
       if (!schema) continue
       for (const field of schema) {
         if (field['x-originalName'] && hasBOM(field['x-originalName'])) {
