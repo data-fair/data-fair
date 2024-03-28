@@ -257,6 +257,17 @@ describe('CSV cases', () => {
     assert.equal(res.data.results[0].id_noeud, '22004N000')
   })
 
+  it('CSV with badly placed BOM', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/salles-sur-yffiniac-6.csv', ax)
+    assert.equal(dataset.schema[0].key, 'salle')
+    assert.equal(dataset.schema[0]['x-originalName'], 'SALLE')
+    assert.equal(dataset.file.schema[0]['x-originalName'], 'SALLE')
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 7)
+    assert.equal(res.data.results[0].salle, 'Salle du Vauriault')
+  })
+
   it('CSV with empty column', async () => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('csv-cases/empty-col.csv', ax)

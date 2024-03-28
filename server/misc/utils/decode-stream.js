@@ -3,7 +3,7 @@
 const iconv = require('iconv-lite')
 const chardet = require('chardet')
 const { Transform } = require('stream')
-const { removeBOM } = require('./bom')
+const outOfCharacter = require('out-of-character')
 
 const sampleSize = 32768 // 32kb
 
@@ -28,8 +28,7 @@ class DecodeStream extends Transform {
     }
     if (this.decoder) {
       if (chunk) {
-        chunk = removeBOM(chunk)
-        const res = this.decoder.write(chunk)
+        const res = outOfCharacter.replace(this.decoder.write(chunk))
         this.push(res)
       }
       if (flush) {

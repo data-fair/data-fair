@@ -213,6 +213,7 @@
     "object-sizeof": "^1.6.3",
     "ogr2ogr": "^4.0.1",
     "original-url": "^1.2.3",
+    "out-of-character": "^1.2.2",
     "parse5": "^7.1.2",
     "piscina": "^3.2.0",
     "proj4": "^2.7.2",

@@ -1,4 +1,5 @@
-const { Transform } = require('stream')
+// Deprecated, replaced by the more generic out-of-character
+// TODO: remove this if it is confirmed that it is not used anymore
 
 /**
  * @param {Buffer} buffer
@@ -15,25 +16,8 @@ exports.hasBOM = function (buffer) {
 exports.removeBOM = function (buffer) {
   // multiple strip BOM because of badly formatted files from some clients
   while (exports.hasBOM(buffer)) {
+    console.log('REMOVE 1 BOM')
     buffer = buffer.slice(3)
   }
   return buffer
 }
-
-class RemoveBOMStream extends Transform {
-  constructor () {
-    super()
-    this.firstChunk = true
-  }
-
-  _transform (chunk, encoding, callback) {
-    if (this.firstChunk) {
-      this.firstChunk = false
-      callback(null, exports.removeBOM(chunk))
-    } else {
-      callback(null, chunk)
-    }
-  }
-}
-
-exports.RemoveBOMStream = RemoveBOMStream

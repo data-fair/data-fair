@@ -11,17 +11,20 @@ exports.process = async function (app, dataset) {
   const datasetUtils = require('../datasets/utils')
   const datasetsService = require('../datasets/service')
   const fieldsSniffer = require('../datasets/utils/fields-sniffer')
+  const outOfCharacter = require('out-of-character')
 
   const debug = require('debug')(`worker:csv-analyzer:${dataset.id}`)
   debug('extract file sample')
-  const fileSample = await datasetFileSample(datasetUtils.filePath(dataset), dataset.file.encoding === 'UTF-8')
+  const fileSample = await datasetFileSample(datasetUtils.filePath(dataset))
   if (!fileSample) throw createError(400, '[noretry] Échec d\'échantillonage du fichier tabulaire, il est vide')
   let decodedSample
   try {
-    decodedSample = iconv.decode(fileSample, dataset.file.encoding)
+    decodedSample = dataset.file.encoding === 'UTF-8' ? fileSample.toString() : iconv.decode(fileSample, dataset.file.encoding)
   } catch (err) {
     throw createError(400, `[noretry] Échec de décodage du fichier selon l'encodage détecté ${dataset.file.encoding}`)
   }
+  decodedSample = outOfCharacter.replace(decodedSample)
+
   debug('sniff csv sample')
   const sniffResult = await csvSniffer.sniff(decodedSample)
 
