@@ -249,6 +249,9 @@ describe('CSV cases', () => {
   it('CSV with BOM', async () => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('csv-cases/Fibre optique_ noeuds de la montée en débit dans le département des Côtes d\'Armor.csv', ax)
+    assert.equal(dataset.schema[0].key, 'id_noeud')
+    assert.equal(dataset.schema[0]['x-originalName'], 'ID_NOEUD')
+    assert.equal(dataset.file.schema[0]['x-originalName'], 'ID_NOEUD')
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 732)
     assert.equal(res.data.results[0].id_noeud, '22004N000')

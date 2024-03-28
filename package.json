@@ -134,7 +134,7 @@
     "web-streams-polyfill": "^3.2.0"
   },
   "dependencies": {
-    "@data-fair/lib": "^0.29.0",
+    "@data-fair/lib": "^0.31.1",
     "@data-fair/sd-express": "^1.4.3",
     "@elastic/elasticsearch": "~7.17.12",
     "@koumoul/icalendar": "^0.7.3",
