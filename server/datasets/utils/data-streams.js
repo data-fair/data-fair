@@ -16,6 +16,7 @@ const fieldsSniffer = require('./fields-sniffer')
 const restDatasetsUtils = require('./rest')
 const { filePath, fullFilePath, tmpDir } = require('./files')
 const pump = require('../../misc/utils/pipe')
+const { RemoveBOMStream } = require('../../misc/utils/bom')
 
 // used both by exports.readStream and bulk transactions in rest datasets
 exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, encoding, skipDecoding, dataset, autoAdjustKeys = false) => {
@@ -29,6 +30,7 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
   } else {
     if (!skipDecoding) streams.push(new DecodeStream(encoding))
   }
+  if (skipDecoding) streams.push(new RemoveBOMStream())
   if (mimeType === 'application/x-ndjson' || mimeType === 'application/json') {
     streams.push(mimeTypeStream(mimeType).parser())
   } else if (csvTypes.includes(mimeType)) {

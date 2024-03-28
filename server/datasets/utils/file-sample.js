@@ -1,5 +1,6 @@
 const fs = require('fs')
 const util = require('util')
+const bom = require('../../misc/utils/bom')
 
 const stat = util.promisify(fs.stat)
 const open = util.promisify(fs.open)
@@ -14,8 +15,8 @@ module.exports = async function (p, removeBOM) {
   fs.close(fd)
 
   // strip BOM cf https://github.com/sindresorhus/strip-bom-buf/blob/main/index.js
-  if (buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF && removeBOM) {
-    return buffer.slice(3)
+  if (removeBOM) {
+    return bom.removeBOM(buffer)
   }
 
   return buffer

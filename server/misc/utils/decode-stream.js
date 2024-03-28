@@ -3,6 +3,7 @@
 const iconv = require('iconv-lite')
 const chardet = require('chardet')
 const { Transform } = require('stream')
+const { removeBOM } = require('./bom')
 
 const sampleSize = 32768 // 32kb
 
@@ -27,10 +28,7 @@ class DecodeStream extends Transform {
     }
     if (this.decoder) {
       if (chunk) {
-        // multiple strip BOM because of badly formatted files from some clients
-        while (chunk[0] === 0xEF && chunk[1] === 0xBB && chunk[2] === 0xBF) {
-          chunk = chunk.slice(3, chunk.length)
-        }
+        chunk = removeBOM(chunk)
         const res = this.decoder.write(chunk)
         this.push(res)
       }
