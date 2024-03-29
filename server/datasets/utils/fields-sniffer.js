@@ -55,7 +55,7 @@ const checkInteger = (val) => {
 }
 
 exports.format = (value, prop, fileProp) => {
-  if (!value) return null
+  if (value === null || value === undefined || value === '') return null
   if (typeof value !== 'string') value = JSON.stringify(value)
   value = value.trim()
   if (!value) return null

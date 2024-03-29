@@ -22,6 +22,7 @@ class AnalyzerWritable extends Writable {
     const properties = feature.properties || {}
     if (feature.id) properties.id = feature.id
     for (const property in properties) {
+      if (properties[property] === null) continue
       this.samples[property] = this.samples[property] || new Set([])
       // Use 100 first values, then 1 in ten until 200
       const size = this.samples[property].size

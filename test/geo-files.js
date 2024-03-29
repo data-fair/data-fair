@@ -18,7 +18,7 @@ describe('geo files support', () => {
     // Dataset received and parsed
     let dataset = await workers.hook('geojsonAnalyzer')
     assert.equal(dataset.status, 'analyzed')
-    assert.equal(dataset.schema.length, 5)
+    assert.equal(dataset.schema.length, 6)
     const idField = dataset.schema.find(field => field.key === 'id')
     assert.equal(idField.type, 'string')
     const descField = dataset.schema.find(field => field.key === 'desc')
@@ -26,6 +26,8 @@ describe('geo files support', () => {
     assert.ok(!descField.format)
     const boolField = dataset.schema.find(field => field.key === 'bool')
     assert.equal(boolField.type, 'boolean')
+    const intField = dataset.schema.find(field => field.key === 'int')
+    assert.equal(intField.type, 'integer')
 
     // ES indexation and finalization
     dataset = await workers.hook('finalizer/' + dataset.id)
@@ -36,6 +38,9 @@ describe('geo files support', () => {
     assert.equal(lines[0]._geopoint, '0.5,103.5')
     assert.equal(lines[0]._geocorners, undefined)
     assert.equal(lines[0]._geoshape, undefined)
+    assert.equal(lines[0].int, 0)
+    assert.equal(lines[1].int, 2)
+    assert.equal(lines[2].int, undefined)
 
     const geojson = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { format: 'geojson' } })).data
     assert.equal(geojson.features.length, 3)

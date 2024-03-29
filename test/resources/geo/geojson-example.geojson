@@ -13,7 +13,8 @@
            "properties": {
                "prop1": "value1",
                "desc": "bla bla bla",
-               "bool": true
+               "bool": true,
+               "int": 0
            }
        },
        {
@@ -29,7 +30,8 @@
            },
            "properties": {
                "prop1": "value2",
-               "desc": "blabla"
+               "desc": "blabla",
+               "int": 2
            }
        },
        {
@@ -45,7 +47,8 @@
            },
            "properties": {
                "prop1": "value3",
-               "desc": "This is a kinked polygon (meaning it has self intersections)"
+               "desc": "This is a kinked polygon (meaning it has self intersections)",
+               "int": null
            }
        }
    ]
