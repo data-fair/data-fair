@@ -4,6 +4,7 @@ const fs = require('fs')
 const path = require('path')
 const https = require('https')
 const http = require('http')
+const escapeHtml = require('escape-html')
 const axios = require('../misc/utils/axios')
 const parse5 = require('parse5')
 const pump = require('../misc/utils/pipe')
@@ -95,13 +96,16 @@ router.get('/:applicationId/manifest.json', setResource, asyncWrap(async (req, r
 // prevents opening a browser if the app is installed standalone
 router.get('/:applicationId/login', setResource, (req, res) => {
   res.setHeader('Content-Type', 'text/html')
-  const redirect = `${req.publicBaseUrl}/app/${req.params.applicationId}`
-  let authUrl = `${req.directoryUrl}/api/auth/password?redirect=${redirect}`
-  if (req.application.owner.type === 'organization') authUrl += `&org=${encodeURIComponent(req.application.owner.id)}&`
+  const authUrl = new URL(`${req.directoryUrl}/api/auth/password`)
+  authUrl.searchParams.set('redirect', `${req.publicBaseUrl}/app/${req.params.applicationId}`)
+  if (req.application.owner.type === 'organization') {
+    authUrl.searchParams.set('org', req.application.owner.id)
+  }
+  const logoUrl = new URL(`${req.directoryUrl}/api/avatars/${req.application.owner.type}/${req.application.owner.id}/avatar.png`)
   res.send(loginHtml
-    .replace('{ERROR}', req.query.error ? `<p style="color:red">${req.query.error}</p>` : '')
-    .replace('{AUTH_ROUTE}', authUrl)
-    .replace('{LOGO}', `${req.directoryUrl}/api/avatars/${req.application.owner.type}/${req.application.owner.id}/avatar.png`)
+    .replace('{ERROR}', req.query.error ? `<p style="color:red">${escapeHtml(req.query.error)}</p>` : '')
+    .replace('{AUTH_ROUTE}', authUrl.href)
+    .replace('{LOGO}', logoUrl.href)
   )
 })
 
