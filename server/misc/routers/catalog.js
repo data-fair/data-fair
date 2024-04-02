@@ -1,8 +1,10 @@
 const express = require('express')
 const createError = require('http-errors')
+const i18n = require('i18n')
 const asyncWrap = require('../utils/async-handler')
 const findUtils = require('../utils/find')
 const datasetUtils = require('../../datasets/utils')
+const permissions = require('../../misc/utils/permissions')
 const catalogApiDocs = require('../../../contract/site-catalog-api-docs')
 
 const router = module.exports = express.Router()
@@ -30,7 +32,7 @@ router.get('/datasets', asyncWrap(async (req, res) => {
 
   if (req.query.file === 'true') extraFilters.push({ file: { $exists: true } })
 
-  const query = findUtils.query(req, { topics: 'topics.id' }, null, extraFilters)
+  const query = findUtils.query(req, i18n.getLocale(req), req.user, 'datasets', { topics: 'topics.id' }, false, extraFilters)
   const sort = findUtils.sort(req.query.sort || '-createdAt')
   const project = findUtils.project(req.query.select, [], req.query.raw === 'true')
   const [skip, size] = findUtils.pagination(req.query)
@@ -70,7 +72,12 @@ router.get('/dcat', asyncWrap(async (req, res) => {
   // > udata dcat parse-url http://localhost:5601/data-fair/api/v1/catalog/dcat
   // > udata dcat parse-url https://opendata.staging-koumoul.com/data-fair/api/v1/catalog/dcat
 
-  const query = { publicationSites: `${req.publicationSite.type}:${req.publicationSite.id}` }
+  const query = {
+    $and: [
+      { publicationSites: `${req.publicationSite.type}:${req.publicationSite.id}` },
+      { $or: permissions.filter(req.user, 'datasets') }
+    ]
+  }
 
   // TODO: pagination ?
 
@@ -103,13 +110,15 @@ router.get('/dcat', asyncWrap(async (req, res) => {
 
   const graph = []
 
+  const datasetUrlTemplate = req.publicationSite.datasetUrlTemplate || req.publicationSite.url + '/datasets/{id}'
+
   for (const dataset of datasets) {
-    const datasetUrl = req.publicationSite.datasetUrlTemplate.replace('{id}', dataset.slug || dataset.id)
+    const datasetUrl = datasetUrlTemplate.replace('{id}', dataset.slug || dataset.id)
     const datasetDCAT = {
       '@id': datasetUrl,
       '@type': 'dcat:Dataset',
       'dct:identifier': dataset.slug || dataset.id,
-      'dcat:landingPage': req.publicationSite.datasetUrlTemplate.replace('{id}', dataset.slug || dataset.id),
+      'dcat:landingPage': datasetUrlTemplate.replace('{id}', dataset.slug || dataset.id),
       'dct:title': dataset.title,
       'dct:description': dataset.description,
       'dcat:keyword': dataset.keywords || [],

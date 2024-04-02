@@ -80,6 +80,13 @@ describe('publication sites', () => {
     assert.ok(await ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${dataset.id}/lines`))
     publishedDatasets = (await ax.get('http://localhost:5601/data-fair/api/v1/datasets')).data
     assert.equal(publishedDatasets.results.length, 1)
+
+    const datasetsCatalog = (await ax.get('http://localhost:5601/data-fair/api/v1/catalog/datasets')).data
+    assert.equal(datasetsCatalog.results.length, 1)
+    assert.equal(datasetsCatalog.count, 1)
+
+    const dcatCatalog = (await ax.get('http://localhost:5601/data-fair/api/v1/catalog/dcat')).data
+    assert.equal(dcatCatalog['@graph'].length, 1)
   })
 
   it('should publish application on a org site', async () => {
