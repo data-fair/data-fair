@@ -549,7 +549,7 @@ async function manageESError (req, err) {
   const message = esUtils.errorMessage(err)
   const status = err.status || err.statusCode || 500
   if (status === 400) {
-    console.error(`(es-query-${status}) elasticsearch query error ${req.dataset.id}`, req.originalUrl, status, req.headers.referer || req.headers.referrer, message, err.stack)
+    // console.error(`(es-query-${status}) elasticsearch query error ${req.dataset.id}`, req.originalUrl, status, req.headers.referer || req.headers.referrer, message, err.stack)
     esQueryErrorCounter.inc()
   } else {
     metrics.internalError('es-query-' + status, err)
