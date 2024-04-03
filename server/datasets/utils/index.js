@@ -186,6 +186,7 @@ exports.clean = (publicUrl, publicationSite, dataset, query = {}, draft = false)
   delete dataset._uniqueRefs
   delete dataset.initFrom
   delete dataset.loaded
+  delete dataset.apiKeys
   if (select.includes('-userPermissions')) delete dataset.userPermissions
   if (select.includes('-owner')) delete dataset.owner
 

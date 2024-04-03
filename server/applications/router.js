@@ -487,11 +487,11 @@ router.get('/:applicationId/print', readApplication, permissions.middleware('rea
 }))
 
 // keys for readonly access to application
-router.get('/:applicationId/keys', readApplication, permissions.middleware('getKeys', 'admin'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
+router.get('/:applicationId/keys', readApplication, permissions.middleware('getKeys', 'admin'), asyncWrap(async (req, res) => {
   const applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ _id: req.application.id })
   res.send((applicationKeys && applicationKeys.keys) || [])
 }))
-router.post('/:applicationId/keys', readApplication, permissions.middleware('setKeys', 'admin'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
+router.post('/:applicationId/keys', readApplication, permissions.middleware('setKeys', 'admin'), asyncWrap(async (req, res) => {
   // @ts-ignore
   const application = req.application
 
