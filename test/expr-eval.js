@@ -14,5 +14,6 @@ describe('expression engine based on expr-eval', () => {
 
     assert.equal(parser.parse('MD5(a, b)').evaluate({ a: 'a', b: 'b' }), '86bfbbec238b3cb49c45ba78b02cd940')
     assert.equal(parser.parse('MD5(a, b)').evaluate({ a: 'a', b: null }), '60921ff7863149ffa56c3947807e17e6')
+    assert.equal(parser.parse('JOIN(SPLIT(a, "-"), "_")').evaluate({ a: 'a-b-c' }), 'a_b_c')
   })
 })

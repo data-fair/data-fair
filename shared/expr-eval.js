@@ -115,4 +115,16 @@ parser.functions.MD5 = function () {
   return md5(JSON.stringify(args).slice(1, -1))
 }
 
+parser.functions.SPLIT = function (arg, separator) {
+  if (typeof arg !== 'string') return arg
+  if (typeof separator !== 'string') return arg
+  return arg.split(separator)
+}
+
+parser.functions.JOIN = function (arg, separator = ',') {
+  if (!Array.isArray(arg)) return arg
+  if (typeof separator !== 'string') return arg
+  return arg.join(separator)
+}
+
 exports.parser = parser
