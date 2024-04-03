@@ -1185,13 +1185,26 @@ router.put('/:datasetId/api-keys', readDataset(), permissions.middleware('setApi
     }
     apiKey.permissions = apiKey.permissions || { classes: ['read'] }
   }
+
+  const returnedApiKeys = req.body.map(apiKey => {
+    const returnedApiKey = { ...apiKey }
+    delete returnedApiKey.key
+    return returnedApiKey
+  })
+
+  const storedApiKeys = req.body.map(apiKey => {
+    const storedApiKey = { ...apiKey }
+    if (!storedApiKey.storeClearKey) delete storedApiKey.clearKey
+    return storedApiKey
+  })
+
   validateStoredDatasetApiKeys(req.body)
-  await req.app.get('db').collection('datasets').updateOne({ id: dataset.id }, { $set: { apiKeys: req.body } })
+  await req.app.get('db').collection('datasets').updateOne({ id: dataset.id }, { $set: { apiKeys: storedApiKeys } })
 
   await import('@data-fair/lib/express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.writeKeys', `wrote dataset level API keys ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
-  res.send(req.body)
+  res.send(returnedApiKeys)
 }))
 
 module.exports = router

@@ -10,6 +10,10 @@ exports.writable = {
         readOnly: true,
         'x-display': 'hidden'
       },
+      storeClearKey: {
+        type: 'boolean',
+        default: false
+      },
       clearKey: {
         type: 'string',
         readOnly: true
