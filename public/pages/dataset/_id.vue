@@ -267,6 +267,13 @@
                 </v-tab>
 
                 <v-tab
+                  v-if="can('getKeys')"
+                  href="#api-keys"
+                >
+                  <v-icon>mdi-cloud-key</v-icon>&nbsp;&nbsp;{{ $t('datasetApiKeys') }}
+                </v-tab>
+
+                <v-tab
                   v-if="!env.disablePublicationSites"
                   href="#share-publication-sites"
                 >
@@ -304,6 +311,12 @@
                       :has-public-deps="hasPublicApplications"
                       @permissions="p => permissions = p"
                     />
+                  </v-container>
+                </v-tab-item>
+
+                <v-tab-item value="api-keys">
+                  <v-container fluid>
+                    <dataset-api-keys />
                   </v-container>
                 </v-tab-item>
 
@@ -427,6 +440,7 @@ fr:
   metadata: Métadonnées
   uses: Utilisations
   datasets: jeux de données
+  datasetApiKeys: Accès par clé d'API
   tasks:
     initialize: initialisation
     store: chargement
@@ -469,6 +483,7 @@ en:
   metadata: Metadata
   uses: Uses
   datasets: datasets
+  datasetApiKeys: Access through API keys
   tasks:
     initialize: initialization
     store: loading
