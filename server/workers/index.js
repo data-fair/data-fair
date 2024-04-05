@@ -28,7 +28,8 @@ const tasks = exports.tasks = {
   ttlManager: require('./ttl-manager'),
   restExporterCSV: require('./rest-exporter-csv'),
   applicationPublisher: require('./application-publisher'),
-  catalogHarvester: require('./catalog-harvester')
+  catalogHarvester: require('./catalog-harvester'),
+  readApiKeyRenewer: require('./read-api-key-renewer')
 }
 
 // resolve functions that will be filled when we will be asked to stop the workers
@@ -163,7 +164,9 @@ const getTypesFilters = () => {
           // fetch rest datasets with an automatic export to do
           { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: new Date().toISOString() } },
           // file datasets with remote url that need refreshing
-          { status: { $nin: ['error'] }, 'remoteFile.autoUpdate.active': true, 'remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() } }
+          { status: { $nin: ['error'] }, 'remoteFile.autoUpdate.active': true, 'remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() } },
+          // renew read api key
+          { 'readApiKey.active': true, 'readApiKey.renewAt': { $lt: new Date().toISOString() } }
         ]
       }, {
         isMetaOnly: true,
@@ -264,6 +267,11 @@ async function iter (app, resource, type) {
         resource.exports.restToCSV.nextExport < new Date().toISOString()
       ) {
         taskKey = 'restExporterCSV'
+      } else if (
+        resource?.readApiKey?.active &&
+        resource.readApiKey.renewAt < new Date().toISOString()
+      ) {
+        taskKey = 'readApiKeyRenewer'
       }
     }
 

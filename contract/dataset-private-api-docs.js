@@ -75,7 +75,9 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       summary: 'Mettre à jour les informations du jeu de données',
       operationId: 'writeDescription',
       'x-permissionClass': 'write',
-      'x-altPermissions': [{ id: 'writeDescriptionBreaking', class: 'write', title: 'Mettre à jour les informations du jeu de données qui peuvent déclencher une rupture de compatibilité' }],
+      'x-altPermissions': [
+        { id: 'writeDescriptionBreaking', class: 'write', title: 'Mettre à jour les informations du jeu de données qui peuvent déclencher une rupture de compatibilité' }
+      ],
       tags: ['Métadonnées'],
       requestBody: {
         description: 'Fichier à charger et informations de propriété',
@@ -526,6 +528,32 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   if (dataset.isMetaOnly) {
     delete api.paths['/'].post
+  }
+
+  if (dataset.readApiKey?.active) {
+    api.paths['/read-api-key'] = {
+      get: {
+        summary: 'Récupérer la clé API de lecture',
+        operationId: 'getReadApiKey',
+        'x-permissionClass': 'read',
+        tags: ['Métadonnées'],
+        responses: {
+          200: {
+            description: 'La clé API de lecture',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    current: { type: 'string' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   return api

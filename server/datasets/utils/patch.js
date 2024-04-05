@@ -102,6 +102,13 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
     }
   }
 
+  if (patch.readApiKey && (patch.readApiKey.active !== dataset.readApiKey?.active || patch.readApiKey?.interval !== dataset.readApiKey?.interval)) {
+    patch._readApiKey = datasetUtils.createReadApiKey(dataset.owner, patch.readApiKey)
+  }
+  if (patch.readApiKey === null) {
+    patch._readApiKey = null
+  }
+
   const coordXProp = dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordX')
   const coordYProp = dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#coordY')
   const projectGeomProp = dataset.schema.find(p => p['x-refersTo'] === 'http://data.ign.fr/def/geometrie#Geometry')

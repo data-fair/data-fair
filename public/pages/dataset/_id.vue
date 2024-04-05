@@ -267,10 +267,10 @@
                 </v-tab>
 
                 <v-tab
-                  v-if="can('getKeys')"
-                  href="#api-keys"
+                  v-if="can('getReadApiKey')"
+                  href="#read-api-key"
                 >
-                  <v-icon>mdi-cloud-key</v-icon>&nbsp;&nbsp;{{ $t('datasetApiKeys') }}
+                  <v-icon>mdi-cloud-key</v-icon>&nbsp;&nbsp;{{ $t('readApiKey') }}
                 </v-tab>
 
                 <v-tab
@@ -314,9 +314,9 @@
                   </v-container>
                 </v-tab-item>
 
-                <v-tab-item value="api-keys">
+                <v-tab-item value="read-api-key">
                   <v-container fluid>
-                    <dataset-api-keys />
+                    <dataset-read-api-key />
                   </v-container>
                 </v-tab-item>
 
@@ -440,7 +440,7 @@ fr:
   metadata: Métadonnées
   uses: Utilisations
   datasets: jeux de données
-  datasetApiKeys: Accès par clé d'API
+  readApiKey: Accès par clé d'API
   tasks:
     initialize: initialisation
     store: chargement
@@ -483,7 +483,7 @@ en:
   metadata: Metadata
   uses: Uses
   datasets: datasets
-  datasetApiKeys: Access through API keys
+  readApiKey: Access using API key
   tasks:
     initialize: initialization
     store: loading

@@ -802,6 +802,16 @@ module.exports = {
           href: { type: 'string' }
         }
       }
+    },
+    readApiKey: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        active: { type: 'boolean', title: 'Activer l\'accès par clé d\'API' },
+        interval: { type: 'string', title: 'Durée de validité des clés', oneOf: [{ const: 'P1W', title: '1 semaine' }, { const: 'P1M', title: '1 mois' }, { const: 'P1Y', title: '1 année' }] },
+        expiresAt: { type: 'string', format: 'date-time', readOnly: true, 'x-display': 'hidden' },
+        renewAt: { type: 'string', format: 'date-time', readOnly: true, 'x-display': 'hidden' }
+      }
     }
   }
 }

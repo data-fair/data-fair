@@ -6,15 +6,14 @@ const createError = require('http-errors')
 const asyncWrap = require('../utils/async-handler')
 
 exports.readApiKey = async (db, rawApiKey, scope, asAccount, req) => {
-  const hash = crypto.createHash('sha512')
-  hash.update(rawApiKey)
-  const hashedApiKey = hash.digest('hex')
-  const resourceApiKey = req?.resource?.apiKeys?.find(apiKey => apiKey.key === hashedApiKey)
-  if (resourceApiKey) {
-    req.bypassPermissions = resourceApiKey.permissions || { classes: ['read'] }
-    const user = { isApiKey: true, id: 'resourceApiKey:' + resourceApiKey.id, name: resourceApiKey.title }
+  if (req.resource?._readApiKey && (req.resource._readApiKey.current === rawApiKey || req.resource._readApiKey.previous === rawApiKey)) {
+    req.bypassPermissions = { classes: ['read'] }
+    const user = { isApiKey: true, id: 'readApiKey', title: 'Read API key for specifc resource' }
     return user
   } else {
+    const hash = crypto.createHash('sha512')
+    hash.update(rawApiKey)
+    const hashedApiKey = hash.digest('hex')
     const settings = await db.collection('settings')
       .findOne({ 'apiKeys.key': hashedApiKey }, { projection: { _id: 0, id: 1, type: 1, department: 1, name: 1, 'apiKeys.$': 1 } })
     if (!settings) throw createError(401, 'Cette clé d\'API est inconnue.')

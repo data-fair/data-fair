@@ -1,11 +1,9 @@
-const crypto = require('node:crypto')
 const config = /** @type {any} */(require('config'))
 const express = require('express')
 const ajv = require('../misc/utils/ajv')
 const fs = require('fs-extra')
 const path = require('path')
 const moment = require('moment')
-const { nanoid } = require('nanoid')
 const { Counter } = require('prom-client')
 const createError = require('http-errors')
 const pump = require('../misc/utils/pipe')
@@ -37,9 +35,6 @@ const datasetPostSchema = require('../../contract/dataset-post')
 const validatePost = ajv.compile(datasetPostSchema.properties.body)
 const userNotificationSchema = require('../../contract/user-notification')
 const validateUserNotification = ajv.compile(userNotificationSchema)
-const datasetApiKeys = require('../../contract/dataset-api-keys')
-const validateWritableDatasetApiKeys = ajv.compile(datasetApiKeys.writable)
-const validateStoredDatasetApiKeys = ajv.compile(datasetApiKeys.stored)
 const { getThumbnail } = require('../misc/utils/thumbnails')
 const { bulkSearchStreams } = require('./utils/master-data')
 const applicationKey = require('../misc/utils/application-key')
@@ -130,6 +125,7 @@ router.get('/:datasetId/safe-schema', readDataset(), apiKeyMiddleware, applicati
 
 const permissionsWritePublications = permissions.middleware('writePublications', 'admin')
 const permissionsWriteExports = permissions.middleware('writeExports', 'admin')
+const permissionsSetReadApiKey = permissions.middleware('setReadApiKey', 'admin')
 const permissionsWriteDescription = permissions.middleware('writeDescription', 'write')
 const debugBreakingChanges = require('debug')('breaking-changes')
 const descriptionBreakingKeys = ['rest', 'virtual', 'lineOwnership', 'primaryKey', 'projection', 'attachmentsAsImage', 'extensions', 'timeZone', 'slug'] // a change in these properties is considered a breaking change
@@ -167,6 +163,7 @@ router.patch('/:datasetId',
   (req, res, next) => descriptionHasBreakingChanges(req) ? permissionsWriteDescriptionBreaking(req, res, next) : permissionsWriteDescription(req, res, next),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
   (req, res, next) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),
+  (req, res, next) => req.body.readApiKey ? permissionsSetReadApiKey(req, res, next) : next(),
   asyncWrap(async (req, res) => {
     // @ts-ignore
     const dataset = req.dataset
@@ -1112,6 +1109,11 @@ router.get('/:datasetId/thumbnail/:thumbnailId', readDataset(), apiKeyMiddleware
   }
 }))
 
+router.get('/:datasetId/read-api-key', readDataset(), permissions.middleware('getReadApiKey', 'read'), asyncWrap(async (req, res, next) => {
+  if (!req.dataset._readApiKey) return res.status(404).send("dataset doesn't have a read API key")
+  res.send(req.dataset._readApiKey)
+}))
+
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.
 router.get('/:datasetId/_diagnose', readDataset(), cacheHeaders.noCache, asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).type('text/plain').send()
@@ -1148,63 +1150,6 @@ router.delete('/:datasetId/_lock', readDataset(), asyncWrap(async (req, res) => 
   await locks.release(req.app.get('db'), `dataset:${req.dataset.id}`)
   await locks.release(req.app.get('db'), `dataset:slug:${req.dataset.owner.type}:${req.dataset.owner.id}:${req.dataset.slug}`)
   res.status(204).send()
-}))
-
-// keys for readonly access to application
-router.get('/:datasetId/api-keys', readDataset(), permissions.middleware('getApiKeys', 'read'), asyncWrap(async (req, res) => {
-  // @ts-ignore
-  const dataset = req.dataset
-
-  const apiKeys = JSON.parse(JSON.stringify(dataset.apiKeys || []))
-
-  for (const key of apiKeys || []) {
-    delete key.key
-  }
-  res.send(apiKeys || [])
-}))
-router.put('/:datasetId/api-keys', readDataset(), permissions.middleware('setApiKeys', 'admin'), asyncWrap(async (req, res) => {
-  // @ts-ignore
-  const dataset = req.dataset
-
-  validateWritableDatasetApiKeys(req.body)
-
-  // TODO: have a mode where the clear key is preserved and another where it is just shown once ?
-  for (const apiKey of req.body) {
-    const existingApiKey = dataset.apiKeys?.find(k => k.id === apiKey.id)
-    if (!existingApiKey) {
-      apiKey.id = nanoid()
-      const clearKeyParts = [dataset.owner.type.slice(0, 1), dataset.owner.id]
-      if (dataset.owner.department) clearKeyParts.push(dataset.owner.department)
-      clearKeyParts.push(nanoid())
-      apiKey.clearKey = Buffer.from(clearKeyParts.join(':')).toString('base64url')
-      const hash = crypto.createHash('sha512')
-      hash.update(apiKey.clearKey)
-      apiKey.key = hash.digest('hex')
-    } else {
-      apiKey.key = existingApiKey.key
-    }
-    apiKey.permissions = apiKey.permissions || { classes: ['read'] }
-  }
-
-  const returnedApiKeys = req.body.map(apiKey => {
-    const returnedApiKey = { ...apiKey }
-    delete returnedApiKey.key
-    return returnedApiKey
-  })
-
-  const storedApiKeys = req.body.map(apiKey => {
-    const storedApiKey = { ...apiKey }
-    if (!storedApiKey.storeClearKey) delete storedApiKey.clearKey
-    return storedApiKey
-  })
-
-  validateStoredDatasetApiKeys(req.body)
-  await req.app.get('db').collection('datasets').updateOne({ id: dataset.id }, { $set: { apiKeys: storedApiKeys } })
-
-  await import('@data-fair/lib/express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.writeKeys', `wrote dataset level API keys ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
-
-  res.send(returnedApiKeys)
 }))
 
 module.exports = router
