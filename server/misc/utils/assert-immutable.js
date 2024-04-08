@@ -24,9 +24,14 @@ module.exports = (target, label) => {
     get (target, key) {
       if (key === '__isProxy') return true
       if (key === '__proxyTarget') return target
-      return typeof target[key] === 'object' && !(target[key] instanceof Date)
-        ? new Proxy(target[key], proxyHandler)
-        : target[key]
+      if (typeof target[key] === 'object' && !(target[key] instanceof Date)) {
+        try {
+          return new Proxy(target[key], proxyHandler)
+        } catch (err) {
+          console.warn('failed to create object proxy', err)
+        }
+      }
+      return target[key]
     },
     set (target, key, value) {
       throw new MutationError(`Attempt to modify immutable object: ${label} - ${key}`)
