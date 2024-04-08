@@ -185,6 +185,8 @@ fr:
     <li><code>STRPOS(param, recherche)</code><br>retourne la position de la première occurence d'une sous chaîne de caractère.</li>
     <li><code>SUM(param1, param2, ...)</code><br>effectue la somme de tous les paramètres. Les paramètres vides ou qui ne sont pas des nombres seront ignorés.</li>
     <li><code>AVERAGE ou AVG(param1, param2, ...)</code><br>calcule la moyenne de tous les paramètres. Les paramètres vides ou qui ne sont pas des nombres seront ignorés.</li>
+    <li><code>SPLIT(param, séparateur)</code><br>utilise le séparateur pour diviser la chaîne de caractères en paramètre et retourne un tableau.</li>
+    <li><code>JOIN(tableau, séparateur)</code><br>retourne une chaîne de caractère résultat de la concaténation des éléments du tableau en insérant le séparateur entre chaque élément. Le séparateur par défaut est \",\".</li>
     <li><code>MD5(param1, param2, ...)</code><br>calcule une signature MD5 de la liste des paramètres.</li>
   </ul>"
 en:
