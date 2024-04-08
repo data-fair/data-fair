@@ -105,7 +105,7 @@
                   v-if="can('getKeys')"
                   href="#share-links"
                 >
-                  <v-icon>mdi-link</v-icon>&nbsp;&nbsp;{{ $t('protectedLink') }}
+                  <v-icon>mdi-cloud-key</v-icon>&nbsp;&nbsp;{{ $t('protectedLink') }}
                 </v-tab>
 
                 <v-tab

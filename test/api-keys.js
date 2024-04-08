@@ -4,12 +4,7 @@ const assert = require('assert').strict
 describe('API keys', () => {
   it('Reject wrong api key', async () => {
     const ax = await global.ax.builder(null, null, { headers: { 'x-apiKey': 'wrong' } })
-    try {
-      await ax.get('/api/v1/stats')
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 401)
-    }
+    await assert.rejects(ax.get('/api/v1/stats'), { status: 401 })
   })
 
   it('Create and use a User level api key', async () => {
@@ -31,12 +26,7 @@ describe('API keys', () => {
 
     // Wrong scope
     const axKey2 = await global.ax.builder(null, null, { headers: { 'x-apiKey': key2 } })
-    try {
-      await axKey2.get('/api/v1/stats')
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.status, 403)
-    }
+    await assert.rejects(axKey2.get('/api/v1/stats'), { status: 403 })
 
     // Set the correct owner
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', axKey2)

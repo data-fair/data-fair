@@ -14,6 +14,7 @@ const filesUtils = require('./files')
 const storageUtils = require('./storage')
 const dataStreamsUtils = require('./data-streams')
 const schemaUtils = require('./schema')
+const readApiKeyUtils = require('./read-api-key')
 
 exports.filePath = filesUtils.filePath
 exports.dataFiles = filesUtils.dataFiles
@@ -40,6 +41,7 @@ exports.schemasFullyCompatible = schemaUtils.schemasFullyCompatible
 exports.schemasValidationCompatible = schemaUtils.schemasValidationCompatible
 exports.schemaHasValidationRules = schemaUtils.schemaHasValidationRules
 exports.jsonSchema = schemaUtils.jsonSchema
+exports.createReadApiKey = readApiKeyUtils.create
 
 exports.mergeDraft = require('./merge-draft')
 
@@ -186,6 +188,8 @@ exports.clean = (publicUrl, publicationSite, dataset, query = {}, draft = false)
   delete dataset._uniqueRefs
   delete dataset.initFrom
   delete dataset.loaded
+  delete dataset._readApiKey
+
   if (select.includes('-userPermissions')) delete dataset.userPermissions
   if (select.includes('-owner')) delete dataset.owner
 

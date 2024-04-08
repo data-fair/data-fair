@@ -59,6 +59,8 @@ const clean = datasetUtils.clean
 const debugFiles = require('debug')('files')
 const debugLimits = require('debug')('limits')
 
+const apiKeyMiddleware = require('../misc/utils/api-key').middleware('datasets')
+
 router.use((req, res, next) => {
   // @ts-ignore
   req.resourceType = 'datasets'
@@ -66,7 +68,7 @@ router.use((req, res, next) => {
 })
 
 // Get the list of datasets
-router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
+router.get('', apiKeyMiddleware, cacheHeaders.listBased, asyncWrap(async (req, res) => {
   // @ts-ignore
   const publicationSite = req.publicationSite
   // @ts-ignore
@@ -85,7 +87,7 @@ router.use('/:datasetId/permissions', readDataset(), permissions.router('dataset
 }))
 
 // retrieve a dataset by its id
-router.get('/:datasetId', readDataset({ acceptInitialDraft: true }), applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId', readDataset({ acceptInitialDraft: true }), apiKeyMiddleware, applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   // @ts-ignore
   const dataset = clone(req.dataset)
   dataset.userPermissions = permissions.list('datasets', dataset, req.user, req.bypassPermissions)
@@ -108,11 +110,11 @@ const sendSchema = (req, res, schema) => {
   }
   res.status(200).send(schema)
 }
-router.get('/:datasetId/schema', readDataset(), applicationKey, permissions.middleware('readSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/schema', readDataset(), apiKeyMiddleware, applicationKey, permissions.middleware('readSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
   sendSchema(req, res, clone(req.dataset.schema))
 })
 // alternate read schema route that does not return clues about the data (cardinality and enums)
-router.get('/:datasetId/safe-schema', readDataset(), applicationKey, permissions.middleware('readSafeSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/safe-schema', readDataset(), apiKeyMiddleware, applicationKey, permissions.middleware('readSafeSchema', 'read'), cacheHeaders.noCache, (req, res, next) => {
   const schema = clone(req.dataset.schema)
   for (const p of schema) {
     delete p['x-cardinality']
@@ -123,6 +125,7 @@ router.get('/:datasetId/safe-schema', readDataset(), applicationKey, permissions
 
 const permissionsWritePublications = permissions.middleware('writePublications', 'admin')
 const permissionsWriteExports = permissions.middleware('writeExports', 'admin')
+const permissionsSetReadApiKey = permissions.middleware('setReadApiKey', 'admin')
 const permissionsWriteDescription = permissions.middleware('writeDescription', 'write')
 const debugBreakingChanges = require('debug')('breaking-changes')
 const descriptionBreakingKeys = ['rest', 'virtual', 'lineOwnership', 'primaryKey', 'projection', 'attachmentsAsImage', 'extensions', 'timeZone', 'slug'] // a change in these properties is considered a breaking change
@@ -152,6 +155,7 @@ router.patch('/:datasetId',
       }
     }
   }),
+  apiKeyMiddleware,
   lockDataset((/** @type {any} */ patch) => {
     return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)
   }),
@@ -159,6 +163,7 @@ router.patch('/:datasetId',
   (req, res, next) => descriptionHasBreakingChanges(req) ? permissionsWriteDescriptionBreaking(req, res, next) : permissionsWriteDescription(req, res, next),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
   (req, res, next) => req.body.exports ? permissionsWriteExports(req, res, next) : next(),
+  (req, res, next) => req.body.readApiKey ? permissionsSetReadApiKey(req, res, next) : next(),
   asyncWrap(async (req, res) => {
     // @ts-ignore
     const dataset = req.dataset
@@ -195,7 +200,7 @@ router.patch('/:datasetId',
   }))
 
 // Change ownership of a dataset
-router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwner', 'admin'), asyncWrap(async (req, res) => {
+router.put('/:datasetId/owner', readDataset(), apiKeyMiddleware, permissions.middleware('changeOwner', 'admin'), asyncWrap(async (req, res) => {
   // @ts-ignore
   const dataset = req.dataset
 
@@ -261,7 +266,7 @@ router.put('/:datasetId/owner', readDataset(), permissions.middleware('changeOwn
 }))
 
 // Delete a dataset
-router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft: true }), permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
+router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft: true }), apiKeyMiddleware, permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
   // @ts-ignore
   const dataset = req.dataset
   // @ts-ignore
@@ -337,7 +342,7 @@ const createDatasetRoute = asyncWrap(async (req, res) => {
     throw err
   }
 })
-router.post('', checkStorage(true, true), createDatasetRoute)
+router.post('', apiKeyMiddleware, checkStorage(true, true), createDatasetRoute)
 
 const updateDatasetRoute = asyncWrap(async (req, res, next) => {
   // @ts-ignore
@@ -405,11 +410,11 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
   res.status(200).json(clean(publicBaseUrl, publicationSite, dataset))
 })
 
-router.post('/:datasetId', lockDataset(), readDataset({ acceptedStatuses: ['finalized', 'error'], acceptMissing: true }), permissions.middleware('writeData', 'write', null, true), checkStorage(true, true), updateDatasetRoute)
-router.put('/:datasetId', lockDataset(), readDataset({ acceptedStatuses: ['finalized', 'error'], acceptMissing: true }), permissions.middleware('writeData', 'write', null, true), checkStorage(true, true), updateDatasetRoute)
+router.post('/:datasetId', lockDataset(), readDataset({ acceptedStatuses: ['finalized', 'error'], acceptMissing: true }), apiKeyMiddleware, permissions.middleware('writeData', 'write', null, true), checkStorage(true, true), updateDatasetRoute)
+router.put('/:datasetId', lockDataset(), readDataset({ acceptedStatuses: ['finalized', 'error'], acceptMissing: true }), apiKeyMiddleware, permissions.middleware('writeData', 'write', null, true), checkStorage(true, true), updateDatasetRoute)
 
 // validate the draft
-router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], alwaysDraft: true }), permissions.middleware('validateDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
+router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], alwaysDraft: true }), apiKeyMiddleware, permissions.middleware('validateDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
   // @ts-ignore
   const dataset = req.dataset
 
@@ -426,7 +431,7 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
 }))
 
 // cancel the draft
-router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'finalized', 'error'], alwaysDraft: true }), permissions.middleware('cancelDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
+router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'finalized', 'error'], alwaysDraft: true }), apiKeyMiddleware, permissions.middleware('cancelDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
   // @ts-ignore
   const dataset = req.dataset
   // @ts-ignore
@@ -462,16 +467,16 @@ function isRest (req, res, next) {
 }
 
 const readWritableDataset = readDataset({ acceptedStatuses: ['finalized', 'updated', 'extended-updated', 'indexed', 'error'] })
-router.get('/:datasetId/lines/:lineId', readDataset(), isRest, permissions.middleware('readLine', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
-router.post('/:datasetId/lines', readWritableDataset, isRest, applicationKey, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createOrUpdateLine))
-router.put('/:datasetId/lines/:lineId', readWritableDataset, isRest, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createOrUpdateLine))
-router.patch('/:datasetId/lines/:lineId', readWritableDataset, isRest, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.patchLine))
-router.post('/:datasetId/_bulk_lines', readWritableDataset, isRest, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
-router.delete('/:datasetId/lines/:lineId', readWritableDataset, isRest, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
-router.get('/:datasetId/lines/:lineId/revisions', readWritableDataset, isRest, permissions.middleware('readLineRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
-router.get('/:datasetId/revisions', readWritableDataset, isRest, permissions.middleware('readRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
-router.delete('/:datasetId/lines', readWritableDataset, isRest, permissions.middleware('deleteAllLines', 'write'), asyncWrap(restDatasetsUtils.deleteAllLines))
-router.post('/:datasetId/_sync_attachments_lines', readWritableDataset, isRest, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), asyncWrap(restDatasetsUtils.syncAttachmentsLines))
+router.get('/:datasetId/lines/:lineId', readDataset(), isRest, apiKeyMiddleware, permissions.middleware('readLine', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
+router.post('/:datasetId/lines', readWritableDataset, isRest, applicationKey, apiKeyMiddleware, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createOrUpdateLine))
+router.put('/:datasetId/lines/:lineId', readWritableDataset, isRest, apiKeyMiddleware, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createOrUpdateLine))
+router.patch('/:datasetId/lines/:lineId', readWritableDataset, isRest, apiKeyMiddleware, permissions.middleware('patchLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.patchLine))
+router.post('/:datasetId/_bulk_lines', readWritableDataset, isRest, apiKeyMiddleware, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
+router.delete('/:datasetId/lines/:lineId', readWritableDataset, isRest, apiKeyMiddleware, permissions.middleware('deleteLine', 'write'), asyncWrap(restDatasetsUtils.deleteLine))
+router.get('/:datasetId/lines/:lineId/revisions', readWritableDataset, isRest, apiKeyMiddleware, permissions.middleware('readLineRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
+router.get('/:datasetId/revisions', readWritableDataset, isRest, apiKeyMiddleware, permissions.middleware('readRevisions', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
+router.delete('/:datasetId/lines', readWritableDataset, isRest, apiKeyMiddleware, permissions.middleware('deleteAllLines', 'write'), asyncWrap(restDatasetsUtils.deleteAllLines))
+router.post('/:datasetId/_sync_attachments_lines', readWritableDataset, isRest, apiKeyMiddleware, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), asyncWrap(restDatasetsUtils.syncAttachmentsLines))
 
 // specific routes with rest datasets with lineOwnership activated
 router.use('/:datasetId/own/:owner', readWritableDataset, isRest, (req, res, next) => {
@@ -505,7 +510,7 @@ router.get('/:datasetId/own/:owner/lines/:lineId/revisions', readWritableDataset
 router.get('/:datasetId/own/:owner/revisions', readWritableDataset, isRest, applicationKey, permissions.middleware('readOwnRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
 
 // Specific routes for datasets with masterData functionalities enabled
-router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset({ fillDescendants: true }), permissions.middleware('readLines', 'read', 'readDataAPI'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset({ fillDescendants: true }), apiKeyMiddleware, permissions.middleware('readLines', 'read', 'readDataAPI'), asyncWrap(async (req, res) => {
   const singleSearch = req.dataset.masterData && req.dataset.masterData.singleSearchs && req.dataset.masterData.singleSearchs.find(ss => ss.id === req.params.singleSearchId)
   if (!singleSearch) return res.status(404).send(`Recherche unitaire "${req.params.singleSearchId}" inconnue`)
 
@@ -529,7 +534,7 @@ router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset
   }
   res.send(result)
 }))
-router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset({ fillDescendants: true }), permissions.middleware('bulkSearch', 'read'), asyncWrap(async (req, res) => {
+router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset({ fillDescendants: true }), apiKeyMiddleware, permissions.middleware('bulkSearch', 'read'), asyncWrap(async (req, res) => {
   // no buffering of this response in the reverse proxy
   res.setHeader('X-Accel-Buffering', 'no')
   await pump(
@@ -771,11 +776,11 @@ const readLines = asyncWrap(async (req, res) => {
 
   res.status(200).send(result)
 })
-router.get('/:datasetId/lines', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('readLines', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), readLines)
-router.get('/:datasetId/own/:owner/lines', readDataset({ fillDescendants: true }), isRest, applicationKey, permissions.middleware('readOwnLines', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, readLines)
+router.get('/:datasetId/lines', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('readLines', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), readLines)
+router.get('/:datasetId/own/:owner/lines', readDataset({ fillDescendants: true }), isRest, applicationKey, apiKeyMiddleware, permissions.middleware('readOwnLines', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, readLines)
 
 // Special geo aggregation
-router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('getGeoAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('getGeoAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
   res.throttleEnd()
   const db = req.app.get('db')
 
@@ -820,7 +825,7 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
 }))
 
 // Standard aggregation to group items by value and perform an optional metric calculation on each group
-router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('getValuesAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('getValuesAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
   res.throttleEnd()
   const db = req.app.get('db')
 
@@ -867,7 +872,7 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
 
 // Simpler values list and filter (q is applied only to the selected field, not all fields)
 // mostly useful for selects/autocompletes on values
-router.get('/:datasetId/values/:fieldKey', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('getValues', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/values/:fieldKey', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('getValues', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
   res.throttleEnd()
   let result
   try {
@@ -879,7 +884,7 @@ router.get('/:datasetId/values/:fieldKey', readDataset({ fillDescendants: true }
 }))
 
 // Simple metric aggregation to calculate 1 value (sum, avg, etc.) about 1 column
-router.get('/:datasetId/metric_agg', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('getMetricAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/metric_agg', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('getMetricAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
   res.throttleEnd()
   let result
   try {
@@ -891,7 +896,7 @@ router.get('/:datasetId/metric_agg', readDataset({ fillDescendants: true }), app
 }))
 
 // Simple metric aggregation to calculate some basic values about a list of columns
-router.get('/:datasetId/simple_metrics_agg', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('getSimpleMetricsAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/simple_metrics_agg', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('getSimpleMetricsAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
   res.throttleEnd()
   let result
   try {
@@ -903,7 +908,7 @@ router.get('/:datasetId/simple_metrics_agg', readDataset({ fillDescendants: true
 }))
 
 // Simple words aggregation for significant terms extraction
-router.get('/:datasetId/words_agg', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('getWordsAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/words_agg', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('getWordsAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
   res.throttleEnd()
   let result
   try {
@@ -916,7 +921,7 @@ router.get('/:datasetId/words_agg', readDataset({ fillDescendants: true }), appl
 
 // DEPRECATED, replaced by metric_agg
 // Get max value of a field
-router.get('/:datasetId/max/:fieldKey', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('getMaxAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/max/:fieldKey', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('getMaxAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
   let result
   try {
     result = await esUtils.maxAgg(req.app.get('es'), req.dataset, req.params.fieldKey, req.query)
@@ -928,7 +933,7 @@ router.get('/:datasetId/max/:fieldKey', readDataset({ fillDescendants: true }), 
 
 // DEPRECATED, replaced by metric_agg
 // Get min value of a field
-router.get('/:datasetId/min/:fieldKey', readDataset({ fillDescendants: true }), applicationKey, permissions.middleware('getMinAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
+router.get('/:datasetId/min/:fieldKey', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('getMinAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), asyncWrap(async (req, res) => {
   let result
   try {
     result = await esUtils.minAgg(req.app.get('es'), req.dataset, req.params.fieldKey, req.query)
@@ -939,7 +944,7 @@ router.get('/:datasetId/min/:fieldKey', readDataset({ fillDescendants: true }), 
 }))
 
 // For datasets with attached files
-router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissions.middleware('downloadAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/attachments/*', readDataset(), applicationKey, apiKeyMiddleware, permissions.middleware('downloadAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   res.download(
     req.params['0'],
@@ -952,22 +957,22 @@ router.get('/:datasetId/attachments/*', readDataset(), applicationKey, permissio
 })
 
 // Direct access to data files
-router.get('/:datasetId/data-files', readDataset(), permissions.middleware('listDataFiles', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
+router.get('/:datasetId/data-files', readDataset(), apiKeyMiddleware, permissions.middleware('listDataFiles', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   res.send(await datasetUtils.dataFiles(req.dataset, req.publicBaseUrl))
 }))
-router.get('/:datasetId/data-files/*', readDataset(), permissions.middleware('downloadDataFile', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
+router.get('/:datasetId/data-files/*', readDataset(), apiKeyMiddleware, permissions.middleware('downloadDataFile', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   res.download(req.params['0'], null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
 }))
 
 // Special attachments referenced in dataset metadatas
-router.post('/:datasetId/metadata-attachments', readDataset(), permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, asyncWrap(async (req, res, next) => {
+router.post('/:datasetId/metadata-attachments', readDataset(), apiKeyMiddleware, permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, asyncWrap(async (req, res, next) => {
   req.body.size = (await fs.promises.stat(req.file.path)).size
   req.body.updatedAt = moment().toISOString()
   await datasetUtils.updateStorage(req.app, req.dataset)
   res.status(200).send(req.body)
 }))
-router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('downloadMetadataAttachment', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/metadata-attachments/*', readDataset(), apiKeyMiddleware, permissions.middleware('downloadMetadataAttachment', 'read'), cacheHeaders.noCache, (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   // res.set('content-disposition', `inline; filename="${req.params['0']}"`)
   res.sendFile(
@@ -980,7 +985,7 @@ router.get('/:datasetId/metadata-attachments/*', readDataset(), permissions.midd
   )
   // res.sendFile(req.params[0])
 })
-router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.middleware('deleteMetadataAttachment', 'write'), asyncWrap(async (req, res, next) => {
+router.delete('/:datasetId/metadata-attachments/*', readDataset(), apiKeyMiddleware, permissions.middleware('deleteMetadataAttachment', 'write'), asyncWrap(async (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).type('text/plain').send('Unacceptable attachment path')
   await fs.remove(datasetUtils.metadataAttachmentPath(req.dataset, filePath))
@@ -989,7 +994,7 @@ router.delete('/:datasetId/metadata-attachments/*', readDataset(), permissions.m
 }))
 
 // Download the full dataset in its original form
-router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
+router.get('/:datasetId/raw', readDataset(), apiKeyMiddleware, permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   // a special case for superadmins.. handy but quite dangerous for the db load
   if (req.dataset.isRest && req.user.adminMode) {
     req.query.select = req.query.select || ['_id'].concat(req.dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)).join(',')
@@ -1009,7 +1014,7 @@ router.get('/:datasetId/raw', readDataset(), permissions.middleware('downloadOri
 }))
 
 // Download the dataset in various formats
-router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/convert', readDataset(), apiKeyMiddleware, permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
   if (!req.dataset.file) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
 
   // the transform stream option was patched into "send" module using patch-package
@@ -1018,7 +1023,7 @@ router.get('/:datasetId/convert', readDataset(), permissions.middleware('downloa
 
 // Download the full dataset with extensions
 // TODO use ES scroll functionality instead of file read + extensions
-router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFullData', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
+router.get('/:datasetId/full', readDataset(), apiKeyMiddleware, permissions.middleware('downloadFullData', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   if (await fs.pathExists(datasetUtils.fullFilePath(req.dataset))) {
     res.download(datasetUtils.fullFileName(req.dataset), null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
@@ -1027,19 +1032,19 @@ router.get('/:datasetId/full', readDataset(), permissions.middleware('downloadFu
   }
 }))
 
-router.get('/:datasetId/api-docs.json', readDataset(), permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
+router.get('/:datasetId/api-docs.json', readDataset(), apiKeyMiddleware, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
   const settings = await req.app.get('db').collection('settings')
     .findOne({ type: req.dataset.owner.type, id: req.dataset.owner.id }, { projection: { info: 1 } })
   res.send(datasetAPIDocs(req.dataset, req.publicBaseUrl, (settings && settings.info) || {}, req.publicationSite).api)
 }))
 
-router.get('/:datasetId/private-api-docs.json', readDataset(), permissions.middleware('readPrivateApiDoc', 'readAdvanced'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
+router.get('/:datasetId/private-api-docs.json', readDataset(), apiKeyMiddleware, permissions.middleware('readPrivateApiDoc', 'readAdvanced'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const settings = await req.app.get('db').collection('settings')
     .findOne({ type: req.dataset.owner.type, id: req.dataset.owner.id }, { projection: { info: 1 } })
   res.send(privateDatasetAPIDocs(req.dataset, req.publicBaseUrl, req.user, (settings && settings.info) || {}))
 }))
 
-router.get('/:datasetId/journal', readDataset(), permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
+router.get('/:datasetId/journal', readDataset(), apiKeyMiddleware, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({
     type: 'dataset',
     id: req.dataset.id,
@@ -1060,6 +1065,7 @@ const sendUserNotificationPublicPermissions = permissions.middleware('sendUserNo
 router.post(
   '/:datasetId/user-notification',
   readDataset(),
+  apiKeyMiddleware,
   (req, res, next) => req.body.visibility === 'public' ? sendUserNotificationPublicPermissions(req, res, next) : sendUserNotificationPermissions(req, res, next),
   asyncWrap(async (req, res, next) => {
     const userNotification = req.body
@@ -1085,11 +1091,11 @@ router.post(
   })
 )
 
-router.get('/:datasetId/thumbnail', readDataset(), permissions.middleware('readDescription', 'read'), asyncWrap(async (req, res, next) => {
+router.get('/:datasetId/thumbnail', readDataset(), apiKeyMiddleware, permissions.middleware('readDescription', 'read'), asyncWrap(async (req, res, next) => {
   if (!req.dataset.image) return res.status(404).send("dataset doesn't have an image")
   await getThumbnail(req, res, req.dataset.image)
 }))
-router.get('/:datasetId/thumbnail/:thumbnailId', readDataset(), permissions.middleware('readLines', 'read'), asyncWrap(async (req, res, next) => {
+router.get('/:datasetId/thumbnail/:thumbnailId', readDataset(), apiKeyMiddleware, permissions.middleware('readLines', 'read'), asyncWrap(async (req, res, next) => {
   const url = Buffer.from(req.params.thumbnailId, 'hex').toString()
   if (req.dataset.attachmentsAsImage && url.startsWith('/attachments/')) {
     await getThumbnail(req, res, `${config.publicUrl}/api/v1/datasets/${req.dataset.id}${url}`, datasetUtils.attachmentPath(req.dataset, url.replace('/attachments/', '')), req.dataset.thumbnails)
@@ -1101,6 +1107,11 @@ router.get('/:datasetId/thumbnail/:thumbnailId', readDataset(), permissions.midd
     if (!count) return res.status(404).send('thumbnail does not match a URL from this dataset')
     await getThumbnail(req, res, url, null, req.dataset.thumbnails)
   }
+}))
+
+router.get('/:datasetId/read-api-key', readDataset(), permissions.middleware('getReadApiKey', 'read'), asyncWrap(async (req, res, next) => {
+  if (!req.dataset._readApiKey) return res.status(404).send("dataset doesn't have a read API key")
+  res.send(req.dataset._readApiKey)
 }))
 
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.

@@ -159,7 +159,7 @@ if (config.mode.includes('server')) {
   app.use('/api/v1/catalogs', apiKey('catalogs'), require('./catalogs/router'))
   app.use('/api/v1/base-applications', require('./base-applications/router').router)
   app.use('/api/v1/applications', apiKey('applications'), require('./applications/router'))
-  app.use('/api/v1/datasets', rateLimiting.middleware(), apiKey('datasets'), require('./datasets/router'))
+  app.use('/api/v1/datasets', rateLimiting.middleware(), require('./datasets/router'))
   app.use('/api/v1/stats', apiKey('stats'), require('./misc/routers/stats'))
   app.use('/api/v1/settings', require('./misc/routers/settings'))
   app.use('/api/v1/admin', require('./misc/routers/admin'))
