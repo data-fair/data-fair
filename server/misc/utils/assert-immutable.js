@@ -28,7 +28,7 @@ module.exports = (target, label) => {
         try {
           return new Proxy(target[key], proxyHandler)
         } catch (err) {
-          console.warn('failed to create object proxy', err)
+          console.warn(`failed to create object proxy for key ${key}`, target[key], err)
         }
       }
       return target[key]
