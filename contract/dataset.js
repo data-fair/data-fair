@@ -351,6 +351,24 @@ module.exports = {
               title: 'URL'
             }
           }
+        }, {
+          title: 'Fichier récupéré depuis une URL',
+          required: ['name'],
+          properties: {
+            type: {
+              title: 'Type de pièce jointe',
+              const: 'remoteFile'
+            },
+            name: {
+              type: 'string',
+              title: 'Nom du fichier'
+            },
+            targetUrl: {
+              type: 'string',
+              title: 'URL de téléchargement',
+              description: 'Cette URL n\'est pas consultable après écriture. Elle est utilisée pour télécharger le fichier depuis un service distant et peut contenir un secret.'
+            }
+          }
         }]
       }
     },

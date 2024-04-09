@@ -342,6 +342,14 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
         mime: attachment.mimetype
       })
     }
+    if (attachment.type === 'remoteFile') {
+      resources.push({
+        title: attachment.title,
+        description: attachment.description,
+        url: `${catalog.dataFairBaseUrl || config.publicUrl}/api/v1/datasets/${dataset.id}/metadata-attachments/${attachment.name}`,
+        filetype: 'remote'
+      })
+    }
   }
 
   const udataDataset = {

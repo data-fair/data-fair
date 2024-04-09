@@ -15,7 +15,7 @@ describe('REST datasets with auto-initialization', () => {
     attachmentForm.append('attachment', fs.readFileSync('./test/resources/avatar.jpeg'), 'avatar.jpeg')
     await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
 
-    await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'A description', attachments: [{ name: 'avatar.jpeg', title: 'Avatar' }] })
+    await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'A description', attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
 
     const res = await ax.post('/api/v1/datasets', {
       isRest: true,

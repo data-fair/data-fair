@@ -1,4 +1,5 @@
 const config = /** @type {any} */(require('config'))
+const { text: stream2text } = require('node:stream/consumers')
 const express = require('express')
 const ajv = require('../misc/utils/ajv')
 const fs = require('fs-extra')
@@ -12,6 +13,7 @@ const i18n = require('i18n')
 const sanitizeHtml = require('../../shared/sanitize-html')
 const LinkHeader = require('http-link-header')
 const journals = require('../misc/utils/journals')
+const axios = require('../misc/utils/axios')
 const esUtils = require('./es')
 const uploadUtils = require('./utils/upload')
 const datasetAPIDocs = require('../../contract/dataset-api-docs')
@@ -972,9 +974,56 @@ router.post('/:datasetId/metadata-attachments', readDataset(), apiKeyMiddleware,
   await datasetUtils.updateStorage(req.app, req.dataset)
   res.status(200).send(req.body)
 }))
-router.get('/:datasetId/metadata-attachments/*', readDataset(), apiKeyMiddleware, permissions.middleware('downloadMetadataAttachment', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId/metadata-attachments/*', readDataset(), apiKeyMiddleware, permissions.middleware('downloadMetadataAttachment', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   // res.set('content-disposition', `inline; filename="${req.params['0']}"`)
+
+  const attachmentsTargets = clone(req.dataset._attachmentsTargets || [])
+  const attachmentTarget = attachmentsTargets.find(a => a.name === req.params[0])
+  if (attachmentTarget) {
+    if (attachmentTarget.fetchedAt && attachmentTarget.fetchedAt.getTime() + config.remoteAttachmentCacheDuration > Date.now()) {
+      res.set('x-remote-status', 'CACHE')
+    } else {
+      const headers = {}
+      if (attachmentTarget.etag) headers['If-None-Match'] = attachmentTarget.etag
+      if (attachmentTarget.lastModified) headers['If-Modified-Since'] = attachmentTarget.lastModified
+      const response = await axios.get(attachmentTarget.targetUrl, {
+        responseType: 'stream',
+        headers,
+        validateStatus: function (status) {
+          return status === 200 || status === 304
+        }
+      })
+      if (response.status !== 200 && response.status !== 304) {
+        let message = `${response.status} - ${response.statusText}`
+        if (response.headers['content-type']?.startsWith('text/plain')) {
+          const data = await stream2text(response.data)
+          if (data) message = data
+        }
+        throw createError('Échec de téléchargement du fichier : ' + message)
+      }
+
+      if (response.status === 304) {
+        // nothing to do
+        res.set('x-remote-status', 'NOTMODIFIED')
+        await stream2text(response.data)
+      } else {
+        res.set('x-remote-status', 'DOWNLOAD')
+        const attachmentPath = datasetUtils.metadataAttachmentPath(req.dataset, req.params['0'])
+        // creating empty file before streaming seems to fix some weird bugs with NFS
+        await fs.ensureFile(attachmentPath)
+        await pump(
+          response.data,
+          fs.createWriteStream(attachmentPath)
+        )
+        attachmentTarget.etag = response.headers.etag
+        attachmentTarget.lastModified = response.headers['last-modified']
+        attachmentTarget.fetchedAt = new Date()
+        await req.app.get('db').collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _attachmentsTargets: attachmentsTargets } })
+      }
+    }
+  }
+
   res.sendFile(
     req.params['0'],
     {
@@ -984,7 +1033,8 @@ router.get('/:datasetId/metadata-attachments/*', readDataset(), apiKeyMiddleware
     }
   )
   // res.sendFile(req.params[0])
-})
+}))
+
 router.delete('/:datasetId/metadata-attachments/*', readDataset(), apiKeyMiddleware, permissions.middleware('deleteMetadataAttachment', 'write'), asyncWrap(async (req, res, next) => {
   const filePath = req.params['0']
   if (filePath.includes('..')) return res.status(400).type('text/plain').send('Unacceptable attachment path')

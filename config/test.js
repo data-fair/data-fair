@@ -103,5 +103,6 @@ module.exports = {
     active: false,
     dataDir: '/data/data-fair/test'
   },
-  assertImmutable: true
+  assertImmutable: true,
+  remoteAttachmentCacheDuration: 1000
 }

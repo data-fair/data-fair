@@ -55,6 +55,25 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
     patch.loaded.attachments = true
   }
 
+  if (patch.attachments) {
+    patch._attachmentsTargets = []
+    for (const attachment of patch.attachments) {
+      if (attachment.type === 'remoteFile') {
+        if (attachment.targetUrl) {
+          patch._attachmentsTargets.push({ ...attachment })
+          delete attachment.targetUrl
+        } else {
+          const existingAttachmentTarget = dataset._attachmentsTargets?.find(a => a.name === attachment.name)
+          if (!existingAttachmentTarget) {
+            throw createError(400, `Impossible de créer la pièce jointe ${attachment.name} sans URL cible`)
+          }
+          const attachmentTarget = { ...existingAttachmentTarget, ...attachment }
+          patch._attachmentsTargets.push(attachmentTarget)
+        }
+      }
+    }
+  }
+
   // Ignore patch that doesn't bring actual change
   for (const patchKey of Object.keys(patch)) {
     if (stableStringify(patch[patchKey]) === stableStringify(dataset[patchKey])) { delete patch[patchKey] }

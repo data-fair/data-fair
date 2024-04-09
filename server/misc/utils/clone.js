@@ -7,5 +7,5 @@ const clone = rfdc()
  * @returns {T}
  */
 module.exports = (obj) => {
-  return clone(obj.__isProxy ? obj.__proxyTarget : obj)
+  return clone(obj?.__isProxy ? obj.__proxyTarget : obj)
 }

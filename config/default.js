@@ -342,5 +342,6 @@ module.exports = {
     port: 3310,
     dataDir: '/data/data-fair'
   },
-  assertImmutable: false
+  assertImmutable: false,
+  remoteAttachmentCacheDuration: 1000 * 30
 }
