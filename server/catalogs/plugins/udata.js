@@ -12,6 +12,7 @@ exports.optionalCapabilities = [
   'searchOrganizations',
   'publishDataset',
   'publishApplication',
+  'publishDatasetAttachments',
   'listDatasets'
 ]
 
@@ -318,6 +319,28 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
         filesize: dataset.file.size,
         mime: dataset.file.mimetype,
         format: fileFormat
+      })
+    }
+  }
+
+  for (const attachment of dataset.attachments || []) {
+    if (!attachment.includeInCatalogPublications) continue
+    console.log(attachment)
+    if (attachment.type === 'url') {
+      resources.push({
+        title: attachment.title,
+        description: attachment.description,
+        url: attachment.url
+      })
+    }
+    if (attachment.type === 'file') {
+      resources.push({
+        title: attachment.title,
+        description: attachment.description,
+        url: `${catalog.dataFairBaseUrl || config.publicUrl}/api/v1/datasets/${dataset.id}/metadata-attachments/${attachment.name}`,
+        filetype: 'remote',
+        filesize: attachment.size,
+        mime: attachment.mimetype
       })
     }
   }

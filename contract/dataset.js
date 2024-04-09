@@ -295,6 +295,11 @@ module.exports = {
             type: 'string',
             title: 'Description',
             'x-display': 'markdown'
+          },
+          includeInCatalogPublications: {
+            type: 'boolean',
+            title: 'Inclure dans les publications sur catalogue',
+            default: false
           }
         },
         oneOf: [{

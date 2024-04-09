@@ -38,7 +38,7 @@ services:
     ports:
       - 27017:27017
     volumes:
-      - mongo-data:/data/db
+      - ./data/mongo-data:/data/db
 
   sd:
     profiles:
@@ -122,7 +122,7 @@ services:
         test: ["CMD", "nc", "-z", "-v", "localhost", "3310"]
     volumes:
       - ./data:/data/data-fair
-      - clamav-data:/var/lib/clamav
+      - ./data/clamav:/var/lib/clamav
     environment:
       - CLAMAV_NO_FRESHCLAMD=true
       - CLAMAV_NO_MILTERD=true
@@ -134,7 +134,7 @@ services:
     profiles:
       - udata
     volumes:
-      - redis-data:/data
+      - ./data/redis-data:/data
     ports:
     - 6379:6379
 
@@ -145,6 +145,7 @@ services:
     # udata user create
     # udata user set-admin alban83@gmail.com
     image: udata/udata
+    # exposed on port 7000
     network_mode: host
     profiles:
       - udata
@@ -152,12 +153,8 @@ services:
       - mongodb
       - redis
     volumes:
-      - udata-fs:/udata/fs
+      - ./data/udata-fs:/udata/fs
       - ./test/resources/udata.cfg:/udata/udata.cfg
 
 volumes:
   elasticsearch-data:
-  mongo-data:
-  udata-fs:
-  redis-data:
-  clamav-data:

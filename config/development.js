@@ -79,5 +79,8 @@ module.exports = {
     active: true,
     dataDir: '/data/data-fair/development'
   },
-  assertImmutable: true
+  assertImmutable: true,
+  agentkeepaliveOptions: {
+    keepAlive: false
+  }
 }
