@@ -339,7 +339,8 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
         url: `${catalog.dataFairBaseUrl || config.publicUrl}/api/v1/datasets/${dataset.id}/metadata-attachments/${attachment.name}`,
         filetype: 'remote',
         filesize: attachment.size,
-        mime: attachment.mimetype
+        mime: attachment.mimetype,
+        format: attachment.name.split('.').pop()
       })
     }
     if (attachment.type === 'remoteFile') {
@@ -347,7 +348,8 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
         title: attachment.title,
         description: attachment.description,
         url: `${catalog.dataFairBaseUrl || config.publicUrl}/api/v1/datasets/${dataset.id}/metadata-attachments/${attachment.name}`,
-        filetype: 'remote'
+        filetype: 'remote',
+        format: attachment.name.split('.').pop()
       })
     }
   }
