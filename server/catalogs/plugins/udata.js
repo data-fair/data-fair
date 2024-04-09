@@ -325,7 +325,6 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
 
   for (const attachment of dataset.attachments || []) {
     if (!attachment.includeInCatalogPublications) continue
-    console.log(attachment)
     if (attachment.type === 'url') {
       resources.push({
         title: attachment.title,
