@@ -362,7 +362,10 @@ module.exports = {
             name: {
               type: 'string',
               title: 'Nom du fichier',
-              description: 'Ce nom doit contenir l\'extension qui doit correspondre au format du fichier téléchargé.'
+              description: 'Ce nom doit contenir l\'extension qui doit correspondre au format du fichier téléchargé.',
+              'x-rules': [
+                'hasExtension'
+              ]
             },
             targetUrl: {
               type: 'string',

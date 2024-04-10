@@ -112,7 +112,13 @@ export default {
   props: ['value', 'index'],
   data: () => ({
     vjsfOptions: {
-      easyMDEOptions: { minHeight: '100px' }
+      easyMDEOptions: { minHeight: '100px' },
+      rules: {
+        hasExtension: (value) => {
+          if (!value) return true
+          return value.split('.').length > 1 || 'Le nom du fichier doit contenir une extension'
+        }
+      }
     },
     dialog: false,
     file: null,
