@@ -38,7 +38,7 @@ services:
     ports:
       - 27017:27017
     volumes:
-      - ./data/mongo-data:/data/db
+      - mongo-data:/data/db
 
   sd:
     profiles:
@@ -122,7 +122,7 @@ services:
         test: ["CMD", "nc", "-z", "-v", "localhost", "3310"]
     volumes:
       - ./data:/data/data-fair
-      - ./data/clamav:/var/lib/clamav
+      - clamav-data:/var/lib/clamav
     environment:
       - CLAMAV_NO_FRESHCLAMD=true
       - CLAMAV_NO_MILTERD=true
@@ -134,7 +134,7 @@ services:
     profiles:
       - udata
     volumes:
-      - ./data/redis-data:/data
+      - redis-data:/data
     ports:
     - 6379:6379
 
@@ -153,8 +153,12 @@ services:
       - mongodb
       - redis
     volumes:
-      - ./data/udata-fs:/udata/fs
+      - udata-fs:/udata/fs
       - ./test/resources/udata.cfg:/udata/udata.cfg
 
 volumes:
   elasticsearch-data:
+  mongo-data:
+  udata-fs:
+  redis-data:
+  clamav-data:
