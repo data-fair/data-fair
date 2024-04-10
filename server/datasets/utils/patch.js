@@ -1,4 +1,5 @@
 const config = /** @type {any} */(require('config'))
+const path = require('node:path')
 const stableStringify = require('json-stable-stringify')
 const moment = require('moment')
 const createError = require('http-errors')
@@ -60,8 +61,9 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
     patch._attachmentsTargets = []
     for (const attachment of patch.attachments) {
       if (['file', 'remoteFile'].includes(attachment.type) && attachment.name && !attachment.mimetype) {
-        attachment.mimetype = mime.lookup(attachment.name)
-        if (!attachment.mimetype) throw createError(400, `Impossible de déterminer le type MIME de la pièce jointe ${attachment.name}`)
+        if (!path.extname(attachment.name)) throw createError(400, `Le nom de fichier de la pièce jointe ${attachment.name} ne contient pas d'extension.`)
+        const mimetype = mime.lookup(attachment.name)
+        if (mimetype) attachment.mimetype = mimetype
       }
       if (attachment.type === 'remoteFile') {
         if (attachment.targetUrl) {
