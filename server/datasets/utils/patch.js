@@ -2,6 +2,7 @@ const config = /** @type {any} */(require('config'))
 const stableStringify = require('json-stable-stringify')
 const moment = require('moment')
 const createError = require('http-errors')
+const mime = require('mime')
 const CronJob = require('cron').CronJob
 const geo = require('./geo')
 const ajv = require('../../misc/utils/ajv')
@@ -58,6 +59,9 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
   if (patch.attachments) {
     patch._attachmentsTargets = []
     for (const attachment of patch.attachments) {
+      if (['file', 'remoteFile'].includes(attachment.type) && attachment.name && !attachment.mimetype) {
+        attachment.mimetype = mime.lookup(attachment.name)
+      }
       if (attachment.type === 'remoteFile') {
         if (attachment.targetUrl) {
           patch._attachmentsTargets.push({ ...attachment })

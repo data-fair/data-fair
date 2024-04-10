@@ -23,7 +23,6 @@ describe('Datasets with metadata attachments', () => {
     const downloadAttachmentRes = await ax.get('/api/v1/datasets/attachments1/metadata-attachments/avatar.jpeg')
     assert.equal(downloadAttachmentRes.status, 200)
     assert.equal(downloadAttachmentRes.headers['content-type'], 'image/jpeg')
-    console.log(downloadAttachmentRes.headers)
     assert.ok(downloadAttachmentRes.headers['last-modified'])
     await assert.rejects(ax.get('/api/v1/datasets/attachments1/metadata-attachments/avatar.jpeg', { headers: { 'If-Modified-Since': downloadAttachmentRes.headers['last-modified'] } }), { status: 304 })
   })
@@ -33,7 +32,9 @@ describe('Datasets with metadata attachments', () => {
     await ax.put('/api/v1/datasets/attachments2', { isRest: true, title: 'attachments2' })
     await workers.hook('finalizer/attachments2')
 
-    await ax.patch('/api/v1/datasets/attachments2', { attachments: [{ type: 'remoteFile', name: 'logo-square.png', title: 'Avatar', targetUrl: 'https://koumoul.com/static/logo-square.png' }] })
+    const patchRes = await ax.patch('/api/v1/datasets/attachments2', { attachments: [{ type: 'remoteFile', name: 'logo-square.png', title: 'Avatar', targetUrl: 'https://koumoul.com/static/logo-square.png' }] })
+    assert.equal(patchRes.data.attachments[0].mimetype, 'image/png')
+    assert.ok(!patchRes.data.attachments[0].targetUrl)
 
     const downloadAttachmentRes = await ax.get('/api/v1/datasets/attachments2/metadata-attachments/logo-square.png')
     assert.equal(downloadAttachmentRes.status, 200)
