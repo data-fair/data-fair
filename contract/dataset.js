@@ -361,12 +361,13 @@ module.exports = {
             },
             name: {
               type: 'string',
-              title: 'Nom du fichier'
+              title: 'Nom du fichier',
+              description: 'Ce nom doit contenir l\'extension qui doit correspondre au format du fichier téléchargé.'
             },
             targetUrl: {
               type: 'string',
               title: 'URL de téléchargement',
-              description: 'Cette URL n\'est pas consultable après écriture. Elle est utilisée pour télécharger le fichier depuis un service distant et peut contenir un secret.'
+              description: 'Cette URL n\'est pas consultable après écriture. Elle est utilisée pour télécharger le fichier depuis un service distant et peut contenir un secret. Vous pouvez la laisser vide quand vous modifiez les autres informations, mais vous devez la renseigner de nouveau si vous changez le nom de fichier.'
             }
           }
         }]
