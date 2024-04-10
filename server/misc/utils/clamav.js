@@ -41,7 +41,6 @@ exports.checkFiles = async (files, user) => {
   for (const file of files || []) {
     const remotePath = path.join(config.clamav.dataDir, path.relative(config.dataDir, file.path))
     const result = await runCommand(`SCAN ${remotePath}`)
-    console.log(result)
     if (result.endsWith('OK')) continue
     if (result.endsWith('ERROR')) throw createError('failure while applying antivirus ' + result.slice(0, -6))
     if (result.endsWith('FOUND')) {

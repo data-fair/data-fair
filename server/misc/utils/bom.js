@@ -16,7 +16,6 @@ exports.hasBOM = function (buffer) {
 exports.removeBOM = function (buffer) {
   // multiple strip BOM because of badly formatted files from some clients
   while (exports.hasBOM(buffer)) {
-    console.log('REMOVE 1 BOM')
     buffer = buffer.slice(3)
   }
   return buffer
