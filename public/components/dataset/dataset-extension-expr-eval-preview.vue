@@ -181,8 +181,8 @@ fr:
     <li><code>LOWER(param)</code><br>passe une chaîne de caractère en minuscule.</li>
     <li><code>SUBSTRING(param, debut, longueur)</code><br>extrait une sous chaîne de caractère en spécifiant la position de début (commence à 0) et la longueur (la longueur est un paramètre optionnel).</li>
     <li><code>EXTRACT(param, avant, après)</code><br>extrait une sous chaîne de caractère en spécifiant une chaîne à trouver avant et une autre après. Si un séparateur avant ou après est vide il est ignoré. Si un séparateur avant ou après n'est pas trouvé le résultat est vide.</li>
-    <li><code>REPLACE(param, recherche, remplacement)</code><br>remplace toutes les occurences d'une sous chaîne de caractère par une autre.</li>
-    <li><code>STRPOS(param, recherche)</code><br>retourne la position de la première occurence d'une sous chaîne de caractère.</li>
+    <li><code>REPLACE(param, recherche, remplacement)</code><br>remplace toutes les occurrences d'une sous chaîne de caractère par une autre.</li>
+    <li><code>STRPOS(param, recherche)</code><br>retourne la position de la première occurrence d'une sous chaîne de caractère.</li>
     <li><code>SUM(param1, param2, ...)</code><br>effectue la somme de tous les paramètres. Les paramètres vides ou qui ne sont pas des nombres seront ignorés.</li>
     <li><code>AVERAGE ou AVG(param1, param2, ...)</code><br>calcule la moyenne de tous les paramètres. Les paramètres vides ou qui ne sont pas des nombres seront ignorés.</li>
     <li><code>SPLIT(param, séparateur)</code><br>utilise le séparateur pour diviser la chaîne de caractères en paramètre et retourne un tableau.</li>

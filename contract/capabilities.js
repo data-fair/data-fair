@@ -34,7 +34,7 @@ module.exports = {
       default: false,
       'x-display': 'switch',
       title: 'Statistiques de mots',
-      description: 'Activez cette capacité si avez l\'intention d\'obtenir des statistiques sur les occurences de mots (par exemple pour construire un nuage de mot).'
+      description: 'Activez cette capacité si avez l\'intention d\'obtenir des statistiques sur les occurrences de mots (par exemple pour construire un nuage de mot).'
     },
     wildcard: {
       type: 'boolean',
