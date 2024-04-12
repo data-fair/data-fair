@@ -6,7 +6,7 @@ const createError = require('http-errors')
 const asyncWrap = require('../utils/async-handler')
 
 exports.readApiKey = async (db, rawApiKey, scope, asAccount, req) => {
-  if (req.resource?._readApiKey && (req.resource._readApiKey.current === rawApiKey || req.resource._readApiKey.previous === rawApiKey)) {
+  if (req?.resource?._readApiKey && (req.resource._readApiKey.current === rawApiKey || req.resource._readApiKey.previous === rawApiKey)) {
     req.bypassPermissions = { classes: ['read'] }
     const user = { isApiKey: true, id: 'readApiKey', title: 'Read API key for specifc resource' }
     return user
