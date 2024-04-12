@@ -9,7 +9,9 @@ describe('REST datasets with auto-initialization', () => {
   it('Create REST dataset with copied information', async () => {
     const ax = global.ax.dmeadus
 
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const dataset = await testUtils.sendDataset('datasets/date-formats.csv', ax)
+    assert.equal(dataset.file.schema[2].dateFormat, 'D/M/YYYY')
+    assert.equal(dataset.file.schema[3].dateTimeFormat, 'D/M/YYYY H:m')
 
     const attachmentForm = new FormData()
     attachmentForm.append('attachment', fs.readFileSync('./test/resources/avatar.jpeg'), 'avatar.jpeg')
@@ -27,8 +29,9 @@ describe('REST datasets with auto-initialization', () => {
     assert.equal(res.status, 201)
     const initFromDataset = await workers.hook('finalizer/' + res.data.id)
 
-    assert.ok(!initFromDataset.initFrom)
-    assert.ok(initFromDataset.schema.find(p => p.key === 'adr'), 2)
+    assert.equal(initFromDataset.schema[0].key, 'date')
+    assert.equal(initFromDataset.schema[2].dateFormat, 'D/M/YYYY')
+    assert.equal(initFromDataset.schema[3].dateTimeFormat, 'D/M/YYYY H:m')
     assert.equal(initFromDataset.description, 'A description')
     assert.equal(initFromDataset.attachments.length, 1)
     assert.ok(initFromDataset.storage.metadataAttachments.size > 1000)

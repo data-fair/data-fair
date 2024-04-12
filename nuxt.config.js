@@ -125,7 +125,9 @@ module.exports = {
     disableRemoteServices: config.disableRemoteServices,
     disablePublicationSites: config.disablePublicationSites,
     i18n: config.i18n,
-    defaultTimeZone: config.defaultTimeZone
+    defaultTimeZone: config.defaultTimeZone,
+    dateFormats: config.dateFormats,
+    dateTimeFormats: config.dateTimeFormats
   },
   head: {
     title: config.brand.title,

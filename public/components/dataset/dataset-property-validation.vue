@@ -108,6 +108,36 @@
               @click:clear="delete property.pattern"
             />
           </template>
+          <template v-if="property.type === 'string' && property.format === 'date'">
+            <tutorial-alert
+              id="validation-date-format"
+              :text="$t('dateFormatMessage')"
+              persistent
+            />
+            <v-select
+              v-model="property.dateFormat"
+              :label="$t('dateFormat')"
+              :disabled="!editable"
+              clearable
+              :items="dateFormats"
+              @click:clear="delete property.dateFormat"
+            />
+          </template>
+          <template v-if="property.type === 'string' && property.format === 'date-time'">
+            <tutorial-alert
+              id="validation-date-time-format"
+              :text="$t('dateTimeFormatMessage')"
+              persistent
+            />
+            <v-select
+              v-model="property.dateTimeFormat"
+              :label="$t('dateTimeFormat')"
+              :disabled="!editable"
+              clearable
+              :items="dateTimeFormats"
+              @click:clear="delete property.dateTimeFormat"
+            />
+          </template>
         </v-form>
       </v-card-text>
     </v-card>
@@ -127,6 +157,10 @@ fr:
   validationRestMessage: Ces règles de validation seront appliquées dans les formulaires d'édition et vérifiées au moment de la réception de la donnée par la plateforme.
   validationFileMessage: Ces règles de validation seront appliquées lors de l'analyse des nouvelles versions de fichier. Les brouillons ne seront pas automatiquement validés si des erreurs sont détectées.
   validationRegexpMessage: La définition du format est basée sur une expression régulière. Il s'agit d'un paramétrage avancé.
+  dateFormatMessage: Vous pouvez choisir un format de date accepté. Par défaut le seul format accepté est ISO 8601.
+  dateFormat: Formattage de date
+  dateTimeFormatMessage: Vous pouvez choisir un format de date et heure accepté. Par défaut le seul format accepté est IS0 8601.
+  dateTimeFormat: Formattage de date et heure
 en:
   validationConfig: Data validation configuration
   required: required information
@@ -139,6 +173,10 @@ en:
   validationRestMessage: These validation rules will be applied in the edition forms and checked when the data is received by the platform.
   validationFileMessage: These validation rules will be applied when analyzing new file versions. Drafts will not be automatically validated if errors are detected.
   validationRegexpMessage: The format definition is based on a regular expression. This is an advanced setting.
+  dateFormatMessage: You can chose an accepted date format. By default only ISO 8601 is accepted.
+  dateFormat: Date format
+  dateTimeFormatMessage: You can chose an accepted datetime format. By default only ISO 8601 is accepted.
+  dateTimeFormat: Datetime format
 </i18n>
 
 <script>
@@ -149,7 +187,9 @@ export default {
   data () {
     return {
       dialog: false,
-      editCapabilities: null
+      editCapabilities: null,
+      dateFormats: process.env.dateFormats,
+      dateTimeFormats: process.env.dateTimeFormats
     }
   },
   computed: {

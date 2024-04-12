@@ -86,6 +86,11 @@ exports.process = async function (app, dataset) {
         const newProperty = { ...p }
         delete newProperty.enum
         delete newProperty['x-cardinality']
+        const fileProp = parentDataset.file?.schema?.find(fp => fp.key === p.key)
+        if (fileProp) {
+          if (fileProp.dateFormat) newProperty.dateFormat = fileProp.dateFormat
+          if (fileProp.dateTimeFormat) newProperty.dateTimeFormat = fileProp.dateTimeFormat
+        }
         return newProperty
       })
 

@@ -59,26 +59,32 @@ exports.format = (value, prop, fileProp) => {
   if (typeof value !== 'string') value = JSON.stringify(value)
   value = value.trim()
   if (!value) return null
-  if (prop.type === 'string' && prop.format === 'date' && fileProp && fileProp.dateFormat) {
-    const date = moment(value, fileProp.dateFormat, true)
-    if (date.isValid()) return date.format('YYYY-MM-DD')
-    else return null
+  if (prop.type === 'string' && prop.format === 'date') {
+    const dateFormat = (fileProp && fileProp.dateFormat) || prop.dateFormat
+    if (dateFormat) {
+      const date = moment(value, dateFormat, true)
+      if (date.isValid()) return date.format('YYYY-MM-DD')
+      else return null
+    }
   }
-  if (prop.type === 'string' && prop.format === 'date-time' && fileProp && fileProp.dateTimeFormat) {
-    const timeZone = prop.timeZone || config.defaultTimeZone
-    const date = moment.tz(value, fileProp.dateTimeFormat, true, timeZone) // the boolean is for strict mode
-    // format will store the timezone info, it is a richer info than always storing with Z suffix
-    // when showing the date it is preferred to use moment "parseZone" and show the data in the original time zone
-    // instead of moving to the user's time zone
-    if (date.isValid()) return date.format()
-    else return null
-  }
-  if (prop.type === 'string' && prop.format === 'date-time' && !(fileProp && fileProp.dateTimeFormat)) {
-    if (value[10] !== 'T') value = value.substring(0, 10) + 'T' + value.substring(11)
-    const isValid = dateTimeSchema(value)
-    if (!isValid) {
-      const date = moment.tz(value, null, true, prop.timeZone || config.defaultTimeZone)
-      value = date.format()
+
+  if (prop.type === 'string' && prop.format === 'date-time') {
+    const dateTimeFormat = (fileProp && fileProp.dateTimeFormat) || prop.dateTimeFormat
+    if (dateTimeFormat) {
+      const timeZone = prop.timeZone || config.defaultTimeZone
+      const date = moment.tz(value, dateTimeFormat, true, timeZone) // the boolean is for strict mode
+      // format will store the timezone info, it is a richer info than always storing with Z suffix
+      // when showing the date it is preferred to use moment "parseZone" and show the data in the original time zone
+      // instead of moving to the user's time zone
+      if (date.isValid()) return date.format()
+      else return null
+    } else {
+      if (value[10] !== 'T') value = value.substring(0, 10) + 'T' + value.substring(11)
+      const isValid = dateTimeSchema(value)
+      if (!isValid) {
+        const date = moment.tz(value, null, true, prop.timeZone || config.defaultTimeZone)
+        value = date.format()
+      }
     }
   }
   if (prop.type === 'string') return value

@@ -1334,4 +1334,21 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.results[2]._action, 'createOrUpdate')
     assert.equal(res.data.results[2].attr2, 'v1')
   })
+
+  it('Specify a date-time format', async () => {
+    const ax = await global.ax.hlalonde3
+    await ax.post('/api/v1/datasets/restdatetimeformat', {
+      isRest: true,
+      title: 'restdatetimeformat',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string', format: 'date-time', dateTimeFormat: 'D/M/YYYY H:m' }]
+    })
+    await workers.hook('finalizer/restdatetimeformat')
+    let res = await ax.post('/api/v1/datasets/restdatetimeformat/_bulk_lines', [
+      { attr1: 'test1', attr2: moment().toISOString() },
+      { attr1: 'test2', attr2: moment().format('D/M/YYYY H:m') }
+    ])
+    await workers.hook('finalizer/restdatetimeformat')
+    res = await ax.get('/api/v1/datasets/restdatetimeformat/lines')
+    assert.equal(res.data.total, 2)
+  })
 })

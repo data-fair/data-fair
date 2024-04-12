@@ -31,6 +31,19 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
   }
   if (mimeType === 'application/x-ndjson' || mimeType === 'application/json') {
     streams.push(mimeTypeStream(mimeType).parser())
+    // perform some basic normalization on the json
+    streams.push(new Transform({
+      objectMode: true,
+      transform (item, encoding, callback) {
+        for (const prop of schema) {
+          if (typeof item[prop.key] === 'string') {
+            const value = fieldsSniffer.format(item[prop['x-originalName'] || prop.key], prop)
+            if (value !== null) item[prop.key] = value
+          }
+        }
+        callback(null, item)
+      }
+    }))
   } else if (csvTypes.includes(mimeType)) {
     // use result from csv-sniffer to configure parser
     const parserOpts = {
