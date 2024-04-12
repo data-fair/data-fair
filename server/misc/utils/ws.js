@@ -15,6 +15,7 @@ Downstream examples:
 const { nanoid } = require('nanoid')
 const permissions = require('./permissions')
 const { readApiKey } = require('./api-key')
+const metrics = require('./metrics')
 
 let cursor
 const subscribers = {}
@@ -75,6 +76,7 @@ exports.initServer = async (wss, db, session) => {
         } catch (err) {
           const errorMessage = { type: 'error', status: 500, data: err.message }
           if (message && message.channel) errorMessage.channel = message.channel
+          metrics.internalError('ws-error', err)
           return ws.send(JSON.stringify(errorMessage))
         }
       })
