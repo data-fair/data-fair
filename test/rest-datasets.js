@@ -1345,10 +1345,21 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     await workers.hook('finalizer/restdatetimeformat')
     let res = await ax.post('/api/v1/datasets/restdatetimeformat/_bulk_lines', [
       { attr1: 'test1', attr2: moment().toISOString() },
-      { attr1: 'test2', attr2: moment().format('D/M/YYYY H:m') }
+      { attr1: 'test2', attr2: moment().format('D/M/YYYY H:m') },
+      { attr1: 'test3', attr2: 'bad date' }
     ])
+    assert.equal(res.data.nbErrors, 1)
+    assert.equal(res.data.nbOk, 2)
+
+    res = await ax.post('/api/v1/datasets/restdatetimeformat/_bulk_lines', `attr1,attr2
+    test1,${moment().toISOString()}
+    test2,${moment().format('D/M/YYYY H:m')}
+    test2,bad date`, { headers: { 'content-type': 'text/csv' } })
+    assert.equal(res.data.nbErrors, 1)
+    assert.equal(res.data.nbOk, 2)
+
     await workers.hook('finalizer/restdatetimeformat')
     res = await ax.get('/api/v1/datasets/restdatetimeformat/lines')
-    assert.equal(res.data.total, 2)
+    assert.equal(res.data.total, 4)
   })
 })

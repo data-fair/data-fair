@@ -64,7 +64,6 @@ exports.format = (value, prop, fileProp) => {
     if (dateFormat) {
       const date = moment(value, dateFormat, true)
       if (date.isValid()) return date.format('YYYY-MM-DD')
-      else return null
     }
   }
 
@@ -77,7 +76,6 @@ exports.format = (value, prop, fileProp) => {
       // when showing the date it is preferred to use moment "parseZone" and show the data in the original time zone
       // instead of moving to the user's time zone
       if (date.isValid()) return date.format()
-      else return null
     } else {
       if (value[10] !== 'T') value = value.substring(0, 10) + 'T' + value.substring(11)
       const isValid = dateTimeSchema(value)
