@@ -696,10 +696,10 @@ exports.createOrUpdateLine = async (req, res, next) => {
   const dataset = req.dataset
 
   const db = req.app.get('db')
+  Object.assign(req.body, linesOwnerCols(req.linesOwner))
   req.body._action = req.body._action ?? 'createOrUpdate'
   const definedId = req.params.lineId || req.body._id || getLineId(req.body, req.dataset)
   req.body._id = definedId || nanoid()
-  Object.assign(req.body, linesOwnerCols(req.linesOwner))
   await manageAttachment(req, false)
   const [operation] = (await applyReqTransactions(req, [req.body], compileSchema(req.dataset, req.user.adminMode))).operations
 
