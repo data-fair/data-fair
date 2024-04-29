@@ -30,3 +30,9 @@ Il est ainsi possible de **mettre en avant certaines données** et de leur donne
 La création d'une page se fait en trois étapes&nbsp;: on choisit d'abord le **modèle de page**, puis on renseigne les différents éléments au moyen d'un formulaire adapté au modèle de page choisi avec une **prévisualisation du résultat**. On peut enfin publier la page, ce qui permet de **préparer des pages en avance** et de les publier plus tard. En plus de la saisie de texte libre, il est possible d'intégrer différents type d'éléments : tableau d'un jeu de données, visualisation, liste de jeux de données, intégration de contenu externe, etc.
 
 Pour accéder aux pages de contenu créées, il est possible de renseigner des liens dans la barre de navigation. Les liens peuvent apparaître directement dans la barre, ou dans un menu ajouté à celle-ci. Il est possible de créer des pages **publiques** ou des pages **privées**.
+
+
+Les actualités et les évènements sont des pages d'édition spécifiques. Lorsque les actualités ou les évènements sont activés dans la configuration du portail, il est possible de créer des plusieurs pages d'actualités ou d'évènements. Les liens vers les dernières pages publiées sont disponibles sur l'accueil du portail.
+
+<img src="./images/functional-presentation/events.jpg"
+     height="300" style="margin:40px auto;" alt="capture d'écran d'un évènement" />

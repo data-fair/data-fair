@@ -35,11 +35,20 @@ Le dernier élément qui peut être renseigné et qui a une importance considér
 
 Ce typage métier **augmente la réutilisabilité** des données et permet deux choses au sein de la plateforme : **l'enrichissement à partir d'autres données**, et la proposition de **visualisations adaptées** (en simplifiant le paramétrage de celles-ci)&nbsp;: les concepts &laquo;&nbsp;latitude&nbsp;&raquo; et &laquo;&nbsp;longitude&nbsp;&raquo; permettent, par exemple, de paramétrer des cartes avec des marqueurs.
 
-### Réferentiel de schémas
+Les valeurs dans les colonnes peuvent être limitées à certaines valeurs à l'aide de la validation des données. Il est possible de rendre la colonne obligatoire, d'avoir une longueur minimale et/ou maximal et de renseigner un format basé sur une expression régulière qui va limiter les valeurs possibles de la colonne.  
+
+<img src="./images/functional-presentation/colonne-obligatoire.jpg"
+     height="330" style="margin:20px auto;" alt="capture d'écran de l'édition du schéma d'un jeu de données" />
+
+### Référentiel de schémas
 
 Pour améliorer la saisie et la réutilisation des données, nous proposons un référentiel de schémas issus de https://schema.data.gouv.fr/schemas.html qui recense différents schémas de données publiques pour la France.  
 
 Lors de la création d'un jeu de données éditable, il est possible de choisir un des schémas proposés. Les données saisies seront standardisées, ce qui augmentera leur réutilisabilité, tant au niveau de la remontée de différentes données vers une destination commune pour fusionner les données, que dans l'utilisation de visualisations.  
+
+<img src="./images/functional-presentation/list-schema.jpg"
+     height="350" style="margin:20px auto;" alt="Liste de schéma data.gouv.fr" />
+
 Par exemple, une application permettant de rechercher et visualiser des délibérations publiées au format SCDL pourra être utilisée par toute collectivité qui publie ses données de délibérations avec le schéma adapté.
 
 ### Métadonnées et pièces jointes
@@ -52,13 +61,21 @@ Les pièces jointes peuvent aussi être **directement attachées à un jeu de do
 
 ### Données&nbsp;maîtres et enrichissement
 
-Certaines données peuvent être utilisées à différents endroits et dans différents processus par les organisations. Il est possible de définir un jeu de données comme étant des **données&nbsp;maîtres** (*master&nbsp;data*, en anglais). Ce sont des données qui font référence à des concepts particuliers, et la plateforme met à disposition de toutes les organisations des données&nbsp;maîtres mutualisées.
+Certaines données peuvent être utilisées à différents endroits et dans différents processus par les organisations. Il est possible de définir un jeu de données comme étant des **données&nbsp;maîtres** (*master&nbsp;data*, en anglais). Ce sont des données qui font référence à des concepts particuliers, et la plateforme met à disposition de toutes les organisations des données&nbsp;maîtres mutualisées.  
+L'administrateur d'une organisation peut également définir des données privées de son organisation comme des données maîtres. Celles-ci ne pourront être utilisées que par son organisation.
 
 Les données de la **base Sirene** sont rattachées aux concepts de &laquo;&nbsp;code SIREN&nbsp;&raquo;, &laquo;&nbsp;code SIRET&nbsp;&raquo; et &laquo;&nbsp;code APE&nbsp;&raquo;, par exemple. Il y a également des données mises à disposition à partir du **cadastre** (via des &laquo;&nbsp;codes parcelle&nbsp;&raquo;) ou des données de l'INSEE (via les &laquo;&nbsp;codes commune&nbsp;&raquo;, &laquo;&nbsp;codes département&nbsp;&raquo;...) Il y a enfin des données d'adresses, issues de la **BAN**, qui permettent de faire du géocodage. De nouvelles données de référence sont régulièrement ajoutées à la plateforme, et chaque organisation peut elle-même créer ses propres jeux de données pivots.
 
 Ces données&nbsp;maîtres sont d'une grande valeur, car elles permettent de **compléter facilement les autres données**. Dans le cadre des formulaires de saisie des jeux incrémentaux, on peut faire référence à des données&nbsp;maîtres en assignant un concept à un certain champ, et le **formulaire proposera une liste de valeurs** (avec un moteur de recherche si elle est grande) pour sélectionner ce qui sera mis dans le champ. Il est ainsi possible de contraindre la saisie dans un champ et de s'assurer que les valeurs dedans soient toutes valides suivant certaines règles métier.
 
-La deuxième possibilité pour compléter les données est de mettre en place des **enrichissements**&nbsp;: des colonnes sont alors automatiquement ajoutées au jeu de données et les valeurs renseignées à partir d'une ou plusieurs autres colonnes. Par exemple, des colonnes qui ont les concepts &laquo;&nbsp;numéro de rue&nbsp;&raquo;, &laquo;&nbsp;libellé de rue&nbsp;&raquo; et &laquo;&nbsp;code postal&nbsp;&raquo; peuvent être complétées par les données d'adresse et être géocodées, ce qui permet de projeter les données sur une carte. Quand les données sont actualisées, les enrichissements sont automatiquement mis à jour, et un jeu de données peut avoir plusieurs enrichissements provenant de données&nbsp;maîtres différentes.
+<img src="./images/functional-presentation/ajout-ligne.jpg"
+     height="400" style="margin:20px auto;" alt="Ajout d'une ligne standardisées" />
+
+La deuxième possibilité pour compléter les données est de mettre en place des **enrichissements**&nbsp;: des colonnes sont alors automatiquement ajoutées au jeu de données et les valeurs renseignées à partir d'une ou plusieurs autres colonnes. Par exemple, des colonnes qui ont les concepts &laquo;&nbsp;numéro de rue&nbsp;&raquo;, &laquo;&nbsp;libellé de rue&nbsp;&raquo; et &laquo;&nbsp;code postal&nbsp;&raquo; peuvent être complétées par les données d'adresse et être géocodées, ce qui permet de projeter les données sur une carte. Quand les données sont actualisées, les enrichissements sont automatiquement mis à jour, et un jeu de données peut avoir plusieurs enrichissements provenant de données&nbsp;maîtres différentes.  
+L'enrichissement de données sans données de référence est possible à l'aide des **colonnes calculées**. Tout comme un enrichissement classique, un enrichissement de **colonne calculée** va ajouter une nouvelle colonne, mais la source de cet enrichissement va être une ou plusieurs colonnes du jeu de données. Par exemple, si le jeu de données contient des colonnes numéro, type, voie, code postal et nom de la commune et prénom, il va être possible de concaténer ces colonnes en une seule colonne pour obtenir l'adresse.
+
+<img src="./images/functional-presentation/adresse.jpg"
+     height="400" style="margin:20px auto;" alt="Concaténer plusieurs colonnes" />
 
 Les données de référence peuvent également être utilisées via les jeux virtuels pour proposer les données de référence sur son portail.
 Il est alors possible de créer un jeu virtuel sur le portail de son organisation qui va être une vue du jeu de données de référence. Ainsi, lorsque les données de références seront mises à jour, le jeu virtuel sera également actualisé.  
@@ -85,3 +102,5 @@ Il est aussi possible de publier un jeu de données sur des portails ou catalogu
 ### Journal des événements
 
 Chaque étape du traitement d'un jeu de données laisse des traces dans le journal associé. On peut ainsi retracer les actions, leurs dates, leurs durées et les éventuelles erreurs rencontrées.
+
+### Validation des données
