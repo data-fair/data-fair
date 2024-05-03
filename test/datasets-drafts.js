@@ -152,6 +152,7 @@ describe('datasets in draft mode', () => {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
     assert.equal(res.data.total, 5)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/raw`)
+    assert.equal(res.headers['x-operation'], '{"class":"read","id":"downloadOriginalData","track":"readDataFiles"}')
     assert.ok(res.data.startsWith('id,adr,some date,loc'))
     res = await ax.get(`/api/v1/datasets/${dataset.id}/raw`, { params: { draft: true } })
     assert.ok(res.data.startsWith('id,somedate,employees,adr'))

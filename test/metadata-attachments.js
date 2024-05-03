@@ -21,6 +21,7 @@ describe('Datasets with metadata attachments', () => {
     await sendAttachment(ax, 'attachments1', 'avatar.jpeg')
 
     const downloadAttachmentRes = await ax.get('/api/v1/datasets/attachments1/metadata-attachments/avatar.jpeg')
+    assert.equal(downloadAttachmentRes.headers['x-operation'], '{"class":"read","id":"downloadMetadataAttachment","track":"readDataFiles"}')
     assert.equal(downloadAttachmentRes.status, 200)
     assert.equal(downloadAttachmentRes.headers['content-type'], 'image/jpeg')
     assert.ok(downloadAttachmentRes.headers['last-modified'])
@@ -37,6 +38,7 @@ describe('Datasets with metadata attachments', () => {
     assert.ok(!patchRes.data.attachments[0].targetUrl)
 
     const downloadAttachmentRes = await ax.get('/api/v1/datasets/attachments2/metadata-attachments/logo-square.png')
+    assert.equal(downloadAttachmentRes.headers['x-operation'], '{"class":"read","id":"downloadMetadataAttachment","track":"readDataAPI"}')
     assert.equal(downloadAttachmentRes.status, 200)
     assert.equal(downloadAttachmentRes.headers['content-type'], 'image/png')
     assert.ok(downloadAttachmentRes.headers['content-length'] > 1000)

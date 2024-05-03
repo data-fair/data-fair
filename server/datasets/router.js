@@ -974,13 +974,16 @@ router.post('/:datasetId/metadata-attachments', readDataset(), apiKeyMiddleware,
   await datasetUtils.updateStorage(req.app, req.dataset)
   res.status(200).send(req.body)
 }))
-router.get('/:datasetId/metadata-attachments/*', readDataset(), apiKeyMiddleware, permissions.middleware('downloadMetadataAttachment', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
+router.get('/:datasetId/metadata-attachments/*', readDataset(), apiKeyMiddleware, permissions.middleware('downloadMetadataAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   // res.set('content-disposition', `inline; filename="${req.params['0']}"`)
 
   const attachmentsTargets = clone(req.dataset._attachmentsTargets || [])
   const attachmentTarget = attachmentsTargets.find(a => a.name === req.params[0])
   if (attachmentTarget) {
+    // special case for remote attachments, we monitor them as if they were API call and not static files
+    req.operation.track = 'readDataAPI'
+    res.setHeader('x-operation', JSON.stringify(req.operation))
     if (attachmentTarget.fetchedAt && attachmentTarget.fetchedAt.getTime() + config.remoteAttachmentCacheDuration > Date.now()) {
       res.set('x-remote-status', 'CACHE')
     } else {
