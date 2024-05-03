@@ -344,6 +344,25 @@
     }
   },
   {
+    "id": "uniteUrbaine2020",
+    "title": {
+      "fr": "Code unité urbaine 2020",
+      "en": ""
+    },
+    "description": {
+      "fr": "Code INSEE de l'unité urbaine 2020, sur 5 caractères.",
+      "en": ""
+    },
+    "identifiers": [
+      "http://rdf.insee.fr/def/geo#UniteUrbaine2020"
+    ],
+    "type": "string",
+    "tag": {
+      "fr": "Référentiels administratifs français",
+      "en": "French administrative master-data"
+    }
+  },
+  {
     "id": "latitude",
     "title": {
       "fr": "Latitude",
