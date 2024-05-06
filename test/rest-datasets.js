@@ -31,6 +31,11 @@ describe('REST datasets', () => {
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, 'a-rest-dataset-3')
     await workers.hook('finalizer/' + res.data.id)
+
+    res = await ax.put('/api/v1/datasets/restdataset3', { isRest: true, title: 'a rest dataset updated' })
+    assert.equal(res.status, 200)
+    assert.equal(res.data.slug, 'a-rest-dataset-3')
+    assert.equal(res.data.title, 'a rest dataset updated')
   })
 
   it('Perform CRUD operations on REST datasets', async () => {

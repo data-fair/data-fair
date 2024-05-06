@@ -12,6 +12,7 @@ const mongodb = require('mongodb')
 const i18n = require('i18n')
 const sanitizeHtml = require('../../shared/sanitize-html')
 const LinkHeader = require('http-link-header')
+const equal = require('deep-equal')
 const journals = require('../misc/utils/journals')
 const axios = require('../misc/utils/axios')
 const esUtils = require('./es')
@@ -374,6 +375,15 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
     }
 
     const patch = uploadUtils.getFormBody(req.body)
+
+    // this is also done inside preparePatch
+    // but in the case of PUT we do it here to tolerate properties usually used at creation time
+    for (const key of Object.keys(patch)) {
+      if (equal(patch[key], dataset[key])) { delete patch[key] }
+    }
+    if (patch.owner && patch.owner.type === dataset.owner.type && patch.owner.id === dataset.owner.id) {
+      delete patch.owner
+    }
 
     validatePatch(patch)
     validateURLFriendly(locale, patch.slug)
