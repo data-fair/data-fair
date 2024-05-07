@@ -502,6 +502,14 @@ koumoul,19 rue de la voie lactée saint avé
     const anotherAddress3 = res.data.results.sort((a, b) => b._i - a._i)[0]
     assert.equal(anotherAddress3[extensionKey + '.lat'], 12)
     assert.equal(anotherAddress3[extensionKey + '.lon'], 12)
+
+    // remove extension
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      extensions: []
+    })
+    await workers.hook(`finalizer/${dataset.id}`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.results[0][extensionKey + '.lat'], undefined)
   })
 
   it('Remove extensions when input properties got removed', async () => {
@@ -721,5 +729,49 @@ other,unknown address
       assert.equal(err.message, 'Une extension essaie de créer la colonne "employees" mais cette clé est déjà utilisée.')
       return true
     })
+  })
+
+  it('Manage cases where extension returns wrong type', async function () {
+    const ax = global.ax.dmeadus
+    // Initial dataset with addresses
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
+    let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [
+        { active: true, type: 'exprEval', expr: '"value"', property: { key: 'calc1', type: 'number' } }
+      ]
+    })
+    assert.equal(res.status, 200)
+    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"\"value\"\" : /calc1 doit être de type number" })
+
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [
+        { active: true, type: 'exprEval', expr: '1', property: { key: 'calc1', type: 'string' } }
+      ]
+    })
+    assert.equal(res.status, 200)
+    await workers.hook(`finalizer/${dataset.id}`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.results[0].calc1, '1')
+
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [
+        { active: true, type: 'exprEval', expr: '[[1],[2]]', property: { key: 'calc1', type: 'number' } }
+      ]
+    })
+    assert.equal(res.status, 200)
+    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"[[1],[2]]\" : /calc1 doit être de type number" })
+
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [
+        { active: true, type: 'exprEval', expr: '"wrongDate"', property: { key: 'calc1', type: 'string', format: 'date-time' } }
+      ]
+    })
+    assert.equal(res.status, 200)
+    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"\"wrongDate\"\" : /calc1 doit correspondre au format \"date-time\" (date-time)" })
   })
 })

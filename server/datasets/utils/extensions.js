@@ -15,6 +15,8 @@ const { bulkSearchPromise, bulkSearchStreams } = require('./master-data')
 const taskProgress = require('./task-progress')
 const permissionsUtils = require('../../misc/utils/permissions')
 const { getPseudoUser } = require('../../misc/utils/users')
+const ajv = require('../../misc/utils/ajv')
+const { jsonSchema } = require('./schema')
 const debugMasterData = require('debug')('master-data')
 
 const debug = require('debug')('extensions')
@@ -88,9 +90,18 @@ exports.extend = async (app, dataset, extensions) => {
       const { parser } = require('../../../shared/expr-eval')
       try {
         const parsedExpression = parser.parse(extension.expr)
+        const property = dataset.schema.find(p => p.key === extension.property.key)
+        const validate = ajv.compile(jsonSchema([property]))
         detailedExtensions.push({
           ...extension,
-          evaluate: (data) => parsedExpression.evaluate(data)
+          evaluate: (data) => {
+            let result = parsedExpression.evaluate(data)
+            if (property.type === 'string' && ['boolean', 'number'].includes(typeof result)) {
+              result = result + ''
+            }
+            return result
+          },
+          validate: (data) => validate({ [extension.property.key]: data })
         })
       } catch (err) {
         throw new Error(`[noretry] échec de l'analyse de l'expression "${extension.expr}" : ${err.message}`)
@@ -270,6 +281,7 @@ class ExtensionsStream extends Transform {
               }
             }
             value = extension.evaluate(data)
+            extension.validate(value)
           } catch (err) {
             throw new Error(`[noretry] échec de l'évaluation de l'expression "${extension.expr}" : ${err.message}`)
           }
