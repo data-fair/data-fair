@@ -61,6 +61,7 @@ exports.prepareExtensions = (locale, extensions, oldExtensions = []) => {
 
 // Apply an extension to a dataset: meaning, query a remote service in batches
 // and add the result either to a "full" file or to the collection in case of a rest dataset
+const parser = require('../../../shared/expr-eval')(config.defaultTimezone)
 exports.extend = async (app, dataset, extensions) => {
   debugMasterData(`extend dataset ${dataset.id} (${dataset.slug})`, extensions)
   const db = app.get('db')
@@ -87,7 +88,6 @@ exports.extend = async (app, dataset, extensions) => {
       if (!idInput) throw new Error('A field with concept "http://schema.org/identifier" is required and missing in the remote service action', action)
       detailedExtensions.push({ ...extension, extensionKey, inputMapping, remoteService, action, errorKey, idInput })
     } else if (extension.type === 'exprEval') {
-      const { parser } = require('../../../shared/expr-eval')
       try {
         const parsedExpression = parser.parse(extension.expr)
         const property = dataset.schema.find(p => p.key === extension.property.key)
