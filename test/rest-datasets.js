@@ -197,6 +197,12 @@ describe('REST datasets', () => {
       return true
     })
 
+    await assert.rejects(ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', _attr3: 'test1' }), (err) => {
+      assert.equal(err.data, 'ne doit pas contenir de propriétés additionnelles (_attr3)')
+      assert.equal(err.status, 400)
+      return true
+    })
+
     await assert.rejects(ax.post('/api/v1/datasets/rest4/lines', { attr1: 111 }), (err) => {
       assert.equal(err.data, '/attr1 doit être de type string')
       assert.equal(err.status, 400)
