@@ -188,7 +188,7 @@ fr:
     <li><code>SPLIT(param, séparateur)</code><br>utilise le séparateur pour diviser la chaîne de caractères en paramètre et retourne un tableau.</li>
     <li><code>JOIN(tableau, séparateur)</code><br>retourne une chaîne de caractère résultat de la concaténation des éléments du tableau en insérant le séparateur entre chaque élément. Le séparateur par défaut est \",\".</li>
     <li><code>MD5(param1, param2, ...)</code><br>calcule une signature MD5 de la liste des paramètres.</li>
-    <li><code>TRANSFORM_DATE(date, format entrée, format sortie, fuseau horaire entrée, fuseau horaire sortie)</code><br>Transforme une date d'un format à un autre. La liste des formats est disponible sur la documentation de <a href=\"https://day.js.org/docs/en/display/format\">dayjs</a>. \"X\" est un format spécial pour un timestamp Unix et \"x\" pour un timestamp Unix en millisecondes. Les paramètres de fuseaux horaires sont optionnels et valent \"Europe/Paris\" par défaut.</li>
+    <li><code>TRANSFORM_DATE(date, format entrée, format sortie, fuseau horaire entrée, fuseau horaire sortie)</code><br>Transforme une date d'un format à un autre. La liste des formats est disponible sur la documentation de <a href=\"https://day.js.org/docs/en/display/format\">dayjs</a>. Si un format d'entrée ou de sortie est laissé vide c'est un format standard ISO 8601 complet qui est utilisé. \"X\" est un format spécial pour un timestamp Unix et \"x\" pour un timestamp Unix en millisecondes. Les paramètres de fuseaux horaires sont optionnels et valent \"Europe/Paris\" par défaut.</li>
   </ul>"
 en:
   linesCount: " | See 1 extension result | See {count} extension results"
