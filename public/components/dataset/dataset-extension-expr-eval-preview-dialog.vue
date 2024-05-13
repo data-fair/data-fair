@@ -23,6 +23,7 @@
       <v-toolbar
         dense
         flat
+        color="transparent"
       >
         {{ $t('preview') }}&nbsp;{{ extension.property?.['x-originalName'] || $t('newExprEval') }}
         <v-spacer />

@@ -176,6 +176,7 @@
         <v-toolbar
           dense
           flat
+          color="transparent"
         >
           <v-switch
             v-if="dataset.public && can('readPrivateApiDoc') && can('readApiDoc')"

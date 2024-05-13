@@ -14,10 +14,14 @@
         mdi-table
       </v-icon>
     </template>
-    <v-card v-if="dialog">
+    <v-card
+      v-if="dialog"
+      outlined
+    >
       <v-toolbar
         dense
         flat
+        color="transparent"
       >
         <v-toolbar-title class="font-weight-bold">
           {{ dataset.title }}

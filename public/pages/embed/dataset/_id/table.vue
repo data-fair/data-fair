@@ -551,7 +551,11 @@ export default {
       return this.headers.filter(h => (!h.field || !this.selectedCols.length || this.selectedCols.includes(h.value)) && h.value !== this.fixedCol)
     },
     truncate () {
-      return this.$vuetify.breakpoint.mdAndUp ? 50 : 40
+      const minTruncate = this.$vuetify.breakpoint.mdAndUp ? 50 : 40
+      const maxTruncate = 200
+      const estimatedTruncate = this.windowWidth / this.selectedHeaders.length / 8 // 8px is about a char's width
+      const roundedTruncate = Math.round(estimatedTruncate / 20) * 20
+      return Math.min(maxTruncate, Math.max(minTruncate, roundedTruncate))
     },
     params () {
       const params = {

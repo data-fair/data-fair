@@ -183,6 +183,7 @@
         <v-toolbar
           dense
           flat
+          color="transparent"
         >
           <v-toolbar-title />
           <v-spacer />

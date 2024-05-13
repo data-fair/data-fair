@@ -23,6 +23,7 @@
       <v-toolbar
         dense
         flat
+        color="transparent"
       >
         {{ remoteServicesMap[extension.remoteService] && remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
         <v-spacer />
