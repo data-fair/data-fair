@@ -83,6 +83,24 @@
               :local-enum="header.field.separator ? item[header.value].split(header.field.separator).map(v => v.trim()) : [item[header.value]]"
               @filter="filter => $emit('filter', {header, filter})"
               @hide="$emit('hide', header)"
+            >
+              <template #prepend-items="{hide}">
+                <v-list-item
+                  v-if="shouldDisplayDetail(header.field, item[header.field.key])"
+                  class="pl-2"
+                  @click="$set(detailDialog, header.field.key, true); hide()"
+                >
+                  <v-list-item-icon class="mr-2"><v-icon>mdi-magnify-plus</v-icon></v-list-item-icon>
+                  <v-list-item-content>
+                    <v-list-item-title>{{ $t('showFullValue') }}</v-list-item-title>
+                  </v-list-item-content>
+                </v-list-item>
+              </template>
+            </dataset-table-header-menu>
+            <dataset-item-detail-dialog
+              v-model="detailDialog[header.field.key]"
+              :item="item"
+              :field="header.field"
             />
           </v-lazy>
         </template>
@@ -90,6 +108,13 @@
     </v-card-text>
   </v-card>
 </template>
+
+<i18n lang="yaml">
+  fr:
+    showFullValue: Afficher la valeur entière
+  en:
+    showFullValue: Show full value
+  </i18n>
 
 <script>
 import { mapState, mapGetters } from 'vuex'
@@ -107,12 +132,20 @@ export default {
   },
   data () {
     return {
-      hovered: {}
+      hovered: {},
+      detailDialog: {}
     }
   },
   computed: {
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['labelField', 'descriptionField']),
+    shouldDisplayDetail () {
+      return (field, itemValue) => {
+        if (field['x-refersTo'] === 'http://schema.org/DigitalDocument') return false
+        if (field['x-refersTo'] === 'https://schema.org/WebPage') return false
+        return field.type === 'string' && !field.separator && itemValue && this.truncate < itemValue.length
+      }
+    },
     otherHeaders () {
       return this.headers.filter(h => {
         if (!h.field) return false

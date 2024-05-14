@@ -19,6 +19,11 @@
         dense
         class="pa-0"
       >
+        <slot
+          name="prepend-items"
+          :hide="() => {showMenu = false}"
+        />
+
         <!-- hide column -->
         <v-list-item
           v-if="header.value !== fixedCol"
