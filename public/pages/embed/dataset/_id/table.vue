@@ -4,6 +4,7 @@
     class="pa-0 embed-table"
   >
     <tutorial-alert
+      v-if="!noInteraction"
       id="dataset-table"
       style="position:absolute;top: 60px;z-index:1;left: 50%;transform: translate(-50%, 0);min-width: 360px;"
     >
