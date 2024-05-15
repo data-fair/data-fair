@@ -216,7 +216,7 @@ fr:
   delete: Supprimer
   changeOwner: Changer le propriétaire
   deleteApp: Suppression de l'application
-  deleteMsg: Voulez vous vraiment supprimer l'application "{title}" ? La suppression est définitive et la configuration de l'application ne pourra pas être récupérées.
+  deleteMsg: Voulez vous vraiment supprimer l'application "{title}" ? La suppression est définitive et la configuration de l'application ne pourra pas être récupérée.
   yes: Oui
   no: Non
   changeOwnerTitle: Changer le propriétaire de l'application
