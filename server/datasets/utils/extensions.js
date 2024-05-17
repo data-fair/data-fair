@@ -283,7 +283,9 @@ class ExtensionsStream extends Transform {
             value = extension.evaluate(data)
             extension.validate(value)
           } catch (err) {
-            throw new Error(`[noretry] échec de l'évaluation de l'expression "${extension.expr}" : ${err.message}`)
+            let message = `[noretry] échec de l'évaluation de l'expression "${extension.expr}" : ${err.message}`
+            if (value !== undefined) message += ` (résultat : ${JSON.stringify(value)})`
+            throw new Error(message)
           }
           if (value !== null && value !== undefined) {
             if (extension.property.type === 'boolean') value = !!(value)

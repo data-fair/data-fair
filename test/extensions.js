@@ -743,7 +743,7 @@ other,unknown address
       ]
     })
     assert.equal(res.status, 200)
-    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"\"value\"\" : /calc1 doit être de type number" })
+    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"\"value\"\" : /calc1 doit être de type number (résultat : \"value\")" })
 
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -763,7 +763,7 @@ other,unknown address
       ]
     })
     assert.equal(res.status, 200)
-    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"[[1],[2]]\" : /calc1 doit être de type number" })
+    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"[[1],[2]]\" : /calc1 doit être de type number (résultat : [[1],[2]])" })
 
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -772,6 +772,6 @@ other,unknown address
       ]
     })
     assert.equal(res.status, 200)
-    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"\"wrongDate\"\" : /calc1 doit correspondre au format \"date-time\" (date-time)" })
+    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"\"wrongDate\"\" : /calc1 doit correspondre au format \"date-time\" (date-time) (résultat : \"wrongDate\")" })
   })
 })
