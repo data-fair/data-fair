@@ -4,6 +4,8 @@ const dayjs = require('dayjs')
 const customParseFormat = require('dayjs/plugin/customParseFormat')
 const timezone = require('dayjs/plugin/timezone')
 const utc = require('dayjs/plugin/utc')
+const { ajv, errorsText, localize } = require('./ajv')
+const { cleanJsonSchemaProperty } = require('./schema')
 
 dayjs.extend(customParseFormat)
 dayjs.extend(timezone)
@@ -130,6 +132,7 @@ module.exports = (defaultTimezone) => {
   }
 
   parser.functions.SPLIT = function (arg, separator) {
+    if (arg === null || arg === undefined) return []
     if (typeof arg !== 'string') return arg
     if (typeof separator !== 'string') return arg
     return arg.split(separator)
@@ -161,5 +164,76 @@ module.exports = (defaultTimezone) => {
     return date.format(outputFormat)
   }
 
-  return parser
+  return {
+    parser,
+    /**
+     * @param {string} expr
+     * @param {any} property
+     * @param {string} locale
+     */
+    compile: (expr, property, locale = 'fr') => {
+      const parsedExpression = parser.parse(expr)
+
+      const propertySchema = cleanJsonSchemaProperty(property)
+      const schema = {
+        type: 'object',
+        properties: {
+          [property.key]: property.separator ? { type: 'array', items: propertySchema } : propertySchema
+        }
+      }
+      const validate = ajv.compile(schema)
+
+      /**
+       * @param {any} data
+       */
+      return (data) => {
+        let result = parsedExpression.evaluate(data)
+        if (property.separator && typeof result === 'string') {
+          result = result.split(property.separator)
+        }
+        if (property.separator && Array.isArray(result)) {
+          result = result.map(value => fixValue(value, property))
+        } else {
+          result = fixValue(result, property)
+        }
+
+        /** @type {any} */
+        const validateData = {}
+        if (result !== null && result !== undefined) validateData[property.key] = result
+        if (!validate(validateData)) {
+          (localize[locale] || localize.fr)(validate.errors)
+          let message = errorsText(validate.errors)
+          if (result !== undefined) message += ` (résultat : ${JSON.stringify(result)})`
+          throw new Error(message)
+        }
+
+        if (property.separator && Array.isArray(result)) {
+          return result.join(property.separator)
+        } else {
+          return result
+        }
+      }
+    }
+  }
+}
+
+/**
+ * @param {any} value
+ * @param {any} property
+ * @returns {any}
+ */
+const fixValue = (value, property) => {
+  if (value === null || value === undefined) return null
+  if (property.type === 'string' && ['boolean', 'number'].includes(typeof value)) {
+    return value + ''
+  }
+  if (property.type === 'boolean') return !!(value)
+  if (property.type === 'string') value = '' + value
+  if (['number', 'integer'].includes(property.type)) {
+    const numberValue = Number(value)
+    if (isNaN(numberValue)) return value
+    if (property.type === 'integer') return Math.round(numberValue)
+    return numberValue
+  }
+  return value
 }

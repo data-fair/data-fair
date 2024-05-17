@@ -5,6 +5,7 @@ const vocabulary = require('../../../contract/vocabulary.json')
 const geoUtils = require('./geo')
 const i18nUtils = require('../../i18n/utils')
 const settingsUtils = require('../../misc/utils/settings')
+const { cleanJsonSchemaProperty } = require('../../../shared/schema')
 
 const capabilitiesSchema = require('../../../contract/capabilities.js')
 const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter(key => capabilitiesSchema.properties[key]?.default === false)
@@ -239,45 +240,6 @@ exports.tableSchema = (schema) => {
   }
 }
 
-const cleanJsonSchemaProperty = (p, publicBaseUrl, writableId) => {
-  const cleanProp = { ...p }
-  // we badly named enum from the start, too bad, now we accept this semantic difference with json schema
-  if (cleanProp.enum) {
-    cleanProp.examples = cleanProp.enum
-    delete cleanProp.enum
-  }
-  const labels = cleanProp['x-labels']
-  if (labels && Object.keys(labels).length) {
-    const values = Object.keys(labels).map(key => ({ title: labels[key] || key, const: key }))
-    if (cleanProp['x-labelsRestricted']) {
-      cleanProp.oneOf = values
-    } else {
-      cleanProp.anyOf = values
-      cleanProp.anyOf.push({})
-    }
-
-    delete cleanProp.examples
-  }
-  if (cleanProp['x-fromUrl'] && publicBaseUrl) {
-    cleanProp['x-fromUrl'] = cleanProp['x-fromUrl'].replace(config.publicUrl, publicBaseUrl)
-  }
-  if (cleanProp.separator) cleanProp['x-separator'] = cleanProp.separator
-
-  if (cleanProp['x-calculated']) cleanProp.readOnly = true
-  if (cleanProp['x-extension']) cleanProp.readOnly = true
-
-  if (p['x-refersTo'] === 'https://schema.org/description') cleanProp['x-display'] = 'markdown'
-  if (p['x-refersTo'] === 'https://schema.org/color') cleanProp['x-display'] = 'color-picker'
-
-  delete cleanProp.separator
-  delete cleanProp.key
-  delete cleanProp.ignoreDetection
-  delete cleanProp.ignoreIntegerDetection
-  delete cleanProp.icon
-  delete cleanProp.label
-  return cleanProp
-}
-
 /**
  *
  * @param {any} schema
@@ -288,7 +250,7 @@ exports.jsonSchema = (schema, publicBaseUrl) => {
   /** @type {any} */
   const properties = {}
   for (const p of schema) {
-    properties[p.key] = cleanJsonSchemaProperty(p, publicBaseUrl)
+    properties[p.key] = cleanJsonSchemaProperty(p, config.publicUrl, publicBaseUrl)
   }
   return {
     type: 'object',

@@ -15,8 +15,7 @@ const { bulkSearchPromise, bulkSearchStreams } = require('./master-data')
 const taskProgress = require('./task-progress')
 const permissionsUtils = require('../../misc/utils/permissions')
 const { getPseudoUser } = require('../../misc/utils/users')
-const ajv = require('../../misc/utils/ajv')
-const { jsonSchema } = require('./schema')
+
 const debugMasterData = require('debug')('master-data')
 
 const debug = require('debug')('extensions')
@@ -61,7 +60,7 @@ exports.prepareExtensions = (locale, extensions, oldExtensions = []) => {
 
 // Apply an extension to a dataset: meaning, query a remote service in batches
 // and add the result either to a "full" file or to the collection in case of a rest dataset
-const parser = require('../../../shared/expr-eval')(config.defaultTimezone)
+const compileExpression = require('../../../shared/expr-eval')(config.defaultTimezone).compile
 exports.extend = async (app, dataset, extensions) => {
   debugMasterData(`extend dataset ${dataset.id} (${dataset.slug})`, extensions)
   const db = app.get('db')
@@ -88,20 +87,12 @@ exports.extend = async (app, dataset, extensions) => {
       if (!idInput) throw new Error('A field with concept "http://schema.org/identifier" is required and missing in the remote service action', action)
       detailedExtensions.push({ ...extension, extensionKey, inputMapping, remoteService, action, errorKey, idInput })
     } else if (extension.type === 'exprEval') {
+      const property = dataset.schema.find(p => p.key === extension.property.key)
+      const evaluate = compileExpression(extension.expr, property)
       try {
-        const parsedExpression = parser.parse(extension.expr)
-        const property = dataset.schema.find(p => p.key === extension.property.key)
-        const validate = ajv.compile(jsonSchema([property]))
         detailedExtensions.push({
           ...extension,
-          evaluate: (data) => {
-            let result = parsedExpression.evaluate(data)
-            if (property.type === 'string' && ['boolean', 'number'].includes(typeof result)) {
-              result = result + ''
-            }
-            return result
-          },
-          validate: (data) => validate({ [extension.property.key]: data })
+          evaluate
         })
       } catch (err) {
         throw new Error(`[noretry] échec de l'analyse de l'expression "${extension.expr}" : ${err.message}`)
@@ -281,20 +272,12 @@ class ExtensionsStream extends Transform {
               }
             }
             value = extension.evaluate(data)
-            extension.validate(value)
           } catch (err) {
-            let message = `[noretry] échec de l'évaluation de l'expression "${extension.expr}" : ${err.message}`
-            if (value !== undefined) message += ` (résultat : ${JSON.stringify(value)})`
+            const message = `[noretry] échec de l'évaluation de l'expression "${extension.expr}" : ${err.message}`
+
             throw new Error(message)
           }
           if (value !== null && value !== undefined) {
-            if (extension.property.type === 'boolean') value = !!(value)
-            if (extension.property.type === 'string') value = '' + value
-            if (['number', 'integer'].includes(extension.property.type)) {
-              value = Number(value)
-              if (isNaN(value)) continue
-              if (extension.property.type === 'integer') value = Math.round(value)
-            }
             this.buffer[i][extension.property.key] = value
           }
         }

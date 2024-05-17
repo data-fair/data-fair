@@ -748,6 +748,28 @@ other,unknown address
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [
+        { active: true, type: 'exprEval', expr: '1.1', property: { key: 'calc1', type: 'number' } }
+      ]
+    })
+    assert.equal(res.status, 200)
+    await workers.hook(`finalizer/${dataset.id}`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.results[0].calc1, 1.1)
+
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [
+        { active: true, type: 'exprEval', expr: '1.1', property: { key: 'calc1', type: 'integer' } }
+      ]
+    })
+    assert.equal(res.status, 200)
+    await workers.hook(`finalizer/${dataset.id}`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.results[0].calc1, 1)
+
+    res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [
         { active: true, type: 'exprEval', expr: '1', property: { key: 'calc1', type: 'string' } }
       ]
     })

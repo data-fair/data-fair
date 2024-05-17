@@ -1,5 +1,5 @@
 const assert = require('assert').strict
-const parser = require('../shared/expr-eval')('Europe/Paris')
+const { parser } = require('../shared/expr-eval')('Europe/Paris')
 
 describe('expression engine based on expr-eval', () => {
   it('should evaluate simple expressions', () => {

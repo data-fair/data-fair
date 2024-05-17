@@ -205,7 +205,7 @@ en:
 <script>
 import eventBus from '~/event-bus'
 import { unflatten } from 'flat'
-const parser = require('../../../shared/expr-eval')(process.env.defaultTimeZone)
+const { compile } = require('../../../shared/expr-eval')(process.env.defaultTimeZone)
 const { getExtensionKey } = require('../../../shared/utils/extensions')
 const { mapState, mapGetters } = require('vuex')
 
@@ -262,7 +262,7 @@ export default {
             }
           }
 
-          return { result: this.parsedExpression.evaluate(data) }
+          return { result: this.parsedExpression(data) }
         } catch (err) {
           return { error: err.message }
         }
@@ -276,7 +276,8 @@ export default {
           this.parsingError = this.$t('emptyExpr')
         } else {
           try {
-            this.parsedExpression = parser.parse(this.extension.expr)
+            const property = this.dataset.schema.find(p => p.key === this.extension.property.key) ?? this.extension.property
+            this.parsedExpression = compile(this.extension.expr, property)
             this.parsingError = null
           } catch (err) {
             this.parsingError = err.message
