@@ -875,14 +875,6 @@ export default {
       if (filter.type === 'in' && filter.values.length === 0) return
       this.filters.push(filter)
     },
-    isFilterable (field, value) {
-      if (field['x-capabilities'] && field['x-capabilities'].index === false) return false
-      if (field['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
-      if (value === undefined || value === null || value === '') return false
-      if (typeof value === 'string' && (value.length > 200 || value.startsWith('{'))) return false
-      if (typeof value === 'string' && value.endsWith('...')) return false
-      return true
-    },
     hideHeader (header) {
       if (!this.selectedCols.length) this.selectedCols = this.cols
       this.selectedCols = this.selectedCols.filter(sc => sc !== header.value)

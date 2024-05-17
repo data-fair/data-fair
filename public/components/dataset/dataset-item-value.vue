@@ -163,7 +163,7 @@ export default {
       if (this.field['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
       if (value === undefined || value === null || value === '') return false
       if (typeof value === 'string' && (value.length > 200 || value.startsWith('{'))) return false
-      if (typeof value === 'string' && value.endsWith('...')) return false
+      if (this.shouldDisplayDetail) return false
       return true
     },
     hoverValue (value) {
