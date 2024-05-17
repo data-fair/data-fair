@@ -1,5 +1,5 @@
 const assert = require('assert').strict
-const { parser } = require('../shared/expr-eval')('Europe/Paris')
+const { parser, compile } = require('../shared/expr-eval')('Europe/Paris')
 
 describe('expression engine based on expr-eval', () => {
   it('should evaluate simple expressions', () => {
@@ -24,5 +24,12 @@ describe('expression engine based on expr-eval', () => {
     assert.equal(parser.parse('TRANSFORM_DATE(a, "x")').evaluate({ a: 1715076817000 }), '2024-05-07T12:13:37+02:00')
     assert.equal(parser.parse('TRANSFORM_DATE(a, "X")').evaluate({ a: '1715076817' }), '2024-05-07T12:13:37+02:00')
     assert.equal(parser.parse('TRANSFORM_DATE(a, "X")').evaluate({ a: null }), null)
+
+    assert.equal(compile('a', { type: 'string' })({ a: 11 }), '11')
+    assert.equal(compile('a', { type: 'number' })({ a: '11' }), 11)
+    assert.equal(compile('CONCAT(a,";",a)', { type: 'number', separator: ';' })({ a: '11' }), '11;11')
+    assert.equal(compile('[a,a]', { type: 'number', separator: ';' })({ a: '11' }), '11;11')
+    assert.equal(compile('[a,a]', { type: 'string', format: 'date', separator: ';' })({ a: '2024-11-11' }), '2024-11-11;2024-11-11')
+    assert.throws(() => compile('a', { type: 'string', format: 'date' })({ a: '11' }), { message: '/undefined doit correspondre au format "date" (date) (résultat : "11")' })
   })
 })
