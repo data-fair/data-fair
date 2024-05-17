@@ -635,8 +635,10 @@ exports.prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicU
 
 // try to produce a somewhat readable error message from a structured error from elasticsearch
 exports.errorMessage = (err) => {
-  const errBody = (err.body && err.body.error) || (err.meta && err.meta.body && err.meta.body.error) || err.error
-  if (!errBody) return err.message || err
+  if (typeof err === 'string') return err
+  let errBody = (err.body && err.body.error) || (err.meta && err.meta.body && err.meta.body.error) || err.error
+  if (!errBody && !!err.reason) errBody = err
+  if (!errBody) return err.message
   const parts = []
   if (errBody.reason) {
     parts.push(errBody.reason)
