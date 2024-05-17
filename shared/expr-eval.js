@@ -175,12 +175,14 @@ module.exports = (defaultTimezone) => {
       const parsedExpression = parser.parse(expr)
 
       const propertySchema = cleanJsonSchemaProperty(property)
+      /** @type {any} */
       const schema = {
         type: 'object',
         properties: {
           [property.key]: property.separator ? { type: 'array', items: propertySchema } : propertySchema
         }
       }
+      if (property['x-required']) schema.required = [property.key]
       const validate = ajv.compile(schema)
 
       /**
