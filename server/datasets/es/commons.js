@@ -638,7 +638,10 @@ exports.errorMessage = (err) => {
   if (typeof err === 'string') return err
   let errBody = (err.body && err.body.error) || (err.meta && err.meta.body && err.meta.body.error) || err.error
   if (!errBody && !!err.reason) errBody = err
-  if (!errBody) return err.message
+  if (!errBody) {
+    if (err.message) return err.message
+    else return JSON.stringify(err)
+  }
   const parts = []
   if (errBody.reason) {
     parts.push(errBody.reason)
