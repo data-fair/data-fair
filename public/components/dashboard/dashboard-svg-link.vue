@@ -10,7 +10,7 @@
 
     <layout-wrap-svg
       :source="svg"
-      style="height:100%;width:100%;"
+      style="width:100%;padding-left:34px;padding-right:34px;margin-top:-16px;margin-bottom: -20px;"
       :color="$vuetify.theme.themes.light[color] || color"
     />
   </v-card>
