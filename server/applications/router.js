@@ -50,11 +50,12 @@ const setUniqueRefs = (application) => {
 
 const curateApplication = async (db, application) => {
   if (application.title) application.title = application.title.trim()
+  const projection = { id: 1, url: 1, meta: 1, datasetsFilters: 1 }
   if (application.url) {
-    application.baseApp = await db.collection('base-applications').findOne({ url: application.url }, { projection: { id: 1, url: 1, meta: 1 } })
+    application.baseApp = await db.collection('base-applications').findOne({ url: application.url }, { projection })
   }
   if (application.urlDraft) {
-    application.baseAppDraft = await db.collection('base-applications').findOne({ url: application.urlDraft }, { projection: { id: 1, url: 1, meta: 1 } })
+    application.baseAppDraft = await db.collection('base-applications').findOne({ url: application.urlDraft }, { projection })
   }
   setUniqueRefs(application)
 }

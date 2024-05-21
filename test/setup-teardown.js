@@ -47,7 +47,41 @@ before('global mocks', () => {
   nock('http://monapp1.com/')
     .persist()
     .get('/index.html').query(true).reply(200, html)
-    .get('/config-schema.json').query(true).reply(200, {})
+    .get('/config-schema.json').query(true).reply(200, {
+      type: 'object',
+      required: ['datasets'],
+      properties: {
+        datasets: {
+          type: 'array',
+          items: [
+            {
+              title: 'Jeu de données',
+              description: 'Ce jeu doit contenir au moins une colonne avec valeur numérique',
+              type: 'object',
+              'x-fromUrl': 'api/v1/datasets?status=finalized&field-type=integer,number&q={q}&select=id,title,schema&{context.datasetFilter}',
+              'x-itemsProp': 'results',
+              'x-itemTitle': 'title',
+              'x-itemKey': 'href',
+              additionalProperties: false,
+              properties: {
+                href: {
+                  type: 'string'
+                },
+                title: {
+                  type: 'string'
+                },
+                id: {
+                  type: 'string'
+                },
+                finalizedAt: {
+                  type: 'string'
+                }
+              }
+            }
+          ]
+        }
+      }
+    })
   nock('http://monapp2.com')
     .persist()
     .get('/index.html').query(true).reply(200, html)

@@ -198,14 +198,25 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   // and so benefit from better caching
   const datasets = req.application.configuration && req.application.configuration.datasets && req.application.configuration.datasets.filter(d => !!d)
   if (datasets && datasets.length) {
-    const refreshKeys = ['finalizedAt']
-    for (const d of datasets) {
+    let refreshKeys = ['finalizedAt']
+    for (let i = 0; i < datasets.length; i++) {
+      const d = datasets[i]
       if (d.href) d.href = d.href.replace(config.publicUrl, req.publicBaseUrl)
-      for (const key of Object.keys(d)) {
-        if (!['id', '_id', 'href'].includes(key) && !refreshKeys.includes(key)) refreshKeys.push(key)
+
+      // we use the select parameter passed to data-fair as a cue to fill fresh dataset info
+      const datasetFilters = req.application.baseApp.datasetsFilters?.[i] ?? []
+      const select = datasetFilters.select ?? []
+      if (select) {
+        refreshKeys = refreshKeys.concat(select)
+      } else {
+        // if select is not found we use the old deprecated method to prevent compatibility breakage
+        for (const key of Object.keys(d)) {
+          if (!['id', '_id', 'href'].includes(key) && !refreshKeys.includes(key)) refreshKeys.push(key)
+        }
       }
     }
 
+    /** @type {Record<string, 0 | 1>} */
     const projection = { _id: 0, id: 1 }
     for (const key of refreshKeys) projection[key] = 1
 

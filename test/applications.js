@@ -1,6 +1,7 @@
 const assert = require('assert').strict
 const config = require('config')
 const workers = require('../server/workers')
+const testUtils = require('./resources/test-utils')
 
 describe('Applications', () => {
   it('Get applications when not authenticated', async () => {
@@ -65,7 +66,10 @@ describe('Applications', () => {
   it('Use an application through the application proxy', async () => {
     const ax = global.ax.dmeadus
     const adminAx = global.ax.alban
-    let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
+
+    const dataset = await testUtils.sendDataset('datasets/split.csv', ax)
+
+    let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/', configuration: { datasets: [{ id: dataset.id, href: config.publicUrl + '/api/v1/datasets/' + dataset.id }] } })
     const appId = res.data.id
 
     // The same content is returned with or without a trailing slash
@@ -79,6 +83,12 @@ describe('Applications', () => {
     assert.ok(res.data.includes('My app body'))
     // The configuration is injected
     assert.ok(res.data.includes('window.APPLICATION={'))
+    const application = JSON.parse(/>window\.APPLICATION=(.*);</.exec(res.data)[1])
+    assert.ok(application.configuration)
+    assert.ok(application.configuration.datasets?.length, 1)
+    const datasetRef = application.configuration.datasets[0]
+    assert.deepEqual(Object.keys(datasetRef).sort(), ['finalizedAt', 'href', 'id', 'schema', 'title'])
+
     // A link to the manifest is injected
     assert.ok(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/data-fair/app/${appId}/manifest.json">`))
     // The app reference a service worker

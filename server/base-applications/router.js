@@ -37,7 +37,7 @@ async function clean (db) {
 
 function prepareQuery (query) {
   return Object.keys(query)
-    .filter(key => !['skip', 'size', 'q', 'status', 'select'].includes(key))
+    .filter(key => !['skip', 'size', 'q', 'status', '{context.datasetFilter}', 'owner'].includes(key))
     .reduce((a, key) => { a[key] = query[key].split(','); return a }, {})
 }
 
@@ -96,7 +96,7 @@ async function initBaseApp (db, app) {
 }
 
 async function syncBaseApp (db, baseApp) {
-  const baseAppReference = { id: baseApp.id, url: baseApp.url, meta: baseApp.meta }
+  const baseAppReference = { id: baseApp.id, url: baseApp.url, meta: baseApp.meta, datasetsFilters: baseApp.datasetsFilters }
   await db.collection('applications').updateMany({ url: baseApp.url }, { $set: { baseApp: baseAppReference } })
   await db.collection('applications').updateMany({ urlDraft: baseApp.url }, { $set: { baseAppDraft: baseAppReference } })
 }
