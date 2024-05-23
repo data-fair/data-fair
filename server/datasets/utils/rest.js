@@ -350,6 +350,12 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
         if (operation) {
           operation.body = { ...previousBody, ...operation.body }
           Object.assign(operation.fullBody, operation.body)
+          for (const key in operation.body) {
+            if (operation.body[key] === null) {
+              delete operation.body[key]
+              delete operation.fullBody[key]
+            }
+          }
           operation.fullBody._hash = getLineHash(operation.body)
           if (operation.fullBody._hash === _hash) {
             operation._status = 304
@@ -692,10 +698,10 @@ exports.deleteLine = async (req, res, next) => {
 }
 
 exports.createOrUpdateLine = async (req, res, next) => {
-  formatLine(req.body, req.dataset.schema)
-
   // @ts-ignore
   const dataset = req.dataset
+
+  formatLine(req.body, dataset.schema)
 
   const db = req.app.get('db')
   Object.assign(req.body, linesOwnerCols(req.linesOwner))
@@ -722,7 +728,9 @@ exports.patchLine = async (req, res, next) => {
 
   const db = req.app.get('db')
   await manageAttachment(req, true)
-  const [operation] = (await applyReqTransactions(req, [{ _action: 'patch', _id: req.params.lineId, ...req.body }], compileSchema(req.dataset, req.user.adminMode))).operations
+  const fullLine = { _action: 'patch', _id: req.params.lineId, ...req.body }
+  formatLine(fullLine, dataset.schema)
+  const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, req.user.adminMode))).operations
   if (operation._error) return res.status(operation._status).send(operation._error)
 
   await import('@data-fair/lib/express/events-log.js')

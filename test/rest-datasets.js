@@ -922,10 +922,50 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
     await workers.hook('finalizer/restdate')
     await ax.post('/api/v1/datasets/restdate/lines', { attr1: '1961-02-13 00:00:00+00:00' })
     await workers.hook('finalizer/restdate')
-    const lines = (await ax.get('/api/v1/datasets/restdate/lines')).data.results
+    let lines = (await ax.get('/api/v1/datasets/restdate/lines')).data.results
     assert.equal(lines.length, 1)
     assert.equal(lines[0].attr1, '1961-02-13T00:00:00+00:00')
-    console.log(lines)
+
+    await ax.patch('/api/v1/datasets/restdate/lines/' + lines[0]._id, { attr1: '1961-02-14 00:00:00+00:00' })
+    await workers.hook('finalizer/restdate')
+    lines = (await ax.get('/api/v1/datasets/restdate/lines')).data.results
+    assert.equal(lines.length, 1)
+    assert.equal(lines[0].attr1, '1961-02-14T00:00:00+00:00')
+
+    await ax.patch('/api/v1/datasets/restdate/lines/' + lines[0]._id, { attr1: null })
+    await workers.hook('finalizer/restdate')
+    lines = (await ax.get('/api/v1/datasets/restdate/lines')).data.results
+    assert.equal(lines.length, 1)
+    assert.ok(!lines[0].attr1)
+    return true
+  })
+
+  it('Accept date detected as ISO by JS but not by elasticsearch in bulk', async function () {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets/restdatebulk', {
+      isRest: true,
+      title: 'restdatebulk',
+      schema: [{ key: 'attr1', type: 'string', format: 'date-time' }, { key: 'attr2', type: 'string' }]
+    })
+    await workers.hook('finalizer/restdatebulk')
+    await ax.post('/api/v1/datasets/restdatebulk/_bulk_lines', [
+      { _id: '1', attr1: '1961-02-13 00:00:00+00:00', attr2: 'val1' },
+      { _id: '2', attr1: '1961-02-13T00:00:00+00:00', attr2: 'val2' }
+    ])
+    await workers.hook('finalizer/restdatebulk')
+    let lines = (await ax.get('/api/v1/datasets/restdatebulk/lines')).data.results
+    assert.equal(lines.length, 2)
+    assert.equal(lines[0].attr1, '1961-02-13T00:00:00+00:00')
+    assert.equal(lines[0].attr2, 'val2')
+    assert.equal(lines[1].attr1, '1961-02-13T00:00:00+00:00')
+    assert.equal(lines[1].attr2, 'val1')
+
+    await ax.post('/api/v1/datasets/restdatebulk/_bulk_lines', [{ _id: lines[0]._id, attr1: null, _action: 'patch' }])
+    await workers.hook('finalizer/restdatebulk')
+    lines = (await ax.get('/api/v1/datasets/restdatebulk/lines')).data.results
+    assert.equal(lines.length, 2)
+    assert.ok(!lines[0].attr1)
+    assert.equal(lines[0].attr2, 'val2')
     return true
   })
 
@@ -945,6 +985,23 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
     const lines = (await ax.get('/api/v1/datasets/restcsv/lines')).data.results
     assert.equal(lines.length, 1)
     assert.equal(lines[0].attr1, '1961-02-13T00:00:00+00:00')
+    return true
+  })
+
+  it('Ignore null values', async function () {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets/restnull', {
+      isRest: true,
+      title: 'restnull',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+    })
+    await workers.hook('finalizer/restnull')
+    await ax.post('/api/v1/datasets/restnull/lines', { attr1: 'val1', attr2: null })
+    await workers.hook('finalizer/restnull')
+    const lines = (await ax.get('/api/v1/datasets/restnull/lines')).data.results
+    assert.equal(lines.length, 1)
+    assert.equal(lines[0].attr1, 'val1')
+    assert.ok(!('attr2' in lines[0]))
     return true
   })
 

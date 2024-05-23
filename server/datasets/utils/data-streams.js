@@ -18,10 +18,15 @@ const { filePath, fullFilePath, tmpDir } = require('./files')
 const pump = require('../../misc/utils/pipe')
 
 exports.formatLine = (item, schema) => {
-  for (const prop of schema) {
-    if (typeof item[prop.key] === 'string') {
-      const value = fieldsSniffer.format(item[prop['x-originalName'] || prop.key], prop)
-      if (value !== null) item[prop.key] = value
+  for (const key of Object.keys(item)) {
+    const prop = schema.find(p => p.key === key)
+    if (prop && typeof item[key] === 'string') {
+      const value = fieldsSniffer.format(item[prop['x-originalName'] || key], prop)
+      if (value !== null) item[key] = value
+    }
+    // special case for rest datasets where null values are kept in a patch
+    if (item._action !== 'patch') {
+      if (item[key] === null) delete item[key]
     }
   }
 }
