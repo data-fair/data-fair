@@ -29,7 +29,7 @@
           {{ detailValue }}
         </div>
         <div
-          v-else-if="field['x-display'] === 'markdown' && !!fullValue"
+          v-else-if="(field['x-display'] === 'markdown' || field['x-refersTo'] === 'http://schema.org/description') && !!fullValue"
           class="item-value-detail"
           v-html="fullValue"
         />

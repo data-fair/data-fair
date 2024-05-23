@@ -25,7 +25,7 @@ exports.cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl) => {
   if (cleanProp['x-calculated']) cleanProp.readOnly = true
   if (cleanProp['x-extension']) cleanProp.readOnly = true
 
-  if (p['x-refersTo'] === 'https://schema.org/description') cleanProp['x-display'] = 'markdown'
+  if (p['x-refersTo'] === 'http://schema.org/description') cleanProp['x-display'] = 'markdown'
   if (p['x-refersTo'] === 'https://schema.org/color') cleanProp['x-display'] = 'color-picker'
 
   delete cleanProp.separator

@@ -581,10 +581,10 @@ exports.prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicU
 
   // format markdown and sanitize it for XSS prevention
   // either using x-display=markdown info or implicitly for description
-  const descriptionField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/description')
+  const descriptionField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/description')?.key
   if (query.html === 'true') {
     for (const field of dataset.schema) {
-      if ((field['x-display'] === 'markdown' || field === descriptionField) && res[field.key]) {
+      if ((field['x-display'] === 'markdown' || field.key === descriptionField) && res[field.key]) {
         res[field.key] = marked.parse(res[field.key]).trim()
         res[field.key] = sanitizeHtml(res[field.key])
       }
@@ -600,7 +600,7 @@ exports.prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicU
     const truncate = Number(query.truncate)
     for (const key in res) {
       if (typeof res[key] !== 'string') continue
-      if (descriptionField && descriptionField.key === key) continue
+      if (descriptionField === key) continue
       if (imageField && imageField.key === key) continue
       if (linkField && linkField.key === key) continue
       if (emailField && emailField.key === key) continue
@@ -613,7 +613,7 @@ exports.prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicU
       if (key === '_attachment_url') continue
       const field = dataset.schema.find(f => f.key === key)
       if (field && field.separator) continue
-      if (query.html === 'true' && (field['x-display'] === 'markdown' || field === descriptionField)) {
+      if (query.html === 'true' && (field['x-display'] === 'markdown' || field.key === descriptionField)) {
         res[key] = truncateHTML(res[key], truncate)
       } else {
         res[key] = truncateMiddle(res[key], truncate, 0, '...')
