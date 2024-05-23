@@ -912,6 +912,23 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
     })
   })
 
+  it('Accept date detected as ISO by JS but not by elasticsearch', async function () {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets/restdate', {
+      isRest: true,
+      title: 'restdate',
+      schema: [{ key: 'attr1', type: 'string', format: 'date-time' }]
+    })
+    await workers.hook('finalizer/restdate')
+    await ax.post('/api/v1/datasets/restdate/lines', { attr1: '1961-02-13 00:00:00+00:00' })
+    await workers.hook('finalizer/restdate')
+    const lines = (await ax.get('/api/v1/datasets/restdate/lines')).data.results
+    assert.equal(lines.length, 1)
+    assert.equal(lines[0].attr1, '1961-02-13T00:00:00+00:00')
+    console.log(lines)
+    return true
+  })
+
   it('Accept date detected as ISO by JS but not by elasticsearch in bulk CSV', async function () {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets/restcsv', {
@@ -925,6 +942,9 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.nbErrors, 0)
     assert.equal(res.data.nbOk, 1)
     await workers.hook('finalizer/restcsv')
+    const lines = (await ax.get('/api/v1/datasets/restcsv/lines')).data.results
+    assert.equal(lines.length, 1)
+    assert.equal(lines[0].attr1, '1961-02-13T00:00:00+00:00')
     return true
   })
 
@@ -1361,7 +1381,6 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     ])
     assert.equal(res.data.nbErrors, 1)
     assert.equal(res.data.nbOk, 2)
-
     res = await ax.post('/api/v1/datasets/restdatetimeformat/_bulk_lines', `attr1,attr2
     test1,${moment().toISOString()}
     test2,${moment().format('D/M/YYYY H:m')}

@@ -17,6 +17,15 @@ const restDatasetsUtils = require('./rest')
 const { filePath, fullFilePath, tmpDir } = require('./files')
 const pump = require('../../misc/utils/pipe')
 
+exports.formatLine = (item, schema) => {
+  for (const prop of schema) {
+    if (typeof item[prop.key] === 'string') {
+      const value = fieldsSniffer.format(item[prop['x-originalName'] || prop.key], prop)
+      if (value !== null) item[prop.key] = value
+    }
+  }
+}
+
 // used both by exports.readStream and bulk transactions in rest datasets
 exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, encoding, skipDecoding, dataset, autoAdjustKeys = false) => {
   const streams = []
@@ -35,12 +44,7 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
     streams.push(new Transform({
       objectMode: true,
       transform (item, encoding, callback) {
-        for (const prop of schema) {
-          if (typeof item[prop.key] === 'string') {
-            const value = fieldsSniffer.format(item[prop['x-originalName'] || prop.key], prop)
-            if (value !== null) item[prop.key] = value
-          }
-        }
+        exports.formatLine(item, schema)
         callback(null, item)
       }
     }))

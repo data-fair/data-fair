@@ -22,7 +22,7 @@ const attachmentsUtils = require('./attachments')
 const findUtils = require('../../misc/utils/find')
 const metrics = require('../../misc/utils/metrics')
 const fieldsSniffer = require('./fields-sniffer')
-const { transformFileStreams } = require('./data-streams')
+const { transformFileStreams, formatLine } = require('./data-streams')
 const { attachmentPath, lsAttachments } = require('./files')
 const { jsonSchema } = require('./schema')
 const { tmpDir } = require('./files')
@@ -692,6 +692,8 @@ exports.deleteLine = async (req, res, next) => {
 }
 
 exports.createOrUpdateLine = async (req, res, next) => {
+  formatLine(req.body, req.dataset.schema)
+
   // @ts-ignore
   const dataset = req.dataset
 
@@ -700,6 +702,7 @@ exports.createOrUpdateLine = async (req, res, next) => {
   req.body._action = req.body._action ?? 'createOrUpdate'
   const definedId = req.params.lineId || req.body._id || getLineId(req.body, req.dataset)
   req.body._id = definedId || nanoid()
+
   await manageAttachment(req, false)
   const [operation] = (await applyReqTransactions(req, [req.body], compileSchema(req.dataset, req.user.adminMode))).operations
 

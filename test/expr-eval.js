@@ -30,6 +30,7 @@ describe('expression engine based on expr-eval', () => {
     assert.equal(compile('CONCAT(a,";",a)', { type: 'number', separator: ';' })({ a: '11' }), '11;11')
     assert.equal(compile('[a,a]', { type: 'number', separator: ';' })({ a: '11' }), '11;11')
     assert.equal(compile('[a,a]', { type: 'string', format: 'date', separator: ';' })({ a: '2024-11-11' }), '2024-11-11;2024-11-11')
+    assert.equal(compile('a', { type: 'string', format: 'date-time' })({ a: '1961-02-13 00:00:00+00:00' }), '1961-02-13T00:00:00+00:00')
     assert.throws(() => compile('a', { key: 'e', type: 'string', format: 'date' })({ a: '11' }), { message: '/e doit correspondre au format "date" (date) (résultat : "11")' })
     assert.equal(compile('a', { type: 'string' })({ a: null }), null)
     assert.throws(() => compile('a', { key: 'e', type: 'string', 'x-required': true })({ a: null }), { message: 'requiert la propriété e (e) (résultat : null)' })

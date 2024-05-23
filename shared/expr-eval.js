@@ -230,7 +230,12 @@ const fixValue = (value, property) => {
     return value + ''
   }
   if (property.type === 'boolean') return !!(value)
-  if (property.type === 'string') value = '' + value
+  if (property.type === 'string') {
+    value = '' + value
+    if (property.format === 'date-time' && value.length > 10 && value[10] !== 'T') {
+      value = value.substring(0, 10) + 'T' + value.substring(11)
+    }
+  }
   if (['number', 'integer'].includes(property.type)) {
     const numberValue = Number(value)
     if (isNaN(numberValue)) return value
