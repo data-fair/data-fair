@@ -1036,6 +1036,24 @@ router.get('/:datasetId/metadata-attachments/*', readDataset(), apiKeyMiddleware
     }
   }
 
+  const ranges = req.range(1000000)
+  if (Array.isArray(ranges) && ranges.length === 1 && ranges.type === 'bytes') {
+    const range = ranges[0]
+    const filePath = datasetUtils.metadataAttachmentPath(req.dataset, req.params[0])
+    if (!await fs.pathExists(filePath)) return res.status(404).send()
+    const stats = await fs.stat(filePath)
+
+    res.setHeader('content-type', 'application/octet-stream')
+    res.setHeader('content-range', `bytes ${range.start}-${range.end}/${stats.size}`)
+    res.setHeader('content-length', (range.end - range.start) + 1)
+    res.status(206)
+    await pump(
+      fs.createReadStream(filePath, { start: range.start, end: range.end }),
+      res.throttle('static'),
+      res
+    )
+  }
+
   res.sendFile(
     req.params['0'],
     {
