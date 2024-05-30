@@ -95,8 +95,8 @@ module.exports = {
     // Limits applied to all API requests
     apiRate: {
       anonymous: {
-        duration: 5, // 5 seconds intervals
-        nb: 100, // 100 req max in this interval, 429 afterwards
+        duration: 60, // seconds intervals
+        nb: 600, // req max in this interval, 429 afterwards
         // in bytes per second, no 429, instead the stream is throttled
         bandwidth: {
           // used by routes with dynamic contents (search mostly)
@@ -106,8 +106,8 @@ module.exports = {
         }
       },
       user: {
-        duration: 1, // 1 second intervals
-        nb: 100, // 100 req max in this interval, 429 afterwards
+        duration: 60, // second intervals
+        nb: 1200, // req max in this interval, 429 afterwards
         // in bytes per second, no 429, instead the stream is throttled
         bandwidth: {
           // used by routes with dynamic contents (search mostly)

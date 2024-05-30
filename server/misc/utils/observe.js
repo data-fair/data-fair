@@ -35,7 +35,7 @@ exports.reqStep = (req, stepName) => {
   reqStep.labels(req[reqObserveKey].routeName, stepName).observe(duration / 1000)
   debugReq('request', req.method, req.originalUrl, stepName, duration, 'ms')
   if (duration > 1000 && stepName !== 'total' && stepName !== 'finish') {
-    console.log('request', req.method, req.originalUrl, stepName, duration, 'ms')
+    console.log('slow request', req.method, req.originalUrl, stepName, duration, 'ms')
   }
   req[reqObserveKey].step = now
 }
