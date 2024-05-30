@@ -8,7 +8,7 @@ published: true
 application : https://koumoul.com/apps/data-fair-networks/0.1/
 ---
 
-La visualisation **graphes/réseaux** permet de générer des graphes dynamiques à partir de deux jeux de données, l'un contenant les nœuds et l'autre les liens. Vous avez un exemple de cette visualisation sur le [réseau de tags dans Stackoverflow](https://opendata.koumoul.com/reuses/reseau-de-tags-dans-stackoverflow).
+La visualisation **graphes/réseaux** permet de générer des graphes dynamiques à partir de deux jeux de données, l'un contenant les nœuds et l'autre les liens. Vous avez un exemple de cette visualisation sur le [réseau de tags dans Stackoverflow](https://opendata.koumoul.com/reuses/noeuds-du-reseau-des-tags-dans-stackoverflow).
 
 ## Créer votre graphe
 
