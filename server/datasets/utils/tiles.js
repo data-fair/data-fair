@@ -1,7 +1,7 @@
 const path = require('path')
 const Piscina = require('piscina')
 
-const geojson2pbfPiscina = new Piscina({
+const geojson2pbfPiscina = exports.geojson2pbfPiscina = new Piscina({
   filename: path.resolve(__dirname, '../../datasets/threads/geojson2pbf.js'),
   maxThreads: 1
 })

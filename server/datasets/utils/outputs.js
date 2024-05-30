@@ -4,7 +4,7 @@ const { Transform } = require('stream')
 const path = require('path')
 const Piscina = require('piscina')
 
-const results2sheetPiscina = new Piscina({
+const results2sheetPiscina = exports.results2sheetPiscina = new Piscina({
   filename: path.resolve(__dirname, '../../datasets/threads/results2sheet.js'),
   maxThreads: 1
 })

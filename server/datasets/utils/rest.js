@@ -30,7 +30,7 @@ const esUtils = require('../../datasets/es')
 const { tabularTypes } = require('../../workers/file-normalizer')
 const Piscina = require('piscina')
 
-const sheet2csvPiscina = new Piscina({
+const sheet2csvPiscina = exports.sheet2csvPiscina = new Piscina({
   filename: path.resolve(__dirname, '../threads/sheet2csv.js'),
   maxThreads: 1
 })
