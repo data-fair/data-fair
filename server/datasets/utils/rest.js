@@ -11,6 +11,7 @@ const mime = require('mime-types')
 const { Readable, Transform, Writable } = require('stream')
 const moment = require('moment')
 const { crc32 } = require('crc')
+const md5File = require('md5-file')
 const stableStringify = require('fast-json-stable-stringify')
 const LinkHeader = require('http-link-header')
 const unzipper = require('unzipper')
@@ -517,6 +518,13 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
     if (hasRevisionsBulkOp) {
       await revisionsBulkOp.execute()
     }
+  } else {
+    for (const operation of operations) {
+      if (operation._action === 'delete' && !operation._error && (!operation._status || operation._status < 300)) {
+        const dir = attachmentPath(dataset, operation._id)
+        await fs.remove(dir)
+      }
+    }
   }
 
   if (user && bulkOpMatchingOperations.length) {
@@ -652,8 +660,10 @@ async function manageAttachment (req, keepExisting) {
   if (req.file) {
     // An attachment was uploaded
     await fs.ensureDir(dir)
-    await fs.emptyDir(dir)
-    const relativePath = path.join(lineId, req.file.originalname)
+    if (!req.dataset.rest?.history) await fs.emptyDir(dir)
+    const fileMd5 = await md5File(req.file.path)
+    await fs.ensureDir(path.join(dir, fileMd5))
+    const relativePath = path.join(lineId, fileMd5, req.file.originalname)
     await fs.rename(req.file.path, attachmentPath(req.dataset, relativePath))
     if (!pathField) {
       throw createError(400, 'Le schéma ne prévoit pas d\'associer une pièce jointe')

@@ -269,18 +269,28 @@ describe('REST datasets', () => {
     form.append('attr1', 10)
     res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    assert.ok(res.data._id)
-    assert.equal(res.data.attachmentPath, `${res.data._id}/test.pdf`)
+    const line = res.data
+    assert.ok(line._id)
+    assert.ok(line.attachmentPath.startsWith(res.data._id + '/'))
+    assert.ok(line.attachmentPath.endsWith('/test.pdf'))
     await workers.hook('finalizer/rest5')
-    const ls = await lsAttachments(dataset)
-    assert.equal(ls.length, 1)
-    assert.equal(ls[0], res.data.attachmentPath)
 
     res = await ax.get('/api/v1/datasets/rest5/lines')
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]['_file.content'], 'This is a test pdf file.')
+    let attachments = await lsAttachments(dataset)
+    assert.equal(attachments.length, 1)
+    assert.equal(attachments[0], res.data.results[0].attachmentPath)
 
     assert.equal((await fs.readdir('data/test/tmp')).length, 0)
+
+    await ax.delete('/api/v1/datasets/rest5/lines/' + line._id)
+    await workers.hook('finalizer/rest5')
+
+    res = await ax.get('/api/v1/datasets/rest5/lines')
+    assert.equal(res.data.total, 0)
+    attachments = await lsAttachments(dataset)
+    assert.equal(attachments.length, 0)
   })
 
   it('Send attachments with bulk request', async () => {
@@ -648,6 +658,65 @@ describe('REST datasets', () => {
     await assert.rejects(ax.get('/api/v1/datasets/resthisttoggle/lines/id1/revisions', { params: { size: 1 } }), (err) => err.status === 400)
     res = await ax.get('/api/v1/datasets/resthisttoggle')
     assert.equal(res.data.storage.revisions, undefined)
+  })
+
+  it('Use history mode with attachments', async () => {
+    const ax = await global.ax.hlalonde3
+    let res = await ax.post('/api/v1/datasets/resthistattach', {
+      isRest: true,
+      title: 'resthistattach',
+      rest: { history: true },
+      schema: [
+        { key: 'attr1', type: 'string' },
+        { key: 'attr2', type: 'string' },
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ]
+    })
+    const dataset = await workers.hook('finalizer/resthistattach')
+
+    // create line with an attachment
+    const form = new FormData()
+    const attachmentContent = fs.readFileSync('./test/resources/datasets/files/dir1/test.pdf')
+    form.append('attachment', attachmentContent, 'dir1/test.pdf')
+    form.append('attr1', 'test1')
+    form.append('attr2', 'test1')
+    res = await ax.post('/api/v1/datasets/resthistattach/lines', form, { headers: testUtils.formHeaders(form) })
+    const line = res.data
+    await workers.hook('finalizer/resthistattach')
+
+    // patch a property but do not touch the attachment
+    res = await ax.patch(`/api/v1/datasets/resthistattach/lines/${line._id}`, { attr1: 'test2' })
+    await workers.hook('finalizer/resthistattach')
+
+    // patch the attachment
+    const form2 = new FormData()
+    const attachmentContent2 = fs.readFileSync('./test/resources/datasets/files/test.odt')
+    form2.append('attachment', attachmentContent2, 'dir1/test.pdf')
+    form2.append('attr2', 'test2')
+    res = await ax.patch(`/api/v1/datasets/resthistattach/lines/${line._id}`, form2, { headers: testUtils.formHeaders(form2) })
+    await workers.hook('finalizer/resthistattach')
+
+    res = await ax.get(`/api/v1/datasets/resthistattach/lines/${line._id}/revisions`)
+    assert.equal(res.data.results.length, 3)
+    assert.equal(res.data.results[0].attr1, 'test2')
+    assert.equal(res.data.results[0].attr2, 'test2')
+    assert.equal(res.data.results[1].attr1, 'test2')
+    assert.equal(res.data.results[1].attr2, 'test1')
+    assert.equal(res.data.results[2].attr1, 'test1')
+    assert.equal(res.data.results[2].attr2, 'test1')
+    assert.equal(res.data.results[2].attachmentPath, res.data.results[1].attachmentPath)
+    assert.notEqual(res.data.results[1].attachmentPath, res.data.results[0].attachmentPath)
+    let attachments = await lsAttachments(dataset)
+    assert.equal(attachments.length, 2)
+
+    // delete the line, the attachments should still be there
+    await ax.delete(`/api/v1/datasets/resthistattach/lines/${line._id}`)
+    await workers.hook('finalizer/resthistattach')
+
+    res = await ax.get(`/api/v1/datasets/resthistattach/lines/${line._id}/revisions`)
+    assert.equal(res.data.results.length, 4)
+    attachments = await lsAttachments(dataset)
+    assert.equal(attachments.length, 2)
   })
 
   it('Apply a TTL on some date-field', async () => {
