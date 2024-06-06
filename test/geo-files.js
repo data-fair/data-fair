@@ -98,6 +98,23 @@ describe('geo files support', () => {
     await workers.hook('finalizer/' + dataset.id)
   })
 
+  it('Upload geojson dataset with some managed fixes', async () => {
+    // Send dataset
+    const datasetFd = fs.readFileSync('./test/resources/geo/geojson-broken-globalid.geojson')
+    const form = new FormData()
+    form.append('file', datasetFd, 'geojson-broken-globalid.geojson')
+    form.append('extras', JSON.stringify({
+      fixGeojsonGlobalId: true
+    }))
+    const ax = global.ax.dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+
+    // Dataset received and parsed
+    const dataset = await workers.hook('finalizer/' + res.data.id)
+    assert.equal(dataset.count, 2)
+  })
+
   it('Log error for geojson with broken feature', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/geo/geojson-broken.geojson')

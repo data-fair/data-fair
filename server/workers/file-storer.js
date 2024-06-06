@@ -32,6 +32,35 @@ exports.process = async function (app, dataset) {
       await new Promise(resolve => setTimeout(resolve, 10000))
     }
 
+    // manage some special cases of invalid files
+    // some ESRI files have invalid geojson with stuff like this:
+    // "GLOBALID": {7E1C9E26-9767-4AE4-9CBB-F353B15B3BFE},
+    if (dataset.extras?.fixGeojsonGlobalId) {
+      const { Transform } = require('stream')
+      const split2 = require('split2')
+      const pump = require('../misc/utils/pipe')
+
+      const fixedFilePath = loadedFilePath + '.fixed'
+      const globalIdRegexp = /"GLOBALID": \{(.*)\}/g
+      await pump(
+        fs.createReadStream(loadedFilePath),
+        split2(),
+        new Transform({
+          objectMode: true,
+          transform (line, encoding, callback) {
+            const match = globalIdRegexp.exec(line)
+            if (match) {
+              callback(null, line.replace(match[0], `"GLOBALID": "${match[1]}"`))
+            } else {
+              callback(null, line)
+            }
+          }
+        }),
+        fs.createWriteStream(fixedFilePath)
+      )
+      await fs.move(fixedFilePath, loadedFilePath, { overwrite: true })
+    }
+
     datasetFile.md5 = await md5File(loadedFilePath)
     const fileSample = await datasetFileSample(loadedFilePath)
     debug(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${loadedFilePath}`)

@@ -1,6 +1,5 @@
 const fs = require('fs-extra')
-const { Writable } = require('stream')
-const { Transform } = require('stream')
+const { Writable, Transform } = require('stream')
 const csv = require('csv-parser')
 const JSONStream = require('JSONStream')
 const { stringify: csvStrStream } = require('csv-stringify')
