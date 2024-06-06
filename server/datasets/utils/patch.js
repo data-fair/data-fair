@@ -146,9 +146,10 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
     patch.dataUpdatedAt = patch.updatedAt
     patch.status = 'loaded'
   } else if (patch.remoteFile) {
-    if (patch.remoteFile?.url !== dataset.remoteFile?.url || patch.remoteFile?.name !== dataset.remoteFile?.name) {
+    if (patch.remoteFile?.url !== dataset.remoteFile?.url || patch.remoteFile?.name !== dataset.remoteFile?.name || patch.remoteFile.forceUpdate) {
       delete patch.remoteFile.lastModified
       delete patch.remoteFile.etag
+      delete patch.remoteFile.forceUpdate
       patch.status = 'imported'
     } else {
       patch.remoteFile.lastModified = dataset.remoteFile.lastModified

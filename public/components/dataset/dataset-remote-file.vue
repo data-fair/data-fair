@@ -14,6 +14,7 @@
           style="max-width: 600px;"
           :rules="[val => val && val.startsWith('http://') || val.startsWith('https://')]"
         />
+
         <v-checkbox
           v-model="remoteFile.autoUpdate.active"
           :label="$t('autoUpdate')"
@@ -28,6 +29,15 @@
           {{ $t('nextUpdate') }} {{ remoteFile.autoUpdate.nextUpdate | moment("from", "now") }}
         </v-alert>
       </v-form>
+      <v-row class="ma-0 mt-2">
+        <v-btn
+          color="warning"
+          @click="forceUpdate"
+        >
+          {{ $t('forceUpdate') }}
+          <v-icon right>mdi-refresh</v-icon>
+        </v-btn>
+      </v-row>
       <v-row class="ma-0 mt-2">
         <v-spacer />
         <v-btn
@@ -44,14 +54,17 @@
 
 <i18n lang="yaml">
   fr:
+    save: Enregister
     inputRemoteFile: URL du fichier distant
     autoUpdate: Activer la mise à jour automatique
     nextUpdate: Prochaine mise à jour
-    save: Enregister
+    forceUpdate: Forcer la mise à jour
   en:
     save: Save
+    inputRemoteFile: URL of the remote file
     autoUpdate: Activate auto-update
     nextUpdate: Next update
+    forceUpdate: Force update
 </i18n>
 
 <script>
@@ -87,6 +100,9 @@ export default {
     },
     async save () {
       await this.patchAndApplyRemoteChange({ remoteFile: this.remoteFile })
+    },
+    async forceUpdate () {
+      await this.patchAndApplyRemoteChange({ remoteFile: { ...this.originalRemoteFile, forceUpdate: true } })
     }
   }
 }

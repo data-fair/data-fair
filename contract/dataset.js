@@ -416,6 +416,9 @@ module.exports = {
             nextUpdate: { type: 'string', format: 'date-time' },
             lastUpdate: { type: 'string', format: 'date-time' }
           }
+        },
+        forceUpdate: {
+          type: 'boolean'
         }
       }
     },
