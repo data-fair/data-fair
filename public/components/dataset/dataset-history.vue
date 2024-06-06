@@ -67,7 +67,7 @@
             </template>
             <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
               <!-- attachment_url is empty if the value is an external link -->
-              <a :href="attachmentUrl">{{ item[header.value]?.split('/').pop() | truncate(50) }}</a>
+              <a :href="attachmentUrl(item)">{{ item[header.value]?.split('/').pop() | truncate(50) }}</a>
             </template>
             <template v-else>
               <div :style="`position: relative; max-height: 40px; min-width: ${Math.min((item[header.value] + '').length, 50) * 6}px;`">
@@ -132,10 +132,12 @@ export default {
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['resourceUrl', 'digitalDocumentField']),
     attachmentUrl () {
-      const p = this.line && this.digitalDocumentField && this.line[this.digitalDocumentField.key]
-      if (!p) return null
-      if (p.startsWith('http')) return p
-      return `${this.resourceUrl}/attachments/${p}`
+      return (item) => {
+        const p = item && this.digitalDocumentField && item[this.digitalDocumentField.key]
+        if (!p) return null
+        if (p.startsWith('http')) return p
+        return `${this.resourceUrl}/attachments/${p}`
+      }
     },
     headers () {
       const headers = this.dataset.schema
