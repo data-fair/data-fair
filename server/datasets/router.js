@@ -881,6 +881,9 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
     return res.status(200).send(tile)
   }
 
+  // @ts-ignore
+  if (explain) result.explain = explain
+
   res.status(200).send(result)
 }))
 
