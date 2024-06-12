@@ -840,6 +840,9 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
   res.throttleEnd()
   const db = req.app.get('db')
 
+  /** @type {object | null} */
+  const explain = req.query.explain === 'true' && req.user && (req.user.isAdmin || req.user.asAdmin) ? {} : null
+
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
   // Is the tile cached ?
   let cacheHash
@@ -856,7 +859,7 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
 
   let result
   try {
-    result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, req.query, vectorTileRequested || req.query.format === 'geojson', req.publicBaseUrl)
+    result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, req.query, vectorTileRequested || req.query.format === 'geojson', req.publicBaseUrl, explain)
   } catch (err) {
     await manageESError(req, err)
   }

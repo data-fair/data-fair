@@ -1,7 +1,7 @@
 const createError = require('http-errors')
 const { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } = require('./commons.js')
 
-module.exports = async (client, dataset, query, addGeoData, publicBaseUrl) => {
+module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, explain) => {
   const fields = dataset.schema.map(f => f.key)
   // nested grouping by a serie of fields
   if (!query.field) throw createError(400, 'Le paramètre "field" est obligatoire')
@@ -124,7 +124,9 @@ module.exports = async (client, dataset, query, addGeoData, publicBaseUrl) => {
     currentAggLevel.values.aggs.topHits = { top_hits: { size, _source: esQuery._source, sort: hitsSort } }
   }
   // Bound complexity with a timeout
+  if (explain) explain.esQuery = esQuery
   const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery, timeout: '2s' })).body
+  if (explain) explain.esResponse = esResponse
   return prepareValuesAggResponse(esResponse, valuesFields, dataset, query, publicBaseUrl)
 }
 
