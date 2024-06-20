@@ -159,6 +159,12 @@
           class="text-h6 mt-4"
         />
 
+        <v-checkbox
+          v-if="dataset.schema.some(p => p['x-refersTo'] === 'https://github.com/data-fair/lib/account') || virtual.filterActiveAccount"
+          v-model="virtual.filterActiveAccount"
+          :label="$t('filterActiveAccount')"
+        />
+
         <v-autocomplete
           v-model="searchedFilter"
           :items="allColumns.map(c => ({disabled: filtersByKey[c.key], value: c.key, text: c.title || c['x-originalName'] || c.key}))"
@@ -297,6 +303,7 @@ fr:
   filters: Filtres
   addFilter: ajouter un filtre
   noFilter: Aucun filtre défini.
+  filterActiveAccount: Filtrer sur les comptes actifs
   save: Enregister
 en:
   search: Search
@@ -316,6 +323,7 @@ en:
   filters: Filters
   addFilter: add a filter
   noFilter: No filter defined.
+  filterActiveAccount: Filter on active accounts
   save: Save
 </i18n>
 

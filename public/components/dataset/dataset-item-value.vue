@@ -62,7 +62,24 @@
           :style="`background-color:${itemValue}`"
         />
 
-        <span>
+        <v-tooltip
+          v-if="isAccount && itemValue"
+          top
+        >
+          <template #activator="{on}">
+            <span
+              class="text-body-2"
+              v-on="on"
+            >
+              <v-avatar :size="28">
+                <img :src="`${env.directoryUrl}/api/avatars/${itemValue.split(':').join('/')}/avatar.png`">
+              </v-avatar>
+            </span>
+          </template>
+          <!-- TODO: fetch account name ? -->
+          {{ itemValue }}
+        </v-tooltip>
+        <span v-else>
           {{ itemValue | cellValues(field, truncate) }}
         </span>
         <template v-if="hovered[itemValue] && !item._tmpState">
@@ -148,6 +165,9 @@ export default {
     },
     isWebPage () {
       return this.field['x-refersTo'] === 'https://schema.org/WebPage'
+    },
+    isAccount () {
+      return this.field['x-refersTo'] === 'https://github.com/data-fair/lib/account'
     },
     shouldDisplayDetail () {
       if (this.noInteraction) return false

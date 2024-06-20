@@ -22,6 +22,11 @@ exports.setNoCache = (req, res) => {
 // prevent running expensive queries while always presenting fresh data
 // also set last finalized date into last-modified header
 exports.resourceBased = (dateKey = 'updatedAt') => (req, res, next) => {
+  if (req.noCache) {
+    exports.setNoCache(req, res)
+    return next()
+  }
+
   const dateStr = req.resource[dateKey] || req.resource.updatedAt
   const date = new Date(dateStr)
   const dateUTC = date.toUTCString()

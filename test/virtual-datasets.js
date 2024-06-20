@@ -564,4 +564,49 @@ describe('virtual datasets', () => {
     res = await ax.get(`/api/v1/datasets/${virtual2.id}/lines?xyz=63,44,7`)
     assert.equal(res.data.total, 1)
   })
+
+  it('Create a virtual dataset with a filter on account concept', async () => {
+    const ax = global.ax.dmeadus
+
+    const dataset = (await ax.post('/api/v1/datasets/rest1', {
+      isRest: true,
+      title: 'restaccount',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'account', type: 'string', 'x-refersTo': 'https://github.com/data-fair/lib/account' }]
+    })).data
+    await workers.hook('finalizer/' + dataset.id)
+    await ax.post('/api/v1/datasets/rest1/_bulk_lines', [
+      { attr1: 'test1', account: 'user:ccherryholme1' },
+      { attr1: 'test2', account: 'user:cdurning2' },
+      { attr1: 'test3' }
+    ])
+    await workers.hook('finalizer/' + dataset.id)
+
+    let res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      virtual: {
+        children: [dataset.id],
+        filterActiveAccount: true
+      },
+      title: 'a virtual dataset',
+      schema: [{ key: 'attr1' }, { key: 'account' }]
+    })
+    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    await ax.put('/api/v1/datasets/' + virtualDataset.id + '/permissions', [
+      { classes: ['read'] }
+    ])
+
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 3)
+    assert.ok(res.headers['cache-control'].includes('private'))
+
+    res = await global.ax.cdurning2.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].attr1, 'test2')
+    assert.equal(res.data.results[0].account, 'user:cdurning2')
+    assert.ok(res.headers['cache-control'].includes('private'))
+
+    // TODO: prevent public access to account filtered dataset, at least no public cache
+  })
 })

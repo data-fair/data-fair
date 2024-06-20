@@ -710,6 +710,9 @@ module.exports = {
               }
             }
           }
+        },
+        filterActiveAccount: {
+          type: 'boolean'
         }
       }
     },

@@ -284,6 +284,12 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
     filter.push({ term: { _owner: query.owner } })
   }
 
+  if (query.account) {
+    const accountField = dataset.schema.find(f => f['x-refersTo'] === 'https://github.com/data-fair/lib/account')
+    if (!accountField) throw createError(400, 'Impossible de filtrer sur le concept compte, il n\'est pas défini sur le dataset.')
+    filter.push({ term: { [accountField.key]: query.account } })
+  }
+
   const q = query.q && query.q.trim()
 
   if (q || query.qs) {

@@ -157,7 +157,7 @@ exports.descendants = async (db, dataset, tolerateStale = false, extraProperties
   }], options).toArray()
   if (!res[0]) return []
   const virtualDescendantsWithFilters = res[0].descendants
-    .filter(d => d.isVirtual && d.virtual.filters && d.virtual.filters.length)
+    .filter(d => d.isVirtual && (d.virtual.filters?.length || d.virtual.filterActiveAccount))
   if (virtualDescendantsWithFilters.length) {
     throw createError(501, 'Le jeu de données virtuel ne peut pas être requêté, il agrège un autre jeu de données virtuel avec des filtres dont nous ne pouvons pas garantir l\'application.')
   }

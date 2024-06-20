@@ -4,6 +4,7 @@ const i18n = require('i18n')
 const asyncWrap = require('../misc/utils/async-handler')
 const locks = require('../misc/utils/locks')
 const usersUtils = require('../misc/utils/users')
+const { getOwnerRole } = require('../misc/utils/permissions')
 const { checkStorage } = require('./utils/storage')
 const service = require('./service')
 
@@ -75,6 +76,17 @@ exports.readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptM
   const { dataset, datasetFull } = tolerateStale
     ? await service.memoizedGetDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, req.app.get('db'), tolerateStale, acceptedStatuses, req.body)
     : await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, req.app.get('db'), tolerateStale, acceptedStatuses, req.body)
+
+  if (fillDescendants && dataset.virtual && dataset.virtual.filterActiveAccount) {
+    const activeAccount = req.user?.activeAccount
+    if (!activeAccount) throw createError(401, 'No active account')
+    const ownerRole = getOwnerRole(dataset.owner, req.user)
+    if (!ownerRole) {
+      if (req.query.account) throw createError(403, 'You are not allowed to use the account parameter')
+      req.query.account = `${activeAccount.type}:${activeAccount.id}${activeAccount.department ? ':' + activeAccount.department : ''}`
+    }
+    req.noCache = true
+  }
 
   /**
    * can be used to check the memoizee cache usage, first import memoizee/profile on top of app.js
