@@ -577,7 +577,8 @@ describe('virtual datasets', () => {
     await ax.post('/api/v1/datasets/rest1/_bulk_lines', [
       { attr1: 'test1', account: 'user:ccherryholme1' },
       { attr1: 'test2', account: 'user:cdurning2' },
-      { attr1: 'test3' }
+      { attr1: 'test3', account: 'user:cdurning2' },
+      { attr1: 'test4' }
     ])
     await workers.hook('finalizer/' + dataset.id)
 
@@ -597,16 +598,41 @@ describe('virtual datasets', () => {
 
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.status, 200)
-    assert.equal(res.data.total, 3)
+    assert.equal(res.data.total, 4)
     assert.ok(res.headers['cache-control'].includes('private'))
 
-    res = await global.ax.cdurning2.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    // owner of dataset can use account filter both on virtual dataset and on child
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user%3Acdurning2`)
     assert.equal(res.status, 200)
-    assert.equal(res.data.total, 1)
+    assert.equal(res.data.total, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?account=user%3Acdurning2`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 2)
+
+    // user can read the lines where he is referenced
+    res = await global.ax.cdurning2.get(`/api/v1/datasets/${virtualDataset.id}/lines?size=1`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results.length, 1)
     assert.equal(res.data.results[0].attr1, 'test2')
     assert.equal(res.data.results[0].account, 'user:cdurning2')
     assert.ok(res.headers['cache-control'].includes('private'))
+    assert.ok(res.data.next)
+    assert.ok(res.data.next.includes('account=user%3Acdurning2'))
+    res = await global.ax.cdurning2.get(res.data.next)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results.length, 1)
+    assert.equal(res.data.results[0].attr1, 'test3')
+    assert.equal(res.data.results[0].account, 'user:cdurning2')
 
-    // TODO: prevent public access to account filtered dataset, at least no public cache
+    // another user cannot read the lines where he is not referenced
+    res = await global.ax.hlalonde3.get(`/api/v1/datasets/${virtualDataset.id}/lines?size=1`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 0)
+    await assert.rejects(
+      global.ax.hlalonde3.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user%3Acdurning2`),
+      { status: 403 }
+    )
   })
 })
