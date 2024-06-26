@@ -93,6 +93,50 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     assert.equal(res.status, 200)
   })
 
+  it('Use an application key to access child application (used for dashboards)', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const otherOwnerDataset = await testUtils.sendDataset('datasets/dataset1.csv', global.ax.cdurning2)
+    const app1 = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
+    await ax.put('/api/v1/applications/' + app1.id + '/config', {
+      datasets: [{ href: `${config.publicUrl}/api/v1/datasets/${dataset.id}` }, { href: `${config.publicUrl}/api/v1/datasets/${otherOwnerDataset.id}` }]
+    })
+    const app2 = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
+    const app3 = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
+    const appOtherOwner = (await global.ax.cdurning2.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
+    const appParent = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
+    await ax.put('/api/v1/applications/' + appParent.id + '/config', {
+      applications: [{ id: app1.id }, { id: app2.id }, { id: appOtherOwner.id }]
+    })
+
+    let res = await ax.get(`/app/${appParent.id}/`, { maxRedirects: 0 })
+    assert.equal(res.status, 200)
+
+    await assert.rejects(global.ax.anonymous.get(`/app/${app1.id}/`, { maxRedirects: 0 }), { status: 302 })
+    await assert.rejects(global.ax.anonymous.get(`/app/${app2.id}/`, { maxRedirects: 0 }), { status: 302 })
+    await assert.rejects(global.ax.anonymous.get(`/app/${appParent.id}/`, { maxRedirects: 0 }), { status: 302 })
+
+    res = await ax.post(`/api/v1/applications/${appParent.id}/keys`, [{ title: 'Access key' }])
+    const key = res.data[0].id
+
+    res = await global.ax.anonymous.get(`/app/${encodeURIComponent(key + ':' + app1.id)}/`, { maxRedirects: 0 })
+    assert.equal(res.status, 200)
+    res = await global.ax.anonymous.get(`/app/${encodeURIComponent(key + ':' + app2.id)}/`, { maxRedirects: 0 })
+    assert.equal(res.status, 200)
+    res = await global.ax.anonymous.get(`/app/${encodeURIComponent(key + ':' + appParent.id)}/`, { maxRedirects: 0 })
+    assert.equal(res.status, 200)
+
+    await assert.rejects(global.ax.anonymous.get(`/app/${encodeURIComponent(key + ':' + app3.id)}/`, { maxRedirects: 0 }), { status: 302 })
+    await assert.rejects(global.ax.anonymous.get(`/app/${encodeURIComponent(key + ':' + appOtherOwner.id)}/`, { maxRedirects: 0 }), { status: 302 })
+
+    res = await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}`, { headers: { referrer: config.publicUrl + `/app/${encodeURIComponent(key + ':' + app1.id)}/` } })
+    assert.equal(res.status, 200)
+    res = await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/lines`, { headers: { referrer: config.publicUrl + `/app/${encodeURIComponent(key + ':' + app1.id)}/` } })
+    assert.equal(res.status, 200)
+    await assert.rejects(global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}`, { headers: { referrer: config.publicUrl + `/app/${encodeURIComponent(key + ':' + app2.id)}/` } }), { status: 403 })
+    await assert.rejects(global.ax.anonymous.get(`/api/v1/datasets/${otherOwnerDataset.id}`, { headers: { referrer: config.publicUrl + `/app/${encodeURIComponent(key + ':' + app1.id)}/` } }), { status: 403 })
+  })
+
   it('Reject an application without the read permission', async () => {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })

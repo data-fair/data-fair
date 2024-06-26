@@ -73,6 +73,8 @@ exports.init = async (db) => {
     exports.ensureIndex(db, 'applications', { title: 'text', description: 'text', 'owner.name': 'text', 'owner.departmentName': 'text' }, { name: 'fulltext', weights: { title: 2 } }),
     // get the applications of a dataset
     exports.ensureIndex(db, 'applications', { 'configuration.datasets.href': 1 }),
+    exports.ensureIndex(db, 'applications', { 'configuration.datasets.id': 1 }, { name: 'datasets-id', sparse: true }),
+    exports.ensureIndex(db, 'applications', { 'configuration.applications.id': 1 }, { name: 'child-app-id', sparse: true }),
 
     // applications keys indexes
     exports.ensureIndex(db, 'applications-keys', { 'keys.id': 1 }),

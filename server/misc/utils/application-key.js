@@ -21,27 +21,35 @@ module.exports = asyncWrap(async (req, res, next) => {
   }
   if (!refererUrl) return next()
   if (!refererUrl.pathname.startsWith('/data-fair/app/')) return next()
-  const appId = decodeURIComponent(refererUrl.pathname.replace('/data-fair/app/', '').split('/')[0])
-  const key = refererUrl.searchParams && refererUrl.searchParams.get('key')
-  let applicationKeys, applicationKey
-  if (key) {
-    applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ _id: appId, 'keys.id': key })
-    if (applicationKeys) applicationKey = applicationKeys.keys.find(ak => ak.id === key)
-  } else {
+  let appId = decodeURIComponent(refererUrl.pathname.replace('/data-fair/app/', '').split('/')[0])
+  let applicationKeyId = refererUrl.searchParams && refererUrl.searchParams.get('key')
+  if (!applicationKeyId) {
     const keys = appId.split(':')
     if (keys.length > 1) {
-      applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ _id: appId.replace(keys[0] + ':', ''), 'keys.id': keys[0] })
-      if (applicationKeys) applicationKey = applicationKeys.keys.find(ak => ak.id === keys[0])
+      applicationKeyId = keys[0]
+      appId = appId.replace(keys[0] + ':', '')
     }
   }
-  if (!applicationKeys || !applicationKey) return next()
+  if (!applicationKeyId) return next()
+  const ownerFilter = {
+    'owner.type': req.dataset.owner.type,
+    'owner.id': req.dataset.owner.id,
+    'owner.department': req.dataset.owner.department ?? undefined
+  }
+  // TODO: add owner filter ?
+  const applicationKey = await req.app.get('db').collection('applications-keys').findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
+  if (!applicationKey) return next()
+  if (applicationKey._id !== appId) {
+    // ths application key can be matched to a parent application key (case of dashboards, etc)
+    const isParentApplicationKey = await req.app.get('db').collection('applications').count({ id: applicationKey._id, 'configuration.applications.id': appId, ...ownerFilter })
+    if (!isParentApplicationKey) return next()
+  }
 
   const datasetHref = `${config.publicUrl}/api/v1/datasets/${req.dataset.id}`
   const filter = {
-    id: applicationKeys._id,
-    'owner.type': req.dataset.owner.type,
-    'owner.id': req.dataset.owner.id,
-    $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': req.dataset.id }]
+    id: appId,
+    $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': req.dataset.id }],
+    ...ownerFilter
   }
   const matchingApplication = await req.app.get('db').collection('applications')
     .findOne(filter, { projection: { 'configuration.datasets': 1 } })

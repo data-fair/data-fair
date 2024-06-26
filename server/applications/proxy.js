@@ -46,10 +46,24 @@ const setResource = asyncWrap(async (req, res, next) => {
     application = await findUtils.getByUniqueRef(db, publicationSite, mainPublicationSite, req.params, 'application', applicationIdCandidate, tolerateStale)
   }
   if (!application) return res.status(404).send(req.__('errors.missingApp'))
+  const ownerFilter = { 'owner.type': application.owner.type, 'owner.id': application.owner.id, 'owner.department': application.owner.department ?? undefined }
   if (applicationKeyId) {
-    const applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ _id: application.id, 'keys.id': applicationKeyId })
-    // @ts-ignore
-    req.matchinApplicationKey = !!applicationKeys
+    const applicationKey = await req.app.get('db').collection('applications-keys')
+      .findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
+    if (applicationKey) {
+      if (applicationKey._id === application.id) {
+        // @ts-ignore
+        req.matchingApplicationKey = true
+      } else {
+        // ths application key can be matched to a parent application key (case of dashboards, etc)
+        const isParentApplicationKey = await req.app.get('db').collection('applications')
+          .count({ id: applicationKey._id, 'configuration.applications.id': application.id, ...ownerFilter })
+        if (isParentApplicationKey) {
+          // @ts-ignore
+          req.matchingApplicationKey = true
+        }
+      }
+    }
   }
   findUtils.setResourceLinks(application, 'application', publicBaseUrl, null, encodeURIComponent(req.params.applicationId))
 
@@ -61,7 +75,7 @@ const setResource = asyncWrap(async (req, res, next) => {
 })
 
 router.get('/:applicationId/manifest.json', setResource, asyncWrap(async (req, res) => {
-  if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchinApplicationKey) {
+  if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchingApplicationKey) {
     return res.status(403).type('text/plain').send()
   }
   const baseApp = await req.app.get('db').collection('base-applications').findOne({ url: req.application.url }, { projection: { id: 1, meta: 1 } })
@@ -170,7 +184,7 @@ let minifiedIframeRedirectSrc
 router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
 
-  if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchinApplicationKey) {
+  if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchingApplicationKey) {
     return res.redirect(`${req.publicBaseUrl}/app/${req.params.applicationId}/login`)
   }
 
