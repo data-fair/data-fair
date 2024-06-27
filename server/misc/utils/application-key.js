@@ -34,7 +34,7 @@ module.exports = asyncWrap(async (req, res, next) => {
   const ownerFilter = {
     'owner.type': req.dataset.owner.type,
     'owner.id': req.dataset.owner.id,
-    'owner.department': req.dataset.owner.department ?? undefined
+    'owner.department': req.dataset.owner.department ? req.dataset.owner.department : { $exists: false }
   }
   // TODO: add owner filter ?
   const applicationKey = await req.app.get('db').collection('applications-keys').findOne({ 'keys.id': applicationKeyId, ...ownerFilter })

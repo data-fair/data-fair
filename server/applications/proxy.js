@@ -46,7 +46,11 @@ const setResource = asyncWrap(async (req, res, next) => {
     application = await findUtils.getByUniqueRef(db, publicationSite, mainPublicationSite, req.params, 'application', applicationIdCandidate, tolerateStale)
   }
   if (!application) return res.status(404).send(req.__('errors.missingApp'))
-  const ownerFilter = { 'owner.type': application.owner.type, 'owner.id': application.owner.id, 'owner.department': application.owner.department ?? undefined }
+  const ownerFilter = {
+    'owner.type': application.owner.type,
+    'owner.id': application.owner.id,
+    'owner.department': application.owner.department ? application.owner.department : { $exists: false }
+  }
   if (applicationKeyId) {
     const applicationKey = await req.app.get('db').collection('applications-keys')
       .findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
