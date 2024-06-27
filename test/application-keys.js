@@ -93,9 +93,10 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     assert.equal(res.status, 200)
   })
 
-  it('Use an application key to access child application (used for dashboards)', async () => {
+  it('Use an application key to access child applications and previews (used for dashboards)', async () => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const dataset2 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     const otherOwnerDataset = await testUtils.sendDataset('datasets/dataset1.csv', global.ax.cdurning2)
     const app1 = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
     await ax.put('/api/v1/applications/' + app1.id + '/config', {
@@ -106,7 +107,8 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     const appOtherOwner = (await global.ax.cdurning2.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
     const appParent = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
     await ax.put('/api/v1/applications/' + appParent.id + '/config', {
-      applications: [{ id: app1.id }, { id: app2.id }, { id: appOtherOwner.id }]
+      applications: [{ id: app1.id }, { id: app2.id }, { id: appOtherOwner.id }],
+      datasets: [{ href: `${config.publicUrl}/api/v1/datasets/${dataset2.id}` }, { href: `${config.publicUrl}/api/v1/datasets/${otherOwnerDataset.id}` }]
     })
 
     let res = await ax.get(`/app/${appParent.id}/`, { maxRedirects: 0 })
@@ -135,6 +137,12 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     assert.equal(res.status, 200)
     await assert.rejects(global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}`, { headers: { referrer: config.publicUrl + `/app/${encodeURIComponent(key + ':' + app2.id)}/` } }), { status: 403 })
     await assert.rejects(global.ax.anonymous.get(`/api/v1/datasets/${otherOwnerDataset.id}`, { headers: { referrer: config.publicUrl + `/app/${encodeURIComponent(key + ':' + app1.id)}/` } }), { status: 403 })
+
+    res = await global.ax.anonymous.get(`/api/v1/datasets/${dataset2.id}`, { headers: { referrer: config.publicUrl + `/embed/dataset/${encodeURIComponent(key + ':' + dataset2.id)}/` } })
+    assert.equal(res.status, 200)
+    await assert.rejects(global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}`, { headers: { referrer: config.publicUrl + `/embed/dataset/${encodeURIComponent(key + ':' + dataset2.id)}/` } }), { status: 403 })
+    await assert.rejects(global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}`, { headers: { referrer: config.publicUrl + `/embed/dataset/${encodeURIComponent(key + ':' + dataset.id)}/` } }), { status: 403 })
+    await assert.rejects(global.ax.anonymous.get(`/api/v1/datasets/${otherOwnerDataset.id}`, { headers: { referrer: config.publicUrl + `/embed/dataset/${encodeURIComponent(key + ':' + otherOwnerDataset.id)}/` } }), { status: 403 })
   })
 
   it('Reject an application without the read permission', async () => {

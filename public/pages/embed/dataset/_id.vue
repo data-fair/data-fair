@@ -18,9 +18,14 @@ export default {
   async fetch ({ store, params, route }) {
     try {
       const html = route.path.endsWith('/fields') || route.path.endsWith('/table')
-      await store.dispatch('dataset/setId', { datasetId: route.params.id, html, fetchInfo: false })
+      let datasetId = route.params.id
+      // manage case of application prefixed to dataset id in embed page
+      const keys = datasetId.split(':')
+      if (keys.length > 1) datasetId = keys[1]
+
+      await store.dispatch('dataset/setId', { datasetId, html, fetchInfo: false })
       await Promise.all([
-        store.dispatch('fetchVocabulary', route.params.id),
+        store.dispatch('fetchVocabulary', datasetId),
         store.dispatch('dataset/fetchDataset')
       ])
     } catch (err) {

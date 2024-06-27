@@ -20,39 +20,65 @@ module.exports = asyncWrap(async (req, res, next) => {
     // invalid URL in referer header, it happens
   }
   if (!refererUrl) return next()
-  if (!refererUrl.pathname.startsWith('/data-fair/app/')) return next()
-  let appId = decodeURIComponent(refererUrl.pathname.replace('/data-fair/app/', '').split('/')[0])
-  let applicationKeyId = refererUrl.searchParams && refererUrl.searchParams.get('key')
-  if (!applicationKeyId) {
-    const keys = appId.split(':')
-    if (keys.length > 1) {
-      applicationKeyId = keys[0]
-      appId = appId.replace(keys[0] + ':', '')
-    }
-  }
-  if (!applicationKeyId) return next()
+
   const ownerFilter = {
     'owner.type': req.dataset.owner.type,
     'owner.id': req.dataset.owner.id,
     'owner.department': req.dataset.owner.department ? req.dataset.owner.department : { $exists: false }
   }
-  // TODO: add owner filter ?
-  const applicationKey = await req.app.get('db').collection('applications-keys').findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
-  if (!applicationKey) return next()
-  if (applicationKey._id !== appId) {
-    // ths application key can be matched to a parent application key (case of dashboards, etc)
-    const isParentApplicationKey = await req.app.get('db').collection('applications').count({ id: applicationKey._id, 'configuration.applications.id': appId, ...ownerFilter })
+  const datasetHref = `${config.publicUrl}/api/v1/datasets/${req.dataset.id}`
+  let appId, applicationKey
+
+  if (refererUrl.pathname.startsWith('/data-fair/embed/dataset/')) {
+    let refererDatasetId = decodeURIComponent(refererUrl.pathname.replace('/data-fair/embed/dataset/', '').split('/')[0])
+    let applicationKeyId = refererUrl.searchParams && refererUrl.searchParams.get('key')
+    if (refererDatasetId !== req.dataset.id) {
+      const keys = refererDatasetId.split(':')
+      if (keys.length > 1) {
+        applicationKeyId = keys[0]
+        refererDatasetId = refererDatasetId.replace(keys[0] + ':', '')
+      }
+    }
+    if (!applicationKeyId) return next()
+    applicationKey = await req.app.get('db').collection('applications-keys').findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
+    if (!applicationKey) return next()
+    appId = applicationKey._id
+    const isParentApplicationKey = await req.app.get('db').collection('applications')
+      .count({
+        id: applicationKey._id,
+        $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': req.dataset.id }],
+        ...ownerFilter
+      })
     if (!isParentApplicationKey) return next()
   }
 
-  const datasetHref = `${config.publicUrl}/api/v1/datasets/${req.dataset.id}`
-  const filter = {
-    id: appId,
-    $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': req.dataset.id }],
-    ...ownerFilter
+  if (refererUrl.pathname.startsWith('/data-fair/app/')) {
+    appId = decodeURIComponent(refererUrl.pathname.replace('/data-fair/app/', '').split('/')[0])
+    let applicationKeyId = refererUrl.searchParams && refererUrl.searchParams.get('key')
+    if (!applicationKeyId) {
+      const keys = appId.split(':')
+      if (keys.length > 1) {
+        applicationKeyId = keys[0]
+        appId = appId.replace(keys[0] + ':', '')
+      }
+    }
+    if (!applicationKeyId) return next()
+    applicationKey = await req.app.get('db').collection('applications-keys').findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
+    if (!applicationKey) return next()
+    if (applicationKey._id !== appId) {
+      // the application key can be matched to a parent application key (case of dashboards, etc)
+      const isParentApplicationKey = await req.app.get('db').collection('applications')
+        .count({ id: applicationKey._id, 'configuration.applications.id': appId, ...ownerFilter })
+      if (!isParentApplicationKey) return next()
+    }
   }
+
   const matchingApplication = await req.app.get('db').collection('applications')
-    .findOne(filter, { projection: { 'configuration.datasets': 1 } })
+    .findOne({
+      id: appId,
+      $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': req.dataset.id }],
+      ...ownerFilter
+    }, { projection: { 'configuration.datasets': 1 } })
   if (matchingApplication) {
     // this is basically the "crowd-sourcing" use case
     // we apply some anti-spam protection
