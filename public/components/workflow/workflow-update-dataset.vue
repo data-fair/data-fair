@@ -463,7 +463,6 @@ export default {
       }
     },
     '$route.query.updated' () {
-      console.log('UPDATED CHANGED', this.$route.query.updated)
       // updated from parent window
       if (this.dataset && !this.$route.query.updated) window.location.reload()
     }
