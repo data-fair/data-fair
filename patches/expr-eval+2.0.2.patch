@@ -1,0 +1,15 @@
+diff --git a/node_modules/expr-eval/dist/bundle.js b/node_modules/expr-eval/dist/bundle.js
+index 1b96d4a..d169d0e 100644
+--- a/node_modules/expr-eval/dist/bundle.js
++++ b/node_modules/expr-eval/dist/bundle.js
+@@ -196,6 +196,10 @@
+           nstack.push(f(resolveExpression(n1, values), resolveExpression(n2, values), resolveExpression(n3, values)));
+         }
+       } else if (type === IVAR) {
++        // see https://github.com/silentmatt/expr-eval/pull/252 and https://github.com/silentmatt/expr-eval/pull/252/commits/3679a4d663a4e84fb18578a383ac7560730e4c7f
++        if (/^__proto__|prototype|constructor$/.test(item.value)) {
++          throw new Error('prototype access detected');
++        }
+         if (item.value in expr.functions) {
+           nstack.push(expr.functions[item.value]);
+         } else if (item.value in expr.unaryOps && expr.parser.isOperatorEnabled(item.value)) {
