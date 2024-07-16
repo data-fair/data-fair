@@ -2,7 +2,8 @@
   <div>
     <template v-if="isDigitalDocument">
       <!-- attachment_url is empty if the value is an external link -->
-      <a :href="item._attachment_url || itemValue">{{ itemValue?.split('/').pop() | truncate(truncate) }}</a>
+      <a v-if="item._attachment_url" :href="item._attachment_url">{{ item._attachment_url.split('/').pop() | truncate(truncate - 4, 4) }}</a>
+      <a v-else-if="!!itemValue" :href="itemValue">{{ itemValue | truncate(truncate - 10, 10) }}</a>
     </template>
     <template v-else-if="isWebPage">
       <a
