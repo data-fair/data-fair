@@ -69,11 +69,22 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
   }
   debug('resize using sharp', fullSharpOptions)
   try {
-    newEntry.data = new Binary(await sharp(filePath)
-      .resize(fullSharpOptions)
-      .toBuffer())
+    const sharpImage = sharp(filePath, { animated: true })
+    const metadata = await sharpImage.metadata()
+    if (metadata.pages) {
+      newEntry.data = new Binary(await sharpImage
+        .resize({ ...fullSharpOptions, animated: true })
+        .gif()
+        .toBuffer())
+      newEntry.animated = true
+    } else {
+      newEntry.data = new Binary(await sharpImage
+        .resize(fullSharpOptions)
+        .png()
+        .toBuffer())
+    }
     debug('resize ok')
-  } catch (err) {
+  } catch (/** @type any */ err) {
     console.warn('Sharp error while processing thumbnail for image ' + url, err)
     newEntry.sharpError = err.message
   }
@@ -128,7 +139,8 @@ exports.getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
     // res.status(400).type('text/plain').send(entry.sharpError)
     res.redirect(url)
   } else {
-    res.setHeader('content-type', 'image/png')
+    if (entry.animated) res.setHeader('content-type', 'image/gif')
+    else res.setHeader('content-type', 'image/png')
     res.send(entry.data.buffer)
   }
 }

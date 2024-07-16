@@ -18,24 +18,32 @@ describe('thumbnails', () => {
     })
     await workers.hook('finalizer/thumbnails1')
     res = await ax.post('/api/v1/datasets/thumbnails1/_bulk_lines', [
-      { imageUrl: 'http://test-thumbnail.com/image.png', desc: 'image 1' },
-      { imageUrl: 'http://test-thumbnail.com/avatar.jpg', desc: 'avatar' }
+      { imageUrl: 'http://test-thumbnail.com/image.png', desc: '1 image' },
+      { imageUrl: 'http://test-thumbnail.com/avatar.jpg', desc: '2 avatar' },
+      { imageUrl: 'http://test-thumbnail.com/wikipedia.gif', desc: '3 wikipedia animated' }
     ])
     await workers.hook('finalizer/thumbnails1')
-    res = await ax.get('/api/v1/datasets/thumbnails1/lines', { params: { thumbnail: true, select: 'desc', sort: '-desc' } })
-    assert.equal(res.data.results.length, 2)
-    assert.equal(res.data.results[0].desc, 'image 1')
-    assert.equal(res.data.results[1].desc, 'avatar')
+    res = await ax.get('/api/v1/datasets/thumbnails1/lines', { params: { thumbnail: true, select: 'desc', sort: 'desc' } })
+    assert.equal(res.data.results.length, 3)
+    assert.equal(res.data.results[0].desc, '1 image')
+    assert.equal(res.data.results[1].desc, '2 avatar')
+    assert.equal(res.data.results[2].desc, '3 wikipedia animated')
     assert.ok(res.data.results[0]._thumbnail.endsWith('width=300&height=200'))
     const nockScope = nock('http://test-thumbnail.com')
       .get('/image.png').reply(200, () => '')
       .get('/avatar.jpg').reply(200, () => fs.readFileSync('test/resources/avatar.jpeg'))
+      .get('/wikipedia.gif').reply(200, () => fs.readFileSync('test/resources/wikipedia.gif'))
       .persist()
     await assert.rejects(ax.get(res.data.results[0]._thumbnail, { maxRedirects: 0 }), (err) => err.status === 302)
-    res = await ax.get(res.data.results[1]._thumbnail)
-    assert.equal(res.headers['content-type'], 'image/png')
-    assert.equal(res.headers['x-thumbnails-cache-status'], 'MISS')
-    assert.equal(res.headers['cache-control'], 'no-cache, private')
+    const thumbres = await ax.get(res.data.results[1]._thumbnail)
+    assert.equal(thumbres.headers['content-type'], 'image/png')
+    assert.equal(thumbres.headers['x-thumbnails-cache-status'], 'MISS')
+    assert.equal(thumbres.headers['cache-control'], 'no-cache, private')
+
+    const thumbresGif = await ax.get(res.data.results[2]._thumbnail)
+    assert.equal(thumbresGif.headers['content-type'], 'image/gif')
+    assert.equal(thumbresGif.headers['x-thumbnails-cache-status'], 'MISS')
+    assert.equal(thumbresGif.headers['cache-control'], 'no-cache, private')
     nockScope.done()
   })
 
