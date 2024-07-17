@@ -9,6 +9,8 @@
           <v-col>
             <dataset-status v-if="!dataset.isMetaOnly" />
 
+            <dataset-remote-file v-if="!sections.find(s => s.id === 'structure') && dataset.remoteFile" />
+
             <layout-section-tabs
               :min-height="180"
               :svg="buildingSvg"
