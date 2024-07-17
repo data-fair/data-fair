@@ -305,8 +305,14 @@
               </template>
               <template v-else-if="digitalDocumentField && digitalDocumentField.key === header.value">
                 <!-- attachment_url is empty if the value is an external link -->
-                <a v-if="item._attachment_url" :href="item._attachment_url">{{ item._attachment_url.split('/').pop() | truncate(46, 4) }}</a>
-                <a v-else-if="!!item[header.value]" :href="item[header.value]">{{ item[header.value] | truncate(30, 20) }}</a>
+                <a
+                  v-if="item._attachment_url"
+                  :href="item._attachment_url"
+                >{{ item._attachment_url.split('/').pop() | truncate(46, 4) }}</a>
+                <a
+                  v-else-if="!!item[header.value]"
+                  :href="item[header.value]"
+                >{{ item[header.value] | truncate(30, 20) }}</a>
               </template>
               <template v-else-if="webPageField && webPageField.key === header.value">
                 <a
