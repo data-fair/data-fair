@@ -552,6 +552,7 @@ export default {
       return this.headers.filter(h => (!h.field || !this.selectedCols.length || this.selectedCols.includes(h.value)) && h.value !== this.fixedCol)
     },
     truncate () {
+      if (this.displayMode === 'list') return 200
       const minTruncate = this.$vuetify.breakpoint.mdAndUp ? 50 : 40
       const maxTruncate = 200
       const estimatedTruncate = this.windowWidth / this.selectedHeaders.length / 8 // 8px is about a char's width

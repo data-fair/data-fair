@@ -59,11 +59,12 @@
                 :truncate="truncate"
                 :disable-hover="true"
                 :dense="true"
+                style="padding-right: 16px;"
                 @filter="filter => $emit('filter', {field, filter})"
               />
               <v-icon
                 v-if="hovered[header.value] || header.value === pagination.sortBy[0]"
-                style="position:absolute;top:12px;right:2px;"
+                style="position:absolute;top:16px;right:-4px;"
                 :color="header.value === pagination.sortBy[0] ? 'primary' : 'default'"
               >
                 <template v-if="header.value === pagination.sortBy[0] && !pagination.sortDesc[0]">mdi-sort-ascending</template>
@@ -143,7 +144,7 @@ export default {
       return (field, itemValue) => {
         if (field['x-refersTo'] === 'http://schema.org/DigitalDocument') return false
         if (field['x-refersTo'] === 'https://schema.org/WebPage') return false
-        return field.type === 'string' && !field.separator && itemValue && this.truncate < itemValue.length
+        return field.type === 'string' && !field.separator && itemValue && itemValue.length > 20
       }
     },
     otherHeaders () {
