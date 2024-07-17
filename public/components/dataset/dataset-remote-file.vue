@@ -102,7 +102,7 @@ export default {
       await this.patchAndApplyRemoteChange({ remoteFile: this.remoteFile })
     },
     async forceUpdate () {
-      await this.patchAndApplyRemoteChange({ remoteFile: { ...this.originalRemoteFile, forceUpdate: true } })
+      await this.patchAndApplyRemoteChange({ remoteFile: { ...JSON.parse(this.originalRemoteFile), forceUpdate: true } })
     }
   }
 }
