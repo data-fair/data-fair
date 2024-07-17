@@ -55,11 +55,13 @@
 
         <!-- sorting -->
         <template v-if="header.sortable">
-          <v-list-item-group color="primary">
+          <v-list-item-group
+            color="primary"
+            :value="sortItem"
+          >
             <v-list-item
               class="pl-2"
-              :class="{'v-item--active v-list-item--active': header.value === pagination.sortBy[0] && !pagination.sortDesc[0]}"
-              @click="$set(pagination, 'sortBy', [header.value]);$set(pagination, 'sortDesc', [false]);showMenu=false"
+              @click="toggleSort(false)"
             >
               <v-list-item-icon class="mr-2"><v-icon>mdi-sort-ascending</v-icon></v-list-item-icon>
               <v-list-item-content>
@@ -68,8 +70,7 @@
             </v-list-item>
             <v-list-item
               class="pl-2"
-              :class="{'v-item--active v-list-item--active': header.value === pagination.sortBy[0] && pagination.sortDesc[0]}"
-              @click="$set(pagination, 'sortBy', [header.value]);$set(pagination, 'sortDesc', [true]);showMenu=false"
+              @click="toggleSort(true)"
             >
               <v-list-item-icon class="mr-2"><v-icon>mdi-sort-descending</v-icon></v-list-item-icon>
               <v-list-item-content>
@@ -491,6 +492,10 @@ export default {
         reversedLabels[this.field['x-labels'][key]] = key
       }
       return reversedLabels
+    },
+    sortItem () {
+      if (this.pagination.sortBy[0] !== this.header.value) return null
+      return this.pagination.sortDesc[0] ? 1 : 0
     }
   },
   watch: {
@@ -560,6 +565,16 @@ export default {
       this.lte = null
       this.gte = null
       this.editDate = null
+    },
+    toggleSort (desc) {
+      if (this.pagination.sortBy[0] === this.header.value && this.pagination.sortDesc[0] === desc) {
+        this.$set(this.pagination, 'sortBy', [])
+        this.$set(this.pagination, 'sortDesc', [])
+      } else {
+        this.$set(this.pagination, 'sortBy', [this.header.value])
+        this.$set(this.pagination, 'sortDesc', [desc])
+      }
+      this.showMenu = false
     }
   }
 }
