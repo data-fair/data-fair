@@ -10,6 +10,7 @@ exports.process = async function (app, dataset) {
   const metrics = require('../misc/utils/metrics')
   const chardet = require('chardet')
   const md5File = require('md5-file')
+  const JSONStream = require('JSONStream')
 
   const debug = require('debug')(`worker:file-storer:${dataset.id}`)
 
@@ -35,7 +36,7 @@ exports.process = async function (app, dataset) {
     // manage some special cases of invalid files
     // some ESRI files have invalid geojson with stuff like this:
     // "GLOBALID": {7E1C9E26-9767-4AE4-9CBB-F353B15B3BFE},
-    if (dataset.extras?.fixGeojsonGlobalId) {
+    if (dataset.extras?.fixGeojsonGlobalId || dataset.extras?.fixGeojsonESRI) {
       const { Transform } = require('stream')
       const split2 = require('split2')
       const pump = require('../misc/utils/pipe')
@@ -56,6 +57,21 @@ exports.process = async function (app, dataset) {
             }
           }
         }),
+        JSONStream.parse('features.*'),
+        // transform geojson features into raw data items
+        new Transform({
+          objectMode: true,
+          transform (feature, encoding, callback) {
+            if (feature.geometry?.type === 'LineString' && Array.isArray(feature.geometry.coordinates) && Array.isArray(feature.geometry.coordinates[0]) && Array.isArray(feature.geometry.coordinates[0][0])) {
+              feature.geometry.type = 'MultiLineString'
+            }
+            callback(null, feature)
+          }
+        }),
+        JSONStream.stringify(`{
+ "type": "FeatureCollection",
+ "features": [`, ',\n  ', ` ]
+}`),
         fs.createWriteStream(fixedFilePath)
       )
       await fs.move(fixedFilePath, loadedFilePath, { overwrite: true })
