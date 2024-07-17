@@ -41,7 +41,7 @@ describe('thumbnails', () => {
     assert.equal(thumbres.headers['cache-control'], 'no-cache, private')
 
     const thumbresGif = await ax.get(res.data.results[2]._thumbnail)
-    assert.equal(thumbresGif.headers['content-type'], 'image/gif')
+    assert.equal(thumbresGif.headers['content-type'], 'image/webp')
     assert.equal(thumbresGif.headers['x-thumbnails-cache-status'], 'MISS')
     assert.equal(thumbresGif.headers['cache-control'], 'no-cache, private')
     nockScope.done()
