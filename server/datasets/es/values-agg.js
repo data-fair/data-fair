@@ -14,6 +14,7 @@ module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, expla
   const intervals = query.interval ? query.interval.split(';') : []
   // number of agg results for each level
   const aggSizes = query.agg_size ? query.agg_size.split(';').map(s => Number(s)) : []
+  let combinedMaxSize = 1
   const aggTypes = []
   for (let i = 0; i < valuesFields.length; i++) {
     if (!props[i]) throw createError(400, `Le paramètre "field" référence un champ inconnu ${valuesFields[i]}`)
@@ -35,6 +36,7 @@ module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, expla
 
     if (aggSizes[i] === undefined) aggSizes[i] = 20
     if (aggSizes[i] > 1000) throw createError(400, '"agg_size" cannot be more than 1000')
+    combinedMaxSize *= aggSizes[i]
     if (sorts[i] === valuesFields[i]) sorts[i] = '_key'
     if (sorts[i] === '-' + valuesFields[i]) sorts[i] = '-_key'
     if (sorts[i] === 'key') sorts[i] = '_key'
@@ -52,7 +54,9 @@ module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, expla
 
   // number of hit results inside the last level of aggregation
   const size = query.size ? Number(query.size) : 0
-  if (size > 100) throw createError(400, '"size" cannot be more than 100')
+  combinedMaxSize *= size
+  // TODO: remove the condition on size and only use combinedMaxSize, but to do this we must check if we break some existing usage
+  if (size > 100 && combinedMaxSize > 100000) throw createError(400, '"size" x "agg_size" cannot be more than 100000')
 
   // Get a ES query to filter the aggregation results
   delete query.sort

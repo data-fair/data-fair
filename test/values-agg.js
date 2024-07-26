@@ -45,6 +45,8 @@ describe('values aggs', () => {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&agg_size=1`)
     assert.equal(res.data.aggs.length, 1)
     assert.equal(res.data.total_other, 2)
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&agg_size=1000000`), { status: 400 })
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&agg_size=1000&size=1000`), { status: 400 })
 
     // 2 level aggregation
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id;adr&metric_field=employees&metric=sum&sort=-count;-count`)
@@ -53,6 +55,7 @@ describe('values aggs', () => {
     assert.equal(res.data.aggs[0].aggs[0].value, 'bureau')
     assert.equal(res.data.aggs[0].aggs[0].total, 2)
     assert.equal(res.data.aggs[0].aggs[0].metric, 0)
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id;adr&agg_size=100,100&size=100`), { status: 400 })
 
     // 2 level aggregation with inner results
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id;adr&metric_field=employees&metric=sum&sort=-count;-count&size=10`)
