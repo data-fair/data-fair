@@ -869,7 +869,7 @@
       "en": "Reference to an account"
     },
     "description": {
-      "fr": "Une référence à un compte de cette plateforme, le format est 'organisation:idOrg:idDep' par exemple.",
+      "fr": "Une référence à un compte de cette plateforme, le format est 'organization:idOrg:idDep' par exemple.",
       "en": "A reference to an account from this platform, format is 'organization:idOrg:idDep' for example."
     },
     "identifiers": [
