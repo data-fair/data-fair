@@ -1,3 +1,4 @@
+const config = require('config')
 const createError = require('http-errors')
 const { prepareQuery, aliasName } = require('./commons')
 
@@ -11,7 +12,12 @@ module.exports = async (client, dataset, query = {}) => {
   const geoCornersProp = dataset.schema.find(p => p.key === '_geocorners')
   const geoCorners = geoCornersProp && (!geoCornersProp['x-capabilities'] || geoCornersProp['x-capabilities'].geoCorners !== false)
   esQuery.aggs = { bbox: { geo_bounds: { field: geoCorners ? '_geocorners' : '_geopoint' } } }
-  const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body
+  const esResponse = (await client.search({
+    index: aliasName(dataset),
+    body: esQuery,
+    timeout: config.elasticsearch.searchTimeout,
+    allow_partial_search_results: false
+  })).body
   const response = { total: esResponse.hits.total.value }
   // ES bounds to standard bounding box: left,bottom,right,top
   const bounds = esResponse.aggregations.bbox.bounds

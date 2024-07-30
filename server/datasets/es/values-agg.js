@@ -1,3 +1,4 @@
+const config = require('config')
 const createError = require('http-errors')
 const { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } = require('./commons.js')
 
@@ -129,7 +130,12 @@ module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, expla
   }
   // Bound complexity with a timeout
   if (explain) explain.esQuery = esQuery
-  const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery, timeout: '2s' })).body
+  const esResponse = (await client.search({
+    index: aliasName(dataset),
+    body: esQuery,
+    timeout: config.elasticsearch.searchTimeout,
+    allow_partial_search_results: false
+  })).body
   if (explain) explain.esResponse = esResponse
   return prepareValuesAggResponse(esResponse, valuesFields, dataset, query, publicBaseUrl)
 }

@@ -1,3 +1,4 @@
+const config = require('config')
 const createError = require('http-errors')
 const { prepareQuery, aliasName } = require('./commons')
 
@@ -41,7 +42,12 @@ module.exports = async (client, dataset, query) => {
   }
 
   // console.log(esQuery)
-  const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body
+  const esResponse = (await client.search({
+    index: aliasName(dataset),
+    body: esQuery,
+    timeout: config.elasticsearch.searchTimeout,
+    allow_partial_search_results: false
+  })).body
 
   const buckets = esResponse.aggregations.sample.words.buckets
 
@@ -74,7 +80,9 @@ async function unstem (client, dataset, field, key) {
         pre_tags: '<>',
         post_tags: '<>'
       }
-    }
+    },
+    timeout: config.elasticsearch.searchTimeout,
+    allow_partial_search_results: false
   })).body
 
   const words = {}

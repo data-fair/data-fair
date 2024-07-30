@@ -1,3 +1,4 @@
+const config = require('config')
 const createError = require('http-errors')
 const geohash = require('../../misc/utils/geohash')
 
@@ -34,7 +35,12 @@ module.exports = async (client, dataset, query, publicBaseUrl) => {
       [query.metric]: { field: query.metric_field }
     }
   }
-  const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body
+  const esResponse = (await client.search({
+    index: aliasName(dataset),
+    body: esQuery,
+    timeout: config.elasticsearch.searchTimeout,
+    allow_partial_search_results: false
+  })).body
   return prepareGeoAggResponse(esResponse, dataset, query, publicBaseUrl)
 }
 

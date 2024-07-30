@@ -562,8 +562,7 @@ const esQueryErrorCounter = new Counter({
 
 // Error from ES backend should be stored in the journal
 async function manageESError (req, err) {
-  const message = esUtils.errorMessage(err)
-  const status = err.status || err.statusCode || 500
+  const { message, status } = esUtils.extractError(err)
   if (status === 400) {
     // console.error(`(es-query-${status}) elasticsearch query error ${req.dataset.id}`, req.originalUrl, status, req.headers.referer || req.headers.referrer, message, err.stack)
     esQueryErrorCounter.inc()

@@ -1,3 +1,4 @@
+const config = require('config')
 const createError = require('http-errors')
 const { prepareQuery, aliasName } = require('./commons.js')
 
@@ -11,7 +12,12 @@ exports.max = async (client, dataset, fieldKey, query) => {
       max: { field: fieldKey }
     }
   }
-  const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body
+  const esResponse = (await client.search({
+    index: aliasName(dataset),
+    body: esQuery,
+    timeout: config.elasticsearch.searchTimeout,
+    allow_partial_search_results: false
+  })).body
   return esResponse.aggregations.max.value
 }
 
@@ -25,6 +31,11 @@ exports.min = async (client, dataset, fieldKey, query) => {
       min: { field: fieldKey }
     }
   }
-  const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body
+  const esResponse = (await client.search({
+    index: aliasName(dataset),
+    body: esQuery,
+    timeout: config.elasticsearch.searchTimeout,
+    allow_partial_search_results: false
+  })).body
   return esResponse.aggregations.min.value
 }

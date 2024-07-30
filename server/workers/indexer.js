@@ -39,7 +39,7 @@ exports.process = async function (app, dataset) {
       indexName = await es.initDatasetIndex(esClient, dataset)
     } catch (err) {
       metrics.internalError('es-init-index', err)
-      const message = es.errorMessage(err)
+      const { message } = es.extractError(err)
       throw new Error(message)
     }
     debug(`Initialize new dataset index ${indexName}`)

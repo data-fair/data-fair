@@ -97,8 +97,8 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
             esResponse = await esUtils.multiSearch(es, dataset, queries)
           } catch (err) {
             metrics.internalError('masterdata-multi-query', err)
-            const message = esUtils.errorMessage(err)
-            throw createError(err.status, message)
+            const { message, status } = esUtils.extractError(err)
+            throw createError(status, message)
           }
           for (const i in esResponse.responses) {
             const line = lines[i]
@@ -108,7 +108,7 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
 
             if (response.error) {
               metrics.internalError('masterdata-item-query', response.error)
-              this.push(finalizeResponseLine({}, lineKey, esUtils.errorMessage(response.error)))
+              this.push(finalizeResponseLine({}, lineKey, esUtils.extractError(response.error).message))
               continue
             }
             if (response.hits.hits.length === 0) {

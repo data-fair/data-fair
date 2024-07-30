@@ -75,7 +75,8 @@ module.exports = {
     nbReplicas: {
       __name: 'ES_NB_REPLICAS',
       __format: 'json'
-    }
+    },
+    searchTimeout: 'ES_SEARCH_TIMEOUT'
   },
   secretKeys: {
     identities: 'SECRET_IDENTITIES',

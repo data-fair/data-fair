@@ -20,7 +20,12 @@ module.exports = async (client, dataset, query, publicBaseUrl) => {
     esQuery.aggs = { totalCollapse: { cardinality: { field: query.collapse, precision_threshold: precisionThreshold } } }
   }
 
-  const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body
+  const esResponse = (await client.search({
+    index: aliasName(dataset),
+    body: esQuery,
+    timeout: config.elasticsearch.searchTimeout,
+    allow_partial_search_results: false
+  })).body
 
   for (const hit of esResponse.hits.hits) {
     // TODO: move this to prepareResultItems

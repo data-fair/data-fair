@@ -77,7 +77,12 @@ exports.agg = async (client, dataset, query) => {
     const precisionThreshold = Number(query.precision_threshold ?? '40000')
     esQuery.aggs.metric.cardinality.precision_threshold = precisionThreshold
   }
-  const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body
+  const esResponse = (await client.search({
+    index: aliasName(dataset),
+    body: esQuery,
+    timeout: config.elasticsearch.searchTimeout,
+    allow_partial_search_results: false
+  })).body
   const response = { total: esResponse.hits.total.value }
   response.metric = getValueFromAggRes(field, query.metric, esResponse.aggregations.metric)
   return response
@@ -108,7 +113,12 @@ exports.simpleMetricsAgg = async (client, dataset, query) => {
       }
     }
   }
-  const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery })).body
+  const esResponse = (await client.search({
+    index: aliasName(dataset),
+    body: esQuery,
+    timeout: config.elasticsearch.searchTimeout,
+    allow_partial_search_results: false
+  })).body
   const response = { total: esResponse.hits.total.value, metrics: {} }
   for (const metricField of fields) {
     response.metrics[metricField] = {}

@@ -12,7 +12,7 @@ exports.datasetInfos = manageIndices.datasetInfos
 exports.updateDatasetMapping = manageIndices.updateDatasetMapping
 
 exports.aliasName = commons.aliasName
-exports.errorMessage = commons.errorMessage
+exports.extractError = commons.extractError
 exports.prepareResultItem = commons.prepareResultItem
 exports.escapeFilter = commons.escapeFilter
 

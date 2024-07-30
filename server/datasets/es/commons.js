@@ -640,13 +640,19 @@ exports.prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicU
 }
 
 // try to produce a somewhat readable error message from a structured error from elasticsearch
-exports.errorMessage = (err) => {
-  if (typeof err === 'string') return err
+/**
+ *
+ * @param {any} err
+ * @returns {{message: String, status: Number}}
+ */
+exports.extractError = (err) => {
+  const status = err.status ?? err.statusCode ?? 500
+  if (typeof err === 'string') return { message: err, status }
   let errBody = (err.body && err.body.error) || (err.meta && err.meta.body && err.meta.body.error) || err.error
   if (!errBody && !!err.reason) errBody = err
   if (!errBody) {
-    if (err.message) return err.message
-    else return JSON.stringify(err)
+    if (err.message) return { message: err.message, status }
+    else return { message: JSON.stringify(err), status }
   }
   const parts = []
   if (errBody.reason) {
@@ -667,7 +673,13 @@ exports.errorMessage = (err) => {
       if (!parts.includes(reason)) parts.push(reason)
     }
   }
-  return parts.join(' - ')
+  if (parts.includes('Time exceeded')) {
+    return {
+      message: 'Cette requête est trop longue, son traitement a été interrompu.',
+      status: 504
+    }
+  }
+  return { message: parts.join(' - '), status }
 }
 
 // cf https://github.com/joeybaker/lucene-escape-query/blob/master/index.js

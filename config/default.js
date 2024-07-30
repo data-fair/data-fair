@@ -40,7 +40,8 @@ module.exports = {
     maxBulkChars: 200000,
     maxShardSize: 10000000000, // 10go
     nbReplicas: 1,
-    maxPageSize: 10000
+    maxPageSize: 10000,
+    searchTimeout: '45s' // bound search complexity, TODO: measure actual requests and lower this to a more reasonable value
   },
   indicesPrefix: 'dataset-' + (process.env.NODE_ENV || 'development'),
   info: {

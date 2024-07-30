@@ -1,3 +1,4 @@
+const config = require('config')
 const createError = require('http-errors')
 const { prepareQuery, aliasName } = require('./commons.js')
 
@@ -34,6 +35,11 @@ module.exports = async (client, dataset, fieldKey, query) => {
     }
   }
   // Bound complexity with a timeout
-  const esResponse = (await client.search({ index: aliasName(dataset), body: esQuery, timeout: '2s' })).body
+  const esResponse = (await client.search({
+    index: aliasName(dataset),
+    body: esQuery,
+    timeout: config.elasticsearch.searchTimeout,
+    allow_partial_search_results: false
+  })).body
   return esResponse.aggregations.values.buckets.map(b => b.key_as_string || b.key).map(v => query.stringify === 'true' ? (v + '') : v)
 }
