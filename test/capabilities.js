@@ -218,7 +218,7 @@ describe('Properties capabilities', () => {
     assert.equal(geoShapeProp['x-capabilities'].geoShape, false)
     assert.ok(!dataset.schema.find(p => p.key === '_geocorners'))
     const diagnostic = (await global.ax.superadmin('/api/v1/datasets/rest-geoshape/_diagnose')).data
-    const indexDefinition = Object.values(diagnostic.esInfos.indices[0].definition.body)[0]
+    const indexDefinition = diagnostic.esInfos.index.definition
     assert.equal(indexDefinition.mappings.properties._geoshape.enabled, false)
     assert.equal(indexDefinition.mappings.properties.geom.index, false)
     assert.ok(!indexDefinition.mappings.properties.geom.fields)
