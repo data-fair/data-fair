@@ -73,7 +73,7 @@ module.exports = {
   disableRemoteServices: false,
   disablePublicationSites: false,
   elasticsearch: {
-    searchTimeout: '2s'
+    // searchTimeout: '2s'
   },
   clamav: {
     active: true,

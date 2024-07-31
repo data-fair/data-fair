@@ -43,6 +43,23 @@ router.get('/datasets-errors', asyncWrap(async (req, res, next) => {
   res.send({ count, results })
 }))
 
+router.get('/datasets-es-warnings', asyncWrap(async (req, res, next) => {
+  const datasets = req.app.get('db').collection('datasets')
+  const query = { esWarning: { $exists: true, $ne: null } }
+  const [skip, size] = findUtils.pagination(req.query)
+
+  const resultsPromise = datasets
+    .find(query)
+    .skip(skip)
+    .limit(size)
+    .project({ _id: 0, id: 1, title: 1, owner: 1, esWarning: 1, status: 1 })
+    .toArray()
+
+  const [count, results] = await Promise.all([datasets.countDocuments(query), resultsPromise])
+
+  res.send({ count, results })
+}))
+
 router.get('/applications-errors', asyncWrap(async (req, res, next) => {
   const applications = req.app.get('db').collection('applications')
   const query = { errorMessage: { $exists: true } }

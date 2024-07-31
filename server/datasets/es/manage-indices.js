@@ -77,8 +77,12 @@ exports.switchAlias = async (client, dataset, tempId) => {
   await client.indices.putAlias({ name, index: tempId })
 }
 
+const getNbShards = (dataset) => {
+  return Math.max(1, Math.ceil((dataset.storage?.indexed?.size || 0) / config.elasticsearch.maxShardSize))
+}
+
 const indexBase = (dataset) => {
-  const nbShards = dataset.file ? Math.max(1, Math.ceil(dataset.file.size / config.elasticsearch.maxShardSize)) : 1
+  const nbShards = getNbShards(dataset)
   return {
     settings: {
       index: {
@@ -137,13 +141,30 @@ exports.datasetInfos = async (client, dataset) => {
   // const indices = await client.indices.get({index: `${indexPrefix(dataset)}-*`})
   const indices = (await client.cat.indices({ index: `${indexPrefix(dataset)}-*`, format: 'json' })).body
   for (const index of indices) {
-    index.definition = await client.indices.get({ index: index.index })
+    index.definition = (await client.indices.get({ index: index.index })).body[index.index]
   }
-  const alias = await client.indices.getAlias({ index: aliasName(dataset) })
+  const alias = (await client.indices.getAlias({ index: aliasName(dataset) })).body
+  const aliasedIndexName = Object.keys(alias ?? {})[0]
+  const index = indices.find(index => index.index === aliasedIndexName)
   return {
     aliasName: aliasName(dataset),
     indexPrefix: indexPrefix(dataset),
     indices,
-    alias
+    alias,
+    index
   }
+}
+
+exports.datasetWarning = async (client, dataset) => {
+  if (dataset.isVirtual || dataset.isMetaOnly || dataset.status === 'draft') return null
+  const esInfos = await exports.datasetInfos(client, dataset)
+  if (!esInfos.index) return 'MissingIndex'
+  else if (esInfos.index.health === 'red') return 'IndexHealthRed'
+  else if (!esInfos.index.definition?.settings?.index?.number_of_shards) return 'MissingIndexSettings'
+  else {
+    const nbShards = Number(esInfos.index.definition.settings.index.number_of_shards)
+    const recommendedNbShards = getNbShards(dataset)
+    if (recommendedNbShards !== nbShards) return 'ShardingRecommended'
+  }
+  return null
 }

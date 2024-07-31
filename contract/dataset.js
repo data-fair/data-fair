@@ -845,6 +845,10 @@ module.exports = {
         expiresAt: { type: 'string', format: 'date-time', readOnly: true, 'x-display': 'hidden' },
         renewAt: { type: 'string', format: 'date-time', readOnly: true, 'x-display': 'hidden' }
       }
+    },
+    esWarning: {
+      type: ['string', 'null'],
+      enum: ['MissingIndex', 'IndexHealthRed', 'MissingIndexSettings', 'ShardingRecommended']
     }
   }
 }

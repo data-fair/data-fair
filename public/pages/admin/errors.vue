@@ -42,6 +42,46 @@
           </v-sheet>
         </template>
 
+        <p v-if="datasetsEsWarnings && datasetsEsWarnings.count === 0">
+          Aucun jeu de données avec avertissements Elasticsearch
+        </p>
+        <template v-else-if="datasetsEsWarnings">
+          <h3 class="text-h6">
+            Jeux de données avec avertissements Elasticsearch
+          </h3>
+          <v-sheet
+            class="my-4"
+            style="max-height:800px; overflow-y: scroll;"
+          >
+            <v-list two-line>
+              <v-list-item
+                v-for="error in datasetsEsWarnings.results"
+                :key="error.id"
+              >
+                <v-list-item-content>
+                  <v-list-item-title>
+                    <nuxt-link :to="`/dataset/${error.id}`">
+                      {{ error.title }} ({{ error.owner.name }})
+                    </nuxt-link>
+                  </v-list-item-title>
+                  <v-list-item-subtitle>{{ error.esWarning }}</v-list-item-subtitle>
+                </v-list-item-content>
+                <v-list-item-action>
+                  <v-btn
+                    icon
+                    color="primary"
+                    target="blank"
+                    title="reindex"
+                    @click="reindex(error.id)"
+                  >
+                    <v-icon>mdi-play</v-icon>
+                  </v-btn>
+                </v-list-item-action>
+              </v-list-item>
+            </v-list>
+          </v-sheet>
+        </template>
+
         <p v-if="applicationsErrors && applicationsErrors.count === 0">
           Aucune application en erreur
         </p>
@@ -108,7 +148,7 @@
 export default {
   middleware: ['admin-required'],
   data () {
-    return { datasetsErrors: null, applicationsErrors: null, applicationsDraftErrors: null }
+    return { datasetsErrors: null, datasetsEsWarnings: null, applicationsErrors: null, applicationsDraftErrors: null }
   },
   async mounted () {
     this.refresh()
@@ -116,6 +156,7 @@ export default {
   methods: {
     async refresh () {
       this.datasetsErrors = await this.$axios.$get('api/v1/admin/datasets-errors', { params: { size: 1000 } })
+      this.datasetsEsWarnings = await this.$axios.$get('api/v1/admin/datasets-es-warnings', { params: { size: 1000 } })
       this.applicationsErrors = await this.$axios.$get('api/v1/admin/applications-errors', { params: { size: 1000 } })
       this.applicationsDraftErrors = await this.$axios.$get('api/v1/admin/applications-draft-errors', { params: { size: 1000 } })
     },
