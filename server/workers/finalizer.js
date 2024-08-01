@@ -114,7 +114,7 @@ exports.process = async function (app, dataset) {
     await progress()
   }
 
-  result.esWarning = esUtils.datasetWarning(es, dataset)
+  result.esWarning = await esUtils.datasetWarning(es, dataset)
 
   result.finalizedAt = (new Date()).toISOString()
   if (dataset.isRest && (await collection.findOne({ id: dataset.id })).status === 'updated') {
