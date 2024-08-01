@@ -2,7 +2,7 @@ const config = require('config')
 const createError = require('http-errors')
 const { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } = require('./commons.js')
 
-module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, explain) => {
+module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, explain, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
   const fields = dataset.schema.map(f => f.key)
   // nested grouping by a serie of fields
   if (!query.field) throw createError(400, 'Le paramètre "field" est obligatoire')
@@ -133,19 +133,16 @@ module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, expla
   const esResponse = (await client.search({
     index: aliasName(dataset),
     body: esQuery,
-    timeout: config.elasticsearch.searchTimeout,
-    allow_partial_search_results: false
+    timeout,
+    allow_partial_search_results: allowPartialResults
   })).body
   if (explain) explain.esResponse = esResponse
   return prepareValuesAggResponse(esResponse, valuesFields, dataset, query, publicBaseUrl)
 }
 
 const prepareValuesAggResponse = (esResponse, fields, dataset, query, publicBaseUrl) => {
-  const response = {
-    total: esResponse.hits.total.value,
-    took: esResponse.took,
-    timed_out: esResponse.timed_out
-  }
+  const response = { total: esResponse.hits.total.value }
+  if (esResponse.timed_out) response.timed_out = true
   recurseAggResponse(response, esResponse.aggregations, dataset, query, publicBaseUrl)
   return response
 }

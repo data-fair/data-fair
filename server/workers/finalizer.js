@@ -52,7 +52,7 @@ exports.process = async function (app, dataset) {
 
   for (const prop of cardinalityProps) {
     debug(`Calculate cardinality of field ${prop.key}`)
-    const cardAggResult = await esUtils.valuesAgg(es, queryableDataset, { field: prop.key, agg_size: '0', precision_threshold: 3000 })
+    const cardAggResult = await esUtils.valuesAgg(es, queryableDataset, { field: prop.key, agg_size: '0', precision_threshold: 3000 }, null, null, null, true, '10s')
     prop['x-cardinality'] = cardAggResult.total_values
     debug(`Cardinality of field ${prop.key} is ${prop['x-cardinality']}`)
     delete prop.enum
@@ -62,7 +62,7 @@ exports.process = async function (app, dataset) {
     // also if the cell is not too sparse
     if (setEnum) {
       // this could be merged with the previous call to valuesAgg, but it is better to separate for performance on large datasets
-      const valuesAggResult = await esUtils.valuesAgg(es, queryableDataset, { field: prop.key, agg_size: '50', precision_threshold: 0 })
+      const valuesAggResult = await esUtils.valuesAgg(es, queryableDataset, { field: prop.key, agg_size: '50', precision_threshold: 0 }, null, null, null, true, '10s')
       const totalWithValue = valuesAggResult.aggs.reduce((t, item) => { t += item.total; return t }, 0)
       // cardinality is not too close to overall count
       if (cardAggResult.total_values > totalWithValue / 2) setEnum = false
@@ -83,7 +83,7 @@ exports.process = async function (app, dataset) {
   if (geopoint || geometry) {
     debug('calculate bounding ok')
     queryableDataset.bbox = []
-    result.bbox = dataset.bbox = (await esUtils.bboxAgg(es, queryableDataset)).bbox
+    result.bbox = dataset.bbox = (await esUtils.bboxAgg(es, queryableDataset, {}, true, '10s')).bbox
     debug('bounding box ok', result.bbox)
     await progress()
   } else {
