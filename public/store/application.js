@@ -14,6 +14,7 @@ export default () => ({
     config: null,
     configDraft: null,
     datasets: null,
+    childrenApps: null,
     prodBaseApp: null,
     otherVersions: null
   },
@@ -67,9 +68,12 @@ export default () => ({
         dispatch('readConfig'),
         dispatch('fetchProdBaseApp')
       ])
-      await dispatch('fetchOtherVersions')
-      if (getters.can('readJournal')) await dispatch('fetchJournal')
-      await dispatch('fetchDatasets')
+      await Promise.all([
+        dispatch('fetchOtherVersions'),
+        dispatch('fetchJournal'),
+        dispatch('fetchDatasets'),
+        dispatch('fetchChildrenApps')
+      ])
     },
     async fetchApplication ({ commit, state }) {
       const application = await this.$axios.$get(`api/v1/applications/${state.applicationId}`)
@@ -104,7 +108,8 @@ export default () => ({
       const api = await this.$axios.$get(`api/v1/applications/${state.applicationId}/api-docs.json`)
       commit('setAny', { api })
     },
-    async fetchJournal ({ commit, state }) {
+    async fetchJournal ({ commit, state, getters }) {
+      if (!getters.can('readJournal')) return
       const journal = await this.$axios.$get(`api/v1/applications/${state.applicationId}/journal`)
       commit('setAny', { journal })
     },
@@ -165,10 +170,34 @@ export default () => ({
       const datasetsIds = ((state.config && state.config.datasets) || [])
         .map(d => d.id || d.href.split('/').pop())
       if (datasetsIds.length) {
-        const res = await this.$axios.$get('api/v1/datasets', { params: { id: datasetsIds.join(','), select: 'id,title,visibility' } })
+        const res = await this.$axios.$get('api/v1/datasets', {
+          params: {
+            id: datasetsIds.join(','),
+            size: 10000,
+            select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,draft.file,draft.remoteFile,draft.originalFile,count,finalizedAt',
+            sort: 'createdAt:-1'
+          }
+        })
         commit('setAny', { datasets: res.results })
       } else {
         commit('setAny', { datasets: [] })
+      }
+    },
+    async fetchChildrenApps ({ commit, state }) {
+      const appIds = ((state.config && state.config.applications) || [])
+        .map(d => d.id || d.href.split('/').pop())
+      if (appIds.length) {
+        const res = await this.$axios.$get('api/v1/applications', {
+          params: {
+            id: appIds.join(','),
+            size: 10000,
+            select: 'title,description,status,topics,errorMessage,updatedAt',
+            sort: 'createdAt:-1'
+          }
+        })
+        commit('setAny', { childrenApps: res.results })
+      } else {
+        commit('setAny', { childrenApps: [] })
       }
     },
     async writeConfig ({ state, commit, getters, dispatch }, config) {

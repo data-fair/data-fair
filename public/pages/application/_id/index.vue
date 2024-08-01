@@ -20,6 +20,18 @@
                 <v-tab href="#metadata-info">
                   <v-icon>mdi-information</v-icon>&nbsp;&nbsp;{{ $t('info') }}
                 </v-tab>
+                <v-tab
+                  v-if="datasets.length"
+                  href="#datasets"
+                >
+                  <v-icon>mdi-database</v-icon>&nbsp;&nbsp;{{ $t('datasets') }}
+                </v-tab>
+                <v-tab
+                  v-if="childrenApps.length"
+                  href="#children-apps"
+                >
+                  <v-icon>mdi-image-multiple</v-icon>&nbsp;&nbsp;{{ $t('childrenApps') }}
+                </v-tab>
               </template>
               <template #tabs-items>
                 <v-tab-item value="metadata-info">
@@ -33,6 +45,44 @@
                       persistent
                     />
                     <application-info />
+                  </v-container>
+                </v-tab-item>
+                <v-tab-item value="datasets">
+                  <v-container
+                    fluid
+                  >
+                    <v-row
+                      class="resourcesList"
+                    >
+                      <v-col
+                        v-for="dataset in datasets"
+                        :key="dataset.id"
+                        cols="12"
+                        md="6"
+                        lg="4"
+                      >
+                        <dataset-card :dataset="dataset" />
+                      </v-col>
+                    </v-row>
+                  </v-container>
+                </v-tab-item>
+                <v-tab-item value="children-apps">
+                  <v-container
+                    fluid
+                  >
+                    <v-row
+                      class="resourcesList"
+                    >
+                      <v-col
+                        v-for="app in childrenApps"
+                        :key="app.id"
+                        cols="12"
+                        md="6"
+                        lg="4"
+                      >
+                        <application-card :application="app" />
+                      </v-col>
+                    </v-row>
                   </v-container>
                 </v-tab-item>
               </template>
@@ -225,6 +275,8 @@ fr:
   config: Configuration
   editConfig: Éditer la configuration
   validatedError: Erreur dans la <b>version validée</b>
+  datasets: Jeux de données utilisés
+  childrenApps: Applications utilisées
 en:
   info: Information
   tutorialConfigMeta: You can configure topics in the parameters.
@@ -243,6 +295,8 @@ en:
   config: Configuration
   editConfig: Edit configuration
   validatedError: Error in the <b>validated version</b>
+  datasets: Used datasets
+  childrenApps: Used applications
 </i18n>
 
 <script>
@@ -276,7 +330,7 @@ export default {
   },
   computed: {
     ...mapState(['env']),
-    ...mapState('application', ['application', 'api', 'journal', 'prodBaseApp']),
+    ...mapState('application', ['application', 'api', 'journal', 'prodBaseApp', 'datasets', 'childrenApps']),
     ...mapGetters('application', ['resourceUrl', 'can', 'applicationLink', 'hasPrivateDatasets']),
     publicationSites () {
       if (!this.application || this.env.disablePublicationSites) return []
