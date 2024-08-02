@@ -644,6 +644,19 @@ module.exports = {
         }]
       }
     },
+    extensionUpdates: {
+      type: 'object',
+      patternProperties: {
+        '.*': {
+          type: 'object',
+          properties: {
+            manualUpdate: {
+              type: 'boolean'
+            }
+          }
+        }
+      }
+    },
     masterData: masterData.schema,
     publications: {
       type: 'array',
