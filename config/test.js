@@ -104,5 +104,8 @@ module.exports = {
     dataDir: '/data/data-fair/test'
   },
   assertImmutable: true,
-  remoteAttachmentCacheDuration: 1000
+  remoteAttachmentCacheDuration: 1000,
+  elasticsearch: {
+    acceptYellowStatus: true
+  }
 }

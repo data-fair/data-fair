@@ -74,6 +74,7 @@ module.exports = {
   disablePublicationSites: false,
   elasticsearch: {
     // searchTimeout: '2s'
+    acceptYellowStatus: true
   },
   clamav: {
     active: true,
