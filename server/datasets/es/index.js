@@ -52,7 +52,7 @@ exports.init = async () => {
     await client.ping()
   } catch (err) {
     // 1 retry after 2s
-    // solve the quite common case in docker-compose of the service starting at the same time as the elasticsearh node
+    // solve the quite common case in docker compose of the service starting at the same time as the elasticsearh node
     await new Promise(resolve => setTimeout(resolve, 2000))
     await client.ping()
   }
