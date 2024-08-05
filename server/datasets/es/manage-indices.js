@@ -1,6 +1,7 @@
 const crypto = require('crypto')
 const config = require('config')
 const datasetUtils = require('../utils')
+const metrics = require('../../misc/utils/metrics')
 const { aliasName, esProperty } = require('./commons')
 
 exports.indexDefinition = async (dataset) => {
@@ -63,18 +64,20 @@ exports.delete = async (client, dataset) => {
 
 exports.switchAlias = async (client, dataset, tempId) => {
   const name = aliasName(dataset)
-  // Delete all other indices from this dataset
   const previousIndices = await client.indices.get({ index: `${indexPrefix(dataset)}-*`, ignore_unavailable: true })
-  for (const key in previousIndices.body) {
-    if (key !== tempId) await client.indices.delete({ index: key })
-  }
-  /* try {
-    await client.indices.deleteAlias({ name, index: '_all' })
-  } catch (err) {
-    if (err.message !== 'aliases_not_found_exception') throw new Error(err)
-  }
-  await client.indices.delete({ index: name, ignore_unavailable: true }) */
+
   await client.indices.putAlias({ name, index: tempId })
+
+  // Delete all other indices from this dataset
+  for (const key in previousIndices.body) {
+    if (key !== tempId) {
+      try {
+        await client.indices.delete({ index: key })
+      } catch (err) {
+        metrics.internalError('es-delete-index', err)
+      }
+    }
+  }
 }
 
 const getNbShards = (dataset) => {
@@ -83,13 +86,19 @@ const getNbShards = (dataset) => {
 
 const indexBase = (dataset) => {
   const nbShards = getNbShards(dataset)
+  /** @type {any} */
+  const indexSettings = {
+    'mapping.total_fields.limit': 3000,
+    number_of_shards: nbShards,
+    number_of_replicas: config.elasticsearch.nbReplicas
+  }
+  // used for testing
+  if (process.env.READ_ONLY_ES_INDEX === 'true') {
+    indexSettings['blocks.read_only_allow_delete'] = true
+  }
   return {
     settings: {
-      index: {
-        'mapping.total_fields.limit': 3000,
-        number_of_shards: nbShards,
-        number_of_replicas: config.elasticsearch.nbReplicas
-      },
+      index: indexSettings,
       analysis: {
         normalizer: {
           // sorting ignores case and diacritics variations
