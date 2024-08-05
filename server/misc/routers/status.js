@@ -15,7 +15,7 @@ async function esStatus (req) {
   const healthStatus = health?.body?.status
   if (healthStatus === 'green') {
     // OK
-  } if (config.elasticsearch.acceptYellowStatus && healthStatus === 'yellow') {
+  } else if (config.elasticsearch.acceptYellowStatus && healthStatus === 'yellow') {
     // OK
   } else {
     throw new Error('Health status is ' + healthStatus)
