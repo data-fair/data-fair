@@ -234,6 +234,9 @@ export default {
     ...mapState(['projections']),
     ...mapState('dataset', ['dataset', 'journal', 'eventStates']),
     ...mapGetters('dataset', ['can']),
+    hasExtension () {
+      return this.dataset.extensions && this.dataset.extensions.find(e => e.active)
+    },
     nonErrorStatus () {
       // is status is in error, get the previous state from the journal
       if (this.dataset.status === 'error') {
@@ -259,7 +262,10 @@ export default {
       const status = this.nonErrorStatus
       if (status === 'stored') return 1
       if (status === 'normalized') return 2
-      if (status === 'analyzed') return 3
+      if (status === 'analyzed') {
+        if (this.hasExtension) return 3
+        else return 4
+      }
       if (status === 'extended') return 4
       if (status === 'indexed') return 5
       if (status === 'finalized') return 6
