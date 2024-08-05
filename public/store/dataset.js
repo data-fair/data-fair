@@ -251,7 +251,7 @@ export default () => ({
         eventBus.$emit('unsubscribe', getters.journalChannel)
         eventBus.$emit('unsubscribe', getters.taskProgressChannel)
       }
-      commit('setAny', { datasetId: null, dataset: null, api: null, journal: [], showTableCard: null, remoteServices: null })
+      commit('setAny', { datasetId: null, dataset: null, api: null, journal: [], showTableCard: null, remoteServices: null, taskProgress: null })
     },
     async patch ({ commit, getters, dispatch, state }, patch) {
       try {
