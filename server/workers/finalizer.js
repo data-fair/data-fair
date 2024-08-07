@@ -160,11 +160,11 @@ exports.process = async function (app, dataset) {
     const dayjs = require('dayjs')
     const nextUpdate = dayjs().add(60, 'seconds').toISOString()
     const cursor = db.collection('datasets').find({
-      extensions: { $elemMatch: { autoUpdate: true, remoteService: 'dataset:' + dataset.id } }
+      extensions: { $elemMatch: { active: true, autoUpdate: true, remoteService: 'dataset:' + dataset.id } }
     })
     for await (const extendedDataset of cursor) {
       for (const extension of extendedDataset.extensions) {
-        if (extension.autoUpdate && extension.remoteService === 'dataset:' + dataset.id) {
+        if (extension.active && extension.autoUpdate && extension.remoteService === 'dataset:' + dataset.id) {
           extension.nextUpdate = nextUpdate
         }
       }

@@ -52,9 +52,9 @@ exports.prepareExtensions = (locale, extensions, oldExtensions = []) => {
         // TODO: also check if there is a conflict with an existing calculate property ?
       }
     }
-    if (e.type === 'exprEval') {
+    if (e.type === 'exprEval' && e.active) {
       const oldExtension = oldExtensions.find(oe => oe.type === 'exprEval' && oe.property?.key === e.property?.key)
-      if (oldExtension && oldExtension.expr !== e.expr) {
+      if (oldExtension && oldExtension.active && oldExtension.expr !== e.expr) {
         e.needsUpdate = true
       }
     }

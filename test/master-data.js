@@ -144,7 +144,7 @@ describe('Master data management', () => {
     })
     await workers.hook('finalizer/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }, { siret: '82898347800011' }])
-    const slave = await workers.hook('finalizer/slave')
+    let slave = await workers.hook('finalizer/slave')
     const extraProp = slave.schema.find(p => p.key === '_siret.extra')
     assert.ok(extraProp)
     assert.ok(extraProp['x-labels'])
@@ -153,16 +153,41 @@ describe('Master data management', () => {
     assert.equal(extraProp['x-capabilities'].text, false)
     assert.ok(slave.schema.find(p => p.key === '_siret._error'))
     assert.ok(!slave.schema.find(p => p.key === '_siret.siret'))
-    const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
+    let results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_siret.extra'], 'Extra information')
     assert.equal(results[1]['_siret.extra'], 'Extra information')
     assert.ok(!results[0]['_siret.siret'])
+
+    // activate auto update
+    await ax.patch('/api/v1/datasets/slave', {
+      extensions: [{
+        active: true,
+        autoUpdate: true,
+        type: 'remoteService',
+        remoteService: remoteService.id,
+        action: 'masterData_bulkSearch_siret',
+        select: ['extra']
+      }]
+    })
+    const items2 = [{ siret: '82898347800011', extra: 'Extra information 2' }]
+    await ax.post('/api/v1/datasets/master/_bulk_lines', items2.map(item => ({ _id: item.siret, ...item })))
+    await workers.hook('finalizer/master')
+    slave = (await ax.get('/api/v1/datasets/slave')).data
+    assert.ok(slave.extensions[0].nextUpdate)
+    await ax.patch('/api/v1/datasets/slave', {
+      extensions: [{ ...slave.extensions[0], nextUpdate: new Date().toISOString() }]
+    })
+    await workers.hook('finalizer/slave')
+    results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
+    assert.equal(results[0]['_siret.extra'], 'Extra information 2')
 
     // patching the dataset to remove extension
     await ax.patch('/api/v1/datasets/slave', {
       extensions: []
     })
     await workers.hook('finalizer/slave')
+    results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
+    assert.ok(!results[0]['_siret.extra'])
   })
 
   it('accept an input with elasticsearch special chars', async () => {
