@@ -172,7 +172,7 @@ class ExtensionsStream extends Transform {
     if (!this.buffer.length) return
     if (global.events) global.events.emit('extension-inputs', this.buffer.length)
 
-    const changesIndexes = []
+    const changesIndexes = new Set()
 
     for (const extension of this.extensions) {
       debug(`Send req with ${this.buffer.length} items`, this.reqOpts)
@@ -254,7 +254,7 @@ class ExtensionsStream extends Transform {
 
           const i = result[extension.idInput.name]
           if (this.onlyEmitChanges && !equal(this.buffer[i][extension.extensionKey], selectedResult)) {
-            changesIndexes.push(i)
+            changesIndexes.add(i)
           }
           this.buffer[i][extension.extensionKey] = selectedResult
 
@@ -292,7 +292,7 @@ class ExtensionsStream extends Transform {
             throw new Error(message)
           }
           if (this.onlyEmitChanges && !equal(this.buffer[i][extension.property.key], value)) {
-            changesIndexes.push(i)
+            changesIndexes.add(i)
           }
           if (value !== null && value !== undefined) {
             this.buffer[i][extension.property.key] = value
@@ -303,14 +303,9 @@ class ExtensionsStream extends Transform {
       }
     }
 
-    if (this.onlyEmitChanges) {
-      for (const changeIndex of changesIndexes) {
-        this.push(this.buffer[changeIndex])
-      }
-    } else {
-      for (const item of this.buffer) {
-        this.push(item)
-      }
+    for (const i in this.buffer) {
+      if (this.onlyEmitChanges && !changesIndexes.has(i)) continue
+      this.push(this.buffer[i])
     }
 
     this.buffer = []
