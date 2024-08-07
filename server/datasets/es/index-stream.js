@@ -124,8 +124,14 @@ class IndexStream extends Transform {
             input: this.body[(i * 2) + 1]
           }
           if (!item.error) continue
-          this.nbErroredItems += 1
-          if (this.erroredItems.length < maxErroredItems) this.erroredItems.push(item)
+
+          // for some error we can fail immediately, for most we memorize them
+          if (item.error.type === 'cluster_block_exception') {
+            throw new Error(item.error.type ? `${item.error.type} - ${item.error.reason}` : item.error)
+          } else {
+            this.nbErroredItems += 1
+            if (this.erroredItems.length < maxErroredItems) this.erroredItems.push(item)
+          }
         }
       }
       this.body = []

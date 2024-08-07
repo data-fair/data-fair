@@ -11,7 +11,15 @@ async function mongoStatus (req) {
 
 async function esStatus (req) {
   const es = req.app.get('es')
-  await es.ping()
+  const health = await es.cluster.health()
+  const healthStatus = health?.body?.status
+  if (healthStatus === 'green') {
+    // OK
+  } else if (config.elasticsearch.acceptYellowStatus && healthStatus === 'yellow') {
+    // OK
+  } else {
+    throw new Error('Health status is ' + healthStatus)
+  }
   const ingestAttachment = (await es.cat.plugins({ format: 'json' })).body.find(p => p.component === 'ingest-attachment')
   if (!ingestAttachment) throw new Error('Ingest attachment plugin is not installed.')
 }

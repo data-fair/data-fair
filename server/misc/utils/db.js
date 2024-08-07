@@ -26,7 +26,7 @@ exports.connect = async () => {
     client = await MongoClient.connect(config.mongo.url, opts)
   } catch (err) {
     // 1 retry after 1s
-    // solve the quite common case in docker-compose of the service starting at the same time as the db
+    // solve the quite common case in docker compose of the service starting at the same time as the db
     await new Promise(resolve => setTimeout(resolve, 1000))
     client = await MongoClient.connect(config.mongo.url, opts)
   }

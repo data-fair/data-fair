@@ -50,7 +50,7 @@ jobs:
         cache-to: type=gha,mode=max
     
     - name: Stop test dependencies
-      run: docker-compose stop
+      run: docker compose stop
 
     - name: Image digest
       run: echo ${{ steps.docker_build.outputs.digest }}

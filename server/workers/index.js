@@ -244,7 +244,6 @@ async function iter (app, resource, type) {
         taskKey = 'indexer'
       } else if (resource.status === 'indexed') {
         // finalization covers some metadata enrichment, schema cleanup, etc.
-        // either extended or there are no extensions to perform
         taskKey = 'finalizer'
       } else if (
         (resource.isMetaOnly || resource.status === 'finalized') &&

@@ -76,7 +76,11 @@ module.exports = {
       __name: 'ES_NB_REPLICAS',
       __format: 'json'
     },
-    searchTimeout: 'ES_SEARCH_TIMEOUT'
+    searchTimeout: 'ES_SEARCH_TIMEOUT',
+    acceptYellowStatus: {
+      __name: 'ES_ACCEPT_YELLOW_STATUS',
+      __format: 'json'
+    }
   },
   secretKeys: {
     identities: 'SECRET_IDENTITIES',

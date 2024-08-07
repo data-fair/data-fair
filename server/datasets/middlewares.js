@@ -77,6 +77,16 @@ exports.readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptM
     ? await service.memoizedGetDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, req.app.get('db'), tolerateStale, acceptedStatuses, req.body)
     : await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, req.app.get('db'), tolerateStale, acceptedStatuses, req.body)
 
+  /**
+   * can be used to check the memoizee cache usage, first import memoizee/profile on top of app.js
+   * if (tolerateStale) {
+    console.log('memProfile', require('memoizee/profile').log())
+  } */
+  if (!dataset) {
+    if (acceptMissing) return next()
+    return res.status(404).send('Dataset not found')
+  }
+
   if (fillDescendants && dataset.virtual && dataset.virtual.filterActiveAccount) {
     const activeAccount = req.user?.activeAccount
     if (!activeAccount) throw createError(401, 'No active account')
@@ -89,15 +99,6 @@ exports.readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptM
     req.noCache = true
   }
 
-  /**
-   * can be used to check the memoizee cache usage, first import memoizee/profile on top of app.js
-   * if (tolerateStale) {
-    console.log('memProfile', require('memoizee/profile').log())
-  } */
-  if (!dataset) {
-    if (acceptMissing) return next()
-    return res.status(404).send('Dataset not found')
-  }
   // @ts-ignore
   req.dataset = req.resource = dataset
   // @ts-ignore

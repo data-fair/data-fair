@@ -4,7 +4,7 @@ module.exports = (app, datasetId, task, nbSteps, progressCallback) => {
   let lastTime = new Date().getTime() - 1000
   return async (inc = 1) => {
     step += inc
-    const progress = Math.min(Math.round((step / nbSteps) * 100), 100)
+    const progress = Math.min(Math.floor((step / nbSteps) * 100), 100)
     const time = new Date().getTime()
     if (progressCallback && progress > lastProgress) {
       progressCallback(progress)
