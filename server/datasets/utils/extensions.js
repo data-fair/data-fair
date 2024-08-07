@@ -120,7 +120,7 @@ exports.extend = async (app, dataset, extensions, updateMode) => {
     inputStreams = await readStreams(db, dataset, false, false, false, progress)
   }
 
-  const writeStreams = await writeExtendedStreams(db, dataset, updateMode === 'updatedExtensions')
+  const writeStreams = await writeExtendedStreams(db, dataset, extensions)
   await pump(
     ...inputStreams,
     new ExtensionsStream({ extensions: detailedExtensions, dataset, db, es, onlyEmitChanges: updateMode === 'updatedExtensions' }),
