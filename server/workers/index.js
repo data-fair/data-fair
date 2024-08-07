@@ -168,6 +168,7 @@ const getTypesFilters = () => {
           // renew read api key
           { 'readApiKey.active': true, 'readApiKey.renewAt': { $lt: new Date().toISOString() } },
           // fetch datasets that are finalized, but need to update an extension
+          { status: 'finalized', isRest: true, 'extensions.nextUpdate': { $lt: new Date().toISOString() } },
           { status: 'finalized', isRest: true, 'extensions.needsUpdate': true }
         ]
       }, {
@@ -181,6 +182,7 @@ const getTypesFilters = () => {
 async function iter (app, resource, type) {
   const db = app.get('db')
   const journals = require('../misc/utils/journals')
+  const now = new Date().toISOString()
 
   let taskKey
   let lastStderr = ''
@@ -214,7 +216,7 @@ async function iter (app, resource, type) {
       if (resource.status === 'created' && resource.isRest) {
         // Initialize a REST dataset
         taskKey = 'restInitializer'
-      } else if (resource.status === 'imported' || (resource.remoteFile?.autoUpdate?.active && resource.remoteFile.autoUpdate.nextUpdate < new Date().toISOString())) {
+      } else if (resource.status === 'imported' || (resource.remoteFile?.autoUpdate?.active && resource.remoteFile.autoUpdate.nextUpdate < now)) {
         // Load a dataset from a catalog
         taskKey = 'fileDownloader'
       } else if (resource.status === 'loaded') {
@@ -265,16 +267,25 @@ async function iter (app, resource, type) {
       } else if (
         resource.status === 'finalized' &&
         resource.isRest && resource?.exports?.restToCSV?.active &&
-        resource.exports.restToCSV.nextExport < new Date().toISOString()
+        resource.exports.restToCSV.nextExport < now
       ) {
         taskKey = 'restExporterCSV'
       } else if (
         resource?.readApiKey?.active &&
-        resource.readApiKey.renewAt < new Date().toISOString()
+        resource.readApiKey.renewAt < now
       ) {
         taskKey = 'readApiKeyRenewer'
       } else if (resource.status === 'finalized' && resource.isRest && resource.extensions?.find(e => e.needsUpdate)) {
         taskKey = 'extender'
+      } else if (resource.status === 'finalized' && resource.isRest && resource.extensions?.find(e => e.nextUpdate && e.nextUpdate < now)) {
+        const extensions = [...resource.extensions]
+        for (const e of extensions) {
+          if (e.nextUpdate && e.nextUpdate < now) {
+            e.needsUpdate = true
+            delete e.nextUpdate
+          }
+        }
+        await db.collection('datasets').updateOne({ id: resource.id }, { $set: { extensions } })
       }
     }
 

@@ -587,6 +587,13 @@ module.exports = {
           },
           needsUpdate: {
             type: 'boolean'
+          },
+          autoUpdate: {
+            type: 'boolean'
+          },
+          nextUpdate: {
+            type: 'string',
+            format: 'date-time'
           }
         },
         oneOf: [{

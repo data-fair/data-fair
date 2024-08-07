@@ -155,6 +155,23 @@ exports.process = async function (app, dataset) {
     await datasetUtils.updateStorage(app, queryableDataset)
   }
 
+  // trigger auto updates if this dataset is used as a source of extensions
+  if (dataset.masterData?.bulkSearchs?.length) {
+    const dayjs = require('dayjs')
+    const nextUpdate = dayjs().add(60, 'seconds').toISOString()
+    const cursor = db.collection('datasets').find({
+      extensions: { $elemMatch: { autoUpdate: true, remoteService: 'dataset:' + dataset.id } }
+    })
+    for await (const extendedDataset of cursor) {
+      for (const extension of extendedDataset.extensions) {
+        if (extension.autoUpdate && extension.remoteService === 'dataset:' + dataset.id) {
+          extension.nextUpdate = nextUpdate
+        }
+      }
+      await db.collection('datasets').updateOne({ id: extendedDataset.id }, { $set: { extensions: extendedDataset.extensions } })
+    }
+  }
+
   await progress()
 
   debug('done')
