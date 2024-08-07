@@ -166,7 +166,9 @@ const getTypesFilters = () => {
           // file datasets with remote url that need refreshing
           { status: { $nin: ['error'] }, 'remoteFile.autoUpdate.active': true, 'remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() } },
           // renew read api key
-          { 'readApiKey.active': true, 'readApiKey.renewAt': { $lt: new Date().toISOString() } }
+          { 'readApiKey.active': true, 'readApiKey.renewAt': { $lt: new Date().toISOString() } },
+          // fetch datasets that are finalized, but need to update an extension
+          { status: 'finalized', isRest: true, 'extensions.needsUpdate': true }
         ]
       }, {
         isMetaOnly: true,
@@ -271,6 +273,8 @@ async function iter (app, resource, type) {
         resource.readApiKey.renewAt < new Date().toISOString()
       ) {
         taskKey = 'readApiKeyRenewer'
+      } else if (resource.status === 'finalized' && resource.isRest && resource.extensions?.find(e => e.needsUpdate)) {
+        taskKey = 'extender'
       }
     }
 

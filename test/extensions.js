@@ -4,6 +4,7 @@ const assert = require('assert').strict
 const FormData = require('form-data')
 const config = require('config')
 const eventToPromise = require('event-to-promise')
+const restDatasetsUtils = require('../server/datasets/utils/rest')
 const testUtils = require('./resources/test-utils')
 
 const workers = require('../server/workers')
@@ -729,6 +730,54 @@ other,unknown address
       assert.equal(err.message, 'Une extension essaie de créer la colonne "employees" mais cette clé est déjà utilisée.')
       return true
     })
+  })
+
+  it('Update a single extension on file dataset should trigger full reindexing', async function () {
+    const ax = global.ax.dmeadus
+    // Initial dataset with addresses
+    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(id, " - ", adr)', property: { key: 'employees', type: 'string' } }]
+    })
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(id, " / ", adr)', property: { key: 'employees', type: 'string' } }]
+    })
+    assert.equal(res.data.status, 'analyzed')
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
+    assert.equal(lines[0].employees, 'koumoul / 19 rue de la voie lactée saint avé')
+  })
+
+  it('Update a single extension on Rest dataset should NOT trigger full reindexing', async function () {
+    const ax = global.ax.dmeadus
+    // Initial dataset with addresses
+    let dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest dataset',
+      schema: [{ key: 'str1', type: 'string' }, { key: 'str2', type: 'string' }],
+      extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(str1, " - ", str2)', property: { key: 'exp', type: 'string' } }]
+    })).data
+    await workers.hook(`finalizer/${dataset.id}`)
+    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ str1: 'str 1', str2: 'str 2' }, { str1: 'UPPER STR 1', str2: 'UPPER STR 2' }])
+    await workers.hook(`finalizer/${dataset.id}`)
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
+    assert.equal(lines[0].exp, 'UPPER STR 1 - UPPER STR 2')
+    assert.equal(lines[1].exp, 'str 1 - str 2')
+    const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      extensions: [{ active: true, type: 'exprEval', expr: 'UPPER(CONCAT(str1, " - ", str2))', property: { key: 'exp', type: 'string' } }]
+    })
+    assert.equal(res.data.status, 'finalized')
+    assert.equal(res.data.extensions[0].needsUpdate, true)
+    await workers.hook(`extender/${dataset.id}`)
+    const collection = restDatasetsUtils.collection(global.db, dataset)
+    const needsIndexingLines = await collection.find({ _needsIndexing: true }).toArray()
+    assert.equal(needsIndexingLines.length, 1)
+    assert.equal(needsIndexingLines[0].str1, 'str 1')
+    assert.equal(needsIndexingLines[0].exp, 'STR 1 - STR 2')
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
   })
 
   it('Manage cases where extension returns wrong type', async function () {

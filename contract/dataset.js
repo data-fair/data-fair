@@ -584,6 +584,9 @@ module.exports = {
           active: {
             type: 'boolean',
             description: 'Toggle on and off the extension'
+          },
+          needsUpdate: {
+            type: 'boolean'
           }
         },
         oneOf: [{
@@ -642,19 +645,6 @@ module.exports = {
             }
           }
         }]
-      }
-    },
-    extensionUpdates: {
-      type: 'object',
-      patternProperties: {
-        '.*': {
-          type: 'object',
-          properties: {
-            manualUpdate: {
-              type: 'boolean'
-            }
-          }
-        }
       }
     },
     masterData: masterData.schema,
