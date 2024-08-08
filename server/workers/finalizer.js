@@ -2,6 +2,7 @@
 exports.eventsPrefix = 'finalize'
 
 exports.process = async function (app, dataset) {
+  const config = /** @type {any} */(require('config'))
   const esUtils = require('../datasets/es')
   const geoUtils = require('../datasets/utils/geo')
   const datasetUtils = require('../datasets/utils')
@@ -158,7 +159,7 @@ exports.process = async function (app, dataset) {
   // trigger auto updates if this dataset is used as a source of extensions
   if (dataset.masterData?.bulkSearchs?.length) {
     const dayjs = require('dayjs')
-    const nextUpdate = dayjs().add(60, 'seconds').toISOString()
+    const nextUpdate = dayjs().add(config.extensionUpdateDelay, 'seconds').toISOString()
     const cursor = db.collection('datasets').find({
       extensions: { $elemMatch: { active: true, autoUpdate: true, remoteService: 'dataset:' + dataset.id } }
     })

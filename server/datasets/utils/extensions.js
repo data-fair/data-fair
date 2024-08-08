@@ -58,6 +58,9 @@ exports.prepareExtensions = (locale, extensions, oldExtensions = []) => {
         e.needsUpdate = true
       }
     }
+    if (e.nextUpdate && !e.autoUpdate) {
+      delete e.nextUpdate
+    }
   }
   const propertyPrefixes = extensions.filter(e => !!e.propertyPrefix).map(e => e.propertyPrefix)
   if (propertyPrefixes.length !== [...new Set(propertyPrefixes)].length) {

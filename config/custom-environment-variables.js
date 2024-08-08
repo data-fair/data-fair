@@ -291,5 +291,9 @@ module.exports = {
   assertImmutable: {
     __name: 'ASSERT_IMMUTABLE',
     __format: 'json'
+  },
+  extensionUpdateDelay: {
+    __name: 'EXTENSION_UPDATE_DELAY',
+    __format: 'json'
   }
 }
