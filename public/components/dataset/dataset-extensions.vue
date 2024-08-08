@@ -115,8 +115,27 @@
                     chips
                     deletable-chips
                   />
+                  <v-checkbox
+                    v-if="extension.remoteService.startsWith('dataset:') && dataset.isRest"
+                    v-model="extension.autoUpdate"
+                    :label="$t('autoUpdate')"
+                    :messages="extension.nextUpdate"
+                  >
+                    <template #message>
+                      {{ $t('nextUpdate') }} {{ extension.nextUpdate | moment("from", "now") }}
+                    </template>
+                  </v-checkbox>
                 </v-card-text>
                 <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
+                  <confirm-menu
+                    v-if="can('writeDescriptionBreaking') && dataset.isRest"
+                    yes-color="primary"
+                    icon="mdi-refresh"
+                    :btn-props="{color: 'primary', icon: true}"
+                    :text="$t('confirmRefreshText')"
+                    :tooltip="$t('confirmRefreshTooltip')"
+                    @confirm="updateExtension(idx)"
+                  />
                   <dataset-extension-details-dialog
                     :extension="extension"
                     :disabled="extensionHasChanges(extension)"
@@ -207,12 +226,16 @@ fr:
   allColsOut: Toutes les colonnes
   confirmDeleteTooltip: Supprimer l'extension
   confirmDeleteText: Souhaitez-vous confirmer la suppression ?
+  confirmRefreshTooltip: Relancer l'enrichissement
+  confirmRefreshText: Souhaitez-vous confirmer la relance de l'enrichissement ?
   apply: Appliquer
   extensionExists: Cette extension a déjà été configurée
   missingConcepts: "Il faut associer au moins l'un des concepts suivants à vos colonnes : {concepts}"
   missingConcept: "Il faut associer le concept suivant à une de vos colonnes : ${concept}"
   newExprEval: Nouvelle colonne calculée
   expr: Expression
+  autoUpdate: mise à jour automatique si la source change
+  nextUpdate: mise à jour planifiée pour
 en:
   addExtension: Add columns from master-data sources
   addExprEvalExtension: Add a calculated column
@@ -220,12 +243,16 @@ en:
   allColsOut: All the columns
   confirmDeleteTooltip: Delete the extension
   confirmDeleteText: Do you want to confirm the deletion ?
+  confirmRefreshTooltip: Update extension
+  confirmRefreshText: Do you want to confirm the update of the extension ?
   apply: Apply
   extensionExists: This extension was already configured
   missingConcepts: "You must tag your columns with at least one of these concepts: {concepts}"
   missingConcept: "You must tag one of your columns with this concept: ${concept}"
   newExprEval: New calculated column
   expr: Expression
+  autoUpdate: auto update when the source changes
+  nextUpdate: next update planned for
 </i18n>
 
 <script>
@@ -362,6 +389,10 @@ export default {
     },
     removeExtension (idx) {
       this.localExtensions.splice(idx, 1)
+    },
+    updateExtension (idx) {
+      this.localExtensions[idx].needsUpdate = true
+      this.patchAndCommit({ extensions: JSON.parse(JSON.stringify(this.localExtensions)) })
     },
     applyExtensions () {
       this.patchAndCommit({ extensions: JSON.parse(JSON.stringify(this.localExtensions)) })

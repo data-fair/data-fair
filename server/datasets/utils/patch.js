@@ -141,6 +141,8 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
 
   let attemptMappingUpdate = false
 
+  const reindexerStatus = (dataset.file && datasetUtils.schemaHasValidationRules(dataset.schema)) ? 'validated' : 'analyzed'
+
   if (datasetFile || attachmentsFile) {
     patch.dataUpdatedBy = patch.updatedBy
     patch.dataUpdatedAt = patch.updatedAt
@@ -166,21 +168,22 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
   } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && df.ignoreIntegerDetection !== f.ignoreIntegerDetection))) {
     // some ignoreIntegerDetection param has changed on a field, trigger full analysis / re-indexing
     patch.status = 'loaded'
-  } else if (patch.extensions) {
+  } else if (patch.extensions && !dataset.isRest) {
     // extensions have changed, trigger full re-indexing
-    patch.status = (dataset.file && datasetUtils.schemaHasValidationRules(dataset.schema)) ? 'validated' : 'analyzed'
+    // in "rest" dataset no need for full reindexing if the schema is still compatible, extension-updater worker will suffice
+    patch.status = reindexerStatus
   } else if (patch.projection && (!dataset.projection || patch.projection.code !== dataset.projection.code) && ((coordXProp && coordYProp) || projectGeomProp)) {
     // geo projection has changed, trigger full re-indexing
-    patch.status = (dataset.file && datasetUtils.schemaHasValidationRules(dataset.schema)) ? 'validated' : 'analyzed'
+    patch.status = reindexerStatus
   } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.geoFieldsKey(dataset.schema)) {
     // geo concepts haved changed, trigger full re-indexing
-    patch.status = (dataset.file && datasetUtils.schemaHasValidationRules(dataset.schema)) ? 'validated' : 'analyzed'
+    patch.status = reindexerStatus
   } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && df.separator !== f.separator))) {
     // some separator has changed on a field, trigger full re-indexing
-    patch.status = (dataset.file && datasetUtils.schemaHasValidationRules(dataset.schema)) ? 'validated' : 'analyzed'
+    patch.status = reindexerStatus
   } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && df.timeZone !== f.timeZone))) {
     // some timeZone has changed on a field, trigger full re-indexing
-    patch.status = (dataset.file && datasetUtils.schemaHasValidationRules(dataset.schema)) ? 'validated' : 'analyzed'
+    patch.status = reindexerStatus
   } else if (removedRestProps.length) {
     patch.status = 'analyzed'
   } else if (dataset.file && patch.schema && ['validation-updated', 'finalized'].includes(dataset.status) && datasetUtils.schemasFullyCompatible(patch.schema, dataset.schema, true) && datasetUtils.schemaHasValidationRules(patch.schema) && !datasetUtils.schemasValidationCompatible(patch.schema, dataset.schema)) {

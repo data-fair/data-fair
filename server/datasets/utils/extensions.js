@@ -6,6 +6,7 @@ const fs = require('fs-extra')
 const { Transform } = require('stream')
 const stringify = require('json-stable-stringify')
 const flatten = require('flat')
+const equal = require('deep-equal')
 const axios = require('../../misc/utils/axios')
 const { fullFilePath, fsyncFile } = require('./files')
 const { readStreams, writeExtendedStreams } = require('./data-streams')
@@ -51,6 +52,15 @@ exports.prepareExtensions = (locale, extensions, oldExtensions = []) => {
         // TODO: also check if there is a conflict with an existing calculate property ?
       }
     }
+    if (e.type === 'exprEval' && e.active) {
+      const oldExtension = oldExtensions.find(oe => oe.type === 'exprEval' && oe.property?.key === e.property?.key)
+      if (oldExtension && oldExtension.active && oldExtension.expr !== e.expr) {
+        e.needsUpdate = true
+      }
+    }
+    if (e.nextUpdate && !e.autoUpdate) {
+      delete e.nextUpdate
+    }
   }
   const propertyPrefixes = extensions.filter(e => !!e.propertyPrefix).map(e => e.propertyPrefix)
   if (propertyPrefixes.length !== [...new Set(propertyPrefixes)].length) {
@@ -61,7 +71,7 @@ exports.prepareExtensions = (locale, extensions, oldExtensions = []) => {
 // Apply an extension to a dataset: meaning, query a remote service in batches
 // and add the result either to a "full" file or to the collection in case of a rest dataset
 const compileExpression = require('../../../shared/expr-eval')(config.defaultTimezone).compile
-exports.extend = async (app, dataset, extensions) => {
+exports.extend = async (app, dataset, extensions, updateMode) => {
   debugMasterData(`extend dataset ${dataset.id} (${dataset.slug})`, extensions)
   const db = app.get('db')
   const es = app.get('es')
@@ -108,15 +118,15 @@ exports.extend = async (app, dataset, extensions) => {
   const progress = taskProgress(app, dataset.id, 'extend', 100)
   await progress(0)
   if (dataset.isRest) {
-    inputStreams = await restDatasetsUtils.readStreams(db, dataset, dataset.status === 'updated' ? { _needsExtending: true } : {}, progress)
+    inputStreams = await restDatasetsUtils.readStreams(db, dataset, updateMode === 'updatedLines' ? { _needsExtending: true } : {}, progress)
   } else {
     inputStreams = await readStreams(db, dataset, false, false, false, progress)
   }
 
-  const writeStreams = await writeExtendedStreams(db, dataset)
+  const writeStreams = await writeExtendedStreams(db, dataset, extensions)
   await pump(
     ...inputStreams,
-    new ExtensionsStream({ extensions: detailedExtensions, dataset, db, es }),
+    new ExtensionsStream({ extensions: detailedExtensions, dataset, db, es, onlyEmitChanges: updateMode === 'updatedExtensions' }),
     ...writeStreams
   )
   const filePath = writeStreams[writeStreams.length - 1].path
@@ -130,13 +140,14 @@ exports.extend = async (app, dataset, extensions) => {
 
 // Perform HTTP requests to a remote service to extend data
 class ExtensionsStream extends Transform {
-  constructor ({ extensions, dataset, db, es }) {
+  constructor ({ extensions, dataset, db, es, onlyEmitChanges }) {
     super({ objectMode: true })
     this.i = 0
     this.dataset = dataset
     this.extensions = extensions
     this.db = db
     this.es = es
+    this.onlyEmitChanges = onlyEmitChanges
     this.buffer = []
   }
 
@@ -163,6 +174,8 @@ class ExtensionsStream extends Transform {
   async _sendBuffer () {
     if (!this.buffer.length) return
     if (global.events) global.events.emit('extension-inputs', this.buffer.length)
+
+    const changesIndexes = new Set()
 
     for (const extension of this.extensions) {
       debug(`Send req with ${this.buffer.length} items`, this.reqOpts)
@@ -243,7 +256,11 @@ class ExtensionsStream extends Transform {
             .reduce((a, key) => { a[key] = result[key]; return a }, {})
 
           const i = result[extension.idInput.name]
+          if (this.onlyEmitChanges && !equal(this.buffer[i][extension.extensionKey], selectedResult)) {
+            changesIndexes.add(i)
+          }
           this.buffer[i][extension.extensionKey] = selectedResult
+
           if (!localMasterData) {
             // TODO: do this in bulk ?
             await this.db.collection('extensions-cache')
@@ -277,15 +294,21 @@ class ExtensionsStream extends Transform {
 
             throw new Error(message)
           }
+          if (this.onlyEmitChanges && !equal(this.buffer[i][extension.property.key], value)) {
+            changesIndexes.add(i)
+          }
           if (value !== null && value !== undefined) {
             this.buffer[i][extension.property.key] = value
+          } else {
+            delete this.buffer[i][extension.property.key]
           }
         }
       }
     }
 
-    for (const item of this.buffer) {
-      this.push(item)
+    for (const i in this.buffer) {
+      if (this.onlyEmitChanges && !changesIndexes.has(i)) continue
+      this.push(this.buffer[i])
     }
 
     this.buffer = []

@@ -1000,15 +1000,23 @@ exports.readStreams = async (db, dataset, filter = {}, progress) => {
   ]
 }
 
-exports.writeExtendedStreams = (db, dataset) => {
+exports.writeExtendedStreams = (db, dataset, extensions) => {
+  const patchedKeys = []
+  for (const extension of extensions) {
+    if (extension.type === 'remoteService') patchedKeys.push(extension.propertyPrefix)
+    if (extension.type === 'exprEval') patchedKeys.push(extension.property.key)
+  }
   const collection = exports.collection(db, dataset)
   return [new Writable({
     objectMode: true,
     async write (item, encoding, cb) {
       try {
-        delete item._needsExtending
-        item._needsIndexing = true
-        await collection.replaceOne({ _id: item._id }, item)
+        const patch = { $set: { _needsIndexing: true }, $unset: { _needsExtending: 1 } }
+        for (const key of patchedKeys) {
+          if (key in item) patch.$set[key] = item[key]
+          else patch.$unset[key] = item[key]
+        }
+        await collection.updateOne({ _id: item._id }, patch)
         cb()
       } catch (err) {
         cb(err)

@@ -584,6 +584,16 @@ module.exports = {
           active: {
             type: 'boolean',
             description: 'Toggle on and off the extension'
+          },
+          needsUpdate: {
+            type: 'boolean'
+          },
+          autoUpdate: {
+            type: 'boolean'
+          },
+          nextUpdate: {
+            type: 'string',
+            format: 'date-time'
           }
         },
         oneOf: [{
