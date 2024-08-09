@@ -133,7 +133,13 @@ describe('Master data management', () => {
     await ax.put('/api/v1/datasets/slave', {
       isRest: true,
       title: 'slave',
-      schema: [siretProperty],
+      schema: [siretProperty]
+    })
+    await workers.hook('finalizer/slave')
+    await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }, { siret: '82898347800011' }])
+    await workers.hook('finalizer/slave')
+
+    await ax.patch('/api/v1/datasets/slave', {
       extensions: [{
         active: true,
         type: 'remoteService',
@@ -142,9 +148,9 @@ describe('Master data management', () => {
         select: ['extra']
       }]
     })
-    await workers.hook('finalizer/slave')
-    await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }, { siret: '82898347800011' }])
+    await workers.hook('extender/slave')
     let slave = await workers.hook('finalizer/slave')
+
     const extraProp = slave.schema.find(p => p.key === '_siret.extra')
     assert.ok(extraProp)
     assert.ok(extraProp['x-labels'])
