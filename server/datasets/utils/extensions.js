@@ -49,12 +49,14 @@ exports.prepareExtensions = (locale, extensions, oldExtensions = []) => {
         e.propertyPrefix = propertyPrefix.replace(/__/g, '_').replace(/^_/, '').replace(/_$/, '')
         e.propertyPrefix = '_' + e.propertyPrefix
 
+        e.needsUpdate = true
+
         // TODO: also check if there is a conflict with an existing calculate property ?
       }
     }
     if (e.type === 'exprEval' && e.active) {
       const oldExtension = oldExtensions.find(oe => oe.type === 'exprEval' && oe.property?.key === e.property?.key)
-      if (oldExtension && oldExtension.active && oldExtension.expr !== e.expr) {
+      if (!oldExtension || (oldExtension && oldExtension.active && oldExtension.expr !== e.expr)) {
         e.needsUpdate = true
       }
     }

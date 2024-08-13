@@ -183,7 +183,7 @@ router.patch('/:datasetId',
     validatePatch(patch)
     validateURLFriendly(locale, patch.slug)
 
-    const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, req.body, dataset, user, locale)
+    const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, user, locale)
       .catch(err => {
         if (err.code !== 11000) throw err
         throw createError(400, req.__('errors.dupSlug'))

@@ -172,6 +172,7 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
     // extensions have changed, trigger full re-indexing
     // in "rest" dataset no need for full reindexing if the schema is still compatible, extension-updater worker will suffice
     patch.status = reindexerStatus
+    for (const e of patch.extensions) delete e.needsUpdate
   } else if (patch.projection && (!dataset.projection || patch.projection.code !== dataset.projection.code) && ((coordXProp && coordYProp) || projectGeomProp)) {
     // geo projection has changed, trigger full re-indexing
     patch.status = reindexerStatus

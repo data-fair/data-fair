@@ -388,6 +388,13 @@ exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappin
     }
   }
 
+  // no need to update individual extensions, dataset will be reindexed entirely
+  if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.extensions) {
+    for (const e of patch.extensions) {
+      delete e.needsUpdate
+    }
+  }
+
   Object.assign(dataset, patch)
 
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset)
