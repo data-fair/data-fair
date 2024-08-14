@@ -14,7 +14,7 @@ const workersTasksHistogram = new Histogram({
 })
 
 const tasks = exports.tasks = {
-  restInitializer: require('./rest-initializer'),
+  initializer: require('./initializer'),
   fileDownloader: require('./file-downloader'),
   fileStorer: require('./file-storer'),
   fileNormalizer: require('./file-normalizer'),
@@ -213,9 +213,9 @@ async function iter (app, resource, type) {
 
       const normalized = (resource.status === 'stored' && tasks.fileNormalizer.basicTypes.includes(resource.originalFile?.mimetype)) || resource.status === 'normalized'
 
-      if (resource.status === 'created' && resource.isRest) {
-        // Initialize a REST dataset
-        taskKey = 'restInitializer'
+      if (resource.status === 'created') {
+        // Initialize a dataset
+        taskKey = 'initializer'
       } else if (resource.status === 'imported' || (resource.remoteFile?.autoUpdate?.active && resource.remoteFile.autoUpdate.nextUpdate < now)) {
         // Load a dataset from a catalog
         taskKey = 'fileDownloader'
