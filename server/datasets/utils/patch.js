@@ -31,30 +31,28 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
   datasetUtils.setUniqueRefs(patch)
   datasetUtils.curateDataset(patch)
 
-  // Changed a previously failed dataset, retry everything.
-  // Except download.. We only try it again if the fetch failed.
+  // changed a previously failed dataset, retry the previous update (dataset._currentUpdate should be preserved)
   if (dataset.status === 'error') {
-    if (dataset.isVirtual) patch.status = 'indexed'
-    else if (dataset.isRest) patch.status = 'analyzed'
-    else if (dataset.remoteFile && !dataset.originalFile) patch.status = 'imported'
-    else patch.status = 'stored'
+    patch.status = 'updated'
+    patch._currentUpdate = dataset._currentUpdate ?? { reindex: true }
+  } else {
+    patch._currentUpdate = {}
   }
 
   const datasetFile = files && files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
   const attachmentsFile = files?.find(f => f.fieldname === 'attachments')
 
   if (datasetFile) {
-    patch.loaded = {
-      dataset: {
-        name: datasetFile.originalname,
-        size: datasetFile.size,
-        mimetype: datasetFile.mimetype
-      }
+    patch.status = 'updated'
+    patch._currentUpdate.dataFile = {
+      name: datasetFile.originalname,
+      size: datasetFile.size,
+      mimetype: datasetFile.mimetype
     }
   }
   if (attachmentsFile) {
-    patch.loaded = patch.loaded || {}
-    patch.loaded.attachments = true
+    patch.status = 'updated'
+    patch._currentUpdate.attachments = true
   }
 
   if (patch.attachments) {
@@ -141,18 +139,16 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
 
   let attemptMappingUpdate = false
 
-  const reindexerStatus = (dataset.file && datasetUtils.schemaHasValidationRules(dataset.schema)) ? 'validated' : 'analyzed'
-
   if (datasetFile || attachmentsFile) {
     patch.dataUpdatedBy = patch.updatedBy
     patch.dataUpdatedAt = patch.updatedAt
-    patch.status = 'loaded'
   } else if (patch.remoteFile) {
     if (patch.remoteFile?.url !== dataset.remoteFile?.url || patch.remoteFile?.name !== dataset.remoteFile?.name || patch.remoteFile.forceUpdate) {
       delete patch.remoteFile.lastModified
       delete patch.remoteFile.etag
       delete patch.remoteFile.forceUpdate
-      patch.status = 'imported'
+      patch.status = 'updated'
+      patch._currentUpdate.downloadRemoteFile = true
     } else {
       patch.remoteFile.lastModified = dataset.remoteFile.lastModified
       patch.remoteFile.etag = dataset.remoteFile.etag
@@ -160,47 +156,60 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
   } else if (dataset.isVirtual) {
     if (patch.schema || patch.virtual) {
       patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...dataset, ...patch })
-      patch.status = 'indexed'
+      patch.status = 'updated'
     }
   } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && df.ignoreDetection !== f.ignoreDetection))) {
-    // some ignoreDetection param has changed on a field, trigger full analysis / re-indexing
-    patch.status = 'loaded'
+    // some ignoreDetection param has changed on a field, trigger full re-indexing
+    patch.status = 'updated'
+    // TODO: also re-analysis ?
+    patch._currentUpdate.reindex = true
   } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && df.ignoreIntegerDetection !== f.ignoreIntegerDetection))) {
     // some ignoreIntegerDetection param has changed on a field, trigger full analysis / re-indexing
-    patch.status = 'loaded'
+    patch.status = 'updated'
+    // TODO: also re-analysis ?
+    patch._currentUpdate.reindex = true
   } else if (patch.extensions && !dataset.isRest) {
     // extensions have changed, trigger full re-indexing
     // in "rest" dataset no need for full reindexing if the schema is still compatible, extension-updater worker will suffice
-    patch.status = reindexerStatus
+    patch.status = 'updated'
+    patch._currentUpdate.reindex = true
     for (const e of patch.extensions) delete e.needsUpdate
   } else if (patch.projection && (!dataset.projection || patch.projection.code !== dataset.projection.code) && ((coordXProp && coordYProp) || projectGeomProp)) {
     // geo projection has changed, trigger full re-indexing
-    patch.status = reindexerStatus
+    patch.status = 'updated'
+    patch._currentUpdate.reindex = true
   } else if (patch.schema && geo.geoFieldsKey(patch.schema) !== geo.geoFieldsKey(dataset.schema)) {
     // geo concepts haved changed, trigger full re-indexing
-    patch.status = reindexerStatus
+    patch.status = 'updated'
+    patch._currentUpdate.reindex = true
   } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && df.separator !== f.separator))) {
     // some separator has changed on a field, trigger full re-indexing
-    patch.status = reindexerStatus
+    patch.status = 'updated'
+    patch._currentUpdate.reindex = true
   } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && df.timeZone !== f.timeZone))) {
     // some timeZone has changed on a field, trigger full re-indexing
-    patch.status = reindexerStatus
+    patch.status = 'updated'
+    patch._currentUpdate.reindex = true
   } else if (removedRestProps.length) {
-    patch.status = 'analyzed'
+    patch.status = 'updated'
+    patch._currentUpdate.reindex = true
   } else if (dataset.file && patch.schema && ['validation-updated', 'finalized'].includes(dataset.status) && datasetUtils.schemasFullyCompatible(patch.schema, dataset.schema, true) && datasetUtils.schemaHasValidationRules(patch.schema) && !datasetUtils.schemasValidationCompatible(patch.schema, dataset.schema)) {
-    patch.status = 'validation-updated'
+    patch.status = 'updated'
+    patch._currentUpdate.reValidate = true
   } else if (patch.schema && !datasetUtils.schemasFullyCompatible(patch.schema, dataset.schema, true)) {
     attemptMappingUpdate = true
-    patch.status = 'analyzed'
+    patch.status = 'updated'
+    // reindex will be removed later on if the mapping is successfully updated
+    patch._currentUpdate.reindex = true
   } else if (patch.thumbnails || patch.masterData) {
     // just change finalizedAt so that cache is invalidated, but the worker doesn't relly need to work on the dataset
     patch.finalizedAt = (new Date()).toISOString()
   } else if (patch.rest && dataset.rest && patch.rest.storeUpdatedBy !== dataset.rest.storeUpdatedBy) {
-    // changes in rest history mode will be processed by the finalizer worker
-    patch.status = 'analyzed'
+    patch.status = 'updated'
+    patch._currentUpdate.reindex = true
   } else if (patch.rest) {
-    // changes in rest history mode will be processed by the finalizer worker
-    patch.status = 'indexed'
+    // changes in rest history mode will be processed by the finalizer task, no need to reindex
+    patch.status = 'updated'
   }
 
   return { removedRestProps, attemptMappingUpdate }

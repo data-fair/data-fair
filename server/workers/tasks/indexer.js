@@ -1,22 +1,20 @@
-const metrics = require('../misc/utils/metrics')
-const journals = require('../misc/utils/journals')
+const fs = require('fs-extra')
+const createError = require('http-errors')
+const { Writable } = require('stream')
+const pump = require('../../misc/utils/pipe')
+const es = require('../../datasets/es')
+const datasetUtils = require('../../datasets/utils')
+const restDatasetsUtils = require('../../datasets/utils/rest')
+const taskProgress = require('../../datasets/utils/task-progress')
+const metrics = require('../../misc/utils/metrics')
+const journals = require('../../misc/utils/journals')
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
 exports.eventsPrefix = 'index'
 
-exports.process = async function (app, dataset) {
-  const fs = require('fs-extra')
-  const createError = require('http-errors')
-  const { Writable } = require('stream')
-  const pump = require('../misc/utils/pipe')
-  const es = require('../datasets/es')
-  const datasetUtils = require('../datasets/utils')
-  const datasetsService = require('../datasets/service')
-  const restDatasetsUtils = require('../datasets/utils/rest')
-  const taskProgress = require('../datasets/utils/task-progress')
-
+exports.process = async function (app, dataset, patch) {
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
-  const debugHeap = require('../misc/utils/heap').debug(`worker:indexer:${dataset.id}`)
+  const debugHeap = require('../../misc/utils/heap').debug(`worker:indexer:${dataset.id}`)
 
   if (process.env.NODE_ENV === 'test' && dataset.slug === 'trigger-test-error') {
     throw new Error('This is a test error')
@@ -77,27 +75,24 @@ exports.process = async function (app, dataset) {
   const errorsSummary = indexStream.errorsSummary()
   if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
 
-  const result = {
-    status: 'indexed',
-    schema: datasetUtils.cleanSchema(dataset)
-  }
+  patch.schema = datasetUtils.cleanSchema(dataset)
   if (dataset.status === 'updated' || dataset.status === 'extended-updated') {
-    result.count = await restDatasetsUtils.count(db, dataset)
+    patch.count = await restDatasetsUtils.count(db, dataset)
   } else {
     debug('Switch alias to point to new datasets index')
+    // TODO: switch alias after finalization
     await es.switchAlias(esClient, dataset, indexName)
-    result.count = indexStream.i
+    patch.count = indexStream.i
   }
 
   // Some data was updated in the interval during which we performed indexation
   // keep dataset as "updated" so that this worker keeps going
+  /* TODO: replace this with a loop in the main worker
   if (dataset.status === 'extended-updated' && await restDatasetsUtils.count(db, dataset, { _needsExtending: true })) {
     debug('REST dataset indexed, but some data still needs extending, get back in "updated" status')
-    result.status = 'updated'
+    patch.status = 'updated'
   } else if ((dataset.status === 'updated' || dataset.status === 'extended-updated') && await restDatasetsUtils.count(db, dataset, { _needsIndexing: true })) {
     debug(`REST dataset indexed, but some data is still fresh, stay in "${dataset.status}" status`)
-    result.status = dataset.status
-  }
-
-  await datasetsService.applyPatch(app, dataset, result)
+    patch.status = dataset.status
+  } */
 }

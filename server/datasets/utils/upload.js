@@ -19,7 +19,7 @@ const fallbackMimeTypes = {
 }
 const debug = require('debug')('files')
 
-const { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } = require('../../workers/file-normalizer')
+const { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } = require('./files')
 
 const storage = multer.diskStorage({
   destination: async function (req, file, cb) {

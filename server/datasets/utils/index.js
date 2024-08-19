@@ -51,15 +51,13 @@ exports.sampleValues = dataStreamsUtils.sampleValues
 exports.readStreams = dataStreamsUtils.readStreams
 
 exports.reindex = async (db, dataset) => {
-  const patch = { status: 'stored' }
-  if (dataset.isVirtual) patch.status = 'indexed'
-  else if (dataset.isRest) patch.status = 'analyzed'
+  const patch = { status: 'updated', _currentUpdate: { reindex: true } }
   return (await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
 }
 
 exports.refinalize = async (db, dataset) => {
-  const patch = { status: 'indexed' }
+  const patch = { status: 'updated' }
   return (await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
 }
@@ -187,7 +185,7 @@ exports.clean = (publicUrl, publicationSite, dataset, query = {}, draft = false)
   delete dataset._id
   delete dataset._uniqueRefs
   delete dataset.initFrom
-  delete dataset.loaded
+  delete dataset._currentUpdate
   delete dataset._readApiKey
   delete dataset._attachmentsTargets
 

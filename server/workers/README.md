@@ -23,19 +23,15 @@ Compared to previous implementation the purpose is:
 
 All datasets are in this state at first.
 
-### "data-updated"
+### "updated"
 
 File datasets are in this state right after upload (or download in the case of remote file datasets). Rest datasets are in this state after a request performed some changes on the mongodb collection.
 
-When a dataset is in this state there can be some cases where there are some discrepancies (a rest dataset's index not being up to date with the database).But we try to reduce those.
-
-### "metadata-updated"
-
 All datasets are in this state after an impactful metadata update (impactful means that at least some action is required by a worker).
 
-This state is accompanied by a property "metadataUpdate" that stores information useful for the worker to perform the right tasks (which parts of the metadata were patched, if there was breaking schema changes, etc).
+This state is accompanied by a property "currentUpdate" that stores information useful for the worker to perform the right tasks (which parts of the metadata were patched, if there was breaking schema changes, etc).
 
-When a dataset is in this state there can be some discrepancies (an extension declared but not yet executed, etc).
+When a dataset is in this state there can be some cases where there are some discrepancies (a rest dataset's index not being up to date with the database, an extension declared but not yet executed, etc).But we try to reduce those as much as possible.
 
 ### "finalized"
 

@@ -52,6 +52,10 @@ exports.loadedAttachmentsFilePath = (dataset) => {
   return resolvePath(exports.loadingDir(dataset), 'attachments.zip')
 }
 
+exports.loadedAttachmentsDir = (dataset) => {
+  return resolvePath(exports.loadingDir(dataset), 'attachments')
+}
+
 exports.attachmentsDir = (dataset) => {
   return resolvePath(exports.dir(dataset), 'attachments')
 }
@@ -192,3 +196,33 @@ exports.fsyncFile = async (p) => {
   await fs.fsync(fd)
   await fs.close(fd)
 }
+
+exports.archiveTypes = new Set([
+  'application/zip' // .zip
+  /* 'application/x-7z-compressed', // .7z
+  'application/x-bzip', // .bzip
+  'application/x-bzip2', // .bzip2
+  'application/x-tar', // .tar */
+])
+exports.tabularTypes = new Set([
+  'application/vnd.oasis.opendocument.spreadsheet', // ods, fods
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
+  'application/vnd.ms-excel', // xls
+  'application/dbase' // dbf
+])
+exports.geographicalTypes = new Set([
+  'application/vnd.google-earth.kml+xml', // kml
+  'application/vnd.google-earth.kmz', // kmz
+  'application/gpx+xml', // gpx or xml ?
+  'application/geopackage+sqlite3' // gpkg
+])
+exports.calendarTypes = new Set(['text/calendar'])
+exports.csvTypes = [
+  'text/csv',
+  'text/plain', // txt often contains csv or tsv content
+  'text/tab-separated-values' // tsv processed in the same way as csv
+]
+exports.basicTypes = [
+  ...exports.csvTypes,
+  'application/geo+json'
+]

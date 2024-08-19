@@ -225,6 +225,7 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
   dataset.createdBy = dataset.updatedBy = { id: user.id, name: user.name }
   dataset.permissions = []
   dataset.schema = dataset.schema || []
+  dataset.status = 'created'
   if (dataset.extensions) {
     prepareExtensions(locale, dataset.extensions)
     dataset.schema = await prepareExtensionsSchema(db, dataset.schema, dataset.extensions)
@@ -262,26 +263,22 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
     if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
     dataset.virtual = dataset.virtual || { children: [] }
     dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
-    dataset.status = 'indexed'
   } else if (body.isRest) {
     if (!body.title) throw createError(400, 'Un jeu de données éditable doit être créé avec un titre')
     if (attachmentsFile) throw createError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
     dataset.rest = dataset.rest || {}
     dataset.rest.primaryKeyMode = dataset.rest.primaryKeyMode || 'sha256'
     dataset.schema = dataset.schema || []
-    dataset.status = 'created'
   } else if (body.isMetaOnly) {
     if (!body.title) throw createError(400, 'Un jeu de données métadonnées doit être créé avec un titre')
     if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
   } else if (body.remoteFile) {
     dataset.title = dataset.title || titleFromFileName(body.remoteFile.name || path.basename(new URL(body.remoteFile.url).pathname))
-    dataset.status = 'created'
     if (dataset.initFrom && dataset.initFrom.parts.includes('data')) {
       throw createError(400, 'Un jeu de données basé sur fichier distant ne peut être initialisé ave la donnée d\'un jeu de données de référence')
     }
   } else if (dataset.initFrom && dataset.initFrom.parts.includes('data')) {
     // case of a file dataset initialized from master data
-    dataset.status = 'created'
   } else {
     throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "éditable" ou "métadonnées"')
   }
@@ -389,14 +386,14 @@ exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappin
       // we just try in case elasticsearch considers the new mapping compatible
       // so that we might optimize and reindex only when necessary
       await esUtils.updateDatasetMapping(app.get('es'), { id: dataset.id, schema: patch.schema }, dataset)
-      patch.status = 'indexed'
+      delete patch._currentUpdate.reindex
     } catch (err) {
       // generated ES mappings are not compatible, trigger full re-indexing
     }
   }
 
   // no need to update individual extensions, dataset will be reindexed entirely
-  if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.extensions) {
+  if (patch.status === 'updated' && patch._currentUpdate.reindex && patch.extensions) {
     for (const e of patch.extensions) {
       delete e.needsUpdate
     }

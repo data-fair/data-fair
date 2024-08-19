@@ -1,65 +1,32 @@
-// convert from tabular data to csv or geographical data to geojson
 const config = /** @type {any} */(require('config'))
+const { pipeline } = require('node:stream').promises
+const path = require('path')
+const fs = require('fs-extra')
+const createError = require('http-errors')
+const ogr2ogr = require('ogr2ogr').default
+const pump = require('../../misc/utils/pipe')
+const { stringify: csvStrStream } = require('csv-stringify')
+const tmp = require('tmp-promise')
+const dir = require('node-dir')
+const mime = require('mime-types')
+const zlib = require('node:zlib')
+const resolvePath = require('resolve-path')
+const { displayBytes } = require('../../misc/utils/bytes')
+const datasetUtils = require('../../datasets/utils')
+const { tmpDir: mainTmpDir, basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } = require('../../datasets/utils/files')
+const icalendar = require('../../misc/utils/icalendar')
+const xlsx = require('../../misc/utils/xlsx')
+const i18nUtils = require('../../i18n/utils')
+const metrics = require('../../misc/utils/metrics')
 
 exports.eventsPrefix = 'normalize'
 
-const archiveTypes = exports.archiveTypes = new Set([
-  'application/zip' // .zip
-  /* 'application/x-7z-compressed', // .7z
-  'application/x-bzip', // .bzip
-  'application/x-bzip2', // .bzip2
-  'application/x-tar', // .tar */
-])
-const tabularTypes = exports.tabularTypes = new Set([
-  'application/vnd.oasis.opendocument.spreadsheet', // ods, fods
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
-  'application/vnd.ms-excel', // xls
-  'application/dbase' // dbf
-])
-const geographicalTypes = exports.geographicalTypes = new Set([
-  'application/vnd.google-earth.kml+xml', // kml
-  'application/vnd.google-earth.kmz', // kmz
-  'application/gpx+xml', // gpx or xml ?
-  'application/geopackage+sqlite3' // gpkg
-])
-const calendarTypes = exports.calendarTypes = new Set(['text/calendar'])
-exports.csvTypes = [
-  'text/csv',
-  'text/plain', // txt often contains csv or tsv content
-  'text/tab-separated-values' // tsv processed in the same way as csv
-]
-exports.basicTypes = [
-  ...exports.csvTypes,
-  'application/geo+json'
-]
-
 async function decompress (mimetype, filePath, dirPath) {
-  const exec = require('../misc/utils/exec')
+  const exec = require('../../misc/utils/exec')
   if (mimetype === 'application/zip') await exec('unzip', ['-o', '-q', filePath, '-d', dirPath])
 }
 
-exports.process = async function (app, dataset) {
-  const { pipeline } = require('node:stream').promises
-  const path = require('path')
-  const fs = require('fs-extra')
-  const createError = require('http-errors')
-  const ogr2ogr = require('ogr2ogr').default
-  const pump = require('../misc/utils/pipe')
-  const { stringify: csvStrStream } = require('csv-stringify')
-  const tmp = require('tmp-promise')
-  const dir = require('node-dir')
-  const mime = require('mime-types')
-  const zlib = require('node:zlib')
-  const resolvePath = require('resolve-path')
-  const { displayBytes } = require('../misc/utils/bytes')
-  const datasetUtils = require('../datasets/utils')
-  const datasetService = require('../datasets/service')
-  const { tmpDir: mainTmpDir } = require('../datasets/utils/files')
-  const icalendar = require('../misc/utils/icalendar')
-  const xlsx = require('../misc/utils/xlsx')
-  const i18nUtils = require('../i18n/utils')
-  const metrics = require('../misc/utils/metrics')
-
+exports.process = async function (app, dataset, patch) {
   const debug = require('debug')(`worker:file-normalizer:${dataset.id}`)
   const originalFilePath = datasetUtils.originalFilePath(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
@@ -88,7 +55,7 @@ exports.process = async function (app, dataset) {
         filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.shx')) &&
         filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.dbf'))) {
       isShapefile = true
-    } else if (filePaths.length === 1 && exports.basicTypes.includes(mime.lookup(filePaths[0].base))) {
+    } else if (filePaths.length === 1 && basicTypes.includes(mime.lookup(filePaths[0].base))) {
       // case of a single data file in an archive
       const filePath = resolvePath(datasetUtils.dir(dataset), filePaths[0].base)
       await fs.move(resolvePath(tmpDir, files[0]), filePath, { overwrite: true })
@@ -210,12 +177,8 @@ exports.process = async function (app, dataset) {
     throw createError(400, `[noretry] Le format de ce fichier n'est pas supporté (${dataset.originalFile.mimetype}).`)
   }
 
-  dataset.status = 'normalized'
-
-  const patch = { status: dataset.status, file: dataset.file, schema: dataset.schema }
+  patch.file = dataset.file
+  patch.schema = dataset.schema
   if (dataset.timeZone) patch.timeZone = dataset.timeZone
   if (dataset.analysis) patch.analysis = dataset.analysis
-
-  await datasetService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
 }

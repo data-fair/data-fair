@@ -1,18 +1,15 @@
-const journals = require('../misc/utils/journals')
+const journals = require('../../misc/utils/journals')
+const createError = require('http-errors')
+const iconv = require('iconv-lite')
+const datasetFileSample = require('../../datasets/utils/file-sample')
+const csvSniffer = require('../../misc/utils/csv-sniffer')
+const datasetUtils = require('../../datasets/utils')
+const fieldsSniffer = require('../../datasets/utils/fields-sniffer')
+const outOfCharacter = require('out-of-character')
 
-// Analyze dataset data, check validity and extract a few metadata for next workers
-exports.eventsPrefix = 'analyze'
+// TODO: create a task progress ?
 
-exports.process = async function (app, dataset) {
-  const createError = require('http-errors')
-  const iconv = require('iconv-lite')
-  const datasetFileSample = require('../datasets/utils/file-sample')
-  const csvSniffer = require('../misc/utils/csv-sniffer')
-  const datasetUtils = require('../datasets/utils')
-  const datasetsService = require('../datasets/service')
-  const fieldsSniffer = require('../datasets/utils/fields-sniffer')
-  const outOfCharacter = require('out-of-character')
-
+exports.process = async function (app, dataset, patch) {
   const debug = require('debug')(`worker:csv-analyzer:${dataset.id}`)
   debug('extract file sample')
   const fileSample = await datasetFileSample(datasetUtils.filePath(dataset))
@@ -77,16 +74,12 @@ exports.process = async function (app, dataset) {
   datasetUtils.mergeFileSchema(dataset)
   datasetUtils.cleanSchema(dataset)
 
-  const patch = {
-    status: 'analyzed',
-    file: dataset.file,
-    schema: dataset.schema
-  }
+  patch.file = dataset.file
+  patch.schema = dataset.schema
 
+  /* TODO: rework auto validation of drafts
   if (!datasetUtils.schemaHasValidationRules(dataset.schema) && await datasetsService.validateCompatibleDraft(app, dataset, patch)) {
     return
   }
-
-  await datasetsService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
+  */
 }

@@ -1,14 +1,11 @@
+const extensionsUtils = require('../../datasets/utils/extensions')
+const restDatasetsUtils = require('../../datasets/utils/rest')
+
 const debugMasterData = require('debug')('master-data')
 
-// Index tabular datasets with elasticsearch using available information on dataset schema
-exports.eventsPrefix = 'extend'
+// const eventsPrefix = 'extend'
 
-exports.process = async function (app, dataset) {
-  const extensionsUtils = require('../datasets/utils/extensions')
-  const datasetUtils = require('../datasets/utils')
-  const datasetService = require('../datasets/service')
-  const restDatasetsUtils = require('../datasets/utils/rest')
-
+exports.process = async function (app, dataset, patch) {
   const debug = require('debug')(`worker:extender:${dataset.id}`)
 
   let updateMode = 'all'
@@ -17,7 +14,6 @@ exports.process = async function (app, dataset) {
   debug('update mode', updateMode)
 
   const db = app.get('db')
-  const patch = { status: updateMode === 'all' ? 'extended' : 'extended-updated' }
 
   let extensions = dataset.extensions || []
   if (updateMode === 'updatedExtensions') extensions = extensions.filter(e => e.needsUpdate)
@@ -44,7 +40,5 @@ exports.process = async function (app, dataset) {
       return doneE
     })
   }
-  await datasetService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
   debug('done')
 }

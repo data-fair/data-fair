@@ -192,7 +192,10 @@ exports.harvestDatasetResource = async (app, catalog, datasetId, resourceId, for
       if (harvestedDataset.remoteFile.lastModified) remoteFile.lastModified = harvestedDataset.remoteFile.lastModified
     }
     const patch = getDatasetPatch(catalog, dataset, { title: dataset.title, remoteFile })
-    if (harvestedDataset.remoteFile?.url !== remoteFile.url || forceDownload) patch.status = 'imported'
+    if (harvestedDataset.remoteFile?.url !== remoteFile.url || forceDownload) {
+      patch.status = 'updated'
+      patch._currentUpdate = { downloadRemoteFile: true }
+    }
     debug('apply patch to existing resource dataset', harvestedDataset.id, patch)
     if (Object.keys(patch).length) {
       await app.get('db').collection('datasets').updateOne({ id: harvestedDataset.id }, { $set: patch })

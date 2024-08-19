@@ -1,25 +1,21 @@
 const config = /** @type {any} */(require('config'))
+const { text: stream2text } = require('node:stream/consumers')
+const path = require('path')
+const tmp = require('tmp-promise')
+const fs = require('fs-extra')
+const mime = require('mime-types')
+const md5File = require('md5-file')
+const CronJob = require('cron').CronJob
+const contentDisposition = require('content-disposition')
+const createError = require('http-errors')
+const axios = require('../../misc/utils/axios')
+const pump = require('../../misc/utils/pipe')
+const limits = require('../../misc/utils/limits')
+const catalogs = require('../../catalogs/plugins')
+const datasetUtils = require('../../datasets/utils')
+const { tmpDir } = require('../../datasets/utils/files')
 
-exports.eventsPrefix = 'download'
-
-exports.process = async function (app, dataset) {
-  const { text: stream2text } = require('node:stream/consumers')
-  const path = require('path')
-  const tmp = require('tmp-promise')
-  const fs = require('fs-extra')
-  const mime = require('mime-types')
-  const md5File = require('md5-file')
-  const CronJob = require('cron').CronJob
-  const contentDisposition = require('content-disposition')
-  const createError = require('http-errors')
-  const axios = require('../misc/utils/axios')
-  const pump = require('../misc/utils/pipe')
-  const limits = require('../misc/utils/limits')
-  const catalogs = require('../catalogs/plugins')
-  const datasetUtils = require('../datasets/utils')
-  const datasetService = require('../datasets/service')
-  const { tmpDir } = require('../datasets/utils/files')
-
+exports.process = async function (app, dataset, patch) {
   const debug = require('debug')(`worker:downloader:${dataset.id}`)
 
   const db = app.get('db')
@@ -93,7 +89,6 @@ exports.process = async function (app, dataset) {
   }
 
   /** @type {any} */
-  const patch = {}
   patch.loaded = {
     dataset: {
       name: fileName,
@@ -137,7 +132,4 @@ exports.process = async function (app, dataset) {
       nextUpdate: job.nextDates().toISOString()
     }
   }
-
-  await datasetService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
 }

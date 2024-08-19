@@ -4,7 +4,6 @@ const metrics = require('../misc/utils/metrics')
 const locks = require('../misc/utils/locks')
 const debug = require('debug')('workers')
 const mergeDraft = require('../datasets/utils/merge-draft')
-const { schemaHasValidationRules } = require('../datasets/utils/schema')
 
 const workersTasksHistogram = new Histogram({
   name: 'df_datasets_workers_tasks',
@@ -14,16 +13,7 @@ const workersTasksHistogram = new Histogram({
 })
 
 const tasks = exports.tasks = {
-  initializer: require('./initializer'),
-  fileDownloader: require('./file-downloader'),
-  fileStorer: require('./file-storer'),
-  fileNormalizer: require('./file-normalizer'),
-  csvAnalyzer: require('./csv-analyzer'),
-  geojsonAnalyzer: require('./geojson-analyzer'),
-  fileValidator: require('./file-validator'),
-  extender: require('./extender'),
-  indexer: require('./indexer'),
-  finalizer: require('./finalizer'),
+  datasetStateManager: require('./dataset-state-manager'),
   datasetPublisher: require('./dataset-publisher'),
   ttlManager: require('./ttl-manager'),
   restExporterCSV: require('./rest-exporter-csv'),
@@ -211,44 +201,8 @@ async function iter (app, resource, type) {
     } else if (type === 'dataset') {
       const moment = require('moment')
 
-      const normalized = (resource.status === 'stored' && tasks.fileNormalizer.basicTypes.includes(resource.originalFile?.mimetype)) || resource.status === 'normalized'
-
-      if (resource.status === 'created') {
-        // Initialize a dataset
-        taskKey = 'initializer'
-      } else if (resource.status === 'imported' || (resource.remoteFile?.autoUpdate?.active && resource.remoteFile.autoUpdate.nextUpdate < now)) {
-        // Load a dataset from a catalog
-        taskKey = 'fileDownloader'
-      } else if (resource.status === 'loaded') {
-        // File was either uploaded or downloded, it needs to be copied to the storage
-        taskKey = 'fileStorer'
-      } else if (resource.status === 'stored' && !normalized) {
-        // XLS to csv of other transformations
-        taskKey = 'fileNormalizer'
-      } else if (normalized && resource.file && tasks.fileNormalizer.csvTypes.includes(resource.file.mimetype)) {
-        // Quickly parse a CSV file
-        taskKey = 'csvAnalyzer'
-      } else if (normalized && resource.file && resource.file.mimetype === 'application/geo+json') {
-        // Deduce a schema from geojson properties
-        taskKey = 'geojsonAnalyzer'
-      } else if (resource.isRest && resource.status === 'extended-updated') {
-        taskKey = 'indexer'
-      } else if (resource.file && ['analyzed', 'validation-updated'].includes(resource.status) && schemaHasValidationRules(resource.schema)) {
-        taskKey = 'fileValidator'
-      } else if ((resource.file && resource.status === (schemaHasValidationRules(resource.schema) ? 'validated' : 'analyzed')) || (resource.isRest && ['analyzed', 'updated'].includes(resource.status))) {
-        if (resource.extensions && resource.extensions.find(e => e.active)) {
-          // Perform extensions from remote services for dataset that have at least one active extension
-          taskKey = 'extender'
-        } else {
-          // index the content of the dataset in ES
-          // either just analyzed or an updated REST dataset
-          taskKey = 'indexer'
-        }
-      } else if (resource.status === 'extended') {
-        taskKey = 'indexer'
-      } else if (resource.status === 'indexed') {
-        // finalization covers some metadata enrichment, schema cleanup, etc.
-        taskKey = 'finalizer'
+      if (resource.status === 'created' || resource.status === 'updated') {
+        taskKey = 'datasetStateManager'
       } else if (
         (resource.isMetaOnly || resource.status === 'finalized') &&
         !resource.draftReason &&

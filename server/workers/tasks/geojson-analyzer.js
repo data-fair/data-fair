@@ -1,8 +1,13 @@
-const projections = require('../../contract/projections')
+const projections = require('../../../contract/projections')
+const fs = require('fs')
+const JSONStream = require('JSONStream')
+const createError = require('http-errors')
+const iconv = require('iconv-lite')
+const pump = require('../../misc/utils/pipe')
+const datasetUtils = require('../../datasets/utils')
 const { Writable } = require('stream')
 
-// Analyze geojson dataset data, check validity and detect schema
-exports.eventsPrefix = 'analyze'
+// exports.eventsPrefix = 'analyze'
 
 // This writable stream will receive geojson features, take samples and and deduce a dataset skeleton
 class AnalyzerWritable extends Writable {
@@ -34,7 +39,7 @@ class AnalyzerWritable extends Writable {
   }
 
   _final (callback) {
-    const fieldsSniffer = require('../datasets/utils/fields-sniffer')
+    const fieldsSniffer = require('../../datasets/utils/fields-sniffer')
     for (const property in this.samples) {
       const key = fieldsSniffer.escapeKey(property, this.options.dataset)
       const existingField = this.options.existingSchema.find(f => f.key === key)
@@ -49,15 +54,7 @@ class AnalyzerWritable extends Writable {
   }
 }
 
-exports.process = async function (app, dataset) {
-  const fs = require('fs')
-  const JSONStream = require('JSONStream')
-  const createError = require('http-errors')
-  const iconv = require('iconv-lite')
-  const pump = require('../misc/utils/pipe')
-  const datasetUtils = require('../datasets/utils')
-  const datasetsService = require('../datasets/service')
-
+exports.process = async function (app, dataset, patch) {
   const attachments = await datasetUtils.lsAttachments(dataset)
   const analyzer = new AnalyzerWritable({ attachments, existingSchema: dataset.schema || [], dataset })
   const readableStream = fs.createReadStream(datasetUtils.filePath(dataset))
@@ -92,17 +89,12 @@ exports.process = async function (app, dataset) {
   datasetUtils.mergeFileSchema(dataset)
   datasetUtils.cleanSchema(dataset)
 
-  const patch = {
-    status: 'analyzed',
-    file: dataset.file,
-    schema: dataset.schema
-  }
+  patch.file = dataset.file
+  patch.schema = dataset.schema
   if (dataset.projection) patch.projection = dataset.projection
 
-  if (!datasetUtils.schemaHasValidationRules(dataset.schema) && await datasetsService.validateCompatibleDraft(app, dataset, patch)) {
+  // TODO: manage auto-validation of draft
+  /* if (!datasetUtils.schemaHasValidationRules(dataset.schema) && await datasetsService.validateCompatibleDraft(app, dataset, patch)) {
     return
-  }
-
-  await datasetsService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
+  } */
 }

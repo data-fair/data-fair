@@ -504,8 +504,12 @@ module.exports = {
     owner,
     status: {
       type: 'string',
-      enum: ['remote', 'uploaded', 'loaded', 'analyzed', 'schematized', 'indexed', 'extended', 'finalized', 'error'],
+      enum: ['created', 'updated', 'finalized', 'draft', 'error'],
       description: 'The processing steps of a dataset.'
+    },
+    _currentUpdate: {
+      type: 'object',
+      description: 'If a dataset is in "updated" state, this property describes the parts that changed and need to be re-processed.'
     },
     primaryKey: {
       type: 'array',

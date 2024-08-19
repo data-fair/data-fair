@@ -1,5 +1,8 @@
 const { Writable } = require('stream')
-const journals = require('../misc/utils/journals')
+const journals = require('../../misc/utils/journals')
+const pump = require('../../misc/utils/pipe')
+const datasetUtils = require('../../datasets/utils')
+const taskProgress = require('../../datasets/utils/task-progress')
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
 exports.eventsPrefix = 'validate'
@@ -10,8 +13,8 @@ class ValidateStream extends Writable {
   constructor (options) {
     super({ objectMode: true })
 
-    const { jsonSchema } = require('../datasets/utils/schema')
-    const ajv = require('../misc/utils/ajv')
+    const { jsonSchema } = require('../../datasets/utils/schema')
+    const ajv = require('../../misc/utils/ajv')
     const schema = jsonSchema(options.dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']))
     this.validate = ajv.compile(schema, false)
 
@@ -46,12 +49,7 @@ class ValidateStream extends Writable {
   }
 }
 
-exports.process = async function (app, dataset) {
-  const pump = require('../misc/utils/pipe')
-  const datasetUtils = require('../datasets/utils')
-  const datasetsService = require('../datasets/service')
-  const taskProgress = require('../datasets/utils/task-progress')
-
+exports.process = async function (app, dataset, patch) {
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
 
   if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape validation.')
@@ -67,14 +65,14 @@ exports.process = async function (app, dataset) {
   await pump(...readStreams, validateStream)
   debug('Validator stream ok')
 
-  const patch = { status: dataset.status === 'validation-updated' ? 'finalized' : 'validated' }
+  // TODO: make sure that when only validation is updated we go straight to finalized
+  // const patch = { status: dataset.status === 'validation-updated' ? 'finalized' : 'validated' }
 
   const errorsSummary = validateStream.errorsSummary()
   if (errorsSummary) {
     await journals.log(app, dataset, { type: 'error', data: errorsSummary })
   } else {
-    if (await datasetsService.validateCompatibleDraft(app, dataset, patch)) return
+    // TODO: manage auto-validation of draft
+    // if (await datasetsService.validateCompatibleDraft(app, dataset, patch)) return
   }
-
-  await datasetsService.applyPatch(app, dataset, patch)
 }

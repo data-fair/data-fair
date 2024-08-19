@@ -1,34 +1,29 @@
-// Finalize dataset for publication
-exports.eventsPrefix = 'finalize'
+const esUtils = require('../../datasets/es')
+const geoUtils = require('../../datasets/utils/geo')
+const datasetUtils = require('../../datasets/utils')
+const datasetService = require('../../datasets/service')
+const attachmentsUtils = require('../../datasets/utils/attachments')
+const virtualDatasetsUtils = require('../../datasets/utils/virtual')
+const taskProgress = require('../../datasets/utils/task-progress')
+const restDatasetsUtils = require('../../datasets/utils/rest')
 
-exports.process = async function (app, dataset) {
-  const config = /** @type {any} */(require('config'))
-  const esUtils = require('../datasets/es')
-  const geoUtils = require('../datasets/utils/geo')
-  const datasetUtils = require('../datasets/utils')
-  const datasetService = require('../datasets/service')
-  const attachmentsUtils = require('../datasets/utils/attachments')
-  const virtualDatasetsUtils = require('../datasets/utils/virtual')
-  const taskProgress = require('../datasets/utils/task-progress')
-  const restDatasetsUtils = require('../datasets/utils/rest')
-
+exports.process = async function (app, dataset, patch) {
   const debug = require('debug')(`worker:finalizer:${dataset.id}`)
 
   const db = app.get('db')
   const es = app.get('es')
-  const collection = db.collection('datasets')
   const queryableDataset = { ...dataset }
 
-  const result = { status: 'finalized', schema: dataset.schema }
+  patch.schema = dataset.schema
 
   if (dataset.isVirtual) {
     queryableDataset.descendants = await virtualDatasetsUtils.descendants(db, dataset, false)
-    queryableDataset.schema = result.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
+    queryableDataset.schema = patch.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
   }
 
   // Add the calculated fields to the schema
   debug('prepare extended schema')
-  queryableDataset.schema = result.schema = await datasetUtils.extendedSchema(db, dataset)
+  queryableDataset.schema = dataset.schema = await datasetUtils.extendedSchema(db, dataset)
 
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
   const geometry = geoUtils.schemaHasGeometry(dataset.schema)
@@ -48,7 +43,7 @@ exports.process = async function (app, dataset) {
   let nbSteps = cardinalityProps.length + 1
   if (startDateField || endDateField) nbSteps += 1
   if (geopoint || geometry) nbSteps += 1
-  const progress = taskProgress(app, dataset.id, exports.eventsPrefix, nbSteps)
+  const progress = taskProgress(app, dataset.id, 'finalize', nbSteps)
   await progress(0)
 
   for (const prop of cardinalityProps) {
@@ -84,11 +79,11 @@ exports.process = async function (app, dataset) {
   if (geopoint || geometry) {
     debug('calculate bounding ok')
     queryableDataset.bbox = []
-    result.bbox = dataset.bbox = (await esUtils.bboxAgg(es, queryableDataset, {}, true, '10s')).bbox
-    debug('bounding box ok', result.bbox)
+    patch.bbox = dataset.bbox = (await esUtils.bboxAgg(es, queryableDataset, {}, true, '10s')).bbox
+    debug('bounding box ok', patch.bbox)
     await progress()
   } else {
-    result.bbox = null
+    patch.bbox = null
   }
 
   // calculate temporal coverage
@@ -108,20 +103,22 @@ exports.process = async function (app, dataset) {
       a.endDate = value > a.endDate ? value : a.endDate
       return a
     }, { startDate: limitValues[0], endDate: limitValues[0] })
-    result.timePeriod = {
+    patch.timePeriod = {
       startDate: new Date(timePeriod.startDate).toISOString(),
       endDate: new Date(timePeriod.endDate).toISOString()
     }
     await progress()
   }
 
-  result.esWarning = await esUtils.datasetWarning(es, dataset)
+  patch.esWarning = await esUtils.datasetWarning(es, dataset)
 
-  result.finalizedAt = (new Date()).toISOString()
+  patch.finalizedAt = (new Date()).toISOString()
+  /* TODO: implement this in a loop in the main worker instead of statuses tricks
   if (dataset.isRest && (await collection.findOne({ id: dataset.id })).status === 'updated') {
     // dataset was updated while we were finalizing.. keep it as such
-    delete result.status
+    delete patch.status
   }
+    */
   if (dataset.isRest) {
     await restDatasetsUtils.configureHistory(app, dataset)
   }
@@ -132,45 +129,21 @@ exports.process = async function (app, dataset) {
     dataset.descendants = descendants.map(d => d.id)
     const lastDataUpdate = descendants.filter(d => !!d.dataUpdatedAt).sort((d1, d2) => d1.dataUpdatedAt > d2.dataUpdatedAt ? 1 : -1).pop()
     if (lastDataUpdate) {
-      result.dataUpdatedAt = lastDataUpdate.dataUpdatedAt
-      result.dataUpdatedBy = lastDataUpdate.dataUpdatedBy
+      patch.dataUpdatedAt = lastDataUpdate.dataUpdatedAt
+      patch.dataUpdatedBy = lastDataUpdate.dataUpdatedBy
     }
-    result.count = dataset.count = await esUtils.count(es, queryableDataset, {})
+    patch.count = dataset.count = await esUtils.count(es, queryableDataset, {})
   }
 
-  await datasetService.applyPatch(app, dataset, result)
+  await datasetService.applyPatch(app, dataset, patch)
 
   // Remove attachments if the schema does not refer to their existence
   if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
     await attachmentsUtils.removeAll(dataset)
   }
 
-  // parent virtual datasets have to be re-finalized too
-  if (!dataset.draftReason) {
-    for await (const virtualDataset of collection.find({ 'virtual.children': dataset.id })) {
-      await collection.updateOne({ id: virtualDataset.id }, { $set: { status: 'indexed' } })
-    }
-  }
-
   if (dataset.isVirtual) {
     await datasetUtils.updateStorage(app, queryableDataset)
-  }
-
-  // trigger auto updates if this dataset is used as a source of extensions
-  if (dataset.masterData?.bulkSearchs?.length) {
-    const dayjs = require('dayjs')
-    const nextUpdate = dayjs().add(config.extensionUpdateDelay, 'seconds').toISOString()
-    const cursor = db.collection('datasets').find({
-      extensions: { $elemMatch: { active: true, autoUpdate: true, remoteService: 'dataset:' + dataset.id } }
-    })
-    for await (const extendedDataset of cursor) {
-      for (const extension of extendedDataset.extensions) {
-        if (extension.active && extension.autoUpdate && extension.remoteService === 'dataset:' + dataset.id) {
-          extension.nextUpdate = nextUpdate
-        }
-      }
-      await db.collection('datasets').updateOne({ id: extendedDataset.id }, { $set: { extensions: extendedDataset.extensions } })
-    }
   }
 
   await progress()

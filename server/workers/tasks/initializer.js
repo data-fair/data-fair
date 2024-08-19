@@ -1,32 +1,24 @@
-exports.eventsPrefix = 'initialize'
+const fs = require('fs-extra')
+const path = require('path')
+const pump = require('../../misc/utils/pipe')
+const restUtils = require('../../datasets/utils/rest')
+const datasetUtils = require('../../datasets/utils')
+const { getPseudoUser } = require('../../misc/utils/users')
+const permissionsUtils = require('../../misc/utils/permissions')
+const { lsMetadataAttachments, metadataAttachmentPath, lsAttachments, attachmentPath } = require('../../datasets/utils/files')
+const { applyTransactions } = require('../../datasets/utils/rest')
+const iterHits = require('../../datasets/es/iter-hits')
+const taskProgress = require('../../datasets/utils/task-progress')
+const filesUtils = require('../../datasets/utils/files')
 
-exports.process = async function (app, dataset) {
-  const fs = require('fs-extra')
-  const path = require('path')
-  const pump = require('../misc/utils/pipe')
-  const restUtils = require('../datasets/utils/rest')
-  const datasetUtils = require('../datasets/utils')
-  const datasetsService = require('../datasets/service')
-  const { getPseudoUser } = require('../misc/utils/users')
-  const permissionsUtils = require('../misc/utils/permissions')
-  const { lsMetadataAttachments, metadataAttachmentPath, lsAttachments, attachmentPath } = require('../datasets/utils/files')
-  const { applyTransactions } = require('../datasets/utils/rest')
-  const iterHits = require('../datasets/es/iter-hits')
-  const taskProgress = require('../datasets/utils/task-progress')
-  const filesUtils = require('../datasets/utils/files')
+const eventsPrefix = 'initialize'
 
+exports.process = async function (app, dataset, patch) {
   const debug = require('debug')(`worker:initializer:${dataset.id}`)
   const db = app.get('db')
 
   /** @type {any} */
-  const patch = { updatedAt: (new Date()).toISOString() }
-  if (dataset.isRest) {
-    patch.status = 'analyzed'
-  } else if (dataset.remoteFile) {
-    patch.status = 'imported'
-  } else if (dataset.loaded) {
-    patch.status = 'loaded'
-  }
+  patch.updatedAt = patch.updatedAt ?? (new Date()).toISOString()
 
   if (dataset.isRest) {
     await restUtils.initDataset(db, dataset)
@@ -71,7 +63,7 @@ exports.process = async function (app, dataset) {
       count += metadataAttachments.length
     }
 
-    const progress = taskProgress(app, dataset.id, exports.eventsPrefix, count)
+    const progress = taskProgress(app, dataset.id, eventsPrefix, count)
 
     if (dataset.initFrom.parts.includes('schema')) {
       patch.schema = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => {
@@ -106,7 +98,6 @@ exports.process = async function (app, dataset) {
         // from file to file: copy data files
         patch.file = parentDataset.file
         patch.originalFile = parentDataset.originalFile
-        patch.status = 'analyzed'
         await fs.copy(datasetUtils.originalFilePath(parentDataset), datasetUtils.originalFilePath({ ...dataset, ...patch }))
         if (datasetUtils.originalFilePath(parentDataset) !== datasetUtils.filePath(parentDataset)) {
           await fs.copy(datasetUtils.filePath(parentDataset), datasetUtils.filePath({ ...dataset, ...patch }))
@@ -121,13 +112,12 @@ exports.process = async function (app, dataset) {
         await fs.ensureFile(filePath)
         await pump(
           ...await restUtils.readStreams(db, parentDataset),
-          ...require('../datasets/utils/outputs').csvStreams({ ...dataset, ...patch }),
+          ...require('../../datasets/utils/outputs').csvStreams({ ...dataset, ...patch }),
           fs.createWriteStream(filePath)
         )
         await filesUtils.fsyncFile(filePath)
         const loadedFileStats = await fs.stat(filePath)
 
-        patch.status = 'loaded'
         patch.loaded = {
           dataset: {
             name: fileName,
@@ -167,7 +157,5 @@ exports.process = async function (app, dataset) {
     patch.initFrom = null
   }
 
-  await datasetsService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset)
   debug('done')
 }
