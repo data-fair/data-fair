@@ -232,11 +232,13 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
   curateDataset(dataset)
   permissions.initResourcePermissions(dataset)
 
+  if (dataset.initFrom) prepareInitFrom(dataset, user)
+
   if (datasetFile) {
     dataset.title = dataset.title || titleFromFileName(datasetFile.originalname)
     /** @type {any} */
     const filePatch = {
-      status: 'loaded',
+      status: 'created',
       dataUpdatedBy: dataset.updatedBy,
       dataUpdatedAt: dataset.updatedAt,
       loaded: {
@@ -268,13 +270,18 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
     dataset.rest.primaryKeyMode = dataset.rest.primaryKeyMode || 'sha256'
     dataset.schema = dataset.schema || []
     dataset.status = 'created'
-    if (dataset.initFrom) prepareInitFrom(dataset, user)
   } else if (body.isMetaOnly) {
     if (!body.title) throw createError(400, 'Un jeu de données métadonnées doit être créé avec un titre')
     if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
   } else if (body.remoteFile) {
     dataset.title = dataset.title || titleFromFileName(body.remoteFile.name || path.basename(new URL(body.remoteFile.url).pathname))
-    dataset.status = 'imported'
+    dataset.status = 'created'
+    if (dataset.initFrom && dataset.initFrom.parts.includes('data')) {
+      throw createError(400, 'Un jeu de données basé sur fichier distant ne peut être initialisé ave la donnée d\'un jeu de données de référence')
+    }
+  } else if (dataset.initFrom && dataset.initFrom.parts.includes('data')) {
+    // case of a file dataset initialized from master data
+    dataset.status = 'created'
   } else {
     throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "éditable" ou "métadonnées"')
   }

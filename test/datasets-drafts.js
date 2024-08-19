@@ -98,6 +98,8 @@ describe('datasets in draft mode', () => {
     // the journal kept traces of all changes (draft and not)
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal.pop().type, 'dataset-created')
+    assert.equal(journal.pop().type, 'initialize-start')
+    assert.equal(journal.pop().type, 'initialize-end')
     assert.equal(journal.pop().type, 'store-start')
     assert.equal(journal.pop().type, 'store-end')
     assert.equal(journal.pop().type, 'analyze-start')
@@ -173,6 +175,8 @@ describe('datasets in draft mode', () => {
     // the journal kept traces of all changes (draft and not)
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal.pop().type, 'dataset-created')
+    assert.equal(journal.pop().type, 'initialize-start')
+    assert.equal(journal.pop().type, 'initialize-end')
     assert.equal(journal.pop().type, 'store-start')
     assert.equal(journal.pop().type, 'store-end')
     assert.equal(journal.pop().type, 'analyze-start')
@@ -249,6 +253,8 @@ describe('datasets in draft mode', () => {
 
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal.pop().type, 'dataset-created')
+    assert.equal(journal.pop().type, 'initialize-start')
+    assert.equal(journal.pop().type, 'initialize-end')
     assert.equal(journal.pop().type, 'store-start')
     assert.equal(journal.pop().type, 'store-end')
     assert.equal(journal.pop().type, 'analyze-start')
@@ -322,7 +328,7 @@ describe('datasets in draft mode', () => {
     form2.append('file', datasetFd2, 'dataset1-draft2.csv')
     form2.append('description', 'draft description 2')
     const datasetDraft2 = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
-    assert.equal(datasetDraft2.status, 'loaded')
+    assert.equal(datasetDraft2.status, 'created')
     dataset = await workers.hook('finalizer')
     assert.ok(!dataset.file)
     assert.equal(dataset.status, 'draft')

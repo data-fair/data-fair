@@ -257,7 +257,7 @@ describe('datasets', () => {
     wsCli.send(JSON.stringify({ type: 'subscribe', channel: 'datasets/' + datasetId + '/journal' }))
     res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
     assert.equal(res.status, 200)
-    assert.equal(res.data.length, 9)
+    assert.equal(res.data.length, 11)
 
     // Send again the data to the same dataset
     form = new FormData()
@@ -271,7 +271,7 @@ describe('datasets', () => {
     await testUtils.timeout(eventToPromise(notifier, 'webhook'), 2000, 'second webhook not received')
     res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
 
-    assert.equal(res.data.length, 18)
+    assert.equal(res.data.length, 20)
     // testing permissions
     await assert.rejects(global.ax.dmeadus.get(webhook.href), err => err.status === 403)
     await assert.rejects(global.ax.anonymous.get(webhook.href), err => err.status === 403)

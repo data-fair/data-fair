@@ -5,8 +5,8 @@ const testUtils = require('./resources/test-utils')
 
 const workers = require('../server/workers')
 
-describe('REST datasets with auto-initialization', () => {
-  it('Create REST dataset with copied information', async () => {
+describe('Datasets with auto-initialization from another one', () => {
+  it('Create REST dataset with copied information from file dataset', async () => {
     const ax = global.ax.dmeadus
 
     const dataset = await testUtils.sendDataset('datasets/date-formats.csv', ax)
@@ -38,6 +38,115 @@ describe('REST datasets with auto-initialization', () => {
     assert.ok(initFromDataset.attachments.find(a => a.name === 'avatar.jpeg'))
     const downloadAttachmentRes = await ax.get(`/api/v1/datasets/${initFromDataset.id}/metadata-attachments/avatar.jpeg`)
     assert.equal(downloadAttachmentRes.status, 200)
+    const lines = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines`)).data
+    assert.equal(lines.total, 3)
+  })
+
+  it('Create file dataset with copied information from another file dataset', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
+    const attachmentForm = new FormData()
+    attachmentForm.append('attachment', fs.readFileSync('./test/resources/avatar.jpeg'), 'avatar.jpeg')
+    await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
+
+    await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'A description', attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
+
+    const res = await ax.post('/api/v1/datasets', {
+      title: 'init from schema',
+      initFrom: {
+        dataset: dataset.id, parts: ['schema', 'metadataAttachments', 'description', 'data']
+      }
+    })
+    assert.equal(res.status, 201)
+    const initFromDataset = await workers.hook('finalizer/' + res.data.id)
+
+    assert.equal(initFromDataset.file.name, 'dataset1.csv')
+    assert.equal(initFromDataset.schema[0].key, 'id')
+    assert.equal(initFromDataset.description, 'A description')
+    assert.equal(initFromDataset.attachments.length, 1)
+    assert.ok(initFromDataset.storage.metadataAttachments.size > 1000)
+    assert.ok(initFromDataset.attachments.find(a => a.name === 'avatar.jpeg'))
+    const downloadAttachmentRes = await ax.get(`/api/v1/datasets/${initFromDataset.id}/metadata-attachments/avatar.jpeg`)
+    assert.equal(downloadAttachmentRes.status, 200)
+    const lines = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines`)).data
+    assert.equal(lines.total, 2)
+    const dataFiles = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/data-files`)).data
+    assert.equal(dataFiles.length, 1)
+    const fileData = (await ax.get(dataFiles[0].url)).data
+    assert.ok(fileData.startsWith('id,adr,'))
+  })
+
+  it.skip('Create file dataset that doesn\'t match imported schema', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
+    const form = new FormData()
+    form.append('file', fs.readFileSync('./test/resources/datasets/dataset2.csv'), 'dataset2.csv')
+    form.append('body', JSON.stringify({
+      title: 'init from schema',
+      initFrom: {
+        dataset: dataset.id, parts: ['schema', 'metadataAttachments', 'description']
+      }
+    }))
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    assert.equal(res.status, 201)
+    const initFromDataset = await workers.hook('finalizer/' + res.data.id)
+
+    assert.equal(initFromDataset.file.name, 'dataset2.csv')
+    assert.equal(initFromDataset.schema[0].key, 'id')
+    assert.equal(initFromDataset.attachments.length, 1)
+    assert.ok(initFromDataset.attachments.find(a => a.name === 'avatar.jpeg'))
+    const downloadAttachmentRes = await ax.get(`/api/v1/datasets/${initFromDataset.id}/metadata-attachments/avatar.jpeg`)
+    assert.equal(downloadAttachmentRes.status, 200)
+    const lines = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines`)).data
+    assert.equal(lines.total, 2)
+    const dataFiles = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/data-files`)).data
+    assert.equal(dataFiles.length, 1)
+    const fileData = (await ax.get(dataFiles[0].url)).data
+    assert.ok(fileData.startsWith('id,adr,'))
+  })
+
+  it('Create file dataset with copied information from a rest dataset', async () => {
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets/rest1', {
+      isRest: true,
+      title: 'rest1',
+      schema: [{ key: 'attr1', type: 'string', description: 'A description' }, { key: 'attr2', type: 'string' }]
+    })
+    const dataset = await workers.hook('finalizer/rest1')
+    await ax.post('/api/v1/datasets/rest1/lines', { attr1: 'test1', attr2: 'test1' })
+    await workers.hook('finalizer/rest1')
+
+    const attachmentForm = new FormData()
+    attachmentForm.append('attachment', fs.readFileSync('./test/resources/avatar.jpeg'), 'avatar.jpeg')
+    await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
+
+    await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'A description', attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
+
+    const res = await ax.post('/api/v1/datasets', {
+      title: 'init from schema',
+      initFrom: {
+        dataset: dataset.id, parts: ['schema', 'metadataAttachments', 'description', 'data']
+      }
+    })
+    assert.equal(res.status, 201)
+    const initFromDataset = await workers.hook('finalizer/' + res.data.id)
+
+    assert.equal(initFromDataset.file.name, 'rest1.csv')
+    assert.equal(initFromDataset.schema[0].key, 'attr1')
+    assert.equal(initFromDataset.description, 'A description')
+    assert.equal(initFromDataset.attachments.length, 1)
+    assert.ok(initFromDataset.storage.metadataAttachments.size > 1000)
+    assert.ok(initFromDataset.attachments.find(a => a.name === 'avatar.jpeg'))
+    const downloadAttachmentRes = await ax.get(`/api/v1/datasets/${initFromDataset.id}/metadata-attachments/avatar.jpeg`)
+    assert.equal(downloadAttachmentRes.status, 200)
+    const lines = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines`)).data
+    assert.equal(lines.total, 1)
+    const dataFiles = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/data-files`)).data
+    assert.equal(dataFiles.length, 1)
+    const fileData = (await ax.get(dataFiles[0].url)).data
+    assert.ok(fileData.startsWith('"attr1",'))
   })
 
   it('Prevent initializing a dataset when missing permissions', async () => {

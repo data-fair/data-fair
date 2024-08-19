@@ -3,6 +3,7 @@ exports.eventsPrefix = 'initialize'
 exports.process = async function (app, dataset) {
   const fs = require('fs-extra')
   const path = require('path')
+  const pump = require('../misc/utils/pipe')
   const restUtils = require('../datasets/utils/rest')
   const datasetUtils = require('../datasets/utils')
   const datasetsService = require('../datasets/service')
@@ -12,14 +13,24 @@ exports.process = async function (app, dataset) {
   const { applyTransactions } = require('../datasets/utils/rest')
   const iterHits = require('../datasets/es/iter-hits')
   const taskProgress = require('../datasets/utils/task-progress')
+  const filesUtils = require('../datasets/utils/files')
 
-  const debug = require('debug')(`worker:rest-initializer:${dataset.id}`)
+  const debug = require('debug')(`worker:initializer:${dataset.id}`)
   const db = app.get('db')
 
   /** @type {any} */
-  const patch = { status: 'analyzed', updatedAt: (new Date()).toISOString() }
+  const patch = { updatedAt: (new Date()).toISOString() }
+  if (dataset.isRest) {
+    patch.status = 'analyzed'
+  } else if (dataset.remoteFile) {
+    patch.status = 'imported'
+  } else if (dataset.loaded) {
+    patch.status = 'loaded'
+  }
 
-  await restUtils.initDataset(db, dataset)
+  if (dataset.isRest) {
+    await restUtils.initDataset(db, dataset)
+  }
 
   if (dataset.initFrom) {
     const pseudoUser = getPseudoUser(dataset.owner, 'initializer', '_init_from', dataset.initFrom.role, dataset.initFrom.department)
@@ -62,14 +73,70 @@ exports.process = async function (app, dataset) {
 
     const progress = taskProgress(app, dataset.id, exports.eventsPrefix, count)
 
+    if (dataset.initFrom.parts.includes('schema')) {
+      patch.schema = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => {
+        const newProperty = { ...p }
+        delete newProperty.enum
+        delete newProperty['x-cardinality']
+        const fileProp = parentDataset.file?.schema?.find(fp => fp.key === p.key)
+        if (fileProp && dataset.isRest) {
+          if (fileProp.dateFormat) newProperty.dateFormat = fileProp.dateFormat
+          if (fileProp.dateTimeFormat) newProperty.dateTimeFormat = fileProp.dateTimeFormat
+        }
+        return newProperty
+      })
+
+      // a few extra properties implicitly accompany the schema
+      if (parentDataset.primaryKey?.length) patch.primaryKey = parentDataset.primaryKey
+      if (parentDataset.attachmentsAsImage) patch.attachmentsAsImage = parentDataset.attachmentsAsImage
+      if (parentDataset.timeZone) patch.timeZone = parentDataset.timeZone
+      if (parentDataset.projection) patch.projection = parentDataset.projection
+    }
+
     if (dataset.initFrom.parts.includes('data')) {
-      // copy data in bulk
-      const select = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => p.key).join(',')
-      for await (const hits of iterHits(app.get('es'), parentDataset, { size: 1000, select })) {
-        const transactions = hits.map(hit => ({ _action: 'create', _id: hit._id, ...hit._source }))
-        await applyTransactions(db, dataset, pseudoUser, transactions)
-        await progress(transactions.length)
+      if (dataset.isRest) {
+        // from any kind of dataset to rest: copy data in bulk into the mongodb collection
+        const select = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => p.key).join(',')
+        for await (const hits of iterHits(app.get('es'), parentDataset, { size: 1000, select })) {
+          const transactions = hits.map(hit => ({ _action: 'create', _id: hit._id, ...hit._source }))
+          await applyTransactions(db, dataset, pseudoUser, transactions)
+          await progress(transactions.length)
+        }
+      } else if (parentDataset.file) {
+        // from file to file: copy data files
+        patch.file = parentDataset.file
+        patch.originalFile = parentDataset.originalFile
+        patch.status = 'analyzed'
+        await fs.copy(datasetUtils.originalFilePath(parentDataset), datasetUtils.originalFilePath({ ...dataset, ...patch }))
+        if (datasetUtils.originalFilePath(parentDataset) !== datasetUtils.filePath(parentDataset)) {
+          await fs.copy(datasetUtils.filePath(parentDataset), datasetUtils.filePath({ ...dataset, ...patch }))
+        }
+      } else {
+        // from rest to file: make export and use as data file
+
+        const fileName = parentDataset.slug + '.csv'
+        const filePath = path.join(datasetUtils.loadingDir(dataset), fileName)
+
+        // creating empty file before streaming seems to fix some weird bugs with NFS
+        await fs.ensureFile(filePath)
+        await pump(
+          ...await restUtils.readStreams(db, parentDataset),
+          ...require('../datasets/utils/outputs').csvStreams({ ...dataset, ...patch }),
+          fs.createWriteStream(filePath)
+        )
+        await filesUtils.fsyncFile(filePath)
+        const loadedFileStats = await fs.stat(filePath)
+
+        patch.status = 'loaded'
+        patch.loaded = {
+          dataset: {
+            name: fileName,
+            size: loadedFileStats.size,
+            mimetype: 'text/csv'
+          }
+        }
       }
+
       // also copy attachments
       if (attachments.length) {
         for (const attachment of attachments) {
@@ -81,24 +148,6 @@ exports.process = async function (app, dataset) {
       }
     }
 
-    if (dataset.initFrom.parts.includes('schema')) {
-      patch.schema = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => {
-        const newProperty = { ...p }
-        delete newProperty.enum
-        delete newProperty['x-cardinality']
-        const fileProp = parentDataset.file?.schema?.find(fp => fp.key === p.key)
-        if (fileProp) {
-          if (fileProp.dateFormat) newProperty.dateFormat = fileProp.dateFormat
-          if (fileProp.dateTimeFormat) newProperty.dateTimeFormat = fileProp.dateTimeFormat
-        }
-        return newProperty
-      })
-
-      // a few extra properties implicitly accompany the schema
-      if (parentDataset.primaryKey?.length) patch.primaryKey = parentDataset.primaryKey
-      if (parentDataset.attachmentsAsImage) patch.attachmentsAsImage = parentDataset.attachmentsAsImage
-      if (parentDataset.timeZone) patch.timeZone = parentDataset.timeZone
-    }
     if (dataset.initFrom.parts.includes('extensions')) {
       patch.extensions = parentDataset.extensions
     }

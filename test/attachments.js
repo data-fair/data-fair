@@ -16,7 +16,7 @@ describe('Attachments', () => {
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     let dataset = res.data
     assert.equal(res.status, 201)
-    assert.equal(dataset.status, 'loaded')
+    assert.equal(dataset.status, 'created')
 
     // dataset converted
     dataset = await workers.hook(`fileNormalizer/${dataset.id}`)

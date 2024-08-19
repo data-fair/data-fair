@@ -14,7 +14,7 @@ const workersTasksHistogram = new Histogram({
 })
 
 const tasks = exports.tasks = {
-  restInitializer: require('./rest-initializer'),
+  initializer: require('./initializer'),
   fileDownloader: require('./file-downloader'),
   fileStorer: require('./file-storer'),
   fileNormalizer: require('./file-normalizer'),
@@ -213,9 +213,9 @@ async function iter (app, resource, type) {
 
       const normalized = (resource.status === 'stored' && tasks.fileNormalizer.basicTypes.includes(resource.originalFile?.mimetype)) || resource.status === 'normalized'
 
-      if (resource.status === 'created' && resource.isRest) {
-        // Initialize a REST dataset
-        taskKey = 'restInitializer'
+      if (resource.status === 'created') {
+        // Initialize a dataset
+        taskKey = 'initializer'
       } else if (resource.status === 'imported' || (resource.remoteFile?.autoUpdate?.active && resource.remoteFile.autoUpdate.nextUpdate < now)) {
         // Load a dataset from a catalog
         taskKey = 'fileDownloader'
@@ -291,7 +291,7 @@ async function iter (app, resource, type) {
 
     if (!taskKey) return
     const task = tasks[taskKey]
-    debug(`run task ${taskKey} - ${type} / ${resource.id}`)
+    debug(`run task ${taskKey} - ${type} / ${resource.slug} (${resource.id})`)
 
     if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
 
@@ -317,7 +317,7 @@ async function iter (app, resource, type) {
       await task.process(app, resource)
     }
     endTask({ status: 'ok' })
-    debug(`finished task ${taskKey} - ${type} / ${resource.id}`)
+    debug(`finished task ${taskKey} - ${type} / ${resource.slug} (${resource.id})`)
 
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
     if (task.eventsPrefix && newResource) {
@@ -353,7 +353,7 @@ async function iter (app, resource, type) {
 
     // metrics.internalError('task', errorMessage)
 
-    console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, errorMessage)
+    console.warn(`failure in worker ${taskKey} - ${type} / ${resource.slug} (${resource.id})`, errorMessage)
     if (!config.worker.spawnTask || !errorMessage) console.debug(err)
 
     // some error are caused by bad input, we should not retry these
