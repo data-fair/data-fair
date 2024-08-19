@@ -291,7 +291,7 @@ async function iter (app, resource, type) {
 
     if (!taskKey) return
     const task = tasks[taskKey]
-    debug(`run task ${taskKey} - ${type} / ${resource.id}`)
+    debug(`run task ${taskKey} - ${type} / ${resource.slug} (${resource.id})`)
 
     if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
 
@@ -317,7 +317,7 @@ async function iter (app, resource, type) {
       await task.process(app, resource)
     }
     endTask({ status: 'ok' })
-    debug(`finished task ${taskKey} - ${type} / ${resource.id}`)
+    debug(`finished task ${taskKey} - ${type} / ${resource.slug} (${resource.id})`)
 
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
     if (task.eventsPrefix && newResource) {
@@ -353,7 +353,7 @@ async function iter (app, resource, type) {
 
     // metrics.internalError('task', errorMessage)
 
-    console.warn(`failure in worker ${taskKey} - ${type} / ${resource.id}`, errorMessage)
+    console.warn(`failure in worker ${taskKey} - ${type} / ${resource.slug} (${resource.id})`, errorMessage)
     if (!config.worker.spawnTask || !errorMessage) console.debug(err)
 
     // some error are caused by bad input, we should not retry these

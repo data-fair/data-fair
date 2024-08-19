@@ -77,6 +77,36 @@ describe('Datasets with auto-initialization from another one', () => {
     assert.ok(fileData.startsWith('id,adr,'))
   })
 
+  it.skip('Create file dataset that doesn\'t match imported schema', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
+    const form = new FormData()
+    form.append('file', fs.readFileSync('./test/resources/datasets/dataset2.csv'), 'dataset2.csv')
+    form.append('body', JSON.stringify({
+      title: 'init from schema',
+      initFrom: {
+        dataset: dataset.id, parts: ['schema', 'metadataAttachments', 'description']
+      }
+    }))
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    assert.equal(res.status, 201)
+    const initFromDataset = await workers.hook('finalizer/' + res.data.id)
+
+    assert.equal(initFromDataset.file.name, 'dataset2.csv')
+    assert.equal(initFromDataset.schema[0].key, 'id')
+    assert.equal(initFromDataset.attachments.length, 1)
+    assert.ok(initFromDataset.attachments.find(a => a.name === 'avatar.jpeg'))
+    const downloadAttachmentRes = await ax.get(`/api/v1/datasets/${initFromDataset.id}/metadata-attachments/avatar.jpeg`)
+    assert.equal(downloadAttachmentRes.status, 200)
+    const lines = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines`)).data
+    assert.equal(lines.total, 2)
+    const dataFiles = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/data-files`)).data
+    assert.equal(dataFiles.length, 1)
+    const fileData = (await ax.get(dataFiles[0].url)).data
+    assert.ok(fileData.startsWith('id,adr,'))
+  })
+
   it('Create file dataset with copied information from a rest dataset', async () => {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets/rest1', {
