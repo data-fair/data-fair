@@ -42,12 +42,10 @@ describe('datasets', () => {
 
     // 1 dataset in user zone
     await testUtils.sendDataset('datasets/dataset1.csv', ax)
-    console.log('1 dataset ok')
+
     // 2 datasets in organization zone
     await testUtils.sendDataset('datasets/dataset1.csv', axOrg)
-    console.log('2 dataset ok')
     await testUtils.sendDataset('datasets/dataset1.csv', axOrg)
-    console.log('3 dataset ok')
 
     res = await ax.get('/api/v1/datasets', { params: { facets: 'owner,field-type', sums: 'count' } })
     assert.equal(res.data.count, 1)

@@ -1,7 +1,6 @@
 const esUtils = require('../../datasets/es')
 const geoUtils = require('../../datasets/utils/geo')
 const datasetUtils = require('../../datasets/utils')
-const datasetService = require('../../datasets/service')
 const attachmentsUtils = require('../../datasets/utils/attachments')
 const virtualDatasetsUtils = require('../../datasets/utils/virtual')
 const taskProgress = require('../../datasets/utils/task-progress')
@@ -23,7 +22,7 @@ exports.process = async function (app, dataset, patch) {
 
   // Add the calculated fields to the schema
   debug('prepare extended schema')
-  queryableDataset.schema = dataset.schema = await datasetUtils.extendedSchema(db, dataset)
+  queryableDataset.schema = patch.schema = await datasetUtils.extendedSchema(db, dataset)
 
   const geopoint = geoUtils.schemaHasGeopoint(dataset.schema)
   const geometry = geoUtils.schemaHasGeometry(dataset.schema)
