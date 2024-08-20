@@ -1,5 +1,4 @@
 const extensionsUtils = require('../../datasets/utils/extensions')
-const restDatasetsUtils = require('../../datasets/utils/rest')
 
 const debugMasterData = require('debug')('master-data')
 
@@ -10,7 +9,7 @@ exports.process = async function (app, dataset, patch) {
 
   let updateMode = 'all'
   if (dataset.status === 'finalized' && dataset.extensions.find(e => e.needsUpdate)) updateMode = 'updatedExtensions'
-  else if (dataset.status === 'updated') updateMode = 'updatedLines'
+  else if (dataset._restPartialUpdate) updateMode = 'updatedLines'
   debug('update mode', updateMode)
 
   const db = app.get('db')
@@ -18,20 +17,15 @@ exports.process = async function (app, dataset, patch) {
   let extensions = dataset.extensions || []
   if (updateMode === 'updatedExtensions') extensions = extensions.filter(e => e.needsUpdate)
 
-  debug('check extensions validity')
-  await extensionsUtils.checkExtensions(db, dataset.schema, extensions)
+  if (updateMode !== 'updatedLines') {
+    debug('check extensions validity')
+    await extensionsUtils.checkExtensions(db, dataset.schema, extensions)
+  }
 
   debug('apply extensions', dataset.extensions)
   // TODO: "full" file of a new data file should be created in the "loading" directory
   await extensionsUtils.extend(app, dataset, extensions, updateMode)
   debug('extensions ok')
-
-  // Some data was updated in the interval during which we performed indexation
-  // keep dataset as "updated" so that this worker keeps going
-  if (updateMode !== 'all' && await restDatasetsUtils.count(db, dataset, { _needsExtending: true })) {
-    debug('REST dataset extended, but some data has changed, stay in "updated" status')
-    patch.status = 'updated'
-  }
 
   debugMasterData(`apply patch after extensions ${dataset.id} (${dataset.slug})`, patch)
   if (updateMode !== 'updatedLines') {

@@ -143,9 +143,11 @@ const getTypesFilters = () => {
         isMetaOnly: { $ne: true },
         $or: [
           // fetch next processing steps in usual sequence
-          { status: { $nin: ['finalized', 'error', 'draft'] } },
+          { status: { $in: ['created', 'updated'] } },
           // fetch next processing steps in usual sequence, but of the draft version of the dataset
-          { 'draft.status': { $exists: true, $nin: ['finalized', 'error'] } },
+          { 'draft.status': { $exists: true, $in: ['created', 'updated'] } },
+          // fetch rest datasets that need to apply partial indexing
+          { status: 'finalized', _restPartialUpdate: { $exists: true } },
           // fetch datasets that are finalized, but need to update a publication
           { status: 'finalized', 'publications.status': { $in: ['waiting', 'deleted'] } },
           // fetch rest datasets with a TTL to process
@@ -201,7 +203,7 @@ async function iter (app, resource, type) {
     } else if (type === 'dataset') {
       const moment = require('moment')
 
-      if (resource.status === 'created' || resource.status === 'updated') {
+      if (resource.status === 'created' || resource.status === 'updated' || !!resource._restPartialUpdate) {
         taskKey = 'datasetStateManager'
       } else if (
         (resource.isMetaOnly || resource.status === 'finalized') &&

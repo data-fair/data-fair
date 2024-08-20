@@ -60,6 +60,16 @@ exports.process = async function (app, dataset) {
     dataset._newIndexName = await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, true)
     debug('run task file-storer')
     await require('./tasks/file-storer').process(app, dataset, patch)
+  } else if (dataset.status === 'finalized' && dataset._restPartialUpdate) {
+    // switch _restPartialUpdate to null at first, so that if it is toggled back to a value while we are working
+    // the worker will simply loop back on the dataset
+    await datasetsService.applyPatch(app, dataset, { _restPartialUpdate: null })
+    if (dataset.extensions && dataset.extensions.find(e => e.active)) {
+      debug('run task extender on updated lines')
+      await require('./tasks/extender').process(app, { ...dataset, ...patch }, patch)
+    }
+    debug('run task indexer on updated lines')
+    await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, false, true)
   } else {
     const reExtend = dataset._currentUpdate?.reExtend || (dataset.isRest && dataset.status === 'created')
     const reindex = dataset._currentUpdate?.reindex || reExtend
