@@ -8,7 +8,7 @@ describe('publication sites', () => {
     const ax = global.ax.dmeadusOrg
 
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
     await assert.rejects(ax.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] }),
       err => err.status === 404)
   })
@@ -25,7 +25,7 @@ describe('publication sites', () => {
     const ax = global.ax.dmeadusOrg
 
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
     await assert.rejects(ax.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] }),
       err => err.status === 404)
   })
@@ -37,7 +37,7 @@ describe('publication sites', () => {
     await ax.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
 
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
 
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] })
   })
@@ -46,10 +46,10 @@ describe('publication sites', () => {
     const ax = global.ax.dmeadusOrg
 
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
 
     const otherDataset = (await global.ax.dmeadus.post('/api/v1/datasets', { isRest: true, title: 'other dataset', schema: [] })).data
-    await workers.hook(`finalizer/${otherDataset.id}`)
+    await workers.hook(`datasetStateManager/${otherDataset.id}`)
 
     await assert.rejects(ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${dataset.id}`), (err) => {
       assert.equal(err.status, 404)
@@ -105,7 +105,7 @@ describe('publication sites', () => {
     await global.ax.dmeadusOrg.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
 
     const dataset = (await global.ax.hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
     await assert.rejects(global.ax.hlalonde3Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] }),
       err => err.status === 403)
   })
@@ -118,7 +118,7 @@ describe('publication sites', () => {
     await global.ax.dmeadusOrg.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
 
     const dataset = (await global.ax.hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
     await global.ax.hlalonde3Org.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
     assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:' + dataset.slug)
     assert.equal(notif.body, 'published dataset - Huntington Lalonde')
@@ -140,7 +140,7 @@ describe('publication sites', () => {
     assert.equal(publicationSites[1].department, 'dep1')
 
     const dataset = (await global.ax.hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
     await global.ax.hlalonde3Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] })
   })
 
@@ -149,7 +149,7 @@ describe('publication sites', () => {
     await global.ax.hlalonde3Org.post('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites', portal)
 
     const dataset = (await global.ax.hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
     await assert.rejects(global.ax.ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] }),
       err => err.status === 403)
   })
@@ -162,7 +162,7 @@ describe('publication sites', () => {
     await global.ax.hlalonde3Org.post('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites', portal)
 
     const dataset = (await global.ax.hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
     await global.ax.ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
     assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:' + dataset.slug)
     assert.equal(notif.body, 'published dataset - Duky De Cruce')
@@ -178,7 +178,7 @@ describe('publication sites', () => {
     await global.ax.dmeadusOrg.post('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites', portalStaging)
 
     const dataset = (await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
     await assert.rejects(global.ax.ngernier4Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal-unknown'] }), err => err.status === 404)
     await assert.rejects(global.ax.ngernier4Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal-prod'] }), err => err.status === 403)
     await global.ax.ngernier4Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal-staging'] })

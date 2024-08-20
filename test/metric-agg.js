@@ -18,7 +18,7 @@ describe('metric agg', () => {
         { key: 'textfield2', type: 'string', 'x-capabilities': { values: false } }
       ]
     })
-    await workers.hook('finalizer/metric-agg')
+    await workers.hook('datasetStateManager/metric-agg')
     await ax.post('/api/v1/datasets/metric-agg/_bulk_lines', [
       { numfield: 0, textfield: 'a', datefield: '2020-12-01', datetimefield: '2020-12-01T01:10:10Z', booleanfield: false },
       { numfield: 1, textfield: 'b', datefield: '2020-12-02', datetimefield: '2020-12-01T02:10:10Z', booleanfield: true },
@@ -32,7 +32,7 @@ describe('metric agg', () => {
       { numfield: 9, textfield: 'j', datefield: '2020-12-10', datetimefield: '2020-12-01T10:10:10Z' },
       { numfield: 10, textfield: 'k', datefield: '2020-12-11', datetimefield: '2020-12-01T11:10:10Z' }
     ])
-    await workers.hook('finalizer/metric-agg')
+    await workers.hook('datasetStateManager/metric-agg')
   })
 
   it('performs calculations on a field', async function () {

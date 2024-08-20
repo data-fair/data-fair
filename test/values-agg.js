@@ -14,7 +14,7 @@ describe('values aggs', () => {
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
     const dataset = res.data
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('datasetStateManager/' + dataset.id)
 
     // Simple value aggregation
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id`)

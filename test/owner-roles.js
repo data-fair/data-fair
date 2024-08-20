@@ -5,7 +5,7 @@ describe('owner roles', () => {
   it('user can do everything in his own account', async () => {
     const dataset = (await global.ax.dmeadus.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Danna Meadus')
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('datasetStateManager/' + dataset.id)
     await global.ax.dmeadus.get(`/api/v1/datasets/${dataset.id}`)
     await global.ax.dmeadus.get(`/api/v1/datasets/${dataset.id}/lines`)
     await global.ax.dmeadus.get(`/api/v1/datasets/${dataset.id}/permissions`)
@@ -22,7 +22,7 @@ describe('owner roles', () => {
   it('organization admin can do everything', async () => {
     const dataset = (await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Fivechat')
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('datasetStateManager/' + dataset.id)
     await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}`)
     await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}/lines`)
     await global.ax.dmeadusOrg.delete(`/api/v1/datasets/${dataset.id}`)
@@ -41,7 +41,7 @@ describe('owner roles', () => {
     // can create a dataset and use it, but not administrate it
     const dataset = (await global.ax.ngernier4Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Fivechat')
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('datasetStateManager/' + dataset.id)
     await global.ax.ngernier4Org.get(`/api/v1/datasets/${dataset.id}`)
     await global.ax.ngernier4Org.get(`/api/v1/datasets/${dataset.id}/lines`)
     try {
@@ -68,7 +68,7 @@ describe('owner roles', () => {
     await assert.rejects(global.ax.bhazeldean7Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' }), err => err.status === 403)
     const dataset = (await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Fivechat')
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('datasetStateManager/' + dataset.id)
     const datasets = (await global.ax.bhazeldean7Org.get('/api/v1/datasets')).data
     assert.equal(datasets.count, 0)
     await assert.rejects(global.ax.bhazeldean7Org.get(`/api/v1/datasets/${dataset.id}`), err => err.status === 403)
@@ -89,7 +89,7 @@ describe('owner roles', () => {
   it('departments can be used to restrict contrib capabilities', async () => {
     // dataset is not attached to specific department at first
     const dataset = (await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.owner.department, undefined)
 
     // admin in org without department restriction -> ok for read and write

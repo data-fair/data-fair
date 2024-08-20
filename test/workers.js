@@ -116,7 +116,7 @@ describe('workers', () => {
     assert.equal(res.status, 201)
     let dataset = await workers.hook(`csvAnalyzer/${res.data.id}`)
     assert.equal(dataset.status, 'analyzed')
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.count, 2)
     config.worker.spawnTask = false
@@ -206,13 +206,13 @@ describe('workers', () => {
     idProp.separator = ','
     let patchedDataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema })).data
     assert.equal(patchedDataset.status, 'analyzed')
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
 
     // changing capabilities requires only refinalizing
     idProp['x-capabilities'] = { insensitive: false }
     patchedDataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema })).data
     assert.equal(patchedDataset.status, 'indexed')
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
 
     // changing a title does not require any worker tasks
     idProp.title = 'Identifier'

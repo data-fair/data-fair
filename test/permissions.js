@@ -6,7 +6,7 @@ describe('permissions', () => {
     // A dataset with restricted permissions
     let res = await global.ax.dmeadus.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })
     const datasetId = res.data.id
-    await workers.hook('finalizer/' + datasetId)
+    await workers.hook('datasetStateManager/' + datasetId)
     await global.ax.dmeadus.put('/api/v1/datasets/' + datasetId + '/permissions', [
       { type: 'user', id: 'ngernier4', operations: ['readDescription', 'list'] },
       { type: 'user', id: 'ddecruce5', classes: ['read'] },
@@ -16,7 +16,7 @@ describe('permissions', () => {
 
     // Another one that can be read by all
     res = await global.ax.dmeadus.post('/api/v1/datasets', { isRest: true, title: 'Another dataset' })
-    await workers.hook('finalizer/' + res.data.id)
+    await workers.hook('datasetStateManager/' + res.data.id)
     await global.ax.dmeadus.put('/api/v1/datasets/' + res.data.id + '/permissions', [
       { operations: ['readDescription', 'list'] }
     ])
@@ -77,7 +77,7 @@ describe('permissions', () => {
     // User can create a dataset for his organization
     res = await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })
     const datasetId2 = res.data.id
-    await workers.hook('finalizer/' + datasetId2)
+    await workers.hook('datasetStateManager/' + datasetId2)
     assert.equal(res.status, 201)
     await global.ax.dmeadusOrg.put('/api/v1/datasets/' + datasetId2 + '/permissions', [{ type: 'user', id: 'cdurning2', operations: ['readDescription'] }])
     res = await global.ax.dmeadusOrg.get('/api/v1/datasets/' + datasetId2)
@@ -97,7 +97,7 @@ describe('permissions', () => {
     // A dataset made accessible to all users of owner organization
     const res = await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })
     const datasetId = res.data.id
-    await workers.hook('finalizer/' + datasetId)
+    await workers.hook('datasetStateManager/' + datasetId)
     assert.equal((await global.ax.bhazeldean7Org.get('/api/v1/datasets')).data.count, 0)
     await assert.rejects(global.ax.bhazeldean7Org.get('/api/v1/datasets/' + datasetId), err => err.status === 403)
     await global.ax.dmeadusOrg.put('/api/v1/datasets/' + datasetId + '/permissions', [
@@ -125,7 +125,7 @@ describe('permissions', () => {
   it('apply permission to any authenticated user', async () => {
     const res = await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })
     const datasetId = res.data.id
-    await workers.hook('finalizer/' + datasetId)
+    await workers.hook('datasetStateManager/' + datasetId)
     assert.equal((await global.ax.bhazeldean7.get('/api/v1/datasets')).data.count, 0)
     await assert.rejects(global.ax.bhazeldean7.get('/api/v1/datasets/' + datasetId), err => err.status === 403)
     await global.ax.dmeadusOrg.put('/api/v1/datasets/' + datasetId + '/permissions', [
@@ -144,7 +144,7 @@ describe('permissions', () => {
       schema: [{ key: 'str', title: 'str title', type: 'string' }]
     })
     const datasetId = res.data.id
-    await workers.hook('finalizer/' + datasetId)
+    await workers.hook('datasetStateManager/' + datasetId)
     await global.ax.dmeadus.put('/api/v1/datasets/' + datasetId + '/permissions', [
       { type: 'user', id: 'ngernier4', operations: ['writeDescription', 'readDescription'] },
       { type: 'user', id: 'ddecruce5', operations: ['writeDescriptionBreaking', 'readDescription'] }

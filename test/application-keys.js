@@ -176,7 +176,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
       title: 'restcrowd',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/restcrowd')
+    await workers.hook('datasetStateManager/restcrowd')
 
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
       datasets: [{
@@ -204,7 +204,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     // accepted because token is the right age
     res = await global.ax.anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } })
     assert.equal(res.status, 201)
-    await workers.hook('finalizer/restcrowd')
+    await workers.hook('datasetStateManager/restcrowd')
 
     // rejected because of simple rate limiting
     await assert.rejects(
@@ -223,7 +223,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
       title: 'restcrowdown',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/restcrowdown')
+    await workers.hook('datasetStateManager/restcrowdown')
 
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
       datasets: [{
@@ -246,7 +246,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
 
     res = await global.ax.cdurning2.post('/api/v1/datasets/restcrowdown/own/user:cdurning2/lines', {}, { headers })
     assert.equal(res.status, 201)
-    await workers.hook('finalizer/restcrowdown')
+    await workers.hook('datasetStateManager/restcrowdown')
 
     res = await global.ax.cdurning2.get('/api/v1/datasets/restcrowdown/own/user:cdurning2/lines', { headers })
     assert.equal(res.status, 200)

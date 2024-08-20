@@ -128,7 +128,7 @@ describe('Applications', () => {
 
     const { data: app } = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const { data: dataset } = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('datasetStateManager/' + dataset.id)
     await ax.put('/api/v1/applications/' + app.id + '/config', { datasets: [{ href: dataset.href, id: dataset.id }] })
     const updatedAt = (await ax.get('/api/v1/applications/' + app.id)).data.updatedAt
     assert.ok(updatedAt)

@@ -10,7 +10,7 @@ describe('Enum of actual values in schema', () => {
       title: 'rest2',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'string' }]
     })
-    await workers.hook('finalizer/rest2')
+    await workers.hook('datasetStateManager/rest2')
     await ax.post('/api/v1/datasets/rest2/_bulk_lines', [
       { attr1: 'test1', attr2: 'test1', attr3: 'test1' },
       { attr1: 'test1', attr2: 'test2', attr3: 'test1' },
@@ -24,7 +24,7 @@ describe('Enum of actual values in schema', () => {
       { attr1: 'test2', attr2: 'test9' },
       { attr1: '', attr2: 'test10' }
     ])
-    const dataset = await workers.hook('finalizer/rest2')
+    const dataset = await workers.hook('datasetStateManager/rest2')
     const attr1 = dataset.schema.find(p => p.key === 'attr1')
     assert.deepEqual(attr1.enum, ['test2', 'test1'])
 

@@ -16,7 +16,7 @@ describe('Datasets with metadata attachments', () => {
   it('Upload a simple attachment', async () => {
     const ax = global.ax.dmeadus
     await ax.put('/api/v1/datasets/attachments1', { isRest: true, title: 'attachments1' })
-    await workers.hook('finalizer/attachments1')
+    await workers.hook('datasetStateManager/attachments1')
 
     await sendAttachment(ax, 'attachments1', 'avatar.jpeg')
 
@@ -31,7 +31,7 @@ describe('Datasets with metadata attachments', () => {
   it('Create an attachment with a private target URL', async () => {
     const ax = global.ax.dmeadus
     await ax.put('/api/v1/datasets/attachments2', { isRest: true, title: 'attachments2' })
-    await workers.hook('finalizer/attachments2')
+    await workers.hook('datasetStateManager/attachments2')
 
     const patchRes = await ax.patch('/api/v1/datasets/attachments2', { attachments: [{ type: 'remoteFile', name: 'logo-square.png', title: 'Avatar', targetUrl: 'https://koumoul.com/static/logo-square.png' }] })
     assert.equal(patchRes.data.attachments[0].mimetype, 'image/png')

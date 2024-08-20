@@ -9,12 +9,12 @@ describe('REST datasets exported', () => {
       title: 'rest',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/rest')
+    await workers.hook('datasetStateManager/rest')
     await ax.post('/api/v1/datasets/rest/_bulk_lines', [
       { attr1: 'test1', attr2: 'test1' },
       { attr1: 'test2', attr2: 'test2' }
     ])
-    await workers.hook('finalizer/rest')
+    await workers.hook('datasetStateManager/rest')
     const patched = (await ax.patch('/api/v1/datasets/rest', { exports: { restToCSV: { active: true } } })).data
     assert.ok(!!patched.exports.restToCSV.nextExport)
 
@@ -45,7 +45,7 @@ describe('REST datasets exported', () => {
     await ax.post('/api/v1/datasets/rest/_bulk_lines', [
       { attr1: 'test3', attr2: 'test3' }
     ])
-    await workers.hook('finalizer/rest')
+    await workers.hook('datasetStateManager/rest')
 
     await assert.rejects(ax.get('/api/v1/datasets/rest/raw'), err => err.status === 404)
 

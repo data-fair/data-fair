@@ -11,7 +11,7 @@ describe('safe relative paths management', () => {
     form.append('file', fs.readFileSync('./test/resources/datasets/dataset1.csv'), '../dataset1.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    const dataset = await workers.hook('finalizer/' + res.data.id)
+    const dataset = await workers.hook('datasetStateManager/' + res.data.id)
     assert.equal(dataset.file.name, 'dataset1.csv')
   })
 
@@ -34,7 +34,7 @@ describe('safe relative paths management', () => {
     form.append('dataset', datasetFd, 'files.zip')
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    const dataset = await workers.hook('finalizer/' + res.data.id)
+    const dataset = await workers.hook('datasetStateManager/' + res.data.id)
     const attachmentRes = await ax.get(`/api/v1/datasets/${dataset.id}/attachments/test.odt`)
     assert.equal(attachmentRes.status, 200)
     const attachmentHackRes1 = await ax.get(`/api/v1/datasets/${dataset.id}/attachments//test.odt`)

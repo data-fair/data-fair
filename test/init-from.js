@@ -27,7 +27,7 @@ describe('Datasets with auto-initialization from another one', () => {
       }
     })
     assert.equal(res.status, 201)
-    const initFromDataset = await workers.hook('finalizer/' + res.data.id)
+    const initFromDataset = await workers.hook('datasetStateManager/' + res.data.id)
 
     assert.equal(initFromDataset.schema[0].key, 'date')
     assert.equal(initFromDataset.schema[2].dateFormat, 'D/M/YYYY')
@@ -59,7 +59,7 @@ describe('Datasets with auto-initialization from another one', () => {
       }
     })
     assert.equal(res.status, 201)
-    const initFromDataset = await workers.hook('finalizer/' + res.data.id)
+    const initFromDataset = await workers.hook('datasetStateManager/' + res.data.id)
 
     assert.equal(initFromDataset.file.name, 'dataset1.csv')
     assert.equal(initFromDataset.schema[0].key, 'id')
@@ -91,7 +91,7 @@ describe('Datasets with auto-initialization from another one', () => {
     }))
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
     assert.equal(res.status, 201)
-    const initFromDataset = await workers.hook('finalizer/' + res.data.id)
+    const initFromDataset = await workers.hook('datasetStateManager/' + res.data.id)
 
     assert.equal(initFromDataset.file.name, 'dataset2.csv')
     assert.equal(initFromDataset.schema[0].key, 'id')
@@ -114,9 +114,9 @@ describe('Datasets with auto-initialization from another one', () => {
       title: 'rest1',
       schema: [{ key: 'attr1', type: 'string', description: 'A description' }, { key: 'attr2', type: 'string' }]
     })
-    const dataset = await workers.hook('finalizer/rest1')
+    const dataset = await workers.hook('datasetStateManager/rest1')
     await ax.post('/api/v1/datasets/rest1/lines', { attr1: 'test1', attr2: 'test1' })
-    await workers.hook('finalizer/rest1')
+    await workers.hook('datasetStateManager/rest1')
 
     const attachmentForm = new FormData()
     attachmentForm.append('attachment', fs.readFileSync('./test/resources/avatar.jpeg'), 'avatar.jpeg')
@@ -131,7 +131,7 @@ describe('Datasets with auto-initialization from another one', () => {
       }
     })
     assert.equal(res.status, 201)
-    const initFromDataset = await workers.hook('finalizer/' + res.data.id)
+    const initFromDataset = await workers.hook('datasetStateManager/' + res.data.id)
 
     assert.equal(initFromDataset.file.name, 'rest1.csv')
     assert.equal(initFromDataset.schema[0].key, 'attr1')
@@ -162,7 +162,7 @@ describe('Datasets with auto-initialization from another one', () => {
       }
     })
     assert.equal(res.status, 201)
-    assert.rejects(workers.hook('finalizer/' + res.data.id), err => err.message.includes('permission manquante'))
+    assert.rejects(workers.hook('datasetStateManager/' + res.data.id), err => err.message.includes('permission manquante'))
   })
 
   it('Initialize dataset in a department from dataset in orga', async () => {
@@ -184,7 +184,7 @@ describe('Datasets with auto-initialization from another one', () => {
       }
     })
     assert.equal(res.status, 201)
-    const initFromDataset = await workers.hook('finalizer/' + res.data.id)
+    const initFromDataset = await workers.hook('datasetStateManager/' + res.data.id)
     assert.equal(initFromDataset.owner.department, 'dep1')
     assert.equal(initFromDataset.count, 2)
   })

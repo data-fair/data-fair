@@ -12,19 +12,19 @@ describe('Properties capabilities', () => {
       title: 'rest-insensitive',
       schema: [{ key: 'str1', type: 'string' }]
     })
-    await workers.hook('finalizer/rest-insensitive')
+    await workers.hook('datasetStateManager/rest-insensitive')
     res = await ax.post('/api/v1/datasets/rest-insensitive/_bulk_lines', [
       { str1: 'test3' },
       { str1: 'test2' },
       { str1: 'test1' },
       { str1: 'Test2' }
     ])
-    await workers.hook('finalizer/rest-insensitive')
+    await workers.hook('datasetStateManager/rest-insensitive')
     res = await ax.get('/api/v1/datasets/rest-insensitive/lines', { params: { sort: 'str1' } })
     assert.deepEqual(res.data.results.map(result => result.str1), ['test1', 'Test2', 'test2', 'test3'])
 
     await ax.patch('/api/v1/datasets/rest-insensitive', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { insensitive: false } }] })
-    await workers.hook('finalizer/rest-insensitive')
+    await workers.hook('datasetStateManager/rest-insensitive')
     res = await ax.get('/api/v1/datasets/rest-insensitive/lines', { params: { sort: 'str1' } })
     assert.deepEqual(res.data.results.map(result => result.str1), ['Test2', 'test1', 'test2', 'test3'])
   })
@@ -36,7 +36,7 @@ describe('Properties capabilities', () => {
       title: 'rest-values',
       schema: [{ key: 'str1', type: 'string', 'x-capabilities': { insensitive: false } }]
     })
-    await workers.hook('finalizer/rest-values')
+    await workers.hook('datasetStateManager/rest-values')
     res = await ax.post('/api/v1/datasets/rest-values/_bulk_lines', [
       { str1: 'test3' },
       { str1: 'test2' },
@@ -48,7 +48,7 @@ describe('Properties capabilities', () => {
       { str1: 'Test2' },
       { str1: 'Test2' }
     ])
-    let dataset = await workers.hook('finalizer/rest-values')
+    let dataset = await workers.hook('datasetStateManager/rest-values')
     let prop = dataset.schema.find(p => p.key === 'str1')
     assert.equal(prop['x-cardinality'], 4)
     assert.ok(prop.enum)
@@ -66,7 +66,7 @@ describe('Properties capabilities', () => {
         }
       }]
     })
-    dataset = await workers.hook('finalizer/rest-values')
+    dataset = await workers.hook('datasetStateManager/rest-values')
     prop = dataset.schema.find(p => p.key === 'str1')
     assert.equal(prop['x-cardinality'], undefined)
     assert.ok(!prop.enum)
@@ -93,21 +93,21 @@ describe('Properties capabilities', () => {
       title: 'rest-textagg',
       schema: [{ key: 'str1', type: 'string' }]
     })
-    await workers.hook('finalizer/rest-textagg')
+    await workers.hook('datasetStateManager/rest-textagg')
     res = await ax.post('/api/v1/datasets/rest-textagg/_bulk_lines', [
       { str1: 'test3' },
       { str1: 'test2' },
       { str1: 'test1' },
       { str1: 'Test2' }
     ])
-    await workers.hook('finalizer/rest-textagg')
+    await workers.hook('datasetStateManager/rest-textagg')
 
     let aggSchema = (await ax.get('/api/v1/datasets/rest-textagg/schema', { params: { capability: 'textAgg' } })).data
     assert.equal(aggSchema.length, 0)
     await assert.rejects(ax.get('/api/v1/datasets/rest-textagg/words_agg', { params: { field: 'str1' } }), (err) => err.status === 400)
 
     await ax.patch('/api/v1/datasets/rest-textagg', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { textAgg: true } }] })
-    await workers.hook('finalizer/rest-textagg')
+    await workers.hook('datasetStateManager/rest-textagg')
 
     aggSchema = (await ax.get('/api/v1/datasets/rest-textagg/schema', { params: { capability: 'textAgg' } })).data
     assert.equal(aggSchema.length, 1)
@@ -122,14 +122,14 @@ describe('Properties capabilities', () => {
       title: 'rest-index',
       schema: [{ key: 'str1', type: 'string', 'x-refersTo': 'http://www.datatourisme.fr/ontology/core/1.0/#siret' }]
     })
-    await workers.hook('finalizer/rest-index')
+    await workers.hook('datasetStateManager/rest-index')
     res = await ax.post('/api/v1/datasets/rest-index/_bulk_lines', [
       { str1: 'test3' },
       { str1: 'test2' },
       { str1: 'test1' },
       { str1: 'Test2' }
     ])
-    await workers.hook('finalizer/rest-index')
+    await workers.hook('datasetStateManager/rest-index')
     res = await ax.get('/api/v1/datasets/rest-index/lines', { params: { qs: 'str1:test3' } })
     assert.equal(res.data.total, 1)
     res = await ax.get('/api/v1/datasets/rest-index/lines', { params: { str1_in: 'test3,test2' } })
@@ -139,7 +139,7 @@ describe('Properties capabilities', () => {
     assert.equal(res.data.total, 2)
 
     await ax.patch('/api/v1/datasets/rest-index', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { index: false } }] })
-    await workers.hook('finalizer/rest-index')
+    await workers.hook('datasetStateManager/rest-index')
     try {
       res = await ax.get('/api/v1/datasets/rest-index/lines', { params: { qs: 'str1:test3' } })
       assert.fail()
@@ -163,26 +163,26 @@ describe('Properties capabilities', () => {
       title: 'rest-text',
       schema: [{ key: 'str1', type: 'string' }]
     })
-    await workers.hook('finalizer/rest-text')
+    await workers.hook('datasetStateManager/rest-text')
     res = await ax.post('/api/v1/datasets/rest-text/_bulk_lines', [
       { str1: 'ceci est une phrase pour tester' },
       { str1: 'ceci est un autre test' },
       { str1: 'ceci est un autre têst avec un accent imprévu' }
     ])
-    await workers.hook('finalizer/rest-text')
+    await workers.hook('datasetStateManager/rest-text')
     res = await ax.get('/api/v1/datasets/rest-text/lines', { params: { q: 'test' } })
     assert.equal(res.data.total, 3)
     res = await ax.get('/api/v1/datasets/rest-text/lines', { params: { q: 'tester' } })
     assert.equal(res.data.total, 3)
 
     await ax.patch('/api/v1/datasets/rest-text', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { text: false } }] })
-    await workers.hook('finalizer/rest-text')
+    await workers.hook('datasetStateManager/rest-text')
 
     res = await ax.get('/api/v1/datasets/rest-text/lines', { params: { q: 'test' } })
     assert.equal(res.data.total, 1)
 
     await ax.patch('/api/v1/datasets/rest-text', { schema: [{ key: 'str1', type: 'string', 'x-capabilities': { text: false, textStandard: false } }] })
-    await workers.hook('finalizer/rest-text')
+    await workers.hook('datasetStateManager/rest-text')
 
     res = await ax.get('/api/v1/datasets/rest-text/lines', { params: { q: 'test' } })
     assert.equal(res.data.total, 0)
@@ -195,12 +195,12 @@ describe('Properties capabilities', () => {
       title: 'rest-geoshape',
       schema: [{ key: 'geom', type: 'string', 'x-refersTo': 'https://purl.org/geojson/vocab#geometry' }]
     })
-    await workers.hook('finalizer/rest-geoshape')
+    await workers.hook('datasetStateManager/rest-geoshape')
     res = await ax.post('/api/v1/datasets/rest-geoshape/_bulk_lines', [
       { geom: JSON.stringify({ type: 'Polygon', coordinates: [[[-2.42, 47.86], [-2.38, 47.86], [-2.38, 47.88], [-2.42, 47.88], [-2.42, 47.86]]] }) },
       { geom: JSON.stringify({ type: 'Point', coordinates: [-2.40, 47.89] }) }
     ])
-    await workers.hook('finalizer/rest-geoshape')
+    await workers.hook('datasetStateManager/rest-geoshape')
 
     res = await ax.get('/api/v1/datasets/rest-geoshape/lines', { params: { geo_distance: '-2.41,47.87,0' } })
     assert.equal(res.data.total, 1)
@@ -212,7 +212,7 @@ describe('Properties capabilities', () => {
         { key: 'geom', type: 'string', 'x-refersTo': 'https://purl.org/geojson/vocab#geometry', 'x-capabilities': { geoShape: false, geoCorners: false } }
       ]
     })
-    const dataset = await workers.hook('finalizer/rest-geoshape')
+    const dataset = await workers.hook('datasetStateManager/rest-geoshape')
     const geoShapeProp = dataset.schema.find(p => p.key === '_geoshape')
     assert.ok(geoShapeProp)
     assert.equal(geoShapeProp['x-capabilities'].geoShape, false)
@@ -242,7 +242,7 @@ describe('Properties capabilities', () => {
     let dataset = res.data
     assert.equal(res.status, 201)
 
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
     // _file.content is searchable
     assert.ok(dataset.schema.find(p => p.key === '_file.content'))
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'libreoffice' } })
@@ -257,7 +257,7 @@ describe('Properties capabilities', () => {
       ]
     })
 
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
     // _file.content is no longer searchable
     assert.equal(dataset.schema.find(p => p.key === '_file.content'), undefined)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'libreoffice' } })

@@ -22,6 +22,7 @@ exports.process = async function (app, dataset, patch) {
   await extensionsUtils.checkExtensions(db, dataset.schema, extensions)
 
   debug('apply extensions', dataset.extensions)
+  // TODO: "full" file of a new data file should be created in the "loading" directory
   await extensionsUtils.extend(app, dataset, extensions, updateMode)
   debug('extensions ok')
 

@@ -19,7 +19,7 @@ const initMaster = async (ax, info, masterData, id = 'master') => {
     masterData,
     ...info
   })
-  await workers.hook('finalizer/' + id)
+  await workers.hook('datasetStateManager/' + id)
   const master = (await ax.get('api/v1/datasets/' + id)).data
 
   const apiDocUrl = master.href + '/api-docs.json'
@@ -102,7 +102,7 @@ describe('Master data management', () => {
     // feed some data to the master
     const items = [{ siret: '82898347800011', extra: 'Extra information' }]
     await ax.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
-    await workers.hook('finalizer/master')
+    await workers.hook('datasetStateManager/master')
 
     // use the bulk-searchs endpoint with various mime-types, errors, etc.
     let res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', [{ siret: '82898347800011' }])
@@ -135,9 +135,9 @@ describe('Master data management', () => {
       title: 'slave',
       schema: [siretProperty]
     })
-    await workers.hook('finalizer/slave')
+    await workers.hook('datasetStateManager/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }, { siret: '82898347800011' }])
-    await workers.hook('finalizer/slave')
+    await workers.hook('datasetStateManager/slave')
 
     await ax.patch('/api/v1/datasets/slave', {
       extensions: [{
@@ -149,7 +149,7 @@ describe('Master data management', () => {
       }]
     })
     await workers.hook('extender/slave')
-    let slave = await workers.hook('finalizer/slave')
+    let slave = await workers.hook('datasetStateManager/slave')
 
     const extraProp = slave.schema.find(p => p.key === '_siret.extra')
     assert.ok(extraProp)
@@ -177,13 +177,13 @@ describe('Master data management', () => {
     })
     const items2 = [{ siret: '82898347800011', extra: 'Extra information 2' }]
     await ax.post('/api/v1/datasets/master/_bulk_lines', items2.map(item => ({ _id: item.siret, ...item })))
-    await workers.hook('finalizer/master')
+    await workers.hook('datasetStateManager/master')
     slave = (await ax.get('/api/v1/datasets/slave')).data
     assert.ok(slave.extensions[0].nextUpdate)
     await ax.patch('/api/v1/datasets/slave', {
       extensions: [{ ...slave.extensions[0], nextUpdate: new Date().toISOString() }]
     })
-    await workers.hook('finalizer/slave')
+    await workers.hook('datasetStateManager/slave')
     results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_siret.extra'], 'Extra information 2')
 
@@ -191,7 +191,7 @@ describe('Master data management', () => {
     await ax.patch('/api/v1/datasets/slave', {
       extensions: []
     })
-    await workers.hook('finalizer/slave')
+    await workers.hook('datasetStateManager/slave')
     results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.ok(!results[0]['_siret.extra'])
   })
@@ -212,7 +212,7 @@ describe('Master data management', () => {
 
     const items = [{ siret: 'TEST"SIRET*', extra: 'Extra information' }]
     await ax.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
-    await workers.hook('finalizer/master')
+    await workers.hook('datasetStateManager/master')
 
     // create slave dataset
     await ax.put('/api/v1/datasets/slave', {
@@ -227,9 +227,9 @@ describe('Master data management', () => {
         select: ['extra']
       }]
     })
-    await workers.hook('finalizer/slave')
+    await workers.hook('datasetStateManager/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: 'TEST"SIRET*' }].map(item => ({ _id: item.siret, ...item })))
-    await workers.hook('finalizer/slave')
+    await workers.hook('datasetStateManager/slave')
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_siret.extra'], 'Extra information')
   })
@@ -250,7 +250,7 @@ describe('Master data management', () => {
 
     const items = [{ siret: 'TEST"SIRET*', extra: 'Extra information' }]
     await ax.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
-    await workers.hook('finalizer/master')
+    await workers.hook('datasetStateManager/master')
 
     // create slave dataset
     await ax.put('/api/v1/datasets/slave', {
@@ -265,9 +265,9 @@ describe('Master data management', () => {
         select: ['extra']
       }]
     })
-    await workers.hook('finalizer/slave')
+    await workers.hook('datasetStateManager/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: 'test " failure' }].map(item => ({ _id: item.siret, ...item })))
-    await assert.rejects(workers.hook('finalizer/slave'), (err) => {
+    await assert.rejects(workers.hook('datasetStateManager/slave'), (err) => {
       assert.ok(err.message.includes('Impossible d\'effectuer cette recherche'), `message was ${err.message}`)
       return true
     })
@@ -290,7 +290,7 @@ describe('Master data management', () => {
     )
     const items = [{ siret: '82898347800011', extra: 'Extra information', Dénomination: 'Dénomination string' }]
     await ax.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
-    await workers.hook('finalizer/master')
+    await workers.hook('datasetStateManager/master')
 
     // create another slave from a geojson file
     let geojsonSlave = await testUtils.sendDataset('datasets/dataset-siret-extensions.geojson', ax)
@@ -306,7 +306,7 @@ describe('Master data management', () => {
       }]
     })
     assert.equal(res.status, 200)
-    geojsonSlave = await workers.hook(`finalizer/${geojsonSlave.id}`)
+    geojsonSlave = await workers.hook(`datasetStateManager/${geojsonSlave.id}`)
     res = await ax.get(`/api/v1/datasets/${geojsonSlave.id}/full`)
     assert.equal(res.data.type, 'FeatureCollection')
     assert.equal(res.data.features.length, 1)
@@ -344,9 +344,9 @@ describe('Master data management', () => {
         action: 'masterData_bulkSearch_siret'
       }]
     })
-    await workers.hook('finalizer/slave')
+    await workers.hook('datasetStateManager/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
-    const slave = await workers.hook('finalizer/slave')
+    const slave = await workers.hook('datasetStateManager/slave')
     assert.ok(slave.schema.find(p => p.key === '_siret.extra'))
     assert.ok(slave.schema.find(p => p.key === '_siret._error'))
     assert.ok(slave.schema.find(p => p.key === '_siret.siret'))
@@ -400,7 +400,7 @@ describe('Master data management', () => {
         action: 'masterData_bulkSearch_siret2'
       }]
     })
-    const slave = await workers.hook('finalizer/slave')
+    const slave = await workers.hook('datasetStateManager/slave')
 
     // slave schema contains props from both levels of extensions
     assert.ok(slave.schema.find(p => p.key === '_siret2.extra2'))
@@ -413,13 +413,13 @@ describe('Master data management', () => {
     // feed some data to the masters
     const items = [{ siret: '82898347800011', extra: 'Extra information' }]
     await ax.post('/api/v1/datasets/master1/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
-    await workers.hook('finalizer/master1')
+    await workers.hook('datasetStateManager/master1')
     const items2 = [{ siret: '82898347800011', extra2: 'Extra information 2' }]
     await ax.post('/api/v1/datasets/master2/_bulk_lines', items2.map(item => ({ _id: item.siret, ...item })))
-    await workers.hook('finalizer/master2')
+    await workers.hook('datasetStateManager/master2')
 
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }])
-    await workers.hook('finalizer/slave')
+    await workers.hook('datasetStateManager/slave')
     const lines = (await ax.get('api/v1/datasets/slave/lines')).data
     assert.equal(lines.results[0]['_siret2._siret.extra'], 'Extra information')
     assert.equal(lines.results[0]['_siret2.extra2'], 'Extra information 2')
@@ -449,7 +449,7 @@ describe('Master data management', () => {
       { siret: '82898347800011', sortKey: 2, extra: 'Extra information 2' }
     ]
     await ax.post('/api/v1/datasets/master/_bulk_lines', items)
-    await workers.hook('finalizer/master')
+    await workers.hook('datasetStateManager/master')
 
     const input = [
       { siret: 'blabla' },
@@ -493,7 +493,7 @@ describe('Master data management', () => {
       { start: '2021-05-15T14:23:15.178Z', end: '2021-05-18T14:23:15.178Z', extra: 'Extra information 2' }
     ]
     await ax.post('/api/v1/datasets/master/_bulk_lines', items)
-    await workers.hook('finalizer/master')
+    await workers.hook('datasetStateManager/master')
 
     const input = [
       { _date: '2021-05-14T14:23:15.178Z' },
@@ -527,7 +527,7 @@ describe('Master data management', () => {
       { latlon: '-2.8,45.5', extra: 'Extra information 2' }
     ]
     await ax.post('/api/v1/datasets/master/_bulk_lines', items)
-    await workers.hook('finalizer/master')
+    await workers.hook('datasetStateManager/master')
 
     const input = [
       { _geopoint: '-2.7,47.6' },
@@ -569,7 +569,7 @@ describe('Master data management', () => {
         select: ['extra']
       }]
     })
-    await assert.rejects(workers.hook('finalizer/slave'), err => err.message.startsWith('Try to apply extension'))
+    await assert.rejects(workers.hook('datasetStateManager/slave'), err => err.message.startsWith('Try to apply extension'))
   })
 
   it('should prevent using master-data without permission on dataset', async () => {
@@ -601,9 +601,9 @@ describe('Master data management', () => {
         select: ['extra']
       }]
     })
-    await workers.hook('finalizer/slave')
+    await workers.hook('datasetStateManager/slave')
     await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
-    await assert.rejects(workers.hook('finalizer/slave'), err => err.message.startsWith('permission manquante'))
+    await assert.rejects(workers.hook('datasetStateManager/slave'), err => err.message.startsWith('permission manquante'))
   })
 
   it('should support using master-data from other account if visibility is ok', async () => {
@@ -620,7 +620,7 @@ describe('Master data management', () => {
     // feed some data to the master
     const items = [{ siret: '82898347800011', extra: 'Extra information' }]
     await global.ax.dmeadus.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
-    await workers.hook('finalizer/master')
+    await workers.hook('datasetStateManager/master')
 
     // only super admin can open remote service to public
     await assert.rejects(global.ax.dmeadus.patch('/api/v1/remote-services/' + remoteService.id, { public: true }), (err) => err.status === 403)
@@ -641,9 +641,9 @@ describe('Master data management', () => {
         select: ['extra']
       }]
     })
-    await workers.hook('finalizer/slave')
+    await workers.hook('datasetStateManager/slave')
     await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
-    await workers.hook('finalizer/slave')
+    await workers.hook('datasetStateManager/slave')
     const results = (await global.ax.cdurning2.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_siret.extra'], 'Extra information')
   })
@@ -675,12 +675,12 @@ describe('Master data management', () => {
       { latlon: '-2.7,47.6', country: 'FRA' },
       { latlon: '-2.8,45.5', country: 'JPN' }
     ])
-    await workers.hook('finalizer/master1')
+    await workers.hook('datasetStateManager/master1')
     await ax.post('/api/v1/datasets/master2/_bulk_lines', [
       { country: 'FRA', name: 'France' },
       { country: 'JPN', name: 'Japan' }
     ])
-    await workers.hook('finalizer/master2')
+    await workers.hook('datasetStateManager/master2')
 
     // create slave dataset
     await ax.put('/api/v1/datasets/slave', {
@@ -701,7 +701,7 @@ describe('Master data management', () => {
         select: ['name']
       }]
     })
-    const slave = await workers.hook('finalizer/slave')
+    const slave = await workers.hook('datasetStateManager/slave')
     assert.ok(slave.schema.find(p => p.key === '_geo.country'))
     assert.ok(slave.schema.find(p => p.key === '_country.name'))
 
@@ -709,7 +709,7 @@ describe('Master data management', () => {
       { latlon: '-2.7,47.6' },
       { latlon: '-2.8,45.5' }
     ])
-    await workers.hook('finalizer/slave')
+    await workers.hook('datasetStateManager/slave')
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_geo.country'], 'JPN')
     assert.equal(results[0]['_country.name'], 'Japan')
@@ -742,13 +742,13 @@ describe('Master data management', () => {
       { latlon: '-2.7,47.6', country: 'FRA' },
       { latlon: '-2.8,45.5', country: 'JPN' }
     ])
-    await workers.hook('finalizer/master1')
+    await workers.hook('datasetStateManager/master1')
 
     await ax.post('/api/v1/datasets/master2/_bulk_lines', [
       { country: 'FRA', name: 'France' },
       { country: 'JPN', name: 'Japan' }
     ])
-    await workers.hook('finalizer/master2')
+    await workers.hook('datasetStateManager/master2')
 
     // create slave dataset
     await ax.put('/api/v1/datasets/slave', {
@@ -769,7 +769,7 @@ describe('Master data management', () => {
         select: ['name']
       }]
     })
-    const slave = await workers.hook('finalizer/slave')
+    const slave = await workers.hook('datasetStateManager/slave')
     assert.ok(slave.schema.find(p => p.key === '_geo.country'))
     assert.ok(slave.schema.find(p => p.key === '_country.name'))
 
@@ -777,7 +777,7 @@ describe('Master data management', () => {
       { latlon: '-2.7,47.6' },
       { latlon: '-2.8,45.5' }
     ])
-    await workers.hook('finalizer/slave')
+    await workers.hook('datasetStateManager/slave')
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_geo.country'], 'JPN')
     assert.equal(results[0]['_country.name'], 'Japan')

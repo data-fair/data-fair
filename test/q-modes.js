@@ -11,7 +11,7 @@ describe('query modes', () => {
       title: 'qmodes',
       schema: [{ key: 'content', type: 'string' }]
     })
-    let dataset = await workers.hook('finalizer/qmodes')
+    let dataset = await workers.hook('datasetStateManager/qmodes')
     const items = {
       t1: 'prefix',
       t2: 'prefixsuite',
@@ -20,7 +20,7 @@ describe('query modes', () => {
       p2: 'phrase 2 mot1 mot3 mot2 mot4'
     }
     let res = await ax.post('/api/v1/datasets/qmodes/_bulk_lines', Object.keys(items).map(key => ({ _id: key, content: items[key] })))
-    dataset = await workers.hook('finalizer/qmodes')
+    dataset = await workers.hook('datasetStateManager/qmodes')
     assert.ok(dataset.schema.find(f => f.key === '_id'))
     assert.ok(dataset.schema.find(f => f.key === '_updatedAt'))
     res = await ax.get('/api/v1/datasets/qmodes/lines')

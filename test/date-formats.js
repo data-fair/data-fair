@@ -27,7 +27,7 @@ describe('Date formats', () => {
     let form = new FormData()
     form.append('file', 'str,date\nstrval,2021-01-22', 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    let dataset = await workers.hook(`finalizer/${res.data.id}`)
+    let dataset = await workers.hook(`datasetStateManager/${res.data.id}`)
     let dateProp = dataset.file.schema.find(p => p.key === 'date')
     assert.equal(dateProp.type, 'string')
     assert.equal(dateProp.format, 'date')
@@ -38,7 +38,7 @@ describe('Date formats', () => {
     form = new FormData()
     form.append('file', 'str,date\nstrval,28/11/1983', 'dataset.csv')
     res = await ax.post(`/api/v1/datasets/${dataset.id}`, form, { headers: testUtils.formHeaders(form) })
-    dataset = await workers.hook(`finalizer/${res.data.id}`)
+    dataset = await workers.hook(`datasetStateManager/${res.data.id}`)
     dateProp = dataset.file.schema.find(p => p.key === 'date')
     assert.equal(dateProp.type, 'string')
     assert.equal(dateProp.format, 'date')
@@ -60,7 +60,7 @@ describe('Date formats', () => {
     data += '\n\r\t01/07/2021;AAA;;;;;;;;;;;;;;;;;;;;;;;;;;;;11,11;11,11;11,11;;;;;;'
     form.append('file', data, 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
-    let dataset = await workers.hook(`finalizer/${res.data.id}`)
+    let dataset = await workers.hook(`datasetStateManager/${res.data.id}`)
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`, { params: { draft: true } })).data
     const dateProp = dataset.file.schema.find(p => p.key === 'periode')
     assert.equal(dateProp.type, 'string')
@@ -75,7 +75,7 @@ describe('Date formats', () => {
     const form = new FormData()
     form.append('file', 'str,datetime\nstrval,2021-02-23T10:27:50', 'dataset.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    const dataset = await workers.hook(`finalizer/${res.data.id}`)
+    const dataset = await workers.hook(`datasetStateManager/${res.data.id}`)
     const dateProp = dataset.file.schema.find(p => p.key === 'datetime')
     assert.equal(dateProp.type, 'string')
     assert.equal(dateProp.format, 'date-time')
@@ -90,7 +90,7 @@ describe('Date formats', () => {
     const form = new FormData()
     form.append('file', 'str,datetime\nstrval,1961-02-13 00:00:00+00:00', 'dataset.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    const dataset = await workers.hook(`finalizer/${res.data.id}`)
+    const dataset = await workers.hook(`datasetStateManager/${res.data.id}`)
     const dateProp = dataset.file.schema.find(p => p.key === 'datetime')
     assert.equal(dateProp.type, 'string')
     assert.equal(dateProp.format, 'date-time')
@@ -112,7 +112,7 @@ describe('Date formats', () => {
 
     dataset.schema.find(field => field.key === 'horodatage').timeZone = 'Pacific/Honolulu'
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema })
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
 
     results = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
     assert.equal(results[0].horodatage, '2050-01-01T00:00:00-10:00')
@@ -139,7 +139,7 @@ describe('Date formats', () => {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    const dataset = await workers.hook(`finalizer/${res.data.id}`)
+    const dataset = await workers.hook(`datasetStateManager/${res.data.id}`)
     const dateProp = dataset.file.schema.find(p => p.key === 'date')
     assert.equal(dateProp.dateFormat, 'YYYY/M/D')
   })

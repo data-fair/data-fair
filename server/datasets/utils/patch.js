@@ -172,7 +172,7 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
     // extensions have changed, trigger full re-indexing
     // in "rest" dataset no need for full reindexing if the schema is still compatible, extension-updater worker will suffice
     patch.status = 'updated'
-    patch._currentUpdate.reindex = true
+    patch._currentUpdate.reExtend = true
     for (const e of patch.extensions) delete e.needsUpdate
   } else if (patch.projection && (!dataset.projection || patch.projection.code !== dataset.projection.code) && ((coordXProp && coordYProp) || projectGeomProp)) {
     // geo projection has changed, trigger full re-indexing
@@ -201,6 +201,7 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
     patch.status = 'updated'
     // reindex will be removed later on if the mapping is successfully updated
     patch._currentUpdate.reindex = true
+    if (patch.extensions) patch._currentUpdate.reExtend = true
   } else if (patch.thumbnails || patch.masterData) {
     // just change finalizedAt so that cache is invalidated, but the worker doesn't relly need to work on the dataset
     patch.finalizedAt = (new Date()).toISOString()

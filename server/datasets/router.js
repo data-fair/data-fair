@@ -328,7 +328,7 @@ const createDatasetRoute = asyncWrap(async (req, res) => {
      */
     const onClose = (callback) => res.on('close', callback)
 
-    const dataset = await createDataset(db, locale, user, owner, body, files, draft, onClose)
+    const dataset = await createDataset(req.app, locale, user, owner, body, files, draft, onClose)
 
     await import('@data-fair/lib/express/events-log.js')
       .then((eventsLog) => eventsLog.default.info('df.datasets.create', `created a dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))

@@ -19,7 +19,7 @@ describe('Elasticsearch disk watermarks', () => {
     form2.append('file', datasetFd2, 'dataset2.csv')
     form2.append('description', 'draft description')
     await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
-    await assert.rejects(workers.hook(`finalizer/${dataset.id}`))
+    await assert.rejects(workers.hook(`datasetStateManager/${dataset.id}`))
 
     // dataset is in error, but still queryable from previous index
     dataset = (await ax.get('/api/v1/datasets/' + dataset.id)).data

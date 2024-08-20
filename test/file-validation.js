@@ -48,7 +48,7 @@ describe('file datasets with validation rules', () => {
     form.append('schema', JSON.stringify(schema))
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.count, 2)
   })
 
@@ -59,7 +59,7 @@ describe('file datasets with validation rules', () => {
     form.append('schema', JSON.stringify(schema))
     const ax = global.ax.dmeadus
     const dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    await assert.rejects(workers.hook('finalizer/' + dataset.id), err => {
+    await assert.rejects(workers.hook('datasetStateManager/' + dataset.id), err => {
       assert.ok(err.message.includes('ont une erreur de validation'))
       return true
     })
@@ -71,7 +71,7 @@ describe('file datasets with validation rules', () => {
     form.append('file', fs.readFileSync('./test/resources/datasets/dataset1.csv'), 'dataset1.csv')
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.count, 2)
     const patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema })).data
     assert.equal(patched.status, 'validation-updated')
@@ -85,7 +85,7 @@ describe('file datasets with validation rules', () => {
     form.append('file', fs.readFileSync('./test/resources/datasets/dataset1-invalid.csv'), 'dataset1.csv')
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.count, 2)
     const patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema })).data
     assert.equal(patched.status, 'validation-updated')

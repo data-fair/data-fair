@@ -197,7 +197,7 @@ exports.memoizedGetDataset = memoize(exports.getDataset, {
 
 /**
  *
- * @param {import('mongodb').Db} db
+ * @param {any} app
  * @param {string} locale
  * @param {any} user
  * @param {any} owner
@@ -207,7 +207,10 @@ exports.memoizedGetDataset = memoize(exports.getDataset, {
  * @param {(callback: () => {}) => void} onClose
  * @returns {Promise<any>}
  */
-exports.createDataset = async (db, locale, user, owner, body, files, draft, onClose) => {
+exports.createDataset = async (app, locale, user, owner, body, files, draft, onClose) => {
+  /** @type {import('mongodb').Db} */
+  const db = app.get('db')
+
   validateURLFriendly(locale, body.id)
   validateURLFriendly(locale, body.slug)
 
@@ -288,12 +291,15 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
 
   if (datasetFile) {
     await fs.emptyDir(datasetUtils.loadingDir(insertedDataset))
-    await fs.move(datasetFile.path, datasetUtils.loadedFilePath(insertedDataset))
-    await fsyncFile(datasetUtils.loadedFilePath(insertedDataset))
+    const loadedFilePath = datasetUtils.loadedFilePath(insertedDataset)
+    await fs.move(datasetFile.path, loadedFilePath)
+    await fsyncFile(loadedFilePath)
     if (attachmentsFile) {
-      await fs.move(attachmentsFile.path, datasetUtils.loadedAttachmentsFilePath(insertedDataset))
-      await fsyncFile(datasetUtils.loadedAttachmentsFilePath(insertedDataset))
+      const loadedAttachmentsFilePath = datasetUtils.loadedAttachmentsFilePath(insertedDataset)
+      await fs.move(attachmentsFile.path, loadedAttachmentsFilePath)
+      await fsyncFile(loadedAttachmentsFilePath)
     }
+    await datasetUtils.updateStorage(app, dataset, false, false)
   }
   if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with extensions by ${user?.name} (${user?.id})`, insertedDataset.extensions)
   if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with masterData by ${user?.name} (${user?.id})`, insertedDataset.masterData)
@@ -387,6 +393,7 @@ exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappin
       // so that we might optimize and reindex only when necessary
       await esUtils.updateDatasetMapping(app.get('es'), { id: dataset.id, schema: patch.schema }, dataset)
       delete patch._currentUpdate.reindex
+      delete patch._currentUpdate.reExtend
     } catch (err) {
       // generated ES mappings are not compatible, trigger full re-indexing
     }

@@ -165,6 +165,7 @@ exports.datasetInfos = async (client, dataset) => {
 }
 
 exports.datasetWarning = async (client, dataset) => {
+  if (dataset._newIndexName) return null
   if (dataset.isVirtual || dataset.isMetaOnly || dataset.status === 'draft' || dataset.status === 'error') return null
   const esInfos = await exports.datasetInfos(client, dataset)
   if (!esInfos.index) return 'MissingIndex'

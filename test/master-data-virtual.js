@@ -14,7 +14,7 @@ const initMaster = async (ax, schema, id = 'master') => {
       virtualDatasets: { active: true }
     }
   })
-  await workers.hook('finalizer/' + id)
+  await workers.hook('datasetStateManager/' + id)
   const master = (await ax.get('api/v1/datasets/' + id)).data
 
   await ax.put(`/api/v1/datasets/${master.id}/permissions`, [{ classes: ['read'] }])
@@ -49,7 +49,7 @@ describe('Virtual master data management', () => {
       { str1: 'LINE3' },
       { str1: 'LINE4' }
     ])
-    const master = await workers.hook('finalizer/master')
+    const master = await workers.hook('datasetStateManager/master')
 
     const res = await global.ax.dmeadus.post('/api/v1/datasets', {
       isVirtual: true,
@@ -58,7 +58,7 @@ describe('Virtual master data management', () => {
       },
       title: 'a virtual dataset'
     })
-    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    const virtualDataset = await workers.hook('datasetStateManager/' + res.data.id)
     assert.equal(virtualDataset.storage.size, 0)
     assert.ok(virtualDataset.storage.indexed.size > 0)
     assert.equal(virtualDataset.storage.indexed.size, Math.round(master.storage.indexed.size / 2))

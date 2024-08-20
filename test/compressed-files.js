@@ -39,7 +39,7 @@ describe('Archive conversions', () => {
     const form = new FormData()
     form.append('file', gzippedContent, 'dataset1.csv.gz')
     await ax.put('/api/v1/datasets/dataset-compressed', form, { headers: testUtils.formHeaders(form) })
-    let dataset = await workers.hook('finalizer/dataset-compressed')
+    let dataset = await workers.hook('datasetStateManager/dataset-compressed')
     assert.ok(dataset.schema.find(p => p.key === 'id'))
     assert.ok(dataset.schema.find(p => p.key === '_id'))
 
@@ -52,7 +52,7 @@ describe('Archive conversions', () => {
     form2.append('file', csvContent, 'dataset1.csv')
     form2.append('schema', JSON.stringify(schema))
     await ax.put('/api/v1/datasets/dataset-compressed', form2, { headers: testUtils.formHeaders(form2) })
-    dataset = await workers.hook('finalizer/dataset-compressed')
+    dataset = await workers.hook('datasetStateManager/dataset-compressed')
     assert.ok(dataset.schema.find(p => p.key === 'id'))
     assert.ok(dataset.schema.find(p => p.key === '_id'))
     assert.ok(dataset.bbox)

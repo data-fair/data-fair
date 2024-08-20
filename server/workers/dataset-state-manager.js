@@ -1,10 +1,9 @@
-exports.eventsPrefix = 'dataset-state'
-
 exports.process = async function (app, dataset) {
   const config = require('config')
   const datasetsService = require('../datasets/service')
   const datasetUtils = require('../datasets/utils')
   const { basicTypes, csvTypes } = require('../datasets/utils/files')
+  const journals = require('../misc/utils/journals')
 
   const debug = require('debug')(`worker:dataset-state-manager:${dataset.id}`)
 
@@ -31,8 +30,10 @@ exports.process = async function (app, dataset) {
     }
   }
 
-  if (dataset._currentUpdate.dataFile || dataset._currentUpdate.attachments) {
-    debug('new data file loaded, run task file-detector')
+  // full processing a new data file
+  if (dataset._currentUpdate?.dataFile || dataset._currentUpdate?.attachments) {
+    debug('new data file loaded')
+    debug('run task file-detector')
     await require('./tasks/file-detector').process(app, { ...dataset, ...patch }, patch)
     if (!basicTypes.includes(patch.originalFile?.mimetype)) {
       debug('run task file-normalizer')
@@ -58,7 +59,18 @@ exports.process = async function (app, dataset) {
     debug('run task indexer')
     dataset._newIndexName = await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, true)
     debug('run task file-storer')
-    await require('./tasks/file-storer').process(app, { ...dataset, ...patch }, patch)
+    await require('./tasks/file-storer').process(app, dataset, patch)
+  } else {
+    const reExtend = dataset._currentUpdate?.reExtend || (dataset.isRest && dataset.status === 'created')
+    const reindex = dataset._currentUpdate?.reindex || reExtend
+    if (reExtend && dataset.extensions && dataset.extensions.find(e => e.active)) {
+      debug('run task extender')
+      await require('./tasks/extender').process(app, { ...dataset, ...patch }, patch)
+    }
+    if (reindex) {
+      debug('run task indexer')
+      dataset._newIndexName = await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, false)
+    }
   }
 
   debug('run task finalizer')
@@ -72,7 +84,7 @@ exports.process = async function (app, dataset) {
   debug('apply patch', patch)
   await datasetsService.applyPatch(app, dataset, patch)
 
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
+  await journals.log(app, dataset, { type: 'finalize-end' }, 'dataset', dataset.isRest)
 
   // After applying the patch to this dataset we neet to propagate some actions to other datasets
 

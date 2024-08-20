@@ -12,7 +12,7 @@ describe('Cache headers', () => {
       title: 'cache-headers-' + nanoid(),
       schema: [{ key: 'str1', type: 'string' }]
     })).data
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
     return dataset
   }

@@ -16,13 +16,13 @@ describe('thumbnails', () => {
       attachmentsAsImage: true,
       schema: [{ key: 'desc', type: 'string' }, { key: 'imageUrl', type: 'string', 'x-refersTo': 'http://schema.org/image' }]
     })
-    await workers.hook('finalizer/thumbnails1')
+    await workers.hook('datasetStateManager/thumbnails1')
     res = await ax.post('/api/v1/datasets/thumbnails1/_bulk_lines', [
       { imageUrl: 'http://test-thumbnail.com/image.png', desc: '1 image' },
       { imageUrl: 'http://test-thumbnail.com/avatar.jpg', desc: '2 avatar' },
       { imageUrl: 'http://test-thumbnail.com/wikipedia.gif', desc: '3 wikipedia animated' }
     ])
-    await workers.hook('finalizer/thumbnails1')
+    await workers.hook('datasetStateManager/thumbnails1')
     res = await ax.get('/api/v1/datasets/thumbnails1/lines', { params: { thumbnail: true, select: 'desc', sort: 'desc' } })
     assert.equal(res.data.results.length, 3)
     assert.equal(res.data.results[0].desc, '1 image')
@@ -54,7 +54,7 @@ describe('thumbnails', () => {
       title: 'thumbnail',
       image: 'http://test-thumbnail.com/dataset-image.jpg'
     })
-    await workers.hook('finalizer/thumbnail')
+    await workers.hook('datasetStateManager/thumbnail')
     await ax.put('/api/v1/datasets/thumbnail/permissions', [{ classes: ['read'] }])
     let res = await ax.get('/api/v1/datasets/thumbnail')
     assert.ok(res.data.thumbnail)
@@ -74,7 +74,7 @@ describe('thumbnails', () => {
       title: 'thumbnail',
       image: 'https://geocatalogue.lannion-tregor.com/geonetwork/srv/api/records/c4576973-28cd-47d5-a082-7871f96d8f14/attachments/reseau_transport_scolaire.JPG'
     })
-    await workers.hook('finalizer/thumbnail')
+    await workers.hook('datasetStateManager/thumbnail')
     await ax.put('/api/v1/datasets/thumbnail/permissions', [{ classes: ['read'] }])
     let res = await ax.get('/api/v1/datasets/thumbnail')
     assert.ok(res.data.thumbnail)
@@ -90,7 +90,7 @@ describe('thumbnails', () => {
     form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
     const dataset = res.data
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('datasetStateManager/' + dataset.id)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true } })
     const thumbnail1 = res.data.results[0]._thumbnail
     await assert.rejects(ax.get(res.data.results[0]._thumbnail, { maxRedirects: 0 }), (err) => err.status === 302)

@@ -7,7 +7,7 @@ const fs = require('fs-extra')
 const limits = require('../../misc/utils/limits')
 const config = /** @type {any} */(require('config'))
 const debugLimits = require('debug')('limits')
-const { dataFiles, lsAttachments, lsMetadataAttachments, attachmentPath, metadataAttachmentPath } = require('./files')
+const { dataFiles, lsAttachments, lsMetadataAttachments, attachmentPath, metadataAttachmentPath, loadedAttachmentsFilePath } = require('./files')
 
 /**
  * @param {import('mongodb').Db} db
@@ -65,6 +65,15 @@ exports.storage = async (db, es, dataset) => {
     masterData: { size: 0, count: 0 }
   }
   for (const df of storage.dataFiles) delete df.url
+
+  if (dataset.status === 'created' || dataset.status === 'draft') {
+    if (dataset._currentUpdate?.dataFile) {
+      storage.size += dataset._currentUpdate?.dataFile.size
+    }
+    if (dataset._currentUpdate?.attachments) {
+      storage.size += (await fs.stat(loadedAttachmentsFilePath(dataset))).size
+    }
+  }
 
   if (dataset.isVirtual) {
     const descendants = await virtualDatasetsUtils.descendants(db, dataset, false, ['storage', 'owner', 'masterData', 'count'], false)
@@ -168,11 +177,8 @@ exports.updateStorage = async (app, dataset, deleted = false, checkRemaining = f
     return
   }
   if (!deleted) {
-    await db.collection('datasets').updateOne({ id: dataset.id }, {
-      $set: {
-        storage: await exports.storage(db, es, dataset)
-      }
-    })
+    const storage = await exports.storage(db, es, dataset)
+    await db.collection('datasets').updateOne({ id: dataset.id }, { $set: { storage } })
   }
   return exports.updateTotalStorage(db, dataset.owner, checkRemaining)
 }

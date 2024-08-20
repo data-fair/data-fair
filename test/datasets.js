@@ -10,7 +10,7 @@ const workers = require('../server/workers')
 const { validate } = require('tableschema')
 
 let notifier
-describe('datasets', () => {
+describe.only('datasets', () => {
   before('prepare notifier', async () => {
     notifier = require('./resources/app-notifier.js')
     await eventToPromise(notifier, 'listening')
@@ -30,7 +30,7 @@ describe('datasets', () => {
     assert.equal(res.data.count, 0)
   })
 
-  it.only('Search and apply some params (facets, raw, count, select, etc)', async () => {
+  it('Search and apply some params (facets, raw, count, select, etc)', async () => {
     const ax = global.ax.dmeadus
     const axOrg = global.ax.dmeadusOrg
 
@@ -103,7 +103,7 @@ describe('datasets', () => {
     let form = new FormData()
     form.append('file', Buffer.alloc(110000), 'largedataset1.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    await assert.rejects(workers.hook('finalizer/' + res.data.id))
+    await assert.rejects(workers.hook('datasetStateManager/' + res.data.id))
 
     form = new FormData()
     form.append('file', Buffer.alloc(110000), 'largedataset2.csv')
@@ -124,7 +124,7 @@ describe('datasets', () => {
     assert.ok(res.data.previews[0].href.endsWith(`/embed/dataset/${res.data.id}/table`))
     assert.equal(res.data.updatedAt, res.data.createdAt)
     assert.equal(res.data.updatedAt, res.data.dataUpdatedAt)
-    const dataset = await workers.hook('finalizer/' + res.data.id)
+    const dataset = await workers.hook('datasetStateManager/' + res.data.id)
     assert.equal(dataset.file.encoding, 'UTF-8')
     assert.equal(dataset.count, 2)
   })
@@ -138,7 +138,7 @@ describe('datasets', () => {
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, 'my-title')
     assert.equal(res.data.title, 'My title\'')
-    await workers.hook('finalizer/' + res.data.id)
+    await workers.hook('datasetStateManager/' + res.data.id)
   })
 
   it('Upload new dataset in organization zone', async () => {
@@ -149,7 +149,7 @@ describe('datasets', () => {
     assert.equal(res.status, 201)
     assert.equal(res.data.owner.type, 'organization')
     assert.equal(res.data.owner.id, 'KWqAGZ4mG')
-    await workers.hook('finalizer/' + res.data.id)
+    await workers.hook('datasetStateManager/' + res.data.id)
   })
 
   it('Upload new dataset in organization zone with explicit department', async () => {
@@ -162,7 +162,7 @@ describe('datasets', () => {
     assert.equal(res.data.owner.type, 'organization')
     assert.equal(res.data.owner.id, 'KWqAGZ4mG')
     assert.equal(res.data.owner.department, 'dep1')
-    await workers.hook('finalizer/' + res.data.id)
+    await workers.hook('datasetStateManager/' + res.data.id)
   })
 
   it('Uploading same file twice should increment slug', async () => {
@@ -173,7 +173,7 @@ describe('datasets', () => {
       const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
       assert.equal(res.status, 201)
       assert.equal(res.data.slug, 'my-dataset' + (i === 1 ? '' : '-' + i))
-      await workers.hook('finalizer/' + res.data.id)
+      await workers.hook('datasetStateManager/' + res.data.id)
     }
   })
 
@@ -185,7 +185,7 @@ describe('datasets', () => {
     form.append('file', datasetFd, 'yet-a-dataset.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.data.title, 'A dataset with pre-filled title')
-    await workers.hook('finalizer/' + res.data.id)
+    await workers.hook('datasetStateManager/' + res.data.id)
   })
 
   it('Upload new dataset with JSON body', async () => {
@@ -195,7 +195,7 @@ describe('datasets', () => {
     form.append('file', datasetFd, 'yet-a-dataset.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.data.title, 'A dataset with both file and JSON body')
-    await workers.hook('finalizer/' + res.data.id)
+    await workers.hook('datasetStateManager/' + res.data.id)
   })
 
   it('Upload new dataset with defined id', async () => {
@@ -207,13 +207,13 @@ describe('datasets', () => {
     assert.equal(res.status, 201)
     assert.equal(res.data.title, 'my title')
     assert.equal(res.data.id, 'my-dataset-id')
-    await workers.hook('finalizer/my-dataset-id')
+    await workers.hook('datasetStateManager/my-dataset-id')
     form = new FormData()
     form.append('title', 'my other title')
     form.append('file', datasetFd, 'yet-a-dataset.csv')
     res = await ax.post('/api/v1/datasets/my-dataset-id', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 200)
-    await workers.hook('finalizer/my-dataset-id')
+    await workers.hook('datasetStateManager/my-dataset-id')
   })
 
   it('Reject some not URL friendly id', async () => {
@@ -258,7 +258,7 @@ describe('datasets', () => {
     wsCli.send(JSON.stringify({ type: 'subscribe', channel: 'datasets/' + datasetId + '/journal' }))
     res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
     assert.equal(res.status, 200)
-    assert.equal(res.data.length, 11)
+    assert.equal(res.data.length, 2)
 
     // Send again the data to the same dataset
     form = new FormData()
@@ -271,8 +271,8 @@ describe('datasets', () => {
     assert.equal(JSON.parse(wsRes.data).channel, 'datasets/' + datasetId + '/journal')
     await testUtils.timeout(eventToPromise(notifier, 'webhook'), 2000, 'second webhook not received')
     res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
+    assert.equal(res.data.length, 4)
 
-    assert.equal(res.data.length, 20)
     // testing permissions
     await assert.rejects(global.ax.dmeadus.get(webhook.href), err => err.status === 403)
     await assert.rejects(global.ax.anonymous.get(webhook.href), err => err.status === 403)
@@ -303,7 +303,7 @@ describe('datasets', () => {
     const form = new FormData()
     form.append('file', datasetFd, 'dataset-name.csv')
     let res = await ax.post('/api/v1/datasets/dataset-name', form, { headers: testUtils.formHeaders(form) })
-    await workers.hook('finalizer/dataset-name')
+    await workers.hook('datasetStateManager/dataset-name')
     res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.ok(res.data.store_bytes.consumption > 150)
     assert.ok(res.data.store_bytes.consumption < 300)
@@ -312,7 +312,7 @@ describe('datasets', () => {
     const form2 = new FormData()
     form2.append('file', datasetFd, 'dataset-name2.csv')
     res = await ax.put('/api/v1/datasets/dataset-name', form2, { headers: testUtils.formHeaders(form2) })
-    const dataset = await workers.hook('finalizer/dataset-name')
+    const dataset = await workers.hook('datasetStateManager/dataset-name')
     assert.equal(dataset.originalFile.name, 'dataset-name2.csv')
     assert.equal(dataset.file.name, 'dataset-name2.csv')
     assert.equal(dataset.updatedAt, dataset.dataUpdatedAt)
@@ -385,7 +385,7 @@ describe('datasets', () => {
     const form = new FormData()
     form.append('file', datasetFd, 'dataset-name.csv')
     let res = await ax.post('/api/v1/datasets/dataset-name', form, { headers: testUtils.formHeaders(form) })
-    await workers.hook('finalizer/dataset-name')
+    await workers.hook('datasetStateManager/dataset-name')
     res = await ax.get('/api/v1/datasets/dataset-name')
     const schema = res.data.schema.filter(f => !f['x-calculated'])
     schema.forEach(f => {
@@ -399,7 +399,7 @@ describe('datasets', () => {
     form2.append('file', datasetFd, 'dataset-name.csv')
     form2.append('schema', JSON.stringify(schema))
     res = await ax.post('/api/v1/datasets/dataset-name', form2, { headers: testUtils.formHeaders(form2) })
-    await workers.hook('finalizer/dataset-name')
+    await workers.hook('datasetStateManager/dataset-name')
     res = await ax.get('/api/v1/datasets/dataset-name')
     assert.equal(res.data.schema.filter(f => f.ignoreDetection).length, 6)
   })
@@ -409,7 +409,7 @@ describe('datasets', () => {
 
     for (const title of ['aa', 'bb', 'àb', ' àb', '1a']) {
       const res = await ax.post('/api/v1/datasets', { isRest: true, title })
-      await workers.hook('finalizer/' + res.data.id)
+      await workers.hook('datasetStateManager/' + res.data.id)
     }
 
     let res = await ax.get('/api/v1/datasets', { params: { select: 'title', raw: true, sort: 'title:1' } })

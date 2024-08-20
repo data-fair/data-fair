@@ -9,7 +9,7 @@ describe('Sorting', () => {
       title: 'restsort1',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'integer' }]
     })
-    await workers.hook('finalizer/restsort1')
+    await workers.hook('datasetStateManager/restsort1')
 
     await ax.post('/api/v1/datasets/restsort1/_bulk_lines', [
       { attr1: 'aaa', attr2: 1 },
@@ -20,7 +20,7 @@ describe('Sorting', () => {
       { attr1: 'eee', attr2: 6 },
       { attr1: 'ééé', attr2: 7 }
     ])
-    await workers.hook('finalizer/restsort1')
+    await workers.hook('datasetStateManager/restsort1')
 
     let lines = await ax.get('/api/v1/datasets/restsort1/lines', { params: { sort: 'attr1' } })
     assert.deepEqual(lines.data.results.map(r => r.attr1), ['AAA', 'aaa', 'BBB', 'bbb', 'eee', 'ééé', 'zzz'])

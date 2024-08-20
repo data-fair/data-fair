@@ -15,7 +15,7 @@ describe('projections', () => {
     })
     assert.equal(res.status, 201)
     const dataset = res.data
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
 
     await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       projection: {
@@ -23,11 +23,11 @@ describe('projections', () => {
         code: 'EPSG:27572'
       }
     })
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
 
     res = await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { x: 610336, y: 2132685 })
     assert.equal(res.status, 201)
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: 'x,y,_geopoint' } })
     assert.ok(res.data.results[0]._geopoint)
@@ -45,7 +45,7 @@ describe('projections', () => {
     })
     assert.equal(res.status, 201)
     const dataset = res.data
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
 
     await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       projection: {
@@ -53,13 +53,13 @@ describe('projections', () => {
         code: 'EPSG:27572'
       }
     })
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
 
     res = await ax.post(`/api/v1/datasets/${dataset.id}/lines`, {
       g: JSON.stringify({ type: 'LineString', coordinates: [[610336, 2132685], [610346, 2132695]] })
     })
     assert.equal(res.status, 201)
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: 'g,_geopoint' } })
     assert.ok(res.data.results[0]._geopoint)

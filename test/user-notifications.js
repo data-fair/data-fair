@@ -10,7 +10,7 @@ describe('user-notifications about dataset', () => {
       title: 'user notif 1',
       schema: [{ key: 'str', type: 'string' }]
     })).data
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('datasetStateManager/' + dataset.id)
 
     // listen to all notifications
     const notifications = []

@@ -11,7 +11,7 @@ describe('stats', () => {
     const form = new FormData()
     form.append('file', datasetData, 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    await workers.hook(`finalizer/${res.data.id}`)
+    await workers.hook(`datasetStateManager/${res.data.id}`)
     assert.equal(res.status, 201)
 
     res = await ax.get('/api/v1/stats')

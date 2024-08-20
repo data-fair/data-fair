@@ -18,10 +18,10 @@ describe('data pagination', () => {
         title: 'rest pagination ' + i,
         schema
       })
-      await workers.hook('finalizer/rest-page' + i)
+      await workers.hook('datasetStateManager/rest-page' + i)
 
       const res = await ax.post(`/api/v1/datasets/rest-page${i}/_bulk_lines`, actions)
-      await workers.hook('finalizer/rest-page' + i)
+      await workers.hook('datasetStateManager/rest-page' + i)
       assert.equal(res.data.nbOk, 100)
       assert.equal(res.data.nbCreated, 100)
     }
@@ -32,7 +32,7 @@ describe('data pagination', () => {
       schema,
       title: 'a virtual dataset'
     })
-    await workers.hook('finalizer/virtual-page')
+    await workers.hook('datasetStateManager/virtual-page')
 
     let res = await ax.get('/api/v1/datasets/rest-page0/lines')
     assert.equal(res.data.total, 100)

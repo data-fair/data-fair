@@ -11,7 +11,7 @@ describe('search', () => {
     locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
     let res = await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     assert.equal(res.status, 200)
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
 
@@ -101,7 +101,7 @@ describe('search', () => {
     assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526",0,11')
     locProp.title = 'Localisation'
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`datasetStateManager/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?format=csv`)
     lines = res.data.split('\n')
     assert.equal(lines[0].trim(), '"id","adr","some date","loc","bool","nb"')

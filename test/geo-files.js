@@ -30,7 +30,7 @@ describe('geo files support', () => {
     assert.equal(intField.type, 'integer')
 
     // ES indexation and finalization
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
 
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
@@ -63,7 +63,7 @@ describe('geo files support', () => {
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
 
-    const dataset = await workers.hook('finalizer/' + res.data.id)
+    const dataset = await workers.hook('datasetStateManager/' + res.data.id)
     assert.ok(dataset.projection)
     assert.equal(dataset.projection.code, 'EPSG:27572')
     assert.equal(dataset.schema[0]['x-refersTo'], 'http://data.ign.fr/def/geometrie#Geometry')
@@ -95,7 +95,7 @@ describe('geo files support', () => {
     const dataset = await workers.hook('geojsonAnalyzer/' + res.data.id)
     const prop1 = dataset.schema.find(p => p.key === 'prop1')
     assert.equal(prop1['x-refersTo'], 'http://rdf.insee.fr/def/geo#codeRegion')
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('datasetStateManager/' + dataset.id)
   })
 
   it('Upload geojson dataset with some managed fixes', async () => {
@@ -111,7 +111,7 @@ describe('geo files support', () => {
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
-    const dataset = await workers.hook('finalizer/' + res.data.id)
+    const dataset = await workers.hook('datasetStateManager/' + res.data.id)
     assert.equal(dataset.count, 2)
   })
 
@@ -158,7 +158,7 @@ describe('geo files support', () => {
 
     assert.equal(dataset.storage.dataFiles.length, 2)
     assert.equal(dataset.storage.attachments.size, 0)
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('datasetStateManager/' + dataset.id)
   })
 
   it('Process shapefile dataset where zip file has different name from contents', async () => {
@@ -178,7 +178,7 @@ describe('geo files support', () => {
     const dataset = await workers.hook('fileNormalizer/' + res.data.id)
     assert.equal(dataset.status, 'normalized')
     assert.equal(dataset.file.name, 'stations2.geojson')
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('datasetStateManager/' + dataset.id)
   })
 
   it('Upload CSV file with WKT geometries', async () => {
@@ -186,7 +186,7 @@ describe('geo files support', () => {
     let dataset = await testUtils.sendDataset('geo/wkt.csv', ax)
     dataset.schema.find(p => p.key === 'geom')['x-refersTo'] = 'https://purl.org/geojson/vocab#geometry'
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema })
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.ok(dataset.bbox)
 
     const geojson = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { format: 'geojson' } })).data
@@ -220,7 +220,7 @@ describe('geo files support', () => {
     assert.equal(dataset.storage.dataFiles.length, 2)
     assert.equal(dataset.storage.attachments.size, 0)
 
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.count, 1)
 
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data

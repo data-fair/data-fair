@@ -9,7 +9,7 @@ exports.process = async function (app, dataset, patch) {
   patch.loaded = null
   const loadingDir = datasetUtils.loadingDir(dataset)
 
-  const datasetFile = dataset.loaded?.dataset
+  const datasetFile = dataset._currentUpdate?.dataFile
   if (datasetFile) {
     const loadedFilePath = datasetUtils.loadedFilePath(dataset)
 
@@ -23,7 +23,7 @@ exports.process = async function (app, dataset, patch) {
     }
   }
 
-  if (dataset.loaded?.attachments) {
+  if (dataset._currentUpdate?.attachments) {
     await replaceAllAttachments(dataset, datasetUtils.loadedAttachmentsFilePath(dataset))
   }
 
