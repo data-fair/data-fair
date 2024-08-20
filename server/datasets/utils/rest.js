@@ -28,7 +28,7 @@ const { attachmentPath, lsAttachments } = require('./files')
 const { jsonSchema } = require('./schema')
 const { tmpDir } = require('./files')
 const esUtils = require('../../datasets/es')
-const { tabularTypes } = require('../../workers/file-normalizer')
+const { tabularTypes } = require('./files')
 const Piscina = require('piscina')
 
 const sheet2csvPiscina = exports.sheet2csvPiscina = new Piscina({

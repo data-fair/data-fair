@@ -12,7 +12,7 @@ const journals = require('../../misc/utils/journals')
 // Index tabular datasets with elasticsearch using available information on dataset schema
 exports.eventsPrefix = 'index'
 
-exports.process = async function (app, dataset, patch) {
+exports.process = async function (app, dataset, patch, fromLoadingDir, partialRestUpdate = false) {
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
   const debugHeap = require('../../misc/utils/heap').debug(`worker:indexer:${dataset.id}`)
 
@@ -29,7 +29,7 @@ exports.process = async function (app, dataset, patch) {
   const esClient = app.get('es')
 
   let indexName
-  if (dataset.status === 'updated' || dataset.status === 'extended-updated') {
+  if (partialRestUpdate) {
     indexName = es.aliasName(dataset)
     debug(`Update index ${indexName}`)
   } else {
@@ -60,13 +60,13 @@ exports.process = async function (app, dataset, patch) {
   })
   await progress(0)
   debugHeap('before-stream')
+
   if (dataset.isRest) {
-    readStreams = await restDatasetsUtils.readStreams(db, dataset, (dataset.status === 'updated' || dataset.status === 'extended-updated') ? { _needsIndexing: true } : {}, progress)
+    readStreams = await restDatasetsUtils.readStreams(db, dataset, partialRestUpdate ? { _needsIndexing: true } : {}, progress)
     writeStream = restDatasetsUtils.markIndexedStream(db, dataset)
   } else {
     const extended = dataset.extensions && dataset.extensions.find(e => e.active)
-    if (!extended) await fs.remove(datasetUtils.fullFilePath(dataset))
-    readStreams = await datasetUtils.readStreams(db, dataset, false, extended, false, progress)
+    readStreams = await datasetUtils.readStreams(db, dataset, false, extended, false, fromLoadingDir, progress)
     writeStream = new Writable({ objectMode: true, write (chunk, encoding, cb) { cb() } })
   }
   await pump(...readStreams, indexStream, writeStream)
@@ -76,13 +76,12 @@ exports.process = async function (app, dataset, patch) {
   if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
 
   patch.schema = datasetUtils.cleanSchema(dataset)
-  if (dataset.status === 'updated' || dataset.status === 'extended-updated') {
+  if (partialRestUpdate) {
     patch.count = await restDatasetsUtils.count(db, dataset)
   } else {
-    debug('Switch alias to point to new datasets index')
-    // TODO: switch alias after finalization
-    await es.switchAlias(esClient, dataset, indexName)
     patch.count = indexStream.i
+    // alias will be switched after finalization
+    return indexName
   }
 
   // Some data was updated in the interval during which we performed indexation

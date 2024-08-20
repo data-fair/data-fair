@@ -87,6 +87,8 @@ exports.esProperty = prop => {
 }
 
 exports.aliasName = dataset => {
+  console.log('alias name ?', dataset._newIndexName)
+  if (dataset._newIndexName) return dataset._newIndexName
   if (dataset.isVirtual) return dataset.descendants.map(id => `${config.indicesPrefix}-${id}`).join(',')
   if (dataset.draftReason) return `${config.indicesPrefix}_draft-${dataset.id}`
   return `${config.indicesPrefix}-${dataset.id}`

@@ -85,7 +85,7 @@ exports.start = async (app) => {
       await Promise.any(promisePool)
     }
     const freeSlot = promisePool.findIndex(p => !p)
-    debugLoop('free slot', freeSlot)
+    // debugLoop('free slot', freeSlot)
 
     // once we have a free slot, acquire the next resource to work on
     const typesFilters = getTypesFilters()

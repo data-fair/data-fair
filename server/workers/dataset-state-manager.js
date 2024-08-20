@@ -6,6 +6,8 @@ exports.process = async function (app, dataset) {
   const datasetUtils = require('../datasets/utils')
   const { basicTypes, csvTypes } = require('../datasets/utils/files')
 
+  const debug = require('debug')(`worker:dataset-state-manager:${dataset.id}`)
+
   const db = app.get('db')
   const now = new Date().toISOString()
 
@@ -24,35 +26,52 @@ exports.process = async function (app, dataset) {
       dataset._currentUpdate?.downloadRemoteFile ||
       (dataset.status === 'finalized' && dataset.remoteFile?.autoUpdate?.active && dataset.remoteFile.autoUpdate.nextUpdate < now)
     ) {
+      debug('run task file downloader')
       await require('./tasks/file-downloader').process(app, { ...dataset, ...patch }, patch)
     }
   }
 
-  if (dataset.loaded) {
+  if (dataset._currentUpdate.dataFile || dataset._currentUpdate.attachments) {
+    debug('new data file loaded, run task file-detector')
     await require('./tasks/file-detector').process(app, { ...dataset, ...patch }, patch)
     if (!basicTypes.includes(patch.originalFile?.mimetype)) {
+      debug('run task file-normalizer')
       await require('./tasks/file-normalizer').process(app, { ...dataset, ...patch }, patch)
     }
     if (csvTypes.includes(patch.file.mimetype)) {
+      debug('run task csv-analyzer')
       await require('./tasks/csv-analyzer').process(app, { ...dataset, ...patch }, patch)
     }
     if (patch.file.mimetype === 'application/geo+json') {
+      debug('run task geojson-analyzer')
       await require('./tasks/geojson-analyzer').process(app, { ...dataset, ...patch }, patch)
     }
     // TODO: add a "schemaLocked" metadata to enforce strictly compatible schema with previous version of file ?
     if (datasetUtils.schemaHasValidationRules(patch.schema ?? dataset.schema)) {
+      debug('run task file-validator')
       await require('./tasks/file-validator').process(app, { ...dataset, ...patch }, patch)
     }
     if (dataset.extensions && dataset.extensions.find(e => e.active)) {
+      debug('run task extender')
       await require('./tasks/extender').process(app, { ...dataset, ...patch }, patch)
     }
-    await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch)
+    debug('run task indexer')
+    dataset._newIndexName = await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, true)
+    debug('run task file-storer')
     await require('./tasks/file-storer').process(app, { ...dataset, ...patch }, patch)
   }
 
-  await require('./tasks/finalizer').process(app, dataset, patch)
+  debug('run task finalizer')
+  await require('./tasks/finalizer').process(app, { ...dataset, ...patch }, patch)
 
+  if (dataset._newIndexName) {
+    debug('switch elasticsearch alias', dataset._newIndexName)
+    await require('../datasets/es').switchAlias(app.get('es'), { ...dataset, ...patch, _newIndexName: null }, dataset._newIndexName)
+  }
+
+  debug('apply patch', patch)
   await datasetsService.applyPatch(app, dataset, patch)
+
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
 
   // After applying the patch to this dataset we neet to propagate some actions to other datasets
@@ -60,7 +79,8 @@ exports.process = async function (app, dataset) {
   // parent virtual datasets have to be re-finalized too
   if (!dataset.draftReason) {
     for await (const virtualDataset of db.collection('datasets').find({ 'virtual.children': dataset.id })) {
-      await db.collection('datasets').updateOne({ id: virtualDataset.id }, { $set: { status: 'indexed' } })
+      debug(`mark virtual dataset ${virtualDataset.slug} (${virtualDataset.id}) as updated`)
+      await db.collection('datasets').updateOne({ id: virtualDataset.id }, { $set: { status: 'updated' } })
     }
   }
 
@@ -77,6 +97,7 @@ exports.process = async function (app, dataset) {
           extension.nextUpdate = nextUpdate
         }
       }
+      debug(`plan next update of extension ${extendedDataset.slug} (${extendedDataset.id})`)
       await db.collection('datasets').updateOne({ id: extendedDataset.id }, { $set: { extensions: extendedDataset.extensions } })
     }
   }

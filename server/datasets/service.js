@@ -242,8 +242,8 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
       status: 'created',
       dataUpdatedBy: dataset.updatedBy,
       dataUpdatedAt: dataset.updatedAt,
-      loaded: {
-        dataset: {
+      _currentUpdate: {
+        dataFile: {
           name: datasetFile.originalname,
           size: datasetFile.size,
           mimetype: datasetFile.mimetype

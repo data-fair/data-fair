@@ -96,14 +96,14 @@ exports.process = async function (app, dataset, patch) {
 
   if (dataset.originalFile.mimetype === 'application/gzip') {
     const basicTypeFileName = dataset.originalFile.name.slice(0, dataset.originalFile.name.length - 3)
-    const filePath = resolvePath(datasetUtils.dir(dataset), basicTypeFileName)
-    await pump(fs.createReadStream(originalFilePath), zlib.createGunzip(), fs.createWriteStream(filePath))
     dataset.file = {
       name: basicTypeFileName,
-      size: await fs.stat(filePath).size,
       mimetype: mime.lookup(basicTypeFileName),
       encoding: 'utf-8'
     }
+    const filePath = datasetUtils.filePath(dataset, true)
+    await pump(fs.createReadStream(originalFilePath), zlib.createGunzip(), fs.createWriteStream(filePath))
+    dataset.file.size = (await fs.stat(filePath)).size
   }
 
   if (calendarTypes.has(dataset.originalFile.mimetype)) {
@@ -112,32 +112,34 @@ exports.process = async function (app, dataset, patch) {
       throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
     const { eventsStream, infos } = await icalendar.parse(originalFilePath)
-    const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
+    const fileName = baseName + '.csv'
+    dataset.file = {
+      name: fileName,
+      mimetype: 'text/csv',
+      encoding: 'utf-8'
+    }
+    const filePath = datasetUtils.filePath(dataset, true)
     await pump(
       eventsStream,
       csvStrStream({ columns: ['DTSTART', 'DTEND', 'SUMMARY', 'LOCATION', 'CATEGORIES', 'STATUS', 'DESCRIPTION', 'TRANSP', 'SEQUENCE', 'GEO', 'URL'], header: true }),
       fs.createWriteStream(filePath)
     )
-    dataset.file = {
-      name: path.parse(dataset.originalFile.name).name + '.csv',
-      size: await fs.stat(filePath).size,
-      mimetype: 'text/csv',
-      encoding: 'utf-8'
-    }
+    dataset.file.size = (await fs.stat(filePath)).size
     icalendar.prepareSchema(dataset, infos)
     dataset.analysis = { escapeKeyAlgorithm: 'legacy' }
   } else if (tabularTypes.has(dataset.originalFile.mimetype)) {
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
       throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
-    const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
-    await pipeline(xlsx.iterCSV(originalFilePath), fs.createWriteStream(filePath))
+    const fileName = baseName + '.csv'
     dataset.file = {
-      name: path.parse(dataset.originalFile.name).name + '.csv',
-      size: await fs.stat(filePath).size,
+      name: fileName,
       mimetype: 'text/csv',
       encoding: 'utf-8'
     }
+    const filePath = datasetUtils.filePath(dataset, true)
+    await pipeline(xlsx.iterCSV(originalFilePath), fs.createWriteStream(filePath))
+    dataset.file.size = (await fs.stat(filePath)).size
   } else if (isShapefile || geographicalTypes.has(dataset.originalFile.mimetype)) {
     if (config.ogr2ogr.skip) {
       throw createError(400, '[noretry] Les fichiers de type shapefile ne sont pas supportés sur ce service.')
@@ -154,21 +156,20 @@ exports.process = async function (app, dataset, patch) {
       ogrOptions.push('routes')
     }
 
-    const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.geojson')
+    const fileName = baseName + '.geojson'
+    dataset.file = {
+      name: fileName,
+      mimetype: 'application/geo+json',
+      encoding: 'utf-8'
+    }
+    const filePath = datasetUtils.filePath(dataset, true)
     await ogr2ogr(originalFilePath, {
       format: 'GeoJSON',
       options: ogrOptions,
       timeout: config.ogr2ogr.timeout,
       destination: filePath
     })
-
-    // await pump(geoJsonStream, fs.createWriteStream(filePath))
-    dataset.file = {
-      name: path.parse(dataset.originalFile.name).name + '.geojson',
-      size: await fs.stat(filePath).size,
-      mimetype: 'application/geo+json',
-      encoding: 'utf-8'
-    }
+    dataset.file.size = (await fs.stat(filePath)).size
   }
 
   await fs.remove(tmpDir)

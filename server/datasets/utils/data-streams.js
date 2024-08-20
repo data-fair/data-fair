@@ -10,7 +10,7 @@ const createError = require('http-errors')
 const { createGunzip } = require('zlib')
 const DecodeStream = require('../../misc/utils/decode-stream')
 const metrics = require('../../misc/utils/metrics')
-const { csvTypes } = require('../../workers/file-normalizer')
+const { csvTypes } = require('./files')
 const fieldsSniffer = require('./fields-sniffer')
 const restDatasetsUtils = require('./rest')
 const { filePath, fullFilePath, tmpDir } = require('./files')
@@ -170,9 +170,9 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
 }
 
 // Read the dataset file and get a stream of line items
-exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraftLimit = false, progress) => {
+exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraftLimit = false, fromLoadingDir = false, progress) => {
   if (dataset.isRest) return restDatasetsUtils.readStreams(db, dataset)
-  const p = full ? fullFilePath(dataset) : filePath(dataset)
+  const p = full ? fullFilePath(dataset, fromLoadingDir) : filePath(dataset, fromLoadingDir)
 
   if (!await fs.pathExists(p)) {
     // we should not have to do this
@@ -268,7 +268,7 @@ exports.sampleValues = async (dataset) => {
   let currentLine = 0
   let stopped = false
   const sampleValues = {}
-  const streams = await exports.readStreams(null, dataset, true, false, true)
+  const streams = await exports.readStreams(null, dataset, true, false, true, true)
   await pump(...streams, new Writable({
     objectMode: true,
     write (chunk, encoding, callback) {

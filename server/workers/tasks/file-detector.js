@@ -16,7 +16,7 @@ exports.process = async function (app, dataset, patch) {
 
   const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
 
-  const datasetFile = dataset.loaded?.dataset
+  const datasetFile = dataset._currentUpdate.dataFile
   if (datasetFile) {
     const loadedFilePath = datasetUtils.loadedFilePath(dataset)
 
@@ -85,15 +85,13 @@ exports.process = async function (app, dataset, patch) {
   } else if (draft && !await fs.pathExists(datasetUtils.originalFilePath(dataset))) {
     // this happens if we upload only the attachments, not the data file itself
     // in this case copy the one from prod
-    // TODO: do this in "loaded" directory ?
-    // await fs.copy(datasetUtils.originalFilePath(datasetFull), datasetUtils.originalFilePath(dataset))
+    await fs.copy(datasetUtils.originalFilePath(datasetFull), datasetUtils.loadedFilePath(dataset))
   }
 
   if (!dataset.loaded?.attachments && draft && await fs.pathExists(datasetUtils.attachmentsDir(datasetFull)) && !await fs.pathExists(datasetUtils.attachmentsDir(dataset))) {
     // this happens if we upload only the main data file and not the attachments
     // in this case copy the attachments directory from prod
-    // TODO: do this in "loaded" directory ?
-    // await fs.copy(datasetUtils.attachmentsDir(datasetFull), datasetUtils.attachmentsDir(dataset))
+    await fs.copy(datasetUtils.attachmentsDir(datasetFull), datasetUtils.loadedAttachmentsDir(dataset))
   }
 
   debug('done')

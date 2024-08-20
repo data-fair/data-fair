@@ -15,7 +15,7 @@ exports.sendDataset = async (fileName, ax, opts, body) => {
   form.append('file', datasetFd, fileName)
   if (body) form.append('body', JSON.stringify(body))
   const res = await ax.post('/api/v1/datasets', form, { ...opts, headers: exports.formHeaders(form) })
-  return workers.hook(`finalizer/${res.data.id}`)
+  return workers.hook(`datasetStateManager/${res.data.id}`)
 }
 
 exports.timeout = (promise, delay = 1000, message = 'time limit exceeded') => {

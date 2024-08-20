@@ -24,11 +24,11 @@ exports.loadingDir = (dataset) => {
 }
 
 exports.loadedFilePath = (dataset) => {
-  return resolvePath(exports.loadingDir(dataset), dataset.loaded?.dataset?.name)
+  return resolvePath(exports.loadingDir(dataset), dataset._currentUpdate?.dataFile?.name)
 }
 
-exports.filePath = (dataset) => {
-  return resolvePath(exports.dir(dataset), dataset.file.name)
+exports.filePath = (dataset, fromLoadingDir = false) => {
+  return resolvePath(fromLoadingDir ? exports.loadingDir(dataset) : exports.dir(dataset), dataset.file.name)
 }
 
 exports.originalFilePath = (dataset) => {
@@ -40,8 +40,8 @@ exports.fullFileName = (dataset) => {
   return `${parsed.name}-full${parsed.ext}`
 }
 
-exports.fullFilePath = (dataset) => {
-  return resolvePath(exports.dir(dataset), exports.fullFileName(dataset))
+exports.fullFilePath = (dataset, fromLoadingDir = false) => {
+  return resolvePath(fromLoadingDir ? exports.loadingDir(dataset) : exports.dir(dataset), exports.fullFileName(dataset))
 }
 
 exports.exportedFilePath = (dataset, ext) => {

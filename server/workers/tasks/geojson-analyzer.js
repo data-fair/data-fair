@@ -57,7 +57,7 @@ class AnalyzerWritable extends Writable {
 exports.process = async function (app, dataset, patch) {
   const attachments = await datasetUtils.lsAttachments(dataset)
   const analyzer = new AnalyzerWritable({ attachments, existingSchema: dataset.schema || [], dataset })
-  const readableStream = fs.createReadStream(datasetUtils.filePath(dataset))
+  const readableStream = fs.createReadStream(datasetUtils.filePath(dataset, true))
   const decodeStream = iconv.decodeStream(dataset.file.encoding)
 
   // the stream is mainly read to get the features, but we also support extracting the crs property if it is present

@@ -12,7 +12,7 @@ const outOfCharacter = require('out-of-character')
 exports.process = async function (app, dataset, patch) {
   const debug = require('debug')(`worker:csv-analyzer:${dataset.id}`)
   debug('extract file sample')
-  const fileSample = await datasetFileSample(datasetUtils.filePath(dataset))
+  const fileSample = await datasetFileSample(datasetUtils.filePath(dataset, true))
   if (!fileSample) throw createError(400, '[noretry] Échec d\'échantillonage du fichier tabulaire, il est vide')
   let decodedSample
   try {

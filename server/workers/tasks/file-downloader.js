@@ -118,8 +118,8 @@ exports.process = async function (app, dataset, patch) {
 
     await fs.move(tmpFile.path, filePath, { overwrite: true })
 
-    patch.loaded.dataset.md5 = md5
-    patch.loaded.dataset.size = (await fs.promises.stat(filePath)).size
+    patch._currentUpdate.dataFile.md5 = md5
+    patch._currentUpdate.dataFile.size = (await fs.promises.stat(filePath)).size
     patch.status = 'loaded'
   }
 

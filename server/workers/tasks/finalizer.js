@@ -135,13 +135,14 @@ exports.process = async function (app, dataset, patch) {
     patch.count = dataset.count = await esUtils.count(es, queryableDataset, {})
   }
 
-  await datasetService.applyPatch(app, dataset, patch)
+  patch.status = 'finalized'
 
   // Remove attachments if the schema does not refer to their existence
   if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
     await attachmentsUtils.removeAll(dataset)
   }
 
+  // TODO: move updateStorage into the main worker ?
   if (dataset.isVirtual) {
     await datasetUtils.updateStorage(app, queryableDataset)
   }
