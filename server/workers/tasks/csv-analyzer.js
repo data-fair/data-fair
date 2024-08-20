@@ -51,7 +51,7 @@ exports.process = async function (app, dataset, patch) {
   const sampleValues = await datasetUtils.sampleValues(dataset)
   debug('list attachments')
   // Now we can extract infos for each field
-  const attachments = await datasetUtils.lsAttachments(dataset)
+  const attachments = await datasetUtils.lsAttachments(dataset, true)
   for (const field of Object.keys(sampleValues)) {
     if (!field) continue // do not keep columns with empty string as header
     const escapedKey = fieldsSniffer.escapeKey(field, dataset)

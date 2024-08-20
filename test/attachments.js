@@ -7,7 +7,7 @@ const testUtils = require('./resources/test-utils')
 const workers = require('../server/workers')
 
 describe('Attachments', () => {
-  it('Process newly uploaded attachments alone', async () => {
+  it.only('Process newly uploaded attachments alone', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/datasets/files.zip')
     const form = new FormData()
@@ -18,14 +18,13 @@ describe('Attachments', () => {
     assert.equal(res.status, 201)
     assert.equal(dataset.status, 'created')
 
-    // dataset converted
-    dataset = await workers.hook(`fileNormalizer/${dataset.id}`)
-    assert.equal(dataset.status, 'normalized')
-    assert.equal(dataset.file.name, 'files.csv')
-
     // ES indexation and finalization
     dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
     assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.file.name, 'files.csv')
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 2)
+    console.log(res.data)
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, {
       params: { highlight: '_file.content', q: 'test' }

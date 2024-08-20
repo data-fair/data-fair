@@ -28,7 +28,7 @@ async function decompress (mimetype, filePath, dirPath) {
 
 exports.process = async function (app, dataset, patch) {
   const debug = require('debug')(`worker:file-normalizer:${dataset.id}`)
-  const originalFilePath = datasetUtils.originalFilePath(dataset)
+  const originalFilePath = datasetUtils.loadedFilePath(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
   const tmpDir = (await tmp.dir({ dir: mainTmpDir, unsafeCleanup: true })).path
 
@@ -57,34 +57,37 @@ exports.process = async function (app, dataset, patch) {
       isShapefile = true
     } else if (filePaths.length === 1 && basicTypes.includes(mime.lookup(filePaths[0].base))) {
       // case of a single data file in an archive
-      const filePath = resolvePath(datasetUtils.dir(dataset), filePaths[0].base)
-      await fs.move(resolvePath(tmpDir, files[0]), filePath, { overwrite: true })
+      const fileName = filePaths[0].base
       dataset.file = {
-        name: filePaths[0].base,
-        size: await fs.stat(filePath).size,
+        name: fileName,
         mimetype: mime.lookup(filePaths[0].base),
         encoding: 'utf-8'
       }
+      const filePath = datasetUtils.filePath(dataset, true)
+      await fs.move(resolvePath(tmpDir, files[0]), filePath, { overwrite: true })
+      dataset.file.size = (await fs.stat(filePath)).size
     } else {
-      if (await fs.pathExists(datasetUtils.attachmentsDir(dataset))) {
+      if (await fs.pathExists(datasetUtils.loadedAttachmentsDir(dataset))) {
         throw createError(400, '[noretry] Vous avez chargé un fichier zip comme fichier de données principal, mais il y a également des pièces jointes chargées.')
       }
-      await fs.move(tmpDir, datasetUtils.attachmentsDir(dataset))
-      const csvFilePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
-      // Either there is a data.csv in this archive and we use it as the main source for data related to the files, or we create it
-      const csvContent = 'file\n' + files.map(f => `"${f}"`).join('\n') + '\n'
-      await fs.writeFile(csvFilePath, csvContent)
+      await fs.move(tmpDir, datasetUtils.loadedAttachmentsDir(dataset))
+      const fileName = baseName + '.csv'
       dataset.file = {
-        name: path.parse(dataset.originalFile.name).name + '.csv',
-        size: await fs.stat(csvFilePath).size,
+        name: fileName,
         mimetype: 'text/csv',
         encoding: 'utf-8'
       }
+      const filePath = datasetUtils.filePath(dataset, true)
+      // Either there is a data.csv in this archive and we use it as the main source for data related to the files, or we create it
+      const csvContent = 'file\n' + files.map(f => `"${f}"`).join('\n') + '\n'
+      await fs.writeFile(filePath, csvContent)
+      dataset.file.size = (await fs.stat(filePath)).size
+
       if (!dataset.schema.find(f => f.key === 'file')) {
         const concept = i18nUtils.vocabulary[config.i18n.defaultLocale]['http://schema.org/DigitalDocument']
         dataset.schema.push({
-          key: 'attachment',
-          'x-originalName': 'attachment',
+          key: 'file',
+          'x-originalName': 'file',
           type: 'string',
           title: concept.title,
           description: concept.description,

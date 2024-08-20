@@ -60,8 +60,8 @@ exports.attachmentsDir = (dataset) => {
   return resolvePath(exports.dir(dataset), 'attachments')
 }
 
-exports.attachmentPath = (dataset, name) => {
-  return resolvePath(exports.attachmentsDir(dataset), name)
+exports.attachmentPath = (dataset, name, fromLoadingDir = false) => {
+  return resolvePath(fromLoadingDir ? exports.loadedAttachmentsDir(dataset) : exports.attachmentsDir(dataset), name)
 }
 
 exports.metadataAttachmentsDir = (dataset) => {
@@ -72,8 +72,8 @@ exports.metadataAttachmentPath = (dataset, name) => {
   return resolvePath(exports.metadataAttachmentsDir(dataset), name)
 }
 
-exports.lsAttachments = async (dataset) => {
-  const dirName = exports.attachmentsDir(dataset)
+exports.lsAttachments = async (dataset, fromLoadingDir = false) => {
+  const dirName = fromLoadingDir ? exports.loadedAttachmentsDir(dataset) : exports.attachmentsDir(dataset)
   if (!await fs.pathExists(dirName)) return []
   const files = (await dir.promiseFiles(dirName))
     .map(f => path.relative(dirName, f))
@@ -133,7 +133,7 @@ exports.dataFiles = async (dataset, publicBaseUrl = config.publicUrl) => {
     if (dataset.file) {
       if (dataset.file.name !== dataset.originalFile.name) {
         if (!files.includes(dataset.file.name)) {
-          console.warn('Normalized data file not found', dir, dataset.file.name)
+          console.warn('Normalized data file not found', dir, dataset.file.name, new Error('BIM'))
         } else {
           results.push({
             name: dataset.file.name,

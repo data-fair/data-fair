@@ -55,7 +55,7 @@ class AnalyzerWritable extends Writable {
 }
 
 exports.process = async function (app, dataset, patch) {
-  const attachments = await datasetUtils.lsAttachments(dataset)
+  const attachments = await datasetUtils.lsAttachments(dataset, true)
   const analyzer = new AnalyzerWritable({ attachments, existingSchema: dataset.schema || [], dataset })
   const readableStream = fs.createReadStream(datasetUtils.filePath(dataset, true))
   const decodeStream = iconv.decodeStream(dataset.file.encoding)

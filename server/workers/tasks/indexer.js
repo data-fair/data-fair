@@ -43,7 +43,7 @@ exports.process = async function (app, dataset, patch, fromLoadingDir, partialRe
     debug(`Initialize new dataset index ${indexName}`)
   }
   const attachments = !!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
-  const indexStream = es.indexStream({ esClient, indexName, dataset, attachments })
+  const indexStream = es.indexStream({ esClient, indexName, dataset, attachments, fromLoadingDir })
 
   if (!dataset.extensions || dataset.extensions.filter(e => e.active).length === 0) {
     if (dataset.file && await fs.pathExists(datasetUtils.fullFilePath(dataset))) {

@@ -37,7 +37,7 @@ class IndexStream extends Transform {
     try {
       let warning
       if (this.options.updateMode) {
-        warning = await applyCalculations(this.options.dataset, item.doc)
+        warning = await applyCalculations(this.options.dataset, item.doc, this.options.fromLoadingDir)
         const keys = Object.keys(item.doc)
         if (keys.length === 0 || (keys.length === 1 && keys[0] === '_i')) return callback()
         this.body.push({ update: { _index: this.options.indexName, _id: item.id, retry_on_conflict: 3 } })
@@ -56,7 +56,7 @@ class IndexStream extends Transform {
         params.index._id = item._id || nanoid()
         delete item._id
         this.body.push(params)
-        warning = await applyCalculations(this.options.dataset, item)
+        warning = await applyCalculations(this.options.dataset, item, this.options.fromLoadingDir)
         this.body.push(item)
         this.bulkChars += JSON.stringify(item).length
       }
@@ -162,14 +162,14 @@ class IndexStream extends Transform {
   }
 }
 
-const applyCalculations = async (dataset, item) => {
+const applyCalculations = async (dataset, item, fromLoadingDir = false) => {
   let warning = null
   const flatItem = flatten(item, { safe: true })
 
   // Add base64 content of attachments
   const attachmentField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (attachmentField && flatItem[attachmentField.key]) {
-    const filePath = datasetUtils.attachmentPath(dataset, flatItem[attachmentField.key])
+    const filePath = datasetUtils.attachmentPath(dataset, flatItem[attachmentField.key], fromLoadingDir)
     if (await fs.pathExists(filePath)) {
       const stats = await fs.stat(filePath)
       if (stats.size > config.defaultLimits.attachmentIndexed) {
@@ -188,7 +188,7 @@ const applyCalculations = async (dataset, item) => {
     try {
       Object.assign(item, geoUtils.latlon2fields(dataset, flatItem))
     } catch (err) {
-      console.log('failure to parse geopoints', dataset.id, err, flatItem)
+      console.warn('failure to parse geopoints', dataset.id, err, flatItem)
       return 'Coordonnée géographique non valide - ' + err.message
     }
   } else if (geoUtils.schemaHasGeometry(dataset.schema)) {
