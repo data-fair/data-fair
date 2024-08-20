@@ -92,6 +92,7 @@ exports.process = async function (app, dataset) {
   }
 
   debug('apply patch', patch)
+  patch._currentUpdate = null
   await datasetsService.applyPatch(app, dataset, patch)
 
   await journals.log(app, dataset, { type: 'finalize-end' }, 'dataset', dataset.isRest)

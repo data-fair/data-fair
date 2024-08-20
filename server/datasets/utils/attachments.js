@@ -3,7 +3,7 @@ const fs = require('fs-extra')
 const multer = require('multer')
 const createError = require('http-errors')
 const mime = require('mime-types')
-const { attachmentsDir, metadataAttachmentsDir, metadataAttachmentPath } = require('./files')
+const { attachmentsDir, loadedAttachmentsDir, metadataAttachmentsDir, metadataAttachmentPath } = require('./files')
 const limits = require('../../misc/utils/limits')
 const exec = require('../../misc/utils/exec')
 
@@ -17,8 +17,8 @@ exports.addAttachments = async (dataset, attachmentsArchive) => {
   await fs.remove(attachmentsArchive.path)
 }
 
-exports.replaceAllAttachments = async (dataset, attachmentsFilePath) => {
-  const dir = attachmentsDir(dataset)
+exports.replaceAllAttachments = async (dataset, attachmentsFilePath, fromLoadingDir = false) => {
+  const dir = fromLoadingDir ? loadedAttachmentsDir(dataset) : attachmentsDir(dataset)
   await fs.ensureDir(dir)
   await fs.emptyDir(dir)
   await exec('unzip', ['-o', '-q', attachmentsFilePath, '-d', dir])

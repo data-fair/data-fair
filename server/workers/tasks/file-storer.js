@@ -1,6 +1,5 @@
 const fs = require('fs-extra')
 const datasetUtils = require('../../datasets/utils')
-const { replaceAllAttachments } = require('../../datasets/utils/attachments')
 
 exports.process = async function (app, dataset, patch) {
   const debug = require('debug')(`worker:file-storer:${dataset.id}`)
@@ -33,10 +32,6 @@ exports.process = async function (app, dataset, patch) {
         }
       }
     }
-  }
-
-  if (dataset._currentUpdate?.attachments) {
-    await replaceAllAttachments(dataset, datasetUtils.loadedAttachmentsFilePath(dataset))
   }
 
   const loadedAttachmentsDir = datasetUtils.loadedAttachmentsDir(dataset)

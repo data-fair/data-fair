@@ -7,7 +7,7 @@ const testUtils = require('./resources/test-utils')
 const workers = require('../server/workers')
 
 describe('Attachments', () => {
-  it.only('Process newly uploaded attachments alone', async () => {
+  it('Process newly uploaded attachments alone', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/datasets/files.zip')
     const form = new FormData()
@@ -24,7 +24,6 @@ describe('Attachments', () => {
     assert.equal(dataset.file.name, 'files.csv')
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
-    console.log(res.data)
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, {
       params: { highlight: '_file.content', q: 'test' }
@@ -119,7 +118,6 @@ describe('Attachments', () => {
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
     dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
     const attachmentsSize = dataset.storage.attachments.size
-
     const form2 = new FormData()
     form2.append('attachments', fs.readFileSync('./test/resources/datasets/files2.zip'), 'files2.zip')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: testUtils.formHeaders(form2) })

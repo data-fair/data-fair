@@ -81,7 +81,9 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
 
   // Ignore patch that doesn't bring actual change
   for (const patchKey of Object.keys(patch)) {
-    if (equal(patch[patchKey], dataset[patchKey])) { delete patch[patchKey] }
+    if (patchKey !== '_currentUpdate' && equal(patch[patchKey], dataset[patchKey])) {
+      delete patch[patchKey]
+    }
   }
   if (Object.keys(patch).length === 0) return { isEmpty: true }
 
