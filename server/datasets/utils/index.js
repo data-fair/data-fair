@@ -187,6 +187,7 @@ exports.clean = (publicUrl, publicationSite, dataset, query = {}, draft = false)
   delete dataset._uniqueRefs
   delete dataset.initFrom
   delete dataset._currentUpdate
+  delete dataset._restPartialUpdate
   delete dataset._readApiKey
   delete dataset._attachmentsTargets
 

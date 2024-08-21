@@ -137,7 +137,7 @@ describe('search', () => {
     const rolesProp = dataset.schema.find(p => p.key === 'roles')
     rolesProp.separator = ' ; '
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
-    await workers.hook('finalizer')
+    await workers.hook(`datasetStateManager/${dataset.id}`)
 
     // TODO: this should be 400
     await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/lines?collapse=roles`), { status: 500 })

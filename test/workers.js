@@ -35,7 +35,7 @@ describe('workers', () => {
     assert.equal(dateField.format, 'date')
 
     // ES indexation and finalization
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.count, 2)
     const idProp = dataset.schema.find(p => p.key === 'id')
@@ -55,7 +55,7 @@ describe('workers', () => {
     assert.equal(res.status, 200)
 
     // Second ES indexation
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.count, 2)
     const esIndices2 = (await global.es.indices.get({ index: esUtils.aliasName(dataset) })).body
@@ -92,7 +92,7 @@ describe('workers', () => {
     form.append('file', datasetFd, 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    let dataset = await workers.hook('finalizer')
+    let dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
     assert.equal(dataset.status, 'finalized')
 
     // Update dataset to ask for a publication
