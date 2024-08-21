@@ -12,7 +12,7 @@ const journals = require('../../misc/utils/journals')
 // Index tabular datasets with elasticsearch using available information on dataset schema
 exports.eventsPrefix = 'index'
 
-exports.process = async function (app, dataset, patch, fromLoadingDir, partialRestUpdate = false) {
+exports.process = async function (app, dataset, patch, ignoreDraftLimit = false, fromLoadingDir = false, partialRestUpdate = false) {
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
   const debugHeap = require('../../misc/utils/heap').debug(`worker:indexer:${dataset.id}`)
 
@@ -34,7 +34,11 @@ exports.process = async function (app, dataset, patch, fromLoadingDir, partialRe
     debug(`Update index ${indexName}`)
   } else {
     try {
-      indexName = await es.initDatasetIndex(esClient, dataset)
+      if (ignoreDraftLimit) {
+        indexName = await es.initDatasetIndex(esClient, { ...dataset, draftReason: null })
+      } else {
+        indexName = await es.initDatasetIndex(esClient, dataset)
+      }
     } catch (err) {
       metrics.internalError('es-init-index', err)
       const { message } = es.extractError(err)
@@ -66,7 +70,7 @@ exports.process = async function (app, dataset, patch, fromLoadingDir, partialRe
     writeStream = restDatasetsUtils.markIndexedStream(db, dataset)
   } else {
     const extended = dataset.extensions && dataset.extensions.find(e => e.active)
-    readStreams = await datasetUtils.readStreams(db, dataset, false, extended, false, fromLoadingDir, progress)
+    readStreams = await datasetUtils.readStreams(db, dataset, false, extended, ignoreDraftLimit, fromLoadingDir, progress)
     writeStream = new Writable({ objectMode: true, write (chunk, encoding, cb) { cb() } })
   }
   await pump(...readStreams, indexStream, writeStream)

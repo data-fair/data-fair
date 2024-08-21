@@ -73,7 +73,7 @@ exports.prepareExtensions = (locale, extensions, oldExtensions = []) => {
 // Apply an extension to a dataset: meaning, query a remote service in batches
 // and add the result either to a "full" file or to the collection in case of a rest dataset
 const compileExpression = require('../../../shared/expr-eval')(config.defaultTimezone).compile
-exports.extend = async (app, dataset, extensions, updateMode) => {
+exports.extend = async (app, dataset, extensions, updateMode, ignoreDraftLimit) => {
   debugMasterData(`extend dataset ${dataset.id} (${dataset.slug})`, extensions)
   const db = app.get('db')
   const es = app.get('es')
@@ -122,7 +122,7 @@ exports.extend = async (app, dataset, extensions, updateMode) => {
   if (dataset.isRest) {
     inputStreams = await restDatasetsUtils.readStreams(db, dataset, updateMode === 'updatedLines' ? { _needsExtending: true } : {}, progress)
   } else {
-    inputStreams = await readStreams(db, dataset, false, false, false, progress)
+    inputStreams = await readStreams(db, dataset, false, ignoreDraftLimit, false, progress)
   }
 
   const writeStreams = await writeExtendedStreams(db, dataset, extensions)

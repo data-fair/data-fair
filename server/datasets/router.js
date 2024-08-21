@@ -21,6 +21,7 @@ const datasetAPIDocs = require('../../contract/dataset-api-docs')
 const privateDatasetAPIDocs = require('../../contract/dataset-private-api-docs')
 const permissions = require('../misc/utils/permissions')
 const usersUtils = require('../misc/utils/users')
+const webhooks = require('../misc/utils/webhooks')
 const datasetUtils = require('./utils')
 const restDatasetsUtils = require('./utils/rest')
 const findUtils = require('../misc/utils/find')
@@ -194,6 +195,8 @@ router.patch('/:datasetId',
 
       await import('@data-fair/lib/express/events-log.js')
         .then((eventsLog) => eventsLog.default.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner }))
+
+      if (patch.status === 'updated') await journals.log(req.app, dataset, { type: 'structure-updated' }, 'dataset')
 
       await syncRemoteService(db, dataset)
     }
@@ -429,16 +432,36 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
   // @ts-ignore
   const dataset = req.dataset
 
+  const db = req.app.get('db')
+
   if (!req.datasetFull.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
 
-  const validatedDataset = await validateDraft(req.app, req.datasetFull, req.dataset, req.user, req)
+  const patch = {
+    status: 'updated',
+    _currentUpdate: { validateDraft: true },
+    updatedAt: (new Date()).toISOString(),
+    updatedBy: { id: req.user.id, name: req.user.name }
+  }
+  const patchedDataset = (await db.collection('datasets')
+    .findOneAndUpdate({ id: dataset.id }, { $set: patch })).value
+
+  const breakingChanges = getSchemaBreakingChanges(req.datasetFull.schema, dataset.schema)
+  for (const breakingChange of breakingChanges) {
+    webhooks.trigger(db, 'dataset', patchedDataset, {
+      type: 'breaking-change',
+      body: require('i18n').getLocales().reduce((a, locale) => {
+        a[locale] = req.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { title: patchedDataset.title, key: breakingChange.key })
+        return a
+      }, {})
+    })
+  }
 
   await import('@data-fair/lib/express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
-  return res.send(validatedDataset)
+  return res.send(patchedDataset)
 }))
 
 // cancel the draft

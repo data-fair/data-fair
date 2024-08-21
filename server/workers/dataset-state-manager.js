@@ -2,7 +2,7 @@ exports.process = async function (app, dataset) {
   const config = require('config')
   const datasetsService = require('../datasets/service')
   const datasetUtils = require('../datasets/utils')
-  const { basicTypes, csvTypes } = require('../datasets/utils/files')
+  const { basicTypes, csvTypes, dir } = require('../datasets/utils/files')
   const journals = require('../misc/utils/journals')
 
   const debug = require('debug')(`worker:dataset-state-manager:${dataset.id}`)
@@ -19,6 +19,10 @@ exports.process = async function (app, dataset) {
     await require('./tasks/initializer').process(app, dataset, patch)
   }
 
+  if (dataset._currentUpdate?.pendingPatch) {
+    Object.assign(patch, dataset._currentUpdate?.pendingPatch)
+  }
+
   if (dataset.remoteFile) {
     if (
       dataset.status === 'created' ||
@@ -30,8 +34,28 @@ exports.process = async function (app, dataset) {
     }
   }
 
-  // full processing a new data file
-  if (dataset._currentUpdate?.dataFile || dataset._currentUpdate?.attachments) {
+  // TODO: apply file-storer after finalizer ?
+
+  let datasetDraft
+  if (dataset._currentUpdate?.validateDraft) {
+    // draft validation is performed by moving the draft directory into the loading directory
+    // applying modified properties and re-performing the last steps (extension, indexing, storing)
+
+    datasetDraft = { ...dataset, ...dataset.draft }
+
+    debug('prepare draft validation patch')
+    await require('./tasks/draft-validator').prepare(app, { ...dataset, ...patch }, patch)
+
+    if (dataset.extensions && dataset.extensions.find(e => e.active)) {
+      debug('run task extender')
+      await require('./tasks/extender').process(app, datasetDraft, patch, true)
+    }
+    debug('run task indexer')
+    dataset._newIndexName = await require('./tasks/indexer').process(app, datasetDraft, patch, true, false)
+    debug('move draft files')
+    await require('./tasks/draft-validator').moveFiles(app, dataset, patch)
+  } else if (dataset._currentUpdate?.dataFile || dataset._currentUpdate?.attachments) {
+    // full processing a new data file
     debug('new data file loaded')
     debug('run task file-detector')
     await require('./tasks/file-detector').process(app, { ...dataset, ...patch }, patch)
@@ -57,7 +81,7 @@ exports.process = async function (app, dataset) {
       await require('./tasks/extender').process(app, { ...dataset, ...patch }, patch)
     }
     debug('run task indexer')
-    dataset._newIndexName = await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, true)
+    dataset._newIndexName = await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, false, true)
     debug('run task file-storer')
     await require('./tasks/file-storer').process(app, dataset, patch)
   } else if (dataset.status === 'finalized' && dataset._restPartialUpdate) {
@@ -71,6 +95,7 @@ exports.process = async function (app, dataset) {
     debug('run task indexer on updated lines')
     await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, false, true)
   } else {
+    // re-perform extending and indexing on demand
     const reExtend = dataset._currentUpdate?.reExtend || (dataset.isRest && dataset.status === 'created')
     const reindex = dataset._currentUpdate?.reindex || reExtend
     if (reExtend && dataset.extensions && dataset.extensions.find(e => e.active)) {
@@ -79,7 +104,7 @@ exports.process = async function (app, dataset) {
     }
     if (reindex) {
       debug('run task indexer')
-      dataset._newIndexName = await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, false)
+      dataset._newIndexName = await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, false, false)
     }
   }
 
@@ -94,6 +119,16 @@ exports.process = async function (app, dataset) {
   debug('apply patch', patch)
   patch._currentUpdate = null
   await datasetsService.applyPatch(app, dataset, patch)
+
+  if (datasetDraft) {
+    debug('cleanup draft data that was validated')
+    try {
+      await require('../datasets/es').delete(app.get('es'), datasetDraft)
+    } catch (err) {
+      if (err.statusCode !== 404) throw err
+    }
+    await require('fs-extra').remove(dir(datasetDraft))
+  }
 
   await journals.log(app, dataset, { type: 'finalize-end' }, 'dataset', dataset.isRest)
 

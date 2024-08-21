@@ -19,6 +19,13 @@ exports.dir = (dataset) => {
   )
 }
 
+exports.draftDir = (dataset) => {
+  return resolvePath(
+    ownerDir(dataset.owner),
+    path.join('datasets-drafts', dataset.id)
+  )
+}
+
 exports.loadingDir = (dataset) => {
   return resolvePath(exports.dir(dataset), 'loading')
 }

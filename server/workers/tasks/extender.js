@@ -4,7 +4,7 @@ const debugMasterData = require('debug')('master-data')
 
 // const eventsPrefix = 'extend'
 
-exports.process = async function (app, dataset, patch) {
+exports.process = async function (app, dataset, patch, ignoreDraftLimit = false) {
   const debug = require('debug')(`worker:extender:${dataset.id}`)
 
   let updateMode = 'all'
@@ -24,7 +24,7 @@ exports.process = async function (app, dataset, patch) {
 
   debug('apply extensions', dataset.extensions)
   // TODO: "full" file of a new data file should be created in the "loading" directory
-  await extensionsUtils.extend(app, dataset, extensions, updateMode)
+  await extensionsUtils.extend(app, dataset, extensions, updateMode, ignoreDraftLimit)
   debug('extensions ok')
 
   debugMasterData(`apply patch after extensions ${dataset.id} (${dataset.slug})`, patch)

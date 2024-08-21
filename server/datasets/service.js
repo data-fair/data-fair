@@ -468,10 +468,7 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
   */
   const db = app.get('db')
   const patch = { ...datasetFull.draft }
-  if (user) {
-    patch.updatedAt = (new Date()).toISOString()
-    patch.updatedBy = { id: user.id, name: user.name }
-  }
+
   if (datasetFull.draft.dataUpdatedAt) {
     patch.dataUpdatedAt = patch.updatedAt
     patch.dataUpdatedBy = patch.updatedBy
@@ -489,18 +486,6 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
 
   if (datasetFull.file) {
     webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
-    if (req) {
-      const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema)
-      for (const breakingChange of breakingChanges) {
-        webhooks.trigger(db, 'dataset', patchedDataset, {
-          type: 'breaking-change',
-          body: require('i18n').getLocales().reduce((a, locale) => {
-            a[locale] = req.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { title: patchedDataset.title, key: breakingChange.key })
-            return a
-          }, {})
-        })
-      }
-    }
   }
 
   await fs.ensureDir(dir(patchedDataset))
