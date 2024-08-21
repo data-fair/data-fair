@@ -13,7 +13,7 @@ const pump = require('../../misc/utils/pipe')
 const limits = require('../../misc/utils/limits')
 const catalogs = require('../../catalogs/plugins')
 const datasetUtils = require('../../datasets/utils')
-const { tmpDir } = require('../../datasets/utils/files')
+const { tmpDir, fsyncFile } = require('../../datasets/utils/files')
 
 exports.process = async function (app, dataset, patch) {
   const debug = require('debug')(`worker:downloader:${dataset.id}`)
@@ -89,8 +89,8 @@ exports.process = async function (app, dataset, patch) {
   }
 
   /** @type {any} */
-  patch.loaded = {
-    dataset: {
+  dataset._currentUpdate = {
+    dataFile: {
       name: fileName,
       mimetype
     }
@@ -103,7 +103,15 @@ exports.process = async function (app, dataset, patch) {
   if (response.status === 304 || (autoUpdating && dataset.originalFile && dataset.originalFile.md5 === md5)) {
     // prevent re-indexing when the file didn't change
     debug('content of remote file did not change')
-    await tmpFile.cleanup()
+    if (dataset.originalFile && dataset.originalFile.name !== fileName) {
+      await fs.copy(datasetUtils.originalFilePath(dataset), filePath, { overwrite: true })
+      await fsyncFile(filePath)
+      dataset._currentUpdate.dataFile.md5 = dataset.originalFile.md5
+      dataset._currentUpdate.dataFile.size = dataset.originalFile.size
+    } else {
+      await tmpFile.cleanup()
+      return true
+    }
   } else {
     if (response.headers.etag) {
       patch.remoteFile = patch.remoteFile || { ...dataset.remoteFile }
@@ -117,10 +125,10 @@ exports.process = async function (app, dataset, patch) {
     }
 
     await fs.move(tmpFile.path, filePath, { overwrite: true })
+    await fsyncFile(filePath)
 
-    patch._currentUpdate.dataFile.md5 = md5
-    patch._currentUpdate.dataFile.size = (await fs.promises.stat(filePath)).size
-    patch.status = 'loaded'
+    dataset._currentUpdate.dataFile.md5 = md5
+    dataset._currentUpdate.dataFile.size = (await fs.promises.stat(filePath)).size
   }
 
   if (autoUpdating) {

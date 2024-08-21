@@ -31,7 +31,8 @@ exports.process = async function (app, dataset) {
       (dataset.status === 'finalized' && dataset.remoteFile?.autoUpdate?.active && dataset.remoteFile.autoUpdate.nextUpdate < now)
     ) {
       debug('run task file downloader')
-      await require('./tasks/file-downloader').process(app, { ...dataset, ...patch }, patch)
+      const noFileChange = await require('./tasks/file-downloader').process(app, dataset, patch)
+      if (noFileChange) return
     }
   }
 

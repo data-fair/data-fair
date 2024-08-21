@@ -156,7 +156,7 @@ const getTypesFilters = () => {
           // fetch rest datasets with an automatic export to do
           { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: new Date().toISOString() } },
           // file datasets with remote url that need refreshing
-          { status: { $nin: ['error'] }, 'remoteFile.autoUpdate.active': true, 'remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() } },
+          { status: 'finalized', 'remoteFile.autoUpdate.active': true, 'remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() } },
           // renew read api key
           { 'readApiKey.active': true, 'readApiKey.renewAt': { $lt: new Date().toISOString() } },
           // fetch datasets that are finalized, but need to update an extension
@@ -232,6 +232,8 @@ async function iter (app, resource, type) {
       ) {
         taskKey = 'readApiKeyRenewer'
       } else if (resource.status === 'finalized' && resource.isRest && resource.extensions?.find(e => e.needsUpdate)) {
+        taskKey = 'datasetStateManager'
+      } else if (resource.status === 'finalized' && resource.remoteFile?.autoUpdate?.active === true && resource.remoteFile.autoUpdate.nextUpdate < now) {
         taskKey = 'datasetStateManager'
       } else if (resource.status === 'finalized' && resource.isRest && resource.extensions?.find(e => e.nextUpdate && e.nextUpdate < now)) {
         const extensions = [...resource.extensions]

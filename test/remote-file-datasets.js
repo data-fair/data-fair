@@ -62,6 +62,7 @@ describe('datasets based on remote files', () => {
     assert.ok(dataset.schema.find(p => p.key === 'col'))
     assert.equal(dataset.originalFile.name, 'data.csv')
     nockScope.done()
+    const finalizedAt = dataset.finalizedAt
 
     // force change of nextExport date to trigger worker
     // but md5 did not change
@@ -70,8 +71,9 @@ describe('datasets based on remote files', () => {
       { id: dataset.id }, { $set: { 'remoteFile.autoUpdate.nextUpdate': nextUpdate } })
     nockScope = nock('http://test-remote.com')
       .get('/data.csv').reply(200, 'col\nval1\nval2')
-    dataset = await workers.hook('fileDownloader/' + dataset.id)
+    dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.finalizedAt, finalizedAt)
     nockScope.done()
 
     // trigger re-downloading but etag matches did not change
@@ -79,8 +81,9 @@ describe('datasets based on remote files', () => {
       { id: dataset.id }, { $set: { 'remoteFile.autoUpdate.nextUpdate': nextUpdate } })
     nockScope = nock('http://test-remote.com')
       .get('/data.csv').reply(304)
-    dataset = await workers.hook('fileDownloader/' + dataset.id)
+    dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.finalizedAt, finalizedAt)
     nockScope.done()
 
     // trigger re-downloading and content changed
@@ -90,6 +93,7 @@ describe('datasets based on remote files', () => {
       .get('/data.csv').reply(200, 'col\nval11\nval22')
     dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
+    assert.notEqual(dataset.finalizedAt, finalizedAt)
     nockScope.done()
 
     // trigger re-downloading and file name changed
@@ -98,6 +102,7 @@ describe('datasets based on remote files', () => {
       .get('/data2.csv').reply(200, 'col\nval11\nval22')
     dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.originalFile.name, 'data2.csv')
+    assert.notEqual(dataset.finalizedAt, finalizedAt)
     nockScope.done()
 
     // trigger re-downloading and file name is specifid by content-disposition header
@@ -106,6 +111,7 @@ describe('datasets based on remote files', () => {
       .get('/data3.csv').reply(200, 'col\nval11\nval22', { 'content-disposition': 'attachment; filename="remote-data.csv"' })
     dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.originalFile.name, 'remote-data.csv')
+    assert.notEqual(dataset.finalizedAt, finalizedAt)
     nockScope.done()
   })
 })
