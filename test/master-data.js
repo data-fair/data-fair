@@ -148,7 +148,6 @@ describe('Master data management', () => {
         select: ['extra']
       }]
     })
-    await workers.hook('extender/slave')
     let slave = await workers.hook('datasetStateManager/slave')
 
     const extraProp = slave.schema.find(p => p.key === '_siret.extra')

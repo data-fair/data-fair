@@ -138,7 +138,7 @@ exports.process = async function (app, dataset) {
     await require('../datasets/es').switchAlias(app.get('es'), { ...dataset, ...patch, _newIndexName: null }, dataset._newIndexName)
   }
 
-  debug('apply patch', patch)
+  debug('apply patch', Object.keys(patch))
   patch._currentUpdate = null
   await datasetsService.applyPatch(app, dataset, patch)
 

@@ -394,6 +394,10 @@ exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappin
       await esUtils.updateDatasetMapping(app.get('es'), { id: dataset.id, schema: patch.schema }, dataset)
       delete patch._currentUpdate.reindex
       delete patch._currentUpdate.reExtend
+      if (Object.keys(patch._currentUpdate).length === 0 && patch.extensions && patch.extensions.find(e => e.needsUpdate)) {
+        delete patch.status
+        delete patch._currentUpdate
+      }
     } catch (err) {
       // generated ES mappings are not compatible, trigger full re-indexing
     }
