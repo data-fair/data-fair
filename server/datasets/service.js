@@ -299,7 +299,7 @@ exports.createDataset = async (app, locale, user, owner, body, files, draft, onC
       await fs.move(attachmentsFile.path, loadedAttachmentsFilePath)
       await fsyncFile(loadedAttachmentsFilePath)
     }
-    await datasetUtils.updateStorage(app, dataset, false, false)
+    if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, false)
   }
   if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with extensions by ${user?.name} (${user?.id})`, insertedDataset.extensions)
   if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with masterData by ${user?.name} (${user?.id})`, insertedDataset.masterData)
@@ -539,14 +539,12 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
  * @param {any} patch
  * @returns {Promise<any>}
  */
-exports.validateCompatibleDraft = async (app, dataset, patch) => {
-  if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {
-    const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
-    Object.assign(datasetFull.draft, patch)
-    const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
-    if (!datasetDraft.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument') && schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
-      return await exports.validateDraft(app, datasetFull, datasetDraft)
-    }
+exports.isDraftCompatible = async (app, dataset, patch) => {
+  const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
+  Object.assign(datasetFull.draft, patch)
+  const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
+  if (!datasetDraft.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument') && schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
+    return true
   }
-  return null
+  return false
 }

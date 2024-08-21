@@ -13,8 +13,8 @@ const esUtils = require('../server/datasets/es')
 nock('http://test-catalog.com').persist()
   .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
 
-describe('datasets in draft mode', () => {
-  it.only('create new dataset in draft mode and validate it', async () => {
+describe.only('datasets in draft mode', () => {
+  it('create new dataset in draft mode and validate it', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
     const form = new FormData()
@@ -116,7 +116,8 @@ describe('datasets in draft mode', () => {
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    let dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
+    let dataset = res.data
+    dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
 
     // upload a new file
     const datasetFd2 = fs.readFileSync('./test/resources/datasets/dataset2.csv')
@@ -124,7 +125,7 @@ describe('datasets in draft mode', () => {
     form2.append('file', datasetFd2, 'dataset2.csv')
     form2.append('description', 'draft description')
     dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
-    assert.equal(dataset.status, 'loaded')
+    assert.equal(dataset.status, 'updated')
     assert.equal(dataset.draftReason.key, 'file-updated')
     dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
     assert.equal(dataset.file.name, 'dataset1.csv')
@@ -157,57 +158,39 @@ describe('datasets in draft mode', () => {
     // the journal kept traces of all changes (draft and not)
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal.pop().type, 'dataset-created')
-    assert.equal(journal.pop().type, 'initialize-start')
-    assert.equal(journal.pop().type, 'initialize-end')
-    assert.equal(journal.pop().type, 'store-start')
-    assert.equal(journal.pop().type, 'store-end')
-    assert.equal(journal.pop().type, 'analyze-start')
-    assert.equal(journal.pop().type, 'analyze-end')
-    assert.equal(journal.pop().type, 'index-start')
-    assert.equal(journal.pop().type, 'index-end')
-    assert.equal(journal.pop().type, 'finalize-start')
     assert.equal(journal.pop().type, 'finalize-end')
     let evt = journal.pop()
     assert.equal(evt.type, 'data-updated')
     assert.equal(evt.draft, true)
-    assert.equal(journal.pop().type, 'store-start')
-    assert.equal(journal.pop().type, 'store-end')
-    assert.equal(journal.pop().type, 'analyze-start')
-    assert.equal(journal.pop().type, 'analyze-end')
-    assert.equal(journal.pop().type, 'index-start')
-    assert.equal(journal.pop().type, 'index-end')
-    assert.equal(journal.pop().type, 'finalize-start')
     assert.equal(journal.pop().type, 'finalize-end')
     assert.equal(journal.pop().type, 'draft-validated')
     evt = journal.pop()
-    assert.equal(evt.type, 'index-start')
+    assert.equal(evt.type, 'finalize-end')
     assert.equal(evt.draft, undefined)
-    assert.equal(journal.pop().type, 'index-end')
-    assert.equal(journal.pop().type, 'finalize-start')
-    assert.equal(journal.pop().type, 'finalize-end')
 
     // the notifications contain the same thing as the journal minus not very interesting events
     // and adding some extra events were triggerred when validating the draft
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-dataset-created:' + dataset.slug)
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-finalize-end:' + dataset.slug)
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-draft-data-updated:' + dataset.slug)
-    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-data-updated:' + dataset.slug)
     // console.log(notifications.shift())
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:' + dataset.slug)
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:' + dataset.slug)
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:' + dataset.slug)
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:' + dataset.slug)
+    assert.equal(notifications.shift().topic.key, 'data-fair:dataset-data-updated:' + dataset.slug)
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-finalize-end:' + dataset.slug)
   })
 
-  it('create a draft when updating the data file and auto-validate if it\'s schema is compatible', async () => {
+  it.only('create a draft when updating the data file and auto-validate if it\'s schema is compatible', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    let dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
+    let dataset = res.data
+    dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
 
     // upload a new file
     const datasetFd2 = fs.readFileSync('./test/resources/datasets/dataset1.csv')
@@ -215,13 +198,16 @@ describe('datasets in draft mode', () => {
     form2.append('file', datasetFd2, 'dataset1.csv')
     form2.append('description', 'draft description')
     dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
-    assert.equal(dataset.status, 'loaded')
+    assert.equal(dataset.status, 'updated')
     assert.equal(dataset.draftReason.key, 'file-updated')
+    // the worker will process the draft version, then interrupt itself and trigger the processing of the full version
     dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
+    assert.ok(dataset.draft)
+    dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
+    assert.ok(!dataset.draft)
     assert.equal(dataset.file.name, 'dataset1.csv')
     assert.equal(dataset.count, 2)
     // console.log(dataset)
-    assert.ok(!dataset.draft)
     assert.ok(dataset.file.schema.length, 6)
     assert.ok(dataset.schema.length, 6)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -235,30 +221,14 @@ describe('datasets in draft mode', () => {
 
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal.pop().type, 'dataset-created')
-    assert.equal(journal.pop().type, 'initialize-start')
-    assert.equal(journal.pop().type, 'initialize-end')
-    assert.equal(journal.pop().type, 'store-start')
-    assert.equal(journal.pop().type, 'store-end')
-    assert.equal(journal.pop().type, 'analyze-start')
-    assert.equal(journal.pop().type, 'analyze-end')
-    assert.equal(journal.pop().type, 'index-start')
-    assert.equal(journal.pop().type, 'index-end')
-    assert.equal(journal.pop().type, 'finalize-start')
     assert.equal(journal.pop().type, 'finalize-end')
     let evt = journal.pop()
     assert.equal(evt.type, 'data-updated')
     assert.equal(evt.draft, true)
-    assert.equal(journal.pop().type, 'store-start')
-    assert.equal(journal.pop().type, 'store-end')
-    assert.equal(journal.pop().type, 'analyze-start')
     assert.equal(journal.pop().type, 'draft-validated')
     evt = journal.pop()
-    assert.equal(evt.type, 'analyze-end')
+    assert.equal(evt.type, 'finalize-end')
     assert.equal(evt.draft, undefined)
-    assert.equal(journal.pop().type, 'index-start')
-    assert.equal(journal.pop().type, 'index-end')
-    assert.equal(journal.pop().type, 'finalize-start')
-    assert.equal(journal.pop().type, 'finalize-end')
   })
 
   it('create a draft when updating the data file but do not auto-validate if there are some validation errors', async () => {

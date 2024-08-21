@@ -76,10 +76,4 @@ exports.process = async function (app, dataset, patch) {
 
   patch.file = dataset.file
   patch.schema = dataset.schema
-
-  /* TODO: rework auto validation of drafts
-  if (!datasetUtils.schemaHasValidationRules(dataset.schema) && await datasetsService.validateCompatibleDraft(app, dataset, patch)) {
-    return
-  }
-  */
 }

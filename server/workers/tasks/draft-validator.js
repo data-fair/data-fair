@@ -1,12 +1,13 @@
 const fs = require('fs-extra')
-const { dir, attachmentsDir, fsyncFile, filePath, originalFilePath, fullFilePath } = require('../../datasets/utils/files')
-const webhooks = require('../../misc/utils/webhooks')
-const journals = require('../../misc/utils/journals')
 
 exports.prepare = async function (app, dataset, patch) {
+  const webhooks = require('../../misc/utils/webhooks')
+  const journals = require('../../misc/utils/journals')
+
   const debug = require('debug')(`worker:draft-validator:${dataset.id}`)
 
   Object.assign(patch, dataset.draft)
+  patch.draft = null
   if (dataset.draft.dataUpdatedAt) {
     patch.dataUpdatedAt = patch.updatedAt
     patch.dataUpdatedBy = patch.updatedBy
@@ -31,6 +32,8 @@ exports.prepare = async function (app, dataset, patch) {
 }
 
 exports.moveFiles = async function (app, dataset, patch) {
+  const { dir, attachmentsDir, fsyncFile, filePath, originalFilePath, fullFilePath } = require('../../datasets/utils/files')
+
   const patchedDataset = { ...dataset, ...patch }
   const datasetDraft = { ...dataset, ...dataset.draft }
 
@@ -70,5 +73,19 @@ exports.moveFiles = async function (app, dataset, patch) {
     }
   } else if (dataset.file) {
     await fs.remove(fullFilePath(dataset))
+  }
+}
+
+exports.autoValidate = async function (app, dataset, patch) {
+  const datasetsService = require('../../datasets/service')
+  if (await datasetsService.isDraftCompatible(app, dataset, patch)) {
+    patch._currentUpdate = null
+    patch.status = 'finalized'
+    await require('./file-storer').process(app, dataset, patch)
+    await datasetsService.applyPatch(app, dataset, patch)
+    await app.get('db').collection('datasets').updateOne({ id: dataset.id }, { $set: { status: 'updated', _currentUpdate: { validateDraft: true } } })
+    return true
+  } else {
+    return false
   }
 }

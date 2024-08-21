@@ -71,8 +71,5 @@ exports.process = async function (app, dataset, patch) {
   const errorsSummary = validateStream.errorsSummary()
   if (errorsSummary) {
     await journals.log(app, dataset, { type: 'error', data: errorsSummary })
-  } else {
-    // TODO: manage auto-validation of draft
-    // if (await datasetsService.validateCompatibleDraft(app, dataset, patch)) return
   }
 }

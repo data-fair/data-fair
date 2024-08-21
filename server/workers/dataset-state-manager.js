@@ -76,6 +76,12 @@ exports.process = async function (app, dataset) {
       debug('run task file-validator')
       await require('./tasks/file-validator').process(app, { ...dataset, ...patch }, patch)
     }
+
+    // interrupt work on a draft that is fully compatible
+    if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {
+      if (await require('./tasks/draft-validator').autoValidate(app, dataset, patch)) return
+    }
+
     if (dataset.extensions && dataset.extensions.find(e => e.active)) {
       debug('run task extender')
       await require('./tasks/extender').process(app, { ...dataset, ...patch }, patch)
@@ -95,6 +101,11 @@ exports.process = async function (app, dataset) {
     debug('run task indexer on updated lines')
     await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, false, true)
   } else {
+    // interrupt work on a draft that is fully compatible
+    if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {
+      if (await require('./tasks/draft-validator').autoValidate(app, dataset, patch)) return
+    }
+
     // re-perform extending and indexing on demand
     const reExtend = dataset._currentUpdate?.reExtend || (dataset.isRest && dataset.status === 'created')
     const reindex = dataset._currentUpdate?.reindex || reExtend
