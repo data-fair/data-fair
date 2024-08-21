@@ -23,6 +23,13 @@
         "en": "the dataset was created"
       }
     },
+    "structure-updated": {
+      "icon": "mdi-pencil",
+      "text": {
+        "fr": "la structure a été mise à jour",
+        "en": "the data as updated"
+      }
+    },
     "data-updated": {
       "icon": "mdi-pencil",
       "text": {

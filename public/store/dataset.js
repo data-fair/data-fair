@@ -23,6 +23,7 @@ export default () => ({
       'store-start': 'loaded',
       'store-end': 'stored',
       'convert-start': 'stored',
+      'structure-updated': 'stored',
       'convert-end': 'normalized',
       'analyze-start': 'normalized',
       'analyze-end': 'analyzed',
@@ -214,7 +215,7 @@ export default () => ({
           eventBus.$emit('notification', { error: event.data, msg: 'Le service a rencontré une erreur pendant le traitement du jeu de données:' })
         }
 
-        if (['initialize-end', 'draft-validated', 'draft-cancelled', 'data-updated'].includes(event.type)) {
+        if (['draft-validated', 'draft-cancelled', 'data-updated', 'structure-updated'].includes(event.type)) {
           return dispatch('fetchInfo')
         }
 
