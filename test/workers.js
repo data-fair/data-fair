@@ -22,21 +22,18 @@ describe('workers', () => {
     form.append('file', datasetFd, 'dataset.csv')
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let dataset = res.data
     assert.equal(res.status, 201)
 
-    // Dataset received and parsed
-    let dataset = await workers.hook('csvAnalyzer')
-    assert.equal(dataset.status, 'analyzed')
+    // // Dataset received and parsed + ES indexation and finalization
+    dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
+    assert.equal(dataset.status, 'finalized')
     const idField = dataset.schema.find(f => f.key === 'id')
     const dateField = dataset.schema.find(f => f.key === 'some_date')
     assert.equal(idField.type, 'string')
     assert.equal(idField.format, undefined)
     assert.equal(dateField.type, 'string')
     assert.equal(dateField.format, 'date')
-
-    // ES indexation and finalization
-    dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
-    assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.count, 2)
     const idProp = dataset.schema.find(p => p.key === 'id')
     assert.equal(idProp['x-cardinality'], 2)
@@ -72,7 +69,7 @@ describe('workers', () => {
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset.csv')
     await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
-    await assert.rejects(workers.hook('indexer'), () => true)
+    await assert.rejects(workers.hook(`datasetStateManager/${dataset.id}`), () => true)
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
     assert.equal(res.status, 200)
     assert.equal(res.data[0].type, 'error')
@@ -92,7 +89,8 @@ describe('workers', () => {
     form.append('file', datasetFd, 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    let dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
+    let dataset = res.data
+    dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
     assert.equal(dataset.status, 'finalized')
 
     // Update dataset to ask for a publication
@@ -113,9 +111,8 @@ describe('workers', () => {
     form.append('file', datasetFd, 'dataset.csv')
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let dataset = res.data
     assert.equal(res.status, 201)
-    let dataset = await workers.hook(`csvAnalyzer/${res.data.id}`)
-    assert.equal(dataset.status, 'analyzed')
     dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.count, 2)
@@ -152,7 +149,7 @@ describe('workers', () => {
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
     const dataset = res.data
-    await assert.rejects(workers.hook(`indexer/${dataset.id}`), () => true)
+    await assert.rejects(workers.hook(`datasetStateManager/${dataset.id}`), () => true)
     // Check that there is an error message in the journal
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
     assert.equal(res.status, 200)
@@ -165,7 +162,7 @@ describe('workers', () => {
     config.worker.spawnTask = true
     const ax = global.ax.dmeadus
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'trigger test error 400' })).data
-    await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
+    await assert.rejects(workers.hook('datasetStateManager/' + dataset.id), () => true)
     // Check that there is an error message in the journal
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal[0].type, 'error')
@@ -178,7 +175,7 @@ describe('workers', () => {
     config.worker.errorRetryDelay = 100
     const ax = global.ax.dmeadus
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'trigger test error' })).data
-    await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
+    await assert.rejects(workers.hook('datasetStateManager/' + dataset.id), () => true)
     let journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal[0].type, 'error-retry')
     assert.equal(journal[0].data, 'This is a test error')
@@ -186,7 +183,7 @@ describe('workers', () => {
     await new Promise(resolve => setTimeout(resolve, 100))
     await global.db.collection('locks').deleteOne({ _id: 'dataset:' + dataset.id })
 
-    await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
+    await assert.rejects(workers.hook('datasetStateManager/' + dataset.id), () => true)
     journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal[0].type, 'error')
     assert.equal(journal[0].data, 'This is a test error')
@@ -205,13 +202,15 @@ describe('workers', () => {
     // changing separator requires a full redindexing
     idProp.separator = ','
     let patchedDataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema })).data
-    assert.equal(patchedDataset.status, 'analyzed')
+    assert.equal(patchedDataset.status, 'updated')
+    assert.deepEqual(patchedDataset._currentUpdate, { reindex: true })
     await workers.hook(`datasetStateManager/${dataset.id}`)
 
     // changing capabilities requires only refinalizing
     idProp['x-capabilities'] = { insensitive: false }
     patchedDataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema })).data
-    assert.equal(patchedDataset.status, 'indexed')
+    assert.equal(patchedDataset.status, 'updated')
+    assert.deepEqual(patchedDataset._currentUpdate, { })
     await workers.hook(`datasetStateManager/${dataset.id}`)
 
     // changing a title does not require any worker tasks

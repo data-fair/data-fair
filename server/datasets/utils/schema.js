@@ -204,6 +204,14 @@ exports.extendedSchema = async (db, dataset, fixConcept = true) => {
   schema.push({ 'x-calculated': true, key: '_i', type: 'integer', title: 'Numéro de ligne', description: 'Indice de la ligne dans le fichier d\'origine' })
   schema.push({ 'x-calculated': true, key: '_rand', type: 'integer', title: 'Nombre aléatoire', description: 'Un nombre aléatoire associé à la ligne qui permet d\'obtenir un tri aléatoire par exemple' })
 
+  for (const property of schema) {
+    if (property.ignoreDetection) {
+      property.type = 'string'
+      delete property.format
+    }
+    if (property.type === 'integer' && property.ignoreIntegerDetection) property.type = 'number'
+  }
+
   // maintain coherent x-refersTo and x-concept annotations
   if (fixConcept) {
     let ownerVocabulary

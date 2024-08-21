@@ -34,7 +34,7 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
   // changed a previously failed dataset, retry the previous update (dataset._currentUpdate should be preserved)
   if (dataset.status === 'error') {
     patch.status = 'updated'
-    patch._currentUpdate = dataset._currentUpdate ?? { reindex: true }
+    patch._currentUpdate = dataset._currentUpdate ?? {}
   } else {
     patch._currentUpdate = {}
   }
@@ -161,14 +161,12 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
       patch.status = 'updated'
     }
   } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && df.ignoreDetection !== f.ignoreDetection))) {
-    // some ignoreDetection param has changed on a field, trigger full re-indexing
+    // some ignoreDetection param has changed on a field, trigger re-indexing
     patch.status = 'updated'
-    // TODO: also re-analysis ?
     patch._currentUpdate.reindex = true
   } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && df.ignoreIntegerDetection !== f.ignoreIntegerDetection))) {
-    // some ignoreIntegerDetection param has changed on a field, trigger full analysis / re-indexing
+    // some ignoreIntegerDetection param has changed on a field, trigger re-indexing
     patch.status = 'updated'
-    // TODO: also re-analysis ?
     patch._currentUpdate.reindex = true
   } else if (patch.extensions && !dataset.isRest) {
     // extensions have changed, trigger full re-indexing
