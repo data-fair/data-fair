@@ -98,9 +98,14 @@ exports.process = async function (app, dataset, patch) {
         // from file to file: copy data files
         patch.file = parentDataset.file
         patch.originalFile = parentDataset.originalFile
-        await fs.copy(datasetUtils.originalFilePath(parentDataset), datasetUtils.originalFilePath({ ...dataset, ...patch }))
+        dataset._currentUpdate = { reExtend: true }
+        const newOriginalFilePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
+        await fs.copy(datasetUtils.originalFilePath(parentDataset), newOriginalFilePath)
+        await filesUtils.fsyncFile(newOriginalFilePath)
         if (datasetUtils.originalFilePath(parentDataset) !== datasetUtils.filePath(parentDataset)) {
-          await fs.copy(datasetUtils.filePath(parentDataset), datasetUtils.filePath({ ...dataset, ...patch }))
+          const newFilePath = datasetUtils.filePath({ ...dataset, ...patch })
+          await fs.copy(datasetUtils.filePath(parentDataset), newFilePath)
+          await filesUtils.fsyncFile(newFilePath)
         }
       } else {
         // from rest to file: make export and use as data file
@@ -118,8 +123,8 @@ exports.process = async function (app, dataset, patch) {
         await filesUtils.fsyncFile(filePath)
         const loadedFileStats = await fs.stat(filePath)
 
-        patch.loaded = {
-          dataset: {
+        dataset._currentUpdate = {
+          dataFile: {
             name: fileName,
             size: loadedFileStats.size,
             mimetype: 'text/csv'
@@ -129,6 +134,9 @@ exports.process = async function (app, dataset, patch) {
 
       // also copy attachments
       if (attachments.length) {
+        if (dataset._currentUpdate?.dataFile) {
+          dataset._currentUpdate.attachments = true
+        }
         for (const attachment of attachments) {
           const newPath = attachmentPath(dataset, attachment)
           await fs.ensureDir(path.dirname(newPath))

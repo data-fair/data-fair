@@ -74,8 +74,8 @@ describe('file datasets with validation rules', () => {
     dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.count, 2)
     const patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema })).data
-    assert.equal(patched.status, 'validation-updated')
-    dataset = await workers.hook('fileValidator/' + dataset.id)
+    assert.equal(patched.status, 'updated')
+    dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
   })
 
@@ -88,8 +88,8 @@ describe('file datasets with validation rules', () => {
     dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.count, 2)
     const patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema })).data
-    assert.equal(patched.status, 'validation-updated')
-    await assert.rejects(workers.hook('fileValidator/' + dataset.id), err => {
+    assert.equal(patched.status, 'updated')
+    await assert.rejects(workers.hook('datasetStateManager/' + dataset.id), err => {
       assert.ok(err.message.includes('ont une erreur de validation'))
       return true
     })

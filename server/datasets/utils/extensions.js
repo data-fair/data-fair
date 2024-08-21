@@ -134,7 +134,7 @@ exports.extend = async (app, dataset, extensions, updateMode, ignoreDraftLimit, 
   const filePath = writeStreams[writeStreams.length - 1].path
   if (filePath) {
     await fs.move(filePath, fullFilePath(dataset, fromLoadingDir), { overwrite: true })
-    await fsyncFile(fullFilePath(dataset))
+    await fsyncFile(fullFilePath(dataset, fromLoadingDir))
   }
 
   debug('Extension is over')

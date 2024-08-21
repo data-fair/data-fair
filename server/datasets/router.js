@@ -196,7 +196,9 @@ router.patch('/:datasetId',
       await import('@data-fair/lib/express/events-log.js')
         .then((eventsLog) => eventsLog.default.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner }))
 
-      if (patch.status === 'updated') await journals.log(req.app, dataset, { type: 'structure-updated' }, 'dataset')
+      if (patch.status === 'updated' && !(patch._currentUpdate.reValidate && Object.keys(patch._currentUpdate).length === 1)) {
+        await journals.log(req.app, dataset, { type: 'structure-updated' }, 'dataset')
+      }
 
       await syncRemoteService(db, dataset)
     }

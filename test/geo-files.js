@@ -14,11 +14,12 @@ describe('geo files support', () => {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
+    let dataset = res.data
 
-    // Dataset received and parsed
-    let dataset = await workers.hook('geojsonAnalyzer')
-    assert.equal(dataset.status, 'analyzed')
-    assert.equal(dataset.schema.length, 6)
+    // ES indexation and finalization
+    dataset = await workers.hook('datasetStateManager/' + dataset.id)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.schema.filter(p => !p['x-calculated']).length, 6)
     const idField = dataset.schema.find(field => field.key === 'id')
     assert.equal(idField.type, 'string')
     const descField = dataset.schema.find(field => field.key === 'desc')
@@ -28,10 +29,6 @@ describe('geo files support', () => {
     assert.equal(boolField.type, 'boolean')
     const intField = dataset.schema.find(field => field.key === 'int')
     assert.equal(intField.type, 'integer')
-
-    // ES indexation and finalization
-    dataset = await workers.hook('datasetStateManager/' + dataset.id)
-    assert.equal(dataset.status, 'finalized')
 
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
     assert.equal(lines.length, 3)
@@ -90,12 +87,11 @@ describe('geo files support', () => {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
+    const dataset = res.data
 
-    // Dataset received and parsed
-    const dataset = await workers.hook('geojsonAnalyzer/' + res.data.id)
+    await workers.hook('datasetStateManager/' + dataset.id)
     const prop1 = dataset.schema.find(p => p.key === 'prop1')
     assert.equal(prop1['x-refersTo'], 'http://rdf.insee.fr/def/geo#codeRegion')
-    await workers.hook('datasetStateManager/' + dataset.id)
   })
 
   it('Upload geojson dataset with some managed fixes', async () => {
@@ -150,15 +146,13 @@ describe('geo files support', () => {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
+    let dataset = res.data
 
     // dataset converted
-    const dataset = await workers.hook('fileNormalizer/' + res.data.id)
-    assert.equal(dataset.status, 'normalized')
+    dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.file.name, 'stations.geojson')
-
     assert.equal(dataset.storage.dataFiles.length, 2)
     assert.equal(dataset.storage.attachments.size, 0)
-    await workers.hook('datasetStateManager/' + dataset.id)
   })
 
   it('Process shapefile dataset where zip file has different name from contents', async () => {
@@ -173,12 +167,11 @@ describe('geo files support', () => {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
+    let dataset = res.data
 
     // dataset converted
-    const dataset = await workers.hook('fileNormalizer/' + res.data.id)
-    assert.equal(dataset.status, 'normalized')
+    dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.file.name, 'stations2.geojson')
-    await workers.hook('datasetStateManager/' + dataset.id)
   })
 
   it('Upload CSV file with WKT geometries', async () => {
@@ -211,17 +204,13 @@ describe('geo files support', () => {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-
-    // dataset converted
-    let dataset = await workers.hook('fileNormalizer/' + res.data.id)
-    assert.equal(dataset.status, 'normalized')
-    assert.equal(dataset.file.name, 'paths.geojson')
-
-    assert.equal(dataset.storage.dataFiles.length, 2)
-    assert.equal(dataset.storage.attachments.size, 0)
+    let dataset = res.data
 
     dataset = await workers.hook('datasetStateManager/' + dataset.id)
     assert.equal(dataset.count, 1)
+    assert.equal(dataset.file.name, 'paths.geojson')
+    assert.equal(dataset.storage.dataFiles.length, 2)
+    assert.equal(dataset.storage.attachments.size, 0)
 
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
     assert.equal(lines.results[0].name, 'Tronçon n°1 - de Saint-Brieuc (22) à Saint-Nic (29)')

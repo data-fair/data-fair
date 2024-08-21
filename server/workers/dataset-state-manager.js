@@ -16,6 +16,7 @@ exports.process = async function (app, dataset) {
   const patch = {}
 
   if (dataset.status === 'created') {
+    debug('run task initializer')
     await require('./tasks/initializer').process(app, dataset, patch)
   }
 
@@ -93,14 +94,24 @@ exports.process = async function (app, dataset) {
   } else if (dataset.status === 'finalized' && dataset._restPartialUpdate) {
     // switch _restPartialUpdate to null at first, so that if it is toggled back to a value while we are working
     // the worker will simply loop back on the dataset
-    await datasetsService.applyPatch(app, dataset, { _restPartialUpdate: null })
+    await datasetsService.applyPatch(app, { ...dataset }, { _restPartialUpdate: null })
     if (dataset.extensions && dataset.extensions.find(e => e.active)) {
       debug('run task extender on updated lines')
       await require('./tasks/extender').process(app, { ...dataset, ...patch }, patch, false, false)
     }
     debug('run task indexer on updated lines')
     await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, false, false, true)
+  } else if (dataset.status === 'finalized' && dataset.isRest && dataset.extensions?.find(e => e.needsUpdate)) {
+    debug('run task extender on extension that needs an update')
+    await require('./tasks/extender').process(app, { ...dataset, ...patch }, patch, false, false)
+    debug('run task indexer on updated lines')
+    await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, false, false, true)
   } else {
+    if (dataset._currentUpdate?.reValidate) {
+      debug('explicitly run task file-validator')
+      await require('./tasks/file-validator').process(app, { ...dataset, ...patch }, patch, false)
+    }
+
     // interrupt work on a draft that is fully compatible
     if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {
       if (await require('./tasks/draft-validator').autoValidate(app, dataset, patch)) return

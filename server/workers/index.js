@@ -232,7 +232,7 @@ async function iter (app, resource, type) {
       ) {
         taskKey = 'readApiKeyRenewer'
       } else if (resource.status === 'finalized' && resource.isRest && resource.extensions?.find(e => e.needsUpdate)) {
-        taskKey = 'extender'
+        taskKey = 'datasetStateManager'
       } else if (resource.status === 'finalized' && resource.isRest && resource.extensions?.find(e => e.nextUpdate && e.nextUpdate < now)) {
         const extensions = [...resource.extensions]
         for (const e of extensions) {

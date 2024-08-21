@@ -98,6 +98,7 @@ class IndexStream extends Transform {
   async _sendBulk () {
     if (this.body.length === 0) return
     debug(`Send ${this.body.length} lines to bulk indexing`)
+    if (global.events) global.events.emit('indexing-bulk', this.body.length / 2)
     const bodyClone = [].concat(this.body)
     const bulkOpts = {
       // ES does not want the doc along with a delete instruction,

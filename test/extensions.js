@@ -4,7 +4,6 @@ const assert = require('assert').strict
 const FormData = require('form-data')
 const config = require('config')
 const eventToPromise = require('event-to-promise')
-const restDatasetsUtils = require('../server/datasets/utils/rest')
 const testUtils = require('./resources/test-utils')
 
 const workers = require('../server/workers')
@@ -268,7 +267,7 @@ other,unknown address
     })
     assert.equal(res.status, 200)
     try {
-      await workers.hook('extender')
+      await workers.hook(`datasetStateManager/${res.data.id}`)
       assert.fail()
     } catch (err) {
       assert.equal(err.message, '500 - some error')
@@ -282,7 +281,7 @@ other,unknown address
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, type: 'remoteService', forceNext: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }] })
     assert.equal(res.status, 200)
     try {
-      await workers.hook('extender/' + dataset.id)
+      await workers.hook(`datasetStateManager/${res.data.id}`)
       assert.fail()
     } catch (err) {
       assert.ok(err.message.includes('Unexpected token'))
@@ -497,7 +496,7 @@ koumoul,19 rue de la voie lactée saint avé
     nockScope = getExtensionNock({ lat: 12, lon: 12 })
     await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ _id: anotherAddress2._id, address: 'yet another address' }])
     inputsEvent = await eventToPromise(global.events, 'extension-inputs')
-    // assert.equal(inputsEvent, 1)
+    assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     const anotherAddress3 = res.data.results.sort((a, b) => b._i - a._i)[0]
@@ -538,9 +537,8 @@ other,unknown address
       schema: dataset.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
-    await workers.hook(`extender/${dataset.id}`)
-    nockScope.done()
     dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
+    nockScope.done()
     assert.equal(dataset.extensions.length, 1)
     assert.equal(dataset.schema.length, 11)
 
@@ -578,9 +576,9 @@ other,unknown address
       schema: dataset.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
-    await workers.hook(`extender/${dataset.id}`)
-    nockScope.done()
+
     dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
+    nockScope.done()
     assert.equal(dataset.extensions.length, 1)
     assert.equal(dataset.schema.length, 11)
 
@@ -745,7 +743,7 @@ other,unknown address
       schema: dataset.schema,
       extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(id, " / ", adr)', property: { key: 'employees', type: 'string' } }]
     })
-    assert.equal(res.data.status, 'analyzed')
+    assert.equal(res.data.status, 'updated')
     dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
     assert.equal(lines[0].employees, 'koumoul / 19 rue de la voie lactée saint avé')
@@ -771,12 +769,10 @@ other,unknown address
     })
     assert.equal(res.data.status, 'finalized')
     assert.equal(res.data.extensions[0].needsUpdate, true)
-    await workers.hook(`extender/${dataset.id}`)
-    const collection = restDatasetsUtils.collection(global.db, dataset)
-    const needsIndexingLines = await collection.find({ _needsIndexing: true }).toArray()
-    assert.equal(needsIndexingLines.length, 1)
-    assert.equal(needsIndexingLines[0].str1, 'str 1')
-    assert.equal(needsIndexingLines[0].exp, 'STR 1 - STR 2')
+    const extensionInputs = await eventToPromise(global.events, 'extension-inputs')
+    assert.equal(extensionInputs, 2)
+    const indexingBulk = await eventToPromise(global.events, 'indexing-bulk')
+    assert.equal(indexingBulk, 1)
     dataset = await workers.hook(`datasetStateManager/${dataset.id}`)
   })
 
