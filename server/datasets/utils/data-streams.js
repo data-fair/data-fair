@@ -170,32 +170,39 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
 }
 
 // Read the dataset file and get a stream of line items
-exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraftLimit = false, fromLoadingDir = false, progress) => {
+/**
+ *
+ * @param {any} db
+ * @param {any} dataset
+ * @param {{raw?: boolean, full?: boolean, ignoreDraftLimit?: boolean, fromLoadingDir?: boolean, progress?: any}} opts
+ * @returns
+ */
+exports.readStreams = async (db, dataset, opts = {}) => {
   if (dataset.isRest) return restDatasetsUtils.readStreams(db, dataset)
-  const p = full ? fullFilePath(dataset, fromLoadingDir) : filePath(dataset, fromLoadingDir)
+  const p = opts.full ? fullFilePath(dataset, opts.fromLoadingDir) : filePath(dataset, opts.fromLoadingDir)
 
   if (!await fs.pathExists(p)) {
     // we should not have to do this
     // this is a weird thing, maybe an unsolved race condition ?
     // let's wait a bit and try again to mask this problem temporarily
-    metrics.internalError('indexer-missing-file', 'file missing when indexer started working ' + p)
+    metrics.internalError('worker-missing-file', 'file missing when read started ' + p)
     await new Promise(resolve => setTimeout(resolve, 10000))
   }
 
   let streams = [fs.createReadStream(p)]
-  if (progress) {
+  if (opts.progress) {
     const { size } = await fs.stat(p)
     streams.push(new Transform({
       transform (chunk, encoding, callback) {
-        progress((chunk.length / size) * 100)
+        opts.progress((chunk.length / size) * 100)
         callback(null, chunk)
       }
     }))
   }
-  streams = streams.concat(exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, false, full ? 'UTF-8' : dataset.file.encoding, false, dataset))
+  streams = streams.concat(exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, opts.full ? {} : dataset.file.props, opts.raw, false, opts.full ? 'UTF-8' : dataset.file.encoding, false, dataset))
 
   // manage interruption in case of draft mode
-  const limit = (dataset.draftReason && !ignoreDraftLimit) ? 100 : -1
+  const limit = (dataset.draftReason && !opts.ignoreDraftLimit) ? 100 : -1
   if (limit !== -1) {
     streams.push(new Transform({
       objectMode: true,
@@ -268,7 +275,7 @@ exports.sampleValues = async (dataset) => {
   let currentLine = 0
   let stopped = false
   const sampleValues = {}
-  const streams = await exports.readStreams(null, dataset, true, false, true, true)
+  const streams = await exports.readStreams(null, dataset, { raw: true, ignoreDraftLimit: true, fromLoadingDir: true })
   await pump(...streams, new Writable({
     objectMode: true,
     write (chunk, encoding, callback) {

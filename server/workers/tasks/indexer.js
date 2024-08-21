@@ -70,7 +70,7 @@ exports.process = async function (app, dataset, patch, ignoreDraftLimit = false,
     writeStream = restDatasetsUtils.markIndexedStream(db, dataset)
   } else {
     const extended = dataset.extensions && dataset.extensions.find(e => e.active)
-    readStreams = await datasetUtils.readStreams(db, dataset, false, extended, ignoreDraftLimit, fromLoadingDir, progress)
+    readStreams = await datasetUtils.readStreams(db, dataset, { full: extended, ignoreDraftLimit, fromLoadingDir, progress })
     writeStream = new Writable({ objectMode: true, write (chunk, encoding, cb) { cb() } })
   }
   await pump(...readStreams, indexStream, writeStream)

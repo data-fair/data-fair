@@ -5,7 +5,7 @@ exports.process = async function (app, dataset) {
   const { basicTypes, csvTypes, dir } = require('../datasets/utils/files')
   const journals = require('../misc/utils/journals')
 
-  const debug = require('debug')(`worker:dataset-state-manager:${dataset.id}`)
+  const debug = require('debug')(`worker:dataset-state-manager:${dataset.id}${dataset.draftReason ? ':draft' : ''}`)
 
   const db = app.get('db')
   const now = new Date().toISOString()
@@ -48,7 +48,7 @@ exports.process = async function (app, dataset) {
 
     if (dataset.extensions && dataset.extensions.find(e => e.active)) {
       debug('run task extender')
-      await require('./tasks/extender').process(app, datasetDraft, patch, true)
+      await require('./tasks/extender').process(app, datasetDraft, patch, true, false)
     }
     debug('run task indexer')
     dataset._newIndexName = await require('./tasks/indexer').process(app, datasetDraft, patch, true, false)
@@ -74,7 +74,7 @@ exports.process = async function (app, dataset) {
     // TODO: add a "schemaLocked" metadata to enforce strictly compatible schema with previous version of file ?
     if (datasetUtils.schemaHasValidationRules(patch.schema ?? dataset.schema)) {
       debug('run task file-validator')
-      await require('./tasks/file-validator').process(app, { ...dataset, ...patch }, patch)
+      await require('./tasks/file-validator').process(app, { ...dataset, ...patch }, patch, true)
     }
 
     // interrupt work on a draft that is fully compatible
@@ -84,7 +84,7 @@ exports.process = async function (app, dataset) {
 
     if (dataset.extensions && dataset.extensions.find(e => e.active)) {
       debug('run task extender')
-      await require('./tasks/extender').process(app, { ...dataset, ...patch }, patch)
+      await require('./tasks/extender').process(app, { ...dataset, ...patch }, patch, false, true)
     }
     debug('run task indexer')
     dataset._newIndexName = await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, false, true)
@@ -96,10 +96,10 @@ exports.process = async function (app, dataset) {
     await datasetsService.applyPatch(app, dataset, { _restPartialUpdate: null })
     if (dataset.extensions && dataset.extensions.find(e => e.active)) {
       debug('run task extender on updated lines')
-      await require('./tasks/extender').process(app, { ...dataset, ...patch }, patch)
+      await require('./tasks/extender').process(app, { ...dataset, ...patch }, patch, false, false)
     }
     debug('run task indexer on updated lines')
-    await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, false, true)
+    await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, false, false, true)
   } else {
     // interrupt work on a draft that is fully compatible
     if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {
@@ -110,12 +110,12 @@ exports.process = async function (app, dataset) {
     const reExtend = dataset._currentUpdate?.reExtend || (dataset.isRest && dataset.status === 'created')
     const reindex = dataset._currentUpdate?.reindex || reExtend
     if (reExtend && dataset.extensions && dataset.extensions.find(e => e.active)) {
-      debug('run task extender')
-      await require('./tasks/extender').process(app, { ...dataset, ...patch }, patch)
+      debug('explicitly run task extender')
+      await require('./tasks/extender').process(app, { ...dataset, ...patch }, patch, false, false)
     }
     if (reindex) {
-      debug('run task indexer')
-      dataset._newIndexName = await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, false, false)
+      debug('explicitly run task indexer')
+      dataset._newIndexName = await require('./tasks/indexer').process(app, { ...dataset, ...patch }, patch, false, false, false)
     }
   }
 

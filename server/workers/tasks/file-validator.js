@@ -49,7 +49,7 @@ class ValidateStream extends Writable {
   }
 }
 
-exports.process = async function (app, dataset, patch) {
+exports.process = async function (app, dataset, patch, fromLoadingDir = false) {
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
 
   if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape validation.')
@@ -60,7 +60,7 @@ exports.process = async function (app, dataset, patch) {
   debug('Run validator stream')
   const progress = taskProgress(app, dataset.id, exports.eventsPrefix, 100)
   await progress(0)
-  const readStreams = await datasetUtils.readStreams(db, dataset, false, false, false, progress)
+  const readStreams = await datasetUtils.readStreams(db, dataset, { progress, fromLoadingDir })
   const validateStream = new ValidateStream({ dataset })
   await pump(...readStreams, validateStream)
   debug('Validator stream ok')
