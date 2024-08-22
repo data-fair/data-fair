@@ -26,6 +26,8 @@ const tasks = exports.tasks = {
 // const stopResolves = {}
 let stopped = false
 const promisePool = []
+/** @type {null | ((value?: any) => void)} */
+let loopIntervalPromiseResolve = null
 
 // Hooks for testing
 let hooks = {}
@@ -36,6 +38,7 @@ exports.hook = (key, delay = 15000, message) => {
   })
   const error = new Error(message) // prepare error at this level so that stack trace is useful
   const timeoutPromise = new Promise((resolve, reject) => setTimeout(() => reject(error), delay))
+  if (loopIntervalPromiseResolve) loopIntervalPromiseResolve()
   return Promise.race([promise, timeoutPromise])
 }
 // clear also for testing
@@ -66,16 +69,15 @@ exports.start = async (app) => {
     promisePool[i] = null
   }
   let active = true
-  let intervalPromiseResolve
 
   while (!stopped) {
     if (!active) {
       // polling interval is ignored while we are actively working on resources
       await new Promise(resolve => {
-        intervalPromiseResolve = resolve
+        loopIntervalPromiseResolve = resolve
         setTimeout(resolve, config.worker.interval)
       })
-      intervalPromiseResolve = null
+      loopIntervalPromiseResolve = null
     }
 
     let resource, type
@@ -114,9 +116,9 @@ exports.start = async (app) => {
     // always empty the slot after the promise is finished
     promisePool[freeSlot].finally(() => {
       promisePool[freeSlot] = null
-      if (intervalPromiseResolve) {
+      if (loopIntervalPromiseResolve) {
         debugLoop('slot is freed, shorten interval waiting')
-        intervalPromiseResolve()
+        loopIntervalPromiseResolve()
       }
     })
   }
