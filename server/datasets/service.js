@@ -454,20 +454,12 @@ exports.syncApplications = async (db, datasetId) => {
     .updateOne({ id: datasetId }, { $set: { 'extras.applications': applicationsExtras } })
 }
 
-exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
-  /* TODO: draft validation shoud be performed in a worker
-    - the workers shoud keep working on the draft dataset one last time but fully (all data, extensions, et)
-    - go until finalizer, then perform the final replacement operation as atomically as possible
+exports.validateDraft = async (app, dataset, datasetFull, patch) => {
+  Object.assign(datasetFull.draft, patch)
+  const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
 
-    Another option for greater simplication would be to remove the draft system and always work on the full dataset,
-    consider the dataset as immutable and use the slug system to switch between versions
-  */
   const db = app.get('db')
-  const patch = { ...datasetFull.draft }
-  if (user) {
-    patch.updatedAt = (new Date()).toISOString()
-    patch.updatedBy = { id: user.id, name: user.name }
-  }
+  Object.assign(patch, datasetFull.draft)
   if (datasetFull.draft.dataUpdatedAt) {
     patch.dataUpdatedAt = patch.updatedAt
     patch.dataUpdatedBy = patch.updatedBy
@@ -478,6 +470,7 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
   delete patch.count
   delete patch.bbox
   delete patch.storage
+  delete patch._validateDraft
   const patchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: datasetFull.id },
     { $set: patch, $unset: { draft: '' } },
     { returnDocument: 'after' }
@@ -485,17 +478,15 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
 
   if (datasetFull.file) {
     webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
-    if (req) {
-      const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema)
-      for (const breakingChange of breakingChanges) {
-        webhooks.trigger(db, 'dataset', patchedDataset, {
-          type: 'breaking-change',
-          body: require('i18n').getLocales().reduce((a, locale) => {
-            a[locale] = breakingChange => req.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { title: patchedDataset.title, key: breakingChange.key })
-            return a
-          }, {})
-        })
-      }
+    const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema)
+    for (const breakingChange of breakingChanges) {
+      webhooks.trigger(db, 'dataset', patchedDataset, {
+        type: 'breaking-change',
+        body: require('i18n').getLocales().reduce((a, locale) => {
+          a[locale] = require('i18n').__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { title: patchedDataset.title, key: breakingChange.key })
+          return a
+        }, {})
+      })
     }
   }
 
@@ -527,54 +518,7 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
   }
   if (datasetFull.file) await fs.remove(fullFilePath(datasetFull))
 
-  const statusPatch = { status: datasetUtils.schemaHasValidationRules(patchedDataset.schema) ? 'validated' : 'analyzed' }
-  const statusPatchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: datasetFull.id },
-    { $set: statusPatch },
-    { returnDocument: 'after' }
-  )).value
-  await journals.log(app, statusPatchedDataset, { type: 'draft-validated' }, 'dataset')
-  try {
-    await esUtils.delete(app.get('es'), datasetDraft)
-  } catch (err) {
-    if (err.statusCode !== 404) throw err
-  }
+  await journals.log(app, datasetFull, { type: 'draft-validated' }, 'dataset')
+  await esUtils.validateDraftAlias(app.get('es'), dataset)
   await fs.remove(dir(datasetDraft))
-  await updateStorage(app, statusPatchedDataset)
-  return statusPatchedDataset
-}
-
-/**
- *
- * @param {any} app
- * @param {any} dataset
- * @param {any} patch
- * @returns {Promise<any>}
- */
-exports.validateCompatibleDraft = async (app, dataset, patch) => {
-  if (!dataset.draftReason || dataset.draftReason.validationMode === 'never') return
-  if (dataset.draftReason.validationMode === 'always') {
-    patch._validateDraft = true
-    return
-  }
-  const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
-  Object.assign(datasetFull.draft, patch)
-  const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
-  if (dataset.draftReason.validationMode === 'noBreakingChange' || dataset.draftReason.validationMode === 'compatible') {
-    const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema)
-    if (breakingChanges.length) {
-      return breakingChanges.map(breakingChanges.map(breakingChange => req.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { title: patchedDataset.title, key: breakingChange.key })).join('\n'))
-    }
-  }
-  if (dataset.draftReason.validationMode === 'compatible') {
-    patch._validateDraft = true
-
-    if (datasetDraft.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
-      // I don't remember why we never auto-validate the draft in this case
-      return
-    }
-    if (schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
-      patch._validateDraft
-    }
-  }
-  return null
 }

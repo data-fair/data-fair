@@ -8,6 +8,7 @@ const smallAggs = require('./small-aggs')
 exports.delete = manageIndices.delete
 exports.initDatasetIndex = manageIndices.initDatasetIndex
 exports.switchAlias = manageIndices.switchAlias
+exports.validateDraftAlias = manageIndices.validateDraftAlias
 exports.datasetInfos = manageIndices.datasetInfos
 exports.datasetWarning = manageIndices.datasetWarning
 exports.updateDatasetMapping = manageIndices.updateDatasetMapping

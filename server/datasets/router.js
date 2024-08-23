@@ -363,6 +363,8 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
   const publicationSite = req.publicationSite
   // TODO: replace this with a string draftValidationMode ?
   const draft = req.query.draft === 'true'
+  // force the file upload middleware to write files in draft directory, as updated datasets always go into draft mode
+  req.query.draft = 'true'
 
   const db = req.app.get('db')
   const locale = i18n.getLocale(req)
@@ -432,11 +434,7 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
 
-  // const validatedDataset = await validateDraft(req.app, req.datasetFull, req.dataset, req.user, req)
-  const patch = {
-    status: datasetUtils.schemaHasValidationRules(dataset.schema) ? 'validated' : 'analyzed',
-    _validateDraft: true
-  }
+  const patch = { status: 'validated', _validateDraft: true }
   await applyPatch(req.app, dataset, patch)
 
   await import('@data-fair/lib/express/events-log.js')

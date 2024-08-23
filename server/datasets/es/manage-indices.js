@@ -23,7 +23,7 @@ exports.indexDefinition = async (dataset) => {
 }
 
 function indexPrefix (dataset) {
-  return `${aliasName(dataset)}-${crypto.createHash('sha1').update(dataset.id).digest('hex').slice(0, 12)}`
+  return `${config.indicesPrefix}-${dataset.id}-${crypto.createHash('sha1').update(dataset.id).digest('hex').slice(0, 12)}`
 }
 
 exports.initDatasetIndex = async (client, dataset) => {
@@ -57,27 +57,67 @@ exports.updateDatasetMapping = async (client, dataset, oldDataset) => {
   await client.indices.putMapping({ index, body: newMapping })
 }
 
-exports.delete = async (client, dataset) => {
-  await client.indices.deleteAlias({ name: aliasName(dataset), index: '_all' })
-  await client.indices.delete({ index: `${indexPrefix(dataset)}-*` })
+const getAliases = async (client, dataset) => {
+  let prodAlias
+  try {
+    prodAlias = (await client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: null }) })).body
+  } catch (err) {
+    if (err.statusCode !== 404) throw err
+  }
+  let draftAlias
+  try {
+    draftAlias = (await client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: true }) })).body
+  } catch (err) {
+    if (err.statusCode !== 404) throw err
+  }
+  return { prodAlias, draftAlias }
 }
 
+// delete indices and aliases of a dataset
+exports.delete = async (client, dataset) => {
+  const { prodAlias, draftAlias } = await getAliases(client, dataset)
+
+  if (dataset.draftReason) {
+    // in case of a draft dataset, delete all indices not used by the production alias
+    const previousIndices = await client.indices.get({ index: `${indexPrefix(dataset)}-*`, ignore_unavailable: true })
+    for (const index in previousIndices.body) {
+      if (prodAlias && prodAlias[index]) continue
+      await client.indices.delete({ index })
+    }
+    if (draftAlias) await client.indices.deleteAlias({ name: aliasName(dataset), index: '_all' })
+  } else {
+    await client.indices.delete({ index: `${indexPrefix(dataset)}-*` })
+  }
+}
+
+// replace the index referenced by a dataset's alias
 exports.switchAlias = async (client, dataset, tempId) => {
   const name = aliasName(dataset)
-  const previousIndices = await client.indices.get({ index: `${indexPrefix(dataset)}-*`, ignore_unavailable: true })
-
-  await client.indices.putAlias({ name, index: tempId })
-
-  // Delete all other indices from this dataset
-  for (const key in previousIndices.body) {
-    if (key !== tempId) {
-      try {
-        await client.indices.delete({ index: key })
-      } catch (err) {
-        metrics.internalError('es-delete-index', err)
-      }
+  await client.indices.updateAliases({
+    body: {
+      actions: [
+        { remove: { alias: name, index: '*' } },
+        { add: { alias: name, index: tempId } }
+      ]
     }
+  })
+
+  // Delete indices of this dataset that are not referenced by either the draft or prod aliases
+  const { prodAlias, draftAlias } = await getAliases(client, dataset)
+  const indices = await client.indices.get({ index: `${indexPrefix(dataset)}-*`, ignore_unavailable: true })
+  for (const index in indices.body) {
+    if (prodAlias && prodAlias[index]) continue
+    if (draftAlias && draftAlias[index]) continue
+    await client.indices.delete({ index })
   }
+}
+
+// move an index from the draft alias to the production alias
+exports.validateDraftAlias = async (client, dataset, tempId) => {
+  const { draftAlias } = await getAliases(client, dataset)
+  if (!draftAlias || Object.keys(draftAlias).length !== 1) throw new Error('no draft alias to validate')
+  await client.indices.deleteAlias({ name: aliasName({ ...dataset, draftReason: true }), index: '_all' })
+  exports.switchAlias(client, { ...dataset, draftReason: null }, Object.keys(draftAlias)[0])
 }
 
 const getNbShards = (dataset) => {

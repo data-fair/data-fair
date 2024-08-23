@@ -1,7 +1,8 @@
 // Finalize dataset for publication
 exports.eventsPrefix = 'finalize'
 
-exports.process = async function (app, dataset) {
+exports.process = async function (app, _dataset) {
+  let dataset = _dataset
   const config = /** @type {any} */(require('config'))
   const esUtils = require('../datasets/es')
   const geoUtils = require('../datasets/utils/geo')
@@ -138,12 +139,15 @@ exports.process = async function (app, dataset) {
     result.count = dataset.count = await esUtils.count(es, queryableDataset, {})
   }
 
-  // TODO
-  if (dataset._validateDraft) {
-    console.log('FINALIZE VALIDATE DRAFT')
+  if (dataset.draftReason && dataset._validateDraft) {
+    const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
+    await datasetService.validateDraft(app, dataset, datasetFull, result)
+    await datasetService.applyPatch(app, datasetFull, result)
+    await datasetUtils.updateStorage(app, datasetFull)
+    dataset = datasetFull
+  } else {
+    await datasetService.applyPatch(app, dataset, result)
   }
-
-  await datasetService.applyPatch(app, dataset, result)
 
   // Remove attachments if the schema does not refer to their existence
   if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {

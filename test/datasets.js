@@ -10,7 +10,7 @@ const workers = require('../server/workers')
 const { validate } = require('tableschema')
 
 let notifier
-describe.only('datasets', () => {
+describe('datasets', () => {
   before('prepare notifier', async () => {
     notifier = require('./resources/app-notifier.js')
     await eventToPromise(notifier, 'listening')
@@ -257,7 +257,7 @@ describe.only('datasets', () => {
     wsCli.send(JSON.stringify({ type: 'subscribe', channel: 'datasets/' + datasetId + '/journal' }))
     res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
     assert.equal(res.status, 200)
-    assert.equal(res.data.length, 11)
+    assert.equal(res.data.length, 13)
 
     // Send again the data to the same dataset
     form = new FormData()
@@ -271,7 +271,7 @@ describe.only('datasets', () => {
     await testUtils.timeout(eventToPromise(notifier, 'webhook'), 2000, 'second webhook not received')
     res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
 
-    assert.equal(res.data.length, 20)
+    assert.equal(res.data.length, 25)
     // testing permissions
     await assert.rejects(global.ax.dmeadus.get(webhook.href), err => err.status === 403)
     await assert.rejects(global.ax.anonymous.get(webhook.href), err => err.status === 403)

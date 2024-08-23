@@ -76,10 +76,10 @@ exports.process = async function (app, dataset) {
       if (breakingChanges.length) {
         let breakingChangesMessage = 'La structure du nouveau fichier contient des ruptures de compatibilité :'
         for (const breakingChange of breakingChanges) {
-          breakingChangesMessage += '\n<br>' + req.__({ phrase: 'breakingChanges.' + breakingChange.type, locale: config.locale.default }, { title: datasetDraft.title, key: breakingChange.key })
+          breakingChangesMessage += '\n<br>' + require('i18n').__({ phrase: 'breakingChanges.' + breakingChange.type, locale: config.i18n.defaultLocale }, { title: datasetDraft.title, key: breakingChange.key })
         }
         await journals.log(app, dataset, { type: 'error', data: breakingChangesMessage })
-        if (dataset.draftReason.validationMode === 'noBreakingChange' || dataset.draftReason.validationMode === 'compatible') {
+        if (dataset.draftReason.validationMode === 'noBreakingChange' || dataset.draftReason.validationMode === 'compatible') {
           delete patch._validateDraft
         }
       } else if (!require('../datasets/utils/schema').schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
@@ -91,18 +91,20 @@ exports.process = async function (app, dataset) {
     }
   }
 
-  debug('Run validator stream')
-  const progress = taskProgress(app, dataset.id, exports.eventsPrefix, 100)
-  await progress(0)
-  const readStreams = await datasetUtils.readStreams(db, dataset, false, false, false, progress)
-  const validateStream = new ValidateStream({ dataset })
-  await pump(...readStreams, validateStream)
-  debug('Validator stream ok')
+  if (datasetUtils.schemaHasValidationRules(dataset.schema)) {
+    debug('Run validator stream')
+    const progress = taskProgress(app, dataset.id, exports.eventsPrefix, 100)
+    await progress(0)
+    const readStreams = await datasetUtils.readStreams(db, dataset, false, false, false, progress)
+    const validateStream = new ValidateStream({ dataset })
+    await pump(...readStreams, validateStream)
+    debug('Validator stream ok')
 
-  const errorsSummary = validateStream.errorsSummary()
-  if (errorsSummary) {
-    await journals.log(app, dataset, { type: 'error', data: errorsSummary })
-    delete patch._validateDraft
+    const errorsSummary = validateStream.errorsSummary()
+    if (errorsSummary) {
+      await journals.log(app, dataset, { type: 'error', data: errorsSummary })
+      delete patch._validateDraft
+    }
   }
 
   await datasetsService.applyPatch(app, dataset, patch)
