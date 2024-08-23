@@ -117,7 +117,7 @@ exports.validateDraftAlias = async (client, dataset, tempId) => {
   const { draftAlias } = await getAliases(client, dataset)
   if (!draftAlias || Object.keys(draftAlias).length !== 1) throw new Error('no draft alias to validate')
   await client.indices.deleteAlias({ name: aliasName({ ...dataset, draftReason: true }), index: '_all' })
-  exports.switchAlias(client, { ...dataset, draftReason: null }, Object.keys(draftAlias)[0])
+  await exports.switchAlias(client, { ...dataset, draftReason: null }, Object.keys(draftAlias)[0])
 }
 
 const getNbShards = (dataset) => {
