@@ -404,7 +404,7 @@ exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappin
 
   Object.assign(dataset, patch)
 
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset)
+  // if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset)
 
   // if the dataset is in draft mode all patched values are stored in the draft state
   if (dataset.draftReason) {
@@ -459,22 +459,21 @@ exports.validateDraft = async (app, dataset, datasetFull, patch) => {
   const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
 
   const db = app.get('db')
-  Object.assign(patch, datasetFull.draft)
+  const draftPatch = { ...datasetFull.draft }
   if (datasetFull.draft.dataUpdatedAt) {
-    patch.dataUpdatedAt = patch.updatedAt
-    patch.dataUpdatedBy = patch.updatedBy
+    draftPatch.dataUpdatedAt = draftPatch.updatedAt
+    draftPatch.dataUpdatedBy = draftPatch.updatedBy
   }
-  delete patch.status
-  delete patch.finalizedAt
-  delete patch.draftReason
-  delete patch.count
-  delete patch.bbox
-  delete patch.storage
-  delete patch._validateDraft
-  const patchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: datasetFull.id },
-    { $set: patch, $unset: { draft: '' } },
-    { returnDocument: 'after' }
-  )).value
+  delete draftPatch.status
+  delete draftPatch.finalizedAt
+  delete draftPatch.draftReason
+  delete draftPatch.count
+  delete draftPatch.bbox
+  delete draftPatch.storage
+  delete draftPatch._validateDraft
+  Object.assign(patch, draftPatch)
+  patch.draft = null
+  const patchedDataset = { ...datasetFull, ...patch }
 
   if (datasetFull.file) {
     webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })

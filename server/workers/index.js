@@ -293,7 +293,7 @@ async function iter (app, resource, type) {
 
     if (!taskKey) return
     const task = tasks[taskKey]
-    debug(`run task ${taskKey} - ${type} / ${resource.slug} (${resource.id})`)
+    debug(`run task ${taskKey} - ${type} / ${resource.slug} (${resource.id})${resource.draftReason ? ' - draft' : ''}`)
 
     if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
 
@@ -319,7 +319,7 @@ async function iter (app, resource, type) {
       await task.process(app, resource)
     }
     endTask({ status: 'ok' })
-    debug(`finished task ${taskKey} - ${type} / ${resource.slug} (${resource.id})`)
+    debug(`finished task ${taskKey} - ${type} / ${resource.slug} (${resource.id})${resource.draftReason ? ' - draft' : ''}`)
 
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
     if (task.eventsPrefix && newResource) {

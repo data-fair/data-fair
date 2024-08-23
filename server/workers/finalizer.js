@@ -127,6 +127,11 @@ exports.process = async function (app, _dataset) {
     await restDatasetsUtils.configureHistory(app, dataset)
   }
 
+  // Remove attachments if the schema does not refer to their existence
+  if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
+    await attachmentsUtils.removeAll(dataset)
+  }
+
   // virtual datasets have to be re-counted here (others were implicitly counted at index step)
   if (dataset.isVirtual) {
     const descendants = await virtualDatasetsUtils.descendants(db, dataset, false, ['dataUpdatedAt', 'dataUpdatedBy'])
@@ -147,11 +152,6 @@ exports.process = async function (app, _dataset) {
     dataset = datasetFull
   } else {
     await datasetService.applyPatch(app, dataset, result)
-  }
-
-  // Remove attachments if the schema does not refer to their existence
-  if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
-    await attachmentsUtils.removeAll(dataset)
   }
 
   // parent virtual datasets have to be re-finalized too
