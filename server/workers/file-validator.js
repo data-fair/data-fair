@@ -1,4 +1,5 @@
 const { Writable } = require('stream')
+const config = require('config')
 const journals = require('../misc/utils/journals')
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
@@ -59,6 +60,37 @@ exports.process = async function (app, dataset) {
 
   const db = app.get('db')
 
+  const patch = { status: dataset.status === 'validation-updated' ? 'finalized' : 'validated' }
+
+  if (dataset.draftReason) {
+    // manage auto-validation of a dataset draft
+    if (!dataset.draftReason || dataset.draftReason.validationMode === 'never') {
+      // nothing to do
+    } else {
+      patch._validateDraft = true
+
+      const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
+      Object.assign(datasetFull.draft, patch)
+      const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
+      const breakingChanges = require('../datasets/utils/schema').getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema)
+      if (breakingChanges.length) {
+        let breakingChangesMessage = 'La structure du nouveau fichier contient des ruptures de compatibilité :'
+        for (const breakingChange of breakingChanges) {
+          breakingChangesMessage += '\n<br>' + req.__({ phrase: 'breakingChanges.' + breakingChange.type, locale: config.locale.default }, { title: datasetDraft.title, key: breakingChange.key })
+        }
+        await journals.log(app, dataset, { type: 'error', data: breakingChangesMessage })
+        if (dataset.draftReason.validationMode === 'noBreakingChange' || dataset.draftReason.validationMode === 'compatible') {
+          delete patch._validateDraft
+        }
+      } else if (!require('../datasets/utils/schema').schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
+        await journals.log(app, dataset, { type: 'error', data: 'La structure du nouveau fichier contient des changements.' })
+        if (dataset.draftReason.validationMode === 'compatible') {
+          delete patch._validateDraft
+        }
+      }
+    }
+  }
+
   debug('Run validator stream')
   const progress = taskProgress(app, dataset.id, exports.eventsPrefix, 100)
   await progress(0)
@@ -67,13 +99,10 @@ exports.process = async function (app, dataset) {
   await pump(...readStreams, validateStream)
   debug('Validator stream ok')
 
-  const patch = { status: dataset.status === 'validation-updated' ? 'finalized' : 'validated' }
-
   const errorsSummary = validateStream.errorsSummary()
   if (errorsSummary) {
     await journals.log(app, dataset, { type: 'error', data: errorsSummary })
-  } else {
-    if (await datasetsService.validateCompatibleDraft(app, dataset, patch)) return
+    delete patch._validateDraft
   }
 
   await datasetsService.applyPatch(app, dataset, patch)

@@ -361,6 +361,7 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
   const publicBaseUrl = req.publicBaseUrl
   // @ts-ignore
   const publicationSite = req.publicationSite
+  // TODO: replace this with a string draftValidationMode ?
   const draft = req.query.draft === 'true'
 
   const db = req.app.get('db')

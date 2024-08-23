@@ -99,10 +99,6 @@ exports.process = async function (app, dataset) {
   }
   if (dataset.projection) patch.projection = dataset.projection
 
-  if (!datasetUtils.schemaHasValidationRules(dataset.schema) && await datasetsService.validateCompatibleDraft(app, dataset, patch)) {
-    return
-  }
-
   await datasetsService.applyPatch(app, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
 }

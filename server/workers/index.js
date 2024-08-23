@@ -235,9 +235,9 @@ async function iter (app, resource, type) {
         taskKey = 'geojsonAnalyzer'
       } else if (resource.isRest && resource.status === 'extended-updated') {
         taskKey = 'indexer'
-      } else if (resource.file && ['analyzed', 'validation-updated'].includes(resource.status) && schemaHasValidationRules(resource.schema)) {
+      } else if (resource.file && ['analyzed', 'validation-updated'].includes(resource.status)) {
         taskKey = 'fileValidator'
-      } else if ((resource.file && resource.status === (schemaHasValidationRules(resource.schema) ? 'validated' : 'analyzed')) || (resource.isRest && ['analyzed', 'updated'].includes(resource.status))) {
+      } else if ((resource.file && resource.status === 'validated') || (resource.isRest && ['analyzed', 'updated'].includes(resource.status))) {
         if (resource.extensions && resource.extensions.find(e => e.active)) {
           // Perform extensions from remote services for dataset that have at least one active extension
           taskKey = 'extender'

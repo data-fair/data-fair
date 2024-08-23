@@ -10,7 +10,7 @@ const workers = require('../server/workers')
 const { validate } = require('tableschema')
 
 let notifier
-describe('datasets', () => {
+describe.only('datasets', () => {
   before('prepare notifier', async () => {
     notifier = require('./resources/app-notifier.js')
     await eventToPromise(notifier, 'listening')

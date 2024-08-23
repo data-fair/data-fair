@@ -138,6 +138,11 @@ exports.process = async function (app, dataset) {
     result.count = dataset.count = await esUtils.count(es, queryableDataset, {})
   }
 
+  // TODO
+  if (dataset._validateDraft) {
+    console.log('FINALIZE VALIDATE DRAFT')
+  }
+
   await datasetService.applyPatch(app, dataset, result)
 
   // Remove attachments if the schema does not refer to their existence
