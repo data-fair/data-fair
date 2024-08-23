@@ -252,7 +252,7 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
     }
     if (draft) {
       dataset.status = 'draft'
-      filePatch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon' }
+      filePatch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon', validationMode: 'never' }
       dataset.draft = filePatch
     } else {
       Object.assign(dataset, filePatch)
@@ -487,11 +487,11 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
     webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
     if (req) {
       const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema)
-      for (const breakingChange of breakingChanges) {
+      if (breakingChanges.length) {
         webhooks.trigger(db, 'dataset', patchedDataset, {
           type: 'breaking-change',
           body: require('i18n').getLocales().reduce((a, locale) => {
-            a[locale] = req.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { title: patchedDataset.title, key: breakingChange.key })
+            a[locale] = breakingChanges.map(breakingChange => req.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { title: patchedDataset.title, key: breakingChange.key })).join('\n')
             return a
           }, {})
         })
@@ -551,12 +551,21 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
  * @returns {Promise<any>}
  */
 exports.validateCompatibleDraft = async (app, dataset, patch) => {
-  if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {
+  if (!dataset.draftReason) return
+  if (dataset.draftReason.validationMode === 'always') {
+    patch._validateDraft = true
+  }
+  if (dataset.draftReason.validationMode === 'compatible') {
+    patch._validateDraft = true
     const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
     Object.assign(datasetFull.draft, patch)
     const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
-    if (!datasetDraft.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument') && schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
-      return await exports.validateDraft(app, datasetFull, datasetDraft)
+    if (datasetDraft.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
+      // I don't remember why we never auto-validate the draft in this case
+      return
+    }
+    if (schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
+      patch._validateDraft
     }
   }
   return null

@@ -83,8 +83,10 @@ exports.process = async function (app, dataset) {
     schema: dataset.schema
   }
 
-  if (!datasetUtils.schemaHasValidationRules(dataset.schema) && await datasetsService.validateCompatibleDraft(app, dataset, patch)) {
-    return
+  if (!datasetUtils.schemaHasValidationRules(dataset.schema)) {
+    if (dataset.draftReason?.validationMode === 'always') {
+      patch._validateDraft = true
+    }
   }
 
   await datasetsService.applyPatch(app, dataset, patch)

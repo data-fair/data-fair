@@ -882,11 +882,9 @@ module.exports.properties.draft = {
         message: {
           type: 'string'
         },
-        details: {
-          type: 'array',
-          items: {
-            type: 'string'
-          }
+        validationMode: {
+          type: 'string',
+          enum: ['never', 'always', 'compatible']
         }
       }
     }

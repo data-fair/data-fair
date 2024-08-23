@@ -300,6 +300,7 @@ const removeInnocuous = (p) => {
   return cleanProp
 }
 
+// TODO: we should never ignore calculated properties, they have an impact on true compatibility
 exports.schemasFullyCompatible = (schema1, schema2, ignoreCalculated = false) => {
   // a change in these properties does not consitute a breaking change of the api
   // and does not require a re-finalization of the dataset when patched

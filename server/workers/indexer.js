@@ -68,7 +68,7 @@ exports.process = async function (app, dataset) {
   } else {
     const extended = dataset.extensions && dataset.extensions.find(e => e.active)
     if (!extended) await fs.remove(datasetUtils.fullFilePath(dataset))
-    readStreams = await datasetUtils.readStreams(db, dataset, false, extended, false, progress)
+    readStreams = await datasetUtils.readStreams(db, dataset, false, extended, dataset._validateDraft, progress)
     writeStream = new Writable({ objectMode: true, write (chunk, encoding, cb) { cb() } })
   }
   await pump(...readStreams, indexStream, writeStream)

@@ -26,7 +26,7 @@ exports.process = async function (app, dataset) {
   await extensionsUtils.checkExtensions(db, dataset.schema, extensions)
 
   debug('apply extensions', dataset.extensions)
-  await extensionsUtils.extend(app, dataset, extensions, updateMode)
+  await extensionsUtils.extend(app, dataset, extensions, updateMode, dataset._validateDraft)
   debug('extensions ok')
 
   // Some data was updated in the interval during which we performed indexation

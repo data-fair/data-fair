@@ -47,7 +47,7 @@ const metrics = require('../misc/utils/metrics')
 const publicationSites = require('../misc/utils/publication-sites')
 const clamav = require('../misc/utils/clamav')
 const { syncDataset: syncRemoteService } = require('../remote-services/utils')
-const { findDatasets, applyPatch, validateDraft, deleteDataset, createDataset } = require('./service')
+const { findDatasets, applyPatch, deleteDataset, createDataset } = require('./service')
 const { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } = require('./utils/schema')
 const { dir, attachmentsDir } = require('./utils/files')
 const { preparePatch, validatePatch } = require('./utils/patch')
@@ -336,7 +336,7 @@ const createDatasetRoute = asyncWrap(async (req, res) => {
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
     await syncRemoteService(db, dataset)
 
-    res.status(201).send(clean(req.publicBaseUrl, req.publicationSite, dataset, {}, req.query.draft === 'true'))
+    res.status(201).send(clean(req.publicBaseUrl, req.publicationSite, dataset, {}, draft))
   } catch (err) {
     if (files) {
       for (const file of files) await fs.remove(file.path)
@@ -387,12 +387,10 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
     validatePatch(patch)
     validateURLFriendly(locale, patch.slug)
 
-    if (draft) {
-      if (req.datasetFull.status === 'draft') {
-        patch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon' }
-      } else {
-        patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant' }
-      }
+    if (req.datasetFull.status === 'draft') {
+      patch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon', validationMode: 'never' }
+    } else {
+      patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode: draft ? 'compatible' : 'always' }
     }
 
     const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, user, locale, files)
@@ -433,12 +431,17 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
 
-  const validatedDataset = await validateDraft(req.app, req.datasetFull, req.dataset, req.user, req)
+  // const validatedDataset = await validateDraft(req.app, req.datasetFull, req.dataset, req.user, req)
+  const patch = {
+    status: datasetUtils.schemaHasValidationRules(dataset.schema) ? 'validated' : 'analyzed',
+    _validateDraft: true
+  }
+  await applyPatch(req.app, dataset, patch)
 
   await import('@data-fair/lib/express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
-  return res.send(validatedDataset)
+  return res.send(dataset)
 }))
 
 // cancel the draft
