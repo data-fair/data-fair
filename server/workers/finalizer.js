@@ -153,7 +153,7 @@ exports.process = async function (app, _dataset) {
     await attachmentsUtils.removeAll(dataset)
   }
 
-  await datasetUtils.updateStorage(app, dataset)
+  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset)
 
   // parent virtual datasets have to be re-finalized too
   if (!dataset.draftReason) {

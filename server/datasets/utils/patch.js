@@ -141,7 +141,7 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
 
   let attemptMappingUpdate = false
 
-  const reindexerStatus = (dataset.file && datasetUtils.schemaHasValidationRules(dataset.schema)) ? 'validated' : 'analyzed'
+  const reindexerStatus = dataset.file ? 'validated' : 'analyzed'
 
   if (datasetFile || attachmentsFile) {
     patch.dataUpdatedBy = patch.updatedBy

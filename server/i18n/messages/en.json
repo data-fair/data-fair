@@ -31,9 +31,10 @@
 		"requires": "requires ",
 		"requiresJoin": " and "
 	},
+	"hasBreakingChanges": "the dataset \"{{title}}\" has breaking changes:",
 	"breakingChanges": {
-		"missing": "the column \"{{key}}\" doesn't exist anymore in the dataset \"{{title}}\"",
-		"type": "the column \"{{key}}\" changed type in the dataset \"{{title}}\""
+		"missing": "the column \"{{key}}\" doesn't exist anymore",
+		"type": "the column \"{{key}}\" changed type"
 	},
 	"sheets": {
 		"data": "data",

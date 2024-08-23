@@ -31,9 +31,10 @@
 		"requires": "nécessite ",
 		"requiresJoin": " et "
 	},
+	"hasBreakingChanges": "le jeu de données \"{{title}}\" a des ruptures de compatibilité :",
 	"breakingChanges": {
-		"missing": "la colonne \"{{key}}\" n'existe plus dans le jeu de données \"{{title}}\"",
-		"type": "la colonne \"{{key}}\" a changé de type dans le jeu de données \"{{title}}\""
+		"missing": "la colonne \"{{key}}\" n'existe plus",
+		"type": "la colonne \"{{key}}\" a changé de type"
 	},
 	"sheets": {
 		"data": "données",

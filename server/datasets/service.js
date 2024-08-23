@@ -467,7 +467,6 @@ exports.validateDraft = async (app, dataset, datasetFull, patch) => {
   delete draftPatch.status
   delete draftPatch.finalizedAt
   delete draftPatch.draftReason
-  delete draftPatch.count
   delete draftPatch.bbox
   delete draftPatch.storage
   delete draftPatch._validateDraft
@@ -478,11 +477,15 @@ exports.validateDraft = async (app, dataset, datasetFull, patch) => {
   if (datasetFull.file) {
     webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
     const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema)
-    for (const breakingChange of breakingChanges) {
+    if (breakingChanges.length) {
       webhooks.trigger(db, 'dataset', patchedDataset, {
         type: 'breaking-change',
         body: require('i18n').getLocales().reduce((a, locale) => {
-          a[locale] = require('i18n').__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { title: patchedDataset.title, key: breakingChange.key })
+          let msg = require('i18n').__({ phrase: 'hasBreakingChanges', locale }, { title: patchedDataset.title })
+          for (const breakingChange of breakingChanges) {
+            msg += '\n' + require('i18n').__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { key: breakingChange.key })
+          }
+          a[locale] = msg
           return a
         }, {})
       })
@@ -517,7 +520,6 @@ exports.validateDraft = async (app, dataset, datasetFull, patch) => {
   }
   if (datasetFull.file) await fs.remove(fullFilePath(datasetFull))
 
-  await journals.log(app, datasetFull, { type: 'draft-validated' }, 'dataset')
   await esUtils.validateDraftAlias(app.get('es'), dataset)
   await fs.remove(dir(datasetDraft))
 }

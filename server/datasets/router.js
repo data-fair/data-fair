@@ -426,6 +426,7 @@ router.post('/:datasetId', lockDataset(), readDataset({ acceptedStatuses: ['fina
 router.put('/:datasetId', lockDataset(), readDataset({ acceptedStatuses: ['finalized', 'error'], acceptMissing: true }), apiKeyMiddleware, permissions.middleware('writeData', 'write', null, true), checkStorage(true, true), updateDatasetRoute)
 
 // validate the draft
+// TODO: apply different permission if draft has breaking changes or not
 router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], alwaysDraft: true }), apiKeyMiddleware, permissions.middleware('validateDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
   // @ts-ignore
   const dataset = req.dataset
@@ -436,6 +437,7 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
 
   const patch = { status: 'validated', _validateDraft: true }
   await applyPatch(req.app, dataset, patch)
+  await journals.log(req.app, dataset, { type: 'draft-validated', data: 'validation manuelle du brouillon' }, 'dataset')
 
   await import('@data-fair/lib/express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))

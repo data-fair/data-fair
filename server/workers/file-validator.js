@@ -76,7 +76,7 @@ exports.process = async function (app, dataset) {
       if (breakingChanges.length) {
         let breakingChangesMessage = 'La structure du nouveau fichier contient des ruptures de compatibilité :'
         for (const breakingChange of breakingChanges) {
-          breakingChangesMessage += '\n<br>' + require('i18n').__({ phrase: 'breakingChanges.' + breakingChange.type, locale: config.i18n.defaultLocale }, { title: datasetDraft.title, key: breakingChange.key })
+          breakingChangesMessage += '\n<br>' + require('i18n').__({ phrase: 'breakingChanges.' + breakingChange.type, locale: config.i18n.defaultLocale }, { key: breakingChange.key })
         }
         await journals.log(app, dataset, { type: 'error', data: breakingChangesMessage })
         if (dataset.draftReason.validationMode === 'noBreakingChange' || dataset.draftReason.validationMode === 'compatible') {
@@ -105,6 +105,10 @@ exports.process = async function (app, dataset) {
       await journals.log(app, dataset, { type: 'error', data: errorsSummary })
       delete patch._validateDraft
     }
+  }
+
+  if (patch._validateDraft) {
+    await journals.log(app, dataset, { type: 'draft-validated', data: 'validation automatique du brouillon' }, 'dataset')
   }
 
   await datasetsService.applyPatch(app, dataset, patch)
