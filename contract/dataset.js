@@ -507,6 +507,11 @@ module.exports = {
       enum: ['remote', 'uploaded', 'loaded', 'analyzed', 'schematized', 'indexed', 'extended', 'finalized', 'error'],
       description: 'The processing steps of a dataset.'
     },
+    errorStatus: {
+      type: 'string',
+      enum: ['remote', 'uploaded', 'loaded', 'analyzed', 'schematized', 'indexed', 'extended', 'finalized', 'error'],
+      description: 'The processing step the dataset was in when it encountered an error.'
+    },
     primaryKey: {
       type: 'array',
       description: 'List of properties of the schema used as unique primary key for each line',
@@ -887,6 +892,10 @@ module.exports.properties.draft = {
           enum: ['never', 'always', 'compatible']
         }
       }
+    },
+    validateDraft: {
+      type: 'boolean',
+      title: 'indicates that the draft was validated and is being processed to replace the current state'
     }
   }
 }

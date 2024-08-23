@@ -197,14 +197,6 @@ async function iter (app, resource, type) {
       mergeDraft(resource)
     }
 
-    // REST datasets trigger too many events
-    let noStoreEvent = false
-    if (type === 'dataset' && resource.isRest && resource.finalizedAt) {
-      const journal = (await db.collection('journals')
-        .findOne({ id: resource.id, type, 'owner.type': resource.owner.type, 'owner.id': resource.owner.id }, { projection: { events: { $slice: -1 } } }))
-      const lastEvent = journal && journal.events[0]
-      if (lastEvent && lastEvent.type === 'finalize-end') noStoreEvent = true
-    }
     if (type === 'application') {
       // Not much to do on applications.. Just catalog publication
       taskKey = 'applicationPublisher'
@@ -295,7 +287,10 @@ async function iter (app, resource, type) {
     const task = tasks[taskKey]
     debug(`run task ${taskKey} - ${type} / ${resource.slug} (${resource.id})${resource.draftReason ? ' - draft' : ''}`)
 
-    if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
+    if (task.eventsPrefix) {
+      const noStoreEvent = type === 'dataset'
+      await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
+    }
 
     endTask = workersTasksHistogram.startTimer({ task: taskKey })
     if (config.worker.spawnTask) {
@@ -323,6 +318,7 @@ async function iter (app, resource, type) {
 
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
     if (task.eventsPrefix && newResource) {
+      const noStoreEvent = type === 'dataset' && task.eventsPrefix !== 'finalize'
       if (resource.draftReason) {
         await journals.log(app, mergeDraft({ ...newResource }), { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
       } else {
@@ -383,7 +379,10 @@ async function iter (app, resource, type) {
     } else {
       debug('do NOT retry the task, mark the resource status as error')
       await journals.log(app, resource, { type: 'error', data: errorMessage }, type)
-      await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { [resource.draftReason ? 'draft.status' : 'status']: 'error' } })
+      await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: {
+        [resource.draftReason ? 'draft.status' : 'status']: 'error' },
+        [resource.draftReason ? 'draft.errorStatus' : 'errorStatus']: 'resource.status' }
+      })
       resource.status = 'error'
     }
     hookRejection = { resource, message: errorMessage }

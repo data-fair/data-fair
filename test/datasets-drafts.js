@@ -99,28 +99,12 @@ describe.only('datasets in draft mode', () => {
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     // 1rst data load
     assert.equal(journal.pop().type, 'dataset-created')
-    assert.equal(journal.pop().type, 'initialize-start')
-    assert.equal(journal.pop().type, 'initialize-end')
-    assert.equal(journal.pop().type, 'store-start')
-    assert.equal(journal.pop().type, 'store-end')
-    assert.equal(journal.pop().type, 'analyze-start')
-    assert.equal(journal.pop().type, 'analyze-end')
-    assert.equal(journal.pop().type, 'validate-start')
-    assert.equal(journal.pop().type, 'validate-end')
-    assert.equal(journal.pop().type, 'index-start')
-    assert.equal(journal.pop().type, 'index-end')
-    assert.equal(journal.pop().type, 'finalize-start')
     assert.equal(journal.pop().type, 'finalize-end')
     // patched schema with draft=true
-    assert.equal(journal.pop().type, 'index-start')
-    assert.equal(journal.pop().type, 'index-end')
-    assert.equal(journal.pop().type, 'finalize-start')
+    assert.equal(journal.pop().type, 'structure-updated')
     assert.equal(journal.pop().type, 'finalize-end')
     // draft validated
     assert.equal(journal.pop().type, 'draft-validated')
-    assert.equal(journal.pop().type, 'index-start')
-    assert.equal(journal.pop().type, 'index-end')
-    assert.equal(journal.pop().type, 'finalize-start')
     assert.equal(journal.pop().type, 'finalize-end')
 
     assert.ok(await fs.pathExists(`data/test/user/dmeadus0/datasets/${dataset.id}`))
@@ -181,40 +165,19 @@ describe.only('datasets in draft mode', () => {
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     // 1rst data upload
     assert.equal(journal.pop().type, 'dataset-created')
-    assert.equal(journal.pop().type, 'initialize-start')
-    assert.equal(journal.pop().type, 'initialize-end')
-    assert.equal(journal.pop().type, 'store-start')
-    assert.equal(journal.pop().type, 'store-end')
-    assert.equal(journal.pop().type, 'analyze-start')
-    assert.equal(journal.pop().type, 'analyze-end')
-    assert.equal(journal.pop().type, 'validate-start')
-    assert.equal(journal.pop().type, 'validate-end')
-    assert.equal(journal.pop().type, 'index-start')
-    assert.equal(journal.pop().type, 'index-end')
-    assert.equal(journal.pop().type, 'finalize-start')
     assert.equal(journal.pop().type, 'finalize-end')
 
     // 2nd data upload
     let evt = journal.pop()
     assert.equal(evt.type, 'data-updated')
     assert.equal(evt.draft, true)
-    assert.equal(journal.pop().type, 'store-start')
-    assert.equal(journal.pop().type, 'store-end')
-    assert.equal(journal.pop().type, 'analyze-start')
-    assert.equal(journal.pop().type, 'analyze-end')
-    assert.equal(journal.pop().type, 'validate-start')
     const errorEvent = journal.pop()
     assert.equal(errorEvent.type, 'error')
     assert.ok(errorEvent.data.startsWith('La structure'))
-    assert.equal(journal.pop().type, 'validate-end')
-    assert.equal(journal.pop().type, 'index-start')
-    assert.equal(journal.pop().type, 'index-end')
-    assert.equal(journal.pop().type, 'finalize-start')
     assert.equal(journal.pop().type, 'finalize-end')
+
+    // manual draft validation
     assert.equal(journal.pop().type, 'draft-validated')
-    assert.equal(journal.pop().type, 'index-start')
-    assert.equal(journal.pop().type, 'index-end')
-    assert.equal(journal.pop().type, 'finalize-start')
     evt = journal.pop()
     assert.equal(evt.type, 'finalize-end')
     assert.equal(evt.draft, undefined)
@@ -264,32 +227,14 @@ describe.only('datasets in draft mode', () => {
     assert.equal(res.data.results[1].id, 'bidule')
 
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+    // 1rst data upload
     assert.equal(journal.pop().type, 'dataset-created')
-    assert.equal(journal.pop().type, 'initialize-start')
-    assert.equal(journal.pop().type, 'initialize-end')
-    assert.equal(journal.pop().type, 'store-start')
-    assert.equal(journal.pop().type, 'store-end')
-    assert.equal(journal.pop().type, 'analyze-start')
-    assert.equal(journal.pop().type, 'analyze-end')
-    assert.equal(journal.pop().type, 'validate-start')
-    assert.equal(journal.pop().type, 'validate-end')
-    assert.equal(journal.pop().type, 'index-start')
-    assert.equal(journal.pop().type, 'index-end')
-    assert.equal(journal.pop().type, 'finalize-start')
     assert.equal(journal.pop().type, 'finalize-end')
     let evt = journal.pop()
+    // new compatible data uploaded
     assert.equal(evt.type, 'data-updated')
     assert.equal(evt.draft, true)
-    assert.equal(journal.pop().type, 'store-start')
-    assert.equal(journal.pop().type, 'store-end')
-    assert.equal(journal.pop().type, 'analyze-start')
-    assert.equal(journal.pop().type, 'analyze-end')
-    assert.equal(journal.pop().type, 'validate-start')
     assert.equal(journal.pop().type, 'draft-validated')
-    assert.equal(journal.pop().type, 'validate-end')
-    assert.equal(journal.pop().type, 'index-start')
-    assert.equal(journal.pop().type, 'index-end')
-    assert.equal(journal.pop().type, 'finalize-start')
     evt = journal.pop()
     assert.equal(evt.type, 'finalize-end')
     assert.equal(evt.draft, undefined)
@@ -467,7 +412,7 @@ describe.only('datasets in draft mode', () => {
     assert.equal(res.data.total, 2)
   })
 
-  it.only('Create a draft with attachments then data uploaded separately', async () => {
+  it('Create a draft with attachments then data uploaded separately', async () => {
     const ax = global.ax.dmeadus
 
     // Send dataset with a CSV and attachments in an archive

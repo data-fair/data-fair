@@ -67,7 +67,7 @@ exports.process = async function (app, dataset) {
     if (!dataset.draftReason || dataset.draftReason.validationMode === 'never') {
       // nothing to do
     } else {
-      patch._validateDraft = true
+      patch.validateDraft = true
 
       const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
       Object.assign(datasetFull.draft, patch)
@@ -80,12 +80,12 @@ exports.process = async function (app, dataset) {
         }
         await journals.log(app, dataset, { type: 'error', data: breakingChangesMessage })
         if (dataset.draftReason.validationMode === 'noBreakingChange' || dataset.draftReason.validationMode === 'compatible') {
-          delete patch._validateDraft
+          delete patch.validateDraft
         }
       } else if (!require('../datasets/utils/schema').schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
         await journals.log(app, dataset, { type: 'error', data: 'La structure du nouveau fichier contient des changements.' })
         if (dataset.draftReason.validationMode === 'compatible') {
-          delete patch._validateDraft
+          delete patch.validateDraft
         }
       }
     }
@@ -103,11 +103,11 @@ exports.process = async function (app, dataset) {
     const errorsSummary = validateStream.errorsSummary()
     if (errorsSummary) {
       await journals.log(app, dataset, { type: 'error', data: errorsSummary })
-      delete patch._validateDraft
+      delete patch.validateDraft
     }
   }
 
-  if (patch._validateDraft) {
+  if (patch.validateDraft) {
     await journals.log(app, dataset, { type: 'draft-validated', data: 'validation automatique du brouillon' }, 'dataset')
   }
 

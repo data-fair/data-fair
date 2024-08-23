@@ -139,7 +139,7 @@ exports.process = async function (app, _dataset) {
     result.count = dataset.count = await esUtils.count(es, queryableDataset, {})
   }
 
-  if (dataset.draftReason && dataset._validateDraft) {
+  if (dataset.draftReason && dataset.validateDraft) {
     const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
     await datasetService.validateDraft(app, dataset, datasetFull, result)
     await datasetService.applyPatch(app, datasetFull, result)

@@ -469,7 +469,7 @@ exports.validateDraft = async (app, dataset, datasetFull, patch) => {
   delete draftPatch.draftReason
   delete draftPatch.bbox
   delete draftPatch.storage
-  delete draftPatch._validateDraft
+  delete draftPatch.validateDraft
   Object.assign(patch, draftPatch)
   patch.draft = null
   const patchedDataset = { ...datasetFull, ...patch }

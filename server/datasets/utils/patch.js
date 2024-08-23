@@ -31,10 +31,10 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
   datasetUtils.setUniqueRefs(patch)
   datasetUtils.curateDataset(patch)
 
-  // Changed a previously failed dataset, retry everything.
-  // Except download.. We only try it again if the fetch failed.
+  // Changed a previously failed dataset, retry the previous step
   if (dataset.status === 'error') {
-    if (dataset.isVirtual) patch.status = 'indexed'
+    if (dataset.errorStatus) patch.status = dataset.errorStatus
+    else if (dataset.isVirtual) patch.status = 'indexed'
     else if (dataset.isRest) patch.status = 'analyzed'
     else if (dataset.remoteFile && !dataset.originalFile) patch.status = 'imported'
     else patch.status = 'stored'

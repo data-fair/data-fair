@@ -16,6 +16,11 @@ module.exports = (app, datasetId, task, nbSteps, progressCallback) => {
       lastProgress = progress
       lastTime = time
       await app.publish('datasets/' + datasetId + '/task-progress', { task, progress })
+      if (progress === 100) {
+        await app.get('db').collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $unset: { taskProgress: 1 } })
+      } else {
+        await app.get('db').collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $set: { taskProgress: { task, progress } } })
+      }
     }
   }
 }

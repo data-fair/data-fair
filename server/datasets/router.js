@@ -192,6 +192,10 @@ router.patch('/:datasetId',
       await publicationSites.applyPatch(db, dataset, { ...dataset, ...patch }, user, 'dataset')
       await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
 
+      if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
+        await journals.log(req.app, dataset, { type: 'structure-updated' }, 'dataset')
+      }
+
       await import('@data-fair/lib/express/events-log.js')
         .then((eventsLog) => eventsLog.default.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner }))
 
@@ -435,7 +439,7 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
 
-  const patch = { status: 'validated', _validateDraft: true }
+  const patch = { status: 'validated', validateDraft: true }
   await applyPatch(req.app, dataset, patch)
   await journals.log(req.app, dataset, { type: 'draft-validated', data: 'validation manuelle du brouillon' }, 'dataset')
 
@@ -1147,6 +1151,18 @@ router.get('/:datasetId/journal', readDataset(), apiKeyMiddleware, permissions.m
     if (e.data) e.data = sanitizeHtml(e.data)
   }
   res.json(journal.events)
+}))
+
+router.get('/:datasetId/task-progress', readDataset(), apiKeyMiddleware, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
+  const journal = await req.app.get('db').collection('journals').findOne({
+    type: 'dataset',
+    id: req.dataset.id,
+    'owner.type': req.dataset.owner.type,
+    'owner.id': req.dataset.owner.id
+  })
+  if (!journal) return res.send({})
+  if (!journal.taskProgress) return res.send({})
+  res.json(journal.taskProgress)
 }))
 
 const sendUserNotificationPermissions = permissions.middleware('sendUserNotification', 'write')
