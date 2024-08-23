@@ -20,7 +20,7 @@ module.exports = async (client, dataset, query) => {
   delete esQuery._source
   delete esQuery.sort
 
-  const aggType = (query.q || query.qs) ? 'significant_text' : 'terms'
+  const aggType = (query.q || query._c_q || query.qs) ? 'significant_text' : 'terms'
 
   esQuery.aggs = {
     // signifant_text is costly, and we look for approximative statistics in words-add

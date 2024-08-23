@@ -290,11 +290,12 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
     filter.push({ term: { [accountField.key]: query.account } })
   }
 
-  const q = query.q && query.q.trim()
+  let q = query.q ?? query._c_q
+  if (q) q = q.trim()
 
   if (q || query.qs) {
     // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
-  // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
+    // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
     const searchFields = []
     const wildcardFields = []
     const qSearchFields = []
@@ -528,8 +529,8 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
 
 exports.getQueryBBOX = (query) => {
   let bbox
-  if (query.bbox ?? query._c_bbox_eq) {
-    bbox = (query.bbox ?? query._c_bbox_eq).split(',').map(Number)
+  if (query.bbox ?? query._c_bbox) {
+    bbox = (query.bbox ?? query._c_bbox).split(',').map(Number)
   } else if (query.xyz) {
     bbox = tiles.xyz2bbox(...query.xyz.split(',').map(Number))
   }
