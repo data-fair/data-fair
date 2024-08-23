@@ -206,6 +206,8 @@ describe('Properties capabilities', () => {
     assert.equal(res.data.total, 1)
     res = await ax.get('/api/v1/datasets/rest-geoshape/lines', { params: { bbox: '-2.41,47.8,-2.35,47.9' } })
     assert.equal(res.data.total, 2)
+    res = await ax.get('/api/v1/datasets/rest-geoshape/lines', { params: { _c_bbox: '-2.41,47.8,-2.35,47.9' } })
+    assert.equal(res.data.total, 2)
 
     await ax.patch('/api/v1/datasets/rest-geoshape', {
       schema: [
