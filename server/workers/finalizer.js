@@ -127,11 +127,6 @@ exports.process = async function (app, _dataset) {
     await restDatasetsUtils.configureHistory(app, dataset)
   }
 
-  // Remove attachments if the schema does not refer to their existence
-  if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
-    await attachmentsUtils.removeAll(dataset)
-  }
-
   // virtual datasets have to be re-counted here (others were implicitly counted at index step)
   if (dataset.isVirtual) {
     const descendants = await virtualDatasetsUtils.descendants(db, dataset, false, ['dataUpdatedAt', 'dataUpdatedBy'])
@@ -148,21 +143,23 @@ exports.process = async function (app, _dataset) {
     const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
     await datasetService.validateDraft(app, dataset, datasetFull, result)
     await datasetService.applyPatch(app, datasetFull, result)
-    await datasetUtils.updateStorage(app, datasetFull)
     dataset = datasetFull
   } else {
     await datasetService.applyPatch(app, dataset, result)
   }
+
+  // Remove attachments if the schema does not refer to their existence
+  if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
+    await attachmentsUtils.removeAll(dataset)
+  }
+
+  await datasetUtils.updateStorage(app, dataset)
 
   // parent virtual datasets have to be re-finalized too
   if (!dataset.draftReason) {
     for await (const virtualDataset of collection.find({ 'virtual.children': dataset.id })) {
       await collection.updateOne({ id: virtualDataset.id }, { $set: { status: 'indexed' } })
     }
-  }
-
-  if (dataset.isVirtual) {
-    await datasetUtils.updateStorage(app, queryableDataset)
   }
 
   // trigger auto updates if this dataset is used as a source of extensions
