@@ -23,7 +23,6 @@ describe('datasets based on remote files', () => {
     const res = await ax.post('/api/v1/datasets', { remoteFile: { url: 'http://test-remote.com/data.ppt' } })
     const dataset = res.data
     await assert.rejects(workers.hook('finalizer/' + dataset.id), (err) => {
-      console.log(err.message)
       assert.ok(err.message.includes('Le format de ce fichier n\'est pas supporté'))
       return true
     })

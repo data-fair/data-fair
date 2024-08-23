@@ -176,13 +176,13 @@ function checkQuery (query, schema, esFields, currentField) {
   if (query.field === '_exists_') {
     const field = query.term.replace(/\\/g, '')
     if (!esFields.includes(field)) {
-      throw createError(400, `Impossible de faire une recherche sur le champ ${field}, il n'existe pas dans le jeu de données.`)
+      throw createError(400, `Impossible d'appliquer un filtre' sur le champ ${field}, il n'existe pas dans le jeu de données.`)
     }
   } else if (query.field && !esFields.includes(query.field)) {
     if (!schema.find(p => p.key === query.field)) {
-      throw createError(400, `Impossible de faire une recherche sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
+      throw createError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
     }
-    throw createError(400, `Impossible de faire une recherche sur le champ ${query.field}, la fonctionnalité a été désactivée.`)
+    throw createError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, la fonctionnalité a été désactivée.`)
   }
   if (query.term && (query.term.startsWith('*') || query.term.startsWith('?')) && (!query.field || !query.field.endsWith('.wildcard'))) {
     // throw createError(400, `Impossible de faire une recherche de suite de caractères sans préfixe sur le champ ${query.field}, la fonctionnalité n'est pas activée.`)
@@ -382,43 +382,46 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
       must.push(qBool)
     }
   }
-  for (const key of Object.keys(query)) {
-    if (!['_in', '_eq', '_gt', '_lt', '_gte', '_lte'].some(suffix => key.endsWith(suffix))) continue
+  for (const queryKey of Object.keys(query)) {
+    const filterSuffix = ['_in', '_eq', '_gt', '_lt', '_gte', '_lte'].find(suffix => queryKey.endsWith(suffix))
+    if (!filterSuffix) continue
     let prop
-    if (key.startsWith('_c_')) {
-      const conceptId = key.slice(3, key.length - 3)
+    if (queryKey.startsWith('_c_')) {
+      const conceptId = queryKey.slice(3, queryKey.length - filterSuffix.length)
       prop = dataset.schema.find(p => p['x-concept'] && p['x-concept'].primary && p['x-concept'].id === conceptId)
-      // concept filters can be applied to any dataset by dashboards, they should be ignored
+      // concept filters can be applied to any dataset by dashboards, they should be ignored if no match is found
       if (!prop) continue
     } else {
-      prop = dataset.schema.find(p => p.key === key.slice(0, key.length - 3))
+      const propKey = queryKey.slice(0, queryKey.length - filterSuffix.length)
+      prop = dataset.schema.find(p => p.key === propKey)
+      if (!prop) throw createError(400, `Impossible d'appliquer un filtre sur le champ ${propKey}, il n'existe pas dans le jeu de données.`)
     }
 
-    if (!prop || (prop['x-capabilities'] && prop['x-capabilities'].index === false)) {
-      throw createError(400, `Impossible de faire une recherche sur le champ ${key.slice(0, key.length - 3)}.`)
+    if (prop['x-capabilities'] && prop['x-capabilities'].index === false) {
+      throw createError(400, `Impossible d'appliquer un filtre sur le champ ${prop.key}, la fonctionnalité a été désactivée.`)
     }
-    if (key.endsWith('_in')) {
+    if (filterSuffix === '_in') {
       try {
-        const values = query[key].startsWith('"') ? JSON.parse(`[${query[key]}]`) : query[key].split(',')
+        const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',')
         filter.push({ terms: { [prop.key]: values } })
       } catch (err) {
-        throw createError(400, `"${key}" parameter is malformed`)
+        throw createError(400, `"${queryKey}" parameter is malformed`)
       }
     }
-    if (key.endsWith('_eq')) {
-      filter.push({ term: { [prop.key]: query[key] } })
+    if (filterSuffix === '_eq') {
+      filter.push({ term: { [prop.key]: query[queryKey] } })
     }
-    if (key.endsWith('_gt')) {
-      filter.push({ range: { [prop.key]: { gt: query[key] } } })
+    if (filterSuffix === '_gt') {
+      filter.push({ range: { [prop.key]: { gt: query[queryKey] } } })
     }
-    if (key.endsWith('_gte')) {
-      filter.push({ range: { [prop.key]: { gte: query[key] } } })
+    if (filterSuffix === '_gte') {
+      filter.push({ range: { [prop.key]: { gte: query[queryKey] } } })
     }
-    if (key.endsWith('_lt')) {
-      filter.push({ range: { [prop.key]: { lt: query[key] } } })
+    if (filterSuffix === '_lt') {
+      filter.push({ range: { [prop.key]: { lt: query[queryKey] } } })
     }
-    if (key.endsWith('_lte')) {
-      filter.push({ range: { [prop.key]: { lte: query[key] } } })
+    if (filterSuffix === '_lte') {
+      filter.push({ range: { [prop.key]: { lte: query[queryKey] } } })
     }
   }
 

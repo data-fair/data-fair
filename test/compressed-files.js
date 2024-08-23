@@ -46,7 +46,6 @@ describe('Archive conversions', () => {
     const schema = dataset.schema.filter(p => !p['x-calculated'])
     const locProp = schema.find(p => p.key === 'loc')
     locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
-    console.log(schema)
     const csvContent = fs.readFileSync(path.resolve('./test/resources/datasets/dataset1.csv'))
     const form2 = new FormData()
     form2.append('file', csvContent, 'dataset1.csv')

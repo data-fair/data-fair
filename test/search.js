@@ -46,6 +46,8 @@ describe('search', () => {
     // filter on ranges with query params suffixed with _lte, _gte, _lt, _gt
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_gt=cc`)
     assert.equal(res.data.total, 1)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_gte=cc`)
+    assert.equal(res.data.total, 1)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?some_date_gt=2017-11-12`)
     assert.equal(res.data.total, 1)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?nb_gt=22`)
@@ -115,7 +117,6 @@ describe('search', () => {
     assert.equal(res.headers['content-disposition'], 'attachment; filename="dataset1.xlsx"')
     assert.ok(Number(res.headers['content-length']) > 5000)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?format=ods`)
-    console.log(res.headers)
     assert.equal(res.headers['content-disposition'], 'attachment; filename="dataset1.ods"')
     assert.ok(Number(res.headers['content-length']) > 5000)
   })

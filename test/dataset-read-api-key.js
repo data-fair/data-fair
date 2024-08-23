@@ -11,7 +11,6 @@ describe('Dataset API keys', () => {
     assert.ok(dataset.readApiKey.renewAt)
     await assert.rejects(global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/read-api-key`), { status: 403 })
     const apiKey = (await ax.get(`/api/v1/datasets/${dataset.id}/read-api-key`)).data
-    console.log(apiKey)
 
     await assert.rejects(global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/lines`), { status: 403 })
     await assert.rejects(global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/lines`, { headers: { 'x-apiKey': 'wrong' } }), { status: 401 })

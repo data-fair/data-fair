@@ -145,14 +145,14 @@ describe('Properties capabilities', () => {
       assert.fail()
     } catch (err) {
       assert.equal(err.status, 400)
-      assert.ok(err.data.includes('Impossible de faire une recherche'))
+      assert.ok(err.data.includes('Impossible d\'appliquer un filtre'))
     }
     try {
       res = await ax.get('/api/v1/datasets/rest-index/lines', { params: { str1_in: 'test3,test2' } })
       assert.fail()
     } catch (err) {
       assert.equal(err.status, 400)
-      assert.ok(err.data.includes('Impossible de faire une recherche'))
+      assert.ok(err.data.includes('Impossible d\'appliquer un filtre'))
     }
   })
 
