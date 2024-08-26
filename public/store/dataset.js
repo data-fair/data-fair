@@ -218,7 +218,11 @@ export default () => ({
           return dispatch('fetchInfo')
         }
 
-        dispatch('addJournalEvent', event)
+        if (!event.store) {
+          // ignore event that is not stored, prevent different render after refresh
+        } else {
+          dispatch('addJournalEvent', event)
+        }
 
         // refresh dataset with relevant parts when receiving journal event
         if (state.eventStates[event.type] && state.dataset) {
