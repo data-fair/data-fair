@@ -74,11 +74,7 @@ exports.process = async function (app, dataset) {
       const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
       const breakingChanges = require('../datasets/utils/schema').getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema)
       if (breakingChanges.length) {
-        let breakingChangesMessage = 'La structure du nouveau fichier contient des ruptures de compatibilité :'
-        for (const breakingChange of breakingChanges) {
-          breakingChangesMessage += '\n<br>' + require('i18n').__({ phrase: 'breakingChanges.' + breakingChange.type, locale: config.i18n.defaultLocale }, { key: breakingChange.key })
-        }
-        await journals.log(app, dataset, { type: 'error', data: breakingChangesMessage })
+        await journals.log(app, dataset, { type: 'error', data: 'La structure du nouveau fichier contient des ruptures de compatibilité.' })
         if (dataset.draftReason.validationMode === 'noBreakingChange' || dataset.draftReason.validationMode === 'compatible') {
           delete patch.validateDraft
         }
