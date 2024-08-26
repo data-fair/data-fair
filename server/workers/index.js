@@ -379,9 +379,11 @@ async function iter (app, resource, type) {
     } else {
       debug('do NOT retry the task, mark the resource status as error')
       await journals.log(app, resource, { type: 'error', data: errorMessage }, type)
-      await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: {
-        [resource.draftReason ? 'draft.status' : 'status']: 'error' },
-        [resource.draftReason ? 'draft.errorStatus' : 'errorStatus']: 'resource.status' }
+      await app.get('db').collection(type + 's').updateOne({ id: resource.id }, {
+        $set: {
+          [resource.draftReason ? 'draft.status' : 'status']: 'error',
+          [resource.draftReason ? 'draft.errorStatus' : 'errorStatus']: 'resource.status'
+        }
       })
       resource.status = 'error'
     }

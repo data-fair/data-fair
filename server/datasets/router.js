@@ -397,7 +397,13 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
     if (req.datasetFull.status === 'draft') {
       patch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon', validationMode: 'never' }
     } else {
-      patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode: draft ? 'compatible' : 'always' }
+      let validationMode = 'always'
+      if (draft) {
+        if ((patch.schema ?? dataset.schema).find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) validationMode = 'never'
+        else validationMode = 'compatible'
+      }
+
+      patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode }
     }
 
     const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, user, locale, files)

@@ -1,7 +1,5 @@
 const testUtils = require('./resources/test-utils')
 const assert = require('assert').strict
-const fs = require('fs-extra')
-const FormData = require('form-data')
 const workers = require('../server/workers')
 
 describe('Elasticsearch disk watermarks', () => {
@@ -14,11 +12,7 @@ describe('Elasticsearch disk watermarks', () => {
 
     // upload a new file but the index won't be writable (simulates a lock from flood watermark errors)
     process.env.READ_ONLY_ES_INDEX = 'true'
-    const datasetFd2 = fs.readFileSync('./test/resources/datasets/dataset2.csv')
-    const form2 = new FormData()
-    form2.append('file', datasetFd2, 'dataset2.csv')
-    form2.append('description', 'draft description')
-    await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
+    await global.ax.superadmin.post(`/api/v1/datasets/${dataset.id}/_reindex`)
     await assert.rejects(workers.hook(`finalizer/${dataset.id}`))
 
     // dataset is in error, but still queryable from previous index

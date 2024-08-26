@@ -745,7 +745,7 @@ other,unknown address
       schema: dataset.schema,
       extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(id, " / ", adr)', property: { key: 'employees', type: 'string' } }]
     })
-    assert.equal(res.data.status, 'analyzed')
+    assert.equal(res.data.status, 'validated')
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
     assert.equal(lines[0].employees, 'koumoul / 19 rue de la voie lactée saint avé')

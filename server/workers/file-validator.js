@@ -64,7 +64,7 @@ exports.process = async function (app, dataset) {
 
   if (dataset.draftReason) {
     // manage auto-validation of a dataset draft
-    if (!dataset.draftReason || dataset.draftReason.validationMode === 'never') {
+    if (dataset.draftReason.validationMode === 'never') {
       // nothing to do
     } else {
       patch.validateDraft = true

@@ -13,7 +13,7 @@ const esUtils = require('../server/datasets/es')
 nock('http://test-catalog.com').persist()
   .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
 
-describe.only('datasets in draft mode', () => {
+describe('datasets in draft mode', () => {
   it('create new dataset in draft mode and validate it', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
