@@ -14,7 +14,7 @@ nock('http://test-catalog.com').persist()
   .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
 
 describe('datasets in draft mode', () => {
-  it('create new dataset in draft mode and validate it', async () => {
+  it.only('create new dataset in draft mode and validate it', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
     const form = new FormData()
@@ -39,6 +39,7 @@ describe('datasets in draft mode', () => {
     assert.equal(dataset.status, 'draft')
     assert.equal(dataset.draft.status, 'finalized')
     assert.equal(dataset.draft.count, 2)
+    console.log(dataset.dataUpdatedAt, dataset.dataUpdatedBy)
 
     // querying with ?draft=true automatically merges the draft state into the main state
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`, { params: { draft: true } })).data
@@ -85,9 +86,11 @@ describe('datasets in draft mode', () => {
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
     dataset = await workers.hook('finalizer')
     assert.equal(dataset.status, 'finalized')
+    assert.ok(!dataset.draftReason)
     assert.equal(dataset.count, 2)
     assert.ok(dataset.bbox)
     assert.ok(!await fs.pathExists(`data/test/user/dmeadus0/datasets-drafts/${dataset.id}`))
+    console.log(dataset.dataUpdatedAt, dataset.dataUpdatedBy)
 
     // querying lines is now possible
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)

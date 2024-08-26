@@ -462,7 +462,7 @@ exports.validateDraft = async (app, dataset, datasetFull, patch) => {
   const draftPatch = { ...datasetFull.draft }
   if (datasetFull.draft.dataUpdatedAt) {
     draftPatch.dataUpdatedAt = draftPatch.updatedAt
-    draftPatch.dataUpdatedBy = draftPatch.updatedBy
+    draftPatch.dataUpdatedBy = draftPatch.updatedBy ?? draftPatch.dataUpdatedBy
   }
   delete draftPatch.status
   delete draftPatch.finalizedAt

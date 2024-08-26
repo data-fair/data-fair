@@ -60,7 +60,7 @@ exports.process = async function (app, dataset) {
   const progress = taskProgress(app, dataset.id, exports.eventsPrefix, 100, (progress) => {
     debugHeap('progress ' + progress, indexStream)
   })
-  await progress(0)
+  await progress.inc(0)
   debugHeap('before-stream')
   if (dataset.isRest) {
     readStreams = await restDatasetsUtils.readStreams(db, dataset, (dataset.status === 'updated' || dataset.status === 'extended-updated') ? { _needsIndexing: true } : {}, progress)

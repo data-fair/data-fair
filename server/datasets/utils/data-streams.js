@@ -187,7 +187,7 @@ exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraft
     const { size } = await fs.stat(p)
     streams.push(new Transform({
       transform (chunk, encoding, callback) {
-        progress((chunk.length / size) * 100)
+        progress.inc((chunk.length / size) * 100)
         callback(null, chunk)
       }
     }))

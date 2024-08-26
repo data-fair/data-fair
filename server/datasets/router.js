@@ -447,7 +447,7 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
 
   const patch = { status: 'validated', validateDraft: true }
   await applyPatch(req.app, dataset, patch)
-  await journals.log(req.app, dataset, { type: 'draft-validated', data: 'validation manuelle du brouillon' }, 'dataset')
+  await journals.log(req.app, dataset, { type: 'draft-validated', data: 'validation manuelle' }, 'dataset')
 
   await import('@data-fair/lib/express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
@@ -1143,7 +1143,7 @@ router.get('/:datasetId/private-api-docs.json', readDataset(), apiKeyMiddleware,
   res.send(privateDatasetAPIDocs(req.dataset, req.publicBaseUrl, req.user, (settings && settings.info) || {}))
 }))
 
-router.get('/:datasetId/journal', readDataset(), apiKeyMiddleware, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
+router.get('/:datasetId/journal', readDataset({ acceptInitialDraft: true }), apiKeyMiddleware, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({
     type: 'dataset',
     id: req.dataset.id,

@@ -4,6 +4,7 @@ const metrics = require('../misc/utils/metrics')
 const locks = require('../misc/utils/locks')
 const debug = require('debug')('workers')
 const mergeDraft = require('../datasets/utils/merge-draft')
+const taskProgress = require('../datasets/utils/task-progress')
 const { schemaHasValidationRules } = require('../datasets/utils/schema')
 
 const workersTasksHistogram = new Histogram({
@@ -191,6 +192,7 @@ async function iter (app, resource, type) {
   let endTask
   let hookResolution, hookRejection
   let lockReleaseDelay = 0
+  let progress
   try {
     // if there is something to be done in the draft mode of the dataset, it is prioritary
     if (type === 'dataset' && resource.draft && resource.draft.status !== 'finalized' && resource.draft.status !== 'error') {
@@ -290,6 +292,8 @@ async function iter (app, resource, type) {
     if (task.eventsPrefix) {
       const noStoreEvent = type === 'dataset'
       await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
+      progress = taskProgress(app, resource.id, task.eventsPrefix)
+      await progress.start()
     }
 
     endTask = workersTasksHistogram.startTimer({ task: taskKey })
@@ -324,6 +328,7 @@ async function iter (app, resource, type) {
       } else {
         await journals.log(app, newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
       }
+      await progress?.end()
     }
     hookResolution = newResource
   } catch (err) {
@@ -369,6 +374,8 @@ async function iter (app, resource, type) {
         retry = false
       }
     }
+
+    await progress?.end(true)
 
     if (retry) {
       debug('retry task after lock release delay', config.worker.errorRetryDelay)

@@ -991,7 +991,7 @@ exports.readStreams = async (db, dataset, filter = {}, progress) => {
     new Transform({
       objectMode: true,
       transform (chunk, encoding, cb) {
-        if (progress) progress(inc)
+        if (progress) progress.inc(inc)
         // now _i should always be defined, but keep the OR for retro-compatibility
         chunk._i = chunk._i || chunk._updatedAt.getTime()
         cb(null, chunk)

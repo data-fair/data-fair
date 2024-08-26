@@ -94,7 +94,7 @@ exports.process = async function (app, dataset) {
   if (datasetUtils.schemaHasValidationRules(dataset.schema)) {
     debug('Run validator stream')
     const progress = taskProgress(app, dataset.id, exports.eventsPrefix, 100)
-    await progress(0)
+    await progress.inc(0)
     const readStreams = await datasetUtils.readStreams(db, dataset, false, false, false, progress)
     const validateStream = new ValidateStream({ dataset })
     await pump(...readStreams, validateStream)
@@ -108,7 +108,7 @@ exports.process = async function (app, dataset) {
   }
 
   if (patch.validateDraft) {
-    await journals.log(app, dataset, { type: 'draft-validated', data: 'validation automatique du brouillon' }, 'dataset')
+    await journals.log(app, dataset, { type: 'draft-validated', data: 'validation automatique' }, 'dataset')
   }
 
   await datasetsService.applyPatch(app, dataset, patch)

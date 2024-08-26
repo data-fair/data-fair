@@ -50,7 +50,7 @@ exports.process = async function (app, _dataset) {
   if (startDateField || endDateField) nbSteps += 1
   if (geopoint || geometry) nbSteps += 1
   const progress = taskProgress(app, dataset.id, exports.eventsPrefix, nbSteps)
-  await progress(0)
+  await progress.inc(0)
 
   for (const prop of cardinalityProps) {
     debug(`Calculate cardinality of field ${prop.key}`)
@@ -78,7 +78,7 @@ exports.process = async function (app, _dataset) {
         })
       }
     }
-    await progress()
+    await progress.inc()
   }
 
   // calculate geographical coverage
@@ -87,7 +87,7 @@ exports.process = async function (app, _dataset) {
     queryableDataset.bbox = []
     result.bbox = dataset.bbox = (await esUtils.bboxAgg(es, queryableDataset, {}, true, '10s')).bbox
     debug('bounding box ok', result.bbox)
-    await progress()
+    await progress.inc()
   } else {
     result.bbox = null
   }
@@ -113,7 +113,7 @@ exports.process = async function (app, _dataset) {
       startDate: new Date(timePeriod.startDate).toISOString(),
       endDate: new Date(timePeriod.endDate).toISOString()
     }
-    await progress()
+    await progress.inc()
   }
 
   result.esWarning = await esUtils.datasetWarning(es, dataset)
@@ -179,7 +179,7 @@ exports.process = async function (app, _dataset) {
     }
   }
 
-  await progress()
+  await progress.inc()
 
   debug('done')
 }

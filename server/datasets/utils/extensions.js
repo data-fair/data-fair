@@ -118,7 +118,7 @@ exports.extend = async (app, dataset, extensions, updateMode, ignoreDraftLimit) 
 
   let inputStreams
   const progress = taskProgress(app, dataset.id, 'extend', 100)
-  await progress(0)
+  await progress.inc(0)
   if (dataset.isRest) {
     inputStreams = await restDatasetsUtils.readStreams(db, dataset, updateMode === 'updatedLines' ? { _needsExtending: true } : {}, progress)
   } else {

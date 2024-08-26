@@ -18,8 +18,8 @@
             <span
               v-if="item.draft"
               class="font-weight-thin font-italic ml-4"
-            >brouillon</span>
-            <template v-if="item.data">
+            >{{ item.type === 'draft-validated' ? item.data : 'brouillon' }}</span>
+            <template v-if="item.data && item.type !== 'draft-validated'">
               <br>
               <p
                 class="mb-0"
