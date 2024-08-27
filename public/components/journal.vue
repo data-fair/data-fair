@@ -71,7 +71,7 @@
         </v-list-item>
         <v-divider
           v-if="item.draft && !events[i+1]?.draft"
-          :key="`before-${i}`"
+          :key="`after-${i}`"
         />
       </template>
     </v-list>

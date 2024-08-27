@@ -1000,7 +1000,7 @@ export default {
       this.cancelSource = this.$axios.CancelToken.source()
       const options = {
         onUploadProgress: (e) => {
-          if (e.lengthComputable) {
+          if (e.total) {
             this.uploadProgress = {
               loaded: e.loaded,
               total: e.total,
