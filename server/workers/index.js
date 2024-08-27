@@ -159,7 +159,9 @@ const getTypesFilters = () => {
           { status: { $nin: ['finalized', 'error', 'draft'] } },
           // fetch next processing steps in usual sequence, but of the draft version of the dataset
           { 'draft.status': { $exists: true, $nin: ['finalized', 'error'] } },
-          // fetch datasets that are finalized, but need to update a publication
+          // fetch rest datasets with a partial update
+          { status: 'finalized', isRest: true, _partialRestStatus: { $exists: true } },
+          // fetch datasets that are finalized, but need to update a publications
           { status: 'finalized', 'publications.status': { $in: ['waiting', 'deleted'] } },
           // fetch rest datasets with a TTL to process
           { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } },
@@ -227,11 +229,9 @@ async function iter (app, resource, type) {
       } else if (normalized && resource.file && resource.file.mimetype === 'application/geo+json') {
         // Deduce a schema from geojson properties
         taskKey = 'geojsonAnalyzer'
-      } else if (resource.isRest && resource.status === 'extended-updated') {
-        taskKey = 'indexer'
       } else if (resource.file && ['analyzed', 'validation-updated'].includes(resource.status)) {
         taskKey = 'fileValidator'
-      } else if ((resource.file && resource.status === 'validated') || (resource.isRest && ['analyzed', 'updated'].includes(resource.status))) {
+      } else if ((resource.file && resource.status === 'validated') || (resource.isRest && resource.status === 'analyzed') || (resource.isRest && resource._partialRestStatus === 'updated')) {
         if (resource.extensions && resource.extensions.find(e => e.active)) {
           // Perform extensions from remote services for dataset that have at least one active extension
           taskKey = 'extender'
@@ -240,9 +240,9 @@ async function iter (app, resource, type) {
           // either just analyzed or an updated REST dataset
           taskKey = 'indexer'
         }
-      } else if (resource.status === 'extended') {
+      } else if (resource.status === 'extended' || (resource.isRest && resource._partialRestStatus === 'extended')) {
         taskKey = 'indexer'
-      } else if (resource.status === 'indexed') {
+      } else if (resource.status === 'indexed' || (resource.isRest && resource._partialRestStatus === 'indexed')) {
         // finalization covers some metadata enrichment, schema cleanup, etc.
         taskKey = 'finalizer'
       } else if (

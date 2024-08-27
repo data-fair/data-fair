@@ -13,11 +13,16 @@ exports.process = async function (app, dataset) {
 
   let updateMode = 'all'
   if (dataset.status === 'finalized' && dataset.extensions.find(e => e.needsUpdate)) updateMode = 'updatedExtensions'
-  else if (dataset.status === 'updated') updateMode = 'updatedLines'
+  else if (dataset._partialRestStatus === 'updated') updateMode = 'updatedLines'
   debug('update mode', updateMode)
 
   const db = app.get('db')
-  const patch = { status: updateMode === 'all' ? 'extended' : 'extended-updated' }
+  const patch = {}
+  if (updateMode === 'all') {
+    patch.status = 'extended'
+  } else {
+    patch._partialRestStatus = 'extended'
+  }
 
   let extensions = dataset.extensions || []
   if (updateMode === 'updatedExtensions') extensions = extensions.filter(e => e.needsUpdate)
@@ -33,7 +38,7 @@ exports.process = async function (app, dataset) {
   // keep dataset as "updated" so that this worker keeps going
   if (updateMode !== 'all' && await restDatasetsUtils.count(db, dataset, { _needsExtending: true })) {
     debug('REST dataset extended, but some data has changed, stay in "updated" status')
-    patch.status = 'updated'
+    patch._partialRestStatus = 'updated'
   }
 
   debugMasterData(`apply patch after extensions ${dataset.id} (${dataset.slug})`, patch)

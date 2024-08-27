@@ -118,14 +118,11 @@ exports.process = async function (app, _dataset) {
 
   result.esWarning = await esUtils.datasetWarning(es, dataset)
 
-  result.finalizedAt = (new Date()).toISOString()
-  if (dataset.isRest && (await collection.findOne({ id: dataset.id })).status === 'updated') {
-    // dataset was updated while we were finalizing.. keep it as such
-    delete result.status
-  }
   if (dataset.isRest) {
     await restDatasetsUtils.configureHistory(app, dataset)
   }
+
+  result.finalizedAt = (new Date()).toISOString()
 
   // virtual datasets have to be re-counted here (others were implicitly counted at index step)
   if (dataset.isVirtual) {
@@ -145,6 +142,13 @@ exports.process = async function (app, _dataset) {
     await datasetService.applyPatch(app, datasetFull, result)
     dataset = datasetFull
   } else {
+    if (dataset.isRest && dataset._partialRestStatus) {
+      // dataset was updated while we were finalizing.. keep it as such
+      if ((await collection.findOne({ id: dataset.id }))._partialRestStatus === 'indexed') {
+        result._partialRestStatus = null
+      }
+    }
+
     await datasetService.applyPatch(app, dataset, result)
   }
 

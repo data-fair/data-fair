@@ -701,7 +701,7 @@ exports.deleteLine = async (req, res, next) => {
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
   if (operation._error) return res.status(operation._status).send(operation._error)
-  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
   // TODO: delete the attachment if it is the primary key ?
   res.status(204).send()
   storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
@@ -726,7 +726,7 @@ exports.createOrUpdateLine = async (req, res, next) => {
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
   if (operation._error) return res.status(operation._status).send(operation._error)
-  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
   const line = getLineFromOperation(operation)
   res.status(line._status || (definedId ? 200 : 201)).send(cleanLine(line))
   storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
@@ -746,7 +746,7 @@ exports.patchLine = async (req, res, next) => {
   await import('@data-fair/lib/express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
-  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
   const line = getLineFromOperation(operation)
   res.status(200).send(cleanLine(line))
   storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
@@ -765,7 +765,7 @@ exports.deleteAllLines = async (req, res, next) => {
   await import('@data-fair/lib/express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
-  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
 
   res.status(204).send()
   storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
@@ -875,7 +875,7 @@ exports.bulkLines = async (req, res, next) => {
           await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'analyzed' } })
         }
       } else {
-        await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+        await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
       }
     } catch (err) {
       metrics.internalError('bulk-lines', err)
@@ -936,7 +936,7 @@ exports.syncAttachmentsLines = async (req, res, next) => {
   const transactionStream = new TransactionStream({ req, validate, summary })
   await pump(filesStream, transactionStream)
 
-  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
   await storageUtils.updateStorage(req.app, req.dataset)
 
   res.send(summary)
@@ -1114,7 +1114,7 @@ exports.applyTTL = async (app, dataset) => {
     new TransactionStream({ req: { app, dataset }, summary })
   )
   const patch = { 'rest.ttl.checkedAt': new Date().toISOString() }
-  if (summary.nbOk) patch.status = 'updated'
+  if (summary.nbOk) patch._partialRestStatus = 'updated'
 
   await app.get('db').collection('datasets')
     .updateOne({ id: dataset.id }, { $set: patch })

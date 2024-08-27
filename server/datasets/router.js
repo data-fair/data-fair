@@ -491,7 +491,7 @@ function isRest (req, res, next) {
   next()
 }
 
-const readWritableDataset = readDataset({ acceptedStatuses: ['finalized', 'updated', 'extended-updated', 'indexed', 'error'] })
+const readWritableDataset = readDataset({ acceptedStatuses: ['finalized', 'indexed', 'error'] })
 router.get('/:datasetId/lines/:lineId', readDataset(), isRest, apiKeyMiddleware, permissions.middleware('readLine', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
 router.post('/:datasetId/lines', readWritableDataset, isRest, applicationKey, apiKeyMiddleware, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createOrUpdateLine))
 router.put('/:datasetId/lines/:lineId', readWritableDataset, isRest, apiKeyMiddleware, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createOrUpdateLine))

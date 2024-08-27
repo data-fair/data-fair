@@ -192,6 +192,7 @@ exports.clean = (publicUrl, publicationSite, dataset, query = {}, draft = false)
   delete dataset.loaded
   delete dataset._readApiKey
   delete dataset._attachmentsTargets
+  delete dataset._partialRestStatus
 
   if (select.includes('-userPermissions')) delete dataset.userPermissions
   if (select.includes('-owner')) delete dataset.owner
