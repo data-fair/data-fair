@@ -1,5 +1,4 @@
 const { Writable } = require('stream')
-const config = require('config')
 const journals = require('../misc/utils/journals')
 
 // Index tabular datasets with elasticsearch using available information on dataset schema

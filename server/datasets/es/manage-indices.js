@@ -1,7 +1,6 @@
 const crypto = require('crypto')
 const config = require('config')
 const datasetUtils = require('../utils')
-const metrics = require('../../misc/utils/metrics')
 const { aliasName, esProperty } = require('./commons')
 
 exports.indexDefinition = async (dataset) => {

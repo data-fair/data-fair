@@ -718,7 +718,6 @@ exports.deleteLine = async (req, res, next) => {
   // @ts-ignore
   const dataset = req.dataset
 
-  const db = req.app.get('db')
   const [operation] = (await applyReqTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset, req.user.adminMode))).operations
   if (operation._error) return res.status(operation._status).send(operation._error)
   await commitSingleLine(req.app, dataset, req.params.lineId)
@@ -737,7 +736,6 @@ exports.createOrUpdateLine = async (req, res, next) => {
 
   formatLine(req.body, dataset.schema)
 
-  const db = req.app.get('db')
   Object.assign(req.body, linesOwnerCols(req.linesOwner))
   req.body._action = req.body._action ?? 'createOrUpdate'
   const definedId = req.params.lineId || req.body._id || getLineId(req.body, req.dataset)
@@ -760,7 +758,6 @@ exports.patchLine = async (req, res, next) => {
   // @ts-ignore
   const dataset = req.dataset
 
-  const db = req.app.get('db')
   await manageAttachment(req, true)
   const fullLine = { _action: 'patch', _id: req.params.lineId, ...req.body }
   formatLine(fullLine, dataset.schema)

@@ -5,7 +5,6 @@ const locks = require('../misc/utils/locks')
 const debug = require('debug')('workers')
 const mergeDraft = require('../datasets/utils/merge-draft')
 const taskProgress = require('../datasets/utils/task-progress')
-const { schemaHasValidationRules } = require('../datasets/utils/schema')
 
 const workersTasksHistogram = new Histogram({
   name: 'df_datasets_workers_tasks',
