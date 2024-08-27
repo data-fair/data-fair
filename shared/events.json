@@ -27,7 +27,14 @@
       "icon": "mdi-pencil",
       "text": {
         "fr": "les données ont été mises à jour",
-        "en": "the data as updated"
+        "en": "the data was updated"
+      }
+    },
+    "structure-updated": {
+      "icon": "mdi-pencil",
+      "text": {
+        "fr": "la structure a été mise à jour",
+        "en": "the structure was updated"
       }
     },
     "initialize-start": {
@@ -186,8 +193,8 @@
     "finalize-end": {
       "icon": "mdi-check",
       "text": {
-        "fr": "le brouillon du jeu de données a été traité",
-        "en": "the dataset draft was processed"
+        "fr": "le brouillon du jeu de données est consultable",
+        "en": "the dataset draft is accessible"
       }
     }
   },
