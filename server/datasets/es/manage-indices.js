@@ -75,7 +75,7 @@ const getAliases = async (client, dataset) => {
 
 // delete indices and aliases of a dataset
 exports.delete = async (client, dataset) => {
-  const { prodAlias, draftAlias } = await getAliases(client, dataset)
+  const { prodAlias } = await getAliases(client, dataset)
 
   if (dataset.draftReason) {
     // in case of a draft dataset, delete all indices not used by the production alias
@@ -84,7 +84,6 @@ exports.delete = async (client, dataset) => {
       if (prodAlias && prodAlias[index]) continue
       await client.indices.delete({ index })
     }
-    if (draftAlias) await client.indices.deleteAlias({ name: aliasName(dataset), index: '_all' })
   } else {
     await client.indices.delete({ index: `${indexPrefix(dataset)}-*` })
   }

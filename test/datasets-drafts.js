@@ -14,7 +14,7 @@ nock('http://test-catalog.com').persist()
   .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
 
 describe('datasets in draft mode', () => {
-  it.only('create new dataset in draft mode and validate it', async () => {
+  it('create new dataset in draft mode and validate it', async () => {
     // Send dataset
     const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
     const form = new FormData()
@@ -194,6 +194,59 @@ describe('datasets in draft mode', () => {
     // console.log(notifications.shift())
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-breaking-change:' + dataset.slug)
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-finalize-end:' + dataset.slug)
+  })
+
+  it('create a draft when updating the data file and cancel it', async () => {
+    // listen to all notifications
+    const notifications = []
+    global.events.on('notification', (n) => notifications.push(n))
+
+    // Send dataset
+    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+    const form = new FormData()
+    form.append('file', datasetFd, 'dataset1.csv')
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let dataset = await workers.hook('finalizer')
+
+    // upload a new file with incompatible schema
+    const datasetFd2 = fs.readFileSync('./test/resources/datasets/dataset2.csv')
+    const form2 = new FormData()
+    form2.append('file', datasetFd2, 'dataset2.csv')
+    form2.append('description', 'draft description')
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
+    dataset = await workers.hook('finalizer')
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
+    assert.equal(res.data.total, 5)
+
+    // cancel the draft
+    await ax.delete(`/api/v1/datasets/${dataset.id}/draft`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 2)
+    dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`, { params: { draft: true } })).data
+    assert.equal(dataset.draftReason, undefined)
+
+    // the journal kept traces of all changes (draft and not)
+    const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+    // 1rst data upload
+    assert.equal(journal.pop().type, 'dataset-created')
+    assert.equal(journal.pop().type, 'finalize-end')
+
+    // 2nd data upload
+    let evt = journal.pop()
+    assert.equal(evt.type, 'data-updated')
+    assert.equal(evt.draft, true)
+    const errorEvent = journal.pop()
+    assert.equal(errorEvent.type, 'error')
+    assert.ok(errorEvent.data.startsWith('La structure'))
+    assert.equal(journal.pop().type, 'finalize-end')
+
+    // draft cancellation
+    assert.equal(journal.pop().type, 'draft-cancelled')
+    evt = journal.pop()
+    assert.equal(journal.length, 0)
   })
 
   it('create a draft when updating the data file and auto-validate if it\'s schema is compatible', async () => {
