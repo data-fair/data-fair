@@ -150,6 +150,7 @@ exports.process = async function (app, _dataset) {
     }
 
     await datasetService.applyPatch(app, dataset, result)
+    // console.log('applied', await collection.findOne({ id: dataset.id }))
   }
 
   // Remove attachments if the schema does not refer to their existence

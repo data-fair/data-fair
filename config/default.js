@@ -41,6 +41,7 @@ module.exports = {
     maxShardSize: 10000000000, // 10go
     nbReplicas: 1,
     maxPageSize: 10000,
+    singleLineOpRefresh: 'wait_for',
     searchTimeout: '45s', // bound search complexity, TODO: measure actual requests and lower this to a more reasonable value
     acceptYellowStatus: false // change to "true" to tolerate a single node instance
   },

@@ -106,6 +106,7 @@ module.exports = {
   assertImmutable: true,
   remoteAttachmentCacheDuration: 1000,
   elasticsearch: {
-    acceptYellowStatus: true
+    acceptYellowStatus: true,
+    singleLineOpRefresh: true
   }
 }
