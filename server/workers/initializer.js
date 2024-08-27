@@ -100,7 +100,7 @@ exports.process = async function (app, dataset) {
         for await (const hits of iterHits(app.get('es'), parentDataset, { size: 1000, select })) {
           const transactions = hits.map(hit => ({ _action: 'create', _id: hit._id, ...hit._source }))
           await applyTransactions(db, dataset, pseudoUser, transactions)
-          await progress(transactions.length)
+          await progress.inc(transactions.length)
         }
       } else if (parentDataset.file) {
         // from file to file: copy data files
@@ -143,7 +143,7 @@ exports.process = async function (app, dataset) {
           const newPath = attachmentPath(dataset, attachment)
           await fs.ensureDir(path.dirname(newPath))
           await fs.copyFile(attachmentPath(parentDataset, attachment), newPath)
-          await progress()
+          await progress.inc()
         }
       }
     }
@@ -159,7 +159,7 @@ exports.process = async function (app, dataset) {
         const newPath = metadataAttachmentPath(dataset, metadataAttachment)
         await fs.ensureDir(path.dirname(newPath))
         await fs.copyFile(metadataAttachmentPath(parentDataset, metadataAttachment), newPath)
-        await progress()
+        await progress.inc()
       }
       patch.attachments = parentDataset.attachments
     }

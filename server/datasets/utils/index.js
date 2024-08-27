@@ -51,15 +51,17 @@ exports.sampleValues = dataStreamsUtils.sampleValues
 exports.readStreams = dataStreamsUtils.readStreams
 
 exports.reindex = async (db, dataset) => {
-  const patch = { status: 'stored' }
+  let patch = { status: 'stored' }
   if (dataset.isVirtual) patch.status = 'indexed'
   else if (dataset.isRest) patch.status = 'analyzed'
+  if (dataset.draftReason) patch = { 'draft.status': patch.status }
   return (await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
 }
 
 exports.refinalize = async (db, dataset) => {
-  const patch = { status: 'indexed' }
+  let patch = { status: 'indexed' }
+  if (dataset.draftReason) patch = { 'draft.status': patch.status }
   return (await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
 }
@@ -190,6 +192,7 @@ exports.clean = (publicUrl, publicationSite, dataset, query = {}, draft = false)
   delete dataset.loaded
   delete dataset._readApiKey
   delete dataset._attachmentsTargets
+  delete dataset._partialRestStatus
 
   if (select.includes('-userPermissions')) delete dataset.userPermissions
   if (select.includes('-owner')) delete dataset.owner

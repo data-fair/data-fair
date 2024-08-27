@@ -17,7 +17,7 @@ module.exports.log = async function (app, resource, event, type = 'dataset', noS
     }
 
     // websockets notifications
-    await app.publish(`${type}s/${resource.id}/journal`, event)
+    await app.publish(`${type}s/${resource.id}/journal`, { ...event, store: !noStoreEvent })
 
     webhooks.trigger(db, type, resource, event)
   } catch (err) {

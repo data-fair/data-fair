@@ -4,7 +4,7 @@ const metrics = require('../misc/utils/metrics')
 const locks = require('../misc/utils/locks')
 const debug = require('debug')('workers')
 const mergeDraft = require('../datasets/utils/merge-draft')
-const { schemaHasValidationRules } = require('../datasets/utils/schema')
+const taskProgress = require('../datasets/utils/task-progress')
 
 const workersTasksHistogram = new Histogram({
   name: 'df_datasets_workers_tasks',
@@ -36,6 +36,8 @@ const tasks = exports.tasks = {
 // const stopResolves = {}
 let stopped = false
 const promisePool = []
+/** @type {null | ((value?: any) => void)} */
+let loopIntervalPromiseResolve = null
 
 // Hooks for testing
 let hooks = {}
@@ -46,6 +48,7 @@ exports.hook = (key, delay = 15000, message) => {
   })
   const error = new Error(message) // prepare error at this level so that stack trace is useful
   const timeoutPromise = new Promise((resolve, reject) => setTimeout(() => reject(error), delay))
+  if (loopIntervalPromiseResolve) loopIntervalPromiseResolve()
   return Promise.race([promise, timeoutPromise])
 }
 // clear also for testing
@@ -76,16 +79,15 @@ exports.start = async (app) => {
     promisePool[i] = null
   }
   let active = true
-  let intervalPromiseResolve
 
   while (!stopped) {
     if (!active) {
       // polling interval is ignored while we are actively working on resources
       await new Promise(resolve => {
-        intervalPromiseResolve = resolve
+        loopIntervalPromiseResolve = resolve
         setTimeout(resolve, config.worker.interval)
       })
-      intervalPromiseResolve = null
+      loopIntervalPromiseResolve = null
     }
 
     let resource, type
@@ -124,9 +126,9 @@ exports.start = async (app) => {
     // always empty the slot after the promise is finished
     promisePool[freeSlot].finally(() => {
       promisePool[freeSlot] = null
-      if (intervalPromiseResolve) {
+      if (loopIntervalPromiseResolve) {
         debugLoop('slot is freed, shorten interval waiting')
-        intervalPromiseResolve()
+        loopIntervalPromiseResolve()
       }
     })
   }
@@ -156,7 +158,9 @@ const getTypesFilters = () => {
           { status: { $nin: ['finalized', 'error', 'draft'] } },
           // fetch next processing steps in usual sequence, but of the draft version of the dataset
           { 'draft.status': { $exists: true, $nin: ['finalized', 'error'] } },
-          // fetch datasets that are finalized, but need to update a publication
+          // fetch rest datasets with a partial update
+          { status: 'finalized', isRest: true, _partialRestStatus: { $exists: true } },
+          // fetch datasets that are finalized, but need to update a publications
           { status: 'finalized', 'publications.status': { $in: ['waiting', 'deleted'] } },
           // fetch rest datasets with a TTL to process
           { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } },
@@ -189,20 +193,13 @@ async function iter (app, resource, type) {
   let endTask
   let hookResolution, hookRejection
   let lockReleaseDelay = 0
+  let progress
   try {
     // if there is something to be done in the draft mode of the dataset, it is prioritary
     if (type === 'dataset' && resource.draft && resource.draft.status !== 'finalized' && resource.draft.status !== 'error') {
       mergeDraft(resource)
     }
 
-    // REST datasets trigger too many events
-    let noStoreEvent = false
-    if (type === 'dataset' && resource.isRest && resource.finalizedAt) {
-      const journal = (await db.collection('journals')
-        .findOne({ id: resource.id, type, 'owner.type': resource.owner.type, 'owner.id': resource.owner.id }, { projection: { events: { $slice: -1 } } }))
-      const lastEvent = journal && journal.events[0]
-      if (lastEvent && lastEvent.type === 'finalize-end') noStoreEvent = true
-    }
     if (type === 'application') {
       // Not much to do on applications.. Just catalog publication
       taskKey = 'applicationPublisher'
@@ -231,11 +228,9 @@ async function iter (app, resource, type) {
       } else if (normalized && resource.file && resource.file.mimetype === 'application/geo+json') {
         // Deduce a schema from geojson properties
         taskKey = 'geojsonAnalyzer'
-      } else if (resource.isRest && resource.status === 'extended-updated') {
-        taskKey = 'indexer'
-      } else if (resource.file && ['analyzed', 'validation-updated'].includes(resource.status) && schemaHasValidationRules(resource.schema)) {
+      } else if (resource.file && ['analyzed', 'validation-updated'].includes(resource.status)) {
         taskKey = 'fileValidator'
-      } else if ((resource.file && resource.status === (schemaHasValidationRules(resource.schema) ? 'validated' : 'analyzed')) || (resource.isRest && ['analyzed', 'updated'].includes(resource.status))) {
+      } else if ((resource.file && resource.status === 'validated') || (resource.isRest && resource.status === 'analyzed') || (resource.isRest && resource._partialRestStatus === 'updated')) {
         if (resource.extensions && resource.extensions.find(e => e.active)) {
           // Perform extensions from remote services for dataset that have at least one active extension
           taskKey = 'extender'
@@ -244,9 +239,9 @@ async function iter (app, resource, type) {
           // either just analyzed or an updated REST dataset
           taskKey = 'indexer'
         }
-      } else if (resource.status === 'extended') {
+      } else if (resource.status === 'extended' || (resource.isRest && resource._partialRestStatus === 'extended')) {
         taskKey = 'indexer'
-      } else if (resource.status === 'indexed') {
+      } else if (resource.status === 'indexed' || (resource.isRest && resource._partialRestStatus === 'indexed')) {
         // finalization covers some metadata enrichment, schema cleanup, etc.
         taskKey = 'finalizer'
       } else if (
@@ -291,9 +286,14 @@ async function iter (app, resource, type) {
 
     if (!taskKey) return
     const task = tasks[taskKey]
-    debug(`run task ${taskKey} - ${type} / ${resource.slug} (${resource.id})`)
+    debug(`run task ${taskKey} - ${type} / ${resource.slug} (${resource.id})${resource.draftReason ? ' - draft' : ''}`)
 
-    if (task.eventsPrefix) await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
+    if (task.eventsPrefix) {
+      const noStoreEvent = type === 'dataset'
+      await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
+      progress = taskProgress(app, resource.id, task.eventsPrefix)
+      await progress.start()
+    }
 
     endTask = workersTasksHistogram.startTimer({ task: taskKey })
     if (config.worker.spawnTask) {
@@ -317,15 +317,17 @@ async function iter (app, resource, type) {
       await task.process(app, resource)
     }
     endTask({ status: 'ok' })
-    debug(`finished task ${taskKey} - ${type} / ${resource.slug} (${resource.id})`)
+    debug(`finished task ${taskKey} - ${type} / ${resource.slug} (${resource.id})${resource.draftReason ? ' - draft' : ''}`)
 
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
     if (task.eventsPrefix && newResource) {
+      const noStoreEvent = type === 'dataset' && task.eventsPrefix !== 'finalize'
       if (resource.draftReason) {
         await journals.log(app, mergeDraft({ ...newResource }), { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
       } else {
         await journals.log(app, newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
       }
+      await progress?.end()
     }
     hookResolution = newResource
   } catch (err) {
@@ -372,6 +374,8 @@ async function iter (app, resource, type) {
       }
     }
 
+    await progress?.end(true)
+
     if (retry) {
       debug('retry task after lock release delay', config.worker.errorRetryDelay)
       await journals.log(app, resource, { type: 'error-retry', data: errorMessage }, type)
@@ -381,7 +385,12 @@ async function iter (app, resource, type) {
     } else {
       debug('do NOT retry the task, mark the resource status as error')
       await journals.log(app, resource, { type: 'error', data: errorMessage }, type)
-      await app.get('db').collection(type + 's').updateOne({ id: resource.id }, { $set: { [resource.draftReason ? 'draft.status' : 'status']: 'error' } })
+      await app.get('db').collection(type + 's').updateOne({ id: resource.id }, {
+        $set: {
+          [resource.draftReason ? 'draft.status' : 'status']: 'error',
+          [resource.draftReason ? 'draft.errorStatus' : 'errorStatus']: 'resource.status'
+        }
+      })
       resource.status = 'error'
     }
     hookRejection = { resource, message: errorMessage }

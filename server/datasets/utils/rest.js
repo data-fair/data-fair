@@ -20,6 +20,7 @@ const duration = require('dayjs/plugin/duration')
 dayjs.extend(duration)
 const storageUtils = require('./storage')
 const attachmentsUtils = require('./attachments')
+const extensionsUtils = require('./extensions')
 const findUtils = require('../../misc/utils/find')
 const metrics = require('../../misc/utils/metrics')
 const fieldsSniffer = require('./fields-sniffer')
@@ -676,6 +677,29 @@ async function manageAttachment (req, keepExisting) {
   }
 }
 
+// bulk operations are processed by the workers, but single line changes are processed in real time
+// this allows for read-after-write when editing the dataset
+async function commitSingleLine (app, dataset, lineId) {
+  const db = app.get('db')
+  const esClient = app.get('es')
+  if (dataset.extensions && dataset.extensions.find(e => e.active)) {
+    await extensionsUtils.extend(app, dataset, dataset.extensions, 'singleLine', true, lineId)
+  }
+  const attachments = !!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+  const indexName = esUtils.aliasName(dataset)
+  const indexStream = esUtils.indexStream({ esClient, indexName, dataset, attachments, refresh: config.elasticsearch.singleLineOpRefresh })
+  const readStreams = await exports.readStreams(db, dataset, { _id: lineId })
+  const writeStream = exports.markIndexedStream(db, dataset)
+  await pump(...readStreams, indexStream, writeStream)
+
+  await db.collection('datasets').updateOne({ id: dataset.id, _partialRestStatus: { $exists: false } }, {
+    $set: {
+      _partialRestStatus: 'indexed',
+      count: await exports.count(db, dataset)
+    }
+  })
+}
+
 exports.readLine = async (req, res, next) => {
   const db = req.app.get('db')
   const collection = exports.collection(db, req.dataset)
@@ -694,14 +718,13 @@ exports.deleteLine = async (req, res, next) => {
   // @ts-ignore
   const dataset = req.dataset
 
-  const db = req.app.get('db')
   const [operation] = (await applyReqTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset, req.user.adminMode))).operations
+  if (operation._error) return res.status(operation._status).send(operation._error)
+  await commitSingleLine(req.app, dataset, req.params.lineId)
 
   await import('@data-fair/lib/express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
-  if (operation._error) return res.status(operation._status).send(operation._error)
-  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   // TODO: delete the attachment if it is the primary key ?
   res.status(204).send()
   storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
@@ -713,7 +736,6 @@ exports.createOrUpdateLine = async (req, res, next) => {
 
   formatLine(req.body, dataset.schema)
 
-  const db = req.app.get('db')
   Object.assign(req.body, linesOwnerCols(req.linesOwner))
   req.body._action = req.body._action ?? 'createOrUpdate'
   const definedId = req.params.lineId || req.body._id || getLineId(req.body, req.dataset)
@@ -721,12 +743,12 @@ exports.createOrUpdateLine = async (req, res, next) => {
 
   await manageAttachment(req, false)
   const [operation] = (await applyReqTransactions(req, [req.body], compileSchema(req.dataset, req.user.adminMode))).operations
+  if (operation._error) return res.status(operation._status).send(operation._error)
+  await commitSingleLine(req.app, dataset, req.body._id)
 
   await import('@data-fair/lib/express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
-  if (operation._error) return res.status(operation._status).send(operation._error)
-  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   const line = getLineFromOperation(operation)
   res.status(line._status || (definedId ? 200 : 201)).send(cleanLine(line))
   storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
@@ -736,17 +758,16 @@ exports.patchLine = async (req, res, next) => {
   // @ts-ignore
   const dataset = req.dataset
 
-  const db = req.app.get('db')
   await manageAttachment(req, true)
   const fullLine = { _action: 'patch', _id: req.params.lineId, ...req.body }
   formatLine(fullLine, dataset.schema)
   const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, req.user.adminMode))).operations
   if (operation._error) return res.status(operation._status).send(operation._error)
+  await commitSingleLine(req.app, dataset, fullLine._id)
 
   await import('@data-fair/lib/express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
-  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
   const line = getLineFromOperation(operation)
   res.status(200).send(cleanLine(line))
   storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
@@ -765,7 +786,7 @@ exports.deleteAllLines = async (req, res, next) => {
   await import('@data-fair/lib/express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
-  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
 
   res.status(204).send()
   storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
@@ -875,7 +896,7 @@ exports.bulkLines = async (req, res, next) => {
           await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'analyzed' } })
         }
       } else {
-        await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+        await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
       }
     } catch (err) {
       metrics.internalError('bulk-lines', err)
@@ -936,7 +957,7 @@ exports.syncAttachmentsLines = async (req, res, next) => {
   const transactionStream = new TransactionStream({ req, validate, summary })
   await pump(filesStream, transactionStream)
 
-  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'updated' } })
+  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
   await storageUtils.updateStorage(req.app, req.dataset)
 
   res.send(summary)
@@ -991,7 +1012,7 @@ exports.readStreams = async (db, dataset, filter = {}, progress) => {
     new Transform({
       objectMode: true,
       transform (chunk, encoding, cb) {
-        if (progress) progress(inc)
+        if (progress) progress.inc(inc)
         // now _i should always be defined, but keep the OR for retro-compatibility
         chunk._i = chunk._i || chunk._updatedAt.getTime()
         cb(null, chunk)
@@ -1114,7 +1135,7 @@ exports.applyTTL = async (app, dataset) => {
     new TransactionStream({ req: { app, dataset }, summary })
   )
   const patch = { 'rest.ttl.checkedAt': new Date().toISOString() }
-  if (summary.nbOk) patch.status = 'updated'
+  if (summary.nbOk) patch._partialRestStatus = 'updated'
 
   await app.get('db').collection('datasets')
     .updateOne({ id: dataset.id }, { $set: patch })

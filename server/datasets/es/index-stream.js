@@ -26,6 +26,7 @@ class IndexStream extends Transform {
   constructor (options) {
     super({ objectMode: true })
     this.options = options
+    this.options.refresh = this.options.refresh || false
     this.body = []
     this.bulkChars = 0
     this.i = 0
@@ -82,6 +83,7 @@ class IndexStream extends Transform {
   _final (cb) {
     this._sendBulk()
       .then(() => {
+        if (this.options.refresh) return
         return this.options.esClient.indices.refresh({ index: this.options.indexName }).catch(() => {
           // refresh can take some time on large datasets, try one more time
           return new Promise(resolve => setTimeout(resolve, 30000)).finally(() => {
@@ -103,7 +105,8 @@ class IndexStream extends Transform {
       // ES does not want the doc along with a delete instruction,
       // but we put it in body anyway for our outgoing/reporting logic
       body: this.body.filter(line => !line._deleted),
-      timeout: '4m'
+      timeout: '4m',
+      refresh: this.options.refresh
     }
     try {
       // Use the ingest plugin to parse attached files

@@ -34,7 +34,7 @@
             <v-list-item-avatar class="ml-0 my-0">
               <v-icon>{{ dataset.isRest ? 'mdi-playlist-edit' : 'mdi-upload' }}</v-icon>
             </v-list-item-avatar>
-            <span>{{ dataset.dataUpdatedBy.name }} {{ dataset.dataUpdatedAt | moment("lll") }}</span>
+            <span>{{ dataset.dataUpdatedBy?.name }} {{ dataset.dataUpdatedAt | moment("lll") }}</span>
           </v-list-item>
 
           <v-list-item title="création">

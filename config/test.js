@@ -48,7 +48,7 @@ module.exports = {
     }
   },
   worker: {
-    interval: 10,
+    interval: 50,
     concurrency: 1,
     spawnTask: false,
     errorRetryDelay: 0
@@ -106,6 +106,7 @@ module.exports = {
   assertImmutable: true,
   remoteAttachmentCacheDuration: 1000,
   elasticsearch: {
-    acceptYellowStatus: true
+    acceptYellowStatus: true,
+    singleLineOpRefresh: true
   }
 }

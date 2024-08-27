@@ -1,7 +1,8 @@
 // Finalize dataset for publication
 exports.eventsPrefix = 'finalize'
 
-exports.process = async function (app, dataset) {
+exports.process = async function (app, _dataset) {
+  let dataset = _dataset
   const config = /** @type {any} */(require('config'))
   const esUtils = require('../datasets/es')
   const geoUtils = require('../datasets/utils/geo')
@@ -49,7 +50,7 @@ exports.process = async function (app, dataset) {
   if (startDateField || endDateField) nbSteps += 1
   if (geopoint || geometry) nbSteps += 1
   const progress = taskProgress(app, dataset.id, exports.eventsPrefix, nbSteps)
-  await progress(0)
+  await progress.inc(0)
 
   for (const prop of cardinalityProps) {
     debug(`Calculate cardinality of field ${prop.key}`)
@@ -77,7 +78,7 @@ exports.process = async function (app, dataset) {
         })
       }
     }
-    await progress()
+    await progress.inc()
   }
 
   // calculate geographical coverage
@@ -86,7 +87,7 @@ exports.process = async function (app, dataset) {
     queryableDataset.bbox = []
     result.bbox = dataset.bbox = (await esUtils.bboxAgg(es, queryableDataset, {}, true, '10s')).bbox
     debug('bounding box ok', result.bbox)
-    await progress()
+    await progress.inc()
   } else {
     result.bbox = null
   }
@@ -112,19 +113,16 @@ exports.process = async function (app, dataset) {
       startDate: new Date(timePeriod.startDate).toISOString(),
       endDate: new Date(timePeriod.endDate).toISOString()
     }
-    await progress()
+    await progress.inc()
   }
 
   result.esWarning = await esUtils.datasetWarning(es, dataset)
 
-  result.finalizedAt = (new Date()).toISOString()
-  if (dataset.isRest && (await collection.findOne({ id: dataset.id })).status === 'updated') {
-    // dataset was updated while we were finalizing.. keep it as such
-    delete result.status
-  }
   if (dataset.isRest) {
     await restDatasetsUtils.configureHistory(app, dataset)
   }
+
+  result.finalizedAt = (new Date()).toISOString()
 
   // virtual datasets have to be re-counted here (others were implicitly counted at index step)
   if (dataset.isVirtual) {
@@ -138,22 +136,35 @@ exports.process = async function (app, dataset) {
     result.count = dataset.count = await esUtils.count(es, queryableDataset, {})
   }
 
-  await datasetService.applyPatch(app, dataset, result)
+  if (dataset.draftReason && dataset.validateDraft) {
+    const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
+    await datasetService.validateDraft(app, dataset, datasetFull, result)
+    await datasetService.applyPatch(app, datasetFull, result)
+    dataset = datasetFull
+  } else {
+    if (dataset.isRest && dataset._partialRestStatus) {
+      // dataset was updated while we were finalizing.. keep it as such
+      if ((await collection.findOne({ id: dataset.id }))._partialRestStatus === 'indexed') {
+        result._partialRestStatus = null
+      }
+    }
+
+    await datasetService.applyPatch(app, dataset, result)
+    // console.log('applied', await collection.findOne({ id: dataset.id }))
+  }
 
   // Remove attachments if the schema does not refer to their existence
   if (!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
     await attachmentsUtils.removeAll(dataset)
   }
 
+  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset)
+
   // parent virtual datasets have to be re-finalized too
   if (!dataset.draftReason) {
     for await (const virtualDataset of collection.find({ 'virtual.children': dataset.id })) {
       await collection.updateOne({ id: virtualDataset.id }, { $set: { status: 'indexed' } })
     }
-  }
-
-  if (dataset.isVirtual) {
-    await datasetUtils.updateStorage(app, queryableDataset)
   }
 
   // trigger auto updates if this dataset is used as a source of extensions
@@ -173,7 +184,7 @@ exports.process = async function (app, dataset) {
     }
   }
 
-  await progress()
+  await progress.inc()
 
   debug('done')
 }

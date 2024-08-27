@@ -446,8 +446,10 @@ koumoul,19 rue de la voie lactée saint avé
 
     // extend first inserted line
     let nockScope = getExtensionNock({ lat: 10, lon: 10 })
-    await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: '19 rue de la voie lactée saint avé' })
-    let inputsEvent = await eventToPromise(global.events, 'extension-inputs')
+    let [, inputsEvent] = await Promise.all([
+      ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: '19 rue de la voie lactée saint avé' }),
+      eventToPromise(global.events, 'extension-inputs')
+    ])
     assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()
@@ -461,9 +463,11 @@ koumoul,19 rue de la voie lactée saint avé
     assert.equal(res.data.results[0][extensionKey + '.lon'], 10)
 
     // extend second inserted line
-    nockScope = getExtensionNock({ lat: 11, lon: 11 })
-    await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'another address' })
-    inputsEvent = await eventToPromise(global.events, 'extension-inputs')
+    nockScope = getExtensionNock({ lat: 11, lon: 11 });
+    [, inputsEvent] = await Promise.all([
+      ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'another address' }),
+      eventToPromise(global.events, 'extension-inputs')
+    ])
     assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()
@@ -473,19 +477,23 @@ koumoul,19 rue de la voie lactée saint avé
     assert.equal(anotherAddress[extensionKey + '.lon'], 11)
 
     // fail to extend an unknown line
-    nockScope = getExtensionNock({ error: 'unknown' })
-    await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'unknown address' })
-    inputsEvent = await eventToPromise(global.events, 'extension-inputs')
+    nockScope = getExtensionNock({ error: 'unknown' });
+    [, inputsEvent] = await Promise.all([
+      ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'unknown address' }),
+      eventToPromise(global.events, 'extension-inputs')
+    ])
     assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     const unknownAddress = res.data.results.find(r => r.address === 'unknown address')
-    assert.equal(unknownAddress[extensionKey + '.error'], 'unknown')
+    assert.equal(unknownAddress[extensionKey + '.error'], 'unknown');
 
     // add a line that uses cache
-    await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'another address' })
-    inputsEvent = await eventToPromise(global.events, 'extension-inputs')
+    [, inputsEvent] = await Promise.all([
+      ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'another address' }),
+      eventToPromise(global.events, 'extension-inputs')
+    ])
     assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -494,9 +502,11 @@ koumoul,19 rue de la voie lactée saint avé
     assert.equal(anotherAddress2[extensionKey + '.lon'], 11)
 
     // update a line
-    nockScope = getExtensionNock({ lat: 12, lon: 12 })
-    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ _id: anotherAddress2._id, address: 'yet another address' }])
-    inputsEvent = await eventToPromise(global.events, 'extension-inputs')
+    nockScope = getExtensionNock({ lat: 12, lon: 12 });
+    [, inputsEvent] = await Promise.all([
+      ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ _id: anotherAddress2._id, address: 'yet another address' }]),
+      eventToPromise(global.events, 'extension-inputs')
+    ])
     // assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -745,7 +755,7 @@ other,unknown address
       schema: dataset.schema,
       extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(id, " / ", adr)', property: { key: 'employees', type: 'string' } }]
     })
-    assert.equal(res.data.status, 'analyzed')
+    assert.equal(res.data.status, 'validated')
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
     assert.equal(lines[0].employees, 'koumoul / 19 rue de la voie lactée saint avé')

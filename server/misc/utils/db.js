@@ -50,6 +50,7 @@ exports.init = async (db) => {
     exports.ensureIndex(db, 'datasets', { 'rest.ttl.active': 1 }),
     exports.ensureIndex(db, 'datasets', { 'remoteFile.autoUpdate.nextUpdate': 1 }),
     exports.ensureIndex(db, 'datasets', { '_readApiKey.renewAt': 1 }),
+    exports.ensureIndex(db, 'datasets', { _partialRestStatus: 1 }, { sparse: true }),
     exports.ensureIndex(db, 'datasets', { esWarning: 1 }),
 
     // remote-services indexes

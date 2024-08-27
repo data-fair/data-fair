@@ -17,16 +17,19 @@ export default () => ({
     nbVirtualDatasets: null,
     dataFiles: null,
     jsonSchema: null,
+    // TODO: this is a bit shady, and probably not rellay needed anymore, try to remove this logic
     eventStates: {
       'data-updated': 'loaded',
       'download-end': 'loaded',
       'store-start': 'loaded',
       'store-end': 'stored',
-      'convert-start': 'stored',
-      'convert-end': 'normalized',
+      'normalize-start': 'stored',
+      'normalize-end': 'normalized',
       'analyze-start': 'normalized',
       'analyze-end': 'analyzed',
-      'extend-start': 'analyzed',
+      'validate-start': 'analyzed',
+      'validate-end': 'validated',
+      'extend-start': 'validated',
       'extend-end': 'extended',
       'index-start': 'extended',
       'index-end': 'indexed',
@@ -142,7 +145,10 @@ export default () => ({
         dispatch('fetchDataFiles')
       ])
       if (getters.can('readPrivateApiDoc')) await dispatch('fetchApiDoc')
-      if (getters.can('readJournal')) await dispatch('fetchJournal')
+      if (getters.can('readJournal')) {
+        await dispatch('fetchJournal')
+        await dispatch('fetchTaskProgress')
+      }
     },
     async fetchDataset ({ commit, state }) {
       const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { draft: state.draftMode, html: state.html } })
@@ -193,6 +199,10 @@ export default () => ({
       const journal = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/journal`, { params: { draft: state.draftMode } })
       commit('setAny', { journal })
     },
+    async fetchTaskProgress ({ commit, state }) {
+      const taskProgress = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/task-progress`, { params: { draft: state.draftMode } })
+      commit('setAny', { taskProgress })
+    },
     async fetchDataFiles ({ commit, state }) {
       const dataFiles = await this.$axios.$get(`api/v1/datasets/${state.datasetId}/data-files`, { params: { draft: state.draftMode } })
       commit('setAny', { dataFiles })
@@ -204,21 +214,26 @@ export default () => ({
     subscribe ({ getters, dispatch, state, commit }) {
       eventBus.$emit('subscribe', getters.journalChannel)
       eventBus.$on(getters.journalChannel, async event => {
-        if (event.type.endsWith('-start')) commit('setAny', { taskProgress: { task: event.type.replace('-start', '') } })
         if (event.type === 'finalize-end') {
-          commit('setAny', { taskProgress: null })
           eventBus.$emit('notification', { type: 'success', msg: 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.' })
         }
         if (event.type === 'error') {
-          commit('setAny', { taskProgress: null })
           eventBus.$emit('notification', { error: event.data, msg: 'Le service a rencontré une erreur pendant le traitement du jeu de données:' })
         }
 
-        if (['initialize-end', 'draft-validated', 'draft-cancelled', 'data-updated'].includes(event.type)) {
+        if (['initialize-end', 'draft-cancelled', 'data-updated'].includes(event.type)) {
+          return dispatch('fetchInfo')
+        }
+        // looks like the the draft was validated
+        if (event.type === 'finalize-end' && !event.draft && state.dataset.draftReason) {
           return dispatch('fetchInfo')
         }
 
-        dispatch('addJournalEvent', event)
+        if (!event.store) {
+          // ignore event that is not stored, prevent different render after refresh
+        } else {
+          dispatch('addJournalEvent', event)
+        }
 
         // refresh dataset with relevant parts when receiving journal event
         if (state.eventStates[event.type] && state.dataset) {

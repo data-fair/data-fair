@@ -47,7 +47,7 @@ const metrics = require('../misc/utils/metrics')
 const publicationSites = require('../misc/utils/publication-sites')
 const clamav = require('../misc/utils/clamav')
 const { syncDataset: syncRemoteService } = require('../remote-services/utils')
-const { findDatasets, applyPatch, validateDraft, deleteDataset, createDataset } = require('./service')
+const { findDatasets, applyPatch, deleteDataset, createDataset } = require('./service')
 const { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } = require('./utils/schema')
 const { dir, attachmentsDir } = require('./utils/files')
 const { preparePatch, validatePatch } = require('./utils/patch')
@@ -191,6 +191,10 @@ router.patch('/:datasetId',
     if (!isEmpty) {
       await publicationSites.applyPatch(db, dataset, { ...dataset, ...patch }, user, 'dataset')
       await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
+
+      if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
+        await journals.log(req.app, dataset, { type: 'structure-updated' }, 'dataset')
+      }
 
       await import('@data-fair/lib/express/events-log.js')
         .then((eventsLog) => eventsLog.default.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner }))
@@ -336,7 +340,7 @@ const createDatasetRoute = asyncWrap(async (req, res) => {
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
     await syncRemoteService(db, dataset)
 
-    res.status(201).send(clean(req.publicBaseUrl, req.publicationSite, dataset, {}, req.query.draft === 'true'))
+    res.status(201).send(clean(req.publicBaseUrl, req.publicationSite, dataset, {}, draft))
   } catch (err) {
     if (files) {
       for (const file of files) await fs.remove(file.path)
@@ -361,7 +365,10 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
   const publicBaseUrl = req.publicBaseUrl
   // @ts-ignore
   const publicationSite = req.publicationSite
+  // TODO: replace this with a string draftValidationMode ?
   const draft = req.query.draft === 'true'
+  // force the file upload middleware to write files in draft directory, as updated datasets always go into draft mode
+  req.query.draft = 'true'
 
   const db = req.app.get('db')
   const locale = i18n.getLocale(req)
@@ -387,12 +394,16 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
     validatePatch(patch)
     validateURLFriendly(locale, patch.slug)
 
-    if (draft) {
-      if (req.datasetFull.status === 'draft') {
-        patch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon' }
-      } else {
-        patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant' }
+    if (req.datasetFull.status === 'draft') {
+      patch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon', validationMode: 'never' }
+    } else {
+      let validationMode = 'always'
+      if (draft) {
+        if ((patch.schema ?? dataset.schema).find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) validationMode = 'never'
+        else validationMode = 'compatible'
       }
+
+      patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode }
     }
 
     const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, user, locale, files)
@@ -425,6 +436,7 @@ router.post('/:datasetId', lockDataset(), readDataset({ acceptedStatuses: ['fina
 router.put('/:datasetId', lockDataset(), readDataset({ acceptedStatuses: ['finalized', 'error'], acceptMissing: true }), apiKeyMiddleware, permissions.middleware('writeData', 'write', null, true), checkStorage(true, true), updateDatasetRoute)
 
 // validate the draft
+// TODO: apply different permission if draft has breaking changes or not
 router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], alwaysDraft: true }), apiKeyMiddleware, permissions.middleware('validateDraft', 'write'), lockDataset(), asyncWrap(async (req, res, next) => {
   // @ts-ignore
   const dataset = req.dataset
@@ -433,12 +445,14 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
 
-  const validatedDataset = await validateDraft(req.app, req.datasetFull, req.dataset, req.user, req)
+  const patch = { status: 'validated', validateDraft: true }
+  await applyPatch(req.app, dataset, patch)
+  await journals.log(req.app, dataset, { type: 'draft-validated', data: 'validation manuelle' }, 'dataset')
 
   await import('@data-fair/lib/express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
-  return res.send(validatedDataset)
+  return res.send(dataset)
 }))
 
 // cancel the draft
@@ -477,7 +491,7 @@ function isRest (req, res, next) {
   next()
 }
 
-const readWritableDataset = readDataset({ acceptedStatuses: ['finalized', 'updated', 'extended-updated', 'indexed', 'error'] })
+const readWritableDataset = readDataset({ acceptedStatuses: ['finalized', 'indexed', 'error'] })
 router.get('/:datasetId/lines/:lineId', readDataset(), isRest, apiKeyMiddleware, permissions.middleware('readLine', 'read', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
 router.post('/:datasetId/lines', readWritableDataset, isRest, applicationKey, apiKeyMiddleware, permissions.middleware('createLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createOrUpdateLine))
 router.put('/:datasetId/lines/:lineId', readWritableDataset, isRest, apiKeyMiddleware, permissions.middleware('updateLine', 'write'), checkStorage(false), restDatasetsUtils.uploadAttachment, uploadUtils.fsyncFiles, clamav.middleware, asyncWrap(restDatasetsUtils.createOrUpdateLine))
@@ -1129,7 +1143,7 @@ router.get('/:datasetId/private-api-docs.json', readDataset(), apiKeyMiddleware,
   res.send(privateDatasetAPIDocs(req.dataset, req.publicBaseUrl, req.user, (settings && settings.info) || {}))
 }))
 
-router.get('/:datasetId/journal', readDataset(), apiKeyMiddleware, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
+router.get('/:datasetId/journal', readDataset({ acceptInitialDraft: true }), apiKeyMiddleware, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({
     type: 'dataset',
     id: req.dataset.id,
@@ -1143,6 +1157,18 @@ router.get('/:datasetId/journal', readDataset(), apiKeyMiddleware, permissions.m
     if (e.data) e.data = sanitizeHtml(e.data)
   }
   res.json(journal.events)
+}))
+
+router.get('/:datasetId/task-progress', readDataset(), apiKeyMiddleware, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
+  const journal = await req.app.get('db').collection('journals').findOne({
+    type: 'dataset',
+    id: req.dataset.id,
+    'owner.type': req.dataset.owner.type,
+    'owner.id': req.dataset.owner.id
+  })
+  if (!journal) return res.send({})
+  if (!journal.taskProgress) return res.send({})
+  res.json(journal.taskProgress)
 }))
 
 const sendUserNotificationPermissions = permissions.middleware('sendUserNotification', 'write')

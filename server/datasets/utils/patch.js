@@ -31,13 +31,16 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
   datasetUtils.setUniqueRefs(patch)
   datasetUtils.curateDataset(patch)
 
-  // Changed a previously failed dataset, retry everything.
-  // Except download.. We only try it again if the fetch failed.
+  // Changed a previously failed dataset, retry the previous step
   if (dataset.status === 'error') {
-    if (dataset.isVirtual) patch.status = 'indexed'
+    if (dataset.errorStatus) patch.status = dataset.errorStatus
+    else if (dataset.isVirtual) patch.status = 'indexed'
     else if (dataset.isRest) patch.status = 'analyzed'
     else if (dataset.remoteFile && !dataset.originalFile) patch.status = 'imported'
     else patch.status = 'stored'
+
+    await app.publish('datasets/' + dataset.id + '/task-progress', {})
+    await app.get('db').collection('journals').updateOne({ type: 'dataset', id: dataset.id }, { $unset: { taskProgress: 1 } })
   }
 
   const datasetFile = files && files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
@@ -89,6 +92,10 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
 
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: user.id, name: user.name }
+  if (datasetFile || attachmentsFile) {
+    patch.dataUpdatedAt = patch.updatedAt
+    patch.dataUpdatedBy = patch.updatedBy
+  }
 
   if (patch.extensions) extensions.prepareExtensions(locale, patch.extensions, dataset.extensions)
   if (patch.extensions || dataset.extensions) {
@@ -141,7 +148,7 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
 
   let attemptMappingUpdate = false
 
-  const reindexerStatus = (dataset.file && datasetUtils.schemaHasValidationRules(dataset.schema)) ? 'validated' : 'analyzed'
+  const reindexerStatus = dataset.file ? 'validated' : 'analyzed'
 
   if (datasetFile || attachmentsFile) {
     patch.dataUpdatedBy = patch.updatedBy

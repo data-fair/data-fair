@@ -9,10 +9,9 @@ const datasetUtils = require('./utils')
 const restDatasetsUtils = require('./utils/rest')
 const esUtils = require('./es')
 const webhooks = require('../misc/utils/webhooks')
-const journals = require('../misc/utils/journals')
 const { updateStorage } = require('./utils/storage')
 const { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile } = require('./utils/files')
-const { schemasFullyCompatible, getSchemaBreakingChanges } = require('./utils/schema')
+const { getSchemaBreakingChanges } = require('./utils/schema')
 const { getExtensionKey, prepareExtensions, prepareExtensionsSchema } = require('./utils/extensions')
 const { validateURLFriendly } = require('../misc/utils/validation')
 const assertImmutable = require('../misc/utils/assert-immutable')
@@ -252,7 +251,7 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
     }
     if (draft) {
       dataset.status = 'draft'
-      filePatch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon' }
+      filePatch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon', validationMode: 'never' }
       dataset.draft = filePatch
     } else {
       Object.assign(dataset, filePatch)
@@ -404,7 +403,7 @@ exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappin
 
   Object.assign(dataset, patch)
 
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset)
+  // if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset)
 
   // if the dataset is in draft mode all patched values are stored in the draft state
   if (dataset.draftReason) {
@@ -454,48 +453,41 @@ exports.syncApplications = async (db, datasetId) => {
     .updateOne({ id: datasetId }, { $set: { 'extras.applications': applicationsExtras } })
 }
 
-exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
-  /* TODO: draft validation shoud be performed in a worker
-    - the workers shoud keep working on the draft dataset one last time but fully (all data, extensions, et)
-    - go until finalizer, then perform the final replacement operation as atomically as possible
+exports.validateDraft = async (app, dataset, datasetFull, patch) => {
+  Object.assign(datasetFull.draft, patch)
+  const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
 
-    Another option for greater simplication would be to remove the draft system and always work on the full dataset,
-    consider the dataset as immutable and use the slug system to switch between versions
-  */
   const db = app.get('db')
-  const patch = { ...datasetFull.draft }
-  if (user) {
-    patch.updatedAt = (new Date()).toISOString()
-    patch.updatedBy = { id: user.id, name: user.name }
-  }
+  const draftPatch = { ...datasetFull.draft }
   if (datasetFull.draft.dataUpdatedAt) {
-    patch.dataUpdatedAt = patch.updatedAt
-    patch.dataUpdatedBy = patch.updatedBy
+    draftPatch.dataUpdatedAt = draftPatch.updatedAt
+    draftPatch.dataUpdatedBy = draftPatch.updatedBy ?? draftPatch.dataUpdatedBy
   }
-  delete patch.status
-  delete patch.finalizedAt
-  delete patch.draftReason
-  delete patch.count
-  delete patch.bbox
-  delete patch.storage
-  const patchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: datasetFull.id },
-    { $set: patch, $unset: { draft: '' } },
-    { returnDocument: 'after' }
-  )).value
+  delete draftPatch.status
+  delete draftPatch.finalizedAt
+  delete draftPatch.draftReason
+  delete draftPatch.bbox
+  delete draftPatch.storage
+  delete draftPatch.validateDraft
+  Object.assign(patch, draftPatch)
+  patch.draft = null
+  const patchedDataset = { ...datasetFull, ...patch }
 
   if (datasetFull.file) {
     webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
-    if (req) {
-      const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema)
-      for (const breakingChange of breakingChanges) {
-        webhooks.trigger(db, 'dataset', patchedDataset, {
-          type: 'breaking-change',
-          body: require('i18n').getLocales().reduce((a, locale) => {
-            a[locale] = req.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { title: patchedDataset.title, key: breakingChange.key })
-            return a
-          }, {})
-        })
-      }
+    const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema)
+    if (breakingChanges.length) {
+      webhooks.trigger(db, 'dataset', patchedDataset, {
+        type: 'breaking-change',
+        body: require('i18n').getLocales().reduce((a, locale) => {
+          let msg = require('i18n').__({ phrase: 'hasBreakingChanges', locale }, { title: patchedDataset.title })
+          for (const breakingChange of breakingChanges) {
+            msg += '\n' + require('i18n').__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { key: breakingChange.key })
+          }
+          a[locale] = msg
+          return a
+        }, {})
+      })
     }
   }
 
@@ -527,37 +519,6 @@ exports.validateDraft = async (app, datasetFull, datasetDraft, user, req) => {
   }
   if (datasetFull.file) await fs.remove(fullFilePath(datasetFull))
 
-  const statusPatch = { status: datasetUtils.schemaHasValidationRules(patchedDataset.schema) ? 'validated' : 'analyzed' }
-  const statusPatchedDataset = (await db.collection('datasets').findOneAndUpdate({ id: datasetFull.id },
-    { $set: statusPatch },
-    { returnDocument: 'after' }
-  )).value
-  await journals.log(app, statusPatchedDataset, { type: 'draft-validated' }, 'dataset')
-  try {
-    await esUtils.delete(app.get('es'), datasetDraft)
-  } catch (err) {
-    if (err.statusCode !== 404) throw err
-  }
+  await esUtils.validateDraftAlias(app.get('es'), dataset)
   await fs.remove(dir(datasetDraft))
-  await updateStorage(app, statusPatchedDataset)
-  return statusPatchedDataset
-}
-
-/**
- *
- * @param {any} app
- * @param {any} dataset
- * @param {any} patch
- * @returns {Promise<any>}
- */
-exports.validateCompatibleDraft = async (app, dataset, patch) => {
-  if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {
-    const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
-    Object.assign(datasetFull.draft, patch)
-    const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
-    if (!datasetDraft.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument') && schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
-      return await exports.validateDraft(app, datasetFull, datasetDraft)
-    }
-  }
-  return null
 }

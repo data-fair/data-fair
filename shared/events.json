@@ -138,8 +138,8 @@
     "finalize-end": {
       "icon": "mdi-check",
       "text": {
-        "fr": "les données et meta-données sont à jour, le jeu de données est disponible",
-        "en": "data and metadata are up to date, the dataset is available"
+        "fr": "le jeu de données a été entièrement traité",
+        "en": "the dataset was entirely processed"
       },
       "color": "success"
     },
@@ -180,6 +180,15 @@
         "en": "the dataset draft was cancelled"
       },
       "color": "warning"
+    }
+  },
+  "dataset-draft": {
+    "finalize-end": {
+      "icon": "mdi-check",
+      "text": {
+        "fr": "le brouillon du jeu de données a été traité",
+        "en": "the dataset draft was processed"
+      }
     }
   },
   "application": {

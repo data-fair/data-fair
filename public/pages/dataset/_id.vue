@@ -387,15 +387,16 @@
       <dataset-actions :publication-sites="publicationSites" />
       <layout-toc :sections="sections">
         <template #title="{section}">
-          {{ section.id === 'activity' && taskProgress ? ($t('activity') + ' - ' + $t('tasks.' + taskProgress.task)) : section.title }}
+          {{ section.id === 'activity' && taskProgress?.task ? ($t('activity') + ' - ' + $t('tasks.' + taskProgress.task)) : section.title }}
         </template>
         <template #bottom="{section}">
           <v-progress-linear
-            v-if="section.id === 'activity' && taskProgress"
+            v-if="section.id === 'activity' && taskProgress?.task"
             :value="taskProgress.progress"
-            :indeterminate="taskProgress.progress === undefined"
+            :indeterminate="taskProgress.progress === -1"
             absolute
             bottom
+            :color="taskProgress.error ? 'error' : 'primary'"
           />
         </template>
       </layout-toc>

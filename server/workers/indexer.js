@@ -30,8 +30,10 @@ exports.process = async function (app, dataset) {
   const db = app.get('db')
   const esClient = app.get('es')
 
+  const partialUpdate = dataset._partialRestStatus === 'updated' || dataset._partialRestStatus === 'extended'
+
   let indexName
-  if (dataset.status === 'updated' || dataset.status === 'extended-updated') {
+  if (partialUpdate) {
     indexName = es.aliasName(dataset)
     debug(`Update index ${indexName}`)
   } else {
@@ -60,15 +62,15 @@ exports.process = async function (app, dataset) {
   const progress = taskProgress(app, dataset.id, exports.eventsPrefix, 100, (progress) => {
     debugHeap('progress ' + progress, indexStream)
   })
-  await progress(0)
+  await progress.inc(0)
   debugHeap('before-stream')
   if (dataset.isRest) {
-    readStreams = await restDatasetsUtils.readStreams(db, dataset, (dataset.status === 'updated' || dataset.status === 'extended-updated') ? { _needsIndexing: true } : {}, progress)
+    readStreams = await restDatasetsUtils.readStreams(db, dataset, partialUpdate ? { _needsIndexing: true } : {}, progress)
     writeStream = restDatasetsUtils.markIndexedStream(db, dataset)
   } else {
     const extended = dataset.extensions && dataset.extensions.find(e => e.active)
     if (!extended) await fs.remove(datasetUtils.fullFilePath(dataset))
-    readStreams = await datasetUtils.readStreams(db, dataset, false, extended, false, progress)
+    readStreams = await datasetUtils.readStreams(db, dataset, false, extended, dataset.validateDraft, progress)
     writeStream = new Writable({ objectMode: true, write (chunk, encoding, cb) { cb() } })
   }
   await pump(...readStreams, indexStream, writeStream)
@@ -78,12 +80,13 @@ exports.process = async function (app, dataset) {
   if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
 
   const result = {
-    status: 'indexed',
     schema: datasetUtils.cleanSchema(dataset)
   }
-  if (dataset.status === 'updated' || dataset.status === 'extended-updated') {
+  if (partialUpdate) {
+    result._partialRestStatus = 'indexed'
     result.count = await restDatasetsUtils.count(db, dataset)
   } else {
+    result.status = 'indexed'
     debug('Switch alias to point to new datasets index')
     await es.switchAlias(esClient, dataset, indexName)
     result.count = indexStream.i
@@ -91,12 +94,12 @@ exports.process = async function (app, dataset) {
 
   // Some data was updated in the interval during which we performed indexation
   // keep dataset as "updated" so that this worker keeps going
-  if (dataset.status === 'extended-updated' && await restDatasetsUtils.count(db, dataset, { _needsExtending: true })) {
+  if (dataset._partialRestStatus === 'extended' && await restDatasetsUtils.count(db, dataset, { _needsExtending: true })) {
     debug('REST dataset indexed, but some data still needs extending, get back in "updated" status')
-    result.status = 'updated'
-  } else if ((dataset.status === 'updated' || dataset.status === 'extended-updated') && await restDatasetsUtils.count(db, dataset, { _needsIndexing: true })) {
+    result._partialRestStatus = 'updated'
+  } else if ((dataset._partialRestStatus === 'updated' || dataset._partialRestStatus === 'extended') && await restDatasetsUtils.count(db, dataset, { _needsIndexing: true })) {
     debug(`REST dataset indexed, but some data is still fresh, stay in "${dataset.status}" status`)
-    result.status = dataset.status
+    result._partialRestStatus = dataset._partialRestStatus
   }
 
   await datasetsService.applyPatch(app, dataset, result)
