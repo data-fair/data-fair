@@ -63,22 +63,24 @@ exports.process = async function (app, dataset) {
 
   if (dataset.draftReason) {
     // manage auto-validation of a dataset draft
-    if (dataset.draftReason.validationMode === 'never') {
-      // nothing to do
-    } else {
+    if (dataset.draftReason.validationMode !== 'never') {
       patch.validateDraft = true
+    }
 
-      const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
+    const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
+    if (datasetFull.status === 'draft' && !datasetFull.schema?.length) {
+      // nothing pre-existing schema to compare to
+    } else {
       Object.assign(datasetFull.draft, patch)
       const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
       const breakingChanges = require('../datasets/utils/schema').getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema)
       if (breakingChanges.length) {
-        await journals.log(app, dataset, { type: 'error', data: 'La structure du nouveau fichier contient des ruptures de compatibilité.' })
+        await journals.log(app, dataset, { type: 'error', data: 'La structure du fichier contient des ruptures de compatibilité.' })
         if (dataset.draftReason.validationMode === 'noBreakingChange' || dataset.draftReason.validationMode === 'compatible') {
           delete patch.validateDraft
         }
       } else if (!require('../datasets/utils/schema').schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
-        await journals.log(app, dataset, { type: 'error', data: 'La structure du nouveau fichier contient des changements.' })
+        await journals.log(app, dataset, { type: 'error', data: 'La structure du fichier contient des changements.' })
         if (dataset.draftReason.validationMode === 'compatible') {
           delete patch.validateDraft
         }

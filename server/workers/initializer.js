@@ -164,7 +164,15 @@ exports.process = async function (app, dataset) {
       patch.attachments = parentDataset.attachments
     }
 
-    patch.initFrom = null
+    if (dataset.draftReason) {
+      const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
+      const datasetFullPatch = { initFrom: null }
+      // we apply schema not only to the draft but also to the main dataset info so that file validation rules apply correctly
+      if (patch.schema) datasetFullPatch.schema = patch.schema
+      await datasetsService.applyPatch(app, datasetFull, datasetFullPatch)
+    } else {
+      patch.initFrom = null
+    }
   }
 
   await datasetsService.applyPatch(app, dataset, patch)
