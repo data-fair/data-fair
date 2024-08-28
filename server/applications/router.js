@@ -108,7 +108,7 @@ router.post('', asyncWrap(async (req, res) => {
   const baseslug = application.slug || slug(application.title || application.applicationName || lastUrlPart, { lower: true, strict: true })
   application.slug = baseslug
   setUniqueRefs(application)
-  permissions.initResourcePermissions(application, req.user)
+  permissions.initResourcePermissions(application)
   let insertOk = false
   let i = 1
   while (!insertOk) {
@@ -199,7 +199,7 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
 
   validate(newApplication)
 
-  permissions.initResourcePermissions(newApplication, req.user)
+  permissions.initResourcePermissions(newApplication)
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (permissions.canDoForOwner(newApplication.owner, 'applications', 'post', req.user)) {
@@ -302,7 +302,21 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
     updatedBy: { id: req.user.id, name: req.user.name },
     updatedAt: moment().toISOString()
   }
-  await permissions.initResourcePermissions(patch)
+  const sameOrg = application.owner.type === 'organization' && application.owner.type === req.body.type && application.owner.id === req.body.id
+  if (!sameOrg) patch.publicationSites = []
+
+  const preservePermissions = (application.permissions || []).filter(p => {
+    // keep public permissions
+    if (!p.type) return true
+    if (sameOrg) {
+      // keep individual user permissions (user partners)
+      if (p.type === 'user') return true
+      // keep permissions to external org (org partners)
+      if (p.type === 'organization' && p.id !== application.owner.id) return true
+    }
+    return false
+  })
+  await permissions.initResourcePermissions(patch, preservePermissions)
 
   const patchedApp = (await db.collection('applications')
     .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })).value

@@ -243,7 +243,22 @@ router.put('/:datasetId/owner', readDataset(), apiKeyMiddleware, permissions.mid
     updatedBy: { id: req.user.id, name: req.user.name },
     updatedAt: moment().toISOString()
   }
-  await permissions.initResourcePermissions(patch)
+
+  const sameOrg = dataset.owner.type === 'organization' && dataset.owner.type === req.body.type && dataset.owner.id === req.body.id
+  if (!sameOrg) patch.publicationSites = []
+
+  const preservePermissions = (dataset.permissions || []).filter(p => {
+    // keep public permissions
+    if (!p.type) return true
+    if (sameOrg) {
+      // keep individual user permissions (user partners)
+      if (p.type === 'user') return true
+      // keep permissions to external org (org partners)
+      if (p.type === 'organization' && p.id !== dataset.owner.id) return true
+    }
+    return false
+  })
+  await permissions.initResourcePermissions(patch, preservePermissions)
 
   const patchedDataset = (await req.app.get('db').collection('datasets')
     .findOneAndUpdate({ id: req.dataset.id }, { $set: patch }, { returnDocument: 'after' })).value

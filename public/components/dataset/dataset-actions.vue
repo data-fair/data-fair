@@ -286,6 +286,12 @@
             v-model="newOwner"
             :current-owner="dataset.owner"
           />
+          <v-alert
+            type="warning"
+            outlined
+          >
+            Le changement de propriétaire a un effet sur les permissions et les publications du jeu de données. Pensez à vérifier ces aspects après avoir confirmé le changement.
+          </v-alert>
         </v-card-text>
         <v-card-actions>
           <v-spacer />

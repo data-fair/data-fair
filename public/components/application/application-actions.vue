@@ -157,6 +157,12 @@
             v-model="newOwner"
             :current-owner="application.owner"
           />
+          <v-alert
+            type="warning"
+            outlined
+          >
+            Le changement de propriétaire a un effet sur les permissions et les publications de l'application. Pensez à vérifier ces aspects après avoir confirmé le changement.
+          </v-alert>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
