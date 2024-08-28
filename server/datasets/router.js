@@ -412,6 +412,7 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
     if (req.datasetFull.status === 'draft') {
       patch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon', validationMode: 'never' }
     } else {
+      // TODO: do not use always as default value when the dataset is public or published ?
       let validationMode = 'always'
       if (draft) {
         if ((patch.schema ?? dataset.schema).find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) validationMode = 'never'

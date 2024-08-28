@@ -156,10 +156,10 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
     patch.status = 'loaded'
   } else if (patch.remoteFile) {
     if (patch.remoteFile?.url !== dataset.remoteFile?.url || patch.remoteFile?.name !== dataset.remoteFile?.name || patch.remoteFile.forceUpdate) {
-      delete patch.remoteFile.lastModified
-      delete patch.remoteFile.etag
-      delete patch.remoteFile.forceUpdate
       patch.status = 'imported'
+      patch.remoteFile.forceUpdate = true
+      // TODO: do not use always as default value when the dataset is public or published ?
+      patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode: 'always' }
     } else {
       patch.remoteFile.lastModified = dataset.remoteFile.lastModified
       patch.remoteFile.etag = dataset.remoteFile.etag

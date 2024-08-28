@@ -79,6 +79,7 @@ describe('datasets based on remote files', () => {
     nockScope = nock('http://test-remote.com')
       .get('/data.csv').reply(304)
     dataset = await workers.hook('fileDownloader/' + dataset.id)
+    assert.ok(!dataset.draft)
     assert.equal(dataset.status, 'finalized')
     nockScope.done()
 

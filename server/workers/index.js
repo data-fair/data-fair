@@ -168,7 +168,7 @@ const getTypesFilters = () => {
           // fetch rest datasets with an automatic export to do
           { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: new Date().toISOString() } },
           // file datasets with remote url that need refreshing
-          { status: { $nin: ['error'] }, 'remoteFile.autoUpdate.active': true, 'remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() } },
+          { status: 'finalized', draft: { $exists: false }, 'remoteFile.autoUpdate.active': true, 'remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() } },
           // renew read api key
           { 'readApiKey.active': true, 'readApiKey.renewAt': { $lt: new Date().toISOString() } },
           // fetch datasets that are finalized, but need to update an extension
@@ -213,9 +213,15 @@ async function iter (app, resource, type) {
       if (resource.status === 'created') {
         // Initialize a dataset
         taskKey = 'initializer'
-      } else if (resource.status === 'imported' || (resource.remoteFile?.autoUpdate?.active && resource.remoteFile.autoUpdate.nextUpdate < now)) {
+      } else if (resource.status === 'imported') {
         // Load a dataset from a catalog
         taskKey = 'fileDownloader'
+      } else if (resource.remoteFile?.autoUpdate?.active && resource.remoteFile.autoUpdate.nextUpdate < now && !resource.draftReason && !resource.draft) {
+        const draft = {
+          status: 'imported',
+          draftReason: { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode: 'always' }
+        }
+        await db.collection('datasets').updateOne({ id: resource.id }, { $set: { draft } })
       } else if (resource.status === 'loaded') {
         // File was either uploaded or downloded, it needs to be copied to the storage
         taskKey = 'fileStorer'

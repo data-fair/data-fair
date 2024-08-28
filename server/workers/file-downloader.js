@@ -45,8 +45,7 @@ exports.process = async function (app, dataset) {
   // creating empty file before streaming seems to fix some weird bugs with NFS
   await fs.ensureFile(tmpFile.path)
   const headers = catalogHttpParams.headers ? { ...catalogHttpParams.headers } : {}
-  const autoUpdating = dataset.status !== 'imported'
-  if (autoUpdating) {
+  if (!dataset.remoteFile.forceUpdate) {
     if (dataset.remoteFile?.etag) headers['If-None-Match'] = dataset.remoteFile.etag
     if (dataset.remoteFile?.lastModified) headers['If-Modified-Since'] = dataset.remoteFile.lastModified
   }
@@ -105,7 +104,7 @@ exports.process = async function (app, dataset) {
 
   const filePath = datasetUtils.loadedFilePath({ ...dataset, ...patch })
 
-  if (response.status === 304 || (autoUpdating && dataset.originalFile && dataset.originalFile.md5 === md5)) {
+  if (response.status === 304 || (!dataset.remoteFile.forceUpdate && dataset.originalFile && dataset.originalFile.md5 === md5)) {
     // prevent re-indexing when the file didn't change
     debug('content of remote file did not change')
     await tmpFile.cleanup()
@@ -128,8 +127,10 @@ exports.process = async function (app, dataset) {
     patch.status = 'loaded'
   }
 
-  if (autoUpdating) {
-    patch.remoteFile = patch.remoteFile || { ...dataset.remoteFile }
+  patch.remoteFile = patch.remoteFile || { ...dataset.remoteFile }
+  delete patch.remoteFile.forceUpdate
+
+  if (dataset.remoteFile.autoUpdate?.active && !dataset.remoteFile.forceUpdate) {
     const job = new CronJob(config.remoteFilesAutoUpdates.cron, () => {})
     patch.remoteFile.autoUpdate = {
       ...patch.remoteFile.autoUpdate,
@@ -138,6 +139,9 @@ exports.process = async function (app, dataset) {
     }
   }
 
-  await datasetService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
+  if (dataset.draftReason && !patch.status) {
+    await db.collection('datasets').findOneAndUpdate({ id: dataset.id }, { $unset: { draft: '' } })
+  } else {
+    await datasetService.applyPatch(app, dataset, patch)
+  }
 }
