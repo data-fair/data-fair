@@ -149,7 +149,7 @@ export default {
               prop: vp,
               originalProp: vp,
               editable: false,
-              warning: 'Cette colonne n\'apparait plus dans la nouvelle version du fichier.'
+              warning: this.dataset.draftReason.key === 'file-new' ? 'Cette colonne n\'apparait pas dans le fichier mais est attendue par le schéma.' : 'Cette colonne n\'apparait plus dans la nouvelle version du fichier.'
             })
           }
         })
@@ -173,12 +173,12 @@ export default {
         let warning
         if (validatedProp) {
           if (validatedProp.type !== p.type) {
-            warning = 'Cette colonne a changé de type dans la nouvelle version du fichier.'
+            warning = this.dataset.draftReason.key === 'file-new' ? 'Cette colonne n\'a pas le type attendu par le schéma' : 'Cette colonne a changé de type dans la nouvelle version du fichier.'
           }
           const format = (p.format && p.format !== 'uri-reference') ? p.format : null
           const validatedFormat = (validatedProp.format && validatedProp.format !== 'uri-reference') ? validatedProp.format : null
           if (validatedProp.type === 'string' && p.type === 'string' && validatedFormat !== format) {
-            warning = 'Cette colonne a changé de type dans la nouvelle version du fichier.'
+            warning = this.dataset.draftReason.key === 'file-new' ? 'Cette colonne n\'a pas le type attendu par le schéma' : 'Cette colonne a changé de type dans la nouvelle version du fichier.'
           }
         }
         return {

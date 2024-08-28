@@ -6,8 +6,29 @@
     <v-row class="mx-0">
       <v-col class="pa-0">
         <template v-if="journal && !dataset.draftReason">
+          <v-alert
+            v-if="dataset.status === 'error'"
+            type="error"
+            style="width: 100%"
+            outlined
+          >
+            <p
+              class="mb-0"
+              v-html="lastProdEvent.data"
+            />
+            <template #append>
+              <v-btn
+                icon
+                title="Relancer"
+                color="primary"
+                @click="patch({})"
+              >
+                <v-icon>mdi-play</v-icon>
+              </v-btn>
+            </template>
+          </v-alert>
           <v-list-item
-            v-if="lastProdEvent"
+            v-else-if="lastProdEvent"
             :class="`pa-2 event-${lastProdEvent.type}`"
           >
             <v-list-item-avatar
@@ -35,31 +56,6 @@
       </v-col>
     </v-row>
     <v-row
-      v-if="journal && dataset.status==='error'"
-      class="mx-0 px-2"
-    >
-      <v-alert
-        type="error"
-        style="width: 100%"
-        outlined
-      >
-        <p
-          class="mb-0"
-          v-html="lastProdEvent.data"
-        />
-        <template #append>
-          <v-btn
-            icon
-            title="Relancer"
-            color="primary"
-            @click="patch({})"
-          >
-            <v-icon>mdi-play</v-icon>
-          </v-btn>
-        </template>
-      </v-alert>
-    </v-row>
-    <v-row
       v-if="dataset.draftReason"
     >
       <v-col>
@@ -70,23 +66,25 @@
         >
           <v-row align="center">
             <v-col
-              v-if="dataset.draftReason.key === 'file-new'"
               class="grow"
             >
-              <p v-t="'draftNew1'" />
               <p
-                v-t="'draftNew2'"
-                class="mb-0"
+                v-if="dataset.draftReason.key === 'file-new'"
+                v-t="'draftNew1'"
               />
-            </v-col>
-            <v-col
-              v-else-if="dataset.draftReason.key === 'file-updated'"
-              class="grow"
-            >
+
               <p
+                v-else-if="dataset.draftReason.key === 'file-updated'"
                 v-t="'draftUpdated1'"
                 class="mb-0"
               />
+              <p
+                v-else
+                class="mb-0"
+              >
+                {{ draftReason.message }}
+              </p>
+
               <template v-if="dataset.status === 'finalized'">
                 <p
                   v-if="draftError"
@@ -96,23 +94,24 @@
                 <p
                   class="mt-4 mb-0"
                 >
-                  <span v-t="'draftUpdated2'" />
+                  <span
+                    v-if="dataset.draftReason.key === 'file-new'"
+                    v-t="'draftNew2'"
+                  />
+                  <span
+                    v-if="dataset.draftReason.key === 'file-updated'"
+                    v-t="'draftUpdated2'"
+                  />
                   <span
                     v-if="can('validateDraft')"
-                    v-t="'draftUpdatedCan'"
+                    v-t="'draftValidateCan'"
                   />
                   <span
                     v-else
-                    v-t="'draftUpdatedCannot'"
+                    v-t="'draftValidateCannot'"
                   />
                 </p>
               </template>
-            </v-col>
-            <v-col
-              v-else
-              class="grow"
-            >
-              {{ dataset.draftReason.message }}
             </v-col>
             <v-col class="shrink text-center">
               <v-btn
@@ -147,8 +146,8 @@ fr:
   draftNew2: Vérifiez que le fichier a bien été lu, parcourez les 100 premières lignes de la donnée, ajoutez des concepts au schéma, configurez des extensions, etc. Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
   draftUpdated1: Le jeu de données est passé en mode brouillon suite au chargement d'un nouveau fichier.
   draftUpdated2: Vérifiez que le fichier a bien été lu et que le schéma est correct, parcourez les 100 premières lignes de la donnée, etc.
-  draftUpdatedCan: Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
-  draftUpdatedCannot: Vous n'avez pas la permission pour publier ce brouillon, peut-être devriez-vous contacter un administrateur ?
+  draftValidateCan: Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
+  draftValidateCannot: Vous n'avez pas la permission pour publier ce brouillon, peut-être devriez-vous contacter un administrateur ?
   cancelDraft: Annuler le brouillon
   validateDraft: Valider le brouillon
 en:

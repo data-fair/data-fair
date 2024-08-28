@@ -63,6 +63,13 @@
           :step="$route.query.simple === 'true' ? 4 : 5"
           :editable="fileParamsForm"
         >
+          {{ $t('stepInit') }}
+        </v-stepper-step>
+        <v-divider />
+        <v-stepper-step
+          :step="$route.query.simple === 'true' ? 5 : 6"
+          :editable="fileParamsForm"
+        >
           {{ $t('stepAction') }}
         </v-stepper-step>
       </template>
@@ -84,6 +91,13 @@
         <v-divider />
         <v-stepper-step
           :step="3"
+          :editable="remoteFileParamsForm"
+        >
+          {{ $t('stepInit') }}
+        </v-stepper-step>
+        <v-divider />
+        <v-stepper-step
+          :step="4"
           :editable="remoteFileParamsForm"
         >
           {{ $t('stepAction') }}
@@ -215,7 +229,7 @@
               outlined
               dense
               hide-details
-              style="max-width: 400px;"
+              style="max-width: 440px;"
               :accept="accepted.join(', ')"
               @change="() => {if (file && !suggestArchive) currentStep = 3}"
             />
@@ -250,12 +264,11 @@
             type="info"
             outlined
             dense
-            style="max-width:400px;"
+            style="max-width:440px;"
           >
             {{ $t('optionalStep') }}
           </v-alert>
           <p v-t="'attachmentsMsg1'" />
-          <p v-t="'attachmentsMsg2'" />
           <div
             class="mt-3 mb-3"
             @drop.prevent="e => {attachment = e.dataTransfer.files[0]; currentStep = 4}"
@@ -263,10 +276,10 @@
           >
             <v-file-input
               v-model="attachment"
-              :label="$t('selectFile')"
+              :label="$t('selectArchive')"
               outlined
               dense
-              style="max-width: 400px;"
+              style="max-width: 440px;"
               accept=".zip"
               hide-details
               clearable
@@ -306,7 +319,7 @@
               dense
               hide-details
               :label="$t('title')"
-              style="max-width: 400px"
+              style="max-width: 440px"
               :rules="[val => val && val.length > 3]"
               class="pl-2 mt-5"
             />
@@ -327,6 +340,29 @@
         </v-stepper-content>
 
         <v-stepper-content :step="$route.query.simple === 'true' ? 4 : 5">
+          <v-alert
+            type="info"
+            outlined
+            dense
+            style="max-width:440px;"
+          >
+            {{ $t('optionalStep') }}
+          </v-alert>
+
+          <dataset-init-from
+            :dataset="fileDataset"
+            :allow-data="false"
+          />
+
+          <v-btn
+            v-t="'continue'"
+            color="primary"
+            class="ml-2 mt-4"
+            @click.native="currentStep += 1"
+          />
+        </v-stepper-content>
+
+        <v-stepper-content :step="$route.query.simple === 'true' ? 5 : 6">
           <owner-pick
             v-model="fileDataset.owner"
             hide-single
@@ -334,7 +370,7 @@
             message="Choisissez le propriétaire du nouveau jeu de données :"
           />
           <dataset-conflicts
-            v-if="datasetType === 'file' && currentStep === ($route.query.simple === 'true' ? 4 : 5)"
+            v-if="datasetType === 'file' && currentStep === ($route.query.simple === 'true' ? 5 : 6)"
             v-model="conflictsOk"
             :dataset="fileDataset"
             :file="file"
@@ -420,7 +456,30 @@
           <dataset-file-formats />
         </v-stepper-content>
 
-        <v-stepper-content :step="3">
+        <v-stepper-content step="3">
+          <v-alert
+            type="info"
+            outlined
+            dense
+            style="max-width:440px;"
+          >
+            {{ $t('optionalStep') }}
+          </v-alert>
+
+          <dataset-init-from
+            :dataset="remoteFileDataset"
+            :allow-data="false"
+          />
+
+          <v-btn
+            v-t="'continue'"
+            color="primary"
+            class="ml-2 mt-4"
+            @click.native="currentStep += 1"
+          />
+        </v-stepper-content>
+
+        <v-stepper-content step="4">
           <owner-pick
             v-model="remoteFileDataset.owner"
             hide-single
@@ -428,7 +487,7 @@
             message="Choisissez le propriétaire du nouveau jeu de données :"
           />
           <dataset-conflicts
-            v-if="datasetType === 'remoteFile' && currentStep === 3"
+            v-if="datasetType === 'remoteFile' && currentStep === 4"
             v-model="conflictsOk"
             :dataset="remoteFileDataset"
           />
@@ -459,7 +518,7 @@
               outlined
               dense
               :label="$t('title')"
-              style="max-width: 400px"
+              style="max-width: 440px"
               :rules="[val => val && val.length > 3]"
               class="mt-5"
             />
@@ -509,60 +568,12 @@
             type="info"
             outlined
             dense
-            style="max-width:400px;"
+            style="max-width:440px;"
           >
             {{ $t('optionalStep') }}
           </v-alert>
 
-          <dataset-select
-            v-model="initFromDataset"
-            :label="$t('restInitFromDataset')"
-            :extra-params="{queryable: true, select: ''}"
-            master-data="standardSchema"
-            class="mt-2"
-            @change="setInitFrom"
-          />
-
-          <template v-if="restDataset.initFrom">
-            <v-checkbox
-              :value="restDataset.initFrom.parts.includes('data')"
-              hide-details
-              class="pl-2"
-              :label="$t('initFromData')"
-              @change="toggleInitFromPart('data')"
-            />
-            <v-checkbox
-              :value="restDataset.initFrom.parts.includes('schema')"
-              hide-details
-              class="pl-2"
-              :label="$t('initFromSchema')"
-              :disabled="restDataset.initFrom.parts.includes('data')"
-              @change="toggleInitFromPart('schema')"
-            />
-            <v-checkbox
-              v-if="initFromDataset.extensions?.length"
-              :value="restDataset.initFrom.parts.includes('extensions')"
-              hide-details
-              class="pl-2"
-              :label="$t('initFromExtensions')"
-              @change="toggleInitFromPart('extensions')"
-            />
-            <v-checkbox
-              v-if="initFromDataset.attachments?.length"
-              :value="restDataset.initFrom.parts.includes('metadataAttachments')"
-              hide-details
-              class="pl-2"
-              :label="$t('initFromAttachments')"
-              @change="toggleInitFromPart('metadataAttachments')"
-            />
-            <v-checkbox
-              :value="restDataset.initFrom.parts.includes('description')"
-              hide-details
-              class="pl-2"
-              :label="$t('initFromDescription')"
-              @change="toggleInitFromPart('description')"
-            />
-          </template>
+          <dataset-init-from :dataset="restDataset" />
 
           <v-btn
             v-t="'continue'"
@@ -612,7 +623,7 @@
               outlined
               dense
               :label="$t('title')"
-              style="max-width: 400px"
+              style="max-width: 440px"
               :rules="[val => val && val.length > 3]"
               class="mt-5"
             />
@@ -706,7 +717,7 @@
               outlined
               dense
               :label="$t('title')"
-              style="max-width: 400px"
+              style="max-width: 440px"
               :rules="[val => val && val.length > 3]"
               class="pl-2 mt-5"
             />
@@ -769,6 +780,7 @@ fr:
   stepAction: Confirmation
   loadMainFile: Chargez un fichier de données principal.
   selectFile: sélectionnez ou glissez/déposez un fichier
+  selectArchive: sélectionnez ou glissez/déposez une archive
   title: Titre du jeu de données
   titleId: Le titre du jeu de données sera utilisé pour construire un identifiant unique visible dans les URLs de pages de portails, les APIs, etc. Cet identifiant ne pourra pas être modifié.
   filenameTitle: Utiliser le nom du fichier pour construire le titre du jeu de données
@@ -776,8 +788,7 @@ fr:
   formats: Formats supportés
   attachment: Document numérique attaché
   optionalStep: Cette étape est optionnelle
-  attachmentsMsg1: Vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal.
-  attachmentsMsg2: Le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
+  attachmentsMsg1: Vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal. Dans ce cas le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
   attachments: Accepter des pièces jointes
   attachmentsAsImage: Traiter les pièces jointes comme des images
   import: Lancer l'import
@@ -794,7 +805,6 @@ fr:
   of: de
   history: Conserver un historique complet des révisions des lignes du jeu de données
   lineOwnership: Permet de donner la propriété d'une lignes à des utilisateurs (scénarios collaboratifs)
-  restInitFromDataset: Utiliser un jeu de données existant pour initialiser le nouveau
   children: Jeux enfants
   virtualDatasetFill: Initialiser le schéma avec toutes les colonnes des jeux enfants
   completed: complétés
@@ -804,12 +814,6 @@ fr:
   remoteFileMessage: Utilisez un lien vers un fichier dont le format est supporté.
   inputRemoteFile: URL du fichier distant
   autoUpdate: Activer la mise à jour automatique
-  initFromData: copier la donnée
-  initFromSchema: copier le schéma
-  initFromPrimaryKey: copier la clé primaire
-  initFromExtensions: copier les extensions
-  initFromDescription: copier la description
-  initFromAttachments: copier les pièces jointes
 en:
   datasetType: Dataset type
   newDataset: Create a dataset
@@ -833,6 +837,7 @@ en:
   stepAction: Confirmation
   loadMainFile: Load the main data file
   selectFile: select or drag and drop a file
+  selectArchive: select or drag and drop an archive
   title: Dataset title
   titleId: The title of the dataset will be used to create a unique id visible in URLs of portals pages, APIs, etc. This id cannot be changed.
   filenameTitle: Use the file name to create the title of the dataset
@@ -840,8 +845,7 @@ en:
   formats: Supported formats
   attachment: Attachment
   optionalStep: This step is optional
-  attachmentsMsg1: You can load a zip archive containing files to be used as attachments to the lines of the main dataset file.
-  attachmentsMsg2: The main data file must have a column that contains paths of the attachments in the archive.
+  attachmentsMsg1: You can load a zip archive containing files to be used as attachments to the lines of the main dataset file. In this case the main data file must have a column that contains paths of the attachments in the archive.
   attachments: Accept attachments
   attachmentsAsImage: Process the attachments as images
   import: Proceed with importing data
@@ -858,7 +862,6 @@ en:
   of: of
   history: Keep a full history of the revisions of the lines of the dataset
   lineOwnership: Accept giving ownership of lines to users (collaborative use-cases)
-  restInitFromDataset: Use an existing dataset to initialize the new one
   children: Children datasets
   virtualDatasetFill: Initialize the schema with all columns from children
   completed: completed
@@ -866,12 +869,6 @@ en:
   masterData: Master data
   ownerDatasets: Your datasets
   autoUpdate: Activate auto-update
-  initFromData: copy data
-  initFromSchema: copy schema
-  initFromPrimaryKey: copy primary key
-  initFromExtensions: copy extensions
-  initFromDescription: copy description
-  initFromAttachments: copy attachments
 </i18n>
 
 <script>
@@ -942,8 +939,7 @@ export default {
     datasets: [],
     refDatasets: [],
     virtualDatasetFill: false,
-    conflictsOk: false,
-    initFromDataset: null
+    conflictsOk: false
   }),
   computed: {
     ...mapState('session', ['user']),
@@ -1022,7 +1018,7 @@ export default {
       formData.append('body', JSON.stringify(this.fileDataset))
       this.importing = true
       try {
-        if (this.file.size > 100000) options.params.draft = 'true'
+        if (this.file.size > 100000 || this.fileDataset.initFrom?.parts?.includes('schema')) options.params.draft = 'true'
         const dataset = await this.$axios.$post('api/v1/datasets', formData, options)
         if (dataset.error) throw new Error(dataset.error)
         this.$router.push({ path: `/dataset/${dataset.id}` })
@@ -1040,9 +1036,11 @@ export default {
       if (this.cancelSource) this.cancelSource.cancel(this.$t('cancelled'))
     },
     async createDataset (dataset) {
+      const params = {}
+      if (dataset.initFrom?.parts?.includes('schema')) params.draft = 'true'
       this.importing = true
       try {
-        dataset = await this.$axios.$post('api/v1/datasets', dataset)
+        dataset = await this.$axios.$post('api/v1/datasets', dataset, { params })
         this.$router.push({ path: `/dataset/${dataset.id}` })
       } catch (error) {
         eventBus.$emit('notification', { error, msg: this.$t('creationError') })
@@ -1073,25 +1071,6 @@ export default {
               this.virtualDataset.schema.push(property)
             }
           }
-        }
-      }
-    },
-    setInitFrom (dataset) {
-      if (dataset) {
-        const initFrom = { dataset: dataset.id, parts: [] }
-        this.$set(this.restDataset, 'initFrom', initFrom)
-      } else {
-        delete this.restDataset.initFrom
-      }
-    },
-    toggleInitFromPart (part) {
-      const initFrom = this.restDataset.initFrom
-      if (initFrom.parts.includes(part)) {
-        initFrom.parts = initFrom.parts.filter(p => p !== part)
-      } else {
-        initFrom.parts.push(part)
-        if (part === 'data' && !initFrom.parts.includes('schema')) {
-          initFrom.parts.push('schema')
         }
       }
     }

@@ -170,7 +170,7 @@ export default () => ({
         dataset.rest.historyTTL = dataset.rest.historyTTL || { active: false, delay: { value: 30, unit: 'days' } }
       }
       commit('setAny', { dataset })
-      if (dataset.draftReason && dataset.draftReason.key === 'file-updated') {
+      if (dataset.draftReason) {
         const validatedDataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`)
         commit('setAny', { validatedDataset })
       } else {

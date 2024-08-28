@@ -1,6 +1,7 @@
 const assert = require('assert').strict
 const fs = require('fs')
 const FormData = require('form-data')
+const nock = require('nock')
 const testUtils = require('./resources/test-utils')
 
 const workers = require('../server/workers')
@@ -95,6 +96,38 @@ describe('Datasets with auto-initialization from another one', () => {
 
     assert.equal(initFromDataset.status, 'draft')
     assert.equal(initFromDataset.draft.file.name, 'dataset2.csv')
+    assert.equal(initFromDataset.schema[0].key, 'id')
+
+    const journal = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/journal`)).data
+    let event = journal.pop()
+    assert.equal(event.draft, true)
+    assert.equal(event.type, 'dataset-created')
+    event = journal.pop()
+    assert.equal(event.draft, true)
+    assert.equal(event.type, 'error')
+    assert.equal(event.data, 'La structure du fichier contient des ruptures de compatibilité.')
+    event = journal.pop()
+    assert.equal(event.draft, true)
+    assert.equal(event.type, 'finalize-end')
+  })
+
+  it('Create remote file dataset that doesn\'t match imported schema', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
+    const nockScope = nock('http://test-remote.com').get('/data.csv').reply(200, 'col\nval1\nval2')
+    let initFromDataset = (await ax.post('/api/v1/datasets', {
+      title: 'init from schema remote file',
+      initFrom: {
+        dataset: dataset.id, parts: ['schema', 'metadataAttachments', 'description']
+      },
+      remoteFile: { url: 'http://test-remote.com/data.csv', autoUpdate: { active: true } }
+    }, { params: { draft: true } })).data
+    initFromDataset = await workers.hook('finalizer/' + initFromDataset.id)
+    nockScope.done()
+
+    assert.equal(initFromDataset.status, 'draft')
+    assert.equal(initFromDataset.draft.file.name, 'data.csv')
     assert.equal(initFromDataset.schema[0].key, 'id')
 
     const journal = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/journal`)).data

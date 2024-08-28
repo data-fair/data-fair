@@ -274,9 +274,16 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
     if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
   } else if (body.remoteFile) {
     dataset.title = dataset.title || titleFromFileName(body.remoteFile.name || path.basename(new URL(body.remoteFile.url).pathname))
-    dataset.status = 'created'
+    const filePatch = { status: 'created' }
     if (dataset.initFrom && dataset.initFrom.parts.includes('data')) {
       throw createError(400, 'Un jeu de données basé sur fichier distant ne peut être initialisé ave la donnée d\'un jeu de données de référence')
+    }
+    if (draft) {
+      dataset.status = 'draft'
+      filePatch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon', validationMode: 'never' }
+      dataset.draft = filePatch
+    } else {
+      Object.assign(dataset, filePatch)
     }
   } else if (dataset.initFrom && dataset.initFrom.parts.includes('data')) {
     // case of a file dataset initialized from master data

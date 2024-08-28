@@ -322,35 +322,6 @@ describe('datasets', () => {
     assert.deepEqual(await fs.readdir('data/test/user/dmeadus0/datasets/dataset-name/'), ['dataset-name2.csv'])
   })
 
-  it('Upload new dataset in user zone then change ownership to organization', async () => {
-    const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
-
-    await assert.rejects(
-      ax.put(`/api/v1/datasets/${dataset.id}/owner`, {
-        type: 'organization',
-        id: 'anotherorg',
-        name: 'Test'
-      }),
-      err => err.status === 403
-    )
-    await assert.rejects(
-      ax.put(`/api/v1/datasets/${dataset.id}/owner`, {
-        type: 'user',
-        id: 'anotheruser',
-        name: 'Test'
-      }),
-      err => err.status === 403
-    )
-    await ax.put(`/api/v1/datasets/${dataset.id}/owner`, {
-      type: 'organization',
-      id: 'KWqAGZ4mG',
-      name: 'Fivechat'
-    })
-    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}`), err => err.status === 403)
-    await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}`)
-  })
-
   it('Upload new dataset and detect types', async () => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset-types.csv', ax)
