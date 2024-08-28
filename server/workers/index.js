@@ -321,7 +321,7 @@ async function iter (app, resource, type) {
 
     const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
     if (task.eventsPrefix && newResource) {
-      const noStoreEvent = type === 'dataset' && task.eventsPrefix !== 'finalize' && !resource._partialRestStatus
+      const noStoreEvent = type === 'dataset' && (task.eventsPrefix !== 'finalize' || !!resource._partialRestStatus)
       if (resource.draftReason) {
         await journals.log(app, mergeDraft({ ...newResource }), { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
       } else {
