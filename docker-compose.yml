@@ -33,7 +33,7 @@ services:
     profiles:
       - dev
       - test
-    image: mongo:4.2
+    image: mongo:4.4
     ports:
       - 27017:27017
     volumes:

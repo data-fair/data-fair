@@ -34,54 +34,55 @@ class IndexStream extends Transform {
     this.erroredItems = []
   }
 
-  async _transform (item, encoding, callback) {
-    try {
-      let warning
-      if (this.options.updateMode) {
-        warning = await applyCalculations(this.options.dataset, item.doc)
-        const keys = Object.keys(item.doc)
-        if (keys.length === 0 || (keys.length === 1 && keys[0] === '_i')) return callback()
-        this.body.push({ update: { _index: this.options.indexName, _id: item.id, retry_on_conflict: 3 } })
-        cleanItem(item.doc)
-        this.body.push({ doc: cleanItem(item.doc) })
-        this.bulkChars += JSON.stringify(item.doc).length
-      } else if (item._deleted) {
-        const params = { delete: { _index: this.options.indexName, _id: item._id } }
-        // kinda lame, but pushing the delete query twice keeps parity of the body size that we use in reporting results
-        this.body.push(params)
-        this.body.push(item)
-      } else {
-        cleanItem(item)
-        const params = { index: { _index: this.options.indexName } }
-        // nanoid will prevent risks of collision even when assembling in virtual datasets
-        params.index._id = item._id || nanoid()
-        delete item._id
-        this.body.push(params)
-        warning = await applyCalculations(this.options.dataset, item)
-        this.body.push(item)
-        this.bulkChars += JSON.stringify(item).length
-      }
-      if (warning) {
-        this.nbErroredItems += 1
-        if (this.erroredItems.length < maxErroredItems) this.erroredItems.push({ customMessage: warning, _i: this.i + 1 })
-      }
-
-      this.i += 1
-
-      if (
-        this.body.length / 2 >= config.elasticsearch.maxBulkLines ||
-        this.bulkChars >= config.elasticsearch.maxBulkChars
-      ) {
-        await this._sendBulk()
-      }
-    } catch (err) {
-      return callback(err)
+  async transformPromise (item, encoding) {
+    let warning
+    if (this.options.updateMode) {
+      warning = await applyCalculations(this.options.dataset, item.doc)
+      const keys = Object.keys(item.doc)
+      if (keys.length === 0 || (keys.length === 1 && keys[0] === '_i')) return
+      this.body.push({ update: { _index: this.options.indexName, _id: item.id, retry_on_conflict: 3 } })
+      cleanItem(item.doc)
+      this.body.push({ doc: cleanItem(item.doc) })
+      this.bulkChars += JSON.stringify(item.doc).length
+    } else if (item._deleted) {
+      const params = { delete: { _index: this.options.indexName, _id: item._id } }
+      // kinda lame, but pushing the delete query twice keeps parity of the body size that we use in reporting results
+      this.body.push(params)
+      this.body.push(item)
+    } else {
+      cleanItem(item)
+      const params = { index: { _index: this.options.indexName } }
+      // nanoid will prevent risks of collision even when assembling in virtual datasets
+      params.index._id = item._id || nanoid()
+      delete item._id
+      this.body.push(params)
+      warning = await applyCalculations(this.options.dataset, item)
+      this.body.push(item)
+      this.bulkChars += JSON.stringify(item).length
     }
-    callback()
+    if (warning) {
+      this.nbErroredItems += 1
+      if (this.erroredItems.length < maxErroredItems) this.erroredItems.push({ customMessage: warning, _i: this.i + 1 })
+    }
+
+    this.i += 1
+
+    if (
+      this.body.length / 2 >= config.elasticsearch.maxBulkLines ||
+        this.bulkChars >= config.elasticsearch.maxBulkChars
+    ) {
+      await this.sendBulk()
+    }
+  }
+
+  _transform (item, encoding, cb) {
+    // use then syntax cf https://github.com/nodejs/node/issues/39535
+    this.transformPromise(item, encoding).then(() => cb(), cb)
   }
 
   _final (cb) {
-    this._sendBulk()
+    // use then syntax cf https://github.com/nodejs/node/issues/39535
+    this.sendBulk()
       .then(() => {
         if (this.options.refresh) return
         return this.options.esClient.indices.refresh({ index: this.options.indexName }).catch(() => {
@@ -97,7 +98,7 @@ class IndexStream extends Transform {
       .then(() => cb(), cb)
   }
 
-  async _sendBulk () {
+  async sendBulk () {
     if (this.body.length === 0) return
     debug(`Send ${this.body.length} lines to bulk indexing`)
     const bodyClone = [].concat(this.body)

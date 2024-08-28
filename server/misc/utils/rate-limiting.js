@@ -66,20 +66,19 @@ class Throttle extends Transform {
     this.tokenBucket = tokenBucket
   }
 
-  async _transform (chunk, encoding, callback) {
-    try {
-      this.tokenBucket.lastUsed = Date.now()
-      let pos = 0
-      while (chunk.length > pos) {
-        const slice = chunk.slice(pos, pos + this.tokenBucket.bucketSize)
-        await this.tokenBucket.bucket.removeTokens(slice.length)
-        this.push(slice)
-        pos += slice.length
-      }
-      callback()
-    } catch (err) {
-      callback(err)
+  async transformPromise (chunk, encoding, callback) {
+    this.tokenBucket.lastUsed = Date.now()
+    let pos = 0
+    while (chunk.length > pos) {
+      const slice = chunk.slice(pos, pos + this.tokenBucket.bucketSize)
+      await this.tokenBucket.bucket.removeTokens(slice.length)
+      this.push(slice)
+      pos += slice.length
     }
+  }
+
+  _transform (chunk, encoding, cb) {
+    this.transformPromise(chunk, encoding).then(() => cb(), cb)
   }
 }
 

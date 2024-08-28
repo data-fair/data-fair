@@ -544,7 +544,7 @@ exports.applyTransactions = async (db, dataset, user, transacs, validate, linesO
  * @param {any} [tmpDataset]
  * @returns {{operations: Operation[], bulkOpResult: any}}
  */
-const applyReqTransactions = (req, transacs, validate, tmpDataset) => {
+const applyReqTransactions = async (req, transacs, validate, tmpDataset) => {
   return exports.applyTransactions(req.app.get('db'), req.dataset, req.user, transacs, validate, req.linesOwner, tmpDataset)
 }
 
@@ -558,7 +558,7 @@ class TransactionStream extends Writable {
     this.transactions = []
   }
 
-  async _applyTransactions () {
+  async applyTransactions () {
     const { operations, bulkOpResult } = await applyReqTransactions(this.options.req, this.transactions, this.options.validate, this.options.tmpDataset)
 
     this.transactions = []
@@ -589,33 +589,36 @@ class TransactionStream extends Writable {
     this.emit('batch')
   }
 
-  async _write (chunk, encoding, cb) {
-    try {
-      chunk._action = chunk._action || 'createOrUpdate'
-      delete chunk._i
-      if (['create', 'createOrUpdate'].includes(chunk._action) && !chunk._id) {
-        chunk._id = getLineId(chunk, this.options.req.dataset) || nanoid()
-      }
-      if (chunk._action === 'delete' && !chunk._id) { // delete by primary key
-        chunk._id = getLineId(chunk, this.options.req.dataset)
-      }
-
-      // prevent working twice on a line in the same bulk, this way sequentiality doesn't matter and we can use mongodb unordered bulk
-      if (chunk._id && this.transactions.find(c => c._id === chunk._id)) await this._applyTransactions()
-
-      this.transactions.push(chunk)
-
-      // WARNING: changing this number has impact on the _i generation logic
-      if (this.transactions.length > config.mongo.maxBulkOps) await this._applyTransactions()
-    } catch (err) {
-      return cb(err)
+  async writePromise (chunk, encoding) {
+    chunk._action = chunk._action || 'createOrUpdate'
+    delete chunk._i
+    if (['create', 'createOrUpdate'].includes(chunk._action) && !chunk._id) {
+      chunk._id = getLineId(chunk, this.options.req.dataset) || nanoid()
     }
-    cb()
+    if (chunk._action === 'delete' && !chunk._id) { // delete by primary key
+      chunk._id = getLineId(chunk, this.options.req.dataset)
+    }
+
+    // prevent working twice on a line in the same bulk, this way sequentiality doesn't matter and we can use mongodb unordered bulk
+    if (chunk._id && this.transactions.find(c => c._id === chunk._id)) {
+      console.log('split transac stream', chunk._id)
+      await this.applyTransactions()
+    }
+
+    this.transactions.push(chunk)
+
+    // WARNING: changing this number has impact on the _i generation logic
+    if (this.transactions.length > config.mongo.maxBulkOps) await this.applyTransactions()
+  }
+
+  _write (chunk, encoding, cb) {
+    // use then syntax cf https://github.com/nodejs/node/issues/39535
+    this.writePromise(chunk, encoding).then(() => cb(), cb)
   }
 
   _final (cb) {
     // use then syntax cf https://github.com/nodejs/node/issues/39535
-    this._applyTransactions().then(() => cb(), cb)
+    this.applyTransactions().then(() => cb(), cb)
   }
 }
 

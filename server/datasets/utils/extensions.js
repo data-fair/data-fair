@@ -158,27 +158,23 @@ class ExtensionsStream extends Transform {
     this.buffer = []
   }
 
-  async _transform (item, encoding, callback) {
-    try {
-      this.i += 1
-      this.buffer.push(item)
-      if (this.i % 1000 === 0) await this._sendBuffer()
-      callback()
-    } catch (err) {
-      callback(err)
-    }
+  async transformPromise (item, encoding) {
+    this.i += 1
+    this.buffer.push(item)
+    if (this.i % 1000 === 0) await this.sendBuffer()
   }
 
-  async _flush (callback) {
-    try {
-      await this._sendBuffer()
-      callback()
-    } catch (err) {
-      callback(err)
-    }
+  _transform (item, encoding, cb) {
+    // use then syntax cf https://github.com/nodejs/node/issues/39535
+    this.transformPromise(item, encoding).then(() => cb(), cb)
   }
 
-  async _sendBuffer () {
+  _flush (cb) {
+    // use then syntax cf https://github.com/nodejs/node/issues/39535
+    this.sendBuffer().then(() => cb(), cb)
+  }
+
+  async sendBuffer () {
     if (!this.buffer.length) return
     if (global.events) global.events.emit('extension-inputs', this.buffer.length)
 
