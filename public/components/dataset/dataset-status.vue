@@ -60,7 +60,7 @@
     >
       <v-col>
         <v-alert
-          :type="draftError ? 'warning' : 'info'"
+          :type="(draftError || draftValidationError) ? 'warning' : 'info'"
           style="width: 100%"
           outlined
         >
@@ -92,6 +92,11 @@
                   v-html="draftError.data"
                 />
                 <p
+                  v-if="draftValidationError"
+                  class="mt-4 mb-0 font-weight-bold"
+                  v-html="draftValidationError.data"
+                />
+                <p
                   class="mt-4 mb-0"
                 >
                   <span
@@ -118,7 +123,7 @@
                 v-if="dataset.draftReason.key !== 'file-new' && (dataset.status === 'error' || dataset.status === 'finalized')"
                 v-t="'cancelDraft'"
                 :disabled="!can('cancelDraft')"
-                :color="draftError ? 'default' : 'warning'"
+                :color="(draftError || draftValidationError) ? 'default' : 'warning'"
                 class="ma-1"
                 elevation="0"
                 @click="cancelDraft"
@@ -127,7 +132,7 @@
                 v-if="dataset.status === 'finalized'"
                 v-t="'validateDraft'"
                 :disabled="!can('validateDraft')"
-                :color="draftError ? 'warning' : 'primary'"
+                :color="(draftError || draftValidationError) ? 'warning' : 'primary'"
                 class="ma-1"
                 @click="validateDraft"
               />
@@ -179,16 +184,25 @@ export default {
       return null
     },
     draftError () {
-      if (this.dataset.status !== 'finalized') return null
-      for (const event of this.journal) {
-        if (!event.draft) break
-        if (event.type === 'error') return event
-      }
-      return null
+      return this.getLastDraftEvent('error')
+    },
+    draftValidationError () {
+      return this.getLastDraftEvent('validation-error')
     }
   },
   methods: {
-    ...mapActions('dataset', ['patch', 'validateDraft', 'cancelDraft'])
+    ...mapActions('dataset', ['patch', 'validateDraft', 'cancelDraft']),
+    getLastDraftEvent (eventType) {
+      if (this.dataset.status !== 'finalized') return null
+      let inCurrentDraft = false
+      for (const event of this.journal) {
+        if (inCurrentDraft && !event.draft) break
+        if (inCurrentDraft && event.type === 'finalize-end') break
+        if (event.type === 'finalize-end') inCurrentDraft = true
+        if (inCurrentDraft && event.type === eventType) return event
+      }
+      return null
+    }
   }
 }
 </script>

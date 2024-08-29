@@ -31,7 +31,7 @@
           <v-list-item-content>
             <v-list-item-title :class="`event-${item.type}`">
               <span
-                v-if="item.type === 'error'"
+                v-if="item.type === 'error' || item.type === 'validation-error'"
                 class="error--text"
               >
                 {{ item.data || eventLabel(item) }}
@@ -50,7 +50,7 @@
                 {{ item.date | moment("lll") }}
               </span>
             </v-list-item-title>
-            <v-list-item-subtitle v-if="item.data && item.type !== 'draft-validated' && item.type !== 'error'">
+            <v-list-item-subtitle v-if="item.data && item.type !== 'draft-validated' && item.type !== 'error' && item.type !== 'validation-error'">
               <p
                 class="mb-0"
                 v-html="item.data"

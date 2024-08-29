@@ -16,6 +16,14 @@
       },
       "color": "warning"
     },
+    "validation-error": {
+      "icon": "mdi-alert-decagram",
+      "text": {
+        "fr": "le service a rencontré une erreur pendant le traitement du jeu de données",
+        "en": "the service failed while processing the dataset"
+      },
+      "color": "warning"
+    },
     "dataset-created": {
       "icon": "mdi-plus-circle-outline",
       "text": {
