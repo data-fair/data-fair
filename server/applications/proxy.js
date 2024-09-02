@@ -224,6 +224,9 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
       // we use the select parameter passed to data-fair as a cue to fill fresh dataset info
       const datasetFilters = req.application.baseApp.datasetsFilters?.[i] ?? []
       const select = datasetFilters.select
+
+      // TODO: manage separate refreshKeys for different datasets, apply clean, apply userPermissions, use memoized dataset info
+
       if (select) {
         refreshKeys = refreshKeys.concat(select)
       } else {

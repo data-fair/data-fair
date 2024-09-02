@@ -175,7 +175,7 @@ describe('datasets in draft mode', () => {
     assert.equal(evt.type, 'data-updated')
     assert.equal(evt.draft, true)
     const errorEvent = journal.pop()
-    assert.equal(errorEvent.type, 'error')
+    assert.equal(errorEvent.type, 'validation-error')
     assert.ok(errorEvent.data.startsWith('La structure'))
     assert.equal(journal.pop().type, 'finalize-end')
 
@@ -239,7 +239,7 @@ describe('datasets in draft mode', () => {
     assert.equal(evt.type, 'data-updated')
     assert.equal(evt.draft, true)
     const errorEvent = journal.pop()
-    assert.equal(errorEvent.type, 'error')
+    assert.equal(errorEvent.type, 'validation-error')
     assert.ok(errorEvent.data.startsWith('La structure'))
     assert.equal(journal.pop().type, 'finalize-end')
 

@@ -520,7 +520,7 @@ router.delete('/:datasetId/lines', readWritableDataset, isRest, apiKeyMiddleware
 router.post('/:datasetId/_sync_attachments_lines', readWritableDataset, isRest, apiKeyMiddleware, permissions.middleware('bulkLines', 'write'), lockDataset((body, query) => query.lock === 'true'), asyncWrap(restDatasetsUtils.syncAttachmentsLines))
 
 // specific routes with rest datasets with lineOwnership activated
-router.use('/:datasetId/own/:owner', readWritableDataset, isRest, (req, res, next) => {
+router.use('/:datasetId/own/:owner', readWritableDataset, isRest, apiKeyMiddleware, (req, res, next) => {
   if (!req.dataset.rest?.lineOwnership) {
     return res.status(501)
       .send('Les opérations de gestion des lignes par propriétaires ne sont pas supportées pour ce jeu de données.')
@@ -541,14 +541,14 @@ router.use('/:datasetId/own/:owner', readWritableDataset, isRest, (req, res, nex
   if (req.user.adminMode) return next()
   res.status(403).type('text/plain').send('only owner can manage his own lines')
 })
-router.get('/:datasetId/own/:owner/lines/:lineId', readDataset(), isRest, applicationKey, permissions.middleware('readOwnLine', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
-router.post('/:datasetId/own/:owner/lines', readWritableDataset, isRest, applicationKey, permissions.middleware('createOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createOrUpdateLine))
-router.put('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRest, applicationKey, permissions.middleware('updateOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createOrUpdateLine))
-router.patch('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRest, applicationKey, permissions.middleware('patchOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
-router.post('/:datasetId/own/:owner/_bulk_lines', lockDataset((body, query) => query.lock === 'true'), readWritableDataset, isRest, applicationKey, permissions.middleware('bulkOwnLines', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
-router.delete('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRest, applicationKey, permissions.middleware('deleteOwnLine', 'manageOwnLines'), asyncWrap(restDatasetsUtils.deleteLine))
-router.get('/:datasetId/own/:owner/lines/:lineId/revisions', readWritableDataset, isRest, applicationKey, permissions.middleware('readOwnLineRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
-router.get('/:datasetId/own/:owner/revisions', readWritableDataset, isRest, applicationKey, permissions.middleware('readOwnRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
+router.get('/:datasetId/own/:owner/lines/:lineId', readDataset(), isRest, apiKeyMiddleware, applicationKey, permissions.middleware('readOwnLine', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readLine))
+router.post('/:datasetId/own/:owner/lines', readWritableDataset, isRest, apiKeyMiddleware, applicationKey, permissions.middleware('createOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createOrUpdateLine))
+router.put('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRest, apiKeyMiddleware, applicationKey, permissions.middleware('updateOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.createOrUpdateLine))
+router.patch('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRest, apiKeyMiddleware, applicationKey, permissions.middleware('patchOwnLine', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadAttachment, asyncWrap(restDatasetsUtils.patchLine))
+router.post('/:datasetId/own/:owner/_bulk_lines', lockDataset((body, query) => query.lock === 'true'), readWritableDataset, isRest, apiKeyMiddleware, applicationKey, permissions.middleware('bulkOwnLines', 'manageOwnLines'), checkStorage(false), restDatasetsUtils.uploadBulk, asyncWrap(restDatasetsUtils.bulkLines))
+router.delete('/:datasetId/own/:owner/lines/:lineId', readWritableDataset, isRest, apiKeyMiddleware, applicationKey, permissions.middleware('deleteOwnLine', 'manageOwnLines'), asyncWrap(restDatasetsUtils.deleteLine))
+router.get('/:datasetId/own/:owner/lines/:lineId/revisions', readWritableDataset, isRest, apiKeyMiddleware, applicationKey, permissions.middleware('readOwnLineRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
+router.get('/:datasetId/own/:owner/revisions', readWritableDataset, isRest, apiKeyMiddleware, applicationKey, permissions.middleware('readOwnRevisions', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, asyncWrap(restDatasetsUtils.readRevisions))
 
 // Specific routes for datasets with masterData functionalities enabled
 router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset({ fillDescendants: true }), apiKeyMiddleware, permissions.middleware('readLines', 'read', 'readDataAPI'), asyncWrap(async (req, res) => {
