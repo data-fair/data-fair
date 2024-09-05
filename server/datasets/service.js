@@ -287,7 +287,15 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
     }
   } else if (dataset.initFrom && dataset.initFrom.parts.includes('data')) {
     // case of a file dataset initialized from master data
-    dataset.status = 'created'
+    if (draft) {
+      dataset.status = 'draft'
+      dataset.draft = {
+        status: 'created',
+        draftReason: { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon', validationMode: 'never' }
+      }
+    } else {
+      dataset.status = 'created'
+    }
   } else {
     throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "éditable" ou "métadonnées"')
   }
