@@ -148,7 +148,7 @@
 <i18n lang="yaml">
 fr:
   draftNew1: Le jeu de données a été créé en mode brouillon. Cet état vous permet de travailler son paramétrage.
-  draftNew2: Vérifiez que le fichier a bien été lu, parcourez les 100 premières lignes de la donnée, ajoutez des concepts au schéma, configurez des extensions, etc. Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
+  draftNew2: Vérifiez que le fichier a bien été lu, parcourez les 100 premières lignes de la donnée, ajoutez des concepts au schéma, configurez des extensions, etc..
   draftUpdated1: Le jeu de données est passé en mode brouillon suite au chargement d'un nouveau fichier.
   draftUpdated2: Vérifiez que le fichier a bien été lu et que le schéma est correct, parcourez les 100 premières lignes de la donnée, etc.
   draftValidateCan: Quand vous êtes satisfait, validez le brouillon et le jeu de données sera traité intégralement.
@@ -157,9 +157,11 @@ fr:
   validateDraft: Valider le brouillon
 en:
   draftNew1: The dataset was created in draft mode. This state allow you to work on its configuration.
-  draftNew2: Check that the file was property read, browse the first 100 lines, add concepts to the schema, configure extensions, etc. When satisfied, walidate the draft and the dataset will be processed entirely.
+  draftNew2: Check that the file was property read, browse the first 100 lines, add concepts to the schema, configure extensions, etc.
   draftUpdated1: The dataset was switched to draft mode following the upload of a new file.
   draftUpdated2: Check that the file was property read, browse the first 100 lines, etc. When satisfied, walidate the draft and the dataset will be processed entirely.
+  draftValidationCan:  When satisfied, validate the draft and the dataset will be processed entirely.
+  draftValidationCannot: You lack the permission to validate this draft, you should contact an admin.
   cancelDraft: Cancel the draft
   validateDraft: Validate the draft
 </i18n>

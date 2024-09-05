@@ -240,14 +240,12 @@ export default () => ({
           commit('patch', { status: state.eventStates[event.type] })
         }
         if (event.type === 'analyze-end' || event.type === 'extend-start') {
-          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema,projection', draft: 'true' } })
-          const patch = { schema: dataset.schema }
-          if (dataset.projection) patch.projection = dataset.projection
-          commit('patch', patch)
+          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema,projection,file,originalFile', draft: 'true' } })
+          commit('patch', { schema: dataset.schema, projection: dataset.projection, file: dataset.file, originalFile: dataset.originalFile })
         }
         if (event.type === 'finalize-end') {
-          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema,bbox', draft: 'true' } })
-          commit('patch', { schema: dataset.schema, bbox: dataset.bbox, finalizedAt: dataset.finalizedAt })
+          const dataset = await this.$axios.$get(`api/v1/datasets/${state.datasetId}`, { params: { select: 'schema,bbox,timePeriod', draft: 'true' } })
+          commit('patch', { schema: dataset.schema, bbox: dataset.bbox, timePeriod: dataset.timePeriod, finalizedAt: dataset.finalizedAt })
           if (state.jsonSchema) dispatch('fetchJsonSchema')
         }
         if (event.type === 'publication') {
