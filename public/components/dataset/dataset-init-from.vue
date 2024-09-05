@@ -93,7 +93,7 @@ export default {
         const initFrom = { dataset: dataset.id, parts: [] }
         this.$set(this.dataset, 'initFrom', initFrom)
       } else {
-        delete this.dataset.initFrom
+        this.$delete(this.dataset, 'initFrom')
       }
     },
     toggleInitFromPart (part) {

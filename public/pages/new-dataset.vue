@@ -21,8 +21,16 @@
         <v-divider />
         <v-stepper-step
           :step="2"
-          :complete="!!file"
-          :editable="!!datasetType"
+          editable
+          :complete="!!fileDataset.initFrom"
+        >
+          {{ $t('stepInit') }}
+        </v-stepper-step>
+        <v-divider />
+        <v-stepper-step
+          :step="3"
+          :complete="!initFileFromData && !!file"
+          :editable="!initFileFromData"
         >
           {{ $t('stepFile') }}
           <small
@@ -35,9 +43,9 @@
         <template v-if="$route.query.simple !== 'true'">
           <v-stepper-step
             v-if="$route.query.simple !== 'true'"
-            :step="3"
-            :complete="!!attachment"
-            :editable="!!file"
+            :step="4"
+            :complete="!initFileFromData && !!attachment"
+            :editable="!initFileFromData && !!file"
           >
             {{ $t('stepAttachment') }}
             <small
@@ -48,8 +56,8 @@
           <v-divider />
         </template>
         <v-stepper-step
-          :step="$route.query.simple === 'true' ? 3 : 4"
-          :editable="!!file"
+          :step="$route.query.simple === 'true' ? 4 : 5"
+          :editable="initFileFromData || !!file"
           :complete="fileParamsForm"
         >
           {{ $t('stepParams') }}
@@ -57,13 +65,6 @@
             v-if="fileParamsForm"
             v-t="'completed'"
           />
-        </v-stepper-step>
-        <v-divider />
-        <v-stepper-step
-          :step="$route.query.simple === 'true' ? 4 : 5"
-          :editable="fileParamsForm"
-        >
-          {{ $t('stepInit') }}
         </v-stepper-step>
         <v-divider />
         <v-stepper-step
@@ -79,7 +80,15 @@
         <v-divider />
         <v-stepper-step
           :step="2"
-          :editable="!!datasetType"
+          editable
+          :complete="!!remoteFileDataset.initFrom"
+        >
+          {{ $t('stepInit') }}
+        </v-stepper-step>
+        <v-divider />
+        <v-stepper-step
+          :step="3"
+          editable
           :complete="remoteFileParamsForm"
         >
           {{ $t('stepParams') }}
@@ -87,13 +96,6 @@
             v-if="fileParamsForm"
             v-t="'completed'"
           />
-        </v-stepper-step>
-        <v-divider />
-        <v-stepper-step
-          :step="3"
-          :editable="remoteFileParamsForm"
-        >
-          {{ $t('stepInit') }}
         </v-stepper-step>
         <v-divider />
         <v-stepper-step
@@ -110,6 +112,14 @@
         <v-stepper-step
           :step="2"
           editable
+          :complete="!!restDataset.initFrom"
+        >
+          {{ $t('stepInit') }}
+        </v-stepper-step>
+        <v-divider />
+        <v-stepper-step
+          :step="3"
+          editable
           :complete="restParamsForm"
         >
           {{ $t('stepParams') }}
@@ -117,13 +127,6 @@
             v-if="restParamsForm"
             v-t="'completed'"
           />
-        </v-stepper-step>
-        <v-divider />
-        <v-stepper-step
-          :step="3"
-          :editable="restParamsForm"
-        >
-          {{ $t('stepInit') }}
         </v-stepper-step>
         <v-divider />
         <v-stepper-step
@@ -216,7 +219,29 @@
 
       <!-- FILE steps -->
       <template v-if="datasetType === 'file'">
-        <v-stepper-content step="2">
+        <v-stepper-content :step="2">
+          <v-alert
+            type="info"
+            outlined
+            dense
+            style="max-width:440px;"
+          >
+            {{ $t('optionalStep') }}
+          </v-alert>
+
+          <dataset-init-from
+            :dataset="fileDataset"
+          />
+
+          <v-btn
+            v-t="fileDataset.initFrom ? 'continue' : 'ignorer'"
+            color="primary"
+            class="ml-2 mt-4"
+            @click.native="currentStep = initFileFromData ? ($route.query.simple === 'true' ? 4 : 5) : 3"
+          />
+        </v-stepper-content>
+
+        <v-stepper-content step="3">
           <p v-t="'loadMainFile'" />
           <div
             class="mt-3 mb-3"
@@ -246,7 +271,7 @@
             class="mt-2"
             :disabled="!file"
             color="primary"
-            @click.native="currentStep = 3"
+            @click.native="currentStep += 1"
           />
 
           <h3
@@ -258,7 +283,7 @@
 
         <v-stepper-content
           v-if="$route.query.simple !== 'true'"
-          step="3"
+          step="4"
         >
           <v-alert
             type="info"
@@ -287,24 +312,17 @@
             />
           </div>
           <v-btn
-            v-t="'continue'"
+            v-t="attachment ? 'continue' : 'ignore'"
             color="primary"
             class="mt-4"
-            @click.native="currentStep = 4"
+            @click.native="currentStep += 1"
           />
         </v-stepper-content>
 
-        <v-stepper-content :step="$route.query.simple === 'true' ? 3 : 4">
+        <v-stepper-content :step="$route.query.simple === 'true' ? 4 : 5">
           <v-form v-model="fileParamsForm">
-            <v-alert
-              outlined
-              type="warning"
-              dense
-              style="max-width:800px;"
-            >
-              {{ $t('titleId') }}
-            </v-alert>
             <v-checkbox
+              v-if="!initFileFromData && !!file"
               v-model="filenameTitle"
               name="filenameTitle"
               hide-details
@@ -312,7 +330,7 @@
               class="pl-2"
             />
             <v-text-field
-              v-if="!filenameTitle"
+              v-if="initFileFromData || !filenameTitle || !file"
               v-model="fileDataset.title"
               name="title"
               outlined
@@ -324,7 +342,7 @@
               class="pl-2 mt-5"
             />
             <v-checkbox
-              v-if="attachment"
+              v-if="attachment && !initFileFromData"
               v-model="fileDataset.attachmentsAsImage"
               :label="$t('attachmentsAsImage')"
               class="pl-2"
@@ -335,30 +353,7 @@
             color="primary"
             class="ml-2 mt-4"
             :disabled="!fileParamsForm"
-            @click.native="currentStep = $route.query.simple ? 4 : 5"
-          />
-        </v-stepper-content>
-
-        <v-stepper-content :step="$route.query.simple === 'true' ? 4 : 5">
-          <v-alert
-            type="info"
-            outlined
-            dense
-            style="max-width:440px;"
-          >
-            {{ $t('optionalStep') }}
-          </v-alert>
-
-          <dataset-init-from
-            :dataset="fileDataset"
-            :allow-data="false"
-          />
-
-          <v-btn
-            v-t="'continue'"
-            color="primary"
-            class="ml-2 mt-4"
-            @click.native="currentStep += 1"
+            @click.native="currentStep = $route.query.simple ? 5 : 6"
           />
         </v-stepper-content>
 
@@ -413,6 +408,29 @@
       <!-- REMOTE FILE steps -->
       <template v-if="datasetType === 'remoteFile'">
         <v-stepper-content step="2">
+          <v-alert
+            type="info"
+            outlined
+            dense
+            style="max-width:440px;"
+          >
+            {{ $t('optionalStep') }}
+          </v-alert>
+
+          <dataset-init-from
+            :dataset="remoteFileDataset"
+            :allow-data="false"
+          />
+
+          <v-btn
+            v-t="remoteFileDataset.initFrom ? 'continue' : 'ignore'"
+            color="primary"
+            class="ml-2 mt-4"
+            @click.native="currentStep += 1"
+          />
+        </v-stepper-content>
+
+        <v-stepper-content step="3">
           <p v-t="'remoteFileMessage'" />
 
           <v-form v-model="remoteFileParamsForm">
@@ -446,7 +464,7 @@
             class="mt-2"
             :disabled="!remoteFileParamsForm"
             color="primary"
-            @click.native="currentStep = 3"
+            @click.native="currentStep += 1"
           />
 
           <h3
@@ -454,29 +472,6 @@
             class="text-h6 mt-4"
           />
           <dataset-file-formats />
-        </v-stepper-content>
-
-        <v-stepper-content step="3">
-          <v-alert
-            type="info"
-            outlined
-            dense
-            style="max-width:440px;"
-          >
-            {{ $t('optionalStep') }}
-          </v-alert>
-
-          <dataset-init-from
-            :dataset="remoteFileDataset"
-            :allow-data="false"
-          />
-
-          <v-btn
-            v-t="'continue'"
-            color="primary"
-            class="ml-2 mt-4"
-            @click.native="currentStep += 1"
-          />
         </v-stepper-content>
 
         <v-stepper-content step="4">
@@ -503,15 +498,27 @@
       <!-- REST steps -->
       <template v-if="datasetType === 'rest'">
         <v-stepper-content step="2">
+          <v-alert
+            type="info"
+            outlined
+            dense
+            style="max-width:440px;"
+          >
+            {{ $t('optionalStep') }}
+          </v-alert>
+
+          <dataset-init-from :dataset="restDataset" />
+
+          <v-btn
+            v-t="'continue'"
+            color="primary"
+            class="ml-2 mt-4"
+            @click.native="currentStep += 1"
+          />
+        </v-stepper-content>
+
+        <v-stepper-content step="3">
           <v-form v-model="restParamsForm">
-            <v-alert
-              outlined
-              type="warning"
-              dense
-              style="max-width:800px;"
-            >
-              {{ $t('titleId') }}
-            </v-alert>
             <v-text-field
               v-model="restDataset.title"
               name="title"
@@ -559,27 +566,7 @@
             color="primary"
             class="ml-2 mt-4"
             :disabled="!restParamsForm"
-            @click.native="currentStep = 3"
-          />
-        </v-stepper-content>
-
-        <v-stepper-content step="3">
-          <v-alert
-            type="info"
-            outlined
-            dense
-            style="max-width:440px;"
-          >
-            {{ $t('optionalStep') }}
-          </v-alert>
-
-          <dataset-init-from :dataset="restDataset" />
-
-          <v-btn
-            v-t="'continue'"
-            color="primary"
-            class="ml-2 mt-4"
-            @click.native="currentStep = 4"
+            @click.native="currentStep += 1"
           />
         </v-stepper-content>
 
@@ -609,14 +596,6 @@
       <template v-if="datasetType === 'virtual'">
         <v-stepper-content step="2">
           <v-form v-model="virtualParamsForm">
-            <v-alert
-              outlined
-              type="warning"
-              dense
-              style="max-width:800px;"
-            >
-              {{ $t('titleId') }}
-            </v-alert>
             <v-text-field
               v-model="virtualDataset.title"
               name="title"
@@ -703,14 +682,6 @@
       <template v-if="datasetType === 'metaOnly'">
         <v-stepper-content step="2">
           <v-form v-model="metaParamsForm">
-            <v-alert
-              outlined
-              type="warning"
-              dense
-              style="max-width:800px;"
-            >
-              {{ $t('titleId') }}
-            </v-alert>
             <v-text-field
               v-model="metaOnlyDataset.title"
               name="title"
@@ -782,9 +753,9 @@ fr:
   selectFile: sélectionnez ou glissez/déposez un fichier
   selectArchive: sélectionnez ou glissez/déposez une archive
   title: Titre du jeu de données
-  titleId: Le titre du jeu de données sera utilisé pour construire un identifiant unique visible dans les URLs de pages de portails, les APIs, etc. Cet identifiant ne pourra pas être modifié.
   filenameTitle: Utiliser le nom du fichier pour construire le titre du jeu de données
   continue: Continuer
+  ignore: Ignorer
   formats: Formats supportés
   attachment: Document numérique attaché
   optionalStep: Cette étape est optionnelle
@@ -839,9 +810,9 @@ en:
   selectFile: select or drag and drop a file
   selectArchive: select or drag and drop an archive
   title: Dataset title
-  titleId: The title of the dataset will be used to create a unique id visible in URLs of portals pages, APIs, etc. This id cannot be changed.
   filenameTitle: Use the file name to create the title of the dataset
   continue: Continue
+  ignore: Ignore
   formats: Supported formats
   attachment: Attachment
   optionalStep: This step is optional
@@ -976,8 +947,10 @@ export default {
     },
     suggestArchive () {
       return this.file && this.file.size > 50000000 && (this.file.name.endsWith('.csv') || this.file.name.endsWith('.tsv') || this.file.name.endsWith('.txt') || this.file.name.endsWith('.geojson'))
+    },
+    initFileFromData () {
+      return this.fileDataset?.initFrom?.parts?.includes('data')
     }
-
   },
   watch: {
     search () {
@@ -1008,17 +981,19 @@ export default {
         params: {}
       }
       const formData = new FormData()
-      formData.append('dataset', this.file)
-      if (this.attachment) {
-        formData.append('attachments', this.attachment)
-      } else {
-        delete this.fileDataset.attachmentsAsImage
+      if (!this.initFileFromData) {
+        formData.append('dataset', this.file)
+        if (this.attachment) {
+          formData.append('attachments', this.attachment)
+        } else {
+          delete this.fileDataset.attachmentsAsImage
+        }
+        if (this.filenameTitle) delete this.fileDataset.title
       }
-      if (this.filenameTitle) delete this.fileDataset.title
       formData.append('body', JSON.stringify(this.fileDataset))
       this.importing = true
       try {
-        if (this.file.size > 100000 || this.fileDataset.initFrom?.parts?.includes('schema')) options.params.draft = 'true'
+        if (this.fileDataset.initFrom?.parts?.includes('schema') || this.file.size > 100000) options.params.draft = 'true'
         const dataset = await this.$axios.$post('api/v1/datasets', formData, options)
         if (dataset.error) throw new Error(dataset.error)
         this.$router.push({ path: `/dataset/${dataset.id}` })
