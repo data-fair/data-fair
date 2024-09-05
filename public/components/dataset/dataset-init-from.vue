@@ -55,7 +55,7 @@
 
 <i18n lang="yaml">
     fr:
-      initFromDataset: Utiliser un jeu de données existant pour initialiser le nouveau ?
+      initFromDataset: Utiliser un jeu de données existant comme modèle ?
       initFromData: copier la donnée
       initFromSchema: copier le schéma
       initFromPrimaryKey: copier la clé primaire
@@ -63,7 +63,7 @@
       initFromDescription: copier la description
       initFromAttachments: copier les pièces jointes
     en:
-      initFromDataset: Use an existing dataset to initialize the new one ?
+      initFromDataset: Use an existing dataset as a model ?
       initFromData: copy data
       initFromSchema: copy schema
       initFromPrimaryKey: copy primary key
