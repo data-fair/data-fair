@@ -245,7 +245,14 @@ router.put('/:datasetId/owner', readDataset(), apiKeyMiddleware, permissions.mid
   }
 
   const sameOrg = dataset.owner.type === 'organization' && dataset.owner.type === req.body.type && dataset.owner.id === req.body.id
-  if (!sameOrg) patch.publicationSites = []
+  if (sameOrg && !dataset.owner.department && req.body.department) {
+    // moving from org root to a department, we keep the publicationSites
+  } else {
+    patch.publicationSites = []
+  }
+  if (!sameOrg && req.body.publications) {
+    patch.publications = []
+  }
 
   const preservePermissions = (dataset.permissions || []).filter(p => {
     // keep public permissions

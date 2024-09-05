@@ -51,11 +51,11 @@ describe('resource ownership', () => {
     await ax.put(`/api/v1/datasets/${dataset.id}/owner`, {
       type: 'organization',
       id: 'KWqAGZ4mG',
-      dep: 'dep1',
+      department: 'dep1',
       name: 'Fivechat'
     })
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
-    assert.deepEqual(dataset.owner, { type: 'organization', id: 'KWqAGZ4mG', name: 'Fivechat', dep: 'dep1' })
+    assert.deepEqual(dataset.owner, { type: 'organization', id: 'KWqAGZ4mG', name: 'Fivechat', department: 'dep1' })
     assert.deepEqual(dataset.publicationSites, ['data-fair-portals:portal1'])
     const newPermissions = (await ax.get('/api/v1/datasets/' + dataset.id + '/permissions')).data
     assert.deepEqual(newPermissions[newPermissions.length - 1], { operations: ['readDescription', 'list'] })

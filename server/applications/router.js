@@ -303,7 +303,14 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
     updatedAt: moment().toISOString()
   }
   const sameOrg = application.owner.type === 'organization' && application.owner.type === req.body.type && application.owner.id === req.body.id
-  if (!sameOrg) patch.publicationSites = []
+  if (sameOrg && !application.owner.department && req.body.department) {
+    // moving from org root to a department, we keep the publicationSites
+  } else {
+    patch.publicationSites = []
+  }
+  if (!sameOrg && req.body.publications) {
+    patch.publications = []
+  }
 
   const preservePermissions = (application.permissions || []).filter(p => {
     // keep public permissions

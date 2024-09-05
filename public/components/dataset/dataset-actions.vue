@@ -290,7 +290,34 @@
             type="warning"
             outlined
           >
-            Le changement de propriétaire a un effet sur les permissions et les publications du jeu de données. Pensez à vérifier ces aspects après avoir confirmé le changement.
+            <p>
+              Le changement de propriétaire peut avoir de nombreux effets sur un jeu de données. Avant de confirmer l'opération effectuez ces vérifications :
+            </p>
+            <p>
+              <ul>
+                <li>
+                  quelles personnes ont les permissions nécessaires pour contribuer ou pour utiliser le jeu de données ?
+                </li>
+                <li>
+                  quelles applications utilisent le jeu de données ?
+                </li>
+                <li>
+                  sur quels portails le jeu de données est-il publié ?
+                </li>
+                <li>
+                  sur quels catalogues le jeu de données est-il publié ?
+                </li>
+                <li>
+                  le jeu de données est-il utilisé par des programmes qui utilisent une clé d'API du compte propriétaire ?
+                </li>
+                <li>
+                  le jeu de données est-il associé à un traitement automatisé ?
+                </li>
+              </ul>
+            </p>
+            <p>
+              Après la confirmation vérifiez de nouveaux tous ces aspects et effectuez les corrections nécessaires.
+            </p>
           </v-alert>
         </v-card-text>
         <v-card-actions>

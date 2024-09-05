@@ -161,7 +161,28 @@
             type="warning"
             outlined
           >
-            Le changement de propriétaire a un effet sur les permissions et les publications de l'application. Pensez à vérifier ces aspects après avoir confirmé le changement.
+            <p>
+              Le changement de propriétaire peut avoir de nombreux effets sur une application. Avant de confirmer l'opération effectuez ces vérifications :
+            </p>
+            <p>
+              <ul>
+                <li>
+                  quelles personnes ont les permissions nécessaires pour configurer ou pour utiliser l'application ?
+                </li>
+                <li>
+                  quel jeu de données est utilisé par l'application ?
+                </li>
+                <li>
+                  sur quels portails l'application est-elle publiée ?
+                </li>
+                <li>
+                  sur quels catalogues l'application est-elle publiée ?
+                </li>
+              </ul>
+            </p>
+            <p>
+              Après la confirmation vérifiez de nouveaux tous ces aspects et effectuez les corrections nécessaires.
+            </p>
           </v-alert>
         </v-card-text>
         <v-card-actions>
