@@ -296,6 +296,6 @@ exports.sampleValues = async (dataset) => {
       }
     }
   }))
-  if (currentLine === 0) throw new Error('Èchec de l\'échantillonage des données')
+  if (currentLine === 0) throw new Error('[noretry] Échec de l\'échantillonage des données')
   return sampleValues
 }
