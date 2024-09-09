@@ -69,7 +69,9 @@ describe('Applications', () => {
 
     const dataset = await testUtils.sendDataset('datasets/split.csv', ax)
 
-    let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/', configuration: { datasets: [{ id: dataset.id, href: config.publicUrl + '/api/v1/datasets/' + dataset.id }] } })
+    const datasetRefInit = (await ax.get('/api/v1/datasets', { params: { id: dataset.id, select: 'id,title,schema,userPermissions' } })).data.results[0]
+
+    let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/', configuration: { datasets: [datasetRefInit] } })
     const appId = res.data.id
 
     // The same content is returned with or without a trailing slash
@@ -87,7 +89,7 @@ describe('Applications', () => {
     assert.ok(application.configuration)
     assert.ok(application.configuration.datasets?.length, 1)
     const datasetRef = application.configuration.datasets[0]
-    assert.deepEqual(Object.keys(datasetRef).sort(), ['finalizedAt', 'href', 'id', 'owner', 'page', 'previews', 'public', 'schema', 'title', 'userPermissions', 'visibility'])
+    assert.deepEqual(Object.keys(datasetRef).sort(), ['finalizedAt', 'href', 'id', 'owner', 'page', 'previews', 'public', 'schema', 'slug', 'title', 'userPermissions', 'visibility'])
 
     // A link to the manifest is injected
     assert.ok(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/data-fair/app/${appId}/manifest.json">`))

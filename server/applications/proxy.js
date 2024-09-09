@@ -8,7 +8,6 @@ const escapeHtml = require('escape-html')
 const memoize = require('memoizee')
 const axios = require('../misc/utils/axios')
 const parse5 = require('parse5')
-const clone = require('../misc/utils/clone')
 const pump = require('../misc/utils/pipe')
 const CacheableLookup = require('cacheable-lookup')
 const asyncWrap = require('../misc/utils/async-handler')
@@ -186,15 +185,21 @@ if (inIframe()) {
 }
 `
 
-const memoizedGetFreshDataset = memoize(async (id, db) => {
-  return db.collection('datasets').findOne({ id })
+const memoizedGetFreshDataset = memoize(async (id, publicUrl, publicationSite, db) => {
+  const dataset = db.collection('datasets').findOne({ id })
+  if (!dataset) return null
+  const permissions = dataset.permissions
+  datasetUtils.clean(publicUrl, publicationSite, dataset)
+  // re-affect permissions that is removed by clean so that we can process userPermissions after fetching from cache
+  dataset.permissions = permissions
+  return dataset
 }, {
   profileName: 'getAppFreshDataset',
   promise: true,
   primitive: true,
   max: 10000,
   maxAge: 1000 * 60, // 1 minute
-  length: 1 // ignore db parameter
+  length: 3 // ignore db parameter
 })
 
 /** @type {string} */
@@ -237,16 +242,20 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
         if (dataset.href) dataset.href = dataset.href.replace(config.publicUrl, req.publicBaseUrl)
         continue
       }
+      let refreshKeys = Object.keys(dataset)
+      refreshKeys.push('finalizedAt')
 
-      const freshDataset = clone(await memoizedGetFreshDataset(dataset.id, db))
+      const datasetFilters = req.application.baseApp.datasetsFilters?.[i] ?? {}
+      if (datasetFilters.select) refreshKeys = refreshKeys.concat(datasetFilters.select)
+
+      const freshDataset = await memoizedGetFreshDataset(dataset.id, req.publicBaseUrl, req.publicationSite, db)
       if (!freshDataset) throw new Error('dataset not found ' + dataset.id)
 
-      freshDataset.userPermissions = permissions.list('datasets', freshDataset, req.user)
-      datasetUtils.clean(req.publicBaseUrl, req.publicationSite, freshDataset)
-      for (const key of Object.keys(dataset)) {
+      for (const key of refreshKeys) {
+        if (key === 'userPermissions') dataset.userPermissions = permissions.list('datasets', freshDataset, req.user)
         if (key in freshDataset) dataset[key] = freshDataset[key]
       }
-      Object.assign(dataset, freshDataset)
+      dataset.finalizedAt = freshDataset.finalizedAt
     }
   }
 
