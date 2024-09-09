@@ -8,6 +8,7 @@ const escapeHtml = require('escape-html')
 const memoize = require('memoizee')
 const axios = require('../misc/utils/axios')
 const parse5 = require('parse5')
+const clone = require('../misc/utils/clone')
 const pump = require('../misc/utils/pipe')
 const CacheableLookup = require('cacheable-lookup')
 const asyncWrap = require('../misc/utils/async-handler')
@@ -233,31 +234,18 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
       const dataset = datasets[i]
       if (!dataset.id) {
         console.error(`missing dataset id "${JSON.stringify(dataset)}" in app config "${req.application.id}"`)
+        if (dataset.href) dataset.href = dataset.href.replace(config.publicUrl, req.publicBaseUrl)
         continue
       }
 
-      // we use the select parameter passed to data-fair as a cue to fill fresh dataset info
-      /** @type {Record<string, string[]>} */
-      const datasetFilters = req.application.baseApp.datasetsFilters?.[i] ?? {}
-      const datasetQuery = Object.keys(datasetFilters).reduce(
-        (a, key) => {
-          a[key] = datasetFilters[key].join(',')
-          return a
-        }
-        , /** @type {Record<string, string>} */({}))
+      const freshDataset = clone(await memoizedGetFreshDataset(dataset.id, db))
+      if (!freshDataset) throw new Error('dataset not found ' + dataset.id)
 
-      const select = (datasetQuery.select ?? 'id') + ',finalizedAt'
-      const projection = findUtils.project(select, [])
-
-      const freshDatasetFull = await memoizedGetFreshDataset(dataset.id, db)
-      if (!freshDatasetFull) throw new Error('dataset not found ' + dataset.id)
-
-      const freshDataset = {}
-      for (const projectionKey of Object.keys(projection)) {
-        if (projection[projectionKey] === 1) freshDataset[projectionKey] = freshDatasetFull[projectionKey]
+      freshDataset.userPermissions = permissions.list('datasets', freshDataset, req.user)
+      datasetUtils.clean(req.publicBaseUrl, req.publicationSite, freshDataset)
+      for (const key of Object.keys(dataset)) {
+        if (key in freshDataset) dataset[key] = freshDataset[key]
       }
-      if (datasetQuery.raw !== 'true') freshDataset.userPermissions = permissions.list('datasets', freshDataset, req.user)
-      datasetUtils.clean(req.publicBaseUrl, req.publicationSite, freshDataset, datasetQuery)
       Object.assign(dataset, freshDataset)
     }
   }

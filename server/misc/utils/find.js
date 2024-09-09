@@ -202,7 +202,7 @@ exports.project = (selectStr, exclude = [], raw = false) => {
     for (const s of selectStr.split(',')) {
       select[s] = 1
     }
-    if (!raw) Object.assign(select, { permissions: 1, id: 1, owner: 1 })
+    if (!raw) Object.assign(select, { permissions: 1, id: 1, owner: 1, slug: 1 })
     for (const e of exclude) {
       delete select[e]
     }
