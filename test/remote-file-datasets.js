@@ -71,6 +71,7 @@ describe('datasets based on remote files', () => {
       .get('/data.csv').reply(200, 'col\nval1\nval2')
     dataset = await workers.hook('fileDownloader/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
+    assert.ok(dataset.remoteFile.autoUpdate.nextUpdate > nextUpdate)
     nockScope.done()
 
     // trigger re-downloading but etag matches did not change
@@ -81,6 +82,7 @@ describe('datasets based on remote files', () => {
     dataset = await workers.hook('fileDownloader/' + dataset.id)
     assert.ok(!dataset.draft)
     assert.equal(dataset.status, 'finalized')
+    assert.ok(dataset.remoteFile.autoUpdate.nextUpdate > nextUpdate)
     nockScope.done()
 
     // trigger re-downloading and content changed
@@ -90,6 +92,7 @@ describe('datasets based on remote files', () => {
       .get('/data.csv').reply(200, 'col\nval11\nval22')
     dataset = await workers.hook('finalizer/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
+    assert.ok(dataset.remoteFile.autoUpdate.nextUpdate > nextUpdate)
     nockScope.done()
 
     // trigger re-downloading and file name changed

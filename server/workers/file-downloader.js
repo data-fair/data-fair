@@ -140,7 +140,10 @@ exports.process = async function (app, dataset) {
   }
 
   if (dataset.draftReason && !patch.status) {
-    await db.collection('datasets').findOneAndUpdate({ id: dataset.id }, { $unset: { draft: '' } })
+    await db.collection('datasets').findOneAndUpdate(
+      { id: dataset.id },
+      { $unset: { draft: '' }, $set: { remoteFile: patch.remoteFile } }
+    )
   } else {
     await datasetService.applyPatch(app, dataset, patch)
   }
