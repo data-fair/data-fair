@@ -58,7 +58,7 @@ before('global mocks', () => {
               title: 'Jeu de données',
               description: 'Ce jeu doit contenir au moins une colonne avec valeur numérique',
               type: 'object',
-              'x-fromUrl': 'api/v1/datasets?status=finalized&field-type=integer,number&q={q}&select=id,title,schema&{context.datasetFilter}',
+              'x-fromUrl': 'api/v1/datasets?status=finalized&field-type=integer,number&q={q}&select=id,title,schema,userPermissions&{context.datasetFilter}',
               'x-itemsProp': 'results',
               'x-itemTitle': 'title',
               'x-itemKey': 'href',

@@ -5,12 +5,14 @@ const path = require('path')
 const https = require('https')
 const http = require('http')
 const escapeHtml = require('escape-html')
+const memoize = require('memoizee')
 const axios = require('../misc/utils/axios')
 const parse5 = require('parse5')
 const pump = require('../misc/utils/pipe')
 const CacheableLookup = require('cacheable-lookup')
 const asyncWrap = require('../misc/utils/async-handler')
 const findUtils = require('../misc/utils/find')
+const datasetUtils = require('../datasets/utils/index.js')
 const permissions = require('../misc/utils/permissions')
 const serviceWorkers = require('../misc/utils/service-workers')
 const metrics = require('../misc/utils/metrics')
@@ -183,6 +185,17 @@ if (inIframe()) {
 }
 `
 
+const memoizedGetFreshDataset = memoize(async (id, db) => {
+  return db.collection('datasets').findOne({ id })
+}, {
+  profileName: 'getAppFreshDataset',
+  promise: true,
+  primitive: true,
+  max: 10000,
+  maxAge: 1000 * 60, // 1 minute
+  length: 1 // ignore db parameter
+})
+
 /** @type {string} */
 let minifiedIframeRedirectSrc
 router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => {
@@ -216,44 +229,39 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   // and so benefit from better caching
   const datasets = req.application.configuration && req.application.configuration.datasets && req.application.configuration.datasets.filter(d => !!d)
   if (datasets && datasets.length) {
-    let refreshKeys = ['finalizedAt']
     for (let i = 0; i < datasets.length; i++) {
-      const d = datasets[i]
-      if (d.href) d.href = d.href.replace(config.publicUrl, req.publicBaseUrl)
+      const dataset = datasets[i]
+      if (!dataset.id) {
+        console.error(`missing dataset id "${JSON.stringify(dataset)}" in app config "${req.application.id}"`)
+        continue
+      }
 
       // we use the select parameter passed to data-fair as a cue to fill fresh dataset info
-      const datasetFilters = req.application.baseApp.datasetsFilters?.[i] ?? []
-      const select = datasetFilters.select
-
-      // TODO: manage separate refreshKeys for different datasets, apply clean, apply userPermissions, use memoized dataset info
-
-      if (select) {
-        refreshKeys = refreshKeys.concat(select)
-      } else {
-        // if select is not found we use the old deprecated method to prevent compatibility breakage
-        for (const key of Object.keys(d)) {
-          if (!['id', '_id', 'href'].includes(key) && !refreshKeys.includes(key)) refreshKeys.push(key)
+      /** @type {Record<string, string[]>} */
+      const datasetFilters = req.application.baseApp.datasetsFilters?.[i] ?? {}
+      const datasetQuery = Object.keys(datasetFilters).reduce(
+        (a, key) => {
+          a[key] = datasetFilters[key].join(',')
+          return a
         }
-      }
-    }
+        , /** @type {Record<string, string>} */({}))
 
-    /** @type {Record<string, 0 | 1>} */
-    const projection = { _id: 0, id: 1 }
-    for (const key of refreshKeys) projection[key] = 1
+      const select = (datasetQuery.select ?? 'id') + ',finalizedAt'
+      const projection = findUtils.project(select, [])
 
-    const freshDatasets = await db.collection('datasets')
-      .find({ $or: datasets.map(d => ({ id: d.id })) })
-      .project(projection)
-      .toArray()
-    for (const fd of freshDatasets) {
-      const d = req.application.configuration.datasets.find(d => fd.id === d.id)
-      for (const key of refreshKeys) {
-        d[key] = fd[key]
+      const freshDatasetFull = await memoizedGetFreshDataset(dataset.id, db)
+      if (!freshDatasetFull) throw new Error('dataset not found ' + dataset.id)
+
+      const freshDataset = {}
+      for (const projectionKey of Object.keys(projection)) {
+        if (projection[projectionKey] === 1) freshDataset[projectionKey] = freshDatasetFull[projectionKey]
       }
+      if (datasetQuery.raw !== 'true') freshDataset.userPermissions = permissions.list('datasets', freshDataset, req.user)
+      datasetUtils.clean(req.publicBaseUrl, req.publicationSite, freshDataset, datasetQuery)
+      Object.assign(dataset, freshDataset)
     }
   }
 
-  // we await the promises afterwards so that the datasets and baseApp promises were resolved in parallel
   const [limits, baseApp] = await Promise.all([
     db.collection('limits').findOne({ type: req.application.owner.type, id: req.application.owner.id }),
     db.collection('base-applications').findOne({ url: applicationUrl, $or: accessFilter }, { projection: { id: 1, meta: 1 } })

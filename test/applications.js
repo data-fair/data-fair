@@ -87,7 +87,7 @@ describe('Applications', () => {
     assert.ok(application.configuration)
     assert.ok(application.configuration.datasets?.length, 1)
     const datasetRef = application.configuration.datasets[0]
-    assert.deepEqual(Object.keys(datasetRef).sort(), ['finalizedAt', 'href', 'id', 'schema', 'title'])
+    assert.deepEqual(Object.keys(datasetRef).sort(), ['finalizedAt', 'href', 'id', 'owner', 'page', 'previews', 'public', 'schema', 'title', 'userPermissions', 'visibility'])
 
     // A link to the manifest is injected
     assert.ok(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/data-fair/app/${appId}/manifest.json">`))

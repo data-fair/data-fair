@@ -18,7 +18,7 @@ describe('Base applications', () => {
     const baseApp1 = res.data.results[0]
     assert.ok(baseApp1)
     assert.equal(baseApp1.public, true)
-    assert.deepEqual(baseApp1.datasetsFilters, [{ 'field-type': ['integer', 'number'], select: ['id', 'title', 'schema'] }])
+    assert.deepEqual(baseApp1.datasetsFilters, [{ 'field-type': ['integer', 'number'], select: ['id', 'title', 'schema', 'userPermissions'] }])
 
     // super admin patchs the private one
     const adminAx = global.ax.superadmin
