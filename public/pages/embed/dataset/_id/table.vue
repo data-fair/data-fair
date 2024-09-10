@@ -574,7 +574,7 @@ export default {
       if (this.query) params.q = this.query
       if (this.filters.length) {
         try {
-          params.qs = filtersUtils.filters2qs(this.filters, this.$i18n.locale)
+          filtersUtils.writeQueryParams(this.dataset, this.filters, params)
         } catch (error) {
           // eslint-disable-next-line vue/no-async-in-computed-properties
           this.$nextTick(() => eventBus.$emit('notification', { error }))
@@ -749,7 +749,7 @@ export default {
       if (this.query) query.q = this.query
       else delete query.q
 
-      filtersUtils.writeQueryParams(this.filters, query)
+      filtersUtils.writeQueryParams(this.dataset, this.filters, query)
 
       if (this.pagination.sortBy && this.pagination.sortBy[0]) {
         query.sort = this.pagination.sortBy[0] + ':' + (this.pagination.sortDesc[0] ? '-1' : '1')
