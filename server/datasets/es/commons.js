@@ -192,6 +192,18 @@ function checkQuery (query, schema, esFields, currentField) {
   if (query.right) checkQuery(query.right, schema, esFields, query.field)
 }
 
+/**
+ *
+ * @param {any} prop
+ * @param {string} capability
+ */
+const requiredCapability = (prop, filterName, capability = 'index') => {
+  const capabilities = prop['x-capabilities'] ?? {}
+  if (capabilities[capability] === false || (['wildcard', 'textAgg'].includes(capability) && capabilities[capability] !== true)) {
+    throw createError(400, `Impossible d'appliquer un filtre ${filterName} sur le champ ${prop.key}.`)
+  }
+}
+
 exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) => {
   const esQuery = {}
   qFields = qFields || (query.q_fields && query.q_fields.split(','))
@@ -384,7 +396,7 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
     }
   }
   for (const queryKey of Object.keys(query)) {
-    const filterSuffix = ['_in', '_eq', '_gt', '_lt', '_gte', '_lte'].find(suffix => queryKey.endsWith(suffix))
+    const filterSuffix = ['_in', '_eq', '_gt', '_lt', '_gte', '_lte', '_search', '_contains', '_starts'].find(suffix => queryKey.endsWith(suffix))
     if (!filterSuffix) continue
     let prop
     if (queryKey.startsWith('_c_')) {
@@ -398,10 +410,8 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
       if (!prop) throw createError(400, `Impossible d'appliquer un filtre sur le champ ${propKey}, il n'existe pas dans le jeu de données.`)
     }
 
-    if (prop['x-capabilities'] && prop['x-capabilities'].index === false) {
-      throw createError(400, `Impossible d'appliquer un filtre sur le champ ${prop.key}, la fonctionnalité a été désactivée.`)
-    }
     if (filterSuffix === '_in') {
+      requiredCapability(prop, filterSuffix)
       try {
         const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',')
         filter.push({ terms: { [prop.key]: values } })
@@ -410,19 +420,39 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
       }
     }
     if (filterSuffix === '_eq') {
+      requiredCapability(prop, filterSuffix)
       filter.push({ term: { [prop.key]: query[queryKey] } })
     }
     if (filterSuffix === '_gt') {
+      // TODO: check if this filter required a "index" capability or "values"
+      requiredCapability(prop, filterSuffix)
       filter.push({ range: { [prop.key]: { gt: query[queryKey] } } })
     }
     if (filterSuffix === '_gte') {
+      requiredCapability(prop, filterSuffix)
       filter.push({ range: { [prop.key]: { gte: query[queryKey] } } })
     }
     if (filterSuffix === '_lt') {
+      requiredCapability(prop, filterSuffix)
       filter.push({ range: { [prop.key]: { lt: query[queryKey] } } })
     }
     if (filterSuffix === '_lte') {
+      requiredCapability(prop, filterSuffix)
       filter.push({ range: { [prop.key]: { lte: query[queryKey] } } })
+    }
+    if (filterSuffix === '_starts') {
+      requiredCapability(prop, filterSuffix)
+      filter.push({ prefix: { [prop.key]: query[queryKey] } })
+    }
+    if (filterSuffix === '_contains') {
+      requiredCapability(prop, filterSuffix, 'wildcard')
+      filter.push({ wildcard: { [`${prop.key}.wildcard`]: `*${query[queryKey]}*` } })
+    }
+    if (filterSuffix === '_search') {
+      let subfield = 'text_standard'
+      if (prop['x-capabilities']?.text !== false) subfield = 'text'
+      requiredCapability(prop, filterSuffix, 'textStandard')
+      must.push({ match: { [`${prop.key}.${subfield}`]: query[queryKey] } })
     }
   }
 
