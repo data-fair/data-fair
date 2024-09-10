@@ -749,7 +749,7 @@ export default {
       if (this.query) query.q = this.query
       else delete query.q
 
-      filtersUtils.writeQueryParams(this.dataset, this.filters, query)
+      filtersUtils.writeQueryParams(this.dataset, this.filters, query, true)
 
       if (this.pagination.sortBy && this.pagination.sortBy[0]) {
         query.sort = this.pagination.sortBy[0] + ':' + (this.pagination.sortDesc[0] ? '-1' : '1')
