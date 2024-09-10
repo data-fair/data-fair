@@ -176,7 +176,6 @@ describe('Applications keys for unauthenticated readOnly access', () => {
       title: 'restcrowd',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/restcrowd')
 
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
       datasets: [{
@@ -223,7 +222,6 @@ describe('Applications keys for unauthenticated readOnly access', () => {
       title: 'restcrowdown',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/restcrowdown')
 
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
       datasets: [{

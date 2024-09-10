@@ -20,17 +20,17 @@ describe('REST datasets', () => {
     let res = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, 'a-rest-dataset')
-    await workers.hook('finalizer/' + res.data.id)
+    assert.equal(res.data.status, 'finalized')
 
     res = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, 'a-rest-dataset-2')
-    await workers.hook('finalizer/' + res.data.id)
+    assert.equal(res.data.status, 'finalized')
 
     res = await ax.put('/api/v1/datasets/restdataset3', { isRest: true, title: 'a rest dataset' })
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, 'a-rest-dataset-3')
-    await workers.hook('finalizer/' + res.data.id)
+    assert.equal(res.data.status, 'finalized')
 
     res = await ax.put('/api/v1/datasets/restdataset3', { isRest: true, title: 'a rest dataset updated' })
     assert.equal(res.status, 200)
@@ -45,7 +45,6 @@ describe('REST datasets', () => {
       title: 'rest1',
       schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/rest1')
     res = await ax.post('/api/v1/datasets/rest1/lines', { attr1: 'test1', attr2: 'test1' })
     await workers.hook('finalizer/rest1')
     assert.equal(res.status, 201)
@@ -87,7 +86,6 @@ describe('REST datasets', () => {
       title: 'restjson',
       schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/restjson')
     await assert.rejects(ax.post('/api/v1/datasets/restjson/lines', JSON.stringify({ attr1: 'test1', attr2: 'test1' })), (err) => {
       assert.equal(err.status, 415)
       assert.equal(err.data, 'Cette API attend un header content-type compatible, le plus souvent application/json.')
@@ -102,7 +100,6 @@ describe('REST datasets', () => {
       title: 'rest2',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/rest2')
     let res = await ax.post('/api/v1/datasets/rest2/_bulk_lines', [
       { attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
@@ -139,14 +136,13 @@ describe('REST datasets', () => {
       title: 'rest3',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    let dataset = await workers.hook('finalizer/rest3')
     let res = await ax.post('/api/v1/datasets/rest3/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
       { _id: 'line4', attr1: 'test1', attr2: 'test1' }
     ])
-    dataset = await workers.hook('finalizer/rest3')
+    let dataset = await workers.hook('finalizer/rest3')
     assert.ok(dataset.schema.find(f => f.key === '_id'))
     assert.ok(dataset.schema.find(f => f.key === '_updatedAt'))
     res = await ax.get('/api/v1/datasets/rest3/lines')
@@ -171,7 +167,8 @@ describe('REST datasets', () => {
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 2)
 
     dataset = await workers.hook('finalizer/rest3')
-    assert.ok(dataset.updatedAt > dataset.createdAt)
+    console.log(dataset.updatedAt, dataset.createdAt)
+    assert.equal(dataset.updatedAt, dataset.createdAt)
     assert.ok(dataset.dataUpdatedAt > dataset.updatedAt)
     assert.ok(dataset.finalizedAt > dataset.dataUpdatedAt)
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 0)
@@ -189,7 +186,6 @@ describe('REST datasets', () => {
       title: 'rest4',
       schema: [{ key: 'attr1', type: 'string', 'x-required': true }, { key: 'attr2', type: 'string', pattern: '^test[0-9]$' }]
     })
-    await workers.hook('finalizer/rest4')
 
     await assert.rejects(ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', attr3: 'test1' }), (err) => {
       assert.equal(err.data, 'ne doit pas contenir de propriétés additionnelles (attr3)')
@@ -260,7 +256,6 @@ describe('REST datasets', () => {
       ]
     })
     const dataset = res.data
-    await workers.hook('finalizer/rest5')
 
     // Create a line with an attached file
     const form = new FormData()
@@ -304,7 +299,6 @@ describe('REST datasets', () => {
       ]
     })
     const dataset = res.data
-    await workers.hook('finalizer/rest6')
 
     // Create a line with an attached file
     const form = new FormData()
@@ -337,7 +331,6 @@ describe('REST datasets', () => {
       primaryKey: ['attachmentPath']
     })
     let dataset = res.data
-    await workers.hook('finalizer/restsync')
 
     // Create a line with an attached file
     const form = new FormData()
@@ -408,7 +401,6 @@ describe('REST datasets', () => {
         { key: 'operation', type: 'string' }
       ]
     })
-    await workers.hook('finalizer/restndjson')
 
     // Create a line with an attached file
     const form = new FormData()
@@ -433,7 +425,6 @@ describe('REST datasets', () => {
         { key: 'date', type: 'string', format: 'date-time' }
       ]
     })
-    await workers.hook('finalizer/restndjson')
 
     // Create a line with an attached file
     const form = new FormData()
@@ -455,7 +446,6 @@ describe('REST datasets', () => {
       title: 'rest7',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/rest7')
     await ax.post('/api/v1/datasets/rest7/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
@@ -482,7 +472,6 @@ describe('REST datasets', () => {
       rest: { history: true },
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/resthist')
     res = await ax.post('/api/v1/datasets/resthist/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
     assert.equal(res.data._id, 'id1')
     await workers.hook('finalizer/resthist')
@@ -539,7 +528,6 @@ describe('REST datasets', () => {
       primaryKey: ['attr1', 'attr2'],
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/resthistprimary')
     const line = (await ax.post('/api/v1/datasets/resthistprimary/lines', { attr1: 'test1', attr2: 'test2' })).data
     assert.ok(line._id)
     await workers.hook('finalizer/resthistprimary')
@@ -564,7 +552,6 @@ describe('REST datasets', () => {
       rest: { history: true },
       schema: [{ key: 'attr1', type: 'string' }]
     })
-    await workers.hook('finalizer/resthistfill')
     // _updatedAt is normally rejected, accepted only as superadmin
     await assert.rejects(
       ax.post('/api/v1/datasets/resthistfill/lines', { _id: 'id1', attr1: 'test-old', _updatedAt: moment().subtract(1, 'day').toISOString() }),
@@ -605,7 +592,7 @@ describe('REST datasets', () => {
       rest: { history: true, historyTTL: { active: true, delay: { value: 2, unit: 'days' } } },
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    const dataset = await workers.hook('finalizer/resthistttl')
+    const dataset = res.data
     res = await ax.post('/api/v1/datasets/resthistttl/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
     assert.equal(res.data._id, 'id1')
     await workers.hook('finalizer/resthistttl')
@@ -640,7 +627,6 @@ describe('REST datasets', () => {
       title: 'resthisttoggle',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/resthisttoggle')
     await ax.post('/api/v1/datasets/resthisttoggle/lines', { _id: 'id1', attr1: 'test1', attr2: 'test1' })
     await workers.hook('finalizer/resthisttoggle')
     await assert.rejects(ax.get('/api/v1/datasets/resthisttoggle/lines/id1/revisions', { params: { size: 1 } }), (err) => err.status === 400)
@@ -672,7 +658,7 @@ describe('REST datasets', () => {
         { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
       ]
     })
-    const dataset = await workers.hook('finalizer/resthistattach')
+    const dataset = res.data
 
     // create line with an attachment
     const form = new FormData()
@@ -736,7 +722,6 @@ describe('REST datasets', () => {
       },
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string', format: 'date-time' }]
     })
-    await workers.hook('finalizer/restttl')
     await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(3, 'days').toISOString() })
     await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(2, 'days').toISOString() })
     await ax.post('/api/v1/datasets/restttl/lines', { attr1: 'test1', attr2: moment().subtract(1, 'days').toISOString() })
@@ -755,7 +740,6 @@ describe('REST datasets', () => {
       title: 'restidem',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/restidem')
     let res = await ax.post('/api/v1/datasets/restidem/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
@@ -791,19 +775,19 @@ describe('REST datasets', () => {
 
   it('Applying the exact same data twice in history mode should not duplicate revisions', async () => {
     const ax = await global.ax.hlalonde3
-    await ax.post('/api/v1/datasets/resthistidem', {
+    let res = await ax.post('/api/v1/datasets/resthistidem', {
       isRest: true,
       title: 'resthistidem',
       rest: { history: true },
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    const dataset = await workers.hook('finalizer/resthistidem')
+    const dataset = res.data
     await ax.post('/api/v1/datasets/resthistidem/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' }
     ])
     await workers.hook('finalizer/resthistidem')
-    let res = await ax.get('/api/v1/datasets/resthistidem/lines/line1/revisions')
+    res = await ax.get('/api/v1/datasets/resthistidem/lines/line1/revisions')
     assert.equal(res.data.total, 1)
     res = await ax.get('/api/v1/datasets/resthistidem/lines/line2/revisions')
     assert.equal(res.data.total, 1)
@@ -836,12 +820,12 @@ describe('REST datasets', () => {
 
   it('Delete all lines from a rest dataset', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets/restdel', {
+    const res = await ax.post('/api/v1/datasets/restdel', {
       isRest: true,
       title: 'restdel',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    let dataset = await workers.hook('finalizer/restdel')
+    let dataset = res.data
     await ax.post('/api/v1/datasets/restdel/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
@@ -860,7 +844,7 @@ describe('REST datasets', () => {
 
   it('Send bulk actions as a CSV body', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets/restcsv', {
+    const res = await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
       title: 'restcsv',
       schema: [
@@ -870,7 +854,7 @@ describe('REST datasets', () => {
         { key: 'attr4', type: 'string', format: 'date-time' }
       ]
     })
-    let dataset = await workers.hook('finalizer/restcsv')
+    let dataset = res.data
     await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attr1,attr2,attr3,attr4
 line1,test1,test1,oui,2015-03-18T00:58:59
 line2,test1,test1,non,
@@ -913,7 +897,7 @@ line4;test1;test1;oui,2015-03-18T00:58:59`, { headers: { 'content-type': 'text/c
 
   it('Send bulk actions as a CSV body with automatic adjustment of keys', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets/restcsv', {
+    const res = await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
       title: 'restcsv',
       schema: [
@@ -921,7 +905,7 @@ line4;test1;test1;oui,2015-03-18T00:58:59`, { headers: { 'content-type': 'text/c
         { key: 'attr2', type: 'string' }
       ]
     })
-    let dataset = await workers.hook('finalizer/restcsv')
+    let dataset = res.data
     await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `Attr1,Attr2
 test1,test1
 test2,test2`, { headers: { 'content-type': 'text/csv' } })
@@ -936,7 +920,7 @@ test2,test2`, { headers: { 'content-type': 'text/csv' } })
 
   it('Resend downloaded csv as bulk actions', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets/restcsv', {
+    const res = await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
       title: 'restcsv',
       schema: [
@@ -944,7 +928,7 @@ test2,test2`, { headers: { 'content-type': 'text/csv' } })
         { key: 'attr2', type: 'string' }
       ]
     })
-    let dataset = await workers.hook('finalizer/restcsv')
+    let dataset = res.data
     await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `attr1,attr2
 test1,test1
 test2,test2
@@ -970,7 +954,6 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
       title: 'restcsv',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'boolean' }]
     })
-    await workers.hook('finalizer/restcsv')
     await assert.rejects(ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attrko
     line1,test1
     line2,test1
@@ -988,7 +971,6 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
       title: 'restdate',
       schema: [{ key: 'attr1', type: 'string', format: 'date-time' }]
     })
-    await workers.hook('finalizer/restdate')
     await ax.post('/api/v1/datasets/restdate/lines', { attr1: '1961-02-13 00:00:00+00:00' })
     await workers.hook('finalizer/restdate')
     let lines = (await ax.get('/api/v1/datasets/restdate/lines')).data.results
@@ -1016,7 +998,6 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
       title: 'restdatebulk',
       schema: [{ key: 'attr1', type: 'string', format: 'date-time' }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/restdatebulk')
     await ax.post('/api/v1/datasets/restdatebulk/_bulk_lines', [
       { _id: '1', attr1: '1961-02-13 00:00:00+00:00', attr2: 'val1' },
       { _id: '2', attr1: '1961-02-13T00:00:00+00:00', attr2: 'val2' }
@@ -1045,7 +1026,6 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
       title: 'restcsv',
       schema: [{ key: 'attr1', type: 'string', format: 'date-time' }]
     })
-    await workers.hook('finalizer/restcsv')
     const res = await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attr1
     line1,1961-02-13 00:00:00+00:00`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.nbErrors, 0)
@@ -1064,7 +1044,6 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
       title: 'restnull',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/restnull')
     await ax.post('/api/v1/datasets/restnull/lines', { attr1: 'val1', attr2: null })
     await workers.hook('finalizer/restnull')
     const lines = (await ax.get('/api/v1/datasets/restnull/lines')).data.results
@@ -1076,12 +1055,12 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
 
   it('Send bulk actions as a gzipped CSV', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets/restgzcsv', {
+    const res = await ax.post('/api/v1/datasets/restgzcsv', {
       isRest: true,
       title: 'restgzcsv',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    let dataset = await workers.hook('finalizer/restgzcsv')
+    let dataset = res.data
     await ax.post('/api/v1/datasets/restgzcsv/_bulk_lines', zlib.gzipSync(`_id,attr1,attr2
 line1,test1,test1
 line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
@@ -1096,12 +1075,12 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   it('Send bulk as a .csv file', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets/restcsvfile', {
+    const res = await ax.post('/api/v1/datasets/restcsvfile', {
       isRest: true,
       title: 'restcsvfile',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    let dataset = await workers.hook('finalizer/restcsvfile')
+    let dataset = res.data
 
     // Create a line with an attached file
     const form = new FormData()
@@ -1120,12 +1099,12 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   it('Send bulk as a .csv file with other encoding', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets/restcsvfile', {
+    const res = await ax.post('/api/v1/datasets/restcsvfile', {
       isRest: true,
       title: 'restcsvfile',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'testé2', type: 'string' }]
     })
-    let dataset = await workers.hook('finalizer/restcsvfile')
+    let dataset = res.data
 
     // Create a line with an attached file
     const form = new FormData()
@@ -1146,12 +1125,12 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   it('Send bulk as a .csv.gz file', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets/restcsvgz', {
+    const res = await ax.post('/api/v1/datasets/restcsvgz', {
       isRest: true,
       title: 'restcsvgz',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    let dataset = await workers.hook('finalizer/restcsvgz')
+    let dataset = res.data
 
     // Create a line with an attached file
     const form = new FormData()
@@ -1170,12 +1149,12 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   it('Send bulk as a .xlsx file', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets/restxlsxfile', {
+    const res = await ax.post('/api/v1/datasets/restxlsxfile', {
       isRest: true,
       title: 'restxlsxfile',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    let dataset = await workers.hook('finalizer/restxlsxfile')
+    let dataset = res.data
 
     const form = new FormData()
     form.append('actions', fs.readFileSync('./test/resources/datasets/actions.xlsx'), 'actions.xlsx')
@@ -1191,12 +1170,12 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   it('Send bulk as a .ods file', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets/restodsfile', {
+    const res = await ax.post('/api/v1/datasets/restodsfile', {
       isRest: true,
       title: 'restodsfile',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    let dataset = await workers.hook('finalizer/restodsfile')
+    let dataset = res.data
 
     const form = new FormData()
     form.append('actions', fs.readFileSync('./test/resources/datasets/actions.xlsx'), 'actions.ods')
@@ -1212,12 +1191,12 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   it('Send bulk as a .zip file', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets/restcsvzip', {
+    const res = await ax.post('/api/v1/datasets/restcsvzip', {
       isRest: true,
       title: 'restcsvzip',
       schema: [{ key: 'id', type: 'string' }, { key: 'adr', type: 'string' }, { key: 'some date', type: 'string' }, { key: 'loc', type: 'string' }]
     })
-    let dataset = await workers.hook('finalizer/restcsvzip')
+    let dataset = res.data
 
     // Create a line with an attached file
     const form = new FormData()
@@ -1233,13 +1212,13 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   it('Use the primary key defined by the user', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets/restkey', {
+    const res = await ax.post('/api/v1/datasets/restkey', {
       isRest: true,
       title: 'restkey',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'string' }],
       primaryKey: ['attr1', 'attr2']
     })
-    let dataset = await workers.hook('finalizer/restkey')
+    let dataset = res.data
     await ax.post('/api/v1/datasets/restkey/_bulk_lines', `attr1,attr2,attr3
 test1,test1,test1
 test2,test2,test2
@@ -1275,7 +1254,6 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
       title: 'restlarge',
       schema: [{ key: 'attr1', type: 'string' }]
     })
-    await workers.hook('finalizer/rest2')
     const bulkLines = []
     for (let i = 0; i < 550; i++) {
       bulkLines.push({ attr1: 'test' + i })
@@ -1306,7 +1284,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
       title: 'restunset',
       schema: [{ key: 'attr1', type: 'string', readOnly: true }, { key: 'attr2', type: 'string' }]
     })
-    let dataset = await workers.hook('finalizer/restunset')
+    let dataset = res.data
     res = await ax.post('/api/v1/datasets/restunset/lines', { attr1: 'test1', attr2: 'test1' })
     assert.equal(res.status, 201)
     dataset = await workers.hook('finalizer/restunset')
@@ -1332,7 +1310,6 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
       primaryKey: ['attr1'],
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/updatedby')
     await ax.post('/api/v1/datasets/updatedby/lines', { attr1: 'test1', attr2: 'test1' })
     await workers.hook('finalizer/updatedby')
 
@@ -1385,7 +1362,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
       title: 'restdrop',
       schema: [{ key: 'attr1', type: 'string' }]
     })
-    let dataset = await workers.hook('finalizer/restdrop')
+    let dataset = res.data
 
     res = await ax.post('/api/v1/datasets/restdrop/_bulk_lines', [
       { attr1: 'test1-1' },
@@ -1443,7 +1420,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }],
       rest: { history: true }
     })
-    let dataset = await workers.hook('finalizer/restdrophist')
+    let dataset = res.data
 
     res = await ax.post('/api/v1/datasets/restdrophist/_bulk_lines', [
       { attr1: 'test1', attr2: 'v1' },
@@ -1499,7 +1476,6 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
       title: 'restdatetimeformat',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string', format: 'date-time', dateTimeFormat: 'D/M/YYYY H:m' }]
     })
-    await workers.hook('finalizer/restdatetimeformat')
     let res = await ax.post('/api/v1/datasets/restdatetimeformat/_bulk_lines', [
       { attr1: 'test1', attr2: moment().toISOString() },
       { attr1: 'test2', attr2: moment().format('D/M/YYYY H:m') },

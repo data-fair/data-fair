@@ -316,6 +316,7 @@ router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft:
 // Create a dataset
 const createDatasetRoute = asyncWrap(async (req, res) => {
   const db = req.app.get('db')
+  const es = req.app.get('es')
   const locale = i18n.getLocale(req)
   // @ts-ignore
   const user = /** @type {any} */(req.user)
@@ -354,13 +355,30 @@ const createDatasetRoute = asyncWrap(async (req, res) => {
      */
     const onClose = (callback) => res.on('close', callback)
 
-    const dataset = await createDataset(db, locale, user, owner, body, files, draft, onClose)
+    const dataset = await createDataset(db, es, locale, user, owner, body, files, draft, onClose)
 
     await import('@data-fair/lib/express/events-log.js')
       .then((eventsLog) => eventsLog.default.info('df.datasets.create', `created a dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
     await syncRemoteService(db, dataset)
+
+    if (dataset.isRest && dataset.status === 'finalized') {
+      // case where we simply initialize the empty dataset
+      // being empty this is not costly and can be performed by the API
+      await restDatasetsUtils.initDataset(db, dataset)
+      const indexName = await esUtils.initDatasetIndex(es, dataset)
+      await esUtils.switchAlias(es, dataset, indexName)
+      await restDatasetsUtils.configureHistory(req.app, dataset)
+
+      setTimeout(() => {
+        // this is only to maintain compatibilty, but clients should look for the status in the response
+        // and not wait for an event if the dataset is created already finalized
+        journals.log(req.app, dataset, { type: 'finalize-end' }, 'dataset', true).catch(err => {
+          console.error(err)
+        })
+      }, 1000)
+    }
 
     res.status(201).send(clean(req.publicBaseUrl, req.publicationSite, dataset, {}, draft))
   } catch (err) {

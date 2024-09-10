@@ -145,12 +145,11 @@ describe('Datasets with auto-initialization from another one', () => {
 
   it('Create file dataset with copied information from a rest dataset', async () => {
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets/rest1', {
+    const dataset = (await ax.post('/api/v1/datasets/rest1', {
       isRest: true,
       title: 'rest1',
       schema: [{ key: 'attr1', type: 'string', description: 'A description' }, { key: 'attr2', type: 'string' }]
-    })
-    const dataset = await workers.hook('finalizer/rest1')
+    })).data
     await ax.post('/api/v1/datasets/rest1/lines', { attr1: 'test1', attr2: 'test1' })
     await workers.hook('finalizer/rest1')
 

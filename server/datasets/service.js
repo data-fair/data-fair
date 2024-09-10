@@ -197,6 +197,7 @@ exports.memoizedGetDataset = memoize(exports.getDataset, {
 /**
  *
  * @param {import('mongodb').Db} db
+ * @param {import('@elastic/elasticsearch').Client} es
  * @param {string} locale
  * @param {any} user
  * @param {any} owner
@@ -206,7 +207,7 @@ exports.memoizedGetDataset = memoize(exports.getDataset, {
  * @param {(callback: () => {}) => void} onClose
  * @returns {Promise<any>}
  */
-exports.createDataset = async (db, locale, user, owner, body, files, draft, onClose) => {
+exports.createDataset = async (db, es, locale, user, owner, body, files, draft, onClose) => {
   validateURLFriendly(locale, body.id)
   validateURLFriendly(locale, body.slug)
 
@@ -268,7 +269,16 @@ exports.createDataset = async (db, locale, user, owner, body, files, draft, onCl
     dataset.rest = dataset.rest || {}
     dataset.rest.primaryKeyMode = dataset.rest.primaryKeyMode || 'sha256'
     dataset.schema = dataset.schema || []
-    dataset.status = 'created'
+    if (dataset.initFrom) {
+      // case where we go through the full workers sequence
+      dataset.status = 'created'
+    } else {
+      // case where we simply initialize the empty dataset
+      // being empty this is not costly and can be performed by the API
+      dataset.schema = await datasetUtils.extendedSchema(db, dataset)
+      dataset.finalizedAt = (new Date()).toISOString()
+      dataset.status = 'finalized'
+    }
   } else if (body.isMetaOnly) {
     if (!body.title) throw createError(400, 'Un jeu de données métadonnées doit être créé avec un titre')
     if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
