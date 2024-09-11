@@ -59,7 +59,7 @@ export function writeQueryParams (dataset, filters, query, applyDatasetPrefix = 
         query[prefix + '_gte'] = f.minValue
       }
       if (f.maxValue !== undefined && f.maxValue !== null && f.maxValue !== '') {
-        query[prefix + '_gte'] = f.maxValue
+        query[prefix + '_lte'] = f.maxValue
       }
     }
     if (f.type === 'search') {
@@ -107,8 +107,8 @@ export function readQueryParams (query, dataset) {
             type: 'interval',
             field
           }
+          filters.push(intervalFilter)
         }
-        filters.push(intervalFilter)
         if (key.endsWith('_lte')) intervalFilter.maxValue = query[key]
         if (key.endsWith('_gte')) intervalFilter.minValue = query[key]
       } else if (key.endsWith('_search')) {
