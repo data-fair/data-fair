@@ -369,8 +369,8 @@ const createDatasetRoute = asyncWrap(async (req, res) => {
       onClose(() => {
         // this is only to maintain compatibilty, but clients should look for the status in the response
         // and not wait for an event if the dataset is created already finalized
-        journals.log(req.app, dataset, { type: 'finalize-end' }, 'dataset', true).catch(err => {
-          console.error(err)
+        journals.log(req.app, dataset, { type: 'finalize-end' }, 'dataset').catch(err => {
+          console.error('failure when send finalize-end to journal after rest dataset creation', err)
         })
       })
     }
