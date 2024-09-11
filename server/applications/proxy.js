@@ -186,7 +186,7 @@ if (inIframe()) {
 `
 
 const memoizedGetFreshDataset = memoize(async (id, publicUrl, publicationSite, db) => {
-  const dataset = db.collection('datasets').findOne({ id })
+  const dataset = await db.collection('datasets').findOne({ id })
   if (!dataset) return null
   const permissions = dataset.permissions
   datasetUtils.clean(publicUrl, publicationSite, dataset)
@@ -199,7 +199,7 @@ const memoizedGetFreshDataset = memoize(async (id, publicUrl, publicationSite, d
   primitive: true,
   max: 10000,
   maxAge: 1000 * 60, // 1 minute
-  length: 3 // ignore db parameter
+  length: 2 // ignore publicationSite and db parameter
 })
 
 /** @type {string} */
@@ -255,7 +255,6 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
         if (key === 'userPermissions') dataset.userPermissions = permissions.list('datasets', freshDataset, req.user)
         if (key in freshDataset) dataset[key] = freshDataset[key]
       }
-      dataset.finalizedAt = freshDataset.finalizedAt
     }
   }
 
