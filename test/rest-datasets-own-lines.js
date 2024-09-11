@@ -12,7 +12,7 @@ describe('REST datasets with owner specific lines', () => {
     })
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, 'a-rest-dataset')
-    let dataset = await workers.hook('finalizer/' + res.data.id)
+    let dataset = res.data
     assert.ok(dataset.schema.find(p => p.key === '_owner'))
     assert.ok(dataset.schema.find(p => p.key === '_ownerName'))
     assert.equal(dataset.schema.length, 7)
@@ -121,7 +121,7 @@ describe('REST datasets with owner specific lines', () => {
     })
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, 'a-rest-dataset')
-    let dataset = await workers.hook('finalizer/' + res.data.id)
+    let dataset = res.data
     assert.ok(dataset.schema.find(p => p.key === '_owner'))
     assert.ok(dataset.schema.find(p => p.key === '_ownerName'))
     assert.equal(dataset.schema.length, 8)

@@ -13,7 +13,6 @@ describe('markdown contents management', () => {
     })
     assert.equal(res.status, 201)
     const dataset = res.data
-    await workers.hook('finalizer/' + dataset.id)
     res = await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { prop1: 'This is a **markdown** content.' })
     await workers.hook('finalizer/' + dataset.id)
 
@@ -49,7 +48,6 @@ describe('markdown contents management', () => {
     })
     assert.equal(res.status, 201)
     const dataset = res.data
-    await workers.hook('finalizer/' + dataset.id)
     res = await ax.get(`/api/v1/datasets/${dataset.id}`, { params: { html: true } })
     assert.equal(res.data.description, '<p>This is a <span>html</span><span> description</span>.</p>')
   })

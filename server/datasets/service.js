@@ -204,7 +204,7 @@ exports.memoizedGetDataset = memoize(exports.getDataset, {
  * @param {any} body
  * @param {undefined | any[]} files
  * @param {boolean} draft
- * @param {(callback: () => {}) => void} onClose
+ * @param {(callback: () => void) => void} onClose
  * @returns {Promise<any>}
  */
 exports.createDataset = async (db, es, locale, user, owner, body, files, draft, onClose) => {

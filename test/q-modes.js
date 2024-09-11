@@ -6,12 +6,11 @@ describe('query modes', () => {
   it('Search in dataset using all supported query modes', async function () {
     // Load a few lines
     const ax = global.ax.dmeadus
-    await ax.put('/api/v1/datasets/qmodes', {
+    let dataset = (await ax.put('/api/v1/datasets/qmodes', {
       isRest: true,
       title: 'qmodes',
       schema: [{ key: 'content', type: 'string' }]
-    })
-    let dataset = await workers.hook('finalizer/qmodes')
+    })).data
     const items = {
       t1: 'prefix',
       t2: 'prefixsuite',

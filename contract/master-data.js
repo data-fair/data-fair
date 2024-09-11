@@ -293,7 +293,7 @@ exports.endpoints = (dataset) => {
   for (const bulkSearch of dataset.masterData.bulkSearchs || []) {
     const inputProperties = {}
     for (const input of bulkSearch.input) {
-      const matchingProp = dataset.schema.find(p => p.key === input.property.key)
+      const matchingProp = dataset.schema.find(p => p.key === input.property.key && p['x-refersTo'] === input.property['x-refersTo'])
       inputProperties[input.property.key] = matchingProp ? { ...matchingProp } : { ...input.property }
       inputProperties[input.property.key].title = inputProperties[input.property.key].title || ''
       inputProperties[input.property.key].description = inputProperties[input.property.key].description || ''

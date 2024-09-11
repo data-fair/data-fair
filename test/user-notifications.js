@@ -1,7 +1,5 @@
 const assert = require('assert').strict
 
-const workers = require('../server/workers')
-
 describe('user-notifications about dataset', () => {
   it('send user notification', async () => {
     const ax = global.ax.dmeadus
@@ -10,7 +8,6 @@ describe('user-notifications about dataset', () => {
       title: 'user notif 1',
       schema: [{ key: 'str', type: 'string' }]
     })).data
-    await workers.hook('finalizer/' + dataset.id)
 
     // listen to all notifications
     const notifications = []
@@ -19,10 +16,12 @@ describe('user-notifications about dataset', () => {
     await assert.rejects(ax.post(`/api/v1/datasets/${dataset.id}/user-notification`, { title: 'Title' }), (err) => err.status === 400)
 
     await ax.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' })
-    assert.equal(notifications.length, 1)
-    assert.equal(notifications[0].title, 'Title')
-    assert.ok(notifications[0].topic.key.endsWith(':topic1'))
-    assert.equal(notifications[0].visibility, 'private')
+    console.log(notifications)
+    assert.equal(notifications.length, 2)
+    assert.equal(notifications[0].topic.key, 'data-fair:dataset-finalize-end:user-notif-1')
+    assert.equal(notifications[1].title, 'Title')
+    assert.ok(notifications[1].topic.key.endsWith(':topic1'))
+    assert.equal(notifications[1].visibility, 'private')
 
     await assert.rejects(global.ax.cdurning2.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' }), (err) => err.status === 403)
     await global.ax.dmeadusOrg.put(`/api/v1/datasets/${dataset.id}/permissions`, [

@@ -164,7 +164,8 @@ describe('workers', () => {
   it('Manage bad input in children processes', async function () {
     config.worker.spawnTask = true
     const ax = global.ax.dmeadus
-    const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'trigger test error 400' })).data
+    const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'trigger test error 400', schema: [{ key: 'test', type: 'string' }] })).data
+    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ test: 'test' }])
     await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
     // Check that there is an error message in the journal
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
@@ -177,7 +178,8 @@ describe('workers', () => {
     config.worker.spawnTask = true
     config.worker.errorRetryDelay = 100
     const ax = global.ax.dmeadus
-    const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'trigger test error' })).data
+    const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'trigger test error', schema: [{ key: 'test', type: 'string' }] })).data
+    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ test: 'test' }])
     await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
     let journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal[0].type, 'error-retry')

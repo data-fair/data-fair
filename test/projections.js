@@ -15,7 +15,6 @@ describe('projections', () => {
     })
     assert.equal(res.status, 201)
     const dataset = res.data
-    await workers.hook(`finalizer/${dataset.id}`)
 
     await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       projection: {
@@ -45,7 +44,6 @@ describe('projections', () => {
     })
     assert.equal(res.status, 201)
     const dataset = res.data
-    await workers.hook(`finalizer/${dataset.id}`)
 
     await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       projection: {

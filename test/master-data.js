@@ -19,7 +19,6 @@ const initMaster = async (ax, info, masterData, id = 'master') => {
     masterData,
     ...info
   })
-  await workers.hook('finalizer/' + id)
   const master = (await ax.get('api/v1/datasets/' + id)).data
 
   const apiDocUrl = master.href + '/api-docs.json'
@@ -135,7 +134,6 @@ describe('Master data management', () => {
       title: 'slave',
       schema: [siretProperty]
     })
-    await workers.hook('finalizer/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }, { siret: '82898347800011' }])
     await workers.hook('finalizer/slave')
 
@@ -227,7 +225,6 @@ describe('Master data management', () => {
         select: ['extra']
       }]
     })
-    await workers.hook('finalizer/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: 'TEST"SIRET*' }].map(item => ({ _id: item.siret, ...item })))
     await workers.hook('finalizer/slave')
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
@@ -265,7 +262,6 @@ describe('Master data management', () => {
         select: ['extra']
       }]
     })
-    await workers.hook('finalizer/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: 'test " failure' }].map(item => ({ _id: item.siret, ...item })))
     await assert.rejects(workers.hook('finalizer/slave'), (err) => {
       assert.ok(err.message.includes('Impossible d\'effectuer cette recherche'), `message was ${err.message}`)
@@ -344,7 +340,6 @@ describe('Master data management', () => {
         action: 'masterData_bulkSearch_siret'
       }]
     })
-    await workers.hook('finalizer/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
     const slave = await workers.hook('finalizer/slave')
     assert.ok(slave.schema.find(p => p.key === '_siret.extra'))
@@ -389,7 +384,7 @@ describe('Master data management', () => {
     )
 
     // create slave dataset
-    await ax.put('/api/v1/datasets/slave', {
+    const slave = (await ax.put('/api/v1/datasets/slave', {
       isRest: true,
       title: 'slave',
       schema: [siretProperty],
@@ -399,8 +394,7 @@ describe('Master data management', () => {
         remoteService: remoteService2.id,
         action: 'masterData_bulkSearch_siret2'
       }]
-    })
-    const slave = await workers.hook('finalizer/slave')
+    })).data
 
     // slave schema contains props from both levels of extensions
     assert.ok(slave.schema.find(p => p.key === '_siret2.extra2'))
@@ -601,7 +595,6 @@ describe('Master data management', () => {
         select: ['extra']
       }]
     })
-    await workers.hook('finalizer/slave')
     await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
     await assert.rejects(workers.hook('finalizer/slave'), err => err.message.startsWith('permission manquante'))
   })
@@ -641,7 +634,6 @@ describe('Master data management', () => {
         select: ['extra']
       }]
     })
-    await workers.hook('finalizer/slave')
     await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
     await workers.hook('finalizer/slave')
     const results = (await global.ax.cdurning2.get('/api/v1/datasets/slave/lines')).data.results
@@ -660,6 +652,7 @@ describe('Master data management', () => {
       }],
       'master1'
     )
+    assert.equal(remoteService.actions[0].input.length, 2)
     const { remoteService: remoteService2 } = await initMaster(
       ax,
       [countryProperty, { key: 'name', type: 'string' }],
@@ -683,7 +676,7 @@ describe('Master data management', () => {
     await workers.hook('finalizer/master2')
 
     // create slave dataset
-    await ax.put('/api/v1/datasets/slave', {
+    const slave = (await ax.put('/api/v1/datasets/slave', {
       isRest: true,
       title: 'slave',
       schema: [latlonProperty], // countryProperty will be deduced from first level extension
@@ -700,11 +693,9 @@ describe('Master data management', () => {
         action: 'masterData_bulkSearch_country',
         select: ['name']
       }]
-    })
-    const slave = await workers.hook('finalizer/slave')
+    })).data
     assert.ok(slave.schema.find(p => p.key === '_geo.country'))
     assert.ok(slave.schema.find(p => p.key === '_country.name'))
-
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [
       { latlon: '-2.7,47.6' },
       { latlon: '-2.8,45.5' }
@@ -751,7 +742,7 @@ describe('Master data management', () => {
     await workers.hook('finalizer/master2')
 
     // create slave dataset
-    await ax.put('/api/v1/datasets/slave', {
+    const slave = (await ax.put('/api/v1/datasets/slave', {
       isRest: true,
       title: 'slave',
       schema: [latlonProperty],
@@ -768,8 +759,7 @@ describe('Master data management', () => {
         action: 'masterData_bulkSearch_country',
         select: ['name']
       }]
-    })
-    const slave = await workers.hook('finalizer/slave')
+    })).data
     assert.ok(slave.schema.find(p => p.key === '_geo.country'))
     assert.ok(slave.schema.find(p => p.key === '_country.name'))
 
