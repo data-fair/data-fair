@@ -59,7 +59,13 @@ exports.parse = async (filePath) => {
               if (p.startsWith('DT')) value = parseDate(event.properties[p][0], infos.timeZone)
               line[p] = value
             }
-            // No DTEND means eaither a full day event, or a single point in time event
+
+            // A DTEND that is not a date-time but a date only should be moved to the end of the day
+            if (line.DTEND && event.properties.DTEND[0].value.date_only) {
+              line.DTEND = moment(line.DTEND).add(1, 'days').toISOString()
+            }
+
+            // No DTEND means either a full day event, or a single point in time event
             // it depends on if only the date part of the data should be used (no date-time)
             // we do not distinguish date and a date-time in data-fair yet, so we make this explicit
             // console.log(JSON.stringify(event.properties, null, 2))

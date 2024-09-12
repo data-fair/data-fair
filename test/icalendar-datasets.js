@@ -17,6 +17,9 @@ describe('icalendar dataset', () => {
     assert.equal(dataset.timeZone, localeTimeZone)
     assert.ok(dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/startDate'))
     assert.ok(dataset.schema.find(f => f['x-refersTo'] === 'https://schema.org/endDate'))
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(moment(res.data.results[0].DTSTART).format('YYYY-MM-DD-HH:mm'), '2008-02-12-00:00')
+    assert.equal(moment(res.data.results[0].DTEND).format('YYYY-MM-DD-HH:mm'), '2008-02-14-00:00')
   })
 
   it('Upload dataset in iCalendar format with X-WR-TIMEZONE param', async () => {
