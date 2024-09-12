@@ -2,7 +2,6 @@
 const assert = require('assert').strict
 const config = require('config')
 const { nanoid } = require('nanoid')
-const workers = require('../server/workers')
 
 describe('Cache headers', () => {
   const createDataset = async (ax) => {
@@ -12,7 +11,6 @@ describe('Cache headers', () => {
       title: 'cache-headers-' + nanoid(),
       schema: [{ key: 'str1', type: 'string' }]
     })).data
-    await workers.hook(`finalizer/${dataset.id}`)
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
     return dataset
   }

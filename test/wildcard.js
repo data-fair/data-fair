@@ -20,7 +20,6 @@ describe('Wildcard fields', () => {
       title: 'wildcards',
       schema: [{ key: 'content', type: 'string', 'x-capabilities': { wildcard: true } }]
     })
-    await workers.hook('finalizer/wildcards')
     let res = await ax.post('/api/v1/datasets/wildcards/_bulk_lines', Object.keys(items).map(key => ({ _id: key, content: items[key] })))
     await workers.hook('finalizer/wildcards')
 
@@ -54,7 +53,6 @@ describe('Wildcard fields', () => {
       title: 'wildcards2',
       schema: [{ key: 'content', type: 'string' }]
     })
-    await workers.hook('finalizer/wildcards2')
     await ax.post('/api/v1/datasets/wildcards2/_bulk_lines', Object.keys(items).map(key => ({ _id: key, content: items[key] })))
     await workers.hook('finalizer/wildcards2')
 

@@ -9,7 +9,6 @@ describe('Sorting', () => {
       title: 'restsort1',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'integer' }]
     })
-    await workers.hook('finalizer/restsort1')
 
     await ax.post('/api/v1/datasets/restsort1/_bulk_lines', [
       { attr1: 'aaa', attr2: 1 },

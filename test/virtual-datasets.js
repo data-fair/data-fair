@@ -573,7 +573,6 @@ describe('virtual datasets', () => {
       title: 'restaccount',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'account', type: 'string', 'x-refersTo': 'https://github.com/data-fair/lib/account' }]
     })).data
-    await workers.hook('finalizer/' + dataset.id)
     await ax.post('/api/v1/datasets/rest1/_bulk_lines', [
       { attr1: 'test1', account: 'user:ccherryholme1' },
       { attr1: 'test2', account: 'user:cdurning2' },

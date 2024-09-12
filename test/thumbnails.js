@@ -16,7 +16,6 @@ describe('thumbnails', () => {
       attachmentsAsImage: true,
       schema: [{ key: 'desc', type: 'string' }, { key: 'imageUrl', type: 'string', 'x-refersTo': 'http://schema.org/image' }]
     })
-    await workers.hook('finalizer/thumbnails1')
     res = await ax.post('/api/v1/datasets/thumbnails1/_bulk_lines', [
       { imageUrl: 'http://test-thumbnail.com/image.png', desc: '1 image' },
       { imageUrl: 'http://test-thumbnail.com/avatar.jpg', desc: '2 avatar' },
@@ -54,7 +53,6 @@ describe('thumbnails', () => {
       title: 'thumbnail',
       image: 'http://test-thumbnail.com/dataset-image.jpg'
     })
-    await workers.hook('finalizer/thumbnail')
     await ax.put('/api/v1/datasets/thumbnail/permissions', [{ classes: ['read'] }])
     let res = await ax.get('/api/v1/datasets/thumbnail')
     assert.ok(res.data.thumbnail)
@@ -74,7 +72,6 @@ describe('thumbnails', () => {
       title: 'thumbnail',
       image: 'https://geocatalogue.lannion-tregor.com/geonetwork/srv/api/records/c4576973-28cd-47d5-a082-7871f96d8f14/attachments/reseau_transport_scolaire.JPG'
     })
-    await workers.hook('finalizer/thumbnail')
     await ax.put('/api/v1/datasets/thumbnail/permissions', [{ classes: ['read'] }])
     let res = await ax.get('/api/v1/datasets/thumbnail')
     assert.ok(res.data.thumbnail)

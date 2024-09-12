@@ -18,7 +18,6 @@ describe('data pagination', () => {
         title: 'rest pagination ' + i,
         schema
       })
-      await workers.hook('finalizer/rest-page' + i)
 
       const res = await ax.post(`/api/v1/datasets/rest-page${i}/_bulk_lines`, actions)
       await workers.hook('finalizer/rest-page' + i)

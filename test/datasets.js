@@ -378,8 +378,7 @@ describe('datasets', () => {
     const ax = global.ax.dmeadus
 
     for (const title of ['aa', 'bb', 'àb', ' àb', '1a']) {
-      const res = await ax.post('/api/v1/datasets', { isRest: true, title })
-      await workers.hook('finalizer/' + res.data.id)
+      await ax.post('/api/v1/datasets', { isRest: true, title })
     }
 
     let res = await ax.get('/api/v1/datasets', { params: { select: 'title', raw: true, sort: 'title:1' } })

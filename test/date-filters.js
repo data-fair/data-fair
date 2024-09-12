@@ -9,7 +9,6 @@ describe('Date filters', () => {
       title: 'rest-date-match',
       schema: [{ key: 'date1', type: 'string', format: 'date-time', 'x-refersTo': 'http://schema.org/Date' }]
     })
-    await workers.hook('finalizer/rest-date-match')
     res = await ax.post('/api/v1/datasets/rest-date-match/_bulk_lines', [
       { date1: '2023-11-19T23:00:00.000Z' }, // start of 20/11/2023 in our timezone
       { date1: '2023-11-20T23:00:00.000Z' }, // start of 21/11/2023 in our timezone
@@ -46,7 +45,6 @@ describe('Date filters', () => {
         { key: 'end', type: 'string', format: 'date-time', 'x-refersTo': 'https://schema.org/endDate' }
       ]
     })
-    await workers.hook('finalizer/rest-date-match')
     res = await ax.post('/api/v1/datasets/rest-date-match/_bulk_lines', [
       { start: '2023-11-19T23:00:00.000Z', end: '2023-11-20T22:59:00.000Z' }, // whole day of 20/11/2023 in our timezone
       { start: '2023-11-20T23:00:00.000Z', end: '2023-11-21T22:59:00.000Z' }, // whole day of 21/11/2023 in our timezone

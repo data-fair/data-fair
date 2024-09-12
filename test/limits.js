@@ -43,9 +43,7 @@ describe('limits', () => {
     // test nb datasets size limit
     let lastDataset
     for (let i = 0; i < 8; i++) {
-      const dataset = (await ax.post('/api/v1/datasets/rest-dataset-' + (i + 1), { title: 'rest-dataset', isRest: true })).data
-      await workers.hook('finalizer/' + dataset.id)
-      lastDataset = dataset
+      lastDataset = (await ax.post('/api/v1/datasets/rest-dataset-' + (i + 1), { title: 'rest-dataset', isRest: true })).data
     }
     await assert.rejects(ax.post('/api/v1/datasets', { title: 'rest-dataset', isRest: true }), err => err.status === 429)
 

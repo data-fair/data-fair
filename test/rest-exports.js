@@ -9,7 +9,6 @@ describe('REST datasets exported', () => {
       title: 'rest',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
-    await workers.hook('finalizer/rest')
     await ax.post('/api/v1/datasets/rest/_bulk_lines', [
       { attr1: 'test1', attr2: 'test1' },
       { attr1: 'test2', attr2: 'test2' }

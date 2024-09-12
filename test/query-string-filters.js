@@ -16,7 +16,6 @@ describe('query modes', () => {
         { key: 'nb1', type: 'number' }
       ]
     })
-    await workers.hook('finalizer/qsfilters')
     const items = [
       { _id: 'line1', str1: 'test 1' },
       { _id: 'line2', str1: 'test 2' },

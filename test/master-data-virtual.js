@@ -14,7 +14,6 @@ const initMaster = async (ax, schema, id = 'master') => {
       virtualDatasets: { active: true }
     }
   })
-  await workers.hook('finalizer/' + id)
   const master = (await ax.get('api/v1/datasets/' + id)).data
 
   await ax.put(`/api/v1/datasets/${master.id}/permissions`, [{ classes: ['read'] }])

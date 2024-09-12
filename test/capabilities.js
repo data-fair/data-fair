@@ -12,7 +12,6 @@ describe('Properties capabilities', () => {
       title: 'rest-insensitive',
       schema: [{ key: 'str1', type: 'string' }]
     })
-    await workers.hook('finalizer/rest-insensitive')
     res = await ax.post('/api/v1/datasets/rest-insensitive/_bulk_lines', [
       { str1: 'test3' },
       { str1: 'test2' },
@@ -36,7 +35,6 @@ describe('Properties capabilities', () => {
       title: 'rest-values',
       schema: [{ key: 'str1', type: 'string', 'x-capabilities': { insensitive: false } }]
     })
-    await workers.hook('finalizer/rest-values')
     res = await ax.post('/api/v1/datasets/rest-values/_bulk_lines', [
       { str1: 'test3' },
       { str1: 'test2' },
@@ -93,7 +91,6 @@ describe('Properties capabilities', () => {
       title: 'rest-textagg',
       schema: [{ key: 'str1', type: 'string' }]
     })
-    await workers.hook('finalizer/rest-textagg')
     res = await ax.post('/api/v1/datasets/rest-textagg/_bulk_lines', [
       { str1: 'test3' },
       { str1: 'test2' },
@@ -122,7 +119,6 @@ describe('Properties capabilities', () => {
       title: 'rest-index',
       schema: [{ key: 'str1', type: 'string', 'x-refersTo': 'http://www.datatourisme.fr/ontology/core/1.0/#siret' }]
     })
-    await workers.hook('finalizer/rest-index')
     res = await ax.post('/api/v1/datasets/rest-index/_bulk_lines', [
       { str1: 'test3' },
       { str1: 'test2' },
@@ -163,7 +159,6 @@ describe('Properties capabilities', () => {
       title: 'rest-text',
       schema: [{ key: 'str1', type: 'string' }]
     })
-    await workers.hook('finalizer/rest-text')
     res = await ax.post('/api/v1/datasets/rest-text/_bulk_lines', [
       { str1: 'ceci est une phrase pour tester' },
       { str1: 'ceci est un autre test' },
@@ -195,7 +190,6 @@ describe('Properties capabilities', () => {
       title: 'rest-geoshape',
       schema: [{ key: 'geom', type: 'string', 'x-refersTo': 'https://purl.org/geojson/vocab#geometry' }]
     })
-    await workers.hook('finalizer/rest-geoshape')
     res = await ax.post('/api/v1/datasets/rest-geoshape/_bulk_lines', [
       { geom: JSON.stringify({ type: 'Polygon', coordinates: [[[-2.42, 47.86], [-2.38, 47.86], [-2.38, 47.88], [-2.42, 47.88], [-2.42, 47.86]]] }) },
       { geom: JSON.stringify({ type: 'Point', coordinates: [-2.40, 47.89] }) }
