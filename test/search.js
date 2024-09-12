@@ -38,6 +38,14 @@ describe('search', () => {
     // filter on exact values with query params suffixed with _eq
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_eq=koumoul`)
     assert.equal(res.data.total, 1)
+    // perform a full-text search on a column with query params suffixed with _search
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_search=koumoul`)
+    assert.equal(res.data.total, 1)
+    // perform a wildcard filter on a column with query params suffixed with _contains
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/lines?id_contains=oumou`), { status: 400 })
+    // perform a prefix filter on a column with query params suffixed with _starts
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_starts=kou`)
+    assert.equal(res.data.total, 1)
     // fail to filter on unknown property
     assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/lines?BADFIELD_in=koumoul`), (err) => {
       assert.equal(err.status, 400)

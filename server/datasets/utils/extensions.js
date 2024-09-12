@@ -288,7 +288,10 @@ class ExtensionsStream extends Transform {
                 const shortKey = prop.key.replace(extKey + '.', '')
                 data[extKey][shortKey] = data[extKey][shortKey] ?? null
               } else {
-                data[prop.key] = data[prop.key] ?? null
+                // this check is probably only necessary for _updatedAt that is stored as a Date object in rest datasets
+                // this should probably be fixed and we should only manipulate iso strings for dates
+                if (data[prop.key] instanceof Date) data[prop.key] = data[prop.key].toISOString()
+                else data[prop.key] = data[prop.key] ?? null
               }
             }
             value = extension.evaluate(data)
