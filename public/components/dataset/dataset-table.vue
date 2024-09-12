@@ -683,7 +683,7 @@ export default {
       if (this.query) params.q = this.query
       if (this.filters.length) {
         try {
-          params.qs = filtersUtils.filters2qs(this.filters, this.$i18n.locale)
+          filtersUtils.writeQueryParams(this.dataset, this.filters, params)
         } catch (error) {
           // eslint-disable-next-line vue/no-async-in-computed-properties
           this.$nextTick(() => eventBus.$emit('notification', { error }))

@@ -4,6 +4,7 @@ const assert = require('assert').strict
 const FormData = require('form-data')
 const config = require('config')
 const eventToPromise = require('event-to-promise')
+const dayjs = require('dayjs')
 const restDatasetsUtils = require('../server/datasets/utils/rest')
 const testUtils = require('./resources/test-utils')
 
@@ -763,21 +764,27 @@ other,unknown address
 
   it('Update a single extension on Rest dataset should NOT trigger full reindexing', async function () {
     const ax = global.ax.dmeadus
+    const today = dayjs().format('DD/MM/YYYY')
     // Initial dataset with addresses
     let dataset = (await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'rest dataset',
       schema: [{ key: 'str1', type: 'string' }, { key: 'str2', type: 'string' }],
-      extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(str1, " - ", str2)', property: { key: 'exp', type: 'string' } }]
+      extensions: [{
+        active: true,
+        type: 'exprEval',
+        expr: 'CONCAT(str1, " - ", str2, " - ", TRANSFORM_DATE(_updatedAt, "", "DD/MM/YYYY"))',
+        property: { key: 'exp', type: 'string' }
+      }]
     })).data
     await workers.hook(`finalizer/${dataset.id}`)
     await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ str1: 'str 1', str2: 'str 2' }, { str1: 'UPPER STR 1', str2: 'UPPER STR 2' }])
     await workers.hook(`finalizer/${dataset.id}`)
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
-    assert.equal(lines[0].exp, 'UPPER STR 1 - UPPER STR 2')
-    assert.equal(lines[1].exp, 'str 1 - str 2')
+    assert.equal(lines[0].exp, 'UPPER STR 1 - UPPER STR 2 - ' + today)
+    assert.equal(lines[1].exp, 'str 1 - str 2 - ' + today)
     const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
-      extensions: [{ active: true, type: 'exprEval', expr: 'UPPER(CONCAT(str1, " - ", str2))', property: { key: 'exp', type: 'string' } }]
+      extensions: [{ active: true, type: 'exprEval', expr: 'UPPER(CONCAT(str1, " - ", str2, " - ", TRANSFORM_DATE(_updatedAt, "", "DD/MM/YYYY")))', property: { key: 'exp', type: 'string' } }]
     })
     assert.equal(res.data.status, 'finalized')
     assert.equal(res.data.extensions[0].needsUpdate, true)
@@ -786,7 +793,7 @@ other,unknown address
     const needsIndexingLines = await collection.find({ _needsIndexing: true }).toArray()
     assert.equal(needsIndexingLines.length, 1)
     assert.equal(needsIndexingLines[0].str1, 'str 1')
-    assert.equal(needsIndexingLines[0].exp, 'STR 1 - STR 2')
+    assert.equal(needsIndexingLines[0].exp, 'STR 1 - STR 2 - ' + today)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
   })
 
