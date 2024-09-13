@@ -72,6 +72,12 @@ describe('Extensions', () => {
     assert.equal(newResult[extensionKey + '.lat'], 50)
     assert.equal(newResult[extensionKey + '.lon'], 50)
     assert.equal(newResult._geopoint, '50,50')
+    // list generated files
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
+    assert.equal(res.status, 200)
+    assert.ok(res.data.find(file => file.key === 'original'))
+    assert.ok(res.data.find(file => file.key === 'full'))
+    assert.equal(res.data.length, 2)
 
     // Reduce selected output using extension.select
     nockScope = nock('http://test.com').post('/geocoder/coords?select=lat,lon').reply(200, (uri, requestBody) => {

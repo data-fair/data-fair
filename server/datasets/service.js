@@ -519,26 +519,40 @@ exports.validateDraft = async (app, dataset, datasetFull, patch) => {
     await fs.move(attachmentsDir(datasetDraft), attachmentsDir(patchedDataset))
   }
 
+  // replace originalFile
+  const draftOriginalFilePath = originalFilePath(datasetDraft)
+  const newOriginalFilePath = originalFilePath(patchedDataset)
+  const oldOriginalFilePath = originalFilePath(datasetFull)
   if (patchedDataset.originalFile && patchedDataset.originalFile.name !== patchedDataset.file?.name) {
-    // creating empty file before moving seems to fix some weird bugs with NFS
-    const newOriginalFilePath = originalFilePath(patchedDataset)
-    // fsync to try and fix weird nfs bugs
-    await fs.move(originalFilePath(datasetDraft), newOriginalFilePath, { overwrite: true })
+    await fs.move(draftOriginalFilePath, newOriginalFilePath, { overwrite: true })
     await fsyncFile(newOriginalFilePath)
   }
-  if (datasetFull.originalFile && datasetFull.originalFile.name !== datasetFull.file?.name && originalFilePath(patchedDataset) !== originalFilePath(datasetFull)) {
-    await fs.remove(originalFilePath(datasetFull))
+  if (datasetFull.originalFile && datasetFull.originalFile.name !== datasetFull.file?.name && newOriginalFilePath !== oldOriginalFilePath) {
+    await fs.remove(oldOriginalFilePath)
   }
 
+  // replace extended file
+  const draftFullFilePath = fullFilePath(datasetDraft)
+  const newFullFilePath = fullFilePath(patchedDataset)
+  const oldFullFilePath = fullFilePath(datasetFull)
+  const hasFullFile = await fs.exists(draftFullFilePath)
+  if (hasFullFile) {
+    await fs.move(draftFullFilePath, newFullFilePath, { overwrite: true })
+    await fsyncFile(newFullFilePath)
+  }
+  if (!hasFullFile || newFullFilePath !== oldFullFilePath) {
+    await fs.remove(oldFullFilePath)
+  }
+
+  // replace file
+  const draftFilePath = filePath(datasetDraft)
   const newFilePath = filePath(patchedDataset)
-  // fsync to try and fix weird nfs bugs
-  await fs.move(filePath(datasetDraft), newFilePath, { overwrite: true })
+  const oldFilePath = filePath(datasetFull)
+  await fs.move(draftFilePath, newFilePath, { overwrite: true })
   await fsyncFile(newFilePath)
-
-  if (datasetFull.file && filePath(patchedDataset) !== filePath(datasetFull)) {
-    await fs.remove(filePath(datasetFull))
+  if (newFilePath !== oldFilePath) {
+    await fs.remove(oldFilePath)
   }
-  if (datasetFull.file) await fs.remove(fullFilePath(datasetFull))
 
   await esUtils.validateDraftAlias(app.get('es'), dataset)
   await fs.remove(dir(datasetDraft))
