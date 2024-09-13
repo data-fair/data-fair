@@ -80,6 +80,9 @@ router.get('', apiKeyMiddleware, cacheHeaders.listBased, asyncWrap(async (req, r
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
   const response = await findDatasets(req.app.get('db'), i18n.getLocale(req), publicationSite, publicBaseUrl, reqQuery, user)
+  for (const r of response.results) {
+    datasetUtils.clean(req, r)
+  }
   res.json(response)
 }))
 
@@ -92,8 +95,7 @@ router.use('/:datasetId/permissions', readDataset(), permissions.router('dataset
 router.get('/:datasetId', readDataset({ acceptInitialDraft: true }), apiKeyMiddleware, applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   // @ts-ignore
   const dataset = clone(req.dataset)
-  dataset.userPermissions = permissions.list('datasets', dataset, req.user, req.bypassPermissions)
-  res.status(200).send(clean(req.publicBaseUrl, req.publicationSite, dataset, req.query))
+  res.status(200).send(clean(req, dataset))
 })
 
 // retrieve only the schema.. Mostly useful for easy select fields
@@ -171,10 +173,6 @@ router.patch('/:datasetId',
     const dataset = req.dataset
     // @ts-ignore
     const user = req.user
-    // @ts-ignore
-    const publicBaseUrl = req.publicBaseUrl
-    // @ts-ignore
-    const publicationSite = req.publicationSite
 
     const patch = req.body
     const db = req.app.get('db')
@@ -202,7 +200,7 @@ router.patch('/:datasetId',
       await syncRemoteService(db, dataset)
     }
 
-    res.status(200).json(clean(publicBaseUrl, publicationSite, dataset))
+    res.status(200).json(clean(req, dataset))
   }))
 
 // Change ownership of a dataset
@@ -290,7 +288,7 @@ router.put('/:datasetId/owner', readDataset(), apiKeyMiddleware, permissions.mid
   await updateTotalStorage(req.app.get('db'), req.dataset.owner)
   await updateTotalStorage(req.app.get('db'), patch.owner)
 
-  res.status(200).json(clean(req.publicBaseUrl, req.publicationSite, patchedDataset))
+  res.status(200).json(clean(req, patchedDataset))
 }))
 
 // Delete a dataset
@@ -381,7 +379,7 @@ const createDatasetRoute = asyncWrap(async (req, res) => {
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
     await syncRemoteService(db, dataset)
 
-    res.status(201).send(clean(req.publicBaseUrl, req.publicationSite, dataset, {}, draft))
+    res.status(201).send(clean(req, dataset, draft))
   } catch (err) {
     if (files) {
       for (const file of files) await fs.remove(file.path)
@@ -402,10 +400,6 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
 
   // @ts-ignore
   const user = req.user
-  // @ts-ignore
-  const publicBaseUrl = req.publicBaseUrl
-  // @ts-ignore
-  const publicationSite = req.publicationSite
   // TODO: replace this with a string draftValidationMode ?
   const draft = req.query.draft === 'true'
   // force the file upload middleware to write files in draft directory, as updated datasets always go into draft mode
@@ -471,7 +465,7 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
     throw err
   }
 
-  res.status(200).json(clean(publicBaseUrl, publicationSite, dataset))
+  res.status(200).json(clean(req, dataset))
 })
 
 router.post('/:datasetId', lockDataset(), readDataset({ acceptedStatuses: ['finalized', 'error'], acceptMissing: true }), apiKeyMiddleware, permissions.middleware('writeData', 'write', null, true), checkStorage(true, true), updateDatasetRoute)

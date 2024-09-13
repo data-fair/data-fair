@@ -145,9 +145,21 @@ exports.previews = (dataset, publicUrl = config.publicUrl) => {
   return previews
 }
 
-exports.clean = (publicUrl, publicationSite, dataset, query = {}, draft = false) => {
+/**
+ * @param {import('express').Request} req
+ * @param {any} dataset
+ * @param {boolean} draft
+ */
+exports.clean = (req, dataset, draft = false) => {
+  const query = req.query
+  // @ts-ignore
+  const publicationSite = req.publicationSite
+  // @ts-ignore
+  const publicUrl = req.publicBaseUrl
+
   const select = query.select ? query.select.split(',') : []
   if (query.raw !== 'true') {
+    dataset.userPermissions = permissions.list('datasets', dataset, req.user, req.bypassPermissions)
     const thumbnail = query.thumbnail || '300x200'
     if (draft) exports.mergeDraft(dataset)
     if (!select.includes('-public')) dataset.public = permissions.isPublic('datasets', dataset)

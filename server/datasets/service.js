@@ -126,10 +126,6 @@ exports.findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQue
   if (facetsPromise) response.facets = findUtils.parseFacets(facets, nullFacetFields)
   if (sumsPromise) response.sums = sums
   const t1 = Date.now()
-  for (const r of response.results) {
-    if (reqQuery.raw !== 'true') r.userPermissions = permissions.list('datasets', r, user)
-    datasetUtils.clean(publicBaseUrl, publicationSite, r, reqQuery)
-  }
   if (explain) {
     explain.cleanMS = Date.now() - t1
     response.explain = explain

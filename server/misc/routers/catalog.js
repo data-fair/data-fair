@@ -41,7 +41,7 @@ router.get('/datasets', asyncWrap(async (req, res) => {
   const resultsPromise = size > 0 && datasets.find(query).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
   const [count, results] = await Promise.all([countPromise, resultsPromise])
   for (const result of results) {
-    datasetUtils.clean(req.publicBaseUrl, req.publicationSite, result, req.query)
+    datasetUtils.clean(req, result)
     delete result.publicationSites
     delete result.owner
   }

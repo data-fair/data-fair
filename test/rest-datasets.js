@@ -21,6 +21,7 @@ describe('REST datasets', () => {
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, 'a-rest-dataset')
     assert.equal(res.data.status, 'finalized')
+    assert.ok(res.data.userPermissions)
 
     res = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
     assert.equal(res.status, 201)

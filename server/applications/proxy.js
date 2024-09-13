@@ -10,6 +10,7 @@ const axios = require('../misc/utils/axios')
 const parse5 = require('parse5')
 const pump = require('../misc/utils/pipe')
 const CacheableLookup = require('cacheable-lookup')
+const clone = require('../misc/utils/clone')
 const asyncWrap = require('../misc/utils/async-handler')
 const findUtils = require('../misc/utils/find')
 const datasetUtils = require('../datasets/utils/index.js')
@@ -185,21 +186,15 @@ if (inIframe()) {
 }
 `
 
-const memoizedGetFreshDataset = memoize(async (id, publicUrl, publicationSite, db) => {
-  const dataset = await db.collection('datasets').findOne({ id })
-  if (!dataset) return null
-  const permissions = dataset.permissions
-  datasetUtils.clean(publicUrl, publicationSite, dataset)
-  // re-affect permissions that is removed by clean so that we can process userPermissions after fetching from cache
-  dataset.permissions = permissions
-  return dataset
+const memoizedGetFreshDataset = memoize(async (id, db) => {
+  return await db.collection('datasets').findOne({ id })
 }, {
   profileName: 'getAppFreshDataset',
   promise: true,
   primitive: true,
   max: 10000,
   maxAge: 1000 * 60, // 1 minute
-  length: 2 // ignore publicationSite and db parameter
+  length: 1 // ignore db parameter
 })
 
 /** @type {string} */
@@ -248,7 +243,8 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
       const datasetFilters = req.application.baseApp.datasetsFilters?.[i] ?? {}
       if (datasetFilters.select) refreshKeys = refreshKeys.concat(datasetFilters.select)
 
-      const freshDataset = await memoizedGetFreshDataset(dataset.id, req.publicBaseUrl, req.publicationSite, db)
+      const freshDataset = clone(await memoizedGetFreshDataset(dataset.id, db))
+      datasetUtils.clean(req, freshDataset)
       if (!freshDataset) throw new Error('dataset not found ' + dataset.id)
 
       for (const key of refreshKeys) {

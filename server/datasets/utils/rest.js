@@ -601,7 +601,6 @@ class TransactionStream extends Writable {
 
     // prevent working twice on a line in the same bulk, this way sequentiality doesn't matter and we can use mongodb unordered bulk
     if (chunk._id && this.transactions.find(c => c._id === chunk._id)) {
-      console.log('split transac stream', chunk._id)
       await this.applyTransactions()
     }
 
