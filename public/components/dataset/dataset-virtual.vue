@@ -476,6 +476,8 @@ export default {
       this.searchedFilter = null
     },
     async save () {
+      // small delay because of the behavior of combobox
+      await new Promise(resolve => setTimeout(resolve, 0))
       await this.patchAndCommit({ schema: this.schema, virtual: this.virtual })
     }
   }
