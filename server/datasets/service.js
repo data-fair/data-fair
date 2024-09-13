@@ -522,35 +522,35 @@ exports.validateDraft = async (app, dataset, datasetFull, patch) => {
   // replace originalFile
   const draftOriginalFilePath = originalFilePath(datasetDraft)
   const newOriginalFilePath = originalFilePath(patchedDataset)
-  const oldOriginalFilePath = originalFilePath(datasetFull)
+  const oldOriginalFilePath = datasetFull.originalFile && originalFilePath(datasetFull)
   if (patchedDataset.originalFile && patchedDataset.originalFile.name !== patchedDataset.file?.name) {
     await fs.move(draftOriginalFilePath, newOriginalFilePath, { overwrite: true })
     await fsyncFile(newOriginalFilePath)
   }
-  if (datasetFull.originalFile && datasetFull.originalFile.name !== datasetFull.file?.name && newOriginalFilePath !== oldOriginalFilePath) {
+  if (oldOriginalFilePath && datasetFull.originalFile.name !== datasetFull.file?.name && newOriginalFilePath !== oldOriginalFilePath) {
     await fs.remove(oldOriginalFilePath)
   }
 
   // replace extended file
   const draftFullFilePath = fullFilePath(datasetDraft)
   const newFullFilePath = fullFilePath(patchedDataset)
-  const oldFullFilePath = fullFilePath(datasetFull)
+  const oldFullFilePath = datasetFull.file && fullFilePath(datasetFull)
   const hasFullFile = await fs.exists(draftFullFilePath)
   if (hasFullFile) {
     await fs.move(draftFullFilePath, newFullFilePath, { overwrite: true })
     await fsyncFile(newFullFilePath)
   }
-  if (!hasFullFile || newFullFilePath !== oldFullFilePath) {
+  if (oldFullFilePath && (!hasFullFile || newFullFilePath !== oldFullFilePath)) {
     await fs.remove(oldFullFilePath)
   }
 
   // replace file
   const draftFilePath = filePath(datasetDraft)
   const newFilePath = filePath(patchedDataset)
-  const oldFilePath = filePath(datasetFull)
+  const oldFilePath = datasetFull.file && filePath(datasetFull)
   await fs.move(draftFilePath, newFilePath, { overwrite: true })
   await fsyncFile(newFilePath)
-  if (newFilePath !== oldFilePath) {
+  if (oldFilePath && newFilePath !== oldFilePath) {
     await fs.remove(oldFilePath)
   }
 
