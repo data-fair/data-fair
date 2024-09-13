@@ -478,6 +478,11 @@ export default {
     async save () {
       // small delay because of the behavior of combobox
       await new Promise(resolve => setTimeout(resolve, 0))
+      if (this.virtual.filters) {
+        for (const filter of this.virtual.filters) {
+          if (filter.values) filter.values = filter.values.filter(Boolean).map(v => v.trim())
+        }
+      }
       await this.patchAndCommit({ schema: this.schema, virtual: this.virtual })
     }
   }
