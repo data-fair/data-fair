@@ -34,7 +34,7 @@ const screenshotRequestOpts = (req, isDefaultThumbnail) => {
     type: 'png',
     width: 1050, // 21/9 resolution
     height: 450,
-    filename: (req.application.id || req.application.slug) + '.png'
+    filename: (req.query.filename || req.application.slug || req.application.id) + '.png'
   }
   if (req.query.width) qs.width = req.query.width
   if (req.query.height) qs.height = req.query.height
