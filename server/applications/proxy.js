@@ -244,8 +244,8 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
       if (datasetFilters.select) refreshKeys = refreshKeys.concat(datasetFilters.select)
 
       const freshDataset = clone(await memoizedGetFreshDataset(dataset.id, db))
-      datasetUtils.clean(req, freshDataset)
       if (!freshDataset) throw new Error('dataset not found ' + dataset.id)
+      datasetUtils.clean(req, freshDataset)
 
       for (const key of refreshKeys) {
         if (key === 'userPermissions') dataset.userPermissions = permissions.list('datasets', freshDataset, req.user)
