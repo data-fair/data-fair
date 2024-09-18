@@ -1,6 +1,7 @@
 const config = require('config')
 const createError = require('http-errors')
 const { prepareQuery, aliasName } = require('./commons')
+const capabilities = require('../../../contract/capabilities')
 
 module.exports = async (client, dataset, query) => {
   if (!query.field) throw createError(400, '"field" parameter is required')
@@ -9,7 +10,7 @@ module.exports = async (client, dataset, query) => {
     throw createError(400, `Impossible d'agréger sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
   }
   if (prop['x-capabilities'] && !prop['x-capabilities'].textAgg) {
-    throw createError(400, `Impossible d'agréger sur le champ ${prop.key}, la fonctionnalité n'est pas activée.`)
+    throw createError(400, `Impossible d'agréger sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties.textAgg.title}" n'est pas activée dans la configuration technique du champ.`)
   }
 
   const field = query.analysis === 'standard' ? query.field + '.text_standard' : query.field + '.text'

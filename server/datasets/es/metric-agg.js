@@ -2,6 +2,7 @@ const createError = require('http-errors')
 const moment = require('moment-timezone')
 const config = require('config')
 const { prepareQuery, aliasName } = require('./commons')
+const capabilities = require('../../../contract/capabilities')
 
 const acceptedMetricAggsByType = {
   number: ['avg', 'sum', 'min', 'max', 'stats', 'value_count', 'percentiles'],
@@ -53,11 +54,13 @@ exports.agg = async (client, dataset, query) => {
   const field = dataset.schema.find(f => f.key === metricField)
   if (!field) throw createError(400, `Impossible de calculer une métrique sur le champ ${metricField}, il n'existe pas dans le jeu de données.`)
   if (field['x-capabilities'] && field['x-capabilities'].values === false) {
-    throw createError(400, `Impossible de calculer des métriques sur le champ ${metricField}, la fonctionnalité a été désactivée.`)
+    throw createError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
   }
   const metricType = getMetricType(field)
   const acceptedAggs = acceptedMetricAggsByType[metricType]
-  if (!acceptedAggs.includes(query.metric)) throw createError(400, `La métrique ${query.metric}, n'est pas supportée pour ce type de champ.`)
+  if (!acceptedAggs.includes(query.metric)) {
+    throw createError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La métrique ${query.metric}, n'est pas supportée pour ce type de champ.`)
+  }
 
   const esQuery = prepareQuery(dataset, query)
   esQuery.size = 0
@@ -105,7 +108,7 @@ exports.simpleMetricsAgg = async (client, dataset, query) => {
     const field = dataset.schema.find(f => f.key === metricField)
     if (!field) throw createError(400, `Impossible de calculer des métriques sur le champ ${metricField}, il n'existe pas dans le jeu de données.`)
     if (field['x-capabilities'] && field['x-capabilities'].values === false) {
-      throw createError(400, `Impossible de calculer des métriques sur le champ ${metricField}, la fonctionnalité a été désactivée.`)
+      throw createError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
     }
     for (const metric of defaultMetricAggsByType[getMetricType(field)]) {
       esQuery.aggs[metricField + ':' + metric] = {

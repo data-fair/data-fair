@@ -15,6 +15,7 @@ const { prepareThumbnailUrl } = require('../../misc/utils/thumbnails')
 const tiles = require('../utils/tiles')
 const geo = require('../utils/geo')
 const { geojsonToWKT } = require('@terraformer/wkt')
+const capabilities = require('../../../contract/capabilities')
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -117,7 +118,7 @@ exports.parseSort = (sortStr, fields, dataset) => {
     const field = dataset.schema.find(f => f.key === key)
     const capabilities = (field && field['x-capabilities']) || {}
     if (capabilities.values === false && capabilities.insensitive === false) {
-      throw createError(400, `Impossible de trier sur le champ ${key}, la fonctionnalité a été désactivée.`)
+      throw createError(400, `Impossible de trier sur le champ ${key}. La fonctionnalité "Triable et groupable" n'est pas activée dans la configuration technique du champ.`)
     }
     if (capabilities.insensitive !== false && field && field.type === 'string' && (field.format === 'uri-reference' || !field.format)) {
       // ignore_unmapped is necessary to maintain compatibility with older indices
@@ -141,6 +142,12 @@ exports.parseOrder = (sortStr, fields, dataset) => {
 
 // Check that a query_string query (lucene syntax)
 // does not try to use fields outside the current schema
+const capabilitiesSuffixes = [
+  ['.text', 'text'],
+  ['.text_standard', 'textStandard'],
+  ['.keyword_insensitive', 'insensitive'],
+  ['.wildcard', 'wildcard']
+]
 function checkQuery (query, schema, esFields, currentField) {
   if (typeof query === 'string') {
     // lucene-query-parser as a bug where it doesn't accept escaped quotes inside quotes
@@ -179,10 +186,18 @@ function checkQuery (query, schema, esFields, currentField) {
       throw createError(400, `Impossible d'appliquer un filtre' sur le champ ${field}, il n'existe pas dans le jeu de données.`)
     }
   } else if (query.field && !esFields.includes(query.field)) {
-    if (!schema.find(p => p.key === query.field)) {
-      throw createError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
+    const suffix = capabilitiesSuffixes.find(cs => query.field.endsWith(cs[0]))
+    if (suffix) {
+      if (!schema.find(p => p.key + suffix[0] === query.field)) {
+        throw createError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
+      }
+      throw createError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilities.properties[suffix[1]]?.title}" n'est pas activée dans la configuration technique du champ.`)
+    } else {
+      if (!schema.find(p => p.key === query.field)) {
+        throw createError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
+      }
+      throw createError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilities.properties.index.title}" n'est pas activée dans la configuration technique du champ.`)
     }
-    throw createError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, la fonctionnalité a été désactivée.`)
   }
   if (query.term && (query.term.startsWith('*') || query.term.startsWith('?')) && (!query.field || !query.field.endsWith('.wildcard'))) {
     // throw createError(400, `Impossible de faire une recherche de suite de caractères sans préfixe sur le champ ${query.field}, la fonctionnalité n'est pas activée.`)
@@ -198,9 +213,9 @@ function checkQuery (query, schema, esFields, currentField) {
  * @param {string} capability
  */
 const requiredCapability = (prop, filterName, capability = 'index') => {
-  const capabilities = prop['x-capabilities'] ?? {}
-  if (capabilities[capability] === false || (['wildcard', 'textAgg'].includes(capability) && capabilities[capability] !== true)) {
-    throw createError(400, `Impossible d'appliquer un filtre ${filterName} sur le champ ${prop.key}.`)
+  const propCapabilities = prop['x-capabilities'] ?? {}
+  if (propCapabilities[capability] === false || (['wildcard', 'textAgg'].includes(capability) && propCapabilities[capability] !== true)) {
+    throw createError(400, `Impossible d'appliquer un filtre ${filterName} sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties[capability]?.title}" n'est pas activée dans la configuration technique du champ.`)
   }
 }
 

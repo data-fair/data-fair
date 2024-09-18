@@ -26,7 +26,7 @@ module.exports = {
       type: 'boolean',
       default: true,
       'x-display': 'switch',
-      title: 'Texte analysé spécifiquement pour la langue française.',
+      title: 'Texte analysé spécifiquement pour la langue française',
       description: 'Désactivez cette capacité pour tout contenu qui n\'est pas en langue française ou pour lequel la recherche de mots a peu de sens.'
     },
     textAgg: {

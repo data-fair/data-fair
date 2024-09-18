@@ -1,6 +1,7 @@
 const config = require('config')
 const createError = require('http-errors')
 const { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } = require('./commons.js')
+const capabilities = require('../../../contract/capabilities.js')
 
 module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, explain, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
   const fields = dataset.schema.map(f => f.key)
@@ -20,7 +21,7 @@ module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, expla
   for (let i = 0; i < valuesFields.length; i++) {
     if (!props[i]) throw createError(400, `Le paramètre "field" référence un champ inconnu ${valuesFields[i]}`)
     if (props[i]['x-capabilities'] && props[i]['x-capabilities'].values === false) {
-      throw createError(400, `Impossible de grouper sur le champ ${props[i].key}, la fonctionnalité a été désactivée.`)
+      throw createError(400, `Impossible de grouper sur le champ ${props[i].key}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
     }
     intervals[i] = intervals[i] || 'value' // default is to group by strict value (simple terms aggregation)
     aggTypes[i] = 'terms'
