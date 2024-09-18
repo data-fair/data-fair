@@ -26,7 +26,7 @@ const findUtils = require('../misc/utils/find')
 const asyncWrap = require('../misc/utils/async-handler')
 const journals = require('../misc/utils/journals')
 const capture = require('../misc/utils/capture')
-const { clean } = require('./utils')
+const { clean, refreshConfigDatasetsRefs } = require('./utils')
 const { findApplications } = require('./service')
 const { syncApplications } = require('../datasets/service')
 const cacheHeaders = require('../misc/utils/cache-headers')
@@ -361,7 +361,10 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
 }))
 
 // Get only the configuration part of the application
-const getConfig = (req, res, next) => res.status(200).send(req.application.configuration || {})
+const getConfig = asyncWrap(async (req, res, next) => {
+  await refreshConfigDatasetsRefs(req, req.application, false)
+  res.status(200).send(req.application.configuration || {})
+})
 // 2 paths kept for compatibility.. but /config is deprecated because not homogeneous with the structure of the object
 router.get('/:applicationId/config', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased(), getConfig)
 router.get('/:applicationId/configuration', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased(), getConfig)
@@ -400,7 +403,8 @@ router.put('/:applicationId/config', readApplication, permissions.middleware('wr
 router.put('/:applicationId/configuration', readApplication, permissions.middleware('writeConfig', 'write'), writeConfig)
 
 // Configuration draft management
-router.get('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'read'), cacheHeaders.resourceBased(), (req, res) => {
+router.get('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
+  await refreshConfigDatasetsRefs(req, req.application, true)
   res.status(200).send(req.application.configurationDraft || req.application.configuration || {})
 })
 router.put('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), asyncWrap(async (req, res, next) => {

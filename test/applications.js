@@ -47,19 +47,30 @@ describe('Applications', () => {
 
   it('Manage the custom configuration part of the object', async () => {
     const ax = global.ax.dmeadus
+
+    const dataset = await testUtils.sendDataset('datasets/split.csv', ax)
+    const datasetRefInit = (await ax.get('/api/v1/datasets', { params: { id: dataset.id, select: 'id' } })).data.results[0]
+
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
-      datasets: [{ href: config.publicUrl + '/api/v1/datasets/111' }]
+      datasets: [{ id: dataset.id, href: datasetRefInit.href }]
     })
     assert.equal(res.status, 200)
     res = await ax.get('/api/v1/applications/' + appId + '/config')
     assert.equal(res.status, 200)
     assert.equal(res.data.datasets.length, 1)
+    assert.equal(res.data.datasets[0].title, 'split')
     res = await ax.get('/api/v1/applications', { params: { dataset: 'nope' } })
     assert.equal(res.data.count, 0)
-    res = await ax.get('/api/v1/applications', { params: { dataset: '111' } })
+    res = await ax.get('/api/v1/applications', { params: { dataset: dataset.id } })
     assert.equal(res.data.count, 1)
+
+    await ax.patch('/api/v1/datasets/' + dataset.id, { title: 'changed title' })
+    res = await ax.get('/api/v1/applications/' + appId + '/configuration-draft')
+    assert.equal(res.status, 200)
+    assert.equal(res.data.datasets.length, 1)
+    assert.equal(res.data.datasets[0].title, 'changed title')
   })
 
   it('Use an application through the application proxy', async () => {
@@ -68,9 +79,9 @@ describe('Applications', () => {
 
     const dataset = await testUtils.sendDataset('datasets/split.csv', ax)
 
-    const datasetRefInit = (await ax.get('/api/v1/datasets', { params: { id: dataset.id, select: 'id,title,schema,userPermissions' } })).data.results[0]
+    const datasetRefInit = (await ax.get('/api/v1/datasets', { params: { id: dataset.id, select: 'id' } })).data.results[0]
 
-    let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/', configuration: { datasets: [datasetRefInit] } })
+    let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/', configuration: { datasets: [{ id: dataset.id, href: datasetRefInit.href }] } })
     const appId = res.data.id
 
     // The same content is returned with or without a trailing slash
@@ -88,7 +99,7 @@ describe('Applications', () => {
     assert.ok(application.configuration)
     assert.ok(application.configuration.datasets?.length, 1)
     const datasetRef = application.configuration.datasets[0]
-    assert.deepEqual(Object.keys(datasetRef).sort(), ['finalizedAt', 'href', 'id', 'owner', 'page', 'previews', 'public', 'schema', 'slug', 'title', 'userPermissions', 'visibility'])
+    assert.deepEqual(Object.keys(datasetRef).sort(), ['finalizedAt', 'href', 'id', 'schema', 'slug', 'title', 'userPermissions'])
 
     // A link to the manifest is injected
     assert.ok(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/data-fair/app/${appId}/manifest.json">`))

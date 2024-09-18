@@ -5,18 +5,16 @@ const path = require('path')
 const https = require('https')
 const http = require('http')
 const escapeHtml = require('escape-html')
-const memoize = require('memoizee')
 const axios = require('../misc/utils/axios')
 const parse5 = require('parse5')
 const pump = require('../misc/utils/pipe')
 const CacheableLookup = require('cacheable-lookup')
-const clone = require('../misc/utils/clone')
 const asyncWrap = require('../misc/utils/async-handler')
 const findUtils = require('../misc/utils/find')
-const datasetUtils = require('../datasets/utils/index.js')
 const permissions = require('../misc/utils/permissions')
 const serviceWorkers = require('../misc/utils/service-workers')
 const metrics = require('../misc/utils/metrics')
+const { refreshConfigDatasetsRefs } = require('./utils')
 const router = module.exports = express.Router()
 // const debug = require('debug')('application-proxy')
 const vIframeVersion = require('../../node_modules/@koumoul/v-iframe/package.json').version
@@ -186,17 +184,6 @@ if (inIframe()) {
 }
 `
 
-const memoizedGetFreshDataset = memoize(async (id, db) => {
-  return await db.collection('datasets').findOne({ id })
-}, {
-  profileName: 'getAppFreshDataset',
-  promise: true,
-  primitive: true,
-  max: 10000,
-  maxAge: 1000 * 60, // 1 minute
-  length: 1 // ignore db parameter
-})
-
 /** @type {string} */
 let minifiedIframeRedirectSrc
 router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => {
@@ -211,7 +198,8 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   // TODO: captureUrl should be on same domain too ?
   req.application.captureUrl = config.captureUrl
   req.application.wsUrl = req.publicWsBaseUrl
-  if (req.query.draft === 'true') {
+  const draft = req.query.draft === 'true'
+  if (draft) {
     req.application.configuration = req.application.configurationDraft || req.application.configuration
   }
   delete req.application.configurationDraft
@@ -225,34 +213,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
     { privateAccess: { $elemMatch: { type: req.application.owner.type, id: req.application.owner.id } } }
   ]
 
-  // Update the config with fresh information of the datasets include finalizedAt
-  // this info can then be used to add ?finalizedAt=... to any queries
-  // and so benefit from better caching
-  const datasets = req.application.configuration && req.application.configuration.datasets && req.application.configuration.datasets.filter(d => !!d)
-  if (datasets && datasets.length) {
-    for (let i = 0; i < datasets.length; i++) {
-      const dataset = datasets[i]
-      if (!dataset.id) {
-        console.error(`missing dataset id "${JSON.stringify(dataset)}" in app config "${req.application.id}"`)
-        if (dataset.href) dataset.href = dataset.href.replace(config.publicUrl, req.publicBaseUrl)
-        continue
-      }
-      let refreshKeys = Object.keys(dataset)
-      refreshKeys.push('finalizedAt')
-
-      const datasetFilters = req.application.baseApp.datasetsFilters?.[i] ?? {}
-      if (datasetFilters.select) refreshKeys = refreshKeys.concat(datasetFilters.select)
-
-      const freshDataset = clone(await memoizedGetFreshDataset(dataset.id, db))
-      if (!freshDataset) throw new Error('dataset not found ' + dataset.id)
-      datasetUtils.clean(req, freshDataset)
-
-      for (const key of refreshKeys) {
-        if (key === 'userPermissions') dataset.userPermissions = permissions.list('datasets', freshDataset, req.user)
-        if (key in freshDataset) dataset[key] = freshDataset[key]
-      }
-    }
-  }
+  await refreshConfigDatasetsRefs(req, req.application, draft)
 
   const [limits, baseApp] = await Promise.all([
     db.collection('limits').findOne({ type: req.application.owner.type, id: req.application.owner.id }),
