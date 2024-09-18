@@ -507,8 +507,10 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
   const geoShape = geoShapeProp && (!geoShapeProp['x-capabilities'] || geoShapeProp['x-capabilities'].geoShape !== false)
   const geoCornersProp = dataset.schema.find(p => p.key === '_geocorners')
   const geoCorners = geoCornersProp && (!geoCornersProp['x-capabilities'] || geoCornersProp['x-capabilities'].geoCorners !== false)
-  if (query.bbox || query._c_bbox || query.xyz) {
-    if (!dataset.bbox) throw createError(400, '"bbox" filter cannot be used on this dataset. It is not geolocalized.')
+  if ((query.bbox || query.xyz) && !dataset.bbox) {
+    throw createError(400, '"bbox" filter cannot be used on this dataset. It is not geolocalized.')
+  }
+  if ((query.bbox || query._c_bbox || query.xyz) && dataset.bbox) {
     const bbox = exports.getQueryBBOX(query, dataset)
     const esBoundingBox = { left: bbox[0], bottom: bbox[1], right: bbox[2], top: bbox[3] }
     // use geo_shape intersection instead geo_bounding_box in order to get even
