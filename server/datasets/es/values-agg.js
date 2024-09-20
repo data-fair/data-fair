@@ -2,6 +2,7 @@ const config = require('config')
 const createError = require('http-errors')
 const { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } = require('./commons.js')
 const capabilities = require('../../../contract/capabilities.js')
+const { assertMetricAccepted } = require('./metric-agg')
 
 module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, explain, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
   const fields = dataset.schema.map(f => f.key)
@@ -89,21 +90,37 @@ module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, expla
       }
     }
 
-    // manage sorting
     if (currentAggLevel.values) {
       currentAggLevel.values[aggTypes[i]].order = parseOrder(sorts[i], fields, dataset)
       if (query.metric && query.metric_field) {
-        if (!fields.includes(query.metric_field)) {
-          throw createError(400, `Impossible d'agréger sur le champ ${query.metric_field}, il n'existe pas dans le jeu de données.`)
+        const metricField = dataset.schema.find(p => p.key === query.metric_field)
+        if (!metricField) {
+          throw createError(400, `Impossible de calculer une métrique sur le champ ${query.metric_field}, il n'existe pas dans le jeu de données.`)
         }
+        assertMetricAccepted(metricField, query.metric)
 
         currentAggLevel.values[aggTypes[i]].order.push({ metric: 'desc' })
-        currentAggLevel.values.aggs = {}
+        currentAggLevel.values.aggs = currentAggLevel.values.aggs ?? {}
         currentAggLevel.values.aggs.metric = {
           [query.metric]: { field: query.metric_field }
         }
       }
       currentAggLevel.values[aggTypes[i]].order.push({ _count: 'desc' })
+
+      if (query.extra_metrics) {
+        for (const extraMetric of query.extra_metrics.split(',')) {
+          const [field, metric] = extraMetric.split(':')
+          const metricField = dataset.schema.find(p => p.key === field)
+          if (!metricField) {
+            throw createError(400, `Impossible de calculer une métrique sur le champ ${field}, il n'existe pas dans le jeu de données.`)
+          }
+          assertMetricAccepted(metricField, metric)
+          currentAggLevel.values.aggs = currentAggLevel.values.aggs ?? {}
+          currentAggLevel.values.aggs[`extra_metric_${field}_${metric}`] = {
+            [metric]: { field }
+          }
+        }
+      }
     }
 
     // Prepare next nested level
@@ -163,6 +180,11 @@ const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl) => 
     }
     if (b.metric) {
       aggItem.metric = b.metric.value
+    }
+    for (const key of Object.keys(b)) {
+      if (key.startsWith('extra_metric_')) {
+        aggItem[key.replace('extra_metric_', '')] = b[key].value
+      }
     }
     if (b.values) {
       recurseAggResponse(aggItem, b, dataset, query, publicBaseUrl)

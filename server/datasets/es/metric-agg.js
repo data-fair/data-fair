@@ -14,12 +14,6 @@ const defaultMetricAggsByType = {
   string: ['cardinality'],
   other: []
 }
-exports.acceptedMetricAggs = []
-for (const type in acceptedMetricAggsByType) {
-  for (const metric of acceptedMetricAggsByType[type]) {
-    if (!exports.acceptedMetricAggs.includes(metric)) exports.acceptedMetricAggs.push(metric)
-  }
-}
 
 const cleanValue = (field, metric, value) => {
   if (['min', 'max', 'percentiles'].includes(metric)) {
@@ -47,6 +41,14 @@ const getMetricType = (field) => {
   }
 }
 
+exports.assertMetricAccepted = (field, metric) => {
+  const metricType = getMetricType(field)
+  const acceptedAggs = acceptedMetricAggsByType[metricType]
+  if (!acceptedAggs?.includes(metric)) {
+    throw createError(400, `Impossible de calculer une métrique sur le champ ${field.key}. La métrique "${metric}", n'est pas supportée pour ce type de champ.`)
+  }
+}
+
 exports.agg = async (client, dataset, query) => {
   if (!query.metric) throw createError(400, '"metric" parameter is required')
   const metricField = query.field || query.metric_field
@@ -56,11 +58,7 @@ exports.agg = async (client, dataset, query) => {
   if (field['x-capabilities'] && field['x-capabilities'].values === false) {
     throw createError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
   }
-  const metricType = getMetricType(field)
-  const acceptedAggs = acceptedMetricAggsByType[metricType]
-  if (!acceptedAggs.includes(query.metric)) {
-    throw createError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La métrique ${query.metric}, n'est pas supportée pour ce type de champ.`)
-  }
+  exports.assertMetricAccepted(field, query.metric)
 
   const esQuery = prepareQuery(dataset, query)
   esQuery.size = 0

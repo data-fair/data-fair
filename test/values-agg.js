@@ -29,9 +29,20 @@ describe('values aggs', () => {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&metric_field=employees&metric=sum`)
     assert.equal(res.data.aggs[0].metric, 13) // default sorting by metric
 
+    // Value aggregation + extra metrics
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&extra_metrics=employees:sum,employees:avg`)
+    // default sorting by total
+    assert.equal(res.data.aggs[0].value, 'koumoul')
+    assert.equal(res.data.aggs[0].total, 3)
+    assert.equal(res.data.aggs[0].employees_sum, 3)
+    assert.equal(res.data.aggs[0].employees_avg, 1)
+    assert.equal(res.data.aggs[1].total, 2)
+    assert.equal(res.data.aggs[1].employees_sum, 13)
+    assert.equal(res.data.aggs[1].employees_avg, 6.5)
+
     // Sorting
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&metric_field=employees&metric=sum&sort=-id`)
-    assert.equal(res.data.aggs[0].value, 'koumoul') // default sorting by metric
+    assert.equal(res.data.aggs[0].value, 'koumoul')
 
     // with inner hits as results array
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&size=10&sort=-count;employees`)
