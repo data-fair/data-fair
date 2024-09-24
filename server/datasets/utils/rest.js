@@ -80,6 +80,11 @@ exports.uploadAttachment = multer({
   storage: multer.diskStorage({ destination, filename })
 }).single('attachment')
 
+exports.fixFormBody = (req, res, next) => {
+  if (req.body?._body) req.body = JSON.parse(req.body._body)
+  next()
+}
+
 exports.uploadBulk = multer({
   storage: multer.diskStorage({ destination, filename })
 }).fields([{ name: 'attachments', maxCount: 1 }, { name: 'actions', maxCount: 1 }])

@@ -275,6 +275,7 @@ describe('REST datasets', () => {
     res = await ax.get('/api/v1/datasets/rest5/lines')
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]['_file.content'], 'This is a test pdf file.')
+    assert.equal(res.data.results[0].attr1, 10)
     let attachments = await lsAttachments(dataset)
     assert.equal(attachments.length, 1)
     assert.equal(attachments[0], res.data.results[0].attachmentPath)
@@ -288,6 +289,31 @@ describe('REST datasets', () => {
     assert.equal(res.data.total, 0)
     attachments = await lsAttachments(dataset)
     assert.equal(attachments.length, 0)
+  })
+
+  it('Send attachment with multipart an special _body jey', async function () {
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/datasets/rest5', {
+      isRest: true,
+      title: 'rest5',
+      schema: [
+        { key: 'attr1', type: 'integer' },
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ]
+    })
+
+    // Create a line with an attached file
+    const form = new FormData()
+    const attachmentContent = fs.readFileSync('./test/resources/datasets/files/dir1/test.pdf')
+    form.append('attachment', attachmentContent, 'dir1/test.pdf')
+    form.append('_body', '{"attr1":10}')
+    res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+    await workers.hook('finalizer/rest5')
+
+    res = await ax.get('/api/v1/datasets/rest5/lines')
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].attr1, 10)
   })
 
   it('Send attachments with bulk request', async () => {
