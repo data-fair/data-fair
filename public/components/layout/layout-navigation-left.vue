@@ -184,6 +184,17 @@
           <v-list-item-action><v-icon>mdi-book-open-variant</v-icon></v-list-item-action>
           <v-list-item-title v-t="'userDoc'" />
         </v-list-item>
+        <v-list-item
+          v-for="(docLink, i) of env.extraDocLinks"
+          :key="i"
+          :nuxt="true"
+          dense
+          :href="docLink.href"
+          target="blank"
+        >
+          <v-list-item-action><v-icon>{{ docLink.icon }}</v-icon></v-list-item-action>
+          <v-list-item-title>{{ docLink.title }}</v-list-item-title>
+        </v-list-item>
       </v-list-group>
     </v-list>
 

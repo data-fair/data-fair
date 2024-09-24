@@ -119,6 +119,7 @@ module.exports = {
     doc: config.doc,
     extraNavigationItems: config.extraNavigationItems,
     extraAdminNavigationItems: config.extraAdminNavigationItems,
+    extraDocLinks: config.extraDocLinks,
     darkModeSwitch: config.darkModeSwitch,
     disableSharing: config.disableSharing,
     disableApplications: config.disableApplications,

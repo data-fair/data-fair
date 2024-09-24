@@ -252,6 +252,10 @@ module.exports = {
     __name: 'EXTRA_ADMIN_NAV_ITEMS',
     __format: 'json'
   },
+  extraDocLinks: {
+    __name: 'EXTRA_DOC_LINKS',
+    __format: 'json'
+  },
   dateFormats: {
     __name: 'DATE_FORMATS',
     __format: 'json'

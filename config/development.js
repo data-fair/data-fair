@@ -68,6 +68,13 @@ module.exports = {
       icon: 'mdi-link'
     }
   ],
+  extraDocLinks: [
+    {
+      title: 'Plateforme Koumoul',
+      href: 'https://docs.koumoul.com/',
+      icon: 'mdi-alpha-k-box'
+    }
+  ],
   disableSharing: false,
   disableApplications: false,
   disableRemoteServices: false,
