@@ -429,20 +429,16 @@ const updateDatasetRoute = asyncWrap(async (req, res, next) => {
     validatePatch(patch)
     validateURLFriendly(locale, patch.slug)
 
+    // TODO: do not use always as default value when the dataset is public or published ?
+    let draftValidationMode = 'always'
     if (req.datasetFull.status === 'draft') {
-      patch.draftReason = { key: 'file-new', message: 'Nouveau jeu de données chargé en mode brouillon', validationMode: 'never' }
-    } else {
-      // TODO: do not use always as default value when the dataset is public or published ?
-      let validationMode = 'always'
-      if (draft) {
-        if ((patch.schema ?? dataset.schema).find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) validationMode = 'never'
-        else validationMode = 'compatible'
-      }
-
-      patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode }
+      draftValidationMode = 'never'
+    } else if (draft) {
+      if ((patch.schema ?? dataset.schema).find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) draftValidationMode = 'never'
+      else draftValidationMode = 'compatible'
     }
 
-    const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, user, locale, files)
+    const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, user, locale, draftValidationMode, files)
       .catch(err => {
         if (err.code !== 11000) throw err
         throw createError(400, req.__('errors.dupSlug'))

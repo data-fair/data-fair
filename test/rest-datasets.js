@@ -35,6 +35,7 @@ describe('REST datasets', () => {
 
     res = await ax.put('/api/v1/datasets/restdataset3', { isRest: true, title: 'a rest dataset updated' })
     assert.equal(res.status, 200)
+    assert.ok(!res.data.draftReason)
     assert.equal(res.data.slug, 'a-rest-dataset-3')
     assert.equal(res.data.title, 'a rest dataset updated')
   })

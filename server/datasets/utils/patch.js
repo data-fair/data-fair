@@ -20,10 +20,11 @@ exports.validatePatch = ajv.compile(datasetPatchSchema)
  * @param {any} dataset
  * @param {any} user
  * @param {string} locale
+ * @param {string} draftValidationMode
  * @param {any[]} [files]
  * @returns {Promise<{removedRestProps?: any[], attemptMappingUpdate?: boolean, isEmpty?: boolean}>}
  */
-exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
+exports.preparePatch = async (app, patch, dataset, user, locale, draftValidationMode, files) => {
   const db = app.get('db')
 
   patch.id = dataset.id
@@ -154,12 +155,13 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
     patch.dataUpdatedBy = patch.updatedBy
     patch.dataUpdatedAt = patch.updatedAt
     patch.status = 'loaded'
+    patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode: draftValidationMode }
   } else if (patch.remoteFile) {
     if (patch.remoteFile?.url !== dataset.remoteFile?.url || patch.remoteFile?.name !== dataset.remoteFile?.name || patch.remoteFile.forceUpdate) {
       patch.status = 'imported'
       patch.remoteFile.forceUpdate = true
       // TODO: do not use always as default value when the dataset is public or published ?
-      patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode: 'always' }
+      patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode: draftValidationMode }
     } else {
       if (dataset.remoteFile.lastModified) patch.remoteFile.lastModified = dataset.remoteFile.lastModified
       if (dataset.remoteFile.etag) patch.remoteFile.etag = dataset.remoteFile.etag
