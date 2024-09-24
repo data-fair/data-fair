@@ -36,6 +36,13 @@
       </v-stepper-content>
 
       <v-stepper-content step="2">
+        <owner-pick
+          v-model="owner"
+          hide-single
+          :current-owner="dataset?.owner"
+          :restriction="[activeAccount]"
+          message="Choisissez le propriétaire de la nouvelle application :"
+        />
         <v-text-field
           v-model="title"
           style="max-width: 500px;"
@@ -93,7 +100,8 @@ export default {
     applicationUrl: null,
     configurableApplications: [],
     importing: false,
-    title: null
+    title: null,
+    owner: null
   }),
   async fetch () {
     if (this.$route.query.dataset) {
@@ -153,6 +161,7 @@ export default {
           }]
         }
         const application = await this.$axios.$post('api/v1/applications', {
+          owner: this.owner,
           url: this.baseApp.url,
           title: this.title,
           configurationDraft
