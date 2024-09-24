@@ -161,8 +161,8 @@ exports.preparePatch = async (app, patch, dataset, user, locale, files) => {
       // TODO: do not use always as default value when the dataset is public or published ?
       patch.draftReason = { key: 'file-updated', message: 'Nouveau fichier chargé sur un jeu de données existant', validationMode: 'always' }
     } else {
-      patch.remoteFile.lastModified = dataset.remoteFile.lastModified
-      patch.remoteFile.etag = dataset.remoteFile.etag
+      if (dataset.remoteFile.lastModified) patch.remoteFile.lastModified = dataset.remoteFile.lastModified
+      if (dataset.remoteFile.etag) patch.remoteFile.etag = dataset.remoteFile.etag
     }
   } else if (dataset.isVirtual) {
     if (patch.schema || patch.virtual) {

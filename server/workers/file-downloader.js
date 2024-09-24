@@ -104,20 +104,24 @@ exports.process = async function (app, dataset) {
 
   const filePath = datasetUtils.loadedFilePath({ ...dataset, ...patch })
 
+  patch.remoteFile = patch.remoteFile || { ...dataset.remoteFile }
+
   if (response.status === 304 || (!dataset.remoteFile.forceUpdate && dataset.originalFile && dataset.originalFile.md5 === md5)) {
     // prevent re-indexing when the file didn't change
     debug('content of remote file did not change')
     await tmpFile.cleanup()
   } else {
     if (response.headers.etag) {
-      patch.remoteFile = patch.remoteFile || { ...dataset.remoteFile }
       patch.remoteFile.etag = response.headers.etag
       debug('store etag header for future conditional fetch', response.headers.etag)
+    } else {
+      delete patch.remoteFile.etag
     }
     if (response.headers['last-modified']) {
-      patch.remoteFile = patch.remoteFile || { ...dataset.remoteFile }
       patch.remoteFile.lastModified = response.headers['last-modified']
       debug('store last-modified header for future conditional fetch', response.headers['last-modified'])
+    } else {
+      delete patch.remoteFile.lastModified
     }
 
     await fs.move(tmpFile.path, filePath, { overwrite: true })
@@ -127,7 +131,6 @@ exports.process = async function (app, dataset) {
     patch.status = 'loaded'
   }
 
-  patch.remoteFile = patch.remoteFile || { ...dataset.remoteFile }
   delete patch.remoteFile.forceUpdate
 
   if (dataset.remoteFile.autoUpdate?.active && !dataset.remoteFile.forceUpdate) {
