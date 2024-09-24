@@ -1,3 +1,30 @@
+const filters = {
+  type: 'array',
+  title: 'Filtres statiques',
+  'x-class': 'mb-4',
+  'x-options': { editMode: 'inline' },
+  items: {
+    type: 'object',
+    required: ['property', 'values'],
+    properties: {
+      property: {
+        type: 'object',
+        title: 'Propriété sur laquelle appliquer le filtre',
+        'x-fromData': 'context.filterProperties',
+        'x-itemTitle': 'title',
+        'x-itemKey': 'key'
+      },
+      values: {
+        type: 'array',
+        title: 'Valeurs',
+        items: {
+          type: 'string'
+        }
+      }
+    }
+  }
+}
+
 exports.schema = {
   type: 'object',
   title: 'Données de référence',
@@ -33,6 +60,7 @@ exports.schema = {
               placeholder: 'exemple "cet enrichissement vous permet de récupérer les informations de plusieurs produits à partir d\'une liste de codes produits."'
             }
           },
+          filters,
           input: {
             type: 'array',
             title: 'Méthodes de correspondance',
@@ -152,7 +180,8 @@ Exemple: ma_colonne,-ma_colonne2`
             'x-fromData': 'context.stringProperties',
             'x-itemTitle': 'title',
             'x-itemKey': 'key'
-          }
+          },
+          filters
           /* input: {
             type: 'array',
             title: 'Propriétés utilisées pour la recherche',

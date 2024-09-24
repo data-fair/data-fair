@@ -52,6 +52,13 @@ exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, s
   const paramsBuilder = (line) => {
     const params = {}
     const qs = []
+    if (bulkSearch.filters) {
+      for (const f of bulkSearch.filters) {
+        if (f.property?.key && f.values?.length) {
+          qs.push(f.values.map(value => `(${esUtils.escapeFilter(f.property.key)}:"${esUtils.escapeFilter(value)}")`).join(' OR '))
+        }
+      }
+    }
     for (const input of bulkSearch.input) {
       if ([null, undefined].includes(line[input.property.key])) {
         throw createError(400, `la propriété en entrée ${input.property.key} est obligatoire`)

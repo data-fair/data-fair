@@ -87,8 +87,11 @@ export default {
         stringProperties: this.dataset.schema
           .filter(p => p.type === 'string')
           .map(p => ({ key: p.key, title: p.title || p['x-originalName'] || p.key })),
+        filterProperties: this.dataset.schema
+          .filter(p => !p['x-capabilities'] || p['x-capabilities'].index !== false)
+          .map(p => ({ key: p.key, title: p.title || p['x-originalName'] || p.key })),
         searchProperties: this.dataset.schema
-          .filter(p => p.type === 'string' && (!p['x-capabilities'] || !p['x-capabilities'].textStandard))
+          .filter(p => p.type === 'string' && (!p['x-capabilities'] || p['x-capabilities'].textStandard !== false))
           .map(p => ({ key: p.key, title: p.title || p['x-originalName'] || p.key })),
         propertiesWithConcepts: this.dataset.schema
           .filter(p => p['x-refersTo'])

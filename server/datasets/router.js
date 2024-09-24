@@ -574,9 +574,19 @@ router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset
   let esResponse
   let select = singleSearch.output.key
   if (singleSearch.label) select += ',' + singleSearch.label.key
+  const params = { q: req.query.q, size: req.query.size, q_mode: 'complete', select }
+  const qs = []
+
+  if (singleSearch.filters) {
+    for (const f of singleSearch.filters) {
+      if (f.property?.key && f.values?.length) {
+        qs.push(f.values.map(value => `(${esUtils.escapeFilter(f.property.key)}:"${esUtils.escapeFilter(value)}")`).join(' OR '))
+      }
+    }
+  }
+  if (qs.length) params.qs = qs.map(f => `(${f})`).join(' AND ')
   try {
-    esResponse = await esUtils.search(req.app.get('es'), req.dataset,
-      { q: req.query.q, size: req.query.size, q_mode: 'complete', select })
+    esResponse = await esUtils.search(req.app.get('es'), req.dataset, params)
   } catch (err) {
     await manageESError(req, err)
   }

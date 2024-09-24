@@ -79,11 +79,17 @@ describe('Master data management', () => {
 
     const { remoteService, apiDoc } = await initMaster(
       ax,
-      [siretProperty, { key: 'extra', type: 'string', 'x-labels': { value1: 'label1' }, 'x-capabilities': { text: false } }],
+      [
+        siretProperty,
+        { key: 'extra', type: 'string', 'x-labels': { value1: 'label1' }, 'x-capabilities': { text: false } },
+        { key: 'extraFilter', type: 'string' }
+      ]
+      ,
       [{
         id: 'siret',
         title: 'Fetch extra info from siret',
         description: '',
+        filters: [{ property: { key: 'extraFilter' }, values: ['filterOk'] }],
         input: [{ type: 'equals', property: siretProperty }]
       }]
     )
@@ -99,15 +105,22 @@ describe('Master data management', () => {
     assert.equal(remoteService.actions[0].id, 'masterData_bulkSearch_siret')
 
     // feed some data to the master
-    const items = [{ siret: '82898347800011', extra: 'Extra information' }]
+    const items = [
+      { siret: '82898347800011', extra: 'Extra information', extraFilter: 'filterOk' },
+      { siret: '82898347800012', extra: 'Extra information', extraFilter: 'filterKo' }
+    ]
     await ax.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
     await workers.hook('finalizer/master')
 
     // use the bulk-searchs endpoint with various mime-types, errors, etc.
-    let res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', [{ siret: '82898347800011' }])
-    assert.equal(res.data.length, 1)
+    let res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', [
+      { siret: '82898347800011' },
+      { siret: '82898347800012' }
+    ])
+    assert.equal(res.data.length, 2)
     assert.equal(res.data[0].siret, '82898347800011')
     assert.equal(res.data[0].extra, 'Extra information')
+    assert.ok(res.data[1]._error)
     res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', [{ siret: '82898347800011' }, { siret: 'unknown' }])
     assert.equal(res.data.length, 2)
     assert.equal(res.data[0].siret, '82898347800011')
@@ -119,13 +132,13 @@ describe('Master data management', () => {
     assert.equal(res.data[1].siret, '82898347800011')
     assert.equal(res.data[1].extra, 'Extra information')
     res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', 'siret\n82898347800011', { headers: { 'content-type': 'text/csv' } })
-    assert.equal(res.data, `siret,extra,_key,_error
-82898347800011,Extra information,0,
+    assert.equal(res.data, `siret,extra,extraFilter,_key,_error
+82898347800011,Extra information,filterOk,0,
 `)
     res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', 'siret\nunknown\n82898347800011', { headers: { 'content-type': 'text/csv' } })
-    assert.equal(res.data, `siret,extra,_key,_error
-,,0,La donnée de référence ne contient pas de ligne correspondante.
-82898347800011,Extra information,1,
+    assert.equal(res.data, `siret,extra,extraFilter,_key,_error
+,,,0,La donnée de référence ne contient pas de ligne correspondante.
+82898347800011,Extra information,filterOk,1,
 `)
 
     // create slave dataset
@@ -173,7 +186,7 @@ describe('Master data management', () => {
         select: ['extra']
       }]
     })
-    const items2 = [{ siret: '82898347800011', extra: 'Extra information 2' }]
+    const items2 = [{ siret: '82898347800011', extra: 'Extra information 2', extraFilter: 'filterOk' }]
     await ax.post('/api/v1/datasets/master/_bulk_lines', items2.map(item => ({ _id: item.siret, ...item })))
     await workers.hook('finalizer/master')
     slave = (await ax.get('/api/v1/datasets/slave')).data
