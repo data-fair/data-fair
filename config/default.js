@@ -295,7 +295,7 @@ module.exports = {
   },
   extraNavigationItems: [],
   extraAdminNavigationItems: [],
-  extraDocLlinks: [],
+  extraDocLinks: [],
   // cf https://momentjs.com/docs/#/parsing/string-format/ en mode strict
   // french formats for now, TODO: prepare for internationalization
   dateFormats: [
