@@ -1,6 +1,7 @@
 const crypto = require('crypto')
 const config = require('config')
 const datasetUtils = require('../utils')
+const metrics = require('../../misc/utils/metrics')
 const { aliasName, esProperty } = require('./commons')
 
 exports.indexDefinition = async (dataset) => {
@@ -72,6 +73,16 @@ const getAliases = async (client, dataset) => {
   return { prodAlias, draftAlias }
 }
 
+// deletion failures can happen during ES snapshots
+// it is acceptable to tolerate these errors, log them and do some cleanup later
+const safeDeleteIndex = async (client, index) => {
+  try {
+    await client.indices.delete({ index })
+  } catch (err) {
+    metrics.internalError('es-delete-index', err)
+  }
+}
+
 // delete indices and aliases of a dataset
 exports.delete = async (client, dataset) => {
   const { prodAlias } = await getAliases(client, dataset)
@@ -81,10 +92,10 @@ exports.delete = async (client, dataset) => {
     const previousIndices = await client.indices.get({ index: `${indexPrefix(dataset)}-*`, ignore_unavailable: true })
     for (const index in previousIndices.body) {
       if (prodAlias && prodAlias[index]) continue
-      await client.indices.delete({ index })
+      await safeDeleteIndex(client, index)
     }
   } else {
-    await client.indices.delete({ index: `${indexPrefix(dataset)}-*` })
+    await safeDeleteIndex(client, `${indexPrefix(dataset)}-*`)
   }
 }
 
@@ -106,7 +117,7 @@ exports.switchAlias = async (client, dataset, tempId) => {
   for (const index in indices.body) {
     if (prodAlias && prodAlias[index]) continue
     if (draftAlias && draftAlias[index]) continue
-    await client.indices.delete({ index })
+    await safeDeleteIndex(client, index)
   }
 }
 
