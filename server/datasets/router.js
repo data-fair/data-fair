@@ -86,7 +86,7 @@ router.get('', apiKeyMiddleware, cacheHeaders.listBased, asyncWrap(async (req, r
   res.json(response)
 }))
 
-router.use('/:datasetId/permissions', readDataset(), permissions.router('datasets', 'dataset', async (req, patchedDataset) => {
+router.use('/:datasetId/permissions', readDataset(), apiKeyMiddleware, permissions.router('datasets', 'dataset', async (req, patchedDataset) => {
   // this callback function is called when the resource becomes public
   await publicationSites.onPublic(req.app.get('db'), patchedDataset, 'dataset')
 }))
