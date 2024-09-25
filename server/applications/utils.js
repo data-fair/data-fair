@@ -6,6 +6,8 @@ const { prepareMarkdownContent } = require('../misc/utils/markdown')
 const findUtils = require('../misc/utils/find')
 const clone = require('../misc/utils/clone')
 const datasetUtils = require('../datasets/utils/index.js')
+const createError = require('http-errors')
+const { getPseudoUser } = require('../misc/utils/users')
 
 exports.clean = (application, publicUrl, publicationSite, query = {}) => {
   const select = query.select ? query.select.split(',') : []
@@ -79,12 +81,17 @@ exports.refreshConfigDatasetsRefs = async (req, application, draft) => {
         ? clone(await memoizedGetFreshDataset(dataset.id, db))
         : (await db.collection('datasets').findOne({ id: dataset.id }))
 
-      if (!freshDataset) throw new Error('dataset not found ' + dataset.id)
-      datasetUtils.clean(req, freshDataset)
+      if (freshDataset) {
+        const pseudoUser = getPseudoUser(application.owner, 'application config', application.id, 'admin')
+        if (!permissions.list('datasets', freshDataset, pseudoUser).includes('readDescription')) {
+          throw createError(403, `permission manquante sur le jeu de données référencé dans l'application ${freshDataset.id}`)
+        }
 
-      for (const key of refreshKeys) {
-        if (key === 'userPermissions') dataset.userPermissions = permissions.list('datasets', freshDataset, user)
-        if (key in freshDataset) dataset[key] = freshDataset[key]
+        datasetUtils.clean(req, freshDataset)
+        for (const key of refreshKeys) {
+          if (key === 'userPermissions') dataset.userPermissions = permissions.list('datasets', freshDataset, user)
+          if (key in freshDataset) dataset[key] = freshDataset[key]
+        }
       }
     }
   }
