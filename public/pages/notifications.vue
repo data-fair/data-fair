@@ -118,7 +118,7 @@ export default {
           keys.push(`data-fair:dataset-published-topic:${p.type}:${p.id}:${topic.id}`)
           titles.push(this.$t('datasetPublishedTopic', { title: p.title || p.url || p.id, topic: topic.title }))
         }
-        let subscribeUrl = `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keys.join(','))}&title=${encodeURIComponent(titles.join(','))}&register=false&header=no`
+        let subscribeUrl = `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keys.join(','))}&title=${encodeURIComponent(titles.join(','))}&register=false&header=no&sender=${encodeURIComponent(this.siteSender(p))}`
         if (p.datasetUrlTemplate) subscribeUrl += `&url-template=${encodeURIComponent(p.datasetUrlTemplate)}`
         return {
           ...p,
@@ -132,7 +132,7 @@ export default {
       const key = `data-fair:dataset-publication-requested:${this.selectedSite.type}:${this.selectedSite.id}`
       const title = this.$t('datasetPublicationRequested', { title: this.selectedSite.title || this.selectedSite.url || this.selectedSite.id })
       const urlTemplate = this.env.publicUrl + '/dataset/{id}'
-      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no`
+      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no&sender=${encodeURIComponent(this.siteSender(this.selectedSite))}`
     },
     requestedApplicationPublicationSiteUrl () {
       if (!this.selectedSite) return null
@@ -140,18 +140,26 @@ export default {
       const key = `data-fair:application-publication-requested:${this.selectedSite.type}:${this.selectedSite.id}`
       const title = this.$t('applicationPublicationRequested', { title: this.selectedSite.title || this.selectedSite.url || this.selectedSite.id })
       const urlTemplate = this.env.publicUrl + '/application/{id}'
-      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no`
+      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no&sender=${encodeURIComponent(this.siteSender(this.selectedSite))}`
     }
   },
   async mounted () {
     let publicationSitesUrl = 'api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id
     if (this.activeAccount.department) publicationSitesUrl += ':' + this.activeAccount.department
+    else publicationSitesUrl += ':*'
     publicationSitesUrl += '/publication-sites';
     [this.settingsPublicationSites, this.topics] = await Promise.all([
       this.$axios.$get(publicationSitesUrl),
       this.$axios.$get('api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id + '/topics')
     ])
     this.selectedSite = this.publicationSites[0]
+  },
+  methods: {
+    siteSender (site) {
+      let sender = this.activeAccount.type + ':' + this.activeAccount.id
+      if (site.department) sender += ':' + site.department
+      return sender
+    }
   }
 }
 </script>

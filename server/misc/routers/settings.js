@@ -54,6 +54,7 @@ router.use('/:type/:id', (req, res, next) => {
   }
   req.ownerFilter = { ...req.owner }
   if (!department) req.ownerFilter.department = { $exists: false }
+
   next()
 })
 
@@ -178,7 +179,8 @@ router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async (req, 
   if (req.owner.department) {
     filter.push({ ...req.ownerFilter, department: { $exists: false } })
   } else if (req.department === '*') {
-    filter[0] = { ...req.ownerFilter, department: undefined }
+    filter[0] = { ...req.ownerFilter }
+    delete filter[0].department
   }
   const settingsArray = await db.collection('settings').find({ $or: filter }, { projection: { _id: 0 } }).toArray()
   const publicationSites = []

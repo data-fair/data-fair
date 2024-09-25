@@ -124,7 +124,14 @@ describe('publication sites', () => {
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
     await global.ax.hlalonde3Org.post('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites', portal)
 
-    const publicationSites = (await global.ax.hlalonde3Org.get('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites')).data
+    let publicationSites = (await global.ax.hlalonde3Org.get('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites')).data
+    assert.equal(publicationSites.length, 2)
+    assert.equal(publicationSites[0].id, 'portalorg')
+    assert.equal(publicationSites[0].department, undefined)
+    assert.equal(publicationSites[1].id, 'portal1')
+    assert.equal(publicationSites[1].department, 'dep1')
+
+    publicationSites = (await global.ax.hlalonde3Org.get('/api/v1/settings/organization/KWqAGZ4mG:*/publication-sites')).data
     assert.equal(publicationSites.length, 2)
     assert.equal(publicationSites[0].id, 'portalorg')
     assert.equal(publicationSites[0].department, undefined)
