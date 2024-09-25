@@ -157,7 +157,11 @@ export default {
   methods: {
     siteSender (site) {
       let sender = this.activeAccount.type + ':' + this.activeAccount.id
-      if (site.department) sender += ':' + site.department
+      if (this.activeAccount.department) sender += ':' + this.activeAccount.department
+
+      // else if (site.department) sender += ':' + site.department
+      // specifying the department is not necessary to subscribe and not specifying it is more resilient to
+
       return sender
     }
   }

@@ -90,11 +90,14 @@ exports.applyPatch = async (db, previousResource, resource, user, resourceType) 
 }
 
 // this callback function is called when the resource becomes public
-exports.onPublic = (db, patchedResource, resourceType) => {
+exports.onPublic = async (db, patchedResource, resourceType) => {
   for (const publicationSite of patchedResource.publicationSites || []) {
+    const publicationSiteInfo = await getPublicationSiteInfo(db, patchedResource.owner, publicationSite)
+    if (!publicationSiteInfo) throw createError(404, 'unknown publication site')
+    const sender = { type: patchedResource.owner.type, id: patchedResource.owner.id, department: publicationSiteInfo.department }
     webhooks.trigger(db, resourceType, patchedResource, { type: `published:${publicationSite}` })
     for (const topic of patchedResource.topics || []) {
-      webhooks.trigger(db, resourceType, patchedResource, { type: `published-topic:${publicationSite}:${topic.id}` })
+      webhooks.trigger(db, resourceType, patchedResource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender)
     }
   }
 }
