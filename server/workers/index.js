@@ -394,7 +394,7 @@ async function iter (app, resource, type) {
       await app.get('db').collection(type + 's').updateOne({ id: resource.id }, {
         $set: {
           [resource.draftReason ? 'draft.status' : 'status']: 'error',
-          [resource.draftReason ? 'draft.errorStatus' : 'errorStatus']: 'resource.status'
+          [resource.draftReason ? 'draft.errorStatus' : 'errorStatus']: resource.status
         }
       })
       resource.status = 'error'
