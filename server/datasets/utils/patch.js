@@ -34,8 +34,11 @@ exports.preparePatch = async (app, patch, dataset, user, locale, draftValidation
 
   // Changed a previously failed dataset, retry the previous step
   if (dataset.status === 'error') {
-    if (dataset.errorStatus) patch.status = dataset.errorStatus
-    else if (dataset.isVirtual) patch.status = 'indexed'
+    if (dataset.errorStatus) {
+      patch.status = dataset.errorStatus
+      patch.errorStatus = null
+      patch.errorRetry = null
+    } else if (dataset.isVirtual) patch.status = 'indexed'
     else if (dataset.isRest) patch.status = 'analyzed'
     else if (dataset.remoteFile && !dataset.originalFile) patch.status = 'imported'
     else patch.status = 'stored'

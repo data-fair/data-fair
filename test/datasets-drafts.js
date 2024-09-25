@@ -489,6 +489,10 @@ describe('datasets in draft mode', () => {
       }
       return true
     })
+    dataset = (await ax.get(`/api/v1/datasets/${dataset.id}?draft=true`)).data
+    assert.equal(dataset.status, 'error')
+    assert.equal(dataset.errorStatus, 'stored')
+    assert.ok(!dataset.errorRetry)
 
     // then update the data
     const form3 = new FormData()

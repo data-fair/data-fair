@@ -176,22 +176,33 @@ describe('workers', () => {
 
   it('Manage unexpected failure in children processes', async function () {
     config.worker.spawnTask = true
-    config.worker.errorRetryDelay = 100
+    config.worker.errorRetryDelay = 120
+
+    const form = new FormData()
+    form.append('title', 'trigger test error')
+    form.append('file', fs.readFileSync('./test/resources/datasets/dataset1.csv'), 'dataset.csv')
     const ax = global.ax.dmeadus
-    const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'trigger test error', schema: [{ key: 'test', type: 'string' }] })).data
-    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ test: 'test' }])
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+
     await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
     let journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal[0].type, 'error-retry')
     assert.equal(journal[0].data, 'This is a test error')
+    dataset = (await ax.get('/api/v1/datasets/' + dataset.id)).data
+    assert.equal(dataset.status, 'error')
+    assert.equal(dataset.errorStatus, 'validated')
+    assert.ok(dataset.errorRetry)
 
     await new Promise(resolve => setTimeout(resolve, 100))
-    await global.db.collection('locks').deleteOne({ _id: 'dataset:' + dataset.id })
 
     await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
     journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal[0].type, 'error')
     assert.equal(journal[0].data, 'This is a test error')
+    dataset = (await ax.get('/api/v1/datasets/' + dataset.id)).data
+    assert.equal(dataset.status, 'error')
+    assert.equal(dataset.errorStatus, 'validated')
+    assert.ok(!dataset.errorRetry)
 
     config.worker.spawnTask = false
     config.worker.errorRetryDelay = 0

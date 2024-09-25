@@ -512,6 +512,11 @@ module.exports = {
       enum: ['remote', 'uploaded', 'loaded', 'analyzed', 'schematized', 'indexed', 'extended', 'finalized', 'error'],
       description: 'The processing step the dataset was in when it encountered an error.'
     },
+    errorRetry: {
+      type: 'string',
+      format: 'date-time',
+      description: 'If defined the task that triggered an error will be retried after a delay.'
+    },
     primaryKey: {
       type: 'array',
       description: 'List of properties of the schema used as unique primary key for each line',

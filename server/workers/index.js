@@ -145,6 +145,7 @@ exports.stop = async () => {
 // Filters to select eligible datasets or applications for processing
 const getTypesFilters = () => {
   const moment = require('moment')
+  const date = new Date().toISOString()
   return {
     application: { 'publications.status': { $in: ['waiting', 'deleted'] } },
     catalog: {
@@ -166,13 +167,16 @@ const getTypesFilters = () => {
           { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } },
           { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $exists: false } },
           // fetch rest datasets with an automatic export to do
-          { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: new Date().toISOString() } },
+          { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: date } },
           // file datasets with remote url that need refreshing
-          { status: 'finalized', draft: { $exists: false }, 'remoteFile.autoUpdate.active': true, 'remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() } },
+          { status: 'finalized', draft: { $exists: false }, 'remoteFile.autoUpdate.active': true, 'remoteFile.autoUpdate.nextUpdate': { $lt: date } },
           // renew read api key
-          { 'readApiKey.active': true, 'readApiKey.renewAt': { $lt: new Date().toISOString() } },
+          { 'readApiKey.active': true, 'readApiKey.renewAt': { $lt: date } },
+          // manage error retry
+          { status: 'error', errorStatus: { $exists: true }, errorRetry: { $exists: true, $lt: date } },
+          { 'draft.status': 'error', 'draft.errorStatus': { $exists: true }, 'draft.errorRetry': { $exists: true, $lt: date } },
           // fetch datasets that are finalized, but need to update an extension
-          { status: 'finalized', isRest: true, 'extensions.nextUpdate': { $lt: new Date().toISOString() } },
+          { status: 'finalized', isRest: true, 'extensions.nextUpdate': { $lt: date } },
           { status: 'finalized', isRest: true, 'extensions.needsUpdate': true }
         ]
       }, {
@@ -192,7 +196,6 @@ async function iter (app, resource, type) {
   let lastStderr = ''
   let endTask
   let hookResolution, hookRejection
-  let lockReleaseDelay = 0
   let progress
   try {
     // if there is something to be done in the draft mode of the dataset, it is prioritary
@@ -287,6 +290,18 @@ async function iter (app, resource, type) {
           }
         }
         await db.collection('datasets').updateOne({ id: resource.id }, { $set: { extensions } })
+      } else if (resource.status === 'error' && resource.errorStatus && resource.errorRetry && resource.errorRetry < now) {
+        const propertyPrefix = resource.draftReason ? 'draft.' : ''
+        const patch = {
+          $set: {
+            [propertyPrefix + 'status']: resource.errorStatus
+          },
+          $unset: {
+            [propertyPrefix + 'errorStatus']: 1,
+            [propertyPrefix + 'errorRetry']: 1
+          }
+        }
+        await db.collection('datasets').updateOne({ id: resource.id }, patch)
       }
     }
 
@@ -382,26 +397,27 @@ async function iter (app, resource, type) {
 
     await progress?.end(true)
 
-    if (retry) {
-      debug('retry task after lock release delay', config.worker.errorRetryDelay)
-      await journals.log(app, resource, { type: 'error-retry', data: errorMessage }, type)
-      // do not change the resource so that the task can be attempted again
-      // we use the lock system to postpone the retry
-      lockReleaseDelay = config.worker.errorRetryDelay
-    } else {
-      debug('do NOT retry the task, mark the resource status as error')
-      await journals.log(app, resource, { type: 'error', data: errorMessage }, type)
-      await app.get('db').collection(type + 's').updateOne({ id: resource.id }, {
-        $set: {
-          [resource.draftReason ? 'draft.status' : 'status']: 'error',
-          [resource.draftReason ? 'draft.errorStatus' : 'errorStatus']: resource.status
-        }
-      })
-      resource.status = 'error'
+    const propertyPrefix = resource.draftReason ? 'draft.' : ''
+    const patch = {
+      $set: {
+        [propertyPrefix + 'status']: 'error',
+        [propertyPrefix + 'errorStatus']: resource.status
+      }
     }
+    if (retry) {
+      await journals.log(app, resource, { type: 'error-retry', data: errorMessage }, type)
+      patch.$set[propertyPrefix + 'errorRetry'] = new Date((new Date()).getTime() + config.worker.errorRetryDelay).toISOString()
+    } else {
+      await journals.log(app, resource, { type: 'error', data: errorMessage }, type)
+      patch.$unset = { [propertyPrefix + 'errorRetry']: 1 }
+    }
+
+    await app.get('db').collection(type + 's').updateOne({ id: resource.id }, patch)
+    resource.status = 'error'
+    resource.errorStatus = resource.status
     hookRejection = { resource, message: errorMessage }
   } finally {
-    await locks.release(db, `${type}:${resource.id}`, lockReleaseDelay)
+    await locks.release(db, `${type}:${resource.id}`)
     if (hookRejection) {
       if (hooks[taskKey]) hooks[taskKey].reject(hookRejection)
       if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject(hookRejection)
@@ -419,7 +435,6 @@ async function acquireNext (db, type, filter) {
   const cursor = db.collection(type + 's').aggregate([{ $match: filter }, { $project: { id: 1 } }, { $sample: { size: 100 } }])
   while (await cursor.hasNext()) {
     const resource = await cursor.next()
-    // console.log('resource', resource)
     const ack = await locks.acquire(db, `${type}:${resource.id}`, 'worker')
     if (!ack) continue
     // check that there was no race condition and that the resource is still in the state required to work on it

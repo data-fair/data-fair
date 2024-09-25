@@ -422,6 +422,11 @@ exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappin
     }
   }
 
+  if (patch.status && patch.status !== 'error') {
+    patch.errorStatus = null
+    patch.errorRetry = null
+  }
+
   Object.assign(dataset, patch)
 
   // if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset)

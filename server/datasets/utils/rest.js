@@ -607,6 +607,9 @@ class TransactionStream extends Writable {
     // prevent working twice on a line in the same bulk, this way sequentiality doesn't matter and we can use mongodb unordered bulk
     if (chunk._id && this.transactions.find(c => c._id === chunk._id)) {
       await this.applyTransactions()
+      // weirdly the separation of transactions is not always sufficient to ensure that the operations
+      // are performed in the same order (some test regularly breaks)
+      await new Promise(resolve => setTimeout(resolve, 100))
     }
 
     this.transactions.push(chunk)
