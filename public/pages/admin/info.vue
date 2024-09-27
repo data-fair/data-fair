@@ -32,7 +32,7 @@
           <p v-else>
             <img
               alt="Dernière version disponible"
-              :src="`https://img.shields.io/badge/${encodeURIComponent($t('installed') + '-' + service.version + '-green')}`"
+              :src="`https://img.shields.io/badge/${encodeURIComponent($t('installed') + '-' + service.version.replace(/-/g, '--') + '-green')}`"
               :href="`https://github.com/${service.name}/releases`"
             >
             <a
