@@ -41,7 +41,7 @@
             >
               <img
                 alt="Dernière version disponible"
-                :src="`https://img.shields.io/github/v/release/${service.name}?label=${encodeURIComponent($t('available'))}`"
+                :src="`https://img.shields.io/github/v/tag/${service.name}?sort=semver&label=${encodeURIComponent($t('available'))}`"
               >
             </a>
           </p>
