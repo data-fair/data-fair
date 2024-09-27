@@ -1,9 +1,9 @@
 const express = require('express')
+const status = require('./status')
 const asyncWrap = require('../utils/async-handler')
 const findUtils = require('../utils/find')
 const baseAppsUtils = require('../../base-applications/utils')
 const cacheHeaders = require('../utils/cache-headers')
-const pJson = require('../../../package.json')
 
 const router = module.exports = express.Router()
 
@@ -16,9 +16,15 @@ router.use(asyncWrap(async (req, res, next) => {
 
 router.use(cacheHeaders.noCache)
 
-router.get('/info', asyncWrap(async (req, res, next) => {
-  res.send({ version: pJson.version })
-}))
+let info = { version: process.env.NODE_ENV }
+try { info = require('../../../BUILD.json') } catch (err) {}
+router.get('/info', (req, res) => {
+  res.json(info)
+})
+
+router.get('/status', (req, res, next) => {
+  status.status(req, res, next)
+})
 
 router.get('/datasets-errors', asyncWrap(async (req, res, next) => {
   const datasets = req.app.get('db').collection('datasets')
