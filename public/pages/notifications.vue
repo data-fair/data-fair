@@ -118,8 +118,10 @@ export default {
           keys.push(`data-fair:dataset-published-topic:${p.type}:${p.id}:${topic.id}`)
           titles.push(this.$t('datasetPublishedTopic', { title: p.title || p.url || p.id, topic: topic.title }))
         }
-        let subscribeUrl = `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keys.join(','))}&title=${encodeURIComponent(titles.join(','))}&register=false&header=no&sender=${encodeURIComponent(this.siteSender(p))}`
-        if (p.datasetUrlTemplate) subscribeUrl += `&url-template=${encodeURIComponent(p.datasetUrlTemplate)}`
+        // we used to direct to the publication site, but it is better that a notif coming from the back-office directs to the back-office
+        // and this prevents problem when subscribing before the publication of the site on a domain
+        const urlTemplate = this.env.publicUrl + '/dataset/{id}'
+        const subscribeUrl = `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(keys.join(','))}&title=${encodeURIComponent(titles.join(','))}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no&sender=${encodeURIComponent(this.siteSender(p))}`
         return {
           ...p,
           subscribeUrl
