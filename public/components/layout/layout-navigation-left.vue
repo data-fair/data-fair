@@ -214,14 +214,6 @@
           <v-list-item-action><v-icon>mdi-shield-star</v-icon></v-list-item-action>
           <v-list-item-title v-t="'admin'" />
         </template>
-        <v-list-item
-          :nuxt="true"
-          :to="`/remote-services`"
-          :class="routePrefix === 'remote' ? 'v-list-item--active' : ''"
-        >
-          <v-list-item-action><v-icon>mdi-cloud</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'services'" />
-        </v-list-item>
 
         <v-list-item
           :nuxt="true"
@@ -229,6 +221,15 @@
         >
           <v-list-item-action><v-icon>mdi-information</v-icon></v-list-item-action>
           <v-list-item-title v-t="'serviceInfo'" />
+        </v-list-item>
+
+        <v-list-item
+          :nuxt="true"
+          :to="`/remote-services`"
+          :class="routePrefix === 'remote' ? 'v-list-item--active' : ''"
+        >
+          <v-list-item-action><v-icon>mdi-cloud</v-icon></v-list-item-action>
+          <v-list-item-title v-t="'services'" />
         </v-list-item>
 
         <v-list-item
