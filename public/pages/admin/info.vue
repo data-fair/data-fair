@@ -78,7 +78,7 @@ export default {
     return { info: null, status: null, servicesInfos: null }
   },
   async mounted () {
-    this.status = await this.$axios.$get('api/v1/status')
+    this.status = await this.$axios.$get('api/v1/admin/status')
     for (const service of services) {
       try {
         Object.assign(service, await this.$axios.$get('api/v1/admin/info'))

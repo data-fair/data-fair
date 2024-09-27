@@ -15,8 +15,8 @@ describe('root', () => {
   })
 
   it('Get service info', async () => {
-    const ax = global.ax.dmeadus
-    const res = await ax.get('/api/v1/info')
+    const ax = global.ax.superadmin
+    const res = await ax.get('/api/v1/admin/info')
     assert.equal(res.status, 200)
     assert.equal(res.data.version, 'test')
   })
