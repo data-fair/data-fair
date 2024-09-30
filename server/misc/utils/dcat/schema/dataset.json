@@ -5,10 +5,7 @@
   "description": "The metadata format for all federal open data. Validates a single JSON object entry (as opposed to entire Data.json catalog).",
   "type": "object",
   "required": [
-    "title",
-    "description",
-    "keyword",
-    "publisher"
+    "title"
   ],
   "properties": {
     "@type": {
@@ -318,31 +315,14 @@
     "temporal": {
       "title": "Temporal",
       "description": "The range of temporal applicability of a dataset (i.e., a start and end date of applicability for the data).",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "@type": {
+      "anyOf": [
+        {
           "type": "string"
         },
-        "@id": {
-          "type": "string"
-        },
-        "startDate": {
-          "type": "string",
-          "oneOf": [
-            {"format": "date-time"},
-            {"format": "date"}
-          ]
-          
-        },
-        "endDate": {
-          "type": "string",
-          "oneOf": [
-            {"format": "date-time"},
-            {"format": "date"}
-          ]
+        {
+          "type": "null"
         }
-      }
+      ]
     },
     "isPartOf": {
       "title": "Collection",

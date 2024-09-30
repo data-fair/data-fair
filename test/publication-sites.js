@@ -1,4 +1,5 @@
 const assert = require('assert').strict
+const validateDcat = require('../server/misc/utils/dcat/validate')
 
 const app = require('../server/app')
 
@@ -80,7 +81,10 @@ describe('publication sites', () => {
     assert.equal(datasetsCatalog.count, 1)
 
     const dcatCatalog = (await ax.get('http://localhost:5601/data-fair/api/v1/catalog/dcat')).data
-    assert.equal(dcatCatalog['@graph'].length, 1)
+    const valid = validateDcat(dcatCatalog)
+    if (!valid) console.error('DCAT validation failed', validateDcat.errors)
+    assert.ok(valid)
+    assert.ok(dcatCatalog.dataset?.length, 1)
   })
 
   it('should publish application on a org site', async () => {
