@@ -1,13 +1,13 @@
 // this type of catalog can be tested using this URL as an example:
 // https://geocatalogue.lannion-tregor.com/geonetwork/
 
+const path = require('path')
 const createError = require('http-errors')
 const memoize = require('memoizee')
 const mime = require('mime')
 const slug = require('slugify')
-const axios = require('../../misc/utils/axios')
-const normalize = require('../../misc/utils/dcat/normalize')
-const validate = require('../../misc/utils/dcat/normalize')
+const Piscina = require('piscina')
+const validate = require('../../misc/utils/dcat/validate')
 
 const debug = require('debug')('catalogs:dcat')
 
@@ -19,10 +19,13 @@ exports.optionalCapabilities = [
   'autoUpdate'
 ]
 
+const fetchDCATPiscina = new Piscina({
+  filename: path.resolve(__dirname, '../threads/fetch-dcat.js'),
+  maxThreads: 1
+})
+
 const memoizedGetDCAT = memoize(async (catalogUrl) => {
-  const raw = (await axios.get(catalogUrl)).data
-  const url = new URL(catalogUrl)
-  const normalized = normalize(raw, url.origin + url.pathname)
+  const normalized = await fetchDCATPiscina.run(catalogUrl)
   // we don't make validation blocking as it might be too restrictive
   // but we log it to provide potentially useful indications
   if (!validate(normalized)) {
