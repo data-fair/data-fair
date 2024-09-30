@@ -84,7 +84,7 @@
                 </v-list-item-action>
               </v-list-item>
               <v-list-item
-                v-for="resource of dataset.resources"
+                v-for="resource of dataset.resources.filter(r => r.harvestable)"
                 :key="dataset.id + '-' + resource.id"
                 style="min-height:40px"
               >
