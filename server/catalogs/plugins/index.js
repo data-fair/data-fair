@@ -32,6 +32,7 @@ exports.init = async (catalogUrl) => {
       }
     } catch (err) {
       // Nothing.. an error simply means that this connector is not the right one
+      debug('wrong catalog type', connector.key, err)
     }
   }
 }

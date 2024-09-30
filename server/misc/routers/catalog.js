@@ -128,7 +128,7 @@ router.get('/dcat', asyncWrap(async (req, res) => {
         datasetDCAT.temporal = dataset.temporal.start
       }
     }
-    if (dataset.frequency) datasetDCAT['dct:accrualPeriodicity'] = dataset.frequency
+    if (dataset.frequency) datasetDCAT['dct:accrualPeriodicity'] = 'http://purl.org/cld/freq/' + dataset.frequency
 
     const distributions = []
     if (dataset.file) {

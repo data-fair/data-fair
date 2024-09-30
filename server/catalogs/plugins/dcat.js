@@ -4,11 +4,12 @@
 const createError = require('http-errors')
 const memoize = require('memoizee')
 const mime = require('mime')
+const slug = require('slugify')
 const axios = require('../../misc/utils/axios')
 const normalize = require('../../misc/utils/dcat/normalize')
 const validate = require('../../misc/utils/dcat/normalize')
 
-const debug = require('debug')('catalogs:geonetwork')
+const debug = require('debug')('catalogs:dcat')
 
 exports.title = 'DCAT - JSON-LD'
 exports.description = ''
@@ -20,7 +21,8 @@ exports.optionalCapabilities = [
 
 const memoizedGetDCAT = memoize(async (catalogUrl) => {
   const raw = (await axios.get(catalogUrl)).data
-  const normalized = normalize(raw)
+  const url = new URL(catalogUrl)
+  const normalized = normalize(raw, url.origin + url.pathname)
   // we don't make validation blocking as it might be too restrictive
   // but we log it to provide potentially useful indications
   if (!validate(normalized)) {
@@ -73,7 +75,11 @@ exports.deleteApplication = async (catalog, application, publication) => {
 
 exports.listDatasets = async (catalog, p) => {
   const dcat = await memoizedGetDCAT(catalog.url)
-  const datasets = dcat.dataset?.map(d => prepareDatasetFromCatalog(catalog, d)) ?? []
+  let indexDataset = 0
+  const datasets = dcat.dataset?.map(d => {
+    indexDataset += 1
+    return prepareDatasetFromCatalog(catalog, d, null, indexDataset)
+  }) ?? []
   return { count: datasets.length, results: datasets }
 }
 
@@ -81,9 +87,9 @@ exports.getDataset = async (catalog, datasetId, settings) => {
   return (await exports.listDatasets(catalog)).results.find(d => d.id === datasetId)
 }
 
-function prepareDatasetFromCatalog (catalog, item, settings) {
+function prepareDatasetFromCatalog (catalog, item, settings, indexDataset) {
   const dataset = {
-    id: item.identifier,
+    id: slug(item.identifier ?? '' + indexDataset, { lower: true, strict: true }),
     title: item.title,
     description: item.description,
     creationDate: item.issued,
@@ -98,11 +104,11 @@ function prepareDatasetFromCatalog (catalog, item, settings) {
   }
   if (item.accrualPeriodicity) dataset.frequency = item.accrualPeriodicity.replace('http://purl.org/cld/freq/', '')
   if (item.distribution) {
-    let i = 0
+    let indexDistrib = 0
     dataset.resources = item.distribution.map(distrib => {
-      i++
+      indexDistrib++
       const resource = {
-        id: distrib.identifier ?? i,
+        id: slug(distrib.identifier ?? '' + indexDistrib, { lower: true, strict: true }),
         title: distrib.title,
         format: distrib.format,
         mime: distrib.mediaType,
