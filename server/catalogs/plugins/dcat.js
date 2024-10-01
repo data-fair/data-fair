@@ -21,6 +21,8 @@ exports.optionalCapabilities = [
 
 const fetchDCATPiscina = new Piscina({
   filename: path.resolve(__dirname, '../threads/fetch-dcat.js'),
+  minThreads: 0,
+  idleTimeout: 60 * 60 * 1000,
   maxThreads: 1
 })
 

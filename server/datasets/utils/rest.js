@@ -34,6 +34,8 @@ const Piscina = require('piscina')
 
 const sheet2csvPiscina = exports.sheet2csvPiscina = new Piscina({
   filename: path.resolve(__dirname, '../threads/sheet2csv.js'),
+  minThreads: 0,
+  idleTimeout: 60 * 60 * 1000,
   maxThreads: 1
 })
 
