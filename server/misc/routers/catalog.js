@@ -107,7 +107,7 @@ router.get('/dcat', asyncWrap(async (req, res) => {
   const datasetUrlTemplate = req.publicationSite.datasetUrlTemplate || req.publicationSite.url + '/datasets/{id}'
 
   for (const dataset of datasets) {
-    const datasetUrl = datasetUrlTemplate.replace('{id}', dataset.slug || dataset.id)
+    const datasetUrl = datasetUrlTemplate.replace('{slug}', dataset.slug).replace('{id}', dataset.id)
     /** @type {any} */
     const datasetDCAT = {
       '@id': datasetUrl,
