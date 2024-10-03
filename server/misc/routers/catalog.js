@@ -6,6 +6,7 @@ const findUtils = require('../utils/find')
 const datasetUtils = require('../../datasets/utils')
 const permissions = require('../../misc/utils/permissions')
 const catalogApiDocs = require('../../../contract/site-catalog-api-docs')
+const dcatContext = require('../utils/dcat/context')
 
 const router = module.exports = express.Router()
 
@@ -87,6 +88,7 @@ router.get('/dcat', asyncWrap(async (req, res) => {
     .project({
       _id: 0,
       id: 1,
+      slug: 1,
       title: 1,
       description: 1,
       keywords: 1,
@@ -101,77 +103,72 @@ router.get('/dcat', asyncWrap(async (req, res) => {
     })
     .toArray()
 
-  // the context contains aliases
-  // the one provided by udata is a good example: https://www.data.gouv.fr/api/1/site/context.jsonld
-  const context = {
-    dcat: 'http://www.w3.org/ns/dcat#',
-    dct: 'http://purl.org/dc/terms/'
-  }
-
-  const graph = []
+  const dcatDatasets = []
 
   const datasetUrlTemplate = req.publicationSite.datasetUrlTemplate || req.publicationSite.url + '/datasets/{id}'
 
   for (const dataset of datasets) {
-    const datasetUrl = datasetUrlTemplate.replace('{id}', dataset.slug || dataset.id)
+    const datasetUrl = datasetUrlTemplate.replace('{slug}', dataset.slug).replace('{id}', dataset.id)
+    /** @type {any} */
     const datasetDCAT = {
       '@id': datasetUrl,
-      '@type': 'dcat:Dataset',
-      'dct:identifier': dataset.slug || dataset.id,
-      'dcat:landingPage': datasetUrlTemplate.replace('{id}', dataset.slug || dataset.id),
-      'dct:title': dataset.title,
-      'dct:description': dataset.description,
-      'dcat:keyword': dataset.keywords || [],
-      'dct:issued': dataset.createdAt,
-      'dct:modified': datasets.dataUpdatedAt || datasets.updatedAt
+      '@type': 'Dataset',
+      identifier: dataset.slug || dataset.id,
+      landingPage: datasetUrl,
+      title: dataset.title,
+      description: dataset.description,
+      issued: dataset.createdAt,
+      modified: datasets.dataUpdatedAt || datasets.updatedAt
     }
-    if (dataset.license?.href) datasetDCAT['dct:license'] = dataset.license.href
+    if (dataset.keywords?.length) datasetDCAT.keyword = dataset.keywords
+    if (dataset.license?.href) datasetDCAT.license = dataset.license.href
     if (dataset.temporal && dataset.temporal.start) {
       if (dataset.temporal.end) {
-        datasetDCAT['dct:temporal'] = `${dataset.temporal.start}/${dataset.temporal.start}`
+        datasetDCAT.temporal = `${dataset.temporal.start}/${dataset.temporal.start}`
       } else {
-        datasetDCAT['dct:temporal'] = dataset.temporal.start
+        datasetDCAT.temporal = dataset.temporal.start
       }
     }
-    if (dataset.frequency) datasetDCAT['dct:accrualPeriodicity'] = dataset.frequency
+    if (dataset.frequency) datasetDCAT['dct:accrualPeriodicity'] = 'http://purl.org/cld/freq/' + dataset.frequency
 
     const distributions = []
     if (dataset.file) {
       const originalRessourceUrl = `${req.publicBaseUrl}/api/v1/datasets/${dataset.slug || dataset.id}/raw`
-      distributions.push({ '@id': originalRessourceUrl })
-      graph.push({
+      distributions.push({
         '@id': originalRessourceUrl,
-        '@type': 'dcat:Distribution',
-        'dct:identifier': `${dataset.slug || dataset.id}/raw`,
-        'dct:title': `Fichier ${dataset.originalFile.name.split('.').pop()}`,
-        'dct:description': `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
-        'dcat:downloadURL': originalRessourceUrl,
-        'dcat:mediaType': dataset.originalFile.mimetype,
-        'dcat:bytesSize': dataset.originalFile.size
+        '@type': 'Distribution',
+        identifier: `${dataset.slug || dataset.id}/raw`,
+        title: `Fichier ${dataset.originalFile.name.split('.').pop()}`,
+        description: `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
+        downloadURL: originalRessourceUrl,
+        mediaType: dataset.originalFile.mimetype,
+        bytesSize: dataset.originalFile.size
       })
       if (dataset.file.mimetype !== dataset.originalFile.mimetype) {
         const ressourceUrl = `${req.publicBaseUrl}/api/v1/datasets/${dataset.slug || dataset.id}/convert`
-        distributions.push({ '@id': ressourceUrl })
-        graph.push({
+        distributions.push({
           '@id': ressourceUrl,
-          '@type': 'dcat:Distribution',
-          'dct:identifier': `${dataset.slug || dataset.id}/convert`,
-          'dct:title': `Fichier ${dataset.file.name.split('.').pop()}`,
-          'dct:description': `Téléchargez le fichier complet au format ${dataset.file.name.split('.').pop()}.`,
-          'dcat:downloadURL': ressourceUrl,
-          'dcat:mediaType': dataset.file.mimetype,
-          'dcat:bytesSize': dataset.file.size
+          '@type': 'Distribution',
+          identifier: `${dataset.slug || dataset.id}/convert`,
+          title: `Fichier ${dataset.file.name.split('.').pop()}`,
+          description: `Téléchargez le fichier complet au format ${dataset.file.name.split('.').pop()}.`,
+          downloadURL: ressourceUrl,
+          mediaType: dataset.file.mimetype,
+          bytesSize: dataset.file.size
         })
       }
     }
 
-    if (distributions.length) datasetDCAT['dcat:distribution'] = distributions
-    graph.push(datasetDCAT)
+    if (distributions.length) datasetDCAT.distribution = distributions
+    dcatDatasets.push(datasetDCAT)
   }
 
   const result = {
-    '@context': context,
-    '@graph': graph
+    '@context': dcatContext,
+    '@type': 'Catalog',
+    conformsTo: 'https://project-open-data.cio.gov/v1.1/schema',
+    describedBy: 'https://project-open-data.cio.gov/v1.1/schema/catalog.json',
+    dataset: dcatDatasets
   }
   res.type('application/ld+json')
   res.json(result)

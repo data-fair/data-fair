@@ -70,7 +70,7 @@ exports.publishApplication = async (catalog, application, publication, datasets)
       }
     }
   }
-  const appUrl = catalog.applicationUrlTemplate && catalog.applicationUrlTemplate.replace('{id}', application.id)
+  const appUrl = catalog.applicationUrlTemplate && catalog.applicationUrlTemplate.replace('{id}', application.id).replace('{slug}', application.slug)
 
   const udataReuse = {
     title: application.title,
@@ -162,7 +162,7 @@ function prepareDatasetFromCatalog (catalog, d) {
 
 function getDatasetUrl (catalog, dataset) {
   if (catalog.datasetUrlTemplate) {
-    return catalog.datasetUrlTemplate.replace('{id}', dataset.id)
+    return catalog.datasetUrlTemplate.replace('{id}', dataset.id).replace('{slug}', dataset.slug)
   }
   return `${config.publicUrl}/dataset/${dataset.id}`
 }

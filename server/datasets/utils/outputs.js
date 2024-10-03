@@ -6,6 +6,8 @@ const Piscina = require('piscina')
 
 const results2sheetPiscina = exports.results2sheetPiscina = new Piscina({
   filename: path.resolve(__dirname, '../../datasets/threads/results2sheet.js'),
+  minThreads: 0,
+  idleTimeout: 60 * 60 * 1000,
   maxThreads: 1
 })
 
