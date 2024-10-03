@@ -119,6 +119,7 @@ exports.harvestDataset = async (app, catalog, datasetId) => {
   settings.licenses = [].concat(config.licenses, settings.licenses || [])
   const dataset = await connector.getDataset(catalog, datasetId, settings)
   if (!dataset) throw createError(404, 'Dataset not found')
+  if (!dataset.page) throw createError(404, 'Dataset is missing a page link to be harvested')
 
   const date = moment().toISOString()
 
@@ -163,6 +164,7 @@ exports.harvestDatasetResource = async (app, catalog, datasetId, resourceId, for
   if (!dataset) throw createError(404, 'Dataset not found')
   const resource = (dataset.resources || []).find(r => r.id === resourceId)
   if (!resource) throw createError(404, 'Resource not found')
+  if (!resource.url) throw createError(404, 'Resource is missing a url to be harvested')
   if (!uploadUtils.allowedTypes.has(resource.mime)) throw createError(404, 'Resource format not supported')
 
   const date = moment().toISOString()

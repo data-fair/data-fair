@@ -93,13 +93,23 @@ exports.getDataset = async (catalog, datasetId, settings) => {
 }
 
 function prepareDatasetFromCatalog (catalog, item, settings, indexDataset) {
+  // page is an important property for us, it cannot be absent
+  let page = item.landingPage
+  if (!page) {
+    if (item.identifier && (item.identifier.startsWith('http://') || item.identifier.startsWith('https://'))) {
+      page = item.identifier
+    } else {
+      page = catalog.url + '/dataset/' + item.identifier
+    }
+  }
+
   const dataset = {
     id: slug(item.identifier ?? '' + indexDataset, { lower: true, strict: true }),
     title: item.title,
     description: item.description,
     creationDate: item.issued,
     keywords: item.keyword,
-    page: item.landingPage
+    page
   }
   if (item.license) {
     if (settings && settings.licenses) {
