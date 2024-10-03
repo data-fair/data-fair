@@ -914,7 +914,20 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
 
   let result
   try {
-    result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, req.query, vectorTileRequested || req.query.format === 'geojson', req.publicBaseUrl, explain)
+    result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, { ...req.query }, vectorTileRequested || req.query.format === 'geojson', req.publicBaseUrl, explain)
+    if (result.next) {
+      const nextLinkURL = new URL(`${req.publicBaseUrl}/api/v1/datasets/${req.dataset.id}/values_agg`)
+      for (const key of Object.keys(req.query)) {
+        nextLinkURL.searchParams.set(key, req.query[key])
+      }
+      for (const key of Object.keys(result.next)) {
+        nextLinkURL.searchParams.set(key, result.next[key])
+      }
+      const link = new LinkHeader()
+      link.set({ rel: 'next', uri: nextLinkURL.href })
+      res.set('Link', link.toString())
+      result.next = nextLinkURL.href
+    }
   } catch (err) {
     await manageESError(req, err)
   }
