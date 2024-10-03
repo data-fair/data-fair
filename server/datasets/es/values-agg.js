@@ -155,13 +155,19 @@ module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, expla
     allow_partial_search_results: allowPartialResults
   })).body
   if (explain) explain.esResponse = esResponse
-  return prepareValuesAggResponse(esResponse, valuesFields, dataset, query, publicBaseUrl)
-}
 
-const prepareValuesAggResponse = (esResponse, fields, dataset, query, publicBaseUrl) => {
   const response = { total: esResponse.hits.total.value }
   if (esResponse.timed_out) response.timed_out = true
   recurseAggResponse(response, esResponse.aggregations, dataset, query, publicBaseUrl)
+
+  if (aggSizes[0] > 0 && response.aggs?.length === aggSizes[0]) {
+    const lastValue = response.aggs[response.aggs.length - 1].value
+    let operator
+    if (sorts[0] === '_key') operator = 'gt'
+    if (sorts[0] === '-_key') operator = 'lt'
+    if (operator) response.next = { [`${valuesFields[0]}_${operator}`]: lastValue }
+  }
+
   return response
 }
 

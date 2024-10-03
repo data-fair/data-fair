@@ -44,6 +44,17 @@ describe('values aggs', () => {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&metric_field=employees&metric=sum&sort=-id`)
     assert.equal(res.data.aggs[0].value, 'koumoul')
 
+    // Pagination
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&metric_field=employees&metric=sum&agg_size=1&sort=-id`)
+    assert.equal(res.data.aggs[0].value, 'koumoul')
+    assert.ok(res.data.next)
+    res = await ax.get(res.data.next)
+    assert.equal(res.data.aggs[0].value, 'bidule')
+    assert.ok(res.data.next)
+    res = await ax.get(res.data.next)
+    assert.equal(res.data.aggs?.length, 0)
+    assert.ok(!res.data.next)
+
     // with inner hits as results array
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&size=10&sort=-count;employees`)
     assert.equal(res.data.aggs[0].results.length, 3)
