@@ -34,7 +34,7 @@ const screenshotRequestOpts = (req, isDefaultThumbnail) => {
     type: 'png',
     width: 1050, // 21/9 resolution
     height: 450,
-    filename: (req.query.filename || req.application.slug || req.application.id) + '.png'
+    filename: req.query.filename ? req.query.filename : ((req.application.slug || req.application.id) + '.png')
   }
   if (req.query.width) qs.width = req.query.width
   if (req.query.height) qs.height = req.query.height
@@ -67,7 +67,7 @@ const printRequestOpts = (req) => {
 
   const qs = {
     target: targetUrl.href,
-    filename: (req.application.id || req.application.slug) + '.pdf'
+    filename: req.query.filename ? req.query.filename : ((req.application.slug || req.application.id) + '.pdf')
   }
   if (req.query.landscape) qs.landscape = req.query.landscape
   const headers = {}
