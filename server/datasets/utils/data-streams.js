@@ -152,14 +152,17 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
         const item = flatten({ ...feature.properties }, { safe: true })
         if (feature.id) item.id = feature.id
         item.geometry = feature.geometry
-
-        const line = { _i: this.i = (this.i || 0) + 1 }
-        for (const prop of schema) {
-          const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
-          const value = fieldsSniffer.format(item[prop['x-originalName'] || prop.key], prop, fileProp)
-          if (value !== null) line[prop.key] = value
+        if (raw) {
+          callback(null, item)
+        } else {
+          const line = { _i: this.i = (this.i || 0) + 1 }
+          for (const prop of schema) {
+            const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
+            const value = fieldsSniffer.format(item[prop['x-originalName'] || prop.key], prop, fileProp)
+            if (value !== null) line[prop.key] = value
+          }
+          callback(null, line)
         }
-        callback(null, line)
       }
     }))
   } else {
@@ -264,11 +267,15 @@ exports.writeExtendedStreams = async (db, dataset, extensions) => {
   return [...transforms, writeStream]
 }
 
-exports.sampleValues = async (dataset) => {
+exports.sampleValues = async (dataset, ignoreKeys, onDecodedData) => {
   let currentLine = 0
   let stopped = false
   const sampleValues = {}
   const streams = await exports.readStreams(null, dataset, true, false, true)
+  if (onDecodedData) {
+    const decodeStream = streams.find(s => s instanceof DecodeStream)
+    decodeStream?.on('data', onDecodedData)
+  }
   await pump(...streams, new Writable({
     objectMode: true,
     write (chunk, encoding, callback) {
@@ -276,14 +283,16 @@ exports.sampleValues = async (dataset) => {
 
       let finished = true
       for (const key of Object.keys(chunk)) {
+        if (ignoreKeys && ignoreKeys.includes(key)) continue
         sampleValues[key] = sampleValues[key] || new Set([])
         // stop if we already have a lot of samples
-        if (sampleValues[key].size > 1000) continue
+        if (sampleValues[key].size >= 1000) continue
         // ignore empty values
-        if (!chunk[key]) continue
+        if (chunk[key] === null || chunk[key] === undefined || chunk[key] === '') continue
         finished = false
+        const value = typeof chunk[key] !== 'string' ? '' + chunk[key] : chunk[key]
         // prevent too costly sniffing by truncating long strings
-        sampleValues[key].add(chunk[key].length > 300 ? chunk[key].slice(300) : chunk[key])
+        sampleValues[key].add(value.length > 300 ? value.slice(300) : value)
       }
       currentLine += 1
 
