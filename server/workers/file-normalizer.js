@@ -176,7 +176,9 @@ exports.process = async function (app, dataset) {
       throw createError(400, '[noretry] Les fichiers de type shapefile ne sont pas supportés sur ce service.')
     }
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
-      throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
+      // this rule is deactivated as ogr2ogr actually seems to take a negligible amount of RAM
+      // for the transformation we use it for
+      // throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
     const ogrOptions = ['-lco', 'RFC7946=YES', '-t_srs', 'EPSG:4326']
     if (dataset.originalFile.mimetype === 'application/gpx+xml') {
