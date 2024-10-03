@@ -88,6 +88,7 @@ router.get('/dcat', asyncWrap(async (req, res) => {
     .project({
       _id: 0,
       id: 1,
+      slug: 1,
       title: 1,
       description: 1,
       keywords: 1,
