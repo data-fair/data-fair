@@ -113,7 +113,7 @@ router.get('/dcat', asyncWrap(async (req, res) => {
       '@id': datasetUrl,
       '@type': 'Dataset',
       identifier: dataset.slug || dataset.id,
-      landingPage: datasetUrlTemplate.replace('{id}', dataset.slug || dataset.id),
+      landingPage: datasetUrl,
       title: dataset.title,
       description: dataset.description,
       issued: dataset.createdAt,
