@@ -35,13 +35,13 @@ describe('datasets based on remote files', () => {
   it('manage fetching a geojson with json mime type', async () => {
     const ax = global.ax.dmeadus
     const nockScope = nock('http://test-remote.com')
-      .get('/data.geojson').reply(200, '{"type":"FeatureCollection","features": []}', { 'content-type': 'application/json' })
+      .get('/data.geojson').reply(200, '{"type":"FeatureCollection","features": [{}]}', { 'content-type': 'application/json' })
     const res = await ax.post('/api/v1/datasets', { remoteFile: { url: 'http://test-remote.com/data.geojson' } })
     let dataset = res.data
     dataset = await workers.hook('finalizer/' + dataset.id)
     assert.equal(dataset.originalFile.name, 'data.geojson')
     assert.equal(dataset.file.name, 'data.geojson')
-    assert.equal(dataset.count, 0)
+    assert.equal(dataset.count, 1)
     nockScope.done()
   })
 

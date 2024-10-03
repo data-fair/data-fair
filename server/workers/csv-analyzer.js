@@ -55,6 +55,7 @@ exports.process = async function (app, dataset) {
   debug('list attachments')
   // Now we can extract infos for each field
   const attachments = await datasetUtils.lsAttachments(dataset)
+  debug('sniff sample values')
   for (const field of Object.keys(sampleValues)) {
     if (!field) continue // do not keep columns with empty string as header
     const escapedKey = fieldsSniffer.escapeKey(field, dataset)
@@ -73,6 +74,7 @@ exports.process = async function (app, dataset) {
       data: `le fichier contient une ou plusieurs colonnes vides qui seront ignorées : ${emptyCols.map(c => c['x-originalName' || c.key]).join(', ')}`
     })
   }
+  debug('apply detected schema')
   dataset.file.schema = dataset.file.schema.filter(p => p.type !== 'empty')
   datasetUtils.mergeFileSchema(dataset)
   datasetUtils.cleanSchema(dataset)
