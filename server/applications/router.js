@@ -403,10 +403,10 @@ router.put('/:applicationId/config', readApplication, permissions.middleware('wr
 router.put('/:applicationId/configuration', readApplication, permissions.middleware('writeConfig', 'write'), writeConfig)
 
 // Configuration draft management
-router.get('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
+router.get('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'read'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
   await refreshConfigDatasetsRefs(req, req.application, true)
   res.status(200).send(req.application.configurationDraft || req.application.configuration || {})
-})
+}))
 router.put('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), asyncWrap(async (req, res, next) => {
   // @ts-ignore
   const application = req.application
