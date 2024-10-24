@@ -3,6 +3,7 @@ const fs = require('fs-extra')
 const path = require('path')
 const createError = require('http-errors')
 const memoize = require('memoizee')
+const equal = require('deep-equal')
 const findUtils = require('../misc/utils/find')
 const permissions = require('../misc/utils/permissions')
 const datasetUtils = require('./utils')
@@ -452,6 +453,16 @@ exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappin
   }
 
   await db.collection('datasets').updateOne({ id: dataset.id }, mongoPatch)
+
+  if (!dataset.draftReason && !patch.status && patch.schema) {
+    // if the schema changed without triggering a worker we might need to actualize virtual datasets schemas too
+    for await (const virtualDataset of db.collection('datasets').find({ 'virtual.children': dataset.id })) {
+      const virtualDatasetSchema = await virtualDatasetsUtils.prepareSchema(db, virtualDataset)
+      if (!equal(virtualDatasetSchema, virtualDataset.schema)) {
+        await exports.applyPatch(app, virtualDataset, { schema: virtualDatasetSchema, updatedAt: patch.updatedAt })
+      }
+    }
+  }
 }
 
 // synchronize the list of application references stored in dataset.extras.applications

@@ -514,6 +514,33 @@ describe('virtual datasets', () => {
     assert.deepEqual(virtualDataset.schema[0]['x-capabilities'], { insensitive: false, values: false })
   })
 
+  it('A virtual dataset has a merge of the labels of its children', async () => {
+    const ax = global.ax.dmeadus
+    const child1 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    child1.schema[0]['x-labels'] = { koumoul: 'Koumoul' }
+    await ax.patch('/api/v1/datasets/' + child1.id, { schema: child1.schema })
+    const child2 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    child2.schema[0]['x-labels'] = { bidule: 'Bidule' }
+    await ax.patch('/api/v1/datasets/' + child2.id, { schema: child2.schema })
+
+    const res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'a virtual dataset',
+      virtual: {
+        children: [child1.id, child2.id]
+      },
+      schema: [{ key: 'id' }]
+    })
+
+    let virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    assert.deepEqual(virtualDataset.schema[0]['x-labels'], { koumoul: 'Koumoul', bidule: 'Bidule' })
+
+    child2.schema[0]['x-labels'] = { bidule: 'BiBidule' }
+    await ax.patch('/api/v1/datasets/' + child2.id, { schema: child2.schema })
+    virtualDataset = (await ax.get(`/api/v1/datasets/${virtualDataset.id}`)).data
+    assert.deepEqual(virtualDataset.schema[0]['x-labels'], { koumoul: 'Koumoul', bidule: 'BiBidule' })
+  })
+
   it('A virtual dataset of a geo parent can serve tiles', async () => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
