@@ -13,6 +13,8 @@ module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, expla
   const props = valuesFields.map(f => dataset.schema.find(p => p.key === f))
   // sorting for each level
   const sorts = query.sort ? query.sort.split(';') : []
+  // management of missing items
+  const missings = query.missing ? query.missing.split(';') : []
   // interval for each level
   const intervals = query.interval ? query.interval.split(';') : []
   // number of agg results for each level
@@ -78,6 +80,10 @@ module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, expla
     if (intervals[i] !== 'value') {
       currentAggLevel.values[aggTypes[i]].interval = intervals[i]
       delete currentAggLevel.values[aggTypes[i]].size
+    }
+
+    if (aggTypes[i] === 'terms' && missings[i]) {
+      currentAggLevel.values[aggTypes[i]].missing = missings[i]
     }
 
     // cardinality is meaningful only on the strict values aggregation

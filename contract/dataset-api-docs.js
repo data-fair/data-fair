@@ -543,7 +543,14 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               type: 'string',
               enum: ['avg', 'sum', 'min', 'max']
             }
-          }, metricFieldParam, aggSizeParam].concat(filterParams).concat(hitsParams(0, 100)),
+          }, metricFieldParam, {
+            in: 'query',
+            name: 'missing',
+            description: 'Nom du groupe des lignes pour lesquelles la colonne de groupement est vide',
+            schema: {
+              type: 'string'
+            }
+          }, aggSizeParam].concat(filterParams).concat(hitsParams(0, 100)),
           // TODO: document sort param and interval
           responses: {
             200: {

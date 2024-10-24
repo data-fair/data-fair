@@ -140,11 +140,11 @@ describe('datasets in draft mode', () => {
     assert.equal(dataset.file.name, 'dataset1.csv')
     assert.equal(dataset.count, 2)
     assert.equal(dataset.draft.file.name, 'dataset2.csv')
-    assert.equal(dataset.draft.count, 5)
+    assert.equal(dataset.draft.count, 6)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
-    assert.equal(res.data.total, 5)
+    assert.equal(res.data.total, 6)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/raw`)
     assert.equal(res.headers['x-operation'], '{"class":"read","id":"downloadOriginalData","track":"readDataFiles"}')
     assert.ok(res.data.startsWith('id,adr,some date,loc'))
@@ -161,7 +161,7 @@ describe('datasets in draft mode', () => {
     assert.ok(dataset.updatedAt > dataset.createdAt)
     assert.equal(dataset.dataUpdatedAt, dataset.updatedAt)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
-    assert.equal(res.data.total, 5)
+    assert.equal(res.data.total, 6)
     assert.equal(res.data.results[0].id, 'koumoul')
 
     // the journal kept traces of all changes (draft and not)
@@ -219,7 +219,7 @@ describe('datasets in draft mode', () => {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
-    assert.equal(res.data.total, 5)
+    assert.equal(res.data.total, 6)
 
     // cancel the draft
     await ax.delete(`/api/v1/datasets/${dataset.id}/draft`)
