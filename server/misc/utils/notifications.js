@@ -10,9 +10,7 @@ exports.send = async (notification, subscribedOnly = false) => {
   if (!notifyUrl) return
   if (process.env.NODE_ENV !== 'test') {
     await axios.post(`${notifyUrl}/api/v1/notifications`, notification, { params: { key: config.secretKeys.notifications, subscribedOnly } })
-      .catch(err => {
-        metrics.internalError('notif-push', err)
-      })
+      .catch(err => { metrics.internalError('notif-push', err) })
   }
 }
 
@@ -25,7 +23,5 @@ exports.subscribe = async (req, subscription) => {
   const notifyUrl = config.privateNotifyUrl || config.notifyUrl
   if (!notifyUrl) return
   await axios.post(`${notifyUrl}/api/v1/subscriptions`, subscription, { headers: { cookie: req.headers.cookie } })
-    .catch(err => {
-      metrics.internalError('notif-push', err)
-    })
+    .catch(err => { metrics.internalError('subscribe-push', err) })
 }

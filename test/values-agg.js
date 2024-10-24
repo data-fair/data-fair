@@ -18,12 +18,18 @@ describe('values aggs', () => {
 
     // Simple value aggregation
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id`)
-    assert.equal(res.data.total, 5) // Number of items
+    assert.equal(res.data.total, 6) // Number of items
     assert.equal(res.data.total_values, 2) // Number of distinct values (cardinality)
     assert.equal(res.data.total_other, 0) // Number of items not covered by agg results
     assert.equal(res.data.aggs.length, 2)
     assert.equal(res.data.aggs[0].total, 3) // default sorting by count
     assert.equal(res.data.aggs[0].results.length, 0)
+
+    // put missing values in a group
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&missing=none`)
+    assert.equal(res.data.aggs.length, 3)
+    assert.equal(res.data.aggs[2].total, 1)
+    assert.equal(res.data.aggs[2].value, 'none')
 
     // Value aggregation + metric
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id&metric_field=employees&metric=sum`)
