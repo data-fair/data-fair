@@ -82,6 +82,8 @@ exports.prepareSchema = async (db, dataset) => {
 
     // Some attributes of a field have to be homogeneous accross all children
     field['x-capabilities'] = {}
+    /** @type Record<string, string> */
+    const xLabels = {}
     for (const f of matchingFields) {
       if (f.type !== field.type) {
         let message = `Le champ "${field.key}" a des types contradictoires (${field.type}, ${f.type}).`
@@ -103,9 +105,15 @@ exports.prepareSchema = async (db, dataset) => {
           if (f['x-capabilities'][key] === false) field['x-capabilities'][key] = false
         }
       }
+      for (const key in f['x-labels'] || {}) {
+        if (!(key in xLabels)) xLabels[key] = f['x-labels'][key]
+      }
     }
     for (const key in field['x-capabilities']) {
       if (capabilitiesDefaultFalse.includes(key) && field['x-capabilities'][key] === false) delete field['x-capabilities'][key]
+    }
+    if (Object.keys(xLabels).length) {
+      field['x-labels'] = xLabels
     }
   }
 
