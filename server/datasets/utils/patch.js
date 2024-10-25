@@ -103,7 +103,7 @@ exports.preparePatch = async (app, patch, dataset, user, locale, draftValidation
 
   if (patch.extensions) extensions.prepareExtensions(locale, patch.extensions, dataset.extensions)
   if (patch.extensions || dataset.extensions) {
-    patch.schema = await extensions.prepareSchema(db, patch.schema || dataset.schema, patch.extensions || dataset.extensions)
+    patch.schema = await extensions.prepareExtensionsSchema(db, patch.schema || dataset.schema, patch.extensions || dataset.extensions)
   }
 
   // manage automatic export of REST datasets into files

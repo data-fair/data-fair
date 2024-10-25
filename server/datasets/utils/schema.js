@@ -165,7 +165,7 @@ exports.extendedSchema = async (db, dataset, fixConcept = true) => {
       title: 'Date de mise à jour',
       description: 'Date de dernière mise à jour de la ligne du jeu de données'
     })
-    if (dataset.rest.storeUpdatedBy) {
+    if (dataset.rest?.storeUpdatedBy) {
       schema.push({
         'x-calculated': true,
         key: '_updatedBy',
