@@ -121,4 +121,78 @@ describe('values aggs', () => {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values/somedate?q=2017-10&q_mode=complete`)
     assert.equal(res.data[0], '2017-10-10T00:00:00.000Z')
   })
+
+  it('Get values buckets based on number values', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest values aggs',
+      schema: [{ key: 'year', type: 'number' }, { key: 'nb', type: 'number' }]
+    })).data
+    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [
+      { year: 2020, nb: 2 },
+      { year: 2020, nb: 4 },
+      { year: 2021, nb: 2 },
+      { nb: 2 },
+      { nb: 3 }
+    ])
+    await workers.hook(`finalizer/${dataset.id}`)
+
+    let res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=year&metric_field=nb&metric=sum`)
+    assert.equal(res.data.aggs.length, 2)
+    assert.equal(res.data.aggs[0].value, 2020)
+    assert.equal(res.data.aggs[0].metric, 6)
+
+    // accept missing parameter
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=year&metric_field=nb&metric=sum&missing=-1`)
+    assert.equal(res.data.aggs.length, 3)
+    assert.equal(res.data.aggs[0].value, 2020)
+    assert.equal(res.data.aggs[0].metric, 6)
+    assert.equal(res.data.aggs[1].value, -1)
+    assert.equal(res.data.aggs[1].metric, 5)
+
+    // reject missing parameter of wrong type
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=year&metric_field=nb&metric=sum&missing=none`), (err) => {
+      assert.ok(err.data.includes('missing should be a number'))
+      assert.equal(err.status, 400)
+      return true
+    })
+  })
+
+  it('Get values buckets based on boolean values', async () => {
+    const ax = global.ax.dmeadus
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest values aggs',
+      schema: [{ key: 'active', type: 'boolean' }, { key: 'nb', type: 'number' }]
+    })).data
+    await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [
+      { active: true, nb: 2 },
+      { active: true, nb: 4 },
+      { active: false, nb: 2 },
+      { nb: 2 },
+      { nb: 3 }
+    ])
+    await workers.hook(`finalizer/${dataset.id}`)
+
+    let res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=active&metric_field=nb&metric=sum`)
+    assert.equal(res.data.aggs.length, 2)
+    assert.equal(res.data.aggs[0].value, 'true')
+    assert.equal(res.data.aggs[0].metric, 6)
+
+    // accept missing parameter
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=active&metric_field=nb&metric=sum&missing=false`)
+    assert.equal(res.data.aggs.length, 2)
+    assert.equal(res.data.aggs[0].value, 'false')
+    assert.equal(res.data.aggs[0].metric, 7)
+    assert.equal(res.data.aggs[1].value, 'true')
+    assert.equal(res.data.aggs[1].metric, 6)
+
+    // reject missing parameter of wrong type
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=active&metric_field=nb&metric=sum&missing=none`), (err) => {
+      assert.ok(err.data.includes('missing should be a boolean'))
+      assert.equal(err.status, 400)
+      return true
+    })
+  })
 })
