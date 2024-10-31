@@ -72,6 +72,18 @@ const latlonProperty = {
   'x-refersTo': 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
 }
 const geopointProperty = { ...latlonProperty, key: '_geopoint', title: 'Geopoint' }
+const latProperty = {
+  key: 'lat',
+  title: 'lat',
+  type: 'string',
+  'x-refersTo': 'http://schema.org/latitude'
+}
+const lonProperty = {
+  key: 'lon',
+  title: 'long',
+  type: 'string',
+  'x-refersTo': 'http://schema.org/longitude'
+}
 
 describe('Master data management', () => {
   it('should define and use a dataset as master-data remote-service used for extensions', async () => {
@@ -692,7 +704,10 @@ describe('Master data management', () => {
     const slave = (await ax.put('/api/v1/datasets/slave', {
       isRest: true,
       title: 'slave',
-      schema: [latlonProperty], // countryProperty will be deduced from first level extension
+      // latlonProperty will be calculated
+      // then countryProperty will be deduced from first level extension
+      // then country name will be deduced from second level extension
+      schema: [latProperty, lonProperty],
       extensions: [{
         active: true,
         type: 'remoteService',
@@ -707,11 +722,12 @@ describe('Master data management', () => {
         select: ['name']
       }]
     })).data
+    assert.ok(slave.schema.find(p => p.key === '_geopoint'))
     assert.ok(slave.schema.find(p => p.key === '_geo.country'))
     assert.ok(slave.schema.find(p => p.key === '_country.name'))
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [
-      { latlon: '-2.7,47.6' },
-      { latlon: '-2.8,45.5' }
+      { lat: '-2.7', long: '47.6' },
+      { lat: '-2.8', lon: '45.5' }
     ])
     await workers.hook('finalizer/slave')
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results

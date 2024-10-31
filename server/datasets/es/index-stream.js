@@ -1,12 +1,8 @@
 const { Transform } = require('stream')
-const fs = require('fs-extra')
 const config = require('config')
 const truncateMiddle = require('truncate-middle')
-const flatten = require('flat')
-const datasetUtils = require('../utils')
-const geoUtils = require('..//utils/geo')
+const extensionsUtils = require('../utils/extensions')
 const metrics = require('../../misc/utils/metrics')
-const randomSeed = require('random-seed')
 const { nanoid } = require('nanoid')
 
 const debug = require('debug')('index-stream')
@@ -37,7 +33,7 @@ class IndexStream extends Transform {
   async transformPromise (item, encoding) {
     let warning
     if (this.options.updateMode) {
-      warning = await applyCalculations(this.options.dataset, item.doc)
+      warning = await extensionsUtils.applyCalculations(this.options.dataset, item.doc)
       const keys = Object.keys(item.doc)
       if (keys.length === 0 || (keys.length === 1 && keys[0] === '_i')) return
       this.body.push({ update: { _index: this.options.indexName, _id: item.id, retry_on_conflict: 3 } })
@@ -56,7 +52,7 @@ class IndexStream extends Transform {
       params.index._id = item._id || nanoid()
       delete item._id
       this.body.push(params)
-      warning = await applyCalculations(this.options.dataset, item)
+      warning = await extensionsUtils.applyCalculations(this.options.dataset, item)
       this.body.push(item)
       this.bulkChars += JSON.stringify(item).length
     }
@@ -164,56 +160,6 @@ class IndexStream extends Transform {
     if (this.nbErroredItems > this.i / 2) throw new Error('[noretry] ' + msg)
     return msg
   }
-}
-
-const applyCalculations = async (dataset, item) => {
-  let warning = null
-  const flatItem = flatten(item, { safe: true })
-
-  // Add base64 content of attachments
-  const attachmentField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
-  if (attachmentField && flatItem[attachmentField.key]) {
-    const filePath = datasetUtils.attachmentPath(dataset, flatItem[attachmentField.key])
-    if (await fs.pathExists(filePath)) {
-      const stats = await fs.stat(filePath)
-      if (stats.size > config.defaultLimits.attachmentIndexed) {
-        warning = 'Pièce jointe trop volumineuse pour être analysée'
-      } else {
-        item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${flatItem[attachmentField.key]}`
-        if (!attachmentField['x-capabilities'] || attachmentField['x-capabilities'].indexAttachment !== false) {
-          item._file_raw = (await fs.readFile(filePath)).toString('base64')
-        }
-      }
-    }
-  }
-
-  // calculate geopoint and geometry fields depending on concepts
-  if (geoUtils.schemaHasGeopoint(dataset.schema)) {
-    try {
-      Object.assign(item, geoUtils.latlon2fields(dataset, flatItem))
-    } catch (err) {
-      console.log('failure to parse geopoints', dataset.id, err, flatItem)
-      return 'Coordonnée géographique non valide - ' + err.message
-    }
-  } else if (geoUtils.schemaHasGeometry(dataset.schema)) {
-    try {
-      Object.assign(item, await geoUtils.geometry2fields(dataset, flatItem))
-    } catch (err) {
-      console.log('failure to parse geometry', dataset.id, err, flatItem)
-      return 'Géométrie non valide - ' + err.message
-    }
-  }
-
-  // Add a pseudo-random number for random sorting (more natural distribution)
-  item._rand = randomSeed.create(dataset.id + item._i)(1000000)
-
-  // split the fields that have a separator in their schema
-  for (const field of dataset.schema) {
-    if (field.separator && item[field.key]) {
-      item[field.key] = item[field.key].split(field.separator.trim()).map(part => part.trim())
-    }
-  }
-  return warning
 }
 
 module.exports = (options) => new IndexStream(options)

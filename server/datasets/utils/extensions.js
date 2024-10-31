@@ -8,7 +8,7 @@ const stringify = require('json-stable-stringify')
 const flatten = require('flat')
 const equal = require('deep-equal')
 const axios = require('../../misc/utils/axios')
-const { fullFilePath, fsyncFile } = require('./files')
+const { fullFilePath, fsyncFile, attachmentPath } = require('./files')
 const { readStreams, writeExtendedStreams } = require('./data-streams')
 const restDatasetsUtils = require('./rest')
 const geoUtils = require('./geo')
@@ -16,6 +16,7 @@ const { bulkSearchPromise, bulkSearchStreams } = require('./master-data')
 const taskProgress = require('./task-progress')
 const permissionsUtils = require('../../misc/utils/permissions')
 const { getPseudoUser } = require('../../misc/utils/users')
+const randomSeed = require('random-seed')
 
 const debugMasterData = require('debug')('master-data')
 
@@ -329,21 +330,18 @@ function prepareInputMapping (action, dataset, extensionKey, selectFields) {
     const field = dataset.schema.find(f =>
       f['x-refersTo'] === input.concept &&
       f['x-refersTo'] !== 'http://schema.org/identifier' &&
-      f.key.indexOf(extensionKey) !== 0
+      f.key.indexOf(extensionKey + '.') !== 0
     )
     return field && [field.key, input.name, field]
   }).filter(i => i)
   return async (item) => {
     const mappedItem = {}
-    if (fieldMappings.find(mapping => mapping[0].startsWith('_geo'))) {
-      // calculate geopoint and geometry fields depending on concepts
-      if (geoUtils.schemaHasGeopoint(dataset.schema)) {
-        Object.assign(item, geoUtils.latlon2fields(dataset, item))
-      } else if (geoUtils.schemaHasGeometry(dataset.schema)) {
-        Object.assign(item, await geoUtils.geometry2fields(dataset, item))
-      }
-    }
     const flatItem = flatten(item) // in case the input comes from another extension
+
+    if (fieldMappings.find(mapping => mapping[2]['x-calculated'])) {
+      await exports.applyCalculations(dataset, flatItem)
+    }
+
     for (const mapping of fieldMappings) {
       const val = flatItem[mapping[0]]
       if (val !== undefined && val !== '') mappedItem[mapping[1]] = val
@@ -359,7 +357,7 @@ function prepareInputMapping (action, dataset, extensionKey, selectFields) {
  * @param {any[]} extensions
  * @returns
  */
-exports.prepareExtensionsSchema = exports.prepareSchema = async (db, schema, extensions) => {
+exports.prepareExtensionsSchema = async (db, schema, extensions) => {
   let extensionsFields = []
   await exports.checkExtensions(db, schema, extensions)
   for (const extension of extensions) {
@@ -369,10 +367,6 @@ exports.prepareExtensionsSchema = exports.prepareSchema = async (db, schema, ext
       if (!remoteService) continue
       const action = remoteService.actions.find(action => action.id === extension.action)
       if (!action) continue
-      // ignore extensions with missing input
-      if (!action.input.find(i => i.concept && schema.concat(extensionsFields).find(prop => prop['x-refersTo'] && prop['x-refersTo'] === i.concept))) {
-        continue
-      }
       const extensionKey = exports.getExtensionKey(extension)
       const extensionId = `${extension.remoteService}/${extension.action}`
       const selectFields = extension.select || []
@@ -427,10 +421,15 @@ exports.prepareExtensionsSchema = exports.prepareSchema = async (db, schema, ext
 
 // check if and extension dosn't have the necessary input
 exports.checkExtensions = async (db, schema, extensions = []) => {
-  // console.log('schema', schema)
   const availableConcepts = new Set(schema.map(prop => prop['x-refersTo']).filter(c => c))
 
   for (const extension of extensions) {
+    if (!extension.active) continue
+
+    if (geoUtils.schemaHasGeopoint(schema) || geoUtils.schemaHasGeometry(schema)) {
+      availableConcepts.add('http://www.w3.org/2003/01/geo/wgs84_pos#lat_long')
+    }
+
     if (extension.type === 'remoteService') {
       const remoteService = await db.collection('remote-services').findOne({ id: extension.remoteService })
       if (!remoteService) throw createError(400, `[noretry] source de données de référénce inconnue "${extension.remoteService}"`)
@@ -440,9 +439,60 @@ exports.checkExtensions = async (db, schema, extensions = []) => {
         throw createError(400, `[noretry] un concept nécessaire à l'utilisation de la donnée de référence n'est pas présent dans le jeu de données (${action.input.filter(i => i.concept && i.concept !== 'http://schema.org/identifier').map(i => i.concept).join(', ')})`)
       }
       for (const concept of action.output.map(i => i.concept).filter(c => c)) availableConcepts.add(concept)
-    } else if (extension.type === 'exprEval') {
-      return null
+    } else if (extension.property) {
+      const property = schema.find(p => p.key === extension.property.key)
+      if (property?.['x-refersTo']) availableConcepts.add(property?.['x-refersTo'])
     }
   }
   return null
+}
+
+exports.applyCalculations = async (dataset, item) => {
+  let warning = null
+  const flatItem = flatten(item, { safe: true })
+
+  // Add base64 content of attachments
+  const attachmentField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+  if (attachmentField && flatItem[attachmentField.key]) {
+    const filePath = attachmentPath(dataset, flatItem[attachmentField.key])
+    if (await fs.pathExists(filePath)) {
+      const stats = await fs.stat(filePath)
+      if (stats.size > config.defaultLimits.attachmentIndexed) {
+        warning = 'Pièce jointe trop volumineuse pour être analysée'
+      } else {
+        item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${flatItem[attachmentField.key]}`
+        if (!attachmentField['x-capabilities'] || attachmentField['x-capabilities'].indexAttachment !== false) {
+          item._file_raw = (await fs.readFile(filePath)).toString('base64')
+        }
+      }
+    }
+  }
+
+  // calculate geopoint and geometry fields depending on concepts
+  if (geoUtils.schemaHasGeopoint(dataset.schema)) {
+    try {
+      Object.assign(item, geoUtils.latlon2fields(dataset, flatItem))
+    } catch (err) {
+      console.log('failure to parse geopoints', dataset.id, err, flatItem)
+      warning = 'Coordonnée géographique non valide - ' + err.message
+    }
+  } else if (geoUtils.schemaHasGeometry(dataset.schema)) {
+    try {
+      Object.assign(item, await geoUtils.geometry2fields(dataset, flatItem))
+    } catch (err) {
+      console.log('failure to parse geometry', dataset.id, err, flatItem)
+      warning = 'Géométrie non valide - ' + err.message
+    }
+  }
+
+  // Add a pseudo-random number for random sorting (more natural distribution)
+  item._rand = randomSeed.create(dataset.id + item._i)(1000000)
+
+  // split the fields that have a separator in their schema
+  for (const field of dataset.schema) {
+    if (field.separator && item[field.key]) {
+      item[field.key] = item[field.key].split(field.separator.trim()).map(part => part.trim())
+    }
+  }
+  return warning
 }
