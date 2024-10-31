@@ -83,7 +83,17 @@ module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, expla
     }
 
     if (aggTypes[i] === 'terms' && missings[i]) {
-      currentAggLevel.values[aggTypes[i]].missing = missings[i]
+      const valuesField = dataset.schema.find(p => p.key === valuesFields[i])
+      let missing = missings[i]
+      if (valuesField?.type === 'number' || valuesField?.type === 'integer') {
+        missing = Number(missing)
+        if (isNaN(missing)) throw createError(400, 'missing should be a number')
+      }
+      if (valuesField?.type === 'boolean') {
+        if (!['true', 'false'].includes(missing)) throw createError(400, 'missing should be a boolean')
+        missing = missing === 'true'
+      }
+      currentAggLevel.values[aggTypes[i]].missing = missing
     }
 
     // cardinality is meaningful only on the strict values aggregation
