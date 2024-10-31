@@ -617,7 +617,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             {
               in: 'query',
               name: 'metric',
-              description: 'La métrique à appliquer',
+              description: 'La métrique à calculer',
               required: true,
               schema: {
                 type: 'string',
@@ -679,6 +679,18 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               },
               style: 'form',
               explode: false
+            },
+            {
+              in: 'query',
+              name: 'metrics',
+              description: 'Les métriques à appliquer. Des métriques par défaut sont appliquées en fonction du type de champ.',
+              schema: {
+                type: 'array',
+                items: {
+                  type: 'string',
+                  enum: acceptedMetricAggs
+                }
+              }
             }
           // @ts-ignore
           ].concat(filterParams),

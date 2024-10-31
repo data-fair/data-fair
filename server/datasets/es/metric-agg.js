@@ -9,6 +9,13 @@ const acceptedMetricAggsByType = {
   string: ['min', 'max', 'cardinality', 'value_count'],
   other: ['value_count']
 }
+/** @type string[] */
+exports.acceptedMetricAggs = []
+for (const metrics of Object.values(acceptedMetricAggsByType)) {
+  for (const metric of metrics) {
+    if (!exports.acceptedMetricAggs.includes(metric)) exports.acceptedMetricAggs.push(metric)
+  }
+}
 const defaultMetricAggsByType = {
   number: ['min', 'max'],
   string: ['cardinality'],
@@ -102,13 +109,23 @@ exports.simpleMetricsAgg = async (client, dataset, query) => {
   const esQuery = prepareQuery(dataset, query)
   esQuery.size = 0
   esQuery.aggs = {}
+
+  let globalMetrics
+  if (query.metrics) globalMetrics = query.metrics.split(',')
+
   for (const metricField of fields) {
     const field = dataset.schema.find(f => f.key === metricField)
     if (!field) throw createError(400, `Impossible de calculer des métriques sur le champ ${metricField}, il n'existe pas dans le jeu de données.`)
     if (field['x-capabilities'] && field['x-capabilities'].values === false) {
       throw createError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
     }
-    for (const metric of defaultMetricAggsByType[getMetricType(field)]) {
+    if (globalMetrics) {
+      for (const metric of globalMetrics) {
+        exports.assertMetricAccepted(field, metric)
+      }
+    }
+    const metrics = globalMetrics ?? defaultMetricAggsByType[getMetricType(field)]
+    for (const metric of metrics) {
       esQuery.aggs[metricField + ':' + metric] = {
         [metric]: { field: metricField }
       }
@@ -124,7 +141,8 @@ exports.simpleMetricsAgg = async (client, dataset, query) => {
   for (const metricField of fields) {
     response.metrics[metricField] = {}
     const field = dataset.schema.find(f => f.key === metricField)
-    for (const metric of defaultMetricAggsByType[getMetricType(field)]) {
+    const metrics = globalMetrics ?? defaultMetricAggsByType[getMetricType(field)]
+    for (const metric of metrics) {
       response.metrics[metricField][metric] = getValueFromAggRes(field, metric, esResponse.aggregations[metricField + ':' + metric])
     }
   }
