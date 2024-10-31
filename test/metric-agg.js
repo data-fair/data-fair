@@ -125,5 +125,9 @@ describe('metric agg', () => {
     assert.equal(res.metrics.numfield.min, 4)
     assert.ok(!res.metrics.datefield)
     assert.ok(!res.metrics.datetimefield)
+    res = (await ax.get('/api/v1/datasets/metric-agg/simple_metrics_agg', { params: { qs: 'numfield:>3', fields: 'numfield', metrics: 'sum,avg' } })).data
+    assert.equal(res.total, 7)
+    assert.equal(res.metrics.numfield.sum, 49)
+    assert.equal(res.metrics.numfield.avg, 7)
   })
 })
