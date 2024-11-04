@@ -2,6 +2,7 @@ const fs = require('fs-extra')
 const createError = require('http-errors')
 const { nanoid } = require('nanoid')
 const config = /** @type {any} */(require('config'))
+const standardLicenses = require('../../../contract/licenses')
 const path = require('path')
 const mime = require('mime')
 const moment = require('moment')
@@ -58,7 +59,7 @@ exports.listDatasets = async (db, catalog, params) => {
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
   const settings = (await db.collection('settings').findOne({ type: catalog.owner.type, id: catalog.owner.id })) || {}
-  settings.licenses = [].concat(config.licenses, settings.licenses || [])
+  settings.licenses = [].concat(standardLicenses, settings.licenses || [])
   const datasets = await connector.listDatasets(catalog, params, settings)
   for (const dataset of datasets.results) {
     const harvestedDatasets = await db.collection('datasets').find({
@@ -118,7 +119,7 @@ exports.harvestDataset = async (app, catalog, datasetId) => {
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
 
   const settings = (await app.get('db').collection('settings').findOne({ type: catalog.owner.type, id: catalog.owner.id })) || {}
-  settings.licenses = [].concat(config.licenses, settings.licenses || [])
+  settings.licenses = [].concat(standardLicenses, settings.licenses || [])
   const dataset = await connector.getDataset(catalog, datasetId, settings)
   if (!dataset) throw createError(404, 'Dataset not found')
   if (!dataset.page) throw createError(404, 'Dataset is missing a page link to be harvested')
@@ -161,7 +162,7 @@ exports.harvestDatasetResource = async (app, catalog, datasetId, resourceId, for
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
 
   const settings = (await app.get('db').collection('settings').findOne({ type: catalog.owner.type, id: catalog.owner.id })) || {}
-  settings.licenses = [].concat(config.licenses, settings.licenses || [])
+  settings.licenses = [].concat(standardLicenses, settings.licenses || [])
   const dataset = await connector.getDataset(catalog, datasetId, settings)
   if (!dataset) throw createError(404, 'Dataset not found')
   const resource = (dataset.resources || []).find(r => r.id === resourceId)
