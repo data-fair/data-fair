@@ -8,6 +8,7 @@ const mime = require('mime')
 const slug = require('slugify')
 const Piscina = require('piscina')
 const validate = require('../../misc/utils/dcat/validate')
+const { findLicense } = require('../../misc/utils/licenses')
 
 const debug = require('debug')('catalogs:dcat')
 
@@ -112,9 +113,8 @@ function prepareDatasetFromCatalog (catalog, item, settings, indexDataset) {
     page
   }
   if (item.license) {
-    console.log('LICENSE', item.license, settings?.licenses)
     if (settings && settings.licenses) {
-      const license = settings.licenses.find(l => l.href === item.license || l.title === item.license)
+      const license = findLicense(item.license, settings.licenses)
       if (license) dataset.license = license
     }
   }

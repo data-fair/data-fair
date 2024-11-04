@@ -11,6 +11,7 @@ const cacheHeaders = require('../utils/cache-headers')
 const topicsUtils = require('../utils/topics')
 const notifications = require('../utils/notifications')
 const config = require('config')
+const standardLicenses = require('../../../contract/licenses')
 const debugPublicationSites = require('debug')('publication-sites')
 
 const router = express.Router()
@@ -162,7 +163,7 @@ router.get('/:type/:id/topics', isOwnerMember, asyncWrap(async (req, res) => {
 router.get('/:type/:id/licenses', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   const settings = req.app.get('db').collection('settings')
   const result = await settings.findOne(req.ownerFilter)
-  res.status(200).send([].concat(config.licenses, (result && result.licenses) || []))
+  res.status(200).send([].concat(standardLicenses.map(l => ({ href: l.href, title: l.title })), (result && result.licenses) || []))
 }))
 
 // Get datasets metadata settings as owner

@@ -4,6 +4,7 @@
 const url = require('url')
 const createError = require('http-errors')
 const axios = require('../../misc/utils/axios')
+const { findLicense } = require('../../misc/utils/licenses')
 
 const debug = require('debug')('catalogs:geonetwork')
 
@@ -164,9 +165,14 @@ function prepareDatasetFromCatalog (catalog, item, settings) {
   }
 
   if (settings && settings.licenses) {
-    const license = settings.licenses.find(l => !!legalConstraints.find(lc => lc.includes(l.href)))
-    debug('match legalConstraints to licenses', legalConstraints, settings.licenses, license)
-    if (license) dataset.license = license
+    for (const lc of legalConstraints) {
+      const license = findLicense(lc, settings.licenses)
+      if (license) {
+        debug('match legalConstraints to licenses', legalConstraints, settings.licenses, license)
+        dataset.license = license
+        break
+      }
+    }
   }
 
   return dataset

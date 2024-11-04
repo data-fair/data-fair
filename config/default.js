@@ -178,13 +178,6 @@ module.exports = {
   analytics: {}, // a "modules" definition for @koumoul/vue-multianalytics
   browserLogLevel: 'error',
   nuxtDev: false,
-  licenses: [{
-    title: 'Licence Ouverte / Open License',
-    href: 'https://www.etalab.gouv.fr/licence-ouverte-open-licence'
-  }, {
-    title: 'Open Database License (ODbL)',
-    href: 'http://opendatacommons.org/licenses/odbl/summary/'
-  }],
   // used to configure service workers in cacheFirst mode for common directories of base applications source code
   applicationsDirectories: [
     'https://koumoul.com/apps/',
