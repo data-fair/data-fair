@@ -57,7 +57,9 @@ exports.listDatasets = async (db, catalog, params) => {
   const connector = exports.connectors.find(c => c.key === catalog.type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
-  const datasets = await connector.listDatasets(catalog, params)
+  const settings = (await db.collection('settings').findOne({ type: catalog.owner.type, id: catalog.owner.id })) || {}
+  settings.licenses = [].concat(config.licenses, settings.licenses || [])
+  const datasets = await connector.listDatasets(catalog, params, settings)
   for (const dataset of datasets.results) {
     const harvestedDatasets = await db.collection('datasets').find({
       'owner.type': catalog.owner.type,

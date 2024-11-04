@@ -1,6 +1,7 @@
 const express = require('express')
 const createError = require('http-errors')
 const i18n = require('i18n')
+const mime = require('mime')
 const asyncWrap = require('../utils/async-handler')
 const findUtils = require('../utils/find')
 const datasetUtils = require('../../datasets/utils')
@@ -124,12 +125,12 @@ router.get('/dcat', asyncWrap(async (req, res) => {
     if (dataset.license?.href) datasetDCAT.license = dataset.license.href
     if (dataset.temporal && dataset.temporal.start) {
       if (dataset.temporal.end) {
-        datasetDCAT.temporal = `${dataset.temporal.start}/${dataset.temporal.start}`
+        datasetDCAT.temporal = `${dataset.temporal.start}/${dataset.temporal.end}`
       } else {
-        datasetDCAT.temporal = dataset.temporal.start
+        datasetDCAT.temporal = `${dataset.temporal.start}/${dataset.temporal.start}`
       }
     }
-    if (dataset.frequency) datasetDCAT['dct:accrualPeriodicity'] = 'http://purl.org/cld/freq/' + dataset.frequency
+    if (dataset.frequency) datasetDCAT.accrualPeriodicity = 'http://purl.org/cld/freq/' + dataset.frequency
 
     const distributions = []
     if (dataset.file) {
@@ -142,6 +143,7 @@ router.get('/dcat', asyncWrap(async (req, res) => {
         description: `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
         downloadURL: originalRessourceUrl,
         mediaType: dataset.originalFile.mimetype,
+        format: mime.extension(dataset.originalFile.mimetype),
         bytesSize: dataset.originalFile.size
       })
       if (dataset.file.mimetype !== dataset.originalFile.mimetype) {
@@ -154,6 +156,7 @@ router.get('/dcat', asyncWrap(async (req, res) => {
           description: `Téléchargez le fichier complet au format ${dataset.file.name.split('.').pop()}.`,
           downloadURL: ressourceUrl,
           mediaType: dataset.file.mimetype,
+          format: mime.extension(dataset.file.mimetype),
           bytesSize: dataset.file.size
         })
       }

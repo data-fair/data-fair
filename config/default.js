@@ -179,7 +179,7 @@ module.exports = {
   browserLogLevel: 'error',
   nuxtDev: false,
   licenses: [{
-    title: 'Licence Ouverte / Open Licence',
+    title: 'Licence Ouverte / Open License',
     href: 'https://www.etalab.gouv.fr/licence-ouverte-open-licence'
   }, {
     title: 'Open Database License (ODbL)',

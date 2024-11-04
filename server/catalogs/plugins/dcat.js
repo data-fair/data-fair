@@ -78,18 +78,18 @@ exports.deleteApplication = async (catalog, application, publication) => {
   throw createError(501, 'La dépublication d\'applications vers catalogue DCAT n\'est pas disponible')
 }
 
-exports.listDatasets = async (catalog, p) => {
+exports.listDatasets = async (catalog, p, settings) => {
   const dcat = await memoizedGetDCAT(catalog.url)
   let indexDataset = 0
   const datasets = dcat.dataset?.map(d => {
     indexDataset += 1
-    return prepareDatasetFromCatalog(catalog, d, null, indexDataset)
+    return prepareDatasetFromCatalog(catalog, d, settings, indexDataset)
   }) ?? []
   return { count: datasets.length, results: datasets }
 }
 
 exports.getDataset = async (catalog, datasetId, settings) => {
-  return (await exports.listDatasets(catalog)).results.find(d => d.id === datasetId)
+  return (await exports.listDatasets(catalog, null, settings)).results.find(d => d.id === datasetId)
 }
 
 function prepareDatasetFromCatalog (catalog, item, settings, indexDataset) {
@@ -112,6 +112,7 @@ function prepareDatasetFromCatalog (catalog, item, settings, indexDataset) {
     page
   }
   if (item.license) {
+    console.log('LICENSE', item.license, settings?.licenses)
     if (settings && settings.licenses) {
       const license = settings.licenses.find(l => l.href === item.license || l.title === item.license)
       if (license) dataset.license = license
