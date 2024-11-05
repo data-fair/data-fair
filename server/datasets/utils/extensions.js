@@ -359,7 +359,6 @@ function prepareInputMapping (action, dataset, extensionKey, selectFields) {
  */
 exports.prepareExtensionsSchema = async (db, schema, extensions) => {
   let extensionsFields = []
-  await exports.checkExtensions(db, schema, extensions)
   for (const extension of extensions) {
     if (!extension.active) continue
     if (extension.type === 'remoteService') {
@@ -421,7 +420,11 @@ exports.prepareExtensionsSchema = async (db, schema, extensions) => {
 
 // check if and extension dosn't have the necessary input
 exports.checkExtensions = async (db, schema, extensions = []) => {
+  if (!extensions.some(e => e.active)) return null
+
   const availableConcepts = new Set(schema.map(prop => prop['x-refersTo']).filter(c => c))
+  const previousExtensions = []
+  const fullSchema = await this.prepareExtensionsSchema(db, schema, extensions)
 
   for (const extension of extensions) {
     if (!extension.active) continue
@@ -435,14 +438,21 @@ exports.checkExtensions = async (db, schema, extensions = []) => {
       if (!remoteService) throw createError(400, `[noretry] source de données de référénce inconnue "${extension.remoteService}"`)
       const action = remoteService.actions.find(action => action.id === extension.action)
       if (!action) throw createError(400, `[noretry] opération de récupération de données de référénce inconnue "${extension.remoteService} / ${extension.action?.replace('masterData_bulkSearch_', '')}"`)
+      const errorPrefix = `[noretry] erreur de validation de l'extension "${action.summary}", `
       if (!action.input.find(i => i.concept && availableConcepts.has(i.concept))) {
-        throw createError(400, `[noretry] un concept nécessaire à l'utilisation de la donnée de référence n'est pas présent dans le jeu de données (${action.input.filter(i => i.concept && i.concept !== 'http://schema.org/identifier').map(i => i.concept).join(', ')})`)
+        throw createError(400, `${errorPrefix}un concept nécessaire à l'utilisation de la donnée de référence n'est pas présent dans le jeu de données (${action.input.filter(i => i.concept && i.concept !== 'http://schema.org/identifier').map(i => i.concept).join(', ')})`)
       }
       for (const concept of action.output.map(i => i.concept).filter(c => c)) availableConcepts.add(concept)
     } else if (extension.property) {
+      const errorPrefix = `[noretry] erreur de validation de la colonne calculée "${extension.property.key}", `
+      const availableSchema = await this.prepareExtensionsSchema(db, schema, previousExtensions)
+      const exprError = require('../../../shared/expr-eval')(config.defaultTimezone).check(extension.expr, availableSchema, fullSchema)
+      if (exprError) throw createError(400, `${errorPrefix}${exprError}`)
       const property = schema.find(p => p.key === extension.property.key)
       if (property?.['x-refersTo']) availableConcepts.add(property?.['x-refersTo'])
     }
+
+    previousExtensions.push(extension)
   }
   return null
 }

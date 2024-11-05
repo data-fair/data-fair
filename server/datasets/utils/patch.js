@@ -9,6 +9,7 @@ const geo = require('./geo')
 const ajv = require('../../misc/utils/ajv')
 const datasetUtils = require('./')
 const extensions = require('./extensions')
+const schemaUtils = require('./schema')
 const datasetPatchSchema = require('../../../contract/dataset-patch')
 const virtualDatasetsUtils = require('./virtual')
 
@@ -103,6 +104,8 @@ exports.preparePatch = async (app, patch, dataset, user, locale, draftValidation
 
   if (patch.extensions) extensions.prepareExtensions(locale, patch.extensions, dataset.extensions)
   if (patch.extensions || dataset.extensions) {
+    const extendedSchema = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
+    await extensions.checkExtensions(db, extendedSchema, patch.extensions || dataset.extensions)
     patch.schema = await extensions.prepareExtensionsSchema(db, patch.schema || dataset.schema, patch.extensions || dataset.extensions)
   }
 
