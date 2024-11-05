@@ -84,7 +84,7 @@
                 </v-list-item-action>
               </v-list-item>
               <v-list-item
-                v-for="resource of dataset.resources.filter(r => r.harvestable)"
+                v-for="resource of dataset.resources"
                 :key="dataset.id + '-' + resource.id"
                 style="min-height:40px"
               >
@@ -97,7 +97,7 @@
                     {{ $t('resource') }} - {{ resource.title }}
                   </v-list-item-title>
                   <v-list-item-subtitle>
-                    {{ resource.format }} |
+                    {{ resource.format || $t('formatUnknown') }} |
                     <template v-if="resource.size">
                       {{ resource.size | bytes($i18n.locale) }}
                     </template>
@@ -158,11 +158,12 @@ fr:
   datasetsCount: " | 1 jeu de données dans le catalogue | {count} jeux de données dans le catalogue"
   resource: ressource
   harvestDatasetsMessage: Vous pouvez importer les métadonnées des jeux de données du catalogue pour les référencer dans ce service et dans vos portails. Vous pouvez également importer les ressources comme des jeux de données de type fichier pour exploiter leurs données.
-  harvestDataset: Importer les métadonnées dans un jeu de données local
-  harvestDatasetResource: Importer la ressource comme jeu de données local
+  harvestDataset: Créer un jeu de données de type "métadonnées seules"
+  harvestDatasetResource: Créer un jeu de données de type "fichier distant"
   harvestedDataset: jeu de données importé (mis à jour le {updatedAt})
   noneHarvested: jeu de données non importé
   sizeUnknown: taille inconnue
+  formatUnknown: format inconnu
   fetchError: Erreur pendant la récupération des jeux de données du catalogue
   importError: Erreur pendant l'import du jeu de données
   autoUpdateError: Erreur pendant la configuration de la mise à jour automatique des données
@@ -172,11 +173,12 @@ fr:
 en:
   datasetsCount: " | 1 dataset in the catalog | {count} datasets in the catalog"
   resource: resource
-  harvestDataset: Import metadata in a local dataset
-  harvestDatasetResource: Import the resource as local dataset
+  harvestDataset: Create a dataset of type "metadata only"
+  harvestDatasetResource: Create a dataset of type "remote file"
   harvestedDataset: harvested dataset (updated on {updatedAt})
   noneHarvested: dataset not yet harvested
   sizeUnknown: size unknown
+  formatUnknown: unknown format
   fetchError: Error while fetching datasets from the catalog
   importError: Error while importing the dataset
   autoUpdateError: Error while configuring data auto-update

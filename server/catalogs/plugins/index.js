@@ -7,7 +7,6 @@ const path = require('path')
 const mime = require('mime')
 const moment = require('moment')
 const journals = require('../../misc/utils/journals')
-const uploadUtils = require('../../datasets/utils/upload')
 const permissionsUtil = require('../../misc/utils/permissions')
 const datasetUtils = require('../../datasets/utils')
 
@@ -69,7 +68,7 @@ exports.listDatasets = async (db, catalog, params) => {
     }, { projection: { id: 1, remoteFile: 1, isMetaOnly: 1, updatedAt: 1 } }).toArray()
     dataset.harvestedDataset = harvestedDatasets.find(d => d.isMetaOnly)
     for (const resource of dataset.resources) {
-      resource.harvestable = uploadUtils.allowedTypes.has(resource.mime)
+      // resource.harvestable = uploadUtils.allowedTypes.has(resource.mime)
       resource.harvestedDataset = harvestedDatasets.find(hd => hd.remoteFile && hd.remoteFile.url === resource.url)
     }
   }
@@ -168,7 +167,7 @@ exports.harvestDatasetResource = async (app, catalog, datasetId, resourceId, for
   const resource = (dataset.resources || []).find(r => r.id === resourceId)
   if (!resource) throw createError(404, 'Resource not found')
   if (!resource.url) throw createError(404, 'Resource is missing a url to be harvested')
-  if (!uploadUtils.allowedTypes.has(resource.mime)) throw createError(404, 'Resource format not supported')
+  // if (!uploadUtils.allowedTypes.has(resource.mime)) throw createError(404, 'Resource format not supported')
 
   const date = moment().toISOString()
 
@@ -181,12 +180,14 @@ exports.harvestDatasetResource = async (app, catalog, datasetId, resourceId, for
   const remoteFile = {
     url: resource.url,
     catalog: catalog.id,
-    size: resource.size,
-    mimetype: resource.mime
+    size: resource.size
+  }
+  if (resource.mime) {
+    remoteFile.mimetype = resource.mime
   }
   if (pathParsed.ext && resource.mime === mime.lookup(pathParsed.base)) {
     remoteFile.name = pathParsed.base
-  } else {
+  } else if (resource.mime) {
     remoteFile.name = title + '.' + mime.extension(resource.mime)
   }
   if (harvestedDataset) {
