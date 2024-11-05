@@ -166,6 +166,23 @@ module.exports = (defaultTimezone) => {
 
   return {
     parser,
+    check: (expr, schema, fullSchema) => {
+      try {
+        const parsedExpression = parser.parse(expr)
+        const variables = parsedExpression.variables({ withMembers: true })
+        for (const variable of variables) {
+          if (!schema.find(p => p.key === variable)) {
+            const altProp = schema.find(p => p['x-originalName'] === variable || p.title === variable)
+            if (altProp) return `la clé de la colonne ${variable} est ${altProp.key}`
+            const extProp = fullSchema.find(p => p.key === variable || p['x-originalName'] === variable || p.title === variable)
+            if (extProp) return `la colonne ${variable} est définie par une extension qui est appliquée après cette expression`
+            return `colonne ${variable} inconnue`
+          }
+        }
+      } catch (err) {
+        return err.message
+      }
+    },
     /**
      * @param {string} expr
      * @param {any} property

@@ -13,7 +13,7 @@ const webhooks = require('../misc/utils/webhooks')
 const { updateStorage } = require('./utils/storage')
 const { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile } = require('./utils/files')
 const { getSchemaBreakingChanges } = require('./utils/schema')
-const { getExtensionKey, prepareExtensions, prepareExtensionsSchema } = require('./utils/extensions')
+const { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } = require('./utils/extensions')
 const { validateURLFriendly } = require('../misc/utils/validation')
 const assertImmutable = require('../misc/utils/assert-immutable')
 const { curateDataset, titleFromFileName } = require('./utils')
@@ -224,6 +224,7 @@ exports.createDataset = async (db, es, locale, user, owner, body, files, draft, 
   dataset.schema = dataset.schema || []
   if (dataset.extensions) {
     prepareExtensions(locale, dataset.extensions)
+    await checkExtensions(db, await datasetUtils.extendedSchema(db, dataset), dataset.extensions)
     dataset.schema = await prepareExtensionsSchema(db, dataset.schema, dataset.extensions)
   }
   curateDataset(dataset)

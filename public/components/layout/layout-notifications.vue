@@ -51,6 +51,7 @@ export default {
       if (notif.error) {
         notif.type = 'error'
         notif.errorMsg = (notif.error.response && (notif.error.response.data || notif.error.response.status)) || notif.error.message || notif.error
+        if (typeof notif.errorMsg === 'string') notif.errorMsg = notif.errorMsg.replace('[noretry] ', '')
       }
       notif.type = notif.type || 'default'
       this.notification = notif

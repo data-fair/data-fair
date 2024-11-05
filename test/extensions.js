@@ -726,6 +726,52 @@ other,unknown address
     assert.equal(res.data.results[1].calc1, 'bidule - adresse inconnue - street')
   })
 
+  it('Manage some errors in expressions', async function () {
+    const ax = global.ax.dmeadus
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest dataset',
+      schema: [{ key: 'str1', 'x-originalName': 'Str1', type: 'string' }, { key: 'str2', type: 'string' }]
+    })).data
+
+    await assert.rejects(ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(_id, " - ", str1', property: { key: 'calc1', type: 'string' } }]
+    }), (err) => {
+      assert.equal(err.status, 400)
+      assert.ok(err.data.includes('unexpected TEOF'))
+      return true
+    })
+
+    await assert.rejects(ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(_id, " - ", ADR)', property: { key: 'calc1', type: 'string' } }]
+    }), (err) => {
+      assert.equal(err.status, 400)
+      console.log(err.data)
+      assert.ok(err.data.includes('colonne ADR inconnue'))
+      return true
+    })
+
+    await assert.rejects(ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(_id, " - ", Str1)', property: { key: 'calc1', type: 'string' } }]
+    }), (err) => {
+      assert.equal(err.status, 400)
+      assert.ok(err.data.includes('la clé de la colonne Str1 est str1'))
+      return true
+    })
+
+    await assert.rejects(ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      extensions: [
+        { active: true, type: 'exprEval', expr: 'CONCAT(_id, " - ", calc2)', property: { key: 'calc1', type: 'string' } },
+        { active: true, type: 'exprEval', expr: 'CONCAT(_id, " - ", str1)', property: { key: 'calc2', type: 'string' } }
+      ]
+    }), (err) => {
+      assert.equal(err.status, 400)
+      console.log(err.data)
+      assert.ok(err.data.includes('la colonne calc2 est définie par une extension qui est appliquée après cette expression'))
+      return true
+    })
+  })
+
   it('Fail to add extension with duplicate key', async function () {
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
