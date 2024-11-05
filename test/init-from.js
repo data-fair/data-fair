@@ -29,8 +29,9 @@ describe('Datasets with auto-initialization from another one', () => {
     })
     assert.equal(res.status, 201)
     const initFromDataset = await workers.hook('finalizer/' + res.data.id)
-
     assert.equal(initFromDataset.schema[0].key, 'date')
+    assert.equal(initFromDataset.schema[2].key, 'date_fr')
+    assert.equal(initFromDataset.schema[2]['x-originalName'], 'date fr')
     assert.equal(initFromDataset.schema[2].dateFormat, 'D/M/YYYY')
     assert.equal(initFromDataset.schema[3].dateTimeFormat, 'D/M/YYYY H:m')
     assert.equal(initFromDataset.description, 'A description')
@@ -39,8 +40,24 @@ describe('Datasets with auto-initialization from another one', () => {
     assert.ok(initFromDataset.attachments.find(a => a.name === 'avatar.jpeg'))
     const downloadAttachmentRes = await ax.get(`/api/v1/datasets/${initFromDataset.id}/metadata-attachments/avatar.jpeg`)
     assert.equal(downloadAttachmentRes.status, 200)
-    const lines = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines`)).data
+    let lines = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines`)).data
     assert.equal(lines.total, 3)
+
+    // accept posting lines as csv with original column names
+    await ax.post(`/api/v1/datasets/${initFromDataset.id}/_bulk_lines`, `date,datetime,date fr,datetime fr
+2024-01-13,2024-01-13T19:42:02.790Z,13/01/2024,13/01/2024 19:42`, { headers: { 'content-type': 'text/csv' } })
+    await workers.hook('finalizer/' + initFromDataset.id)
+    lines = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines`)).data
+    assert.equal(lines.total, 4)
+    assert.equal(lines.results[0].datetime_fr, '2024-01-13T19:42:00+01:00')
+
+    // also accept posting lines as csv with keys as column names
+    await ax.post(`/api/v1/datasets/${initFromDataset.id}/_bulk_lines`, `date,datetime,date_fr,datetime_fr
+      2025-01-13,2025-01-13T19:42:02.790Z,13/01/2025,13/01/2025 19:42`, { headers: { 'content-type': 'text/csv' } })
+    await workers.hook('finalizer/' + initFromDataset.id)
+    lines = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines`)).data
+    assert.equal(lines.total, 5)
+    assert.equal(lines.results[0].datetime_fr, '2025-01-13T19:42:00+01:00')
   })
 
   it('Create file dataset with copied information from another file dataset', async () => {
