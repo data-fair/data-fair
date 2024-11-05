@@ -129,16 +129,37 @@ exports.harvestDataset = async (app, catalog, datasetId) => {
     'owner.type': catalog.owner.type,
     'owner.id': catalog.owner.id,
     origin: dataset.page
-  }, { projection: { id: 1 } })
+  }, { projection: { id: 1, attachments: 1 } })
+  const attachments = []
+  if (dataset.resources?.length) {
+    for (const resource of dataset.resources) {
+      if (resource.url) {
+        attachments.push({
+          title: resource.title,
+          type: 'url',
+          url: resource.url
+        })
+      }
+    }
+  }
+
   if (harvestedDataset) {
     const patch = getDatasetPatch(catalog, dataset, { title: dataset.title })
+    if (attachments.length) {
+      for (const attachment of attachments) {
+        const existingAttachment = harvestedDataset.attachments?.find(a => a.url === attachment.url)
+        if (existingAttachment?.description) attachment.description = existingAttachment.description
+        if (existingAttachment?.includeInCatalogPublications) attachment.includeInCatalogPublications = existingAttachment.includeInCatalogPublications
+      }
+      patch.attachments = attachments
+    }
     debug('apply patch to dataset', harvestedDataset.id, patch)
     if (Object.keys(patch).length) {
       await app.get('db').collection('datasets').updateOne({ id: harvestedDataset.id }, { $set: patch })
     }
   } else {
     debug('create new metadata dataset', dataset.title)
-    const newDataset = {
+    const newDataset = getDatasetProps(dataset, {
       title: dataset.title,
       owner: catalog.owner,
       createdBy: { id: catalog.owner.id, name: catalog.owner.name },
@@ -147,8 +168,8 @@ exports.harvestDataset = async (app, catalog, datasetId) => {
       updatedAt: date,
       isMetaOnly: true,
       schema: []
-    }
-    Object.assign(newDataset, getDatasetProps(dataset))
+    })
+    if (attachments.length) newDataset.attachments = attachments
     await permissionsUtil.initResourcePermissions(newDataset)
     await insertDataset(app, newDataset)
   }
