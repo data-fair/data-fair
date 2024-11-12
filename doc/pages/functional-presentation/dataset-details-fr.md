@@ -25,7 +25,7 @@ L'utilisateur peut également accéder aux **pièces jointes** du jeu de donnée
 <img src="./images/functional-presentation/detail-2.jpg"
      height="500" style="margin:20px auto;" alt="capture d'écran d'une page détaillée de jeu de données" />
 
-En plus des visualisations du portail, qui sont des réutilisations des données &laquo;&nbsp;internes&nbsp;&raquo;, d'autres réutilisations de données peuvent être mentionnées. Celles-ci peuvent être présentées au travers d'une vignette cliquable, ou directement embarquées dans la page en iframe.
+En plus des visualisations du portail, qui sont des réutilisations des données &laquo;&nbsp;internes&nbsp;&raquo;, d'autres réutilisations de données peuvent être mentionnées. Celles-ci sont présentées au travers d'une vignette cliquable.
 
 Différents boutons permettent de partager la page du jeu de données sur les réseaux sociaux (Facebook, Twitter, LinkedIn...) La page de données possède des **métadonnées enrichies** qui permettent une meilleure indexation par les moteurs de recherche et un affichage d’une miniature sur les réseaux sociaux. Cette miniature présente la première visualisation associée au jeu de données, et ce côté graphique permet d’**augmenter l’engagement** des utilisateurs des réseaux sociaux.
 

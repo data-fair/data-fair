@@ -15,6 +15,7 @@ Chaque plugin a son propre paramétrage (code d'accès, jeu de données à mettr
 Il est possible de générer une clé d'API spécifique au traitement pour créer un **webhook permettant de le déclencher**&nbsp;: un traitement dans un ETL peut, par exemple, créer un fichier sur un espace de partage puis appeler l'URL du webhook pour que le traitement d'import se déclenche.
 
 
-![Collecteurs](./images/functional-presentation/collecteurs.jpg)
+<img src="./images/functional-presentation/collecteurs.jpg"
+     height="250" style="margin:10px auto;" alt="Collecteurs de données" />
 
 Un contributeur peut accéder à l’**état de réussite** des différentes exécutions d'un traitement, ainsi qu'aux logs détaillés de ses exécutions. Il peut s'abonner aux notifications d'un traitement pour être informé quand un traitement est en échec ou que des alertes sont présentes dans les logs.

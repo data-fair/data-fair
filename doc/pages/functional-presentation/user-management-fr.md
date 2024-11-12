@@ -14,6 +14,9 @@ Les trois autres rôles sont définis par organisation&nbsp;: il est, par exempl
 
 ### Rôles et permissions associées
 
+Les comptes utilisateurs membres d’une organisation peuvent avoir différents rôles dans la plateforme : « administrateur », « contributeur » ou « utilisateur ». Le premier
+rôle permet de tout faire, tandis que le rôle « utilisateur » ne sert que pour la consultation de données privées en close data.
+
 Les administrateurs d’une organisation peuvent gérer les membres&nbsp;:
 
 * **Inviter** de nouveaux membres par e-mail&nbsp;;
@@ -21,7 +24,7 @@ Les administrateurs d’une organisation peuvent gérer les membres&nbsp;:
 * **Exclure** un membre.
 
 <p></p>
-Permissions par défaut des différents rôles d’une organisation :
+Les permissions associées aux différents rôles peuvent être résumées dans le tableau suivant :
 
 <div style="width:700px">
 

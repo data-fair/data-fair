@@ -22,12 +22,12 @@ La liste d'actualités est disponible sur la page des actualités sous forme de 
 Comme pour les pages de contenus, différents éléments peuvent être intégrés, tels que des images, vidéos, formulaires, tableaux de jeux de données, PDF, liens, etc.
 
 <img src="./images/functional-presentation/actu.jpg"
-     height="400" style="margin:20px auto;" alt="Liste des actualités" />
+     height="300" style="margin:20px auto;" alt="Liste des actualités" />
 
 Pour faciliter l'accès aux informations, un fil d'actualités est également disponible en page d'accueil.
 
 <img src="./images/functional-presentation/fil.jpg"
-     height="300" style="margin:20px auto;" alt="Fil d'actualités en page d'accueil" />
+     height="250" style="margin:20px auto;" alt="Fil d'actualités en page d'accueil" />
 
 
 ### Pages d'évènements
@@ -35,9 +35,9 @@ Pour faciliter l'accès aux informations, un fil d'actualités est également di
 Les pages d'évènements permettent d'annoncer des évènements que vous organisez. Comme les pages d'actualités, les pages d'événements sont présentées sous forme de fiches contenant une image, le début et la fin de l'événement mais possèdent en plus la possibilité de s'inscrire à l'événement pour les utilisateurs connectés.
 
 <img src="./images/functional-presentation/page-event.jpg"
-     height="400" style="margin:20px auto;" alt="Rendu d'un évènement sur le portail" />
+     height="250" style="margin:20px auto;" alt="Rendu d'un évènement sur le portail" />
 
 Après s'être connectés, les utilisateurs du portails peuvent choisir entre les 3 options pour signaler leur présence ou absence à l'événement.
 
 <img src="./images/functional-presentation/page-event-inscription.jpg"
-     height="300" style="margin:20px auto;" alt="Inscription à un événement" />
+     height="150" style="margin:20px auto;" alt="Inscription à un événement" />

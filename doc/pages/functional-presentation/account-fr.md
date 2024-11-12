@@ -13,7 +13,7 @@ Pour limiter les problématiques liées au RGPD, un **minimum de données est co
 La création de compte se fait en renseignant un e-mail et un mot de passe, il y a aussi la possibilité de  passer par un compte Gmail, Facebook, LinkedIn ou Github via le **protocole oAuth2**. Un mécanisme de renouvellement de mot de passe est disponible pour les utilisateurs ayant perdu celui-ci ou désirant le changer.
 
 <img src="./images/functional-presentation/connexion.jpg"
-     height="320" style="margin:15px auto;" alt="capture d'écran de la page de connexion" />
+     height="275" style="margin:15px auto;" alt="capture d'écran de la page de connexion" />
 
 Les utilisateurs qui créent des comptes par eux-mêmes ont leur données stockées dans des bases de données. Leur mot de passe est encrypté avec sels et multiples hachages pour garantir une sécurité maximale. Des règles de saisie empêchent la création de mots de passe faibles.
 
@@ -25,11 +25,11 @@ Un administrateur du portail peut donner les droits de contribution sur un ou pl
 Les partenaires pourront ainsi modifier les jeux de données en remplaçant le fichier au complet ou en éditant les lignes du jeu de données à partir de leur espace personnel.
 
 <img src="./images/functional-presentation/contribution.jpg"
-     height="260" style="margin:15px auto;" alt="capture d'écran du workflow de contribution" />
+     height="200" style="margin:15px auto;" alt="capture d'écran du workflow de contribution" />
 
 Les portails peuvent être configurés pour accepter les soumissions de réutilisations.   
 Celles-ci sont effectuées à partir du compte personnel de l'utilisateur et elles sont soumises à modération&nbsp;: c'est l'administrateur qui choisit de publier la réutilisation ou non.  
 
 
 <img src="./images/functional-presentation/reutilisation.jpg"
-     height="320" style="margin:15px auto;" alt="capture d'écran de la gestion des réutilisations" />
+     height="200" style="margin:15px auto;" alt="capture d'écran de la gestion des réutilisations" />

@@ -17,14 +17,14 @@ Il est possible d'utiliser **Matomo Analytics** (anciennement Piwik) ou **Google
 La configuration se fait avec l'**URL du tracker** et l'**identifiant de votre site**. Les statistiques avec [Matomo Analytics](https://fr.matomo.org/) sont disponibles sous différentes formes&nbsp;: tableaux, graphiques et cartes. En sélectionnant les différentes représentations des statistiques, il est possible de personnaliser ses tableaux de bord. On peut également **anonymiser les données** et enregistrer les parcours utilisateurs tout en étant en conformité avec les recommandations de la [CNIL](https://www.cnil.fr/professionnel).
 
 <img src="./images/functional-presentation/matomo.jpg"
-     height="300" style="margin:40px auto;" alt="capture d'écran de Matomo" />
+     height="300" style="margin:10px auto;" alt="capture d'écran de Matomo" />
 
 #### Google Analytics
 
 La configuration se fait grâce au **numéro d'identifiant**. Les statistiques sous [Google Analytics](https://analytics.google.com/) sont aussi disponibles sous différentes formes&nbsp;: tableaux, graphiques et cartes. Il est aussi possible de personnaliser ses tableaux de bord.
 
 <img src="./images/functional-presentation/google-analytics.jpg"
-     height="300" style="margin:40px auto;" alt="capture d'écran de Google analytics" />
+     height="250" style="margin:10px auto;" alt="capture d'écran de Google analytics" />
 
 
 ### Utilisation des API
@@ -34,4 +34,4 @@ Dans la mesure ou Data&nbsp;Fair et les différents services associés utilisent
 Dans un souci de **respect du RGPD**, les données collectées sont anonymisées et agrégées à la journée. On peut accéder à des statistiques pour chaque jeu de données&nbsp;: **nombre d'appels d'API et nombre de téléchargements**. Les métriques sont agrégées par groupes d'utilisateurs (organisation propriétaire, utilisateurs authentifiés externes, anonymes...) ou par domaine d'appel. Des chiffres&nbsp;clés sont présentés sur la période demandée, avec une comparaison sur la période précédente, ce qui permet de voir si l'utilisation de certaines données augmente ou diminue.
 
 <img src="./images/functional-presentation/metrics.jpg"
-     height="500" style="margin:40px auto;" alt="capture d'écran du dashboard des métriques de consommation d'API" />
+     height="350" style="margin:10px auto;" alt="capture d'écran du dashboard des métriques de consommation d'API" />
