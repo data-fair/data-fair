@@ -13,6 +13,19 @@
         <img :src="item._thumbnail">
       </v-avatar>
     </template>
+    <template v-if="header.value === '_map_preview'">
+      <v-btn
+        v-if="item._geopoint"
+        icon
+        x-small
+        :style="`right: 4px;top: 50%;transform: translate(0, -50%);z-index:100;background-color:${$vuetify.theme.dark ? '#212121' : 'white'};`"
+        absolute
+        :title="$t('showMapPreview')"
+        @click="mapPreviewItem = item._id"
+      >
+        <v-icon>mdi-map</v-icon>
+      </v-btn>
+    </template>
     <template v-else-if="header.value === '_owner'">
       <v-tooltip top>
         <template #activator="{on}">
@@ -39,8 +52,44 @@
       :no-interaction="noInteraction"
       @filter="f => $emit('filter', f)"
     />
+
+    <v-dialog
+      :value="mapPreviewItem"
+      max-width="700"
+      :overlay-opacity="0"
+    >
+      <v-card
+        outlined
+      >
+        <v-toolbar
+          dense
+          flat
+          color="transparent"
+        >
+          <v-spacer />
+          <v-btn
+            icon
+            @click.native="mapPreviewItem = null"
+          >
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-toolbar>
+        <lazy-dataset-map
+          v-if="mapPreviewItem"
+          :height-margin="0"
+          :single-item="item._id"
+        />
+      </v-card>
+    </v-dialog>
   </td>
 </template>
+
+<i18n lang="yaml">
+  fr:
+    showMapPreview: Voir sur une carte
+  en:
+    showMapPreview: Show on a map
+</i18n>
 
 <script>
 import { mapState } from 'vuex'
@@ -55,6 +104,9 @@ export default {
     dense: { type: Boolean, default: false },
     noInteraction: { type: Boolean, default: false }
   },
+  data: () => ({
+    mapPreviewItem: null
+  }),
   computed: {
     ...mapState(['env'])
   }
