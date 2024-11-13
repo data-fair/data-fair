@@ -61,22 +61,17 @@
       <v-card
         outlined
       >
-        <v-toolbar
-          dense
-          flat
-          color="transparent"
+        <v-btn
+          style="position:absolute;top:4px;right:4px;z-index:1000;"
+          icon
+          @click.native="mapPreviewItem = null"
         >
-          <v-spacer />
-          <v-btn
-            icon
-            @click.native="mapPreviewItem = null"
-          >
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </v-toolbar>
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
         <lazy-dataset-map
           v-if="mapPreviewItem"
           :height-margin="0"
+          navigation-position="top-left"
           :single-item="item._id"
         />
       </v-card>

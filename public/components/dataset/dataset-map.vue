@@ -50,7 +50,7 @@ function resizeBBOX (bbox, ratio) {
 }
 
 export default {
-  props: ['heightMargin', 'fixedHeight', 'singleItem'],
+  props: ['heightMargin', 'fixedHeight', 'singleItem', 'navigationPosition'],
   data: () => ({ mapHeight: 0, query: '' }),
   computed: {
     ...mapState(['env']),
@@ -171,7 +171,7 @@ export default {
         throw new Error(this.$t('noGeoData'))
       }
       this.map.fitBounds(bbox, { duration: 0 })
-      this.map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right')
+      this.map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), this.navigationPosition ?? 'top-right')
       // Disable map rotation using right click + drag
       this.map.dragRotate.disable()
       // Disable map rotation using touch rotation gesture
