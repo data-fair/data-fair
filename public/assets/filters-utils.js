@@ -32,10 +32,8 @@ const suffixes = ['_in', '_eq', '_gte', '_lte', '_search', '_contains', '_starts
 export function writeQueryParams (dataset, filters, query, applyDatasetPrefix = false) {
   for (const key of Object.keys(query)) {
     if (key.startsWith('_c_')) continue
-    if (applyDatasetPrefix) {
-      if (key.startsWith(`_d_${dataset.id}_`) && suffixes.some(s => key.endsWith(s))) {
-        delete query[key]
-      }
+    if (suffixes.some(s => key.endsWith(s))) {
+      delete query[key]
     }
   }
 
