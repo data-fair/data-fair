@@ -2,6 +2,7 @@
   <dataset-map
     :height-margin="0"
     :show-select="false"
+    :single-item="$route.query._id_eq"
   />
 </template>
 

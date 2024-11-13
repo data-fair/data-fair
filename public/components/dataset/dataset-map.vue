@@ -1,7 +1,7 @@
 <template lang="html">
   <v-card>
     <v-text-field
-      v-if="dataset"
+      v-if="dataset && !singleItem"
       v-model="query"
       light
       class="mt-2 ml-2 mx-2"
@@ -49,54 +49,8 @@ function resizeBBOX (bbox, ratio) {
   return [Math.max(bbox[0] - d1diff, -180), Math.max(bbox[1] - d2diff, -90), Math.min(bbox[2] + d1diff, 180), Math.min(bbox[3] + d2diff, 90)]
 }
 
-const dataLayers = [{
-  id: 'results_polygon',
-  source: 'data-fair',
-  'source-layer': 'results',
-  type: 'fill',
-  paint: {
-    'fill-color': 'rgba(233, 30, 99, 0.2)',
-    'fill-outline-color': 'rgba(233, 30, 99, 0.5)'
-  },
-  filter: ['==', '$type', 'Polygon']
-}, {
-  id: 'results_hover',
-  source: 'data-fair',
-  'source-layer': 'results',
-  type: 'line',
-  paint: {
-    'line-color': '#E91E63',
-    'line-width': { stops: [[4, 1.5], [24, 9]] }
-  },
-  filter: ['==', '_id', '']
-}, {
-  id: 'results_line',
-  source: 'data-fair',
-  'source-layer': 'results',
-  type: 'line',
-  paint: {
-    'line-color': 'rgba(233, 30, 99, 0.5)',
-    'line-width': { stops: [[4, 1], [24, 6]] }
-  },
-  layout: {
-    'line-cap': 'round',
-    'line-join': 'round'
-  },
-  filter: ['==', '$type', 'LineString']
-}, {
-  id: 'results_point',
-  source: 'data-fair',
-  'source-layer': 'results',
-  type: 'circle',
-  paint: {
-    'circle-color': 'rgba(233, 30, 99, 0.5)',
-    'circle-radius': { stops: [[0, 1], [24, 16]] }
-  },
-  filter: ['==', '$type', 'Point']
-}]
-
 export default {
-  props: ['heightMargin', 'fixedHeight'],
+  props: ['heightMargin', 'fixedHeight', 'singleItem'],
   data: () => ({ mapHeight: 0, query: '' }),
   computed: {
     ...mapState(['env']),
@@ -110,6 +64,68 @@ export default {
       if (this.dataset.finalizedAt) url += '&finalizedAt=' + encodeURIComponent(this.dataset.finalizedAt)
       if (this.dataset.draftReason) url += '&draft=true'
       return url
+    },
+    dataLayers () {
+      const primary = this.$vuetify.theme.themes.light.primary
+      const itemFilter = ['==', '_id', this.singleItem]
+      return [{
+        id: 'results_polygon',
+        source: 'data-fair',
+        'source-layer': 'results',
+        type: 'fill',
+        paint: {
+          'fill-color': primary,
+          'fill-opacity': 0.3
+        },
+        filter: this.singleItem ? ['all', ['==', '$type', 'Polygon'], itemFilter] : ['==', '$type', 'Polygon']
+      }, {
+        id: 'results_polygon_outline',
+        source: 'data-fair',
+        'source-layer': 'results',
+        type: 'line',
+        paint: {
+          'line-color': primary,
+          'line-opacity': 0.5,
+          'line-width': { stops: [[4, 0.5], [24, 3]] }
+        },
+        filter: this.singleItem ? ['all', ['==', '$type', 'Polygon'], itemFilter] : ['==', '$type', 'Polygon']
+      }, {
+        id: 'results_hover',
+        source: 'data-fair',
+        'source-layer': 'results',
+        type: 'line',
+        paint: {
+          'line-color': primary,
+          'line-width': { stops: [[4, 1.5], [24, 9]] }
+        },
+        filter: this.singleItem ? itemFilter : ['==', '_id', '']
+      }, {
+        id: 'results_line',
+        source: 'data-fair',
+        'source-layer': 'results',
+        type: 'line',
+        paint: {
+          'line-color': primary,
+          'line-opacity': 0.5,
+          'line-width': { stops: [[4, 1], [24, 6]] }
+        },
+        layout: {
+          'line-cap': 'round',
+          'line-join': 'round'
+        },
+        filter: this.singleItem ? ['all', ['==', '$type', 'LineString'], itemFilter] : ['==', '$type', 'LineString']
+      }, {
+        id: 'results_point',
+        source: 'data-fair',
+        'source-layer': 'results',
+        type: 'circle',
+        paint: {
+          'circle-color': primary,
+          'circle-opacity': 0.5,
+          'circle-radius': { stops: [[0, 1], [24, 16]] }
+        },
+        filter: this.singleItem ? ['all', ['==', '$type', 'Point'], itemFilter] : ['==', '$type', 'Point']
+      }]
     }
   },
   async mounted () {
@@ -155,66 +171,68 @@ export default {
         throw new Error(this.$t('noGeoData'))
       }
       this.map.fitBounds(bbox, { duration: 0 })
-      this.map.addControl(new mapboxgl.NavigationControl(), 'top-right')
+      this.map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right')
       // Disable map rotation using right click + drag
       this.map.dragRotate.disable()
       // Disable map rotation using touch rotation gesture
       this.map.touchZoomRotate.disableRotation()
 
-      // Create a popup, but don't add it to the map yet.
-      const popup = new mapboxgl.Popup({ closeButton: true, closeOnClick: true })
+      if (!this.singleItem) {
+        // Create a popup, but don't add it to the map yet.
+        const popup = new mapboxgl.Popup({ closeButton: true, closeOnClick: true })
 
-      const moveCallback = (e) => {
-        const feature = this.map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
-        if (!feature) return
+        const moveCallback = (e) => {
+          const feature = this.map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
+          if (!feature) return
 
-        if (feature.properties._id !== undefined) {
-          this.map.setFilter('results_hover', ['==', '_id', feature.properties._id])
+          if (feature.properties._id !== undefined) {
+            this.map.setFilter('results_hover', ['==', '_id', feature.properties._id])
+          }
+          // Change the cursor style as a UI indicator.
+          this.map.getCanvas().style.cursor = 'pointer'
         }
-        // Change the cursor style as a UI indicator.
-        this.map.getCanvas().style.cursor = 'pointer'
+
+        const clickCallback = async (e) => {
+          const feature = this.map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
+          if (!feature) return
+
+          if (feature.properties._id === undefined) return console.error('needs _id property to be able to fetch item', feature.properties)
+          const qs = `_id:"${feature.properties._id}"`
+          const select = this.dataset.schema
+            .filter(field => !field['x-calculated'] && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
+            .map(field => field.key)
+            .join(',')
+          const params = { qs, size: 1, select }
+          if (this.dataset.draftReason) params.draft = 'true'
+          const item = (await this.$axios.$get(this.resourceUrl + '/lines', { params })).results[0]
+          if (!item) return console.error('item not found with filter', qs)
+
+          const htmlList = this.dataset.schema
+            .filter(field => !field['x-calculated'] && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
+            .filter(field => item[field.key] !== undefined)
+            .map(field => {
+              return `<li>${field.title || field['x-originalName'] || field.key}: ${item[field.key]}</li>`
+            })
+            .join('\n')
+          const html = `<ul style="list-style-type: none;padding-left: 0;">${htmlList}</ul>`
+
+          // Populate the popup and set its coordinates
+          // based on the feature found.
+          popup.setLngLat(e.lngLat)
+            .setHTML(html)
+            .addTo(this.map)
+        }
+
+        const leaveCallback = () => {
+          this.map.getCanvas().style.cursor = ''
+        }
+
+        this.dataLayers.forEach(layer => {
+          this.map.on('mousemove', layer.id, debounce(moveCallback, 30))
+          this.map.on('mouseleave', layer.id, leaveCallback)
+          this.map.on('click', layer.id, clickCallback)
+        })
       }
-
-      const clickCallback = async (e) => {
-        const feature = this.map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
-        if (!feature) return
-
-        if (feature.properties._id === undefined) return console.error('needs _id property to be able to fetch item', feature.properties)
-        const qs = `_id:"${feature.properties._id}"`
-        const select = this.dataset.schema
-          .filter(field => !field['x-calculated'] && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
-          .map(field => field.key)
-          .join(',')
-        const params = { qs, size: 1, select }
-        if (this.dataset.draftReason) params.draft = 'true'
-        const item = (await this.$axios.$get(this.resourceUrl + '/lines', { params })).results[0]
-        if (!item) return console.error('item not found with filter', qs)
-
-        const htmlList = this.dataset.schema
-          .filter(field => !field['x-calculated'] && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
-          .filter(field => item[field.key] !== undefined)
-          .map(field => {
-            return `<li>${field.title || field['x-originalName'] || field.key}: ${item[field.key]}</li>`
-          })
-          .join('\n')
-        const html = `<ul style="list-style-type: none;padding-left: 0;">${htmlList}</ul>`
-
-        // Populate the popup and set its coordinates
-        // based on the feature found.
-        popup.setLngLat(e.lngLat)
-          .setHTML(html)
-          .addTo(this.map)
-      }
-
-      const leaveCallback = () => {
-        this.map.getCanvas().style.cursor = ''
-      }
-
-      dataLayers.forEach(layer => {
-        this.map.on('mousemove', layer.id, debounce(moveCallback, 30))
-        this.map.on('mouseleave', layer.id, leaveCallback)
-        this.map.on('click', layer.id, clickCallback)
-      })
 
       // Add custom source and layers
       this.map.once('load', () => {
@@ -228,6 +246,7 @@ export default {
     async getBBox () {
       const params = { format: 'geojson', size: 0, q: this.query }
       if (this.dataset.draftReason) params.draft = 'true'
+      if (this.singleItem) params._id_eq = this.singleItem
       const bbox = (await this.$axios.$get(this.resourceUrl + '/lines', { params })).bbox
       if (!bbox || !bbox.length) {
         return null
@@ -236,7 +255,7 @@ export default {
     },
     async refresh () {
       // First clear layers and source to be able to change the tiles url
-      dataLayers.forEach(layer => {
+      this.dataLayers.forEach(layer => {
         if (this.map.getLayer(layer.id)) this.map.removeLayer(layer.id)
       })
       if (this.map.getSource('data-fair')) this.map.removeSource('data-fair')
@@ -250,7 +269,9 @@ export default {
     },
     initCustomSource () {
       this.map.addSource('data-fair', { type: 'vector', tiles: [this.tileUrl] })
-      dataLayers.forEach(layer => this.map.addLayer(layer, this.env.map.beforeLayer))
+      this.dataLayers.forEach(layer => {
+        this.map.addLayer(layer, this.env.map.beforeLayer)
+      })
     }
   }
 }
