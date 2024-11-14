@@ -125,6 +125,16 @@ export default {
           'circle-radius': { stops: [[0, 1], [24, 16]] }
         },
         filter: this.singleItem ? ['all', ['==', '$type', 'Point'], itemFilter] : ['==', '$type', 'Point']
+      }, {
+        id: 'results_point_hover',
+        source: 'data-fair',
+        'source-layer': 'results',
+        type: 'circle',
+        paint: {
+          'circle-color': primary,
+          'circle-radius': { stops: [[0, 1.5], [24, 24]] }
+        },
+        filter: ['all', this.singleItem ? itemFilter : ['==', '_id', ''], ['==', '$type', 'Point']]
       }]
     }
   },
@@ -186,7 +196,9 @@ export default {
           if (!feature) return
 
           if (feature.properties._id !== undefined) {
-            this.map.setFilter('results_hover', ['==', '_id', feature.properties._id])
+            const itemFilter = ['==', '_id', feature.properties._id]
+            this.map.setFilter('results_hover', itemFilter)
+            this.map.setFilter('results_point_hover', ['all', ['==', '$type', 'Point'], itemFilter])
           }
           // Change the cursor style as a UI indicator.
           this.map.getCanvas().style.cursor = 'pointer'
