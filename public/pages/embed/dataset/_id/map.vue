@@ -7,7 +7,13 @@
 </template>
 
 <script>
-export default {}
+import { mapState } from 'vuex'
+
+export default {
+  computed: {
+    ...mapState('dataset', ['dataset'])
+  }
+}
 </script>
 
 <style lang="css">

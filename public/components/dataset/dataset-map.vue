@@ -39,15 +39,9 @@ en:
 import { mapState, mapGetters } from 'vuex'
 import debounce from 'debounce'
 import eventBus from '~/event-bus'
-require('mapbox-gl/dist/mapbox-gl.css')
+require('maplibre-gl/dist/maplibre-gl.css')
 
-function resizeBBOX (bbox, ratio) {
-  const d1 = bbox[2] - bbox[0]
-  const d1diff = ((d1 * ratio) - d1) / 2
-  const d2 = bbox[3] - bbox[1]
-  const d2diff = ((d2 * ratio) - d2) / 2
-  return [Math.max(bbox[0] - d1diff, -180), Math.max(bbox[1] - d2diff, -90), Math.min(bbox[2] + d1diff, 180), Math.min(bbox[3] + d2diff, 90)]
-}
+const fitBoundsOpts = { maxZoom: 15, padding: 80 }
 
 export default {
   props: ['heightMargin', 'fixedHeight', 'singleItem', 'navigationPosition'],
@@ -75,7 +69,7 @@ export default {
         type: 'fill',
         paint: {
           'fill-color': primary,
-          'fill-opacity': 0.3
+          'fill-opacity': 0.5
         },
         filter: this.singleItem ? ['all', ['==', '$type', 'Polygon'], itemFilter] : ['==', '$type', 'Polygon']
       }, {
@@ -85,7 +79,7 @@ export default {
         type: 'line',
         paint: {
           'line-color': primary,
-          'line-opacity': 0.5,
+          'line-opacity': 0.8,
           'line-width': { stops: [[4, 0.5], [24, 3]] }
         },
         filter: this.singleItem ? ['all', ['==', '$type', 'Polygon'], itemFilter] : ['==', '$type', 'Polygon']
@@ -121,7 +115,7 @@ export default {
         type: 'circle',
         paint: {
           'circle-color': primary,
-          'circle-opacity': 0.5,
+          'circle-opacity': 0.8,
           'circle-radius': { stops: [[0, 1], [24, 16]] }
         },
         filter: this.singleItem ? ['all', ['==', '$type', 'Point'], itemFilter] : ['==', '$type', 'Point']
@@ -139,32 +133,33 @@ export default {
     }
   },
   async mounted () {
-    let mapboxgl = null
+    let maplibregl = null
     if (process.browser) {
-      mapboxgl = await import('mapbox-gl')
+      maplibregl = await import('maplibre-gl')
     }
 
-    if (!mapboxgl) return
+    if (!maplibregl) return
     try {
       this.mapHeight = this.fixedHeight ? this.fixedHeight : Math.max(window.innerHeight - this.$el.getBoundingClientRect().top - this.heightMargin, 300)
 
       await new Promise(resolve => setTimeout(resolve, 0))
       const style = this.env.map.style.replace('./', this.env.publicUrl + '/')
-      this.map = new mapboxgl.Map({
+      this.map = new maplibregl.Map({
         container: 'map',
         style,
         transformRequest: (url, resourceType) => {
-          return {
-            url,
-            credentials: 'include' // include cookies, for data-fair sessions
+          if (url.startsWith(this.env.publicUrl)) {
+            // include cookies, for data-fair sessions
+            return { url, credentials: 'include' }
+          } else {
+            return { url }
           }
         },
         attributionControl: false
-      }).addControl(new mapboxgl.AttributionControl({
+      }).addControl(new maplibregl.AttributionControl({
         compact: false
       }))
       this.map.on('error', (error) => {
-        console.log('Map error', error)
         if (error.sourceId) {
           // eventBus.$emit('notification', { error: `Échec d'accès aux tuiles ${error.sourceId}`, msg: 'Erreur pendant le rendu de la carte:' })
         } else if (error.error && error.error.status === 401) {
@@ -180,8 +175,8 @@ export default {
       if (!bbox) {
         throw new Error(this.$t('noGeoData'))
       }
-      this.map.fitBounds(bbox, { duration: 0 })
-      this.map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), this.navigationPosition ?? 'top-right')
+      this.map.fitBounds(bbox, { duration: 0, ...fitBoundsOpts })
+      this.map.addControl(new maplibregl.NavigationControl({ showCompass: false }), this.navigationPosition ?? 'top-right')
       // Disable map rotation using right click + drag
       this.map.dragRotate.disable()
       // Disable map rotation using touch rotation gesture
@@ -189,7 +184,7 @@ export default {
 
       if (!this.singleItem) {
         // Create a popup, but don't add it to the map yet.
-        const popup = new mapboxgl.Popup({ closeButton: true, closeOnClick: true })
+        const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true })
 
         const moveCallback = (e) => {
           const feature = this.map.queryRenderedFeatures(e.point).find(f => f.source === 'data-fair')
@@ -259,11 +254,7 @@ export default {
       const params = { format: 'geojson', size: 0, q: this.query }
       if (this.dataset.draftReason) params.draft = 'true'
       if (this.singleItem) params._id_eq = this.singleItem
-      const bbox = (await this.$axios.$get(this.resourceUrl + '/lines', { params })).bbox
-      if (!bbox || !bbox.length) {
-        return null
-      }
-      return resizeBBOX(bbox, 1.1)
+      return (await this.$axios.$get(this.resourceUrl + '/lines', { params })).bbox
     },
     async refresh () {
       // First clear layers and source to be able to change the tiles url
@@ -277,7 +268,7 @@ export default {
 
       // And fit box to results
       const bbox = await this.getBBox()
-      if (bbox) this.map.fitBounds(bbox)
+      if (bbox) this.map.fitBounds(bbox, fitBoundsOpts)
     },
     initCustomSource () {
       this.map.addSource('data-fair', { type: 'vector', tiles: [this.tileUrl] })
@@ -290,10 +281,10 @@ export default {
 </script>
 
 <style lang="css">
-.mapboxgl-popup-close-button {
+.maplibregl-popup-close-button {
   width: 24px;
 }
-.mapboxgl-popup-content {
+.maplibregl-popup-content {
   max-height: 300px;
   overflow-y: scroll;
   color: rgba(0, 0, 0, 0.87) !important;

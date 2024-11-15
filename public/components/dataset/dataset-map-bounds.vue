@@ -24,7 +24,7 @@ import eventBus from '~/event-bus'
 import bboxPolygon from '@turf/bbox-polygon'
 import bbox from '@turf/bbox'
 
-require('mapbox-gl/dist/mapbox-gl.css')
+require('maplibre-gl/dist/maplibre-gl.css')
 
 const dataLayers = [{
   id: 'bounds_polygon',
@@ -63,18 +63,18 @@ export default {
     }
   },
   async mounted () {
-    let mapboxgl = null
+    let maplibregl = null
     if (process.browser) {
-      mapboxgl = await import('mapbox-gl')
+      maplibregl = await import('maplibre-gl')
     }
 
-    if (!mapboxgl) return
+    if (!maplibregl) return
     try {
       this.mapHeight = this.fixedHeight ? this.fixedHeight : Math.max(window.innerHeight, 200)
 
       await new Promise(resolve => setTimeout(resolve, 0))
       const style = this.env.map.style.replace('./', this.env.publicUrl + '/')
-      this.map = new mapboxgl.Map({
+      this.map = new maplibregl.Map({
         container: 'map',
         style,
         transformRequest: (url, resourceType) => {
@@ -84,7 +84,7 @@ export default {
           }
         },
         attributionControl: false
-      }).addControl(new mapboxgl.AttributionControl({
+      }).addControl(new maplibregl.AttributionControl({
         compact: false
       }))
 
@@ -116,10 +116,10 @@ export default {
 </script>
 
 <style lang="css">
-.mapboxgl-popup-close-button {
+.maplibregl-popup-close-button {
   width: 24px;
 }
-.mapboxgl-popup-content {
+.maplibregl-popup-content {
   max-height: 300px;
   overflow-y: scroll;
   color: rgba(0, 0, 0, 0.87) !important;
