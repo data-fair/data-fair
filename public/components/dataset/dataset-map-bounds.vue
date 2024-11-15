@@ -34,7 +34,6 @@ export default {
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['resourceUrl']),
     boundsGeojson () {
-      console.log(this.dataset.extras)
       // this extra property is added by some importers from SIG
       if (this.dataset.extras?.geographic?.envelope) {
         return this.dataset.extras.geographic.envelope
@@ -53,7 +52,7 @@ export default {
     },
     dataLayers () {
       const primary = this.$vuetify.theme.themes.light.primary
-      return {
+      return [{
         id: 'bounds_polygon',
         source: 'bounds',
         type: 'line',
@@ -61,7 +60,7 @@ export default {
           'line-color': primary,
           'line-width': { stops: [[4, 1.5], [24, 9]] }
         }
-      }
+      }]
     }
   },
   async mounted () {
@@ -80,9 +79,11 @@ export default {
         container: 'map',
         style,
         transformRequest: (url, resourceType) => {
-          return {
-            url,
-            credentials: 'include' // include cookies, for data-fair sessions
+          if (url.startsWith(this.env.publicUrl)) {
+            // include cookies, for data-fair sessions
+            return { url, credentials: 'include' }
+          } else {
+            return { url }
           }
         },
         attributionControl: false
