@@ -8,7 +8,7 @@ const permissionsDoc = require('../server/misc/utils/permissions').apiDoc
 module.exports = (remoteService) => {
   const api = {
     openapi: '3.1.0',
-    info: Object.assign({}, remoteService.apiDoc.info, {
+    info: Object.assign({}, remoteService.apiDoc?.info, {
       title: `API du service distant : ${remoteService.title || remoteService.id}`,
       description: remoteService.description
     }),
@@ -16,7 +16,7 @@ module.exports = (remoteService) => {
       url: `${config.publicUrl}/api/v1/remote-services/${remoteService.id}`
     }],
     components: {
-      schemas: (remoteService.apiDoc.components && remoteService.apiDoc.components.schemas) || {},
+      schemas: remoteService.apiDoc?.components?.schemas || {},
       securitySchemes: {
         sdCookie: {
           type: 'apiKey',
@@ -137,7 +137,7 @@ module.exports = (remoteService) => {
       }
     }
   }
-  const apiPaths = Object.keys(remoteService.apiDoc.paths).reduce((a, path) => {
+  const apiPaths = Object.keys(remoteService.apiDoc?.paths ?? {}).reduce((a, path) => {
     a['/proxy' + path] = JSON.parse(JSON.stringify(remoteService.apiDoc.paths[path]))
     return a
   }, {})

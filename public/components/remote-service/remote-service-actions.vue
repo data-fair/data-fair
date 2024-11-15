@@ -5,7 +5,7 @@
     class="list-actions"
   >
     <v-list-item
-      v-if="remoteService.apiDoc.externalDocs"
+      v-if="remoteService.apiDoc?.externalDocs"
       :href="remoteService.apiDoc.externalDocs.url"
       target="_blank"
     >

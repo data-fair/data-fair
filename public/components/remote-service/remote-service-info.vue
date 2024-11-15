@@ -5,7 +5,7 @@
       md="6"
       order-md="2"
     >
-      <v-sheet>
+      <v-sheet v-if="remoteService.apiDoc">
         <v-list dense>
           <v-list-item v-if="remoteService.apiDoc.info.contact && remoteService.apiDoc.info.contact.url">
             <v-list-item-avatar class="ml-0 my-0">
