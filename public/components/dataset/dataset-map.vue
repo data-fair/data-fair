@@ -41,7 +41,7 @@ import debounce from 'debounce'
 import eventBus from '~/event-bus'
 require('maplibre-gl/dist/maplibre-gl.css')
 
-const fitBoundsOpts = { maxZoom: 15, padding: 80 }
+const fitBoundsOpts = { maxZoom: 15, padding: 40 }
 
 export default {
   props: ['heightMargin', 'fixedHeight', 'singleItem', 'navigationPosition'],
@@ -69,7 +69,7 @@ export default {
         type: 'fill',
         paint: {
           'fill-color': primary,
-          'fill-opacity': 0.5
+          'fill-opacity': 0.4
         },
         filter: this.singleItem ? ['all', ['==', '$type', 'Polygon'], itemFilter] : ['==', '$type', 'Polygon']
       }, {
@@ -79,7 +79,7 @@ export default {
         type: 'line',
         paint: {
           'line-color': primary,
-          'line-opacity': 0.8,
+          'line-opacity': 0.7,
           'line-width': { stops: [[4, 0.5], [24, 3]] }
         },
         filter: this.singleItem ? ['all', ['==', '$type', 'Polygon'], itemFilter] : ['==', '$type', 'Polygon']
@@ -100,7 +100,7 @@ export default {
         type: 'line',
         paint: {
           'line-color': primary,
-          'line-opacity': 0.5,
+          'line-opacity': 0.8,
           'line-width': { stops: [[4, 1], [24, 6]] }
         },
         layout: {

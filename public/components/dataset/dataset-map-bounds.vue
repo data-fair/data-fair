@@ -26,16 +26,6 @@ import bbox from '@turf/bbox'
 
 require('maplibre-gl/dist/maplibre-gl.css')
 
-const dataLayers = [{
-  id: 'bounds_polygon',
-  source: 'bounds',
-  type: 'line',
-  paint: {
-    'line-color': '#E91E63',
-    'line-width': { stops: [[4, 1.5], [24, 9]] }
-  }
-}]
-
 export default {
   props: ['heightMargin', 'fixedHeight'],
   data: () => ({ mapHeight: 0, query: '' }),
@@ -60,6 +50,18 @@ export default {
           coordinates: [[[bbox[0], bbox[1]], [bbox[2], bbox[1]], [bbox[2], bbox[3]], [bbox[0], bbox[3]], [bbox[0], bbox[1]]]]
         }
       } */
+    },
+    dataLayers () {
+      const primary = this.$vuetify.theme.themes.light.primary
+      return {
+        id: 'bounds_polygon',
+        source: 'bounds',
+        type: 'line',
+        paint: {
+          'line-color': primary,
+          'line-width': { stops: [[4, 1.5], [24, 9]] }
+        }
+      }
     }
   },
   async mounted () {
@@ -109,7 +111,7 @@ export default {
         type: 'geojson',
         data: this.boundsGeojson
       })
-      dataLayers.forEach(layer => this.map.addLayer(layer, this.env.map.beforeLayer))
+      this.dataLayers.forEach(layer => this.map.addLayer(layer, this.env.map.beforeLayer))
     }
   }
 }
