@@ -142,7 +142,11 @@ export default {
     try {
       this.mapHeight = this.fixedHeight ? this.fixedHeight : Math.max(window.innerHeight - this.$el.getBoundingClientRect().top - this.heightMargin, 300)
 
-      await new Promise(resolve => setTimeout(resolve, 0))
+      const bbox = await this.getBBox()
+      if (!bbox) {
+        throw new Error(this.$t('noGeoData'))
+      }
+
       const style = this.env.map.style.replace('./', this.env.publicUrl + '/')
       this.map = new maplibregl.Map({
         container: 'map',
@@ -171,10 +175,6 @@ export default {
           // eventBus.$emit('notification', { error: (error.error && error.error.message) || error, msg: 'Erreur pendant le rendu de la carte:' })
         }
       })
-      const bbox = await this.getBBox()
-      if (!bbox) {
-        throw new Error(this.$t('noGeoData'))
-      }
       this.map.fitBounds(bbox, { duration: 0, ...fitBoundsOpts })
       this.map.addControl(new maplibregl.NavigationControl({ showCompass: false }), this.navigationPosition ?? 'top-right')
       // Disable map rotation using right click + drag
