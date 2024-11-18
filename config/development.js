@@ -90,5 +90,11 @@ module.exports = {
   assertImmutable: true,
   agentkeepaliveOptions: {
     keepAlive: false
-  }
+  },
+  remoteServices: [{
+    title: 'Service de données cartographiques',
+    id: 'tileserver-koumoul',
+    description: 'Ce service expose les données cartographiques traitées par Koumoul sous divers formats standards.',
+    server: 'https://staging-koumoul.com/tileserver'
+  }]
 }

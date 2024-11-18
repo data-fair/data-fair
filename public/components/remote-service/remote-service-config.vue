@@ -2,7 +2,7 @@
   <v-container fluid>
     <v-select
       v-model="remoteService.server"
-      :items="remoteService.apiDoc.servers"
+      :items="remoteService.apiDoc?.servers"
       item-value="url"
       item-text="description"
       label="Serveur"

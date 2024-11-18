@@ -24,17 +24,7 @@ import eventBus from '~/event-bus'
 import bboxPolygon from '@turf/bbox-polygon'
 import bbox from '@turf/bbox'
 
-require('mapbox-gl/dist/mapbox-gl.css')
-
-const dataLayers = [{
-  id: 'bounds_polygon',
-  source: 'bounds',
-  type: 'line',
-  paint: {
-    'line-color': '#E91E63',
-    'line-width': { stops: [[4, 1.5], [24, 9]] }
-  }
-}]
+require('maplibre-gl/dist/maplibre-gl.css')
 
 export default {
   props: ['heightMargin', 'fixedHeight'],
@@ -44,7 +34,6 @@ export default {
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['resourceUrl']),
     boundsGeojson () {
-      console.log(this.dataset.extras)
       // this extra property is added by some importers from SIG
       if (this.dataset.extras?.geographic?.envelope) {
         return this.dataset.extras.geographic.envelope
@@ -60,31 +49,45 @@ export default {
           coordinates: [[[bbox[0], bbox[1]], [bbox[2], bbox[1]], [bbox[2], bbox[3]], [bbox[0], bbox[3]], [bbox[0], bbox[1]]]]
         }
       } */
+    },
+    dataLayers () {
+      const primary = this.$vuetify.theme.themes.light.primary
+      return [{
+        id: 'bounds_polygon',
+        source: 'bounds',
+        type: 'line',
+        paint: {
+          'line-color': primary,
+          'line-width': { stops: [[4, 1.5], [24, 9]] }
+        }
+      }]
     }
   },
   async mounted () {
-    let mapboxgl = null
+    let maplibregl = null
     if (process.browser) {
-      mapboxgl = await import('mapbox-gl')
+      maplibregl = await import('maplibre-gl')
     }
 
-    if (!mapboxgl) return
+    if (!maplibregl) return
     try {
       this.mapHeight = this.fixedHeight ? this.fixedHeight : Math.max(window.innerHeight, 200)
 
       await new Promise(resolve => setTimeout(resolve, 0))
       const style = this.env.map.style.replace('./', this.env.publicUrl + '/')
-      this.map = new mapboxgl.Map({
+      this.map = new maplibregl.Map({
         container: 'map',
         style,
         transformRequest: (url, resourceType) => {
-          return {
-            url,
-            credentials: 'include' // include cookies, for data-fair sessions
+          if (url.startsWith(this.env.publicUrl)) {
+            // include cookies, for data-fair sessions
+            return { url, credentials: 'include' }
+          } else {
+            return { url }
           }
         },
         attributionControl: false
-      }).addControl(new mapboxgl.AttributionControl({
+      }).addControl(new maplibregl.AttributionControl({
         compact: false
       }))
 
@@ -109,17 +112,17 @@ export default {
         type: 'geojson',
         data: this.boundsGeojson
       })
-      dataLayers.forEach(layer => this.map.addLayer(layer, this.env.map.beforeLayer))
+      this.dataLayers.forEach(layer => this.map.addLayer(layer, this.env.map.beforeLayer))
     }
   }
 }
 </script>
 
 <style lang="css">
-.mapboxgl-popup-close-button {
+.maplibregl-popup-close-button {
   width: 24px;
 }
-.mapboxgl-popup-content {
+.maplibregl-popup-content {
   max-height: 300px;
   overflow-y: scroll;
   color: rgba(0, 0, 0, 0.87) !important;

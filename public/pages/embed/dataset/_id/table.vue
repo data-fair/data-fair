@@ -543,6 +543,9 @@ export default {
       if (this.imageField) {
         fieldsHeaders.unshift({ text: '', value: '_thumbnail' })
       }
+      if (this.dataset.bbox && !this.noInteraction) {
+        fieldsHeaders.unshift({ text: '', value: '_map_preview' })
+      }
       return fieldsHeaders
     },
     cols () {
