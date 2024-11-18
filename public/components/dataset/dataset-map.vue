@@ -249,6 +249,9 @@ export default {
       eventBus.$emit('notification', { error })
     }
   },
+  destroyed () {
+    if (this.map) this.map.remove()
+  },
   methods: {
     async getBBox () {
       const params = { format: 'geojson', size: 0, q: this.query }

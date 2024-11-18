@@ -21,10 +21,34 @@
         :style="`right: 4px;top: 50%;transform: translate(0, -50%);z-index:100;background-color:${$vuetify.theme.dark ? '#212121' : 'white'};`"
         absolute
         :title="$t('showMapPreview')"
-        @click="mapPreviewItem = item._id"
+        @click="showMapPreview = true"
       >
         <v-icon>mdi-map</v-icon>
       </v-btn>
+      <v-dialog
+        v-model="showMapPreview"
+        max-width="700"
+        :overlay-opacity="0"
+      >
+        <v-card
+          v-if="showMapPreview"
+          outlined
+        >
+          <v-btn
+            style="position:absolute;top:4px;right:4px;z-index:1000;"
+            icon
+            @click.native="showMapPreview = false"
+          >
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+          <dataset-map
+            :key="item._id"
+            :height-margin="0"
+            navigation-position="top-left"
+            :single-item="item._id"
+          />
+        </v-card>
+      </v-dialog>
     </template>
     <template v-else-if="header.value === '_owner'">
       <v-tooltip top>
@@ -52,30 +76,6 @@
       :no-interaction="noInteraction"
       @filter="f => $emit('filter', f)"
     />
-
-    <v-dialog
-      :value="mapPreviewItem"
-      max-width="700"
-      :overlay-opacity="0"
-    >
-      <v-card
-        outlined
-      >
-        <v-btn
-          style="position:absolute;top:4px;right:4px;z-index:1000;"
-          icon
-          @click.native="mapPreviewItem = null"
-        >
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
-        <lazy-dataset-map
-          v-if="mapPreviewItem"
-          :height-margin="0"
-          navigation-position="top-left"
-          :single-item="item._id"
-        />
-      </v-card>
-    </v-dialog>
   </td>
 </template>
 
@@ -100,7 +100,7 @@ export default {
     noInteraction: { type: Boolean, default: false }
   },
   data: () => ({
-    mapPreviewItem: null
+    showMapPreview: false
   }),
   computed: {
     ...mapState(['env'])
