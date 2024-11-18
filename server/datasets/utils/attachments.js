@@ -13,8 +13,8 @@ const debugLimits = require('debug')('limits')
 exports.addAttachments = async (dataset, attachmentsArchive) => {
   const dir = attachmentsDir(dataset)
   await fs.ensureDir(dir)
-  await exec('unzip', ['-o', '-q', attachmentsArchive.path, '-d', dir])
-  await fs.remove(attachmentsArchive.path)
+  await exec('unzip', ['-o', '-q', attachmentsArchive, '-d', dir])
+  await fs.remove(attachmentsArchive)
 }
 
 exports.replaceAllAttachments = async (dataset, attachmentsFilePath) => {

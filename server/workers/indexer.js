@@ -14,6 +14,7 @@ exports.process = async function (app, dataset) {
   const datasetsService = require('../datasets/service')
   const restDatasetsUtils = require('../datasets/utils/rest')
   const taskProgress = require('../datasets/utils/task-progress')
+  const { tmpDir } = require('../datasets/utils/files')
 
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
   const debugHeap = require('../misc/utils/heap').debug(`worker:indexer:${dataset.id}`)
@@ -31,6 +32,16 @@ exports.process = async function (app, dataset) {
   const esClient = app.get('es')
 
   const partialUpdate = dataset._partialRestStatus === 'updated' || dataset._partialRestStatus === 'extended'
+
+  const newRestAttachments = dataset._newRestAttachments
+  if (newRestAttachments?.length) {
+    const path = require('path')
+    const attachmentsUtils = require('../datasets/utils/attachments')
+    for (const a of newRestAttachments) {
+      await attachmentsUtils.addAttachments(dataset, path.join(tmpDir, a))
+      await db.collection('datasets').updateOne({ id: dataset.id }, { $pull: { _newRestAttachments: a } })
+    }
+  }
 
   let indexName
   if (partialUpdate) {
