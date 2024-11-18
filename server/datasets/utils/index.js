@@ -205,6 +205,7 @@ exports.clean = (req, dataset, draft = false) => {
   delete dataset._readApiKey
   delete dataset._attachmentsTargets
   delete dataset._partialRestStatus
+  delete dataset._newRestAttachments
 
   if (select.includes('-userPermissions')) delete dataset.userPermissions
   if (select.includes('-owner')) delete dataset.owner
