@@ -132,6 +132,11 @@ export default {
       }]
     }
   },
+  watch: {
+    singleItem () {
+      this.refresh()
+    }
+  },
   async mounted () {
     let maplibregl = null
     if (process.browser) {
