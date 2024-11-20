@@ -169,6 +169,7 @@ export default {
         compact: false
       }))
       this.map.on('error', (error) => {
+        console.error('dataset map preview error', error)
         if (error.sourceId) {
           // eventBus.$emit('notification', { error: `Échec d'accès aux tuiles ${error.sourceId}`, msg: 'Erreur pendant le rendu de la carte:' })
         } else if (error.error && error.error.status === 401) {
