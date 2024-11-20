@@ -1,7 +1,7 @@
 <template lang="html">
   <v-card>
     <v-text-field
-      v-if="dataset && !singleItem"
+      v-if="dataset && !singleItem && !noInteraction"
       v-model="query"
       light
       class="mt-2 ml-2 mx-2"
@@ -44,7 +44,7 @@ require('maplibre-gl/dist/maplibre-gl.css')
 const fitBoundsOpts = { maxZoom: 15, padding: 40 }
 
 export default {
-  props: ['heightMargin', 'fixedHeight', 'singleItem', 'navigationPosition'],
+  props: ['heightMargin', 'fixedHeight', 'singleItem', 'navigationPosition', 'noInteraction'],
   data: () => ({ mapHeight: 0, query: '' }),
   computed: {
     ...mapState(['env']),
@@ -164,7 +164,7 @@ export default {
             return { url }
           }
         },
-        preserveDrawingBuffer: true, // for capture ? TODO: only apply this if in a capture context ?
+        preserveDrawingBuffer: this.noInteraction, // for capture ? TODO: only apply this if in a capture context ?
         attributionControl: false
       }).addControl(new maplibregl.AttributionControl({
         compact: false
@@ -183,7 +183,9 @@ export default {
         }
       })
       this.map.fitBounds(bbox, { duration: 0, ...fitBoundsOpts })
-      this.map.addControl(new maplibregl.NavigationControl({ showCompass: false }), this.navigationPosition ?? 'top-right')
+      if (!this.noInteraction) {
+        this.map.addControl(new maplibregl.NavigationControl({ showCompass: false }), this.navigationPosition ?? 'top-right')
+      }
       // Disable map rotation using right click + drag
       this.map.dragRotate.disable()
       // Disable map rotation using touch rotation gesture
@@ -244,7 +246,9 @@ export default {
         this.dataLayers.forEach(layer => {
           this.map.on('mousemove', layer.id, debounce(moveCallback, 30))
           this.map.on('mouseleave', layer.id, leaveCallback)
-          this.map.on('click', layer.id, clickCallback)
+          if (!this.noInteraction) {
+            this.map.on('click', layer.id, clickCallback)
+          }
         })
       }
 
