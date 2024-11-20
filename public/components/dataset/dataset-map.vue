@@ -164,6 +164,7 @@ export default {
             return { url }
           }
         },
+        preserveDrawingBuffer: true, // for capture ? TODO: only apply this if in a capture context ?
         attributionControl: false
       }).addControl(new maplibregl.AttributionControl({
         compact: false
