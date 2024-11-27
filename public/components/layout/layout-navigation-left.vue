@@ -175,15 +175,15 @@
           <v-list-item-action><v-icon>mdi-cloud</v-icon></v-list-item-action>
           <v-list-item-title v-t="'apiDoc'" />
         </v-list-item>
-        <v-list-item
+        <!--<v-list-item
           :nuxt="true"
           dense
-          href="https://data-fair.github.io/3/user-guide-backoffice"
+          href="https://data-fair.github.io/4/user-guide-backoffice"
           target="blank"
         >
           <v-list-item-action><v-icon>mdi-book-open-variant</v-icon></v-list-item-action>
           <v-list-item-title v-t="'userDoc'" />
-        </v-list-item>
+        </v-list-item>-->
         <v-list-item
           v-for="(docLink, i) of env.extraDocLinks"
           :key="i"
@@ -288,7 +288,7 @@
     >
       <v-spacer />
       <span class="text-caption"><a
-        href="https://data-fair.github.io/3/"
+        href="https://data-fair.github.io/4/"
         style="color:white;"
       >Powered by Data Fair</a></span>
     </v-footer>

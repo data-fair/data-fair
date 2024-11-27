@@ -32,7 +32,7 @@ Notez que l'API réelle est plus riche, chaque jeu de données et chaque service
 
 Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous pouvez créer dans vos paramètres personnels ou dans les paramètres d'une organisation dont vous êtes administrateur.
 
-Pour des exemples simples de publication de données vous pouvez consulter la <a href="https://data-fair.github.io/3/interoperate/api" target="blank">documentation sur ce sujet</a>.
+Pour des exemples simples de publication de données vous pouvez consulter la <a href="https://data-fair.github.io/4/interoperate/api" target="blank">documentation sur ce sujet</a>.
 `,
       version: version,
       'x-api-id': 'data-fair'

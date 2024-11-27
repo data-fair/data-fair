@@ -70,9 +70,9 @@ module.exports = {
   ],
   extraDocLinks: [
     {
-      title: 'Plateforme Koumoul',
+      title: 'Manuel utilisateur',
       href: 'https://docs.koumoul.com/',
-      icon: 'mdi-alpha-k-box'
+      icon: 'mdi-book-open-variant'
     }
   ],
   disableSharing: false,
