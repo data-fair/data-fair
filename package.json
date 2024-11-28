@@ -25,7 +25,7 @@
     "build-doc": "nuxt generate --config-file ${PWD}/doc/nuxt.config.js",
     "serve-doc": "TARGET=http://localhost:3144/doc-dist/ npm run build-doc && http-server .",
     "postinstall": "patch-package",
-    "prepare": "husky install",
+    "prepare": "husky",
     "check-types": "tsc",
     "quality": "npm run test-deps && npm run lint && npm run test && npm audit --omit=dev --audit-level=critical"
   },
@@ -116,8 +116,7 @@
     "mermaid": "^9.2.2",
     "mocha": "^10.2.0",
     "nock": "^13.1.3",
-    "nuxt": "^2.17.1",
-    "nuxt-webpack-optimisations": "^2.2.0",
+    "nuxt": "^2.18.1",
     "nyc": "^15.1.0",
     "patch-package": "^6.4.7",
     "perfect-scrollbar": "^1.5.5",
