@@ -24,6 +24,9 @@ describe('expression engine based on expr-eval', () => {
     assert.equal(parser.parse('TRANSFORM_DATE(a, "x")').evaluate({ a: 1715076817000 }), '2024-05-07T12:13:37+02:00')
     assert.equal(parser.parse('TRANSFORM_DATE(a, "X")').evaluate({ a: '1715076817' }), '2024-05-07T12:13:37+02:00')
     assert.equal(parser.parse('TRANSFORM_DATE(a, "X")').evaluate({ a: null }), null)
+    assert.equal(parser.parse('join("-", filter(f(item) = item, [a, b, c]))').evaluate({ a: 'a', b: '', c: 'c' }), 'a-c')
+    assert.equal(parser.parse('join("-", filter(TRUTHY, [a, b, c]))').evaluate({ a: 'a', b: '', c: 'c' }), 'a-c')
+    assert.equal(parser.parse('join("-", filter(DEFINED, [a, b, c]))').evaluate({ a: true, b: null, c: false }), 'true-false')
 
     assert.equal(compile('a', { type: 'string' })({ a: 11 }), '11')
     assert.equal(compile('a', { type: 'number' })({ a: '11' }), 11)

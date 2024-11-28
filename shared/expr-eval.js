@@ -164,6 +164,14 @@ module.exports = (defaultTimezone) => {
     return date.format(outputFormat)
   }
 
+  parser.functions.TRUTHY = function (arg) {
+    return !!arg
+  }
+
+  parser.functions.DEFINED = function (arg) {
+    return arg !== undefined && arg !== null
+  }
+
   return {
     parser,
     check: (expr, schema, fullSchema) => {
@@ -176,7 +184,9 @@ module.exports = (defaultTimezone) => {
             if (altProp) return `la clé de la colonne ${variable} est ${altProp.key}`
             const extProp = fullSchema.find(p => p.key === variable || p['x-originalName'] === variable || p.title === variable)
             if (extProp) return `la colonne ${variable} est définie par une extension qui est appliquée après cette expression`
-            return `colonne ${variable} inconnue`
+            // we cannot fail here because variables() also returns locally defined functions
+            // we rely on eval time errors in this case
+            // return `colonne ${variable} inconnue`
           }
         }
       } catch (err) {
