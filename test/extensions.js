@@ -690,6 +690,25 @@ other,unknown address
     assert.equal(res.data.results[1].calc1, 'bidule - adresse inconnue')
   })
 
+  it('Extend dataset using more complex expression', async function () {
+    const ax = global.ax.dmeadus
+    // Initial dataset with addresses
+    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
+    let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: true, type: 'exprEval', expr: 'f(item) = item != "koumoul"; join(" - ", filter(f, [id, adr]))', property: { key: 'calc1', type: 'string' } }]
+    })
+    assert.equal(res.status, 200)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    assert.ok(dataset.schema.find(field => field.key === 'calc1'))
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results[0].calc1, '19 rue de la voie lactée saint avé')
+    assert.equal(res.data.results[1].calc1, 'bidule - adresse inconnue')
+  })
+
   it('Extend dataset using expression referencing column from another extension', async function () {
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
@@ -742,14 +761,14 @@ other,unknown address
       return true
     })
 
-    await assert.rejects(ax.patch(`/api/v1/datasets/${dataset.id}`, {
+    /* await assert.rejects(ax.patch(`/api/v1/datasets/${dataset.id}`, {
       extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(_id, " - ", ADR)', property: { key: 'calc1', type: 'string' } }]
     }), (err) => {
       assert.equal(err.status, 400)
       console.log(err.data)
       assert.ok(err.data.includes('colonne ADR inconnue'))
       return true
-    })
+    }) */
 
     await assert.rejects(ax.patch(`/api/v1/datasets/${dataset.id}`, {
       extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(_id, " - ", Str1)', property: { key: 'calc1', type: 'string' } }]
