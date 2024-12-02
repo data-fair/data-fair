@@ -600,12 +600,15 @@ describe('virtual datasets', () => {
       title: 'restaccount',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'account', type: 'string', 'x-refersTo': 'https://github.com/data-fair/lib/account' }]
     })).data
-    await ax.post('/api/v1/datasets/rest1/_bulk_lines', [
+    const lines = [
       { attr1: 'test1', account: 'user:ccherryholme1' },
       { attr1: 'test2', account: 'user:cdurning2' },
       { attr1: 'test3', account: 'user:cdurning2' },
-      { attr1: 'test4' }
-    ])
+      { attr1: 'test4' },
+      { attr1: 'test5', account: 'organization:KWqAGZ4mG:dep1' },
+      { attr1: 'test6', account: 'user:hlalonde3' }
+    ]
+    await ax.post('/api/v1/datasets/rest1/_bulk_lines', lines)
     await workers.hook('finalizer/' + dataset.id)
 
     let res = await ax.post('/api/v1/datasets', {
@@ -624,7 +627,7 @@ describe('virtual datasets', () => {
 
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.status, 200)
-    assert.equal(res.data.total, 4)
+    assert.equal(res.data.total, lines.length)
     assert.ok(res.headers['cache-control'].includes('private'))
 
     // owner of dataset can use account filter both on virtual dataset and on child
@@ -653,12 +656,20 @@ describe('virtual datasets', () => {
     assert.equal(res.data.results[0].account, 'user:cdurning2')
 
     // another user cannot read the lines where he is not referenced
-    res = await global.ax.hlalonde3.get(`/api/v1/datasets/${virtualDataset.id}/lines?size=1`)
+    res = await global.ax.ngernier4.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 0)
     await assert.rejects(
-      global.ax.hlalonde3.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user%3Acdurning2`),
+      global.ax.ngernier4.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user%3Acdurning2`),
       { status: 403 }
     )
+
+    // another user can read the line where is current orga is referenced and those where he is personnally reference
+    res = await global.ax.hlalonde3.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 1)
+    res = await global.ax.hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 2)
   })
 })

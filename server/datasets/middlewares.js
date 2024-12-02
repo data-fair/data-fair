@@ -94,7 +94,13 @@ exports.readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptM
     if (!ownerRole) {
       const queryAccount = `${activeAccount.type}:${activeAccount.id}${activeAccount.department ? ':' + activeAccount.department : ''}`
       if (req.query.account && req.query.account !== queryAccount) throw createError(403, 'You are not allowed to use the account parameter')
-      req.query.account = queryAccount
+      if (!req.query.account) {
+        req.query.account = queryAccount
+        if (activeAccount.type === 'organization') {
+          // also use personnal permissions
+          req.query.account += `,user:${req.user.id}`
+        }
+      }
     }
     req.noCache = true
   }
