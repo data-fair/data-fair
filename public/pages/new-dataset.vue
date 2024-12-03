@@ -510,7 +510,7 @@
           <dataset-init-from :dataset="restDataset" />
 
           <v-btn
-            v-t="'continue'"
+            v-t="restDataset.initFrom ? 'continue' : 'ignorer'"
             color="primary"
             class="ml-2 mt-4"
             @click.native="currentStep += 1"
