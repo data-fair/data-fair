@@ -75,11 +75,7 @@ module.exports = (defaultTimezone) => {
 
   parser.functions.REPLACE = function (arg, search, replace) {
     if (typeof arg !== 'string') return arg
-    let res = arg
-    while (res.includes(search)) {
-      res = res.replace(search, replace)
-    }
-    return res
+    return arg.replaceAll(search, replace)
   }
 
   parser.functions.EXTRACT = function (arg, before, after) {
