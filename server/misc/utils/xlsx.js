@@ -208,7 +208,7 @@ const iterCSVOld = async function * (filePath) {
         delete cell.w
         delete cell.z
         XLSX.utils.format_cell(cell, null, { dateNF: 'YYYY-MM-DD HH:mm:ss' })
-        if (cell.w.split(' ')[1] !== '00:00:00' && !cell.v.toISOString().endsWith('T00:00:00.000Z')) hasTime[c] = true
+        if (cell.w.split(' ')[1] !== '00:00:00' && cell.v.toISOString && !cell.v.toISOString().endsWith('T00:00:00.000Z')) hasTime[c] = true
       }
     }
   }
