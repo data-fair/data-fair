@@ -182,8 +182,11 @@ function checkQuery (query, schema, esFields, currentField) {
   if (query.field === '<implicit>' && currentField) query.field = currentField
   if (query.field === '_exists_') {
     const field = query.term.replace(/\\/g, '')
+    if (!schema.find(p => p.key === field)) {
+      throw createError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
+    }
     if (!esFields.includes(field)) {
-      throw createError(400, `Impossible d'appliquer un filtre' sur le champ ${field}, il n'existe pas dans le jeu de données.`)
+      throw createError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilities.properties.index.title}" n'est pas activée dans la configuration technique du champ.`)
     }
   } else if (query.field && !esFields.includes(query.field)) {
     const suffix = capabilitiesSuffixes.find(cs => query.field.endsWith(cs[0]))
