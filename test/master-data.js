@@ -2,6 +2,7 @@
 // by another (or the same) data-fair instance
 
 const assert = require('assert').strict
+const FormData = require('form-data')
 
 const workers = require('../server/workers')
 const testUtils = require('./resources/test-utils')
@@ -733,6 +734,51 @@ describe('Master data management', () => {
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_geo.country'], 'JPN')
     assert.equal(results[0]['_country.name'], 'Japan')
+
+    // same test but with a file based dataset
+    const form = new FormData()
+    const csvSlave = `lat,lon
+-2.8,45.5
+`
+    form.append('dataset', csvSlave, 'slave.csv')
+    const slaveFile = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    await workers.hook(`finalizer/${slaveFile.id}`)
+    let lines = (await ax.get(`/api/v1/datasets/${slaveFile.id}/lines`)).data.results
+    await ax.patch(`/api/v1/datasets/${slaveFile.id}`, {
+      // latlonProperty will be calculated
+      // then countryProperty will be deduced from first level extension
+      // then country name will be deduced from second level extension
+      schema: [latProperty, lonProperty],
+      extensions: [{
+        active: true,
+        type: 'remoteService',
+        remoteService: remoteService.id,
+        action: 'masterData_bulkSearch_geo',
+        select: ['country']
+      }, {
+        active: true,
+        type: 'remoteService',
+        remoteService: remoteService2.id,
+        action: 'masterData_bulkSearch_country',
+        select: ['name']
+      }]
+    })
+    await workers.hook(`finalizer/${slaveFile.id}`)
+    lines = (await ax.get(`/api/v1/datasets/${slaveFile.id}/lines`)).data.results
+    assert.equal(lines[0]['_geo.country'], 'JPN')
+    assert.equal(lines[0]['_country.name'], 'Japan')
+
+    // and another time after updating the file dataset
+    const form2 = new FormData()
+    const csvSlave2 = `lat,lon
+-2.7,47.6
+`
+    form2.append('dataset', csvSlave2, 'slave2.csv')
+    await ax.post(`/api/v1/datasets/${slaveFile.id}`, form2, { headers: testUtils.formHeaders(form2) })
+    await workers.hook(`finalizer/${slaveFile.id}`)
+    lines = (await ax.get(`/api/v1/datasets/${slaveFile.id}/lines`)).data.results
+    assert.equal(lines[0]['_geo.country'], 'FRA')
+    assert.equal(lines[0]['_country.name'], 'France')
   })
 
   it('should listing remote services actions', async () => {

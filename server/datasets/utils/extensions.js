@@ -12,6 +12,7 @@ const { fullFilePath, fsyncFile, attachmentPath } = require('./files')
 const { readStreams, writeExtendedStreams } = require('./data-streams')
 const restDatasetsUtils = require('./rest')
 const geoUtils = require('./geo')
+const schemaUtils = require('./schema')
 const { bulkSearchPromise, bulkSearchStreams } = require('./master-data')
 const taskProgress = require('./task-progress')
 const permissionsUtils = require('../../misc/utils/permissions')
@@ -96,7 +97,7 @@ exports.extend = async (app, dataset, extensions, updateMode, ignoreDraftLimit, 
       }
 
       const extensionKey = exports.getExtensionKey(extension)
-      const inputMapping = prepareInputMapping(action, dataset, extensionKey, extension.select)
+      const inputMapping = await prepareInputMapping(app.get('db'), action, dataset, extensionKey, extension.select)
       const errorKey = action.output.find(o => o.name === '_error') ? '_error' : 'error'
       const idInput = action.input.find(input => input.concept === 'http://schema.org/identifier')
       if (!idInput) throw new Error('A field with concept "http://schema.org/identifier" is required and missing in the remote service action', action)
@@ -325,9 +326,10 @@ class ExtensionsStream extends Transform {
 exports.getExtensionKey = require('../../../shared/utils/extensions').getExtensionKey
 
 // Create a function that will transform items from a dataset into inputs for an action
-function prepareInputMapping (action, dataset, extensionKey, selectFields) {
+async function prepareInputMapping (db, action, dataset, extensionKey, selectFields) {
+  const schema = await schemaUtils.extendedSchema(db, dataset)
   const fieldMappings = action.input.map(input => {
-    const field = dataset.schema.find(f =>
+    const field = schema.find(f =>
       f['x-refersTo'] === input.concept &&
       f['x-refersTo'] !== 'http://schema.org/identifier' &&
       f.key.indexOf(extensionKey + '.') !== 0
@@ -428,7 +430,6 @@ exports.checkExtensions = async (db, schema, extensions = []) => {
 
   for (const extension of extensions) {
     if (!extension.active) continue
-
     if (geoUtils.schemaHasGeopoint(schema) || geoUtils.schemaHasGeometry(schema)) {
       availableConcepts.add('http://www.w3.org/2003/01/geo/wgs84_pos#lat_long')
     }
