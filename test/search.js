@@ -12,6 +12,7 @@ describe('search', () => {
     let res = await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     assert.equal(res.status, 200)
     await workers.hook(`finalizer/${dataset.id}`)
+
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
 
@@ -65,6 +66,8 @@ describe('search', () => {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?bbox=-2.5,40,3,47`)
     assert.equal(res.data.total, 1)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?geo_distance=-2.75,47.7,10km`)
+    assert.ok(res.data.results[0]._geo_distance > 1400)
+    assert.ok(res.data.results[0]._geo_distance < 1500)
     assert.equal(res.data.total, 1)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?geo_distance=-2.75:47.7:10km`)
     assert.equal(res.data.total, 1)

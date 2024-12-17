@@ -556,7 +556,7 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
           }
         })
       } else {
-      // TODO: use _geoshape after upgrading ES
+        // TODO: use _geoshape after upgrading ES
 
         // distance of 0 is not accepted
         if (distance === '0m' || distance === '0km') distance = '1m'
@@ -688,6 +688,14 @@ exports.prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicU
       res[geometryField.key] = geojsonToWKT(geometry)
     }
     if (res._geoshape) res._geoshape = geojsonToWKT(res._geoshape)
+  }
+
+  if (res._geopoint && (query.geo_distance ?? query._c_geo_distance)) {
+    const [lon, lat] = (query.geo_distance ?? query._c_geo_distance).split(/[,:]/)
+    const [centerLat, centerLon] = res._geopoint.split(',')
+    const turfDistance = require('@turf/distance').default
+    const distance = turfDistance([lon, lat], [centerLon, centerLat])
+    res._geo_distance = distance * 1000
   }
 
   return res
