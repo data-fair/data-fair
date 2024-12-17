@@ -124,8 +124,12 @@ export default {
           await this.$store.dispatch('dataset/saveLine', { line: this.line, file: this.file })
         }
       }
+      if (!Object.keys(this.queryContext.data).length) {
+        // crowd-sourcing add mode where we don't want the user to spam
+        this.sent = true
+      }
+
       this.saving = false
-      this.sent = true
     }
   }
 }
