@@ -590,6 +590,14 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               type: 'integer',
               maximum: 10000
             }
+          }, {
+            in: 'query',
+            name: 'sort',
+            description: 'Tri des valeurs ("asc" ou "desc"). "asc" par défaut',
+            schema: {
+              type: 'string',
+              enum: ['asc', 'desc']
+            }
           // @ts-ignore
           }].concat(filterParams),
           // TODO: document sort param and interval

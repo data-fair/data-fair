@@ -5,6 +5,7 @@ const { prepareQuery, aliasName } = require('./commons.js')
 module.exports = async (client, dataset, fieldKey, query) => {
   const field = dataset.schema.find(p => p.key === fieldKey)
   if (!field) throw createError(400, `field "${fieldKey}" is unknown`)
+  const sort = query.sort ?? 'asc'
   delete query.sort
   const esQuery = prepareQuery(dataset, query, [fieldKey], { lenient: true, analyze_wildcard: true }, true)
   if (esQuery.size > 1000) throw createError(400, '"size" cannot be more than 1000')
@@ -17,7 +18,7 @@ module.exports = async (client, dataset, fieldKey, query) => {
         size,
         order: {
           // alphabetical order by default
-          _key: 'asc'
+          _key: sort
         }
       }
     }
