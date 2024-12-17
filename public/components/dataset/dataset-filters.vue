@@ -59,6 +59,7 @@ export default {
     },
     labels (filter) {
       let operator = '= '
+      if (filter.type === 'nin' || filter.type === 'neq') operator = '&ne;'
       if (filter.type === 'starts') operator = 'commence par'
       let value = this.$root.$options.filters.cellValues(filter.values || filter.value, filter.field)
       if (filter.type === 'interval') {

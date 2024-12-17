@@ -36,9 +36,19 @@ describe('search', () => {
     // filter on exact values with query params suffixed with _in
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_in=koumoul,test`)
     assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].id, 'koumoul')
     // filter on exact values with query params suffixed with _eq
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_eq=koumoul`)
     assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].id, 'koumoul')
+    // filter on exact values with query params suffixed with _nin
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_nin=koumoul,test`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].id, 'bidule')
+    // exclude exact values with query params suffixed with _neq
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_neq=koumoul`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].id, 'bidule')
     // perform a full-text search on a column with query params suffixed with _search
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_search=koumoul`)
     assert.equal(res.data.total, 1)

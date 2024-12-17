@@ -414,7 +414,7 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
     }
   }
   for (const queryKey of Object.keys(query)) {
-    const filterSuffix = ['_in', '_eq', '_gt', '_lt', '_gte', '_lte', '_search', '_contains', '_starts'].find(suffix => queryKey.endsWith(suffix))
+    const filterSuffix = ['_in', '_nin', '_eq', '_neq', '_gt', '_lt', '_gte', '_lte', '_search', '_contains', '_starts'].find(suffix => queryKey.endsWith(suffix))
     if (!filterSuffix) continue
     let prop
     if (queryKey.startsWith('_c_')) {
@@ -437,9 +437,22 @@ exports.prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) =>
         throw createError(400, `"${queryKey}" parameter is malformed`)
       }
     }
+    if (filterSuffix === '_nin') {
+      requiredCapability(prop, filterSuffix)
+      try {
+        const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',')
+        filter.push({ bool: { must_not: { terms: { [prop.key]: values } } } })
+      } catch (err) {
+        throw createError(400, `"${queryKey}" parameter is malformed`)
+      }
+    }
     if (filterSuffix === '_eq') {
       requiredCapability(prop, filterSuffix)
       filter.push({ term: { [prop.key]: query[queryKey] } })
+    }
+    if (filterSuffix === '_neq') {
+      requiredCapability(prop, filterSuffix)
+      filter.push({ bool: { must_not: { term: { [prop.key]: query[queryKey] } } } })
     }
     if (filterSuffix === '_gt') {
       // TODO: check if this filter required a "index" capability or "values"

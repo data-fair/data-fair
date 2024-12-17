@@ -27,7 +27,7 @@ export function escape (val) {
   }).join('')
 }
 
-const suffixes = ['_in', '_eq', '_gte', '_lte', '_search', '_contains', '_starts']
+const suffixes = ['_in', '_eq', '_nin', '_neq', '_gte', '_lte', '_search', '_contains', '_starts']
 
 export function writeQueryParams (dataset, filters, query, applyDatasetPrefix = false) {
   for (const key of Object.keys(query)) {
@@ -45,6 +45,12 @@ export function writeQueryParams (dataset, filters, query, applyDatasetPrefix = 
     }
     if (f.type === 'in' && f.values.length > 1) {
       query[prefix + '_in'] = JSON.stringify(f.values).slice(1, -1)
+    }
+    if (f.type === 'nin' && f.values.length === 1) {
+      query[prefix + '_neq'] = f.values[0]
+    }
+    if (f.type === 'nin' && f.values.length > 1) {
+      query[prefix + '_nin'] = JSON.stringify(f.values).slice(1, -1)
     }
     if (f.type === 'starts') {
       query[prefix + '_starts'] = f.value
@@ -83,6 +89,18 @@ export function readQueryParams (query, dataset) {
       } else if (key.endsWith('_in')) {
         filters.push({
           type: 'in',
+          field,
+          values: JSON.parse(`[${query[key]}]`)
+        })
+      } else if (key.endsWith('_neq')) {
+        filters.push({
+          type: 'nin',
+          field,
+          values: [query[key]]
+        })
+      } else if (key.endsWith('_nin')) {
+        filters.push({
+          type: 'nin',
           field,
           values: JSON.parse(`[${query[key]}]`)
         })
