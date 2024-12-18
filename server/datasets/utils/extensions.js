@@ -30,7 +30,7 @@ const debug = require('debug')('extensions')
  * @param {any[]} extensions
  * @param {any[]} oldExtensions
  */
-exports.prepareExtensions = (locale, extensions, oldExtensions = []) => {
+ export const prepareExtensions = (locale, extensions, oldExtensions = []) => {
   for (const e of extensions) {
     if (e.type === 'remoteService' && !e.shortId && !e.propertyPrefix) {
       const oldExtension = oldExtensions.find((/** @type {any} */oldE) => oldE.remoteService === e.remoteService && oldE.action === e.action)
@@ -75,7 +75,7 @@ exports.prepareExtensions = (locale, extensions, oldExtensions = []) => {
 // Apply an extension to a dataset: meaning, query a remote service in batches
 // and add the result either to a "full" file or to the collection in case of a rest dataset
 const compileExpression = require('../../../shared/expr-eval')(config.defaultTimezone).compile
-exports.extend = async (app, dataset, extensions, updateMode, ignoreDraftLimit, lineId) => {
+ export const extend = async (app, dataset, extensions, updateMode, ignoreDraftLimit, lineId) => {
   debugMasterData(`extend dataset ${dataset.id} (${dataset.slug})`, extensions)
   const db = app.get('db')
   const es = app.get('es')
@@ -96,7 +96,7 @@ exports.extend = async (app, dataset, extensions, updateMode, ignoreDraftLimit, 
         throw new Error(`Try to apply extension on dataset ${dataset.id} from remote service ${remoteService.id} but action ${extension.action} was not found.`)
       }
 
-      const extensionKey = exports.getExtensionKey(extension)
+      const extensionKey =  export const getExtensionKey(extension)
       const inputMapping = await prepareInputMapping(app.get('db'), action, dataset, extensionKey, extension.select)
       const errorKey = action.output.find(o => o.name === '_error') ? '_error' : 'error'
       const idInput = action.input.find(input => input.concept === 'http://schema.org/identifier')
@@ -283,9 +283,9 @@ class ExtensionsStream extends Transform {
             const data = { ...this.buffer[i] }
             // WARNING: this code is duplicated in server/utils/extensions.js
             for (const prop of this.dataset.schema) {
-              const ext = this.dataset.extensions?.find(e => prop.key.startsWith(exports.getExtensionKey(e) + '.'))
+              const ext = this.dataset.extensions?.find(e => prop.key.startsWith( export const getExtensionKey(e) + '.'))
               if (ext) {
-                const extKey = exports.getExtensionKey(ext)
+                const extKey =  export const getExtensionKey(ext)
                 data[extKey] = data[extKey] ? { ...data[extKey] } : {}
                 const shortKey = prop.key.replace(extKey + '.', '')
                 data[extKey][shortKey] = data[extKey][shortKey] ?? null
@@ -323,7 +323,7 @@ class ExtensionsStream extends Transform {
   }
 }
 
-exports.getExtensionKey = require('../../../shared/utils/extensions').getExtensionKey
+ export const getExtensionKey = require('../../../shared/utils/extensions').getExtensionKey
 
 // Create a function that will transform items from a dataset into inputs for an action
 async function prepareInputMapping (db, action, dataset, extensionKey, selectFields) {
@@ -341,7 +341,7 @@ async function prepareInputMapping (db, action, dataset, extensionKey, selectFie
     const flatItem = flatten(item) // in case the input comes from another extension
 
     if (fieldMappings.find(mapping => mapping[2]['x-calculated'])) {
-      await exports.applyCalculations(dataset, flatItem)
+      await  export const applyCalculations(dataset, flatItem)
     }
 
     for (const mapping of fieldMappings) {
@@ -359,7 +359,7 @@ async function prepareInputMapping (db, action, dataset, extensionKey, selectFie
  * @param {any[]} extensions
  * @returns
  */
-exports.prepareExtensionsSchema = async (db, schema, extensions) => {
+ export const prepareExtensionsSchema = async (db, schema, extensions) => {
   let extensionsFields = []
   for (const extension of extensions) {
     if (!extension.active) continue
@@ -368,7 +368,7 @@ exports.prepareExtensionsSchema = async (db, schema, extensions) => {
       if (!remoteService) continue
       const action = remoteService.actions.find(action => action.id === extension.action)
       if (!action) continue
-      const extensionKey = exports.getExtensionKey(extension)
+      const extensionKey =  export const getExtensionKey(extension)
       const extensionId = `${extension.remoteService}/${extension.action}`
       const selectFields = extension.select || []
       extensionsFields = extensionsFields.concat(action.output
@@ -421,7 +421,7 @@ exports.prepareExtensionsSchema = async (db, schema, extensions) => {
 }
 
 // check if and extension dosn't have the necessary input
-exports.checkExtensions = async (db, schema, extensions = []) => {
+ export const checkExtensions = async (db, schema, extensions = []) => {
   if (!extensions.some(e => e.active)) return null
 
   const availableConcepts = new Set(schema.map(prop => prop['x-refersTo']).filter(c => c))
@@ -458,7 +458,7 @@ exports.checkExtensions = async (db, schema, extensions = []) => {
   return null
 }
 
-exports.applyCalculations = async (dataset, item) => {
+ export const applyCalculations = async (dataset, item) => {
   let warning = null
   const flatItem = flatten(item, { safe: true })
 

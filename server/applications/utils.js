@@ -9,7 +9,7 @@ const datasetUtils = require('../datasets/utils/index.js')
 const createError = require('http-errors')
 const { getPseudoUser } = require('../misc/utils/users')
 
-exports.clean = (application, publicUrl, publicationSite, query = {}) => {
+ export const clean = (application, publicUrl, publicationSite, query = {}) => {
   const select = query.select ? query.select.split(',') : []
   if (query.raw !== 'true') {
     if (!select.includes('-public')) application.public = permissions.isPublic('applications', application)
@@ -47,7 +47,7 @@ const memoizedGetFreshDataset = memoize(async (id, db) => {
  * @param {any} application
  * @param {boolean} draft
  */
-exports.refreshConfigDatasetsRefs = async (req, application, draft) => {
+ export const refreshConfigDatasetsRefs = async (req, application, draft) => {
   const db = req.app.get('db')
   // @ts-ignore
   const publicBaseUrl = req.publicBaseUrl

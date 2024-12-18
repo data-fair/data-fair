@@ -9,7 +9,7 @@ const pump = require('../pipe')
  * @param {string} baseIRI
  * @returns
  */
-exports.fromXML = async (dcat, baseIRI) => {
+ export const fromXML = async (dcat, baseIRI) => {
   const intoStream = (await import('into-stream')).default
   const myParser = new RdfXmlParser({ validateUri: false, baseIRI })
   const mySerializer = new JsonLdSerializer({ space: '  ' })

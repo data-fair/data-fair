@@ -3,7 +3,7 @@
 // when using jsonld.compact these short aliases are applied
 // inspired by https://resources.data.gov/schemas/dcat-us/v1.1/schema/catalog.jsonld
 /** @type {import('jsonld').ContextDefinition} */
-module.exports = {
+export default {
   dcat: 'http://www.w3.org/ns/dcat#',
   org: 'http://www.w3.org/ns/org#',
   vcard: 'http://www.w3.org/2006/vcard/ns#',

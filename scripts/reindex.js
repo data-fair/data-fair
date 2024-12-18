@@ -1,5 +1,6 @@
-const dbUtils = require('../server/misc/utils/db')
-const datasetUtils = require('../server/datasets/utils')
+import dbUtils from '../server/misc/utils/db.js'
+import datasetUtils from '../server/datasets/utils/index.js'
+
 async function main () {
   const { db } = await dbUtils.connect()
   const cursor = await db.collection('datasets').find({})

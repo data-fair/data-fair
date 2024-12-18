@@ -31,7 +31,7 @@ async function jwksStatus (req) {
 
 async function nuxtStatus (req) {
   if (process.env.NODE_ENV === 'test') return
-  const nuxtConfig = require('../../../nuxt.config.js')
+  const nuxtConfig = require('../../../nuxt.config.cjs')
   const dir = nuxtConfig.buildDir || '.nuxt'
   await fs.writeFile(`${dir}/check-access.txt`, 'ok')
   if (req.app.get('nuxt')) await req.app.get('nuxt').renderRoute('/')
@@ -74,12 +74,12 @@ async function getStatus (req) {
   }
 }
 
-exports.status = asyncWrap(async (req, res, next) => {
+ export const status = asyncWrap(async (req, res, next) => {
   const status = await getStatus(req)
   res.send(status)
 })
 
-exports.ping = asyncWrap(async (req, res, next) => {
+ export const ping = asyncWrap(async (req, res, next) => {
   const status = await getStatus(req)
   if (status.status === 'error') res.status(500)
   res.send(status.status)

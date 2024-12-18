@@ -1,9 +1,9 @@
 const journals = require('../misc/utils/journals')
 
 // Analyze dataset data, check validity and extract a few metadata for next workers
-exports.eventsPrefix = 'analyze'
+ export const eventsPrefix = 'analyze'
 
-exports.process = async function (app, dataset) {
+ export const process = async function (app, dataset) {
   const createError = require('http-errors')
   const iconv = require('iconv-lite')
   const datasetFileSample = require('../datasets/utils/file-sample')

@@ -1,9 +1,9 @@
-const config = require('config')
-const version = require('../package.json').version
-const dataset = require('./dataset')
-const utils = require('./utils')
+import config from 'config'
+import { version } from '../package.json'
+import dataset from './dataset.js'
+import utils from './utils.js'
 
-module.exports = (publicUrl, publicationSite, info) => {
+export default (publicUrl, publicationSite, info) => {
   const hostname = new URL(publicUrl).hostname
   const servers = [{
     url: `${publicUrl}/api/v1/catalog`,

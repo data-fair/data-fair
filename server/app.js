@@ -102,7 +102,7 @@ if (config.mode.includes('server')) {
       }
     })
   }
-  const memoizedGetPublicationSiteSettings = exports.memoizedGetPublicationSiteSettings = memoize(getPublicationSiteSettings, {
+  const memoizedGetPublicationSiteSettings =  export const memoizedGetPublicationSiteSettings = memoize(getPublicationSiteSettings, {
     profileName: 'getPublicationSiteSettings',
     promise: true,
     primitive: true,
@@ -198,7 +198,7 @@ if (config.mode.includes('server')) {
 }
 
 // Run app and return it in a promise
-exports.run = async () => {
+ export const run = async () => {
   if (!config.listenWhenReady && config.mode.includes('server')) {
     server.listen(config.port)
     await require('event-to-promise')(server, 'listening')
@@ -288,7 +288,7 @@ exports.run = async () => {
   return app
 }
 
-exports.stop = async () => {
+ export const stop = async () => {
   if (config.mode.includes('server')) {
     wss.close()
     wsUtils.stop(wss)

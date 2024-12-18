@@ -46,4 +46,4 @@ router.get('/configurable-catalogs', (req, res) => {
   res.json(config.catalogs)
 })
 
-module.exports = router
+export default router

@@ -255,4 +255,4 @@ router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, as
   res.status(200).send(req.body)
 }))
 
-module.exports = router
+export default router

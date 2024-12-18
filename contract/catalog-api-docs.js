@@ -1,13 +1,13 @@
-const config = require('config')
-const catalogSchema = require('./catalog')
-const permissionsDoc = require('../server/misc/utils/permissions').apiDoc
+import config from 'config'
+import catalogSchema from './catalog.js'
+import permissionsDoc from '../server/misc/utils/permissions.js'
 
 /**
  *
  * @param {any} catalog
  * @returns any
  */
-module.exports = (catalog) => {
+export default (catalog) => {
   const api = {
     openapi: '3.1.0',
     info: {

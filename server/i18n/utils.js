@@ -10,28 +10,28 @@ i18n.configure({
   objectNotation: true
 })
 
-exports.middleware = i18n.init
+ export const middleware = i18n.init
 
 /** @typedef {{identifiers: string[], title: string, description: string, tag: string | undefined}} LocalizedConcept */
 
 /** @type {{en: LocalizedConcept[], fr: LocalizedConcept[]}} */
-exports.vocabularyArray = { en: [], fr: [] }
+ export const vocabularyArray = { en: [], fr: [] }
 
 /** @type {{en: Record<string, LocalizedConcept>, fr: Record<string, LocalizedConcept>}} */
-exports.vocabulary = { en: {}, fr: {} }
+ export const vocabulary = { en: {}, fr: {} }
 
 for (const _locale of i18n.getLocales()) {
   const locale = /** @type {'en' | 'fr'} */(_locale)
-  exports.vocabularyArray[locale] = require('../../contract/vocabulary.json').map(concept => ({
+   export const vocabularyArray[locale] = require('../../contract/vocabulary.json').map(concept => ({
     ...concept,
     title: /** @type {string} */(concept.title[locale] || concept.title[defaultLocale]),
     description: concept.description[locale] || concept.description[defaultLocale],
     tag: concept.tag[locale] || concept.tag[defaultLocale]
   }))
-  exports.vocabulary[locale] = {}
-  for (const concept of exports.vocabularyArray[locale]) {
+   export const vocabulary[locale] = {}
+  for (const concept of  export const vocabularyArray[locale]) {
     for (const id of concept.identifiers) {
-      exports.vocabulary[locale][id] = concept
+       export const vocabulary[locale][id] = concept
     }
   }
 }

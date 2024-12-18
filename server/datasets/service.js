@@ -65,7 +65,7 @@ const fieldsMap = {
  * @param {Record<string, string>} reqQuery
  * @param {any} user
  */
-exports.findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
+ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
   const explain = reqQuery.explain === 'true' && user && (user.isAdmin || user.asAdmin) && {}
   const datasets = db.collection('datasets')
 
@@ -147,7 +147,7 @@ exports.findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQue
  * @param {any} [reqBody]
  * @returns {Promise<{dataset?: any, datasetFull?: any}>}
  */
-exports.getDataset = async (datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, tolerateStale, _acceptedStatuses, reqBody) => {
+ export const getDataset = async (datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, tolerateStale, _acceptedStatuses, reqBody) => {
   let dataset, datasetFull
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
     dataset = await findUtils.getByUniqueRef(db, publicationSite, mainPublicationSite, {}, 'dataset', datasetId, tolerateStale)
@@ -182,7 +182,7 @@ exports.getDataset = async (datasetId, publicationSite, mainPublicationSite, use
   throw createError(409, `Le jeu de données n'est pas dans un état permettant l'opération demandée. État courant : ${dataset?.status}.`)
 }
 
-exports.memoizedGetDataset = memoize(exports.getDataset, {
+ export const memoizedGetDataset = memoize( export const getDataset, {
   profileName: 'getDataset',
   promise: true,
   primitive: true,
@@ -204,7 +204,7 @@ exports.memoizedGetDataset = memoize(exports.getDataset, {
  * @param {(callback: () => void) => void} onClose
  * @returns {Promise<any>}
  */
-exports.createDataset = async (db, es, locale, user, owner, body, files, draft, onClose) => {
+ export const createDataset = async (db, es, locale, user, owner, body, files, draft, onClose) => {
   validateURLFriendly(locale, body.id)
   validateURLFriendly(locale, body.slug)
 
@@ -326,7 +326,7 @@ exports.createDataset = async (db, es, locale, user, owner, body, files, draft, 
   return insertedDataset
 }
 
-exports.deleteDataset = async (app, dataset) => {
+ export const deleteDataset = async (app, dataset) => {
   const db = app.get('db')
   const es = app.get('es')
   try {
@@ -365,15 +365,15 @@ exports.deleteDataset = async (app, dataset) => {
  * @param {any[]} [removedRestProps]
  * @param {boolean} [attemptMappingUpdate]
  */
-exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappingUpdate) => {
+ export const applyPatch = async (app, dataset, patch, removedRestProps, attemptMappingUpdate) => {
   if (patch.extensions) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) extensions`, dataset.extensions, patch.extensions)
   if (patch.masterData) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) masterData`, dataset.masterData, patch.masterData)
 
   const db = app.get('db')
 
   // manage automatic export of REST datasets into files
-  if (patch.exports && patch.exports.restToCSV) {
-    if (!patch.exports.restToCSV.active && await fs.pathExists(exportedFilePath(dataset, '.csv'))) {
+  if (patch.exports && patch. export const restToCSV) {
+    if (!patch. export const restToCSV.active && await fs.pathExists(exportedFilePath(dataset, '.csv'))) {
       await fs.remove(exportedFilePath(dataset, '.csv'))
     }
   }
@@ -460,7 +460,7 @@ exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappin
     for await (const virtualDataset of db.collection('datasets').find({ 'virtual.children': dataset.id })) {
       const virtualDatasetSchema = await virtualDatasetsUtils.prepareSchema(db, virtualDataset)
       if (!equal(virtualDatasetSchema, virtualDataset.schema)) {
-        await exports.applyPatch(app, virtualDataset, { schema: virtualDatasetSchema, updatedAt: patch.updatedAt })
+        await  export const applyPatch(app, virtualDataset, { schema: virtualDatasetSchema, updatedAt: patch.updatedAt })
       }
     }
   }
@@ -468,7 +468,7 @@ exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappin
 
 // synchronize the list of application references stored in dataset.extras.applications
 // used for quick access to capture, and default sorting in dataset pages
-exports.syncApplications = async (db, datasetId) => {
+ export const syncApplications = async (db, datasetId) => {
   const dataset = await db.collection('datasets').findOne({ id: datasetId }, { projection: { owner: 1, extras: 1 } })
   if (!dataset) return
   const applications = await db.collection('applications')
@@ -491,7 +491,7 @@ exports.syncApplications = async (db, datasetId) => {
     .updateOne({ id: datasetId }, { $set: { 'extras.applications': applicationsExtras } })
 }
 
-exports.validateDraft = async (app, dataset, datasetFull, patch) => {
+ export const validateDraft = async (app, dataset, datasetFull, patch) => {
   Object.assign(datasetFull.draft, patch)
   const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
 

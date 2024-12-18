@@ -3,7 +3,7 @@ const createError = require('http-errors')
 const { prepareQuery, aliasName } = require('./commons')
 const capabilities = require('../../../contract/capabilities')
 
-module.exports = async (client, dataset, query) => {
+export default async (client, dataset, query) => {
   if (!query.field) throw createError(400, '"field" parameter is required')
   const prop = dataset.schema.find(f => f.key === query.field)
   if (!prop) {

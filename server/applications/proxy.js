@@ -15,7 +15,7 @@ const permissions = require('../misc/utils/permissions')
 const serviceWorkers = require('../misc/utils/service-workers')
 const metrics = require('../misc/utils/metrics')
 const { refreshConfigDatasetsRefs } = require('./utils')
-const router = module.exports = express.Router()
+const router = export default express.Router()
 // const debug = require('debug')('application-proxy')
 const vIframeVersion = require('../../node_modules/@koumoul/v-iframe/package.json').version
 const iframeResizerVersion = require('../../node_modules/iframe-resizer/package.json').version

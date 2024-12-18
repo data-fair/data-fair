@@ -1,4 +1,4 @@
-exports.process = async function (app, dataset) {
+ export const process = async function (app, dataset) {
   const readApiKeyUtils = require('../datasets/utils/read-api-key')
   const datasetsService = require('../datasets/service')
 

@@ -1,7 +1,8 @@
-const topic = require('./topic')
-const publicationSites = require('./publication-sites')()
+import topic from './topic.js'
+import _publicationSites from './publication-sites.js'
+const publicationSites = _publicationSites()
 
-module.exports = {
+export default {
   title: 'Settings',
   type: 'object',
   additionalProperties: false,

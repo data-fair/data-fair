@@ -1,7 +1,7 @@
 // Index tabular datasets with elasticsearch using available information on dataset schema
-exports.eventsPrefix = 'extend'
+ export const eventsPrefix = 'extend'
 
-exports.process = async function (app, dataset) {
+ export const process = async function (app, dataset) {
   const extensionsUtils = require('../misc/utils/extensions')
   const datasetUtils = require('../datasets/utils')
 

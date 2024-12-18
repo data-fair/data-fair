@@ -3,7 +3,7 @@
 const axios = require('../../misc/utils/axios')
 const normalize = require('../../misc/utils/dcat/normalize')
 
-module.exports = async (catalogUrl) => {
+export default async (catalogUrl) => {
   const raw = (await axios.get(catalogUrl)).data
   const url = new URL(catalogUrl)
   return normalize(raw, url.origin + url.pathname)

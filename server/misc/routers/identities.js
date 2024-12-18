@@ -7,7 +7,7 @@ const asyncWrap = require('../utils/async-handler')
 const datasetsService = require('../../datasets/service')
 const { ownerDir } = require('../../datasets/utils/files')
 
-const router = module.exports = express.Router()
+const router = export default express.Router()
 
 router.use((req, res, next) => {
   if (!config.secretKeys.identities || config.secretKeys.identities !== req.query.key) {

@@ -9,7 +9,7 @@ const permissions = require('../../misc/utils/permissions')
 const catalogApiDocs = require('../../../contract/site-catalog-api-docs')
 const dcatContext = require('../utils/dcat/context')
 
-const router = module.exports = express.Router()
+const router = export default express.Router()
 
 router.use((req, res, next) => {
   if (req.mainPublicationSite) req.publicationSite = req.mainPublicationSite

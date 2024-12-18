@@ -1,11 +1,11 @@
-const { Parser } = require('expr-eval')
-const md5 = require('md5')
-const dayjs = require('dayjs')
-const customParseFormat = require('dayjs/plugin/customParseFormat')
-const timezone = require('dayjs/plugin/timezone')
-const utc = require('dayjs/plugin/utc')
-const { ajv, errorsText, localize } = require('./ajv')
-const { cleanJsonSchemaProperty } = require('./schema')
+import { Parser } from 'expr-eval'
+import md5 from 'md5'
+import dayjs from 'dayjs'
+import customParseFormat from 'dayjs/plugin/customParseFormat.js'
+import timezone from 'dayjs/plugin/timezone.js'
+import utc from 'dayjs/plugin/utc.js'
+import { ajv, errorsText, localize } from './ajv.js'
+import { cleanJsonSchemaProperty } from './schema.js'
 
 dayjs.extend(customParseFormat)
 dayjs.extend(timezone)
@@ -16,7 +16,7 @@ dayjs.extend(utc)
  * @param {string} defaultTimezone
  * @returns
  */
-module.exports = (defaultTimezone) => {
+export default (defaultTimezone) => {
   const parser = new Parser({
     //  Useless in our use case
     //  mathematical

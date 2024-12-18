@@ -1,7 +1,7 @@
 // Finalize dataset for publication
-exports.eventsPrefix = 'finalize'
+ export const eventsPrefix = 'finalize'
 
-exports.process = async function (app, _dataset) {
+ export const process = async function (app, _dataset) {
   let dataset = _dataset
   const config = /** @type {any} */(require('config'))
   const esUtils = require('../datasets/es')
@@ -49,7 +49,7 @@ exports.process = async function (app, _dataset) {
   let nbSteps = cardinalityProps.length + 1
   if (startDateField || endDateField) nbSteps += 1
   if (geopoint || geometry) nbSteps += 1
-  const progress = taskProgress(app, dataset.id, exports.eventsPrefix, nbSteps)
+  const progress = taskProgress(app, dataset.id,  export const eventsPrefix, nbSteps)
   await progress.inc(0)
 
   for (const prop of cardinalityProps) {

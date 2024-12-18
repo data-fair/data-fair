@@ -1,11 +1,13 @@
-const owner = require('./owner')
-const eventBy = require('./event-by')
-const permissions = require('./permissions')
-const topic = require('./topic')
-const masterData = require('./master-data')
-const capabilities = require('./capabilities')
-const dataFiles = require('./data-files')
-const publicationSchema = JSON.parse(JSON.stringify(require('./publication')))
+import owner from './owner.js'
+import eventBy from './event-by.js'
+import permissions from './permissions.js'
+import topic from './topic.js'
+import masterData from './master-data.js'
+import capabilities from './capabilities.js'
+import dataFiles from './data-files.js'
+import _publicationSchema from './publication.js'
+
+const publicationSchema = JSON.parse(JSON.stringify(_publicationSchema))
 
 publicationSchema.properties.addToDataset = {
   type: 'object',
@@ -143,7 +145,7 @@ const fileSchema = {
   }
 }
 
-module.exports = {
+export default {
   title: 'Dataset',
   type: 'object',
   additionalProperties: false,
@@ -875,7 +877,7 @@ module.exports = {
 
 const draftKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions', 'publications', 'publicationSites', 'virtual', 'rest', 'extras', 'attachmentsAsImage', 'projection', 'attachments', 'topics', 'thumbnails', 'masterData', 'primaryKey', 'origin', 'image', 'spatial', 'temporal', 'keywords', 'frequency']
 
-module.exports.properties.draft = {
+ export constproperties.draft = {
   title: 'Dataset draft',
   description: 'Some properties waiting for confirmation before being merged into the main dataset info',
   type: 'object',
@@ -905,5 +907,5 @@ module.exports.properties.draft = {
   }
 }
 draftKeys.forEach(k => {
-  module.exports.properties.draft.properties[k] = module.exports.properties[k]
+   export constproperties.draft.properties[k] =  export constproperties[k]
 })

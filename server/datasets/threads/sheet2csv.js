@@ -5,6 +5,6 @@ const { iterCSV } = require('../../misc/utils/xlsx')
 /**
  * @param {{source: string, destination: string}} options
  */
-module.exports = async ({ source, destination }) => {
+export default async ({ source, destination }) => {
   await pipeline(iterCSV(source), fs.createWriteStream(destination))
 }

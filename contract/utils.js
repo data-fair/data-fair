@@ -1,4 +1,4 @@
-exports.idParam = {
+export const idParam = {
   in: 'path',
   name: 'id',
   description: 'identifiant',
@@ -8,7 +8,7 @@ exports.idParam = {
   }
 }
 
-exports.qParam = {
+export const qParam = {
   in: 'query',
   name: 'q',
   description: 'Recherche textuelle',
@@ -18,7 +18,7 @@ exports.qParam = {
   }
 }
 
-exports.ownerParams = [/* {
+export const ownerParams = [/* {
   in: 'query',
   name: 'shared',
   description: 'Voir les ressources partagées par d\'autres comptes',
@@ -51,7 +51,7 @@ exports.ownerParams = [/* {
     explode: false
   }]
 
-exports.visibilityParams = [{
+export const visibilityParams = [{
   in: 'query',
   name: 'visibility',
   description: 'Filtrer sur la visibilité de la ressource. "public" = voir les ressources publiques, "private" = voir les ressources privées (celles sur lesquelles aucune permission particulière n\'a été appliquée), "protected" = voir les ressources protégées (celles sur lesquelles une permission a été donnée à des utilisateurs).',
@@ -67,7 +67,7 @@ exports.visibilityParams = [{
   explode: false
 }]
 
-exports.selectParam = (values) => ({
+export const selectParam = (values) => ({
   in: 'query',
   name: 'select',
   description: 'La liste des colonnes à retourner',
@@ -84,7 +84,7 @@ exports.selectParam = (values) => ({
   explode: false
 })
 
-exports.filterParam = (name, description, values) => {
+export const filterParam = (name, description, values) => {
   const p = {
     in: 'query',
     name,
@@ -103,7 +103,7 @@ exports.filterParam = (name, description, values) => {
   return p
 }
 
-exports.booleanParam = (name, description) => ({
+export const booleanParam = (name, description) => ({
   in: 'query',
   name,
   description,
@@ -113,7 +113,7 @@ exports.booleanParam = (name, description) => ({
   }
 })
 
-exports.paginationParams = [{
+export const paginationParams = [{
   in: 'query',
   name: 'page',
   description: 'Numéro de page (à partir de 1)',

@@ -16,7 +16,7 @@ function parseDate (prop, calendarTimeZone) {
   return moment.tz(valueDay, calendarTimeZone).toISOString()
 }
 
-exports.parse = async (filePath) => {
+ export const parse = async (filePath) => {
   let content = (await fs.readFile(filePath, 'utf8')).trim()
   // fix badly closed openagenda exports
   if (content.endsWith('END:VEVENT')) {
@@ -113,7 +113,7 @@ exports.parse = async (filePath) => {
   }
 }
 
-exports.prepareSchema = (dataset, icalInfos) => {
+ export const prepareSchema = (dataset, icalInfos) => {
   dataset.extras = dataset.extras || {}
   dataset.extras.iCalendar = icalInfos
   dataset.timeZone = icalInfos.timeZone

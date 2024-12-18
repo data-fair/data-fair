@@ -18,7 +18,7 @@ const fieldsMap = {
  * @param {Record<string, string>} reqQuery
  * @param {any} user
  */
-exports.findCatalogs = async (db, locale, reqQuery, user) => {
+ export const findCatalogs = async (db, locale, reqQuery, user) => {
   const catalogs = db.collection('catalogs')
   const query = findUtils.query(reqQuery, locale, user, 'catalogs', fieldsMap, false)
   const sort = findUtils.sort(reqQuery.sort)

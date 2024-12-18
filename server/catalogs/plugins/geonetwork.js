@@ -8,15 +8,15 @@ const { findLicense } = require('../../misc/utils/licenses')
 
 const debug = require('debug')('catalogs:geonetwork')
 
-exports.title = 'GeoNetwork'
-exports.description = ''
-exports.docUrl = 'https://geonetwork-opensource.org/'
-exports.optionalCapabilities = [
+ export const title = 'GeoNetwork'
+ export const description = ''
+ export const docUrl = 'https://geonetwork-opensource.org/'
+ export const optionalCapabilities = [
   'listDatasets',
   'autoUpdate'
 ]
 
-exports.init = async (catalogUrl) => {
+ export const init = async (catalogUrl) => {
   const siteUrl = url.resolve(catalogUrl, 'srv/api/0.1/site')
   debug('try fetching geonetwork info', siteUrl)
   const site = (await axios.get(siteUrl)).data
@@ -24,31 +24,31 @@ exports.init = async (catalogUrl) => {
   return { url: catalogUrl, title: site['system/site/name'] + ' - ' + site['system/site/organization'] }
 }
 
-exports.httpParams = async (catalog) => {
+ export const httpParams = async (catalog) => {
   return {}
 }
 
-exports.searchOrganizations = async (catalogUrl, q) => {
+ export const searchOrganizations = async (catalogUrl, q) => {
   throw createError(501, 'La récupération d\'une liste d\'organisations depuis GeoNetwork n\'est pas disponible')
 }
 
-exports.publishDataset = async (catalog, dataset, publication) => {
+ export const publishDataset = async (catalog, dataset, publication) => {
   throw createError(501, 'La publication de jeux de données vers GeoNetwork n\'est pas disponible')
 }
 
-exports.deleteDataset = async (catalog, dataset, publication) => {
+ export const deleteDataset = async (catalog, dataset, publication) => {
   throw createError(501, `Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
 }
 
-exports.publishApplication = async (catalog, application, publication, datasets) => {
+ export const publishApplication = async (catalog, application, publication, datasets) => {
   throw createError(501, 'La publication d\'applications vers GeoNetwork n\'est pas disponible')
 }
 
-exports.deleteApplication = async (catalog, application, publication) => {
+ export const deleteApplication = async (catalog, application, publication) => {
   throw createError(501, 'La dépublication d\'applications vers GeoNetwork n\'est pas disponible')
 }
 
-exports.listDatasets = async (catalog, p) => {
+ export const listDatasets = async (catalog, p) => {
   // RDF approach using public API would be better but I don't see the way to construct links to shapefiles
   // const res = await axios.get(url.resolve(catalog.url, 'srv/api/0.1/records'), { params: { any: params.q, hitsPerPage: 1 } })
   // const datasets = this.rdf2datasets(res.data)
@@ -70,7 +70,7 @@ exports.listDatasets = async (catalog, p) => {
   return { count, results: items.map(item => prepareDatasetFromCatalog(catalog, item)) }
 }
 
-exports.getDataset = async (catalog, datasetId, settings) => {
+ export const getDataset = async (catalog, datasetId, settings) => {
   // https://geocatalogue.lannion-tregor.com/geonetwork/srv/fre/q?_content_type=json&_draft=y+or+n+or+e&_isTemplate=y+or+n&fast=index&uuid=0cf415ff-8334-4658-97f8-c8ca6729fbb8
   const params = {
     _content_type: 'json',
@@ -84,7 +84,7 @@ exports.getDataset = async (catalog, datasetId, settings) => {
 
 /*
 const { xml2js } = require('xml-js')
-exports.rdf2datasets = (rdf) => {
+ export const rdf2datasets = (rdf) => {
   const content = xml2js(rdf, { compact: true })
   const catalogRecords = content['rdf:RDF']['dcat:Catalog']['dcat:dataset']
     .filter(item => !!item['dcat:CatalogRecord'])

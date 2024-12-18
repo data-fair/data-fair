@@ -4,12 +4,12 @@ const axios = require('axios')
 
 const { httpAgent, httpsAgent } = require('./http-agents')
 
-module.exports = axios.create({
+export default axios.create({
   httpAgent,
   httpsAgent
 })
 
-module.exports.interceptors.response.use(response => response, error => {
+ export constinterceptors.response.use(response => response, error => {
   if (!error.response) return Promise.reject(error)
   delete error.response.request
   delete error.response.headers

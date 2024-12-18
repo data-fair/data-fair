@@ -49,4 +49,4 @@ class DecodeStream extends Transform {
   }
 }
 
-module.exports = DecodeStream
+export default DecodeStream

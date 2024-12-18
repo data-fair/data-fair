@@ -8,7 +8,7 @@ const pid = nanoid()
 debug('locks with pid', pid)
 
 let interval
-exports.init = async db => {
+ export const init = async db => {
   const locks = db.collection('locks')
   await locks.createIndex({ pid: 1 })
   try {
@@ -24,12 +24,12 @@ exports.init = async db => {
   }, (config.locks.ttl / 2) * 1000)
 }
 
-exports.stop = async (db) => {
+ export const stop = async (db) => {
   clearInterval(interval)
   await db.collection('locks').deleteMany({ pid })
 }
 
-exports.acquire = async (db, _id, origin) => {
+ export const acquire = async (db, _id, origin) => {
   debug('acquire', _id, origin)
   const locks = db.collection('locks')
   try {
@@ -50,7 +50,7 @@ exports.acquire = async (db, _id, origin) => {
   }
 }
 
-exports.release = async (db, _id, delay = 0) => {
+ export const release = async (db, _id, delay = 0) => {
   debug('release', _id)
   if (delay) {
     const date = new Date((new Date()).getTime() + delay)

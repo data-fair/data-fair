@@ -1,35 +1,35 @@
 // convert from tabular data to csv or geographical data to geojson
 const config = /** @type {any} */(require('config'))
 
-exports.eventsPrefix = 'normalize'
+ export const eventsPrefix = 'normalize'
 
-const archiveTypes = exports.archiveTypes = new Set([
+const archiveTypes =  export const archiveTypes = new Set([
   'application/zip' // .zip
   /* 'application/x-7z-compressed', // .7z
   'application/x-bzip', // .bzip
   'application/x-bzip2', // .bzip2
   'application/x-tar', // .tar */
 ])
-const tabularTypes = exports.tabularTypes = new Set([
+const tabularTypes =  export const tabularTypes = new Set([
   'application/vnd.oasis.opendocument.spreadsheet', // ods, fods
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
   'application/vnd.ms-excel', // xls
   'application/dbase' // dbf
 ])
-const geographicalTypes = exports.geographicalTypes = new Set([
+const geographicalTypes =  export const geographicalTypes = new Set([
   'application/vnd.google-earth.kml+xml', // kml
   'application/vnd.google-earth.kmz', // kmz
   'application/gpx+xml', // gpx or xml ?
   'application/geopackage+sqlite3' // gpkg
 ])
-const calendarTypes = exports.calendarTypes = new Set(['text/calendar'])
-exports.csvTypes = [
+const calendarTypes =  export const calendarTypes = new Set(['text/calendar'])
+ export const csvTypes = [
   'text/csv',
   'text/plain', // txt often contains csv or tsv content
   'text/tab-separated-values' // tsv processed in the same way as csv
 ]
-exports.basicTypes = [
-  ...exports.csvTypes,
+ export const basicTypes = [
+  ... export const csvTypes,
   'application/geo+json'
 ]
 
@@ -38,7 +38,7 @@ async function decompress (mimetype, filePath, dirPath) {
   if (mimetype === 'application/zip') await exec('unzip', ['-o', '-q', filePath, '-d', dirPath])
 }
 
-exports.process = async function (app, dataset) {
+ export const process = async function (app, dataset) {
   const { pipeline } = require('node:stream').promises
   const path = require('path')
   const fs = require('fs-extra')
@@ -88,7 +88,7 @@ exports.process = async function (app, dataset) {
         filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.shx')) &&
         filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.dbf'))) {
       isShapefile = true
-    } else if (filePaths.length === 1 && exports.basicTypes.includes(mime.lookup(filePaths[0].base))) {
+    } else if (filePaths.length === 1 &&  export const basicTypes.includes(mime.lookup(filePaths[0].base))) {
       // case of a single data file in an archive
       const filePath = resolvePath(datasetUtils.dir(dataset), filePaths[0].base)
       await fs.move(resolvePath(tmpDir, files[0]), filePath, { overwrite: true })

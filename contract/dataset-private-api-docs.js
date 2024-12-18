@@ -1,11 +1,11 @@
-const config = require('config')
-const datasetAPIDocs = require('./dataset-api-docs')
-const datasetPost = require('./dataset-post')
-const journalSchema = require('./journal')
-const { visibility } = require('../server/misc/utils/visibility')
-const permissionsDoc = require('../server/misc/utils/permissions').apiDoc
-const datasetUtils = require('../server/datasets/utils')
-const datasetPatchSchema = require('./dataset-patch')
+import config from 'config'
+import datasetAPIDocs from './dataset-api-docs.js'
+import datasetPost from './dataset-post.js'
+import journalSchema from './journal.js'
+import { visibility } from '../server/misc/utils/visibility.js'
+import permissionsDoc from '../server/misc/utils/permissions.js'
+import datasetUtils from '../server/datasets/utils.js'
+import datasetPatchSchema from './dataset-patch.js'
 
 /**
  *
@@ -16,7 +16,7 @@ const datasetPatchSchema = require('./dataset-patch')
  * @returns
  */
 // @ts-ignore
-module.exports = (dataset, publicUrl = config.publicUrl, user, info) => {
+export default (dataset, publicUrl = config.publicUrl, user, info) => {
   const { api, userApiRate, anonymousApiRate, bulkLineSchema } = datasetAPIDocs(dataset, publicUrl, info)
 
   const title = `API privée du jeu de données : ${dataset.title || dataset.id}`

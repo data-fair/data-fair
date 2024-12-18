@@ -14,16 +14,16 @@ const debug = require('debug')('catalogs')
 
 // Dynamic loading of all modules in the current directory
 fs.ensureDirSync(path.resolve(config.pluginsDir, 'catalogs'))
-exports.connectors = fs.readdirSync(__dirname)
+ export const connectors = fs.readdirSync(__dirname)
   .filter(f => f !== 'index.js')
   .map(f => ({ key: f.replace('.js', ''), ...require('./' + f) }))
   // Add all modules from another directory
   .concat(fs.readdirSync(path.resolve(config.pluginsDir, 'catalogs'))
     .map(f => ({ key: f.replace('.js', ''), ...require(path.resolve(config.pluginsDir, 'catalogs', f)) })))
 
-exports.init = async (catalogUrl) => {
+ export const init = async (catalogUrl) => {
   debug('Attempt to init catalog from URL', catalogUrl)
-  for (const connector of exports.connectors) {
+  for (const connector of  export const connectors) {
     try {
       const catalog = await connector.init(catalogUrl)
       if (catalog.title) {
@@ -39,8 +39,8 @@ exports.init = async (catalogUrl) => {
 
 // Used the downloader worker to get credentials (probably API key in a header)
 // to fetch resources
-exports.httpParams = async (catalog, url) => {
-  const connector = exports.connectors.find(c => c.key === catalog.type)
+ export const httpParams = async (catalog, url) => {
+  const connector =  export const connectors.find(c => c.key === catalog.type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.httpParams) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
   if (url.startsWith(catalog.url)) {
@@ -53,8 +53,8 @@ exports.httpParams = async (catalog, url) => {
   }
 }
 
-exports.listDatasets = async (db, catalog, params) => {
-  const connector = exports.connectors.find(c => c.key === catalog.type)
+ export const listDatasets = async (db, catalog, params) => {
+  const connector =  export const connectors.find(c => c.key === catalog.type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
   const settings = (await db.collection('settings').findOne({ type: catalog.owner.type, id: catalog.owner.id })) || {}
@@ -97,23 +97,23 @@ const insertDataset = async (app, newDataset) => {
   await journals.log(app, newDataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + newDataset.id }, 'dataset')
 }
 
-exports.updateAllHarvestedDatasets = async (app, catalog) => {
-  const datasets = await exports.listDatasets(app.get('db'), catalog, {})
+ export const updateAllHarvestedDatasets = async (app, catalog) => {
+  const datasets = await  export const listDatasets(app.get('db'), catalog, {})
   for (const dataset of datasets.results) {
     if (dataset.harvestedDataset) {
-      await exports.harvestDataset(app, catalog, dataset.id)
+      await  export const harvestDataset(app, catalog, dataset.id)
     }
     for (const resource of dataset.resources) {
       if (resource.harvestedDataset) {
-        await exports.harvestDatasetResource(app, catalog, dataset.id, resource.id, false)
+        await  export const harvestDatasetResource(app, catalog, dataset.id, resource.id, false)
       }
     }
   }
 }
 
 // create a simple metadata only dataset
-exports.harvestDataset = async (app, catalog, datasetId) => {
-  const connector = exports.connectors.find(c => c.key === catalog.type)
+ export const harvestDataset = async (app, catalog, datasetId) => {
+  const connector =  export const connectors.find(c => c.key === catalog.type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
 
@@ -176,8 +176,8 @@ exports.harvestDataset = async (app, catalog, datasetId) => {
 }
 
 // create a file dataset from the resource of a dataset on the remote portal
-exports.harvestDatasetResource = async (app, catalog, datasetId, resourceId, forceDownload = true) => {
-  const connector = exports.connectors.find(c => c.key === catalog.type)
+ export const harvestDatasetResource = async (app, catalog, datasetId, resourceId, forceDownload = true) => {
+  const connector =  export const connectors.find(c => c.key === catalog.type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
 
@@ -246,14 +246,14 @@ exports.harvestDatasetResource = async (app, catalog, datasetId, resourceId, for
   }
 }
 
-exports.searchOrganizations = async (type, url, q) => {
-  const connector = exports.connectors.find(c => c.key === type)
+ export const searchOrganizations = async (type, url, q) => {
+  const connector =  export const connectors.find(c => c.key === type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + type)
   if (!connector.optionalCapabilities.includes('searchOrganizations')) throw createError(501, `The connector for the catalog type ${type} cannot do this action`)
   return connector.searchOrganizations(url, q)
 }
 
-exports.processPublications = async function (app, type, resource) {
+ export const processPublications = async function (app, type, resource) {
   const db = app.get('db')
   const resourcesCollection = db.collection(type + 's')
   const catalogsCollection = db.collection('catalogs')
@@ -314,7 +314,7 @@ exports.processPublications = async function (app, type, resource) {
   }
 
   try {
-    const connector = exports.connectors.find(c => c.key === catalog.type)
+    const connector =  export const connectors.find(c => c.key === catalog.type)
     if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
     if (!connector.publishApplication) throw createError(501, `The connector for the catalog type ${type} cannot do this action`)
     let res

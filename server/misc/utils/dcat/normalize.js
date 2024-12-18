@@ -76,7 +76,7 @@ const removePrefix = (obj, key, prefix) => {
  * @param {any} dcat
  * @param {string} baseIRI
  */
-module.exports = async (dcat, baseIRI) => {
+export default async (dcat, baseIRI) => {
   if (typeof dcat === 'string') dcat = await convert.fromXML(dcat, baseIRI)
   dcat = await jsonld.frame(dcat, frame)
   dcat = await jsonld.compact(dcat, context)

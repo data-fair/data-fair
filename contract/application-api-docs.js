@@ -1,8 +1,8 @@
-const config = require('config')
-const applicationSchema = require('./application')
-const journalSchema = require('./journal')
-const permissionsDoc = require('../server/misc/utils/permissions').apiDoc
-const version = require('../package.json').version
+import config from 'config'
+import applicationSchema from './application.js'
+import journalSchema from './journal.js'
+import permissionsDoc from '../server/misc/utils/permissions.js'
+import { version } from '../package.json'
 
 /**
  *
@@ -10,7 +10,7 @@ const version = require('../package.json').version
  * @param {any} info
  * @returns any
  */
-module.exports = (application, info) => {
+export default (application, info) => {
   const api = {
     openapi: '3.1.0',
     info: {

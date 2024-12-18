@@ -3,7 +3,7 @@ const { Gauge } = require('prom-client')
 /**
  * @param {import('mongodb').Db} db
  */
-exports.init = async (db) => {
+ export const init = async (db) => {
   // global metrics based on db connection
 
   const { servicePromRegistry } = await import('@data-fair/lib/node/observer.js')
@@ -51,7 +51,7 @@ exports.init = async (db) => {
  * @param {string} code
  * @param {any} message
  */
-exports.internalError = (code, message) => {
+ export const internalError = (code, message) => {
   return import('@data-fair/lib/node/observer.js').then(({ internalError }) => {
     internalError(code, message)
   })

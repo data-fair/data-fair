@@ -17,11 +17,11 @@ const baseAppsUtils = require('./utils')
 const cacheHeaders = require('../misc/utils/cache-headers')
 const metrics = require('../misc/utils/metrics')
 const { getThumbnail } = require('../misc/utils/thumbnails')
-const router = exports.router = express.Router()
+const router =  export const router = express.Router()
 
 // Fill the collection using the default base applications from config
 // and cleanup non-public apps that are not used anywhere
-exports.init = async (db) => {
+ export const init = async (db) => {
   await clean(db)
   await Promise.all(config.applications.map(app => failSafeInitBaseApp(db, app)))
 }

@@ -10,7 +10,7 @@ const matchingHost = (req) => {
   return false
 }
 
-module.exports = asyncWrap(async (req, res, next) => {
+export default asyncWrap(async (req, res, next) => {
   const referer = req.headers.referer || req.headers.referrer
   if (!referer) return next()
   let refererUrl

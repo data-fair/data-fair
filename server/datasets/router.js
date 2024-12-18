@@ -1319,4 +1319,4 @@ router.delete('/:datasetId/_lock', readDataset(), asyncWrap(async (req, res) => 
   res.status(204).send()
 }))
 
-module.exports = router
+export default router

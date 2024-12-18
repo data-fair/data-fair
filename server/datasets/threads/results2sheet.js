@@ -13,7 +13,7 @@ function fitToColumn (arrayOfArray) {
   return arrayOfArray[0].map((a, i) => ({ wch: Math.min(100, Math.max(...arrayOfArray.map(a2 => val2string(a2[i]).length))) }))
 }
 
-module.exports = ({ results, bookType, query, dataset, downloadUrl, labels }) => {
+export default ({ results, bookType, query, dataset, downloadUrl, labels }) => {
   const select = (query.select && query.select !== '*') ? query.select.split(',') : dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)
   const properties = select.map(key => dataset.schema.find(prop => prop.key === key))
   const dateProperties = properties

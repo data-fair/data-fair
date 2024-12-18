@@ -15,7 +15,7 @@ const service = require('./service')
  * @returns
  */
 // @ts-ignore
-exports.checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
+ export const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
   // @ts-ignore
   if (!req.user) throw createError(401)
   if (process.env.NO_STORAGE_CHECK === 'true') return next()
@@ -37,7 +37,7 @@ exports.checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res
  * @param {boolean | ((patch: any) => boolean)} _shouldLock
  * @returns
  */
-exports.lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => {
+ export const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
   // @ts-ignore
   const shouldLock = typeof _shouldLock === 'function' ? _shouldLock(req.body, req.query) : _shouldLock
@@ -65,7 +65,7 @@ exports.lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) =
  * @param {{acceptedStatuses?: string[] | ((body: any, dataset: any) => string[] | null), fillDescendants?: boolean, alwaysDraft?: boolean, acceptMissing?: boolean, acceptInitialDraft?: boolean}} fillDescendants
  * @returns
  */
-exports.readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing, acceptInitialDraft } = {}) => asyncWrap(async (req, res, next) => {
+ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing, acceptInitialDraft } = {}) => asyncWrap(async (req, res, next) => {
   // @ts-ignore
   const publicationSite = req.publicationSite
   // @ts-ignore

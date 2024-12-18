@@ -1,5 +1,5 @@
 // keep this in a standalone file as it is required by workers/index.js and we want to keep it as small as possible
-module.exports = (dataset) => {
+export default (dataset) => {
   if (!dataset.draft) return dataset
   Object.assign(dataset, dataset.draft)
   if (!dataset.draft.finalizedAt) delete dataset.finalizedAt

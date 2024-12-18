@@ -1,7 +1,7 @@
 const sanitizeHtml = require('../../../shared/sanitize-html')
 const i18nUtils = require('../../i18n/utils')
 
-exports.getPrivateOwnerVocabulary = async (db, owner) => {
+ export const getPrivateOwnerVocabulary = async (db, owner) => {
   const settings = await db.collection('settings')
     .findOne({ type: owner.type, id: owner.id }, { projection: { privateVocabulary: 1 } })
   return ((settings && settings.privateVocabulary) || []).map(pv => {
@@ -22,10 +22,10 @@ exports.getPrivateOwnerVocabulary = async (db, owner) => {
  * @param {'en' | 'fr'} locale
  * @returns
  */
-exports.getFullOwnerVocabulary = async (db, owner, locale) => {
+ export const getFullOwnerVocabulary = async (db, owner, locale) => {
   if (!owner) return i18nUtils.vocabularyArray[locale]
 
-  const privateVocabulary = await exports.getPrivateOwnerVocabulary(db, owner)
+  const privateVocabulary = await  export const getPrivateOwnerVocabulary(db, owner)
 
   return i18nUtils.vocabularyArray[locale].concat(privateVocabulary.map(pv => {
     return { ...pv, private: true }

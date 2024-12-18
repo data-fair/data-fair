@@ -25,9 +25,9 @@ const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
 const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 const projectGeomUri = 'http://data.ign.fr/def/geometrie#Geometry'
 
-exports.allGeoConcepts = [geomUri, projectGeomUri, latlonUri, ...latUri, ...lonUri, coordXUri, coordYUri]
+ export const allGeoConcepts = [geomUri, projectGeomUri, latlonUri, ...latUri, ...lonUri, coordXUri, coordYUri]
 
-exports.schemaHasGeopoint = (schema) => {
+ export const schemaHasGeopoint = (schema) => {
   const lat = schema.find(p => latUri.indexOf(p['x-refersTo']) !== -1)
   const lon = schema.find(p => lonUri.indexOf(p['x-refersTo']) !== -1)
   if (lat && lon) return `${lat.key}/${lon.key}`
@@ -39,7 +39,7 @@ exports.schemaHasGeopoint = (schema) => {
   return false
 }
 
-exports.schemaHasGeometry = (schema) => {
+ export const schemaHasGeometry = (schema) => {
   const geom = schema.find(p => p['x-refersTo'] === geomUri)
   if (geom) return geom.key
   const projectGeom = schema.find(p => p['x-refersTo'] === projectGeomUri)
@@ -47,17 +47,17 @@ exports.schemaHasGeometry = (schema) => {
   return false
 }
 
-exports.geoFieldsKey = (schema) => {
-  return exports.schemaHasGeometry(schema) + '/' + exports.schemaHasGeopoint(schema)
+ export const geoFieldsKey = (schema) => {
+  return  export const schemaHasGeometry(schema) + '/' +  export const schemaHasGeopoint(schema)
 }
 
-exports.fixLon = (val) => {
+ export const fixLon = (val) => {
   while (val < -180) val += 360
   while (val > 180) val -= 360
   return val
 }
 
-exports.latlon2fields = (dataset, doc) => {
+ export const latlon2fields = (dataset, doc) => {
   const schema = dataset.schema
   let lat, lon
 
@@ -91,7 +91,7 @@ exports.latlon2fields = (dataset, doc) => {
 }
 
 // Geometry can be passed as an object, as a geojson string or as a WKT string
-exports.readGeometry = (value) => {
+ export const readGeometry = (value) => {
   if (!value || value === 'undefined') return null
   if (typeof value === 'object') {
     if (!value.coordinates) return null
@@ -121,7 +121,7 @@ const projCoordinates = (projection, coordinates) => {
   }
 }
 
-exports.geometry2fields = async (dataset, doc) => {
+ export const geometry2fields = async (dataset, doc) => {
   const schema = dataset.schema
   let geometry, capabilities
 
@@ -181,7 +181,7 @@ exports.geometry2fields = async (dataset, doc) => {
   return fields
 }
 
-exports.result2geojson = esResponse => {
+ export const result2geojson = esResponse => {
   return {
     type: 'FeatureCollection',
     total: esResponse.hits.total.value,
@@ -203,7 +203,7 @@ exports.result2geojson = esResponse => {
   }
 }
 
-exports.aggs2geojson = aggsResult => {
+ export const aggs2geojson = aggsResult => {
   return {
     type: 'FeatureCollection',
     total: aggsResult.total,
@@ -223,7 +223,7 @@ exports.aggs2geojson = aggsResult => {
   }
 }
 
-exports.result2wkt = esResponse => {
+ export const result2wkt = esResponse => {
   const geometryCollection = {
     type: 'GeometryCollection',
     geometries: esResponse.hits.hits.map(hit => {

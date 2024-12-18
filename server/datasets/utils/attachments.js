@@ -10,14 +10,14 @@ const exec = require('../../misc/utils/exec')
 const debug = require('debug')('attachments')
 const debugLimits = require('debug')('limits')
 
-exports.addAttachments = async (dataset, attachmentsArchive) => {
+ export const addAttachments = async (dataset, attachmentsArchive) => {
   const dir = attachmentsDir(dataset)
   await fs.ensureDir(dir)
   await exec('unzip', ['-o', '-q', attachmentsArchive, '-d', dir])
   await fs.remove(attachmentsArchive)
 }
 
-exports.replaceAllAttachments = async (dataset, attachmentsFilePath) => {
+ export const replaceAllAttachments = async (dataset, attachmentsFilePath) => {
   const dir = attachmentsDir(dataset)
   await fs.ensureDir(dir)
   await fs.emptyDir(dir)
@@ -25,7 +25,7 @@ exports.replaceAllAttachments = async (dataset, attachmentsFilePath) => {
   await fs.remove(attachmentsFilePath)
 }
 
-exports.removeAll = async (dataset) => {
+ export const removeAll = async (dataset) => {
   await fs.remove(attachmentsDir(dataset))
 }
 
@@ -93,4 +93,4 @@ const metadataUpload = multer({
   }
 })
 
-exports.metadataUpload = () => metadataUpload.single('attachment')
+ export const metadataUpload = () => metadataUpload.single('attachment')

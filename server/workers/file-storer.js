@@ -1,6 +1,6 @@
-exports.eventsPrefix = 'store'
+ export const eventsPrefix = 'store'
 
-exports.process = async function (app, dataset) {
+ export const process = async function (app, dataset) {
   const fs = require('fs-extra')
   const datasetUtils = require('../datasets/utils')
   const datasetsService = require('../datasets/service')

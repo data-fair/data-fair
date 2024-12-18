@@ -8,7 +8,7 @@ const debugServiceWorkers = process.env.DEBUG && process.env.DEBUG.includes('ser
 let basePath = escapeStringRegexp(new URL(config.publicUrl).pathname)
 if (!basePath.endsWith('/')) basePath += '/'
 
-exports.sw = () => {
+ export const sw = () => {
   // Use workbox for powerful and easy service workers management
   let sw = `
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/3.6.1/workbox-sw.js');`
@@ -87,7 +87,7 @@ if ('serviceWorker' in navigator) {
   })
 };`
 let minifiedRegister
-exports.register = async () => {
+ export const register = async () => {
   if (debugServiceWorkers) return register
   minifiedRegister = minifiedRegister || await minify(register, { toplevel: true, compress: true, mangle: true })
   return minifiedRegister.code

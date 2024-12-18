@@ -16,41 +16,41 @@ const dataStreamsUtils = require('./data-streams')
 const schemaUtils = require('./schema')
 const readApiKeyUtils = require('./read-api-key')
 
-exports.filePath = filesUtils.filePath
-exports.dataFiles = filesUtils.dataFiles
-exports.lsFiles = filesUtils.lsFiles
-exports.lsAttachments = filesUtils.lsAttachments
-exports.fullFilePath = filesUtils.fullFilePath
-exports.originalFilePath = filesUtils.originalFilePath
-exports.attachmentsDir = filesUtils.attachmentsDir
-exports.metadataAttachmentsDir = filesUtils.metadataAttachmentsDir
-exports.dir = filesUtils.dir
-exports.fullFilePath = filesUtils.fullFilePath
-exports.fullFileName = filesUtils.fullFileName
-exports.exportedFilePath = filesUtils.exportedFilePath
-exports.loadedFilePath = filesUtils.loadedFilePath
-exports.loadingDir = filesUtils.loadingDir
-exports.loadedAttachmentsFilePath = filesUtils.loadedAttachmentsFilePath
-exports.attachmentPath = filesUtils.attachmentPath
-exports.metadataAttachmentPath = filesUtils.metadataAttachmentPath
+ export const filePath = filesUtils.filePath
+ export const dataFiles = filesUtils.dataFiles
+ export const lsFiles = filesUtils.lsFiles
+ export const lsAttachments = filesUtils.lsAttachments
+ export const fullFilePath = filesUtils.fullFilePath
+ export const originalFilePath = filesUtils.originalFilePath
+ export const attachmentsDir = filesUtils.attachmentsDir
+ export const metadataAttachmentsDir = filesUtils.metadataAttachmentsDir
+ export const dir = filesUtils.dir
+ export const fullFilePath = filesUtils.fullFilePath
+ export const fullFileName = filesUtils.fullFileName
+ export const exportedFilePath = filesUtils.exportedFilePath
+ export const loadedFilePath = filesUtils.loadedFilePath
+ export const loadingDir = filesUtils.loadingDir
+ export const loadedAttachmentsFilePath = filesUtils.loadedAttachmentsFilePath
+ export const attachmentPath = filesUtils.attachmentPath
+ export const metadataAttachmentPath = filesUtils.metadataAttachmentPath
 
-exports.mergeFileSchema = schemaUtils.mergeFileSchema
-exports.cleanSchema = schemaUtils.cleanSchema
-exports.extendedSchema = schemaUtils.extendedSchema
-exports.schemasFullyCompatible = schemaUtils.schemasFullyCompatible
-exports.schemasValidationCompatible = schemaUtils.schemasValidationCompatible
-exports.schemaHasValidationRules = schemaUtils.schemaHasValidationRules
-exports.jsonSchema = schemaUtils.jsonSchema
-exports.createReadApiKey = readApiKeyUtils.create
+ export const mergeFileSchema = schemaUtils.mergeFileSchema
+ export const cleanSchema = schemaUtils.cleanSchema
+ export const extendedSchema = schemaUtils.extendedSchema
+ export const schemasFullyCompatible = schemaUtils.schemasFullyCompatible
+ export const schemasValidationCompatible = schemaUtils.schemasValidationCompatible
+ export const schemaHasValidationRules = schemaUtils.schemaHasValidationRules
+ export const jsonSchema = schemaUtils.jsonSchema
+ export const createReadApiKey = readApiKeyUtils.create
 
-exports.mergeDraft = require('./merge-draft')
+ export const mergeDraft = require('./merge-draft')
 
-exports.updateStorage = storageUtils.updateStorage
+ export const updateStorage = storageUtils.updateStorage
 
-exports.sampleValues = dataStreamsUtils.sampleValues
-exports.readStreams = dataStreamsUtils.readStreams
+ export const sampleValues = dataStreamsUtils.sampleValues
+ export const readStreams = dataStreamsUtils.readStreams
 
-exports.reindex = async (db, dataset) => {
+ export const reindex = async (db, dataset) => {
   let patch = { status: 'stored' }
   if (dataset.isVirtual) patch.status = 'indexed'
   else if (dataset.isRest) patch.status = 'analyzed'
@@ -59,7 +59,7 @@ exports.reindex = async (db, dataset) => {
     .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
 }
 
-exports.refinalize = async (db, dataset) => {
+ export const refinalize = async (db, dataset) => {
   let patch = { status: 'indexed' }
   if (dataset.draftReason) patch = { 'draft.status': patch.status }
   return (await db.collection('datasets')
@@ -67,12 +67,12 @@ exports.refinalize = async (db, dataset) => {
 }
 
 // Generate ids and try insertion until there is no conflict on id
-exports.insertWithId = async (db, dataset, onClose) => {
+ export const insertWithId = async (db, dataset, onClose) => {
   const baseSlug = slug(dataset.title, { lower: true, strict: true })
   const owner = dataset.owner
   dataset.id = dataset.id ?? nanoid()
   dataset.slug = baseSlug
-  exports.setUniqueRefs(dataset)
+   export const setUniqueRefs(dataset)
   let insertOk = false
   let i = 1
   while (!insertOk) {
@@ -119,12 +119,12 @@ exports.insertWithId = async (db, dataset, onClose) => {
     }
     i += 1
     dataset.slug = `${baseSlug}-${i}`
-    exports.setUniqueRefs(dataset)
+     export const setUniqueRefs(dataset)
   }
   return dataset
 }
 
-exports.previews = (dataset, publicUrl = config.publicUrl) => {
+ export const previews = (dataset, publicUrl = config.publicUrl) => {
   if (!dataset.schema) return []
   const datasetRef = publicUrl === config.publicUrl ? dataset.id : dataset.slug
   const previews = [{ id: 'table', title: 'Tableau', href: `${publicUrl}/embed/dataset/${datasetRef}/table` }]
@@ -150,7 +150,7 @@ exports.previews = (dataset, publicUrl = config.publicUrl) => {
  * @param {any} dataset
  * @param {boolean} draft
  */
-exports.clean = (req, dataset, draft = false) => {
+ export const clean = (req, dataset, draft = false) => {
   const query = req.query
   // @ts-ignore
   const publicationSite = req.publicationSite
@@ -161,7 +161,7 @@ exports.clean = (req, dataset, draft = false) => {
   if (query.raw !== 'true') {
     dataset.userPermissions = permissions.list('datasets', dataset, req.user, req.bypassPermissions)
     const thumbnail = query.thumbnail || '300x200'
-    if (draft) exports.mergeDraft(dataset)
+    if (draft)  export const mergeDraft(dataset)
     if (!select.includes('-public')) dataset.public = permissions.isPublic('datasets', dataset)
     if (!select.includes('-visibility')) dataset.visibility = visibilityUtils.visibility(dataset)
     if (!query.select || select.includes('description')) {
@@ -187,7 +187,7 @@ exports.clean = (req, dataset, draft = false) => {
     }
 
     if (dataset.schema && !select.includes('-previews')) {
-      dataset.previews = exports.previews(dataset, publicUrl)
+      dataset.previews =  export const previews(dataset, publicUrl)
     }
     if (!select.includes('-links')) findUtils.setResourceLinks(dataset, 'dataset', publicUrl, publicationSite && publicationSite.datasetUrlTemplate)
     if (dataset.image && dataset.public && !select.includes('-thumbnail')) {
@@ -220,14 +220,14 @@ exports.clean = (req, dataset, draft = false) => {
   return dataset
 }
 
-exports.setUniqueRefs = (resource) => {
+ export const setUniqueRefs = (resource) => {
   if (resource.slug) {
     resource._uniqueRefs = [resource.id]
     if (resource.slug !== resource.id) resource._uniqueRefs.push(resource.slug)
   }
 }
 
-exports.curateDataset = (dataset, existingDataset) => {
+ export const curateDataset = (dataset, existingDataset) => {
   if (dataset.title) dataset.title = dataset.title.trim()
 
   if (dataset.remoteFile?.autoUpdate?.active) {
@@ -249,7 +249,7 @@ exports.curateDataset = (dataset, existingDataset) => {
   }
 }
 
-exports.titleFromFileName = (name) => {
+ export const titleFromFileName = (name) => {
   let baseFileName = path.parse(name).name
   if (baseFileName.endsWith('.gz')) baseFileName = path.parse(baseFileName).name
   return path.parse(baseFileName).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')

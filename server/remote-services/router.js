@@ -26,7 +26,7 @@ const debugMasterData = require('debug')('master-data')
 
 const cacheableLookup = new CacheableLookup()
 
-const router = exports.router = express.Router()
+const router =  export const router = express.Router()
 
 router.use((req, res, next) => {
   // @ts-ignore
@@ -49,7 +49,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   res.json(response)
 }))
 
-const actionsRouter = exports.actionsRouter = express.Router()
+const actionsRouter =  export const actionsRouter = express.Router()
 
 // get the unpacked list of actions inside the remote services
 actionsRouter.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {

@@ -2,7 +2,7 @@ const { Transform } = require('stream')
 
 // TODO: use this util in more places
 
-module.exports = (size) => {
+export default (size) => {
   return new Transform({
     transform (line, encoding, callback) {
       this._batch = this._batch || []

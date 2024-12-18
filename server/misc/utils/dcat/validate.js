@@ -10,4 +10,4 @@ ajv.addSchema(require('./schema/distribution.json'))
 ajv.addSchema(require('./schema/organization.json'))
 ajv.addSchema(require('./schema/vcard.json'))
 
-module.exports = ajv.getSchema('https://project-open-data.cio.gov/v1.1/schema/catalog.json#')
+export default ajv.getSchema('https://project-open-data.cio.gov/v1.1/schema/catalog.json#')

@@ -1,8 +1,8 @@
 const config = /** @type {any} */(require('config'))
 
-exports.eventsPrefix = 'download'
+ export const eventsPrefix = 'download'
 
-exports.process = async function (app, dataset) {
+ export const process = async function (app, dataset) {
   const { text: stream2text } = require('node:stream/consumers')
   const path = require('path')
   const tmp = require('tmp-promise')

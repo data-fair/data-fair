@@ -9,7 +9,7 @@ dayjs.extend(utc)
 // /**
 //  * @param {string} filePath
 //  */
-// exports.iterCSV = async function * (filePath) {
+//  export const iterCSV = async function * (filePath) {
 //   // loop on dates to check if there is a need for date-time format or if date is enough
 
 //   const workbook = new Excel.Workbook()
@@ -86,9 +86,9 @@ dayjs.extend(utc)
 //   console.log('3')
 // }
 
-// exports.getCSV = async (filePath) => {
+//  export const getCSV = async (filePath) => {
 //   let data = ''
-//   for await (const row of exports.iterCSV(filePath)) {
+//   for await (const row of  export const iterCSV(filePath)) {
 //     data += row
 //   }
 //   console.log(data)
@@ -124,7 +124,7 @@ const mapCellValue = (value) => {
 /**
  * @param {string} filePath
  */
-exports.iterCSV = async function * (filePath) {
+ export const iterCSV = async function * (filePath) {
   const Excel = require('exceljs')
 
   const workbook = new Excel.Workbook()

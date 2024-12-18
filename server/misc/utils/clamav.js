@@ -26,17 +26,17 @@ const runCommand = async (command) => {
   return result
 }
 
-exports.ping = async () => {
+ export const ping = async () => {
   const result = await runCommand('PING')
   if (result !== 'PONG') throw new Error('expected "PONG" in response')
 }
 
-exports.middleware = asyncWrap(async (req, res, next) => {
-  await exports.checkFiles(req.files, req.user)
+ export const middleware = asyncWrap(async (req, res, next) => {
+  await  export const checkFiles(req.files, req.user)
   next()
 })
 
-exports.checkFiles = async (files, user) => {
+ export const checkFiles = async (files, user) => {
   if (!config.clamav.active) return true
   for (const file of files || []) {
     const remotePath = path.join(config.clamav.dataDir, path.relative(config.dataDir, file.path))

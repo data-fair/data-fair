@@ -1,7 +1,7 @@
 // A dataset post is a subset of the dataset object that can be pushed when initially creating it
+import dataset from './dataset.js'
+import datasetPatch from './dataset-patch.js'
 
-const dataset = require('./dataset')
-const datasetPatch = require('./dataset-patch')
 const postKeys = ['isVirtual', 'isRest', 'isMetaOnly', 'owner', 'remoteFile']
 const body = {
   title: 'Dataset JSON body',
@@ -32,7 +32,7 @@ postKeys.forEach(k => {
   body.properties[k] = dataset.properties[k]
 })
 
-module.exports = {
+export default {
   title: 'Dataset post',
   type: 'object',
   additionalProperties: false,

@@ -12,21 +12,21 @@ const reqStep = new client.Histogram({
 
 const reqObserveKey = Symbol('reqObserveKey')
 
-exports.observeReqMiddleware = (req, res, next) => {
+ export const observeReqMiddleware = (req, res, next) => {
   const start = Date.now()
   req[reqObserveKey] = { start, step: start }
   res.on('finish', () => {
-    exports.reqStep(req, 'finish')
-    exports.reqStep(req, 'total')
+     export const reqStep(req, 'finish')
+     export const reqStep(req, 'total')
   })
   next()
 }
 
-exports.reqRouteName = (req, routeName) => {
+ export const reqRouteName = (req, routeName) => {
   req[reqObserveKey].routeName = routeName
 }
 
-exports.reqStep = (req, stepName) => {
+ export const reqStep = (req, stepName) => {
   if (!req.route) return
   if (!req[reqObserveKey].routeName) req[reqObserveKey].routeName = req.route.path
 

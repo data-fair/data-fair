@@ -5,7 +5,7 @@ const findUtils = require('../utils/find')
 const baseAppsUtils = require('../../base-applications/utils')
 const cacheHeaders = require('../utils/cache-headers')
 
-const router = module.exports = express.Router()
+const router = export default express.Router()
 
 // All routes in the router are only for the super admins of the service
 router.use(asyncWrap(async (req, res, next) => {

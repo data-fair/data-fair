@@ -4,10 +4,10 @@ const equal = require('deep-equal')
 const axios = require('../../misc/utils/axios')
 const debug = require('debug')('catalogs:udata')
 const moment = require('moment')
-exports.title = 'uData'
-exports.description = 'Customizable and skinnable social platform dedicated to (open)data.'
-exports.docUrl = 'https://udata.readthedocs.io/en/latest/'
-exports.optionalCapabilities = [
+ export const title = 'uData'
+ export const description = 'Customizable and skinnable social platform dedicated to (open)data.'
+ export const docUrl = 'https://udata.readthedocs.io/en/latest/'
+ export const optionalCapabilities = [
   'apiKey',
   'searchOrganizations',
   'publishDataset',
@@ -16,21 +16,21 @@ exports.optionalCapabilities = [
   'listDatasets'
 ]
 
-exports.init = async (catalogUrl) => {
+ export const init = async (catalogUrl) => {
   const siteInfo = (await axios.get(url.resolve(catalogUrl, 'api/1/site/'))).data
   return { url: catalogUrl, title: siteInfo.title }
 }
 
-exports.httpParams = async (catalog) => {
+ export const httpParams = async (catalog) => {
   return { headers: { 'X-API-KEY': catalog.apiKey } }
 }
 
-exports.getDataset = async (catalog, datasetId) => {
+ export const getDataset = async (catalog, datasetId) => {
   const dataset = (await axios.get(url.resolve(catalog.url, 'api/1/datasets/' + datasetId), { headers: { 'X-API-KEY': catalog.apiKey } })).data
   return prepareDatasetFromCatalog(catalog, dataset)
 }
 
-exports.listDatasets = async (catalog, params = {}) => {
+ export const listDatasets = async (catalog, params = {}) => {
   params.page_size = params.page_size || 1000
   let datasets
   if (catalog.organization) {
@@ -45,23 +45,23 @@ exports.listDatasets = async (catalog, params = {}) => {
   }
 }
 
-exports.searchOrganizations = async (catalogUrl, q) => {
+ export const searchOrganizations = async (catalogUrl, q) => {
   const res = await axios.get(url.resolve(catalogUrl, 'api/1/organizations/suggest/'), { params: { q } })
   return { results: res.data.map(o => ({ id: o.id, name: o.name })) }
 }
 
-exports.publishDataset = async (catalog, dataset, publication) => {
+ export const publishDataset = async (catalog, dataset, publication) => {
   // if (publication.targetUrl) throw new Error('Publication was already done !')
   if (publication.addToDataset && publication.addToDataset.id) return addResourceToDataset(catalog, dataset, publication)
   else return createOrUpdateDataset(catalog, dataset, publication)
 }
 
-exports.deleteDataset = async (catalog, dataset, publication) => {
+ export const deleteDataset = async (catalog, dataset, publication) => {
   if (publication.addToDataset && publication.addToDataset.id) return deleteResourceFromDataset(catalog, dataset, publication)
   else return deleteDataset(catalog, dataset, publication)
 }
 
-exports.publishApplication = async (catalog, application, publication, datasets) => {
+ export const publishApplication = async (catalog, application, publication, datasets) => {
   const udataDatasets = []
   for (const dataset of datasets) {
     for (const publication of dataset.publications || []) {
@@ -115,7 +115,7 @@ exports.publishApplication = async (catalog, application, publication, datasets)
   }
 }
 
-exports.deleteApplication = async (catalog, application, publication) => {
+ export const deleteApplication = async (catalog, application, publication) => {
   const udataReuse = publication.result
   // The dataset was never really created in udata
   if (!udataReuse) return

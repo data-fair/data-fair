@@ -5,7 +5,7 @@ const express = require('express')
 const asyncWrap = require('../utils/async-handler')
 const findUtils = require('../utils/find')
 
-const router = module.exports = express.Router()
+const router = export default express.Router()
 
 router.get('', asyncWrap(async (req, res) => {
   const db = req.app.get('db')

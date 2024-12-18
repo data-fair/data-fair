@@ -22,7 +22,7 @@ const subscribers = {}
 const clients = {}
 
 let stopped = false
-exports.stop = async () => {
+ export const stop = async () => {
   stopped = true
   if (cursor) await cursor.close()
 }
@@ -33,7 +33,7 @@ async function channel (db) {
   return db.collection('messages')
 }
 
-exports.initServer = async (wss, db, session) => {
+ export const initServer = async (wss, db, session) => {
   wss.on('connection', (ws, req) => {
     session.auth(req, null, () => {
       // Associate ws connections to ids for subscriptions
@@ -133,7 +133,7 @@ const initCursor = (db, mongoChannel) => {
   })
 }
 
-exports.initPublisher = async (db) => {
+ export const initPublisher = async (db) => {
   // Write to pubsub channel
   const mongoChannel = await channel(db)
   await mongoChannel.insertOne({ type: 'init' })

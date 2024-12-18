@@ -55,7 +55,7 @@ const storage = multer.diskStorage({
   }
 })
 
-const allowedTypes = exports.allowedTypes = new Set([...basicTypes, ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes])
+const allowedTypes =  export const allowedTypes = new Set([...basicTypes, ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes])
 
 const middleware = multer({
   limits: {
@@ -92,7 +92,7 @@ const middleware = multer({
 
 const getMulterFiles = promisifyMiddleware(middleware, 'files')
 
-exports.getFiles = async (req, res) => {
+ export const getFiles = async (req, res) => {
   const files = await getMulterFiles(req, res)
   for (const file of files || []) {
     await fsyncFile(file.path)
@@ -100,7 +100,7 @@ exports.getFiles = async (req, res) => {
   return files
 }
 
-exports.getFormBody = (body) => {
+ export const getFormBody = (body) => {
   if (!body) throw createError(400, 'Missing body')
   if (body.body) {
     try {
@@ -130,7 +130,7 @@ exports.getFormBody = (body) => {
   return body
 }
 
-exports.fsyncFiles = asyncWrap(async (req, res, next) => {
+ export const fsyncFiles = asyncWrap(async (req, res, next) => {
   for (const file of req.files || []) {
     await fsyncFile(file.path)
   }

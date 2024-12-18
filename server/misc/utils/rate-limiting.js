@@ -24,12 +24,12 @@ setInterval(() => {
   }
 }, 20 * 60 * 1000)
 
-exports.clear = () => {
+ export const clear = () => {
   for (const key of Object.keys(rateLimiters)) delete rateLimiters[key]
   for (const key of Object.keys(tokenBuckets)) delete tokenBuckets[key]
 }
 
-exports.getRateLimiter = (req, limitType) => {
+ export const getRateLimiter = (req, limitType) => {
   const throttlingId = req.user ? req.user.id : requestIp.getClientIp(req)
   const rateLimiter = rateLimiters[throttlingId + limitType] = rateLimiters[throttlingId + limitType] || {
     rateLimiter: new RateLimiter({
@@ -40,13 +40,13 @@ exports.getRateLimiter = (req, limitType) => {
   return rateLimiter
 }
 
-exports.consume = (req, limitType) => {
-  const rateLimiter = exports.getRateLimiter(req, limitType)
+ export const consume = (req, limitType) => {
+  const rateLimiter =  export const getRateLimiter(req, limitType)
   rateLimiter.lastUsed = Date.now()
   return rateLimiter.rateLimiter.tryRemoveTokens(1)
 }
 
-exports.getTokenBucket = (req, limitType, bandwidthType) => {
+ export const getTokenBucket = (req, limitType, bandwidthType) => {
   const throttlingId = req.user ? req.user.id : requestIp.getClientIp(req)
   const bucketSize = config.defaultLimits.apiRate[limitType].bandwidth[bandwidthType] / 10
   const tokenBucket = tokenBuckets[throttlingId + bandwidthType] = tokenBuckets[throttlingId + bandwidthType] || {
@@ -93,17 +93,17 @@ const throttledEnd = async (res, buffer, tokenBucket) => {
   res._originalEnd()
 }
 
-exports.middleware = (_limitType) => asyncWrap(async (req, res, next) => {
+ export const middleware = (_limitType) => asyncWrap(async (req, res, next) => {
   const limitType = _limitType || ((req.user && req.user.id) ? 'user' : 'anonymous')
 
   const ignoreRateLimiting = config.secretKeys.ignoreRateLimiting && req.get('x-ignore-rate-limiting') === config.secretKeys.ignoreRateLimiting
-  if (!ignoreRateLimiting && !exports.consume(req, limitType)) {
+  if (!ignoreRateLimiting && ! export const consume(req, limitType)) {
     debugLimits('exceedRateLimiting', limitType, req.user, requestIp.getClientIp(req))
     return res.status(429).type('text/plain').send(req.__('errors.exceedRateLimiting'))
   }
 
   res.throttle = (bandwidthType) => {
-    const throttle = new Throttle(exports.getTokenBucket(req, limitType, bandwidthType))
+    const throttle = new Throttle( export const getTokenBucket(req, limitType, bandwidthType))
     throttle.on('error', () => {
       // nothing, throttle might finish in error if the HTTP request was interrupted or somethin like that
       // we don't care about ERR_STREAM_PREMATURE_CLOSE errors, etc
@@ -119,7 +119,7 @@ exports.middleware = (_limitType) => asyncWrap(async (req, res, next) => {
     res._originalEnd = res.end
     res.end = function (buffer) {
       if (!buffer) return res._originalEnd()
-      const tokenBucket = exports.getTokenBucket(req, limitType, bandwidthType)
+      const tokenBucket =  export const getTokenBucket(req, limitType, bandwidthType)
       tokenBucket.lastUsed = Date.now()
       throttledEnd(res, buffer, tokenBucket)
         .catch(err => console.warn('failed to send throttled response', err))

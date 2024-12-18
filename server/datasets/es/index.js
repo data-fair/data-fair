@@ -5,34 +5,34 @@ const manageIndices = require('./manage-indices')
 
 const smallAggs = require('./small-aggs')
 
-exports.delete = manageIndices.delete
-exports.initDatasetIndex = manageIndices.initDatasetIndex
-exports.switchAlias = manageIndices.switchAlias
-exports.validateDraftAlias = manageIndices.validateDraftAlias
-exports.datasetInfos = manageIndices.datasetInfos
-exports.datasetWarning = manageIndices.datasetWarning
-exports.updateDatasetMapping = manageIndices.updateDatasetMapping
+ export const delete = manageIndices.delete
+ export const initDatasetIndex = manageIndices.initDatasetIndex
+ export const switchAlias = manageIndices.switchAlias
+ export const validateDraftAlias = manageIndices.validateDraftAlias
+ export const datasetInfos = manageIndices.datasetInfos
+ export const datasetWarning = manageIndices.datasetWarning
+ export const updateDatasetMapping = manageIndices.updateDatasetMapping
 
-exports.aliasName = commons.aliasName
-exports.extractError = commons.extractError
-exports.prepareResultItem = commons.prepareResultItem
-exports.escapeFilter = commons.escapeFilter
+ export const aliasName = commons.aliasName
+ export const extractError = commons.extractError
+ export const prepareResultItem = commons.prepareResultItem
+ export const escapeFilter = commons.escapeFilter
 
-exports.search = require('./search')
-exports.multiSearch = require('./multi-search')
-exports.count = require('./count')
-exports.valuesAgg = require('./values-agg')
-exports.values = require('./values')
-exports.metricAgg = require('./metric-agg').agg
-exports.simpleMetricsAgg = require('./metric-agg').simpleMetricsAgg
-exports.geoAgg = require('./geo-agg')
-exports.bboxAgg = require('./bbox-agg')
-exports.wordsAgg = require('./words-agg')
-exports.maxAgg = smallAggs.max
-exports.minAgg = smallAggs.min
-exports.indexStream = require('./index-stream')
+ export const search = require('./search')
+ export const multiSearch = require('./multi-search')
+ export const count = require('./count')
+ export const valuesAgg = require('./values-agg')
+ export const values = require('./values')
+ export const metricAgg = require('./metric-agg').agg
+ export const simpleMetricsAgg = require('./metric-agg').simpleMetricsAgg
+ export const geoAgg = require('./geo-agg')
+ export const bboxAgg = require('./bbox-agg')
+ export const wordsAgg = require('./words-agg')
+ export const maxAgg = smallAggs.max
+ export const minAgg = smallAggs.min
+ export const indexStream = require('./index-stream')
 
-exports.init = async () => {
+ export const init = async () => {
   let node = config.elasticsearch.nodes
   if (!node) {
     node = config.elasticsearch.host

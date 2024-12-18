@@ -2,9 +2,9 @@ const metrics = require('../misc/utils/metrics')
 const journals = require('../misc/utils/journals')
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
-exports.eventsPrefix = 'index'
+ export const eventsPrefix = 'index'
 
-exports.process = async function (app, dataset) {
+ export const process = async function (app, dataset) {
   const fs = require('fs-extra')
   const createError = require('http-errors')
   const { Writable } = require('stream')
@@ -70,7 +70,7 @@ exports.process = async function (app, dataset) {
 
   debug('Run index stream')
   let readStreams, writeStream
-  const progress = taskProgress(app, dataset.id, exports.eventsPrefix, 100, (progress) => {
+  const progress = taskProgress(app, dataset.id,  export const eventsPrefix, 100, (progress) => {
     debugHeap('progress ' + progress, indexStream)
   })
   await progress.inc(0)

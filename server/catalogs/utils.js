@@ -8,7 +8,7 @@ const { prepareMarkdownContent } = require('../misc/utils/markdown')
  * @param {boolean} html
  * @returns {any}
  */
-exports.clean = (catalog, html = false) => {
+ export const clean = (catalog, html = false) => {
   catalog.public = permissions.isPublic('catalogs', catalog)
   delete catalog.permissions
   if (catalog.apiKey) catalog.apiKey = '**********'

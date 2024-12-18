@@ -2,7 +2,7 @@ const config = require('config')
 const createError = require('http-errors')
 const { aliasName, prepareQuery } = require('./commons')
 
-module.exports = async (client, dataset, query, publicBaseUrl) => {
+export default async (client, dataset, query, publicBaseUrl) => {
   const esQuery = prepareQuery(dataset, query)
 
   if (query.collapse) {

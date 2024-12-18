@@ -8,7 +8,7 @@ const esUtils = require('../es')
 const metrics = require('../../misc/utils/metrics')
 const pump = require('../../misc/utils/pipe')
 
-exports.bulkSearchPromise = async (streams, data) => {
+ export const bulkSearchPromise = async (streams, data) => {
   const buffers = []
   await pump(
     Readable.from([data]),
@@ -23,7 +23,7 @@ exports.bulkSearchPromise = async (streams, data) => {
   return Buffer.concat(buffers).toString()
 }
 
-exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, select) => {
+ export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, select) => {
   const bulkSearch = dataset.masterData && dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.find(bs => bs.id === bulkSearchId)
   if (!bulkSearch) throw createError(404, `Recherche en masse "${bulkSearchId}" inconnue`)
 

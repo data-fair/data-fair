@@ -3,7 +3,7 @@ const updateProgress = async (app, datasetId, task, progress) => {
   await app.get('db').collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $set: { taskProgress: { task, progress } } })
 }
 
-module.exports = (app, datasetId, task, nbSteps, progressCallback) => {
+export default (app, datasetId, task, nbSteps, progressCallback) => {
   let step = 0
   let lastProgress = -1
   let lastTime = new Date().getTime() - 1000

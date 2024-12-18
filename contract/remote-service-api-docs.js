@@ -1,11 +1,14 @@
-const config = require('config')
-const remoteServiceSchema = { ...require('./remote-service') }
-const remoteServicePatchSchema = { ...require('./remote-service-patch') }
+import config from 'config'
+import _remoteServiceSchema from './remote-service'
+import _remoteServicePatchSchema from './remote-service-patch'
+import { apiDoc as permissionsDoc } from '../server/misc/utils/permissions'
+
+const remoteServiceSchema = { ..._remoteServiceSchema }
+const remoteServicePatchSchema = { ..._remoteServicePatchSchema }
 delete remoteServiceSchema.definitions
 delete remoteServicePatchSchema.definitions
-const permissionsDoc = require('../server/misc/utils/permissions').apiDoc
 
-module.exports = (remoteService) => {
+export default (remoteService) => {
   const api = {
     openapi: '3.1.0',
     info: Object.assign({}, remoteService.apiDoc?.info, {

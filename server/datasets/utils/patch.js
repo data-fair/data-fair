@@ -13,7 +13,7 @@ const schemaUtils = require('./schema')
 const datasetPatchSchema = require('../../../contract/dataset-patch')
 const virtualDatasetsUtils = require('./virtual')
 
-exports.validatePatch = ajv.compile(datasetPatchSchema)
+ export const validatePatch = ajv.compile(datasetPatchSchema)
 
 /**
  * @param {any} app
@@ -25,7 +25,7 @@ exports.validatePatch = ajv.compile(datasetPatchSchema)
  * @param {any[]} [files]
  * @returns {Promise<{removedRestProps?: any[], attemptMappingUpdate?: boolean, isEmpty?: boolean}>}
  */
-exports.preparePatch = async (app, patch, dataset, user, locale, draftValidationMode, files) => {
+ export const preparePatch = async (app, patch, dataset, user, locale, draftValidationMode, files) => {
   const db = app.get('db')
 
   patch.id = dataset.id
@@ -110,14 +110,14 @@ exports.preparePatch = async (app, patch, dataset, user, locale, draftValidation
   }
 
   // manage automatic export of REST datasets into files
-  if (patch.exports && patch.exports.restToCSV) {
-    if (patch.exports.restToCSV.active) {
+  if (patch.exports && patch. export const restToCSV) {
+    if (patch. export const restToCSV.active) {
       const job = new CronJob(config.exportRestDatasets.cron, () => {})
-      patch.exports.restToCSV.nextExport = job.nextDates().toISOString()
+      patch. export const restToCSV.nextExport = job.nextDates().toISOString()
     } else {
-      delete patch.exports.restToCSV.nextExport
+      delete patch. export const restToCSV.nextExport
     }
-    patch.exports.restToCSV.lastExport = dataset?.exports?.restToCSV?.lastExport
+    patch. export const restToCSV.lastExport = dataset?.exports?.restToCSV?.lastExport
   }
 
   const removedRestProps = (dataset.isRest && patch.schema && dataset.schema.filter(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))) ?? []

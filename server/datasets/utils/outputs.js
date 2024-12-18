@@ -4,7 +4,7 @@ const { Transform } = require('stream')
 const path = require('path')
 const Piscina = require('piscina')
 
-const results2sheetPiscina = exports.results2sheetPiscina = new Piscina({
+const results2sheetPiscina =  export const results2sheetPiscina = new Piscina({
   filename: path.resolve(__dirname, '../../datasets/threads/results2sheet.js'),
   minThreads: 0,
   idleTimeout: 60 * 60 * 1000,
@@ -32,7 +32,7 @@ const csvStringifyOptions = (dataset, query = {}) => {
 
 const sliceSize = 200
 
-exports.results2csv = async (req, results) => {
+ export const results2csv = async (req, results) => {
   // add BOM for excel, cf https://stackoverflow.com/a/17879474
   let csv = '\ufeff'
 
@@ -56,7 +56,7 @@ exports.results2csv = async (req, results) => {
   return csv
 }
 
-exports.csvStreams = (dataset, query = {}) => {
+ export const csvStreams = (dataset, query = {}) => {
   return [
     csvStrStream(csvStringifyOptions(dataset, query)),
     new Transform({
@@ -68,7 +68,7 @@ exports.csvStreams = (dataset, query = {}) => {
   ]
 }
 
-exports.results2sheet = async (req, results, bookType) => {
+ export const results2sheet = async (req, results, bookType) => {
   const buf = Buffer.from(await results2sheetPiscina.run({
     results,
     bookType,

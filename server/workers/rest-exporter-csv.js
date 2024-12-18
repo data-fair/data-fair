@@ -1,4 +1,4 @@
-exports.process = async function (app, dataset) {
+ export const process = async function (app, dataset) {
   const metrics = require('../misc/utils/metrics')
   const fs = require('fs-extra')
   const config = require('config')
@@ -15,7 +15,7 @@ exports.process = async function (app, dataset) {
   const db = app.get('db')
   const date = new Date()
   const patch = { exports: JSON.parse(JSON.stringify(dataset.exports)) }
-  patch.exports.restToCSV.lastExport = { date }
+  patch. export const restToCSV.lastExport = { date }
   try {
     const tmpFile = await tmp.tmpName({ dir: tmpDir })
     // creating empty file before streaming seems to fix some weird bugs with NFS
@@ -32,11 +32,11 @@ exports.process = async function (app, dataset) {
     await fs.move(tmpFile, exportedFile, { overwrite: true })
   } catch (err) {
     metrics.internalError('rest-exporter', err)
-    patch.exports.restToCSV.lastExport.error = err.message
+    patch. export const restToCSV.lastExport.error = err.message
   }
 
   const job = new CronJob(config.exportRestDatasets.cron, () => {})
-  patch.exports.restToCSV.nextExport = job.nextDates().toISOString()
+  patch. export const restToCSV.nextExport = job.nextDates().toISOString()
 
   await datasetsService.applyPatch(app, dataset, patch)
   if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)

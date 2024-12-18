@@ -3,7 +3,7 @@ const asyncWrap = require('../utils/async-handler')
 const cacheHeaders = require('../utils/cache-headers')
 const limitsUtils = require('../utils/limits')
 
-const router = module.exports = express.Router()
+const router = export default express.Router()
 
 router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).type('text/plain').send()

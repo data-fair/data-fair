@@ -23,12 +23,12 @@ const schema = {
 }
 const validate = ajv.compile(schema)
 
-exports.init = async (db) => {
+ export const init = async (db) => {
   await dbUtils.ensureIndex(db, 'limits', { id: 'text', name: 'text' }, { name: 'fulltext' })
   await dbUtils.ensureIndex(db, 'limits', { type: 1, id: 1 }, { name: 'limits-find-current', unique: true })
 }
 
-exports.getLimits = async (db, consumer) => {
+ export const getLimits = async (db, consumer) => {
   const coll = db.collection('limits')
   const now = moment()
   let limits = await coll.findOne({ type: consumer.type, id: consumer.id })
@@ -55,8 +55,8 @@ exports.getLimits = async (db, consumer) => {
   return limits
 }
 
-exports.get = async (db, consumer, type) => {
-  const limits = await exports.getLimits(db, consumer)
+ export const get = async (db, consumer, type) => {
+  const limits = await  export const getLimits(db, consumer)
   const res = (limits && limits[type]) || { limit: 0, consumption: 0 }
   res.type = type
   res.lastUpdate = limits ? limits.lastUpdate : new Date().toISOString()
@@ -70,8 +70,8 @@ const calculateRemainingLimit = (limits, key) => {
   return Math.max(0, limit - consumption)
 }
 
-exports.remaining = async (db, consumer) => {
-  const limits = await exports.getLimits(db, consumer)
+ export const remaining = async (db, consumer) => {
+  const limits = await  export const getLimits(db, consumer)
   return {
     storage: calculateRemainingLimit(limits, 'store_bytes'),
     indexed: calculateRemainingLimit(limits, 'indexed_bytes'),
@@ -79,17 +79,17 @@ exports.remaining = async (db, consumer) => {
   }
 }
 
-exports.incrementConsumption = async (db, consumer, type, inc) => {
+ export const incrementConsumption = async (db, consumer, type, inc) => {
   return (await db.collection('limits')
     .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $inc: { [`${type}.consumption`]: inc } }, { returnDocument: 'after', upsert: true })).value
 }
 
-exports.setConsumption = async (db, consumer, type, value) => {
+ export const setConsumption = async (db, consumer, type, value) => {
   return (await db.collection('limits')
     .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $set: { [`${type}.consumption`]: value } }, { returnDocument: 'after', upsert: true })).value
 }
 
-const router = exports.router = express.Router()
+const router =  export const router = express.Router()
 
 const isSuperAdmin = (req, res, next) => {
   if (req.user && req.user.adminMode) return next()
@@ -131,7 +131,7 @@ router.post('/:type/:id', isSuperAdmin, asyncWrap(async (req, res, next) => {
 
 // A user can get limits information for himself only
 router.get('/:type/:id', isAccountMember, asyncWrap(async (req, res, next) => {
-  const limits = await exports.getLimits(req.app.get('db'), { type: req.params.type, id: req.params.id })
+  const limits = await  export const getLimits(req.app.get('db'), { type: req.params.type, id: req.params.id })
   if (!limits) return res.status(404).send()
   delete limits._id
   res.send(limits)

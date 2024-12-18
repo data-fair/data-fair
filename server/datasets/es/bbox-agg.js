@@ -2,7 +2,7 @@ const config = require('config')
 const createError = require('http-errors')
 const { prepareQuery, aliasName } = require('./commons')
 
-module.exports = async (client, dataset, query = {}, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
+export default async (client, dataset, query = {}, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
   if (!dataset.bbox) throw createError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
 
   const esQuery = prepareQuery(dataset, query)

@@ -12,7 +12,7 @@ const possibleFieldsDelimiters = [',', ';', '\t', '|']
 const possibleQuoteChars = ['"', "'"]
 // const possibleQuoteChars = ["'"]
 
-exports.sniff = async (sample) => {
+ export const sniff = async (sample) => {
   const intoStream = (await import('into-stream')).default
 
   // the parameters combination with the most successfully extracted values is probably the best one

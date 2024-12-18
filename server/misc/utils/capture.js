@@ -14,7 +14,7 @@ const captureUrl = config.privateCaptureUrl || config.captureUrl
 
 const capturesDir = path.resolve(config.dataDir, 'captures')
 
-exports.init = async () => {
+ export const init = async () => {
   await fs.ensureDir(capturesDir)
 }
 
@@ -98,7 +98,7 @@ const stream2file = async (reqOpts, capturePath) => {
   }
 }
 
-exports.screenshot = async (req, res) => {
+ export const screenshot = async (req, res) => {
   const capturePath = resolvePath(capturesDir, req.application.id + '.png')
 
   const isDefaultThumbnail = Object.keys(req.query).filter(k => k !== 'updatedAt' && k !== 'app_capture-test-error').length === 0
@@ -155,7 +155,7 @@ exports.screenshot = async (req, res) => {
   }
 }
 
-exports.print = async (req, res) => {
+ export const print = async (req, res) => {
   const reqOpts = printRequestOpts(req)
 
   if (!rateLimiting.consume(req, 'appCaptures')) {

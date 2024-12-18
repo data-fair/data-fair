@@ -1,6 +1,6 @@
 const metrics = require('../misc/utils/metrics')
 
-exports.process = async function (app, catalog) {
+ export const process = async function (app, catalog) {
   const config = /** @type {any} */(require('config'))
   const CronJob = require('cron').CronJob
   const catalogs = require('../catalogs/plugins')

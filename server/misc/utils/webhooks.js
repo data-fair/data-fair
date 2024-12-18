@@ -5,7 +5,7 @@ const notifications = require('./notifications')
 const permissions = require('./permissions')
 const debug = require('debug')('webhooks')
 
-exports.trigger = async (db, type, resource, event, sender) => {
+ export const trigger = async (db, type, resource, event, sender) => {
   const eventKey = resource.draftReason ? `${type}-draft-${event.type}` : `${type}-${event.type}`
   const eventType = settingsSchema.properties.webhooks.items.properties.events.items.oneOf
     .find(eventType => eventType.const === eventKey)

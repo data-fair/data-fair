@@ -4,7 +4,7 @@ const { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } = re
 const capabilities = require('../../../contract/capabilities.js')
 const { assertMetricAccepted } = require('./metric-agg')
 
-module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, explain, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
+export default async (client, dataset, query, addGeoData, publicBaseUrl, explain, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
   const fields = dataset.schema.map(f => f.key)
   // nested grouping by a serie of fields
   if (!query.field) throw createError(400, 'Le paramètre "field" est obligatoire')

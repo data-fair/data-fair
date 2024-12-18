@@ -19,7 +19,7 @@ const { dataFiles, lsAttachments, lsMetadataAttachments, attachmentPath, metadat
  * @param {boolean} indexed
  * @returns
  */
-exports.checkStorage = async (db, locale, owner, dataset, contentLength, overwrite, indexed = false) => {
+ export const checkStorage = async (db, locale, owner, dataset, contentLength, overwrite, indexed = false) => {
   const estimatedContentSize = contentLength - 210
 
   /** @type {any} */
@@ -55,7 +55,7 @@ exports.checkStorage = async (db, locale, owner, dataset, contentLength, overwri
   }
 }
 
-exports.storage = async (db, es, dataset) => {
+ export const storage = async (db, es, dataset) => {
   const storage = {
     size: 0,
     dataFiles: await dataFiles(dataset),
@@ -160,7 +160,7 @@ exports.storage = async (db, es, dataset) => {
 }
 
 // After a change that might impact consumed storage, we store the value
-exports.updateStorage = async (app, dataset, deleted = false, checkRemaining = false) => {
+ export const updateStorage = async (app, dataset, deleted = false, checkRemaining = false) => {
   const db = app.get('db')
   const es = app.get('es')
   if (dataset.draftReason) {
@@ -170,14 +170,14 @@ exports.updateStorage = async (app, dataset, deleted = false, checkRemaining = f
   if (!deleted) {
     await db.collection('datasets').updateOne({ id: dataset.id }, {
       $set: {
-        storage: await exports.storage(db, es, dataset)
+        storage: await  export const storage(db, es, dataset)
       }
     })
   }
-  return exports.updateTotalStorage(db, dataset.owner, checkRemaining)
+  return  export const updateTotalStorage(db, dataset.owner, checkRemaining)
 }
 
-exports.updateTotalStorage = async (db, owner, checkRemaining = false) => {
+ export const updateTotalStorage = async (db, owner, checkRemaining = false) => {
   const aggQuery = [
     { $match: { 'owner.type': owner.type, 'owner.id': owner.id } },
     { $project: { 'storage.size': 1, 'storage.indexed.size': 1 } },

@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   type: 'object',
   required: ['catalog', 'status'],
   additionalProperties: false,

@@ -9,7 +9,7 @@ if (global.gc) console.log('Manual garbage collection is available')
 
 const f = val => Math.round((val / 1024 / 1024)).toLocaleString({}) + 'Mo'
 
-exports.debug = (prefix) => (key, value) => {
+ export const debug = (prefix) => (key, value) => {
   if (!process.env.DEBUG_HEAP) return
   if (process.env.DEBUG_HEAP !== '*' && !prefix.startsWith(process.env.DEBUG_HEAP)) return
 

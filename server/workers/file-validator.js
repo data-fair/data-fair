@@ -2,7 +2,7 @@ const { Writable } = require('stream')
 const journals = require('../misc/utils/journals')
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
-exports.eventsPrefix = 'validate'
+ export const eventsPrefix = 'validate'
 
 const maxErrors = 3
 
@@ -46,7 +46,7 @@ class ValidateStream extends Writable {
   }
 }
 
-exports.process = async function (app, dataset) {
+ export const process = async function (app, dataset) {
   const pump = require('../misc/utils/pipe')
   const datasetUtils = require('../datasets/utils')
   const datasetsService = require('../datasets/service')
@@ -90,7 +90,7 @@ exports.process = async function (app, dataset) {
 
   if (datasetUtils.schemaHasValidationRules(dataset.schema)) {
     debug('Run validator stream')
-    const progress = taskProgress(app, dataset.id, exports.eventsPrefix, 100)
+    const progress = taskProgress(app, dataset.id,  export const eventsPrefix, 100)
     await progress.inc(0)
     const readStreams = await datasetUtils.readStreams(db, dataset, false, false, false, progress)
     const validateStream = new ValidateStream({ dataset })

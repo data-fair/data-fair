@@ -34,6 +34,7 @@
   },
   "author": "",
   "license": "AGPL-3.0-only",
+  "type": "module",
   "eslintConfig": {
     "root": true,
     "env": {
@@ -81,6 +82,7 @@
     "@types/i18n": "^0.13.10",
     "@types/json-stable-stringify": "^1.0.36",
     "@types/jsonld": "^1.5.15",
+    "@types/md5": "^2.3.5",
     "@types/memoizee": "^0.4.11",
     "@types/nanoid": "^3.0.0",
     "@types/node-dir": "^0.0.37",

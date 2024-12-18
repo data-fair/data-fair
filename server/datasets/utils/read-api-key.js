@@ -10,7 +10,7 @@ const makeKey = (owner) => {
   return Buffer.from(parts.join(':')).toString('base64url')
 }
 
-exports.create = (owner, readApiKey) => {
+ export const create = (owner, readApiKey) => {
   if (!readApiKey.active) return null
   const d = dayjs.duration(readApiKey.interval).asSeconds()
   readApiKey.expiresAt = dayjs().add(d, 's').toISOString()
@@ -20,7 +20,7 @@ exports.create = (owner, readApiKey) => {
   }
 }
 
-exports.update = (owner, readApiKey, _readApiKey) => {
+ export const update = (owner, readApiKey, _readApiKey) => {
   const d = dayjs.duration(readApiKey.interval).asSeconds()
   readApiKey.expiresAt = dayjs().add(d, 's').toISOString()
   readApiKey.renewAt = dayjs().add(d / 2, 's').toISOString()

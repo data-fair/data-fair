@@ -6,6 +6,6 @@ const clone = rfdc()
  * @param {T} obj
  * @returns {T}
  */
-module.exports = (obj) => {
+export default (obj) => {
   return clone(obj?.__isProxy ? obj.__proxyTarget : obj)
 }

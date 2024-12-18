@@ -1,7 +1,7 @@
 const config = require('config')
 const asyncWrap = require('./misc/utils/async-handler')
 
-module.exports = async () => {
+export default async () => {
   const trackEmbed = asyncWrap(async (req, res, next) => {
     if (!req.url.startsWith('/embed/')) return next()
     const [resourceType, resourceId, embedView] = req.url.replace('/embed/', '').split(/[/?]/)
@@ -32,7 +32,7 @@ module.exports = async () => {
     return { trackEmbed, render: (req, res, next) => next() }
   } else {
     const { Nuxt } = require('nuxt-start')
-    const nuxtConfig = require('../nuxt.config.js')
+    const nuxtConfig = require('../nuxt.config.cjs')
 
     // Prepare nuxt for rendering and serving UI
     nuxtConfig.dev = false

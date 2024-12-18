@@ -1,7 +1,7 @@
 const geolib = require('geolib')
 const ngeohash = require('ngeohash')
 
-const geohash = module.exports = {}
+const geohash = export default {}
 
 // source https://en.wikipedia.org/wiki/Geohash
 const errorsPerPrecision = [2500, 630, 78, 20, 2.4, 0.61, 0.076, 0.019]

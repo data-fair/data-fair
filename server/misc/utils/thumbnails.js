@@ -94,7 +94,7 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
   return { entry: newEntry, status: 'MISS' }
 }
 
-exports.getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
+ export const getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
   const db = req.app.get('db')
   const sharpOptions = { fit: req.query.fit || 'cover', position: req.query.position || 'center' }
   // resizeMode was mostly adapted from thumbor and comes from dataset schema
@@ -145,7 +145,7 @@ exports.getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
   }
 }
 
-exports.prepareThumbnailUrl = (baseUrl, thumbnail = '300x200', draft) => {
+ export const prepareThumbnailUrl = (baseUrl, thumbnail = '300x200', draft) => {
   if (thumbnail === 'true' || thumbnail === '1') thumbnail = '300x200'
   const [width, height] = (thumbnail).split('x')
   const thumbnailUrl = new URL(baseUrl)

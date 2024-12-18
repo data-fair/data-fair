@@ -5,7 +5,7 @@
  * @param {Buffer} buffer
  * @returns {boolean}
  */
-exports.hasBOM = function (buffer) {
+ export const hasBOM = function (buffer) {
   return buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF
 }
 
@@ -13,9 +13,9 @@ exports.hasBOM = function (buffer) {
  * @param {Buffer} buffer
  * @returns {Buffer}
  */
-exports.removeBOM = function (buffer) {
+ export const removeBOM = function (buffer) {
   // multiple strip BOM because of badly formatted files from some clients
-  while (exports.hasBOM(buffer)) {
+  while ( export const hasBOM(buffer)) {
     buffer = buffer.slice(3)
   }
   return buffer

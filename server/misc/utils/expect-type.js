@@ -1,6 +1,6 @@
 const debug = require('debug')('expect-type')
 
-module.exports = (types) => {
+export default (types) => {
   if (typeof types === 'string') types = [types]
   return (req, res, next) => {
     // content-type is only relevant for write operations

@@ -33,7 +33,7 @@ const cacheHeaders = require('../misc/utils/cache-headers')
 const { validateURLFriendly } = require('../misc/utils/validation')
 const publicationSites = require('../misc/utils/publication-sites')
 
-const router = module.exports = express.Router()
+const router = export default express.Router()
 
 router.use((req, res, next) => {
   // @ts-ignore

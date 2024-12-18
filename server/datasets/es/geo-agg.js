@@ -4,7 +4,7 @@ const geohash = require('../../misc/utils/geohash')
 
 const { prepareQuery, getQueryBBOX, aliasName, prepareResultItem } = require('./commons')
 
-module.exports = async (client, dataset, query, publicBaseUrl) => {
+export default async (client, dataset, query, publicBaseUrl) => {
   if (!dataset.bbox) throw createError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
   const bbox = getQueryBBOX(query) || dataset.bbox
   const aggSize = query.agg_size ? Number(query.agg_size) : 20

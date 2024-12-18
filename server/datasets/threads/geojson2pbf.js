@@ -3,7 +3,7 @@
 const geojsonvt = require('geojson-vt')
 const vtpbf = require('vt-pbf')
 
-module.exports = ({ geojson, xyz }) => {
+export default ({ geojson, xyz }) => {
   const layers = {}
   // indexMaxZoom=0 -> do not pre-render tiles
   // tolerance=4 -> slightly higher simplification than default (3)

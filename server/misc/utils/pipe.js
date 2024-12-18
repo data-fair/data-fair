@@ -4,8 +4,8 @@ const debug = require('debug')('pipe')
 
 if (process.env.PIPE === 'pipeline') {
   debug('PIPE: use native pipeline method to pipe streams together')
-  module.exports = require('stream/promises').pipeline
+  export default require('stream/promises').pipeline
 } else {
   debug('PIPE: use npm pump module to pipe streams together')
-  module.exports = require('util').promisify(require('pump'))
+  export default require('util').promisify(require('pump'))
 }

@@ -13,7 +13,7 @@ const workersTasksHistogram = new Histogram({
   labelNames: ['task', 'status']
 })
 
-const tasks = exports.tasks = {
+const tasks =  export const tasks = {
   initializer: require('./initializer'),
   fileDownloader: require('./file-downloader'),
   fileStorer: require('./file-storer'),
@@ -41,7 +41,7 @@ let loopIntervalPromiseResolve = null
 
 // Hooks for testing
 let hooks = {}
-exports.hook = (key, delay = 15000, message) => {
+ export const hook = (key, delay = 15000, message) => {
   message = message || `time limit on worker hook - ${key}`
   const promise = new Promise((resolve, reject) => {
     hooks[key] = { resolve, reject }
@@ -52,7 +52,7 @@ exports.hook = (key, delay = 15000, message) => {
   return Promise.race([promise, timeoutPromise])
 }
 // clear also for testing
-exports.clear = async () => {
+ export const clear = async () => {
   hooks = {}
   try {
     await Promise.all(promisePool.filter(p => !!p))
@@ -62,13 +62,13 @@ exports.clear = async () => {
   }
 }
 
-exports.runningTasks = () => {
+ export const runningTasks = () => {
   return promisePool.filter(p => !!p).map(p => p._resource)
 }
 
 /* eslint no-unmodified-loop-condition: 0 */
 // Run main loop !
-exports.start = async (app) => {
+ export const start = async (app) => {
   const debugLoop = require('debug')('worker-loop')
 
   debugLoop('start worker loop with config', config.worker)
@@ -135,7 +135,7 @@ exports.start = async (app) => {
 }
 
 // Stop and wait for all workers to finish their current task
-exports.stop = async () => {
+ export const stop = async () => {
   stopped = true
   console.log('waiting for worker loop to finish current tasks')
   await Promise.all(promisePool.filter(p => !!p))
@@ -167,7 +167,7 @@ const getTypesFilters = () => {
           { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } },
           { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $exists: false } },
           // fetch rest datasets with an automatic export to do
-          { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: date } },
+          { status: 'finalized', isRest: true, ' export const restToCSV.active': true, ' export const restToCSV.nextExport': { $lt: date } },
           // file datasets with remote url that need refreshing
           { status: 'finalized', draft: { $exists: false }, 'remoteFile.autoUpdate.active': true, 'remoteFile.autoUpdate.nextUpdate': { $lt: date } },
           // renew read api key
@@ -271,7 +271,7 @@ async function iter (app, resource, type) {
       } else if (
         resource.status === 'finalized' &&
         resource.isRest && resource?.exports?.restToCSV?.active &&
-        resource.exports.restToCSV.nextExport < now
+        resource. export const restToCSV.nextExport < now
       ) {
         taskKey = 'restExporterCSV'
       } else if (

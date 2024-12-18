@@ -162,4 +162,4 @@ class IndexStream extends Transform {
   }
 }
 
-module.exports = (options) => new IndexStream(options)
+export default (options) => new IndexStream(options)

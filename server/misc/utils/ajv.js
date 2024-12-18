@@ -10,7 +10,7 @@ const openApiSchema = JSON.parse(openApiSchemaStr)
 
 ajv.addSchema(openApiSchema, 'openapi-3.1')
 
-exports.compile = (schema, throws = true) => {
+ export const compile = (schema, throws = true) => {
   const validate = typeof schema === 'string' ? ajv.getSchema(schema) : ajv.compile(schema)
   const myValidate = (data, locale = 'fr', errorsCallback) => {
     const valid = validate(data)

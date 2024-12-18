@@ -1,6 +1,6 @@
-exports.eventsPrefix = 'initialize'
+ export const eventsPrefix = 'initialize'
 
-exports.process = async function (app, dataset) {
+ export const process = async function (app, dataset) {
   const fs = require('fs-extra')
   const path = require('path')
   const pump = require('../misc/utils/pipe')
@@ -71,7 +71,7 @@ exports.process = async function (app, dataset) {
       count += metadataAttachments.length
     }
 
-    const progress = taskProgress(app, dataset.id, exports.eventsPrefix, count)
+    const progress = taskProgress(app, dataset.id,  export const eventsPrefix, count)
 
     if (dataset.initFrom.parts.includes('schema')) {
       patch.schema = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => {

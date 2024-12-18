@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   type: 'object',
   additionalProperties: false,
   required: ['topic', 'title'],

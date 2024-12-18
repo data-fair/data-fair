@@ -1,9 +1,9 @@
 const projections = require('../../contract/projections')
 
 // Analyze geojson dataset data, check validity and detect schema
-exports.eventsPrefix = 'analyze'
+ export const eventsPrefix = 'analyze'
 
-exports.process = async function (app, dataset) {
+ export const process = async function (app, dataset) {
   const createError = require('http-errors')
   const JSONStream = require('JSONStream')
   const datasetUtils = require('../datasets/utils')

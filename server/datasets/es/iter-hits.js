@@ -18,4 +18,4 @@ async function * iterHits (es, dataset, query = { size: 1000 }) {
   }
 }
 
-module.exports = iterHits
+export default iterHits

@@ -32,7 +32,7 @@ const fieldsMap = {
  * @param {Record<string, string>} reqQuery
  * @param {any} user
  */
-exports.findApplications = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
+ export const findApplications = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
   const applications = db.collection('applications')
 
   const tolerateStale = !!publicationSite

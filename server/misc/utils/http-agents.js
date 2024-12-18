@@ -14,4 +14,4 @@ const cacheableLookup = new CacheableLookup()
 cacheableLookup.install(httpAgent)
 cacheableLookup.install(httpsAgent)
 
-module.exports = { httpAgent, httpsAgent }
+export default { httpAgent, httpsAgent }

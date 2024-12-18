@@ -6,26 +6,26 @@
 
 const operationFilter = [{ operations: 'list' }, { classes: 'list' }]
 
-exports.publicFilter = {
+ export const publicFilter = {
   permissions: {
     $elemMatch: { $or: operationFilter, type: null, id: null }
   }
 }
 
-exports.privateFilter = {
+ export const privateFilter = {
   permissions: {
     $not: { $elemMatch: { $or: operationFilter } }
   }
 }
 
-exports.protectedFilter = {
+ export const protectedFilter = {
   permissions: {
     $elemMatch: { $or: operationFilter },
     $not: { $elemMatch: { $or: operationFilter, type: null, id: null } }
   }
 }
 
-exports.visibility = (resource) => {
+ export const visibility = (resource) => {
   const permissions = resource.permissions || []
   if (permissions.find(p => ((p.operations && p.operations.includes('list')) || (p.classes && p.classes.includes('list'))) && !p.type && !p.id)) {
     return 'public'
@@ -36,7 +36,7 @@ exports.visibility = (resource) => {
   return 'protected'
 }
 
-exports.filters = (reqQuery) => {
+ export const filters = (reqQuery) => {
   const showPublic = reqQuery.public === 'true' || (reqQuery.visibility && reqQuery.visibility.includes('public'))
   const showPrivate = reqQuery.private === 'true' || (reqQuery.visibility && reqQuery.visibility.includes('private'))
   const showProtected = reqQuery.protected === 'true' || (reqQuery.visibility && reqQuery.visibility.includes('protected'))
@@ -45,10 +45,10 @@ exports.filters = (reqQuery) => {
   if (!showPublic && !showPrivate && !showProtected) return null
 
   const filters = []
-  if (showPublic) filters.push(exports.publicFilter)
-  if (showPrivate) filters.push(exports.privateFilter)
+  if (showPublic) filters.push( export const publicFilter)
+  if (showPrivate) filters.push( export const privateFilter)
   if (showProtected) {
-    filters.push(exports.protectedFilter)
+    filters.push( export const protectedFilter)
   }
 
   return filters
