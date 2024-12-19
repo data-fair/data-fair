@@ -1,8 +1,8 @@
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
 const config = require('config')
-const assert = require('assert').strict
 const fs = require('fs-extra')
 const tmp = require('tmp-promise')
-const testUtils = require('./resources/test-utils')
 
 describe('rate limiting', () => {
   it('should throttle content download', async () => {

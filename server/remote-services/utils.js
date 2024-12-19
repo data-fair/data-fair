@@ -12,20 +12,20 @@ import servicePatch from '../../contract/remote-service-patch.js'
 import datasetAPIDocs from '../../contract/dataset-api-docs.js'
 import debugLib from 'debug'
 
-const debugLib = require('debug')('master-data')
+const debugMasterData = debugLib('master-data')
 
- export const validate = ajv.compile(require('../../contract/remote-service'))
- export const validatePatch = ajv.compile(servicePatch)
- export const validateOpenApi = ajv.compile('openapi-3.1')
+export const validate = ajv.compile(require('../../contract/remote-service'))
+export const validatePatch = ajv.compile(servicePatch)
+export const validateOpenApi = ajv.compile('openapi-3.1')
 
- export const initNew = (body) => {
+export const initNew = (body) => {
   const service = { ...body }
   if (service.apiDoc) {
     if (service.apiDoc.info) {
       service.title = service.title || service.apiDoc.info.title
       service.description = service.apiDoc.info.description
     }
-    service.actions =  export const computeActions(service.apiDoc)
+    service.actions = computeActions(service.apiDoc)
   }
   return service
 }
@@ -38,7 +38,7 @@ const debugLib = require('debug')('master-data')
  * @param {Record<string, string>} reqQuery
  * @param {any} user
  */
- export const fixConceptsFilters = async (db, locale, reqQuery, user) => {
+export const fixConceptsFilters = async (db, locale, reqQuery, user) => {
   let vocabulary
   for (const key of ['input-concepts', 'output-concepts']) {
     if (!reqQuery[key]) continue
@@ -56,7 +56,7 @@ const debugLib = require('debug')('master-data')
   }
 }
 
- export const syncDataset = async (db, dataset) => {
+export const syncDataset = async (db, dataset) => {
   if (dataset.draftReason) return
 
   // console.log('SYNC ko', JSON.stringify(dataset, null, 2))
@@ -75,7 +75,7 @@ const debugLib = require('debug')('master-data')
     const existingService = await db.collection('remote-services')
       .findOne({ id })
     const apiDoc = datasetAPIDocs(dataset, config.publicUrl, (settings && settings.info) || {}).api
-    const service =  export const initNew({
+    const service = initNew({
       id,
       apiDoc,
       url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
@@ -104,7 +104,7 @@ const debugLib = require('debug')('master-data')
         service.virtualDatasets.storageRatio = existingService.virtualDatasets.storageRatio || 0
       }
     }
-     export const validate(service)
+    validate(service)
     await db.collection('remote-services').replaceOne({ id }, mongoEscape.escape(service, true), { upsert: true })
   } else {
     const deleted = await db.collection('remote-services').deleteOne({ id })
@@ -113,7 +113,7 @@ const debugLib = require('debug')('master-data')
 }
 
 // Create default services for the data-fair instance
- export const init = async (db) => {
+export const init = async (db) => {
   debugMasterData('init default remote services ?')
   const remoteServices = db.collection('remote-services')
   const existingServices = await remoteServices.find({ owner: { $exists: false } }).limit(1000).project({ url: 1, id: 1 }).toArray()
@@ -138,7 +138,7 @@ const debugLib = require('debug')('master-data')
     url: s.url,
     apiDoc: apisDict[s.url],
     server: apisDict[s.url].servers && apisDict[s.url].servers.length && apisDict[s.url].servers[0].url,
-    actions:  export const computeActions(apisDict[s.url]),
+    actions: computeActions(apisDict[s.url]),
     public: true,
     privateAccess: []
   }, true)).filter(s => !existingServices.find(es => es.id === s.id))
@@ -167,7 +167,7 @@ const debugLib = require('debug')('master-data')
 }
 
 // TODO: explain ? simplify ? hard to understand piece of code
- export const computeActions = (apiDoc) => {
+export const computeActions = (apiDoc) => {
   const actions = soasLoader(apiDoc).actions()
   for (const a of actions) {
     a.input = Object.keys(a.input).map(concept => ({ concept, ...a.input[concept] }))
@@ -182,7 +182,7 @@ const debugLib = require('debug')('master-data')
   return actions
 }
 
- export const clean = (remoteService, user, html = false) => {
+export const clean = (remoteService, user, html = false) => {
   delete remoteService._id
   if (remoteService.apiKey && remoteService.apiKey.value) remoteService.apiKey.value = '**********'
   if (!user || !user.adminMode) delete remoteService.privateAccess

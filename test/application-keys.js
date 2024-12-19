@@ -1,6 +1,6 @@
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
 const config = require('config')
-const testUtils = require('./resources/test-utils')
 const workers = require('../server/workers')
 const rateLimitingUtils = require('../server/misc/utils/rate-limiting')
 

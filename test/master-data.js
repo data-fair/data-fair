@@ -1,11 +1,11 @@
 // the API exposed by a dataset can be referenced as a remote service
 // by another (or the same) data-fair instance
 
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
 const FormData = require('form-data')
 
 const workers = require('../server/workers')
-const testUtils = require('./resources/test-utils')
 
 const initMaster = async (ax, info, masterData, id = 'master') => {
   if (Array.isArray(masterData)) {

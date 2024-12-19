@@ -1,8 +1,8 @@
-import config from 'config'
+import _config from 'config'
 import createError from 'http-errors'
 import i18n from 'i18n'
-import permissions from './permissions.js'
-import visibility from './visibility.js'
+import * as permissions from './permissions.js'
+import * as visibility from './visibility.js'
 
 const config = /** @type {any} */(_config)
 

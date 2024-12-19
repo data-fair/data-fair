@@ -1,6 +1,6 @@
 
-const marked = require('marked')
-const { prepareThumbnailUrl } = require('../misc/utils/thumbnails')
+import marked from 'marked'
+import { prepareThumbnailUrl } from '../misc/utils/thumbnails.js'
 
 export const clean = (publicUrl, baseApp, thumbnail, html = false) => {
   baseApp.title = baseApp.title || baseApp.meta.title

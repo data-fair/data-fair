@@ -1,6 +1,6 @@
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
 const config = require('config')
-const testUtils = require('./resources/test-utils')
 const { aliasName, extractError } = require('../server/datasets/es/commons')
 
 describe('Elasticsearch errors management', () => {

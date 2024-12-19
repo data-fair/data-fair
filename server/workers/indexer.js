@@ -12,9 +12,9 @@ import taskProgress from '../datasets/utils/task-progress.js'
 import { tmpDir } from '../datasets/utils/files.js'
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
- export const eventsPrefix = 'index'
+export const eventsPrefix = 'index'
 
- export const process = async function (app, dataset) {
+export const process = async function (app, dataset) {
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
   const debugHeap = require('../misc/utils/heap').debug(`worker:indexer:${dataset.id}`)
 
@@ -69,7 +69,7 @@ import { tmpDir } from '../datasets/utils/files.js'
 
   debug('Run index stream')
   let readStreams, writeStream
-  const progress = taskProgress(app, dataset.id,  export const eventsPrefix, 100, (progress) => {
+  const progress = taskProgress(app, dataset.id, eventsPrefix, 100, (progress) => {
     debugHeap('progress ' + progress, indexStream)
   })
   await progress.inc(0)

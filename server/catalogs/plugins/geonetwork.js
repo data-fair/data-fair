@@ -84,7 +84,7 @@ export const getDataset = async (catalog, datasetId, settings) => {
 }
 
 /*
-const { xml2js } = require('xml-js')
+import xml2js from 'xml-js'
 import url from 'url';
 import createError from 'http-errors';
 import axios from '../../misc/utils/axios.js';

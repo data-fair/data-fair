@@ -1,12 +1,12 @@
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
 const nock = require('nock')
 const fs = require('fs-extra')
-const assert = require('assert').strict
 const FormData = require('form-data')
 const config = require('config')
 const eventToPromise = require('event-to-promise')
 const dayjs = require('dayjs')
 const restDatasetsUtils = require('../server/datasets/utils/rest')
-const testUtils = require('./resources/test-utils')
 
 const workers = require('../server/workers')
 describe('Extensions', () => {

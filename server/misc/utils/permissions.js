@@ -10,7 +10,7 @@ const validate = ajv.compile(permissionsSchema)
  export const middleware = function (operationId, operationClass, trackingCategory, acceptMissing) {
   return function (req, res, next) {
     if ((acceptMissing && !req.resource)) return next()
-    if ( export const can(req.resourceType, req.resource, operationId, req.user, req.bypassPermissions)) {
+    if (can(req.resourceType, req.resource, operationId, req.user, req.bypassPermissions)) {
       // nothing to do, user can proceed
     } else {
       res.status(403).type('text/plain')
@@ -27,7 +27,7 @@ const validate = ajv.compile(permissionsSchema)
           let name = org.name || org.id
           if (org.department) name += ' / ' + (org.departmentName || org.department)
           const altAccount = { id: req.user.id, activeAccount: { type: 'organization', ...org } }
-          if ( export const can(req.resourceType, req.resource, operationId, altAccount, req.bypassPermissions)) {
+          if (can(req.resourceType, req.resource, operationId, altAccount, req.bypassPermissions)) {
             return res.send(`${denomination} ${req.resource.title} est accessible depuis l'organisation ${name} dont vous êtes membre mais vous ne l'avez pas sélectionné comme compte actif. Changez de compte pour visualiser les informations.`)
           }
         }
@@ -37,7 +37,7 @@ const validate = ajv.compile(permissionsSchema)
     }
 
     // this is stored here to be used by cache headers utils to manage public cache
-    req.publicOperation =  export const can(req.resourceType, req.resource, operationId, null)
+    req.publicOperation = can(req.resourceType, req.resource, operationId, null)
 
     // these headers can be used to apply other permission/quota/metrics on the gateway
     if (req.resource) res.setHeader('x-resource', JSON.stringify({ type: req.resourceType, id: req.resource.id, title: encodeURIComponent(req.resource.title) }))
@@ -55,14 +55,14 @@ const validate = ajv.compile(permissionsSchema)
  export const canDoForOwnerMiddleware = function (operationClass, ignoreDepartment = false) {
   return function (req, res, next) {
     const owner = ignoreDepartment ? { ...req.resource.owner, department: null } : req.resource.owner
-    if (! export const canDoForOwner(owner, req.resourceType, operationClass, req.user)) {
+    if (!canDoForOwner(owner, req.resourceType, operationClass, req.user)) {
       return res.status(403).type('text/plain').send('Permission manquante pour l\'opération.')
     }
     next()
   }
 }
 
-const getOwnerRole =  export const getOwnerRole = (owner, user, ignoreDepartment = false) => {
+export const getOwnerRole = (owner, user, ignoreDepartment = false) => {
   if (!user || user.isApplicationKey || !user.activeAccount) return null
 
   // user is implicitly admin of his own resources, even if he is currently switched to an organization
@@ -121,7 +121,7 @@ const matchPermission = (owner, permission, user) => {
 // resource can be an application, a dataset or a remote service
  export const can = function (resourceType, resource, operationId, user, bypassPermissions) {
   if (user && user.adminMode) return true
-  const userPermissions =  export const list(resourceType, resource, user, bypassPermissions)
+  const userPermissions = list(resourceType, resource, user, bypassPermissions)
   return !!userPermissions.includes(operationId)
 }
 
@@ -176,7 +176,7 @@ const matchPermission = (owner, permission, user) => {
 // Manage filters for datasets, applications and remote services
 // this filter ensures that nobody can list something they are not permitted to list
  export const filter = function (user, resourceType) {
-  return [visibilityUtils.publicFilter].concat( export const filterCan(user, resourceType, 'list'))
+  return [visibilityUtils.publicFilter].concat(filterCan(user, resourceType, 'list'))
 }
 
  export const filterCan = function (user, resourceType, operation = 'list') {

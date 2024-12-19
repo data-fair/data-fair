@@ -1,31 +1,31 @@
 // convert from tabular data to csv or geographical data to geojson
 
-import { pipeline } from 'node:stream/promises';
-import path from 'path';
-import fs from 'fs-extra';
-import createError from 'http-errors';
-import ogr2ogr from 'ogr2ogr';
-import pump from '../misc/utils/pipe.js';
-import { stringify as csvStrStream } from 'csv-stringify';
-import tmp from 'tmp-promise';
-import dir from 'node-dir';
-import mime from 'mime-types';
-import zlib from 'node:zlib';
-import resolvePath from 'resolve-path';
-import { displayBytes } from '../misc/utils/bytes.js';
-import * as datasetUtils from '../datasets/utils.js';
-import * as datasetService from '../datasets/service.js';
-import { tmpDir as mainTmpDir } from '../datasets/utils/files.js';
-import * as icalendar from '../misc/utils/icalendar.js';
-import * as xlsx from '../misc/utils/xlsx.js';
-import * as i18nUtils from '../i18n/utils.js';
-import * as metrics from '../misc/utils/metrics.js';
-import config from 'config';
+import { pipeline } from 'node:stream/promises'
+import path from 'path'
+import fs from 'fs-extra'
+import createError from 'http-errors'
+import ogr2ogr from 'ogr2ogr'
+import pump from '../misc/utils/pipe.js'
+import { stringify as csvStrStream } from 'csv-stringify'
+import tmp from 'tmp-promise'
+import dir from 'node-dir'
+import mime from 'mime-types'
+import zlib from 'node:zlib'
+import resolvePath from 'resolve-path'
+import { displayBytes } from '../misc/utils/bytes.js'
+import * as datasetUtils from '../datasets/utils.js'
+import * as datasetService from '../datasets/service.js'
+import { tmpDir as mainTmpDir } from '../datasets/utils/files.js'
+import * as icalendar from '../misc/utils/icalendar.js'
+import * as xlsx from '../misc/utils/xlsx.js'
+import * as i18nUtils from '../i18n/utils.js'
+import * as metrics from '../misc/utils/metrics.js'
+import _config from 'config'
 import debugLib from 'debug'
 
-const config = /** @type {any} */(require('config'))
+const config = /** @type {any} */(_config)
 
- export const eventsPrefix = 'normalize'
+export const eventsPrefix = 'normalize'
 
 export const archiveTypes = new Set([
   'application/zip' // .zip
@@ -47,12 +47,12 @@ export const geographicalTypes = new Set([
   'application/geopackage+sqlite3' // gpkg
 ])
 export const calendarTypes = new Set(['text/calendar'])
- export const csvTypes = [
+export const csvTypes = [
   'text/csv',
   'text/plain', // txt often contains csv or tsv content
   'text/tab-separated-values' // tsv processed in the same way as csv
 ]
- export const basicTypes = [
+export const basicTypes = [
   ...csvTypes,
   'application/geo+json'
 ]
@@ -62,7 +62,7 @@ async function decompress (mimetype, filePath, dirPath) {
   if (mimetype === 'application/zip') await exec('unzip', ['-o', '-q', filePath, '-d', dirPath])
 }
 
- export const process = async function (app, dataset) {
+export const process = async function (app, dataset) {
   const debug = debugLib(`worker:file-normalizer:${dataset.id}`)
   const originalFilePath = datasetUtils.originalFilePath(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
@@ -91,7 +91,7 @@ async function decompress (mimetype, filePath, dirPath) {
         filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.shx')) &&
         filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.dbf'))) {
       isShapefile = true
-    } else if (filePaths.length === 1 &&  export const basicTypes.includes(mime.lookup(filePaths[0].base))) {
+    } else if (filePaths.length === 1 && basicTypes.includes(mime.lookup(filePaths[0].base))) {
       // case of a single data file in an archive
       const filePath = resolvePath(datasetUtils.dir(dataset), filePaths[0].base)
       await fs.move(resolvePath(tmpDir, files[0]), filePath, { overwrite: true })

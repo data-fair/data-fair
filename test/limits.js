@@ -1,6 +1,6 @@
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
 const FormData = require('form-data')
-const assert = require('assert').strict
-const testUtils = require('./resources/test-utils')
 const workers = require('../server/workers')
 const config = require('config')
 

@@ -1,7 +1,7 @@
 
-const findUtils = require('../misc/utils/find')
-const permissions = require('../misc/utils/permissions')
-const { prepareMarkdownContent } = require('../misc/utils/markdown')
+import findUtils from '../misc/utils/find.js'
+import permissions from '../misc/utils/permissions.js'
+import { prepareMarkdownContent } from '../misc/utils/markdown.js'
 
 /**
  *

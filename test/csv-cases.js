@@ -1,6 +1,6 @@
 // Some edge cases with CSV files
-const assert = require('assert').strict
-const testUtils = require('./resources/test-utils')
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
 
 describe('CSV cases', () => {
   before(() => {

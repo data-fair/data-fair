@@ -1,4 +1,4 @@
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
 const { parser, compile } = require('../shared/expr-eval')('Europe/Paris')
 
 describe('expression engine based on expr-eval', () => {

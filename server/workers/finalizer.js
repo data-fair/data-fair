@@ -1,20 +1,20 @@
 // Finalize dataset for publication
-import config from 'config';
-import esUtils from '../datasets/es.js';
-import geoUtils from '../datasets/utils/geo.js';
-import datasetUtils from '../datasets/utils/index.js';
-import datasetService from '../datasets/service.js';
-import attachmentsUtils from '../datasets/utils/attachments.js';
-import virtualDatasetsUtils from '../datasets/utils/virtual.js';
-import taskProgress from '../datasets/utils/task-progress.js';
-import restDatasetsUtils from '../datasets/utils/rest.js';
-import debugLib from 'debug';
+import config from 'config'
+import esUtils from '../datasets/es.js'
+import geoUtils from '../datasets/utils/geo.js'
+import datasetUtils from '../datasets/utils/index.js'
+import datasetService from '../datasets/service.js'
+import attachmentsUtils from '../datasets/utils/attachments.js'
+import virtualDatasetsUtils from '../datasets/utils/virtual.js'
+import taskProgress from '../datasets/utils/task-progress.js'
+import restDatasetsUtils from '../datasets/utils/rest.js'
+import debugLib from 'debug'
 
- export const eventsPrefix = 'finalize'
+export const eventsPrefix = 'finalize'
 
- export const process = async function (app, _dataset) {
+export const process = async function (app, _dataset) {
   let dataset = _dataset
-  
+
   const debug = debugLib(`worker:finalizer:${dataset.id}`)
 
   const db = app.get('db')
@@ -51,7 +51,7 @@ import debugLib from 'debug';
   let nbSteps = cardinalityProps.length + 1
   if (startDateField || endDateField) nbSteps += 1
   if (geopoint || geometry) nbSteps += 1
-  const progress = taskProgress(app, dataset.id,  export const eventsPrefix, nbSteps)
+  const progress = taskProgress(app, dataset.id, eventsPrefix, nbSteps)
   await progress.inc(0)
 
   for (const prop of cardinalityProps) {

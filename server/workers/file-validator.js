@@ -3,7 +3,6 @@ import { Writable } from 'stream'
 import journals from '../misc/utils/journals.js'
 import { jsonSchema } from '../datasets/utils/schema.js'
 import ajv from '../misc/utils/ajv.js'
-import truncateMiddle from 'truncate-middle'
 import pump from '../misc/utils/pipe.js'
 import datasetUtils from '../datasets/utils/index.js'
 import datasetsService from '../datasets/service.js'
@@ -12,7 +11,7 @@ import truncateMiddle from 'truncate-middle'
 import debugLib from 'debug'
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
- export const eventsPrefix = 'validate'
+export const eventsPrefix = 'validate'
 
 const maxErrors = 3
 
@@ -20,8 +19,6 @@ class ValidateStream extends Writable {
   constructor (options) {
     super({ objectMode: true })
 
-    const { jsonSchema } = require('../datasets/utils/schema')
-    const ajv = require('../misc/utils/ajv')
     const schema = jsonSchema(options.dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']))
     this.validate = ajv.compile(schema, false)
 
@@ -54,7 +51,7 @@ class ValidateStream extends Writable {
   }
 }
 
- export const process = async function (app, dataset) {
+export const process = async function (app, dataset) {
   const debug = debugLib(`worker:indexer:${dataset.id}`)
 
   if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape validation.')
@@ -93,7 +90,7 @@ class ValidateStream extends Writable {
 
   if (datasetUtils.schemaHasValidationRules(dataset.schema)) {
     debug('Run validator stream')
-    const progress = taskProgress(app, dataset.id,  export const eventsPrefix, 100)
+    const progress = taskProgress(app, dataset.id, eventsPrefix, 100)
     await progress.inc(0)
     const readStreams = await datasetUtils.readStreams(db, dataset, false, false, false, progress)
     const validateStream = new ValidateStream({ dataset })

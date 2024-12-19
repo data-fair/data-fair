@@ -1,5 +1,5 @@
+import eventToPromise from 'event-to-promise'
 import config from 'config'
-import express from 'express'
 import memoize from 'memoizee'
 import * as dbUtils from './misc/utils/db.js'
 import * as esUtils from './datasets/es.js'
@@ -8,208 +8,206 @@ import * as locksUtils from './misc/utils/locks.js'
 import observe from './misc/utils/observe.js'
 import asyncWrap from './misc/utils/async-handler.js'
 import metrics from './misc/utils/metrics.js'
-import {middleware as apiKey} from './misc/utils/api-key.js'
-import root from './misc/routers/root.js'
-import * as remoteServices from './remote-services/router.js'
-import catalog from './misc/routers/catalog.js'
-import catalogs from './catalogs/router.js'
-import baseApplications from './base-applications/router.js'
 import debug from 'debug'
 
 const debugDomain = debug('domain')
 
 // a global event emitter for testing
 if (process.env.NODE_ENV === 'test') {
-  const EventEmitter = require('events')
+  const EventEmitter = await import('events')
   global.events = new EventEmitter()
 }
 
-const app = express()
-let server, wss, httpTerminator
-
-// a middleware for performance analysis
-app.use(observe.observeReqMiddleware)
-
-if (config.mode.includes('server')) {
-  const limits = require('./misc/utils/limits')
-  const rateLimiting = require('./misc/utils/rate-limiting')
-  const session = require('@data-fair/sd-express')({
-    directoryUrl: config.directoryUrl,
-    privateDirectoryUrl: config.privateDirectoryUrl
-  })
-  app.set('session', session)
-
-  app.set('trust proxy', 1)
-  app.set('json spaces', 2)
-
-  app.set('query parser', 'simple')
-  app.use((req, res, next) => {
-    for (const key of Object.keys(req.query)) {
-      if (Array.isArray(req.query[key])) {
-        return res.status(400).send(`query parameter "${key}" is defined multiple times`)
-      }
-    }
-    next()
-  })
-
-  app.use((req, res, next) => {
-    // We use custom "X-Private-If-Modified-Since" and "X-Private-If-None-Match" headers as
-    // alternatives to "If-Modified-Since" and "If-None-Match"
-    // this is because nginx does not transmit these headers when proxy cache is activated
-    // but in the case of a "Private" cache-control proxy pass is not used but it still breaks
-    // summary :
-    // this is necessary for private cache revalidation when public cache revalication is activated in nginx
-    if (req.headers['x-private-if-modified-since'] && !req.headers['if-modified-since']) {
-      req.headers['if-modified-since'] = req.headers['x-private-if-modified-since']
-    }
-    if (req.headers['x-private-if-none-match'] && !req.headers['if-none-match']) {
-      req.headers['if-none-match'] = req.headers['x-private-if-none-match']
-    }
-    next()
-  })
-
-  app.use(require('cors')())
-  app.use((req, res, next) => {
-    if (!req.app.get('api-ready')) res.status(503).type('text/plain').send('Service indisponible pour cause de maintenance.')
-    else next()
-  })
-
-  const bodyParser = express.json({ limit: '1000kb' })
-  app.use((req, res, next) => {
-    // routes with _bulk are streamed, others are parsed as JSON
-    const urlParts = req.url.split('/')
-    if (urlParts[urlParts.length - 1].startsWith('_bulk')) return next()
-    if (urlParts[urlParts.length - 2] === 'bulk-searchs') return next()
-    bodyParser(req, res, next)
-  })
-  app.use(require('cookie-parser')())
-  app.use(require('./i18n/utils').middleware)
-  app.use(session.auth)
-
-  // TODO: we could make this better targetted but more verbose by adding it to all routes
-  app.use(require('./misc/utils/expect-type')(['application/json', 'application/x-ndjson', 'multipart/form-data', 'text/csv', 'text/csv+gzip']))
-
-  // set current baseUrl, i.e. the url of data-fair on the current user's domain
-  // check for the matching publicationSite, etc
-  const parsedPublicUrl = new URL(config.publicUrl)
-  let basePath = parsedPublicUrl.pathname
-  if (!basePath.endsWith('/')) basePath += '/'
-  const originalUrl = require('original-url')
-  const { format: formatUrl } = require('url')
-  const getPublicationSiteSettings = async (publicationSiteUrl, publicationSiteQuery, db) => {
-    const elemMatch = publicationSiteQuery
-      ? { type: publicationSiteQuery.split(':')[0], id: publicationSiteQuery.split(':')[1] }
-      : { url: publicationSiteUrl }
-    return db.collection('settings').findOne({ publicationSites: { $elemMatch: elemMatch } }, {
-      projection: {
-        type: 1,
-        id: 1,
-        department: 1,
-        name: 1,
-        publicationSites: { $elemMatch: elemMatch }
-      }
-    })
-  }
-  const memoizedGetPublicationSiteSettings =  export const memoizedGetPublicationSiteSettings = memoize(getPublicationSiteSettings, {
-    profileName: 'getPublicationSiteSettings',
-    promise: true,
-    primitive: true,
-    max: 10000,
-    maxAge: 1000 * 60, // 1 minute
-    length: 2 // only use publicationSite, not db as cache key
-  })
-  app.use('/', asyncWrap(async (req, res, next) => {
-    const u = originalUrl(req)
-    const urlParts = { protocol: parsedPublicUrl.protocol, hostname: u.hostname, pathname: basePath.slice(0, -1) }
-    if (u.port !== 443 && u.port !== 80) urlParts.port = u.port
-    req.publicBaseUrl = u.full ? formatUrl(urlParts) : config.publicUrl
-
-    const mainDomain = req.publicBaseUrl === config.publicUrl
-
-    const publicationSiteUrl = parsedPublicUrl.protocol + '//' + u.hostname + ((u.port && u.port !== 80 && u.port !== 443) ? ':' + u.port : '')
-    const settings = await memoizedGetPublicationSiteSettings(publicationSiteUrl, mainDomain && req.query.publicationSites, req.app.get('db'))
-    if (!settings && !mainDomain) {
-      metrics.internalError('publication-site-unknown', 'no publication site is associated to URL ' + publicationSiteUrl)
-      return res.status(404).send('publication site unknown')
-    }
-    if (settings) {
-      const publicationSite = {
-        owner: { type: settings.type, id: settings.id, department: settings.department, name: settings.name },
-        ...settings.publicationSites[0]
-      }
-      if (mainDomain) {
-        if (publicationSite.url === publicationSiteUrl) {
-          req.mainPublicationSite = publicationSite
-        }
-        if (req.query.publicationSites === publicationSite.type + ':' + publicationSite.id) {
-          req.publicationSite = publicationSite
-        }
-      } else {
-        req.publicationSite = publicationSite
-      }
-    }
-
-    req.directoryUrl = u.full ? formatUrl({ ...urlParts, pathname: '/simple-directory' }) : config.directoryUrl
-    debugDomain('req.publicBaseUrl', req.publicBaseUrl)
-    req.publicWsBaseUrl = req.publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:') + '/'
-    debugDomain('req.publicWsBaseUrl', req.publicWsBaseUrl)
-    req.publicBasePath = basePath
-    debugDomain('req.publicBasePath', req.publicBasePath)
-    next()
-  }))
-
-  // Business routers
-  app.use('/api/v1', root)
-  app.use('/api/v1/remote-services', remoteServices.router)
-  app.use('/api/v1/remote-services-actions', remoteServices.actionsRouter)
-  app.use('/api/v1/catalog', apiKey('datasets'), catalog)
-  app.use('/api/v1/catalogs', apiKey('catalogs'), catalogs)
-  app.use('/api/v1/base-applications', baseApplications.router)
-  app.use('/api/v1/applications', apiKey('applications'), require('./applications/router'))
-  app.use('/api/v1/datasets', rateLimiting.middleware(), require('./datasets/router'))
-  app.use('/api/v1/stats', apiKey('stats'), require('./misc/routers/stats'))
-  app.use('/api/v1/settings', require('./misc/routers/settings'))
-  app.use('/api/v1/admin', require('./misc/routers/admin'))
-  app.use('/api/v1/identities', require('./misc/routers/identities'))
-  app.use('/api/v1/activity', require('./misc/routers/activity'))
-  app.use('/api/v1/limits', limits.router)
-
-  app.use('/api/', (req, res) => {
-    return res.status(404).send('unknown api endpoint')
-  })
-
-  // External applications proxy
-  const serviceWorkers = require('./misc/utils/service-workers')
-  app.get('/app-sw.js', (req, res) => {
-    res.setHeader('Content-Type', 'application/javascript')
-    res.send(serviceWorkers.sw(req.application))
-  })
-  app.use('/app', require('./applications/proxy'))
-
-  // self hosting of streamsaver man in the middle service worker
-  // see https://github.com/jimmywarting/StreamSaver.js/issues/183
-  app.use('/streamsaver/mitm.html', express.static('node_modules/streamsaver/mitm.html'))
-  app.use('/streamsaver/sw.js', express.static('node_modules/streamsaver/sw.js'))
-
-  const WebSocket = require('ws')
-  server = require('http').createServer(app)
-  const { createHttpTerminator } = require('http-terminator')
-  httpTerminator = createHttpTerminator({ server })
-  // cf https://connectreport.com/blog/tuning-http-keep-alive-in-node-js/
-  // timeout is often 60s on the reverse proxy, better to a have a longer one here
-  // so that interruption is managed downstream instead of here
-  server.keepAliveTimeout = (60 * 1000) + 1000
-  server.headersTimeout = (60 * 1000) + 2000
-  server.requestTimeout = (15 * 60 * 1000)
-  wss = new WebSocket.Server({ server })
-}
 
 // Run app and return it in a promise
- export const run = async () => {
-  if (!config.listenWhenReady && config.mode.includes('server')) {
-    server.listen(config.port)
-    await require('event-to-promise')(server, 'listening')
-  }
+export const run = async () => {
+
+    const app = express()
+    let server, wss, httpTerminator
+
+    // a middleware for performance analysis
+    app.use(observe.observeReqMiddleware)
+
+    if (config.mode.includes('server')) {
+      const limits = await import('./misc/utils/limits.js')
+      const rateLimiting = await import('./misc/utils/rate-limiting')
+      const session = await import('@data-fair/sd-express')({
+        directoryUrl: config.directoryUrl,
+        privateDirectoryUrl: config.privateDirectoryUrl
+      })
+      app.set('session', session)
+
+      app.set('trust proxy', 1)
+      app.set('json spaces', 2)
+
+      app.set('query parser', 'simple')
+      app.use((req, res, next) => {
+        for (const key of Object.keys(req.query)) {
+          if (Array.isArray(req.query[key])) {
+            return res.status(400).send(`query parameter "${key}" is defined multiple times`)
+          }
+        }
+        next()
+      })
+
+      app.use((req, res, next) => {
+        // We use custom "X-Private-If-Modified-Since" and "X-Private-If-None-Match" headers as
+        // alternatives to "If-Modified-Since" and "If-None-Match"
+        // this is because nginx does not transmit these headers when proxy cache is activated
+        // but in the case of a "Private" cache-control proxy pass is not used but it still breaks
+        // summary :
+        // this is necessary for private cache revalidation when public cache revalication is activated in nginx
+        if (req.headers['x-private-if-modified-since'] && !req.headers['if-modified-since']) {
+          req.headers['if-modified-since'] = req.headers['x-private-if-modified-since']
+        }
+        if (req.headers['x-private-if-none-match'] && !req.headers['if-none-match']) {
+          req.headers['if-none-match'] = req.headers['x-private-if-none-match']
+        }
+        next()
+      })
+
+      app.use(await import('cors')())
+      app.use((req, res, next) => {
+        if (!req.app.get('api-ready')) res.status(503).type('text/plain').send('Service indisponible pour cause de maintenance.')
+        else next()
+      })
+
+      const bodyParser = express.json({ limit: '1000kb' })
+      app.use((req, res, next) => {
+        // routes with _bulk are streamed, others are parsed as JSON
+        const urlParts = req.url.split('/')
+        if (urlParts[urlParts.length - 1].startsWith('_bulk')) return next()
+        if (urlParts[urlParts.length - 2] === 'bulk-searchs') return next()
+        bodyParser(req, res, next)
+      })
+      app.use(await import('cookie-parser')())
+      app.use(await import('./i18n/utils').middleware)
+      app.use(session.auth)
+
+      // TODO: we could make this better targetted but more verbose by adding it to all routes
+      app.use(await import('./misc/utils/expect-type')(['application/json', 'application/x-ndjson', 'multipart/form-data', 'text/csv', 'text/csv+gzip']))
+
+      // set current baseUrl, i.e. the url of data-fair on the current user's domain
+      // check for the matching publicationSite, etc
+      const parsedPublicUrl = new URL(config.publicUrl)
+      let basePath = parsedPublicUrl.pathname
+      if (!basePath.endsWith('/')) basePath += '/'
+      const originalUrl = await import('original-url')
+      const { format: formatUrl } = await import('url')
+      const getPublicationSiteSettings = async (publicationSiteUrl, publicationSiteQuery, db) => {
+        const elemMatch = publicationSiteQuery
+          ? { type: publicationSiteQuery.split(':')[0], id: publicationSiteQuery.split(':')[1] }
+          : { url: publicationSiteUrl }
+        return db.collection('settings').findOne({ publicationSites: { $elemMatch: elemMatch } }, {
+          projection: {
+            type: 1,
+            id: 1,
+            department: 1,
+            name: 1,
+            publicationSites: { $elemMatch: elemMatch }
+          }
+        })
+      }
+      const memoizedGetPublicationSiteSettings =  export const memoizedGetPublicationSiteSettings = memoize(getPublicationSiteSettings, {
+        profileName: 'getPublicationSiteSettings',
+        promise: true,
+        primitive: true,
+        max: 10000,
+        maxAge: 1000 * 60, // 1 minute
+        length: 2 // only use publicationSite, not db as cache key
+      })
+      app.use('/', asyncWrap(async (req, res, next) => {
+        const u = originalUrl(req)
+        const urlParts = { protocol: parsedPublicUrl.protocol, hostname: u.hostname, pathname: basePath.slice(0, -1) }
+        if (u.port !== 443 && u.port !== 80) urlParts.port = u.port
+        req.publicBaseUrl = u.full ? formatUrl(urlParts) : config.publicUrl
+
+        const mainDomain = req.publicBaseUrl === config.publicUrl
+
+        const publicationSiteUrl = parsedPublicUrl.protocol + '//' + u.hostname + ((u.port && u.port !== 80 && u.port !== 443) ? ':' + u.port : '')
+        const settings = await memoizedGetPublicationSiteSettings(publicationSiteUrl, mainDomain && req.query.publicationSites, req.app.get('db'))
+        if (!settings && !mainDomain) {
+          metrics.internalError('publication-site-unknown', 'no publication site is associated to URL ' + publicationSiteUrl)
+          return res.status(404).send('publication site unknown')
+        }
+        if (settings) {
+          const publicationSite = {
+            owner: { type: settings.type, id: settings.id, department: settings.department, name: settings.name },
+            ...settings.publicationSites[0]
+          }
+          if (mainDomain) {
+            if (publicationSite.url === publicationSiteUrl) {
+              req.mainPublicationSite = publicationSite
+            }
+            if (req.query.publicationSites === publicationSite.type + ':' + publicationSite.id) {
+              req.publicationSite = publicationSite
+            }
+          } else {
+            req.publicationSite = publicationSite
+          }
+        }
+
+        req.directoryUrl = u.full ? formatUrl({ ...urlParts, pathname: '/simple-directory' }) : config.directoryUrl
+        debugDomain('req.publicBaseUrl', req.publicBaseUrl)
+        req.publicWsBaseUrl = req.publicBaseUrl.replace('http:', 'ws:').replace('https:', 'wss:') + '/'
+        debugDomain('req.publicWsBaseUrl', req.publicWsBaseUrl)
+        req.publicBasePath = basePath
+        debugDomain('req.publicBasePath', req.publicBasePath)
+        next()
+      }))
+
+      // Business routers
+      const {middleware: apiKey} = await import('./misc/utils/api-key.js')
+      app.use('/api/v1', await import('./misc/routers/root.js'))
+      app.use('/api/v1/remote-services', (await import('./remote-services/router.js')).router)
+      app.use('/api/v1/remote-services-actions', (await import('./remote-services/router.js')).actionsRouter)
+      app.use('/api/v1/catalog', apiKey('datasets'), await import('./misc/routers/catalog.js'))
+      app.use('/api/v1/catalogs', apiKey('catalogs'), await import('./catalogs/router.js'))
+      app.use('/api/v1/base-applications', (await import('./base-applications/router.js')).router)
+      app.use('/api/v1/applications', apiKey('applications'), await import('./applications/router.js'))
+      app.use('/api/v1/datasets', rateLimiting.middleware(), await import('./datasets/router.js'))
+      app.use('/api/v1/stats', apiKey('stats'), await import('./misc/routers/stats.js'))
+      app.use('/api/v1/settings', await import('./misc/routers/settings.js'))
+      app.use('/api/v1/admin', await import('./misc/routers/admin.js'))
+      app.use('/api/v1/identities', await import('./misc/routers/identities.js'))
+      app.use('/api/v1/activity', await import('./misc/routers/activity.js'))
+      app.use('/api/v1/limits', limits.router)
+
+      app.use('/api/', (req, res) => {
+        return res.status(404).send('unknown api endpoint')
+      })
+
+      // External applications proxy
+      const serviceWorkers = await import('./misc/utils/service-workers')
+      app.get('/app-sw.js', (req, res) => {
+        res.setHeader('Content-Type', 'application/javascript')
+        res.send(serviceWorkers.sw(req.application))
+      })
+      app.use('/app', await import('./applications/proxy'))
+
+      // self hosting of streamsaver man in the middle service worker
+      // see https://github.com/jimmywarting/StreamSaver.js/issues/183
+      app.use('/streamsaver/mitm.html', express.static('node_modules/streamsaver/mitm.html'))
+      app.use('/streamsaver/sw.js', express.static('node_modules/streamsaver/sw.js'))
+
+      const WebSocket = await import('ws')
+      server = (await import('http')).createServer(app)
+      const { createHttpTerminator } = await import('http-terminator')
+      httpTerminator = createHttpTerminator({ server })
+      // cf https://connectreport.com/blog/tuning-http-keep-alive-in-node-js/
+      // timeout is often 60s on the reverse proxy, better to a have a longer one here
+      // so that interruption is managed downstream instead of here
+      server.keepAliveTimeout = (60 * 1000) + 1000
+      server.headersTimeout = (60 * 1000) + 2000
+      server.requestTimeout = (15 * 60 * 1000)
+      wss = new WebSocket.Server({ server })
+      if (!config.listenWhenReady) {
+        server.listen(config.port)
+        await eventToPromise(server, 'listening')
+      }
+    }
+
+  
 
   const { db, client } = await dbUtils.connect()
 
@@ -224,7 +222,7 @@ if (config.mode.includes('server')) {
       // containers for the scripts that are running in only 1 (while loop on "acquire" ?) and a healthcheck so that workers
       // are not considered "up" and the previous versions keep running in the mean time
     } else {
-      await require('../upgrade')(db, client)
+      await await import('../upgrade')(db, client)
       await locksUtils.release(db, 'upgrade')
     }
   }
@@ -244,12 +242,12 @@ if (config.mode.includes('server')) {
     // Error management
     app.use(errorHandler)
 
-    const limits = require('./misc/utils/limits')
+    const limits = await import('./misc/utils/limits')
     await Promise.all([
-      require('./misc/utils/capture').init(),
-      require('./misc/utils/cache').init(db),
-      require('./remote-services/utils').init(db),
-      require('./base-applications/router').init(db),
+      await import('./misc/utils/capture').init(),
+      await import('./misc/utils/cache').init(db),
+      await import('./remote-services/utils').init(db),
+      await import('./base-applications/router').init(db),
       limits.init(db),
       wsUtils.initServer(wss, db, app.get('session'))
     ])
@@ -261,7 +259,7 @@ if (config.mode.includes('server')) {
       else next()
     })
 
-    const nuxt = await require('./nuxt')()
+    const nuxt = await (await import('./nuxt.js')).default()
     app.set('nuxt', nuxt.instance)
     app.use(nuxt.trackEmbed)
     app.use(nuxt.render)
@@ -269,12 +267,12 @@ if (config.mode.includes('server')) {
 
     if (config.listenWhenReady) {
       server.listen(config.port)
-      await require('event-to-promise')(server, 'listening')
+      await eventToPromise(server, 'listening')
     }
   }
 
   if (config.mode.includes('worker')) {
-    require('./workers').start(app)
+    (await import('./workers/index.js')).start(app)
   }
 
   // special mode: run the process to execute a single worker tasks
@@ -282,11 +280,12 @@ if (config.mode.includes('server')) {
   if (config.mode === 'task') {
     const resource = await app.get('db').collection(process.argv[3] + 's').findOne({ id: process.argv[4] })
     if (process.env.DATASET_DRAFT === 'true') {
-      const datasetUtils = require('./datasets/utils')
+      const datasetUtils = await import('./datasets/utils')
 
       datasetUtils.mergeDraft(resource)
     }
-    await require('./workers').tasks[process.argv[2]].process(app, resource)
+    const task = await (await import('./workers/index.js')).tasks[process.argv[2]]()
+    await task.process(app, resource)
   } else if (config.observer.active) {
     const { startObserver } = await import('@data-fair/lib/node/observer.js')
     await metrics.init(db)
@@ -300,12 +299,12 @@ if (config.mode.includes('server')) {
   if (config.mode.includes('server')) {
     wss.close()
     wsUtils.stop(wss)
-    await require('event-to-promise')(wss, 'close')
+    await eventToPromise(wss, 'close')
     await httpTerminator.terminate()
   }
 
   if (config.mode.includes('worker')) {
-    await require('./workers').stop()
+    await (await import('./workers/index.js')).stop()
   }
 
   await locksUtils.stop(app.get('db'))

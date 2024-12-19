@@ -1,4 +1,4 @@
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
 const sniffer = require('../server/datasets/utils/fields-sniffer')
 
 describe('field sniffer', () => {

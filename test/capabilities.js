@@ -1,8 +1,8 @@
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
 const fs = require('fs-extra')
-const assert = require('assert').strict
 const FormData = require('form-data')
 const workers = require('../server/workers')
-const testUtils = require('./resources/test-utils')
 
 describe('Properties capabilities', () => {
   it('Disable case-sensitive sort', async () => {

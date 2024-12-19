@@ -1,5 +1,5 @@
 // Some edge cases with CSV files
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
 const workers = require('../server/workers')
 
 describe('Enum of actual values in schema', () => {

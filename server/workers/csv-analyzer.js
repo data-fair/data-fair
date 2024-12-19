@@ -9,13 +9,11 @@ import fieldsSniffer from '../datasets/utils/fields-sniffer.js'
 import outOfCharacter from 'out-of-character'
 import debugLib from 'debug'
 
-const debug = debugLib(`worker:csv-analyzer:${dataset.id}`)
-
 // Analyze dataset data, check validity and extract a few metadata for next workers
 export const eventsPrefix = 'analyze'
 
 export const process = async function (app, dataset) {
-  const debug = require('debug')(`worker:csv-analyzer:${dataset.id}`)
+  const debug = debugLib(`worker:csv-analyzer:${dataset.id}`)
 
   debug('extract file sample')
   const fileSample = await datasetFileSample(datasetUtils.filePath(dataset))

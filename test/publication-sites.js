@@ -1,4 +1,4 @@
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
 const validateDcat = require('../server/misc/utils/dcat/validate')
 
 const app = require('../server/app')

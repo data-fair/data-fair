@@ -1,4 +1,4 @@
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
 const nock = require('nock')
 const workers = require('../server/workers')
 

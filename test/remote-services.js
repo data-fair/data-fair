@@ -1,5 +1,5 @@
+import { strict as assert } from 'node:assert'
 const nock = require('nock')
-const assert = require('assert').strict
 
 describe('remote-services', () => {
   it('Get external APIs when not authenticated', async () => {

@@ -12,7 +12,7 @@ import { tmpDir } from '../datasets/utils/files.js'
 import debugLib from 'debug'
 
 export const process = async function (app, dataset) {
-  const debug = require('debug')(`worker:rest-exporter-csv:${dataset.id}`)
+  const debug = debugLib(`worker:rest-exporter-csv:${dataset.id}`)
   const db = app.get('db')
   const date = new Date()
   const patch = { exports: JSON.parse(JSON.stringify(dataset.exports)) }

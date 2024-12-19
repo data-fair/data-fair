@@ -1,9 +1,9 @@
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
+
+import * as testUtils from './resources/test-utils.js'
 const fs = require('fs')
 const nock = require('nock')
 const FormData = require('form-data')
-
-const testUtils = require('./resources/test-utils')
 
 const config = require('config')
 

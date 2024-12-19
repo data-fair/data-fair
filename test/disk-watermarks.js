@@ -1,5 +1,5 @@
-const testUtils = require('./resources/test-utils')
-const assert = require('assert').strict
+import * as testUtils from './resources/test-utils.js'
+import { strict as assert } from 'node:assert'
 const workers = require('../server/workers')
 
 describe('Elasticsearch disk watermarks', () => {

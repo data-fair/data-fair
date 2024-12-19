@@ -1,8 +1,8 @@
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
 const fs = require('fs-extra')
 const FormData = require('form-data')
 const workers = require('../server/workers')
-const testUtils = require('./resources/test-utils')
 
 describe('safe relative paths management', () => {
   it('relative path in dataset file name', async () => {

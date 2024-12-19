@@ -14,7 +14,7 @@ const getPublicationSiteInfo = async (db, owner, publicationSite) => {
 }
 
 // this function is called when the resource is patched to check if publicationSites and requestedPublicationSites have changed
- export const applyPatch = async (db, previousResource, resource, user, resourceType) => {
+export const applyPatch = async (db, previousResource, resource, user, resourceType) => {
   const previousPublicationSites = previousResource.publicationSites || []
   const previousRequestedPublicationSites = previousResource.requestedPublicationSites || []
   const previousTopics = previousResource.topics || []
@@ -90,7 +90,7 @@ const getPublicationSiteInfo = async (db, owner, publicationSite) => {
 }
 
 // this callback function is called when the resource becomes public
- export const onPublic = async (db, patchedResource, resourceType) => {
+export const onPublic = async (db, patchedResource, resourceType) => {
   for (const publicationSite of patchedResource.publicationSites || []) {
     const publicationSiteInfo = await getPublicationSiteInfo(db, patchedResource.owner, publicationSite)
     if (!publicationSiteInfo) throw createError(404, 'unknown publication site')

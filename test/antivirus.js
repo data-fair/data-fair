@@ -1,5 +1,5 @@
-const testUtils = require('./resources/test-utils')
-const assert = require('assert').strict
+import * as testUtils from './resources/test-utils.js'
+import { strict as assert } from 'node:assert'
 
 describe('anti virus integration', () => {
   // this test is skipped because it relies on a shared volume that cannot be mounted during docker build

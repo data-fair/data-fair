@@ -1,6 +1,6 @@
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
 const xlsx = require('../server/misc/utils/xlsx')
-const testUtils = require('./resources/test-utils')
 
 describe('Spreadsheets conversions', () => {
   const checkDateDataset = async (ext) => {

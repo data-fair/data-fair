@@ -1,6 +1,6 @@
+import { strict as assert } from 'node:assert'
 const fs = require('fs')
 const path = require('path')
-const assert = require('assert').strict
 const normalize = require('../server/misc/utils/dcat/normalize')
 const validate = require('../server/misc/utils/dcat/validate')
 const cioExample = require('./resources/dcat/example-cio.json')

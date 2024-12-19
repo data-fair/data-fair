@@ -1,7 +1,6 @@
-
-const config = require('config')
-const metrics = require('./misc/utils/metrics')
-const app = require('./app')
+import config from 'config'
+import metrics from './misc/utils/metrics.js'
+import app from './app.js'
 
 app.run().then(app => {
   if (config.mode.includes('worker')) {

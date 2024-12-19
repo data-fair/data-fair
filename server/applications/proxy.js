@@ -19,7 +19,6 @@ import { version as vIframeVersion } from '../../node_modules/@koumoul/v-iframe/
 import { version as iframeResizerVersion } from '../../node_modules/iframe-resizer/package.json'
 
 const router = export default express.Router()
-// const debug = require('debug')('application-proxy')
 
 const cacheableLookup = new CacheableLookup()
 

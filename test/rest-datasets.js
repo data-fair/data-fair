@@ -1,14 +1,14 @@
+import { strict as assert } from 'node:assert'
+
+import * as testUtils from './resources/test-utils.js'
 const path = require('path')
 const fs = require('fs-extra')
 const FormData = require('form-data')
 const moment = require('moment')
 const zlib = require('zlib')
-const assert = require('assert').strict
 const { Writable } = require('stream')
 const iconv = require('iconv-lite')
 const pump = require('util').promisify(require('pump'))
-
-const testUtils = require('./resources/test-utils')
 const restDatasetsUtils = require('../server/datasets/utils/rest')
 const { attachmentsDir, lsAttachments } = require('../server/datasets/utils/files')
 const workers = require('../server/workers')

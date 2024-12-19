@@ -56,7 +56,7 @@ const validate = ajv.compile(schema)
 }
 
  export const get = async (db, consumer, type) => {
-  const limits = await  export const getLimits(db, consumer)
+  const limits = await getLimits(db, consumer)
   const res = (limits && limits[type]) || { limit: 0, consumption: 0 }
   res.type = type
   res.lastUpdate = limits ? limits.lastUpdate : new Date().toISOString()
@@ -71,7 +71,7 @@ const calculateRemainingLimit = (limits, key) => {
 }
 
  export const remaining = async (db, consumer) => {
-  const limits = await  export const getLimits(db, consumer)
+  const limits = await getLimits(db, consumer)
   return {
     storage: calculateRemainingLimit(limits, 'store_bytes'),
     indexed: calculateRemainingLimit(limits, 'indexed_bytes'),

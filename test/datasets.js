@@ -1,10 +1,10 @@
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
 const fs = require('fs-extra')
 const FormData = require('form-data')
 const eventToPromise = require('event-to-promise')
 const WebSocket = require('ws')
 const config = require('config')
-const testUtils = require('./resources/test-utils')
 const workers = require('../server/workers')
 
 const { validate } = require('tableschema')

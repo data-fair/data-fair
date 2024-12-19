@@ -5,6 +5,8 @@ import config from 'config'
 import objectHash from 'object-hash'
 import debugLib from 'debug'
 
+const debug = debugLib('cache')
+
 export const init = async (db) => {
   const collection = (await db.listCollections({ name: 'cache' }).toArray())[0]
   if (!collection) await db.createCollection('cache', { capped: true, size: config.cache.mongoSize * 1000000 })

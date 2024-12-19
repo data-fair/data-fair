@@ -41,7 +41,7 @@ let loopIntervalPromiseResolve = null
 
 // Hooks for testing
 let hooks = {}
- export const hook = (key, delay = 15000, message) => {
+export const hook = (key, delay = 15000, message) => {
   message = message || `time limit on worker hook - ${key}`
   const promise = new Promise((resolve, reject) => {
     hooks[key] = { resolve, reject }
@@ -52,7 +52,7 @@ let hooks = {}
   return Promise.race([promise, timeoutPromise])
 }
 // clear also for testing
- export const clear = async () => {
+export const clear = async () => {
   hooks = {}
   try {
     await Promise.all(promisePool.filter(p => !!p))
@@ -62,13 +62,13 @@ let hooks = {}
   }
 }
 
- export const runningTasks = () => {
+export const runningTasks = () => {
   return promisePool.filter(p => !!p).map(p => p._resource)
 }
 
 /* eslint no-unmodified-loop-condition: 0 */
 // Run main loop !
- export const start = async (app) => {
+export const start = async (app) => {
   const debugLoop = require('debug')('worker-loop')
 
   debugLoop('start worker loop with config', config.worker)
@@ -135,7 +135,7 @@ let hooks = {}
 }
 
 // Stop and wait for all workers to finish their current task
- export const stop = async () => {
+export const stop = async () => {
   stopped = true
   console.log('waiting for worker loop to finish current tasks')
   await Promise.all(promisePool.filter(p => !!p))
@@ -271,7 +271,7 @@ async function iter (app, resource, type) {
       } else if (
         resource.status === 'finalized' &&
         resource.isRest && resource?.exports?.restToCSV?.active &&
-        resource. export const restToCSV.nextExport < now
+        resource.exports.restToCSV.nextExport < now
       ) {
         taskKey = 'restExporterCSV'
       } else if (

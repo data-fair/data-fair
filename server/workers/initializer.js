@@ -1,23 +1,21 @@
-import fs from 'fs-extra';
-import path from 'path';
-import pump from '../misc/utils/pipe.js';
-import * as restUtils from '../datasets/utils/rest.js';
-import * as datasetUtils from '../datasets/utils/index.js';
-import * as datasetsService from '../datasets/service.js';
-import { getPseudoUser } from '../misc/utils/users.js';
-import * as permissionsUtils from '../misc/utils/permissions.js';
-import { lsMetadataAttachments, metadataAttachmentPath, lsAttachments, attachmentPath } from '../datasets/utils/files.js';
-import { applyTransactions } from '../datasets/utils/rest.js';
-import iterHits from '../datasets/es/iter-hits.js';
-import taskProgress from '../datasets/utils/task-progress.js';
-import * as filesUtils from '../datasets/utils/files.js';
-import debugLib from 'debug';
-
-const debug = debugLib(`worker:initializer:${dataset.id}`);
+import fs from 'fs-extra'
+import path from 'path'
+import pump from '../misc/utils/pipe.js'
+import * as restUtils from '../datasets/utils/rest.js'
+import * as datasetUtils from '../datasets/utils/index.js'
+import * as datasetsService from '../datasets/service.js'
+import { getPseudoUser } from '../misc/utils/users.js'
+import * as permissionsUtils from '../misc/utils/permissions.js'
+import { lsMetadataAttachments, metadataAttachmentPath, lsAttachments, attachmentPath } from '../datasets/utils/files.js'
+import { applyTransactions } from '../datasets/utils/rest.js'
+import iterHits from '../datasets/es/iter-hits.js'
+import taskProgress from '../datasets/utils/task-progress.js'
+import * as filesUtils from '../datasets/utils/files.js'
+import debugLib from 'debug'
 
 export const eventsPrefix = 'initialize'
 
- export const process = async function (app, dataset) {
+export const process = async function (app, dataset) {
   const debug = debugLib(`worker:initializer:${dataset.id}`)
   const db = app.get('db')
 
@@ -74,7 +72,7 @@ export const eventsPrefix = 'initialize'
       count += metadataAttachments.length
     }
 
-    const progress = taskProgress(app, dataset.id,  export const eventsPrefix, count)
+    const progress = taskProgress(app, dataset.id, eventsPrefix, count)
 
     if (dataset.initFrom.parts.includes('schema')) {
       patch.schema = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => {
