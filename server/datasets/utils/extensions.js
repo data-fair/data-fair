@@ -1,27 +1,29 @@
-const config = /** @type {any} */(require('config'))
-const createError = require('http-errors')
-const i18n = require('i18n')
-const pump = require('../../misc/utils/pipe')
-const fs = require('fs-extra')
-const { Transform } = require('stream')
-const stringify = require('json-stable-stringify')
-const flatten = require('flat')
-const equal = require('deep-equal')
-const axios = require('../../misc/utils/axios')
-const { fullFilePath, fsyncFile, attachmentPath } = require('./files')
-const { readStreams, writeExtendedStreams } = require('./data-streams')
-const restDatasetsUtils = require('./rest')
-const geoUtils = require('./geo')
-const schemaUtils = require('./schema')
-const { bulkSearchPromise, bulkSearchStreams } = require('./master-data')
-const taskProgress = require('./task-progress')
-const permissionsUtils = require('../../misc/utils/permissions')
-const { getPseudoUser } = require('../../misc/utils/users')
-const randomSeed = require('random-seed')
+import _config from 'config'
+import createError from 'http-errors'
+import i18n from 'i18n'
+import pump from '../../misc/utils/pipe.js'
+import fs from 'fs-extra'
+import { Transform } from 'stream'
+import stringify from 'json-stable-stringify'
+import flatten from 'flat'
+import equal from 'deep-equal'
+import axios from '../../misc/utils/axios.js'
+import { fullFilePath, fsyncFile, attachmentPath } from './files.js'
+import { readStreams, writeExtendedStreams } from './data-streams.js'
+import restDatasetsUtils from './rest.js'
+import geoUtils from './geo.js'
+import schemaUtils from './schema.js'
+import { bulkSearchPromise, bulkSearchStreams } from './master-data.js'
+import taskProgress from './task-progress.js'
+import permissionsUtils from '../../misc/utils/permissions.js'
+import { getPseudoUser } from '../../misc/utils/users.js'
+import randomSeed from 'random-seed'
+import debugLib from 'debug'
 
-const debugMasterData = require('debug')('master-data')
+const config = /** @type {any} */(_config)
 
-const debug = require('debug')('extensions')
+const debugMasterData = debugLib('master-data')
+const debug = debugLib('extensions')
 
 /**
  * create short ids for extensions that will be used as prefix of the properties ids in the schema

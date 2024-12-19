@@ -1,4 +1,5 @@
-const rfdc = require('rfdc')
+import rfdc from 'rfdc'
+
 const clone = rfdc()
 
 /**

@@ -1,8 +1,8 @@
-const { Writable } = require('stream')
-const csv = require('csv-parser')
-const escapeStringRegexp = require('escape-string-regexp')
-const pump = require('../utils/pipe')
-const debug = require('debug')('csv-sniffer')
+import { Writable } from 'stream'
+import csv from 'csv-parser'
+import escapeStringRegexp from 'escape-string-regexp'
+import pump from '../utils/pipe.js'
+import debug from 'debug'
 
 const possibleLinesDelimiters = ['\r\n', '\n']
 // const possibleLinesDelimiters = ['\n']
@@ -12,7 +12,7 @@ const possibleFieldsDelimiters = [',', ';', '\t', '|']
 const possibleQuoteChars = ['"', "'"]
 // const possibleQuoteChars = ["'"]
 
- export const sniff = async (sample) => {
+export const sniff = async (sample) => {
   const intoStream = (await import('into-stream')).default
 
   // the parameters combination with the most successfully extracted values is probably the best one

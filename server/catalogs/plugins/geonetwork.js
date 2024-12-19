@@ -1,22 +1,23 @@
 // this type of catalog can be tested using this URL as an example:
 // https://geocatalogue.lannion-tregor.com/geonetwork/
 
-const url = require('url')
-const createError = require('http-errors')
-const axios = require('../../misc/utils/axios')
-const { findLicense } = require('../../misc/utils/licenses')
+import url from 'url'
+import createError from 'http-errors'
+import axios from '../../misc/utils/axios.js'
+import { findLicense } from '../../misc/utils/licenses.js'
+import debugLib from 'debug'
 
-const debug = require('debug')('catalogs:geonetwork')
+const debug = debugLib('catalogs:geonetwork')
 
- export const title = 'GeoNetwork'
- export const description = ''
- export const docUrl = 'https://geonetwork-opensource.org/'
- export const optionalCapabilities = [
+export const title = 'GeoNetwork'
+export const description = ''
+export const docUrl = 'https://geonetwork-opensource.org/'
+export const optionalCapabilities = [
   'listDatasets',
   'autoUpdate'
 ]
 
- export const init = async (catalogUrl) => {
+export const init = async (catalogUrl) => {
   const siteUrl = url.resolve(catalogUrl, 'srv/api/0.1/site')
   debug('try fetching geonetwork info', siteUrl)
   const site = (await axios.get(siteUrl)).data
@@ -24,31 +25,31 @@ const debug = require('debug')('catalogs:geonetwork')
   return { url: catalogUrl, title: site['system/site/name'] + ' - ' + site['system/site/organization'] }
 }
 
- export const httpParams = async (catalog) => {
+export const httpParams = async (catalog) => {
   return {}
 }
 
- export const searchOrganizations = async (catalogUrl, q) => {
+export const searchOrganizations = async (catalogUrl, q) => {
   throw createError(501, 'La récupération d\'une liste d\'organisations depuis GeoNetwork n\'est pas disponible')
 }
 
- export const publishDataset = async (catalog, dataset, publication) => {
+export const publishDataset = async (catalog, dataset, publication) => {
   throw createError(501, 'La publication de jeux de données vers GeoNetwork n\'est pas disponible')
 }
 
- export const deleteDataset = async (catalog, dataset, publication) => {
+export const deleteDataset = async (catalog, dataset, publication) => {
   throw createError(501, `Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
 }
 
- export const publishApplication = async (catalog, application, publication, datasets) => {
+export const publishApplication = async (catalog, application, publication, datasets) => {
   throw createError(501, 'La publication d\'applications vers GeoNetwork n\'est pas disponible')
 }
 
- export const deleteApplication = async (catalog, application, publication) => {
+export const deleteApplication = async (catalog, application, publication) => {
   throw createError(501, 'La dépublication d\'applications vers GeoNetwork n\'est pas disponible')
 }
 
- export const listDatasets = async (catalog, p) => {
+export const listDatasets = async (catalog, p) => {
   // RDF approach using public API would be better but I don't see the way to construct links to shapefiles
   // const res = await axios.get(url.resolve(catalog.url, 'srv/api/0.1/records'), { params: { any: params.q, hitsPerPage: 1 } })
   // const datasets = this.rdf2datasets(res.data)
@@ -70,7 +71,7 @@ const debug = require('debug')('catalogs:geonetwork')
   return { count, results: items.map(item => prepareDatasetFromCatalog(catalog, item)) }
 }
 
- export const getDataset = async (catalog, datasetId, settings) => {
+export const getDataset = async (catalog, datasetId, settings) => {
   // https://geocatalogue.lannion-tregor.com/geonetwork/srv/fre/q?_content_type=json&_draft=y+or+n+or+e&_isTemplate=y+or+n&fast=index&uuid=0cf415ff-8334-4658-97f8-c8ca6729fbb8
   const params = {
     _content_type: 'json',
@@ -84,6 +85,11 @@ const debug = require('debug')('catalogs:geonetwork')
 
 /*
 const { xml2js } = require('xml-js')
+import url from 'url';
+import createError from 'http-errors';
+import axios from '../../misc/utils/axios.js';
+import { findLicense } from '../../misc/utils/licenses.js';
+import debugLib from 'debug';
  export const rdf2datasets = (rdf) => {
   const content = xml2js(rdf, { compact: true })
   const catalogRecords = content['rdf:RDF']['dcat:Catalog']['dcat:dataset']

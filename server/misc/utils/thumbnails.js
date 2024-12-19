@@ -1,15 +1,16 @@
-const fs = require('fs-extra')
-const sharp = require('sharp')
-const pump = require('../utils/pipe')
-const dayjs = require('dayjs')
-const tmp = require('tmp-promise')
-const { Binary } = require('mongodb')
-const config = require('config')
-const axios = require('./axios')
-const { setNoCache } = require('./cache-headers')
-const { tmpDir } = require('../../datasets/utils/files')
+import fs from 'fs-extra'
+import sharp from 'sharp'
+import pump from '../utils/pipe.js'
+import dayjs from 'dayjs'
+import tmp from 'tmp-promise'
+import { Binary } from 'mongodb'
+import config from 'config'
+import axios from './axios.js'
+import { setNoCache } from './cache-headers.js'
+import { tmpDir } from '../../datasets/utils/files.js'
+import debugLib from 'debug'
 
-const debug = require('debug')('thumbnails')
+const debug = debugLib('thumbnails')
 
 const getCacheEntry = async (db, url, filePath, sharpOptions) => {
   const cacheFilter = { url, ...sharpOptions }
@@ -94,7 +95,7 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
   return { entry: newEntry, status: 'MISS' }
 }
 
- export const getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
+export const getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
   const db = req.app.get('db')
   const sharpOptions = { fit: req.query.fit || 'cover', position: req.query.position || 'center' }
   // resizeMode was mostly adapted from thumbor and comes from dataset schema
@@ -145,7 +146,7 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
   }
 }
 
- export const prepareThumbnailUrl = (baseUrl, thumbnail = '300x200', draft) => {
+export const prepareThumbnailUrl = (baseUrl, thumbnail = '300x200', draft) => {
   if (thumbnail === 'true' || thumbnail === '1') thumbnail = '300x200'
   const [width, height] = (thumbnail).split('x')
   const thumbnailUrl = new URL(baseUrl)

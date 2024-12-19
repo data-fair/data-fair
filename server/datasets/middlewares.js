@@ -1,12 +1,14 @@
-const config = /** @type {any} */(require('config'))
-const createError = require('http-errors')
-const i18n = require('i18n')
-const asyncWrap = require('../misc/utils/async-handler')
-const locks = require('../misc/utils/locks')
-const usersUtils = require('../misc/utils/users')
-const { getOwnerRole } = require('../misc/utils/permissions')
-const { checkStorage } = require('./utils/storage')
-const service = require('./service')
+import _config from 'config'
+import createError from 'http-errors';
+import i18n from 'i18n';
+import asyncWrap from '../misc/utils/async-handler.js';
+import locks from '../misc/utils/locks.js';
+import usersUtils from '../misc/utils/users.js';
+import { getOwnerRole } from '../misc/utils/permissions.js';
+import { checkStorage } from './utils/storage.js';
+import service from './service.js';
+
+const config = /** @type {any} */(_config)
 
 /**
  *

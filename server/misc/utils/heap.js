@@ -2,14 +2,14 @@
 // the value is the prefix of the debugHeap instructions that you want to see, for example:
 // export DEBUG_HEAP=worker:indexer
 
-const NumberAbbreviate = require('number-abbreviate')
+import NumberAbbreviate from 'number-abbreviate'
 const numberAbbreviate = new NumberAbbreviate([' k', ' M', ' G', ' T'])
 
 if (global.gc) console.log('Manual garbage collection is available')
 
 const f = val => Math.round((val / 1024 / 1024)).toLocaleString({}) + 'Mo'
 
- export const debug = (prefix) => (key, value) => {
+export const debug = (prefix) => (key, value) => {
   if (!process.env.DEBUG_HEAP) return
   if (process.env.DEBUG_HEAP !== '*' && !prefix.startsWith(process.env.DEBUG_HEAP)) return
 

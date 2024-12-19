@@ -1,11 +1,12 @@
-const express = require('express')
-const status = require('./status')
-const asyncWrap = require('../utils/async-handler')
-const findUtils = require('../utils/find')
-const baseAppsUtils = require('../../base-applications/utils')
-const cacheHeaders = require('../utils/cache-headers')
+import express from 'express'
+import status from './status.js'
+import asyncWrap from '../utils/async-handler.js'
+import findUtils from '../utils/find.js'
+import baseAppsUtils from '../../base-applications/utils.js'
+import cacheHeaders from '../utils/cache-headers.js'
 
-const router = export default express.Router()
+const router = express.Router()
+export default router
 
 // All routes in the router are only for the super admins of the service
 router.use(asyncWrap(async (req, res, next) => {

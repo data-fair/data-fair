@@ -1,7 +1,7 @@
-const geolib = require('geolib')
-const ngeohash = require('ngeohash')
+import geolib from 'geolib'
+import ngeohash from 'ngeohash'
 
-const geohash = export default {}
+const geohash = {}
 
 // source https://en.wikipedia.org/wiki/Geohash
 const errorsPerPrecision = [2500, 630, 78, 20, 2.4, 0.61, 0.076, 0.019]
@@ -46,3 +46,5 @@ geohash.hash2coord = function (hash) {
   const r = ngeohash.decode(hash)
   return [r.longitude, r.latitude]
 }
+
+export default geohash

@@ -1,9 +1,9 @@
-const config = require('config')
-const moment = require('moment')
-const axios = require('../utils/axios')
-const fs = require('fs-extra')
-const asyncWrap = require('../utils/async-handler')
-const clamav = require('../utils/clamav')
+import config from 'config'
+import moment from 'moment'
+import axios from '../utils/axios.js'
+import fs from 'fs-extra'
+import asyncWrap from '../utils/async-handler.js'
+import clamav from '../utils/clamav.js'
 
 async function mongoStatus (req) {
   await req.app.get('db').command({ ping: 1 })
@@ -74,12 +74,12 @@ async function getStatus (req) {
   }
 }
 
- export const status = asyncWrap(async (req, res, next) => {
+export const status = asyncWrap(async (req, res, next) => {
   const status = await getStatus(req)
   res.send(status)
 })
 
- export const ping = asyncWrap(async (req, res, next) => {
+export const ping = asyncWrap(async (req, res, next) => {
   const status = await getStatus(req)
   if (status.status === 'error') res.status(500)
   res.send(status.status)

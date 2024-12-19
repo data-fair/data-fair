@@ -1,5 +1,15 @@
-const { Writable } = require('stream')
-const journals = require('../misc/utils/journals')
+
+import { Writable } from 'stream'
+import journals from '../misc/utils/journals.js'
+import { jsonSchema } from '../datasets/utils/schema.js'
+import ajv from '../misc/utils/ajv.js'
+import truncateMiddle from 'truncate-middle'
+import pump from '../misc/utils/pipe.js'
+import datasetUtils from '../datasets/utils/index.js'
+import datasetsService from '../datasets/service.js'
+import taskProgress from '../datasets/utils/task-progress.js'
+import truncateMiddle from 'truncate-middle'
+import debugLib from 'debug'
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
  export const eventsPrefix = 'validate'
@@ -34,8 +44,6 @@ class ValidateStream extends Writable {
   }
 
   errorsSummary () {
-    const truncateMiddle = require('truncate-middle')
-
     if (!this.nbErrors) return null
     const leftOutErrors = this.nbErrors - maxErrors
     let msg = `${Math.round(100 * (this.nbErrors / this.i))}% des lignes ont une erreur de validation.\n<br>`
@@ -47,12 +55,7 @@ class ValidateStream extends Writable {
 }
 
  export const process = async function (app, dataset) {
-  const pump = require('../misc/utils/pipe')
-  const datasetUtils = require('../datasets/utils')
-  const datasetsService = require('../datasets/service')
-  const taskProgress = require('../datasets/utils/task-progress')
-
-  const debug = require('debug')(`worker:indexer:${dataset.id}`)
+  const debug = debugLib(`worker:indexer:${dataset.id}`)
 
   if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape validation.')
   if (dataset.isRest) throw new Error('Un jeu de données éditable ne devrait pas passer par l\'étape validation.')

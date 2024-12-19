@@ -1,20 +1,21 @@
-const path = require('path')
-const config = /** @type {any} */(require('config'))
-const slug = require('slugify')
-const CronJob = require('cron').CronJob
-const locks = require('../../misc/utils/locks')
-const metrics = require('../../misc/utils/metrics')
-const nanoid = require('../../misc/utils/nanoid')
-const visibilityUtils = require('../../misc/utils/visibility')
-const { prepareThumbnailUrl } = require('../../misc/utils/thumbnails')
-const { prepareMarkdownContent } = require('../../misc/utils/markdown')
-const permissions = require('../../misc/utils/permissions')
-const findUtils = require('../../misc/utils/find')
-const filesUtils = require('./files')
-const storageUtils = require('./storage')
-const dataStreamsUtils = require('./data-streams')
-const schemaUtils = require('./schema')
-const readApiKeyUtils = require('./read-api-key')
+
+import path from 'path';
+import config from 'config';
+import slug from 'slugify';
+import { CronJob } from 'cron';
+import * as locks from '../../misc/utils/locks.js';
+import * as metrics from '../../misc/utils/metrics.js';
+import nanoid from '../../misc/utils/nanoid.js';
+import * as visibilityUtils from '../../misc/utils/visibility.js';
+import { prepareThumbnailUrl } from '../../misc/utils/thumbnails.js';
+import { prepareMarkdownContent } from '../../misc/utils/markdown.js';
+import * as permissions from '../../misc/utils/permissions.js';
+import * as findUtils from '../../misc/utils/find.js';
+import * as filesUtils from './files.js';
+import * as storageUtils from './storage.js';
+import * as dataStreamsUtils from './data-streams.js';
+import * as schemaUtils from './schema.js';
+import * as readApiKeyUtils from './read-api-key.js';
 
  export const filePath = filesUtils.filePath
  export const dataFiles = filesUtils.dataFiles

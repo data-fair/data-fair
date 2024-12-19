@@ -1,18 +1,20 @@
-const crypto = require('crypto')
-const express = require('express')
-const ajv = require('../utils/ajv')
-const { nanoid } = require('nanoid')
-const slug = require('slugify')
-const createError = require('http-errors')
-const settingSchema = require('../../../contract/settings')
-const permissions = require('../utils/permissions')
-const asyncWrap = require('../utils/async-handler')
-const cacheHeaders = require('../utils/cache-headers')
-const topicsUtils = require('../utils/topics')
-const notifications = require('../utils/notifications')
-const config = require('config')
-const standardLicenses = require('../../../contract/licenses')
-const debugPublicationSites = require('debug')('publication-sites')
+import crypto from 'crypto'
+import express from 'express'
+import ajv from '../utils/ajv.js'
+import { nanoid } from 'nanoid'
+import slug from 'slugify'
+import createError from 'http-errors'
+import settingSchema from '../../../contract/settings.js'
+import permissions from '../utils/permissions.js'
+import asyncWrap from '../utils/async-handler.js'
+import cacheHeaders from '../utils/cache-headers.js'
+import topicsUtils from '../utils/topics.js'
+import notifications from '../utils/notifications.js'
+import config from 'config'
+import standardLicenses from '../../../contract/licenses.js'
+import debugLib from 'debug'
+
+const debugPublicationSites = debugLib('publication-sites')
 
 const router = express.Router()
 

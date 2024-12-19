@@ -1,4 +1,5 @@
- export const process = async function (app, dataset) {
-  const catalogs = require('../catalogs/plugins')
+import catalogs from '../catalogs/plugins/index.js'
+
+export const process = async function (app, dataset) {
   return catalogs.processPublications(app, 'dataset', dataset)
 }

@@ -1,11 +1,14 @@
-const path = require('path')
-const config = /** @type {any} */(require('config'))
-const { Socket } = require('node:net')
-const createError = require('http-errors')
-const { PromiseSocket } = require('promise-socket')
-const { Counter } = require('prom-client')
-const asyncWrap = require('./async-handler')
-const debug = require('debug')('clamav')
+import path from 'path'
+import { Socket } from 'node:net'
+import createError from 'http-errors'
+import { PromiseSocket } from 'promise-socket'
+import { Counter } from 'prom-client'
+import asyncWrap from './async-handler.js'
+import debugLib from 'debug'
+
+const config = /** @type {any} */(_config)
+
+const debug = debugLib('clamav')
 
 const infectedFilesCounter = new Counter({
   name: 'df_infected_files',

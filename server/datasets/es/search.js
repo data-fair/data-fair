@@ -1,6 +1,6 @@
-const config = require('config')
-const createError = require('http-errors')
-const { aliasName, prepareQuery } = require('./commons')
+import config from 'config'
+import createError from 'http-errors'
+import { aliasName, prepareQuery } from './commons.js'
 
 export default async (client, dataset, query, publicBaseUrl) => {
   const esQuery = prepareQuery(dataset, query)

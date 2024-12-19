@@ -1,7 +1,9 @@
 // TODO: replace this with @data-fair/lib/node/observer.js
 
-const client = require('prom-client')
-const debugReq = require('debug')('df:observe:req')
+import client from 'prom-client';
+import debug from 'debug';
+
+const debugReq = debug('df:observe:req');
 
 const reqStep = new client.Histogram({
   name: 'df_req_step_seconds',

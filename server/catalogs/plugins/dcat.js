@@ -1,16 +1,18 @@
 // this type of catalog can be tested using this URL as an example:
 // https://geocatalogue.lannion-tregor.com/geonetwork/
 
-const path = require('path')
-const createError = require('http-errors')
-const memoize = require('memoizee')
-const mime = require('mime')
-const slug = require('slugify')
-const Piscina = require('piscina')
-const validate = require('../../misc/utils/dcat/validate')
-const { findLicense } = require('../../misc/utils/licenses')
 
-const debug = require('debug')('catalogs:dcat')
+import path from 'path'
+import createError from 'http-errors'
+import memoize from 'memoizee'
+import mime from 'mime'
+import slug from 'slugify'
+import Piscina from 'piscina'
+import validate from '../../misc/utils/dcat/validate.js'
+import { findLicense } from '../../misc/utils/licenses.js'
+import debugLib from 'debug'
+
+const debug = debugLib('catalogs:dcat')
 
  export const title = 'DCAT - JSON-LD'
  export const description = ''

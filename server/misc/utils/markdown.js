@@ -1,8 +1,8 @@
-const marked = require('marked')
-const truncateMiddle = require('truncate-middle')
-const truncateHTML = require('truncate-html')
-const memoize = require('memoizee')
-const sanitizeHtml = require('../../../shared/sanitize-html')
+import marked from 'marked'
+import truncateMiddle from 'truncate-middle'
+import truncateHTML from 'truncate-html'
+import memoize from 'memoizee'
+import sanitizeHtml from '../../../shared/sanitize-html.js'
 
 const prepare = (key, updatedAt, html, truncate, text) => {
   if (html) text = marked.parse(text).trim()
@@ -24,6 +24,6 @@ const memoizedPrepare = memoize(prepare, {
   length: 4 // this way the cache key is key/updatedAt/html/truncate and text that can be large is not used as a key
 })
 
- export const prepareMarkdownContent = (text, html = false, truncate = null, key, updatedAt) => {
+export const prepareMarkdownContent = (text, html = false, truncate = null, key, updatedAt) => {
   return updatedAt ? memoizedPrepare(key, updatedAt, html, truncate, text) : prepare(key, updatedAt, html, truncate, text)
 }

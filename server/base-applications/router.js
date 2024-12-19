@@ -1,22 +1,23 @@
-const util = require('util')
-const url = require('url')
-const config = require('config')
-const express = require('express')
-const axios = require('../misc/utils/axios')
-const slug = require('slugify')
-const jsonRefs = require('json-refs')
-const createError = require('http-errors')
-const Extractor = require('html-extractor')
+import util from 'util'
+import url from 'url'
+import config from 'config'
+import express from 'express'
+import axios from '../misc/utils/axios.js'
+import slug from 'slugify'
+import jsonRefs from 'json-refs'
+import createError from 'http-errors'
+import Extractor from 'html-extractor'
+import i18n from 'i18n'
+import i18nUtils from '../i18n/utils.js'
+import asyncWrap from '../misc/utils/async-handler.js'
+import findUtils from '../misc/utils/find.js'
+import baseAppsUtils from './utils.js'
+import cacheHeaders from '../misc/utils/cache-headers.js'
+import metrics from '../misc/utils/metrics.js'
+import { getThumbnail } from '../misc/utils/thumbnails.js'
+
 const htmlExtractor = new Extractor()
 htmlExtractor.extract = util.promisify(htmlExtractor.extract)
-const i18n = require('i18n')
-const i18nUtils = require('../i18n/utils')
-const asyncWrap = require('../misc/utils/async-handler')
-const findUtils = require('../misc/utils/find')
-const baseAppsUtils = require('./utils')
-const cacheHeaders = require('../misc/utils/cache-headers')
-const metrics = require('../misc/utils/metrics')
-const { getThumbnail } = require('../misc/utils/thumbnails')
 const router =  export const router = express.Router()
 
 // Fill the collection using the default base applications from config

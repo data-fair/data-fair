@@ -1,13 +1,15 @@
 // Define a few routes to be used to synchronize data with the users/organizations directory
 // Useful both for functionalities and help respect GDPR rules
-const express = require('express')
-const config = require('config')
-const fs = require('fs-extra')
-const asyncWrap = require('../utils/async-handler')
-const datasetsService = require('../../datasets/service')
-const { ownerDir } = require('../../datasets/utils/files')
 
-const router = export default express.Router()
+import express from 'express'
+import config from 'config'
+import fs from 'fs-extra'
+import asyncWrap from '../utils/async-handler.js'
+import datasetsService from '../../datasets/service.js'
+import { ownerDir } from '../../datasets/utils/files.js'
+
+const router = express.Router()
+export default router
 
 router.use((req, res, next) => {
   if (!config.secretKeys.identities || config.secretKeys.identities !== req.query.key) {

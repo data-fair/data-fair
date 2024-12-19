@@ -1,21 +1,20 @@
-const metrics = require('../misc/utils/metrics')
-const journals = require('../misc/utils/journals')
+import metrics from '../misc/utils/metrics.js'
+import journals from '../misc/utils/journals.js'
+import fs from 'fs-extra'
+import createError from 'http-errors'
+import { Writable } from 'stream'
+import pump from '../misc/utils/pipe.js'
+import * as es from '../datasets/es.js'
+import * as datasetUtils from '../datasets/utils.js'
+import * as datasetsService from '../datasets/service.js'
+import * as restDatasetsUtils from '../datasets/utils/rest.js'
+import taskProgress from '../datasets/utils/task-progress.js'
+import { tmpDir } from '../datasets/utils/files.js'
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
  export const eventsPrefix = 'index'
 
  export const process = async function (app, dataset) {
-  const fs = require('fs-extra')
-  const createError = require('http-errors')
-  const { Writable } = require('stream')
-  const pump = require('../misc/utils/pipe')
-  const es = require('../datasets/es')
-  const datasetUtils = require('../datasets/utils')
-  const datasetsService = require('../datasets/service')
-  const restDatasetsUtils = require('../datasets/utils/rest')
-  const taskProgress = require('../datasets/utils/task-progress')
-  const { tmpDir } = require('../datasets/utils/files')
-
   const debug = require('debug')(`worker:indexer:${dataset.id}`)
   const debugHeap = require('../misc/utils/heap').debug(`worker:indexer:${dataset.id}`)
 

@@ -1,15 +1,14 @@
 // prepare an axios instance with improved error management
 
-const axios = require('axios')
-
-const { httpAgent, httpsAgent } = require('./http-agents')
+import axios from 'axios';
+import { httpAgent, httpsAgent } from './http-agents.js';
 
 export default axios.create({
   httpAgent,
   httpsAgent
 })
 
- export constinterceptors.response.use(response => response, error => {
+ export const interceptors.response.use(response => response, error => {
   if (!error.response) return Promise.reject(error)
   delete error.response.request
   delete error.response.headers

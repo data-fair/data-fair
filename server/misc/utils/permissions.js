@@ -1,9 +1,10 @@
-const config = require('config')
-const express = require('express')
-const permissionsSchema = require('../../../contract/permissions.json')
-const apiDocsUtil = require('./api-docs')
-const visibilityUtils = require('./visibility')
-const ajv = require('./ajv')
+import config from 'config';
+import express from 'express';
+import permissionsSchema from '../../../contract/permissions.json';
+import * as apiDocsUtil from './api-docs.js';
+import * as visibilityUtils from './visibility.js';
+import ajv from './ajv.js';
+
 const validate = ajv.compile(permissionsSchema)
 
  export const middleware = function (operationId, operationClass, trackingCategory, acceptMissing) {

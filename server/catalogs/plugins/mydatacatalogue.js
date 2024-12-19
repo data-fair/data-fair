@@ -1,46 +1,47 @@
-const url = require('url')
-const createError = require('http-errors')
-const axios = require('../../misc/utils/axios')
 
- export const title = 'Mydatacatalogue'
- export const description = 'Outil de cartographie et de catalogage de vos données'
- export const docUrl = 'https://www.dawizz.fr/'
- export const optionalCapabilities = [
+import url from 'url'
+import createError from 'http-errors'
+import axios from '../../misc/utils/axios.js'
+
+export const title = 'Mydatacatalogue'
+export const description = 'Outil de cartographie et de catalogage de vos données'
+export const docUrl = 'https://www.dawizz.fr/'
+export const optionalCapabilities = [
   'apiKey',
   'publishDataset'
 ]
 
- export const init = async (catalogUrl) => {
+export const init = async (catalogUrl) => {
   const status = (await axios.get(url.resolve(catalogUrl, 'api/v1/status'))).data
   if (status.status !== 'ok') throw new Error('mydatacatalogue status is not ok')
   return { url: catalogUrl, title: 'Mydatacatalogue SaaS' }
 }
 
- export const searchOrganizations = async (catalogUrl, q) => {
+export const searchOrganizations = async (catalogUrl, q) => {
   return { results: [{ id: null, name: 'Organization owning API key' }] }
 }
 
- export const publishDataset = async (catalog, dataset, publication) => {
+export const publishDataset = async (catalog, dataset, publication) => {
   return createNewDataset(catalog, dataset, publication)
 }
 
- export const deleteDataset = async (catalog, dataset, publication) => {
+export const deleteDataset = async (catalog, dataset, publication) => {
   throw createError(501, `Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
 }
 
- export const publishApplication = async (catalog, application, publication, datasets) => {
+export const publishApplication = async (catalog, application, publication, datasets) => {
   throw createError(501, 'La publication d\'applications vers Mydatacatalogue n\'est pas disponible')
 }
 
- export const deleteApplication = async (catalog, application, publication) => {
+export const deleteApplication = async (catalog, application, publication) => {
   throw createError(501, 'La dépublication d\'applications vers Mydatacatalogue n\'est pas disponible')
 }
 
- export const listDatasets = async (catalog, p) => {
+export const listDatasets = async (catalog, p) => {
   throw createError(501, 'La récupération d\'une liste de jeux de données depuis Mydacatalogue n\'est pas disponible')
 }
 
- export const getDataset = async (catalog, datasetId, req) => {
+export const getDataset = async (catalog, datasetId, req) => {
   throw createError(501, 'La récupération d\'une définition de jeu de données depuis Mydacatalogue n\'est pas disponible')
 }
 

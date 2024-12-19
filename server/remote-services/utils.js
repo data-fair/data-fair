@@ -1,17 +1,18 @@
-const findUtils = require('../misc/utils/find')
-const { prepareMarkdownContent } = require('../misc/utils/markdown')
-const soasLoader = require('soas')
-const axios = require('../misc/utils/axios')
-const ajv = require('../misc/utils/ajv')
-const config = /** @type {any} */(require('config'))
-const mongoEscape = require('mongo-escape')
-const slug = require('slugify')
-const metrics = require('../misc/utils/metrics')
-const settingsUtils = require('../misc/utils/settings')
-const servicePatch = require('../../contract/remote-service-patch')
-const datasetAPIDocs = require('../../contract/dataset-api-docs')
+import findUtils from '../misc/utils/find.js'
+import { prepareMarkdownContent } from '../misc/utils/markdown.js'
+import soasLoader from 'soas'
+import axios from '../misc/utils/axios.js'
+import ajv from '../misc/utils/ajv.js'
+import config from 'config'
+import mongoEscape from 'mongo-escape'
+import slug from 'slugify'
+import metrics from '../misc/utils/metrics.js'
+import settingsUtils from '../misc/utils/settings.js'
+import servicePatch from '../../contract/remote-service-patch.js'
+import datasetAPIDocs from '../../contract/dataset-api-docs.js'
+import debugLib from 'debug'
 
-const debugMasterData = require('debug')('master-data')
+const debugLib = require('debug')('master-data')
 
  export const validate = ajv.compile(require('../../contract/remote-service'))
  export const validatePatch = ajv.compile(servicePatch)

@@ -1,7 +1,9 @@
-const config = require('config')
-const createError = require('http-errors')
-const useragent = require('useragent')
-const debug = require('debug')('cache-headers')
+import config from 'config'
+import createError from 'http-errors'
+import useragent from 'useragent'
+import debugLib from 'debug'
+
+const debug = debugLib('cache-headers')
 
  export const setNoCache = (req, res) => {
   res.setHeader('X-Accel-Buffering', 'no')

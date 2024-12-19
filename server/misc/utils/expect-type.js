@@ -1,4 +1,6 @@
-const debug = require('debug')('expect-type')
+import debugLib from 'debug'
+
+const debug = debugLib('expect-type')
 
 export default (types) => {
   if (typeof types === 'string') types = [types]

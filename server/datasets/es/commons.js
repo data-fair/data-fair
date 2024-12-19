@@ -1,21 +1,21 @@
 // Logic shared across all of most search and aggregation routes
 
-const config = require('config')
-const createError = require('http-errors')
-const flatten = require('flat')
-const queryParser = require('lucene-query-parser')
-const sanitizeHtml = require('../../../shared/sanitize-html')
-const truncateMiddle = require('truncate-middle')
-const truncateHTML = require('truncate-html')
-const marked = require('marked')
-const dayjs = require('dayjs')
-const timezone = require('dayjs/plugin/timezone')
-const utc = require('dayjs/plugin/utc')
-const { prepareThumbnailUrl } = require('../../misc/utils/thumbnails')
-const tiles = require('../utils/tiles')
-const geo = require('../utils/geo')
-const { geojsonToWKT } = require('@terraformer/wkt')
-const capabilities = require('../../../contract/capabilities')
+import config from 'config'
+import createError from 'http-errors'
+import flatten from 'flat'
+import queryParser from 'lucene-query-parser'
+import sanitizeHtml from '../../../shared/sanitize-html.js'
+import truncateMiddle from 'truncate-middle'
+import truncateHTML from 'truncate-html'
+import marked from 'marked'
+import dayjs from 'dayjs'
+import timezone from 'dayjs/plugin/timezone.js'
+import utc from 'dayjs/plugin/utc.js'
+import { prepareThumbnailUrl } from '../../misc/utils/thumbnails.js'
+import tiles from '../utils/tiles.js'
+import geo from '../utils/geo.js'
+import { geojsonToWKT } from '@terraformer/wkt'
+import capabilities from '../../../contract/capabilities.js'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)

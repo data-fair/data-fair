@@ -1,8 +1,10 @@
-const config = /** @type {any} */(require('config'))
-const createError = require('http-errors')
-const i18n = require('i18n')
-const permissions = require('./permissions')
-const visibility = require('./visibility')
+import config from 'config'
+import createError from 'http-errors'
+import i18n from 'i18n'
+import permissions from './permissions.js'
+import visibility from './visibility.js'
+
+const config = /** @type {any} */(_config)
 
 // Util functions shared accross the main find (GET on collection) endpoints
 

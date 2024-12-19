@@ -1,8 +1,8 @@
-const crypto = require('crypto')
-const config = require('config')
-const datasetUtils = require('../utils')
-const metrics = require('../../misc/utils/metrics')
-const { aliasName, esProperty } = require('./commons')
+import crypto from 'crypto'
+import config from 'config'
+import datasetUtils from '../utils.js'
+import metrics from '../../misc/utils/metrics.js'
+import { aliasName, esProperty } from './commons.js'
 
  export const indexDefinition = async (dataset) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))

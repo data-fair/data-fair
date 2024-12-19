@@ -1,9 +1,12 @@
-const config = require('config')
-const url = require('url')
-const equal = require('deep-equal')
-const axios = require('../../misc/utils/axios')
-const debug = require('debug')('catalogs:udata')
-const moment = require('moment')
+import config from 'config';
+import url from 'url';
+import equal from 'deep-equal';
+import axios from '../../misc/utils/axios.js';
+import debugLib from 'debug';
+import moment from 'moment';
+
+const debug = debugLib('catalogs:udata');
+
  export const title = 'uData'
  export const description = 'Customizable and skinnable social platform dedicated to (open)data.'
  export const docUrl = 'https://udata.readthedocs.io/en/latest/'

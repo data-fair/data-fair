@@ -1,7 +1,8 @@
 // Prepare dynamic service workers configurations for data-fair applications
-const config = require('config')
-const escapeStringRegexp = require('escape-string-regexp')
-const { minify } = require('terser')
+
+import config from 'config'
+import escapeStringRegexp from 'escape-string-regexp'
+import { minify } from 'terser'
 
 const debugServiceWorkers = process.env.DEBUG && process.env.DEBUG.includes('service-workers')
 

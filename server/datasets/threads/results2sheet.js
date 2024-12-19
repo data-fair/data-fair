@@ -1,6 +1,6 @@
 // this is run in a thread as it is quite cpu and memory intensive
 
-const XLSX = require('xlsx')
+import XLSX from 'xlsx'
 
 // cf https://stackoverflow.com/a/57673262
 const val2string = (val) => {

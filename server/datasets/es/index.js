@@ -1,38 +1,22 @@
-const config = /** @type {any} */(require('config'))
-const elasticsearch = require('@elastic/elasticsearch')
-const commons = require('./commons')
-const manageIndices = require('./manage-indices')
+import config from 'config'
+import elasticsearch from '@elastic/elasticsearch'
 
-const smallAggs = require('./small-aggs')
+export * from './manage-indices.js'
+export * from './commons.js'
+export * as search from './search.js'
+export * as multiSearch from './multi-search.js'
+export * as count from './count.js'
+export * as valuesAgg from './values-agg.js'
+export * as values from './values.js'
+export * as metricAgg from './metric-agg.js'
+export * as simpleMetricsAgg from './metric-agg.js'
+export * as geoAgg from './geo-agg.js'
+export * as bboxAgg from './bbox-agg.js'
+export * as wordsAgg from './words-agg.js'
+export { max as maxAgg, min as minAgg } from './small-aggs.js'
+export * as indexStream from './index-stream.js'
 
- export const delete = manageIndices.delete
- export const initDatasetIndex = manageIndices.initDatasetIndex
- export const switchAlias = manageIndices.switchAlias
- export const validateDraftAlias = manageIndices.validateDraftAlias
- export const datasetInfos = manageIndices.datasetInfos
- export const datasetWarning = manageIndices.datasetWarning
- export const updateDatasetMapping = manageIndices.updateDatasetMapping
-
- export const aliasName = commons.aliasName
- export const extractError = commons.extractError
- export const prepareResultItem = commons.prepareResultItem
- export const escapeFilter = commons.escapeFilter
-
- export const search = require('./search')
- export const multiSearch = require('./multi-search')
- export const count = require('./count')
- export const valuesAgg = require('./values-agg')
- export const values = require('./values')
- export const metricAgg = require('./metric-agg').agg
- export const simpleMetricsAgg = require('./metric-agg').simpleMetricsAgg
- export const geoAgg = require('./geo-agg')
- export const bboxAgg = require('./bbox-agg')
- export const wordsAgg = require('./words-agg')
- export const maxAgg = smallAggs.max
- export const minAgg = smallAggs.min
- export const indexStream = require('./index-stream')
-
- export const init = async () => {
+export const init = async () => {
   let node = config.elasticsearch.nodes
   if (!node) {
     node = config.elasticsearch.host

@@ -1,11 +1,12 @@
 // TODO: this will be replaced by a true activity concept based on a separate collection
 // for now we create something similar based on recently updated datasets and applications
 
-const express = require('express')
-const asyncWrap = require('../utils/async-handler')
-const findUtils = require('../utils/find')
+import express from 'express'
+import asyncWrap from '../utils/async-handler.js'
+import findUtils from '../utils/find.js'
 
-const router = export default express.Router()
+const router = express.Router()
+export default router
 
 router.get('', asyncWrap(async (req, res) => {
   const db = req.app.get('db')

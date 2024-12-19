@@ -1,58 +1,60 @@
+import { text as stream2text } from 'node:stream/consumers'
+import express from 'express'
+import ajv from '../misc/utils/ajv.js'
+import fs from 'fs-extra'
+import path from 'path'
+import moment from 'moment'
+import { Counter } from 'prom-client'
+import createError from 'http-errors'
+import pump from '../misc/utils/pipe.js'
+import mongodb from 'mongodb'
+import i18n from 'i18n'
+import sanitizeHtml from '../../shared/sanitize-html.js'
+import LinkHeader from 'http-link-header'
+import equal from 'deep-equal'
+import journals from '../misc/utils/journals.js'
+import axios from '../misc/utils/axios.js'
+import esUtils from './es.js'
+import uploadUtils from './utils/upload.js'
+import datasetAPIDocs from '../../contract/dataset-api-docs.js'
+import privateDatasetAPIDocs from '../../contract/dataset-private-api-docs.js'
+import permissions from '../misc/utils/permissions.js'
+import usersUtils from '../misc/utils/users.js'
+import datasetUtils from './utils/index.js'
+import restDatasetsUtils from './utils/rest.js'
+import findUtils from '../misc/utils/find.js'
+import asyncWrap from '../misc/utils/async-handler.js'
+import clone from '../misc/utils/clone.js'
+import attachments from './utils/attachments.js'
+import geo from './utils/geo.js'
+import tiles from './utils/tiles.js'
+import cache from '../misc/utils/cache.js'
+import cacheHeaders from '../misc/utils/cache-headers.js'
+import outputs from './utils/outputs.js'
+import limits from '../misc/utils/limits.js'
+import notifications from '../misc/utils/notifications.js'
+import datasetPostSchema from '../../contract/dataset-post.js'
+import userNotificationSchema from '../../contract/user-notification.js'
+import { getThumbnail } from '../misc/utils/thumbnails.js'
+import { bulkSearchStreams } from './utils/master-data.js'
+import applicationKey from '../misc/utils/application-key.js'
+import { validateURLFriendly } from '../misc/utils/validation.js'
+import observe from '../misc/utils/observe.js'
+import metrics from '../misc/utils/metrics.js'
+import publicationSites from '../misc/utils/publication-sites.js'
+import clamav from '../misc/utils/clamav.js'
+import { syncDataset as syncRemoteService } from '../remote-services/utils.js'
+import { findDatasets, applyPatch, deleteDataset, createDataset } from './service.js'
+import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/schema.js'
+import { dir, attachmentsDir } from './utils/files.js'
+import { preparePatch, validatePatch } from './utils/patch.js'
+import { updateTotalStorage } from './utils/storage.js'
+import { checkStorage, lockDataset, readDataset } from './middlewares/index.js'
+
 const config = /** @type {any} */(require('config'))
-const { text: stream2text } = require('node:stream/consumers')
-const express = require('express')
-const ajv = require('../misc/utils/ajv')
-const fs = require('fs-extra')
-const path = require('path')
-const moment = require('moment')
-const { Counter } = require('prom-client')
-const createError = require('http-errors')
-const pump = require('../misc/utils/pipe')
-const mongodb = require('mongodb')
-const i18n = require('i18n')
-const sanitizeHtml = require('../../shared/sanitize-html')
-const LinkHeader = require('http-link-header')
-const equal = require('deep-equal')
-const journals = require('../misc/utils/journals')
-const axios = require('../misc/utils/axios')
-const esUtils = require('./es')
-const uploadUtils = require('./utils/upload')
-const datasetAPIDocs = require('../../contract/dataset-api-docs')
-const privateDatasetAPIDocs = require('../../contract/dataset-private-api-docs')
-const permissions = require('../misc/utils/permissions')
-const usersUtils = require('../misc/utils/users')
-const datasetUtils = require('./utils')
-const restDatasetsUtils = require('./utils/rest')
-const findUtils = require('../misc/utils/find')
-const asyncWrap = require('../misc/utils/async-handler')
-const clone = require('../misc/utils/clone')
-const attachments = require('./utils/attachments')
-const geo = require('./utils/geo')
-const tiles = require('./utils/tiles')
-const cache = require('../misc/utils/cache')
-const cacheHeaders = require('../misc/utils/cache-headers')
-const outputs = require('./utils/outputs')
-const limits = require('../misc/utils/limits')
-const notifications = require('../misc/utils/notifications')
-const datasetPostSchema = require('../../contract/dataset-post')
+
 const validatePost = ajv.compile(datasetPostSchema.properties.body)
-const userNotificationSchema = require('../../contract/user-notification')
 const validateUserNotification = ajv.compile(userNotificationSchema)
-const { getThumbnail } = require('../misc/utils/thumbnails')
-const { bulkSearchStreams } = require('./utils/master-data')
-const applicationKey = require('../misc/utils/application-key')
-const { validateURLFriendly } = require('../misc/utils/validation')
-const observe = require('../misc/utils/observe')
-const metrics = require('../misc/utils/metrics')
-const publicationSites = require('../misc/utils/publication-sites')
-const clamav = require('../misc/utils/clamav')
-const { syncDataset: syncRemoteService } = require('../remote-services/utils')
-const { findDatasets, applyPatch, deleteDataset, createDataset } = require('./service')
-const { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } = require('./utils/schema')
-const { dir, attachmentsDir } = require('./utils/files')
-const { preparePatch, validatePatch } = require('./utils/patch')
-const { updateTotalStorage } = require('./utils/storage')
-const { checkStorage, lockDataset, readDataset } = require('./middlewares')
 
 const router = express.Router()
 
@@ -132,6 +134,7 @@ const permissionsWriteExports = permissions.middleware('writeExports', 'admin')
 const permissionsSetReadApiKey = permissions.middleware('setReadApiKey', 'admin')
 const permissionsWriteDescription = permissions.middleware('writeDescription', 'write')
 const debugBreakingChanges = require('debug')('breaking-changes')
+
 const descriptionBreakingKeys = ['rest', 'virtual', 'lineOwnership', 'primaryKey', 'projection', 'attachmentsAsImage', 'extensions', 'timeZone', 'slug'] // a change in these properties is considered a breaking change
 const descriptionHasBreakingChanges = (req) => {
   const breakingChangeKey = descriptionBreakingKeys.find(key => key in req.body)

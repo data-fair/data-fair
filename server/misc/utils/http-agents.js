@@ -1,7 +1,7 @@
-const config = require('config')
-const CacheableLookup = require('cacheable-lookup')
-const AgentKeepAlive = require('agentkeepalive')
-const https = require('https')
+import config from 'config'
+import CacheableLookup from 'cacheable-lookup'
+import AgentKeepAlive from 'agentkeepalive'
+import https from 'https'
 
 // HTTP agent performance, cf https://github.com/nodejitsu/node-http-proxy/issues/1058
 // use agent keepalive only for http (meaning probably internal to the infrastructure)

@@ -1,16 +1,17 @@
-const fs = require('fs-extra')
-const createError = require('http-errors')
-const { nanoid } = require('nanoid')
-const config = /** @type {any} */(require('config'))
-const standardLicenses = require('../../../contract/licenses')
-const path = require('path')
-const mime = require('mime')
-const moment = require('moment')
-const journals = require('../../misc/utils/journals')
-const permissionsUtil = require('../../misc/utils/permissions')
-const datasetUtils = require('../../datasets/utils')
+import fs from 'fs-extra';
+import createError from 'http-errors';
+import { nanoid } from 'nanoid';
+import config from 'config';
+import standardLicenses from '../../../contract/licenses.js';
+import path from 'path';
+import mime from 'mime';
+import moment from 'moment';
+import journals from '../../misc/utils/journals.js';
+import permissionsUtil from '../../misc/utils/permissions.js';
+import datasetUtils from '../../datasets/utils.js';
+import debugLib from 'debug';
 
-const debug = require('debug')('catalogs')
+const debug = debugLib('catalogs');
 
 // Dynamic loading of all modules in the current directory
 fs.ensureDirSync(path.resolve(config.pluginsDir, 'catalogs'))

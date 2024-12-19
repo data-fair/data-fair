@@ -1,6 +1,7 @@
-const { stringify: csvStr } = require('csv-stringify/sync')
-const dayjs = require('dayjs')
-const utc = require('dayjs/plugin/utc')
+
+import { stringify as csvStr } from 'csv-stringify/sync'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 
 dayjs.extend(utc)
 
@@ -124,8 +125,8 @@ const mapCellValue = (value) => {
 /**
  * @param {string} filePath
  */
- export const iterCSV = async function * (filePath) {
-  const Excel = require('exceljs')
+export const iterCSV = async function * (filePath) {
+  const Excel = (await import('exceljs')).default
 
   const workbook = new Excel.Workbook()
   try {
@@ -185,7 +186,7 @@ const mapCellValue = (value) => {
  * @param {string} filePath
  */
 const iterCSVOld = async function * (filePath) {
-  const XLSX = require('xlsx')
+  const XLSX = (await import('xlsx')).default
 
   const workbook = XLSX.readFile(filePath, { cellDates: true })
   const worksheet = workbook.Sheets[workbook.SheetNames[0]]

@@ -1,11 +1,12 @@
-const config = require('config')
-const fs = require('fs-extra')
-const { Readable } = require('stream')
-const i18nUtils = require('../../i18n/utils')
-const icalendar = require('@koumoul/icalendar')
-const moment = require('moment')
-require('moment-timezone')
-const rrule = require('rrule')
+import config from 'config'
+import fs from 'fs-extra'
+import { Readable } from 'stream'
+import * as i18nUtils from '../../i18n/utils.js'
+import icalendar from '@koumoul/icalendar'
+import moment from 'moment'
+import 'moment-timezone'
+import { RRule } from 'rrule'
+
 const localeTimeZone = moment.tz.guess()
 
 // We want date_only dates to at time 00:00 in the most relevant timezone
@@ -16,7 +17,7 @@ function parseDate (prop, calendarTimeZone) {
   return moment.tz(valueDay, calendarTimeZone).toISOString()
 }
 
- export const parse = async (filePath) => {
+export const parse = async (filePath) => {
   let content = (await fs.readFile(filePath, 'utf8')).trim()
   // fix badly closed openagenda exports
   if (content.endsWith('END:VEVENT')) {
@@ -113,7 +114,7 @@ function parseDate (prop, calendarTimeZone) {
   }
 }
 
- export const prepareSchema = (dataset, icalInfos) => {
+export const prepareSchema = (dataset, icalInfos) => {
   dataset.extras = dataset.extras || {}
   dataset.extras.iCalendar = icalInfos
   dataset.timeZone = icalInfos.timeZone

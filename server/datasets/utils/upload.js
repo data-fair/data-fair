@@ -1,15 +1,16 @@
-const fs = require('fs-extra')
-const multer = require('multer')
-const createError = require('http-errors')
-const { nanoid } = require('nanoid')
-const mime = require('mime-types')
-const resolvePath = require('resolve-path')
-const datasetSchema = require('../../../contract/dataset')
-const datasetUtils = require('./')
-const { tmpDir } = require('./files')
-const asyncWrap = require('../../misc/utils/async-handler')
-const promisifyMiddleware = require('../../misc/utils/promisify-middleware')
-const { fsyncFile } = require('./files')
+import fs from 'fs-extra'
+import multer from 'multer'
+import createError from 'http-errors'
+import { nanoid } from 'nanoid'
+import mime from 'mime-types'
+import resolvePath from 'resolve-path'
+import datasetSchema from '../../../contract/dataset.js'
+import * as datasetUtils from './index.js'
+import { tmpDir, fsyncFile } from './files.js'
+import asyncWrap from '../../misc/utils/async-handler.js'
+import promisifyMiddleware from '../../misc/utils/promisify-middleware.js'
+import { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } from '../../workers/file-normalizer.js'
+import debugLib from 'debug'
 
 const fallbackMimeTypes = {
   dbf: 'application/dbase',
@@ -17,9 +18,7 @@ const fallbackMimeTypes = {
   fods: 'application/vnd.oasis.opendocument.spreadsheet',
   gpkg: 'application/geopackage+sqlite3'
 }
-const debug = require('debug')('files')
-
-const { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } = require('../../workers/file-normalizer')
+const debug = debugLib('files')
 
 const storage = multer.diskStorage({
   destination: async function (req, file, cb) {

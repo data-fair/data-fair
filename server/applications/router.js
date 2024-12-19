@@ -1,37 +1,37 @@
-const express = require('express')
-const slug = require('slugify')
-const moment = require('moment')
-const config = /** @type {any} */(require('config'))
-const fs = require('fs-extra')
-const util = require('util')
-const unlink = util.promisify(fs.unlink)
-const createError = require('http-errors')
-const i18n = require('i18n')
-const sanitizeHtml = require('../../shared/sanitize-html')
-const { nanoid } = require('nanoid')
-const applicationAPIDocs = require('../../contract/application-api-docs')
-const ajv = require('../misc/utils/ajv')
-const applicationSchema = require('../../contract/application')
+import express from 'express';
+import slug from 'slugify';
+import moment from 'moment';
+import config from 'config';
+import fs from 'fs-extra';
+import util from 'util';
+import createError from 'http-errors';
+import i18n from 'i18n';
+import sanitizeHtml from '../../shared/sanitize-html.js';
+import { nanoid } from 'nanoid';
+import applicationAPIDocs from '../../contract/application-api-docs.js';
+import ajv from '../misc/utils/ajv.js';
+import applicationSchema from '../../contract/application.js';
+import applicationPatch from '../../contract/application-patch.js';
+import applicationKeys from '../../contract/application-keys.js';
+import baseAppsUtils from '../base-applications/utils.js';
+import permissions from '../misc/utils/permissions.js';
+import usersUtils from '../misc/utils/users.js';
+import findUtils from '../misc/utils/find.js';
+import asyncWrap from '../misc/utils/async-handler.js';
+import journals from '../misc/utils/journals.js';
+import capture from '../misc/utils/capture.js';
+import { clean, refreshConfigDatasetsRefs } from './utils.js';
+import { findApplications } from './service.js';
+import { syncApplications } from '../datasets/service.js';
+import cacheHeaders from '../misc/utils/cache-headers.js';
+import { validateURLFriendly } from '../misc/utils/validation.js';
+import publicationSites from '../misc/utils/publication-sites.js';
+
+const unlink = util.promisify(fs.unlink);
 const validate = ajv.compile(applicationSchema)
 const validateConfiguration = ajv.compile(applicationSchema.properties.configuration)
-const applicationPatch = require('../../contract/application-patch')
 const validatePatch = ajv.compile(applicationPatch)
-const applicationKeys = require('../../contract/application-keys')
 const validateKeys = ajv.compile(applicationKeys)
-
-const baseAppsUtils = require('../base-applications/utils')
-const permissions = require('../misc/utils/permissions')
-const usersUtils = require('../misc/utils/users')
-const findUtils = require('../misc/utils/find')
-const asyncWrap = require('../misc/utils/async-handler')
-const journals = require('../misc/utils/journals')
-const capture = require('../misc/utils/capture')
-const { clean, refreshConfigDatasetsRefs } = require('./utils')
-const { findApplications } = require('./service')
-const { syncApplications } = require('../datasets/service')
-const cacheHeaders = require('../misc/utils/cache-headers')
-const { validateURLFriendly } = require('../misc/utils/validation')
-const publicationSites = require('../misc/utils/publication-sites')
 
 const router = export default express.Router()
 

@@ -1,21 +1,24 @@
- export const eventsPrefix = 'initialize'
+import fs from 'fs-extra';
+import path from 'path';
+import pump from '../misc/utils/pipe.js';
+import * as restUtils from '../datasets/utils/rest.js';
+import * as datasetUtils from '../datasets/utils/index.js';
+import * as datasetsService from '../datasets/service.js';
+import { getPseudoUser } from '../misc/utils/users.js';
+import * as permissionsUtils from '../misc/utils/permissions.js';
+import { lsMetadataAttachments, metadataAttachmentPath, lsAttachments, attachmentPath } from '../datasets/utils/files.js';
+import { applyTransactions } from '../datasets/utils/rest.js';
+import iterHits from '../datasets/es/iter-hits.js';
+import taskProgress from '../datasets/utils/task-progress.js';
+import * as filesUtils from '../datasets/utils/files.js';
+import debugLib from 'debug';
+
+const debug = debugLib(`worker:initializer:${dataset.id}`);
+
+export const eventsPrefix = 'initialize'
 
  export const process = async function (app, dataset) {
-  const fs = require('fs-extra')
-  const path = require('path')
-  const pump = require('../misc/utils/pipe')
-  const restUtils = require('../datasets/utils/rest')
-  const datasetUtils = require('../datasets/utils')
-  const datasetsService = require('../datasets/service')
-  const { getPseudoUser } = require('../misc/utils/users')
-  const permissionsUtils = require('../misc/utils/permissions')
-  const { lsMetadataAttachments, metadataAttachmentPath, lsAttachments, attachmentPath } = require('../datasets/utils/files')
-  const { applyTransactions } = require('../datasets/utils/rest')
-  const iterHits = require('../datasets/es/iter-hits')
-  const taskProgress = require('../datasets/utils/task-progress')
-  const filesUtils = require('../datasets/utils/files')
-
-  const debug = require('debug')(`worker:initializer:${dataset.id}`)
+  const debug = debugLib(`worker:initializer:${dataset.id}`)
   const db = app.get('db')
 
   /** @type {any} */

@@ -1,7 +1,9 @@
-const findUtils = require('../misc/utils/find')
-const permissions = require('../misc/utils/permissions')
-const { clean } = require('./utils')
-const config = /** @type {any} */(require('config'))
+
+import findUtils from '../misc/utils/find.js'
+import permissions from '../misc/utils/permissions.js'
+import { clean } from './utils.js'
+import _config from 'config'
+const config = /** @type {any} */(_config)
 
 const filterFields = {
   url: 'url',
@@ -32,7 +34,7 @@ const fieldsMap = {
  * @param {Record<string, string>} reqQuery
  * @param {any} user
  */
- export const findApplications = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
+export const findApplications = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
   const applications = db.collection('applications')
 
   const tolerateStale = !!publicationSite

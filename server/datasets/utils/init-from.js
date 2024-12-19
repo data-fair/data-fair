@@ -1,4 +1,5 @@
-const { getOwnerRole } = require('../../misc/utils/permissions')
+
+import { getOwnerRole } from '../../misc/utils/permissions.js'
 
  export const prepareInitFrom = (dataset, user) => {
   dataset.initFrom.role = getOwnerRole(dataset.owner, user)

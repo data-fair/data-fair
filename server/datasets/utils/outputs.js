@@ -1,8 +1,9 @@
-const { stringify: csvStrStream } = require('csv-stringify')
-const { stringify: csvStrSync } = require('csv-stringify/sync')
-const { Transform } = require('stream')
-const path = require('path')
-const Piscina = require('piscina')
+
+import { stringify as csvStrStream } from 'csv-stringify'
+import { stringify as csvStrSync } from 'csv-stringify/sync'
+import { Transform } from 'stream'
+import path from 'path'
+import Piscina from 'piscina'
 
 const results2sheetPiscina =  export const results2sheetPiscina = new Piscina({
   filename: path.resolve(__dirname, '../../datasets/threads/results2sheet.js'),

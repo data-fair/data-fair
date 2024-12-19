@@ -1,11 +1,5 @@
 // a small tool to switch between pump and pipeline to check if one of them is better
 // at handling some occasional "premature close" errors that crash the service
-const debug = require('debug')('pipe')
+import pump from 'pump'
 
-if (process.env.PIPE === 'pipeline') {
-  debug('PIPE: use native pipeline method to pipe streams together')
-  export default require('stream/promises').pipeline
-} else {
-  debug('PIPE: use npm pump module to pipe streams together')
-  export default require('util').promisify(require('pump'))
-}
+export default require('util').promisify(pump)

@@ -1,4 +1,5 @@
-const { aliasName, prepareQuery } = require('./commons')
+
+import { aliasName, prepareQuery } from './commons.js'
 
 export default async (client, dataset, query) => {
   const esQuery = prepareQuery(dataset, query)

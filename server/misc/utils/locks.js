@@ -1,14 +1,16 @@
-const { hostname } = require('node:os')
-const { nanoid } = require('nanoid')
-const config = require('config')
-const debug = require('debug')('locks')
 
+import { hostname } from 'node:os'
+import { nanoid } from 'nanoid'
+import config from 'config'
+import debugLib from 'debug'
+
+const debug = debugLib('locks')
 const pid = nanoid()
 
 debug('locks with pid', pid)
 
 let interval
- export const init = async db => {
+export const init = async db => {
   const locks = db.collection('locks')
   await locks.createIndex({ pid: 1 })
   try {
@@ -24,12 +26,12 @@ let interval
   }, (config.locks.ttl / 2) * 1000)
 }
 
- export const stop = async (db) => {
+export const stop = async (db) => {
   clearInterval(interval)
   await db.collection('locks').deleteMany({ pid })
 }
 
- export const acquire = async (db, _id, origin) => {
+export const acquire = async (db, _id, origin) => {
   debug('acquire', _id, origin)
   const locks = db.collection('locks')
   try {
@@ -50,7 +52,7 @@ let interval
   }
 }
 
- export const release = async (db, _id, delay = 0) => {
+export const release = async (db, _id, delay = 0) => {
   debug('release', _id)
   if (delay) {
     const date = new Date((new Date()).getTime() + delay)

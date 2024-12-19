@@ -1,18 +1,19 @@
-const config = /** @type {any} */(require('config'))
-const path = require('node:path')
-const equal = require('deep-equal')
-const moment = require('moment')
-const createError = require('http-errors')
-const mime = require('mime-types')
-const CronJob = require('cron').CronJob
-const geo = require('./geo')
-const ajv = require('../../misc/utils/ajv')
-const datasetUtils = require('./')
-const extensions = require('./extensions')
-const schemaUtils = require('./schema')
-const datasetPatchSchema = require('../../../contract/dataset-patch')
-const virtualDatasetsUtils = require('./virtual')
+import _config from 'config'
+import path from 'node:path'
+import equal from 'deep-equal'
+import moment from 'moment'
+import createError from 'http-errors'
+import mime from 'mime-types'
+import { CronJob } from 'cron'
+import * as geo from './geo.js'
+import ajv from '../../misc/utils/ajv.js'
+import * as datasetUtils from './index.js'
+import * as extensions from './extensions.js'
+import * as schemaUtils from './schema.js'
+import datasetPatchSchema from '../../../contract/dataset-patch.js'
+import * as virtualDatasetsUtils from './virtual.js'
 
+const config = /** @type {any} */(_config)
  export const validatePatch = ajv.compile(datasetPatchSchema)
 
 /**

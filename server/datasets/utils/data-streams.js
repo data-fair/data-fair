@@ -1,20 +1,20 @@
-const fs = require('fs-extra')
-const { Writable, Transform } = require('stream')
-const csv = require('csv-parser')
-const JSONStream = require('JSONStream')
-const { stringify: csvStrStream } = require('csv-stringify')
-const flatten = require('flat')
-const tmp = require('tmp-promise')
-const mimeTypeStream = require('mime-type-stream')
-const createError = require('http-errors')
-const { createGunzip } = require('zlib')
-const DecodeStream = require('../../misc/utils/decode-stream')
-const metrics = require('../../misc/utils/metrics')
-const { csvTypes } = require('../../workers/file-normalizer')
-const fieldsSniffer = require('./fields-sniffer')
-const restDatasetsUtils = require('./rest')
-const { filePath, fullFilePath, tmpDir } = require('./files')
-const pump = require('../../misc/utils/pipe')
+import fs from 'fs-extra'
+import { Writable, Transform } from 'stream'
+import csv from 'csv-parser'
+import JSONStream from 'JSONStream'
+import { stringify as csvStrStream } from 'csv-stringify'
+import flatten from 'flat'
+import tmp from 'tmp-promise'
+import mimeTypeStream from 'mime-type-stream'
+import createError from 'http-errors'
+import { createGunzip } from 'zlib'
+import DecodeStream from '../../misc/utils/decode-stream.js'
+import metrics from '../../misc/utils/metrics.js'
+import { csvTypes } from '../../workers/file-normalizer.js'
+import fieldsSniffer from './fields-sniffer.js'
+import restDatasetsUtils from './rest.js'
+import { filePath, fullFilePath, tmpDir } from './files.js'
+import pump from '../../misc/utils/pipe.js'
 
  export const formatLine = (item, schema) => {
   for (const key of Object.keys(item)) {

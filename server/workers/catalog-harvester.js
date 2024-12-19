@@ -1,11 +1,11 @@
-const metrics = require('../misc/utils/metrics')
+import config from 'config'
+import metrics from '../misc/utils/metrics.js'
+import debugLib from 'debug'
+import { CronJob } from 'cron'
+import catalogs from '../catalogs/plugins/index.js'
 
- export const process = async function (app, catalog) {
-  const config = /** @type {any} */(require('config'))
-  const CronJob = require('cron').CronJob
-  const catalogs = require('../catalogs/plugins')
-
-  const debug = require('debug')(`worker:catalog-harvester:${catalog.id}`)
+export const process = async function (app, catalog) {
+  const debug = debugLib(`worker:catalog-harvester:${catalog.id}`)
   const db = app.get('db')
   const date = new Date()
 

@@ -1,9 +1,9 @@
 // A middleware that accepts an api key from the settings of a user/orga
 // and create a session with a pseudo user
-const crypto = require('crypto')
-const config = require('config')
-const createError = require('http-errors')
-const asyncWrap = require('../utils/async-handler')
+import crypto from 'crypto'
+import config from 'config'
+import createError from 'http-errors'
+import asyncWrap from '../utils/async-handler.js'
 
  export const readApiKey = async (db, rawApiKey, scope, asAccount, req) => {
   if (req?.resource?._readApiKey && (req.resource._readApiKey.current === rawApiKey || req.resource._readApiKey.previous === rawApiKey)) {

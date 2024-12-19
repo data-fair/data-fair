@@ -1,6 +1,9 @@
-const debug = require('debug')('db')
-const config = require('config')
-const { MongoClient } = require('mongodb')
+
+import debugLib from 'debug'
+import config from 'config'
+import { MongoClient } from 'mongodb'
+
+const debug = debugLib('db')
 
  export const ensureIndex = async (db, collection, key, options = {}) => {
   try {

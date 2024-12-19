@@ -1,14 +1,17 @@
-const config = /** @type {any} */(require('config'))
-const fs = require('fs-extra')
-const multer = require('multer')
-const createError = require('http-errors')
-const mime = require('mime-types')
-const { attachmentsDir, metadataAttachmentsDir, metadataAttachmentPath } = require('./files')
-const limits = require('../../misc/utils/limits')
-const exec = require('../../misc/utils/exec')
+import _config from 'config'
 
-const debug = require('debug')('attachments')
-const debugLimits = require('debug')('limits')
+import debugLib from 'debug'
+import fs from 'fs-extra'
+import multer from 'multer'
+import createError from 'http-errors'
+import mime from 'mime-types'
+import { attachmentsDir, metadataAttachmentsDir, metadataAttachmentPath } from './files.js'
+import limits from '../../misc/utils/limits.js'
+import exec from '../../misc/utils/exec.js'
+
+const config = /** @type {any} */(_config)
+const debug = debugLib('attachments')
+const debugLimits = debugLib('limits')
 
  export const addAttachments = async (dataset, attachmentsArchive) => {
   const dir = attachmentsDir(dataset)

@@ -1,5 +1,7 @@
-const spawn = require('child-process-promise').spawn
-const debug = require('debug')('exec')
+import { spawn } from 'child-process-promise'
+import debugLib from 'debug'
+
+const debug = debugLib('exec')
 
 export default async (cmd, args, options) => {
   try {

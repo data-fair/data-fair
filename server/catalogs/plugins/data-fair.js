@@ -1,51 +1,52 @@
-const url = require('url')
-const createError = require('http-errors')
-const util = require('util')
-const axios = require('../../misc/utils/axios')
-const Extractor = require('html-extractor')
+import url from 'url'
+import createError from 'http-errors'
+import util from 'util'
+import axios from '../../misc/utils/axios.js'
+import Extractor from 'html-extractor'
+
 const htmlExtractor = new Extractor()
 htmlExtractor.extract = util.promisify(htmlExtractor.extract)
 
- export const title = 'Data Fair'
- export const description = 'Visualisez, exploitez et partagez vos données en quelques clics !'
- export const docUrl = 'https://data-fair.github.io/3/'
- export const optionalCapabilities = [
+export const title = 'Data Fair'
+export const description = 'Visualisez, exploitez et partagez vos données en quelques clics !'
+export const docUrl = 'https://data-fair.github.io/3/'
+export const optionalCapabilities = [
   'apiKey',
   'publishDataset'
 ]
 
- export const init = async (catalogUrl) => {
+export const init = async (catalogUrl) => {
   await axios.get(url.resolve(catalogUrl, 'api/v1/ping'))
   const html = axios.get(url.resolve(catalogUrl))
   const data = await htmlExtractor.extract(html)
   return { url: catalogUrl, title: data.meta.title }
 }
 
- export const searchOrganizations = async (catalogUrl, q) => {
+export const searchOrganizations = async (catalogUrl, q) => {
   return { results: [{ id: null, name: 'Organization owning API key' }] }
 }
 
- export const publishDataset = async (catalog, dataset, publication) => {
+export const publishDataset = async (catalog, dataset, publication) => {
   return createOrUpdateDataset(catalog, dataset, publication)
 }
 
- export const deleteDataset = async (catalog, dataset, publication) => {
+export const deleteDataset = async (catalog, dataset, publication) => {
   throw createError(501, `Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
 }
 
- export const publishApplication = async (catalog, application, publication, datasets) => {
+export const publishApplication = async (catalog, application, publication, datasets) => {
   throw createError(501, 'La publication d\'applications vers Data Fair n\'est pas disponible')
 }
 
- export const deleteApplication = async (catalog, application, publication) => {
+export const deleteApplication = async (catalog, application, publication) => {
   throw createError(501, 'La dépublication d\'applications vers Data Fair n\'est pas disponible')
 }
 
- export const listDatasets = async (catalog, params = {}) => {
+export const listDatasets = async (catalog, params = {}) => {
   throw createError(501, 'La récupération d\'une liste de jeux de données depuis Data Fair n\'est pas disponible')
 }
 
- export const getDataset = async (catalog, datasetId, req) => {
+export const getDataset = async (catalog, datasetId, req) => {
   throw createError(501, 'La récupération d\'une définition de jeu de données depuis Data Fair n\'est pas disponible')
 }
 

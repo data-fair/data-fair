@@ -1,3 +1,4 @@
+
 const findUtils = require('../misc/utils/find')
 const permissions = require('../misc/utils/permissions')
 const { prepareMarkdownContent } = require('../misc/utils/markdown')
@@ -8,7 +9,7 @@ const { prepareMarkdownContent } = require('../misc/utils/markdown')
  * @param {boolean} html
  * @returns {any}
  */
- export const clean = (catalog, html = false) => {
+export const clean = (catalog, html = false) => {
   catalog.public = permissions.isPublic('catalogs', catalog)
   delete catalog.permissions
   if (catalog.apiKey) catalog.apiKey = '**********'

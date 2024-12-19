@@ -1,15 +1,16 @@
-const debugMasterData = require('debug')('master-data')
+import debug from 'debug'
+import extensionsUtils from '../datasets/utils/extensions.js'
+import datasetUtils from '../datasets/utils.js'
+import datasetService from '../datasets/service.js'
+import restDatasetsUtils from '../datasets/utils/rest.js'
+
+const debugMasterData = debug('master-data')
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
- export const eventsPrefix = 'extend'
+export const eventsPrefix = 'extend'
 
- export const process = async function (app, dataset) {
-  const extensionsUtils = require('../datasets/utils/extensions')
-  const datasetUtils = require('../datasets/utils')
-  const datasetService = require('../datasets/service')
-  const restDatasetsUtils = require('../datasets/utils/rest')
-
-  const debug = require('debug')(`worker:extender:${dataset.id}`)
+export const process = async function (app, dataset) {
+  const debug = debug(`worker:extender:${dataset.id}`)
 
   let updateMode = 'all'
   if (dataset.status === 'finalized' && dataset.extensions.find(e => e.needsUpdate)) updateMode = 'updatedExtensions'

@@ -1,5 +1,6 @@
-const sanitizeHtml = require('../../../shared/sanitize-html')
-const i18nUtils = require('../../i18n/utils')
+
+import sanitizeHtml from '../../../shared/sanitize-html.js'
+import * as i18nUtils from '../../i18n/utils.js'
 
  export const getPrivateOwnerVocabulary = async (db, owner) => {
   const settings = await db.collection('settings')

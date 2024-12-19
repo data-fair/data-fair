@@ -1,8 +1,9 @@
-const config = require('config')
-const createError = require('http-errors')
-const { prepareQuery, aliasName } = require('./commons.js')
 
- export const max = async (client, dataset, fieldKey, query) => {
+import config from 'config'
+import createError from 'http-errors'
+import { prepareQuery, aliasName } from './commons.js'
+
+export const max = async (client, dataset, fieldKey, query) => {
   const field = dataset.schema.find(p => p.key === fieldKey)
   if (!field) throw createError(400, `field "${fieldKey}" is unknown`)
   const esQuery = prepareQuery(dataset, query)
@@ -21,7 +22,7 @@ const { prepareQuery, aliasName } = require('./commons.js')
   return esResponse.aggregations.max.value
 }
 
- export const min = async (client, dataset, fieldKey, query) => {
+export const min = async (client, dataset, fieldKey, query) => {
   const field = dataset.schema.find(p => p.key === fieldKey)
   if (!field) throw createError(400, `field "${fieldKey}" is unknown`)
   const esQuery = prepareQuery(dataset, query)

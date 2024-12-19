@@ -1,5 +1,5 @@
-const config = /** @type {any} */(require('config'))
-const i18n = require('i18n')
+import config from 'config'
+import i18n from 'i18n'
 
 const defaultLocale = /** @type {'en' | 'fr'} */(config.i18n.defaultLocale)
 

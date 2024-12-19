@@ -1,9 +1,11 @@
-const config = require('config')
-const axios = require('./axios')
-const metrics = require('./metrics')
-const debug = require('debug')('notifications')
+import config from 'config'
+import axios from './axios.js'
+import metrics from './metrics.js'
+import debugLib from 'debug'
 
- export const send = async (notification, subscribedOnly = false) => {
+const debug = debugLib('notifications')
+
+export const send = async (notification, subscribedOnly = false) => {
   if (global.events) global.events.emit('notification', notification)
   debug('send notification', notification)
   const notifyUrl = config.privateNotifyUrl || config.notifyUrl
@@ -14,7 +16,7 @@ const debug = require('debug')('notifications')
   }
 }
 
- export const subscribe = async (req, subscription) => {
+export const subscribe = async (req, subscription) => {
   subscription = {
     recipient: { id: req.user.id, name: req.user.name },
     ...subscription

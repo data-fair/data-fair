@@ -1,5 +1,6 @@
-const path = require('path')
-const Piscina = require('piscina')
+
+import path from 'path';
+import Piscina from 'piscina';
 
 const geojson2pbfPiscina =  export const geojson2pbfPiscina = new Piscina({
   filename: path.resolve(__dirname, '../../datasets/threads/geojson2pbf.js'),

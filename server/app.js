@@ -1,14 +1,22 @@
-const config = /** @type {any} */(require('config'))
-const express = require('express')
-const memoize = require('memoizee')
-const dbUtils = require('./misc/utils/db')
-const esUtils = require('./datasets//es')
-const wsUtils = require('./misc/utils/ws')
-const locksUtils = require('./misc/utils/locks')
-const observe = require('./misc/utils/observe')
-const asyncWrap = require('./misc/utils/async-handler')
-const metrics = require('./misc/utils/metrics')
-const debugDomain = require('debug')('domain')
+import config from 'config'
+import express from 'express'
+import memoize from 'memoizee'
+import * as dbUtils from './misc/utils/db.js'
+import * as esUtils from './datasets/es.js'
+import * as wsUtils from './misc/utils/ws.js'
+import * as locksUtils from './misc/utils/locks.js'
+import observe from './misc/utils/observe.js'
+import asyncWrap from './misc/utils/async-handler.js'
+import metrics from './misc/utils/metrics.js'
+import {middleware as apiKey} from './misc/utils/api-key.js'
+import root from './misc/routers/root.js'
+import * as remoteServices from './remote-services/router.js'
+import catalog from './misc/routers/catalog.js'
+import catalogs from './catalogs/router.js'
+import baseApplications from './base-applications/router.js'
+import debug from 'debug'
+
+const debugDomain = debug('domain')
 
 // a global event emitter for testing
 if (process.env.NODE_ENV === 'test') {
@@ -151,13 +159,12 @@ if (config.mode.includes('server')) {
   }))
 
   // Business routers
-  const apiKey = require('./misc/utils/api-key').middleware
-  app.use('/api/v1', require('./misc/routers/root'))
-  app.use('/api/v1/remote-services', require('./remote-services/router').router)
-  app.use('/api/v1/remote-services-actions', require('./remote-services/router').actionsRouter)
-  app.use('/api/v1/catalog', apiKey('datasets'), require('./misc/routers/catalog'))
-  app.use('/api/v1/catalogs', apiKey('catalogs'), require('./catalogs/router'))
-  app.use('/api/v1/base-applications', require('./base-applications/router').router)
+  app.use('/api/v1', root)
+  app.use('/api/v1/remote-services', remoteServices.router)
+  app.use('/api/v1/remote-services-actions', remoteServices.actionsRouter)
+  app.use('/api/v1/catalog', apiKey('datasets'), catalog)
+  app.use('/api/v1/catalogs', apiKey('catalogs'), catalogs)
+  app.use('/api/v1/base-applications', baseApplications.router)
   app.use('/api/v1/applications', apiKey('applications'), require('./applications/router'))
   app.use('/api/v1/datasets', rateLimiting.middleware(), require('./datasets/router'))
   app.use('/api/v1/stats', apiKey('stats'), require('./misc/routers/stats'))
@@ -276,6 +283,7 @@ if (config.mode.includes('server')) {
     const resource = await app.get('db').collection(process.argv[3] + 's').findOne({ id: process.argv[4] })
     if (process.env.DATASET_DRAFT === 'true') {
       const datasetUtils = require('./datasets/utils')
+
       datasetUtils.mergeDraft(resource)
     }
     await require('./workers').tasks[process.argv[2]].process(app, resource)

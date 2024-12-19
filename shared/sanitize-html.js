@@ -8,4 +8,4 @@ const opts = {
   }
 }
 
-module.exports = (html) => sanitizeHtml(html, opts)
+export default (html) => sanitizeHtml(html, opts)

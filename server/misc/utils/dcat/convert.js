@@ -1,15 +1,14 @@
-// const { xml2js } = require('xml-js')
-const RdfXmlParser = require('rdfxml-streaming-parser').RdfXmlParser
-const JsonLdSerializer = require('jsonld-streaming-serializer').JsonLdSerializer
-const { Writable, Transform } = require('stream')
-const pump = require('../pipe')
+import { RdfXmlParser } from 'rdfxml-streaming-parser'
+import { JsonLdSerializer } from 'jsonld-streaming-serializer'
+import { Writable, Transform } from 'stream'
+import pump from '../pipe.js'
 
 /**
  * @param {string} dcat
  * @param {string} baseIRI
  * @returns
  */
- export const fromXML = async (dcat, baseIRI) => {
+export const fromXML = async (dcat, baseIRI) => {
   const intoStream = (await import('into-stream')).default
   const myParser = new RdfXmlParser({ validateUri: false, baseIRI })
   const mySerializer = new JsonLdSerializer({ space: '  ' })

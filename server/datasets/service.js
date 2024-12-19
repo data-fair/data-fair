@@ -1,26 +1,28 @@
-const config = /** @type {any} */(require('config'))
-const fs = require('fs-extra')
-const path = require('path')
-const createError = require('http-errors')
-const memoize = require('memoizee')
-const equal = require('deep-equal')
-const findUtils = require('../misc/utils/find')
-const permissions = require('../misc/utils/permissions')
-const datasetUtils = require('./utils')
-const restDatasetsUtils = require('./utils/rest')
-const esUtils = require('./es')
-const webhooks = require('../misc/utils/webhooks')
-const { updateStorage } = require('./utils/storage')
-const { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile } = require('./utils/files')
-const { getSchemaBreakingChanges } = require('./utils/schema')
-const { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } = require('./utils/extensions')
-const { validateURLFriendly } = require('../misc/utils/validation')
-const assertImmutable = require('../misc/utils/assert-immutable')
-const { curateDataset, titleFromFileName } = require('./utils')
-const virtualDatasetsUtils = require('./utils/virtual')
-const { prepareInitFrom } = require('./utils/init-from')
+import _config from 'config'
+import debugLib from 'debug'
+import fs from 'fs-extra';
+import path from 'path';
+import createError from 'http-errors';
+import memoize from 'memoizee';
+import equal from 'deep-equal';
+import * as findUtils from '../misc/utils/find.js';
+import * as permissions from '../misc/utils/permissions.js';
+import * as datasetUtils from './utils.js';
+import * as restDatasetsUtils from './utils/rest.js';
+import * as esUtils from './es.js';
+import * as webhooks from '../misc/utils/webhooks.js';
+import { updateStorage } from './utils/storage.js';
+import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile } from './utils/files.js';
+import { getSchemaBreakingChanges } from './utils/schema.js';
+import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.js';
+import { validateURLFriendly } from '../misc/utils/validation.js';
+import assertImmutable from '../misc/utils/assert-immutable.js';
+import { curateDataset, titleFromFileName } from './utils.js';
+import * as virtualDatasetsUtils from './utils/virtual.js';
+import { prepareInitFrom } from './utils/init-from.js';
 
-const debugMasterData = require('debug')('master-data')
+const config = /** @type {any} */(_config)
+const debugMasterData = debugLib('master-data')
 
 const filterFields = {
   concepts: 'schema.x-refersTo',

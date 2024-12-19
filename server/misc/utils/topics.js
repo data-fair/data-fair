@@ -1,6 +1,6 @@
 
 // propagate topics modifications to applications and datasets
- export const updateTopics = async (db, owner, oldTopics, newTopics) => {
+export const updateTopics = async (db, owner, oldTopics, newTopics) => {
   for (const topic of newTopics) {
     const filter = { 'owner.type': owner.type, 'owner.id': owner.id, 'topics.id': topic.id }
     const topicReference = JSON.parse(JSON.stringify(topic))

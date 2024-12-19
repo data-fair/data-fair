@@ -1,13 +1,14 @@
-const config = /** @type {any} */(require('config'))
-const createError = require('http-errors')
-const equal = require('deep-equal')
-const vocabulary = require('../../../contract/vocabulary.json')
-const geoUtils = require('./geo')
-const i18nUtils = require('../../i18n/utils')
-const settingsUtils = require('../../misc/utils/settings')
-const { cleanJsonSchemaProperty } = require('../../../shared/schema')
+import _config from 'config'
+import createError from 'http-errors';
+import equal from 'deep-equal';
+import vocabulary from '../../../contract/vocabulary.json';
+import * as geoUtils from './geo.js';
+import * as i18nUtils from '../../i18n/utils.js';
+import * as settingsUtils from '../../misc/utils/settings.js';
+import { cleanJsonSchemaProperty } from '../../../shared/schema.js';
+import capabilitiesSchema from '../../../contract/capabilities.js';
 
-const capabilitiesSchema = require('../../../contract/capabilities.js')
+const config = /** @type {any} */(_config)
 const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter(key => capabilitiesSchema.properties[key]?.default === false)
 
 /**

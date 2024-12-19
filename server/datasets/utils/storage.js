@@ -1,13 +1,15 @@
-const virtualDatasetsUtils = require('./virtual')
-const esUtils = require('../es')
-const restDatasetsUtils = require('./rest')
-const createError = require('http-errors')
-const i18n = require('i18n')
-const fs = require('fs-extra')
-const limits = require('../../misc/utils/limits')
-const config = /** @type {any} */(require('config'))
-const debugLimits = require('debug')('limits')
-const { dataFiles, lsAttachments, lsMetadataAttachments, attachmentPath, metadataAttachmentPath } = require('./files')
+import virtualDatasetsUtils from './virtual.js'
+import esUtils from '../es.js'
+import restDatasetsUtils from './rest.js'
+import createError from 'http-errors'
+import i18n from 'i18n'
+import fs from 'fs-extra'
+import limits from '../../misc/utils/limits.js'
+import config from 'config'
+import debug from 'debug'
+import { dataFiles, lsAttachments, lsMetadataAttachments, attachmentPath, metadataAttachmentPath } from './files.js'
+
+const debugLimits = debug('limits')
 
 /**
  * @param {import('mongodb').Db} db

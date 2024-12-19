@@ -1,7 +1,7 @@
 // this is run in a thread as it is quite cpu and memory intensive
 
-const geojsonvt = require('geojson-vt')
-const vtpbf = require('vt-pbf')
+import geojsonvt from 'geojson-vt'
+import vtpbf from 'vt-pbf'
 
 export default ({ geojson, xyz }) => {
   const layers = {}

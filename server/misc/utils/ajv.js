@@ -1,7 +1,8 @@
-const fs = require('fs-extra')
-const path = require('path')
-const createError = require('http-errors')
-const { ajv, errorsText, localize } = require('../../../shared/ajv')
+
+import fs from 'fs-extra'
+import path from 'path'
+import createError from 'http-errors'
+import { ajv, errorsText, localize } from '../../../shared/ajv.js'
 
 // cf https://github.com/ajv-validator/ajv/issues/1745
 let openApiSchemaStr = fs.readFileSync(path.join(__dirname, '../../../contract/openapi-3.1.json'), 'utf8')
@@ -10,7 +11,7 @@ const openApiSchema = JSON.parse(openApiSchemaStr)
 
 ajv.addSchema(openApiSchema, 'openapi-3.1')
 
- export const compile = (schema, throws = true) => {
+export const compile = (schema, throws = true) => {
   const validate = typeof schema === 'string' ? ajv.getSchema(schema) : ajv.compile(schema)
   const myValidate = (data, locale = 'fr', errorsCallback) => {
     const valid = validate(data)

@@ -1,8 +1,9 @@
- export const process = async function (app, dataset) {
-  const readApiKeyUtils = require('../datasets/utils/read-api-key')
-  const datasetsService = require('../datasets/service')
+import readApiKeyUtils from '../datasets/utils/read-api-key.js'
+import datasetsService from '../datasets/service.js'
+import debugLib from 'debug'
 
-  const debug = require('debug')(`worker:rest-exporter-csv:${dataset.id}`)
+export const process = async function (app, dataset) {
+  const debug = debugLib(`worker:rest-exporter-csv:${dataset.id}`)
 
   const patch = { readApiKey: { ...dataset.readApiKey } }
   patch._readApiKey = readApiKeyUtils.update(dataset.owner, patch.readApiKey, dataset._readApiKey)

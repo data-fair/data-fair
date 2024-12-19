@@ -1,18 +1,19 @@
- export const eventsPrefix = 'store'
+import fs from 'fs-extra'
+import datasetUtils from '../datasets/utils.js'
+import datasetsService from '../datasets/service.js'
+import { replaceAllAttachments } from '../datasets/utils/attachments.js'
+import { basicTypes } from './file-normalizer.js'
+import datasetFileSample from '../datasets/utils/file-sample.js'
+import metrics from '../misc/utils/metrics.js'
+import chardet from 'chardet'
+import md5File from 'md5-file'
+import JSONStream from 'JSONStream'
+import debugLib from 'debug'
 
- export const process = async function (app, dataset) {
-  const fs = require('fs-extra')
-  const datasetUtils = require('../datasets/utils')
-  const datasetsService = require('../datasets/service')
-  const { replaceAllAttachments } = require('../datasets/utils/attachments')
-  const { basicTypes } = require('./file-normalizer')
-  const datasetFileSample = require('../datasets/utils/file-sample')
-  const metrics = require('../misc/utils/metrics')
-  const chardet = require('chardet')
-  const md5File = require('md5-file')
-  const JSONStream = require('JSONStream')
+export const eventsPrefix = 'store'
 
-  const debug = require('debug')(`worker:file-storer:${dataset.id}`)
+export const process = async function (app, dataset) {
+  const debug = debugLib(`worker:file-storer:${dataset.id}`)
 
   /** @type {any} */
   const patch = { loaded: null, status: 'stored' }

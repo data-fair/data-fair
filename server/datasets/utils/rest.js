@@ -1,35 +1,37 @@
-const config = /** @type {any} */(require('config'))
-const crypto = require('node:crypto')
-const fs = require('fs-extra')
-const path = require('path')
-const createError = require('http-errors')
-const { nanoid } = require('nanoid')
-const pump = require('../../misc/utils/pipe')
-const ajv = require('../../misc/utils/ajv')
-const multer = require('multer')
-const mime = require('mime-types')
-const { Readable, Transform, Writable } = require('stream')
-const moment = require('moment')
-const { crc32 } = require('crc')
-const md5File = require('md5-file')
-const stableStringify = require('fast-json-stable-stringify')
-const LinkHeader = require('http-link-header')
-const unzipper = require('unzipper')
-const dayjs = require('dayjs')
-const duration = require('dayjs/plugin/duration')
+import _config from 'config'
+import crypto from 'node:crypto'
+import fs from 'fs-extra'
+import path from 'path'
+import createError from 'http-errors'
+import { nanoid } from 'nanoid'
+import pump from '../../misc/utils/pipe.js'
+import ajv from '../../misc/utils/ajv.js'
+import multer from 'multer'
+import mime from 'mime-types'
+import { Readable, Transform, Writable } from 'stream'
+import moment from 'moment'
+import { crc32 } from 'crc'
+import md5File from 'md5-file'
+import stableStringify from 'fast-json-stable-stringify'
+import LinkHeader from 'http-link-header'
+import unzipper from 'unzipper'
+import dayjs from 'dayjs'
+import duration from 'dayjs/plugin/duration.js'
+import * as storageUtils from './storage.js'
+import * as extensionsUtils from './extensions.js'
+import * as findUtils from '../../misc/utils/find.js'
+import * as metrics from '../../misc/utils/metrics.js'
+import * as fieldsSniffer from './fields-sniffer.js'
+import { transformFileStreams, formatLine } from './data-streams.js'
+import { attachmentPath, lsAttachments } from './files.js'
+import { jsonSchema } from './schema.js'
+import { tmpDir } from './files.js'
+import * as esUtils from '../../datasets/es.js'
+import { tabularTypes } from '../../workers/file-normalizer.js'
+import Piscina from 'piscina'
+
 dayjs.extend(duration)
-const storageUtils = require('./storage')
-const extensionsUtils = require('./extensions')
-const findUtils = require('../../misc/utils/find')
-const metrics = require('../../misc/utils/metrics')
-const fieldsSniffer = require('./fields-sniffer')
-const { transformFileStreams, formatLine } = require('./data-streams')
-const { attachmentPath, lsAttachments } = require('./files')
-const { jsonSchema } = require('./schema')
-const { tmpDir } = require('./files')
-const esUtils = require('../../datasets/es')
-const { tabularTypes } = require('../../workers/file-normalizer')
-const Piscina = require('piscina')
+const config = /** @type {any} */(_config)
 
 const sheet2csvPiscina =  export const sheet2csvPiscina = new Piscina({
   filename: path.resolve(__dirname, '../threads/sheet2csv.js'),

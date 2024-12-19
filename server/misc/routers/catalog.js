@@ -1,15 +1,16 @@
-const express = require('express')
-const createError = require('http-errors')
-const i18n = require('i18n')
-const mime = require('mime')
-const asyncWrap = require('../utils/async-handler')
-const findUtils = require('../utils/find')
-const datasetUtils = require('../../datasets/utils')
-const permissions = require('../../misc/utils/permissions')
-const catalogApiDocs = require('../../../contract/site-catalog-api-docs')
-const dcatContext = require('../utils/dcat/context')
+import express from 'express'
+import createError from 'http-errors'
+import i18n from 'i18n'
+import mime from 'mime'
+import asyncWrap from '../utils/async-handler.js'
+import findUtils from '../utils/find.js'
+import datasetUtils from '../../datasets/utils.js'
+import permissions from '../../misc/utils/permissions.js'
+import catalogApiDocs from '../../../contract/site-catalog-api-docs.js'
+import dcatContext from '../utils/dcat/context.js'
 
-const router = export default express.Router()
+const router = express.Router()
+export default router
 
 router.use((req, res, next) => {
   if (req.mainPublicationSite) req.publicationSite = req.mainPublicationSite

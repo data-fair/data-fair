@@ -1,19 +1,21 @@
 // Finalize dataset for publication
+import config from 'config';
+import esUtils from '../datasets/es.js';
+import geoUtils from '../datasets/utils/geo.js';
+import datasetUtils from '../datasets/utils/index.js';
+import datasetService from '../datasets/service.js';
+import attachmentsUtils from '../datasets/utils/attachments.js';
+import virtualDatasetsUtils from '../datasets/utils/virtual.js';
+import taskProgress from '../datasets/utils/task-progress.js';
+import restDatasetsUtils from '../datasets/utils/rest.js';
+import debugLib from 'debug';
+
  export const eventsPrefix = 'finalize'
 
  export const process = async function (app, _dataset) {
   let dataset = _dataset
-  const config = /** @type {any} */(require('config'))
-  const esUtils = require('../datasets/es')
-  const geoUtils = require('../datasets/utils/geo')
-  const datasetUtils = require('../datasets/utils')
-  const datasetService = require('../datasets/service')
-  const attachmentsUtils = require('../datasets/utils/attachments')
-  const virtualDatasetsUtils = require('../datasets/utils/virtual')
-  const taskProgress = require('../datasets/utils/task-progress')
-  const restDatasetsUtils = require('../datasets/utils/rest')
-
-  const debug = require('debug')(`worker:finalizer:${dataset.id}`)
+  
+  const debug = debugLib(`worker:finalizer:${dataset.id}`)
 
   const db = app.get('db')
   const es = app.get('es')

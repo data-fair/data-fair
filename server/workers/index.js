@@ -13,23 +13,23 @@ const workersTasksHistogram = new Histogram({
   labelNames: ['task', 'status']
 })
 
-const tasks =  export const tasks = {
-  initializer: require('./initializer'),
-  fileDownloader: require('./file-downloader'),
-  fileStorer: require('./file-storer'),
-  fileNormalizer: require('./file-normalizer'),
-  csvAnalyzer: require('./csv-analyzer'),
-  geojsonAnalyzer: require('./geojson-analyzer'),
-  fileValidator: require('./file-validator'),
-  extender: require('./extender'),
-  indexer: require('./indexer'),
-  finalizer: require('./finalizer'),
-  datasetPublisher: require('./dataset-publisher'),
-  ttlManager: require('./ttl-manager'),
-  restExporterCSV: require('./rest-exporter-csv'),
-  applicationPublisher: require('./application-publisher'),
-  catalogHarvester: require('./catalog-harvester'),
-  readApiKeyRenewer: require('./read-api-key-renewer')
+export const tasks = {
+  initializer: async () => import('./initializer.js'),
+  fileDownloader: async () => import('./file-downloader.js'),
+  fileStorer: async () => import('./file-storer.js'),
+  fileNormalizer: async () => import('./file-normalizer.js'),
+  csvAnalyzer: async () => import('./csv-analyzer.js'),
+  geojsonAnalyzer: async () => import('./geojson-analyzer.js'),
+  fileValidator: async () => import('./file-validator.js'),
+  extender: async () => import('./extender.js'),
+  indexer: async () => import('./indexer.js'),
+  finalizer: async () => import('./finalizer.js'),
+  datasetPublisher: async () => import('./dataset-publisher.js'),
+  ttlManager: async () => import('./ttl-manager.js'),
+  restExporterCSV: async () => import('./rest-exporter-csv.js'),
+  applicationPublisher: async () => import('./application-publisher.js'),
+  catalogHarvester: async () => import('./catalog-harvester.js'),
+  readApiKeyRenewer: async () => import('./read-api-key-renewer.js')
 }
 
 // resolve functions that will be filled when we will be asked to stop the workers

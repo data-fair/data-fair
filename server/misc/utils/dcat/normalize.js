@@ -1,6 +1,6 @@
-const jsonld = require('jsonld')
-const context = require('./context')
-const convert = require('./convert')
+import jsonld from 'jsonld'
+import context from './context.js'
+import convert from './convert.js'
 
 // Frame is used to control serialization of nested objects, prefered over a flat graph
 /** @type {import('jsonld').NodeObject} */

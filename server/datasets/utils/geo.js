@@ -1,22 +1,24 @@
-const util = require('util')
-const fs = require('fs')
-const pointOnFeature = require('@turf/point-on-feature').default
-const bboxPolygon = require('@turf/bbox-polygon').default
-const turfBbox = require('@turf/bbox').default
-const rewind = require('@turf/rewind').default
-const cleanCoords = require('@turf/clean-coords').default
-const kinks = require('@turf/kinks').default
-const unkink = require('@turf/unkink-polygon').default
-const flatten = require('flat')
-const exec = require('child-process-promise').exec
-const tmp = require('tmp-promise')
-const writeFile = util.promisify(fs.writeFile)
-const proj4 = require('proj4')
-const { wktToGeoJSON, geojsonToWKT } = require('@terraformer/wkt')
-const debug = require('debug')('geo')
-const { tmpDir } = require('./files')
+import util from 'util'
+import fs from 'fs'
+import pointOnFeature from '@turf/point-on-feature'
+import bboxPolygon from '@turf/bbox-polygon'
+import turfBbox from '@turf/bbox'
+import rewind from '@turf/rewind'
+import cleanCoords from '@turf/clean-coords'
+import kinks from '@turf/kinks'
+import unkink from '@turf/unkink-polygon'
+import flatten from 'flat'
+import { exec } from 'child-process-promise'
+import tmp from 'tmp-promise'
+import proj4 from 'proj4'
+import { wktToGeoJSON, geojsonToWKT } from '@terraformer/wkt'
+import debugLib from 'debug'
+import { tmpDir } from './files.js'
+import projections from '../../../contract/projections.js'
 
-const projections = require('../../../contract/projections')
+const writeFile = util.promisify(fs.writeFile)
+const debug = debugLib('geo')
+
 const geomUri = 'https://purl.org/geojson/vocab#geometry'
 const latlonUri = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
 const latUri = ['http://schema.org/latitude', 'http://www.w3.org/2003/01/geo/wgs84_pos#lat']

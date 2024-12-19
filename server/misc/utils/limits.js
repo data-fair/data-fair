@@ -1,9 +1,9 @@
-const express = require('express')
-const config = require('config')
-const moment = require('moment')
-const ajv = require('../utils/ajv')
-const asyncWrap = require('./async-handler')
-const dbUtils = require('./db')
+import express from 'express';
+import config from 'config';
+import moment from 'moment';
+import ajv from '../utils/ajv.js';
+import asyncWrap from './async-handler.js';
+import dbUtils from './db.js';
 
 const limitTypeSchema = { type: 'object', properties: { limit: { type: 'number' }, consumption: { type: 'number' } } }
 const schema = {

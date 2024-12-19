@@ -1,6 +1,6 @@
-const webhooks = require('./webhooks')
-const permissions = require('./permissions')
-const createError = require('http-errors')
+import webhooks from './webhooks.js'
+import permissions from './permissions.js'
+import createError from 'http-errors'
 
 const getPublicationSiteInfo = async (db, owner, publicationSite) => {
   const [type, id] = publicationSite.split(':')

@@ -1,10 +1,10 @@
-const config = /** @type {any} */(require('config'))
-const { Transform } = require('node:stream')
-const { RateLimiter, TokenBucket } = require('limiter')
-const requestIp = require('request-ip')
-const asyncWrap = require('./async-handler')
 
-const debugLimits = require('debug')('limits')
+import config from 'config';
+import { Transform } from 'node:stream';
+import { RateLimiter, TokenBucket } from 'limiter';
+import requestIp from 'request-ip';
+import asyncWrap from './async-handler.js';
+import debug from 'debug'
 
 // IMPORTANT NOTE: all rate limiting is based on memory only, to be strictly applied when scaling the service
 // load balancing has to be based on a hash of the rate limiting key i.e the origin IP
