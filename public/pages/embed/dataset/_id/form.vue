@@ -98,7 +98,12 @@ export default {
   },
   async created () {
     if (Object.keys(this.queryContext.data).length) {
-      const existingLines = await this.$axios.$get(`${this.resourceUrl}/lines`, { params: this.queryContext.filters })
+      const existingLines = await this.$axios.$get(`${this.resourceUrl}/lines`, {
+        params: {
+          ...this.queryContext.filters,
+          t: new Date().getTime()
+        }
+      })
       this.existingLine = existingLines.results[0]
       this.line = this.existingLine ? { ...this.existingLine } : { ...this.queryContext.data }
     } else {
