@@ -1044,8 +1044,8 @@ export default {
       const params = {}
       if (this.virtualDatasetInitFromDesc || this.virtualDatasetInitFromAttachments) {
         const parts = []
-        if (this.virtualDatasetInitFromDesc) parts.push('metadataAttachments')
-        if (this.virtualDatasetInitFromAttachments) parts.push('description')
+        if (this.virtualDatasetInitFromDesc) parts.push('description')
+        if (this.virtualDatasetInitFromAttachments) parts.push('metadataAttachments')
         dataset = { ...dataset, initFrom: { dataset: this.virtualChildren[0]?.id, parts } }
       }
       this.importing = true
