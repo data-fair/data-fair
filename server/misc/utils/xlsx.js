@@ -1,7 +1,7 @@
 
 import { stringify as csvStr } from 'csv-stringify/sync'
 import dayjs from 'dayjs'
-import utc from 'dayjs/plugin/utc'
+import utc from 'dayjs/plugin/utc.js'
 
 dayjs.extend(utc)
 
@@ -89,7 +89,7 @@ dayjs.extend(utc)
 
 //  export const getCSV = async (filePath) => {
 //   let data = ''
-//   for await (const row of  export const iterCSV(filePath)) {
+//   for await (const row of iterCSV(filePath)) {
 //     data += row
 //   }
 //   console.log(data)

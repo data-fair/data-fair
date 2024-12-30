@@ -1,7 +1,7 @@
 import owner from './owner.js'
 import eventBy from './event-by.js'
-import permissions from './permissions.json'
-import catalogs from '../server/catalogs/plugins/index.js'
+import permissions from './permissions.json' with {type: 'json'}
+import * as catalogs from '../server/catalogs/plugins/index.js'
 
 export default {
   title: 'Catalog',

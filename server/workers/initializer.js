@@ -122,7 +122,7 @@ export const process = async function (app, dataset) {
         await fs.ensureFile(filePath)
         await pump(
           ...await restUtils.readStreams(db, parentDataset),
-          ...require('../datasets/utils/outputs').csvStreams({ ...dataset, ...patch }),
+          ...(await import('../datasets/utils/outputs.js')).csvStreams({ ...dataset, ...patch }),
           fs.createWriteStream(filePath)
         )
         await filesUtils.fsyncFile(filePath)

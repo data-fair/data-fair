@@ -1,13 +1,13 @@
 import _config from 'config'
 import prettyBytes from 'pretty-bytes'
 import datasetSchema from './dataset.js'
-import masterData from './master-data.js'
+import * as masterData from './master-data.js'
 import dataFiles from './data-files.js'
 import capabilities from './capabilities.js'
-import datasetUtils from '../server/datasets/utils.js'
+import * as datasetUtils from '../server/datasets/utils/index.js'
 import { acceptedMetricAggs } from '../server/datasets/es/metric-agg.js'
-import utils from './utils.js'
-import { version } from '../package.json'
+import * as utils from './utils.js'
+import pJson from '../package.json' with {type: 'json'}
 
 const config = /** @type {any} */(_config)
 
@@ -402,7 +402,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
   const info = {
     title: `API publique du jeu de données : ${dataset.title || dataset.slug}`,
     description,
-    version,
+    version: pJson.version,
     'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-dataset-${dataset.id}`,
     contact: { ...(ownerInfo.contact || {}) }
   }

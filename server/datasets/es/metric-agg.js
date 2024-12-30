@@ -1,8 +1,8 @@
-const createError = require('http-errors')
-const moment = require('moment-timezone')
-const config = require('config')
-const { prepareQuery, aliasName } = require('./commons')
-const capabilities = require('../../../contract/capabilities')
+import createError from 'http-errors'
+import moment from 'moment-timezone'
+import config from 'config'
+import { prepareQuery, aliasName } from './commons.js'
+import capabilities from '../../../contract/capabilities.js'
 
 const acceptedMetricAggsByType = {
   number: ['avg', 'sum', 'min', 'max', 'stats', 'value_count', 'percentiles'],
@@ -10,10 +10,10 @@ const acceptedMetricAggsByType = {
   other: ['value_count']
 }
 /** @type string[] */
- export const acceptedMetricAggs = []
+export const acceptedMetricAggs = []
 for (const metrics of Object.values(acceptedMetricAggsByType)) {
   for (const metric of metrics) {
-    if (! export const acceptedMetricAggs.includes(metric))  export const acceptedMetricAggs.push(metric)
+    if (!acceptedMetricAggs.includes(metric)) acceptedMetricAggs.push(metric)
   }
 }
 const defaultMetricAggsByType = {
@@ -48,7 +48,7 @@ const getMetricType = (field) => {
   }
 }
 
- export const assertMetricAccepted = (field, metric) => {
+export const assertMetricAccepted = (field, metric) => {
   const metricType = getMetricType(field)
   const acceptedAggs = acceptedMetricAggsByType[metricType]
   if (!acceptedAggs?.includes(metric)) {
@@ -56,7 +56,7 @@ const getMetricType = (field) => {
   }
 }
 
- export const agg = async (client, dataset, query) => {
+export const agg = async (client, dataset, query) => {
   if (!query.metric) throw createError(400, '"metric" parameter is required')
   const metricField = query.field || query.metric_field
   if (!metricField) throw createError(400, '"field" parameter is required')
@@ -65,7 +65,7 @@ const getMetricType = (field) => {
   if (field['x-capabilities'] && field['x-capabilities'].values === false) {
     throw createError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
   }
-   export const assertMetricAccepted(field, query.metric)
+  assertMetricAccepted(field, query.metric)
 
   const esQuery = prepareQuery(dataset, query)
   esQuery.size = 0
@@ -96,7 +96,7 @@ const getMetricType = (field) => {
   return response
 }
 
- export const simpleMetricsAgg = async (client, dataset, query) => {
+export const simpleMetricsAgg = async (client, dataset, query) => {
   let fields
   if (query.fields) {
     fields = query.fields.split(',')
@@ -121,7 +121,7 @@ const getMetricType = (field) => {
     }
     if (globalMetrics) {
       for (const metric of globalMetrics) {
-         export const assertMetricAccepted(field, metric)
+        assertMetricAccepted(field, metric)
       }
     }
     const metrics = globalMetrics ?? defaultMetricAggsByType[getMetricType(field)]

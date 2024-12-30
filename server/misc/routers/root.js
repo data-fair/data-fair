@@ -1,11 +1,11 @@
 
 import express from 'express'
-import status from './status.js'
+import * as status from './status.js'
 import apiDocs from '../../../contract/api-docs.js'
 import projections from '../../../contract/projections.js'
 import asyncWrap from '../utils/async-handler.js'
-import settingsUtils from '../utils/settings.js'
-import ajv from '../utils/ajv.js'
+import * as settingsUtils from '../utils/settings.js'
+import * as ajv from '../utils/ajv.js'
 import config from 'config'
 
 const validateApi = ajv.compile('openapi-3.1')

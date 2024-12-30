@@ -1,10 +1,10 @@
 import crypto from 'crypto'
 import config from 'config'
-import datasetUtils from '../utils.js'
-import metrics from '../../misc/utils/metrics.js'
+import * as datasetUtils from '../utils/index.js'
+import * as metrics from '../../misc/utils/metrics.js'
 import { aliasName, esProperty } from './commons.js'
 
- export const indexDefinition = async (dataset) => {
+export const indexDefinition = async (dataset) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))
   const properties = body.mappings.properties = {}
   for (const jsProp of await datasetUtils.extendedSchema(null, dataset, false)) {
@@ -26,9 +26,9 @@ function indexPrefix (dataset) {
   return `${config.indicesPrefix}-${dataset.id}-${crypto.createHash('sha1').update(dataset.id).digest('hex').slice(0, 12)}`
 }
 
- export const initDatasetIndex = async (client, dataset) => {
+export const initDatasetIndex = async (client, dataset) => {
   const tempId = `${indexPrefix(dataset)}-${Date.now()}`
-  const body = await  export const indexDefinition(dataset)
+  const body = await indexDefinition(dataset)
   await client.indices.create({ index: tempId, body })
   return tempId
 }
@@ -36,12 +36,12 @@ function indexPrefix (dataset) {
 // this method will routinely throw errors
 // we just try in case elasticsearch considers the new mapping compatible
 // so that we might optimize and reindex only when necessary
- export const updateDatasetMapping = async (client, dataset, oldDataset) => {
+export const updateDatasetMapping = async (client, dataset, oldDataset) => {
   const index = aliasName(dataset)
-  const newMapping = (await  export const indexDefinition(dataset)).mappings
+  const newMapping = (await indexDefinition(dataset)).mappings
   if (oldDataset) {
     // new inner fields do not trigger an error in ES but they are ignored if we don't fully reindex
-    const oldMapping = (await  export const indexDefinition(oldDataset)).mappings
+    const oldMapping = (await indexDefinition(oldDataset)).mappings
     for (const key of Object.keys(oldMapping.properties)) {
       const oldProperty = oldMapping.properties[key]
       const newProperty = newMapping.properties[key]
@@ -84,7 +84,7 @@ const safeDeleteIndex = async (client, index) => {
 }
 
 // delete indices and aliases of a dataset
- export const delete = async (client, dataset) => {
+export const deleteIndex = async (client, dataset) => {
   const { prodAlias } = await getAliases(client, dataset)
 
   if (dataset.draftReason) {
@@ -100,7 +100,7 @@ const safeDeleteIndex = async (client, index) => {
 }
 
 // replace the index referenced by a dataset's alias
- export const switchAlias = async (client, dataset, tempId) => {
+export const switchAlias = async (client, dataset, tempId) => {
   const name = aliasName(dataset)
   await client.indices.updateAliases({
     body: {
@@ -122,11 +122,11 @@ const safeDeleteIndex = async (client, index) => {
 }
 
 // move an index from the draft alias to the production alias
- export const validateDraftAlias = async (client, dataset, tempId) => {
+export const validateDraftAlias = async (client, dataset, tempId) => {
   const { draftAlias } = await getAliases(client, dataset)
   if (!draftAlias || Object.keys(draftAlias).length !== 1) throw new Error('no draft alias to validate')
   await client.indices.deleteAlias({ name: aliasName({ ...dataset, draftReason: true }), index: '_all' })
-  await  export const switchAlias(client, { ...dataset, draftReason: null }, Object.keys(draftAlias)[0])
+  await switchAlias(client, { ...dataset, draftReason: null }, Object.keys(draftAlias)[0])
 }
 
 const getNbShards = (dataset) => {
@@ -195,7 +195,7 @@ const indexBase = (dataset) => {
   }
 }
 
- export const datasetInfos = async (client, dataset) => {
+export const datasetInfos = async (client, dataset) => {
   // const indices = await client.indices.get({index: `${indexPrefix(dataset)}-*`})
   const indices = (await client.cat.indices({ index: `${indexPrefix(dataset)}-*`, format: 'json' })).body
   for (const index of indices) {
@@ -213,9 +213,9 @@ const indexBase = (dataset) => {
   }
 }
 
- export const datasetWarning = async (client, dataset) => {
+export const datasetWarning = async (client, dataset) => {
   if (dataset.isVirtual || dataset.isMetaOnly || dataset.status === 'draft' || dataset.status === 'error') return null
-  const esInfos = await  export const datasetInfos(client, dataset)
+  const esInfos = await datasetInfos(client, dataset)
   if (!esInfos.index) return 'MissingIndex'
   else if (esInfos.index.health === 'red') return 'IndexHealthRed'
   else if (!esInfos.index.definition?.settings?.index?.number_of_shards) return 'MissingIndexSettings'

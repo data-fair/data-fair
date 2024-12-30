@@ -1,22 +1,27 @@
-import metrics from '../misc/utils/metrics.js'
-import journals from '../misc/utils/journals.js'
+import { join } from 'path'
+import * as metrics from '../misc/utils/metrics.js'
+import * as journals from '../misc/utils/journals.js'
 import fs from 'fs-extra'
 import createError from 'http-errors'
 import { Writable } from 'stream'
 import pump from '../misc/utils/pipe.js'
-import * as es from '../datasets/es.js'
-import * as datasetUtils from '../datasets/utils.js'
+import * as es from '../datasets/es/index.js'
+import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetsService from '../datasets/service.js'
 import * as restDatasetsUtils from '../datasets/utils/rest.js'
+import * as heapUtils from '../misc/utils/heap.js'
 import taskProgress from '../datasets/utils/task-progress.js'
 import { tmpDir } from '../datasets/utils/files.js'
+import * as attachmentsUtils from '../datasets/utils/attachments.js'
+
+import debugModule from 'debug'
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
 export const eventsPrefix = 'index'
 
 export const process = async function (app, dataset) {
-  const debug = require('debug')(`worker:indexer:${dataset.id}`)
-  const debugHeap = require('../misc/utils/heap').debug(`worker:indexer:${dataset.id}`)
+  const debug = debugModule(`worker:indexer:${dataset.id}`)
+  const debugHeap = heapUtils.debug(`worker:indexer:${dataset.id}`)
 
   if (process.env.NODE_ENV === 'test' && dataset.slug === 'trigger-test-error') {
     throw new Error('This is a test error')
@@ -34,10 +39,8 @@ export const process = async function (app, dataset) {
 
   const newRestAttachments = dataset._newRestAttachments
   if (newRestAttachments?.length) {
-    const path = require('path')
-    const attachmentsUtils = require('../datasets/utils/attachments')
     for (const a of newRestAttachments) {
-      await attachmentsUtils.addAttachments(dataset, path.join(tmpDir, a))
+      await attachmentsUtils.addAttachments(dataset, join(tmpDir, a))
       await db.collection('datasets').updateOne({ id: dataset.id }, { $pull: { _newRestAttachments: a } })
     }
   }

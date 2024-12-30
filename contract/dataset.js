@@ -1,8 +1,8 @@
 import owner from './owner.js'
 import eventBy from './event-by.js'
-import permissions from './permissions.js'
+import permissions from './permissions.json' with {type: 'json'}
 import topic from './topic.js'
-import masterData from './master-data.js'
+import * as masterData from './master-data.js'
 import capabilities from './capabilities.js'
 import dataFiles from './data-files.js'
 import _publicationSchema from './publication.js'
@@ -145,7 +145,7 @@ const fileSchema = {
   }
 }
 
-export default {
+const dataset = {
   title: 'Dataset',
   type: 'object',
   additionalProperties: false,
@@ -877,7 +877,7 @@ export default {
 
 const draftKeys = ['schema', 'description', 'title', 'license', 'origin', 'extensions', 'publications', 'publicationSites', 'virtual', 'rest', 'extras', 'attachmentsAsImage', 'projection', 'attachments', 'topics', 'thumbnails', 'masterData', 'primaryKey', 'origin', 'image', 'spatial', 'temporal', 'keywords', 'frequency']
 
- export constproperties.draft = {
+dataset.properties.draft = {
   title: 'Dataset draft',
   description: 'Some properties waiting for confirmation before being merged into the main dataset info',
   type: 'object',
@@ -907,5 +907,7 @@ const draftKeys = ['schema', 'description', 'title', 'license', 'origin', 'exten
   }
 }
 draftKeys.forEach(k => {
-   export constproperties.draft.properties[k] =  export constproperties[k]
+  dataset.properties.draft.properties[k] = dataset.properties[k]
 })
+
+export default dataset

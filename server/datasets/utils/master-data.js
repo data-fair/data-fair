@@ -4,8 +4,8 @@ import mimeTypeStream from 'mime-type-stream'
 import flatten from 'flat'
 import * as virtualDatasetsUtils from './virtual.js'
 import batchStream from '../../misc/utils/batch-stream.js'
-import * as esUtils from '../es.js'
-import metrics from '../../misc/utils/metrics.js'
+import * as esUtils from '../es/index.js'
+import * as metrics from '../../misc/utils/metrics.js'
 import pump from '../../misc/utils/pipe.js'
 
 export const bulkSearchPromise = async (streams, data) => {

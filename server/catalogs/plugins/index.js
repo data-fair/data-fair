@@ -1,15 +1,15 @@
-import fs from 'fs-extra';
-import createError from 'http-errors';
-import { nanoid } from 'nanoid';
-import config from 'config';
-import standardLicenses from '../../../contract/licenses.js';
-import path from 'path';
-import mime from 'mime';
-import moment from 'moment';
-import journals from '../../misc/utils/journals.js';
-import permissionsUtil from '../../misc/utils/permissions.js';
-import datasetUtils from '../../datasets/utils.js';
-import debugLib from 'debug';
+import fs from 'fs-extra'
+import createError from 'http-errors'
+import { nanoid } from 'nanoid'
+import config from 'config'
+import standardLicenses from '../../../contract/licenses.js'
+import path from 'path'
+import mime from 'mime'
+import moment from 'moment'
+import * as journals from '../../misc/utils/journals.js'
+import * as permissionsUtil from '../../misc/utils/permissions.js'
+import * as datasetUtils from '../../datasets/utils/index.js'
+import debugLib from 'debug'
 import * as dataFairConnector from './data-fair.js'
 import * as dcatConnector from './dcat.js'
 import * as geonetworkConnector from './geonetwork.js'
@@ -17,21 +17,21 @@ import * as mydatacatalogueConnector from './mydatacatalogue.js'
 import * as udataConnector from './udata.js'
 
 export const connectors = [
-  {key: 'data-fair', ...dataFairConnector},
-  {key: 'dcat', ...dcatConnector},
-  {key: 'geonetwork', ...geonetworkConnector},
-  {key: 'mydatacatalogue', ...mydatacatalogueConnector},
-  {key: 'udata', ...udataConnector}
+  { key: 'data-fair', ...dataFairConnector },
+  { key: 'dcat', ...dcatConnector },
+  { key: 'geonetwork', ...geonetworkConnector },
+  { key: 'mydatacatalogue', ...mydatacatalogueConnector },
+  { key: 'udata', ...udataConnector }
 ]
 
-const debug = debugLib('catalogs');
+const debug = debugLib('catalogs')
 
 // Dynamic loading of all modules in the current directory
 fs.ensureDirSync(path.resolve(config.pluginsDir, 'catalogs'))
 
- export const init = async (catalogUrl) => {
+export const init = async (catalogUrl) => {
   debug('Attempt to init catalog from URL', catalogUrl)
-  for (const connector of  connectors) {
+  for (const connector of connectors) {
     try {
       const catalog = await connector.init(catalogUrl)
       if (catalog.title) {
@@ -47,8 +47,8 @@ fs.ensureDirSync(path.resolve(config.pluginsDir, 'catalogs'))
 
 // Used the downloader worker to get credentials (probably API key in a header)
 // to fetch resources
- export const httpParams = async (catalog, url) => {
-  const connector =  connectors.find(c => c.key === catalog.type)
+export const httpParams = async (catalog, url) => {
+  const connector = connectors.find(c => c.key === catalog.type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.httpParams) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
   if (url.startsWith(catalog.url)) {
@@ -61,8 +61,8 @@ fs.ensureDirSync(path.resolve(config.pluginsDir, 'catalogs'))
   }
 }
 
- export const listDatasets = async (db, catalog, params) => {
-  const connector =  connectors.find(c => c.key === catalog.type)
+export const listDatasets = async (db, catalog, params) => {
+  const connector = connectors.find(c => c.key === catalog.type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
   const settings = (await db.collection('settings').findOne({ type: catalog.owner.type, id: catalog.owner.id })) || {}
@@ -105,23 +105,23 @@ const insertDataset = async (app, newDataset) => {
   await journals.log(app, newDataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + newDataset.id }, 'dataset')
 }
 
- export const updateAllHarvestedDatasets = async (app, catalog) => {
-  const datasets = await  export const listDatasets(app.get('db'), catalog, {})
+export const updateAllHarvestedDatasets = async (app, catalog) => {
+  const datasets = await listDatasets(app.get('db'), catalog, {})
   for (const dataset of datasets.results) {
     if (dataset.harvestedDataset) {
-      await  export const harvestDataset(app, catalog, dataset.id)
+      await harvestDataset(app, catalog, dataset.id)
     }
     for (const resource of dataset.resources) {
       if (resource.harvestedDataset) {
-        await  export const harvestDatasetResource(app, catalog, dataset.id, resource.id, false)
+        await harvestDatasetResource(app, catalog, dataset.id, resource.id, false)
       }
     }
   }
 }
 
 // create a simple metadata only dataset
- export const harvestDataset = async (app, catalog, datasetId) => {
-  const connector =  export const connectors.find(c => c.key === catalog.type)
+export const harvestDataset = async (app, catalog, datasetId) => {
+  const connector = connectors.find(c => c.key === catalog.type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
 
@@ -184,8 +184,8 @@ const insertDataset = async (app, newDataset) => {
 }
 
 // create a file dataset from the resource of a dataset on the remote portal
- export const harvestDatasetResource = async (app, catalog, datasetId, resourceId, forceDownload = true) => {
-  const connector =  export const connectors.find(c => c.key === catalog.type)
+export const harvestDatasetResource = async (app, catalog, datasetId, resourceId, forceDownload = true) => {
+  const connector = connectors.find(c => c.key === catalog.type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
   if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
 
@@ -254,14 +254,14 @@ const insertDataset = async (app, newDataset) => {
   }
 }
 
- export const searchOrganizations = async (type, url, q) => {
-  const connector =  export const connectors.find(c => c.key === type)
+export const searchOrganizations = async (type, url, q) => {
+  const connector = connectors.find(c => c.key === type)
   if (!connector) throw createError(404, 'No connector found for catalog type ' + type)
   if (!connector.optionalCapabilities.includes('searchOrganizations')) throw createError(501, `The connector for the catalog type ${type} cannot do this action`)
   return connector.searchOrganizations(url, q)
 }
 
- export const processPublications = async function (app, type, resource) {
+export const processPublications = async function (app, type, resource) {
   const db = app.get('db')
   const resourcesCollection = db.collection(type + 's')
   const catalogsCollection = db.collection('catalogs')
@@ -322,7 +322,7 @@ const insertDataset = async (app, newDataset) => {
   }
 
   try {
-    const connector =  export const connectors.find(c => c.key === catalog.type)
+    const connector = connectors.find(c => c.key === catalog.type)
     if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
     if (!connector.publishApplication) throw createError(501, `The connector for the catalog type ${type} cannot do this action`)
     let res

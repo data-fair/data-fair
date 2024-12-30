@@ -1,4 +1,4 @@
-exports.cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl) => {
+export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl) => {
   const cleanProp = { ...p }
   // we badly named enum from the start, too bad, now we accept this semantic difference with json schema
   if (cleanProp.enum) {

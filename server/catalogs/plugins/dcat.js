@@ -1,7 +1,6 @@
 // this type of catalog can be tested using this URL as an example:
 // https://geocatalogue.lannion-tregor.com/geonetwork/
 
-
 import path from 'path'
 import createError from 'http-errors'
 import memoize from 'memoizee'
@@ -14,16 +13,16 @@ import debugLib from 'debug'
 
 const debug = debugLib('catalogs:dcat')
 
- export const title = 'DCAT - JSON-LD'
- export const description = ''
- export const docUrl = 'https://doc.data.gouv.fr/moissonnage/dcat/'
- export const optionalCapabilities = [
+export const title = 'DCAT - JSON-LD'
+export const description = ''
+export const docUrl = 'https://doc.data.gouv.fr/moissonnage/dcat/'
+export const optionalCapabilities = [
   'listDatasets',
   'autoUpdate'
 ]
 
 const fetchDCATPiscina = new Piscina({
-  filename: path.resolve(__dirname, '../threads/fetch-dcat.js'),
+  filename: path.resolve(import.meta.dirname, '../threads/fetch-dcat.js'),
   minThreads: 0,
   idleTimeout: 60 * 60 * 1000,
   maxThreads: 1
@@ -48,7 +47,7 @@ const memoizedGetDCAT = memoize(async (catalogUrl) => {
 /**
  * @param {string} catalogUrl
  */
- export const init = async (catalogUrl) => {
+export const init = async (catalogUrl) => {
   debug('try fetching DCAT catalog', catalogUrl)
   const dcat = await memoizedGetDCAT(catalogUrl)
   if (typeof dcat !== 'object') throw new Error('DCAT should return JSON')
@@ -57,31 +56,31 @@ const memoizedGetDCAT = memoize(async (catalogUrl) => {
   return { url: catalogUrl, title: new URL(catalogUrl).host }
 }
 
- export const httpParams = async (catalog) => {
+export const httpParams = async (catalog) => {
   return {}
 }
 
- export const searchOrganizations = async (catalogUrl, q) => {
+export const searchOrganizations = async (catalogUrl, q) => {
   throw createError(501, 'La récupération d\'une liste d\'organisations depuis catalogue DCAT n\'est pas disponible')
 }
 
- export const publishDataset = async (catalog, dataset, publication) => {
+export const publishDataset = async (catalog, dataset, publication) => {
   throw createError(501, 'La publication de jeux de données vers catalogue DCAT n\'est pas disponible')
 }
 
- export const deleteDataset = async (catalog, dataset, publication) => {
+export const deleteDataset = async (catalog, dataset, publication) => {
   throw createError(501, `Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
 }
 
- export const publishApplication = async (catalog, application, publication, datasets) => {
+export const publishApplication = async (catalog, application, publication, datasets) => {
   throw createError(501, 'La publication d\'applications vers catalogue DCAT n\'est pas disponible')
 }
 
- export const deleteApplication = async (catalog, application, publication) => {
+export const deleteApplication = async (catalog, application, publication) => {
   throw createError(501, 'La dépublication d\'applications vers catalogue DCAT n\'est pas disponible')
 }
 
- export const listDatasets = async (catalog, p, settings) => {
+export const listDatasets = async (catalog, p, settings) => {
   const dcat = await memoizedGetDCAT(catalog.url)
   let indexDataset = 0
   const datasets = dcat.dataset?.map(d => {
@@ -91,8 +90,8 @@ const memoizedGetDCAT = memoize(async (catalogUrl) => {
   return { count: datasets.length, results: datasets }
 }
 
- export const getDataset = async (catalog, datasetId, settings) => {
-  return (await  export const listDatasets(catalog, null, settings)).results.find(d => d.id === datasetId)
+export const getDataset = async (catalog, datasetId, settings) => {
+  return (await listDatasets(catalog, null, settings)).results.find(d => d.id === datasetId)
 }
 
 function prepareDatasetFromCatalog (catalog, item, settings, indexDataset) {

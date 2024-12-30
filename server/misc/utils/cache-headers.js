@@ -5,7 +5,7 @@ import debugLib from 'debug'
 
 const debug = debugLib('cache-headers')
 
- export const setNoCache = (req, res) => {
+export const setNoCache = (req, res) => {
   res.setHeader('X-Accel-Buffering', 'no')
   // compatibility with older IE
   // cf https://stackoverflow.com/questions/12205632/express-returns-304-for-ie-repeative-requests
@@ -23,9 +23,9 @@ const debug = debugLib('cache-headers')
 // only send data if the dataset was finalized since then
 // prevent running expensive queries while always presenting fresh data
 // also set last finalized date into last-modified header
- export const resourceBased = (dateKey = 'updatedAt') => (req, res, next) => {
+export const resourceBased = (dateKey = 'updatedAt') => (req, res, next) => {
   if (req.noCache) {
-     export const setNoCache(req, res)
+    setNoCache(req, res)
     return next()
   }
 
@@ -64,7 +64,7 @@ const debug = debugLib('cache-headers')
     if (cacheVisibility === 'public') {
       res.setHeader('Cache-Control', `must-revalidate, public, max-age=${config.cache.publicMaxAge}`)
     } else {
-       export const setNoCache(req, res)
+      setNoCache(req, res)
     }
   }
 
@@ -72,7 +72,7 @@ const debug = debugLib('cache-headers')
 }
 
 // adapt headers for a request listing the content of a collection
- export const listBased = (req, res, next) => {
+export const listBased = (req, res, next) => {
   const select = req.query.select ? req.query.select.split(',') : []
   let cacheVisibility = 'private'
   if (select.includes('-userPermissions') && req.query.visibility && req.query.visibility.includes('public')) cacheVisibility = 'public'
@@ -81,12 +81,12 @@ const debug = debugLib('cache-headers')
     res.setHeader('X-Accel-Buffering', 'yes')
     res.setHeader('Cache-Control', `must-revalidate, public, max-age=${config.cache.publicMaxAge}`)
   } else {
-     export const setNoCache(req, res)
+    setNoCache(req, res)
   }
   next()
 }
 
- export const noCache = (req, res, next) => {
-   export const setNoCache(req, res)
+export const noCache = (req, res, next) => {
+  setNoCache(req, res)
   next()
 }

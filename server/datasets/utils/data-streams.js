@@ -9,14 +9,14 @@ import mimeTypeStream from 'mime-type-stream'
 import createError from 'http-errors'
 import { createGunzip } from 'zlib'
 import DecodeStream from '../../misc/utils/decode-stream.js'
-import metrics from '../../misc/utils/metrics.js'
+import * as metrics from '../../misc/utils/metrics.js'
 import { csvTypes } from '../../workers/file-normalizer.js'
-import fieldsSniffer from './fields-sniffer.js'
-import restDatasetsUtils from './rest.js'
+import * as fieldsSniffer from './fields-sniffer.js'
+import * as restDatasetsUtils from './rest.js'
 import { filePath, fullFilePath, tmpDir } from './files.js'
 import pump from '../../misc/utils/pipe.js'
 
- export const formatLine = (item, schema) => {
+export const formatLine = (item, schema) => {
   for (const key of Object.keys(item)) {
     const prop = schema.find(p => p.key === key)
     if (prop && typeof item[key] === 'string') {
@@ -30,8 +30,8 @@ import pump from '../../misc/utils/pipe.js'
   }
 }
 
-// used both by  export const readStream and bulk transactions in rest datasets
- export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, encoding, skipDecoding, dataset, autoAdjustKeys = false) => {
+// used both by readStream and bulk transactions in rest datasets
+export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, encoding, skipDecoding, dataset, autoAdjustKeys = false) => {
   const streams = []
 
   // file is gzipped
@@ -48,7 +48,7 @@ import pump from '../../misc/utils/pipe.js'
     streams.push(new Transform({
       objectMode: true,
       transform (item, encoding, callback) {
-         export const formatLine(item, schema)
+        formatLine(item, schema)
         callback(null, item)
       }
     }))
@@ -173,7 +173,7 @@ import pump from '../../misc/utils/pipe.js'
 }
 
 // Read the dataset file and get a stream of line items
- export const readStreams = async (db, dataset, raw = false, full = false, ignoreDraftLimit = false, progress) => {
+export const readStreams = async (db, dataset, raw = false, full = false, ignoreDraftLimit = false, progress) => {
   if (dataset.isRest) return restDatasetsUtils.readStreams(db, dataset)
   const p = full ? fullFilePath(dataset) : filePath(dataset)
 
@@ -195,7 +195,7 @@ import pump from '../../misc/utils/pipe.js'
       }
     }))
   }
-  streams = streams.concat( export const transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, false, full ? 'UTF-8' : dataset.file.encoding, false, dataset))
+  streams = streams.concat(transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, false, full ? 'UTF-8' : dataset.file.encoding, false, dataset))
 
   // manage interruption in case of draft mode
   const limit = (dataset.draftReason && !ignoreDraftLimit) ? 100 : -1
@@ -220,7 +220,7 @@ import pump from '../../misc/utils/pipe.js'
 }
 
 // Used by extender worker to produce the "full" version of the file
- export const writeExtendedStreams = async (db, dataset, extensions) => {
+export const writeExtendedStreams = async (db, dataset, extensions) => {
   if (dataset.isRest) return restDatasetsUtils.writeExtendedStreams(db, dataset, extensions)
   const tmpFullFile = await tmp.tmpName({ dir: tmpDir })
   // creating empty file before streaming seems to fix some weird bugs with NFS
@@ -267,11 +267,11 @@ import pump from '../../misc/utils/pipe.js'
   return [...transforms, writeStream]
 }
 
- export const sampleValues = async (dataset, ignoreKeys, onDecodedData) => {
+export const sampleValues = async (dataset, ignoreKeys, onDecodedData) => {
   let currentLine = 0
   let stopped = false
   const sampleValues = {}
-  const streams = await  export const readStreams(null, dataset, true, false, true)
+  const streams = await readStreams(null, dataset, true, false, true)
   if (onDecodedData) {
     const decodeStream = streams.find(s => s instanceof DecodeStream)
     decodeStream?.on('data', onDecodedData)

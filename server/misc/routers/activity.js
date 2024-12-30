@@ -3,7 +3,7 @@
 
 import express from 'express'
 import asyncWrap from '../utils/async-handler.js'
-import findUtils from '../utils/find.js'
+import * as findUtils from '../utils/find.js'
 
 const router = express.Router()
 export default router

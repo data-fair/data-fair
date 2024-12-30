@@ -1,4 +1,4 @@
-import findUtils from '../misc/utils/find.js'
+import * as findUtils from '../misc/utils/find.js'
 import { clean, fixConceptsFilters } from './utils.js'
 import mongoEscape from 'mongo-escape'
 

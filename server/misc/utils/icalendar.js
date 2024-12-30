@@ -5,7 +5,7 @@ import * as i18nUtils from '../../i18n/utils.js'
 import icalendar from '@koumoul/icalendar'
 import moment from 'moment'
 import 'moment-timezone'
-import { RRule } from 'rrule'
+import rrule from 'rrule'
 
 const localeTimeZone = moment.tz.guess()
 
@@ -82,13 +82,13 @@ export const parse = async (filePath) => {
               for (const k of Object.keys(line.RRULE)) {
                 opts[k.toLowerCase()] = isNaN(line.RRULE[k]) ? line.RRULE[k] : Number(line.RRULE[k])
               }
-              if (opts.freq) opts.freq = RRule[opts.freq.toUpperCase()]
+              if (opts.freq) opts.freq = rrule.RRule[opts.freq.toUpperCase()]
               if (!opts.until) opts.until = new Date(Date.UTC(2099, 12, 31))
               if (opts.byday) {
                 opts.byweekday = opts.byday
                 delete opts.byday
               }
-              const rule = new RRule(opts)
+              const rule = new rrule.RRule(opts)
               const startDates = rule.all().slice(0, 1000)
               const duration = moment(line.DTEND).diff(line.DTSTART)
               for (const startDate of startDates) {

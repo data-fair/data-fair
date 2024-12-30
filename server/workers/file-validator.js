@@ -2,10 +2,11 @@
 import { Writable } from 'stream'
 import journals from '../misc/utils/journals.js'
 import { jsonSchema } from '../datasets/utils/schema.js'
-import ajv from '../misc/utils/ajv.js'
+import * as ajv from '../misc/utils/ajv.js'
 import pump from '../misc/utils/pipe.js'
-import datasetUtils from '../datasets/utils/index.js'
-import datasetsService from '../datasets/service.js'
+import * as datasetUtils from '../datasets/utils/index.js'
+import * as datasetsService from '../datasets/service.js'
+import * as schemaUtils from '../datasets/utils/schema.js'
 import taskProgress from '../datasets/utils/task-progress.js'
 import truncateMiddle from 'truncate-middle'
 import debugLib from 'debug'
@@ -73,13 +74,13 @@ export const process = async function (app, dataset) {
     } else {
       Object.assign(datasetFull.draft, patch)
       const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
-      const breakingChanges = require('../datasets/utils/schema').getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema)
+      const breakingChanges = schemaUtils.getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema)
       if (breakingChanges.length) {
         await journals.log(app, dataset, { type: 'validation-error', data: 'La structure du fichier contient des ruptures de compatibilité.' })
         if (dataset.draftReason.validationMode === 'noBreakingChange' || dataset.draftReason.validationMode === 'compatible') {
           delete patch.validateDraft
         }
-      } else if (!require('../datasets/utils/schema').schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
+      } else if (!schemaUtils.schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
         await journals.log(app, dataset, { type: 'validation-error', data: 'La structure du fichier contient des changements.' })
         if (dataset.draftReason.validationMode === 'compatible') {
           delete patch.validateDraft

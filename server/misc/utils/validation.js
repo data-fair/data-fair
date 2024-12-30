@@ -1,7 +1,7 @@
 
-const i18n = require('i18n')
-const slugify = require('slugify')
-const createError = require('http-errors')
+import i18n from 'i18n'
+import slugify from 'slugify'
+import createError from 'http-errors'
 
 /**
  *

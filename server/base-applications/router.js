@@ -8,21 +8,21 @@ import jsonRefs from 'json-refs'
 import createError from 'http-errors'
 import Extractor from 'html-extractor'
 import i18n from 'i18n'
-import i18nUtils from '../i18n/utils.js'
+import * as i18nUtils from '../i18n/utils.js'
 import asyncWrap from '../misc/utils/async-handler.js'
-import findUtils from '../misc/utils/find.js'
-import baseAppsUtils from './utils.js'
-import cacheHeaders from '../misc/utils/cache-headers.js'
-import metrics from '../misc/utils/metrics.js'
+import * as findUtils from '../misc/utils/find.js'
+import * as baseAppsUtils from './utils.js'
+import * as cacheHeaders from '../misc/utils/cache-headers.js'
+import * as metrics from '../misc/utils/metrics.js'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
 
 const htmlExtractor = new Extractor()
 htmlExtractor.extract = util.promisify(htmlExtractor.extract)
-const router =  export const router = express.Router()
+export const router = express.Router()
 
 // Fill the collection using the default base applications from config
 // and cleanup non-public apps that are not used anywhere
- export const init = async (db) => {
+export const init = async (db) => {
   await clean(db)
   await Promise.all(config.applications.map(app => failSafeInitBaseApp(db, app)))
 }

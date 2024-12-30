@@ -1,7 +1,7 @@
 import config from 'config'
-import { version } from '../package.json'
+import pJson from '../package.json' with {type: 'json'}
 import dataset from './dataset.js'
-import utils from './utils.js'
+import * as utils from './utils.js'
 
 export default (publicUrl, publicationSite, info) => {
   const hostname = new URL(publicUrl).hostname
@@ -15,7 +15,7 @@ export default (publicUrl, publicationSite, info) => {
     info: {
       title: 'API de catalogue de données',
       description: `Cette documentation est à destination de développeurs souhaitant explorer ou moissoner le catalogue de données de ${hostname}.`,
-      version,
+      version: pJson.version,
       'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-catalog`,
       termsOfService: config.info.termsOfService,
       contact: { ...(info.contact || {}) }

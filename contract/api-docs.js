@@ -1,6 +1,6 @@
 import config from 'config'
-import status from './status.json'
-import { version } from '../package.json'
+import status from './status.json' with {type: 'json'}
+import pJson from '../package.json' with {type: 'json'}
 import dataset from './dataset.js'
 import datasetPatch from './dataset-patch.js'
 import datasetPost from './dataset-post.js'
@@ -33,7 +33,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
 Pour des exemples simples de publication de données vous pouvez consulter la <a href="https://data-fair.github.io/4/interoperate/api" target="blank">documentation sur ce sujet</a>.
 `,
-      version: version,
+      version: pJson.version,
       'x-api-id': 'data-fair'
       // @ts-ignore
     }, config.info),

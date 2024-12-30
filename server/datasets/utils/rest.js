@@ -5,12 +5,12 @@ import path from 'path'
 import createError from 'http-errors'
 import { nanoid } from 'nanoid'
 import pump from '../../misc/utils/pipe.js'
-import ajv from '../../misc/utils/ajv.js'
+import * as ajv from '../../misc/utils/ajv.js'
 import multer from 'multer'
 import mime from 'mime-types'
 import { Readable, Transform, Writable } from 'stream'
 import moment from 'moment'
-import { crc32 } from 'crc'
+import crc from 'crc'
 import md5File from 'md5-file'
 import stableStringify from 'fast-json-stable-stringify'
 import LinkHeader from 'http-link-header'
@@ -23,18 +23,17 @@ import * as findUtils from '../../misc/utils/find.js'
 import * as metrics from '../../misc/utils/metrics.js'
 import * as fieldsSniffer from './fields-sniffer.js'
 import { transformFileStreams, formatLine } from './data-streams.js'
-import { attachmentPath, lsAttachments } from './files.js'
+import { attachmentPath, lsAttachments, tmpDir } from './files.js'
 import { jsonSchema } from './schema.js'
-import { tmpDir } from './files.js'
-import * as esUtils from '../../datasets/es.js'
+import * as esUtils from '../../datasets/es/index.js'
 import { tabularTypes } from '../../workers/file-normalizer.js'
 import Piscina from 'piscina'
 
 dayjs.extend(duration)
 const config = /** @type {any} */(_config)
 
-const sheet2csvPiscina =  export const sheet2csvPiscina = new Piscina({
-  filename: path.resolve(__dirname, '../threads/sheet2csv.js'),
+export const sheet2csvPiscina = new Piscina({
+  filename: path.resolve(import.meta.dirname, '../threads/sheet2csv.js'),
   minThreads: 0,
   idleTimeout: 60 * 60 * 1000,
   maxThreads: 1
@@ -79,55 +78,55 @@ const padI = (i) => {
   return new Array((padISize - str.length) + 1).join('0') + str
 }
 
- export const uploadAttachment = multer({
+export const uploadAttachment = multer({
   storage: multer.diskStorage({ destination, filename })
 }).single('attachment')
 
- export const fixFormBody = (req, res, next) => {
+export const fixFormBody = (req, res, next) => {
   if (req.body?._body) req.body = JSON.parse(req.body._body)
   next()
 }
 
- export const uploadBulk = multer({
+export const uploadBulk = multer({
   storage: multer.diskStorage({ destination, filename })
 }).fields([{ name: 'attachments', maxCount: 1 }, { name: 'actions', maxCount: 1 }])
 
- export const collectionName = (dataset) => 'dataset-data-' + dataset.id
- export const collection = (db, dataset) => db.collection( export const collectionName(dataset))
+export const collectionName = (dataset) => 'dataset-data-' + dataset.id
+export const collection = (db, dataset) => db.collection(collectionName(dataset))
 
- export const revisionsCollectionName = (dataset) => 'dataset-revisions-' + dataset.id
- export const revisionsCollection = (db, dataset) => db.collection( export const revisionsCollectionName(dataset))
+export const revisionsCollectionName = (dataset) => 'dataset-revisions-' + dataset.id
+export const revisionsCollection = (db, dataset) => db.collection(revisionsCollectionName(dataset))
 
- export const initDataset = async (db, dataset) => {
+export const initDataset = async (db, dataset) => {
   // just in case of badly cleaned data from previous dataset with same id
   try {
-    await  export const deleteDataset(db, dataset)
+    await deleteDataset(db, dataset)
   } catch (err) {
     // nothing
   }
-  const collection =  export const collection(db, dataset)
+  const c = collection(db, dataset)
   await Promise.all([
-    collection.createIndex({ _needsIndexing: 1 }, { sparse: true }),
-    collection.createIndex({ _needsExtending: 1 }, { sparse: true }),
-    collection.createIndex({ _i: -1 }, { unique: true })
+    c.createIndex({ _needsIndexing: 1 }, { sparse: true }),
+    c.createIndex({ _needsExtending: 1 }, { sparse: true }),
+    c.createIndex({ _i: -1 }, { unique: true })
   ])
 }
 
- export const configureHistory = async (app, dataset) => {
+export const configureHistory = async (app, dataset) => {
   const db = app.get('db')
-  const revisionsCollectionExists = (await db.listCollections({ name:  export const revisionsCollectionName(dataset) }).toArray()).length === 1
+  const revisionsCollectionExists = (await db.listCollections({ name: revisionsCollectionName(dataset) }).toArray()).length === 1
   if (!dataset.rest.history) {
     if (revisionsCollectionExists) {
-      await  export const revisionsCollection(db, dataset).drop()
+      await revisionsCollection(db, dataset).drop()
       await storageUtils.updateStorage(app, dataset)
     }
   } else {
-    const revisionsCollection =  export const revisionsCollection(db, dataset)
+    const rc = revisionsCollection(db, dataset)
     if (!revisionsCollectionExists) {
       // create revisions collection and fill it with initial state
-      await revisionsCollection.createIndex({ _lineId: 1, _i: -1 })
-      let revisionsBulkOp = revisionsCollection.initializeUnorderedBulkOp()
-      for await (const line of  export const collection(db, dataset).find()) {
+      await rc.createIndex({ _lineId: 1, _i: -1 })
+      let revisionsBulkOp = rc.initializeUnorderedBulkOp()
+      for await (const line of collection(db, dataset).find()) {
         const revision = { ...line, _action: 'create' }
         delete revision._needsIndexing
         delete revision._needsExtending
@@ -137,7 +136,7 @@ const padI = (i) => {
         revisionsBulkOp.insert(revision)
         if (revisionsBulkOp.length >= config.mongo.maxBulkOps) {
           await revisionsBulkOp.execute()
-          revisionsBulkOp = revisionsCollection.initializeUnorderedBulkOp()
+          revisionsBulkOp = rc.initializeUnorderedBulkOp()
         }
       }
       if (revisionsBulkOp.length) await revisionsBulkOp.execute()
@@ -147,10 +146,10 @@ const padI = (i) => {
     // manage history TTL
     if (dataset.rest.historyTTL && dataset.rest.historyTTL.active && dataset.rest.historyTTL.delay && dataset.rest.historyTTL.delay.value) {
       const expireAfterSeconds = dayjs.duration(dataset.rest.historyTTL.delay.value, dataset.rest.historyTTL.delay.unit || 'days').asSeconds()
-      await revisionsCollection.createIndex({ _updatedAt: 1 }, { expireAfterSeconds, name: 'history-ttl' })
+      await rc.createIndex({ _updatedAt: 1 }, { expireAfterSeconds, name: 'history-ttl' })
     } else {
       try {
-        await revisionsCollection.dropIndex('history-ttl')
+        await rc.dropIndex('history-ttl')
       } catch (err) {
         if (err.codeName !== 'IndexNotFound') throw err
       }
@@ -158,10 +157,10 @@ const padI = (i) => {
   }
 }
 
- export const deleteDataset = async (db, dataset) => {
-  await  export const collection(db, dataset).drop()
-  const revisionsCollectionExists = (await db.listCollections({ name:  export const revisionsCollectionName(dataset) }).toArray()).length === 1
-  if (revisionsCollectionExists)  export const revisionsCollection(db, dataset).drop()
+export const deleteDataset = async (db, dataset) => {
+  await collection(db, dataset).drop()
+  const revisionsCollectionExists = (await db.listCollections({ name: revisionsCollectionName(dataset) }).toArray()).length === 1
+  if (revisionsCollectionExists) revisionsCollection(db, dataset).drop()
 }
 
 const getLineId = (line, dataset) => {
@@ -196,7 +195,7 @@ const linesOwnerFilter = (linesOwner) => {
  * @returns {string}
  */
 const getLineHash = (body) => {
-  return crc32(stableStringify(body)).toString(16)
+  return crc.crc32(stableStringify(body)).toString(16)
 }
 
 /** @typedef {{_id: string, _action: string, body: any, fullBody: any, filter: {_id: string}, _status?: number, _error?: string}} Operation */
@@ -222,15 +221,15 @@ const getLineFromOperation = (operation) => {
  */
 const checkMissingIdsRevisions = async (db, tmpDataset, dataset, existingIds, user) => {
   const missingIds = new Set(existingIds)
-  for await (const stillExistingDoc of  export const collection(db, tmpDataset).find({ _id: { $in: existingIds } })) {
+  for await (const stillExistingDoc of collection(db, tmpDataset).find({ _id: { $in: existingIds } })) {
     missingIds.delete(stillExistingDoc._id)
   }
   if (missingIds.size) {
     const updatedAt = new Date()
     const datasetCreatedAt = new Date(dataset.createdAt).getTime()
     let i = 0
-    const revisionsBulkOp =  export const revisionsCollection(db, dataset).initializeUnorderedBulkOp()
-    for await (const missingDoc of  export const collection(db, dataset).find({ _id: { $in: [...missingIds] } }).project(getPrimaryKeyProjection(dataset))) {
+    const revisionsBulkOp = revisionsCollection(db, dataset).initializeUnorderedBulkOp()
+    for await (const missingDoc of collection(db, dataset).find({ _id: { $in: [...missingIds] } }).project(getPrimaryKeyProjection(dataset))) {
       i++
       if (missingDoc._deleted) continue
       const revision = {
@@ -265,7 +264,7 @@ const createTmpMissingRevisions = async (db, tmpDataset, dataset, user) => {
   /** @type {string[]} */
   let existingIds = []
 
-  for await (const existingDoc of  export const collection(db, dataset).find({}).project({ _id: 1 })) {
+  for await (const existingDoc of collection(db, dataset).find({}).project({ _id: 1 })) {
     existingIds.push(existingDoc._id)
     if (existingIds.length === 1000) {
       await checkMissingIdsRevisions(db, tmpDataset, dataset, existingIds, user)
@@ -286,11 +285,11 @@ const getPrimaryKeyProjection = (dataset) => {
   return primaryKeyProjection
 }
 
- export const applyTransactions = async (db, dataset, user, transacs, validate, linesOwner, tmpDataset) => {
+export const applyTransactions = async (db, dataset, user, transacs, validate, linesOwner, tmpDataset) => {
   const datasetCreatedAt = new Date(dataset.createdAt).getTime()
   const updatedAt = new Date()
-  const collection =  export const collection(db, tmpDataset || dataset)
-  const revisionsCollection =  export const revisionsCollection(db, dataset)
+  const c = collection(db, tmpDataset || dataset)
+  const rc = revisionsCollection(db, dataset)
   const history = dataset.rest && dataset.rest.history
   const patchProjection = { _id: 1, _hash: 1, _deleted: 1 }
   for (const prop of dataset.schema) {
@@ -467,7 +466,7 @@ const getPrimaryKeyProjection = (dataset) => {
   }
 
   // actually perform the operations and flag errors
-  const bulkOp = collection.initializeUnorderedBulkOp()
+  const bulkOp = c.initializeUnorderedBulkOp()
   const bulkOpMatchingOperations = []
   for (const operation of operations) {
     if (operation._status && operation._status >= 300) continue
@@ -509,7 +508,7 @@ const getPrimaryKeyProjection = (dataset) => {
   // insert revisions for lines that were actually modified
   if (history) {
     let hasRevisionsBulkOp = false
-    const revisionsBulkOp = revisionsCollection.initializeUnorderedBulkOp()
+    const revisionsBulkOp = rc.initializeUnorderedBulkOp()
     let h = 0
     for (const operation of operations) {
       if (operation._status && operation._status >= 300) continue
@@ -553,7 +552,7 @@ const getPrimaryKeyProjection = (dataset) => {
  * @returns {{operations: Operation[], bulkOpResult: any}}
  */
 const applyReqTransactions = async (req, transacs, validate, tmpDataset) => {
-  return  export const applyTransactions(req.app.get('db'), req.dataset, req.user, transacs, validate, req.linesOwner, tmpDataset)
+  return applyTransactions(req.app.get('db'), req.dataset, req.user, transacs, validate, req.linesOwner, tmpDataset)
 }
 
 const initSummary = () => ({ nbOk: 0, nbNotModified: 0, nbErrors: 0, nbCreated: 0, nbModified: 0, nbDeleted: 0, errors: [] })
@@ -701,22 +700,22 @@ async function commitSingleLine (app, dataset, lineId) {
   const attachments = !!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   const indexName = esUtils.aliasName(dataset)
   const indexStream = esUtils.indexStream({ esClient, indexName, dataset, attachments, refresh: config.elasticsearch.singleLineOpRefresh })
-  const readStreams = await  export const readStreams(db, dataset, { _id: lineId })
-  const writeStream =  export const markIndexedStream(db, dataset)
-  await pump(...readStreams, indexStream, writeStream)
+  const rs = await readStreams(db, dataset, { _id: lineId })
+  const writeStream = markIndexedStream(db, dataset)
+  await pump(...rs, indexStream, writeStream)
 
   await db.collection('datasets').updateOne({ id: dataset.id, _partialRestStatus: { $exists: false } }, {
     $set: {
       _partialRestStatus: 'indexed',
-      count: await  export const count(db, dataset)
+      count: await count(db, dataset)
     }
   })
 }
 
- export const readLine = async (req, res, next) => {
+export const readLine = async (req, res, next) => {
   const db = req.app.get('db')
-  const collection =  export const collection(db, req.dataset)
-  const line = await collection.findOne({ _id: req.params.lineId, ...linesOwnerFilter(req.linesOwner) })
+  const c = collection(db, req.dataset)
+  const line = await c.findOne({ _id: req.params.lineId, ...linesOwnerFilter(req.linesOwner) })
   if (!line) return res.status(404).send('Identifiant de ligne inconnu')
   if (line._deleted) return res.status(404).send('Identifiant de ligne inconnu')
   cleanLine(line)
@@ -727,7 +726,7 @@ async function commitSingleLine (app, dataset, lineId) {
   res.send(line)
 }
 
- export const deleteLine = async (req, res, next) => {
+export const deleteLine = async (req, res, next) => {
   // @ts-ignore
   const dataset = req.dataset
 
@@ -743,7 +742,7 @@ async function commitSingleLine (app, dataset, lineId) {
   storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
 }
 
- export const createOrUpdateLine = async (req, res, next) => {
+export const createOrUpdateLine = async (req, res, next) => {
   // @ts-ignore
   const dataset = req.dataset
 
@@ -767,7 +766,7 @@ async function commitSingleLine (app, dataset, lineId) {
   storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
 }
 
- export const patchLine = async (req, res, next) => {
+export const patchLine = async (req, res, next) => {
   // @ts-ignore
   const dataset = req.dataset
 
@@ -786,13 +785,13 @@ async function commitSingleLine (app, dataset, lineId) {
   storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
 }
 
- export const deleteAllLines = async (req, res, next) => {
+export const deleteAllLines = async (req, res, next) => {
   // @ts-ignore
   const dataset = req.dataset
 
   const db = req.app.get('db')
   const esClient = req.app.get('es')
-  await  export const initDataset(db, req.dataset)
+  await initDataset(db, req.dataset)
   const indexName = await esUtils.initDatasetIndex(esClient, req.dataset)
   await esUtils.switchAlias(esClient, req.dataset, indexName)
 
@@ -805,7 +804,7 @@ async function commitSingleLine (app, dataset, lineId) {
   storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
 }
 
- export const bulkLines = async (req, res, next) => {
+export const bulkLines = async (req, res, next) => {
   // @ts-ignore
   const dataset = req.dataset
 
@@ -870,7 +869,7 @@ async function commitSingleLine (app, dataset, lineId) {
     let tmpDataset
     if (drop) {
       tmpDataset = { ...req.dataset, id: req.dataset.id + '-' + nanoid() + '-tmp-bulk' }
-      await  export const initDataset(db, tmpDataset)
+      await initDataset(db, tmpDataset)
     }
 
     const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, false, true, null, skipDecoding, null, true)
@@ -900,11 +899,11 @@ async function commitSingleLine (app, dataset, lineId) {
       if (drop) {
         if (summary.nbErrors) {
           summary.cancelled = true
-          await  export const collection(db, tmpDataset).drop()
+          await collection(db, tmpDataset).drop()
         } else {
           await createTmpMissingRevisions(db, tmpDataset, req.dataset, req.user)
-          await  export const collection(db, req.dataset).drop()
-          await  export const collection(db, tmpDataset).rename( export const collectionName(req.dataset))
+          await collection(db, req.dataset).drop()
+          await collection(db, tmpDataset).rename(collectionName(req.dataset))
           summary.dropped = true
           await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'analyzed' } })
         }
@@ -921,7 +920,7 @@ async function commitSingleLine (app, dataset, lineId) {
 
       if (drop) {
         summary.cancelled = true
-        await  export const collection(db, tmpDataset).drop()
+        await collection(db, tmpDataset).drop()
       }
     }
 
@@ -939,7 +938,7 @@ async function commitSingleLine (app, dataset, lineId) {
   }
 }
 
- export const syncAttachmentsLines = async (req, res, next) => {
+export const syncAttachmentsLines = async (req, res, next) => {
   const db = req.app.get('db')
   const dataset = req.dataset
   const validate = compileSchema(req.dataset, req.user.adminMode)
@@ -953,7 +952,7 @@ async function commitSingleLine (app, dataset, lineId) {
   }
 
   const files = await lsAttachments(dataset)
-  const toDelete = await  export const collection(db, dataset)
+  const toDelete = await collection(db, dataset)
     .find({ [pathField.key]: { $nin: files } })
     .limit(10000).project({ [pathField.key]: 1 }).toArray()
 
@@ -976,11 +975,11 @@ async function commitSingleLine (app, dataset, lineId) {
   res.send(summary)
 }
 
- export const readRevisions = async (req, res, next) => {
+export const readRevisions = async (req, res, next) => {
   if (!req.dataset.rest || !req.dataset.rest.history) {
     return res.status(400).type('text/plain').send('L\'historisation des lignes n\'est pas activée pour ce jeu de données.')
   }
-  const revisionsCollection =  export const revisionsCollection(req.app.get('db'), req.dataset)
+  const rc = revisionsCollection(req.app.get('db'), req.dataset)
   const filter = req.params.lineId ? { _lineId: req.params.lineId } : {}
   Object.assign(filter, linesOwnerFilter(req.linesOwner))
   const countFilter = { ...filter }
@@ -988,8 +987,8 @@ async function commitSingleLine (app, dataset, lineId) {
   // eslint-disable-next-line no-unused-vars
   const [_, size] = findUtils.pagination(req.query)
   const [total, results] = await Promise.all([
-    revisionsCollection.countDocuments(countFilter),
-    revisionsCollection.find(filter).sort({ _i: -1 }).limit(size).toArray()
+    rc.countDocuments(countFilter),
+    rc.find(filter).sort({ _i: -1 }).limit(size).toArray()
   ])
   for (const r of results) {
     r._id = r._lineId
@@ -1013,15 +1012,15 @@ async function commitSingleLine (app, dataset, lineId) {
   res.send(response)
 }
 
- export const readStreams = async (db, dataset, filter = {}, progress) => {
-  const collection =  export const collection(db, dataset)
+export const readStreams = async (db, dataset, filter = {}, progress) => {
+  const c = collection(db, dataset)
   let inc
   if (progress) {
-    const count = await collection.countDocuments(filter)
+    const count = await c.countDocuments(filter)
     inc = 100 / count
   }
   return [
-    collection.find(filter).batchSize(100).stream(),
+    c.find(filter).batchSize(100).stream(),
     new Transform({
       objectMode: true,
       transform (chunk, encoding, cb) {
@@ -1034,13 +1033,13 @@ async function commitSingleLine (app, dataset, lineId) {
   ]
 }
 
- export const writeExtendedStreams = (db, dataset, extensions) => {
+export const writeExtendedStreams = (db, dataset, extensions) => {
   const patchedKeys = []
   for (const extension of extensions) {
     if (extension.type === 'remoteService') patchedKeys.push(extension.propertyPrefix)
     if (extension.type === 'exprEval') patchedKeys.push(extension.property.key)
   }
-  const collection =  export const collection(db, dataset)
+  const c = collection(db, dataset)
   return [new Writable({
     objectMode: true,
     async write (item, encoding, cb) {
@@ -1050,7 +1049,7 @@ async function commitSingleLine (app, dataset, lineId) {
           if (key in item) patch.$set[key] = item[key]
           else patch.$unset[key] = item[key]
         }
-        await collection.updateOne({ _id: item._id }, patch)
+        await c.updateOne({ _id: item._id }, patch)
         cb()
       } catch (err) {
         cb(err)
@@ -1059,14 +1058,14 @@ async function commitSingleLine (app, dataset, lineId) {
   })]
 }
 
- export const markIndexedStream = (db, dataset) => {
-  const collection =  export const collection(db, dataset)
+export const markIndexedStream = (db, dataset) => {
+  const c = collection(db, dataset)
   return new Writable({
     objectMode: true,
     async write (chunk, encoding, cb) {
       try {
         this.i = this.i || 0
-        this.bulkOp = this.bulkOp || collection.initializeUnorderedBulkOp()
+        this.bulkOp = this.bulkOp || c.initializeUnorderedBulkOp()
         const line = await collection.findOne({ _id: chunk._id })
         // if the line was updated in the interval since reading for indexing
         // do not mark it as properly indexed
@@ -1099,13 +1098,13 @@ async function commitSingleLine (app, dataset, lineId) {
   })
 }
 
- export const count = (db, dataset, filter) => {
-  const collection =  export const collection(db, dataset)
-  if (filter) return collection.countDocuments(filter)
-  else return collection.estimatedDocumentCount()
+export const count = (db, dataset, filter) => {
+  const c = collection(db, dataset)
+  if (filter) return c.countDocuments(filter)
+  else return c.estimatedDocumentCount()
 }
 
- export const applyTTL = async (app, dataset) => {
+export const applyTTL = async (app, dataset) => {
   const es = app.get('es')
   const query = `${dataset.rest.ttl.prop}:[* TO ${moment().subtract(dataset.rest.ttl.delay.value, dataset.rest.ttl.delay.unit).toISOString()}]`
   const summary = initSummary()

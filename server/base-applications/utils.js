@@ -1,5 +1,5 @@
 
-import marked from 'marked'
+import { marked } from 'marked'
 import { prepareThumbnailUrl } from '../misc/utils/thumbnails.js'
 
 export const clean = (publicUrl, baseApp, thumbnail, html = false) => {

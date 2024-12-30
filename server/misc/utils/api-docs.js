@@ -1,5 +1,5 @@
 // TODO: this could be processed from actual api doc ?
- export const operationsClasses = {
+export const operationsClasses = {
   datasets: {
     list: ['list'],
     read: ['readDescription', 'readSchema', 'readSafeSchema', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getValues', 'getMetricAgg', 'getSimpleMetricsAgg', 'getWordsAgg', 'getMinAgg', 'getMaxAgg', 'downloadOriginalData', 'downloadFullData', 'readApiDoc', 'realtime-transactions', 'readLine', 'readLineRevisions', 'readRevisions', 'bulkSearch', 'listDataFiles', 'downloadDataFile', 'downloadMetadataAttachment', 'downloadAttachment', 'getReadApiKey'],
@@ -24,19 +24,19 @@
   }
 }
 
- export const adminOperationsClasses = {
+export const adminOperationsClasses = {
   datasets: ['manageMasterData'],
   catalogs: ['post']
 }
 
- export const contribOperationsClasses = {
+export const contribOperationsClasses = {
   datasets: ['post'],
   applications: ['post'],
   catalogs: ['list', 'read', 'use']
 }
 
 // WARNING: this util is used both in UI and server
- export const operations = (apiDoc) => {
+export const operations = (apiDoc) => {
   if (!apiDoc) return []
   return (apiDoc && [].concat(...Object.keys(apiDoc.paths).map(path => Object.keys(apiDoc.paths[path]).map(method => ({
     id: apiDoc.paths[path][method].operationId,
@@ -44,12 +44,12 @@
   }))))) || []
 }
 
- export const classByOperation = {}
-for (const resourceType of Object.keys( export const operationsClasses)) {
-   export const classByOperation[resourceType] = {}
-  for (const classe of Object.keys( export const operationsClasses[resourceType])) {
-    for (const operation of  export const operationsClasses[resourceType][classe]) {
-       export const classByOperation[resourceType][operation] = classe
+export const classByOperation = {}
+for (const resourceType of Object.keys(operationsClasses)) {
+  classByOperation[resourceType] = {}
+  for (const classe of Object.keys(operationsClasses[resourceType])) {
+    for (const operation of operationsClasses[resourceType][classe]) {
+      classByOperation[resourceType][operation] = classe
     }
   }
 }

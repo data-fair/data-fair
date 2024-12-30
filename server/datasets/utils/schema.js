@@ -1,12 +1,12 @@
 import _config from 'config'
-import createError from 'http-errors';
-import equal from 'deep-equal';
-import vocabulary from '../../../contract/vocabulary.json';
-import * as geoUtils from './geo.js';
-import * as i18nUtils from '../../i18n/utils.js';
-import * as settingsUtils from '../../misc/utils/settings.js';
-import { cleanJsonSchemaProperty } from '../../../shared/schema.js';
-import capabilitiesSchema from '../../../contract/capabilities.js';
+import createError from 'http-errors'
+import equal from 'deep-equal'
+import vocabulary from '../../../contract/vocabulary.json' with { type: 'json' }
+import * as geoUtils from './geo.js'
+import * as i18nUtils from '../../i18n/utils.js'
+import * as settingsUtils from '../../misc/utils/settings.js'
+import { cleanJsonSchemaProperty } from '../../../shared/schema.js'
+import capabilitiesSchema from '../../../contract/capabilities.js'
 
 const config = /** @type {any} */(_config)
 const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter(key => capabilitiesSchema.properties[key]?.default === false)
@@ -16,7 +16,7 @@ const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filt
  * @param {any[]} schema
  * @param {Record<string, string>} reqQuery
  */
- export const filterSchema = (schema, reqQuery) => {
+export const filterSchema = (schema, reqQuery) => {
   if (reqQuery.type) {
     const types = reqQuery.type.split(',')
     schema = schema.filter(field => types.includes(field.type))
@@ -71,7 +71,7 @@ const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filt
   return schema
 }
 
- export const mergeFileSchema = (dataset) => {
+export const mergeFileSchema = (dataset) => {
   dataset.schema = dataset.schema || []
   const fileFields = dataset.file.schema
     .map(field => {
@@ -93,7 +93,7 @@ const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filt
   dataset.schema = fileFields.concat(extensionFields)
 }
 
- export const cleanSchema = (dataset) => {
+export const cleanSchema = (dataset) => {
   const schema = dataset.schema = dataset.schema || []
   const fileSchema = dataset.file && dataset.file.schema
   for (const f of schema) {
@@ -127,8 +127,8 @@ const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filt
 
 const latlonUri = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
 
- export const extendedSchema = async (db, dataset, fixConcept = true) => {
-   export const cleanSchema(dataset)
+export const extendedSchema = async (db, dataset, fixConcept = true) => {
+  cleanSchema(dataset)
   const schema = dataset.schema.filter(f => f['x-extension'] || !f['x-calculated'])
   const documentProperty = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (documentProperty) {
@@ -227,7 +227,7 @@ const latlonUri = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
   return schema
 }
 
- export const tableSchema = (schema) => {
+export const tableSchema = (schema) => {
   return {
     fields: schema.filter(f => !f['x-calculated'])
       .filter(f => !f['x-extension'])
@@ -247,7 +247,7 @@ const latlonUri = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
  * @param {string} [publicBaseUrl]
  * @returns {any}
  */
- export const jsonSchema = (schema, publicBaseUrl) => {
+export const jsonSchema = (schema, publicBaseUrl) => {
   /** @type {any} */
   const properties = {}
   for (const p of schema) {
@@ -262,7 +262,7 @@ const latlonUri = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
 
 const validationProps = ['x-labelsRestricted', 'x-required', 'minimum', 'maximum', 'minLength', 'maxLength', 'pattern']
 
- export const schemaHasValidationRules = (schema) => {
+export const schemaHasValidationRules = (schema) => {
   for (const prop of schema) {
     for (const validationProp of validationProps) {
       if (validationProp in prop && prop[validationProp] !== false) return true
@@ -275,7 +275,7 @@ const validationProps = ['x-labelsRestricted', 'x-required', 'minimum', 'maximum
  * @param {any[]} newSchema
  * @param {any[]} oldSchema
  */
- export const schemasValidationCompatible = (newSchema, oldSchema) => {
+export const schemasValidationCompatible = (newSchema, oldSchema) => {
   for (const prop of newSchema) {
     const existingProp = oldSchema.find(p => p.key === prop.key)
     if (existingProp) {
@@ -302,7 +302,7 @@ const removeInnocuous = (p) => {
 }
 
 // TODO: we should never ignore calculated properties, they have an impact on true compatibility
- export const schemasFullyCompatible = (schema1, schema2, ignoreCalculated = false) => {
+export const schemasFullyCompatible = (schema1, schema2, ignoreCalculated = false) => {
   // a change in these properties does not consitute a breaking change of the api
   // and does not require a re-finalization of the dataset when patched
   const schema1Bare = schema1.filter(p => !(p['x-calculated'] && ignoreCalculated)).map(removeInnocuous).sort(sortSchema)
@@ -310,7 +310,7 @@ const removeInnocuous = (p) => {
   return equal(schema1Bare, schema2Bare)
 }
 
- export const getSchemaBreakingChanges = (schema, patchedSchema, ignoreExtensions = false) => {
+export const getSchemaBreakingChanges = (schema, patchedSchema, ignoreExtensions = false) => {
   const breakingChanges = []
   // WARNING, this functionality is kind of a duplicate of the UI in dataset-schema.vue
   for (const field of schema) {

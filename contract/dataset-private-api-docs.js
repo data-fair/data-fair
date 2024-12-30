@@ -3,8 +3,8 @@ import datasetAPIDocs from './dataset-api-docs.js'
 import datasetPost from './dataset-post.js'
 import journalSchema from './journal.js'
 import { visibility } from '../server/misc/utils/visibility.js'
-import permissionsDoc from '../server/misc/utils/permissions.js'
-import datasetUtils from '../server/datasets/utils.js'
+import * as permissionsDoc from '../server/misc/utils/permissions.js'
+import * as datasetUtils from '../server/datasets/utils/index.js'
 import datasetPatchSchema from './dataset-patch.js'
 
 /**

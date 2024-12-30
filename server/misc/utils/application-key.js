@@ -2,7 +2,7 @@
 import requestIp from 'request-ip'
 import config from 'config'
 import asyncWrap from './async-handler.js'
-import rateLimiting from './rate-limiting.js'
+import * as rateLimiting from './rate-limiting.js'
 
 const matchingHost = (req) => {
   if (!req.headers.origin) return true

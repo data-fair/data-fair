@@ -7,21 +7,22 @@ import queryParser from 'lucene-query-parser'
 import sanitizeHtml from '../../../shared/sanitize-html.js'
 import truncateMiddle from 'truncate-middle'
 import truncateHTML from 'truncate-html'
-import marked from 'marked'
+import { marked } from 'marked'
 import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone.js'
 import utc from 'dayjs/plugin/utc.js'
 import { prepareThumbnailUrl } from '../../misc/utils/thumbnails.js'
-import tiles from '../utils/tiles.js'
-import geo from '../utils/geo.js'
+import * as tiles from '../utils/tiles.js'
+import * as geo from '../utils/geo.js'
 import { geojsonToWKT } from '@terraformer/wkt'
 import capabilities from '../../../contract/capabilities.js'
+import turfDistance from '@turf/distance'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
 
 // From a property in data-fair schema to the property in an elasticsearch mapping
- export const esProperty = prop => {
+export const esProperty = prop => {
   const capabilities = prop['x-capabilities'] || {}
   // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly
   const innerFields = {}
@@ -87,13 +88,13 @@ dayjs.extend(timezone)
   return esProp
 }
 
- export const aliasName = dataset => {
+export const aliasName = dataset => {
   if (dataset.isVirtual) return dataset.descendants.map(id => `${config.indicesPrefix}-${id}`).join(',')
   if (dataset.draftReason) return `${config.indicesPrefix}_draft-${dataset.id}`
   return `${config.indicesPrefix}-${dataset.id}`
 }
 
- export const parseSort = (sortStr, fields, dataset) => {
+export const parseSort = (sortStr, fields, dataset) => {
   if (!sortStr) return []
   const result = []
   for (const s of sortStr.split(',')) {
@@ -132,8 +133,8 @@ dayjs.extend(timezone)
   return result
 }
 
- export const parseOrder = (sortStr, fields, dataset) => {
-  const sort =  export const parseSort(sortStr, fields, dataset)
+export const parseOrder = (sortStr, fields, dataset) => {
+  const sort = parseSort(sortStr, fields, dataset)
   return sort.map(s => {
     const key = Object.keys(s)[0]
     return { [key]: s[key].order }
@@ -222,7 +223,7 @@ const requiredCapability = (prop, filterName, capability = 'index') => {
   }
 }
 
- export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) => {
+export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) => {
   const esQuery = {}
   qFields = qFields || (query.q_fields && query.q_fields.split(','))
 
@@ -262,7 +263,7 @@ const requiredCapability = (prop, filterName, capability = 'index') => {
   }
 
   // Sort by list of fields (prefixed by - for descending sort)
-  esQuery.sort = query.sort ?  export const parseSort(query.sort, fields, dataset) : []
+  esQuery.sort = query.sort ? parseSort(query.sort, fields, dataset) : []
   // implicitly sort by score after other criteria
   if (!esQuery.sort.some(s => !!s._score) && query.q) esQuery.sort.push('_score')
   // if there is a geo_distance filter, apply a default _geo_distance sort
@@ -339,7 +340,7 @@ const requiredCapability = (prop, filterName, capability = 'index') => {
       }
 
       const isQField = q && f.key !== '_id' && (!qFields || qFields.includes(f.key))
-      const esProp =  export const esProperty(f)
+      const esProp = esProperty(f)
       if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
         searchFields.push(f.key)
         if (isQField) qSearchFields.push(f.key)
@@ -527,7 +528,7 @@ const requiredCapability = (prop, filterName, capability = 'index') => {
     throw createError(400, '"bbox" filter cannot be used on this dataset. It is not geolocalized.')
   }
   if ((query.bbox || query._c_bbox || query.xyz) && dataset.bbox) {
-    const bbox =  export const getQueryBBOX(query, dataset)
+    const bbox = getQueryBBOX(query, dataset)
     const esBoundingBox = { left: bbox[0], bottom: bbox[1], right: bbox[2], top: bbox[3] }
     // use geo_shape intersection instead geo_bounding_box in order to get even
     // partial geometries in tiles
@@ -590,7 +591,7 @@ const requiredCapability = (prop, filterName, capability = 'index') => {
   return esQuery
 }
 
- export const getQueryBBOX = (query) => {
+export const getQueryBBOX = (query) => {
   let bbox
   if (query.bbox ?? query._c_bbox) {
     bbox = (query.bbox ?? query._c_bbox).split(',').map(Number)
@@ -604,7 +605,7 @@ const requiredCapability = (prop, filterName, capability = 'index') => {
   return bbox
 }
 
- export const prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicUrl) => {
+export const prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicUrl) => {
   // re-join splitted items
   for (const field of dataset.schema) {
     if (field.separator && hit._source[field.key] && Array.isArray(hit._source[field.key])) {
@@ -706,7 +707,6 @@ const requiredCapability = (prop, filterName, capability = 'index') => {
   if (res._geopoint && (query.geo_distance ?? query._c_geo_distance)) {
     const [lon, lat] = (query.geo_distance ?? query._c_geo_distance).split(/[,:]/)
     const [centerLat, centerLon] = res._geopoint.split(',')
-    const turfDistance = require('@turf/distance').default
     const distance = turfDistance([lon, lat], [centerLon, centerLat])
     res._geo_distance = distance * 1000
   }
@@ -720,7 +720,7 @@ const requiredCapability = (prop, filterName, capability = 'index') => {
  * @param {any} err
  * @returns {{message: String, status: Number}}
  */
- export const extractError = (err) => {
+export const extractError = (err) => {
   const status = err.status ?? err.statusCode ?? 500
   if (typeof err === 'string') return { message: err, status }
   let errBody = (err.body && err.body.error) || (err.meta && err.meta.body && err.meta.body.error) || err.error
@@ -758,7 +758,7 @@ const requiredCapability = (prop, filterName, capability = 'index') => {
 }
 
 // cf https://github.com/joeybaker/lucene-escape-query/blob/master/index.js
- export const escapeFilter = (val) => {
+export const escapeFilter = (val) => {
   if (typeof val !== 'string') return val
   return [].map.call(val, (char) => {
     if (char === '+' ||

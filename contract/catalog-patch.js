@@ -5,7 +5,8 @@
 import catalog from './catalog.js'
 
 const patchKeys = ['apiKey', 'description', 'title', 'organization', 'extras', 'datasetUrlTemplate', 'applicationUrlTemplate', 'dataFairBaseUrl', 'autoUpdate']
-export default {
+
+const catalogPatch = {
   title: 'Catalog patch',
   type: 'object',
   additionalProperties: false,
@@ -13,5 +14,7 @@ export default {
   properties: {}
 }
 patchKeys.forEach(k => {
-   export constproperties[k] = catalog.properties[k]
+  catalogPatch.properties[k] = catalog.properties[k]
 })
+
+export default catalogPatch

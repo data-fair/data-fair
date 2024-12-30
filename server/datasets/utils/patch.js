@@ -6,7 +6,7 @@ import createError from 'http-errors'
 import mime from 'mime-types'
 import { CronJob } from 'cron'
 import * as geo from './geo.js'
-import ajv from '../../misc/utils/ajv.js'
+import * as ajv from '../../misc/utils/ajv.js'
 import * as datasetUtils from './index.js'
 import * as extensions from './extensions.js'
 import * as schemaUtils from './schema.js'
@@ -14,7 +14,7 @@ import datasetPatchSchema from '../../../contract/dataset-patch.js'
 import * as virtualDatasetsUtils from './virtual.js'
 
 const config = /** @type {any} */(_config)
- export const validatePatch = ajv.compile(datasetPatchSchema)
+export const validatePatch = ajv.compile(datasetPatchSchema)
 
 /**
  * @param {any} app
@@ -26,7 +26,7 @@ const config = /** @type {any} */(_config)
  * @param {any[]} [files]
  * @returns {Promise<{removedRestProps?: any[], attemptMappingUpdate?: boolean, isEmpty?: boolean}>}
  */
- export const preparePatch = async (app, patch, dataset, user, locale, draftValidationMode, files) => {
+export const preparePatch = async (app, patch, dataset, user, locale, draftValidationMode, files) => {
   const db = app.get('db')
 
   patch.id = dataset.id
@@ -111,14 +111,14 @@ const config = /** @type {any} */(_config)
   }
 
   // manage automatic export of REST datasets into files
-  if (patch.exports && patch. export const restToCSV) {
-    if (patch. export const restToCSV.active) {
+  if (patch.exports && patch.exports.restToCSV) {
+    if (patch.exports.restToCSV.active) {
       const job = new CronJob(config.exportRestDatasets.cron, () => {})
-      patch. export const restToCSV.nextExport = job.nextDates().toISOString()
+      patch.exports.restToCSV.nextExport = job.nextDates().toISOString()
     } else {
-      delete patch. export const restToCSV.nextExport
+      delete patch.exports.restToCSV.nextExport
     }
-    patch. export const restToCSV.lastExport = dataset?.exports?.restToCSV?.lastExport
+    patch.exports.lastExport = dataset?.exports?.restToCSV?.lastExport
   }
 
   const removedRestProps = (dataset.isRest && patch.schema && dataset.schema.filter(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))) ?? []

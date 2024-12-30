@@ -1,10 +1,10 @@
-import virtualDatasetsUtils from './virtual.js'
-import esUtils from '../es.js'
-import restDatasetsUtils from './rest.js'
+import * as virtualDatasetsUtils from './virtual.js'
+import * as esUtils from '../es/index.js'
+import * as restDatasetsUtils from './rest.js'
 import createError from 'http-errors'
 import i18n from 'i18n'
 import fs from 'fs-extra'
-import limits from '../../misc/utils/limits.js'
+import * as limits from '../../misc/utils/limits.js'
 import config from 'config'
 import debug from 'debug'
 import { dataFiles, lsAttachments, lsMetadataAttachments, attachmentPath, metadataAttachmentPath } from './files.js'
@@ -21,7 +21,7 @@ const debugLimits = debug('limits')
  * @param {boolean} indexed
  * @returns
  */
- export const checkStorage = async (db, locale, owner, dataset, contentLength, overwrite, indexed = false) => {
+export const checkStorage = async (db, locale, owner, dataset, contentLength, overwrite, indexed = false) => {
   const estimatedContentSize = contentLength - 210
 
   /** @type {any} */
@@ -57,7 +57,7 @@ const debugLimits = debug('limits')
   }
 }
 
- export const storage = async (db, es, dataset) => {
+export const storage = async (db, es, dataset) => {
   const storage = {
     size: 0,
     dataFiles: await dataFiles(dataset),
@@ -162,7 +162,7 @@ const debugLimits = debug('limits')
 }
 
 // After a change that might impact consumed storage, we store the value
- export const updateStorage = async (app, dataset, deleted = false, checkRemaining = false) => {
+export const updateStorage = async (app, dataset, deleted = false, checkRemaining = false) => {
   const db = app.get('db')
   const es = app.get('es')
   if (dataset.draftReason) {
@@ -172,14 +172,14 @@ const debugLimits = debug('limits')
   if (!deleted) {
     await db.collection('datasets').updateOne({ id: dataset.id }, {
       $set: {
-        storage: await  export const storage(db, es, dataset)
+        storage: await storage(db, es, dataset)
       }
     })
   }
-  return  export const updateTotalStorage(db, dataset.owner, checkRemaining)
+  return updateTotalStorage(db, dataset.owner, checkRemaining)
 }
 
- export const updateTotalStorage = async (db, owner, checkRemaining = false) => {
+export const updateTotalStorage = async (db, owner, checkRemaining = false) => {
   const aggQuery = [
     { $match: { 'owner.type': owner.type, 'owner.id': owner.id } },
     { $project: { 'storage.size': 1, 'storage.indexed.size': 1 } },

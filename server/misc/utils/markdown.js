@@ -1,4 +1,4 @@
-import marked from 'marked'
+import { marked } from 'marked'
 import truncateMiddle from 'truncate-middle'
 import truncateHTML from 'truncate-html'
 import memoize from 'memoizee'

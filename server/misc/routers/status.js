@@ -3,7 +3,7 @@ import moment from 'moment'
 import axios from '../utils/axios.js'
 import fs from 'fs-extra'
 import asyncWrap from '../utils/async-handler.js'
-import clamav from '../utils/clamav.js'
+import * as clamav from '../utils/clamav.js'
 
 async function mongoStatus (req) {
   await req.app.get('db').command({ ping: 1 })

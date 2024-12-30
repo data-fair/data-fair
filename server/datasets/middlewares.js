@@ -1,12 +1,12 @@
 import _config from 'config'
-import createError from 'http-errors';
-import i18n from 'i18n';
-import asyncWrap from '../misc/utils/async-handler.js';
-import locks from '../misc/utils/locks.js';
-import usersUtils from '../misc/utils/users.js';
-import { getOwnerRole } from '../misc/utils/permissions.js';
-import { checkStorage } from './utils/storage.js';
-import service from './service.js';
+import createError from 'http-errors'
+import i18n from 'i18n'
+import asyncWrap from '../misc/utils/async-handler.js'
+import * as locks from '../misc/utils/locks.js'
+import * as usersUtils from '../misc/utils/users.js'
+import { getOwnerRole } from '../misc/utils/permissions.js'
+import { checkStorage as checkStorageFn } from './utils/storage.js'
+import * as service from './service.js'
 
 const config = /** @type {any} */(_config)
 
@@ -17,7 +17,7 @@ const config = /** @type {any} */(_config)
  * @returns
  */
 // @ts-ignore
- export const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
+export const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
   // @ts-ignore
   if (!req.user) throw createError(401)
   if (process.env.NO_STORAGE_CHECK === 'true') return next()
@@ -29,7 +29,7 @@ const config = /** @type {any} */(_config)
   const dataset = req.dataset
   const db = req.app.get('db')
   const owner = dataset ? dataset.owner : usersUtils.owner(req)
-  await checkStorage(db, i18n.getLocale(req), owner, dataset, contentLength, overwrite, indexed)
+  await checkStorageFn(db, i18n.getLocale(req), owner, dataset, contentLength, overwrite, indexed)
   next()
 })
 
@@ -39,7 +39,7 @@ const config = /** @type {any} */(_config)
  * @param {boolean | ((patch: any) => boolean)} _shouldLock
  * @returns
  */
- export const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => {
+export const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
   // @ts-ignore
   const shouldLock = typeof _shouldLock === 'function' ? _shouldLock(req.body, req.query) : _shouldLock
@@ -67,7 +67,7 @@ const config = /** @type {any} */(_config)
  * @param {{acceptedStatuses?: string[] | ((body: any, dataset: any) => string[] | null), fillDescendants?: boolean, alwaysDraft?: boolean, acceptMissing?: boolean, acceptInitialDraft?: boolean}} fillDescendants
  * @returns
  */
- export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing, acceptInitialDraft } = {}) => asyncWrap(async (req, res, next) => {
+export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing, acceptInitialDraft } = {}) => asyncWrap(async (req, res, next) => {
   // @ts-ignore
   const publicationSite = req.publicationSite
   // @ts-ignore

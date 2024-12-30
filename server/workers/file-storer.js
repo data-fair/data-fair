@@ -1,13 +1,16 @@
 import fs from 'fs-extra'
-import datasetUtils from '../datasets/utils.js'
-import datasetsService from '../datasets/service.js'
+import * as datasetUtils from '../datasets/utils.js'
+import * as datasetsService from '../datasets/service.js'
 import { replaceAllAttachments } from '../datasets/utils/attachments.js'
 import { basicTypes } from './file-normalizer.js'
 import datasetFileSample from '../datasets/utils/file-sample.js'
-import metrics from '../misc/utils/metrics.js'
+import * as metrics from '../misc/utils/metrics.js'
 import chardet from 'chardet'
 import md5File from 'md5-file'
 import JSONStream from 'JSONStream'
+import { Transform } from 'node:stream'
+import split2 from 'split2'
+import pump from '../misc/utils/pipe.js'
 import debugLib from 'debug'
 
 export const eventsPrefix = 'store'
@@ -38,10 +41,6 @@ export const process = async function (app, dataset) {
     // some ESRI files have invalid geojson with stuff like this:
     // "GLOBALID": {7E1C9E26-9767-4AE4-9CBB-F353B15B3BFE},
     if (dataset.extras?.fixGeojsonGlobalId || dataset.extras?.fixGeojsonESRI) {
-      const { Transform } = require('stream')
-      const split2 = require('split2')
-      const pump = require('../misc/utils/pipe')
-
       const fixedFilePath = loadedFilePath + '.fixed'
       const globalIdRegexp = /"GLOBALID": \{(.*)\}/g
       await pump(

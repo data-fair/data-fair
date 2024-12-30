@@ -1,20 +1,21 @@
-import findUtils from '../misc/utils/find.js'
+import * as findUtils from '../misc/utils/find.js'
 import { prepareMarkdownContent } from '../misc/utils/markdown.js'
 import soasLoader from 'soas'
 import axios from '../misc/utils/axios.js'
-import ajv from '../misc/utils/ajv.js'
+import * as ajv from '../misc/utils/ajv.js'
 import config from 'config'
 import mongoEscape from 'mongo-escape'
 import slug from 'slugify'
-import metrics from '../misc/utils/metrics.js'
-import settingsUtils from '../misc/utils/settings.js'
+import * as metrics from '../misc/utils/metrics.js'
+import * as settingsUtils from '../misc/utils/settings.js'
 import servicePatch from '../../contract/remote-service-patch.js'
 import datasetAPIDocs from '../../contract/dataset-api-docs.js'
+import remoteServiceSchema from '../../contract/remote-service.js'
 import debugLib from 'debug'
 
 const debugMasterData = debugLib('master-data')
 
-export const validate = ajv.compile(require('../../contract/remote-service'))
+export const validate = ajv.compile(remoteServiceSchema)
 export const validatePatch = ajv.compile(servicePatch)
 export const validateOpenApi = ajv.compile('openapi-3.1')
 

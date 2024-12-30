@@ -1,6 +1,6 @@
 import config from 'config'
-import metrics from './misc/utils/metrics.js'
-import app from './app.js'
+import * as metrics from './misc/utils/metrics.js'
+import * as app from './app.js'
 
 app.run().then(app => {
   if (config.mode.includes('worker')) {

@@ -1,8 +1,8 @@
 
 import express from 'express'
 import asyncWrap from '../utils/async-handler.js'
-import cacheHeaders from '../utils/cache-headers.js'
-import limitsUtils from '../utils/limits.js'
+import * as cacheHeaders from '../utils/cache-headers.js'
+import * as limitsUtils from '../utils/limits.js'
 
 const router = express.Router()
 

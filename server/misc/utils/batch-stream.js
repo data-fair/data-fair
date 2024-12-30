@@ -1,4 +1,4 @@
-const { Transform } = require('stream')
+import { Transform } from 'node:stream'
 
 // TODO: use this util in more places
 

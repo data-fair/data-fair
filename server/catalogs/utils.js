@@ -1,6 +1,6 @@
 
-import findUtils from '../misc/utils/find.js'
-import permissions from '../misc/utils/permissions.js'
+import * as findUtils from '../misc/utils/find.js'
+import * as permissions from '../misc/utils/permissions.js'
 import { prepareMarkdownContent } from '../misc/utils/markdown.js'
 
 /**

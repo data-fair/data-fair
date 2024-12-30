@@ -1,13 +1,13 @@
-import config from 'config';
-import express from 'express';
-import permissionsSchema from '../../../contract/permissions.json';
-import * as apiDocsUtil from './api-docs.js';
-import * as visibilityUtils from './visibility.js';
-import ajv from './ajv.js';
+import config from 'config'
+import express from 'express'
+import permissionsSchema from '../../../contract/permissions.json' with { type: 'json' }
+import * as apiDocsUtil from './api-docs.js'
+import * as visibilityUtils from './visibility.js'
+import * as ajv from './ajv.js'
 
 const validate = ajv.compile(permissionsSchema)
 
- export const middleware = function (operationId, operationClass, trackingCategory, acceptMissing) {
+export const middleware = function (operationId, operationClass, trackingCategory, acceptMissing) {
   return function (req, res, next) {
     if ((acceptMissing && !req.resource)) return next()
     if (can(req.resourceType, req.resource, operationId, req.user, req.bypassPermissions)) {
@@ -52,7 +52,7 @@ const validate = ajv.compile(permissionsSchema)
   }
 }
 
- export const canDoForOwnerMiddleware = function (operationClass, ignoreDepartment = false) {
+export const canDoForOwnerMiddleware = function (operationClass, ignoreDepartment = false) {
   return function (req, res, next) {
     const owner = ignoreDepartment ? { ...req.resource.owner, department: null } : req.resource.owner
     if (!canDoForOwner(owner, req.resourceType, operationClass, req.user)) {
@@ -119,14 +119,14 @@ const matchPermission = (owner, permission, user) => {
 }
 
 // resource can be an application, a dataset or a remote service
- export const can = function (resourceType, resource, operationId, user, bypassPermissions) {
+export const can = function (resourceType, resource, operationId, user, bypassPermissions) {
   if (user && user.adminMode) return true
   const userPermissions = list(resourceType, resource, user, bypassPermissions)
   return !!userPermissions.includes(operationId)
 }
 
 // list operations a user can do with a resource
- export const list = function (resourceType, resource, user, bypassPermissions) {
+export const list = function (resourceType, resource, user, bypassPermissions) {
   const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
   const operations = new Set([])
 
@@ -160,7 +160,7 @@ const matchPermission = (owner, permission, user) => {
 
 // resource is public if there are public permissions for all operations of the classes 'read' and 'use'
 // list is not here as someone can set a resource publicly usable but not appearing in lists
- export const isPublic = function (resourceType, resource) {
+export const isPublic = function (resourceType, resource) {
   const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
   const permissionOperations = p => (p.operations || []).concat(...(p.classes || []).map(c => operationsClasses[c]))
   const publicOperations = new Set([].concat(operationsClasses.read || [], operationsClasses.use || []))
@@ -175,11 +175,11 @@ const matchPermission = (owner, permission, user) => {
 
 // Manage filters for datasets, applications and remote services
 // this filter ensures that nobody can list something they are not permitted to list
- export const filter = function (user, resourceType) {
+export const filter = function (user, resourceType) {
   return [visibilityUtils.publicFilter].concat(filterCan(user, resourceType, 'list'))
 }
 
- export const filterCan = function (user, resourceType, operation = 'list') {
+export const filterCan = function (user, resourceType, operation = 'list') {
   const ignoreDepartment = resourceType === 'catalogs'
 
   const operationFilter = []
@@ -240,13 +240,13 @@ const matchPermission = (owner, permission, user) => {
 
 // Only operationId level : it is used only for creation of resources and
 // setting screen only set creation permissions at operationId level
- export const canDoForOwner = function (owner, resourceType, operationClass, user) {
+export const canDoForOwner = function (owner, resourceType, operationClass, user) {
   if (user && user.adminMode) return true
   const ownerClasses = getOwnerClasses(owner, user, resourceType)
   return ownerClasses && ownerClasses.includes(operationClass)
 }
 
- export const initResourcePermissions = async (resource, extraPermissions = []) => {
+export const initResourcePermissions = async (resource, extraPermissions = []) => {
   // initially give owner contribs permissions to write
   if (resource.owner.type === 'user') {
     resource.permissions = extraPermissions
@@ -268,14 +268,14 @@ const matchPermission = (owner, permission, user) => {
   resource.permissions = [contribWritePermission, { ...contribWritePermission, classes: ['list', 'read', 'readAdvanced'], operations: [] }, ...extraPermissions]
 }
 
- export constrouter = (resourceType, resourceName, onPublicCallback) => {
+export const router = (resourceType, resourceName, onPublicCallback) => {
   const router = express.Router()
 
-  router.get('',  export const middleware('getPermissions', 'admin'), async (req, res, next) => {
+  router.get('', middleware('getPermissions', 'admin'), async (req, res, next) => {
     res.status(200).send(req[resourceName].permissions || [])
   })
 
-  router.put('',  export const middleware('setPermissions', 'admin'), async (req, res, next) => {
+  router.put('', middleware('setPermissions', 'admin'), async (req, res, next) => {
     validate(req.body)
     req.body = req.body || []
     let valid = true
@@ -286,8 +286,8 @@ const matchPermission = (owner, permission, user) => {
     const resources = req.app.get('db').collection(resourceType)
     try {
       const resource = await req[resourceName]
-      const wasPublic =  export const isPublic(resourceType, resource)
-      const willBePublic =  export const isPublic(resourceType, { permissions: req.body })
+      const wasPublic = isPublic(resourceType, resource)
+      const willBePublic = isPublic(resourceType, { permissions: req.body })
 
       // re-publish to catalogs if public/private was switched
       if (['datasets', 'applications'].includes(resourceType)) {
@@ -313,7 +313,7 @@ const matchPermission = (owner, permission, user) => {
   return router
 }
 
- export constapiDoc = {
+export const apiDoc = {
   get: {
     summary: 'Récupérer la liste des permissions.',
     operationId: 'getPermissions',

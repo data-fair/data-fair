@@ -4,13 +4,17 @@
 
 import application from './application.js'
 const patchKeys = ['configuration', 'url', 'urlDraft', 'description', 'slug', 'title', 'publications', 'publicationSites', 'requestedPublicationSites', 'extras', 'topics', 'preferLargeDisplay']
-export default {
+
+const appPatch = {
   title: 'Application patch',
   type: 'object',
   additionalProperties: false,
   /** @type {any} */
   properties: {}
 }
+
 patchKeys.forEach(k => {
-   export constproperties[k] = application.properties[k]
+  appPatch.properties[k] = application.properties[k]
 })
+
+export default appPatch

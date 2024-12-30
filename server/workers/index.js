@@ -1,10 +1,15 @@
-const config = /** @type {any} */(require('config'))
-const { Histogram } = require('prom-client')
-const metrics = require('../misc/utils/metrics')
-const locks = require('../misc/utils/locks')
-const debug = require('debug')('workers')
-const mergeDraft = require('../datasets/utils/merge-draft')
-const taskProgress = require('../datasets/utils/task-progress')
+import _config from 'config'
+import { Histogram } from 'prom-client'
+import * as metrics from '../misc/utils/metrics.js'
+import * as locks from '../misc/utils/locks.js'
+import * as journals from '../misc/utils/journals.js'
+import debug from 'debug'
+import mergeDraft from '../datasets/utils/merge-draft.js'
+import taskProgress from '../datasets/utils/task-progress.js'
+import moment from 'moment'
+import { spawn } from 'node:child-process-promise'
+
+const config = /** @type {any} */(_config)
 
 const workersTasksHistogram = new Histogram({
   name: 'df_datasets_workers_tasks',
@@ -69,7 +74,7 @@ export const runningTasks = () => {
 /* eslint no-unmodified-loop-condition: 0 */
 // Run main loop !
 export const start = async (app) => {
-  const debugLoop = require('debug')('worker-loop')
+  const debugLoop = debug('worker-loop')
 
   debugLoop('start worker loop with config', config.worker)
   const db = app.get('db')
@@ -144,7 +149,6 @@ export const stop = async () => {
 
 // Filters to select eligible datasets or applications for processing
 const getTypesFilters = () => {
-  const moment = require('moment')
   const date = new Date().toISOString()
   return {
     application: { 'publications.status': { $in: ['waiting', 'deleted'] } },
@@ -167,7 +171,7 @@ const getTypesFilters = () => {
           { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } },
           { status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, 'rest.ttl.checkedAt': { $exists: false } },
           // fetch rest datasets with an automatic export to do
-          { status: 'finalized', isRest: true, ' export const restToCSV.active': true, ' export const restToCSV.nextExport': { $lt: date } },
+          { status: 'finalized', isRest: true, 'exports.restToCSV.active': true, 'exports.restToCSV.nextExport': { $lt: date } },
           // file datasets with remote url that need refreshing
           { status: 'finalized', draft: { $exists: false }, 'remoteFile.autoUpdate.active': true, 'remoteFile.autoUpdate.nextUpdate': { $lt: date } },
           // renew read api key
@@ -189,7 +193,6 @@ const getTypesFilters = () => {
 
 async function iter (app, resource, type) {
   const db = app.get('db')
-  const journals = require('../misc/utils/journals')
   const now = new Date().toISOString()
 
   let taskKey
@@ -209,8 +212,6 @@ async function iter (app, resource, type) {
     } else if (type === 'catalog') {
       taskKey = 'catalogHarvester'
     } else if (type === 'dataset') {
-      const moment = require('moment')
-
       const normalized = (resource.status === 'stored' && tasks.fileNormalizer.basicTypes.includes(resource.originalFile?.mimetype)) || resource.status === 'normalized'
 
       if (resource.status === 'created') {
@@ -319,7 +320,6 @@ async function iter (app, resource, type) {
     endTask = workersTasksHistogram.startTimer({ task: taskKey })
     if (config.worker.spawnTask) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
-      const spawn = require('child-process-promise').spawn
       const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task', DATASET_DRAFT: '' + !!resource.draftReason } })
       spawnPromise.childProcess.stdout.on('data', data => {
         data = data.toString()

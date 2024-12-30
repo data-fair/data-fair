@@ -6,21 +6,21 @@ import multer from 'multer'
 import createError from 'http-errors'
 import mime from 'mime-types'
 import { attachmentsDir, metadataAttachmentsDir, metadataAttachmentPath } from './files.js'
-import limits from '../../misc/utils/limits.js'
+import * as limits from '../../misc/utils/limits.js'
 import exec from '../../misc/utils/exec.js'
 
 const config = /** @type {any} */(_config)
 const debug = debugLib('attachments')
 const debugLimits = debugLib('limits')
 
- export const addAttachments = async (dataset, attachmentsArchive) => {
+export const addAttachments = async (dataset, attachmentsArchive) => {
   const dir = attachmentsDir(dataset)
   await fs.ensureDir(dir)
   await exec('unzip', ['-o', '-q', attachmentsArchive, '-d', dir])
   await fs.remove(attachmentsArchive)
 }
 
- export const replaceAllAttachments = async (dataset, attachmentsFilePath) => {
+export const replaceAllAttachments = async (dataset, attachmentsFilePath) => {
   const dir = attachmentsDir(dataset)
   await fs.ensureDir(dir)
   await fs.emptyDir(dir)
@@ -28,7 +28,7 @@ const debugLimits = debugLib('limits')
   await fs.remove(attachmentsFilePath)
 }
 
- export const removeAll = async (dataset) => {
+export const removeAll = async (dataset) => {
   await fs.remove(attachmentsDir(dataset))
 }
 
@@ -53,7 +53,7 @@ const metadataStorage = multer.diskStorage({
   }
 })
 
-const metadataUpload = multer({
+const metadataUploadMulter = multer({
   storage: metadataStorage,
   fileFilter: async function fileFilter (req, file, cb) {
     try {
@@ -96,4 +96,4 @@ const metadataUpload = multer({
   }
 })
 
- export const metadataUpload = () => metadataUpload.single('attachment')
+export const metadataUpload = () => metadataUploadMulter.single('attachment')

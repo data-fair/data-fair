@@ -1,57 +1,57 @@
 
-import path from 'path';
-import config from 'config';
-import slug from 'slugify';
-import { CronJob } from 'cron';
-import * as locks from '../../misc/utils/locks.js';
-import * as metrics from '../../misc/utils/metrics.js';
-import nanoid from '../../misc/utils/nanoid.js';
-import * as visibilityUtils from '../../misc/utils/visibility.js';
-import { prepareThumbnailUrl } from '../../misc/utils/thumbnails.js';
-import { prepareMarkdownContent } from '../../misc/utils/markdown.js';
-import * as permissions from '../../misc/utils/permissions.js';
-import * as findUtils from '../../misc/utils/find.js';
-import * as filesUtils from './files.js';
-import * as storageUtils from './storage.js';
-import * as dataStreamsUtils from './data-streams.js';
-import * as schemaUtils from './schema.js';
-import * as readApiKeyUtils from './read-api-key.js';
+import path from 'path'
+import config from 'config'
+import slug from 'slugify'
+import { CronJob } from 'cron'
+import * as locks from '../../misc/utils/locks.js'
+import * as metrics from '../../misc/utils/metrics.js'
+import nanoid from '../../misc/utils/nanoid.js'
+import * as visibilityUtils from '../../misc/utils/visibility.js'
+import { prepareThumbnailUrl } from '../../misc/utils/thumbnails.js'
+import { prepareMarkdownContent } from '../../misc/utils/markdown.js'
+import * as permissions from '../../misc/utils/permissions.js'
+import * as findUtils from '../../misc/utils/find.js'
+import * as filesUtils from './files.js'
+import * as storageUtils from './storage.js'
+import * as dataStreamsUtils from './data-streams.js'
+import * as schemaUtils from './schema.js'
+import * as readApiKeyUtils from './read-api-key.js'
+import mergeDraft from './merge-draft.js'
 
- export const filePath = filesUtils.filePath
- export const dataFiles = filesUtils.dataFiles
- export const lsFiles = filesUtils.lsFiles
- export const lsAttachments = filesUtils.lsAttachments
- export const fullFilePath = filesUtils.fullFilePath
- export const originalFilePath = filesUtils.originalFilePath
- export const attachmentsDir = filesUtils.attachmentsDir
- export const metadataAttachmentsDir = filesUtils.metadataAttachmentsDir
- export const dir = filesUtils.dir
- export const fullFilePath = filesUtils.fullFilePath
- export const fullFileName = filesUtils.fullFileName
- export const exportedFilePath = filesUtils.exportedFilePath
- export const loadedFilePath = filesUtils.loadedFilePath
- export const loadingDir = filesUtils.loadingDir
- export const loadedAttachmentsFilePath = filesUtils.loadedAttachmentsFilePath
- export const attachmentPath = filesUtils.attachmentPath
- export const metadataAttachmentPath = filesUtils.metadataAttachmentPath
+export { default as mergeDraft } from './merge-draft.js'
 
- export const mergeFileSchema = schemaUtils.mergeFileSchema
- export const cleanSchema = schemaUtils.cleanSchema
- export const extendedSchema = schemaUtils.extendedSchema
- export const schemasFullyCompatible = schemaUtils.schemasFullyCompatible
- export const schemasValidationCompatible = schemaUtils.schemasValidationCompatible
- export const schemaHasValidationRules = schemaUtils.schemaHasValidationRules
- export const jsonSchema = schemaUtils.jsonSchema
- export const createReadApiKey = readApiKeyUtils.create
+export const filePath = filesUtils.filePath
+export const dataFiles = filesUtils.dataFiles
+export const lsFiles = filesUtils.lsFiles
+export const lsAttachments = filesUtils.lsAttachments
+export const fullFilePath = filesUtils.fullFilePath
+export const originalFilePath = filesUtils.originalFilePath
+export const attachmentsDir = filesUtils.attachmentsDir
+export const metadataAttachmentsDir = filesUtils.metadataAttachmentsDir
+export const dir = filesUtils.dir
+export const fullFileName = filesUtils.fullFileName
+export const exportedFilePath = filesUtils.exportedFilePath
+export const loadedFilePath = filesUtils.loadedFilePath
+export const loadingDir = filesUtils.loadingDir
+export const loadedAttachmentsFilePath = filesUtils.loadedAttachmentsFilePath
+export const attachmentPath = filesUtils.attachmentPath
+export const metadataAttachmentPath = filesUtils.metadataAttachmentPath
 
- export const mergeDraft = require('./merge-draft')
+export const mergeFileSchema = schemaUtils.mergeFileSchema
+export const cleanSchema = schemaUtils.cleanSchema
+export const extendedSchema = schemaUtils.extendedSchema
+export const schemasFullyCompatible = schemaUtils.schemasFullyCompatible
+export const schemasValidationCompatible = schemaUtils.schemasValidationCompatible
+export const schemaHasValidationRules = schemaUtils.schemaHasValidationRules
+export const jsonSchema = schemaUtils.jsonSchema
+export const createReadApiKey = readApiKeyUtils.create
 
- export const updateStorage = storageUtils.updateStorage
+export const updateStorage = storageUtils.updateStorage
 
- export const sampleValues = dataStreamsUtils.sampleValues
- export const readStreams = dataStreamsUtils.readStreams
+export const sampleValues = dataStreamsUtils.sampleValues
+export const readStreams = dataStreamsUtils.readStreams
 
- export const reindex = async (db, dataset) => {
+export const reindex = async (db, dataset) => {
   let patch = { status: 'stored' }
   if (dataset.isVirtual) patch.status = 'indexed'
   else if (dataset.isRest) patch.status = 'analyzed'
@@ -60,7 +60,7 @@ import * as readApiKeyUtils from './read-api-key.js';
     .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
 }
 
- export const refinalize = async (db, dataset) => {
+export const refinalize = async (db, dataset) => {
   let patch = { status: 'indexed' }
   if (dataset.draftReason) patch = { 'draft.status': patch.status }
   return (await db.collection('datasets')
@@ -68,12 +68,12 @@ import * as readApiKeyUtils from './read-api-key.js';
 }
 
 // Generate ids and try insertion until there is no conflict on id
- export const insertWithId = async (db, dataset, onClose) => {
+export const insertWithId = async (db, dataset, onClose) => {
   const baseSlug = slug(dataset.title, { lower: true, strict: true })
   const owner = dataset.owner
   dataset.id = dataset.id ?? nanoid()
   dataset.slug = baseSlug
-   export const setUniqueRefs(dataset)
+  setUniqueRefs(dataset)
   let insertOk = false
   let i = 1
   while (!insertOk) {
@@ -120,12 +120,12 @@ import * as readApiKeyUtils from './read-api-key.js';
     }
     i += 1
     dataset.slug = `${baseSlug}-${i}`
-     export const setUniqueRefs(dataset)
+    setUniqueRefs(dataset)
   }
   return dataset
 }
 
- export const previews = (dataset, publicUrl = config.publicUrl) => {
+export const previews = (dataset, publicUrl = config.publicUrl) => {
   if (!dataset.schema) return []
   const datasetRef = publicUrl === config.publicUrl ? dataset.id : dataset.slug
   const previews = [{ id: 'table', title: 'Tableau', href: `${publicUrl}/embed/dataset/${datasetRef}/table` }]
@@ -151,7 +151,7 @@ import * as readApiKeyUtils from './read-api-key.js';
  * @param {any} dataset
  * @param {boolean} draft
  */
- export const clean = (req, dataset, draft = false) => {
+export const clean = (req, dataset, draft = false) => {
   const query = req.query
   // @ts-ignore
   const publicationSite = req.publicationSite
@@ -162,7 +162,7 @@ import * as readApiKeyUtils from './read-api-key.js';
   if (query.raw !== 'true') {
     dataset.userPermissions = permissions.list('datasets', dataset, req.user, req.bypassPermissions)
     const thumbnail = query.thumbnail || '300x200'
-    if (draft)  export const mergeDraft(dataset)
+    if (draft) mergeDraft(dataset)
     if (!select.includes('-public')) dataset.public = permissions.isPublic('datasets', dataset)
     if (!select.includes('-visibility')) dataset.visibility = visibilityUtils.visibility(dataset)
     if (!query.select || select.includes('description')) {
@@ -188,7 +188,7 @@ import * as readApiKeyUtils from './read-api-key.js';
     }
 
     if (dataset.schema && !select.includes('-previews')) {
-      dataset.previews =  export const previews(dataset, publicUrl)
+      dataset.previews = previews(dataset, publicUrl)
     }
     if (!select.includes('-links')) findUtils.setResourceLinks(dataset, 'dataset', publicUrl, publicationSite && publicationSite.datasetUrlTemplate)
     if (dataset.image && dataset.public && !select.includes('-thumbnail')) {
@@ -221,14 +221,14 @@ import * as readApiKeyUtils from './read-api-key.js';
   return dataset
 }
 
- export const setUniqueRefs = (resource) => {
+export const setUniqueRefs = (resource) => {
   if (resource.slug) {
     resource._uniqueRefs = [resource.id]
     if (resource.slug !== resource.id) resource._uniqueRefs.push(resource.slug)
   }
 }
 
- export const curateDataset = (dataset, existingDataset) => {
+export const curateDataset = (dataset, existingDataset) => {
   if (dataset.title) dataset.title = dataset.title.trim()
 
   if (dataset.remoteFile?.autoUpdate?.active) {
@@ -250,7 +250,7 @@ import * as readApiKeyUtils from './read-api-key.js';
   }
 }
 
- export const titleFromFileName = (name) => {
+export const titleFromFileName = (name) => {
   let baseFileName = path.parse(name).name
   if (baseFileName.endsWith('.gz')) baseFileName = path.parse(baseFileName).name
   return path.parse(baseFileName).name.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, ' ').split(/\s+/).join(' ')

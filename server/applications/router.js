@@ -1,39 +1,40 @@
-import express from 'express';
-import slug from 'slugify';
-import moment from 'moment';
-import config from 'config';
-import fs from 'fs-extra';
-import util from 'util';
-import createError from 'http-errors';
-import i18n from 'i18n';
-import sanitizeHtml from '../../shared/sanitize-html.js';
-import { nanoid } from 'nanoid';
-import applicationAPIDocs from '../../contract/application-api-docs.js';
-import ajv from '../misc/utils/ajv.js';
-import applicationSchema from '../../contract/application.js';
-import applicationPatch from '../../contract/application-patch.js';
-import applicationKeys from '../../contract/application-keys.js';
-import baseAppsUtils from '../base-applications/utils.js';
-import permissions from '../misc/utils/permissions.js';
-import usersUtils from '../misc/utils/users.js';
-import findUtils from '../misc/utils/find.js';
-import asyncWrap from '../misc/utils/async-handler.js';
-import journals from '../misc/utils/journals.js';
-import capture from '../misc/utils/capture.js';
-import { clean, refreshConfigDatasetsRefs } from './utils.js';
-import { findApplications } from './service.js';
-import { syncApplications } from '../datasets/service.js';
-import cacheHeaders from '../misc/utils/cache-headers.js';
-import { validateURLFriendly } from '../misc/utils/validation.js';
-import publicationSites from '../misc/utils/publication-sites.js';
+import express from 'express'
+import slug from 'slugify'
+import moment from 'moment'
+import config from 'config'
+import fs from 'fs-extra'
+import util from 'util'
+import createError from 'http-errors'
+import i18n from 'i18n'
+import sanitizeHtml from '../../shared/sanitize-html.js'
+import { nanoid } from 'nanoid'
+import applicationAPIDocs from '../../contract/application-api-docs.js'
+import * as ajv from '../misc/utils/ajv.js'
+import applicationSchema from '../../contract/application.js'
+import applicationPatch from '../../contract/application-patch.js'
+import applicationKeys from '../../contract/application-keys.js'
+import * as baseAppsUtils from '../base-applications/utils.js'
+import * as permissions from '../misc/utils/permissions.js'
+import * as usersUtils from '../misc/utils/users.js'
+import * as findUtils from '../misc/utils/find.js'
+import asyncWrap from '../misc/utils/async-handler.js'
+import * as journals from '../misc/utils/journals.js'
+import * as capture from '../misc/utils/capture.js'
+import { clean, refreshConfigDatasetsRefs } from './utils.js'
+import { findApplications } from './service.js'
+import { syncApplications } from '../datasets/service.js'
+import * as cacheHeaders from '../misc/utils/cache-headers.js'
+import { validateURLFriendly } from '../misc/utils/validation.js'
+import * as publicationSites from '../misc/utils/publication-sites.js'
 
-const unlink = util.promisify(fs.unlink);
+const unlink = util.promisify(fs.unlink)
 const validate = ajv.compile(applicationSchema)
 const validateConfiguration = ajv.compile(applicationSchema.properties.configuration)
 const validatePatch = ajv.compile(applicationPatch)
 const validateKeys = ajv.compile(applicationKeys)
 
-const router = export default express.Router()
+const router = express.Router()
+export default router
 
 router.use((req, res, next) => {
   // @ts-ignore

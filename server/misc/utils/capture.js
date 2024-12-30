@@ -4,10 +4,10 @@ import path from 'path'
 import request from 'request'
 import eventToPromise from 'event-to-promise'
 import pump from '../utils/pipe.js'
-import rateLimiting from '../utils/rate-limiting.js'
+import * as rateLimiting from '../utils/rate-limiting.js'
 import debug from 'debug'
-import permissionsUtils from './permissions.js'
-import metrics from './metrics.js'
+import * as permissionsUtils from './permissions.js'
+import * as metrics from './metrics.js'
 import resolvePath from 'resolve-path'
 
 const captureUrl = config.privateCaptureUrl || config.captureUrl

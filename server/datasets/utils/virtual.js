@@ -1,5 +1,5 @@
 
-import datasetUtils from '../../datasets/utils.js'
+import * as datasetUtils from '../../datasets/utils/index.js'
 import capabilitiesSchema from '../../../contract/capabilities.js'
 import createError from 'http-errors'
 

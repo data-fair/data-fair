@@ -90,7 +90,7 @@ import createError from 'http-errors';
 import axios from '../../misc/utils/axios.js';
 import { findLicense } from '../../misc/utils/licenses.js';
 import debugLib from 'debug';
- export const rdf2datasets = (rdf) => {
+export const rdf2datasets = (rdf) => {
   const content = xml2js(rdf, { compact: true })
   const catalogRecords = content['rdf:RDF']['dcat:Catalog']['dcat:dataset']
     .filter(item => !!item['dcat:CatalogRecord'])

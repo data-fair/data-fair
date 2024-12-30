@@ -5,6 +5,7 @@ import { PromiseSocket } from 'promise-socket'
 import { Counter } from 'prom-client'
 import asyncWrap from './async-handler.js'
 import debugLib from 'debug'
+import _config from 'config'
 
 const config = /** @type {any} */(_config)
 
@@ -29,17 +30,17 @@ const runCommand = async (command) => {
   return result
 }
 
- export const ping = async () => {
+export const ping = async () => {
   const result = await runCommand('PING')
   if (result !== 'PONG') throw new Error('expected "PONG" in response')
 }
 
- export const middleware = asyncWrap(async (req, res, next) => {
-  await  export const checkFiles(req.files, req.user)
+export const middleware = asyncWrap(async (req, res, next) => {
+  await checkFiles(req.files, req.user)
   next()
 })
 
- export const checkFiles = async (files, user) => {
+export const checkFiles = async (files, user) => {
   if (!config.clamav.active) return true
   for (const file of files || []) {
     const remotePath = path.join(config.clamav.dataDir, path.relative(config.dataDir, file.path))

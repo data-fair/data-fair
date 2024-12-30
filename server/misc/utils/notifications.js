@@ -1,6 +1,6 @@
 import config from 'config'
 import axios from './axios.js'
-import metrics from './metrics.js'
+import * as metrics from './metrics.js'
 import debugLib from 'debug'
 
 const debug = debugLib('notifications')

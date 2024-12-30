@@ -1,9 +1,9 @@
 import express from 'express'
-import status from './status.js'
+import * as status from './status.js'
 import asyncWrap from '../utils/async-handler.js'
-import findUtils from '../utils/find.js'
-import baseAppsUtils from '../../base-applications/utils.js'
-import cacheHeaders from '../utils/cache-headers.js'
+import * as findUtils from '../utils/find.js'
+import * as baseAppsUtils from '../../base-applications/utils.js'
+import * as cacheHeaders from '../utils/cache-headers.js'
 
 const router = express.Router()
 export default router
@@ -18,10 +18,10 @@ router.use(asyncWrap(async (req, res, next) => {
 router.use(cacheHeaders.noCache)
 
 let info = { version: process.env.NODE_ENV }
-try { info = require('../../../BUILD.json') } catch (err) {}
-router.get('/info', (req, res) => {
+router.get('/info', asyncWrap(async (req, res) => {
+  try { info = await import('../../../BUILD.json', { with: { type: 'json' } }) } catch (err) {}
   res.json(info)
-})
+}))
 
 router.get('/status', (req, res, next) => {
   status.status(req, res, next)

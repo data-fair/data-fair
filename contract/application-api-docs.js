@@ -1,8 +1,8 @@
 import config from 'config'
 import applicationSchema from './application.js'
 import journalSchema from './journal.js'
-import permissionsDoc from '../server/misc/utils/permissions.js'
-import { version } from '../package.json'
+import * as permissionsDoc from '../server/misc/utils/permissions.js'
+import pJson from '../package.json' with {type: 'json'}
 
 /**
  *
@@ -15,7 +15,7 @@ export default (application, info) => {
     openapi: '3.1.0',
     info: {
       title: `Intégration de l'application : ${application.title || application.id}`,
-      version,
+      version: pJson.version,
       // @ts-ignore
       termsOfService: config.info.termsOfService,
       contact: { ...(info.contact || {}) }

@@ -5,7 +5,7 @@ import express from 'express'
 import config from 'config'
 import fs from 'fs-extra'
 import asyncWrap from '../utils/async-handler.js'
-import datasetsService from '../../datasets/service.js'
+import * as datasetsService from '../../datasets/service.js'
 import { ownerDir } from '../../datasets/utils/files.js'
 
 const router = express.Router()

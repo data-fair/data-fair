@@ -14,9 +14,9 @@ Downstream examples:
 */
 
 import { nanoid } from 'nanoid'
-import permissions from './permissions.js'
+import * as permissions from './permissions.js'
 import { readApiKey } from './api-key.js'
-import metrics from './metrics.js'
+import * as metrics from './metrics.js'
 
 let cursor
 const subscribers = {}

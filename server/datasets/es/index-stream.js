@@ -1,8 +1,8 @@
 import { Transform } from 'stream'
 import config from 'config'
 import truncateMiddle from 'truncate-middle'
-import extensionsUtils from '../utils/extensions.js'
-import metrics from '../../misc/utils/metrics.js'
+import * as extensionsUtils from '../utils/extensions.js'
+import * as metrics from '../../misc/utils/metrics.js'
 import { nanoid } from 'nanoid'
 import debugLib from 'debug'
 

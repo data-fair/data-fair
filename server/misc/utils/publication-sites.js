@@ -1,5 +1,5 @@
-import webhooks from './webhooks.js'
-import permissions from './permissions.js'
+import * as webhooks from './webhooks.js'
+import * as permissions from './permissions.js'
 import createError from 'http-errors'
 
 const getPublicationSiteInfo = async (db, owner, publicationSite) => {

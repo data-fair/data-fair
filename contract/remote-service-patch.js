@@ -5,7 +5,8 @@
 import remoteService from './remote-service.js'
 
 const patchKeys = ['apiDoc', 'apiKey', 'server', 'description', 'title', 'parameters', 'public', 'privateAccess', 'virtualDatasets']
-export default {
+
+const remoteServicePatch = {
   title: 'Remote service patch',
   type: 'object',
   additionalProperties: false,
@@ -14,5 +15,7 @@ export default {
 }
 
 patchKeys.forEach(k => {
-   export constproperties[k] = remoteService.properties[k]
+  remoteServicePatch.properties[k] = remoteService.properties[k]
 })
+
+export default remoteServicePatch
