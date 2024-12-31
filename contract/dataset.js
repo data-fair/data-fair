@@ -1,6 +1,6 @@
 import owner from './owner.js'
 import eventBy from './event-by.js'
-import permissions from './permissions.json' with {type: 'json'}
+import permissions from './permissions.js'
 import topic from './topic.js'
 import * as masterData from './master-data.js'
 import capabilities from './capabilities.js'

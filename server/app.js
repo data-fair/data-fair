@@ -92,7 +92,7 @@ export const run = async () => {
     const parsedPublicUrl = new URL(config.publicUrl)
     let basePath = parsedPublicUrl.pathname
     if (!basePath.endsWith('/')) basePath += '/'
-    const originalUrl = await import('original-url')
+    const { default: originalUrl } = await import('original-url')
     const { format: formatUrl } = await import('url')
     const getPublicationSiteSettings = async (publicationSiteUrl, publicationSiteQuery, db) => {
       const elemMatch = publicationSiteQuery
@@ -190,7 +190,7 @@ export const run = async () => {
     app.use('/streamsaver/mitm.html', express.static('node_modules/streamsaver/mitm.html'))
     app.use('/streamsaver/sw.js', express.static('node_modules/streamsaver/sw.js'))
 
-    const {WebSocketServer} = await import('ws')
+    const { WebSocketServer } = await import('ws')
     server = (await import('http')).createServer(app)
     const { createHttpTerminator } = await import('http-terminator')
     httpTerminator = createHttpTerminator({ server })
@@ -220,7 +220,7 @@ export const run = async () => {
       // containers for the scripts that are running in only 1 (while loop on "acquire" ?) and a healthcheck so that workers
       // are not considered "up" and the previous versions keep running in the mean time
     } else {
-      await await import('../upgrade/index.js')(db, client)
+      await (await import('../upgrade/index.js')).default(db, client)
       await locksUtils.release(db, 'upgrade')
     }
   }

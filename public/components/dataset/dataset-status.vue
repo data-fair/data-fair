@@ -167,7 +167,9 @@ en:
 </i18n>
 
 <script>
-const events = require('~/../shared/events.json').dataset
+import allEvents from '~/../shared/events.json'
+
+const events = allEvents.dataset
 const { mapState, mapGetters, mapActions } = require('vuex')
 
 export default {

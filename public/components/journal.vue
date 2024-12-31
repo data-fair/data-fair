@@ -79,7 +79,7 @@
 </template>
 
 <script>
-const events = require('../../shared/events.json')
+import events from '../../shared/events.json'
 
 export default {
   props: ['journal', 'type'],

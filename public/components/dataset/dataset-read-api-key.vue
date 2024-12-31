@@ -46,7 +46,7 @@ en:
 
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex'
-const datasetSchema = require('~/../contract/dataset.js')
+import datasetSchema from '~/../contract/dataset.js'
 
 const defaultReadApiKey = { active: false, interval: 'P1M' }
 

@@ -7,7 +7,7 @@ import debug from 'debug'
 import mergeDraft from '../datasets/utils/merge-draft.js'
 import taskProgress from '../datasets/utils/task-progress.js'
 import moment from 'moment'
-import { spawn } from 'node:child-process-promise'
+import { spawn } from 'child-process-promise'
 
 const config = /** @type {any} */(_config)
 

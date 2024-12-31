@@ -521,7 +521,8 @@ import { mapState, mapGetters, mapActions } from 'vuex'
 import 'iframe-resizer/js/iframeResizer'
 import VIframe from '@koumoul/v-iframe'
 import eventBus from '~/event-bus'
-const webhooksSchema = require('~/../contract/settings').properties.webhooks
+import settingsSchema from '~/../contract/settings.js'
+const webhooksSchema = settingsSchema.properties.webhooks
 
 export default {
   components: { VIframe },

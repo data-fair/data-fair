@@ -1,6 +1,6 @@
 import owner from './owner.js'
 import eventBy from './event-by.js'
-import permissions from './permissions.json' with {type: 'json'}
+import permissions from './permissions.js'
 import publicationSchema from './publication.js'
 import configurationSchema from './app-configuration.js'
 import topic from './topic.js'

@@ -13,8 +13,9 @@
 
 <script>
 import eventBus from '~/event-bus'
+import settingsSchema from '~/../contract/settings'
 
-const infoSchema = require('~/../contract/settings').properties.info
+const infoSchema = settingsSchema.properties.info
 const wrapperSchema = {
   type: 'object',
   properties: {

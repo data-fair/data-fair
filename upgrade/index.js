@@ -1,12 +1,12 @@
-const path = require('path')
-const semver = require('semver')
-const fs = require('fs')
-const debug = require('debug')('upgrade')
+import path from 'node:path'
+import semver from 'semver'
+import fs from 'node:fs'
+import debugModule from 'debug'
+import pjson from '../package.json' with {type: 'json'}
 
-const pjson = require('../package.json')
-const scriptsRoot = path.join(__dirname, 'scripts')
+const debug = debugModule('upgrade')
 
-module.exports = main
+const scriptsRoot = path.join(import.meta.dirname, 'scripts')
 
 // chose the proper scripts to execute, then run them
 async function main (db, client) {
@@ -22,7 +22,7 @@ async function main (db, client) {
     for (const scriptDef of scripts) {
       if (semver.gte(scriptDef.version, version)) {
         for (const scriptName of scriptDef.names) {
-          const script = require(path.join(scriptsRoot, scriptDef.version, scriptName))
+          const script = (await import(path.join(scriptsRoot, scriptDef.version, scriptName))).default
           debug('Apply script %s/%s : %s', scriptDef.version, scriptName, script.description)
           await script.exec(db, require('debug')(`upgrade:${scriptDef.version}:${scriptName}`))
         }
@@ -47,3 +47,5 @@ async function listScripts () {
     }
   })
 }
+
+export default main

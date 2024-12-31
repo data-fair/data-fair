@@ -1,6 +1,6 @@
 import config from 'config'
 import express from 'express'
-import permissionsSchema from '../../../contract/permissions.json' with { type: 'json' }
+import permissionsSchema from '../../../contract/permissions.js'
 import * as apiDocsUtil from './api-docs.js'
 import * as visibilityUtils from './visibility.js'
 import * as ajv from './ajv.js'

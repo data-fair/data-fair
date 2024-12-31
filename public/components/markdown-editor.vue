@@ -68,7 +68,7 @@ en:
 <script>
 import 'easymde/dist/easymde.min.css'
 import { marked } from 'marked'
-const sanitizeHtml = require('../../shared/sanitize-html.js')
+import sanitizeHtml from '../../shared/sanitize-html.js'
 
 export default {
   props: {

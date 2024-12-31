@@ -1,7 +1,7 @@
 
 import config from 'config'
 import { Transform } from 'node:stream'
-import { RateLimiter, TokenBucket } from 'limiter'
+import { RateLimiter, TokenBucket } from '../../../node_modules/limiter/dist/cjs/index.js' // cf https://github.com/jhurliman/node-rate-limiter/issues/80#issuecomment-1649261071
 import requestIp from 'request-ip'
 import asyncWrap from './async-handler.js'
 import debug from 'debug'
