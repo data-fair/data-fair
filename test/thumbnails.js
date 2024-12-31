@@ -1,11 +1,11 @@
 import { strict as assert } from 'node:assert'
 
 import * as testUtils from './resources/test-utils.js'
-const fs = require('fs')
-const nock = require('nock')
-const FormData = require('form-data')
+import fs from 'node:fs'
+import nock from 'nock'
+import FormData from 'form-data'
 
-const workers = require('../server/workers')
+import * as workers from '../server/workers/index.js'
 
 describe('thumbnails', () => {
   it(' should create thumbnails for datasets with illustrations', async () => {

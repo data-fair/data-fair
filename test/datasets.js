@@ -1,18 +1,17 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
-const fs = require('fs-extra')
-const FormData = require('form-data')
-const eventToPromise = require('event-to-promise')
-const WebSocket = require('ws')
-const config = require('config')
-const workers = require('../server/workers')
-
-const { validate } = require('tableschema')
+import fs from 'fs-extra'
+import FormData from 'form-data'
+import eventToPromise from 'event-to-promise'
+import WebSocket from 'ws'
+import config from 'config'
+import * as workers from '../server/workers/index.js'
+import { validate } from 'tableschema'
 
 let notifier
 describe('datasets', () => {
   before('prepare notifier', async () => {
-    notifier = require('./resources/app-notifier.js')
+    notifier = (await import('./resources/app-notifier.js')).default
     await eventToPromise(notifier, 'listening')
   })
 

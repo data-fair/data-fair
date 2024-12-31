@@ -27,36 +27,6 @@ const config = /** @type {any} */(_config)
 
 export const eventsPrefix = 'normalize'
 
-export const archiveTypes = new Set([
-  'application/zip' // .zip
-  /* 'application/x-7z-compressed', // .7z
-  'application/x-bzip', // .bzip
-  'application/x-bzip2', // .bzip2
-  'application/x-tar', // .tar */
-])
-export const tabularTypes = new Set([
-  'application/vnd.oasis.opendocument.spreadsheet', // ods, fods
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
-  'application/vnd.ms-excel', // xls
-  'application/dbase' // dbf
-])
-export const geographicalTypes = new Set([
-  'application/vnd.google-earth.kml+xml', // kml
-  'application/vnd.google-earth.kmz', // kmz
-  'application/gpx+xml', // gpx or xml ?
-  'application/geopackage+sqlite3' // gpkg
-])
-export const calendarTypes = new Set(['text/calendar'])
-export const csvTypes = [
-  'text/csv',
-  'text/plain', // txt often contains csv or tsv content
-  'text/tab-separated-values' // tsv processed in the same way as csv
-]
-export const basicTypes = [
-  ...csvTypes,
-  'application/geo+json'
-]
-
 async function decompress (mimetype, filePath, dirPath) {
   const exec = (await import('../misc/utils/exec.js')).default
   if (mimetype === 'application/zip') await exec('unzip', ['-o', '-q', filePath, '-d', dirPath])
@@ -77,7 +47,7 @@ export const process = async function (app, dataset) {
   }
 
   let isShapefile = false
-  if (archiveTypes.has(dataset.originalFile.mimetype)) {
+  if (datasetUtils.archiveTypes.has(dataset.originalFile.mimetype)) {
     debug('decompress', dataset.originalFile.mimetype, originalFilePath, tmpDir)
     await decompress(dataset.originalFile.mimetype, originalFilePath, tmpDir)
     const files = (await dir.promiseFiles(tmpDir))
@@ -91,7 +61,7 @@ export const process = async function (app, dataset) {
         filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.shx')) &&
         filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.dbf'))) {
       isShapefile = true
-    } else if (filePaths.length === 1 && basicTypes.includes(mime.lookup(filePaths[0].base))) {
+    } else if (filePaths.length === 1 && datasetUtils.basicTypes.includes(mime.lookup(filePaths[0].base))) {
       // case of a single data file in an archive
       const filePath = resolvePath(datasetUtils.dir(dataset), filePaths[0].base)
       await fs.move(resolvePath(tmpDir, files[0]), filePath, { overwrite: true })
@@ -142,7 +112,7 @@ export const process = async function (app, dataset) {
     }
   }
 
-  if (calendarTypes.has(dataset.originalFile.mimetype)) {
+  if (datasetUtils.calendarTypes.has(dataset.originalFile.mimetype)) {
     // TODO : store these file size limits in config file ?
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
       throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
@@ -162,7 +132,7 @@ export const process = async function (app, dataset) {
     }
     icalendar.prepareSchema(dataset, infos)
     dataset.analysis = { escapeKeyAlgorithm: 'legacy' }
-  } else if (tabularTypes.has(dataset.originalFile.mimetype)) {
+  } else if (datasetUtils.tabularTypes.has(dataset.originalFile.mimetype)) {
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
       throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
@@ -174,7 +144,7 @@ export const process = async function (app, dataset) {
       mimetype: 'text/csv',
       encoding: 'utf-8'
     }
-  } else if (isShapefile || geographicalTypes.has(dataset.originalFile.mimetype)) {
+  } else if (isShapefile || datasetUtils.geographicalTypes.has(dataset.originalFile.mimetype)) {
     if (config.ogr2ogr.skip) {
       throw createError(400, '[noretry] Les fichiers de type shapefile ne sont pas supportés sur ce service.')
     }

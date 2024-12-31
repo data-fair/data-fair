@@ -131,7 +131,7 @@ export const geometry2fields = async (dataset, doc) => {
   const geomProp = schema.find(p => p['x-refersTo'] === geomUri)
 
   if (projectGeomProp) {
-    geometry = this.readGeometry(doc[projectGeomProp.key])
+    geometry = readGeometry(doc[projectGeomProp.key])
     if (geometry) {
       const projection = dataset.projection && dataset.projection.code && projections.find(p => p.code === dataset.projection.code)
       if (dataset.projection && !projection) throw new Error(`La projection ${dataset.projection.code} n'est pas supportée.`)
@@ -141,7 +141,7 @@ export const geometry2fields = async (dataset, doc) => {
     }
     capabilities = projectGeomProp['x-capabilities']
   } else {
-    geometry = this.readGeometry(doc[geomProp.key])
+    geometry = readGeometry(doc[geomProp.key])
     capabilities = geomProp['x-capabilities']
   }
   if (!geometry || Object.keys(geometry).length === 0) return {}

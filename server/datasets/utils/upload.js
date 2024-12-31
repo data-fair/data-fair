@@ -9,7 +9,7 @@ import * as datasetUtils from './index.js'
 import { tmpDir, fsyncFile } from './files.js'
 import asyncWrap from '../../misc/utils/async-handler.js'
 import promisifyMiddleware from '../../misc/utils/promisify-middleware.js'
-import { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } from '../../workers/file-normalizer.js'
+import { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } from './types.js'
 import debugLib from 'debug'
 
 const fallbackMimeTypes = {

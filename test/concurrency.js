@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
-const FormData = require('form-data')
-const config = require('config')
-const workers = require('../server/workers')
+import FormData from 'form-data'
+import config from 'config'
+import * as workers from '../server/workers/index.js'
 
 // run this test manually with "DEBUG=workers WORKER_CONCURRENCY=4 DEFAULT_LIMITS_DATASET_STORAGE=10000000 npm test"
 

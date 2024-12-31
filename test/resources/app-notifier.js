@@ -1,5 +1,5 @@
-const express = require('express')
-const bodyParser = require('body-parser')
+import express from 'express'
+import bodyParser from 'body-parser'
 
 const app = module.exports = express()
 app.use(bodyParser.json({ limit: '100kb' }))

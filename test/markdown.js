@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 
-const workers = require('../server/workers')
+import * as workers from '../server/workers/index.js'
 
 describe('markdown contents management', () => {
   it('Get dataset description and content as HTML', async () => {

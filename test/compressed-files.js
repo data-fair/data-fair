@@ -1,9 +1,9 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
-const fs = require('fs-extra')
-const path = require('path')
-const workers = require('../server/workers')
-const FormData = require('form-data')
+import fs from 'fs-extra'
+import path from 'node:path'
+import * as workers from '../server/workers/index.js'
+import FormData from 'form-data'
 
 describe('Archive conversions', () => {
   it('should extract a zipped csv file', async () => {

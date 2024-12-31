@@ -1,13 +1,13 @@
 import { strict as assert } from 'node:assert'
 
 import * as testUtils from './resources/test-utils.js'
-const fs = require('fs-extra')
-const nock = require('nock')
-const FormData = require('form-data')
-const config = require('config')
+import fs from 'fs-extra'
+import nock from 'nock'
+import FormData from 'form-data'
+import config from 'config'
 
-const workers = require('../server/workers')
-const esUtils = require('../server/datasets/es')
+import * as workers from '../server/workers/index.js'
+import * as esUtils from '../server/datasets/es/index.js'
 
 // Prepare mock for outgoing HTTP requests
 nock('http://test-catalog.com').persist()

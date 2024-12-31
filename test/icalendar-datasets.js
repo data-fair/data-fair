@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
+import moment from 'moment'
+import 'moment-timezone'
 
-const moment = require('moment')
-require('moment-timezone')
 const localeTimeZone = moment.tz.guess()
 
 describe('icalendar dataset', () => {

@@ -1,5 +1,6 @@
 import { strict as assert } from 'node:assert'
-const { parser, compile } = require('../shared/expr-eval')('Europe/Paris')
+import exprEval from '../shared/expr-eval.js'
+const { parser, compile } = exprEval('Europe/Paris')
 
 describe('expression engine based on expr-eval', () => {
   it('should evaluate simple expressions', () => {

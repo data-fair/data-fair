@@ -1,7 +1,6 @@
 import { strict as assert } from 'node:assert'
-const validateDcat = require('../server/misc/utils/dcat/validate')
-
-const app = require('../server/app')
+import validateDcat from '../server/misc/utils/dcat/validate.js'
+import * as app from '../server/app.js'
 
 describe('publication sites', () => {
   it('should fail to publish dataset on unknown site', async () => {

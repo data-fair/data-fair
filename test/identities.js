@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
-const fs = require('fs-extra')
-const path = require('path')
-const config = require('config')
+import fs from 'fs-extra'
+import path from 'node:path'
+import config from 'config'
 
 describe('identities', () => {
   it('Check secret key', async () => {

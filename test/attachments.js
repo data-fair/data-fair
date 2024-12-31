@@ -1,10 +1,9 @@
 import { strict as assert } from 'node:assert'
 
 import * as testUtils from './resources/test-utils.js'
-const fs = require('fs')
-const FormData = require('form-data')
-
-const workers = require('../server/workers')
+import fs from 'node:fs'
+import * as workers from '../server/workers/index.js'
+import FormData from 'form-data'
 
 describe('Attachments', () => {
   it('Process newly uploaded attachments alone', async () => {

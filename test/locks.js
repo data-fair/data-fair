@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert'
-const locks = require('../server/misc/utils/locks')
+import * as locks from '../server/misc/utils/locks.js'
 
 describe('locks', () => {
   it('Acquire and release locks', async () => {

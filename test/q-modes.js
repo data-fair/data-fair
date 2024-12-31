@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 
-const workers = require('../server/workers')
+import * as workers from '../server/workers/index.js'
 
 describe('query modes', () => {
   it('Search in dataset using all supported query modes', async function () {

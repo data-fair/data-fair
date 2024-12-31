@@ -26,7 +26,7 @@ import { transformFileStreams, formatLine } from './data-streams.js'
 import { attachmentPath, lsAttachments, tmpDir } from './files.js'
 import { jsonSchema } from './schema.js'
 import * as esUtils from '../../datasets/es/index.js'
-import { tabularTypes } from '../../workers/file-normalizer.js'
+import { tabularTypes } from './types.js'
 import Piscina from 'piscina'
 
 dayjs.extend(duration)
@@ -1066,7 +1066,7 @@ export const markIndexedStream = (db, dataset) => {
       try {
         this.i = this.i || 0
         this.bulkOp = this.bulkOp || c.initializeUnorderedBulkOp()
-        const line = await collection.findOne({ _id: chunk._id })
+        const line = await c.findOne({ _id: chunk._id })
         // if the line was updated in the interval since reading for indexing
         // do not mark it as properly indexed
         if (chunk._updatedAt.getTime() === line._updatedAt.getTime()) {

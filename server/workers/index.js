@@ -6,6 +6,7 @@ import * as journals from '../misc/utils/journals.js'
 import debug from 'debug'
 import mergeDraft from '../datasets/utils/merge-draft.js'
 import taskProgress from '../datasets/utils/task-progress.js'
+import { basicTypes, csvTypes } from '../datasets/utils/types.js'
 import moment from 'moment'
 import { spawn } from 'child-process-promise'
 
@@ -212,7 +213,7 @@ async function iter (app, resource, type) {
     } else if (type === 'catalog') {
       taskKey = 'catalogHarvester'
     } else if (type === 'dataset') {
-      const normalized = (resource.status === 'stored' && tasks.fileNormalizer.basicTypes.includes(resource.originalFile?.mimetype)) || resource.status === 'normalized'
+      const normalized = (resource.status === 'stored' && basicTypes.includes(resource.originalFile?.mimetype)) || resource.status === 'normalized'
 
       if (resource.status === 'created') {
         // Initialize a dataset
@@ -232,7 +233,7 @@ async function iter (app, resource, type) {
       } else if (resource.status === 'stored' && !normalized) {
         // XLS to csv of other transformations
         taskKey = 'fileNormalizer'
-      } else if (normalized && resource.file && tasks.fileNormalizer.csvTypes.includes(resource.file.mimetype)) {
+      } else if (normalized && resource.file && csvTypes.includes(resource.file.mimetype)) {
         // Quickly parse a CSV file
         taskKey = 'csvAnalyzer'
       } else if (normalized && resource.file && resource.file.mimetype === 'application/geo+json') {
@@ -307,7 +308,7 @@ async function iter (app, resource, type) {
     }
 
     if (!taskKey) return
-    const task = tasks[taskKey]
+    const task = await tasks[taskKey]()
     debug(`run task ${taskKey} - ${type} / ${resource.slug} (${resource.id})${resource.draftReason ? ' - draft' : ''}`)
 
     if (task.eventsPrefix) {

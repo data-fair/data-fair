@@ -1,21 +1,27 @@
-const config = require('config')
-const fs = require('fs-extra')
-const nock = require('nock')
-const axios = require('axios')
-const debug = require('debug')('test')
-const app = require('../server/app')
-const workers = require('../server/workers')
-const rateLimiting = require('../server/misc/utils/rate-limiting')
-const axiosAuth = require('@data-fair/sd-express').axiosAuth
+import config from 'config'
+import fs from 'fs-extra'
+import nock from 'nock'
 
-before('global mocks', () => {
+import * as workers from '../server/workers/index.js'
+import axios from 'axios'
+import debugModule from 'debug'
+import * as app from '../server/app.js'
+import * as rateLimiting from '../server/misc/utils/rate-limiting.js'
+import { axiosAuth } from '@data-fair/sd-express'
+
+const debug = debugModule('test')
+
+before('global mocks', async () => {
   debug('preparing mocks')
+
+  const geocoderApi = await import('./resources/geocoder-api.json', { with: { type: 'json' } })
+  const sireneApi = await import('./resources/sirene-api.json', { with: { type: 'json' } })
 
   // fake remote service
   nock('http://test.com')
     .persist()
-    .get('/geocoder/api-docs.json').reply(200, require('./resources/geocoder-api.json'))
-    .get('/sirene/api-docs.json').reply(200, require('./resources/sirene-api.json'))
+    .get('/geocoder/api-docs.json').reply(200, geocoderApi)
+    .get('/sirene/api-docs.json').reply(200, sireneApi)
 
   // fake catalog
   nock('http://test-catalog.com')
@@ -92,10 +98,10 @@ before('global mocks', () => {
 
 before('init globals', async () => {
   debug('init globals')
-  const { db, client } = await require('../server/misc/utils/db.js').connect()
+  const { db, client } = await (await import('../server/misc/utils/db.js')).connect()
   global.db = db
   global.mongoClient = client
-  global.es = await require('../server/datasets/es').init()
+  global.es = await (await import('../server/datasets/es/index.js')).init()
 
   global.ax = {}
   global.ax.builder = async (email, org, opts = {}) => {
@@ -185,7 +191,7 @@ beforeEach('scratch data', async function () {
       fs.emptyDir('./data/test')
     ])
     await fs.ensureDir('./data/test/captures')
-    app.memoizedGetPublicationSiteSettings.clear()
+    global.memoizedGetPublicationSiteSettings.clear()
     rateLimiting.clear()
   } catch (err) {
     console.warn('error while scratching data before test', err)

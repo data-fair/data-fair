@@ -3,9 +3,9 @@
 
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
-const FormData = require('form-data')
+import FormData from 'form-data'
 
-const workers = require('../server/workers')
+import * as workers from '../server/workers/index.js'
 
 const initMaster = async (ax, info, masterData, id = 'master') => {
   if (Array.isArray(masterData)) {

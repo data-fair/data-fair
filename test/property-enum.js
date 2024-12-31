@@ -1,6 +1,6 @@
 // Some edge cases with CSV files
 import { strict as assert } from 'node:assert'
-const workers = require('../server/workers')
+import * as workers from '../server/workers/index.js'
 
 describe('Enum of actual values in schema', () => {
   it('Calculate enum of values in data', async () => {

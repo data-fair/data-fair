@@ -116,6 +116,9 @@ export const run = async () => {
       maxAge: 1000 * 60, // 1 minute
       length: 2 // only use publicationSite, not db as cache key
     })
+    if (process.env.NODE_ENV === 'test') {
+      global.memoizedGetPublicationSiteSettings = memoizedGetPublicationSiteSettings
+    }
     app.use('/', asyncWrap(async (req, res, next) => {
       const u = originalUrl(req)
       const urlParts = { protocol: parsedPublicUrl.protocol, hostname: u.hostname, pathname: basePath.slice(0, -1) }

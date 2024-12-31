@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert'
-const workers = require('../server/workers')
+import * as workers from '../server/workers/index.js'
 
 describe('REST datasets with owner specific lines', () => {
   it('Create empty REST dataset with activated line ownership', async () => {

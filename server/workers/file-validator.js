@@ -1,6 +1,6 @@
 
 import { Writable } from 'stream'
-import journals from '../misc/utils/journals.js'
+import * as journals from '../misc/utils/journals.js'
 import { jsonSchema } from '../datasets/utils/schema.js'
 import * as ajv from '../misc/utils/ajv.js'
 import pump from '../misc/utils/pipe.js'

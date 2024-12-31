@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
-const fs = require('fs')
-const FormData = require('form-data')
-const workers = require('../server/workers')
+import fs from 'node:fs'
+import FormData from 'form-data'
+import * as workers from '../server/workers/index.js'
 
 describe('stats', () => {
   it('Get simple stats', async () => {

@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert'
-const workers = require('../server/workers')
+import * as workers from '../server/workers/index.js'
 
 describe('Date filters', () => {
   it('Date match special filter on date field with date-time format', async () => {

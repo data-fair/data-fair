@@ -13,7 +13,6 @@ import * as heapUtils from '../misc/utils/heap.js'
 import taskProgress from '../datasets/utils/task-progress.js'
 import { tmpDir } from '../datasets/utils/files.js'
 import * as attachmentsUtils from '../datasets/utils/attachments.js'
-
 import debugModule from 'debug'
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
@@ -23,10 +22,10 @@ export const process = async function (app, dataset) {
   const debug = debugModule(`worker:indexer:${dataset.id}`)
   const debugHeap = heapUtils.debug(`worker:indexer:${dataset.id}`)
 
-  if (process.env.NODE_ENV === 'test' && dataset.slug === 'trigger-test-error') {
+  if (global.process.env.NODE_ENV === 'test' && dataset.slug === 'trigger-test-error') {
     throw new Error('This is a test error')
   }
-  if (process.env.NODE_ENV === 'test' && dataset.slug === 'trigger-test-error-400') {
+  if (global.process.env.NODE_ENV === 'test' && dataset.slug === 'trigger-test-error-400') {
     throw createError(400, '[noretry] This is a test 400 error')
   }
 

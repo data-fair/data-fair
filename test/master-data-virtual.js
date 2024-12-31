@@ -3,7 +3,7 @@
 
 import { strict as assert } from 'node:assert'
 
-const workers = require('../server/workers')
+import * as workers from '../server/workers/index.js'
 
 const initMaster = async (ax, schema, id = 'master') => {
   await ax.put('/api/v1/datasets/' + id, {

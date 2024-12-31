@@ -1,17 +1,20 @@
 import { strict as assert } from 'node:assert'
 
 import * as testUtils from './resources/test-utils.js'
-const path = require('path')
-const fs = require('fs-extra')
-const FormData = require('form-data')
-const moment = require('moment')
-const zlib = require('zlib')
-const { Writable } = require('stream')
-const iconv = require('iconv-lite')
-const pump = require('util').promisify(require('pump'))
-const restDatasetsUtils = require('../server/datasets/utils/rest')
-const { attachmentsDir, lsAttachments } = require('../server/datasets/utils/files')
-const workers = require('../server/workers')
+import path from 'node:path'
+import fs from 'fs-extra'
+import FormData from 'form-data'
+import * as workers from '../server/workers/index.js'
+import moment from 'moment'
+import zlib from 'zlib'
+import { Writable } from 'stream'
+import iconv from 'iconv-lite'
+import { promisify } from 'util'
+import * as restDatasetsUtils from '../server/datasets/utils/rest.js'
+import { attachmentsDir, lsAttachments } from '../server/datasets/utils/files.js'
+import pumpOg from 'pump'
+
+const pump = promisify(pumpOg)
 
 describe('REST datasets', () => {
   it('Create empty REST datasets', async () => {

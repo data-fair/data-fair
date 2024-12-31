@@ -1,8 +1,7 @@
 import fs from 'fs-extra'
-import * as datasetUtils from '../datasets/utils.js'
+import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetsService from '../datasets/service.js'
 import { replaceAllAttachments } from '../datasets/utils/attachments.js'
-import { basicTypes } from './file-normalizer.js'
 import datasetFileSample from '../datasets/utils/file-sample.js'
 import * as metrics from '../misc/utils/metrics.js'
 import chardet from 'chardet'
@@ -84,7 +83,7 @@ export const process = async function (app, dataset) {
     debug(`Detected encoding ${datasetFile.encoding} for file ${loadedFilePath}`)
 
     patch.originalFile = datasetFile
-    if (basicTypes.includes(datasetFile.mimetype)) {
+    if (datasetUtils.basicTypes.includes(datasetFile.mimetype)) {
       patch.file = patch.originalFile
     }
 

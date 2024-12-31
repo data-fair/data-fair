@@ -1,14 +1,14 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
-const nock = require('nock')
-const fs = require('fs-extra')
-const FormData = require('form-data')
-const config = require('config')
-const eventToPromise = require('event-to-promise')
-const dayjs = require('dayjs')
-const restDatasetsUtils = require('../server/datasets/utils/rest')
+import nock from 'nock'
+import fs from 'fs-extra'
+import FormData from 'form-data'
+import config from 'config'
+import eventToPromise from 'event-to-promise'
+import dayjs from 'dayjs'
+import * as restDatasetsUtils from '../server/datasets/utils/rest.js'
+import * as workers from '../server/workers/index.js'
 
-const workers = require('../server/workers')
 describe('Extensions', () => {
   it('Extend dataset using remote service', async function () {
     const ax = global.ax.dmeadus

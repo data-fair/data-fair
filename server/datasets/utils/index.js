@@ -19,6 +19,7 @@ import * as readApiKeyUtils from './read-api-key.js'
 import mergeDraft from './merge-draft.js'
 
 export { default as mergeDraft } from './merge-draft.js'
+export * from './types.js'
 
 export const filePath = filesUtils.filePath
 export const dataFiles = filesUtils.dataFiles

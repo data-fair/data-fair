@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert'
-const workers = require('../server/workers')
+import * as workers from '../server/workers/index.js'
 
 describe('data pagination', () => {
   it('get deeper into data', async () => {
