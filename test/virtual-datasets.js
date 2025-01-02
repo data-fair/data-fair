@@ -37,6 +37,30 @@ describe('virtual datasets', () => {
     assert.equal(res.data.total, 2)
   })
 
+  it('Create a virtual dataset with initFrom', async () => {
+    // Send basic dataset
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'Description' })
+    let res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      initFrom: {
+        dataset: dataset.id,
+        parts: ['description', 'metadataAttachments']
+      },
+      virtual: {
+        children: [dataset.id]
+      },
+      title: 'a virtual dataset'
+    })
+    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}`)
+    assert.equal(res.data.description, 'Description')
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 2)
+  })
+
   it('Create a virtual dataset, add children and query', async () => {
     const ax = global.ax.dmeadus
     const dataset1 = await testUtils.sendDataset('datasets/dataset1.csv', ax)

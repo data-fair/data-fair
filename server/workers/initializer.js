@@ -25,6 +25,8 @@ export const process = async function (app, dataset) {
     patch.status = 'analyzed'
   } else if (dataset.remoteFile) {
     patch.status = 'imported'
+  } else if (dataset.isVirtual) {
+    patch.status = 'indexed'
   } else if (dataset.loaded) {
     patch.status = 'loaded'
   }

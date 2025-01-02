@@ -263,7 +263,11 @@ export const createDataset = async (db, es, locale, user, owner, body, files, dr
     if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
     dataset.virtual = dataset.virtual || { children: [] }
     dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
-    dataset.status = 'indexed'
+    if (dataset.initFrom) {
+      dataset.status = 'created'
+    } else {
+      dataset.status = 'indexed'
+    }
   } else if (body.isRest) {
     if (!body.title) throw createError(400, 'Un jeu de données éditable doit être créé avec un titre')
     if (attachmentsFile) throw createError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')

@@ -646,6 +646,18 @@
               :label="$t('virtualDatasetFill')"
               @change="fillVirtualDataset"
             />
+            <v-checkbox
+              v-model="virtualDatasetInitFromDesc"
+              hide-details
+              class="pl-2"
+              :label="$t('virtualDatasetInitFromDesc')"
+            />
+            <v-checkbox
+              v-model="virtualDatasetInitFromAttachments"
+              hide-details
+              class="pl-2"
+              :label="$t('virtualDatasetInitFromAttachments')"
+            />
           </v-form>
           <v-btn
             v-t="'continue'"
@@ -673,7 +685,7 @@
             v-t="'createDataset'"
             :disabled="importing || !conflictsOk || !virtualDataset.owner"
             color="primary"
-            @click.native="createDataset(virtualDataset)"
+            @click.native="createVirtualDataset(virtualDataset)"
           />
         </v-stepper-content>
       </template>
@@ -777,7 +789,9 @@ fr:
   history: Conserver un historique complet des révisions des lignes du jeu de données
   lineOwnership: Permet de donner la propriété d'une lignes à des utilisateurs (scénarios collaboratifs)
   children: Jeux enfants
-  virtualDatasetFill: Initialiser le schéma avec toutes les colonnes des jeux enfants
+  virtualDatasetFill: initialiser le schéma avec toutes les colonnes des jeux enfants
+  virtualDatasetInitFromDesc: copier la description du 1er jeu enfant
+  virtualDatasetInitFromAttachments: copier les pièces jointes du 1er jeu enfant
   completed: complétés
   loaded: chargées
   masterData: Données de référence
@@ -834,7 +848,9 @@ en:
   history: Keep a full history of the revisions of the lines of the dataset
   lineOwnership: Accept giving ownership of lines to users (collaborative use-cases)
   children: Children datasets
-  virtualDatasetFill: Initialize the schema with all columns from children
+  virtualDatasetFill: initialize the schema with all columns from children
+  virtualDatasetInitFromDesc: copy the description of the first child
+  virtualDatasetInitFromAttachments: copy the attachments of the first child
   completed: completed
   loaded: loaded
   masterData: Master data
@@ -910,6 +926,8 @@ export default {
     datasets: [],
     refDatasets: [],
     virtualDatasetFill: false,
+    virtualDatasetInitFromDesc: false,
+    virtualDatasetInitFromAttachments: false,
     conflictsOk: false
   }),
   computed: {
@@ -1013,6 +1031,23 @@ export default {
     async createDataset (dataset) {
       const params = {}
       if (dataset.initFrom?.parts?.includes('schema')) params.draft = 'true'
+      this.importing = true
+      try {
+        dataset = await this.$axios.$post('api/v1/datasets', dataset, { params })
+        this.$router.push({ path: `/dataset/${dataset.id}` })
+      } catch (error) {
+        eventBus.$emit('notification', { error, msg: this.$t('creationError') })
+        this.importing = false
+      }
+    },
+    async createVirtualDataset (dataset) {
+      const params = {}
+      if (this.virtualDatasetInitFromDesc || this.virtualDatasetInitFromAttachments) {
+        const parts = []
+        if (this.virtualDatasetInitFromDesc) parts.push('description')
+        if (this.virtualDatasetInitFromAttachments) parts.push('metadataAttachments')
+        dataset = { ...dataset, initFrom: { dataset: this.virtualChildren[0]?.id, parts } }
+      }
       this.importing = true
       try {
         dataset = await this.$axios.$post('api/v1/datasets', dataset, { params })
