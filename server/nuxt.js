@@ -1,5 +1,6 @@
 import config from 'config'
 import asyncWrap from './misc/utils/async-handler.js'
+import clone from './misc/utils/clone.js'
 
 export default async () => {
   const trackEmbed = asyncWrap(async (req, res, next) => {
@@ -33,7 +34,7 @@ export default async () => {
     return { trackEmbed, render: (req, res, next) => next() }
   } else {
     const { Nuxt } = await import('nuxt-start')
-    const nuxtConfig = await import('../nuxt.config.cjs')
+    const nuxtConfig = clone(await import('../nuxt.config.cjs'))
 
     // Prepare nuxt for rendering and serving UI
     nuxtConfig.dev = false
