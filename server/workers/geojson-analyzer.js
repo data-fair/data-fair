@@ -1,7 +1,7 @@
 
 import createError from 'http-errors'
 import JSONStream from 'JSONStream'
-import * as datasetUtils from '../datasets/utils.js'
+import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetsService from '../datasets/service.js'
 import * as fieldsSniffer from '../datasets/utils/fields-sniffer.js'
 import projections from '../../contract/projections.js'

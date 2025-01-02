@@ -14,8 +14,8 @@ const debug = debugModule('test')
 before('global mocks', async () => {
   debug('preparing mocks')
 
-  const geocoderApi = await import('./resources/geocoder-api.json', { with: { type: 'json' } })
-  const sireneApi = await import('./resources/sirene-api.json', { with: { type: 'json' } })
+  const { default: geocoderApi } = await import('./resources/geocoder-api.json', { with: { type: 'json' } })
+  const { default: sireneApi } = await import('./resources/sirene-api.json', { with: { type: 'json' } })
 
   // fake remote service
   nock('http://test.com')

@@ -351,7 +351,7 @@ export const applyTransactions = async (db, dataset, user, transacs, validate, l
   // fill data with previous bodies for patch operations
   if (patchPreviousFilters.length) {
     const missingPatchPrevious = new Set(patchPreviousFilters.map(f => f._id))
-    for await (const patchPrevious of collection.find({ $or: patchPreviousFilters }).project(patchProjection)) {
+    for await (const patchPrevious of c.find({ $or: patchPreviousFilters }).project(patchProjection)) {
       const { _id, _hash, _deleted, ...previousBody } = patchPrevious
       if (!_deleted) {
         missingPatchPrevious.delete(_id)
@@ -384,7 +384,7 @@ export const applyTransactions = async (db, dataset, user, transacs, validate, l
   // check delete operations and complete their primary key info
   if (deletePreviousFilters.length) {
     const missingDeletePrevious = new Set(deletePreviousFilters.map(f => f._id))
-    for await (const deletePrevious of collection.find({ $or: deletePreviousFilters }).project(primaryKeyProjection)) {
+    for await (const deletePrevious of c.find({ $or: deletePreviousFilters }).project(primaryKeyProjection)) {
       const { _id, _hash, _deleted, ...previousBody } = deletePrevious
       if (!_deleted) {
         missingDeletePrevious.delete(_id)
@@ -433,7 +433,7 @@ export const applyTransactions = async (db, dataset, user, transacs, validate, l
   // createOrUpdate operation use upsert with hash filter and so don't need this check
   if (createUpdatePreviousFilters.length) {
     const missingCheckPrevious = new Set(createUpdatePreviousFilters.map(f => f._id))
-    for await (const checkPrevious of collection.find({ $or: createUpdatePreviousFilters }).project({ _id: 1, _hash: 1, _deleted: 1 })) {
+    for await (const checkPrevious of c.find({ $or: createUpdatePreviousFilters }).project({ _id: 1, _hash: 1, _deleted: 1 })) {
       const { _id, _hash, _deleted } = checkPrevious
       if (!_deleted) {
         missingCheckPrevious.delete(_id)

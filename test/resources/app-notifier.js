@@ -1,7 +1,7 @@
 import express from 'express'
 import bodyParser from 'body-parser'
 
-const app = module.exports = express()
+const app = express()
 app.use(bodyParser.json({ limit: '100kb' }))
 
 app.post('/', (req, res, next) => {
@@ -16,3 +16,5 @@ app.listen(5900, (err) => {
   console.log('Notifier Listening on http://localhost:%s', 5900)
   app.emit('listening')
 })
+
+export default app

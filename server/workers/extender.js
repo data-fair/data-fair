@@ -1,8 +1,8 @@
 import debugLib from 'debug'
-import extensionsUtils from '../datasets/utils/extensions.js'
-import datasetUtils from '../datasets/utils.js'
-import datasetService from '../datasets/service.js'
-import restDatasetsUtils from '../datasets/utils/rest.js'
+import * as extensionsUtils from '../datasets/utils/extensions.js'
+import * as datasetUtils from '../datasets/utils/index.js'
+import * as datasetService from '../datasets/service.js'
+import * as restDatasetsUtils from '../datasets/utils/rest.js'
 
 const debugMasterData = debugLib('master-data')
 

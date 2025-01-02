@@ -354,7 +354,7 @@ export const deleteDataset = async (app, dataset) => {
 
   if (!dataset.isVirtual) {
     try {
-      await esUtils.delete(es, dataset)
+      await esUtils.deleteIndex(es, dataset)
     } catch (err) {
       console.warn('Error while deleting dataset indexes and alias', err)
     }

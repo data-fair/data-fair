@@ -1,5 +1,5 @@
-import readApiKeyUtils from '../datasets/utils/read-api-key.js'
-import datasetsService from '../datasets/service.js'
+import * as readApiKeyUtils from '../datasets/utils/read-api-key.js'
+import * as datasetsService from '../datasets/service.js'
 import debugLib from 'debug'
 
 export const process = async function (app, dataset) {

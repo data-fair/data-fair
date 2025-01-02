@@ -1,6 +1,6 @@
 // Index tabular datasets with elasticsearch using available information on dataset schema
 import extensionsUtils from '../misc/utils/extensions.js'
-import datasetUtils from '../datasets/utils/index.js'
+import * as datasetUtils from '../datasets/utils/index.js'
 import debugLib from 'debug'
 
 export const eventsPrefix = 'extend'

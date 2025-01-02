@@ -19,7 +19,7 @@ router.use(cacheHeaders.noCache)
 
 let info = { version: process.env.NODE_ENV }
 router.get('/info', asyncWrap(async (req, res) => {
-  try { info = await import('../../../BUILD.json', { with: { type: 'json' } }) } catch (err) {}
+  try { info = (await import('../../../BUILD.json', { with: { type: 'json' } })).default } catch (err) {}
   res.json(info)
 }))
 

@@ -511,7 +511,7 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
   const patchedDataset = (await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $unset: { draft: '' } }, { returnDocument: 'after' })).value
   await fs.remove(dir(dataset))
-  await esUtils.delete(req.app.get('es'), dataset)
+  await esUtils.deleteIndex(req.app.get('es'), dataset)
 
   await import('@data-fair/lib/express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.cancelDraft', `cancelled dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
