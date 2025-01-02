@@ -76,7 +76,7 @@ async function initBaseApp (db, app) {
       if (datasetsDefinition.items && datasetsDefinition.items['x-fromUrl']) datasetsUrls = [datasetsDefinition.items['x-fromUrl']]
       if (Array.isArray(datasetsDefinition.items)) datasetsUrls = datasetsDefinition.items.map(item => item['x-fromUrl'])
     }
-    const datasetsQueries = datasetsUrls.map(datasetsUrl => new URL(datasetsUrl).searchParams)
+    const datasetsQueries = datasetsUrls.map(datasetsUrl => new URL(datasetsUrl, config.publicUrl).searchParams)
     patch.datasetsFilters = datasetsQueries.map(prepareQuery)
   } catch (err) {
     patch.hasConfigSchema = false
