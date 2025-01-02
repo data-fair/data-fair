@@ -1,5 +1,4 @@
 
-import url from 'url'
 import createError from 'http-errors'
 import axios from '../../misc/utils/axios.js'
 
@@ -12,7 +11,7 @@ export const optionalCapabilities = [
 ]
 
 export const init = async (catalogUrl) => {
-  const status = (await axios.get(url.resolve(catalogUrl, 'api/v1/status'))).data
+  const status = (await axios.get(new URL('api/v1/status', catalogUrl).href)).data
   if (status.status !== 'ok') throw new Error('mydatacatalogue status is not ok')
   return { url: catalogUrl, title: 'Mydatacatalogue SaaS' }
 }
@@ -65,11 +64,11 @@ async function createNewDataset (catalog, dataset, publication) {
     }
   }
   try {
-    const res = await axios.post(url.resolve(catalog.url, 'api/v1/sources'), source, { headers: { 'x-apiKey': catalog.apiKey } })
+    const res = await axios.post(new URL('api/v1/sources', catalog.url).href, source, { headers: { 'x-apiKey': catalog.apiKey } })
     if (!res.data.id || typeof res.data.id !== 'string') {
       throw createError(501, `Erreur lors de l'envoi à ${catalog.url} : le format de retour n'est pas correct.`)
     }
-    publication.targetUrl = url.resolve(catalog.url, `sources/${res.data.id}/view`)
+    publication.targetUrl = new URL(`sources/${res.data.id}/view`, catalog.url).href
     publication.result = res.data
   } catch (err) {
     if (err.response) throw createError(501, `Erreur lors de l'envoi à ${catalog.url} : ${JSON.stringify(err.response.data, null, 2)}`)

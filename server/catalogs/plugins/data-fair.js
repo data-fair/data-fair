@@ -1,4 +1,3 @@
-import url from 'url'
 import createError from 'http-errors'
 import util from 'util'
 import axios from '../../misc/utils/axios.js'
@@ -16,8 +15,8 @@ export const optionalCapabilities = [
 ]
 
 export const init = async (catalogUrl) => {
-  await axios.get(url.resolve(catalogUrl, 'api/v1/ping'))
-  const html = axios.get(url.resolve(catalogUrl))
+  await axios.get(new URL('api/v1/ping', catalogUrl).href)
+  const html = axios.get(catalogUrl)
   const data = await htmlExtractor.extract(html)
   return { url: catalogUrl, title: data.meta.title }
 }
@@ -63,11 +62,11 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
     // TODO: send actual data is dataset is of type file
     // only send it if there is some recent change ?
     if (updateDatasetId) {
-      res = await axios.patch(url.resolve(catalog.url, 'api/v1/datasets/' + updateDatasetId), remoteDataset, { headers: { 'x-apiKey': catalog.apiKey } })
+      res = await axios.patch(new URL('api/v1/datasets/' + updateDatasetId, catalog.url).href, remoteDataset, { headers: { 'x-apiKey': catalog.apiKey } })
     } else {
-      res = await axios.post(url.resolve(catalog.url, 'api/v1/datasets'), remoteDataset, { headers: { 'x-apiKey': catalog.apiKey } })
+      res = await axios.post(new URL('api/v1/datasets', catalog.url).href, remoteDataset, { headers: { 'x-apiKey': catalog.apiKey } })
     }
-    publication.targetUrl = url.resolve(catalog.url, `datasets/${res.data.id}`)
+    publication.targetUrl = new URL(`datasets/${res.data.id}`, catalog.url).href
     publication.result = res.data
   } catch (err) {
     if (err.response) throw createError(501, `Erreur lors de l'envoi à ${catalog.url} : ${JSON.stringify(err.response.data, null, 2)}`)

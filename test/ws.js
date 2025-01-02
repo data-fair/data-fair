@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert'
-import WebSocker from 'ws'
+import WebSocket from 'ws'
 import eventToPromise from 'event-to-promise'
 import config from 'config'
 

@@ -1,5 +1,4 @@
 import util from 'util'
-import url from 'url'
 import config from 'config'
 import express from 'express'
 import axios from '../misc/utils/axios.js'
@@ -36,10 +35,10 @@ async function clean (db) {
   }
 }
 
-function prepareQuery (query) {
-  return Object.keys(query)
+function prepareQuery (/** @type {URLSearchParams} */query) {
+  return [...query.keys()]
     .filter(key => !['skip', 'size', 'q', 'status', '{context.datasetFilter}', 'owner'].includes(key))
-    .reduce((a, key) => { a[key] = query[key].split(','); return a }, {})
+    .reduce((a, key) => { a[key] = query.get(key).split(','); return a }, /** @type {Record<string, string[]>} */({}))
 }
 
 async function failSafeInitBaseApp (db, app) {
@@ -77,7 +76,7 @@ async function initBaseApp (db, app) {
       if (datasetsDefinition.items && datasetsDefinition.items['x-fromUrl']) datasetsUrls = [datasetsDefinition.items['x-fromUrl']]
       if (Array.isArray(datasetsDefinition.items)) datasetsUrls = datasetsDefinition.items.map(item => item['x-fromUrl'])
     }
-    const datasetsQueries = datasetsUrls.map(datasetsUrl => url.parse(datasetsUrl, { parseQueryString: true }).query)
+    const datasetsQueries = datasetsUrls.map(datasetsUrl => new URL(datasetsUrl).searchParams)
     patch.datasetsFilters = datasetsQueries.map(prepareQuery)
   } catch (err) {
     patch.hasConfigSchema = false

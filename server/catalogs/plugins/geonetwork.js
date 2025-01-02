@@ -1,7 +1,6 @@
 // this type of catalog can be tested using this URL as an example:
 // https://geocatalogue.lannion-tregor.com/geonetwork/
 
-import url from 'url'
 import createError from 'http-errors'
 import axios from '../../misc/utils/axios.js'
 import { findLicense } from '../../misc/utils/licenses.js'
@@ -18,7 +17,7 @@ export const optionalCapabilities = [
 ]
 
 export const init = async (catalogUrl) => {
-  const siteUrl = url.resolve(catalogUrl, 'srv/api/0.1/site')
+  const siteUrl = new URL('srv/api/0.1/site', catalogUrl)
   debug('try fetching geonetwork info', siteUrl)
   const site = (await axios.get(siteUrl)).data
   if (!site['system/site/name']) throw new Error('missing system/site/name in geonetwork site info')
@@ -65,7 +64,7 @@ export const listDatasets = async (catalog, p) => {
     sortBy: 'relevance'
   }
   if (p.q) params.any = p.q
-  const res = await axios.get(url.resolve(catalog.url, 'srv/fre/q'), { params })
+  const res = await axios.get(new URL('srv/fre/q', catalog.url).href, { params })
   const count = res.data.summary['@count']
   const items = Array.isArray(res.data.metadata) ? res.data.metadata : [res.data.metadata]
   return { count, results: items.map(item => prepareDatasetFromCatalog(catalog, item)) }
@@ -78,7 +77,7 @@ export const getDataset = async (catalog, datasetId, settings) => {
     fast: 'index',
     uuid: datasetId
   }
-  const res = await axios.get(url.resolve(catalog.url, 'srv/fre/q'), { params })
+  const res = await axios.get(new URL('srv/fre/q', catalog.url).href, { params })
   // console.log(JSON.stringify(res.data.metadata, null, 2))
   return prepareDatasetFromCatalog(catalog, res.data.metadata, settings)
 }
@@ -127,7 +126,7 @@ const updateFrequenciesMap = {
 
 function prepareDatasetFromCatalog (catalog, item, settings) {
   const link = Array.isArray(item.link) ? item.link : [item.link]
-  const page = url.resolve(catalog.url, `srv/fre/catalog.search#/metadata/${item['geonet:info'].uuid}`)
+  const page = new URL(`srv/fre/catalog.search#/metadata/${item['geonet:info'].uuid}`, catalog.url).href
   const keywords = (Array.isArray(item.keyword) ? item.keyword : [item.keyword]).filter(k => !!k)
   const legalConstraints = (Array.isArray(item.legalConstraints) ? item.legalConstraints : [item.legalConstraints]).filter(k => !!k)
   const dataset = {
