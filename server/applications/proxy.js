@@ -306,7 +306,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
         nodeName: 'script',
         tagName: 'script',
         attrs: [{ name: 'type', value: 'text/javascript' }]
-      }, minifiedIframeRedirectSrc.replace('__IFRAME_REDIRECT__', iframeRedirect))
+      }, minifiedIframeRedirectSrc.replaceAll('__IFRAME_REDIRECT__', iframeRedirect))
     }
   }
 
