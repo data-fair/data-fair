@@ -1,10 +1,9 @@
-const assert = require('assert').strict
-const fs = require('fs')
-const FormData = require('form-data')
-const nock = require('nock')
-const testUtils = require('./resources/test-utils')
-
-const workers = require('../server/workers')
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
+import fs from 'node:fs'
+import FormData from 'form-data'
+import nock from 'nock'
+import * as workers from '../server/workers/index.js'
 
 describe('Datasets with auto-initialization from another one', () => {
   it('Create REST dataset with copied information from file dataset', async () => {

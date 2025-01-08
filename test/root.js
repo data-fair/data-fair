@@ -1,4 +1,4 @@
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
 
 describe('root', () => {
   it('Get API documentation', async () => {
@@ -23,7 +23,7 @@ describe('root', () => {
 
   it('Check API format', async () => {
     const ax = global.ax.dmeadus
-    const api = require('./resources/geocoder-api.json')
+    const { default: api } = await import('./resources/geocoder-api.json', { with: { type: 'json' } })
     const res = await ax.post('/api/v1/_check-api', api)
     assert.equal(res.status, 200)
     delete api.openapi

@@ -1,9 +1,9 @@
-const owner = require('./owner')
-const eventBy = require('./event-by')
-const permissions = require('./permissions.json')
-const publicationSchema = require('./publication')
-const configurationSchema = require('./app-configuration')
-const topic = require('./topic')
+import owner from './owner.js'
+import eventBy from './event-by.js'
+import permissions from './permissions.js'
+import publicationSchema from './publication.js'
+import configurationSchema from './app-configuration.js'
+import topic from './topic.js'
 
 const baseAppReference = {
   type: 'object',
@@ -16,7 +16,7 @@ const baseAppReference = {
   }
 }
 
-module.exports = {
+export default {
   title: 'Application',
   type: 'object',
   additionalProperties: false,

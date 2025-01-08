@@ -1,27 +1,33 @@
-const config = /** @type {any} */(require('config'))
-const createError = require('http-errors')
-const i18n = require('i18n')
-const pump = require('../../misc/utils/pipe')
-const fs = require('fs-extra')
-const { Transform } = require('stream')
-const stringify = require('json-stable-stringify')
-const flatten = require('flat')
-const equal = require('deep-equal')
-const axios = require('../../misc/utils/axios')
-const { fullFilePath, fsyncFile, attachmentPath } = require('./files')
-const { readStreams, writeExtendedStreams } = require('./data-streams')
-const restDatasetsUtils = require('./rest')
-const geoUtils = require('./geo')
-const schemaUtils = require('./schema')
-const { bulkSearchPromise, bulkSearchStreams } = require('./master-data')
-const taskProgress = require('./task-progress')
-const permissionsUtils = require('../../misc/utils/permissions')
-const { getPseudoUser } = require('../../misc/utils/users')
-const randomSeed = require('random-seed')
+import _config from 'config'
+import createError from 'http-errors'
+import i18n from 'i18n'
+import pump from '../../misc/utils/pipe.js'
+import fs from 'fs-extra'
+import { Transform } from 'stream'
+import stringify from 'json-stable-stringify'
+import flatten from 'flat'
+import equal from 'deep-equal'
+import axios from '../../misc/utils/axios.js'
+import { fullFilePath, fsyncFile, attachmentPath } from './files.js'
+import { readStreams, writeExtendedStreams } from './data-streams.js'
+import * as restDatasetsUtils from './rest.js'
+import * as geoUtils from './geo.js'
+import * as schemaUtils from './schema.js'
+import { bulkSearchPromise, bulkSearchStreams } from './master-data.js'
+import taskProgress from './task-progress.js'
+import * as permissionsUtils from '../../misc/utils/permissions.js'
+import { getPseudoUser } from '../../misc/utils/users.js'
+import randomSeed from 'random-seed'
+import debugLib from 'debug'
+import exprEval from '../../../shared/expr-eval.js'
+import { getExtensionKey } from '../../../shared/utils/extensions.js'
 
-const debugMasterData = require('debug')('master-data')
+export { getExtensionKey } from '../../../shared/utils/extensions.js'
 
-const debug = require('debug')('extensions')
+const config = /** @type {any} */(_config)
+
+const debugMasterData = debugLib('master-data')
+const debug = debugLib('extensions')
 
 /**
  * create short ids for extensions that will be used as prefix of the properties ids in the schema
@@ -30,7 +36,7 @@ const debug = require('debug')('extensions')
  * @param {any[]} extensions
  * @param {any[]} oldExtensions
  */
-exports.prepareExtensions = (locale, extensions, oldExtensions = []) => {
+export const prepareExtensions = (locale, extensions, oldExtensions = []) => {
   for (const e of extensions) {
     if (e.type === 'remoteService' && !e.shortId && !e.propertyPrefix) {
       const oldExtension = oldExtensions.find((/** @type {any} */oldE) => oldE.remoteService === e.remoteService && oldE.action === e.action)
@@ -74,8 +80,8 @@ exports.prepareExtensions = (locale, extensions, oldExtensions = []) => {
 
 // Apply an extension to a dataset: meaning, query a remote service in batches
 // and add the result either to a "full" file or to the collection in case of a rest dataset
-const compileExpression = require('../../../shared/expr-eval')(config.defaultTimezone).compile
-exports.extend = async (app, dataset, extensions, updateMode, ignoreDraftLimit, lineId) => {
+const compileExpression = exprEval(config.defaultTimezone).compile
+export const extend = async (app, dataset, extensions, updateMode, ignoreDraftLimit, lineId) => {
   debugMasterData(`extend dataset ${dataset.id} (${dataset.slug})`, extensions)
   const db = app.get('db')
   const es = app.get('es')
@@ -96,7 +102,7 @@ exports.extend = async (app, dataset, extensions, updateMode, ignoreDraftLimit, 
         throw new Error(`Try to apply extension on dataset ${dataset.id} from remote service ${remoteService.id} but action ${extension.action} was not found.`)
       }
 
-      const extensionKey = exports.getExtensionKey(extension)
+      const extensionKey = getExtensionKey(extension)
       const inputMapping = await prepareInputMapping(app.get('db'), action, dataset, extensionKey, extension.select)
       const errorKey = action.output.find(o => o.name === '_error') ? '_error' : 'error'
       const idInput = action.input.find(input => input.concept === 'http://schema.org/identifier')
@@ -283,9 +289,9 @@ class ExtensionsStream extends Transform {
             const data = { ...this.buffer[i] }
             // WARNING: this code is duplicated in server/utils/extensions.js
             for (const prop of this.dataset.schema) {
-              const ext = this.dataset.extensions?.find(e => prop.key.startsWith(exports.getExtensionKey(e) + '.'))
+              const ext = this.dataset.extensions?.find(e => prop.key.startsWith(getExtensionKey(e) + '.'))
               if (ext) {
-                const extKey = exports.getExtensionKey(ext)
+                const extKey = getExtensionKey(ext)
                 data[extKey] = data[extKey] ? { ...data[extKey] } : {}
                 const shortKey = prop.key.replace(extKey + '.', '')
                 data[extKey][shortKey] = data[extKey][shortKey] ?? null
@@ -323,8 +329,6 @@ class ExtensionsStream extends Transform {
   }
 }
 
-exports.getExtensionKey = require('../../../shared/utils/extensions').getExtensionKey
-
 // Create a function that will transform items from a dataset into inputs for an action
 async function prepareInputMapping (db, action, dataset, extensionKey, selectFields) {
   const schema = await schemaUtils.extendedSchema(db, dataset)
@@ -341,7 +345,7 @@ async function prepareInputMapping (db, action, dataset, extensionKey, selectFie
     const flatItem = flatten(item) // in case the input comes from another extension
 
     if (fieldMappings.find(mapping => mapping[2]['x-calculated'])) {
-      await exports.applyCalculations(dataset, flatItem)
+      await applyCalculations(dataset, flatItem)
     }
 
     for (const mapping of fieldMappings) {
@@ -359,7 +363,7 @@ async function prepareInputMapping (db, action, dataset, extensionKey, selectFie
  * @param {any[]} extensions
  * @returns
  */
-exports.prepareExtensionsSchema = async (db, schema, extensions) => {
+export const prepareExtensionsSchema = async (db, schema, extensions) => {
   let extensionsFields = []
   for (const extension of extensions) {
     if (!extension.active) continue
@@ -368,7 +372,7 @@ exports.prepareExtensionsSchema = async (db, schema, extensions) => {
       if (!remoteService) continue
       const action = remoteService.actions.find(action => action.id === extension.action)
       if (!action) continue
-      const extensionKey = exports.getExtensionKey(extension)
+      const extensionKey = getExtensionKey(extension)
       const extensionId = `${extension.remoteService}/${extension.action}`
       const selectFields = extension.select || []
       extensionsFields = extensionsFields.concat(action.output
@@ -421,12 +425,12 @@ exports.prepareExtensionsSchema = async (db, schema, extensions) => {
 }
 
 // check if and extension dosn't have the necessary input
-exports.checkExtensions = async (db, schema, extensions = []) => {
+export const checkExtensions = async (db, schema, extensions = []) => {
   if (!extensions.some(e => e.active)) return null
 
   const availableConcepts = new Set(schema.map(prop => prop['x-refersTo']).filter(c => c))
   const previousExtensions = []
-  const fullSchema = await this.prepareExtensionsSchema(db, schema, extensions)
+  const fullSchema = await prepareExtensionsSchema(db, schema, extensions)
 
   for (const extension of extensions) {
     if (!extension.active) continue
@@ -446,8 +450,8 @@ exports.checkExtensions = async (db, schema, extensions = []) => {
       for (const concept of action.output.map(i => i.concept).filter(c => c)) availableConcepts.add(concept)
     } else if (extension.property) {
       const errorPrefix = `[noretry] erreur de validation de la colonne calculée "${extension.property.key}", `
-      const availableSchema = await this.prepareExtensionsSchema(db, schema, previousExtensions)
-      const exprError = require('../../../shared/expr-eval')(config.defaultTimezone).check(extension.expr, availableSchema, fullSchema)
+      const availableSchema = await prepareExtensionsSchema(db, schema, previousExtensions)
+      const exprError = exprEval(config.defaultTimezone).check(extension.expr, availableSchema, fullSchema)
       if (exprError) throw createError(400, `${errorPrefix}${exprError}`)
       const property = schema.find(p => p.key === extension.property.key)
       if (property?.['x-refersTo']) availableConcepts.add(property?.['x-refersTo'])
@@ -458,7 +462,7 @@ exports.checkExtensions = async (db, schema, extensions = []) => {
   return null
 }
 
-exports.applyCalculations = async (dataset, item) => {
+export const applyCalculations = async (dataset, item) => {
   let warning = null
   const flatItem = flatten(item, { safe: true })
 

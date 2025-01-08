@@ -1,14 +1,14 @@
-const { Readable, Transform, Writable } = require('stream')
-const createError = require('http-errors')
-const mimeTypeStream = require('mime-type-stream')
-const flatten = require('flat')
-const virtualDatasetsUtils = require('./virtual')
-const batchStream = require('../../misc/utils/batch-stream')
-const esUtils = require('../es')
-const metrics = require('../../misc/utils/metrics')
-const pump = require('../../misc/utils/pipe')
+import { Readable, Transform, Writable } from 'stream'
+import createError from 'http-errors'
+import mimeTypeStream from 'mime-type-stream'
+import flatten from 'flat'
+import * as virtualDatasetsUtils from './virtual.js'
+import batchStream from '../../misc/utils/batch-stream.js'
+import * as esUtils from '../es/index.js'
+import * as metrics from '../../misc/utils/metrics.js'
+import pump from '../../misc/utils/pipe.js'
 
-exports.bulkSearchPromise = async (streams, data) => {
+export const bulkSearchPromise = async (streams, data) => {
   const buffers = []
   await pump(
     Readable.from([data]),
@@ -23,7 +23,7 @@ exports.bulkSearchPromise = async (streams, data) => {
   return Buffer.concat(buffers).toString()
 }
 
-exports.bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, select) => {
+export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, select) => {
   const bulkSearch = dataset.masterData && dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.find(bs => bs.id === bulkSearchId)
   if (!bulkSearch) throw createError(404, `Recherche en masse "${bulkSearchId}" inconnue`)
 

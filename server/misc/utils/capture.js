@@ -1,20 +1,20 @@
-const fs = require('fs-extra')
-const config = require('config')
-const path = require('path')
-const request = require('request')
-const eventToPromise = require('event-to-promise')
-const pump = require('../utils/pipe')
-const rateLimiting = require('../utils/rate-limiting')
-const debug = require('debug')('capture')
-const permissionsUtils = require('./permissions')
-const metrics = require('./metrics')
-const resolvePath = require('resolve-path')
+import fs from 'fs-extra'
+import config from 'config'
+import path from 'path'
+import request from 'request'
+import eventToPromise from 'event-to-promise'
+import pump from '../utils/pipe.js'
+import * as rateLimiting from '../utils/rate-limiting.js'
+import debug from 'debug'
+import * as permissionsUtils from './permissions.js'
+import * as metrics from './metrics.js'
+import resolvePath from 'resolve-path'
 
 const captureUrl = config.privateCaptureUrl || config.captureUrl
 
 const capturesDir = path.resolve(config.dataDir, 'captures')
 
-exports.init = async () => {
+export const init = async () => {
   await fs.ensureDir(capturesDir)
 }
 
@@ -98,7 +98,7 @@ const stream2file = async (reqOpts, capturePath) => {
   }
 }
 
-exports.screenshot = async (req, res) => {
+export const screenshot = async (req, res) => {
   const capturePath = resolvePath(capturesDir, req.application.id + '.png')
 
   const isDefaultThumbnail = Object.keys(req.query).filter(k => k !== 'updatedAt' && k !== 'app_capture-test-error').length === 0
@@ -155,7 +155,7 @@ exports.screenshot = async (req, res) => {
   }
 }
 
-exports.print = async (req, res) => {
+export const print = async (req, res) => {
   const reqOpts = printRequestOpts(req)
 
   if (!rateLimiting.consume(req, 'appCaptures')) {

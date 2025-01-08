@@ -12,17 +12,18 @@ Downstream examples:
 {type: 'message', channel: 'my_channel', data: {...}}
 {type: 'error', data: {...}}
 */
-const { nanoid } = require('nanoid')
-const permissions = require('./permissions')
-const { readApiKey } = require('./api-key')
-const metrics = require('./metrics')
+
+import { nanoid } from 'nanoid'
+import * as permissions from './permissions.js'
+import { readApiKey } from './api-key.js'
+import * as metrics from './metrics.js'
 
 let cursor
 const subscribers = {}
 const clients = {}
 
 let stopped = false
-exports.stop = async () => {
+export const stop = async () => {
   stopped = true
   if (cursor) await cursor.close()
 }
@@ -33,7 +34,7 @@ async function channel (db) {
   return db.collection('messages')
 }
 
-exports.initServer = async (wss, db, session) => {
+export const initServer = async (wss, db, session) => {
   wss.on('connection', (ws, req) => {
     session.auth(req, null, () => {
       // Associate ws connections to ids for subscriptions
@@ -133,7 +134,7 @@ const initCursor = (db, mongoChannel) => {
   })
 }
 
-exports.initPublisher = async (db) => {
+export const initPublisher = async (db) => {
   // Write to pubsub channel
   const mongoChannel = await channel(db)
   await mongoChannel.insertOne({ type: 'init' })

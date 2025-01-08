@@ -14,13 +14,14 @@
 <script>
 import Vue from 'vue'
 import eventBus from '~/event-bus'
+import settingsSchema from '~/../contract/settings'
 
 if (process.browser) {
   const Draggable = require('vuedraggable')
   Vue.component('Draggable', Draggable)
 }
 
-const datasetsMetadataSchema = require('~/../contract/settings').properties.datasetsMetadata
+const datasetsMetadataSchema = settingsSchema.properties.datasetsMetadata
 const wrapperSchema = {
   type: 'object',
   properties: {

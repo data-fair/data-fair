@@ -1,15 +1,14 @@
-const express = require('express')
 
-const status = require('./status')
-const apiDocs = require('../../../contract/api-docs')
-const projections = require('../../../contract/projections')
-const asyncWrap = require('../utils/async-handler')
-const settingsUtils = require('../utils/settings')
+import express from 'express'
+import * as status from './status.js'
+import apiDocs from '../../../contract/api-docs.js'
+import projections from '../../../contract/projections.js'
+import asyncWrap from '../utils/async-handler.js'
+import * as settingsUtils from '../utils/settings.js'
+import * as ajv from '../utils/ajv.js'
+import config from 'config'
 
-const ajv = require('../utils/ajv')
 const validateApi = ajv.compile('openapi-3.1')
-const config = require('config')
-
 const router = express.Router()
 
 const remoteServices = config.remoteServices.map(s => ({ ...s }))
@@ -46,4 +45,4 @@ router.get('/configurable-catalogs', (req, res) => {
   res.json(config.catalogs)
 })
 
-module.exports = router
+export default router

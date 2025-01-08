@@ -1,7 +1,7 @@
 // A subset of cartographic projections supported by data-fair
 // based on definitions from https://epsg.io/about
 
-module.exports = [{
+export default [{
   title: 'NTF (Paris) / Lambert zone II',
   code: 'EPSG:27572',
   aliases: [],

@@ -1,7 +1,8 @@
-const config = require('config')
-const asyncWrap = require('./misc/utils/async-handler')
+import config from 'config'
+import asyncWrap from './misc/utils/async-handler.js'
+import clone from './misc/utils/clone.js'
 
-module.exports = async () => {
+export default async () => {
   const trackEmbed = asyncWrap(async (req, res, next) => {
     if (!req.url.startsWith('/embed/')) return next()
     const [resourceType, resourceId, embedView] = req.url.replace('/embed/', '').split(/[/?]/)
@@ -19,10 +20,11 @@ module.exports = async () => {
     next()
   })
   if (config.proxyNuxt) {
+    const { createProxyMiddleware } = await import('http-proxy-middleware')
     // in dev mode the nuxt dev server is already running, we re-expose it
     return {
       trackEmbed,
-      render: require('http-proxy-middleware').createProxyMiddleware({
+      render: createProxyMiddleware({
         target: 'http://localhost:3000/data-fair/'
         // pathRewrite: { '^/data-fair': '' }
       })
@@ -31,8 +33,8 @@ module.exports = async () => {
     // no UI during tests
     return { trackEmbed, render: (req, res, next) => next() }
   } else {
-    const { Nuxt } = require('nuxt-start')
-    const nuxtConfig = require('../nuxt.config.js')
+    const { Nuxt } = await import('nuxt-start')
+    const nuxtConfig = clone((await import('../nuxt.config.cjs')).default)
 
     // Prepare nuxt for rendering and serving UI
     nuxtConfig.dev = false

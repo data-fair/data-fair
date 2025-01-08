@@ -15,13 +15,14 @@
 <script>
 import Vue from 'vue'
 import eventBus from '~/event-bus'
+import settingsSchema from '~/../contract/settings'
 
 if (process.browser) {
   const Draggable = require('vuedraggable')
   Vue.component('Draggable', Draggable)
 }
 
-const privateVocabularySchema = require('~/../contract/settings').properties.privateVocabulary
+const privateVocabularySchema = settingsSchema.properties.privateVocabulary
 const wrapperSchema = {
   type: 'object',
   properties: {

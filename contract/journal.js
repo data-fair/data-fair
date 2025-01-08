@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   type: 'object',
   description: 'History journal of a resource',
   required: ['id', 'type', 'events'],

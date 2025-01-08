@@ -1,17 +1,16 @@
-const config = require('config')
-const status = require('./status.json')
-const version = require('../package.json').version
-const dataset = require('./dataset')
-const datasetPatch = require('./dataset-patch')
-const datasetPost = require('./dataset-post')
-const remoteService = { ...require('./remote-service') }
-const remoteServicePatch = { ...require('./remote-service-patch') }
-delete remoteServicePatch.definitions
-const catalog = require('./catalog')
-const catalogPatch = require('./catalog-patch')
-const application = require('./application')
-const applicationPatch = require('./application-patch')
-const utils = require('./utils')
+import config from 'config'
+import status from './status.json' with {type: 'json'}
+import pJson from '../package.json' with {type: 'json'}
+import dataset from './dataset.js'
+import datasetPatch from './dataset-patch.js'
+import datasetPost from './dataset-post.js'
+import remoteService from './remote-service.js'
+import remoteServicePatch from './remote-service-patch.js'
+import catalog from './catalog.js'
+import catalogPatch from './catalog-patch.js'
+import application from './application.js'
+import applicationPatch from './application-patch.js'
+import * as utils from './utils.js'
 
 const servers = [{
   // @ts-ignore
@@ -20,7 +19,7 @@ const servers = [{
   description: `Instance DataFair - ${new URL(config.publicUrl).hostname}`
 }]
 
-module.exports = () => {
+export default () => {
   const doc = {
     openapi: '3.1.0',
     info: Object.assign({
@@ -34,9 +33,9 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
 Pour des exemples simples de publication de données vous pouvez consulter la <a href="https://data-fair.github.io/4/interoperate/api" target="blank">documentation sur ce sujet</a>.
 `,
-      version: version,
+      version: pJson.version,
       'x-api-id': 'data-fair'
-    // @ts-ignore
+      // @ts-ignore
     }, config.info),
     servers,
     components: {
@@ -44,8 +43,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
         dataset,
         datasetPatch,
         datasetPost,
-        remoteService,
-        remoteServicePatch,
+        remoteService: { ...remoteService },
+        remoteServicePatch: { ...remoteServicePatch },
         application,
         applicationPatch,
         catalog,

@@ -1,15 +1,16 @@
-const fs = require('fs-extra')
-const multer = require('multer')
-const createError = require('http-errors')
-const { nanoid } = require('nanoid')
-const mime = require('mime-types')
-const resolvePath = require('resolve-path')
-const datasetSchema = require('../../../contract/dataset')
-const datasetUtils = require('./')
-const { tmpDir } = require('./files')
-const asyncWrap = require('../../misc/utils/async-handler')
-const promisifyMiddleware = require('../../misc/utils/promisify-middleware')
-const { fsyncFile } = require('./files')
+import fs from 'fs-extra'
+import multer from 'multer'
+import createError from 'http-errors'
+import { nanoid } from 'nanoid'
+import mime from 'mime-types'
+import resolvePath from 'resolve-path'
+import datasetSchema from '../../../contract/dataset.js'
+import * as datasetUtils from './index.js'
+import { tmpDir, fsyncFile } from './files.js'
+import asyncWrap from '../../misc/utils/async-handler.js'
+import promisifyMiddleware from '../../misc/utils/promisify-middleware.js'
+import { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } from './types.js'
+import debugLib from 'debug'
 
 const fallbackMimeTypes = {
   dbf: 'application/dbase',
@@ -17,9 +18,7 @@ const fallbackMimeTypes = {
   fods: 'application/vnd.oasis.opendocument.spreadsheet',
   gpkg: 'application/geopackage+sqlite3'
 }
-const debug = require('debug')('files')
-
-const { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } = require('../../workers/file-normalizer')
+const debug = debugLib('files')
 
 const storage = multer.diskStorage({
   destination: async function (req, file, cb) {
@@ -55,7 +54,7 @@ const storage = multer.diskStorage({
   }
 })
 
-const allowedTypes = exports.allowedTypes = new Set([...basicTypes, ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes])
+export const allowedTypes = new Set([...basicTypes, ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes])
 
 const middleware = multer({
   limits: {
@@ -92,7 +91,7 @@ const middleware = multer({
 
 const getMulterFiles = promisifyMiddleware(middleware, 'files')
 
-exports.getFiles = async (req, res) => {
+export const getFiles = async (req, res) => {
   const files = await getMulterFiles(req, res)
   for (const file of files || []) {
     await fsyncFile(file.path)
@@ -100,7 +99,7 @@ exports.getFiles = async (req, res) => {
   return files
 }
 
-exports.getFormBody = (body) => {
+export const getFormBody = (body) => {
   if (!body) throw createError(400, 'Missing body')
   if (body.body) {
     try {
@@ -130,7 +129,7 @@ exports.getFormBody = (body) => {
   return body
 }
 
-exports.fsyncFiles = asyncWrap(async (req, res, next) => {
+export const fsyncFiles = asyncWrap(async (req, res, next) => {
   for (const file of req.files || []) {
     await fsyncFile(file.path)
   }

@@ -1,5 +1,5 @@
-const assert = require('node:assert').strict
-const testUtils = require('./resources/test-utils')
+import * as testUtils from './resources/test-utils.js'
+import { strict as assert } from 'node:assert'
 
 describe('Dataset API keys', () => {
   it('Use an api key defined on the dataset', async () => {

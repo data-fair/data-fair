@@ -14,13 +14,14 @@
 <script>
 import Vue from 'vue'
 import eventBus from '~/event-bus'
+import settingsSchema from '~/../contract/settings'
 
 if (process.browser) {
   const Draggable = require('vuedraggable')
   Vue.component('Draggable', Draggable)
 }
 
-const webhooksSchema = require('~/../contract/settings').properties.webhooks
+const webhooksSchema = settingsSchema.properties.webhooks
 const wrapperSchema = {
   type: 'object',
   properties: {

@@ -1,9 +1,10 @@
-const config = require('config')
-const createError = require('http-errors')
-const { prepareQuery, aliasName } = require('./commons')
-const capabilities = require('../../../contract/capabilities')
 
-module.exports = async (client, dataset, query) => {
+import config from 'config'
+import createError from 'http-errors'
+import { prepareQuery, aliasName } from './commons.js'
+import capabilities from '../../../contract/capabilities.js'
+
+export default async (client, dataset, query) => {
   if (!query.field) throw createError(400, '"field" parameter is required')
   const prop = dataset.schema.find(f => f.key === query.field)
   if (!prop) {

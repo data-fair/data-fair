@@ -1,8 +1,18 @@
-const { Writable } = require('stream')
-const journals = require('../misc/utils/journals')
+
+import { Writable } from 'stream'
+import * as journals from '../misc/utils/journals.js'
+import { jsonSchema } from '../datasets/utils/schema.js'
+import * as ajv from '../misc/utils/ajv.js'
+import pump from '../misc/utils/pipe.js'
+import * as datasetUtils from '../datasets/utils/index.js'
+import * as datasetsService from '../datasets/service.js'
+import * as schemaUtils from '../datasets/utils/schema.js'
+import taskProgress from '../datasets/utils/task-progress.js'
+import truncateMiddle from 'truncate-middle'
+import debugLib from 'debug'
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
-exports.eventsPrefix = 'validate'
+export const eventsPrefix = 'validate'
 
 const maxErrors = 3
 
@@ -10,8 +20,6 @@ class ValidateStream extends Writable {
   constructor (options) {
     super({ objectMode: true })
 
-    const { jsonSchema } = require('../datasets/utils/schema')
-    const ajv = require('../misc/utils/ajv')
     const schema = jsonSchema(options.dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']))
     this.validate = ajv.compile(schema, false)
 
@@ -34,8 +42,6 @@ class ValidateStream extends Writable {
   }
 
   errorsSummary () {
-    const truncateMiddle = require('truncate-middle')
-
     if (!this.nbErrors) return null
     const leftOutErrors = this.nbErrors - maxErrors
     let msg = `${Math.round(100 * (this.nbErrors / this.i))}% des lignes ont une erreur de validation.\n<br>`
@@ -46,13 +52,8 @@ class ValidateStream extends Writable {
   }
 }
 
-exports.process = async function (app, dataset) {
-  const pump = require('../misc/utils/pipe')
-  const datasetUtils = require('../datasets/utils')
-  const datasetsService = require('../datasets/service')
-  const taskProgress = require('../datasets/utils/task-progress')
-
-  const debug = require('debug')(`worker:indexer:${dataset.id}`)
+export const process = async function (app, dataset) {
+  const debug = debugLib(`worker:indexer:${dataset.id}`)
 
   if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape validation.')
   if (dataset.isRest) throw new Error('Un jeu de données éditable ne devrait pas passer par l\'étape validation.')
@@ -73,13 +74,13 @@ exports.process = async function (app, dataset) {
     } else {
       Object.assign(datasetFull.draft, patch)
       const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
-      const breakingChanges = require('../datasets/utils/schema').getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema)
+      const breakingChanges = schemaUtils.getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema)
       if (breakingChanges.length) {
         await journals.log(app, dataset, { type: 'validation-error', data: 'La structure du fichier contient des ruptures de compatibilité.' })
         if (dataset.draftReason.validationMode === 'noBreakingChange' || dataset.draftReason.validationMode === 'compatible') {
           delete patch.validateDraft
         }
-      } else if (!require('../datasets/utils/schema').schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
+      } else if (!schemaUtils.schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
         await journals.log(app, dataset, { type: 'validation-error', data: 'La structure du fichier contient des changements.' })
         if (dataset.draftReason.validationMode === 'compatible') {
           delete patch.validateDraft
@@ -90,7 +91,7 @@ exports.process = async function (app, dataset) {
 
   if (datasetUtils.schemaHasValidationRules(dataset.schema)) {
     debug('Run validator stream')
-    const progress = taskProgress(app, dataset.id, exports.eventsPrefix, 100)
+    const progress = taskProgress(app, dataset.id, eventsPrefix, 100)
     await progress.inc(0)
     const readStreams = await datasetUtils.readStreams(db, dataset, false, false, false, progress)
     const validateStream = new ValidateStream({ dataset })

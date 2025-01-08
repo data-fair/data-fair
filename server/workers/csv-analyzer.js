@@ -1,19 +1,20 @@
-const journals = require('../misc/utils/journals')
+import * as journals from '../misc/utils/journals.js'
+import createError from 'http-errors'
+import iconv from 'iconv-lite'
+import datasetFileSample from '../datasets/utils/file-sample.js'
+import * as csvSniffer from '../misc/utils/csv-sniffer.js'
+import * as datasetUtils from '../datasets/utils/index.js'
+import * as datasetsService from '../datasets/service.js'
+import * as fieldsSniffer from '../datasets/utils/fields-sniffer.js'
+import outOfCharacter from 'out-of-character'
+import debugLib from 'debug'
 
 // Analyze dataset data, check validity and extract a few metadata for next workers
-exports.eventsPrefix = 'analyze'
+export const eventsPrefix = 'analyze'
 
-exports.process = async function (app, dataset) {
-  const createError = require('http-errors')
-  const iconv = require('iconv-lite')
-  const datasetFileSample = require('../datasets/utils/file-sample')
-  const csvSniffer = require('../misc/utils/csv-sniffer')
-  const datasetUtils = require('../datasets/utils')
-  const datasetsService = require('../datasets/service')
-  const fieldsSniffer = require('../datasets/utils/fields-sniffer')
-  const outOfCharacter = require('out-of-character')
+export const process = async function (app, dataset) {
+  const debug = debugLib(`worker:csv-analyzer:${dataset.id}`)
 
-  const debug = require('debug')(`worker:csv-analyzer:${dataset.id}`)
   debug('extract file sample')
   const fileSample = await datasetFileSample(datasetUtils.filePath(dataset))
   if (!fileSample) throw createError(400, '[noretry] Échec d\'échantillonage du fichier tabulaire, il est vide')

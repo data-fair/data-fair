@@ -1,26 +1,28 @@
-const config = require('config')
-const express = require('express')
-const moment = require('moment')
-const slug = require('slugify')
-const i18n = require('i18n')
-const mongoEscape = require('mongo-escape')
-const CronJob = require('cron').CronJob
-const catalogAPIDocs = require('../../contract/catalog-api-docs')
-const catalogs = require('./plugins')
 
-const ajv = require('../misc/utils/ajv')
-const validate = ajv.compile(require('../../contract/catalog'))
-const catalogPatch = require('../../contract/catalog-patch')
+import config from 'config'
+import express from 'express'
+import moment from 'moment'
+import slug from 'slugify'
+import i18n from 'i18n'
+import mongoEscape from 'mongo-escape'
+import { CronJob } from 'cron'
+import catalogAPIDocs from '../../contract/catalog-api-docs.js'
+import catalogSchema from '../../contract/catalog.js'
+import * as catalogs from './plugins/index.js'
+import * as ajv from '../misc/utils/ajv.js'
+import catalogPatch from '../../contract/catalog-patch.js'
+import * as permissions from '../misc/utils/permissions.js'
+import * as usersUtils from '../misc/utils/users.js'
+import asyncWrap from '../misc/utils/async-handler.js'
+import * as cacheHeaders from '../misc/utils/cache-headers.js'
+import { clean } from './utils.js'
+import { findCatalogs } from './service.js'
+
+const validate = ajv.compile(catalogSchema)
 const validatePatch = ajv.compile(catalogPatch)
 
-const permissions = require('../misc/utils/permissions')
-const usersUtils = require('../misc/utils/users')
-const asyncWrap = require('../misc/utils/async-handler')
-const cacheHeaders = require('../misc/utils/cache-headers')
-const { clean } = require('./utils')
-const { findCatalogs } = require('./service')
-
-const router = module.exports = express.Router()
+const router = express.Router()
+export default router
 
 router.use((req, res, next) => {
   // @ts-ignore

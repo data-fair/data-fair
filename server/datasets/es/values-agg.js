@@ -1,10 +1,10 @@
-const config = require('config')
-const createError = require('http-errors')
-const { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } = require('./commons.js')
-const capabilities = require('../../../contract/capabilities.js')
-const { assertMetricAccepted } = require('./metric-agg')
+import config from 'config'
+import createError from 'http-errors'
+import { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } from './commons.js'
+import capabilities from '../../../contract/capabilities.js'
+import { assertMetricAccepted } from './metric-agg.js'
 
-module.exports = async (client, dataset, query, addGeoData, publicBaseUrl, explain, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
+export default async (client, dataset, query, addGeoData, publicBaseUrl, explain, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
   const fields = dataset.schema.map(f => f.key)
   // nested grouping by a serie of fields
   if (!query.field) throw createError(400, 'Le paramètre "field" est obligatoire')

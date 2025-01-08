@@ -4,7 +4,7 @@
  * @param {{keepalive?: boolean}} options
  * @returns {import('express').RequestHandler}
  */
-module.exports = (handler, options = {}) => {
+export default (handler, options = {}) => {
   return (req, res, next) => {
     // kinda hackish way of keeping a http request opened in the case where it takes a long time to process
     // ideally all long tasks should be performed in a worker instead but this a temporary workaround

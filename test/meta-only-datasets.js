@@ -1,5 +1,5 @@
-const assert = require('assert').strict
-const workers = require('../server/workers')
+import { strict as assert } from 'node:assert'
+import * as workers from '../server/workers/index.js'
 
 describe('meta only datasets', () => {
   it('Create simple meta only datasets', async () => {

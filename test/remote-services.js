@@ -1,5 +1,5 @@
-const nock = require('nock')
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
+import nock from 'nock'
 
 describe('remote-services', () => {
   it('Get external APIs when not authenticated', async () => {
@@ -11,7 +11,7 @@ describe('remote-services', () => {
 
   it('Post a minimal external API, read it, update it and delete it', async () => {
     const ax = global.ax.superadmin
-    const apiDoc = require('./resources/geocoder-api.json')
+    const { default: apiDoc } = await import('./resources/geocoder-api.json', { with: { type: 'json' } })
     apiDoc.info['x-api-id'] = 'geocoder2'
     let res = await ax.post('/api/v1/remote-services', { apiDoc, apiKey: { in: 'header', name: 'x-apiKey' }, public: true })
     assert.equal(res.status, 201)

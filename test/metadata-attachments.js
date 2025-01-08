@@ -1,7 +1,7 @@
-const assert = require('assert').strict
-const fs = require('fs')
-const FormData = require('form-data')
-const testUtils = require('./resources/test-utils')
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
+import fs from 'node:fs'
+import FormData from 'form-data'
 
 const sendAttachment = async (ax, datasetId, attachmentName) => {
   const attachmentForm = new FormData()

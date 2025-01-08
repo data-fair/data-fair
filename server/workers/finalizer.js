@@ -1,19 +1,23 @@
 // Finalize dataset for publication
-exports.eventsPrefix = 'finalize'
+import config from 'config'
+import * as esUtils from '../datasets/es/index.js'
+import * as geoUtils from '../datasets/utils/geo.js'
+import * as datasetUtils from '../datasets/utils/index.js'
+import * as datasetService from '../datasets/service.js'
+import * as attachmentsUtils from '../datasets/utils/attachments.js'
+import * as virtualDatasetsUtils from '../datasets/utils/virtual.js'
+import taskProgress from '../datasets/utils/task-progress.js'
+import * as restDatasetsUtils from '../datasets/utils/rest.js'
+import dayjs from 'dayjs'
 
-exports.process = async function (app, _dataset) {
+import debugLib from 'debug'
+
+export const eventsPrefix = 'finalize'
+
+export const process = async function (app, _dataset) {
   let dataset = _dataset
-  const config = /** @type {any} */(require('config'))
-  const esUtils = require('../datasets/es')
-  const geoUtils = require('../datasets/utils/geo')
-  const datasetUtils = require('../datasets/utils')
-  const datasetService = require('../datasets/service')
-  const attachmentsUtils = require('../datasets/utils/attachments')
-  const virtualDatasetsUtils = require('../datasets/utils/virtual')
-  const taskProgress = require('../datasets/utils/task-progress')
-  const restDatasetsUtils = require('../datasets/utils/rest')
 
-  const debug = require('debug')(`worker:finalizer:${dataset.id}`)
+  const debug = debugLib(`worker:finalizer:${dataset.id}`)
 
   const db = app.get('db')
   const es = app.get('es')
@@ -49,7 +53,7 @@ exports.process = async function (app, _dataset) {
   let nbSteps = cardinalityProps.length + 1
   if (startDateField || endDateField) nbSteps += 1
   if (geopoint || geometry) nbSteps += 1
-  const progress = taskProgress(app, dataset.id, exports.eventsPrefix, nbSteps)
+  const progress = taskProgress(app, dataset.id, eventsPrefix, nbSteps)
   await progress.inc(0)
 
   for (const prop of cardinalityProps) {
@@ -169,7 +173,6 @@ exports.process = async function (app, _dataset) {
 
   // trigger auto updates if this dataset is used as a source of extensions
   if (dataset.masterData?.bulkSearchs?.length) {
-    const dayjs = require('dayjs')
     const nextUpdate = dayjs().add(config.extensionUpdateDelay, 'seconds').toISOString()
     const cursor = db.collection('datasets').find({
       extensions: { $elemMatch: { active: true, autoUpdate: true, remoteService: 'dataset:' + dataset.id } }

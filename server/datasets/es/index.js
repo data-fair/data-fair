@@ -1,38 +1,21 @@
-const config = /** @type {any} */(require('config'))
-const elasticsearch = require('@elastic/elasticsearch')
-const commons = require('./commons')
-const manageIndices = require('./manage-indices')
+import config from 'config'
+import elasticsearch from '@elastic/elasticsearch'
 
-const smallAggs = require('./small-aggs')
+export * from './manage-indices.js'
+export * from './commons.js'
+export { default as search } from './search.js'
+export { default as multiSearch } from './multi-search.js'
+export { default as count } from './count.js'
+export { default as valuesAgg } from './values-agg.js'
+export { default as values } from './values.js'
+export { simpleMetricsAgg, agg as metricAgg } from './metric-agg.js'
+export { default as geoAgg } from './geo-agg.js'
+export { default as bboxAgg } from './bbox-agg.js'
+export { default as wordsAgg } from './words-agg.js'
+export { max as maxAgg, min as minAgg } from './small-aggs.js'
+export { default as indexStream } from './index-stream.js'
 
-exports.delete = manageIndices.delete
-exports.initDatasetIndex = manageIndices.initDatasetIndex
-exports.switchAlias = manageIndices.switchAlias
-exports.validateDraftAlias = manageIndices.validateDraftAlias
-exports.datasetInfos = manageIndices.datasetInfos
-exports.datasetWarning = manageIndices.datasetWarning
-exports.updateDatasetMapping = manageIndices.updateDatasetMapping
-
-exports.aliasName = commons.aliasName
-exports.extractError = commons.extractError
-exports.prepareResultItem = commons.prepareResultItem
-exports.escapeFilter = commons.escapeFilter
-
-exports.search = require('./search')
-exports.multiSearch = require('./multi-search')
-exports.count = require('./count')
-exports.valuesAgg = require('./values-agg')
-exports.values = require('./values')
-exports.metricAgg = require('./metric-agg').agg
-exports.simpleMetricsAgg = require('./metric-agg').simpleMetricsAgg
-exports.geoAgg = require('./geo-agg')
-exports.bboxAgg = require('./bbox-agg')
-exports.wordsAgg = require('./words-agg')
-exports.maxAgg = smallAggs.max
-exports.minAgg = smallAggs.min
-exports.indexStream = require('./index-stream')
-
-exports.init = async () => {
+export const init = async () => {
   let node = config.elasticsearch.nodes
   if (!node) {
     node = config.elasticsearch.host

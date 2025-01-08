@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   title: 'Application keys for unauthenticated readonly access',
   type: 'array',
   items: {

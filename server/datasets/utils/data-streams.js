@@ -1,22 +1,22 @@
-const fs = require('fs-extra')
-const { Writable, Transform } = require('stream')
-const csv = require('csv-parser')
-const JSONStream = require('JSONStream')
-const { stringify: csvStrStream } = require('csv-stringify')
-const flatten = require('flat')
-const tmp = require('tmp-promise')
-const mimeTypeStream = require('mime-type-stream')
-const createError = require('http-errors')
-const { createGunzip } = require('zlib')
-const DecodeStream = require('../../misc/utils/decode-stream')
-const metrics = require('../../misc/utils/metrics')
-const { csvTypes } = require('../../workers/file-normalizer')
-const fieldsSniffer = require('./fields-sniffer')
-const restDatasetsUtils = require('./rest')
-const { filePath, fullFilePath, tmpDir } = require('./files')
-const pump = require('../../misc/utils/pipe')
+import fs from 'fs-extra'
+import { Writable, Transform } from 'stream'
+import csv from 'csv-parser'
+import JSONStream from 'JSONStream'
+import { stringify as csvStrStream } from 'csv-stringify'
+import flatten from 'flat'
+import tmp from 'tmp-promise'
+import mimeTypeStream from 'mime-type-stream'
+import createError from 'http-errors'
+import { createGunzip } from 'zlib'
+import DecodeStream from '../../misc/utils/decode-stream.js'
+import * as metrics from '../../misc/utils/metrics.js'
+import { csvTypes } from './types.js'
+import * as fieldsSniffer from './fields-sniffer.js'
+import * as restDatasetsUtils from './rest.js'
+import { filePath, fullFilePath, tmpDir } from './files.js'
+import pump from '../../misc/utils/pipe.js'
 
-exports.formatLine = (item, schema) => {
+export const formatLine = (item, schema) => {
   for (const key of Object.keys(item)) {
     const prop = schema.find(p => p.key === key)
     if (prop && typeof item[key] === 'string') {
@@ -30,8 +30,8 @@ exports.formatLine = (item, schema) => {
   }
 }
 
-// used both by exports.readStream and bulk transactions in rest datasets
-exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, encoding, skipDecoding, dataset, autoAdjustKeys = false) => {
+// used both by readStream and bulk transactions in rest datasets
+export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, encoding, skipDecoding, dataset, autoAdjustKeys = false) => {
   const streams = []
 
   // file is gzipped
@@ -48,7 +48,7 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
     streams.push(new Transform({
       objectMode: true,
       transform (item, encoding, callback) {
-        exports.formatLine(item, schema)
+        formatLine(item, schema)
         callback(null, item)
       }
     }))
@@ -173,7 +173,7 @@ exports.transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, ra
 }
 
 // Read the dataset file and get a stream of line items
-exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraftLimit = false, progress) => {
+export const readStreams = async (db, dataset, raw = false, full = false, ignoreDraftLimit = false, progress) => {
   if (dataset.isRest) return restDatasetsUtils.readStreams(db, dataset)
   const p = full ? fullFilePath(dataset) : filePath(dataset)
 
@@ -195,7 +195,7 @@ exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraft
       }
     }))
   }
-  streams = streams.concat(exports.transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, false, full ? 'UTF-8' : dataset.file.encoding, false, dataset))
+  streams = streams.concat(transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, false, full ? 'UTF-8' : dataset.file.encoding, false, dataset))
 
   // manage interruption in case of draft mode
   const limit = (dataset.draftReason && !ignoreDraftLimit) ? 100 : -1
@@ -220,7 +220,7 @@ exports.readStreams = async (db, dataset, raw = false, full = false, ignoreDraft
 }
 
 // Used by extender worker to produce the "full" version of the file
-exports.writeExtendedStreams = async (db, dataset, extensions) => {
+export const writeExtendedStreams = async (db, dataset, extensions) => {
   if (dataset.isRest) return restDatasetsUtils.writeExtendedStreams(db, dataset, extensions)
   const tmpFullFile = await tmp.tmpName({ dir: tmpDir })
   // creating empty file before streaming seems to fix some weird bugs with NFS
@@ -267,11 +267,11 @@ exports.writeExtendedStreams = async (db, dataset, extensions) => {
   return [...transforms, writeStream]
 }
 
-exports.sampleValues = async (dataset, ignoreKeys, onDecodedData) => {
+export const sampleValues = async (dataset, ignoreKeys, onDecodedData) => {
   let currentLine = 0
   let stopped = false
   const sampleValues = {}
-  const streams = await exports.readStreams(null, dataset, true, false, true)
+  const streams = await readStreams(null, dataset, true, false, true)
   if (onDecodedData) {
     const decodeStream = streams.find(s => s instanceof DecodeStream)
     decodeStream?.on('data', onDecodedData)

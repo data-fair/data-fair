@@ -1,9 +1,9 @@
 // inspired by https://github.com/danielgindi/node-autodetect-decoder-stream/blob/master/index.js
 
-const iconv = require('iconv-lite')
-const chardet = require('chardet')
-const { Transform } = require('stream')
-const outOfCharacter = require('out-of-character')
+import iconv from 'iconv-lite'
+import chardet from 'chardet'
+import { Transform } from 'stream'
+import outOfCharacter from 'out-of-character'
 
 const sampleSize = 32768 // 32kb
 
@@ -49,4 +49,4 @@ class DecodeStream extends Transform {
   }
 }
 
-module.exports = DecodeStream
+export default DecodeStream

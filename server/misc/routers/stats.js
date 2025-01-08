@@ -1,9 +1,12 @@
-const express = require('express')
-const asyncWrap = require('../utils/async-handler')
-const cacheHeaders = require('../utils/cache-headers')
-const limitsUtils = require('../utils/limits')
 
-const router = module.exports = express.Router()
+import express from 'express'
+import asyncWrap from '../utils/async-handler.js'
+import * as cacheHeaders from '../utils/cache-headers.js'
+import * as limitsUtils from '../utils/limits.js'
+
+const router = express.Router()
+
+export default router
 
 router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   if (!req.user) return res.status(401).type('text/plain').send()

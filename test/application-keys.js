@@ -1,8 +1,8 @@
-const assert = require('assert').strict
-const config = require('config')
-const testUtils = require('./resources/test-utils')
-const workers = require('../server/workers')
-const rateLimitingUtils = require('../server/misc/utils/rate-limiting')
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
+import config from 'config'
+import * as workers from '../server/workers/index.js'
+import * as rateLimitingUtils from '../server/misc/utils/rate-limiting.js'
 
 describe('Applications keys for unauthenticated readOnly access', () => {
   it('Empty array by default', async () => {

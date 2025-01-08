@@ -1,6 +1,7 @@
-const findUtils = require('../misc/utils/find')
-const permissions = require('../misc/utils/permissions')
-const { prepareMarkdownContent } = require('../misc/utils/markdown')
+
+import * as findUtils from '../misc/utils/find.js'
+import * as permissions from '../misc/utils/permissions.js'
+import { prepareMarkdownContent } from '../misc/utils/markdown.js'
 
 /**
  *
@@ -8,7 +9,7 @@ const { prepareMarkdownContent } = require('../misc/utils/markdown')
  * @param {boolean} html
  * @returns {any}
  */
-exports.clean = (catalog, html = false) => {
+export const clean = (catalog, html = false) => {
   catalog.public = permissions.isPublic('catalogs', catalog)
   delete catalog.permissions
   if (catalog.apiKey) catalog.apiKey = '**********'

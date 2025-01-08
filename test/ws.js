@@ -1,7 +1,7 @@
-const assert = require('assert').strict
-const WebSocket = require('ws')
-const eventToPromise = require('event-to-promise')
-const config = require('config')
+import { strict as assert } from 'node:assert'
+import WebSocket from 'ws'
+import eventToPromise from 'event-to-promise'
+import config from 'config'
 
 async function receive (cli) {
   const res = await eventToPromise(cli, 'message')

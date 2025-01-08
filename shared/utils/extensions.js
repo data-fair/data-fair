@@ -1,4 +1,4 @@
-exports.getExtensionKey = (extension) => {
+export const getExtensionKey = (extension) => {
   if (extension.propertyPrefix) return extension.propertyPrefix
   // deprecated
   if (extension.shortId) return '_ext_' + extension.shortId

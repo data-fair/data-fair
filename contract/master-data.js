@@ -25,7 +25,7 @@ const filters = {
   }
 }
 
-exports.schema = {
+export const schema = {
   type: 'object',
   title: 'Données de référence',
   properties: {
@@ -227,7 +227,7 @@ Exemple: ma_colonne,-ma_colonne2`
   }
 }
 
-exports.endpoints = (dataset) => {
+export const endpoints = (dataset) => {
   const endpoints = {}
   if (!dataset.masterData || !dataset.masterData.bulkSearchs) return endpoints
   const outputProperties = dataset.schema.filter(f => !f['x-calculated'])

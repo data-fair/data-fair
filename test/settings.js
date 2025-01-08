@@ -1,4 +1,4 @@
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
 
 describe('settings API', () => {
   it('should reject wrong account type', async () => {

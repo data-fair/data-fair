@@ -1,13 +1,13 @@
-const _config = require('config')
-const prettyBytes = require('pretty-bytes')
-const datasetSchema = require('./dataset')
-const masterData = require('./master-data')
-const dataFiles = require('./data-files')
-const capabilities = require('./capabilities')
-const datasetUtils = require('../server/datasets/utils')
-const { acceptedMetricAggs } = require('../server/datasets/es/metric-agg')
-const utils = require('./utils')
-const version = require('../package.json').version
+import _config from 'config'
+import prettyBytes from 'pretty-bytes'
+import datasetSchema from './dataset.js'
+import * as masterData from './master-data.js'
+import dataFiles from './data-files.js'
+import capabilities from './capabilities.js'
+import * as datasetUtils from '../server/datasets/utils/index.js'
+import { acceptedMetricAggs } from '../server/datasets/es/metric-agg.js'
+import * as utils from './utils.js'
+import pJson from '../package.json' with {type: 'json'}
 
 const config = /** @type {any} */(_config)
 
@@ -32,7 +32,7 @@ const anonymousApiRate = apiRate('anonymous', 'anonyme')
  * @param {any} [publicationSite]
  */
 // @ts-ignore
-module.exports = (dataset, publicUrl = config.publicUrl, ownerInfo, publicationSite) => {
+export default (dataset, publicUrl = config.publicUrl, ownerInfo, publicationSite) => {
   const schema = dataset.schema || []
   const datasetLineSchema = datasetUtils.jsonSchema(schema, publicUrl)
 
@@ -402,7 +402,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
   const info = {
     title: `API publique du jeu de données : ${dataset.title || dataset.slug}`,
     description,
-    version,
+    version: pJson.version,
     'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-dataset-${dataset.id}`,
     contact: { ...(ownerInfo.contact || {}) }
   }

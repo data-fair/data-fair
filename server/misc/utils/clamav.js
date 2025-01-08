@@ -1,11 +1,15 @@
-const path = require('path')
-const config = /** @type {any} */(require('config'))
-const { Socket } = require('node:net')
-const createError = require('http-errors')
-const { PromiseSocket } = require('promise-socket')
-const { Counter } = require('prom-client')
-const asyncWrap = require('./async-handler')
-const debug = require('debug')('clamav')
+import path from 'path'
+import { Socket } from 'node:net'
+import createError from 'http-errors'
+import { PromiseSocket } from 'promise-socket'
+import { Counter } from 'prom-client'
+import asyncWrap from './async-handler.js'
+import debugLib from 'debug'
+import _config from 'config'
+
+const config = /** @type {any} */(_config)
+
+const debug = debugLib('clamav')
 
 const infectedFilesCounter = new Counter({
   name: 'df_infected_files',
@@ -26,17 +30,17 @@ const runCommand = async (command) => {
   return result
 }
 
-exports.ping = async () => {
+export const ping = async () => {
   const result = await runCommand('PING')
   if (result !== 'PONG') throw new Error('expected "PONG" in response')
 }
 
-exports.middleware = asyncWrap(async (req, res, next) => {
-  await exports.checkFiles(req.files, req.user)
+export const middleware = asyncWrap(async (req, res, next) => {
+  await checkFiles(req.files, req.user)
   next()
 })
 
-exports.checkFiles = async (files, user) => {
+export const checkFiles = async (files, user) => {
   if (!config.clamav.active) return true
   for (const file of files || []) {
     const remotePath = path.join(config.clamav.dataDir, path.relative(config.dataDir, file.path))

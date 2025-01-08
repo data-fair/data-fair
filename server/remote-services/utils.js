@@ -1,30 +1,32 @@
-const findUtils = require('../misc/utils/find')
-const { prepareMarkdownContent } = require('../misc/utils/markdown')
-const soasLoader = require('soas')
-const axios = require('../misc/utils/axios')
-const ajv = require('../misc/utils/ajv')
-const config = /** @type {any} */(require('config'))
-const mongoEscape = require('mongo-escape')
-const slug = require('slugify')
-const metrics = require('../misc/utils/metrics')
-const settingsUtils = require('../misc/utils/settings')
-const servicePatch = require('../../contract/remote-service-patch')
-const datasetAPIDocs = require('../../contract/dataset-api-docs')
+import * as findUtils from '../misc/utils/find.js'
+import { prepareMarkdownContent } from '../misc/utils/markdown.js'
+import soasLoader from 'soas'
+import axios from '../misc/utils/axios.js'
+import * as ajv from '../misc/utils/ajv.js'
+import config from 'config'
+import mongoEscape from 'mongo-escape'
+import slug from 'slugify'
+import * as metrics from '../misc/utils/metrics.js'
+import * as settingsUtils from '../misc/utils/settings.js'
+import servicePatch from '../../contract/remote-service-patch.js'
+import datasetAPIDocs from '../../contract/dataset-api-docs.js'
+import remoteServiceSchema from '../../contract/remote-service.js'
+import debugLib from 'debug'
 
-const debugMasterData = require('debug')('master-data')
+const debugMasterData = debugLib('master-data')
 
-exports.validate = ajv.compile(require('../../contract/remote-service'))
-exports.validatePatch = ajv.compile(servicePatch)
-exports.validateOpenApi = ajv.compile('openapi-3.1')
+export const validate = ajv.compile(remoteServiceSchema)
+export const validatePatch = ajv.compile(servicePatch)
+export const validateOpenApi = ajv.compile('openapi-3.1')
 
-exports.initNew = (body) => {
+export const initNew = (body) => {
   const service = { ...body }
   if (service.apiDoc) {
     if (service.apiDoc.info) {
       service.title = service.title || service.apiDoc.info.title
       service.description = service.apiDoc.info.description
     }
-    service.actions = exports.computeActions(service.apiDoc)
+    service.actions = computeActions(service.apiDoc)
   }
   return service
 }
@@ -37,7 +39,7 @@ exports.initNew = (body) => {
  * @param {Record<string, string>} reqQuery
  * @param {any} user
  */
-exports.fixConceptsFilters = async (db, locale, reqQuery, user) => {
+export const fixConceptsFilters = async (db, locale, reqQuery, user) => {
   let vocabulary
   for (const key of ['input-concepts', 'output-concepts']) {
     if (!reqQuery[key]) continue
@@ -55,7 +57,7 @@ exports.fixConceptsFilters = async (db, locale, reqQuery, user) => {
   }
 }
 
-exports.syncDataset = async (db, dataset) => {
+export const syncDataset = async (db, dataset) => {
   if (dataset.draftReason) return
 
   // console.log('SYNC ko', JSON.stringify(dataset, null, 2))
@@ -74,7 +76,7 @@ exports.syncDataset = async (db, dataset) => {
     const existingService = await db.collection('remote-services')
       .findOne({ id })
     const apiDoc = datasetAPIDocs(dataset, config.publicUrl, (settings && settings.info) || {}).api
-    const service = exports.initNew({
+    const service = initNew({
       id,
       apiDoc,
       url: `${config.publicUrl}/api/v1/datasets/${dataset.id}/api-docs.json`,
@@ -103,7 +105,7 @@ exports.syncDataset = async (db, dataset) => {
         service.virtualDatasets.storageRatio = existingService.virtualDatasets.storageRatio || 0
       }
     }
-    exports.validate(service)
+    validate(service)
     await db.collection('remote-services').replaceOne({ id }, mongoEscape.escape(service, true), { upsert: true })
   } else {
     const deleted = await db.collection('remote-services').deleteOne({ id })
@@ -112,7 +114,7 @@ exports.syncDataset = async (db, dataset) => {
 }
 
 // Create default services for the data-fair instance
-exports.init = async (db) => {
+export const init = async (db) => {
   debugMasterData('init default remote services ?')
   const remoteServices = db.collection('remote-services')
   const existingServices = await remoteServices.find({ owner: { $exists: false } }).limit(1000).project({ url: 1, id: 1 }).toArray()
@@ -137,7 +139,7 @@ exports.init = async (db) => {
     url: s.url,
     apiDoc: apisDict[s.url],
     server: apisDict[s.url].servers && apisDict[s.url].servers.length && apisDict[s.url].servers[0].url,
-    actions: exports.computeActions(apisDict[s.url]),
+    actions: computeActions(apisDict[s.url]),
     public: true,
     privateAccess: []
   }, true)).filter(s => !existingServices.find(es => es.id === s.id))
@@ -166,7 +168,7 @@ exports.init = async (db) => {
 }
 
 // TODO: explain ? simplify ? hard to understand piece of code
-exports.computeActions = (apiDoc) => {
+export const computeActions = (apiDoc) => {
   const actions = soasLoader(apiDoc).actions()
   for (const a of actions) {
     a.input = Object.keys(a.input).map(concept => ({ concept, ...a.input[concept] }))
@@ -181,7 +183,7 @@ exports.computeActions = (apiDoc) => {
   return actions
 }
 
-exports.clean = (remoteService, user, html = false) => {
+export const clean = (remoteService, user, html = false) => {
   delete remoteService._id
   if (remoteService.apiKey && remoteService.apiKey.value) remoteService.apiKey.value = '**********'
   if (!user || !user.adminMode) delete remoteService.privateAccess

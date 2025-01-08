@@ -1,102 +1,104 @@
-const config = /** @type {any} */(require('config'))
-const fs = require('fs-extra')
-const path = require('path')
-const dir = require('node-dir')
-const resolvePath = require('resolve-path') // safe replacement for path.resolve
+import _config from 'config'
+import fs from 'fs-extra'
+import path from 'path'
+import nodeDir from 'node-dir'
+import resolvePath from 'resolve-path' // safe replacement for path.resolve
 
-const dataDir = exports.dataDir = path.resolve(config.dataDir)
+const config = /** @type {any} */(_config)
 
-exports.tmpDir = path.join(dataDir, 'tmp')
+export const dataDir = path.resolve(config.dataDir)
 
-const ownerDir = exports.ownerDir = (owner) => {
+export const tmpDir = path.join(dataDir, 'tmp')
+
+export const ownerDir = (owner) => {
   return resolvePath(dataDir, path.join(owner.type, owner.id))
 }
 
-exports.dir = (dataset) => {
+export const dir = (dataset) => {
   return resolvePath(
     ownerDir(dataset.owner),
     path.join(dataset.draftReason ? 'datasets-drafts' : 'datasets', dataset.id)
   )
 }
 
-exports.loadingDir = (dataset) => {
-  return resolvePath(exports.dir(dataset), 'loading')
+export const loadingDir = (dataset) => {
+  return resolvePath(dir(dataset), 'loading')
 }
 
-exports.loadedFilePath = (dataset) => {
-  return resolvePath(exports.loadingDir(dataset), dataset.loaded?.dataset?.name)
+export const loadedFilePath = (dataset) => {
+  return resolvePath(loadingDir(dataset), dataset.loaded?.dataset?.name)
 }
 
-exports.filePath = (dataset) => {
-  return resolvePath(exports.dir(dataset), dataset.file.name)
+export const filePath = (dataset) => {
+  return resolvePath(dir(dataset), dataset.file.name)
 }
 
-exports.originalFilePath = (dataset) => {
-  return resolvePath(exports.dir(dataset), dataset.originalFile.name)
+export const originalFilePath = (dataset) => {
+  return resolvePath(dir(dataset), dataset.originalFile.name)
 }
 
-exports.fullFileName = (dataset) => {
+export const fullFileName = (dataset) => {
   const parsed = path.parse(dataset.file.name)
   return `${parsed.name}-full${parsed.ext}`
 }
 
-exports.fullFilePath = (dataset) => {
-  return resolvePath(exports.dir(dataset), exports.fullFileName(dataset))
+export const fullFilePath = (dataset) => {
+  return resolvePath(dir(dataset), fullFileName(dataset))
 }
 
-exports.exportedFilePath = (dataset, ext) => {
-  return resolvePath(exports.dir(dataset), `${dataset.id}-last-export${ext}`)
+export const exportedFilePath = (dataset, ext) => {
+  return resolvePath(dir(dataset), `${dataset.id}-last-export${ext}`)
 }
 
-exports.loadedAttachmentsFilePath = (dataset) => {
-  return resolvePath(exports.loadingDir(dataset), 'attachments.zip')
+export const loadedAttachmentsFilePath = (dataset) => {
+  return resolvePath(loadingDir(dataset), 'attachments.zip')
 }
 
-exports.attachmentsDir = (dataset) => {
-  return resolvePath(exports.dir(dataset), 'attachments')
+export const attachmentsDir = (dataset) => {
+  return resolvePath(dir(dataset), 'attachments')
 }
 
-exports.attachmentPath = (dataset, name) => {
-  return resolvePath(exports.attachmentsDir(dataset), name)
+export const attachmentPath = (dataset, name) => {
+  return resolvePath(attachmentsDir(dataset), name)
 }
 
-exports.metadataAttachmentsDir = (dataset) => {
-  return resolvePath(exports.dir(dataset), 'metadata-attachments')
+export const metadataAttachmentsDir = (dataset) => {
+  return resolvePath(dir(dataset), 'metadata-attachments')
 }
 
-exports.metadataAttachmentPath = (dataset, name) => {
-  return resolvePath(exports.metadataAttachmentsDir(dataset), name)
+export const metadataAttachmentPath = (dataset, name) => {
+  return resolvePath(metadataAttachmentsDir(dataset), name)
 }
 
-exports.lsAttachments = async (dataset) => {
-  const dirName = exports.attachmentsDir(dataset)
+export const lsAttachments = async (dataset) => {
+  const dirName = attachmentsDir(dataset)
   if (!await fs.pathExists(dirName)) return []
-  const files = (await dir.promiseFiles(dirName))
+  const files = (await nodeDir.promiseFiles(dirName))
     .map(f => path.relative(dirName, f))
   return files.filter(p => path.basename(p).toLowerCase() !== 'thumbs.db')
 }
 
-exports.lsMetadataAttachments = async (dataset) => {
-  const dirName = exports.metadataAttachmentsDir(dataset)
+export const lsMetadataAttachments = async (dataset) => {
+  const dirName = metadataAttachmentsDir(dataset)
   if (!await fs.pathExists(dirName)) return []
-  const files = (await dir.promiseFiles(dirName))
+  const files = (await nodeDir.promiseFiles(dirName))
     .map(f => path.relative(dirName, f))
   return files
 }
 
-exports.lsFiles = async (dataset) => {
+export const lsFiles = async (dataset) => {
   const infos = {}
   if (dataset.file) {
-    const filePath = exports.filePath(dataset)
-    infos.file = { filePath, size: (await fs.promises.stat(filePath)).size }
+    const fp = filePath(dataset)
+    infos.file = { filePath: fp, size: (await fs.promises.stat(fp)).size }
   }
   if (dataset.originalFile) {
-    const filePath = exports.originalFilePath(dataset)
+    const filePath = originalFilePath(dataset)
     infos.originalFile = { filePath, size: (await fs.promises.stat(filePath)).size }
   }
   if (dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
-    const dirPath = exports.attachmentsDir(dataset)
-    const paths = await exports.lsAttachments(dataset)
+    const dirPath = attachmentsDir(dataset)
+    const paths = await lsAttachments(dataset)
     const files = []
     for (const p of paths) {
       const filePath = path.join(dirPath, p)
@@ -107,13 +109,13 @@ exports.lsFiles = async (dataset) => {
   return infos
 }
 
-exports.dataFiles = async (dataset, publicBaseUrl = config.publicUrl) => {
+export const dataFiles = async (dataset, publicBaseUrl = config.publicUrl) => {
   if (dataset.isVirtual || dataset.isMetaOnly) return []
-  const dir = exports.dir(dataset)
-  if (!await fs.pathExists(dir)) {
+  const d = dir(dataset)
+  if (!await fs.pathExists(d)) {
     return []
   }
-  const files = await fs.readdir(dir)
+  const files = await fs.readdir(d)
   const results = []
   if (dataset.originalFile) {
     if (!files.includes(dataset.originalFile.name)) {
@@ -170,7 +172,7 @@ exports.dataFiles = async (dataset, publicBaseUrl = config.publicUrl) => {
   }
 
   for (const result of results) {
-    const stats = await fs.stat(resolvePath(exports.dir(dataset), result.name))
+    const stats = await fs.stat(resolvePath(dir(dataset), result.name))
     result.size = stats.size
     result.updatedAt = stats.mtime
     let url = `${publicBaseUrl}/api/v1/datasets/${dataset.id}/data-files/${result.name}`
@@ -187,7 +189,7 @@ exports.dataFiles = async (dataset, publicBaseUrl = config.publicUrl) => {
 /**
  * @param {string} p
  */
-exports.fsyncFile = async (p) => {
+export const fsyncFile = async (p) => {
   const fd = await fs.open(p, 'r')
   await fs.fsync(fd)
   await fs.close(fd)

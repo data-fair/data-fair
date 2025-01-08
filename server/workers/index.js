@@ -1,10 +1,16 @@
-const config = /** @type {any} */(require('config'))
-const { Histogram } = require('prom-client')
-const metrics = require('../misc/utils/metrics')
-const locks = require('../misc/utils/locks')
-const debug = require('debug')('workers')
-const mergeDraft = require('../datasets/utils/merge-draft')
-const taskProgress = require('../datasets/utils/task-progress')
+import _config from 'config'
+import { Histogram } from 'prom-client'
+import * as metrics from '../misc/utils/metrics.js'
+import * as locks from '../misc/utils/locks.js'
+import * as journals from '../misc/utils/journals.js'
+import debug from 'debug'
+import mergeDraft from '../datasets/utils/merge-draft.js'
+import taskProgress from '../datasets/utils/task-progress.js'
+import { basicTypes, csvTypes } from '../datasets/utils/types.js'
+import moment from 'moment'
+import { spawn } from 'child-process-promise'
+
+const config = /** @type {any} */(_config)
 
 const workersTasksHistogram = new Histogram({
   name: 'df_datasets_workers_tasks',
@@ -13,23 +19,23 @@ const workersTasksHistogram = new Histogram({
   labelNames: ['task', 'status']
 })
 
-const tasks = exports.tasks = {
-  initializer: require('./initializer'),
-  fileDownloader: require('./file-downloader'),
-  fileStorer: require('./file-storer'),
-  fileNormalizer: require('./file-normalizer'),
-  csvAnalyzer: require('./csv-analyzer'),
-  geojsonAnalyzer: require('./geojson-analyzer'),
-  fileValidator: require('./file-validator'),
-  extender: require('./extender'),
-  indexer: require('./indexer'),
-  finalizer: require('./finalizer'),
-  datasetPublisher: require('./dataset-publisher'),
-  ttlManager: require('./ttl-manager'),
-  restExporterCSV: require('./rest-exporter-csv'),
-  applicationPublisher: require('./application-publisher'),
-  catalogHarvester: require('./catalog-harvester'),
-  readApiKeyRenewer: require('./read-api-key-renewer')
+export const tasks = {
+  initializer: async () => import('./initializer.js'),
+  fileDownloader: async () => import('./file-downloader.js'),
+  fileStorer: async () => import('./file-storer.js'),
+  fileNormalizer: async () => import('./file-normalizer.js'),
+  csvAnalyzer: async () => import('./csv-analyzer.js'),
+  geojsonAnalyzer: async () => import('./geojson-analyzer.js'),
+  fileValidator: async () => import('./file-validator.js'),
+  extender: async () => import('./extender.js'),
+  indexer: async () => import('./indexer.js'),
+  finalizer: async () => import('./finalizer.js'),
+  datasetPublisher: async () => import('./dataset-publisher.js'),
+  ttlManager: async () => import('./ttl-manager.js'),
+  restExporterCSV: async () => import('./rest-exporter-csv.js'),
+  applicationPublisher: async () => import('./application-publisher.js'),
+  catalogHarvester: async () => import('./catalog-harvester.js'),
+  readApiKeyRenewer: async () => import('./read-api-key-renewer.js')
 }
 
 // resolve functions that will be filled when we will be asked to stop the workers
@@ -41,7 +47,7 @@ let loopIntervalPromiseResolve = null
 
 // Hooks for testing
 let hooks = {}
-exports.hook = (key, delay = 15000, message) => {
+export const hook = (key, delay = 15000, message) => {
   message = message || `time limit on worker hook - ${key}`
   const promise = new Promise((resolve, reject) => {
     hooks[key] = { resolve, reject }
@@ -52,7 +58,7 @@ exports.hook = (key, delay = 15000, message) => {
   return Promise.race([promise, timeoutPromise])
 }
 // clear also for testing
-exports.clear = async () => {
+export const clear = async () => {
   hooks = {}
   try {
     await Promise.all(promisePool.filter(p => !!p))
@@ -62,14 +68,14 @@ exports.clear = async () => {
   }
 }
 
-exports.runningTasks = () => {
+export const runningTasks = () => {
   return promisePool.filter(p => !!p).map(p => p._resource)
 }
 
 /* eslint no-unmodified-loop-condition: 0 */
 // Run main loop !
-exports.start = async (app) => {
-  const debugLoop = require('debug')('worker-loop')
+export const start = async (app) => {
+  const debugLoop = debug('worker-loop')
 
   debugLoop('start worker loop with config', config.worker)
   const db = app.get('db')
@@ -135,7 +141,7 @@ exports.start = async (app) => {
 }
 
 // Stop and wait for all workers to finish their current task
-exports.stop = async () => {
+export const stop = async () => {
   stopped = true
   console.log('waiting for worker loop to finish current tasks')
   await Promise.all(promisePool.filter(p => !!p))
@@ -144,7 +150,6 @@ exports.stop = async () => {
 
 // Filters to select eligible datasets or applications for processing
 const getTypesFilters = () => {
-  const moment = require('moment')
   const date = new Date().toISOString()
   return {
     application: { 'publications.status': { $in: ['waiting', 'deleted'] } },
@@ -189,7 +194,6 @@ const getTypesFilters = () => {
 
 async function iter (app, resource, type) {
   const db = app.get('db')
-  const journals = require('../misc/utils/journals')
   const now = new Date().toISOString()
 
   let taskKey
@@ -209,9 +213,7 @@ async function iter (app, resource, type) {
     } else if (type === 'catalog') {
       taskKey = 'catalogHarvester'
     } else if (type === 'dataset') {
-      const moment = require('moment')
-
-      const normalized = (resource.status === 'stored' && tasks.fileNormalizer.basicTypes.includes(resource.originalFile?.mimetype)) || resource.status === 'normalized'
+      const normalized = (resource.status === 'stored' && basicTypes.includes(resource.originalFile?.mimetype)) || resource.status === 'normalized'
 
       if (resource.status === 'created') {
         // Initialize a dataset
@@ -231,7 +233,7 @@ async function iter (app, resource, type) {
       } else if (resource.status === 'stored' && !normalized) {
         // XLS to csv of other transformations
         taskKey = 'fileNormalizer'
-      } else if (normalized && resource.file && tasks.fileNormalizer.csvTypes.includes(resource.file.mimetype)) {
+      } else if (normalized && resource.file && csvTypes.includes(resource.file.mimetype)) {
         // Quickly parse a CSV file
         taskKey = 'csvAnalyzer'
       } else if (normalized && resource.file && resource.file.mimetype === 'application/geo+json') {
@@ -306,7 +308,7 @@ async function iter (app, resource, type) {
     }
 
     if (!taskKey) return
-    const task = tasks[taskKey]
+    const task = await tasks[taskKey]()
     debug(`run task ${taskKey} - ${type} / ${resource.slug} (${resource.id})${resource.draftReason ? ' - draft' : ''}`)
 
     if (task.eventsPrefix) {
@@ -319,7 +321,6 @@ async function iter (app, resource, type) {
     endTask = workersTasksHistogram.startTimer({ task: taskKey })
     if (config.worker.spawnTask) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
-      const spawn = require('child-process-promise').spawn
       const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task', DATASET_DRAFT: '' + !!resource.draftReason } })
       spawnPromise.childProcess.stdout.on('data', data => {
         data = data.toString()

@@ -1,4 +1,4 @@
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
 
 describe('Catalogs', () => {
   it('Get catalogs when not authenticated', async () => {

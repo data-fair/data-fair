@@ -1,13 +1,13 @@
-const Ajv = require('ajv')
-const addFormats = require('ajv-formats')
-const moment = require('moment-timezone')
-const config = require('config')
-const slug = require('slugify')
+import Ajv from 'ajv'
+import addFormats from 'ajv-formats'
+import moment from 'moment-timezone'
+import config from 'config'
+import slug from 'slugify'
 
 const ajv = new Ajv()
 addFormats(ajv)
 
-exports.sniff = (values, attachmentsPaths = [], existingField) => {
+export const sniff = (values, attachmentsPaths = [], existingField) => {
   if (!values.length) return { type: 'empty' }
   if (existingField && existingField.ignoreDetection) return { type: 'string' }
 
@@ -54,7 +54,7 @@ const checkInteger = (val) => {
   return Number.isInteger(number)
 }
 
-exports.format = (value, prop, fileProp) => {
+export const format = (value, prop, fileProp) => {
   if (value === null || value === undefined || value === '') return null
   if (typeof value !== 'string') value = JSON.stringify(value)
   value = value.trim()
@@ -93,7 +93,7 @@ exports.format = (value, prop, fileProp) => {
 }
 
 // WARNING: this code is duplicated in public/assets/dataset-utils.js
-exports.escapeKey = (key, dataset) => {
+export const escapeKey = (key, dataset) => {
   const algorithm = dataset?.analysis?.escapeKeyAlgorithm
   if (algorithm === 'legacy') {
     key = key.replace(/\.|\s|\$|;|,|:|!/g, '_').replace(/"/g, '')

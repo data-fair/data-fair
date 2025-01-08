@@ -1,27 +1,27 @@
-const util = require('util')
-const url = require('url')
-const config = require('config')
-const express = require('express')
-const axios = require('../misc/utils/axios')
-const slug = require('slugify')
-const jsonRefs = require('json-refs')
-const createError = require('http-errors')
-const Extractor = require('html-extractor')
+import util from 'util'
+import config from 'config'
+import express from 'express'
+import axios from '../misc/utils/axios.js'
+import slug from 'slugify'
+import jsonRefs from 'json-refs'
+import createError from 'http-errors'
+import Extractor from 'html-extractor'
+import i18n from 'i18n'
+import * as i18nUtils from '../i18n/utils.js'
+import asyncWrap from '../misc/utils/async-handler.js'
+import * as findUtils from '../misc/utils/find.js'
+import * as baseAppsUtils from './utils.js'
+import * as cacheHeaders from '../misc/utils/cache-headers.js'
+import * as metrics from '../misc/utils/metrics.js'
+import { getThumbnail } from '../misc/utils/thumbnails.js'
+
 const htmlExtractor = new Extractor()
 htmlExtractor.extract = util.promisify(htmlExtractor.extract)
-const i18n = require('i18n')
-const i18nUtils = require('../i18n/utils')
-const asyncWrap = require('../misc/utils/async-handler')
-const findUtils = require('../misc/utils/find')
-const baseAppsUtils = require('./utils')
-const cacheHeaders = require('../misc/utils/cache-headers')
-const metrics = require('../misc/utils/metrics')
-const { getThumbnail } = require('../misc/utils/thumbnails')
-const router = exports.router = express.Router()
+export const router = express.Router()
 
 // Fill the collection using the default base applications from config
 // and cleanup non-public apps that are not used anywhere
-exports.init = async (db) => {
+export const init = async (db) => {
   await clean(db)
   await Promise.all(config.applications.map(app => failSafeInitBaseApp(db, app)))
 }
@@ -35,10 +35,10 @@ async function clean (db) {
   }
 }
 
-function prepareQuery (query) {
-  return Object.keys(query)
+function prepareQuery (/** @type {URLSearchParams} */query) {
+  return [...query.keys()]
     .filter(key => !['skip', 'size', 'q', 'status', '{context.datasetFilter}', 'owner'].includes(key))
-    .reduce((a, key) => { a[key] = query[key].split(','); return a }, {})
+    .reduce((a, key) => { a[key] = query.get(key).split(','); return a }, /** @type {Record<string, string[]>} */({}))
 }
 
 async function failSafeInitBaseApp (db, app) {
@@ -76,7 +76,7 @@ async function initBaseApp (db, app) {
       if (datasetsDefinition.items && datasetsDefinition.items['x-fromUrl']) datasetsUrls = [datasetsDefinition.items['x-fromUrl']]
       if (Array.isArray(datasetsDefinition.items)) datasetsUrls = datasetsDefinition.items.map(item => item['x-fromUrl'])
     }
-    const datasetsQueries = datasetsUrls.map(datasetsUrl => url.parse(datasetsUrl, { parseQueryString: true }).query)
+    const datasetsQueries = datasetsUrls.map(datasetsUrl => new URL(datasetsUrl, config.publicUrl).searchParams)
     patch.datasetsFilters = datasetsQueries.map(prepareQuery)
   } catch (err) {
     patch.hasConfigSchema = false

@@ -1,9 +1,9 @@
 // this is run in a thread as it is quite cpu and memory intensive
 
-const geojsonvt = require('geojson-vt')
-const vtpbf = require('vt-pbf')
+import geojsonvt from 'geojson-vt'
+import vtpbf from 'vt-pbf'
 
-module.exports = ({ geojson, xyz }) => {
+export default ({ geojson, xyz }) => {
   const layers = {}
   // indexMaxZoom=0 -> do not pre-render tiles
   // tolerance=4 -> slightly higher simplification than default (3)

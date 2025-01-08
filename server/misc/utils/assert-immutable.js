@@ -1,4 +1,4 @@
-const config = require('config')
+import config from 'config'
 
 class MutationError extends Error {
   /**
@@ -16,7 +16,7 @@ class MutationError extends Error {
  * @param {string} label
  * @returns {T}
  */
-module.exports = (target, label) => {
+export default (target, label) => {
   // this is not enforced in production, only during test and dev
   if (!config.assertImmutable) return target
 

@@ -1,11 +1,11 @@
-const fs = require('fs')
-const path = require('path')
-const assert = require('assert').strict
-const normalize = require('../server/misc/utils/dcat/normalize')
-const validate = require('../server/misc/utils/dcat/validate')
-const cioExample = require('./resources/dcat/example-cio.json')
-const semiceuExample = require('./resources/dcat/example-semiceu.json')
-const odsRdfExample = fs.readFileSync(path.join(__dirname, '/resources/dcat/ods-export.rdf'), 'utf-8')
+import { strict as assert } from 'node:assert'
+import fs from 'node:fs'
+import path from 'node:path'
+import normalize from '../server/misc/utils/dcat/normalize.js'
+import validate from '../server/misc/utils/dcat/validate.js'
+import cioExample from './resources/dcat/example-cio.json' with { type: 'json' }
+import semiceuExample from './resources/dcat/example-semiceu.json' with { type: 'json' }
+const odsRdfExample = fs.readFileSync(path.join(import.meta.dirname, '/resources/dcat/ods-export.rdf'), 'utf-8')
 
 describe('DCAT support', () => {
   it('Should preserve serialization of a valid example', async function () {

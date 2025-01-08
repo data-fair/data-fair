@@ -1,7 +1,8 @@
-const moment = require('moment')
-const webhooks = require('./webhooks')
 
-module.exports.log = async function (app, resource, event, type = 'dataset', noStoreEvent = false) {
+import moment from 'moment'
+import * as webhooks from './webhooks.js'
+
+export const log = async function (app, resource, event, type = 'dataset', noStoreEvent = false) {
   try {
     const db = app.get('db')
     event.date = moment().toISOString()
@@ -26,7 +27,7 @@ module.exports.log = async function (app, resource, event, type = 'dataset', noS
   }
 }
 
-module.exports.hasErrorRetry = async function (db, resource, type = 'dataset') {
+export const hasErrorRetry = async function (db, resource, type = 'dataset') {
   const journal = await db.collection('journals')
     .findOne(
       { id: resource.id, type, 'owner.type': resource.owner.type, 'owner.id': resource.owner.id },

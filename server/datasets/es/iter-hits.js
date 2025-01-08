@@ -1,5 +1,6 @@
-const config = require('config')
-const { prepareQuery, aliasName } = require('./commons')
+
+import config from 'config'
+import { prepareQuery, aliasName } from './commons.js'
 
 async function * iterHits (es, dataset, query = { size: 1000 }) {
   const esQuery = prepareQuery(dataset, query)
@@ -18,4 +19,4 @@ async function * iterHits (es, dataset, query = { size: 1000 }) {
   }
 }
 
-module.exports = iterHits
+export default iterHits

@@ -1,11 +1,9 @@
-const assert = require('assert').strict
-const fs = require('fs-extra')
-const nock = require('nock')
-const FormData = require('form-data')
-
-const testUtils = require('./resources/test-utils')
-
-const workers = require('../server/workers')
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
+import fs from 'fs-extra'
+import nock from 'nock'
+import FormData from 'form-data'
+import * as workers from '../server/workers/index.js'
 
 // Prepare mock for outgoing HTTP requests
 nock('http://test-catalog.com').persist()

@@ -1,15 +1,16 @@
-const config = require('config')
-const express = require('express')
-const permissionsSchema = require('../../../contract/permissions.json')
-const apiDocsUtil = require('./api-docs')
-const visibilityUtils = require('./visibility')
-const ajv = require('./ajv')
+import config from 'config'
+import express from 'express'
+import permissionsSchema from '../../../contract/permissions.js'
+import * as apiDocsUtil from './api-docs.js'
+import * as visibilityUtils from './visibility.js'
+import * as ajv from './ajv.js'
+
 const validate = ajv.compile(permissionsSchema)
 
-exports.middleware = function (operationId, operationClass, trackingCategory, acceptMissing) {
+export const middleware = function (operationId, operationClass, trackingCategory, acceptMissing) {
   return function (req, res, next) {
     if ((acceptMissing && !req.resource)) return next()
-    if (exports.can(req.resourceType, req.resource, operationId, req.user, req.bypassPermissions)) {
+    if (can(req.resourceType, req.resource, operationId, req.user, req.bypassPermissions)) {
       // nothing to do, user can proceed
     } else {
       res.status(403).type('text/plain')
@@ -26,7 +27,7 @@ exports.middleware = function (operationId, operationClass, trackingCategory, ac
           let name = org.name || org.id
           if (org.department) name += ' / ' + (org.departmentName || org.department)
           const altAccount = { id: req.user.id, activeAccount: { type: 'organization', ...org } }
-          if (exports.can(req.resourceType, req.resource, operationId, altAccount, req.bypassPermissions)) {
+          if (can(req.resourceType, req.resource, operationId, altAccount, req.bypassPermissions)) {
             return res.send(`${denomination} ${req.resource.title} est accessible depuis l'organisation ${name} dont vous êtes membre mais vous ne l'avez pas sélectionné comme compte actif. Changez de compte pour visualiser les informations.`)
           }
         }
@@ -36,7 +37,7 @@ exports.middleware = function (operationId, operationClass, trackingCategory, ac
     }
 
     // this is stored here to be used by cache headers utils to manage public cache
-    req.publicOperation = exports.can(req.resourceType, req.resource, operationId, null)
+    req.publicOperation = can(req.resourceType, req.resource, operationId, null)
 
     // these headers can be used to apply other permission/quota/metrics on the gateway
     if (req.resource) res.setHeader('x-resource', JSON.stringify({ type: req.resourceType, id: req.resource.id, title: encodeURIComponent(req.resource.title) }))
@@ -51,17 +52,17 @@ exports.middleware = function (operationId, operationClass, trackingCategory, ac
   }
 }
 
-exports.canDoForOwnerMiddleware = function (operationClass, ignoreDepartment = false) {
+export const canDoForOwnerMiddleware = function (operationClass, ignoreDepartment = false) {
   return function (req, res, next) {
     const owner = ignoreDepartment ? { ...req.resource.owner, department: null } : req.resource.owner
-    if (!exports.canDoForOwner(owner, req.resourceType, operationClass, req.user)) {
+    if (!canDoForOwner(owner, req.resourceType, operationClass, req.user)) {
       return res.status(403).type('text/plain').send('Permission manquante pour l\'opération.')
     }
     next()
   }
 }
 
-const getOwnerRole = exports.getOwnerRole = (owner, user, ignoreDepartment = false) => {
+export const getOwnerRole = (owner, user, ignoreDepartment = false) => {
   if (!user || user.isApplicationKey || !user.activeAccount) return null
 
   // user is implicitly admin of his own resources, even if he is currently switched to an organization
@@ -118,14 +119,14 @@ const matchPermission = (owner, permission, user) => {
 }
 
 // resource can be an application, a dataset or a remote service
-exports.can = function (resourceType, resource, operationId, user, bypassPermissions) {
+export const can = function (resourceType, resource, operationId, user, bypassPermissions) {
   if (user && user.adminMode) return true
-  const userPermissions = exports.list(resourceType, resource, user, bypassPermissions)
+  const userPermissions = list(resourceType, resource, user, bypassPermissions)
   return !!userPermissions.includes(operationId)
 }
 
 // list operations a user can do with a resource
-exports.list = function (resourceType, resource, user, bypassPermissions) {
+export const list = function (resourceType, resource, user, bypassPermissions) {
   const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
   const operations = new Set([])
 
@@ -159,7 +160,7 @@ exports.list = function (resourceType, resource, user, bypassPermissions) {
 
 // resource is public if there are public permissions for all operations of the classes 'read' and 'use'
 // list is not here as someone can set a resource publicly usable but not appearing in lists
-exports.isPublic = function (resourceType, resource) {
+export const isPublic = function (resourceType, resource) {
   const operationsClasses = apiDocsUtil.operationsClasses[resourceType]
   const permissionOperations = p => (p.operations || []).concat(...(p.classes || []).map(c => operationsClasses[c]))
   const publicOperations = new Set([].concat(operationsClasses.read || [], operationsClasses.use || []))
@@ -174,11 +175,11 @@ exports.isPublic = function (resourceType, resource) {
 
 // Manage filters for datasets, applications and remote services
 // this filter ensures that nobody can list something they are not permitted to list
-exports.filter = function (user, resourceType) {
-  return [visibilityUtils.publicFilter].concat(exports.filterCan(user, resourceType, 'list'))
+export const filter = function (user, resourceType) {
+  return [visibilityUtils.publicFilter].concat(filterCan(user, resourceType, 'list'))
 }
 
-exports.filterCan = function (user, resourceType, operation = 'list') {
+export const filterCan = function (user, resourceType, operation = 'list') {
   const ignoreDepartment = resourceType === 'catalogs'
 
   const operationFilter = []
@@ -239,13 +240,13 @@ exports.filterCan = function (user, resourceType, operation = 'list') {
 
 // Only operationId level : it is used only for creation of resources and
 // setting screen only set creation permissions at operationId level
-exports.canDoForOwner = function (owner, resourceType, operationClass, user) {
+export const canDoForOwner = function (owner, resourceType, operationClass, user) {
   if (user && user.adminMode) return true
   const ownerClasses = getOwnerClasses(owner, user, resourceType)
   return ownerClasses && ownerClasses.includes(operationClass)
 }
 
-exports.initResourcePermissions = async (resource, extraPermissions = []) => {
+export const initResourcePermissions = async (resource, extraPermissions = []) => {
   // initially give owner contribs permissions to write
   if (resource.owner.type === 'user') {
     resource.permissions = extraPermissions
@@ -267,14 +268,14 @@ exports.initResourcePermissions = async (resource, extraPermissions = []) => {
   resource.permissions = [contribWritePermission, { ...contribWritePermission, classes: ['list', 'read', 'readAdvanced'], operations: [] }, ...extraPermissions]
 }
 
-module.exports.router = (resourceType, resourceName, onPublicCallback) => {
+export const router = (resourceType, resourceName, onPublicCallback) => {
   const router = express.Router()
 
-  router.get('', exports.middleware('getPermissions', 'admin'), async (req, res, next) => {
+  router.get('', middleware('getPermissions', 'admin'), async (req, res, next) => {
     res.status(200).send(req[resourceName].permissions || [])
   })
 
-  router.put('', exports.middleware('setPermissions', 'admin'), async (req, res, next) => {
+  router.put('', middleware('setPermissions', 'admin'), async (req, res, next) => {
     validate(req.body)
     req.body = req.body || []
     let valid = true
@@ -285,8 +286,8 @@ module.exports.router = (resourceType, resourceName, onPublicCallback) => {
     const resources = req.app.get('db').collection(resourceType)
     try {
       const resource = await req[resourceName]
-      const wasPublic = exports.isPublic(resourceType, resource)
-      const willBePublic = exports.isPublic(resourceType, { permissions: req.body })
+      const wasPublic = isPublic(resourceType, resource)
+      const willBePublic = isPublic(resourceType, { permissions: req.body })
 
       // re-publish to catalogs if public/private was switched
       if (['datasets', 'applications'].includes(resourceType)) {
@@ -312,7 +313,7 @@ module.exports.router = (resourceType, resourceName, onPublicCallback) => {
   return router
 }
 
-module.exports.apiDoc = {
+export const apiDoc = {
   get: {
     summary: 'Récupérer la liste des permissions.',
     operationId: 'getPermissions',

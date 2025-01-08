@@ -1,13 +1,13 @@
-const Ajv = require('ajv/dist/2020')
-const addFormats = require('ajv-formats')
+import Ajv from 'ajv/dist/2020.js'
+import addFormats from 'ajv-formats'
+export { default as localize } from 'ajv-i18n'
 
-exports.localize = require('ajv-i18n')
+export const ajv = new Ajv({ allErrors: true, messages: false, strict: false })
 
-const ajv = exports.ajv = new Ajv({ allErrors: true, messages: false, strict: false })
 addFormats(ajv)
 
 // temporary duplicate from @data-fair/lib/types/validation.js
-exports.errorsText = (errors, varName = '') => {
+export const errorsText = (errors, varName = '') => {
   if (!errors || errors.length === 0) return 'No errors'
   return errors
     .map((e) => {

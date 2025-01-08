@@ -1,6 +1,8 @@
-const debug = require('debug')('expect-type')
+import debugLib from 'debug'
 
-module.exports = (types) => {
+const debug = debugLib('expect-type')
+
+export default (types) => {
   if (typeof types === 'string') types = [types]
   return (req, res, next) => {
     // content-type is only relevant for write operations

@@ -1,7 +1,8 @@
-const findUtils = require('../misc/utils/find')
-const permissions = require('../misc/utils/permissions')
-const mongoEscape = require('mongo-escape')
-const { clean } = require('./utils')
+
+import * as findUtils from '../misc/utils/find.js'
+import * as permissions from '../misc/utils/permissions.js'
+import mongoEscape from 'mongo-escape'
+import { clean } from './utils.js'
 
 const fieldsMap = {
   type: 'type',
@@ -18,7 +19,7 @@ const fieldsMap = {
  * @param {Record<string, string>} reqQuery
  * @param {any} user
  */
-exports.findCatalogs = async (db, locale, reqQuery, user) => {
+export const findCatalogs = async (db, locale, reqQuery, user) => {
   const catalogs = db.collection('catalogs')
   const query = findUtils.query(reqQuery, locale, user, 'catalogs', fieldsMap, false)
   const sort = findUtils.sort(reqQuery.sort)

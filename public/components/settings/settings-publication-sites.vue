@@ -28,15 +28,17 @@ en:
 import Vue from 'vue'
 import { mapState } from 'vuex'
 import eventBus from '~/event-bus'
+import publicationSitesContract from '~/../contract/publication-sites'
+import settingsSchema from '~/../contract/settings'
 
 if (process.browser) {
   const Draggable = require('vuedraggable')
   Vue.component('Draggable', Draggable)
 }
 
-const publicationSitesSchema = require('~/../contract/publication-sites')(false)
-const publicationSitesAdminSchema = require('~/../contract/publication-sites')(true)
-const datasetsMetadataSchema = require('~/../contract/settings').properties.datasetsMetadata
+const publicationSitesSchema = publicationSitesContract(false)
+const publicationSitesAdminSchema = publicationSitesContract(true)
+const datasetsMetadataSchema = settingsSchema.properties.datasetsMetadata
 
 export default {
   props: ['settings'],

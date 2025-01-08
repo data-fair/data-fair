@@ -1,7 +1,7 @@
 // initialized based on https://www.data.gouv.fr/api/1/datasets/licenses/
 // we removed other-* generic licenses
 // we replaced url with href to match our dataset.license and settings.licenses contracts
-module.exports = [
+export default [
   {
     alternate_titles: [],
     alternate_urls: [],

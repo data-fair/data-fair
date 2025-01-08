@@ -1,6 +1,7 @@
-const datasetUtils = require('../../datasets/utils')
-const capabilitiesSchema = require('../../../contract/capabilities.js')
-const createError = require('http-errors')
+
+import * as datasetUtils from '../../datasets/utils/index.js'
+import capabilitiesSchema from '../../../contract/capabilities.js'
+import createError from 'http-errors'
 
 // blacklisted fields are fields that are present in a grandchild but not re-exposed
 // by the child.. it must not be possible to access those fields in the case
@@ -38,7 +39,7 @@ async function childrenSchemas (db, owner, children, blackListedFields) {
 
 // Validate and fill a virtual dataset schema based on its children
 const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter(key => capabilitiesSchema.properties[key].default === false)
-exports.prepareSchema = async (db, dataset) => {
+export const prepareSchema = async (db, dataset) => {
   if (!dataset.virtual.children || !dataset.virtual.children.length) return []
   dataset.schema = dataset.schema || []
   for (const field of dataset.schema) delete field['x-extension']
@@ -128,7 +129,7 @@ exports.prepareSchema = async (db, dataset) => {
 }
 
 // Only non virtual descendants on which to perform the actual ES queries
-exports.descendants = async (db, dataset, tolerateStale = false, extraProperties = null, throwEmpty = true) => {
+export const descendants = async (db, dataset, tolerateStale = false, extraProperties = null, throwEmpty = true) => {
   const project = {
     'descendants.id': 1,
     'descendants.isVirtual': 1,

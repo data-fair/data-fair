@@ -1,12 +1,14 @@
-const config = /** @type {any} */(require('config'))
-const createError = require('http-errors')
-const i18n = require('i18n')
-const asyncWrap = require('../misc/utils/async-handler')
-const locks = require('../misc/utils/locks')
-const usersUtils = require('../misc/utils/users')
-const { getOwnerRole } = require('../misc/utils/permissions')
-const { checkStorage } = require('./utils/storage')
-const service = require('./service')
+import _config from 'config'
+import createError from 'http-errors'
+import i18n from 'i18n'
+import asyncWrap from '../misc/utils/async-handler.js'
+import * as locks from '../misc/utils/locks.js'
+import * as usersUtils from '../misc/utils/users.js'
+import { getOwnerRole } from '../misc/utils/permissions.js'
+import { checkStorage as checkStorageFn } from './utils/storage.js'
+import * as service from './service.js'
+
+const config = /** @type {any} */(_config)
 
 /**
  *
@@ -15,7 +17,7 @@ const service = require('./service')
  * @returns
  */
 // @ts-ignore
-exports.checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
+export const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
   // @ts-ignore
   if (!req.user) throw createError(401)
   if (process.env.NO_STORAGE_CHECK === 'true') return next()
@@ -27,7 +29,7 @@ exports.checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res
   const dataset = req.dataset
   const db = req.app.get('db')
   const owner = dataset ? dataset.owner : usersUtils.owner(req)
-  await checkStorage(db, i18n.getLocale(req), owner, dataset, contentLength, overwrite, indexed)
+  await checkStorageFn(db, i18n.getLocale(req), owner, dataset, contentLength, overwrite, indexed)
   next()
 })
 
@@ -37,7 +39,7 @@ exports.checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res
  * @param {boolean | ((patch: any) => boolean)} _shouldLock
  * @returns
  */
-exports.lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => {
+export const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => {
   const db = req.app.get('db')
   // @ts-ignore
   const shouldLock = typeof _shouldLock === 'function' ? _shouldLock(req.body, req.query) : _shouldLock
@@ -65,7 +67,7 @@ exports.lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) =
  * @param {{acceptedStatuses?: string[] | ((body: any, dataset: any) => string[] | null), fillDescendants?: boolean, alwaysDraft?: boolean, acceptMissing?: boolean, acceptInitialDraft?: boolean}} fillDescendants
  * @returns
  */
-exports.readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing, acceptInitialDraft } = {}) => asyncWrap(async (req, res, next) => {
+export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing, acceptInitialDraft } = {}) => asyncWrap(async (req, res, next) => {
   // @ts-ignore
   const publicationSite = req.publicationSite
   // @ts-ignore

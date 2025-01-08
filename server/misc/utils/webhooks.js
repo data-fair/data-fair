@@ -1,11 +1,14 @@
-const axios = require('./axios')
-const config = require('config')
-const settingsSchema = require('../../../contract/settings')
-const notifications = require('./notifications')
-const permissions = require('./permissions')
-const debug = require('debug')('webhooks')
 
-exports.trigger = async (db, type, resource, event, sender) => {
+import axios from './axios.js'
+import config from 'config'
+import settingsSchema from '../../../contract/settings.js'
+import * as notifications from './notifications.js'
+import * as permissions from './permissions.js'
+import debugLib from 'debug'
+
+const debug = debugLib('webhooks')
+
+export const trigger = async (db, type, resource, event, sender) => {
   const eventKey = resource.draftReason ? `${type}-draft-${event.type}` : `${type}-${event.type}`
   const eventType = settingsSchema.properties.webhooks.items.properties.events.items.oneOf
     .find(eventType => eventType.const === eventKey)

@@ -377,9 +377,9 @@ en:
 
 <script>
 import { mapState, mapGetters, mapActions } from 'vuex'
+import datasetSchema from '~/../contract/dataset.js'
 const Draggable = require('vuedraggable')
 
-const datasetSchema = require('~/../contract/dataset.js')
 export default {
   components: { Draggable },
   props: ['propertiesRefs', 'editable', 'sortable', 'noBreakingChanges'],

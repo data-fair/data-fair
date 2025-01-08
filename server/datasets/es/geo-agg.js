@@ -1,10 +1,10 @@
-const config = require('config')
-const createError = require('http-errors')
-const geohash = require('../../misc/utils/geohash')
 
-const { prepareQuery, getQueryBBOX, aliasName, prepareResultItem } = require('./commons')
+import config from 'config'
+import createError from 'http-errors'
+import geohash from '../../misc/utils/geohash.js'
+import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem } from './commons.js'
 
-module.exports = async (client, dataset, query, publicBaseUrl) => {
+export default async (client, dataset, query, publicBaseUrl) => {
   if (!dataset.bbox) throw createError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
   const bbox = getQueryBBOX(query) || dataset.bbox
   const aggSize = query.agg_size ? Number(query.agg_size) : 20

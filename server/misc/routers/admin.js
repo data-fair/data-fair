@@ -1,11 +1,12 @@
-const express = require('express')
-const status = require('./status')
-const asyncWrap = require('../utils/async-handler')
-const findUtils = require('../utils/find')
-const baseAppsUtils = require('../../base-applications/utils')
-const cacheHeaders = require('../utils/cache-headers')
+import express from 'express'
+import * as status from './status.js'
+import asyncWrap from '../utils/async-handler.js'
+import * as findUtils from '../utils/find.js'
+import * as baseAppsUtils from '../../base-applications/utils.js'
+import * as cacheHeaders from '../utils/cache-headers.js'
 
-const router = module.exports = express.Router()
+const router = express.Router()
+export default router
 
 // All routes in the router are only for the super admins of the service
 router.use(asyncWrap(async (req, res, next) => {
@@ -17,10 +18,10 @@ router.use(asyncWrap(async (req, res, next) => {
 router.use(cacheHeaders.noCache)
 
 let info = { version: process.env.NODE_ENV }
-try { info = require('../../../BUILD.json') } catch (err) {}
-router.get('/info', (req, res) => {
+router.get('/info', asyncWrap(async (req, res) => {
+  try { info = (await import('../../../BUILD.json', { with: { type: 'json' } })).default } catch (err) {}
   res.json(info)
-})
+}))
 
 router.get('/status', (req, res, next) => {
   status.status(req, res, next)

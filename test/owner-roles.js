@@ -1,4 +1,4 @@
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
 
 describe('owner roles', () => {
   it('user can do everything in his own account', async () => {

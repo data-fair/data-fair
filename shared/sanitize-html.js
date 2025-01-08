@@ -1,4 +1,4 @@
-const sanitizeHtml = require('sanitize-html')
+import sanitizeHtml from 'sanitize-html'
 
 const opts = {
   allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
@@ -8,4 +8,4 @@ const opts = {
   }
 }
 
-module.exports = (html) => sanitizeHtml(html, opts)
+export default (html) => sanitizeHtml(html, opts)

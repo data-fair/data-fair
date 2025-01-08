@@ -1,26 +1,29 @@
-const config = /** @type {any} */(require('config'))
-const fs = require('fs-extra')
-const path = require('path')
-const createError = require('http-errors')
-const memoize = require('memoizee')
-const equal = require('deep-equal')
-const findUtils = require('../misc/utils/find')
-const permissions = require('../misc/utils/permissions')
-const datasetUtils = require('./utils')
-const restDatasetsUtils = require('./utils/rest')
-const esUtils = require('./es')
-const webhooks = require('../misc/utils/webhooks')
-const { updateStorage } = require('./utils/storage')
-const { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile } = require('./utils/files')
-const { getSchemaBreakingChanges } = require('./utils/schema')
-const { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } = require('./utils/extensions')
-const { validateURLFriendly } = require('../misc/utils/validation')
-const assertImmutable = require('../misc/utils/assert-immutable')
-const { curateDataset, titleFromFileName } = require('./utils')
-const virtualDatasetsUtils = require('./utils/virtual')
-const { prepareInitFrom } = require('./utils/init-from')
+import _config from 'config'
+import debugLib from 'debug'
+import fs from 'fs-extra'
+import path from 'path'
+import createError from 'http-errors'
+import memoize from 'memoizee'
+import equal from 'deep-equal'
+import * as findUtils from '../misc/utils/find.js'
+import * as permissions from '../misc/utils/permissions.js'
+import * as datasetUtils from './utils/index.js'
+import * as restDatasetsUtils from './utils/rest.js'
+import * as esUtils from './es/index.js'
+import * as webhooks from '../misc/utils/webhooks.js'
+import { updateStorage } from './utils/storage.js'
+import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile } from './utils/files.js'
+import { getSchemaBreakingChanges } from './utils/schema.js'
+import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.js'
+import { validateURLFriendly } from '../misc/utils/validation.js'
+import assertImmutable from '../misc/utils/assert-immutable.js'
+import { curateDataset, titleFromFileName } from './utils/index.js'
+import * as virtualDatasetsUtils from './utils/virtual.js'
+import { prepareInitFrom } from './utils/init-from.js'
+import i18n from 'i18n'
 
-const debugMasterData = require('debug')('master-data')
+const config = /** @type {any} */(_config)
+const debugMasterData = debugLib('master-data')
 
 const filterFields = {
   concepts: 'schema.x-refersTo',
@@ -65,7 +68,7 @@ const fieldsMap = {
  * @param {Record<string, string>} reqQuery
  * @param {any} user
  */
-exports.findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
+export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
   const explain = reqQuery.explain === 'true' && user && (user.isAdmin || user.asAdmin) && {}
   const datasets = db.collection('datasets')
 
@@ -147,7 +150,7 @@ exports.findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQue
  * @param {any} [reqBody]
  * @returns {Promise<{dataset?: any, datasetFull?: any}>}
  */
-exports.getDataset = async (datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, tolerateStale, _acceptedStatuses, reqBody) => {
+export const getDataset = async (datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, tolerateStale, _acceptedStatuses, reqBody) => {
   let dataset, datasetFull
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
     dataset = await findUtils.getByUniqueRef(db, publicationSite, mainPublicationSite, {}, 'dataset', datasetId, tolerateStale)
@@ -182,7 +185,7 @@ exports.getDataset = async (datasetId, publicationSite, mainPublicationSite, use
   throw createError(409, `Le jeu de données n'est pas dans un état permettant l'opération demandée. État courant : ${dataset?.status}.`)
 }
 
-exports.memoizedGetDataset = memoize(exports.getDataset, {
+export const memoizedGetDataset = memoize(getDataset, {
   profileName: 'getDataset',
   promise: true,
   primitive: true,
@@ -204,7 +207,7 @@ exports.memoizedGetDataset = memoize(exports.getDataset, {
  * @param {(callback: () => void) => void} onClose
  * @returns {Promise<any>}
  */
-exports.createDataset = async (db, es, locale, user, owner, body, files, draft, onClose) => {
+export const createDataset = async (db, es, locale, user, owner, body, files, draft, onClose) => {
   validateURLFriendly(locale, body.id)
   validateURLFriendly(locale, body.slug)
 
@@ -330,7 +333,7 @@ exports.createDataset = async (db, es, locale, user, owner, body, files, draft, 
   return insertedDataset
 }
 
-exports.deleteDataset = async (app, dataset) => {
+export const deleteDataset = async (app, dataset) => {
   const db = app.get('db')
   const es = app.get('es')
   try {
@@ -351,7 +354,7 @@ exports.deleteDataset = async (app, dataset) => {
 
   if (!dataset.isVirtual) {
     try {
-      await esUtils.delete(es, dataset)
+      await esUtils.deleteIndex(es, dataset)
     } catch (err) {
       console.warn('Error while deleting dataset indexes and alias', err)
     }
@@ -369,7 +372,7 @@ exports.deleteDataset = async (app, dataset) => {
  * @param {any[]} [removedRestProps]
  * @param {boolean} [attemptMappingUpdate]
  */
-exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappingUpdate) => {
+export const applyPatch = async (app, dataset, patch, removedRestProps, attemptMappingUpdate) => {
   if (patch.extensions) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) extensions`, dataset.extensions, patch.extensions)
   if (patch.masterData) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) masterData`, dataset.masterData, patch.masterData)
 
@@ -464,7 +467,7 @@ exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappin
     for await (const virtualDataset of db.collection('datasets').find({ 'virtual.children': dataset.id })) {
       const virtualDatasetSchema = await virtualDatasetsUtils.prepareSchema(db, virtualDataset)
       if (!equal(virtualDatasetSchema, virtualDataset.schema)) {
-        await exports.applyPatch(app, virtualDataset, { schema: virtualDatasetSchema, updatedAt: patch.updatedAt })
+        await applyPatch(app, virtualDataset, { schema: virtualDatasetSchema, updatedAt: patch.updatedAt })
       }
     }
   }
@@ -472,7 +475,7 @@ exports.applyPatch = async (app, dataset, patch, removedRestProps, attemptMappin
 
 // synchronize the list of application references stored in dataset.extras.applications
 // used for quick access to capture, and default sorting in dataset pages
-exports.syncApplications = async (db, datasetId) => {
+export const syncApplications = async (db, datasetId) => {
   const dataset = await db.collection('datasets').findOne({ id: datasetId }, { projection: { owner: 1, extras: 1 } })
   if (!dataset) return
   const applications = await db.collection('applications')
@@ -495,7 +498,7 @@ exports.syncApplications = async (db, datasetId) => {
     .updateOne({ id: datasetId }, { $set: { 'extras.applications': applicationsExtras } })
 }
 
-exports.validateDraft = async (app, dataset, datasetFull, patch) => {
+export const validateDraft = async (app, dataset, datasetFull, patch) => {
   Object.assign(datasetFull.draft, patch)
   const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
 
@@ -521,10 +524,10 @@ exports.validateDraft = async (app, dataset, datasetFull, patch) => {
     if (breakingChanges.length) {
       webhooks.trigger(db, 'dataset', patchedDataset, {
         type: 'breaking-change',
-        body: require('i18n').getLocales().reduce((a, locale) => {
-          let msg = require('i18n').__({ phrase: 'hasBreakingChanges', locale }, { title: patchedDataset.title })
+        body: i18n.getLocales().reduce((a, locale) => {
+          let msg = i18n.__({ phrase: 'hasBreakingChanges', locale }, { title: patchedDataset.title })
           for (const breakingChange of breakingChanges) {
-            msg += '\n' + require('i18n').__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { key: breakingChange.key })
+            msg += '\n' + i18n.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { key: breakingChange.key })
           }
           a[locale] = msg
           return a

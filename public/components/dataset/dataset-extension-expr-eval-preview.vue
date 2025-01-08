@@ -207,8 +207,9 @@ en:
 <script>
 import eventBus from '~/event-bus'
 import { unflatten } from 'flat'
-const { compile } = require('../../../shared/expr-eval')(process.env.defaultTimeZone)
-const { getExtensionKey } = require('../../../shared/utils/extensions')
+import { getExtensionKey } from '../../../shared/utils/extensions'
+import exprEval from '../../../shared/expr-eval'
+const { compile } = exprEval(process.env.defaultTimeZone)
 const { mapState, mapGetters } = require('vuex')
 
 export default {

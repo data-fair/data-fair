@@ -1,4 +1,4 @@
-module.exports = (admin = false) => ({
+export default (admin = false) => ({
   type: 'array',
   title: 'Portails',
   'x-options': admin ? {} : { arrayOperations: ['update'] },

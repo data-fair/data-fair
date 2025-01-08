@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   type: 'array',
   description: 'Le tableau de résultats.',
   items: {

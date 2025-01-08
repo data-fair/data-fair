@@ -1,9 +1,9 @@
-const owner = require('./owner')
-const eventBy = require('./event-by')
-const permissions = require('./permissions.json')
-const catalogs = require('../server/catalogs/plugins')
+import owner from './owner.js'
+import eventBy from './event-by.js'
+import permissions from './permissions.js'
+import * as catalogs from '../server/catalogs/plugins/index.js'
 
-module.exports = {
+export default {
   title: 'Catalog',
   description: 'A catalog configuration to publish metadatas from datasets, services and applications.',
   type: 'object',

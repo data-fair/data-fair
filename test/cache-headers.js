@@ -1,7 +1,7 @@
 
-const assert = require('assert').strict
-const config = require('config')
-const { nanoid } = require('nanoid')
+import { strict as assert } from 'node:assert'
+import config from 'config'
+import { nanoid } from 'nanoid'
 
 describe('Cache headers', () => {
   const createDataset = async (ax) => {

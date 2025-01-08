@@ -1,8 +1,8 @@
-const config = require('config')
-const createError = require('http-errors')
-const { prepareQuery, aliasName } = require('./commons.js')
+import config from 'config'
+import createError from 'http-errors'
+import { prepareQuery, aliasName } from './commons.js'
 
-module.exports = async (client, dataset, fieldKey, query) => {
+export default async (client, dataset, fieldKey, query) => {
   const field = dataset.schema.find(p => p.key === fieldKey)
   if (!field) throw createError(400, `field "${fieldKey}" is unknown`)
   const sort = query.sort ?? 'asc'

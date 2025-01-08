@@ -1,13 +1,15 @@
-const config = require('config')
-const url = require('url')
-const equal = require('deep-equal')
-const axios = require('../../misc/utils/axios')
-const debug = require('debug')('catalogs:udata')
-const moment = require('moment')
-exports.title = 'uData'
-exports.description = 'Customizable and skinnable social platform dedicated to (open)data.'
-exports.docUrl = 'https://udata.readthedocs.io/en/latest/'
-exports.optionalCapabilities = [
+import config from 'config'
+import equal from 'deep-equal'
+import axios from '../../misc/utils/axios.js'
+import debugLib from 'debug'
+import moment from 'moment'
+
+const debug = debugLib('catalogs:udata')
+
+export const title = 'uData'
+export const description = 'Customizable and skinnable social platform dedicated to (open)data.'
+export const docUrl = 'https://udata.readthedocs.io/en/latest/'
+export const optionalCapabilities = [
   'apiKey',
   'searchOrganizations',
   'publishDataset',
@@ -16,28 +18,28 @@ exports.optionalCapabilities = [
   'listDatasets'
 ]
 
-exports.init = async (catalogUrl) => {
-  const siteInfo = (await axios.get(url.resolve(catalogUrl, 'api/1/site/'))).data
+export const init = async (catalogUrl) => {
+  const siteInfo = (await axios.get(new URL('api/1/site/', catalogUrl).href)).data
   return { url: catalogUrl, title: siteInfo.title }
 }
 
-exports.httpParams = async (catalog) => {
+export const httpParams = async (catalog) => {
   return { headers: { 'X-API-KEY': catalog.apiKey } }
 }
 
-exports.getDataset = async (catalog, datasetId) => {
-  const dataset = (await axios.get(url.resolve(catalog.url, 'api/1/datasets/' + datasetId), { headers: { 'X-API-KEY': catalog.apiKey } })).data
+export const getDataset = async (catalog, datasetId) => {
+  const dataset = (await axios.get(new URL('api/1/datasets/' + datasetId, catalog.url).href, { headers: { 'X-API-KEY': catalog.apiKey } })).data
   return prepareDatasetFromCatalog(catalog, dataset)
 }
 
-exports.listDatasets = async (catalog, params = {}) => {
+export const listDatasets = async (catalog, params = {}) => {
   params.page_size = params.page_size || 1000
   let datasets
   if (catalog.organization) {
-    datasets = (await axios.get(url.resolve(catalog.url, 'api/1/me/org_datasets'), { params, headers: { 'X-API-KEY': catalog.apiKey } })).data
+    datasets = (await axios.get(new URL('api/1/me/org_datasets', catalog.url).href, { params, headers: { 'X-API-KEY': catalog.apiKey } })).data
       .filter(d => d.organization && d.organization.id === catalog.organization.id)
   } else {
-    datasets = (await axios.get(url.resolve(catalog.url, 'api/1/me/datasets'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
+    datasets = (await axios.get(new URL('api/1/me/datasets', catalog.url).href, { headers: { 'X-API-KEY': catalog.apiKey } })).data
   }
   return {
     count: datasets.length,
@@ -45,23 +47,23 @@ exports.listDatasets = async (catalog, params = {}) => {
   }
 }
 
-exports.searchOrganizations = async (catalogUrl, q) => {
-  const res = await axios.get(url.resolve(catalogUrl, 'api/1/organizations/suggest/'), { params: { q } })
+export const searchOrganizations = async (catalogUrl, q) => {
+  const res = await axios.get(new URL('api/1/organizations/suggest/', catalogUrl).href, { params: { q } })
   return { results: res.data.map(o => ({ id: o.id, name: o.name })) }
 }
 
-exports.publishDataset = async (catalog, dataset, publication) => {
+export const publishDataset = async (catalog, dataset, publication) => {
   // if (publication.targetUrl) throw new Error('Publication was already done !')
   if (publication.addToDataset && publication.addToDataset.id) return addResourceToDataset(catalog, dataset, publication)
   else return createOrUpdateDataset(catalog, dataset, publication)
 }
 
-exports.deleteDataset = async (catalog, dataset, publication) => {
+export const deleteDataset = async (catalog, dataset, publication) => {
   if (publication.addToDataset && publication.addToDataset.id) return deleteResourceFromDataset(catalog, dataset, publication)
-  else return deleteDataset(catalog, dataset, publication)
+  else return deleteUdataDataset(catalog, dataset, publication)
 }
 
-exports.publishApplication = async (catalog, application, publication, datasets) => {
+export const publishApplication = async (catalog, application, publication, datasets) => {
   const udataDatasets = []
   for (const dataset of datasets) {
     for (const publication of dataset.publications || []) {
@@ -92,7 +94,7 @@ exports.publishApplication = async (catalog, application, publication, datasets)
   let existingReuse
   if (updateReuseId) {
     try {
-      existingReuse = (await axios.get(url.resolve(catalog.url, 'api/1/reuses/' + updateReuseId + '/'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
+      existingReuse = (await axios.get(new URL('api/1/reuses/' + updateReuseId + '/', catalog.url).href, { headers: { 'X-API-KEY': catalog.apiKey } })).data
       if (existingReuse.deleted) existingReuse = null
     } catch (err) {
       console.warn('Failed to fetch existing reuse', err)
@@ -103,9 +105,9 @@ exports.publishApplication = async (catalog, application, publication, datasets)
     let res
     if (existingReuse) {
       Object.assign(existingReuse, udataReuse)
-      res = await axios.put(url.resolve(catalog.url, 'api/1/reuses/' + updateReuseId + '/'), existingReuse, { headers: { 'X-API-KEY': catalog.apiKey } })
+      res = await axios.put(new URL('api/1/reuses/' + updateReuseId + '/', catalog.url).href, existingReuse, { headers: { 'X-API-KEY': catalog.apiKey } })
     } else {
-      res = await axios.post(url.resolve(catalog.url, 'api/1/reuses/'), udataReuse, { headers: { 'X-API-KEY': catalog.apiKey } })
+      res = await axios.post(new URL('api/1/reuses/', catalog.url).href, udataReuse, { headers: { 'X-API-KEY': catalog.apiKey } })
     }
     publication.targetUrl = res.data.page
     publication.result = { id: res.data.id, slug: res.data.slug }
@@ -115,12 +117,12 @@ exports.publishApplication = async (catalog, application, publication, datasets)
   }
 }
 
-exports.deleteApplication = async (catalog, application, publication) => {
+export const deleteApplication = async (catalog, application, publication) => {
   const udataReuse = publication.result
   // The dataset was never really created in udata
   if (!udataReuse) return
   try {
-    await axios.delete(url.resolve(catalog.url, `api/1/reuses/${udataReuse.id}/`), { headers: { 'X-API-KEY': catalog.apiKey } })
+    await axios.delete(new URL(`api/1/reuses/${udataReuse.id}/`, catalog.url).href, { headers: { 'X-API-KEY': catalog.apiKey } })
   } catch (err) {
     debug('failed to delete reuse', err)
     // The reuse was already deleted ?
@@ -216,7 +218,7 @@ async function addResourceToDataset (catalog, dataset, publication) {
       }
     })
   }
-  const catalogDataset = (await axios.get(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}`),
+  const catalogDataset = (await axios.get(new URL(`api/1/datasets/${publication.addToDataset.id}`, catalog.url).href,
     { params: { page_size: 1000 }, headers: { 'X-API-KEY': catalog.apiKey } })).data
   if (!catalogDataset) throw new Error(`Le jeu de données ${publication.addToDataset.id} n'existe pas dans le catalogue ${catalog.url}`)
 
@@ -225,7 +227,7 @@ async function addResourceToDataset (catalog, dataset, publication) {
     existingResource.extras = existingResource.extras || {}
     if ((existingResource.extras.datafairOrigin === config.publicUrl || existingResource.extras.datafairOrigin === catalog.dataFairBaseUrl) && existingResource.extras.datafairDatasetId === dataset.id) {
       debug('addToDataset delete existing resource', existingResource.id)
-      await axios.delete(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/${existingResource.id}/`),
+      await axios.delete(new URL(`api/1/datasets/${publication.addToDataset.id}/resources/${existingResource.id}/`, catalog.url).href,
         { headers: { 'X-API-KEY': catalog.apiKey } })
     }
   }
@@ -240,10 +242,10 @@ async function addResourceToDataset (catalog, dataset, publication) {
         resource.id = matchingResource.id
       }
       debug('addToDataset create/update resource')
-      await axios.post(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}/resources/`),
+      await axios.post(new URL(`api/1/datasets/${publication.addToDataset.id}/resources/`, catalog.url).href,
         resource, { headers: { 'X-API-KEY': catalog.apiKey } })
     }
-    const udataDataset = (await axios.get(url.resolve(catalog.url, `api/1/datasets/${publication.addToDataset.id}`))).data
+    const udataDataset = (await axios.get(new URL(`api/1/datasets/${publication.addToDataset.id}`, catalog.url).href)).data
     publication.targetUrl = udataDataset.page
     publication.result = { id: udataDataset.id, slug: udataDataset.slug }
   } catch (err) {
@@ -380,7 +382,7 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
   // if (dataset.spatial) udataDataset.spatial = { granularity: dataset.spatial }
   if (dataset.keywords && dataset.keywords.length) udataDataset.tags = dataset.keywords
   if (dataset.license) {
-    const remoteLicenses = (await axios.get(url.resolve(catalog.url, 'api/1/datasets/licenses/'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
+    const remoteLicenses = (await axios.get(new URL('api/1/datasets/licenses/', catalog.url).href, { headers: { 'X-API-KEY': catalog.apiKey } })).data
     const remoteLicense = remoteLicenses.find(l => l.url === dataset.license.href)
     if (remoteLicense) udataDataset.license = remoteLicense.id
   }
@@ -394,7 +396,7 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
   if (updateDatasetId) {
     delete publication.replaceDataset
     try {
-      existingDataset = (await axios.get(url.resolve(catalog.url, 'api/1/datasets/' + updateDatasetId + '/'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
+      existingDataset = (await axios.get(new URL('api/1/datasets/' + updateDatasetId + '/', catalog.url).href, { headers: { 'X-API-KEY': catalog.apiKey } })).data
       debug('existing dataset', existingDataset.uri)
       if (!existingDataset || existingDataset.deleted) throw new Error(`Impossible de récupérer le jeu de données existant depuis ${catalog.url}. A-t-il été supprimé du catalogue ?`)
 
@@ -417,15 +419,15 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
     if (updateDatasetId && existingDataset) {
       debug('merge over existing dataset')
       Object.assign(existingDataset, udataDataset)
-      res = await axios.put(url.resolve(catalog.url, 'api/1/datasets/' + updateDatasetId + '/'), existingDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
+      res = await axios.put(new URL('api/1/datasets/' + updateDatasetId + '/', catalog.url).href, existingDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
     } else {
       const replaceDatasetId = publication.replaceDataset && publication.replaceDataset.id
       if (replaceDatasetId) {
         debug('overwrite existing dataset entirely', replaceDatasetId)
-        res = await axios.put(url.resolve(catalog.url, 'api/1/datasets/' + replaceDatasetId + '/'), udataDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
+        res = await axios.put(new URL('api/1/datasets/' + replaceDatasetId + '/', catalog.url).href, udataDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
       } else {
         debug('create dataset')
-        res = await axios.post(url.resolve(catalog.url, 'api/1/datasets/'), udataDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
+        res = await axios.post(new URL('api/1/datasets/', catalog.url).href, udataDataset, { headers: { 'X-API-KEY': catalog.apiKey } })
       }
     }
 
@@ -444,7 +446,7 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
 async function deleteResourceFromDataset (catalog, dataset, publication) {
   let udataDataset
   try {
-    udataDataset = (await axios.get(url.resolve(catalog.url, 'api/1/datasets/' + publication.result.id + '/'), { headers: { 'X-API-KEY': catalog.apiKey } })).data
+    udataDataset = (await axios.get(new URL('api/1/datasets/' + publication.result.id + '/', catalog.url).href, { headers: { 'X-API-KEY': catalog.apiKey } })).data
   } catch (err) {
     debug('failed to fetch existing dataset to delete resource from', err)
   }
@@ -455,7 +457,7 @@ async function deleteResourceFromDataset (catalog, dataset, publication) {
   })
   for (const resource of resources) {
     try {
-      await axios.delete(url.resolve(catalog.url, `api/1/datasets/${udataDataset.id}/resources/${resource.id}/`), { headers: { 'X-API-KEY': catalog.apiKey } })
+      await axios.delete(new URL(`api/1/datasets/${udataDataset.id}/resources/${resource.id}/`, catalog.url).href, { headers: { 'X-API-KEY': catalog.apiKey } })
     } catch (err) {
       debug('failed to delete resource', err)
       // The resource was already deleted ?
@@ -466,12 +468,12 @@ async function deleteResourceFromDataset (catalog, dataset, publication) {
   }
 }
 
-async function deleteDataset (catalog, dataset, publication) {
+async function deleteUdataDataset (catalog, dataset, publication) {
   const udataDataset = publication.result
   // The dataset was never really created in udata
   if (!udataDataset) return
   try {
-    await axios.delete(url.resolve(catalog.url, `api/1/datasets/${udataDataset.id}/`), { headers: { 'X-API-KEY': catalog.apiKey } })
+    await axios.delete(new URL(`api/1/datasets/${udataDataset.id}/`, catalog.url).href, { headers: { 'X-API-KEY': catalog.apiKey } })
   } catch (err) {
     debug('failed to delete dataset', err)
     // The dataset was already deleted ?

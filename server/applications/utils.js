@@ -1,15 +1,17 @@
-const config = /** @type {any} */(require('config'))
-const memoize = require('memoizee')
-const visibilityUtils = require('../misc/utils/visibility')
-const permissions = require('../misc/utils/permissions')
-const { prepareMarkdownContent } = require('../misc/utils/markdown')
-const findUtils = require('../misc/utils/find')
-const clone = require('../misc/utils/clone')
-const datasetUtils = require('../datasets/utils/index.js')
-const createError = require('http-errors')
-const { getPseudoUser } = require('../misc/utils/users')
+import _config from 'config'
+import memoize from 'memoizee'
+import * as visibilityUtils from '../misc/utils/visibility.js'
+import * as permissions from '../misc/utils/permissions.js'
+import { prepareMarkdownContent } from '../misc/utils/markdown.js'
+import * as findUtils from '../misc/utils/find.js'
+import clone from '../misc/utils/clone.js'
+import * as datasetUtils from '../datasets/utils/index.js'
+import createError from 'http-errors'
+import { getPseudoUser } from '../misc/utils/users.js'
 
-exports.clean = (application, publicUrl, publicationSite, query = {}) => {
+const config = /** @type {any} */(_config)
+
+export const clean = (application, publicUrl, publicationSite, query = {}) => {
   const select = query.select ? query.select.split(',') : []
   if (query.raw !== 'true') {
     if (!select.includes('-public')) application.public = permissions.isPublic('applications', application)
@@ -47,7 +49,7 @@ const memoizedGetFreshDataset = memoize(async (id, db) => {
  * @param {any} application
  * @param {boolean} draft
  */
-exports.refreshConfigDatasetsRefs = async (req, application, draft) => {
+export const refreshConfigDatasetsRefs = async (req, application, draft) => {
   const db = req.app.get('db')
   // @ts-ignore
   const publicBaseUrl = req.publicBaseUrl

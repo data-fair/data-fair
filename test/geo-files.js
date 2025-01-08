@@ -1,9 +1,9 @@
-const assert = require('assert').strict
-const fs = require('fs')
-const config = require('config')
-const FormData = require('form-data')
-const testUtils = require('./resources/test-utils')
-const workers = require('../server/workers')
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
+import fs from 'node:fs'
+import config from 'config'
+import FormData from 'form-data'
+import * as workers from '../server/workers/index.js'
 
 describe('geo files support', () => {
   it('Process uploaded geojson dataset', async () => {

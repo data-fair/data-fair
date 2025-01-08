@@ -1,66 +1,39 @@
 // convert from tabular data to csv or geographical data to geojson
-const config = /** @type {any} */(require('config'))
 
-exports.eventsPrefix = 'normalize'
+import { pipeline } from 'node:stream/promises'
+import path from 'path'
+import fs from 'fs-extra'
+import createError from 'http-errors'
+import ogr2ogr from 'ogr2ogr'
+import pump from '../misc/utils/pipe.js'
+import { stringify as csvStrStream } from 'csv-stringify'
+import tmp from 'tmp-promise'
+import dir from 'node-dir'
+import mime from 'mime-types'
+import zlib from 'node:zlib'
+import resolvePath from 'resolve-path'
+import { displayBytes } from '../misc/utils/bytes.js'
+import * as datasetUtils from '../datasets/utils/index.js'
+import * as datasetService from '../datasets/service.js'
+import { tmpDir as mainTmpDir } from '../datasets/utils/files.js'
+import * as icalendar from '../misc/utils/icalendar.js'
+import * as xlsx from '../misc/utils/xlsx.js'
+import * as i18nUtils from '../i18n/utils.js'
+import * as metrics from '../misc/utils/metrics.js'
+import _config from 'config'
+import debugLib from 'debug'
 
-const archiveTypes = exports.archiveTypes = new Set([
-  'application/zip' // .zip
-  /* 'application/x-7z-compressed', // .7z
-  'application/x-bzip', // .bzip
-  'application/x-bzip2', // .bzip2
-  'application/x-tar', // .tar */
-])
-const tabularTypes = exports.tabularTypes = new Set([
-  'application/vnd.oasis.opendocument.spreadsheet', // ods, fods
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
-  'application/vnd.ms-excel', // xls
-  'application/dbase' // dbf
-])
-const geographicalTypes = exports.geographicalTypes = new Set([
-  'application/vnd.google-earth.kml+xml', // kml
-  'application/vnd.google-earth.kmz', // kmz
-  'application/gpx+xml', // gpx or xml ?
-  'application/geopackage+sqlite3' // gpkg
-])
-const calendarTypes = exports.calendarTypes = new Set(['text/calendar'])
-exports.csvTypes = [
-  'text/csv',
-  'text/plain', // txt often contains csv or tsv content
-  'text/tab-separated-values' // tsv processed in the same way as csv
-]
-exports.basicTypes = [
-  ...exports.csvTypes,
-  'application/geo+json'
-]
+const config = /** @type {any} */(_config)
+
+export const eventsPrefix = 'normalize'
 
 async function decompress (mimetype, filePath, dirPath) {
-  const exec = require('../misc/utils/exec')
+  const exec = (await import('../misc/utils/exec.js')).default
   if (mimetype === 'application/zip') await exec('unzip', ['-o', '-q', filePath, '-d', dirPath])
 }
 
-exports.process = async function (app, dataset) {
-  const { pipeline } = require('node:stream').promises
-  const path = require('path')
-  const fs = require('fs-extra')
-  const createError = require('http-errors')
-  const ogr2ogr = require('ogr2ogr').default
-  const pump = require('../misc/utils/pipe')
-  const { stringify: csvStrStream } = require('csv-stringify')
-  const tmp = require('tmp-promise')
-  const dir = require('node-dir')
-  const mime = require('mime-types')
-  const zlib = require('node:zlib')
-  const resolvePath = require('resolve-path')
-  const { displayBytes } = require('../misc/utils/bytes')
-  const datasetUtils = require('../datasets/utils')
-  const datasetService = require('../datasets/service')
-  const { tmpDir: mainTmpDir } = require('../datasets/utils/files')
-  const icalendar = require('../misc/utils/icalendar')
-  const xlsx = require('../misc/utils/xlsx')
-  const i18nUtils = require('../i18n/utils')
-  const metrics = require('../misc/utils/metrics')
-
-  const debug = require('debug')(`worker:file-normalizer:${dataset.id}`)
+export const process = async function (app, dataset) {
+  const debug = debugLib(`worker:file-normalizer:${dataset.id}`)
   const originalFilePath = datasetUtils.originalFilePath(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
   const tmpDir = (await tmp.dir({ dir: mainTmpDir, unsafeCleanup: true })).path
@@ -74,7 +47,7 @@ exports.process = async function (app, dataset) {
   }
 
   let isShapefile = false
-  if (archiveTypes.has(dataset.originalFile.mimetype)) {
+  if (datasetUtils.archiveTypes.has(dataset.originalFile.mimetype)) {
     debug('decompress', dataset.originalFile.mimetype, originalFilePath, tmpDir)
     await decompress(dataset.originalFile.mimetype, originalFilePath, tmpDir)
     const files = (await dir.promiseFiles(tmpDir))
@@ -88,7 +61,7 @@ exports.process = async function (app, dataset) {
         filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.shx')) &&
         filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.dbf'))) {
       isShapefile = true
-    } else if (filePaths.length === 1 && exports.basicTypes.includes(mime.lookup(filePaths[0].base))) {
+    } else if (filePaths.length === 1 && datasetUtils.basicTypes.includes(mime.lookup(filePaths[0].base))) {
       // case of a single data file in an archive
       const filePath = resolvePath(datasetUtils.dir(dataset), filePaths[0].base)
       await fs.move(resolvePath(tmpDir, files[0]), filePath, { overwrite: true })
@@ -139,7 +112,7 @@ exports.process = async function (app, dataset) {
     }
   }
 
-  if (calendarTypes.has(dataset.originalFile.mimetype)) {
+  if (datasetUtils.calendarTypes.has(dataset.originalFile.mimetype)) {
     // TODO : store these file size limits in config file ?
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
       throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
@@ -159,7 +132,7 @@ exports.process = async function (app, dataset) {
     }
     icalendar.prepareSchema(dataset, infos)
     dataset.analysis = { escapeKeyAlgorithm: 'legacy' }
-  } else if (tabularTypes.has(dataset.originalFile.mimetype)) {
+  } else if (datasetUtils.tabularTypes.has(dataset.originalFile.mimetype)) {
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
       throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
@@ -171,7 +144,7 @@ exports.process = async function (app, dataset) {
       mimetype: 'text/csv',
       encoding: 'utf-8'
     }
-  } else if (isShapefile || geographicalTypes.has(dataset.originalFile.mimetype)) {
+  } else if (isShapefile || datasetUtils.geographicalTypes.has(dataset.originalFile.mimetype)) {
     if (config.ogr2ogr.skip) {
       throw createError(400, '[noretry] Les fichiers de type shapefile ne sont pas supportés sur ce service.')
     }

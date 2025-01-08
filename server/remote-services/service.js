@@ -1,6 +1,6 @@
-const findUtils = require('../misc/utils/find')
-const { clean, fixConceptsFilters } = require('./utils')
-const mongoEscape = require('mongo-escape')
+import * as findUtils from '../misc/utils/find.js'
+import { clean, fixConceptsFilters } from './utils.js'
+import mongoEscape from 'mongo-escape'
 
 const filterFieldsMap = {
   'input-concepts': 'actions.input.concept',
@@ -22,7 +22,7 @@ const filterFieldsMap = {
  * @param {Record<string, string>} reqQuery
  * @param {any} user
  */
-exports.findRemoteServices = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
+export const findRemoteServices = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
   const remoteServices = db.collection('remote-services')
   const extraFilters = []
   if (reqQuery['virtual-datasets'] === 'true' || reqQuery.virtualDatasets === 'true') {
@@ -67,7 +67,7 @@ const actionsExtraFilters = [{ 'actions.type': 'http://schema.org/SearchAction' 
  * @param {Record<string, string>} reqQuery
  * @param {any} user
  */
-exports.findActions = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
+export const findActions = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
   await fixConceptsFilters(db, locale, reqQuery, user)
   const query = findUtils.query(reqQuery, locale, user, 'remote-services', filterFieldsMap, true, actionsExtraFilters)
 

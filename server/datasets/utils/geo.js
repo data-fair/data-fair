@@ -1,22 +1,24 @@
-const util = require('util')
-const fs = require('fs')
-const pointOnFeature = require('@turf/point-on-feature').default
-const bboxPolygon = require('@turf/bbox-polygon').default
-const turfBbox = require('@turf/bbox').default
-const rewind = require('@turf/rewind').default
-const cleanCoords = require('@turf/clean-coords').default
-const kinks = require('@turf/kinks').default
-const unkink = require('@turf/unkink-polygon').default
-const flatten = require('flat')
-const exec = require('child-process-promise').exec
-const tmp = require('tmp-promise')
-const writeFile = util.promisify(fs.writeFile)
-const proj4 = require('proj4')
-const { wktToGeoJSON, geojsonToWKT } = require('@terraformer/wkt')
-const debug = require('debug')('geo')
-const { tmpDir } = require('./files')
+import util from 'util'
+import fs from 'fs'
+import pointOnFeature from '@turf/point-on-feature'
+import bboxPolygon from '@turf/bbox-polygon'
+import turfBbox from '@turf/bbox'
+import rewind from '@turf/rewind'
+import cleanCoords from '@turf/clean-coords'
+import kinks from '@turf/kinks'
+import unkink from '@turf/unkink-polygon'
+import flatten from 'flat'
+import { exec } from 'child-process-promise'
+import tmp from 'tmp-promise'
+import proj4 from 'proj4'
+import { wktToGeoJSON, geojsonToWKT } from '@terraformer/wkt'
+import debugLib from 'debug'
+import { tmpDir } from './files.js'
+import projections from '../../../contract/projections.js'
 
-const projections = require('../../../contract/projections')
+const writeFile = util.promisify(fs.writeFile)
+const debug = debugLib('geo')
+
 const geomUri = 'https://purl.org/geojson/vocab#geometry'
 const latlonUri = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
 const latUri = ['http://schema.org/latitude', 'http://www.w3.org/2003/01/geo/wgs84_pos#lat']
@@ -25,9 +27,9 @@ const coordXUri = 'http://data.ign.fr/def/geometrie#coordX'
 const coordYUri = 'http://data.ign.fr/def/geometrie#coordY'
 const projectGeomUri = 'http://data.ign.fr/def/geometrie#Geometry'
 
-exports.allGeoConcepts = [geomUri, projectGeomUri, latlonUri, ...latUri, ...lonUri, coordXUri, coordYUri]
+export const allGeoConcepts = [geomUri, projectGeomUri, latlonUri, ...latUri, ...lonUri, coordXUri, coordYUri]
 
-exports.schemaHasGeopoint = (schema) => {
+export const schemaHasGeopoint = (schema) => {
   const lat = schema.find(p => latUri.indexOf(p['x-refersTo']) !== -1)
   const lon = schema.find(p => lonUri.indexOf(p['x-refersTo']) !== -1)
   if (lat && lon) return `${lat.key}/${lon.key}`
@@ -39,7 +41,7 @@ exports.schemaHasGeopoint = (schema) => {
   return false
 }
 
-exports.schemaHasGeometry = (schema) => {
+export const schemaHasGeometry = (schema) => {
   const geom = schema.find(p => p['x-refersTo'] === geomUri)
   if (geom) return geom.key
   const projectGeom = schema.find(p => p['x-refersTo'] === projectGeomUri)
@@ -47,17 +49,17 @@ exports.schemaHasGeometry = (schema) => {
   return false
 }
 
-exports.geoFieldsKey = (schema) => {
-  return exports.schemaHasGeometry(schema) + '/' + exports.schemaHasGeopoint(schema)
+export const geoFieldsKey = (schema) => {
+  return schemaHasGeometry(schema) + '/' + schemaHasGeopoint(schema)
 }
 
-exports.fixLon = (val) => {
+export const fixLon = (val) => {
   while (val < -180) val += 360
   while (val > 180) val -= 360
   return val
 }
 
-exports.latlon2fields = (dataset, doc) => {
+export const latlon2fields = (dataset, doc) => {
   const schema = dataset.schema
   let lat, lon
 
@@ -91,7 +93,7 @@ exports.latlon2fields = (dataset, doc) => {
 }
 
 // Geometry can be passed as an object, as a geojson string or as a WKT string
-exports.readGeometry = (value) => {
+export const readGeometry = (value) => {
   if (!value || value === 'undefined') return null
   if (typeof value === 'object') {
     if (!value.coordinates) return null
@@ -121,7 +123,7 @@ const projCoordinates = (projection, coordinates) => {
   }
 }
 
-exports.geometry2fields = async (dataset, doc) => {
+export const geometry2fields = async (dataset, doc) => {
   const schema = dataset.schema
   let geometry, capabilities
 
@@ -129,7 +131,7 @@ exports.geometry2fields = async (dataset, doc) => {
   const geomProp = schema.find(p => p['x-refersTo'] === geomUri)
 
   if (projectGeomProp) {
-    geometry = this.readGeometry(doc[projectGeomProp.key])
+    geometry = readGeometry(doc[projectGeomProp.key])
     if (geometry) {
       const projection = dataset.projection && dataset.projection.code && projections.find(p => p.code === dataset.projection.code)
       if (dataset.projection && !projection) throw new Error(`La projection ${dataset.projection.code} n'est pas supportée.`)
@@ -139,7 +141,7 @@ exports.geometry2fields = async (dataset, doc) => {
     }
     capabilities = projectGeomProp['x-capabilities']
   } else {
-    geometry = this.readGeometry(doc[geomProp.key])
+    geometry = readGeometry(doc[geomProp.key])
     capabilities = geomProp['x-capabilities']
   }
   if (!geometry || Object.keys(geometry).length === 0) return {}
@@ -181,7 +183,7 @@ exports.geometry2fields = async (dataset, doc) => {
   return fields
 }
 
-exports.result2geojson = esResponse => {
+export const result2geojson = esResponse => {
   return {
     type: 'FeatureCollection',
     total: esResponse.hits.total.value,
@@ -203,7 +205,7 @@ exports.result2geojson = esResponse => {
   }
 }
 
-exports.aggs2geojson = aggsResult => {
+export const aggs2geojson = aggsResult => {
   return {
     type: 'FeatureCollection',
     total: aggsResult.total,
@@ -223,7 +225,7 @@ exports.aggs2geojson = aggsResult => {
   }
 }
 
-exports.result2wkt = esResponse => {
+export const result2wkt = esResponse => {
   const geometryCollection = {
     type: 'GeometryCollection',
     geometries: esResponse.hits.hits.map(hit => {

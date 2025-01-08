@@ -1,6 +1,6 @@
-const assert = require('assert').strict
-const nock = require('nock')
-const workers = require('../server/workers')
+import { strict as assert } from 'node:assert'
+import nock from 'nock'
+import * as workers from '../server/workers/index.js'
 
 describe('datasets based on remote files', () => {
   it('manage failure to fetch file', async () => {

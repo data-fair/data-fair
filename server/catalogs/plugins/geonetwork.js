@@ -1,54 +1,54 @@
 // this type of catalog can be tested using this URL as an example:
 // https://geocatalogue.lannion-tregor.com/geonetwork/
 
-const url = require('url')
-const createError = require('http-errors')
-const axios = require('../../misc/utils/axios')
-const { findLicense } = require('../../misc/utils/licenses')
+import createError from 'http-errors'
+import axios from '../../misc/utils/axios.js'
+import { findLicense } from '../../misc/utils/licenses.js'
+import debugLib from 'debug'
 
-const debug = require('debug')('catalogs:geonetwork')
+const debug = debugLib('catalogs:geonetwork')
 
-exports.title = 'GeoNetwork'
-exports.description = ''
-exports.docUrl = 'https://geonetwork-opensource.org/'
-exports.optionalCapabilities = [
+export const title = 'GeoNetwork'
+export const description = ''
+export const docUrl = 'https://geonetwork-opensource.org/'
+export const optionalCapabilities = [
   'listDatasets',
   'autoUpdate'
 ]
 
-exports.init = async (catalogUrl) => {
-  const siteUrl = url.resolve(catalogUrl, 'srv/api/0.1/site')
+export const init = async (catalogUrl) => {
+  const siteUrl = new URL('srv/api/0.1/site', catalogUrl)
   debug('try fetching geonetwork info', siteUrl)
   const site = (await axios.get(siteUrl)).data
   if (!site['system/site/name']) throw new Error('missing system/site/name in geonetwork site info')
   return { url: catalogUrl, title: site['system/site/name'] + ' - ' + site['system/site/organization'] }
 }
 
-exports.httpParams = async (catalog) => {
+export const httpParams = async (catalog) => {
   return {}
 }
 
-exports.searchOrganizations = async (catalogUrl, q) => {
+export const searchOrganizations = async (catalogUrl, q) => {
   throw createError(501, 'La récupération d\'une liste d\'organisations depuis GeoNetwork n\'est pas disponible')
 }
 
-exports.publishDataset = async (catalog, dataset, publication) => {
+export const publishDataset = async (catalog, dataset, publication) => {
   throw createError(501, 'La publication de jeux de données vers GeoNetwork n\'est pas disponible')
 }
 
-exports.deleteDataset = async (catalog, dataset, publication) => {
+export const deleteDataset = async (catalog, dataset, publication) => {
   throw createError(501, `Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
 }
 
-exports.publishApplication = async (catalog, application, publication, datasets) => {
+export const publishApplication = async (catalog, application, publication, datasets) => {
   throw createError(501, 'La publication d\'applications vers GeoNetwork n\'est pas disponible')
 }
 
-exports.deleteApplication = async (catalog, application, publication) => {
+export const deleteApplication = async (catalog, application, publication) => {
   throw createError(501, 'La dépublication d\'applications vers GeoNetwork n\'est pas disponible')
 }
 
-exports.listDatasets = async (catalog, p) => {
+export const listDatasets = async (catalog, p) => {
   // RDF approach using public API would be better but I don't see the way to construct links to shapefiles
   // const res = await axios.get(url.resolve(catalog.url, 'srv/api/0.1/records'), { params: { any: params.q, hitsPerPage: 1 } })
   // const datasets = this.rdf2datasets(res.data)
@@ -64,27 +64,32 @@ exports.listDatasets = async (catalog, p) => {
     sortBy: 'relevance'
   }
   if (p.q) params.any = p.q
-  const res = await axios.get(url.resolve(catalog.url, 'srv/fre/q'), { params })
+  const res = await axios.get(new URL('srv/fre/q', catalog.url).href, { params })
   const count = res.data.summary['@count']
   const items = Array.isArray(res.data.metadata) ? res.data.metadata : [res.data.metadata]
   return { count, results: items.map(item => prepareDatasetFromCatalog(catalog, item)) }
 }
 
-exports.getDataset = async (catalog, datasetId, settings) => {
+export const getDataset = async (catalog, datasetId, settings) => {
   // https://geocatalogue.lannion-tregor.com/geonetwork/srv/fre/q?_content_type=json&_draft=y+or+n+or+e&_isTemplate=y+or+n&fast=index&uuid=0cf415ff-8334-4658-97f8-c8ca6729fbb8
   const params = {
     _content_type: 'json',
     fast: 'index',
     uuid: datasetId
   }
-  const res = await axios.get(url.resolve(catalog.url, 'srv/fre/q'), { params })
+  const res = await axios.get(new URL('srv/fre/q', catalog.url).href, { params })
   // console.log(JSON.stringify(res.data.metadata, null, 2))
   return prepareDatasetFromCatalog(catalog, res.data.metadata, settings)
 }
 
 /*
-const { xml2js } = require('xml-js')
-exports.rdf2datasets = (rdf) => {
+import xml2js from 'xml-js'
+import url from 'url';
+import createError from 'http-errors';
+import axios from '../../misc/utils/axios.js';
+import { findLicense } from '../../misc/utils/licenses.js';
+import debugLib from 'debug';
+export const rdf2datasets = (rdf) => {
   const content = xml2js(rdf, { compact: true })
   const catalogRecords = content['rdf:RDF']['dcat:Catalog']['dcat:dataset']
     .filter(item => !!item['dcat:CatalogRecord'])
@@ -121,7 +126,7 @@ const updateFrequenciesMap = {
 
 function prepareDatasetFromCatalog (catalog, item, settings) {
   const link = Array.isArray(item.link) ? item.link : [item.link]
-  const page = url.resolve(catalog.url, `srv/fre/catalog.search#/metadata/${item['geonet:info'].uuid}`)
+  const page = new URL(`srv/fre/catalog.search#/metadata/${item['geonet:info'].uuid}`, catalog.url).href
   const keywords = (Array.isArray(item.keyword) ? item.keyword : [item.keyword]).filter(k => !!k)
   const legalConstraints = (Array.isArray(item.legalConstraints) ? item.legalConstraints : [item.legalConstraints]).filter(k => !!k)
   const dataset = {

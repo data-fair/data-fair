@@ -1,11 +1,12 @@
-const { Transform } = require('stream')
-const config = require('config')
-const truncateMiddle = require('truncate-middle')
-const extensionsUtils = require('../utils/extensions')
-const metrics = require('../../misc/utils/metrics')
-const { nanoid } = require('nanoid')
+import { Transform } from 'stream'
+import config from 'config'
+import truncateMiddle from 'truncate-middle'
+import * as extensionsUtils from '../utils/extensions.js'
+import * as metrics from '../../misc/utils/metrics.js'
+import { nanoid } from 'nanoid'
+import debugLib from 'debug'
 
-const debug = require('debug')('index-stream')
+const debug = debugLib('index-stream')
 
 // remove some properties that must not be indexed
 const cleanItem = (item) => {
@@ -162,4 +163,4 @@ class IndexStream extends Transform {
   }
 }
 
-module.exports = (options) => new IndexStream(options)
+export default (options) => new IndexStream(options)

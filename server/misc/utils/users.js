@@ -1,4 +1,4 @@
-exports.owner = (req) => {
+export const owner = (req) => {
   // it is possible to specify owner of a new resource
   // permission canDoForOwner should be checked afterward
   if (req.body && req.body.owner) return req.body.owner
@@ -14,7 +14,7 @@ exports.owner = (req) => {
   return { type: 'user', id: req.user.id, name: req.user.name }
 }
 
-exports.getPseudoUser = (owner, name, defaultId, defaultRole, department) => {
+export const getPseudoUser = (owner, name, defaultId, defaultRole, department) => {
   const pseudoUser = { name: 'extension' }
   if (owner.type === 'user') {
     pseudoUser.id = owner.id

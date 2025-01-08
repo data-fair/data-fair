@@ -1,10 +1,11 @@
-const fs = require('fs-extra')
-const { pipeline } = require('node:stream').promises
-const { iterCSV } = require('../../misc/utils/xlsx')
+
+import fs from 'fs-extra'
+import { pipeline } from 'node:stream/promises'
+import { iterCSV } from '../../misc/utils/xlsx.js'
 
 /**
  * @param {{source: string, destination: string}} options
  */
-module.exports = async ({ source, destination }) => {
+export default async ({ source, destination }) => {
   await pipeline(iterCSV(source), fs.createWriteStream(destination))
 }

@@ -1,51 +1,51 @@
-const url = require('url')
-const createError = require('http-errors')
-const util = require('util')
-const axios = require('../../misc/utils/axios')
-const Extractor = require('html-extractor')
+import createError from 'http-errors'
+import util from 'util'
+import axios from '../../misc/utils/axios.js'
+import Extractor from 'html-extractor'
+
 const htmlExtractor = new Extractor()
 htmlExtractor.extract = util.promisify(htmlExtractor.extract)
 
-exports.title = 'Data Fair'
-exports.description = 'Visualisez, exploitez et partagez vos données en quelques clics !'
-exports.docUrl = 'https://data-fair.github.io/3/'
-exports.optionalCapabilities = [
+export const title = 'Data Fair'
+export const description = 'Visualisez, exploitez et partagez vos données en quelques clics !'
+export const docUrl = 'https://data-fair.github.io/3/'
+export const optionalCapabilities = [
   'apiKey',
   'publishDataset'
 ]
 
-exports.init = async (catalogUrl) => {
-  await axios.get(url.resolve(catalogUrl, 'api/v1/ping'))
-  const html = axios.get(url.resolve(catalogUrl))
+export const init = async (catalogUrl) => {
+  await axios.get(new URL('api/v1/ping', catalogUrl).href)
+  const html = axios.get(catalogUrl)
   const data = await htmlExtractor.extract(html)
   return { url: catalogUrl, title: data.meta.title }
 }
 
-exports.searchOrganizations = async (catalogUrl, q) => {
+export const searchOrganizations = async (catalogUrl, q) => {
   return { results: [{ id: null, name: 'Organization owning API key' }] }
 }
 
-exports.publishDataset = async (catalog, dataset, publication) => {
+export const publishDataset = async (catalog, dataset, publication) => {
   return createOrUpdateDataset(catalog, dataset, publication)
 }
 
-exports.deleteDataset = async (catalog, dataset, publication) => {
+export const deleteDataset = async (catalog, dataset, publication) => {
   throw createError(501, `Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
 }
 
-exports.publishApplication = async (catalog, application, publication, datasets) => {
+export const publishApplication = async (catalog, application, publication, datasets) => {
   throw createError(501, 'La publication d\'applications vers Data Fair n\'est pas disponible')
 }
 
-exports.deleteApplication = async (catalog, application, publication) => {
+export const deleteApplication = async (catalog, application, publication) => {
   throw createError(501, 'La dépublication d\'applications vers Data Fair n\'est pas disponible')
 }
 
-exports.listDatasets = async (catalog, params = {}) => {
+export const listDatasets = async (catalog, params = {}) => {
   throw createError(501, 'La récupération d\'une liste de jeux de données depuis Data Fair n\'est pas disponible')
 }
 
-exports.getDataset = async (catalog, datasetId, req) => {
+export const getDataset = async (catalog, datasetId, req) => {
   throw createError(501, 'La récupération d\'une définition de jeu de données depuis Data Fair n\'est pas disponible')
 }
 
@@ -62,11 +62,11 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
     // TODO: send actual data is dataset is of type file
     // only send it if there is some recent change ?
     if (updateDatasetId) {
-      res = await axios.patch(url.resolve(catalog.url, 'api/v1/datasets/' + updateDatasetId), remoteDataset, { headers: { 'x-apiKey': catalog.apiKey } })
+      res = await axios.patch(new URL('api/v1/datasets/' + updateDatasetId, catalog.url).href, remoteDataset, { headers: { 'x-apiKey': catalog.apiKey } })
     } else {
-      res = await axios.post(url.resolve(catalog.url, 'api/v1/datasets'), remoteDataset, { headers: { 'x-apiKey': catalog.apiKey } })
+      res = await axios.post(new URL('api/v1/datasets', catalog.url).href, remoteDataset, { headers: { 'x-apiKey': catalog.apiKey } })
     }
-    publication.targetUrl = url.resolve(catalog.url, `datasets/${res.data.id}`)
+    publication.targetUrl = new URL(`datasets/${res.data.id}`, catalog.url).href
     publication.result = res.data
   } catch (err) {
     if (err.response) throw createError(501, `Erreur lors de l'envoi à ${catalog.url} : ${JSON.stringify(err.response.data, null, 2)}`)

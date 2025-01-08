@@ -1,6 +1,6 @@
-const assert = require('assert').strict
-const config = require('config')
-const testUtils = require('./resources/test-utils')
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
+import config from 'config'
 
 describe('Applications', () => {
   it('Get applications when not authenticated', async () => {

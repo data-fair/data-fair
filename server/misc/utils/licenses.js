@@ -1,4 +1,4 @@
-exports.findLicense = (/** @type {string} */str, licenses) => {
+export const findLicense = (/** @type {string} */str, licenses) => {
   str = str.toLowerCase()
   for (const l of licenses) {
     if (str === l.href) return l

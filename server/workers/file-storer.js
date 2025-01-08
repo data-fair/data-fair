@@ -1,18 +1,21 @@
-exports.eventsPrefix = 'store'
+import fs from 'fs-extra'
+import * as datasetUtils from '../datasets/utils/index.js'
+import * as datasetsService from '../datasets/service.js'
+import { replaceAllAttachments } from '../datasets/utils/attachments.js'
+import datasetFileSample from '../datasets/utils/file-sample.js'
+import * as metrics from '../misc/utils/metrics.js'
+import chardet from 'chardet'
+import md5File from 'md5-file'
+import JSONStream from 'JSONStream'
+import { Transform } from 'node:stream'
+import split2 from 'split2'
+import pump from '../misc/utils/pipe.js'
+import debugLib from 'debug'
 
-exports.process = async function (app, dataset) {
-  const fs = require('fs-extra')
-  const datasetUtils = require('../datasets/utils')
-  const datasetsService = require('../datasets/service')
-  const { replaceAllAttachments } = require('../datasets/utils/attachments')
-  const { basicTypes } = require('./file-normalizer')
-  const datasetFileSample = require('../datasets/utils/file-sample')
-  const metrics = require('../misc/utils/metrics')
-  const chardet = require('chardet')
-  const md5File = require('md5-file')
-  const JSONStream = require('JSONStream')
+export const eventsPrefix = 'store'
 
-  const debug = require('debug')(`worker:file-storer:${dataset.id}`)
+export const process = async function (app, dataset) {
+  const debug = debugLib(`worker:file-storer:${dataset.id}`)
 
   /** @type {any} */
   const patch = { loaded: null, status: 'stored' }
@@ -37,10 +40,6 @@ exports.process = async function (app, dataset) {
     // some ESRI files have invalid geojson with stuff like this:
     // "GLOBALID": {7E1C9E26-9767-4AE4-9CBB-F353B15B3BFE},
     if (dataset.extras?.fixGeojsonGlobalId || dataset.extras?.fixGeojsonESRI) {
-      const { Transform } = require('stream')
-      const split2 = require('split2')
-      const pump = require('../misc/utils/pipe')
-
       const fixedFilePath = loadedFilePath + '.fixed'
       const globalIdRegexp = /"GLOBALID": \{(.*)\}/g
       await pump(
@@ -84,7 +83,7 @@ exports.process = async function (app, dataset) {
     debug(`Detected encoding ${datasetFile.encoding} for file ${loadedFilePath}`)
 
     patch.originalFile = datasetFile
-    if (basicTypes.includes(datasetFile.mimetype)) {
+    if (datasetUtils.basicTypes.includes(datasetFile.mimetype)) {
       patch.file = patch.originalFile
     }
 

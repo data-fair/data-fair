@@ -1,7 +1,8 @@
-const marked = require('marked')
-const { prepareThumbnailUrl } = require('../misc/utils/thumbnails')
 
-exports.clean = (publicUrl, baseApp, thumbnail, html = false) => {
+import { marked } from 'marked'
+import { prepareThumbnailUrl } from '../misc/utils/thumbnails.js'
+
+export const clean = (publicUrl, baseApp, thumbnail, html = false) => {
   baseApp.title = baseApp.title || baseApp.meta.title
   baseApp.applicationName = baseApp.applicationName || baseApp.meta['application-name']
   baseApp.version = baseApp.version || baseApp.meta.version

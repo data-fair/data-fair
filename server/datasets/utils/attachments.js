@@ -1,23 +1,26 @@
-const config = /** @type {any} */(require('config'))
-const fs = require('fs-extra')
-const multer = require('multer')
-const createError = require('http-errors')
-const mime = require('mime-types')
-const { attachmentsDir, metadataAttachmentsDir, metadataAttachmentPath } = require('./files')
-const limits = require('../../misc/utils/limits')
-const exec = require('../../misc/utils/exec')
+import _config from 'config'
 
-const debug = require('debug')('attachments')
-const debugLimits = require('debug')('limits')
+import debugLib from 'debug'
+import fs from 'fs-extra'
+import multer from 'multer'
+import createError from 'http-errors'
+import mime from 'mime-types'
+import { attachmentsDir, metadataAttachmentsDir, metadataAttachmentPath } from './files.js'
+import * as limits from '../../misc/utils/limits.js'
+import exec from '../../misc/utils/exec.js'
 
-exports.addAttachments = async (dataset, attachmentsArchive) => {
+const config = /** @type {any} */(_config)
+const debug = debugLib('attachments')
+const debugLimits = debugLib('limits')
+
+export const addAttachments = async (dataset, attachmentsArchive) => {
   const dir = attachmentsDir(dataset)
   await fs.ensureDir(dir)
   await exec('unzip', ['-o', '-q', attachmentsArchive, '-d', dir])
   await fs.remove(attachmentsArchive)
 }
 
-exports.replaceAllAttachments = async (dataset, attachmentsFilePath) => {
+export const replaceAllAttachments = async (dataset, attachmentsFilePath) => {
   const dir = attachmentsDir(dataset)
   await fs.ensureDir(dir)
   await fs.emptyDir(dir)
@@ -25,7 +28,7 @@ exports.replaceAllAttachments = async (dataset, attachmentsFilePath) => {
   await fs.remove(attachmentsFilePath)
 }
 
-exports.removeAll = async (dataset) => {
+export const removeAll = async (dataset) => {
   await fs.remove(attachmentsDir(dataset))
 }
 
@@ -50,7 +53,7 @@ const metadataStorage = multer.diskStorage({
   }
 })
 
-const metadataUpload = multer({
+const metadataUploadMulter = multer({
   storage: metadataStorage,
   fileFilter: async function fileFilter (req, file, cb) {
     try {
@@ -93,4 +96,4 @@ const metadataUpload = multer({
   }
 })
 
-exports.metadataUpload = () => metadataUpload.single('attachment')
+export const metadataUpload = () => metadataUploadMulter.single('attachment')

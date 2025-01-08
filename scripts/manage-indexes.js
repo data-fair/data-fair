@@ -3,7 +3,7 @@
 // DO NOT RUN this at peak activity, force merge is expensive
 // https://www.elastic.co/guide/en/elasticsearch/reference/current/size-your-shards.html#:~:text=Aim%20for%20shard%20sizes%20between,and%20may%20tax%20node%20resources.
 
-const config = require('config')
+import config from 'config'
 
 // this script if often run outside of peak activity
 // we do not want it to last forever if ever it detects that it has a lot of work to do

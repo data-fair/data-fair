@@ -1,14 +1,15 @@
 // Prepare dynamic service workers configurations for data-fair applications
-const config = require('config')
-const escapeStringRegexp = require('escape-string-regexp')
-const { minify } = require('terser')
+
+import config from 'config'
+import escapeStringRegexp from 'escape-string-regexp'
+import { minify } from 'terser'
 
 const debugServiceWorkers = process.env.DEBUG && process.env.DEBUG.includes('service-workers')
 
 let basePath = escapeStringRegexp(new URL(config.publicUrl).pathname)
 if (!basePath.endsWith('/')) basePath += '/'
 
-exports.sw = () => {
+export const sw = () => {
   // Use workbox for powerful and easy service workers management
   let sw = `
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/3.6.1/workbox-sw.js');`
@@ -69,7 +70,7 @@ const oldBase = config.publicUrl.endsWith('/') ? config.publicUrl + 'app' : conf
 // The base is the url without a trailing slash
 // and the service worker is not exposed behind a slash
 // so that we can accept accessing the application without a trailing slash
-const register = `
+const registerStr = `
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     // unregister the deprecated service workers
@@ -87,8 +88,8 @@ if ('serviceWorker' in navigator) {
   })
 };`
 let minifiedRegister
-exports.register = async () => {
-  if (debugServiceWorkers) return register
-  minifiedRegister = minifiedRegister || await minify(register, { toplevel: true, compress: true, mangle: true })
+export const register = async () => {
+  if (debugServiceWorkers) return registerStr
+  minifiedRegister = minifiedRegister || await minify(registerStr, { toplevel: true, compress: true, mangle: true })
   return minifiedRegister.code
 }

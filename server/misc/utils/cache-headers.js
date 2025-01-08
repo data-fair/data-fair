@@ -1,9 +1,11 @@
-const config = require('config')
-const createError = require('http-errors')
-const useragent = require('useragent')
-const debug = require('debug')('cache-headers')
+import config from 'config'
+import createError from 'http-errors'
+import useragent from 'useragent'
+import debugLib from 'debug'
 
-exports.setNoCache = (req, res) => {
+const debug = debugLib('cache-headers')
+
+export const setNoCache = (req, res) => {
   res.setHeader('X-Accel-Buffering', 'no')
   // compatibility with older IE
   // cf https://stackoverflow.com/questions/12205632/express-returns-304-for-ie-repeative-requests
@@ -21,9 +23,9 @@ exports.setNoCache = (req, res) => {
 // only send data if the dataset was finalized since then
 // prevent running expensive queries while always presenting fresh data
 // also set last finalized date into last-modified header
-exports.resourceBased = (dateKey = 'updatedAt') => (req, res, next) => {
+export const resourceBased = (dateKey = 'updatedAt') => (req, res, next) => {
   if (req.noCache) {
-    exports.setNoCache(req, res)
+    setNoCache(req, res)
     return next()
   }
 
@@ -62,7 +64,7 @@ exports.resourceBased = (dateKey = 'updatedAt') => (req, res, next) => {
     if (cacheVisibility === 'public') {
       res.setHeader('Cache-Control', `must-revalidate, public, max-age=${config.cache.publicMaxAge}`)
     } else {
-      exports.setNoCache(req, res)
+      setNoCache(req, res)
     }
   }
 
@@ -70,7 +72,7 @@ exports.resourceBased = (dateKey = 'updatedAt') => (req, res, next) => {
 }
 
 // adapt headers for a request listing the content of a collection
-exports.listBased = (req, res, next) => {
+export const listBased = (req, res, next) => {
   const select = req.query.select ? req.query.select.split(',') : []
   let cacheVisibility = 'private'
   if (select.includes('-userPermissions') && req.query.visibility && req.query.visibility.includes('public')) cacheVisibility = 'public'
@@ -79,12 +81,12 @@ exports.listBased = (req, res, next) => {
     res.setHeader('X-Accel-Buffering', 'yes')
     res.setHeader('Cache-Control', `must-revalidate, public, max-age=${config.cache.publicMaxAge}`)
   } else {
-    exports.setNoCache(req, res)
+    setNoCache(req, res)
   }
   next()
 }
 
-exports.noCache = (req, res, next) => {
-  exports.setNoCache(req, res)
+export const noCache = (req, res, next) => {
+  setNoCache(req, res)
   next()
 }

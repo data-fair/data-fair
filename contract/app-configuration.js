@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   type: 'object',
   description: 'A free format configuration object used by applications. A minimal common structure is used to ensure proper linking between applications and datasets and remote services',
   additionalProperties: true,

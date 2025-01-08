@@ -1,6 +1,6 @@
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
 
-const workers = require('../server/workers')
+import * as workers from '../server/workers/index.js'
 
 describe('Wildcard fields', () => {
   const items = {

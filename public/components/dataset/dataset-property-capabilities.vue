@@ -71,8 +71,8 @@ en:
 
 <script>
 import { mapState } from 'vuex'
+import capabilitiesSchema from '~/../contract/capabilities.js'
 
-const capabilitiesSchema = require('~/../contract/capabilities.js')
 const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter(key => capabilitiesSchema.properties[key].default === false)
 
 export default {

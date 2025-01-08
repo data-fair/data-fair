@@ -1,8 +1,10 @@
-const config = /** @type {any} */(require('config'))
-const createError = require('http-errors')
-const i18n = require('i18n')
-const permissions = require('./permissions')
-const visibility = require('./visibility')
+import _config from 'config'
+import createError from 'http-errors'
+import i18n from 'i18n'
+import * as permissions from './permissions.js'
+import * as visibility from './visibility.js'
+
+const config = /** @type {any} */(_config)
 
 // Util functions shared accross the main find (GET on collection) endpoints
 
@@ -28,7 +30,7 @@ function queryVal (val) {
  * @param {any[]} extraFilters
  * @returns
  */
-exports.query = (reqQuery, locale, user, resourceType, fieldsMap, globalMode, extraFilters = []) => {
+export const query = (reqQuery, locale, user, resourceType, fieldsMap, globalMode, extraFilters = []) => {
   /** @type {any} */
   const query = {}
   if (!reqQuery) return query
@@ -94,7 +96,7 @@ exports.query = (reqQuery, locale, user, resourceType, fieldsMap, globalMode, ex
     if (reqQuery.owner) {
       delete query['owner.type']
       delete query['owner.id']
-      query.$and = query.$and.concat(exports.ownerFilters(reqQuery, user && user.activeAccount))
+      query.$and = query.$and.concat(ownerFilters(reqQuery, user && user.activeAccount))
     }
     if ((reqQuery.shared === 'false' || reqQuery.mine === 'true') && user) {
       /** @type {any} */
@@ -113,7 +115,7 @@ exports.query = (reqQuery, locale, user, resourceType, fieldsMap, globalMode, ex
  * @param {any} activeAccount
  * @returns {any}
  */
-exports.ownerFilters = (reqQuery, activeAccount) => {
+export const ownerFilters = (reqQuery, activeAccount) => {
   const or = []
   const nor = []
   for (const ownerStr of reqQuery.owner.split(',')) {
@@ -141,7 +143,7 @@ exports.ownerFilters = (reqQuery, activeAccount) => {
  * @param {string} sortStr
  * @returns {any}
  */
-exports.sort = (sortStr) => {
+export const sort = (sortStr) => {
   /** @type {any} */
   const sort = {}
   if (!sortStr) return sort
@@ -166,7 +168,7 @@ exports.sort = (sortStr) => {
  * @param {number} defaultSize
  * @returns {[number, number]}
  */
-exports.pagination = (reqQuery, defaultSize = 12) => {
+export const pagination = (reqQuery, defaultSize = 12) => {
   let size = defaultSize
   if (reqQuery && reqQuery.size && !isNaN(parseInt(reqQuery.size))) {
     size = parseInt(reqQuery.size)
@@ -191,7 +193,7 @@ exports.pagination = (reqQuery, defaultSize = 12) => {
  * @param {boolean} raw
  * @returns {any}
  */
-exports.project = (selectStr, exclude = [], raw = false) => {
+export const project = (selectStr, exclude = [], raw = false) => {
   /** @type {any} */
   const select = { _id: 0 }
   if (!selectStr) {
@@ -215,7 +217,7 @@ exports.project = (selectStr, exclude = [], raw = false) => {
  * @param {any[]} filterFields
  * @returns {any[]}
  */
-exports.parametersDoc = (filterFields) => [
+export const parametersDoc = (filterFields) => [
   {
     in: 'query',
     name: 'size',
@@ -262,7 +264,7 @@ exports.parametersDoc = (filterFields) => [
  * @param {string | null} pageUrlTemplate
  * @param {string | null} currentAccessId
  */
-exports.setResourceLinks = (resource, resourceType, publicUrl = config.publicUrl, pageUrlTemplate, currentAccessId) => {
+export const setResourceLinks = (resource, resourceType, publicUrl = config.publicUrl, pageUrlTemplate, currentAccessId) => {
   resource.href = `${publicUrl}/api/v1/${resourceType}s/${publicUrl === config.publicUrl ? resource.id : resource.slug}`
   resource.page = pageUrlTemplate ? pageUrlTemplate.replace('{slug}', resource.slug).replace('{id}', resource.id) : `${config.publicUrl}/${resourceType}/${resource.id}`
   if (resourceType === 'application') resource.exposedUrl = `${publicUrl}/app/${currentAccessId || (publicUrl === config.publicUrl ? resource.id : resource.slug)}`
@@ -323,7 +325,7 @@ const basePipeline = (reqQuery, user, resourceType, extraFilters) => {
  * @param {any[]} [extraFilters]
  * @returns
  */
-exports.facetsQuery = (reqQuery, user, resourceType, facetFields = {}, filterFields, nullFacetFields = [], extraFilters) => {
+export const facetsQuery = (reqQuery, user, resourceType, facetFields = {}, filterFields, nullFacetFields = [], extraFilters) => {
   filterFields = filterFields || facetFields
   const facetsQueryParam = reqQuery.facets
   const pipeline = basePipeline(reqQuery, user, resourceType, extraFilters)
@@ -338,7 +340,7 @@ exports.facetsQuery = (reqQuery, user, resourceType, facetFields = {}, filterFie
     }
   }
   if (reqQuery.owner && !fields.includes('owner')) {
-    pipeline.push({ $match: { $and: exports.ownerFilters(reqQuery, user && user.activeAccount) } })
+    pipeline.push({ $match: { $and: ownerFilters(reqQuery, user && user.activeAccount) } })
   }
   if (!fields.includes('visibility') && visibility.filters(reqQuery)) {
     pipeline.push({ $match: { $or: visibility.filters(reqQuery) } })
@@ -356,7 +358,7 @@ exports.facetsQuery = (reqQuery, user, resourceType, facetFields = {}, filterFie
         }
       }
       if (reqQuery.owner && fields.includes('owner') && f !== 'owner') {
-        facet.push({ $match: { $and: exports.ownerFilters(reqQuery, user?.activeAccount) } })
+        facet.push({ $match: { $and: ownerFilters(reqQuery, user?.activeAccount) } })
       }
       if (fields.includes('visibility') && f !== 'visibility' && visibility.filters(reqQuery)) {
         facet.push({ $match: { $or: visibility.filters(reqQuery) } })
@@ -423,7 +425,7 @@ exports.facetsQuery = (reqQuery, user, resourceType, facetFields = {}, filterFie
  * @param {string[]} nullFacetFields
  * @returns
  */
-exports.parseFacets = (facets, nullFacetFields = []) => {
+export const parseFacets = (facets, nullFacetFields = []) => {
   if (!facets) return
 
   /** @type {any} */
@@ -474,7 +476,7 @@ exports.parseFacets = (facets, nullFacetFields = []) => {
  * @param {any[]} extraFilters
  * @returns
  */
-exports.sumsQuery = (reqQuery, user, resourceType, sumFields = {}, filterFields, extraFilters) => {
+export const sumsQuery = (reqQuery, user, resourceType, sumFields = {}, filterFields, extraFilters) => {
   const pipeline = basePipeline(reqQuery, user, resourceType, extraFilters)
   for (const name of Object.keys(filterFields)) {
     if (reqQuery[name] !== undefined) {
@@ -482,7 +484,7 @@ exports.sumsQuery = (reqQuery, user, resourceType, sumFields = {}, filterFields,
     }
   }
   if (reqQuery.owner) {
-    pipeline.push({ $match: { $and: exports.ownerFilters(reqQuery, user?.activeAccount) } })
+    pipeline.push({ $match: { $and: ownerFilters(reqQuery, user?.activeAccount) } })
   }
   if (visibility.filters(reqQuery)) {
     pipeline.push({ $match: { $or: visibility.filters(reqQuery) } })
@@ -506,7 +508,7 @@ exports.sumsQuery = (reqQuery, user, resourceType, sumFields = {}, filterFields,
  * @param {string | null} resourceId
  * @param {boolean | undefined} tolerateStale
  */
-exports.getByUniqueRef = async (db, publicationSite, mainPublicationSite, reqParams, resourceType, resourceId, tolerateStale) => {
+export const getByUniqueRef = async (db, publicationSite, mainPublicationSite, reqParams, resourceType, resourceId, tolerateStale) => {
   const paramId = resourceId ?? reqParams[resourceType + 'Id']
 
   /** @type {any} */

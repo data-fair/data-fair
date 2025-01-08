@@ -1,6 +1,6 @@
-const assert = require('assert').strict
-const testUtils = require('./resources/test-utils')
-const workers = require('../server/workers')
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
+import * as workers from '../server/workers/index.js'
 
 describe('words aggs', () => {
   it('Get words buckets', async () => {

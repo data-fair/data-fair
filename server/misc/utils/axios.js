@@ -1,15 +1,14 @@
 // prepare an axios instance with improved error management
 
-const axios = require('axios')
+import axios from 'axios'
+import { httpAgent, httpsAgent } from './http-agents.js'
 
-const { httpAgent, httpsAgent } = require('./http-agents')
-
-module.exports = axios.create({
+const axiosInstance = axios.create({
   httpAgent,
   httpsAgent
 })
 
-module.exports.interceptors.response.use(response => response, error => {
+axiosInstance.interceptors.response.use(response => response, error => {
   if (!error.response) return Promise.reject(error)
   delete error.response.request
   delete error.response.headers
@@ -24,3 +23,5 @@ module.exports.interceptors.response.use(response => response, error => {
 
   return Promise.reject(error.response)
 })
+
+export default axiosInstance

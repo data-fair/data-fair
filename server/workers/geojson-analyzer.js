@@ -1,15 +1,15 @@
-const projections = require('../../contract/projections')
+
+import createError from 'http-errors'
+import JSONStream from 'JSONStream'
+import * as datasetUtils from '../datasets/utils/index.js'
+import * as datasetsService from '../datasets/service.js'
+import * as fieldsSniffer from '../datasets/utils/fields-sniffer.js'
+import projections from '../../contract/projections.js'
 
 // Analyze geojson dataset data, check validity and detect schema
-exports.eventsPrefix = 'analyze'
+export const eventsPrefix = 'analyze'
 
-exports.process = async function (app, dataset) {
-  const createError = require('http-errors')
-  const JSONStream = require('JSONStream')
-  const datasetUtils = require('../datasets/utils')
-  const datasetsService = require('../datasets/service')
-  const fieldsSniffer = require('../datasets/utils/fields-sniffer')
-
+export const process = async function (app, dataset) {
   const attachments = await datasetUtils.lsAttachments(dataset)
 
   // the stream is mainly read to get the features, but we also support extracting the crs property if it is present

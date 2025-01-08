@@ -1,9 +1,9 @@
-const config = require('config')
-const version = require('../package.json').version
-const dataset = require('./dataset')
-const utils = require('./utils')
+import config from 'config'
+import pJson from '../package.json' with {type: 'json'}
+import dataset from './dataset.js'
+import * as utils from './utils.js'
 
-module.exports = (publicUrl, publicationSite, info) => {
+export default (publicUrl, publicationSite, info) => {
   const hostname = new URL(publicUrl).hostname
   const servers = [{
     url: `${publicUrl}/api/v1/catalog`,
@@ -15,7 +15,7 @@ module.exports = (publicUrl, publicationSite, info) => {
     info: {
       title: 'API de catalogue de données',
       description: `Cette documentation est à destination de développeurs souhaitant explorer ou moissoner le catalogue de données de ${hostname}.`,
-      version,
+      version: pJson.version,
       'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-catalog`,
       termsOfService: config.info.termsOfService,
       contact: { ...(info.contact || {}) }

@@ -1,26 +1,26 @@
-const config = /** @type {any} */(require('config'))
+import config from 'config'
+import { text as stream2text } from 'node:stream/consumers'
+import path from 'path'
+import tmp from 'tmp-promise'
+import fs from 'fs-extra'
+import mime from 'mime-types'
+import md5File from 'md5-file'
+import { CronJob } from 'cron'
+import contentDisposition from 'content-disposition'
+import createError from 'http-errors'
+import axios from '../misc/utils/axios.js'
+import pump from '../misc/utils/pipe.js'
+import * as limits from '../misc/utils/limits.js'
+import * as catalogs from '../catalogs/plugins/index.js'
+import * as datasetUtils from '../datasets/utils/index.js'
+import * as datasetService from '../datasets/service.js'
+import { tmpDir } from '../datasets/utils/files.js'
+import debugLib from 'debug'
 
-exports.eventsPrefix = 'download'
+export const eventsPrefix = 'download'
 
-exports.process = async function (app, dataset) {
-  const { text: stream2text } = require('node:stream/consumers')
-  const path = require('path')
-  const tmp = require('tmp-promise')
-  const fs = require('fs-extra')
-  const mime = require('mime-types')
-  const md5File = require('md5-file')
-  const CronJob = require('cron').CronJob
-  const contentDisposition = require('content-disposition')
-  const createError = require('http-errors')
-  const axios = require('../misc/utils/axios')
-  const pump = require('../misc/utils/pipe')
-  const limits = require('../misc/utils/limits')
-  const catalogs = require('../catalogs/plugins')
-  const datasetUtils = require('../datasets/utils')
-  const datasetService = require('../datasets/service')
-  const { tmpDir } = require('../datasets/utils/files')
-
-  const debug = require('debug')(`worker:downloader:${dataset.id}`)
+export const process = async function (app, dataset) {
+  const debug = debugLib(`worker:downloader:${dataset.id}`)
 
   const db = app.get('db')
 

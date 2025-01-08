@@ -106,7 +106,7 @@ en:
 <script>
 import { mapState, mapActions } from 'vuex'
 import eventBus from '~/event-bus'
-const datasetSchema = require('~/../contract/dataset.js')
+import datasetSchema from '~/../contract/dataset.js'
 
 export default {
   props: ['value', 'index'],

@@ -1,32 +1,32 @@
-const path = require('path')
-const http = require('http')
-const https = require('https')
-const express = require('express')
-const moment = require('moment')
-const slug = require('slugify')
-const i18n = require('i18n')
-const axios = require('../misc/utils/axios')
-const pump = require('../misc/utils/pipe')
-const CacheableLookup = require('cacheable-lookup')
-const remoteServiceAPIDocs = require('../../contract/remote-service-api-docs')
-const mongoEscape = require('mongo-escape')
-const config = /** @type {any} */(require('config'))
-const servicePatch = require('../../contract/remote-service-patch')
+import path from 'path'
+import http from 'http'
+import https from 'https'
+import express from 'express'
+import moment from 'moment'
+import slug from 'slugify'
+import i18n from 'i18n'
+import axios from '../misc/utils/axios.js'
+import pump from '../misc/utils/pipe.js'
+import CacheableLookup from 'cacheable-lookup'
+import remoteServiceAPIDocs from '../../contract/remote-service-api-docs.js'
+import mongoEscape from 'mongo-escape'
+import config from 'config'
+import servicePatch from '../../contract/remote-service-patch.js'
+import asyncWrap from '../misc/utils/async-handler.js'
+import * as cacheHeaders from '../misc/utils/cache-headers.js'
+import * as rateLimiting from '../misc/utils/rate-limiting.js'
+import * as metrics from '../misc/utils/metrics.js'
+import { httpAgent, httpsAgent } from '../misc/utils/http-agents.js'
+import { clean, validate, validateOpenApi, validatePatch, initNew, computeActions } from './utils.js'
+import { findRemoteServices, findActions } from './service.js'
+import debugModule from 'debug'
 
-const asyncWrap = require('../misc/utils/async-handler')
-const cacheHeaders = require('../misc/utils/cache-headers')
-const rateLimiting = require('../misc/utils/rate-limiting')
-const metrics = require('../misc/utils/metrics')
-const { httpAgent, httpsAgent } = require('../misc/utils/http-agents')
-const { clean, validate, validateOpenApi, validatePatch, initNew, computeActions } = require('./utils')
-const { findRemoteServices, findActions } = require('./service')
-
-const debug = require('debug')('remote-services')
-const debugMasterData = require('debug')('master-data')
+const debug = debugModule('remote-services')
+const debugMasterData = debugModule('master-data')
 
 const cacheableLookup = new CacheableLookup()
 
-const router = exports.router = express.Router()
+export const router = express.Router()
 
 router.use((req, res, next) => {
   // @ts-ignore
@@ -49,7 +49,7 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   res.json(response)
 }))
 
-const actionsRouter = exports.actionsRouter = express.Router()
+export const actionsRouter = express.Router()
 
 // get the unpacked list of actions inside the remote services
 actionsRouter.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {

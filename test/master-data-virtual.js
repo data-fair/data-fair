@@ -1,9 +1,9 @@
 // the API exposed by a dataset can be referenced as a remote service
 // by another (or the same) data-fair instance
 
-const assert = require('assert').strict
+import { strict as assert } from 'node:assert'
 
-const workers = require('../server/workers')
+import * as workers from '../server/workers/index.js'
 
 const initMaster = async (ax, schema, id = 'master') => {
   await ax.put('/api/v1/datasets/' + id, {

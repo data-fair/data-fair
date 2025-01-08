@@ -1,8 +1,8 @@
-const FormData = require('form-data')
-const assert = require('assert').strict
-const testUtils = require('./resources/test-utils')
-const workers = require('../server/workers')
-const config = require('config')
+import { strict as assert } from 'node:assert'
+import * as testUtils from './resources/test-utils.js'
+import FormData from 'form-data'
+import * as workers from '../server/workers/index.js'
+import config from 'config'
 
 const baseLimit = {
   indexed_bytes: { limit: 300000, consumption: 0 },

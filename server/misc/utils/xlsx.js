@@ -1,6 +1,7 @@
-const { stringify: csvStr } = require('csv-stringify/sync')
-const dayjs = require('dayjs')
-const utc = require('dayjs/plugin/utc')
+
+import { stringify as csvStr } from 'csv-stringify/sync'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc.js'
 
 dayjs.extend(utc)
 
@@ -9,7 +10,7 @@ dayjs.extend(utc)
 // /**
 //  * @param {string} filePath
 //  */
-// exports.iterCSV = async function * (filePath) {
+//  export const iterCSV = async function * (filePath) {
 //   // loop on dates to check if there is a need for date-time format or if date is enough
 
 //   const workbook = new Excel.Workbook()
@@ -86,9 +87,9 @@ dayjs.extend(utc)
 //   console.log('3')
 // }
 
-// exports.getCSV = async (filePath) => {
+//  export const getCSV = async (filePath) => {
 //   let data = ''
-//   for await (const row of exports.iterCSV(filePath)) {
+//   for await (const row of iterCSV(filePath)) {
 //     data += row
 //   }
 //   console.log(data)
@@ -124,8 +125,8 @@ const mapCellValue = (value) => {
 /**
  * @param {string} filePath
  */
-exports.iterCSV = async function * (filePath) {
-  const Excel = require('exceljs')
+export const iterCSV = async function * (filePath) {
+  const Excel = (await import('exceljs')).default
 
   const workbook = new Excel.Workbook()
   try {
@@ -185,7 +186,7 @@ exports.iterCSV = async function * (filePath) {
  * @param {string} filePath
  */
 const iterCSVOld = async function * (filePath) {
-  const XLSX = require('xlsx')
+  const XLSX = (await import('xlsx')).default
 
   const workbook = XLSX.readFile(filePath, { cellDates: true })
   const worksheet = workbook.Sheets[workbook.SheetNames[0]]

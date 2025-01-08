@@ -1,28 +1,29 @@
-const express = require('express')
-const config = /** @type {any} */(require('config'))
-const fs = require('fs')
-const path = require('path')
-const https = require('https')
-const http = require('http')
-const escapeHtml = require('escape-html')
-const axios = require('../misc/utils/axios')
-const parse5 = require('parse5')
-const pump = require('../misc/utils/pipe')
-const CacheableLookup = require('cacheable-lookup')
-const asyncWrap = require('../misc/utils/async-handler')
-const findUtils = require('../misc/utils/find')
-const permissions = require('../misc/utils/permissions')
-const serviceWorkers = require('../misc/utils/service-workers')
-const metrics = require('../misc/utils/metrics')
-const { refreshConfigDatasetsRefs } = require('./utils')
-const router = module.exports = express.Router()
-// const debug = require('debug')('application-proxy')
-const vIframeVersion = require('../../node_modules/@koumoul/v-iframe/package.json').version
-const iframeResizerVersion = require('../../node_modules/iframe-resizer/package.json').version
+import express from 'express'
+import config from 'config'
+import fs from 'fs'
+import path from 'path'
+import https from 'https'
+import http from 'http'
+import escapeHtml from 'escape-html'
+import axios from '../misc/utils/axios.js'
+import * as parse5 from 'parse5'
+import pump from '../misc/utils/pipe.js'
+import CacheableLookup from 'cacheable-lookup'
+import asyncWrap from '../misc/utils/async-handler.js'
+import * as findUtils from '../misc/utils/find.js'
+import * as permissions from '../misc/utils/permissions.js'
+import * as serviceWorkers from '../misc/utils/service-workers.js'
+import * as metrics from '../misc/utils/metrics.js'
+import { refreshConfigDatasetsRefs } from './utils.js'
+import vIframePJson from '../../node_modules/@koumoul/v-iframe/package.json' with {type: 'json'}
+import iFrameResizerPJson from '../../node_modules/iframe-resizer/package.json' with {type: 'json'}
+
+const router = express.Router()
+export default router
 
 const cacheableLookup = new CacheableLookup()
 
-const loginHtml = fs.readFileSync(path.join(__dirname, './resources/login.html'), 'utf8')
+const loginHtml = fs.readFileSync(path.join(import.meta.dirname, './resources/login.html'), 'utf8')
 
 const brandEmbed = config.brand.embed && parse5.parseFragment(config.brand.embed)
 
@@ -305,7 +306,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
         nodeName: 'script',
         tagName: 'script',
         attrs: [{ name: 'type', value: 'text/javascript' }]
-      }, minifiedIframeRedirectSrc.replace('__IFRAME_REDIRECT__', iframeRedirect))
+      }, minifiedIframeRedirectSrc.replaceAll('__IFRAME_REDIRECT__', iframeRedirect))
     }
   }
 
@@ -323,7 +324,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
       tagName: 'script',
       attrs: [
         { name: 'type', value: 'text/javascript' },
-        { name: 'src', value: `https://cdn.jsdelivr.net/npm/@koumoul/v-iframe@${vIframeVersion}/content-window.min.js` }
+        { name: 'src', value: `https://cdn.jsdelivr.net/npm/@koumoul/v-iframe@${vIframePJson.version}/content-window.min.js` }
       ],
       parentNode: body
     })
@@ -336,7 +337,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
       tagName: 'script',
       attrs: [
         { name: 'type', value: 'text/javascript' },
-        { name: 'src', value: `https://cdn.jsdelivr.net/npm/iframe-resizer@${iframeResizerVersion}/js/iframeResizer.contentWindow.min.js` }
+        { name: 'src', value: `https://cdn.jsdelivr.net/npm/iframe-resizer@${iFrameResizerPJson.version}/js/iframeResizer.contentWindow.min.js` }
       ]
     })
   }
