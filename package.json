@@ -1,6 +1,6 @@
 {
   "name": "data-fair",
-  "version": "4.29.1",
+  "version": "4.29.2",
   "description": "",
   "main": "server",
   "scripts": {
@@ -46,7 +46,9 @@
       "babelOptions": {
         "babelrc": false,
         "configFile": false,
-        "presets": ["@babel/preset-env"]
+        "presets": [
+          "@babel/preset-env"
+        ]
       }
     },
     "extends": [
