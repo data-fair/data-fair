@@ -250,7 +250,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   const body = html.childNodes.find(c => c.tagName === 'body')
   if (!head || !body) throw new Error(req.__('errors.brokenHTML'))
 
-  const pushHeadNode = (node, text) => {
+  const pushHeadNode = (node, text, prepend = false) => {
     node.parentNode = head
     node.namespaceURI = 'http://www.w3.org/1999/xhtml'
     if (text) {
@@ -261,7 +261,8 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
       }
       node.childNodes = [textNode]
     }
-    head.childNodes.push(node)
+    if (prepend) head.childNodes.unshift(node)
+    else head.childNodes.push(node)
   }
 
   // Data-fair generates a manifest per app
@@ -302,11 +303,19 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
       iframeRedirect = iframeRedirectUrl.href
       const { minify } = await import('terser')
       minifiedIframeRedirectSrc = minifiedIframeRedirectSrc || (await minify(iframeRedirectSrc, { toplevel: true, compress: true, mangle: true })).code
-      pushHeadNode({
+      const scriptNode = {
         nodeName: 'script',
         tagName: 'script',
         attrs: [{ name: 'type', value: 'text/javascript' }]
-      }, minifiedIframeRedirectSrc.replaceAll('__IFRAME_REDIRECT__', iframeRedirect))
+      }
+      if (req.query['iframe-redirect'] === 'false') {
+        console.log('manually disabled iframe redirect', iframeRedirect)
+      } else if (req.query['iframe-redirect'] === 'prepend') {
+        console.log('force prepending iframe redirect script', iframeRedirect)
+        pushHeadNode(scriptNode, minifiedIframeRedirectSrc.replaceAll('__IFRAME_REDIRECT__', iframeRedirect), true)
+      } else {
+        pushHeadNode(scriptNode, minifiedIframeRedirectSrc.replaceAll('__IFRAME_REDIRECT__', iframeRedirect))
+      }
     }
   }
 
