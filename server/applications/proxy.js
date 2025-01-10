@@ -17,6 +17,9 @@ import * as metrics from '../misc/utils/metrics.js'
 import { refreshConfigDatasetsRefs } from './utils.js'
 import vIframePJson from '../../node_modules/@koumoul/v-iframe/package.json' with {type: 'json'}
 import iFrameResizerPJson from '../../node_modules/iframe-resizer/package.json' with {type: 'json'}
+import Debug from 'debug'
+
+const debugIframeRedirect = Debug('iframe-redirect')
 
 const router = express.Router()
 export default router
@@ -179,6 +182,7 @@ function inIframe () {
   }
 }
 if (inIframe()) {
+  ${debugIframeRedirect.enabled ? 'console.log("redirect iframe to include referer", window.location.href, "__IFRAME_REDIRECT__")' : ''}
   if (window.history && window.history.replaceState) window.history.replaceState(null, '', "__IFRAME_REDIRECT__");
   else if (window.location.replace) window.location.replace("__IFRAME_REDIRECT__");
   else window.location.href = "__IFRAME_REDIRECT__";
@@ -296,7 +300,8 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   const referer = req.headers.referer || req.headers.referrer
   let iframeRedirect
   if (referer) {
-    const refererDomain = new URL(referer).hostname
+    const refererUrl = new URL(referer)
+    const refererDomain = refererUrl.hostname
     const iframeRedirectUrl = new URL(`${req.publicBaseUrl}${req.originalUrl}`)
     if (refererDomain !== iframeRedirectUrl.hostname && refererDomain !== iframeRedirectUrl.searchParams.get('referer')) {
       iframeRedirectUrl.searchParams.set('referer', refererDomain)
@@ -308,12 +313,13 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
         tagName: 'script',
         attrs: [{ name: 'type', value: 'text/javascript' }]
       }
-      if (req.query['iframe-redirect'] === 'false') {
-        console.log('manually disabled iframe redirect', iframeRedirect)
-      } else if (req.query['iframe-redirect'] === 'prepend') {
-        console.log('force prepending iframe redirect script', iframeRedirect)
+      if (req.query['iframe-redirect'] === 'false' || refererUrl.searchParams.get('iframe-redirect') === 'false') {
+        debugIframeRedirect('manually disabled iframe redirect', iframeRedirect)
+      } else if (req.query['iframe-redirect'] === 'prepend' || refererUrl.searchParams.get('iframe-redirect') === 'prepend') {
+        debugIframeRedirect('force prepending iframe redirect script', iframeRedirect)
         pushHeadNode(scriptNode, minifiedIframeRedirectSrc.replaceAll('__IFRAME_REDIRECT__', iframeRedirect), true)
       } else {
+        debugIframeRedirect('iframe redirect to include referer domain', iframeRedirect)
         pushHeadNode(scriptNode, minifiedIframeRedirectSrc.replaceAll('__IFRAME_REDIRECT__', iframeRedirect))
       }
     }
