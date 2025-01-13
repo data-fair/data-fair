@@ -332,29 +332,43 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
     attrs: [{ name: 'type', value: 'text/javascript' }]
   }, await serviceWorkers.register())
 
+  if (req.query['d-frame'] === 'true') {
+    if (baseApp.meta['df:sync-state'] === 'true' || baseApp.meta['df:overflow'] === 'true') {
+      body.childNodes.push({
+        nodeName: 'script',
+        tagName: 'script',
+        attrs: [
+          { name: 'type', value: 'text/javascript' },
+          { name: 'src', value: 'https://cdn.jsdelivr.net/npm/@data-fair/frame@0.3/dist/v-iframe-compat/d-frame-content.min.js' }
+        ],
+        parentNode: body
+      })
+    }
+  } else {
   // add @koumoul/v-iframe/content-window.min.js to support state sync with portals, etc.
-  if (baseApp.meta['df:sync-state'] === 'true') {
-    body.childNodes.push({
-      nodeName: 'script',
-      tagName: 'script',
-      attrs: [
-        { name: 'type', value: 'text/javascript' },
-        { name: 'src', value: `https://cdn.jsdelivr.net/npm/@koumoul/v-iframe@${vIframePJson.version}/content-window.min.js` }
-      ],
-      parentNode: body
-    })
-  }
+    if (baseApp.meta['df:sync-state'] === 'true') {
+      body.childNodes.push({
+        nodeName: 'script',
+        tagName: 'script',
+        attrs: [
+          { name: 'type', value: 'text/javascript' },
+          { name: 'src', value: `https://cdn.jsdelivr.net/npm/@koumoul/v-iframe@${vIframePJson.version}/content-window.min.js` }
+        ],
+        parentNode: body
+      })
+    }
 
-  // add iframe-resizer/js/iframeResizer.contentWindow.min.js to support dynamic resizing of the iframe in portals, etc
-  if (baseApp.meta['df:overflow'] === 'true') {
-    body.childNodes.push({
-      nodeName: 'script',
-      tagName: 'script',
-      attrs: [
-        { name: 'type', value: 'text/javascript' },
-        { name: 'src', value: `https://cdn.jsdelivr.net/npm/iframe-resizer@${iFrameResizerPJson.version}/js/iframeResizer.contentWindow.min.js` }
-      ]
-    })
+    // add iframe-resizer/js/iframeResizer.contentWindow.min.js to support dynamic resizing of the iframe in portals, etc
+    if (baseApp.meta['df:overflow'] === 'true') {
+      body.childNodes.push({
+        nodeName: 'script',
+        tagName: 'script',
+        attrs: [
+          { name: 'type', value: 'text/javascript' },
+          { name: 'src', value: `https://cdn.jsdelivr.net/npm/iframe-resizer@${iFrameResizerPJson.version}/js/iframeResizer.contentWindow.min.js` }
+        ]
+      })
+    }
   }
 
   // add a brand logo somewhere over the applications
