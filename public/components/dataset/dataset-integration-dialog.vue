@@ -23,6 +23,20 @@
       >
         {{ $t('integrationMsg') }}
         <br>
+        <v-alert
+          dense
+          color="admin"
+          dark
+        >
+          <v-select
+            v-model="mode"
+            label="Mode d'intégration"
+            outlined
+            dense
+            :items="['iframe', 'd-frame']"
+            hide-details
+          />
+        </v-alert>
         <v-select
           v-if="dataset.previews && dataset.previews.length > 1"
           v-model="previewId"
@@ -34,18 +48,39 @@
           hide-details
         />
         <br>
-        <pre>
+        <template v-if="mode === 'iframe'">
+          <pre>
   &lt;iframe
     src="{{ syncedState.href ? syncedState.href : previewUrl }}"
     width="100%" height="500px" style="background-color: transparent; border: none;"
   /&gt;&lt;/iframe&gt;
             </pre>
-        <br>
-        Résultat:
-        <v-iframe
-          :src="previewUrl"
-          @state="s => syncedState = s"
-        />
+          <br>
+          Résultat:
+          <v-iframe
+            :src="previewUrl"
+            @state="s => syncedState = s"
+          />
+        </template>
+        <template v-if="mode === 'd-frame'">
+          <p v-html="$t('dFrameIntro')" />
+          <v-checkbox
+            v-model="syncParams"
+            :label="$t('syncParams')"
+          />
+          <pre>
+  &lt;d-frame
+    src="{{ syncedHref || (previewUrl + '?d-frame=true') }}{{ syncParamsAttr }}
+  /&gt;
+            </pre>
+          <br>
+          Résultat:
+          <d-frame
+            :src="previewUrl + '?d-frame=true'"
+            state-change-events
+            @state-change="s => syncedHref = s.detail[1]"
+          />
+        </template>
       </v-card-text>
     </v-card>
   </v-dialog>
@@ -55,15 +90,20 @@
   fr:
     integrationMsg: Pour intégrer une prévisualisation de ce jeu de données dans un site vous pouvez copier le code suivant ou un code similaire dans le code source HTML.
     previewType: Type de prévisualisation
+    dFrameIntro: <a href="https://data-fair.github.io/frame/latest/">D-Frame</a> est un composant que vous pouvez intégrer à votre site pour une intégration plus riche de la prévisualisation de données.
+    syncParams: Synchroniser les paramètres de l'application
   en:
     integrationMsg: To integrate a preview of this dataset in a website you can copy the code below or a similar code in your HTML source code.
     previewType: Preview type
+    dFrameIntro: <a href="https://data-fair.github.io/frame/latest/">D-Frame</a> is a component that you can integrate in your website for a richer integration of data previsualization.
+    syncParams: Synchronize the application parameters
   </i18n>
 
 <script>
 import { mapState } from 'vuex'
 import 'iframe-resizer/js/iframeResizer'
 import VIframe from '@koumoul/v-iframe'
+import '@data-fair/frame/lib/d-frame.js'
 
 export default {
   components: { VIframe },
@@ -79,18 +119,25 @@ export default {
   },
   data: () => ({
     syncedState: {},
-    previewId: 'table'
+    syncedHref: '',
+    previewId: 'table',
+    mode: 'iframe',
+    syncParams: false
   }),
   computed: {
     ...mapState('dataset', ['dataset']),
     previewUrl () {
       return this.dataset && this.dataset.previews.find(p => p.id === this.previewId).href
+    },
+    syncParamsAttr () {
+      return this.syncParams ? `\n  sync-params="*:${this.dataset.id}"` : ''
     }
   },
   watch: {
     show () {
       this.previewId = 'table'
       this.syncedState = {}
+      this.syncedHref = ''
     }
   }
 }
