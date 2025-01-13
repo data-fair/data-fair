@@ -273,8 +273,17 @@ export const sampleValues = async (dataset, ignoreKeys, onDecodedData) => {
   const sampleValues = {}
   const streams = await readStreams(null, dataset, true, false, true)
   if (onDecodedData) {
-    const decodeStream = streams.find(s => s instanceof DecodeStream)
-    decodeStream?.on('data', onDecodedData)
+    const decodeStreamIndex = streams.findIndex(s => s instanceof DecodeStream)
+    if (decodeStreamIndex !== -1) {
+      streams.splice(decodeStreamIndex + 1, 0,
+        new Transform({
+          transform (chunk, encoding, callback) {
+            onDecodedData(chunk)
+            callback(null, chunk)
+          }
+        })
+      )
+    }
   }
   await pump(...streams, new Writable({
     objectMode: true,
@@ -300,8 +309,10 @@ export const sampleValues = async (dataset, ignoreKeys, onDecodedData) => {
 
       if (finished) {
         stopped = true
-        streams[0].unpipe()
-        streams[1].end()
+        if (!onDecodedData) {
+          streams[0].unpipe()
+          streams[1].end()
+        }
       }
     }
   }))

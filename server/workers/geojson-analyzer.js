@@ -1,6 +1,8 @@
 
 import createError from 'http-errors'
-import JSONStream from 'JSONStream'
+import streamJsonParser from 'stream-json/Parser.js'
+import streamJsonPick from 'stream-json/filters/Pick.js'
+import streamValues from 'stream-json/streamers/StreamValues.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetsService from '../datasets/service.js'
 import * as fieldsSniffer from '../datasets/utils/fields-sniffer.js'
@@ -13,10 +15,16 @@ export const process = async function (app, dataset) {
   const attachments = await datasetUtils.lsAttachments(dataset)
 
   // the stream is mainly read to get the features, but we also support extracting the crs property if it is present
-  const parseCRSStream = JSONStream.parse('crs')
+  const crsParser = streamJsonParser.parser()
+  crsParser.on('error', () => {
+    // ignore invalid json errors at this stage, it will be handled later
+  })
+  const crsPipeline = crsParser
+    .pipe(streamJsonPick.pick({ filter: 'crs' }))
+    .pipe(streamValues.streamValues())
   let crs
-  parseCRSStream.on('data', (data) => {
-    crs = data
+  crsPipeline.on('data', (data) => {
+    crs = data.value
   })
 
   const schema = [{
@@ -25,8 +33,8 @@ export const process = async function (app, dataset) {
     'x-originalName': 'geometry',
     'x-refersTo': 'https://purl.org/geojson/vocab#geometry'
   }]
-  const sampleValues = await datasetUtils.sampleValues(dataset, ['geometry'], (decodedData) => parseCRSStream.write(decodedData))
-  parseCRSStream.end()
+  const sampleValues = await datasetUtils.sampleValues(dataset, ['geometry'], (decodedData) => crsParser.write(decodedData))
+  crsParser.end()
 
   for (const property in sampleValues) {
     const key = fieldsSniffer.escapeKey(property, dataset)
