@@ -9,6 +9,7 @@
 
 <script>
 import '@koumoul/v-iframe/content-window.js'
+import vueRouterDFrameContent from '@data-fair/frame/lib/vue-router/d-frame-content.js'
 
 export default {
   head () {
@@ -19,7 +20,11 @@ export default {
     }
   },
   created () {
-    global.vIframeOptions = { router: this.$router, reactiveParams: true }
+    if (this.$route.query['d-frame'] === 'true') {
+      vueRouterDFrameContent(this.$router)
+    } else {
+      global.vIframeOptions = { router: this.$router, reactiveParams: true }
+    }
   }
 }
 
