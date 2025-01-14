@@ -61,7 +61,7 @@ export const deleteApplication = async (catalog, application, publication) => {
 
 export const listDatasets = async (catalog, p) => {
   const rootData = (await memoizedFetch(catalog.url))
-  const services = rootData.services ?? []
+  const services = rootData.services ? [...rootData.services] : []
   if (rootData.folders) {
     for (const folder of rootData.folders) {
       debug('get folder', folder)
