@@ -15,13 +15,15 @@ import * as dcatConnector from './dcat.js'
 import * as geonetworkConnector from './geonetwork.js'
 import * as mydatacatalogueConnector from './mydatacatalogue.js'
 import * as udataConnector from './udata.js'
+import * as arcgisConnector from './arcgis.js'
 
 export const connectors = [
   { key: 'data-fair', ...dataFairConnector },
   { key: 'dcat', ...dcatConnector },
   { key: 'geonetwork', ...geonetworkConnector },
   { key: 'mydatacatalogue', ...mydatacatalogueConnector },
-  { key: 'udata', ...udataConnector }
+  { key: 'udata', ...udataConnector },
+  { key: 'arcgis', ...arcgisConnector }
 ]
 
 const debug = debugLib('catalogs')
@@ -247,6 +249,9 @@ export const harvestDatasetResource = async (app, catalog, datasetId, resourceId
       dataUpdatedBy: { id: catalog.owner.id, name: catalog.owner.name },
       dataUpdatedAt: date,
       status: 'imported'
+    }
+    if (connector.prepareResourceDatasetHarvest) {
+      connector.prepareResourceDatasetHarvest(newDataset, catalog, dataset, resource)
     }
     Object.assign(newDataset, getDatasetProps(dataset))
     await permissionsUtil.initResourcePermissions(newDataset)
