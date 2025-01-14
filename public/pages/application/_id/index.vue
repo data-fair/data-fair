@@ -21,6 +21,12 @@
                   <v-icon>mdi-information</v-icon>&nbsp;&nbsp;{{ $t('info') }}
                 </v-tab>
                 <v-tab
+                  key="attachments"
+                  href="#attachments"
+                >
+                  <v-icon>mdi-attachment</v-icon>&nbsp;&nbsp;{{ $t('attachments') }}
+                </v-tab>
+                <v-tab
                   v-if="datasets.length"
                   href="#datasets"
                 >
@@ -46,6 +52,9 @@
                     />
                     <application-info />
                   </v-container>
+                </v-tab-item>
+                <v-tab-item value="attachments">
+                  <application-attachments />
                 </v-tab-item>
                 <v-tab-item value="datasets">
                   <v-container
@@ -259,6 +268,7 @@
 <i18n lang="yaml">
 fr:
   info: Informations
+  attachments: Pièces jointes
   tutorialConfigMeta: Vous pouvez configurer des thématiques dans les paramètres.
   edit: Édition
   permissions: Permissions
@@ -279,6 +289,7 @@ fr:
   childrenApps: Applications utilisées
 en:
   info: Information
+  attachments: Attachments
   tutorialConfigMeta: You can configure topics in the parameters.
   edit: Edition
   permissions: Permissions

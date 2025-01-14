@@ -1,5 +1,7 @@
 import _config from 'config'
 import memoize from 'memoizee'
+import path from 'path'
+import fs from 'fs-extra'
 import * as visibilityUtils from '../misc/utils/visibility.js'
 import * as permissions from '../misc/utils/permissions.js'
 import { prepareMarkdownContent } from '../misc/utils/markdown.js'
@@ -8,6 +10,11 @@ import clone from '../misc/utils/clone.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import createError from 'http-errors'
 import { getPseudoUser } from '../misc/utils/users.js'
+import resolvePath from 'resolve-path' // safe replacement for path.resolve
+import { ownerDir } from '../datasets/utils/files.js'
+import { updateTotalStorage } from '../datasets/utils/storage.js'
+import nodeDir from 'node-dir'
+import { prepareThumbnailUrl } from '../misc/utils/thumbnails.js'
 
 const config = /** @type {any} */(_config)
 
@@ -30,6 +37,14 @@ export const clean = (application, publicUrl, publicationSite, query = {}) => {
   if (select.includes('-userPermissions')) delete application.userPermissions
   if (select.includes('-owner')) delete application.owner
   delete application._uniqueRefs
+
+  const thumbnail = query.thumbnail || '300x200'
+  if (application.image && application.public && !select.includes('-thumbnail')) {
+    application.thumbnail = prepareThumbnailUrl(publicUrl + '/api/v1/applications/' + encodeURIComponent(application.id) + '/thumbnail', thumbnail)
+  }
+  if (application.image && publicUrl !== config.publicUrl) {
+    application.image = application.image.replace(config.publicUrl, publicUrl)
+  }
   return application
 }
 
@@ -97,4 +112,60 @@ export const refreshConfigDatasetsRefs = async (req, application, draft) => {
       }
     }
   }
+}
+
+export const dir = (application) => {
+  return resolvePath(
+    ownerDir(application.owner),
+    path.join('applications', application.id)
+  )
+}
+
+export const attachmentsDir = (application) => {
+  return resolvePath(dir(application), 'attachments')
+}
+
+export const attachmentPath = (application, name) => {
+  return resolvePath(attachmentsDir(application), name)
+}
+
+export const lsAttachments = async (application) => {
+  const dirName = attachmentsDir(application)
+  if (!await fs.pathExists(dirName)) return []
+  const files = (await nodeDir.promiseFiles(dirName))
+    .map(f => path.relative(dirName, f))
+  return files
+}
+
+export const storage = async (db, es, application) => {
+  const storage = {
+    attachments: { size: 0, count: 0 }
+  }
+
+  const attachments = await lsAttachments(application)
+  for (const attachment of attachments) {
+    storage.attachments.size += (await fs.promises.stat(attachmentPath(application, attachment))).size
+    storage.attachments.count++
+  }
+  storage.size += storage.attachments.size
+
+  return storage
+}
+
+// After a change that might impact consumed storage, we store the value
+export const updateStorage = async (app, application, deleted = false, checkRemaining = false) => {
+  const db = app.get('db')
+  const es = app.get('es')
+  if (application.draftReason) {
+    console.log(new Error('updateStorage should not be called on a draft dataset'))
+    return
+  }
+  if (!deleted) {
+    await db.collection('applications').updateOne({ id: application.id }, {
+      $set: {
+        storage: await storage(db, es, application)
+      }
+    })
+  }
+  return updateTotalStorage(db, application.owner, checkRemaining)
 }

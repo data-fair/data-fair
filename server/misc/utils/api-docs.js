@@ -10,9 +10,9 @@ export const operationsClasses = {
   },
   applications: {
     list: ['list'],
-    read: ['readDescription', 'readConfig', 'readApiDoc', 'readBaseApp', 'readCapture', 'readPrint'],
+    read: ['readDescription', 'readConfig', 'readApiDoc', 'readBaseApp', 'readCapture', 'readPrint', 'downloadAttachment'],
     readAdvanced: ['readJournal', 'realtime-draft-error'],
-    write: ['writeDescription', 'writeConfig'],
+    write: ['writeDescription', 'writeConfig', 'postAttachment', 'deleteAttachment'],
     admin: ['delete', 'getPermissions', 'setPermissions', 'getKeys', 'setKeys', 'writePublications', 'writePublicationSites']
   },
   catalogs: {

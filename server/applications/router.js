@@ -1,3 +1,4 @@
+import path from 'path'
 import express from 'express'
 import slug from 'slugify'
 import moment from 'moment'
@@ -20,12 +21,17 @@ import * as findUtils from '../misc/utils/find.js'
 import asyncWrap from '../misc/utils/async-handler.js'
 import * as journals from '../misc/utils/journals.js'
 import * as capture from '../misc/utils/capture.js'
-import { clean, refreshConfigDatasetsRefs } from './utils.js'
+import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir } from './utils.js'
 import { findApplications } from './service.js'
 import { syncApplications } from '../datasets/service.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import { validateURLFriendly } from '../misc/utils/validation.js'
 import * as publicationSites from '../misc/utils/publication-sites.js'
+import { checkStorage } from '../datasets/middlewares.js'
+import * as attachments from '../misc/utils/attachments.js'
+import * as clamav from '../misc/utils/clamav.js'
+import { getThumbnail } from '../misc/utils/thumbnails.js'
+import pump from '../misc/utils/pipe.js'
 
 const unlink = util.promisify(fs.unlink)
 const validate = ajv.compile(applicationSchema)
@@ -532,4 +538,57 @@ router.post('/:applicationId/keys', readApplication, permissions.middleware('set
     .then((eventsLog) => eventsLog.default.info('df.applications.writeKeys', `wrote application keys ${application.slug} (${application.id})`, { req, account: application.owner }))
 
   res.send(req.body)
+}))
+
+// attachment files
+router.post('/:applicationId/attachments', readApplication, permissions.middleware('postAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, asyncWrap(async (req, res, next) => {
+  req.body.size = (await fs.promises.stat(req.file.path)).size
+  req.body.updatedAt = moment().toISOString()
+  await updateStorage(req.app, req.application)
+  res.status(200).send(req.body)
+}))
+
+router.get('/:applicationId/attachments/*', readApplication, permissions.middleware('downloadAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
+  // the transform stream option was patched into "send" module using patch-package
+  // res.set('content-disposition', `inline; filename="${req.params['0']}"`)
+
+  const ranges = req.range(1000000)
+  if (Array.isArray(ranges) && ranges.length === 1 && ranges.type === 'bytes') {
+    const range = ranges[0]
+    const filePath = attachmentPath(req.application, req.params[0])
+    if (!await fs.pathExists(filePath)) return res.status(404).send()
+    const stats = await fs.stat(filePath)
+
+    res.setHeader('content-type', 'application/octet-stream')
+    res.setHeader('content-range', `bytes ${range.start}-${range.end}/${stats.size}`)
+    res.setHeader('content-length', (range.end - range.start) + 1)
+    res.status(206)
+    await pump(
+      fs.createReadStream(filePath, { start: range.start, end: range.end }),
+      // res.throttle('static'),
+      res
+    )
+  }
+
+  res.sendFile(
+    req.params['0'],
+    {
+      // transformStream: res.throttle('static'),
+      root: attachmentsDir(req.application),
+      headers: { 'Content-Disposition': `inline; filename="${path.basename(req.params['0'])}"` }
+    }
+  )
+}))
+
+router.delete('/:applicationId/attachments/*', readApplication, permissions.middleware('deleteAttachment', 'write'), asyncWrap(async (req, res, next) => {
+  const filePath = req.params['0']
+  if (filePath.includes('..')) return res.status(400).type('text/plain').send('Unacceptable attachment path')
+  await fs.remove(attachmentPath(req.application, filePath))
+  await updateStorage(req.app, req.application)
+  res.status(204).send()
+}))
+
+router.get('/:applicationId/thumbnail', readApplication, permissions.middleware('readDescription', 'read'), asyncWrap(async (req, res, next) => {
+  if (!req.application.image) return res.status(404).send("dataset doesn't have an image")
+  await getThumbnail(req, res, req.application.image)
 }))
