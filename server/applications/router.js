@@ -21,7 +21,7 @@ import * as findUtils from '../misc/utils/find.js'
 import asyncWrap from '../misc/utils/async-handler.js'
 import * as journals from '../misc/utils/journals.js'
 import * as capture from '../misc/utils/capture.js'
-import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir } from './utils.js'
+import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir, dir } from './utils.js'
 import { findApplications } from './service.js'
 import { syncApplications } from '../datasets/service.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
@@ -359,6 +359,11 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
   } catch (err) {
     console.warn('Failure to remove capture file')
   }
+  try {
+    await fs.remove(dir(application))
+  } catch (err) {
+    console.warn('Failure to remove application directory')
+  }
 
   await import('@data-fair/lib/express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.applications.delete', `deleted application ${application.slug} (${application.id})`, { req, account: application.owner }))
@@ -589,6 +594,6 @@ router.delete('/:applicationId/attachments/*', readApplication, permissions.midd
 }))
 
 router.get('/:applicationId/thumbnail', readApplication, permissions.middleware('readDescription', 'read'), asyncWrap(async (req, res, next) => {
-  if (!req.application.image) return res.status(404).send("dataset doesn't have an image")
+  if (!req.application.image) return res.status(404).send("application doesn't have an image")
   await getThumbnail(req, res, req.application.image)
 }))
