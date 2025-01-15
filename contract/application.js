@@ -46,6 +46,10 @@ export default {
       type: 'string',
       description: 'Detailed description of the application'
     },
+    image: {
+      type: 'string',
+      description: 'URL d\'une image, illustration du jeu de données'
+    },
     applicationName: {
       type: 'string',
       description: 'Identifier of the origin application'
@@ -123,6 +127,47 @@ export default {
     preferLargeDisplay: {
       type: 'boolean',
       default: false
+    },
+    attachments: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['title', 'name'],
+        properties: {
+          title: {
+            type: 'string',
+            title: 'Titre',
+            'x-props': { outlined: true, dense: true }
+          },
+          name: {
+            'x-display': 'hidden',
+            type: 'string',
+            description: 'Name of the file that was used to create or update this attachment'
+          },
+          size: {
+            'x-display': 'hidden',
+            type: 'number',
+            description: 'Size of the file on disk'
+          },
+          mimetype: {
+            'x-display': 'hidden',
+            type: 'string',
+            description: 'Mime type of the file'
+          },
+          updatedAt: {
+            'x-display': 'hidden',
+            type: 'string',
+            description: 'Date of the last update for this attachment',
+            format: 'date-time'
+          },
+          url: {
+            'x-display': 'hidden',
+            readOnly: true,
+            type: 'string',
+            title: 'URL'
+          }
+        }
+      }
     },
     permissions
   }

@@ -3,7 +3,7 @@
 // the rest is read only fields
 
 import application from './application.js'
-const patchKeys = ['configuration', 'url', 'urlDraft', 'description', 'slug', 'title', 'publications', 'publicationSites', 'requestedPublicationSites', 'extras', 'topics', 'preferLargeDisplay']
+const patchKeys = ['configuration', 'url', 'urlDraft', 'description', 'image', 'slug', 'title', 'publications', 'publicationSites', 'requestedPublicationSites', 'extras', 'topics', 'preferLargeDisplay', 'attachments']
 
 const appPatch = {
   title: 'Application patch',
@@ -14,7 +14,8 @@ const appPatch = {
 }
 
 patchKeys.forEach(k => {
-  appPatch.properties[k] = application.properties[k]
+  appPatch.properties[k] = { ...application.properties[k] }
+  appPatch.properties[k].type = ['null', appPatch.properties[k].type]
 })
 
 export default appPatch

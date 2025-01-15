@@ -75,6 +75,15 @@
         return-object
         @input="patch({topics: application.topics})"
       />
+      <v-text-field
+        v-model="application.image"
+        :disabled="!can('writeDescription')"
+        :label="$t('image')"
+        hide-details
+        class="mb-3"
+        clearable
+        @change="patch({image: application.image})"
+      />
     </v-col>
     <v-col
       cols="12"

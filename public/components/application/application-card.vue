@@ -18,7 +18,7 @@
       </v-card-title>
       <v-divider />
       <v-img
-        :src="`${application.href}/capture?updatedAt=${application.updatedAt}`"
+        :src="application.thumbnail || application.image || `${application.href}/capture?updatedAt=${application.updatedAt}`"
         :aspect-ratio="1050 / 450"
       />
       <v-divider />

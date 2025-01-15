@@ -114,6 +114,7 @@
 
     <application-integration-dialog
       :show="showIntegrationDialog"
+      :title="$t('integrate')"
       @hide="showIntegrationDialog = false"
     />
 

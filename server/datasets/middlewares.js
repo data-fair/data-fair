@@ -26,10 +26,10 @@ export const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req
   if (Number.isNaN(contentLength)) throw createError(400, 'Content-Length is not a number')
 
   // @ts-ignore
-  const dataset = req.dataset
+  const resource = req.resource
   const db = req.app.get('db')
-  const owner = dataset ? dataset.owner : usersUtils.owner(req)
-  await checkStorageFn(db, i18n.getLocale(req), owner, dataset, contentLength, overwrite, indexed)
+  const owner = resource ? resource.owner : usersUtils.owner(req)
+  await checkStorageFn(db, i18n.getLocale(req), owner, overwrite && resource, contentLength, indexed)
   next()
 })
 

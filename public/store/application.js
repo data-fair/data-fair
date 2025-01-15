@@ -51,6 +51,7 @@ export default () => ({
     },
     patch (state, patch) {
       for (const key in patch) {
+        console.log('commit patch', key, patch[key])
         Vue.set(state.application, key, patch[key])
       }
     },
@@ -138,9 +139,9 @@ export default () => ({
       try {
         const silent = patch.silent
         delete patch.silent
-        await this.$axios.patch(getters.resourceUrl, patch)
+        const patched = await this.$axios.patch(getters.resourceUrl, patch)
         if (!silent) eventBus.$emit('notification', 'L\'application a été mise à jour.')
-        return true
+        return patched.data
       } catch (error) {
         eventBus.$emit('notification', { error, msg: 'Erreur pendant la mise à jour de l\'application:' })
         return false
@@ -149,6 +150,15 @@ export default () => ({
     async patchAndCommit ({ commit, getters, dispatch }, patch) {
       const patched = await dispatch('patch', patch)
       if (patched) commit('patch', patch)
+    },
+    async patchAndApplyRemoteChange ({ commit, getters, dispatch }, patch) {
+      const patched = await dispatch('patch', patch)
+      if (patched) {
+        Object.keys(patch).forEach(k => {
+          patch[k] = patched[k]
+        })
+        commit('patch', patch)
+      }
     },
     async remove ({ state, getters, dispatch }) {
       try {

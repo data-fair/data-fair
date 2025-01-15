@@ -209,7 +209,7 @@ export default {
       const remoteServiceFilter = `privateAccess=${ownerFilter}`
       return {
         disableAll: !this.can('writeConfig'),
-        context: { owner, ownerFilter, datasetFilter, remoteServiceFilter },
+        context: { owner, ownerFilter, datasetFilter, remoteServiceFilter, attachments: this.application.attachments },
         locale: 'fr',
         rootDisplay: 'expansion-panels',
         // rootDisplay: 'tabs',

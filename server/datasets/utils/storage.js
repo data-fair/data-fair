@@ -15,13 +15,13 @@ const debugLimits = debug('limits')
  * @param {import('mongodb').Db} db
  * @param {string} locale
  * @param {any} owner
- * @param {any} dataset
+ * @param {any} overwriteDataset
  * @param {number} contentLength
  * @param {boolean} overwrite
  * @param {boolean} indexed
  * @returns
  */
-export const checkStorage = async (db, locale, owner, dataset, contentLength, overwrite, indexed = false) => {
+export const checkStorage = async (db, locale, owner, overwriteDataset, contentLength, indexed = false) => {
   const estimatedContentSize = contentLength - 210
 
   /** @type {any} */
@@ -37,11 +37,11 @@ export const checkStorage = async (db, locale, owner, dataset, contentLength, ov
   }
   const remaining = await limits.remaining(db, owner)
   debugInfo.remaining = { ...remaining }
-  if (overwrite && dataset && dataset.storage) {
-    debugInfo.overwriteDataset = dataset.storage
+  if (overwriteDataset && overwriteDataset.storage) {
+    debugInfo.overwriteDataset = overwriteDataset.storage
     // ignore the size of the dataset we are overwriting
-    if (remaining.storage !== -1) remaining.storage += dataset.storage.size
-    if (remaining.indexed !== -1) remaining.indexed += dataset.storage.size
+    if (remaining.storage !== -1) remaining.storage += overwriteDataset.storage.size
+    if (remaining.indexed !== -1) remaining.indexed += overwriteDataset.storage.size
   }
   const storageOk = remaining.storage === -1 || ((remaining.storage - estimatedContentSize) >= 0)
   const indexedOk = !indexed || remaining.indexed === -1 || ((remaining.indexed - estimatedContentSize) >= 0)
@@ -187,6 +187,9 @@ export const updateTotalStorage = async (db, owner, checkRemaining = false) => {
   ]
   const res = await db.collection('datasets').aggregate(aggQuery).toArray()
   const totalStorage = { size: (res[0] && res[0].size) || 0, indexed: (res[0] && res[0].indexed) || 0, count: (res[0] && res[0].count) || 0 }
+
+  const appRes = await db.collection('applications').aggregate(aggQuery).toArray()
+  totalStorage.size += (appRes[0] && appRes[0].size) || 0
 
   await limits.setConsumption(db, owner, 'store_bytes', totalStorage.size)
   await limits.setConsumption(db, owner, 'indexed_bytes', totalStorage.indexed)

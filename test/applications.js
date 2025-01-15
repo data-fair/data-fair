@@ -1,6 +1,15 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import config from 'config'
+import fs from 'node:fs'
+import FormData from 'form-data'
+
+const sendAttachment = async (ax, appId, attachmentName) => {
+  const attachmentForm = new FormData()
+  attachmentForm.append('attachment', fs.readFileSync('./test/resources/' + attachmentName), attachmentName)
+  await ax.post(`/api/v1/applications/${appId}/attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
+  await ax.patch('/api/v1/applications/' + appId, { attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
+}
 
 describe('Applications', () => {
   it('Get applications when not authenticated', async () => {
@@ -204,5 +213,25 @@ describe('Applications', () => {
     assert.deepEqual(res.data.results.map(d => d.title), ['1a', 'aa', 'àb', 'àb', 'bb'])
     res = await ax.get('/api/v1/applications', { params: { select: 'title', raw: true, sort: 'title:-1' } })
     assert.deepEqual(res.data.results.map(d => d.title), ['bb', 'àb', 'àb', 'aa', '1a'])
+  })
+
+  it('Upload a simple attachment on an application', async () => {
+    const ax = global.ax.dmeadus
+    let { data: app } = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
+
+    await sendAttachment(ax, app.id, 'avatar.jpeg')
+
+    const downloadAttachmentRes = await ax.get(`/api/v1/applications/${app.id}/attachments/avatar.jpeg`)
+    assert.equal(downloadAttachmentRes.headers['x-operation'], '{"class":"read","id":"downloadAttachment"}')
+    assert.equal(downloadAttachmentRes.status, 200)
+    assert.equal(downloadAttachmentRes.headers['content-type'], 'image/jpeg')
+    assert.ok(downloadAttachmentRes.headers['last-modified'])
+    await assert.rejects(ax.get(`/api/v1/applications/${app.id}/attachments/avatar.jpeg`, { headers: { 'If-Modified-Since': downloadAttachmentRes.headers['last-modified'] } }), { status: 304 })
+
+    app = (await ax.get(`/api/v1/applications/${app.id}`)).data
+    assert.equal(app.storage.size, 9755)
+
+    const { data: limits } = await ax.get('/api/v1/limits/user/dmeadus0')
+    assert.equal(limits.store_bytes.consumption, 9755)
   })
 })

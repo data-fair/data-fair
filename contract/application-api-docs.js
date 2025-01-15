@@ -214,6 +214,31 @@ export default (application, info) => {
           }
         }
       },
+      '/attachments': {
+        post: {
+          summary: 'Charger une pièce jointe',
+          operationId: 'postAttachment',
+          'x-permissionClass': 'write',
+          tags: ['Métadonnées']
+        }
+      },
+      '/attachments/{attachmentId}': {
+        delete: {
+          summary: 'Supprimer une pièce jointe',
+          operationId: 'deleteAttachment',
+          'x-permissionClass': 'write',
+          tags: ['Métadonnées'],
+          parameters: [{
+            in: 'path',
+            name: 'attachmentId',
+            description: 'Identifiant de la pièce jointe',
+            required: true,
+            schema: {
+              type: 'string'
+            }
+          }]
+        }
+      },
       '/permissions': permissionsDoc
     },
     externalDocs: {
