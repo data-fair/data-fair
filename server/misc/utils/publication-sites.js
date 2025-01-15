@@ -43,11 +43,11 @@ export const applyPatch = async (db, previousResource, resource, user, resourceT
     if (!previousPublicationSites.includes(publicationSite)) {
       const publicationSiteInfo = await getPublicationSiteInfo(db, resource.owner, publicationSite)
       if (!publicationSiteInfo) throw createError(404, 'unknown publication site')
-      if (!user.adminMode && resource.owner.type === 'organization' && user.activeAccount.type === 'organization' && user.activeAccount.id === resource.owner.id && !publicationSiteInfo.department && user.activeAccount.department) {
-        throw createError(403, 'publication site does not belong to user department')
+      if (!user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && user.activeAccount.type === 'organization' && user.activeAccount.id === resource.owner.id && !publicationSiteInfo.department && user.activeAccount.department) {
+        throw createError(403, 'fail to publish: publication site does not belong to user department')
       }
       if (!publicationSiteInfo.settings?.staging && !permissions.can(resourceType + 's', resource, 'writePublicationSites', user)) {
-        throw createError(403, 'publication site requires permission to publish')
+        throw createError(403, 'fail to publish: publication site requires permission to publish')
       }
       const sender = { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
       webhooks.trigger(db, resourceType, resource, { type: `published:${publicationSite}` }, sender)
@@ -59,11 +59,11 @@ export const applyPatch = async (db, previousResource, resource, user, resourceT
   for (const publicationSite of previousPublicationSites) {
     if (!newPublicationSites.includes(publicationSite)) {
       const publicationSiteInfo = await getPublicationSiteInfo(db, resource.owner, publicationSite)
-      if (!user.adminMode && resource.owner.type === 'organization' && user.activeAccount.type === 'organization' && user.activeAccount.id === resource.owner.id && !publicationSiteInfo.department && user.activeAccount.department) {
-        throw createError(403, 'publication site does not belong to user department')
+      if (!user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && user.activeAccount.type === 'organization' && user.activeAccount.id === resource.owner.id && !publicationSiteInfo.department && user.activeAccount.department) {
+        throw createError(403, 'fail to unpublish: publication site does not belong to user department')
       }
       if (publicationSiteInfo && !publicationSiteInfo.settings?.staging && !permissions.can(resourceType + 's', resource, 'writePublicationSites', user)) {
-        throw createError(403, 'publication site requires permission to unpublish')
+        throw createError(403, 'fail to unpublish: publication site requires permission to unpublish')
       }
     }
   }
