@@ -139,7 +139,8 @@ export const lsAttachments = async (application) => {
 
 export const storage = async (db, es, application) => {
   const storage = {
-    attachments: { size: 0, count: 0 }
+    attachments: { size: 0, count: 0 },
+    size: 0
   }
 
   const attachments = await lsAttachments(application)

@@ -553,7 +553,7 @@ router.post('/:applicationId/attachments', readApplication, permissions.middlewa
   res.status(200).send(req.body)
 }))
 
-router.get('/:applicationId/attachments/*', readApplication, permissions.middleware('downloadAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
+router.get('/:applicationId/attachments/*', readApplication, permissions.middleware('downloadAttachment', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   // res.set('content-disposition', `inline; filename="${req.params['0']}"`)
 
