@@ -61,7 +61,7 @@
     "@babel/eslint-parser": "^7.25.9",
     "@commitlint/cli": "^17.5.0",
     "@commitlint/config-conventional": "^17.4.4",
-    "@data-fair/frame": "^0.5.1",
+    "@data-fair/frame": "^0.7.0",
     "@data-fair/sd-vue": "^3.0.1",
     "@hackmd/meta-marked": "^0.5.0",
     "@koumoul/gh-pages-multi": "^0.7.1",
