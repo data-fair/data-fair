@@ -303,7 +303,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
     const refererUrl = new URL(referer)
     const refererDomain = refererUrl.hostname
     const iframeRedirectUrl = new URL(`${req.publicBaseUrl}${req.originalUrl}`)
-    if (refererDomain !== iframeRedirectUrl.hostname && refererDomain !== iframeRedirectUrl.searchParams.get('referer')) {
+    if (refererDomain !== 'localhost' && refererDomain !== iframeRedirectUrl.hostname && refererDomain !== iframeRedirectUrl.searchParams.get('referer')) {
       iframeRedirectUrl.searchParams.set('referer', refererDomain)
       iframeRedirect = iframeRedirectUrl.href
       const { minify } = await import('terser')
