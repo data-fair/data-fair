@@ -86,8 +86,8 @@ describe('thumbnails', () => {
     form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
-    const dataset = res.data
-    await workers.hook('finalizer/' + dataset.id)
+    let dataset = await workers.hook('finalizer/' + res.data.id)
+    assert.ok(dataset.draft.schema.some((field) => field.key === '_attachment_url' && field['x-refersTo'] === 'http://schema.org/image'))
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true } })
     const thumbnail1 = res.data.results[0]._thumbnail
     await assert.rejects(ax.get(res.data.results[0]._thumbnail, { maxRedirects: 0 }), (err) => err.status === 302)
@@ -99,5 +99,9 @@ describe('thumbnails', () => {
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: 'localhost:5601' } })
     assert.equal(thumbnail1.replace('localhost:5600', 'localhost:5601'), res.data.results[0]._thumbnail)
+
+    // remove attachmentsAsImage
+    dataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { attachmentsAsImage: null }, { params: { draft: true } })).data
+    assert.ok(dataset.schema.some((field) => field.key === '_attachment_url' && field['x-refersTo'] === undefined))
   })
 })
