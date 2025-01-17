@@ -1,4 +1,4 @@
-import config from 'config'
+import config from '#config'
 import { text as stream2text } from 'node:stream/consumers'
 import path from 'path'
 import tmp from 'tmp-promise'

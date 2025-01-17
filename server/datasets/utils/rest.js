@@ -1,4 +1,4 @@
-import _config from 'config'
+import config from '#config'
 import crypto from 'node:crypto'
 import fs from 'fs-extra'
 import path from 'path'
@@ -30,7 +30,6 @@ import { tabularTypes } from './types.js'
 import Piscina from 'piscina'
 
 dayjs.extend(duration)
-const config = /** @type {any} */(_config)
 
 export const sheet2csvPiscina = new Piscina({
   filename: path.resolve(import.meta.dirname, '../threads/sheet2csv.js'),

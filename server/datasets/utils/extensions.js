@@ -1,4 +1,4 @@
-import _config from 'config'
+import config from '#config'
 import createError from 'http-errors'
 import i18n from 'i18n'
 import pump from '../../misc/utils/pipe.js'
@@ -23,8 +23,6 @@ import exprEval from '../../../shared/expr-eval.js'
 import { getExtensionKey } from '../../../shared/utils/extensions.js'
 
 export { getExtensionKey } from '../../../shared/utils/extensions.js'
-
-const config = /** @type {any} */(_config)
 
 const debugMasterData = debugLib('master-data')
 const debug = debugLib('extensions')

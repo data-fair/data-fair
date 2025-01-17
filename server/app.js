@@ -1,6 +1,6 @@
 import eventToPromise from 'event-to-promise'
 import express from 'express'
-import config from 'config'
+import config from '#config'
 import memoize from 'memoizee'
 import * as dbUtils from './misc/utils/db.js'
 import * as esUtils from './datasets/es/index.js'

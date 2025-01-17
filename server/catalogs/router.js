@@ -1,5 +1,5 @@
 
-import config from 'config'
+import config from '#config'
 import express from 'express'
 import moment from 'moment'
 import slug from 'slugify'

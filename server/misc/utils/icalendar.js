@@ -1,4 +1,4 @@
-import config from 'config'
+import config from '#config'
 import fs from 'fs-extra'
 import { Readable } from 'stream'
 import * as i18nUtils from '../../i18n/utils.js'

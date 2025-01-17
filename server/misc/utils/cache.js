@@ -1,7 +1,7 @@
 // Caches some data in mongodb
 // Do not use this too much as elasticsearch is a performant backend already,
 // only for specific cases like vector tiles
-import config from 'config'
+import config from '#config'
 import objectHash from 'object-hash'
 import debugLib from 'debug'
 

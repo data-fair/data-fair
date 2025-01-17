@@ -1,5 +1,5 @@
 
-import config from 'config'
+import config from '#config'
 import createError from 'http-errors'
 import geohash from '../../misc/utils/geohash.js'
 import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem } from './commons.js'

@@ -10,7 +10,7 @@ import asyncWrap from '../utils/async-handler.js'
 import * as cacheHeaders from '../utils/cache-headers.js'
 import * as topicsUtils from '../utils/topics.js'
 import * as notifications from '../utils/notifications.js'
-import config from 'config'
+import config from '#config'
 import standardLicenses from '../../../contract/licenses.js'
 import debugLib from 'debug'
 

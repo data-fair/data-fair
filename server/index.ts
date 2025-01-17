@@ -1,4 +1,4 @@
-import config from 'config'
+import config from '#config'
 import * as metrics from './misc/utils/metrics.js'
 import * as app from './app.js'
 

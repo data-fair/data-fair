@@ -1,5 +1,5 @@
 import { Transform } from 'stream'
-import config from 'config'
+import config from '#config'
 import truncateMiddle from 'truncate-middle'
 import * as extensionsUtils from '../utils/extensions.js'
 import * as metrics from '../../misc/utils/metrics.js'

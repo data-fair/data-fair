@@ -1,6 +1,6 @@
 // a midleware to check if the endpoint is called from an application with an unauthenticated readOnly application key
 import requestIp from 'request-ip'
-import config from 'config'
+import config from '#config'
 import asyncWrap from './async-handler.js'
 import * as rateLimiting from './rate-limiting.js'
 

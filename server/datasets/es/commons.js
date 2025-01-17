@@ -1,6 +1,6 @@
 // Logic shared across all of most search and aggregation routes
 
-import config from 'config'
+import config from '#config'
 import createError from 'http-errors'
 import flatten from 'flat'
 import queryParser from 'lucene-query-parser'

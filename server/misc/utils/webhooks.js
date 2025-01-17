@@ -1,6 +1,6 @@
 
 import axios from './axios.js'
-import config from 'config'
+import config from '#config'
 import settingsSchema from '../../../contract/settings.js'
 import * as notifications from './notifications.js'
 import * as permissions from './permissions.js'

@@ -1,4 +1,4 @@
-import _config from 'config'
+import config from '#config'
 import memoize from 'memoizee'
 import path from 'path'
 import fs from 'fs-extra'
@@ -15,8 +15,6 @@ import { ownerDir } from '../datasets/utils/files.js'
 import { updateTotalStorage } from '../datasets/utils/storage.js'
 import nodeDir from 'node-dir'
 import { prepareThumbnailUrl } from '../misc/utils/thumbnails.js'
-
-const config = /** @type {any} */(_config)
 
 export const clean = (application, publicUrl, publicationSite, query = {}) => {
   const select = query.select ? query.select.split(',') : []

@@ -4,8 +4,7 @@
   "description": "",
   "main": "server",
   "scripts": {
-    "test": "NODE_ENV=test EVENTS_LOG_LEVEL=warn mocha --exit --bail --timeout 30000 test/",
-    "test-cover": "nyc npm test",
+    "test": "NODE_ENV=test NODE_OPTIONS=--experimental-strip-types EVENTS_LOG_LEVEL=warn mocha --exit --bail --timeout 30000 test/",
     "test-deps": "docker compose --profile test up -d --wait",
     "coveralls": "nyc report --reporter=text-lcov | coveralls",
     "report": "nyc report --reporter=html",
@@ -13,8 +12,8 @@
     "lint-fix": "eslint --ext js,vue --ignore-path .gitignore --fix .",
     "dev-deps": "docker compose --profile dev up -d --wait",
     "stop-dev-deps": "docker compose --profile dev stop",
-    "dev-server": "DEBUG=upgrade*,i18n*,catalogs*,thumbnails,workers* NODE_ENV=development nodemon server",
-    "dev-server-memory": "DEBUG=upgrade*,i18n*,notifications,worker:* DEBUG_HEAP=* NODE_ENV=development nodemon -x \"node --expose-gc\" server",
+    "dev-server": "DEBUG=upgrade*,i18n*,catalogs*,thumbnails,workers* NODE_ENV=development node --watch --experimental-strip-types server/index.ts",
+    "dev-server-memory": "DEBUG=upgrade*,i18n*,notifications,worker:* DEBUG_HEAP=* NODE_ENV=development node --expose-gc --watch --experimental-strip-types server/index.ts",
     "dev-client": "NODE_ENV=development nuxt",
     "dev-zellij": "zellij --layout .zellij.kdl",
     "build": "nuxt build --no-generate",
@@ -28,6 +27,9 @@
     "prepare": "husky || true",
     "check-types": "tsc",
     "quality": "npm run test-deps && npm run lint && npm run test && npm audit --omit=dev --audit-level=critical"
+  },
+  "imports": {
+    "#config": "./server/config.ts"
   },
   "engines": {
     "node": "v22"
@@ -223,7 +225,6 @@
     "nanoid": "^3.1.22",
     "ngeohash": "^0.6.3",
     "node-dir": "^0.1.17",
-    "nodemon": "^2.0.7",
     "number-abbreviate": "^2.0.0",
     "nuxt-start": "^2.17.1",
     "object-hash": "^2.2.0",

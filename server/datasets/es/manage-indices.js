@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import config from 'config'
+import config from '#config'
 import * as datasetUtils from '../utils/index.js'
 import * as metrics from '../../misc/utils/metrics.js'
 import { aliasName, esProperty } from './commons.js'

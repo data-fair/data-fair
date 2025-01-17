@@ -1,5 +1,5 @@
 import util from 'util'
-import config from 'config'
+import config from '#config'
 import express from 'express'
 import axios from '../misc/utils/axios.js'
 import slug from 'slugify'

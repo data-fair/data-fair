@@ -20,10 +20,8 @@ import * as icalendar from '../misc/utils/icalendar.js'
 import * as xlsx from '../misc/utils/xlsx.js'
 import * as i18nUtils from '../i18n/utils.js'
 import * as metrics from '../misc/utils/metrics.js'
-import _config from 'config'
+import config from '#config'
 import debugLib from 'debug'
-
-const config = /** @type {any} */(_config)
 
 export const eventsPrefix = 'normalize'
 

@@ -1,4 +1,4 @@
-import config from 'config'
+import config from '#config'
 import createError from 'http-errors'
 import useragent from 'useragent'
 import debugLib from 'debug'

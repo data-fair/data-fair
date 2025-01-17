@@ -1,4 +1,4 @@
-import _config from 'config'
+import config from '#config'
 import createError from 'http-errors'
 import i18n from 'i18n'
 import asyncWrap from '../misc/utils/async-handler.js'
@@ -7,8 +7,6 @@ import * as usersUtils from '../misc/utils/users.js'
 import { getOwnerRole } from '../misc/utils/permissions.js'
 import { checkStorage as checkStorageFn } from './utils/storage.js'
 import * as service from './service.js'
-
-const config = /** @type {any} */(_config)
 
 /**
  *

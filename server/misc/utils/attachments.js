@@ -1,5 +1,4 @@
-import _config from 'config'
-
+import config from '#config'
 import debugLib from 'debug'
 import fs from 'fs-extra'
 import multer from 'multer'
@@ -9,7 +8,6 @@ import { metadataAttachmentsDir as datasetAttachmentsDir, metadataAttachmentPath
 import { attachmentsDir as applicationAttachmentsDir, attachmentPath as applicationAttachmentPath } from '../../applications/utils.js'
 import * as limits from './limits.js'
 
-const config = /** @type {any} */(_config)
 const debug = debugLib('attachments')
 const debugLimits = debugLib('limits')
 

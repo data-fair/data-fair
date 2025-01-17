@@ -1,6 +1,6 @@
 
 import debugLib from 'debug'
-import config from 'config'
+import config from '#config'
 import { MongoClient } from 'mongodb'
 
 const debug = debugLib('db')

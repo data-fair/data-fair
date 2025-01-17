@@ -1,7 +1,7 @@
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 import moment from 'moment-timezone'
-import config from 'config'
+import config from '#config'
 import slug from 'slugify'
 
 const ajv = new Ajv()

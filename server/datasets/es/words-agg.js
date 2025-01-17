@@ -1,5 +1,5 @@
 
-import config from 'config'
+import config from '#config'
 import createError from 'http-errors'
 import { prepareQuery, aliasName } from './commons.js'
 import capabilities from '../../../contract/capabilities.js'

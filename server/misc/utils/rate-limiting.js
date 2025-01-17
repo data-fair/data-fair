@@ -1,5 +1,5 @@
 
-import config from 'config'
+import config from '#config'
 import { Transform } from 'node:stream'
 import { RateLimiter, TokenBucket } from '../../../node_modules/limiter/dist/cjs/index.js' // cf https://github.com/jhurliman/node-rate-limiter/issues/80#issuecomment-1649261071
 import requestIp from 'request-ip'

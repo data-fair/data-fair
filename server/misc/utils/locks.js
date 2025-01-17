@@ -1,7 +1,7 @@
 
 import { hostname } from 'node:os'
 import { nanoid } from 'nanoid'
-import config from 'config'
+import config from '#config'
 import debugLib from 'debug'
 
 const debug = debugLib('locks')

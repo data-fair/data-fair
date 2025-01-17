@@ -1,4 +1,4 @@
-import config from 'config'
+import config from '#config'
 import elasticsearch from '@elastic/elasticsearch'
 
 export * from './manage-indices.js'

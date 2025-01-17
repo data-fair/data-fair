@@ -1,5 +1,5 @@
 import fs from 'fs-extra'
-import config from 'config'
+import config from '#config'
 import path from 'path'
 import request from 'request'
 import eventToPromise from 'event-to-promise'

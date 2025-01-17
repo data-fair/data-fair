@@ -6,7 +6,7 @@ import projections from '../../../contract/projections.js'
 import asyncWrap from '../utils/async-handler.js'
 import * as settingsUtils from '../utils/settings.js'
 import * as ajv from '../utils/ajv.js'
-import config from 'config'
+import config from '#config'
 
 const validateApi = ajv.compile('openapi-3.1')
 const router = express.Router()

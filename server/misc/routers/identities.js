@@ -2,7 +2,7 @@
 // Useful both for functionalities and help respect GDPR rules
 
 import express from 'express'
-import config from 'config'
+import config from '#config'
 import fs from 'fs-extra'
 import asyncWrap from '../utils/async-handler.js'
 import * as datasetsService from '../../datasets/service.js'

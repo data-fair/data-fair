@@ -1,4 +1,4 @@
-import _config from 'config'
+import config from '#config'
 import { Histogram } from 'prom-client'
 import * as metrics from '../misc/utils/metrics.js'
 import * as locks from '../misc/utils/locks.js'
@@ -9,8 +9,6 @@ import taskProgress from '../datasets/utils/task-progress.js'
 import { basicTypes, csvTypes } from '../datasets/utils/types.js'
 import moment from 'moment'
 import { spawn } from 'child-process-promise'
-
-const config = /** @type {any} */(_config)
 
 const workersTasksHistogram = new Histogram({
   name: 'df_datasets_workers_tasks',
@@ -321,7 +319,7 @@ async function iter (app, resource, type) {
     endTask = workersTasksHistogram.startTimer({ task: taskKey })
     if (config.worker.spawnTask) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
-      const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task', DATASET_DRAFT: '' + !!resource.draftReason } })
+      const spawnPromise = spawn('node', ['--experimental-strip-types', 'server/index.ts', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task', DATASET_DRAFT: '' + !!resource.draftReason } })
       spawnPromise.childProcess.stdout.on('data', data => {
         data = data.toString()
         console.log(`[${type}/${resource.id}/${taskKey}/stdout] ${data}`)

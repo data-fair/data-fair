@@ -1,6 +1,6 @@
 import * as metrics from '../misc/utils/metrics.js'
 import fs from 'fs-extra'
-import config from 'config'
+import config from '#config'
 import tmp from 'tmp-promise'
 import { CronJob } from 'cron'
 import pump from '../misc/utils/pipe.js'

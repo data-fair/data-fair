@@ -1,5 +1,5 @@
 import express from 'express'
-import config from 'config'
+import config from '#config'
 import moment from 'moment'
 import * as ajv from '../utils/ajv.js'
 import asyncWrap from './async-handler.js'

@@ -1,4 +1,4 @@
-import config from 'config'
+import config from '#config'
 import CacheableLookup from 'cacheable-lookup'
 import AgentKeepAlive from 'agentkeepalive'
 import https from 'https'

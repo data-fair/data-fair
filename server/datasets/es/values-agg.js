@@ -1,4 +1,4 @@
-import config from 'config'
+import config from '#config'
 import createError from 'http-errors'
 import { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } from './commons.js'
 import capabilities from '../../../contract/capabilities.js'

@@ -1,4 +1,4 @@
-import _config from 'config'
+import config from '#config'
 import createError from 'http-errors'
 import equal from 'deep-equal'
 import vocabulary from '../../../contract/vocabulary.json' with { type: 'json' }
@@ -8,7 +8,6 @@ import * as settingsUtils from '../../misc/utils/settings.js'
 import { cleanJsonSchemaProperty } from '../../../shared/schema.js'
 import capabilitiesSchema from '../../../contract/capabilities.js'
 
-const config = /** @type {any} */(_config)
 const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter(key => capabilitiesSchema.properties[key]?.default === false)
 
 /**

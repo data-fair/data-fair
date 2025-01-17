@@ -1,4 +1,4 @@
-import config from 'config'
+import config from '#config'
 import express from 'express'
 import permissionsSchema from '../../../contract/permissions.js'
 import * as apiDocsUtil from './api-docs.js'

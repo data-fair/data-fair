@@ -1,4 +1,4 @@
-import config from 'config'
+import config from '#config'
 import moment from 'moment'
 import axios from '../utils/axios.js'
 import fs from 'fs-extra'

@@ -1,7 +1,7 @@
 // A middleware that accepts an api key from the settings of a user/orga
 // and create a session with a pseudo user
 import crypto from 'crypto'
-import config from 'config'
+import config from '#config'
 import createError from 'http-errors'
 import asyncWrap from '../utils/async-handler.js'
 

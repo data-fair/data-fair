@@ -1,6 +1,6 @@
 
 import path from 'path'
-import config from 'config'
+import config from '#config'
 import slug from 'slugify'
 import { CronJob } from 'cron'
 import * as locks from '../../misc/utils/locks.js'

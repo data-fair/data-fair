@@ -1,7 +1,7 @@
 import fs from 'fs-extra'
 import createError from 'http-errors'
 import { nanoid } from 'nanoid'
-import config from 'config'
+import config from '#config'
 import standardLicenses from '../../../contract/licenses.js'
 import path from 'path'
 import mime from 'mime'

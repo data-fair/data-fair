@@ -1,4 +1,4 @@
-import _config from 'config'
+import config from '#config'
 import path from 'node:path'
 import equal from 'deep-equal'
 import moment from 'moment'
@@ -13,7 +13,6 @@ import * as schemaUtils from './schema.js'
 import datasetPatchSchema from '../../../contract/dataset-patch.js'
 import * as virtualDatasetsUtils from './virtual.js'
 
-const config = /** @type {any} */(_config)
 export const validatePatch = ajv.compile(datasetPatchSchema)
 
 /**

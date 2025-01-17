@@ -5,7 +5,7 @@ import createError from 'http-errors'
 import i18n from 'i18n'
 import fs from 'fs-extra'
 import * as limits from '../../misc/utils/limits.js'
-import config from 'config'
+import config from '#config'
 import debug from 'debug'
 import { dataFiles, lsAttachments, lsMetadataAttachments, attachmentPath, metadataAttachmentPath } from './files.js'
 

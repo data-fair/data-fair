@@ -1,4 +1,4 @@
-import config from 'config'
+import config from '#config'
 import asyncWrap from './misc/utils/async-handler.js'
 import clone from './misc/utils/clone.js'
 

@@ -51,10 +51,8 @@ import { dir, attachmentsDir } from './utils/files.js'
 import { preparePatch, validatePatch } from './utils/patch.js'
 import { updateTotalStorage } from './utils/storage.js'
 import { checkStorage, lockDataset, readDataset } from './middlewares.js'
-import _config from 'config'
+import config from '#config'
 import debugModule from 'debug'
-
-const config = /** @type {any} */(_config)
 
 const validatePost = ajv.compile(datasetPostSchema.properties.body)
 const validateUserNotification = ajv.compile(userNotificationSchema)

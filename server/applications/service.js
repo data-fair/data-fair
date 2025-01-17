@@ -2,8 +2,7 @@
 import * as findUtils from '../misc/utils/find.js'
 import * as permissions from '../misc/utils/permissions.js'
 import { clean } from './utils.js'
-import _config from 'config'
-const config = /** @type {any} */(_config)
+import config from '#config'
 
 const filterFields = {
   url: 'url',

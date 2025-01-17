@@ -5,9 +5,7 @@ import { PromiseSocket } from 'promise-socket'
 import { Counter } from 'prom-client'
 import asyncWrap from './async-handler.js'
 import debugLib from 'debug'
-import _config from 'config'
-
-const config = /** @type {any} */(_config)
+import config from '#config'
 
 const debug = debugLib('clamav')
 

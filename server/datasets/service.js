@@ -1,4 +1,4 @@
-import _config from 'config'
+import config from '#config'
 import debugLib from 'debug'
 import fs from 'fs-extra'
 import path from 'path'
@@ -22,7 +22,6 @@ import * as virtualDatasetsUtils from './utils/virtual.js'
 import { prepareInitFrom } from './utils/init-from.js'
 import i18n from 'i18n'
 
-const config = /** @type {any} */(_config)
 const debugMasterData = debugLib('master-data')
 
 const filterFields = {

@@ -1,4 +1,4 @@
-import config from 'config'
+import config from '#config'
 import metrics from '../misc/utils/metrics.js'
 import debugLib from 'debug'
 import { CronJob } from 'cron'

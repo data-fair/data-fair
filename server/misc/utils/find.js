@@ -1,10 +1,8 @@
-import _config from 'config'
+import config from '#config'
 import createError from 'http-errors'
 import i18n from 'i18n'
 import * as permissions from './permissions.js'
 import * as visibility from './visibility.js'
-
-const config = /** @type {any} */(_config)
 
 // Util functions shared accross the main find (GET on collection) endpoints
 
