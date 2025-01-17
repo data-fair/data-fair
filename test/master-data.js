@@ -302,7 +302,7 @@ describe('Master data management', () => {
 
     const { remoteService } = await initMaster(
       ax,
-      [siretProperty, { key: 'extra', type: 'string' }, { key: 'Dénomination', type: 'string' }],
+      [siretProperty, { key: 'extra', type: 'string' }, { key: 'denomination', 'x-originalName': 'Dénomination', type: 'string' }],
       [{
         id: 'siret',
         title: 'Fetch extra info from siret',
@@ -310,7 +310,7 @@ describe('Master data management', () => {
         input: [{ type: 'equals', property: siretProperty }]
       }]
     )
-    const items = [{ siret: '82898347800011', extra: 'Extra information', Dénomination: 'Dénomination string' }]
+    const items = [{ siret: '82898347800011', extra: 'Extra information', denomination: 'Dénomination string' }]
     await ax.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
     await workers.hook('finalizer/master')
 
@@ -324,7 +324,7 @@ describe('Master data management', () => {
         type: 'remoteService',
         remoteService: remoteService.id,
         action: 'masterData_bulkSearch_siret',
-        select: ['extra', 'Dénomination']
+        select: ['extra', 'denomination']
       }]
     })
     assert.equal(res.status, 200)
@@ -332,12 +332,15 @@ describe('Master data management', () => {
     res = await ax.get(`/api/v1/datasets/${geojsonSlave.id}/full`)
     assert.equal(res.data.type, 'FeatureCollection')
     assert.equal(res.data.features.length, 1)
-    assert.equal(res.data.features[0].properties.label, 'koumoul')
+    assert.equal(res.data.features[0].properties.Siret, '82898347800011')
+    assert.equal(res.data.features[0].properties.Label, 'koumoul')
     assert.equal(res.data.features[0].properties._siret.extra, 'Extra information')
-    assert.equal(res.data.features[0].properties._siret.Dénomination, 'Dénomination string')
+    assert.equal(res.data.features[0].properties._siret.denomination, 'Dénomination string')
     const results = (await ax.get(`/api/v1/datasets/${geojsonSlave.id}/lines`)).data.results
+    assert.equal(results[0].siret, '82898347800011')
+    assert.equal(results[0].label, 'koumoul')
     assert.equal(results[0]['_siret.extra'], 'Extra information')
-    assert.equal(results[0]['_siret.Dénomination'], 'Dénomination string')
+    assert.equal(results[0]['_siret.denomination'], 'Dénomination string')
   })
 
   it('not return calculated properties', async () => {
