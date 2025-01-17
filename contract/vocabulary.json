@@ -537,6 +537,25 @@
     }
   },
   {
+    "id": "idBV",
+    "title": {
+      "fr": "Identifiant de bureau de vote",
+      "en": ""
+    },
+    "description": {
+      "fr": "Identifiant unique national d'un bureau de vote constitué de la concaténation du code INSEE de la commune d'un tiret bas et du code du bureau de vote. Cette information est issue du Répertoire Électoral Unique (REU).",
+      "en": ""
+    },
+    "identifiers": [
+      "https://www.insee.fr/fr/information/3539086/idBV"
+    ],
+    "type": "string",
+    "tag": {
+      "fr": "Référentiels administratifs français",
+      "en": "French administrative master-data"
+    }
+  },
+  {
     "id": "date",
     "title": {
       "fr": "Date d'évènement",
