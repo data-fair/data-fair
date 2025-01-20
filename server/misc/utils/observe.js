@@ -1,4 +1,4 @@
-// TODO: replace this with @data-fair/lib/node/observer.js
+// TODO: replace this with @data-fair/lib-node/observer.js
 
 import client from 'prom-client'
 import debug from 'debug'

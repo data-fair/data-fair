@@ -3,7 +3,6 @@ import { Socket } from 'node:net'
 import createError from 'http-errors'
 import { PromiseSocket } from 'promise-socket'
 import { Counter } from 'prom-client'
-import asyncWrap from './async-handler.js'
 import debugLib from 'debug'
 import config from '#config'
 
@@ -33,10 +32,10 @@ export const ping = async () => {
   if (result !== 'PONG') throw new Error('expected "PONG" in response')
 }
 
-export const middleware = asyncWrap(async (req, res, next) => {
+export const middleware = async (req, res, next) => {
   await checkFiles(req.files, req.user)
   next()
-})
+}
 
 export const checkFiles = async (files, user) => {
   if (!config.clamav.active) return true

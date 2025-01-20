@@ -7,7 +7,6 @@ import * as esUtils from './datasets/es/index.js'
 import * as wsUtils from './misc/utils/ws.js'
 import * as locksUtils from './misc/utils/locks.js'
 import * as observe from './misc/utils/observe.js'
-import asyncWrap from './misc/utils/async-handler.js'
 import * as metrics from './misc/utils/metrics.js'
 import debug from 'debug'
 import EventEmitter from 'node:events'
@@ -119,7 +118,7 @@ export const run = async () => {
     if (process.env.NODE_ENV === 'test') {
       global.memoizedGetPublicationSiteSettings = memoizedGetPublicationSiteSettings
     }
-    app.use('/', asyncWrap(async (req, res, next) => {
+    app.use('/', async (req, res, next) => {
       const u = originalUrl(req)
       const urlParts = { protocol: parsedPublicUrl.protocol, hostname: u.hostname, pathname: basePath.slice(0, -1) }
       if (u.port !== 443 && u.port !== 80) urlParts.port = u.port
@@ -157,7 +156,7 @@ export const run = async () => {
       req.publicBasePath = basePath
       debugDomain('req.publicBasePath', req.publicBasePath)
       next()
-    }))
+    })
 
     // Business routers
     const { middleware: apiKey } = await import('./misc/utils/api-key.js')
@@ -238,7 +237,7 @@ export const run = async () => {
   app.publish = await wsUtils.initPublisher(db)
 
   if (config.mode.includes('server')) {
-    const errorHandler = (await import('@data-fair/lib/express/error-handler.js')).default
+    const errorHandler = (await import('@data-fair/lib-express/error-handler.js')).default
 
     // Error management
     app.use(errorHandler)
@@ -288,7 +287,7 @@ export const run = async () => {
     const task = await (await import('./workers/index.js')).tasks[process.argv[2]]()
     await task.process(app, resource)
   } else if (config.observer.active) {
-    const { startObserver } = await import('@data-fair/lib/node/observer.js')
+    const { startObserver } = await import('@data-fair/lib-node/observer.js')
     await metrics.init(db)
     await startObserver()
   }
@@ -311,7 +310,7 @@ export const stop = async () => {
   await locksUtils.stop(app.get('db'))
 
   if (config.mode !== 'task' && config.observer.active) {
-    const { stopObserver } = await import('@data-fair/lib/node/observer.js')
+    const { stopObserver } = await import('@data-fair/lib-node/observer.js')
     await stopObserver()
   }
 

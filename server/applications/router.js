@@ -18,7 +18,6 @@ import * as baseAppsUtils from '../base-applications/utils.js'
 import * as permissions from '../misc/utils/permissions.js'
 import * as usersUtils from '../misc/utils/users.js'
 import * as findUtils from '../misc/utils/find.js'
-import asyncWrap from '../misc/utils/async-handler.js'
 import * as journals from '../misc/utils/journals.js'
 import * as capture from '../misc/utils/capture.js'
 import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir, dir } from './utils.js'
@@ -77,7 +76,7 @@ const syncDatasets = async (db, newApp, oldApp = {}) => {
 }
 
 // Get the list of applications
-router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
+router.get('', cacheHeaders.listBased, async (req, res) => {
   // @ts-ignore
   const publicationSite = req.publicationSite
   // @ts-ignore
@@ -88,7 +87,7 @@ router.get('', cacheHeaders.listBased, asyncWrap(async (req, res) => {
 
   const response = await findApplications(req.app.get('db'), req.locale, publicationSite, publicBaseUrl, reqQuery, user)
   res.json(response)
-}))
+})
 
 const initNew = async (req) => {
   const application = { ...req.body }
@@ -102,7 +101,7 @@ const initNew = async (req) => {
 }
 
 // Create an application configuration
-router.post('', asyncWrap(async (req, res) => {
+router.post('', async (req, res) => {
   const application = await initNew(req)
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', req.user)) return res.status(403).type('text/plain').send()
   validate(application)
@@ -131,15 +130,15 @@ router.post('', asyncWrap(async (req, res) => {
   }
   application.status = 'created'
 
-  await import('@data-fair/lib/express/events-log.js')
+  await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.applications.create', `created application ${application.slug} (${application.id})`, { req, account: application.owner }))
 
   await journals.log(req.app, application, { type: 'application-created', href: config.publicUrl + '/application/' + application.id }, 'application')
   res.status(201).json(clean(application, req.publicationSite, req.publicBaseUrl))
-}))
+})
 
 // Shared middleware
-const readApplication = asyncWrap(async (req, res, next) => {
+const readApplication = async (req, res, next) => {
   // @ts-ignore
   const publicationSite = req.publicationSite
   // @ts-ignore
@@ -154,19 +153,19 @@ const readApplication = asyncWrap(async (req, res, next) => {
   // @ts-ignore
   req.resource = req.application = application
   next()
-})
+}
 
-const readBaseApp = asyncWrap(async (req, res, next) => {
+const readBaseApp = async (req, res, next) => {
   req.baseApp = await req.app.get('db').collection('base-applications').findOne({ url: req.application.url })
   if (!req.baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
   next()
-})
+}
 
 /*
 // maybe the idea is ok, but this didn't work great, missing in list mode, etc.
 // disabled for now
 
-const setFullUpdatedAt = asyncWrap(async (req, res, next) => {
+const setFullUpdatedAt = async (req, res, next) => {
   const db = req.app.get('db')
   // the dates of last modification / finalization of both the app, the base-app and the datasets it uses
   const updateDates = [req.application.updatedAt]
@@ -186,7 +185,7 @@ const setFullUpdatedAt = asyncWrap(async (req, res, next) => {
   }
   req.application.fullUpdatedAt = updateDates.sort().pop()
   next()
-}) */
+} */
 
 router.use('/:applicationId/permissions', readApplication, permissions.router('applications', 'application', async (req, patchedApplication) => {
   // this callback function is called when the resource becomes public
@@ -200,7 +199,7 @@ router.get('/:applicationId', readApplication, permissions.middleware('readDescr
 })
 
 // PUT used to create or update
-const attemptInsert = asyncWrap(async (req, res, next) => {
+const attemptInsert = async (req, res, next) => {
   const newApplication = await initNew(req)
   newApplication.id = req.params.applicationId
 
@@ -213,7 +212,7 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
     try {
       await req.app.get('db').collection('applications').insertOne(newApplication)
 
-      await import('@data-fair/lib/express/events-log.js')
+      await import('@data-fair/lib-express/events-log.js')
         .then((eventsLog) => eventsLog.default.info('df.applications.create', `created application ${newApplication.slug} (${newApplication.id})`, { req, account: newApplication.owner }))
 
       req.isNewApplication = true
@@ -225,8 +224,8 @@ const attemptInsert = asyncWrap(async (req, res, next) => {
     }
   }
   next()
-})
-router.put('/:applicationId', attemptInsert, readApplication, permissions.middleware('writeDescription', 'write'), asyncWrap(async (req, res) => {
+}
+router.put('/:applicationId', attemptInsert, readApplication, permissions.middleware('writeDescription', 'write'), async (req, res) => {
   const newApplication = req.body
   // preserve all readonly properties, the rest is overwritten
   for (const key of Object.keys(req.application)) {
@@ -239,13 +238,13 @@ router.put('/:applicationId', attemptInsert, readApplication, permissions.middle
   newApplication.created = true
 
   if (!req.isNewApplication) {
-    await import('@data-fair/lib/express/events-log.js')
+    await import('@data-fair/lib-express/events-log.js')
       .then((eventsLog) => eventsLog.default.info('df.applications.update', `updated application ${newApplication.slug} (${newApplication.id})`, { req, account: newApplication.owner }))
   }
 
   await req.app.get('db').collection('applications').replaceOne({ id: req.params.applicationId }, newApplication)
   res.status(200).json(clean(newApplication, req.publicBaseUrl, req.publicationSite))
-}))
+})
 
 const permissionsWritePublications = permissions.middleware('writePublications', 'admin')
 
@@ -254,7 +253,7 @@ router.patch('/:applicationId',
   readApplication,
   permissions.middleware('writeDescription', 'write'),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
-  asyncWrap(async (req, res) => {
+  async (req, res) => {
     const db = req.app.get('db')
     const patch = req.body
     validatePatch(patch)
@@ -288,15 +287,16 @@ router.patch('/:applicationId',
       throw createError(400, req.__('errors.dupSlug'))
     }
 
-    await import('@data-fair/lib/express/events-log.js')
+    await import('@data-fair/lib-express/events-log.js')
       .then((eventsLog) => eventsLog.default.info('df.applications.patch', `patched application ${patchedApplication.slug} (${patchedApplication.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: patchedApplication.owner }))
 
     await syncDatasets(db, patchedApplication, req.application)
     res.status(200).json(clean(patchedApplication, req.publicBaseUrl, req.publicationSite))
-  }))
+  }
+)
 
 // Change ownership of an application
-router.put('/:applicationId/owner', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
+router.put('/:applicationId/owner', readApplication, permissions.middleware('delete', 'admin'), async (req, res) => {
   // @ts-ignore
   const application = req.application
 
@@ -336,17 +336,17 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
     .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })).value
 
   const eventLogMessage = `changed owner of application ${application.slug} (${application.id}), ${application.owner.name} (${application.owner.type}:${application.owner.id}) -> ${req.body.name} (${req.body.type}:${req.body.id})`
-  await import('@data-fair/lib/express/events-log.js')
+  await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.applications.changeOwnerFrom', eventLogMessage, { req, account: application.owner }))
-  await import('@data-fair/lib/express/events-log.js')
+  await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.applications.changeOwnerTo', eventLogMessage, { req, account: req.body }))
 
   await syncDatasets(db, patchedApp)
   res.status(200).json(clean(patchedApp, req.publicBaseUrl, req.publicationSite))
-}))
+})
 
 // Delete an application configuration
-router.delete('/:applicationId', readApplication, permissions.middleware('delete', 'admin'), asyncWrap(async (req, res) => {
+router.delete('/:applicationId', readApplication, permissions.middleware('delete', 'admin'), async (req, res) => {
   // @ts-ignore
   const application = req.application
 
@@ -365,24 +365,24 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
     console.warn('Failure to remove application directory')
   }
 
-  await import('@data-fair/lib/express/events-log.js')
+  await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.applications.delete', `deleted application ${application.slug} (${application.id})`, { req, account: application.owner }))
 
   await syncDatasets(db, req.application)
   res.sendStatus(204)
-}))
+})
 
 // Get only the configuration part of the application
-const getConfig = asyncWrap(async (req, res, next) => {
+const getConfig = async (req, res, next) => {
   await refreshConfigDatasetsRefs(req, req.application, false)
   res.status(200).send(req.application.configuration || {})
-})
+}
 // 2 paths kept for compatibility.. but /config is deprecated because not homogeneous with the structure of the object
 router.get('/:applicationId/config', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased(), getConfig)
 router.get('/:applicationId/configuration', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.resourceBased(), getConfig)
 
 // Update only the configuration part of the application
-const writeConfig = asyncWrap(async (req, res) => {
+const writeConfig = async (req, res) => {
   // @ts-ignore
   const application = req.application
 
@@ -404,22 +404,22 @@ const writeConfig = asyncWrap(async (req, res) => {
     }
   )
 
-  await import('@data-fair/lib/express/events-log.js')
+  await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.applications.writeConfig', `wrote application config ${application.slug} (${application.id})`, { req, account: application.owner }))
 
   await journals.log(req.app, application, { type: 'config-updated' }, 'application')
   await syncDatasets(db, { configuration: req.body })
   res.status(200).json(req.body)
-})
+}
 router.put('/:applicationId/config', readApplication, permissions.middleware('writeConfig', 'write'), writeConfig)
 router.put('/:applicationId/configuration', readApplication, permissions.middleware('writeConfig', 'write'), writeConfig)
 
 // Configuration draft management
-router.get('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'read'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
+router.get('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
   await refreshConfigDatasetsRefs(req, req.application, true)
   res.status(200).send(req.application.configurationDraft || req.application.configuration || {})
-}))
-router.put('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), asyncWrap(async (req, res, next) => {
+})
+router.put('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), async (req, res, next) => {
   // @ts-ignore
   const application = req.application
 
@@ -438,13 +438,13 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
       }
     }
   )
-  await import('@data-fair/lib/express/events-log.js')
+  await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.applications.validateDraft', `vaidated application config draft ${application.slug} (${application.id})`, { req, account: application.owner }))
 
   await journals.log(req.app, application, { type: 'config-draft-updated' }, 'application')
   res.status(200).json(req.body)
-}))
-router.delete('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), asyncWrap(async (req, res, next) => {
+})
+router.delete('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), async (req, res, next) => {
   // @ts-ignore
   const application = req.application
 
@@ -463,28 +463,28 @@ router.delete('/:applicationId/configuration-draft', readApplication, permission
     }
   )
 
-  await import('@data-fair/lib/express/events-log.js')
+  await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.applications.cancelDraft', `cancelled application config draft ${application.slug} (${application.id})`, { req, account: application.owner }))
 
   await journals.log(req.app, application, { type: 'config-draft-cancelled' }, 'application')
   res.status(200).json(req.body)
-}))
+})
 
-router.get('/:applicationId/base-application', readApplication, permissions.middleware('readBaseApp', 'read'), readBaseApp, cacheHeaders.noCache, asyncWrap(async (req, res) => {
+router.get('/:applicationId/base-application', readApplication, permissions.middleware('readBaseApp', 'read'), readBaseApp, cacheHeaders.noCache, async (req, res) => {
   res.send(baseAppsUtils.clean(req.publicBaseUrl, req.baseApp, req.publicBaseUrl, req.query.html === 'true'))
-}))
+})
 
-router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
+router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
   const settings = await req.app.get('db').collection('settings')
     .findOne({ type: req.application.owner.type, id: req.application.owner.id }, { projection: { info: 1 } })
   res.send(applicationAPIDocs(req.application, (settings && settings.info) || {}))
-}))
+})
 
 router.get('/:applicationId/status', readApplication, permissions.middleware('readConfig', 'read'), cacheHeaders.noCache, (req, res) => {
   res.send(req.application.status)
 })
 
-router.get('/:applicationId/journal', readApplication, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
+router.get('/:applicationId/journal', readApplication, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, async (req, res) => {
   const journal = await req.app.get('db').collection('journals').findOne({
     type: 'application',
     id: req.application.id,
@@ -495,10 +495,10 @@ router.get('/:applicationId/journal', readApplication, permissions.middleware('r
   delete journal.owner
   journal.events.reverse()
   res.json(journal.events)
-}))
+})
 
 // Used by applications to declare an error
-router.post('/:applicationId/error', readApplication, permissions.middleware('writeConfig', 'write'), cacheHeaders.noCache, asyncWrap(async (req, res) => {
+router.post('/:applicationId/error', readApplication, permissions.middleware('writeConfig', 'write'), cacheHeaders.noCache, async (req, res) => {
   if (!req.body.message) return res.status(400).type('text/plain').send('Attribut "message" obligatoire')
 
   const referer = req.headers.referer || req.headers.referrer
@@ -515,21 +515,21 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
     await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application')
   }
   res.status(204).send()
-}))
+})
 
-router.get('/:applicationId/capture', readApplication, permissions.middleware('readCapture', 'read'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
+router.get('/:applicationId/capture', readApplication, permissions.middleware('readCapture', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
   await capture.screenshot(req, res)
-}))
-router.get('/:applicationId/print', readApplication, permissions.middleware('readPrint', 'read'), cacheHeaders.resourceBased(), asyncWrap(async (req, res) => {
+})
+router.get('/:applicationId/print', readApplication, permissions.middleware('readPrint', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
   await capture.print(req, res)
-}))
+})
 
 // keys for readonly access to application
-router.get('/:applicationId/keys', readApplication, permissions.middleware('getKeys', 'admin'), asyncWrap(async (req, res) => {
+router.get('/:applicationId/keys', readApplication, permissions.middleware('getKeys', 'admin'), async (req, res) => {
   const applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ _id: req.application.id })
   res.send((applicationKeys && applicationKeys.keys) || [])
-}))
-router.post('/:applicationId/keys', readApplication, permissions.middleware('setKeys', 'admin'), asyncWrap(async (req, res) => {
+})
+router.post('/:applicationId/keys', readApplication, permissions.middleware('setKeys', 'admin'), async (req, res) => {
   // @ts-ignore
   const application = req.application
 
@@ -539,28 +539,28 @@ router.post('/:applicationId/keys', readApplication, permissions.middleware('set
   }
   await req.app.get('db').collection('applications-keys').replaceOne({ _id: application.id }, { _id: application.id, keys: req.body, owner: application.owner }, { upsert: true })
 
-  await import('@data-fair/lib/express/events-log.js')
+  await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.applications.writeKeys', `wrote application keys ${application.slug} (${application.id})`, { req, account: application.owner }))
 
   res.send(req.body)
-}))
+})
 
 // attachment files
-router.post('/:applicationId/attachments', readApplication, permissions.middleware('postAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, asyncWrap(async (req, res, next) => {
+router.post('/:applicationId/attachments', readApplication, permissions.middleware('postAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, async (req, res, next) => {
   req.body.size = (await fs.promises.stat(req.file.path)).size
   req.body.updatedAt = moment().toISOString()
   await updateStorage(req.app, req.application)
   res.status(200).send(req.body)
-}))
+})
 
-router.get('/:applicationId/attachments/*', readApplication, permissions.middleware('downloadAttachment', 'read'), cacheHeaders.noCache, asyncWrap(async (req, res, next) => {
+router.get('/:applicationId/attachments/*attachmentPath', readApplication, permissions.middleware('downloadAttachment', 'read'), cacheHeaders.noCache, async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
-  // res.set('content-disposition', `inline; filename="${req.params['0']}"`)
+  // res.set('content-disposition', `inline; filename="${req.params.attachmentPath}"`)
 
   const ranges = req.range(1000000)
   if (Array.isArray(ranges) && ranges.length === 1 && ranges.type === 'bytes') {
     const range = ranges[0]
-    const filePath = attachmentPath(req.application, req.params[0])
+    const filePath = attachmentPath(req.application, req.params.attachmentPath)
     if (!await fs.pathExists(filePath)) return res.status(404).send()
     const stats = await fs.stat(filePath)
 
@@ -576,24 +576,24 @@ router.get('/:applicationId/attachments/*', readApplication, permissions.middlew
   }
 
   res.sendFile(
-    req.params['0'],
+    req.params.attachmentPath,
     {
       // transformStream: res.throttle('static'),
       root: attachmentsDir(req.application),
-      headers: { 'Content-Disposition': `inline; filename="${path.basename(req.params['0'])}"` }
+      headers: { 'Content-Disposition': `inline; filename="${path.basename(req.params.attachmentPath)}"` }
     }
   )
-}))
+})
 
-router.delete('/:applicationId/attachments/*', readApplication, permissions.middleware('deleteAttachment', 'write'), asyncWrap(async (req, res, next) => {
-  const filePath = req.params['0']
+router.delete('/:applicationId/attachments/*attachmentPath', readApplication, permissions.middleware('deleteAttachment', 'write'), async (req, res, next) => {
+  const filePath = req.params.attachmentPath
   if (filePath.includes('..')) return res.status(400).type('text/plain').send('Unacceptable attachment path')
   await fs.remove(attachmentPath(req.application, filePath))
   await updateStorage(req.app, req.application)
   res.status(204).send()
-}))
+})
 
-router.get('/:applicationId/thumbnail', readApplication, permissions.middleware('readDescription', 'read'), asyncWrap(async (req, res, next) => {
+router.get('/:applicationId/thumbnail', readApplication, permissions.middleware('readDescription', 'read'), async (req, res, next) => {
   if (!req.application.image) return res.status(404).send("application doesn't have an image")
   await getThumbnail(req, res, req.application.image)
-}))
+})

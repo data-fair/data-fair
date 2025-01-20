@@ -733,7 +733,7 @@ export const deleteLine = async (req, res, next) => {
   if (operation._error) return res.status(operation._status).send(operation._error)
   await commitSingleLine(req.app, dataset, req.params.lineId)
 
-  await import('@data-fair/lib/express/events-log.js')
+  await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
   // TODO: delete the attachment if it is the primary key ?
@@ -757,7 +757,7 @@ export const createOrUpdateLine = async (req, res, next) => {
   if (operation._error) return res.status(operation._status).send(operation._error)
   await commitSingleLine(req.app, dataset, req.body._id)
 
-  await import('@data-fair/lib/express/events-log.js')
+  await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
   const line = getLineFromOperation(operation)
@@ -776,7 +776,7 @@ export const patchLine = async (req, res, next) => {
   if (operation._error) return res.status(operation._status).send(operation._error)
   await commitSingleLine(req.app, dataset, fullLine._id)
 
-  await import('@data-fair/lib/express/events-log.js')
+  await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
   const line = getLineFromOperation(operation)
@@ -794,7 +794,7 @@ export const deleteAllLines = async (req, res, next) => {
   const indexName = await esUtils.initDatasetIndex(esClient, req.dataset)
   await esUtils.switchAlias(esClient, req.dataset, indexName)
 
-  await import('@data-fair/lib/express/events-log.js')
+  await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
@@ -923,7 +923,7 @@ export const bulkLines = async (req, res, next) => {
       }
     }
 
-    await import('@data-fair/lib/express/events-log.js')
+    await import('@data-fair/lib-express/events-log.js')
       .then((eventsLog) => eventsLog.default.info('df.datasets.rest.bulkLines', `applied operations in bulk to dataset ${dataset.slug} (${dataset.id}), ${JSON.stringify(summary)}`, { req, account: dataset.owner }))
 
     res.write(JSON.stringify(summary, null, 2))

@@ -9,7 +9,6 @@ import axios from '../misc/utils/axios.js'
 import * as parse5 from 'parse5'
 import pump from '../misc/utils/pipe.js'
 import CacheableLookup from 'cacheable-lookup'
-import asyncWrap from '../misc/utils/async-handler.js'
 import * as findUtils from '../misc/utils/find.js'
 import * as permissions from '../misc/utils/permissions.js'
 import * as serviceWorkers from '../misc/utils/service-workers.js'
@@ -30,7 +29,7 @@ const loginHtml = fs.readFileSync(path.join(import.meta.dirname, './resources/lo
 
 const brandEmbed = config.brand.embed && parse5.parseFragment(config.brand.embed)
 
-const setResource = asyncWrap(async (req, res, next) => {
+const setResource = async (req, res, next) => {
   // @ts-ignore
   const publicationSite = req.publicationSite
   // @ts-ignore
@@ -81,9 +80,9 @@ const setResource = asyncWrap(async (req, res, next) => {
   // @ts-ignore
   req.application = req.resource = application
   next()
-})
+}
 
-router.get('/:applicationId/manifest.json', setResource, asyncWrap(async (req, res) => {
+router.get('/:applicationId/manifest.json', setResource, async (req, res) => {
   if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchingApplicationKey) {
     return res.status(403).type('text/plain').send()
   }
@@ -112,7 +111,7 @@ router.get('/:applicationId/manifest.json', setResource, asyncWrap(async (req, r
       }
     })
   })
-}))
+})
 
 // Login is a special small UI page on /app/appId/login
 // this is so that we expose a minimalist password based auth in the scope of the current application
@@ -191,7 +190,7 @@ if (inIframe()) {
 
 /** @type {string} */
 let minifiedIframeRedirectSrc
-router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => {
+router.all('/:applicationId/*extraPath', setResource, async (req, res, next) => {
   const db = req.app.get('db')
 
   if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchingApplicationKey) {
@@ -229,7 +228,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   // merge incoming an target URL elements
   const incomingUrl = new URL('http://host' + req.url)
   const targetUrl = new URL(cleanApplicationUrl.replace(config.applicationsPrivateMapping[0], config.applicationsPrivateMapping[1]))
-  let extraPath = req.params['0']
+  let extraPath = '/' + req.params.extraPath
   if (extraPath === '') extraPath = '/index.html'
   else if (incomingUrl.pathname.endsWith('/')) extraPath += '/index.html'
   targetUrl.pathname = path.join(targetUrl.pathname, extraPath)
@@ -382,7 +381,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   res.set('cache-control', 'private, max-age=0, must-revalidate')
   res.set('pragma', 'no-cache')
   res.send(parse5.serialize(document))
-}))
+})
 
 const deprecatedProxy = async (cleanApplicationUrl, targetUrl, req, res) => {
   const options = {

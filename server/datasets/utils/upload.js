@@ -7,7 +7,6 @@ import resolvePath from 'resolve-path'
 import datasetSchema from '../../../contract/dataset.js'
 import * as datasetUtils from './index.js'
 import { tmpDir, fsyncFile } from './files.js'
-import asyncWrap from '../../misc/utils/async-handler.js'
 import promisifyMiddleware from '../../misc/utils/promisify-middleware.js'
 import { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } from './types.js'
 import debugLib from 'debug'
@@ -129,9 +128,9 @@ export const getFormBody = (body) => {
   return body
 }
 
-export const fsyncFiles = asyncWrap(async (req, res, next) => {
+export const fsyncFiles = async (req, res, next) => {
   for (const file of req.files || []) {
     await fsyncFile(file.path)
   }
   next()
-})
+}

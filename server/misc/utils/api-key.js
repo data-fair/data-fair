@@ -3,7 +3,6 @@
 import crypto from 'crypto'
 import config from '#config'
 import createError from 'http-errors'
-import asyncWrap from '../utils/async-handler.js'
 
 export const readApiKey = async (db, rawApiKey, scope, asAccount, req) => {
   if (req?.resource?._readApiKey && (req.resource._readApiKey.current === rawApiKey || req.resource._readApiKey.previous === rawApiKey)) {
@@ -66,9 +65,9 @@ export const readApiKey = async (db, rawApiKey, scope, asAccount, req) => {
 }
 
 export const middleware = (scope) => {
-  return asyncWrap(async (req, res, next) => {
+  return async (req, res, next) => {
     const reqApiKey = req.get('x-apiKey') || req.get('x-api-key') || req.query.apiKey
     if (reqApiKey) req.user = await readApiKey(req.app.get('db'), reqApiKey, scope, req.get('x-account') || req.query.account, req)
     next()
-  })
+  }
 }

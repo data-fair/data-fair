@@ -1,7 +1,6 @@
 import config from '#config'
 import createError from 'http-errors'
 import i18n from 'i18n'
-import asyncWrap from '../misc/utils/async-handler.js'
 import * as locks from '../misc/utils/locks.js'
 import * as usersUtils from '../misc/utils/users.js'
 import { getOwnerRole } from '../misc/utils/permissions.js'
@@ -15,7 +14,7 @@ import * as service from './service.js'
  * @returns
  */
 // @ts-ignore
-export const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req, res, next) => {
+export const checkStorage = (overwrite, indexed = false) => async (req, res, next) => {
   // @ts-ignore
   if (!req.user) throw createError(401)
   if (process.env.NO_STORAGE_CHECK === 'true') return next()
@@ -29,7 +28,7 @@ export const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req
   const owner = resource ? resource.owner : usersUtils.owner(req)
   await checkStorageFn(db, i18n.getLocale(req), owner, overwrite && resource, contentLength, indexed)
   next()
-})
+}
 
 // Shared middleware to apply a lock on the modified resource
 /**
@@ -37,7 +36,7 @@ export const checkStorage = (overwrite, indexed = false) => asyncWrap(async (req
  * @param {boolean | ((patch: any) => boolean)} _shouldLock
  * @returns
  */
-export const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, next) => {
+export const lockDataset = (_shouldLock = true) => async (req, res, next) => {
   const db = req.app.get('db')
   // @ts-ignore
   const shouldLock = typeof _shouldLock === 'function' ? _shouldLock(req.body, req.query) : _shouldLock
@@ -56,7 +55,7 @@ export const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, ne
     }
   }
   throw createError(409, `Une opération bloquante est déjà en cours sur le jeu de données ${datasetId}.`)
-})
+}
 
 // Shared middleware to read dataset in db
 // also checks that the dataset is in a state compatible with some action
@@ -65,7 +64,7 @@ export const lockDataset = (_shouldLock = true) => asyncWrap(async (req, res, ne
  * @param {{acceptedStatuses?: string[] | ((body: any, dataset: any) => string[] | null), fillDescendants?: boolean, alwaysDraft?: boolean, acceptMissing?: boolean, acceptInitialDraft?: boolean}} fillDescendants
  * @returns
  */
-export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing, acceptInitialDraft } = {}) => asyncWrap(async (req, res, next) => {
+export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing, acceptInitialDraft } = {}) => async (req, res, next) => {
   // @ts-ignore
   const publicationSite = req.publicationSite
   // @ts-ignore
@@ -111,4 +110,4 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
   req.datasetFull = datasetFull
 
   next()
-})
+}

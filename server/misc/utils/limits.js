@@ -2,7 +2,6 @@ import express from 'express'
 import config from '#config'
 import moment from 'moment'
 import * as ajv from '../utils/ajv.js'
-import asyncWrap from './async-handler.js'
 import * as dbUtils from './db.js'
 
 const limitTypeSchema = { type: 'object', properties: { limit: { type: 'number' }, consumption: { type: 'number' } } }
@@ -113,7 +112,7 @@ const isAccountMember = (req, res, next) => {
 }
 
 // Endpoint for customers service to create/update limits
-router.post('/:type/:id', isSuperAdmin, asyncWrap(async (req, res, next) => {
+router.post('/:type/:id', isSuperAdmin, async (req, res, next) => {
   const db = req.app.get('db')
   req.body.type = req.params.type
   req.body.id = req.params.id
@@ -127,17 +126,17 @@ router.post('/:type/:id', isSuperAdmin, asyncWrap(async (req, res, next) => {
   await db.collection('limits')
     .replaceOne({ type: req.params.type, id: req.params.id }, req.body, { upsert: true })
   res.send(req.body)
-}))
+})
 
 // A user can get limits information for himself only
-router.get('/:type/:id', isAccountMember, asyncWrap(async (req, res, next) => {
+router.get('/:type/:id', isAccountMember, async (req, res, next) => {
   const limits = await getLimits(req.app.get('db'), { type: req.params.type, id: req.params.id })
   if (!limits) return res.status(404).send()
   delete limits._id
   res.send(limits)
-}))
+})
 
-router.get('/', isSuperAdmin, asyncWrap(async (req, res, next) => {
+router.get('/', isSuperAdmin, async (req, res, next) => {
   const filter = {}
   if (req.query.type) filter.type = req.query.type
   if (req.query.id) filter.id = req.query.id
@@ -148,4 +147,4 @@ router.get('/', isSuperAdmin, asyncWrap(async (req, res, next) => {
     .limit(10000)
     .toArray()
   res.send({ results, count: results.length })
-}))
+})

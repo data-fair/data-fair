@@ -6,7 +6,6 @@ import slug from 'slugify'
 import createError from 'http-errors'
 import settingSchema from '../../../contract/settings.js'
 import * as permissions from '../utils/permissions.js'
-import asyncWrap from '../utils/async-handler.js'
 import * as cacheHeaders from '../utils/cache-headers.js'
 import * as topicsUtils from '../utils/topics.js'
 import * as notifications from '../utils/notifications.js'
@@ -81,12 +80,12 @@ function isOwnerMember (req, res, next) {
 }
 
 // read settings as owner
-router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, asyncWrap(async (req, res) => {
+router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, async (req, res) => {
   const settings = req.app.get('db').collection('settings')
   const result = await settings
     .findOne(req.ownerFilter, { projection: { _id: 0, id: 0, type: 0 } })
   res.status(200).send(result || {})
-}))
+})
 
 const fillSettings = (owner, user, settings) => {
   Object.assign(settings, owner)
@@ -105,7 +104,7 @@ const fillSettings = (owner, user, settings) => {
 }
 
 // update settings as owner
-router.put('/:type/:id', isOwnerAdmin, asyncWrap(async (req, res) => {
+router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
   const db = req.app.get('db')
   fillSettings(req.owner, req.user, req.body)
   validate(req.body)
@@ -142,8 +141,7 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async (req, res) => {
       if (!topic.id) topic.id = nanoid()
     }
   }
-
-  const oldSettings = (await settings.findOneAndReplace(req.ownerFilter, req.body, { upsert: true })).value
+  const oldSettings = (await settings.findOneAndReplace(req.ownerFilter, req.body, { upsert: true }))
 
   if (req.body.topics) {
     await topicsUtils.updateTopics(db, req.owner, (oldSettings && oldSettings.topics) || [], req.body.topics)
@@ -152,31 +150,31 @@ router.put('/:type/:id', isOwnerAdmin, asyncWrap(async (req, res) => {
   delete req.body.type
   delete req.body.id
   res.status(200).send({ ...req.body, apiKeys: fullApiKeys })
-}))
+})
 
 // Get topics list as owner
-router.get('/:type/:id/topics', isOwnerMember, asyncWrap(async (req, res) => {
+router.get('/:type/:id/topics', isOwnerMember, async (req, res) => {
   const settings = req.app.get('db').collection('settings')
   const result = await settings.findOne(req.ownerFilter)
   res.status(200).send((result && result.topics) || [])
-}))
+})
 
 // Get licenses list as anyone
-router.get('/:type/:id/licenses', cacheHeaders.noCache, asyncWrap(async (req, res) => {
+router.get('/:type/:id/licenses', cacheHeaders.noCache, async (req, res) => {
   const settings = req.app.get('db').collection('settings')
   const result = await settings.findOne(req.ownerFilter)
   res.status(200).send([].concat(standardLicenses.map(l => ({ href: l.href, title: l.title })), (result && result.licenses) || []))
-}))
+})
 
 // Get datasets metadata settings as owner
-router.get('/:type/:id/datasets-metadata', isOwnerMember, asyncWrap(async (req, res) => {
+router.get('/:type/:id/datasets-metadata', isOwnerMember, async (req, res) => {
   const settings = req.app.get('db').collection('settings')
   const result = await settings.findOne(req.ownerFilter)
   res.status(200).send((result && result.datasetsMetadata) || {})
-}))
+})
 
 // Get publication sites as owner
-router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async (req, res) => {
+router.get('/:type/:id/publication-sites', isOwnerMember, async (req, res) => {
   const db = req.app.get('db')
   const filter = [req.ownerFilter]
   if (req.owner.department) {
@@ -195,9 +193,9 @@ router.get('/:type/:id/publication-sites', isOwnerMember, asyncWrap(async (req, 
   }
   if (!req.user) return res.status(401).type('text/plain').send()
   res.status(200).send(publicationSites)
-}))
+})
 // create/update publication sites as owner (used by data-fair-portals to sync portals)
-router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async (req, res) => {
+router.post('/:type/:id/publication-sites', isOwnerAdmin, async (req, res) => {
   debugPublicationSites('post site', req.body)
   const db = req.app.get('db')
   let settings = await db.collection('settings').findOne(req.ownerFilter, { projection: { _id: 0 } })
@@ -237,9 +235,9 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, asyncWrap(async (req, 
   validate(settings, errors => debugPublicationSites('bad settings after site update', settings, errors))
   await db.collection('settings').replaceOne(req.owner, settings, { upsert: true })
   res.status(200).send(req.body)
-}))
+})
 // delete publication sites as owner (used by data-fair-portals to sync portals)
-router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, asyncWrap(async (req, res) => {
+router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, async (req, res) => {
   debugPublicationSites('delete site', req.params)
   const db = req.app.get('db')
   let settings = await db.collection('settings').findOne(req.ownerFilter, { projection: { _id: 0 } })
@@ -255,6 +253,6 @@ router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, as
   await db.collection('datasets').updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })
   await db.collection('applications').updateMany({ publicationSites: ref }, { $pull: { publicationSites: ref } })
   res.status(200).send(req.body)
-}))
+})
 
 export default router

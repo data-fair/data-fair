@@ -1,7 +1,6 @@
 // a midleware to check if the endpoint is called from an application with an unauthenticated readOnly application key
 import requestIp from 'request-ip'
 import config from '#config'
-import asyncWrap from './async-handler.js'
 import * as rateLimiting from './rate-limiting.js'
 
 const matchingHost = (req) => {
@@ -10,7 +9,7 @@ const matchingHost = (req) => {
   return false
 }
 
-export default asyncWrap(async (req, res, next) => {
+export default async (req, res, next) => {
   const referer = req.headers.referer || req.headers.referrer
   if (!referer) return next()
   let refererUrl
@@ -119,4 +118,4 @@ export default asyncWrap(async (req, res, next) => {
     }
   }
   next()
-})
+}

@@ -6,7 +6,7 @@ import { Gauge } from 'prom-client'
 export const init = async (db) => {
   // global metrics based on db connection
 
-  const { servicePromRegistry } = await import('@data-fair/lib/node/observer.js')
+  const { servicePromRegistry } = await import('@data-fair/lib-node/observer.js')
 
   // eslint-disable-next-line no-new
   new Gauge({
@@ -52,7 +52,7 @@ export const init = async (db) => {
  * @param {any} message
  */
 export const internalError = (code, message) => {
-  return import('@data-fair/lib/node/observer.js').then(({ internalError }) => {
+  return import('@data-fair/lib-nodeobserver.js').then(({ internalError }) => {
     internalError(code, message)
   })
 }

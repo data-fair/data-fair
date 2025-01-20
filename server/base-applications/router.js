@@ -8,7 +8,6 @@ import createError from 'http-errors'
 import Extractor from 'html-extractor'
 import i18n from 'i18n'
 import * as i18nUtils from '../i18n/utils.js'
-import asyncWrap from '../misc/utils/async-handler.js'
 import * as findUtils from '../misc/utils/find.js'
 import * as baseAppsUtils from './utils.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
@@ -101,7 +100,7 @@ async function syncBaseApp (db, baseApp) {
   await db.collection('applications').updateMany({ urlDraft: baseApp.url }, { $set: { baseAppDraft: baseAppReference } })
 }
 
-router.post('', asyncWrap(async (req, res) => {
+router.post('', async (req, res) => {
   const db = req.app.get('db')
   if (!req.body.url || Object.keys(req.body).length !== 1) {
     return res.status(400).type('text/plain').send(req.__('Initializing a base application only accepts the "url" part.'))
@@ -110,9 +109,9 @@ router.post('', asyncWrap(async (req, res) => {
   const fullBaseApp = await initBaseApp(db, baseApp)
   syncBaseApp(db, fullBaseApp)
   res.send(fullBaseApp)
-}))
+})
 
-router.patch('/:id', asyncWrap(async (req, res) => {
+router.patch('/:id', async (req, res) => {
   const db = req.app.get('db')
   if (!req.user || !req.user.adminMode) return res.status(403).type('text/plain').send()
   const patch = req.body
@@ -121,7 +120,7 @@ router.patch('/:id', asyncWrap(async (req, res) => {
   if (!storedBaseApp) return res.status(404).send()
   syncBaseApp(db, storedBaseApp)
   res.send(storedBaseApp)
-}))
+})
 
 const getQuery = (req, showAll = false) => {
   const query = { $and: [{ deprecated: { $ne: true } }] }
@@ -151,7 +150,7 @@ const getQuery = (req, showAll = false) => {
 }
 
 // Get the list. Non admin users can only see the public and non deprecated ones.
-router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
+router.get('', cacheHeaders.noCache, async (req, res) => {
   const db = req.app.get('db')
   const { query, privateAccess } = getQuery(req)
   if (req.query.applicationName) query.$and.push({ $or: [{ applicationName: req.query.applicationName }, { 'meta.application-name': req.query.applicationName }] })
@@ -249,9 +248,9 @@ router.get('', cacheHeaders.noCache, asyncWrap(async (req, res) => {
   }
 
   res.send({ count, results })
-}))
+})
 
-router.get('/:id/icon', asyncWrap(async (req, res, next) => {
+router.get('/:id/icon', async (req, res, next) => {
   const db = req.app.get('db')
   const { query } = getQuery(req, req.user && req.user.adminMode)
   query.$and.push({ id: req.params.id })
@@ -259,8 +258,8 @@ router.get('/:id/icon', asyncWrap(async (req, res, next) => {
   if (!baseApp) return res.status(404).send()
   const iconUrl = baseApp.url.replace(/\/$/, '') + '/icon.png'
   await getThumbnail(req, res, iconUrl)
-}))
-router.get('/:id/thumbnail', asyncWrap(async (req, res, next) => {
+})
+router.get('/:id/thumbnail', async (req, res, next) => {
   const db = req.app.get('db')
   const { query } = getQuery(req, req.user && req.user.adminMode)
   query.$and.push({ id: req.params.id })
@@ -268,4 +267,4 @@ router.get('/:id/thumbnail', asyncWrap(async (req, res, next) => {
   if (!baseApp) return res.status(404).send()
   const imageUrl = baseApp.image || baseApp.url.replace(/\/$/, '') + '/thumbnail.png'
   await getThumbnail(req, res, imageUrl)
-}))
+})

@@ -2,13 +2,12 @@
 // for now we create something similar based on recently updated datasets and applications
 
 import express from 'express'
-import asyncWrap from '../utils/async-handler.js'
 import * as findUtils from '../utils/find.js'
 
 const router = express.Router()
 export default router
 
-router.get('', asyncWrap(async (req, res) => {
+router.get('', async (req, res) => {
   const db = req.app.get('db')
   const query = findUtils.query(req, { status: 'status' })
   const size = findUtils.pagination(req.query)[1]
@@ -33,4 +32,4 @@ router.get('', asyncWrap(async (req, res) => {
   res.send({
     results
   })
-}))
+})

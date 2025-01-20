@@ -4,7 +4,6 @@
 import express from 'express'
 import config from '#config'
 import fs from 'fs-extra'
-import asyncWrap from '../utils/async-handler.js'
 import * as datasetsService from '../../datasets/service.js'
 import { ownerDir } from '../../datasets/utils/files.js'
 
@@ -21,7 +20,7 @@ router.use((req, res, next) => {
 const collectionNames = ['applications', 'datasets', 'catalogs', 'applications-keys', 'journals']
 
 // notify a name change
-router.post('/:type/:id', asyncWrap(async (req, res) => {
+router.post('/:type/:id', async (req, res) => {
   const identity = { ...req.params, name: req.body.name }
 
   for (const c of collectionNames) {
@@ -57,10 +56,10 @@ router.post('/:type/:id', asyncWrap(async (req, res) => {
   await req.app.get('db').collection('limits').updateOne({ type: identity.type, id: identity.id }, { $set: { name: identity.name } })
 
   res.send()
-}))
+})
 
 // Remove resources owned, permissions and anonymize created and updated
-router.delete('/:type/:id', asyncWrap(async (req, res) => {
+router.delete('/:type/:id', async (req, res) => {
   const identity = req.params
 
   const datasetsCursor = req.app.get('db').collection('datasets').find({ 'owner.type': identity.type, 'owner.id': identity.id })
@@ -95,10 +94,10 @@ router.delete('/:type/:id', asyncWrap(async (req, res) => {
   await fs.remove(ownerDir(identity))
 
   res.send()
-}))
+})
 
 // Ask for a report of every piece of data in the service related to an identity
-router.get('/:type/:id/report', asyncWrap(async (req, res) => {
+router.get('/:type/:id/report', async (req, res) => {
   const collections = [{ id: 'remote-services', title: 'Configurations de services' }, { id: 'applications', title: 'Configurations d\'applications' }, { id: 'datasets', title: 'Jeux de données' }]
   const report = {
     owns: [],
@@ -130,4 +129,4 @@ router.get('/:type/:id/report', asyncWrap(async (req, res) => {
     }
   }
   res.send(report)
-}))
+})

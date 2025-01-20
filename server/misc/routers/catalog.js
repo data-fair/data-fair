@@ -2,7 +2,6 @@ import express from 'express'
 import createError from 'http-errors'
 import i18n from 'i18n'
 import mime from 'mime'
-import asyncWrap from '../utils/async-handler.js'
 import * as findUtils from '../utils/find.js'
 import * as datasetUtils from '../../datasets/utils/index.js'
 import * as permissions from '../../misc/utils/permissions.js'
@@ -20,7 +19,7 @@ router.use((req, res, next) => {
   next()
 })
 
-router.get('/datasets', asyncWrap(async (req, res) => {
+router.get('/datasets', async (req, res) => {
   const datasets = req.app.get('db').collection('datasets')
   req.resourceType = 'datasets'
 
@@ -54,15 +53,15 @@ router.get('/datasets', asyncWrap(async (req, res) => {
   else response.results = []
 
   res.json(response)
-}))
+})
 
-router.get('/api-docs.json', asyncWrap(async (req, res) => {
+router.get('/api-docs.json', async (req, res) => {
   const settings = await req.app.get('db').collection('settings')
     .findOne({ type: req.publicationSite.owner.type, id: req.publicationSite.owner.id }, { projection: { info: 1 } })
   res.json(catalogApiDocs(req.publicBaseUrl, req.publicationSite, (settings && settings.info) || {}))
-}))
+})
 
-router.get('/dcat', asyncWrap(async (req, res) => {
+router.get('/dcat', async (req, res) => {
   // mostly useful for harvesting by data.gouv.fr
   // cf https://doc.data.gouv.fr/moissonnage/dcat/
 
@@ -176,4 +175,4 @@ router.get('/dcat', asyncWrap(async (req, res) => {
   }
   res.type('application/ld+json')
   res.json(result)
-}))
+})

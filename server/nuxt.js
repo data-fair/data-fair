@@ -1,9 +1,8 @@
 import config from '#config'
-import asyncWrap from './misc/utils/async-handler.js'
-import clone from './misc/utils/clone.js'
+import clone from '@data-fair/lib-utils/clone.js'
 
 export default async () => {
-  const trackEmbed = asyncWrap(async (req, res, next) => {
+  const trackEmbed = async (req, res, next) => {
     if (!req.url.startsWith('/embed/')) return next()
     const [resourceType, resourceId, embedView] = req.url.replace('/embed/', '').split(/[/?]/)
     if (resourceType === 'dataset') {
@@ -18,7 +17,7 @@ export default async () => {
       }
     }
     next()
-  })
+  }
   if (config.proxyNuxt) {
     const { createProxyMiddleware } = await import('http-proxy-middleware')
     // in dev mode the nuxt dev server is already running, we re-expose it
