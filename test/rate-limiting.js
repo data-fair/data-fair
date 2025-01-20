@@ -16,7 +16,7 @@ describe('rate limiting', () => {
     // a public dataset of about 100KB
     const tmpFile = await tmp.file({ postfix: '.csv' })
     const csvContent = await fs.readFile('test/resources/datasets/dataset1.csv')
-    for (let i = 0; i < 700; i++) {
+    for (let i = 0; i < 600; i++) {
       await fs.write(tmpFile.fd, csvContent)
     }
 
@@ -24,31 +24,31 @@ describe('rate limiting', () => {
     await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
       { classes: ['read'] }
     ])
-    assert.ok(dataset.file.size > 100000, 'content should be larger than 100KB')
+    assert.ok(dataset.file.size > 90000 && dataset.file.size < 110000, 'content should be around 100KB, got ' + dataset.file.size)
 
-    // raw data access by authenticated user
+    // static data access by authenticated user (400 kb/s defined in config/test.cjs)
     let t0 = new Date().getTime()
     await ax.get(`/api/v1/datasets/${dataset.id}/raw`)
+    await ax.get(`/api/v1/datasets/${dataset.id}/full`)
+    await ax.get(`/api/v1/datasets/${dataset.id}/raw`)
+    await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     let t1 = new Date().getTime()
-    assert.ok((t1 - t0 > 150) && (t1 - t0 < 350), 'throttled download should be around 200ms, got ' + (t1 - t0))
+    assert.ok((t1 - t0 > 500) && (t1 - t0 < 1500), 'throttled download should be around 1s, got ' + (t1 - t0))
 
-    // raw data access by anonymous user
+    // static data access by anonymous user (200 kb/s defined in config/test.cjs)
     t0 = new Date().getTime()
     await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/raw`)
+    await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/full`)
+    await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/raw`)
+    await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/full`)
     t1 = new Date().getTime()
-    assert.ok((t1 - t0 > 500) && (t1 - t0 < 800), 'throttled download should be slightly more than 500ms, got ' + (t1 - t0))
+    assert.ok((t1 - t0 > 1200) && (t1 - t0 < 3000), 'throttled download should be around 2s, got ' + (t1 - t0))
 
-    // extended data access by authenticated user
-    t0 = new Date().getTime()
-    await ax.get(`/api/v1/datasets/${dataset.id}/full`)
-    t1 = new Date().getTime()
-    assert.ok((t1 - t0 > 150) && (t1 - t0 < 350), 'throttled download should be around 200ms, got ' + (t1 - t0))
-
-    // queried data access by authenticated user
+    // dynamic data access by authenticated user (200 kb/s defined in config/test.cjs)
     t0 = new Date().getTime()
     await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { size: 500 } })
     t1 = new Date().getTime()
-    assert.ok((t1 - t0 > 500) && (t1 - t0 < 800), 'throttled download should be slightly more than 500ms, got ' + (t1 - t0))
+    assert.ok((t1 - t0 > 250) && (t1 - t0 < 900), 'throttled download should be around 400ms, got ' + (t1 - t0))
   })
 
   it('should block requests when there are too many', async () => {
