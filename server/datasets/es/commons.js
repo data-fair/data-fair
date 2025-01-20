@@ -2,7 +2,7 @@
 
 import config from 'config'
 import createError from 'http-errors'
-import flatten from 'flat'
+import { flatten } from 'flat'
 import queryParser from 'lucene-query-parser'
 import sanitizeHtml from '../../../shared/sanitize-html.js'
 import truncateMiddle from 'truncate-middle'

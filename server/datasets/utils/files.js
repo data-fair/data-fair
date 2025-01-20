@@ -119,7 +119,7 @@ export const dataFiles = async (dataset, publicBaseUrl = config.publicUrl) => {
   const results = []
   if (dataset.originalFile) {
     if (!files.includes(dataset.originalFile.name)) {
-      console.warn('Original data file not found', dir, dataset.originalFile.name)
+      console.warn('Original data file not found', d, dataset.originalFile.name)
     } else {
       results.push({
         name: dataset.originalFile.name,
@@ -131,7 +131,7 @@ export const dataFiles = async (dataset, publicBaseUrl = config.publicUrl) => {
     if (dataset.file) {
       if (dataset.file.name !== dataset.originalFile.name) {
         if (!files.includes(dataset.file.name)) {
-          console.warn('Normalized data file not found', dir, dataset.file.name)
+          console.warn('Normalized data file not found', d, dataset.file.name)
         } else {
           results.push({
             name: dataset.file.name,
@@ -145,7 +145,7 @@ export const dataFiles = async (dataset, publicBaseUrl = config.publicUrl) => {
       if (dataset.extensions && !!dataset.extensions.find(e => e.active)) {
         const name = `${parsed.name}-full${parsed.ext}`
         if (!files.includes(name)) {
-          console.warn('Full data file not found', path.join(dir, name))
+          console.warn('Full data file not found', d, name)
         } else {
           results.push({
             name,
@@ -160,7 +160,7 @@ export const dataFiles = async (dataset, publicBaseUrl = config.publicUrl) => {
   if (dataset.isRest && dataset?.exports?.restToCSV?.active && dataset?.exports?.restToCSV?.lastExport) {
     const name = `${dataset.id}-last-export.csv`
     if (!files.includes(name)) {
-      console.warn('Exported data file not found', path.join(dir, name))
+      console.warn('Exported data file not found', d, name)
     } else {
       results.push({
         name,
