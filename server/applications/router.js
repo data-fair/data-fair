@@ -280,8 +280,8 @@ router.patch('/:applicationId',
 
     let patchedApplication
     try {
-      patchedApplication = (await db.collection('applications')
-        .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })).value
+      patchedApplication = await db.collection('applications')
+        .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })
     } catch (err) {
       if (err.code !== 11000) throw err
       throw createError(400, req.__('errors.dupSlug'))
@@ -332,8 +332,8 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
   })
   await permissions.initResourcePermissions(patch, preservePermissions)
 
-  const patchedApp = (await db.collection('applications')
-    .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })).value
+  const patchedApp = await db.collection('applications')
+    .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })
 
   const eventLogMessage = `changed owner of application ${application.slug} (${application.id}), ${application.owner.name} (${application.owner.type}:${application.owner.id}) -> ${req.body.name} (${req.body.type}:${req.body.id})`
   await import('@data-fair/lib-express/events-log.js')
@@ -557,10 +557,11 @@ router.get('/:applicationId/attachments/*attachmentPath', readApplication, permi
   // the transform stream option was patched into "send" module using patch-package
   // res.set('content-disposition', `inline; filename="${req.params.attachmentPath}"`)
 
+  const relFilePath = path.join(...req.params.attachmentPath)
   const ranges = req.range(1000000)
   if (Array.isArray(ranges) && ranges.length === 1 && ranges.type === 'bytes') {
     const range = ranges[0]
-    const filePath = attachmentPath(req.application, req.params.attachmentPath)
+    const filePath = attachmentPath(req.application, relFilePath)
     if (!await fs.pathExists(filePath)) return res.status(404).send()
     const stats = await fs.stat(filePath)
 
@@ -576,19 +577,17 @@ router.get('/:applicationId/attachments/*attachmentPath', readApplication, permi
   }
 
   res.sendFile(
-    req.params.attachmentPath,
+    relFilePath,
     {
       // transformStream: res.throttle('static'),
       root: attachmentsDir(req.application),
-      headers: { 'Content-Disposition': `inline; filename="${path.basename(req.params.attachmentPath)}"` }
+      headers: { 'Content-Disposition': `inline; filename="${path.basename(relFilePath)}"` }
     }
   )
 })
 
 router.delete('/:applicationId/attachments/*attachmentPath', readApplication, permissions.middleware('deleteAttachment', 'write'), async (req, res, next) => {
-  const filePath = req.params.attachmentPath
-  if (filePath.includes('..')) return res.status(400).type('text/plain').send('Unacceptable attachment path')
-  await fs.remove(attachmentPath(req.application, filePath))
+  await fs.remove(attachmentPath(req.application, path.join(...req.params.attachmentPath)))
   await updateStorage(req.app, req.application)
   res.status(204).send()
 })

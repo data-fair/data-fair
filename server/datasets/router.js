@@ -268,8 +268,8 @@ router.put('/:datasetId/owner', readDataset(), apiKeyMiddleware, permissions.mid
   })
   await permissions.initResourcePermissions(patch, preservePermissions)
 
-  const patchedDataset = (await req.app.get('db').collection('datasets')
-    .findOneAndUpdate({ id: req.dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
+  const patchedDataset = await req.app.get('db').collection('datasets')
+    .findOneAndUpdate({ id: req.dataset.id }, { $set: patch }, { returnDocument: 'after' })
 
   // Move all files
   if (dir(req.dataset) !== dir(patchedDataset)) {
@@ -406,7 +406,7 @@ const updateDatasetRoute = async (req, res, next) => {
   // TODO: replace this with a string draftValidationMode ?
   const draft = req.query.draft === 'true'
   // force the file upload middleware to write files in draft directory, as updated datasets always go into draft mode
-  req.query.draft = 'true'
+  req._draft = true
 
   const db = req.app.get('db')
   const locale = i18n.getLocale(req)
@@ -505,8 +505,8 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
   await journals.log(req.app, dataset, { type: 'draft-cancelled' }, 'dataset')
-  const patchedDataset = (await db.collection('datasets')
-    .findOneAndUpdate({ id: dataset.id }, { $unset: { draft: '' } }, { returnDocument: 'after' })).value
+  const patchedDataset = await db.collection('datasets')
+    .findOneAndUpdate({ id: dataset.id }, { $unset: { draft: '' } }, { returnDocument: 'after' })
   await fs.remove(dir(dataset))
   await esUtils.deleteIndex(req.app.get('es'), dataset)
 
@@ -545,7 +545,6 @@ router.use('/:datasetId/own/:owner', readWritableDataset, isRest, apiKeyMiddlewa
       .send('Les opérations de gestion des lignes par propriétaires ne sont pas supportées pour ce jeu de données.')
   }
   const [type, id, department] = req.params.owner.split(':')
-  req.query.owner = req.params.owner
   req.linesOwner = { type, id, department }
   if (!['organization', 'user'].includes(req.linesOwner.type)) return res.status(400).type('text/plain').send('ownerType must be user or organization')
   if (!req.user) return res.status(401).type('text/plain').send('auth required')
@@ -661,29 +660,34 @@ const readLines = async (req, res) => {
 
   // if the output format is geo make sure geoshape is present
   // also manage a default content for geo tiles
-  if (['geojson', 'mvt', 'vt', 'pbf'].includes(req.query.format)) {
-    req.query.select = (req.query.select ? req.query.select : tiles.defaultSelect(req.dataset).join(','))
-    if (!req.query.select.includes('_geoshape') && req.dataset.schema.find(p => p.key === '_geoshape')) req.query.select += ',_geoshape'
-    if (!req.query.select.includes('_geopoint')) req.query.select += ',_geopoint'
+  const query = { ...req.query }
+
+  // case of own lines query
+  if (req.params.owner) query.owner = req.params.owner
+
+  if (['geojson', 'mvt', 'vt', 'pbf'].includes(query.format)) {
+    query.select = (query.select ? query.select : tiles.defaultSelect(req.dataset).join(','))
+    if (!query.select.includes('_geoshape') && req.dataset.schema.find(p => p.key === '_geoshape')) query.select += ',_geoshape'
+    if (!query.select.includes('_geopoint')) query.select += ',_geopoint'
   }
-  if (req.query.format === 'wkt') {
-    if (req.dataset.schema.find(p => p.key === '_geoshape')) req.query.select = '_geoshape'
-    else req.query.select = '_geopoint'
+  if (query.format === 'wkt') {
+    if (req.dataset.schema.find(p => p.key === '_geoshape')) query.select = '_geoshape'
+    else query.select = '_geopoint'
   }
 
-  const sampling = req.query.sampling || 'neighbors'
+  const sampling = query.sampling || 'neighbors'
   if (!['max', 'neighbors'].includes(sampling)) return res.status(400).type('text/plain').send('Sampling can be "max" or "neighbors"')
 
-  const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
+  const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(query.format)
 
   let xyz
   if (vectorTileRequested) {
     // default is smaller (see es/commons) for other format, but we want filled tiles by default
-    req.query.size = req.query.size || config.elasticsearch.maxPageSize + ''
+    query.size = query.size || config.elasticsearch.maxPageSize + ''
     // sorting by rand provides more homogeneous distribution in tiles
-    req.query.sort = req.query.sort || '_rand'
-    if (!req.query.xyz) return res.status(400).type('text/plain').send('xyz parameter is required for vector tile format.')
-    xyz = req.query.xyz.split(',').map(Number)
+    query.sort = query.sort || '_rand'
+    if (!query.xyz) return res.status(400).type('text/plain').send('xyz parameter is required for vector tile format.')
+    xyz = query.xyz.split(',').map(Number)
   }
 
   observe.reqStep(req, 'prepare')
@@ -696,7 +700,7 @@ const readLines = async (req, res) => {
       sampling,
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
-      query: req.query
+      query
     })
     observe.reqStep(req, 'checkTileCache')
     if (value) {
@@ -711,32 +715,32 @@ const readLines = async (req, res) => {
   if (vectorTileRequested) {
     res.setHeader('x-tilesmode', 'es')
 
-    const requestedSize = Number(req.query.size)
+    const requestedSize = Number(query.size)
     if (sampling === 'neighbors') {
       // count docs in neighboring tiles to perform intelligent sampling
       try {
-        const mainCount = await countWithCache(req, db, req.query)
+        const mainCount = await countWithCache(req, db, query)
         if (mainCount === 0) return res.status(204).send()
         if (mainCount <= requestedSize / 20) {
           // no sampling on low density tiles
-          req.query.size = requestedSize
+          query.size = requestedSize
         } else {
           const neighborsCounts = await Promise.all([
             // the 4 that share an edge
-            countWithCache(req, db, { ...req.query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
-            countWithCache(req, db, { ...req.query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
-            countWithCache(req, db, { ...req.query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
-            countWithCache(req, db, { ...req.query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') }),
+            countWithCache(req, db, { ...query, xyz: [xyz[0] - 1, xyz[1], xyz[2]].join(',') }),
+            countWithCache(req, db, { ...query, xyz: [xyz[0] + 1, xyz[1], xyz[2]].join(',') }),
+            countWithCache(req, db, { ...query, xyz: [xyz[0], xyz[1] - 1, xyz[2]].join(',') }),
+            countWithCache(req, db, { ...query, xyz: [xyz[0], xyz[1] + 1, xyz[2]].join(',') }),
             // Using corners also yields better results
-            countWithCache(req, db, { ...req.query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
-            countWithCache(req, db, { ...req.query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
-            countWithCache(req, db, { ...req.query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
-            countWithCache(req, db, { ...req.query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
+            countWithCache(req, db, { ...query, xyz: [xyz[0] - 1, xyz[1] - 1, xyz[2]].join(',') }),
+            countWithCache(req, db, { ...query, xyz: [xyz[0] + 1, xyz[1] - 1, xyz[2]].join(',') }),
+            countWithCache(req, db, { ...query, xyz: [xyz[0] - 1, xyz[1] + 1, xyz[2]].join(',') }),
+            countWithCache(req, db, { ...query, xyz: [xyz[0] + 1, xyz[1] + 1, xyz[2]].join(',') })
           ])
           const maxCount = Math.max(mainCount, ...neighborsCounts)
           const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
           const sizeFilter = mainCount * sampleRate
-          req.query.size = Math.min(sizeFilter, requestedSize)
+          query.size = Math.min(sizeFilter, requestedSize)
 
           // only add _geoshape to tile if it is not going to be huge
           // otherwise features will be shown as points
@@ -744,7 +748,7 @@ const readLines = async (req, res) => {
             const meanFeatureSize = Math.round(req.dataset.storage.indexed.size / req.dataset.count)
             const expectedTileSize = meanFeatureSize * maxCount
             // arbitrary limit at 50mo
-            if (expectedTileSize > (50 * 1000 * 1000)) req.query.select = req.query.select.replace(',_geoshape', '')
+            if (expectedTileSize > (50 * 1000 * 1000)) query.select = query.select.replace(',_geoshape', '')
           }
         }
       } catch (err) {
@@ -757,7 +761,7 @@ const readLines = async (req, res) => {
 
   let esResponse
   try {
-    esResponse = await esUtils.search(req.app.get('es'), req.dataset, req.query, req.publicBaseUrl, req.query.html === 'true')
+    esResponse = await esUtils.search(req.app.get('es'), req.dataset, query, req.publicBaseUrl, query.html === 'true')
   } catch (err) {
     await manageESError(req, err)
   }
@@ -766,13 +770,13 @@ const readLines = async (req, res) => {
   // manage pagination based on search_after, cd https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
 
   // eslint-disable-next-line no-unused-vars
-  const [_, size] = findUtils.pagination(req.query)
+  const [_, size] = findUtils.pagination(query)
 
   let nextLinkURL
   if (size && esResponse.hits.hits.length === size) {
     nextLinkURL = new URL(`${req.publicBaseUrl}/api/v1/datasets/${req.dataset.id}/lines`)
-    for (const key of Object.keys(req.query)) {
-      if (key !== 'page') nextLinkURL.searchParams.set(key, req.query[key])
+    for (const key of Object.keys(query)) {
+      if (key !== 'page') nextLinkURL.searchParams.set(key, query[key])
     }
     const lastHit = esResponse.hits.hits[esResponse.hits.hits.length - 1]
     nextLinkURL.searchParams.set('after', JSON.stringify(lastHit.sort).slice(1, -1))
@@ -781,17 +785,17 @@ const readLines = async (req, res) => {
     res.set('Link', link.toString())
   }
 
-  if (req.query.format === 'geojson') {
+  if (query.format === 'geojson') {
     const geojson = geo.result2geojson(esResponse)
     observe.reqStep(req, 'result2geojson')
     // geojson format benefits from bbox info
-    geojson.bbox = (await esUtils.bboxAgg(req.app.get('es'), req.dataset, { ...req.query })).bbox
+    geojson.bbox = (await esUtils.bboxAgg(req.app.get('es'), req.dataset, { ...query })).bbox
     observe.reqStep(req, 'bboxAgg')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.geojson"`)
     return res.status(200).send(geojson)
   }
 
-  if (req.query.format === 'wkt') {
+  if (query.format === 'wkt') {
     const wkt = geo.result2wkt(esResponse)
     observe.reqStep(req, 'result2wkt')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.wkt"`)
@@ -811,24 +815,24 @@ const readLines = async (req, res) => {
 
   const result = { total: esResponse.hits.total.value }
   if (nextLinkURL) result.next = nextLinkURL.href
-  if (req.query.collapse) result.totalCollapse = esResponse.aggregations.totalCollapse.value
+  if (query.collapse) result.totalCollapse = esResponse.aggregations.totalCollapse.value
   result.results = []
   for (let i = 0; i < esResponse.hits.hits.length; i++) {
     // avoid blocking the event loop
     if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
-    result.results.push(esUtils.prepareResultItem(esResponse.hits.hits[i], req.dataset, req.query, req.publicBaseUrl))
+    result.results.push(esUtils.prepareResultItem(esResponse.hits.hits[i], req.dataset, query, req.publicBaseUrl))
   }
 
   observe.reqStep(req, 'prepareResultItems')
 
-  if (req.query.format === 'csv') {
+  if (query.format === 'csv') {
     const csv = await outputs.results2csv(req, result.results)
     observe.reqStep(req, 'results2csv')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.csv"`)
     return res.status(200).send(csv)
   }
 
-  if (req.query.format === 'xlsx') {
+  if (query.format === 'xlsx') {
     JSON.stringify(result.results)
     observe.reqStep(req, 'stringify')
     const sheet = await outputs.results2sheet(req, result.results)
@@ -836,7 +840,7 @@ const readLines = async (req, res) => {
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.xlsx"`)
     return res.status(200).send(sheet)
   }
-  if (req.query.format === 'ods') {
+  if (query.format === 'ods') {
     const sheet = await outputs.results2sheet(req, result.results, 'ods')
     observe.reqStep(req, 'results2ods')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.ods"`)
@@ -1035,7 +1039,7 @@ router.get('/:datasetId/min/:fieldKey', readDataset({ fillDescendants: true }), 
 router.get('/:datasetId/attachments/*attachmentPath', readDataset(), applicationKey, apiKeyMiddleware, permissions.middleware('downloadAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   res.download(
-    req.params.attachmentPath,
+    path.join(...req.params.attachmentPath),
     null,
     {
       transformStream: res.throttle('static'),
@@ -1050,7 +1054,7 @@ router.get('/:datasetId/data-files', readDataset(), apiKeyMiddleware, permission
 })
 router.get('/:datasetId/data-files/*filePath', readDataset(), apiKeyMiddleware, permissions.middleware('downloadDataFile', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
-  res.download(req.params.filePath, null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
+  res.download(path.join(...req.params.filePath), null, { transformStream: res.throttle('static'), root: dir(req.dataset) })
 })
 
 // Special attachments referenced in dataset metadatas
@@ -1063,9 +1067,9 @@ router.post('/:datasetId/metadata-attachments', readDataset(), apiKeyMiddleware,
 router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), apiKeyMiddleware, permissions.middleware('downloadMetadataAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
   // res.set('content-disposition', `inline; filename="${req.params.attachmentPath}"`)
-
+  const relFilePath = path.join(...req.params.attachmentPath)
   const attachmentsTargets = clone(req.dataset._attachmentsTargets || [])
-  const attachmentTarget = attachmentsTargets.find(a => a.name === req.params.attachmentPath)
+  const attachmentTarget = attachmentsTargets.find(a => a.name === relFilePath)
   if (attachmentTarget) {
     // special case for remote attachments, we monitor them as if they were API call and not static files
     req.operation.track = 'readDataAPI'
@@ -1098,7 +1102,7 @@ router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), ap
         await stream2text(response.data)
       } else {
         res.set('x-remote-status', 'DOWNLOAD')
-        const attachmentPath = datasetUtils.metadataAttachmentPath(req.dataset, req.params.attachmentPath)
+        const attachmentPath = datasetUtils.metadataAttachmentPath(req.dataset, relFilePath)
         // creating empty file before streaming seems to fix some weird bugs with NFS
         await fs.ensureFile(attachmentPath)
         await pump(
@@ -1116,7 +1120,7 @@ router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), ap
   const ranges = req.range(1000000)
   if (Array.isArray(ranges) && ranges.length === 1 && ranges.type === 'bytes') {
     const range = ranges[0]
-    const filePath = datasetUtils.metadataAttachmentPath(req.dataset, req.params.attachmentPath)
+    const filePath = datasetUtils.metadataAttachmentPath(req.dataset, relFilePath)
     if (!await fs.pathExists(filePath)) return res.status(404).send()
     const stats = await fs.stat(filePath)
 
@@ -1132,20 +1136,18 @@ router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), ap
   }
 
   res.sendFile(
-    req.params.attachmentPath,
+    relFilePath,
     {
       transformStream: res.throttle('static'),
       root: datasetUtils.metadataAttachmentsDir(req.dataset),
-      headers: { 'Content-Disposition': `inline; filename="${path.basename(req.params.attachmentPath)}"` }
+      headers: { 'Content-Disposition': `inline; filename="${path.basename(relFilePath)}"` }
     }
   )
   // res.sendFile(req.params.attachmentPath)
 })
 
 router.delete('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), apiKeyMiddleware, permissions.middleware('deleteMetadataAttachment', 'write'), async (req, res, next) => {
-  const filePath = req.params.attachmentPath
-  if (filePath.includes('..')) return res.status(400).type('text/plain').send('Unacceptable attachment path')
-  await fs.remove(datasetUtils.metadataAttachmentPath(req.dataset, filePath))
+  await fs.remove(datasetUtils.metadataAttachmentPath(req.dataset, path.join(...req.params.attachmentPath)))
   await datasetUtils.updateStorage(req.app, req.dataset)
   res.status(204).send()
 })
@@ -1154,13 +1156,14 @@ router.delete('/:datasetId/metadata-attachments/*attachmentPath', readDataset(),
 router.get('/:datasetId/raw', readDataset(), apiKeyMiddleware, permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
   // a special case for superadmins.. handy but quite dangerous for the db load
   if (req.dataset.isRest && req.user.adminMode) {
-    req.query.select = req.query.select || ['_id'].concat(req.dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)).join(',')
+    const query = { ...req.query }
+    query.select = query.select || ['_id'].concat(req.dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)).join(',')
     res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.csv"`)
     // add BOM for excel, cf https://stackoverflow.com/a/17879474
     res.write('\ufeff')
     await pump(
       ...await restDatasetsUtils.readStreams(req.app.get('db'), req.dataset),
-      ...outputs.csvStreams(req.dataset, req.query),
+      ...outputs.csvStreams(req.dataset, query),
       res
     )
     return

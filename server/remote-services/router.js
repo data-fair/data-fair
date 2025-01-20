@@ -157,8 +157,8 @@ router.patch('/:remoteServiceId', readService, async (req, res) => {
     patch.actions = computeActions(patch.apiDoc)
   }
 
-  const patchedService = (await req.app.get('db').collection('remote-services')
-    .findOneAndUpdate({ id: req.params.remoteServiceId }, { $set: mongoEscape.escape(patch, true) }, { returnDocument: 'after' })).value
+  const patchedService = await req.app.get('db').collection('remote-services')
+    .findOneAndUpdate({ id: req.params.remoteServiceId }, { $set: mongoEscape.escape(patch, true) }, { returnDocument: 'after' })
   debugMasterData('patched remote service')
   res.status(200).json(clean(mongoEscape.unescape(patchedService, req.user)))
 })
@@ -252,7 +252,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.middleware('remote
   // merge incoming and target URL elements
   const incomingUrl = new URL('http://host' + req.url)
   const targetUrl = new URL(remoteService.server.replace(config.remoteServicesPrivateMapping[0], config.remoteServicesPrivateMapping[1]))
-  const extraPath = '/' + req.params.proxyPath
+  const extraPath = '/' + path.join(...req.params.proxyPath)
   targetUrl.pathname = path.join(targetUrl.pathname, extraPath)
   targetUrl.search = incomingUrl.searchParams
 

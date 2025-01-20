@@ -190,7 +190,7 @@ if (inIframe()) {
 
 /** @type {string} */
 let minifiedIframeRedirectSrc
-router.all('/:applicationId/*extraPath', setResource, async (req, res, next) => {
+router.all(['/:applicationId/*extraPath', '/:applicationId'], setResource, async (req, res, next) => {
   const db = req.app.get('db')
 
   if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchingApplicationKey) {
@@ -228,16 +228,16 @@ router.all('/:applicationId/*extraPath', setResource, async (req, res, next) => 
   // merge incoming an target URL elements
   const incomingUrl = new URL('http://host' + req.url)
   const targetUrl = new URL(cleanApplicationUrl.replace(config.applicationsPrivateMapping[0], config.applicationsPrivateMapping[1]))
-  let extraPath = '/' + req.params.extraPath
-  if (extraPath === '') extraPath = '/index.html'
-  else if (incomingUrl.pathname.endsWith('/')) extraPath += '/index.html'
-  targetUrl.pathname = path.join(targetUrl.pathname, extraPath)
+  const extraPathParts = req.params.extraPath ? [...req.params.extraPath] : []
+  if (!req.params.extraPath || incomingUrl.pathname.endsWith('/')) extraPathParts.push('index.html')
+  targetUrl.pathname = path.join(targetUrl.pathname, ...extraPathParts)
   targetUrl.search = incomingUrl.searchParams
 
-  if (extraPath !== '/index.html') {
+  if (extraPathParts.length !== 1 || extraPathParts[0] !== 'index.html') {
     // TODO: check the logs in production, if this line never appears then we can cleanup the code
     console.warn('serving anything else than /index.html from application-proxy is deprecated', targetUrl.href)
-    return await deprecatedProxy(cleanApplicationUrl, targetUrl, req, res)
+    await deprecatedProxy(cleanApplicationUrl, targetUrl, req, res)
+    return
   }
   res.setHeader('x-resource', JSON.stringify({ type: req.resourceType, id: req.resource.id, title: encodeURIComponent(req.resource.title) }))
   res.setHeader('x-operation', JSON.stringify({ class: 'read', id: 'openApplication', track: 'openApplication' }))
@@ -422,11 +422,11 @@ const deprecatedProxy = async (cleanApplicationUrl, targetUrl, req, res) => {
         reject(err)
       }
     })
-
-    cacheAppReq.on('error', err => reject(err))
-    cacheAppReq.on('request', req => {
-      req.on('error', err => reject(err))
-      req.end()
+    cacheAppReq.on('error', err => {
+      console.log('REJECT', err)
+      reject(err)
     })
+    cacheAppReq.on('error', err => reject(err))
+    cacheAppReq.end()
   })
 }

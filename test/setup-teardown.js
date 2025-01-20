@@ -53,6 +53,7 @@ before('global mocks', async () => {
   nock('http://monapp1.com/')
     .persist()
     .get('/index.html').query(true).reply(200, html)
+    .get('/dir1/info.txt').query(true).reply(200, 'into txt dir1')
     .get('/config-schema.json').query(true).reply(200, {
       type: 'object',
       required: ['datasets'],

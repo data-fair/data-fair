@@ -88,8 +88,8 @@ async function initBaseApp (db, app) {
 
   patch.datasetsFilters = patch.datasetsFilters || []
 
-  const storedBaseApp = (await db.collection('base-applications')
-    .findOneAndUpdate({ id: patch.id }, { $set: patch }, { upsert: true, returnDocument: 'after' })).value
+  const storedBaseApp = await db.collection('base-applications')
+    .findOneAndUpdate({ id: patch.id }, { $set: patch }, { upsert: true, returnDocument: 'after' })
   baseAppsUtils.clean(config.publicUrl, storedBaseApp)
   return storedBaseApp
 }
@@ -115,8 +115,8 @@ router.patch('/:id', async (req, res) => {
   const db = req.app.get('db')
   if (!req.user || !req.user.adminMode) return res.status(403).type('text/plain').send()
   const patch = req.body
-  const storedBaseApp = (await db.collection('base-applications')
-    .findOneAndUpdate({ id: req.params.id }, { $set: patch }, { returnDocument: 'after' })).value
+  const storedBaseApp = await db.collection('base-applications')
+    .findOneAndUpdate({ id: req.params.id }, { $set: patch }, { returnDocument: 'after' })
   if (!storedBaseApp) return res.status(404).send()
   syncBaseApp(db, storedBaseApp)
   res.send(storedBaseApp)

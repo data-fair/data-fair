@@ -228,8 +228,8 @@ class ExtensionsStream extends Transform {
           let cachedValue
           if (!localMasterData) {
           // TODO: read cached values in a bulk read ?
-            cachedValue = (await this.db.collection('extensions-cache')
-              .findOneAndUpdate({ extensionKey: extensionCacheKey, input: inputCacheKeys[i] }, { $set: { lastUsed: new Date() } })).value
+            cachedValue = await this.db.collection('extensions-cache')
+              .findOneAndUpdate({ extensionKey: extensionCacheKey, input: inputCacheKeys[i] }, { $set: { lastUsed: new Date() } })
           }
 
           if (cachedValue) this.buffer[i][extension.extensionKey] = cachedValue.output

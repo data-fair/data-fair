@@ -79,13 +79,13 @@ export const remaining = async (db, consumer) => {
 }
 
 export const incrementConsumption = async (db, consumer, type, inc) => {
-  return (await db.collection('limits')
-    .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $inc: { [`${type}.consumption`]: inc } }, { returnDocument: 'after', upsert: true })).value
+  return await db.collection('limits')
+    .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $inc: { [`${type}.consumption`]: inc } }, { returnDocument: 'after', upsert: true })
 }
 
 export const setConsumption = async (db, consumer, type, value) => {
-  return (await db.collection('limits')
-    .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $set: { [`${type}.consumption`]: value } }, { returnDocument: 'after', upsert: true })).value
+  return await db.collection('limits')
+    .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $set: { [`${type}.consumption`]: value } }, { returnDocument: 'after', upsert: true })
 }
 
 export const router = express.Router()

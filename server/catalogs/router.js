@@ -160,8 +160,8 @@ router.patch('/:catalogId', readCatalog, permissions.middleware('writeDescriptio
     }
   }
 
-  const patchedCatalog = (await req.app.get('db').collection('catalogs')
-    .findOneAndUpdate({ id: req.params.catalogId }, { $set: mongoEscape.escape(patch, true) }, { returnDocument: 'after' })).value
+  const patchedCatalog = await req.app.get('db').collection('catalogs')
+    .findOneAndUpdate({ id: req.params.catalogId }, { $set: mongoEscape.escape(patch, true) }, { returnDocument: 'after' })
   res.status(200).json(clean(mongoEscape.unescape(patchedCatalog)))
 })
 
@@ -169,8 +169,8 @@ router.patch('/:catalogId', readCatalog, permissions.middleware('writeDescriptio
 router.put('/:catalogId/owner', readCatalog, permissions.middleware('delete', 'admin'), async (req, res) => {
   // Must be able to delete the current catalog, and to create a new one for the new owner to proceed
   if (!permissions.canDoForOwner(req.body, 'catalogs', 'post', req.user)) return res.sendStatus(403)
-  const patchedCatalog = (await req.app.get('db').collection('catalogs')
-    .findOneAndUpdate({ id: req.params.catalogId }, { $set: { owner: req.body } }, { returnDocument: 'after' })).value
+  const patchedCatalog = await req.app.get('db').collection('catalogs')
+    .findOneAndUpdate({ id: req.params.catalogId }, { $set: { owner: req.body } }, { returnDocument: 'after' })
   res.status(200).json(clean(patchedCatalog))
 })
 

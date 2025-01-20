@@ -57,15 +57,15 @@ export const reindex = async (db, dataset) => {
   if (dataset.isVirtual) patch.status = 'indexed'
   else if (dataset.isRest) patch.status = 'analyzed'
   if (dataset.draftReason) patch = { 'draft.status': patch.status }
-  return (await db.collection('datasets')
-    .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
+  return await db.collection('datasets')
+    .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })
 }
 
 export const refinalize = async (db, dataset) => {
   let patch = { status: 'indexed' }
   if (dataset.draftReason) patch = { 'draft.status': patch.status }
-  return (await db.collection('datasets')
-    .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
+  return await db.collection('datasets')
+    .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })
 }
 
 // Generate ids and try insertion until there is no conflict on id

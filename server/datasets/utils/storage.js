@@ -114,8 +114,8 @@ export const storage = async (db, es, dataset) => {
   // storage used by mongodb collections
   if (dataset.isRest) {
     const collection = await restDatasetsUtils.collection(db, dataset)
-    const stats = await collection.stats()
-    storage.collection = { size: stats.size, count: stats.count }
+    const stats = await collection.aggregate([{ $collStats: { storageStats: {} } }]).next()
+    storage.collection = { size: stats.storageStats.size, count: stats.storageStats.count }
     storage.size += storage.collection.size
     storage.indexed = {
       size: storage.collection.size,

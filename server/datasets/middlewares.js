@@ -91,13 +91,12 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
     if (!activeAccount) throw createError(401, 'No active account')
     const ownerRole = getOwnerRole(dataset.owner, req.user)
     if (!ownerRole) {
-      const queryAccount = `${activeAccount.type}:${activeAccount.id}${activeAccount.department ? ':' + activeAccount.department : ''}`
-      if (req.query.account && req.query.account !== queryAccount) throw createError(403, 'You are not allowed to use the account parameter')
+      req._queryAccount = `${activeAccount.type}:${activeAccount.id}${activeAccount.department ? ':' + activeAccount.department : ''}`
+      if (req.query.account && req.query.account !== req._queryAccount) throw createError(403, 'You are not allowed to use the account parameter')
       if (!req.query.account) {
-        req.query.account = queryAccount
         if (activeAccount.type === 'organization') {
           // also use personnal permissions
-          req.query.account += `,user:${req.user.id}`
+          req._queryAccount += `,user:${req.user.id}`
         }
       }
     }
