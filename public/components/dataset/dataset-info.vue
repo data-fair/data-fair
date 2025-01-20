@@ -310,6 +310,15 @@
         :rules="required.includes('frequency') ? [(val) => !!val]: []"
         @change="patch({frequency: dataset.frequency || ''})"
       />
+      <v-checkbox
+        v-if="dataset.schema.some(prop => prop['x-refersTo'] === 'http://schema.org/DigitalDocument')"
+        v-model="dataset.attachmentsAsImage"
+        :disabled="!can('writeDescriptionBreaking')"
+        :label="$t('attachmentsAsImage')"
+        hide-details
+        dense
+        @change="patch({attachmentsAsImage: dataset.attachmentsAsImage || null})"
+      />
     </v-col>
     <v-col
       cols="12"
@@ -447,6 +456,7 @@ fr:
   noHistoryTTL: pas de politique d'expiration des révisions configurée
   storeUpdatedBy: Stocker l'utilisateur responsable d'une modification de ligne
   noStoreUpdatedBy: Pas de stockage de l'utilisateur responsable d'une modification de ligne
+  attachmentsAsImage: Traiter les documents attachés comme des images
   cancel: Annuler
   validate: Valider
 en:
@@ -493,6 +503,7 @@ en:
   noHistory: 'No history configured (do not store revisions of lines)'
   historyTTL: Automatically delete revisions more than {days} days old.
   noHistoryTTL: no automatic expiration of revisions configured
+  attachmentsAsImage: Process the attachments as images
   cancel: Cancel
   validate: Validate
 </i18n>

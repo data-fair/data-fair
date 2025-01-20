@@ -1065,7 +1065,7 @@ export default {
       this.refDatasets = remoteServicesRes.results.map(r => r.virtualDatasets.parent)
 
       const datasetsRes = await this.$axios.$get('api/v1/datasets', {
-        params: { q: this.search, size: 20, select: 'id,title,schema,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions,-links,-owner', owner: `${this.activeAccount.type}:${this.activeAccount.id}`, queryable: true }
+        params: { q: this.search, size: 20, select: 'id,title,schema,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,attachmentsAsImage,-userPermissions,-links,-owner', owner: `${this.activeAccount.type}:${this.activeAccount.id}`, queryable: true }
       })
 
       this.datasets = datasetsRes.results
@@ -1081,6 +1081,9 @@ export default {
               this.virtualDataset.schema.push(property)
             }
           }
+        }
+        if (this.virtualChildren.every(d => d.attachmentsAsImage)) {
+          this.virtualDataset.attachmentsAsImage = true
         }
       }
     }

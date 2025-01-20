@@ -108,6 +108,8 @@ export const preparePatch = async (app, patch, dataset, user, locale, draftValid
     const extendedSchema = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
     await extensions.checkExtensions(db, extendedSchema, patch.extensions || dataset.extensions)
     patch.schema = await extensions.prepareExtensionsSchema(db, patch.schema || dataset.schema, patch.extensions || dataset.extensions)
+  } else if ('attachmentsAsImage' in patch && patch.attachmentsAsImage !== dataset.attachmentsAsImage) {
+    patch.schema = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
   }
 
   // manage automatic export of REST datasets into files
