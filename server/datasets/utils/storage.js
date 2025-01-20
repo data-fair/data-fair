@@ -125,9 +125,9 @@ export const storage = async (db, es, dataset) => {
     if (dataset.rest && dataset.rest.history) {
       try {
         const revisionsCollection = await restDatasetsUtils.revisionsCollection(db, dataset)
-        const revisionsStats = await revisionsCollection.stats()
+        const revisionsStats = await revisionsCollection.aggregate([{ $collStats: { storageStats: {} } }]).next()
         // we remove 60 bytes per line that are not really part of the original payload but added by _action, _updatedAt, _hash and _i.
-        storage.revisions = { size: revisionsStats.size, count: revisionsStats.count }
+        storage.revisions = { size: revisionsStats.storageStats.size, count: revisionsStats.storageStats.count }
         storage.size += storage.revisions.size
       } catch (err) {
         // ignore, this is probably a new dataset whose revisions collection was not initialized

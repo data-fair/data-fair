@@ -6,6 +6,7 @@ import * as usersUtils from '../misc/utils/users.js'
 import { getOwnerRole } from '../misc/utils/permissions.js'
 import { checkStorage as checkStorageFn } from './utils/storage.js'
 import * as service from './service.js'
+import { withQuery } from 'ufo'
 
 /**
  *
@@ -91,14 +92,15 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
     if (!activeAccount) throw createError(401, 'No active account')
     const ownerRole = getOwnerRole(dataset.owner, req.user)
     if (!ownerRole) {
-      req._queryAccount = `${activeAccount.type}:${activeAccount.id}${activeAccount.department ? ':' + activeAccount.department : ''}`
-      if (req.query.account && req.query.account !== req._queryAccount) throw createError(403, 'You are not allowed to use the account parameter')
+      let account = `${activeAccount.type}:${activeAccount.id}${activeAccount.department ? ':' + activeAccount.department : ''}`
+      if (req.query.account && req.query.account !== account) throw createError(403, 'You are not allowed to use the account parameter')
       if (!req.query.account) {
         if (activeAccount.type === 'organization') {
           // also use personnal permissions
-          req._queryAccount += `,user:${req.user.id}`
+          account += `,user:${req.user.id}`
         }
       }
+      req.url = withQuery(req.url, { account })
     }
     req.noCache = true
   }
