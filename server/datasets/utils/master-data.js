@@ -89,7 +89,7 @@ export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearch
   let lineIndex = 0
   return [
     ioStream.parser(),
-    batchStream(1000),
+    batchStream(200),
     new Transform({
       async transform (lines, encoding, callback) {
         try {
@@ -114,7 +114,7 @@ export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearch
             const response = esResponse.responses[i]
 
             if (response.error) {
-              metrics.internalError('masterdata-item-query', response.error)
+              metrics.internalError('masterdata-item-query', esUtils.extractError(response.error))
               this.push(finalizeResponseLine({}, lineKey, esUtils.extractError(response.error).message))
               continue
             }
