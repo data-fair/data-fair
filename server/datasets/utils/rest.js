@@ -20,7 +20,6 @@ import duration from 'dayjs/plugin/duration.js'
 import * as storageUtils from './storage.js'
 import * as extensionsUtils from './extensions.js'
 import * as findUtils from '../../misc/utils/find.js'
-import * as metrics from '../../misc/utils/metrics.js'
 import * as fieldsSniffer from './fields-sniffer.js'
 import { transformFileStreams, formatLine } from './data-streams.js'
 import { attachmentPath, lsAttachments, tmpDir } from './files.js'
@@ -28,6 +27,7 @@ import { jsonSchema } from './schema.js'
 import * as esUtils from '../../datasets/es/index.js'
 import { tabularTypes } from './types.js'
 import Piscina from 'piscina'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 dayjs.extend(duration)
 
@@ -910,7 +910,7 @@ export const bulkLines = async (req, res, next) => {
         await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
       }
     } catch (err) {
-      metrics.internalError('bulk-lines', err)
+      internalError('bulk-lines', err)
       if (firstBatch) {
         res.writeHeader(err.statusCode || 500, { 'Content-Type': 'application/json' })
       }

@@ -14,11 +14,11 @@ import config from '#config'
 import servicePatch from '../../contract/remote-service-patch.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as rateLimiting from '../misc/utils/rate-limiting.js'
-import * as metrics from '../misc/utils/metrics.js'
 import { httpAgent, httpsAgent } from '../misc/utils/http-agents.js'
 import { clean, validate, validateOpenApi, validatePatch, initNew, computeActions } from './utils.js'
 import { findRemoteServices, findActions } from './service.js'
 import debugModule from 'debug'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 const debug = debugModule('remote-services')
 const debugMasterData = debugModule('master-data')
@@ -295,7 +295,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.middleware('remote
           // pretty usual for map tiles for example
           resolve()
         } else {
-          metrics.internalError('service-proxy-res', err)
+          internalError('service-proxy-res', err)
           reject(err)
         }
       } finally {
@@ -307,7 +307,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.middleware('remote
         res.status(504).type('text/plain').send('remote-service timed out')
         resolve()
       } else {
-        metrics.internalError('service-proxy-req', err)
+        internalError('service-proxy-req', err)
         reject(err)
       }
     })

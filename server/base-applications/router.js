@@ -11,8 +11,8 @@ import * as i18nUtils from '../i18n/utils.js'
 import * as findUtils from '../misc/utils/find.js'
 import * as baseAppsUtils from './utils.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
-import * as metrics from '../misc/utils/metrics.js'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 const htmlExtractor = new Extractor()
 htmlExtractor.extract = util.promisify(htmlExtractor.extract)
@@ -44,7 +44,7 @@ async function failSafeInitBaseApp (db, app) {
   try {
     await initBaseApp(db, app)
   } catch (err) {
-    metrics.internalError('app-init', err)
+    internalError('app-init', err)
   }
 }
 
@@ -79,7 +79,7 @@ async function initBaseApp (db, app) {
     patch.datasetsFilters = datasetsQueries.map(prepareQuery)
   } catch (err) {
     patch.hasConfigSchema = false
-    metrics.internalError('app-config-schema', err)
+    internalError('app-config-schema', err)
   }
 
   if (!patch.hasConfigSchema && !(patch.meta && patch.meta['application-name'])) {

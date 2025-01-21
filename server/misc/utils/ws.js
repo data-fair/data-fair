@@ -16,7 +16,7 @@ Downstream examples:
 import { nanoid } from 'nanoid'
 import * as permissions from './permissions.js'
 import { readApiKey } from './api-key.js'
-import * as metrics from './metrics.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 let cursor
 const subscribers = {}
@@ -77,7 +77,7 @@ export const initServer = async (wss, db, session) => {
         } catch (err) {
           const errorMessage = { type: 'error', status: 500, data: err.message }
           if (message && message.channel) errorMessage.channel = message.channel
-          metrics.internalError('ws-error', err)
+          internalError('ws-error', err)
           return ws.send(JSON.stringify(errorMessage))
         }
       })

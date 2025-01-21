@@ -9,12 +9,12 @@ import mimeTypeStream from 'mime-type-stream'
 import createError from 'http-errors'
 import { createGunzip } from 'zlib'
 import DecodeStream from '../../misc/utils/decode-stream.js'
-import * as metrics from '../../misc/utils/metrics.js'
 import { csvTypes } from './types.js'
 import * as fieldsSniffer from './fields-sniffer.js'
 import * as restDatasetsUtils from './rest.js'
 import { filePath, fullFilePath, tmpDir } from './files.js'
 import pump from '../../misc/utils/pipe.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 export const formatLine = (item, schema) => {
   for (const key of Object.keys(item)) {
@@ -181,7 +181,7 @@ export const readStreams = async (db, dataset, raw = false, full = false, ignore
     // we should not have to do this
     // this is a weird thing, maybe an unsolved race condition ?
     // let's wait a bit and try again to mask this problem temporarily
-    metrics.internalError('indexer-missing-file', 'file missing when indexer started working ' + p)
+    internalError('indexer-missing-file', 'file missing when indexer started working ' + p)
     await new Promise(resolve => setTimeout(resolve, 10000))
   }
 

@@ -12,11 +12,11 @@ import CacheableLookup from 'cacheable-lookup'
 import * as findUtils from '../misc/utils/find.js'
 import * as permissions from '../misc/utils/permissions.js'
 import * as serviceWorkers from '../misc/utils/service-workers.js'
-import * as metrics from '../misc/utils/metrics.js'
 import { refreshConfigDatasetsRefs } from './utils.js'
 import vIframePJson from '../../node_modules/@koumoul/v-iframe/package.json' with {type: 'json'}
 import iFrameResizerPJson from '../../node_modules/iframe-resizer/package.json' with {type: 'json'}
 import Debug from 'debug'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 const debugIframeRedirect = Debug('iframe-redirect')
 
@@ -158,7 +158,7 @@ const fetchHTML = async (cleanApplicationUrl, targetUrl) => {
       return res.data
     }
   } catch (err) {
-    metrics.internalError('app-fetch', err)
+    internalError('app-fetch', err)
     if (cacheEntry) return cacheEntry.content
     throw err
     // in case of failure, serve from simple cache

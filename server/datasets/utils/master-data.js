@@ -5,8 +5,8 @@ import flatten from 'flat'
 import * as virtualDatasetsUtils from './virtual.js'
 import batchStream from '../../misc/utils/batch-stream.js'
 import * as esUtils from '../es/index.js'
-import * as metrics from '../../misc/utils/metrics.js'
 import pump from '../../misc/utils/pipe.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 export const bulkSearchPromise = async (streams, data) => {
   const buffers = []
@@ -103,7 +103,7 @@ export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearch
           try {
             esResponse = await esUtils.multiSearch(es, dataset, queries)
           } catch (err) {
-            metrics.internalError('masterdata-multi-query', err)
+            internalError('masterdata-multi-query', err)
             const { message, status } = esUtils.extractError(err)
             throw createError(status, message)
           }
@@ -114,7 +114,7 @@ export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearch
             const response = esResponse.responses[i]
 
             if (response.error) {
-              metrics.internalError('masterdata-item-query', response.error)
+              internalError('masterdata-item-query', response.error)
               this.push(finalizeResponseLine({}, lineKey, esUtils.extractError(response.error).message))
               continue
             }

@@ -10,6 +10,7 @@ import * as metrics from './misc/utils/metrics.js'
 import debug from 'debug'
 import EventEmitter from 'node:events'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 const debugDomain = debug('domain')
 
@@ -129,7 +130,7 @@ export const run = async () => {
       const publicationSiteUrl = parsedPublicUrl.protocol + '//' + u.hostname + ((u.port && u.port !== 80 && u.port !== 443) ? ':' + u.port : '')
       const settings = await memoizedGetPublicationSiteSettings(publicationSiteUrl, mainDomain && req.query.publicationSites, req.app.get('db'))
       if (!settings && !mainDomain) {
-        metrics.internalError('publication-site-unknown', 'no publication site is associated to URL ' + publicationSiteUrl)
+        internalError('publication-site-unknown', 'no publication site is associated to URL ' + publicationSiteUrl)
         return res.status(404).send('publication site unknown')
       }
       if (settings) {

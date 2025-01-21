@@ -7,8 +7,8 @@ import pump from '../utils/pipe.js'
 import * as rateLimiting from '../utils/rate-limiting.js'
 import debug from 'debug'
 import * as permissionsUtils from './permissions.js'
-import * as metrics from './metrics.js'
 import resolvePath from 'resolve-path'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 const captureUrl = config.privateCaptureUrl || config.captureUrl
 
@@ -131,7 +131,7 @@ export const screenshot = async (req, res) => {
     } catch (err) {
       // catch err locally as this method is called without waiting for result
 
-      metrics.internalError('app-thumbnail', err)
+      internalError('app-thumbnail', err)
 
       // In case of error do not keep corrupted or empty file
       await fs.remove(capturePath)

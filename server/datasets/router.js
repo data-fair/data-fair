@@ -39,7 +39,6 @@ import { bulkSearchStreams } from './utils/master-data.js'
 import applicationKey from '../misc/utils/application-key.js'
 import { validateURLFriendly } from '../misc/utils/validation.js'
 import * as observe from '../misc/utils/observe.js'
-import * as metrics from '../misc/utils/metrics.js'
 import * as publicationSites from '../misc/utils/publication-sites.js'
 import * as clamav from '../misc/utils/clamav.js'
 import * as apiKeyUtils from '../misc/utils/api-key.js'
@@ -52,6 +51,7 @@ import { updateTotalStorage } from './utils/storage.js'
 import { checkStorage, lockDataset, readDataset } from './middlewares.js'
 import config from '#config'
 import debugModule from 'debug'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 const validatePost = ajv.compile(datasetPostSchema.properties.body)
 const validateUserNotification = ajv.compile(userNotificationSchema)
@@ -625,7 +625,7 @@ async function manageESError (req, err) {
     // console.error(`(es-query-${status}) elasticsearch query error ${req.dataset.id}`, req.originalUrl, status, req.headers.referer || req.headers.referrer, message, err.stack)
     esQueryErrorCounter.inc()
   } else {
-    metrics.internalError('es-query-' + status, err)
+    internalError('es-query-' + status, err)
   }
 
   // We used to store an error on the data whenever a dataset encountered an elasticsearch error

@@ -4,7 +4,6 @@ import config from '#config'
 import slug from 'slugify'
 import { CronJob } from 'cron'
 import locks from '@data-fair/lib-node/locks.js'
-import * as metrics from '../../misc/utils/metrics.js'
 import nanoid from '../../misc/utils/nanoid.js'
 import * as visibilityUtils from '../../misc/utils/visibility.js'
 import { prepareThumbnailUrl } from '../../misc/utils/thumbnails.js'
@@ -17,6 +16,7 @@ import * as dataStreamsUtils from './data-streams.js'
 import * as schemaUtils from './schema.js'
 import * as readApiKeyUtils from './read-api-key.js'
 import mergeDraft from './merge-draft.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 export { default as mergeDraft } from './merge-draft.js'
 export * from './types.js'
@@ -85,7 +85,7 @@ export const insertWithId = async (db, dataset, onClose) => {
       onClose(() => {
         // console.log('releasing dataset lock on id', idLockKey)
         locks.release(idLockKey).catch(err => {
-          metrics.internalError('dataset-lock-id', err)
+          internalError('dataset-lock-id', err)
         })
       })
     }
@@ -100,7 +100,7 @@ export const insertWithId = async (db, dataset, onClose) => {
           onClose(() => {
             // console.log('releasing dataset lock on slug', slugLockKey)
             locks.release(slugLockKey).catch(err => {
-              metrics.internalError('dataset-lock-slug', err)
+              internalError('dataset-lock-slug', err)
             })
           })
         } else {

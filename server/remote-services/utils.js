@@ -6,12 +6,12 @@ import * as ajv from '../misc/utils/ajv.js'
 import config from '#config'
 import mongoEscape from 'mongo-escape'
 import slug from 'slugify'
-import * as metrics from '../misc/utils/metrics.js'
 import * as settingsUtils from '../misc/utils/settings.js'
 import servicePatch from '../../contract/remote-service-patch.js'
 import datasetAPIDocs from '../../contract/dataset-api-docs.js'
 import remoteServiceSchema from '../../contract/remote-service.js'
 import debugLib from 'debug'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 const debugMasterData = debugLib('master-data')
 
@@ -127,7 +127,7 @@ export const init = async (db) => {
     return axios.get(url)
       .then(resp => ({ url, api: resp.data }))
       .catch(err => {
-        metrics.internalError('service-init', err)
+        internalError('service-init', err)
       })
   })
   const apis = (await Promise.all(apisPromises)).filter(a => a && a.api)

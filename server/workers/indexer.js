@@ -1,5 +1,4 @@
 import { join } from 'path'
-import * as metrics from '../misc/utils/metrics.js'
 import * as journals from '../misc/utils/journals.js'
 import fs from 'fs-extra'
 import createError from 'http-errors'
@@ -14,6 +13,7 @@ import taskProgress from '../datasets/utils/task-progress.js'
 import { tmpDir } from '../datasets/utils/files.js'
 import * as attachmentsUtils from '../datasets/utils/attachments.js'
 import debugModule from 'debug'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
 export const eventsPrefix = 'index'
@@ -52,7 +52,7 @@ export const process = async function (app, dataset) {
     try {
       indexName = await es.initDatasetIndex(esClient, dataset)
     } catch (err) {
-      metrics.internalError('es-init-index', err)
+      internalError('es-init-index', err)
       const { message } = es.extractError(err)
       throw new Error(message)
     }

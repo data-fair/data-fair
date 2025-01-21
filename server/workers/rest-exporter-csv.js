@@ -1,4 +1,3 @@
-import * as metrics from '../misc/utils/metrics.js'
 import fs from 'fs-extra'
 import config from '#config'
 import tmp from 'tmp-promise'
@@ -10,6 +9,7 @@ import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetsService from '../datasets/service.js'
 import { tmpDir } from '../datasets/utils/files.js'
 import debugLib from 'debug'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 export const process = async function (app, dataset) {
   const debug = debugLib(`worker:rest-exporter-csv:${dataset.id}`)
@@ -32,7 +32,7 @@ export const process = async function (app, dataset) {
     debug('mode to file', exportedFile)
     await fs.move(tmpFile, exportedFile, { overwrite: true })
   } catch (err) {
-    metrics.internalError('rest-exporter', err)
+    internalError('rest-exporter', err)
     patch.exports.restToCSV.lastExport.error = err.message
   }
 

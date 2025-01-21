@@ -1,6 +1,5 @@
 import config from '#config'
 import { Histogram } from 'prom-client'
-import * as metrics from '../misc/utils/metrics.js'
 import locks from '@data-fair/lib-node/locks.js'
 import * as journals from '../misc/utils/journals.js'
 import debug from 'debug'
@@ -9,6 +8,7 @@ import taskProgress from '../datasets/utils/task-progress.js'
 import { basicTypes, csvTypes } from '../datasets/utils/types.js'
 import moment from 'moment'
 import { spawn } from 'child-process-promise'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 const workersTasksHistogram = new Histogram({
   name: 'df_datasets_workers_tasks',
@@ -125,7 +125,7 @@ export const start = async (app) => {
     promisePool[freeSlot] = iter(app, resource, type)
     promisePool[freeSlot]._resource = `${type}/${resource.id} (${resource.slug}) - ${resource.status}`
     promisePool[freeSlot].catch(err => {
-      metrics.internalError('worker-iter', err)
+      internalError('worker-iter', err)
     })
     // always empty the slot after the promise is finished
     promisePool[freeSlot].finally(() => {
@@ -373,7 +373,7 @@ async function iter (app, resource, type) {
 
     if (endTask) endTask({ status: 'error' })
 
-    // metrics.internalError('task', errorMessage)
+    // internalError('task', errorMessage)
 
     console.warn(`failure in worker ${taskKey} - ${type} / ${resource.slug} (${resource.id})`, errorMessage)
     if (!config.worker.spawnTask || !errorMessage) console.debug(err)

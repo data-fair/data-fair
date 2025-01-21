@@ -19,9 +19,9 @@ import { tmpDir as mainTmpDir } from '../datasets/utils/files.js'
 import * as icalendar from '../misc/utils/icalendar.js'
 import * as xlsx from '../misc/utils/xlsx.js'
 import * as i18nUtils from '../i18n/utils.js'
-import * as metrics from '../misc/utils/metrics.js'
 import config from '#config'
 import debugLib from 'debug'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 export const eventsPrefix = 'normalize'
 
@@ -40,7 +40,7 @@ export const process = async function (app, dataset) {
     // we should not have to do this
     // this is a weird thing, maybe an unsolved race condition ?
     // let's wait a bit and try again to mask this problem temporarily
-    metrics.internalError('normalizer-missing-file', 'file missing when normalizer started working ' + originalFilePath)
+    internalError('normalizer-missing-file', 'file missing when normalizer started working ' + originalFilePath)
     await new Promise(resolve => setTimeout(resolve, 10000))
   }
 

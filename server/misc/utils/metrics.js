@@ -1,12 +1,11 @@
 import { Gauge } from 'prom-client'
+import { servicePromRegistry } from '@data-fair/lib-node/observer.js'
 
 /**
  * @param {import('mongodb').Db} db
  */
 export const init = async (db) => {
   // global metrics based on db connection
-
-  const { servicePromRegistry } = await import('@data-fair/lib-node/observer.js')
 
   // eslint-disable-next-line no-new
   new Gauge({
@@ -43,16 +42,5 @@ export const init = async (db) => {
       this.set({ task: 'sheet2csv' }, (sheet2csvPiscina.completed * sheet2csvPiscina.runTime.mean) / sheet2csvPiscina.duration)
       this.set({ task: 'geojson2pbf' }, (geojson2pbfPiscina.completed * geojson2pbfPiscina.runTime.mean) / geojson2pbfPiscina.duration)
     }
-  })
-}
-
-/**
- *
- * @param {string} code
- * @param {any} message
- */
-export const internalError = (code, message) => {
-  return import('@data-fair/lib-nodeobserver.js').then(({ internalError }) => {
-    internalError(code, message)
   })
 }
