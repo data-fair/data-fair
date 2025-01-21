@@ -5,7 +5,7 @@ import nock from 'nock'
 import * as workers from '../server/workers/index.js'
 import axios from 'axios'
 import debugModule from 'debug'
-import * as app from '../server/app.ts'
+import * as app from '../server/app.js'
 import * as rateLimiting from '../server/misc/utils/rate-limiting.js'
 import { axiosAuth } from '@data-fair/sd-express'
 
