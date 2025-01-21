@@ -11,6 +11,7 @@ import split2 from 'split2'
 import pump from '../misc/utils/pipe.js'
 import debugLib from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import mongo from '#mongo'
 
 export const eventsPrefix = 'store'
 
@@ -22,7 +23,7 @@ export const process = async function (app, dataset) {
   const draft = !!dataset.draftReason
   const loadingDir = datasetUtils.loadingDir(dataset)
 
-  const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
+  const datasetFull = await mongo.db.collection('datasets').findOne({ id: dataset.id })
 
   const datasetFile = dataset.loaded?.dataset
   if (datasetFile) {

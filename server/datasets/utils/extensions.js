@@ -1,5 +1,6 @@
 import config from '#config'
-import createError from 'http-errors'
+import mongo from '#mongo'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
 import pump from '../../misc/utils/pipe.js'
 import fs from 'fs-extra'
@@ -72,7 +73,7 @@ export const prepareExtensions = (locale, extensions, oldExtensions = []) => {
   }
   const propertyPrefixes = extensions.filter(e => !!e.propertyPrefix).map(e => e.propertyPrefix)
   if (propertyPrefixes.length !== [...new Set(propertyPrefixes)].length) {
-    throw createError(400, i18n.__({ locale, phrase: 'errors.extensionShortIdConflict' }))
+    throw httpError(400, i18n.__({ locale, phrase: 'errors.extensionShortIdConflict' }))
   }
 }
 
@@ -81,7 +82,7 @@ export const prepareExtensions = (locale, extensions, oldExtensions = []) => {
 const compileExpression = exprEval(config.defaultTimezone).compile
 export const extend = async (app, dataset, extensions, updateMode, ignoreDraftLimit, lineId) => {
   debugMasterData(`extend dataset ${dataset.id} (${dataset.slug})`, extensions)
-  const db = app.get('db')
+  const db = mongo.db
   const es = app.get('es')
   const detailedExtensions = []
 
@@ -101,7 +102,7 @@ export const extend = async (app, dataset, extensions, updateMode, ignoreDraftLi
       }
 
       const extensionKey = getExtensionKey(extension)
-      const inputMapping = await prepareInputMapping(app.get('db'), action, dataset, extensionKey, extension.select)
+      const inputMapping = await prepareInputMapping(mongo.db, action, dataset, extensionKey, extension.select)
       const errorKey = action.output.find(o => o.name === '_error') ? '_error' : 'error'
       const idInput = action.input.find(input => input.concept === 'http://schema.org/identifier')
       if (!idInput) throw new Error('A field with concept "http://schema.org/identifier" is required and missing in the remote service action', action)
@@ -413,7 +414,7 @@ export const prepareExtensionsSchema = async (db, schema, extensions) => {
       })
     } else if (extension.property) {
       const existingProperty = schema.find(p => p.key === extension.property.key)
-      if (existingProperty && !existingProperty['x-extension']) throw createError(400, `Une extension essaie de créer la colonne "${extension.property.key}" mais cette clé est déjà utilisée.`)
+      if (existingProperty && !existingProperty['x-extension']) throw httpError(400, `Une extension essaie de créer la colonne "${extension.property.key}" mais cette clé est déjà utilisée.`)
       const fullProperty = existingProperty ? { ...existingProperty } : { ...extension.property }
       fullProperty['x-extension'] = extension.property.key
       extensionsFields.push(fullProperty)
@@ -438,19 +439,19 @@ export const checkExtensions = async (db, schema, extensions = []) => {
 
     if (extension.type === 'remoteService') {
       const remoteService = await db.collection('remote-services').findOne({ id: extension.remoteService })
-      if (!remoteService) throw createError(400, `[noretry] source de données de référénce inconnue "${extension.remoteService}"`)
+      if (!remoteService) throw httpError(400, `[noretry] source de données de référénce inconnue "${extension.remoteService}"`)
       const action = remoteService.actions.find(action => action.id === extension.action)
-      if (!action) throw createError(400, `[noretry] opération de récupération de données de référénce inconnue "${extension.remoteService} / ${extension.action?.replace('masterData_bulkSearch_', '')}"`)
+      if (!action) throw httpError(400, `[noretry] opération de récupération de données de référénce inconnue "${extension.remoteService} / ${extension.action?.replace('masterData_bulkSearch_', '')}"`)
       const errorPrefix = `[noretry] erreur de validation de l'extension "${action.summary}", `
       if (!action.input.find(i => i.concept && availableConcepts.has(i.concept))) {
-        throw createError(400, `${errorPrefix}un concept nécessaire à l'utilisation de la donnée de référence n'est pas présent dans le jeu de données (${action.input.filter(i => i.concept && i.concept !== 'http://schema.org/identifier').map(i => i.concept).join(', ')})`)
+        throw httpError(400, `${errorPrefix}un concept nécessaire à l'utilisation de la donnée de référence n'est pas présent dans le jeu de données (${action.input.filter(i => i.concept && i.concept !== 'http://schema.org/identifier').map(i => i.concept).join(', ')})`)
       }
       for (const concept of action.output.map(i => i.concept).filter(c => c)) availableConcepts.add(concept)
     } else if (extension.property) {
       const errorPrefix = `[noretry] erreur de validation de la colonne calculée "${extension.property.key}", `
       const availableSchema = await prepareExtensionsSchema(db, schema, previousExtensions)
       const exprError = exprEval(config.defaultTimezone).check(extension.expr, availableSchema, fullSchema)
-      if (exprError) throw createError(400, `${errorPrefix}${exprError}`)
+      if (exprError) throw httpError(400, `${errorPrefix}${exprError}`)
       const property = schema.find(p => p.key === extension.property.key)
       if (property?.['x-refersTo']) availableConcepts.add(property?.['x-refersTo'])
     }

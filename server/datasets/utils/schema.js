@@ -1,5 +1,5 @@
 import config from '#config'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import equal from 'deep-equal'
 import vocabulary from '../../../contract/vocabulary.json' with { type: 'json' }
 import * as geoUtils from './geo.js'
@@ -87,7 +87,7 @@ export const mergeFileSchema = (dataset) => {
   // keep extension fields
   const extensionFields = dataset.schema.filter(field => field['x-extension'])
   for (const field of extensionFields) {
-    if (fileFields.find(f => f.key === field.key)) throw createError(400, `[noretry] Une extension essaie de créer la colonne "${field.key}" mais cette clé est déjà utilisée.`)
+    if (fileFields.find(f => f.key === field.key)) throw httpError(400, `[noretry] Une extension essaie de créer la colonne "${field.key}" mais cette clé est déjà utilisée.`)
   }
   dataset.schema = fileFields.concat(extensionFields)
 }

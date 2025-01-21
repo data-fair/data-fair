@@ -3,6 +3,7 @@ import * as status from './status.js'
 import * as findUtils from '../utils/find.js'
 import * as baseAppsUtils from '../../base-applications/utils.js'
 import * as cacheHeaders from '../utils/cache-headers.js'
+import mongo from '#mongo'
 
 const router = express.Router()
 export default router
@@ -27,7 +28,7 @@ router.get('/status', (req, res, next) => {
 })
 
 router.get('/datasets-errors', async (req, res, next) => {
-  const datasets = req.app.get('db').collection('datasets')
+  const datasets = mongo.db.collection('datasets')
   const query = { status: 'error' }
   const [skip, size] = findUtils.pagination(req.query)
 
@@ -50,7 +51,7 @@ router.get('/datasets-errors', async (req, res, next) => {
 })
 
 router.get('/datasets-es-warnings', async (req, res, next) => {
-  const datasets = req.app.get('db').collection('datasets')
+  const datasets = mongo.db.collection('datasets')
   const query = { esWarning: { $exists: true, $ne: null } }
   const [skip, size] = findUtils.pagination(req.query)
 
@@ -67,7 +68,7 @@ router.get('/datasets-es-warnings', async (req, res, next) => {
 })
 
 router.get('/applications-errors', async (req, res, next) => {
-  const applications = req.app.get('db').collection('applications')
+  const applications = mongo.db.collection('applications')
   const query = { errorMessage: { $exists: true } }
   const [skip, size] = findUtils.pagination(req.query)
   const resultsPromise = applications
@@ -82,7 +83,7 @@ router.get('/applications-errors', async (req, res, next) => {
 })
 
 router.get('/applications-draft-errors', async (req, res, next) => {
-  const applications = req.app.get('db').collection('applications')
+  const applications = mongo.db.collection('applications')
   const query = { errorMessageDraft: { $exists: true } }
   const [skip, size] = findUtils.pagination(req.query)
   const resultsPromise = applications
@@ -97,7 +98,7 @@ router.get('/applications-draft-errors', async (req, res, next) => {
 })
 
 router.get('/owners', async (req, res) => {
-  const limits = req.app.get('db').collection('limits')
+  const limits = mongo.db.collection('limits')
   const [skip, size] = findUtils.pagination(req.query)
   const query = {}
   if (req.query.q) query.$text = { $search: req.query.q }
@@ -144,7 +145,7 @@ router.get('/owners', async (req, res) => {
 })
 
 router.get('/base-applications', async (req, res) => {
-  const baseApps = req.app.get('db').collection('base-applications')
+  const baseApps = mongo.db.collection('base-applications')
   const [skip, size] = findUtils.pagination(req.query)
   const query = {}
   if (req.query.public) query.public = true

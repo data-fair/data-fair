@@ -1,5 +1,5 @@
 
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import axios from '../../misc/utils/axios.js'
 
 export const title = 'Mydatacatalogue'
@@ -25,23 +25,23 @@ export const publishDataset = async (catalog, dataset, publication) => {
 }
 
 export const deleteDataset = async (catalog, dataset, publication) => {
-  throw createError(501, `Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
+  throw httpError(501, `Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
 }
 
 export const publishApplication = async (catalog, application, publication, datasets) => {
-  throw createError(501, 'La publication d\'applications vers Mydatacatalogue n\'est pas disponible')
+  throw httpError(501, 'La publication d\'applications vers Mydatacatalogue n\'est pas disponible')
 }
 
 export const deleteApplication = async (catalog, application, publication) => {
-  throw createError(501, 'La dépublication d\'applications vers Mydatacatalogue n\'est pas disponible')
+  throw httpError(501, 'La dépublication d\'applications vers Mydatacatalogue n\'est pas disponible')
 }
 
 export const listDatasets = async (catalog, p) => {
-  throw createError(501, 'La récupération d\'une liste de jeux de données depuis Mydacatalogue n\'est pas disponible')
+  throw httpError(501, 'La récupération d\'une liste de jeux de données depuis Mydacatalogue n\'est pas disponible')
 }
 
 export const getDataset = async (catalog, datasetId, req) => {
-  throw createError(501, 'La récupération d\'une définition de jeu de données depuis Mydacatalogue n\'est pas disponible')
+  throw httpError(501, 'La récupération d\'une définition de jeu de données depuis Mydacatalogue n\'est pas disponible')
 }
 
 function datasetPageDesc (dataset) {
@@ -66,12 +66,12 @@ async function createNewDataset (catalog, dataset, publication) {
   try {
     const res = await axios.post(new URL('api/v1/sources', catalog.url).href, source, { headers: { 'x-apiKey': catalog.apiKey } })
     if (!res.data.id || typeof res.data.id !== 'string') {
-      throw createError(501, `Erreur lors de l'envoi à ${catalog.url} : le format de retour n'est pas correct.`)
+      throw httpError(501, `Erreur lors de l'envoi à ${catalog.url} : le format de retour n'est pas correct.`)
     }
     publication.targetUrl = new URL(`sources/${res.data.id}/view`, catalog.url).href
     publication.result = res.data
   } catch (err) {
-    if (err.response) throw createError(501, `Erreur lors de l'envoi à ${catalog.url} : ${JSON.stringify(err.response.data, null, 2)}`)
+    if (err.response) throw httpError(501, `Erreur lors de l'envoi à ${catalog.url} : ${JSON.stringify(err.response.data, null, 2)}`)
     else throw err
   }
 }

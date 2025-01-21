@@ -1,7 +1,7 @@
 // Logic shared across all of most search and aggregation routes
 
 import config from '#config'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import flatten from 'flat'
 import queryParser from 'lucene-query-parser'
 import sanitizeHtml from '../../../shared/sanitize-html.js'
@@ -107,19 +107,19 @@ export const parseSort = (sortStr, fields, dataset) => {
       order = 'asc'
     }
     if (key.startsWith('_geo_distance:')) {
-      if (!dataset.bbox) throw createError(400, '"geo_distance" sorting cannot be used on this dataset. It is not geolocalized.')
+      if (!dataset.bbox) throw httpError(400, '"geo_distance" sorting cannot be used on this dataset. It is not geolocalized.')
       const [lon, lat] = key.replace('_geo_distance:', '').split(':')
       result.push({ _geo_distance: { _geopoint: { lon, lat }, order } })
       continue
     }
 
     if (!fields.concat(['_key', '_count', '_time', 'metric', '_i', '_rand', '_score']).includes(key)) {
-      throw createError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+      throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     }
     const field = dataset.schema.find(f => f.key === key)
     const capabilities = (field && field['x-capabilities']) || {}
     if (capabilities.values === false && capabilities.insensitive === false) {
-      throw createError(400, `Impossible de trier sur le champ ${key}. La fonctionnalité "Triable et groupable" n'est pas activée dans la configuration technique du champ.`)
+      throw httpError(400, `Impossible de trier sur le champ ${key}. La fonctionnalité "Triable et groupable" n'est pas activée dans la configuration technique du champ.`)
     }
     if (capabilities.insensitive !== false && field && field.type === 'string' && (field.format === 'uri-reference' || !field.format)) {
       // ignore_unmapped is necessary to maintain compatibility with older indices
@@ -161,7 +161,7 @@ function checkQuery (query, schema, esFields, currentField) {
     try {
       query = queryParser.parse(query)
     } catch (err) {
-      throw createError(400, `<p>Impossible d'effectuer cette recherche, la syntaxe du paramètre "qs" n'est pas respectée :</p>
+      throw httpError(400, `<p>Impossible d'effectuer cette recherche, la syntaxe du paramètre "qs" n'est pas respectée :</p>
  <ul>
   <li>requête : ${query}</li>
   <li>erreur : ${err.message}</li>
@@ -184,27 +184,27 @@ function checkQuery (query, schema, esFields, currentField) {
   if (query.field === '_exists_') {
     const field = query.term.replace(/\\/g, '')
     if (!schema.find(p => p.key === field)) {
-      throw createError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
+      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
     }
     if (!esFields.includes(field)) {
-      throw createError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilities.properties.index.title}" n'est pas activée dans la configuration technique du champ.`)
+      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilities.properties.index.title}" n'est pas activée dans la configuration technique du champ.`)
     }
   } else if (query.field && !esFields.includes(query.field)) {
     const suffix = capabilitiesSuffixes.find(cs => query.field.endsWith(cs[0]))
     if (suffix) {
       if (!schema.find(p => p.key + suffix[0] === query.field)) {
-        throw createError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
+        throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
       }
-      throw createError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilities.properties[suffix[1]]?.title}" n'est pas activée dans la configuration technique du champ.`)
+      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilities.properties[suffix[1]]?.title}" n'est pas activée dans la configuration technique du champ.`)
     } else {
       if (!schema.find(p => p.key === query.field)) {
-        throw createError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
+        throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
       }
-      throw createError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilities.properties.index.title}" n'est pas activée dans la configuration technique du champ.`)
+      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilities.properties.index.title}" n'est pas activée dans la configuration technique du champ.`)
     }
   }
   if (query.term && (query.term.startsWith('*') || query.term.startsWith('?')) && (!query.field || !query.field.endsWith('.wildcard'))) {
-    // throw createError(400, `Impossible de faire une recherche de suite de caractères sans préfixe sur le champ ${query.field}, la fonctionnalité n'est pas activée.`)
+    // throw httpError(400, `Impossible de faire une recherche de suite de caractères sans préfixe sur le champ ${query.field}, la fonctionnalité n'est pas activée.`)
     // console.warn(`Impossible de faire une recherche de suite de caractères sans préfixe sur le champ ${query.field}, la fonctionnalité n'est pas activée.`)
   }
   if (query.left) checkQuery(query.left, schema, esFields, query.field)
@@ -219,7 +219,7 @@ function checkQuery (query, schema, esFields, currentField) {
 const requiredCapability = (prop, filterName, capability = 'index') => {
   const propCapabilities = prop['x-capabilities'] ?? {}
   if (propCapabilities[capability] === false || (['wildcard', 'textAgg'].includes(capability) && propCapabilities[capability] !== true)) {
-    throw createError(400, `Impossible d'appliquer un filtre ${filterName} sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties[capability]?.title}" n'est pas activée dans la configuration technique du champ.`)
+    throw httpError(400, `Impossible d'appliquer un filtre ${filterName} sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties[capability]?.title}" n'est pas activée dans la configuration technique du champ.`)
   }
 }
 
@@ -233,17 +233,17 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
 
   // Pagination
   esQuery.size = query.size ? Number(query.size) : 12
-  if (esQuery.size > config.elasticsearch.maxPageSize) throw createError(400, `"size" cannot be more than ${config.elasticsearch.maxPageSize}`)
+  if (esQuery.size > config.elasticsearch.maxPageSize) throw httpError(400, `"size" cannot be more than ${config.elasticsearch.maxPageSize}`)
   if (query.after) {
     try {
       esQuery.search_after = JSON.parse(`[${query.after}]`)
     } catch (err) {
-      throw createError(400, '"after" parameter is malformed')
+      throw httpError(400, '"after" parameter is malformed')
     }
   } else {
     esQuery.from = (query.page ? Number(query.page) - 1 : 0) * esQuery.size
   }
-  if ((esQuery.from + esQuery.size) > config.elasticsearch.maxPageSize) throw createError(400, `"size * page" cannot be more than ${config.elasticsearch.maxPageSize}`)
+  if ((esQuery.from + esQuery.size) > config.elasticsearch.maxPageSize) throw httpError(400, `"size * page" cannot be more than ${config.elasticsearch.maxPageSize}`)
 
   // Select fields to return
   const fields = dataset.schema.map(f => f.key)
@@ -252,7 +252,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
     ? query.select.split(',')
     : fields.filter(key => key !== '_geoshape' && key !== '_geocorners')
   const unknownField = esQuery._source.find(s => !fields.includes(s))
-  if (unknownField) throw createError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données.`)
+  if (unknownField) throw httpError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données.`)
 
   // Others are included depending on the context
   if (query.thumbnail) {
@@ -289,7 +289,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   if (query.highlight) {
     esQuery.highlight = { fields: {}, no_match_size: 300, fragment_size: 100, pre_tags: ['<em class="highlighted">'], post_tags: ['</em>'] }
     for (const key of query.highlight.split(',')) {
-      if (!fields.includes(key)) throw createError(400, `Impossible de demander un "highlight" sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+      if (!fields.includes(key)) throw httpError(400, `Impossible de demander un "highlight" sur le champ ${key}, il n'existe pas dans le jeu de données.`)
       esQuery.highlight.fields[key + '.text'] = {}
       esQuery.highlight.fields[key + '.text_standard'] = {}
     }
@@ -317,7 +317,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
 
   if (query.account) {
     const accountField = dataset.schema.find(f => f['x-refersTo'] === 'https://github.com/data-fair/lib/account')
-    if (!accountField) throw createError(400, 'Impossible de filtrer sur le concept compte, il n\'est pas défini sur le dataset.')
+    if (!accountField) throw httpError(400, 'Impossible de filtrer sur le concept compte, il n\'est pas défini sur le dataset.')
     filter.push({ terms: { [accountField.key]: query.account.split(',') } })
   }
 
@@ -426,7 +426,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
     } else {
       const propKey = queryKey.slice(0, queryKey.length - filterSuffix.length)
       prop = dataset.schema.find(p => p.key === propKey)
-      if (!prop) throw createError(400, `Impossible d'appliquer un filtre sur le champ ${propKey}, il n'existe pas dans le jeu de données.`)
+      if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${propKey}, il n'existe pas dans le jeu de données.`)
     }
 
     if (filterSuffix === '_in') {
@@ -435,7 +435,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
         const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',')
         filter.push({ terms: { [prop.key]: values } })
       } catch (err) {
-        throw createError(400, `"${queryKey}" parameter is malformed`)
+        throw httpError(400, `"${queryKey}" parameter is malformed`)
       }
     }
     if (filterSuffix === '_nin') {
@@ -444,7 +444,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
         const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',')
         filter.push({ bool: { must_not: { terms: { [prop.key]: values } } } })
       } catch (err) {
-        throw createError(400, `"${queryKey}" parameter is malformed`)
+        throw httpError(400, `"${queryKey}" parameter is malformed`)
       }
     }
     if (filterSuffix === '_eq') {
@@ -495,7 +495,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
     const endDateField = dataset.schema.find(p => p['x-refersTo'] === 'https://schema.org/endDate') ?? dateField
     if (!startDateField || !endDateField) {
       if (query.date_match) {
-        throw createError(400, '"date_match" ne peut pas être utilisé sur ce jeu de données.')
+        throw httpError(400, '"date_match" ne peut pas être utilisé sur ce jeu de données.')
       } else {
         // silently ignore filters prefixed by _c_ if they are not used
       }
@@ -525,7 +525,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   const geoCornersProp = dataset.schema.find(p => p.key === '_geocorners')
   const geoCorners = geoCornersProp && (!geoCornersProp['x-capabilities'] || geoCornersProp['x-capabilities'].geoCorners !== false)
   if ((query.bbox || query.xyz) && !dataset.bbox) {
-    throw createError(400, '"bbox" filter cannot be used on this dataset. It is not geolocalized.')
+    throw httpError(400, '"bbox" filter cannot be used on this dataset. It is not geolocalized.')
   }
   if ((query.bbox || query._c_bbox || query.xyz) && dataset.bbox) {
     const bbox = getQueryBBOX(query, dataset)
@@ -548,7 +548,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   if (query.geo_distance ?? query._c_geo_distance) {
     if (!dataset.bbox) {
       if (query.geo_distance) {
-        throw createError(400, '"geo_distance" filter cannot be used on this dataset. It is not geolocalized.')
+        throw httpError(400, '"geo_distance" filter cannot be used on this dataset. It is not geolocalized.')
       } else {
         // silently ignore filters prefixed by _c_ if they are not used
       }
@@ -638,7 +638,7 @@ export const prepareResultItem = (hit, dataset, query, publicBaseUrl = config.pu
 
   const imageField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
   if (query.thumbnail) {
-    if (!imageField) throw createError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
+    if (!imageField) throw httpError(400, 'Thumbnail management is only available if the "image" concept is associated to a field of the dataset.')
     if (res[imageField.key]) {
       let imageUrl = res[imageField.key]
       if (dataset.attachmentsAsImage) {

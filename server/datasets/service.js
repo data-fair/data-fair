@@ -1,8 +1,9 @@
 import config from '#config'
+import mongo from '#mongo'
 import debugLib from 'debug'
 import fs from 'fs-extra'
 import path from 'path'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import memoize from 'memoizee'
 import equal from 'deep-equal'
 import * as findUtils from '../misc/utils/find.js'
@@ -181,7 +182,7 @@ export const getDataset = async (datasetId, publicationSite, mainPublicationSite
     // dataset found but not in proper state.. wait a little while
     await new Promise(resolve => setTimeout(resolve, config.datasetStateRetries.interval))
   }
-  throw createError(409, `Le jeu de données n'est pas dans un état permettant l'opération demandée. État courant : ${dataset?.status}.`)
+  throw httpError(409, `Le jeu de données n'est pas dans un état permettant l'opération demandée. État courant : ${dataset?.status}.`)
 }
 
 export const memoizedGetDataset = memoize(getDataset, {
@@ -214,7 +215,7 @@ export const createDataset = async (db, es, locale, user, owner, body, files, dr
   const attachmentsFile = files?.find(f => f.fieldname === 'attachments')
 
   if ([!!datasetFile, !!body.remoteFile, body.isVirtual, body.isRest, body.isMetaOnly].filter(b => b).length > 1) {
-    throw createError(400, 'Un jeu de données ne peut pas être de plusieurs types à la fois')
+    throw httpError(400, 'Un jeu de données ne peut pas être de plusieurs types à la fois')
   }
 
   const dataset = { ...body }
@@ -258,8 +259,8 @@ export const createDataset = async (db, es, locale, user, owner, body, files, dr
       Object.assign(dataset, filePatch)
     }
   } else if (body.isVirtual) {
-    if (!body.title) throw createError(400, 'Un jeu de données virtuel doit être créé avec un titre')
-    if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
+    if (!body.title) throw httpError(400, 'Un jeu de données virtuel doit être créé avec un titre')
+    if (attachmentsFile) throw httpError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
     dataset.virtual = dataset.virtual || { children: [] }
     dataset.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
     if (dataset.initFrom) {
@@ -268,8 +269,8 @@ export const createDataset = async (db, es, locale, user, owner, body, files, dr
       dataset.status = 'indexed'
     }
   } else if (body.isRest) {
-    if (!body.title) throw createError(400, 'Un jeu de données éditable doit être créé avec un titre')
-    if (attachmentsFile) throw createError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
+    if (!body.title) throw httpError(400, 'Un jeu de données éditable doit être créé avec un titre')
+    if (attachmentsFile) throw httpError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
     dataset.rest = dataset.rest || {}
     dataset.rest.primaryKeyMode = dataset.rest.primaryKeyMode || 'sha256'
     dataset.schema = dataset.schema || []
@@ -284,13 +285,13 @@ export const createDataset = async (db, es, locale, user, owner, body, files, dr
       dataset.status = 'finalized'
     }
   } else if (body.isMetaOnly) {
-    if (!body.title) throw createError(400, 'Un jeu de données métadonnées doit être créé avec un titre')
-    if (attachmentsFile) throw createError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
+    if (!body.title) throw httpError(400, 'Un jeu de données métadonnées doit être créé avec un titre')
+    if (attachmentsFile) throw httpError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
   } else if (body.remoteFile) {
     dataset.title = dataset.title || titleFromFileName(body.remoteFile.name || path.basename(new URL(body.remoteFile.url).pathname))
     const filePatch = { status: 'created' }
     if (dataset.initFrom && dataset.initFrom.parts.includes('data')) {
-      throw createError(400, 'Un jeu de données basé sur fichier distant ne peut être initialisé ave la donnée d\'un jeu de données de référence')
+      throw httpError(400, 'Un jeu de données basé sur fichier distant ne peut être initialisé ave la donnée d\'un jeu de données de référence')
     }
     if (draft) {
       dataset.status = 'draft'
@@ -311,7 +312,7 @@ export const createDataset = async (db, es, locale, user, owner, body, files, dr
       dataset.status = 'created'
     }
   } else {
-    throw createError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "éditable" ou "métadonnées"')
+    throw httpError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "éditable" ou "métadonnées"')
   }
 
   const insertedDatasetFull = await datasetUtils.insertWithId(db, dataset, onClose)
@@ -333,7 +334,7 @@ export const createDataset = async (db, es, locale, user, owner, body, files, dr
 }
 
 export const deleteDataset = async (app, dataset) => {
-  const db = app.get('db')
+  const db = mongo.db
   const es = app.get('es')
   try {
     await fs.remove(dir(dataset))
@@ -375,7 +376,7 @@ export const applyPatch = async (app, dataset, patch, removedRestProps, attemptM
   if (patch.extensions) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) extensions`, dataset.extensions, patch.extensions)
   if (patch.masterData) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) masterData`, dataset.masterData, patch.masterData)
 
-  const db = app.get('db')
+  const db = mongo.db
 
   // manage automatic export of REST datasets into files
   if (patch.exports && patch.exports.restToCSV) {
@@ -501,7 +502,7 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
   Object.assign(datasetFull.draft, patch)
   const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
 
-  const db = app.get('db')
+  const db = mongo.db
   const draftPatch = { ...datasetFull.draft }
   if (datasetFull.draft.dataUpdatedAt) {
     draftPatch.dataUpdatedAt = draftPatch.updatedAt

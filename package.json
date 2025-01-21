@@ -29,7 +29,8 @@
     "quality": "npm run test-deps && npm run lint && npm run test && npm audit --omit=dev --audit-level=critical"
   },
   "imports": {
-    "#config": "./server/config.ts"
+    "#config": "./server/config.ts",
+    "#mongo": "./server/mongo.js"
   },
   "engines": {
     "node": "v22"
@@ -198,7 +199,6 @@
     "geojson-vt": "^3.2.1",
     "geolib": "^3.3.1",
     "html-extractor": "^0.2.2",
-    "http-errors": "^1.8.0",
     "http-link-header": "^1.0.4",
     "http-terminator": "^3.2.0",
     "i18n": "^0.13.3",

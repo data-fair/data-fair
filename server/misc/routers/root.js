@@ -6,6 +6,7 @@ import projections from '../../../contract/projections.js'
 import * as settingsUtils from '../utils/settings.js'
 import * as ajv from '../utils/ajv.js'
 import config from '#config'
+import mongo from '#mongo'
 
 const validateApi = ajv.compile('openapi-3.1')
 const router = express.Router()
@@ -19,7 +20,7 @@ router.get('/api-docs.json', (req, res) => {
 })
 
 router.get('/vocabulary', async (req, res) => {
-  res.json(await settingsUtils.getFullOwnerVocabulary(req.app.get('db'), req.user && req.user.activeAccount, req.locale))
+  res.json(await settingsUtils.getFullOwnerVocabulary(mongo.db, req.user && req.user.activeAccount, req.locale))
 })
 
 router.get('/projections', (req, res) => {

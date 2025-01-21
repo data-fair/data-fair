@@ -1,4 +1,4 @@
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import util from 'util'
 import axios from '../../misc/utils/axios.js'
 import Extractor from 'html-extractor'
@@ -30,23 +30,23 @@ export const publishDataset = async (catalog, dataset, publication) => {
 }
 
 export const deleteDataset = async (catalog, dataset, publication) => {
-  throw createError(501, `Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
+  throw httpError(501, `Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
 }
 
 export const publishApplication = async (catalog, application, publication, datasets) => {
-  throw createError(501, 'La publication d\'applications vers Data Fair n\'est pas disponible')
+  throw httpError(501, 'La publication d\'applications vers Data Fair n\'est pas disponible')
 }
 
 export const deleteApplication = async (catalog, application, publication) => {
-  throw createError(501, 'La dépublication d\'applications vers Data Fair n\'est pas disponible')
+  throw httpError(501, 'La dépublication d\'applications vers Data Fair n\'est pas disponible')
 }
 
 export const listDatasets = async (catalog, params = {}) => {
-  throw createError(501, 'La récupération d\'une liste de jeux de données depuis Data Fair n\'est pas disponible')
+  throw httpError(501, 'La récupération d\'une liste de jeux de données depuis Data Fair n\'est pas disponible')
 }
 
 export const getDataset = async (catalog, datasetId, req) => {
-  throw createError(501, 'La récupération d\'une définition de jeu de données depuis Data Fair n\'est pas disponible')
+  throw httpError(501, 'La récupération d\'une définition de jeu de données depuis Data Fair n\'est pas disponible')
 }
 
 async function createOrUpdateDataset (catalog, dataset, publication) {
@@ -69,7 +69,7 @@ async function createOrUpdateDataset (catalog, dataset, publication) {
     publication.targetUrl = new URL(`datasets/${res.data.id}`, catalog.url).href
     publication.result = res.data
   } catch (err) {
-    if (err.response) throw createError(501, `Erreur lors de l'envoi à ${catalog.url} : ${JSON.stringify(err.response.data, null, 2)}`)
+    if (err.response) throw httpError(501, `Erreur lors de l'envoi à ${catalog.url} : ${JSON.stringify(err.response.data, null, 2)}`)
     else throw err
   }
 }

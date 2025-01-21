@@ -3,6 +3,7 @@ import * as extensionsUtils from '../datasets/utils/extensions.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetService from '../datasets/service.js'
 import * as restDatasetsUtils from '../datasets/utils/rest.js'
+import mongo from '#mongo'
 
 const debugMasterData = debugLib('master-data')
 
@@ -17,7 +18,7 @@ export const process = async function (app, dataset) {
   else if (dataset._partialRestStatus === 'updated') updateMode = 'updatedLines'
   debug('update mode', updateMode)
 
-  const db = app.get('db')
+  const db = mongo.db
   const patch = {}
   if (updateMode === 'all') {
     patch.status = 'extended'

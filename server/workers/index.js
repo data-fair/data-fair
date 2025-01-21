@@ -1,4 +1,5 @@
 import config from '#config'
+import mongo from '#mongo'
 import { Histogram } from 'prom-client'
 import locks from '@data-fair/lib-node/locks.js'
 import * as journals from '../misc/utils/journals.js'
@@ -76,7 +77,7 @@ export const start = async (app) => {
   const debugLoop = debug('worker-loop')
 
   debugLoop('start worker loop with config', config.worker)
-  const db = app.get('db')
+  const db = mongo.db
 
   // initialize empty promise pool
   for (let i = 0; i < config.worker.concurrency; i++) {
@@ -191,7 +192,7 @@ const getTypesFilters = () => {
 }
 
 async function iter (app, resource, type) {
-  const db = app.get('db')
+  const db = mongo.db
   const now = new Date().toISOString()
 
   let taskKey
@@ -339,7 +340,7 @@ async function iter (app, resource, type) {
     endTask({ status: 'ok' })
     debug(`finished task ${taskKey} - ${type} / ${resource.slug} (${resource.id})${resource.draftReason ? ' - draft' : ''}`)
 
-    const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
+    const newResource = await mongo.db.collection(type + 's').findOne({ id: resource.id })
     if (task.eventsPrefix && newResource) {
       const noStoreEvent = type === 'dataset' && (task.eventsPrefix !== 'finalize' || !!resource._partialRestStatus)
       if (resource.draftReason) {
@@ -411,7 +412,7 @@ async function iter (app, resource, type) {
       patch.$unset = { [propertyPrefix + 'errorRetry']: 1 }
     }
 
-    await app.get('db').collection(type + 's').updateOne({ id: resource.id }, patch)
+    await mongo.db.collection(type + 's').updateOne({ id: resource.id }, patch)
     resource.status = 'error'
     resource.errorStatus = resource.status
     hookRejection = { resource, message: errorMessage }

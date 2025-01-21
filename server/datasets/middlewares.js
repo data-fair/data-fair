@@ -1,5 +1,6 @@
 import config from '#config'
-import createError from 'http-errors'
+import mongo from '#mongo'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
 import locks from '@data-fair/lib-node/locks.js'
 import * as usersUtils from '../misc/utils/users.js'
@@ -17,15 +18,15 @@ import { withQuery } from 'ufo'
 // @ts-ignore
 export const checkStorage = (overwrite, indexed = false) => async (req, res, next) => {
   // @ts-ignore
-  if (!req.user) throw createError(401)
+  if (!req.user) throw httpError(401)
   if (process.env.NO_STORAGE_CHECK === 'true') return next()
-  if (!req.get('Content-Length')) throw createError(411, 'Content-Length is mandatory')
+  if (!req.get('Content-Length')) throw httpError(411, 'Content-Length is mandatory')
   const contentLength = Number(req.get('Content-Length'))
-  if (Number.isNaN(contentLength)) throw createError(400, 'Content-Length is not a number')
+  if (Number.isNaN(contentLength)) throw httpError(400, 'Content-Length is not a number')
 
   // @ts-ignore
   const resource = req.resource
-  const db = req.app.get('db')
+  const db = mongo.db
   const owner = resource ? resource.owner : usersUtils.owner(req)
   await checkStorageFn(db, i18n.getLocale(req), owner, overwrite && resource, contentLength, indexed)
   next()
@@ -54,7 +55,7 @@ export const lockDataset = (_shouldLock = true) => async (req, res, next) => {
       await new Promise(resolve => setTimeout(resolve, config.datasetStateRetries.interval))
     }
   }
-  throw createError(409, `Une opération bloquante est déjà en cours sur le jeu de données ${datasetId}.`)
+  throw httpError(409, `Une opération bloquante est déjà en cours sur le jeu de données ${datasetId}.`)
 }
 
 // Shared middleware to read dataset in db
@@ -73,8 +74,8 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
   const useDraft = req.query.draft === 'true' || alwaysDraft
 
   const { dataset, datasetFull } = tolerateStale
-    ? await service.memoizedGetDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, req.app.get('db'), tolerateStale, acceptedStatuses, req.body)
-    : await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, req.app.get('db'), tolerateStale, acceptedStatuses, req.body)
+    ? await service.memoizedGetDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, tolerateStale, acceptedStatuses, req.body)
+    : await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, tolerateStale, acceptedStatuses, req.body)
 
   /**
    * can be used to check the memoizee cache usage, first import memoizee/profile on top of app.js
@@ -88,11 +89,11 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
 
   if (fillDescendants && dataset.virtual && dataset.virtual.filterActiveAccount) {
     const activeAccount = req.user?.activeAccount
-    if (!activeAccount) throw createError(401, 'No active account')
+    if (!activeAccount) throw httpError(401, 'No active account')
     const ownerRole = getOwnerRole(dataset.owner, req.user)
     if (!ownerRole) {
       let account = `${activeAccount.type}:${activeAccount.id}${activeAccount.department ? ':' + activeAccount.department : ''}`
-      if (req.query.account && req.query.account !== account) throw createError(403, 'You are not allowed to use the account parameter')
+      if (req.query.account && req.query.account !== account) throw httpError(403, 'You are not allowed to use the account parameter')
       if (!req.query.account) {
         if (activeAccount.type === 'organization') {
           // also use personnal permissions

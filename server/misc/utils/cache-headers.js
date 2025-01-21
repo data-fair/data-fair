@@ -1,5 +1,5 @@
 import config from '#config'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import useragent from 'useragent'
 import debugLib from 'debug'
 
@@ -57,7 +57,7 @@ export const resourceBased = (dateKey = 'updatedAt') => (req, res, next) => {
     const queryDate = new Date(queryDateStr)
     if (queryDate > date) {
       console.warn(`wrong usage of finalizedAt or updatedAt parameters: query=${JSON.stringify(req.query)}, resource=${{ finalizedAt: req.resource.finalizedAt, updatedAt: req.resource.updatedAt }}`)
-      throw createError(400, `"finalizedAt" or "updatedAt" parameter has a value higher in the query than in the resource (${queryDate.toISOString()} > ${date.toISOString()}).`)
+      throw httpError(400, `"finalizedAt" or "updatedAt" parameter has a value higher in the query than in the resource (${queryDate.toISOString()} > ${date.toISOString()}).`)
     }
     res.setHeader('Cache-Control', `must-revalidate, ${cacheVisibility}, max-age=${config.cache.timestampedPublicMaxAge}`)
   } else {

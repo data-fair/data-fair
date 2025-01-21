@@ -1,7 +1,7 @@
-import config from 'config'
+import config from '#config'
+import mongo from '#mongo'
 import fs from 'fs-extra'
 import nock from 'nock'
-
 import * as workers from '../server/workers/index.js'
 import axios from 'axios'
 import debugModule from 'debug'
@@ -99,9 +99,9 @@ before('global mocks', async () => {
 
 before('init globals', async () => {
   debug('init globals')
-  const { db, client } = await (await import('../server/misc/utils/db.js')).connect()
-  global.db = db
-  global.mongoClient = client
+  await mongo.init()
+  global.db = mongo.db
+  global.mongoClient = mongo.client
   global.es = await (await import('../server/datasets/es/index.js')).init()
 
   global.ax = {}

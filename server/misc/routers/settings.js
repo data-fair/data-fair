@@ -3,13 +3,14 @@ import express from 'express'
 import * as ajv from '../utils/ajv.js'
 import { nanoid } from 'nanoid'
 import slug from 'slugify'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import settingSchema from '../../../contract/settings.js'
 import * as permissions from '../utils/permissions.js'
 import * as cacheHeaders from '../utils/cache-headers.js'
 import * as topicsUtils from '../utils/topics.js'
 import * as notifications from '../utils/notifications.js'
 import config from '#config'
+import mongo from '#mongo'
 import standardLicenses from '../../../contract/licenses.js'
 import debugLib from 'debug'
 
@@ -81,7 +82,7 @@ function isOwnerMember (req, res, next) {
 
 // read settings as owner
 router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, async (req, res) => {
-  const settings = req.app.get('db').collection('settings')
+  const settings = mongo.db.collection('settings')
   const result = await settings
     .findOne(req.ownerFilter, { projection: { _id: 0, id: 0, type: 0 } })
   res.status(200).send(result || {})
@@ -105,7 +106,7 @@ const fillSettings = (owner, user, settings) => {
 
 // update settings as owner
 router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
-  const db = req.app.get('db')
+  const db = mongo.db
   fillSettings(req.owner, req.user, req.body)
   validate(req.body)
   const settings = db.collection('settings')
@@ -114,7 +115,7 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
   for (let i = 0; i < req.body.apiKeys.length; i++) {
     const apiKey = req.body.apiKeys[i]
     if (apiKey.adminMode && !req.user.adminMode) {
-      throw createError(403, 'Only superadmin can manage api keys with adminMode=true')
+      throw httpError(403, 'Only superadmin can manage api keys with adminMode=true')
     }
     if (!apiKey.id) fullApiKeys[i].id = apiKey.id = nanoid()
 
@@ -154,28 +155,28 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
 
 // Get topics list as owner
 router.get('/:type/:id/topics', isOwnerMember, async (req, res) => {
-  const settings = req.app.get('db').collection('settings')
+  const settings = mongo.db.collection('settings')
   const result = await settings.findOne(req.ownerFilter)
   res.status(200).send((result && result.topics) || [])
 })
 
 // Get licenses list as anyone
 router.get('/:type/:id/licenses', cacheHeaders.noCache, async (req, res) => {
-  const settings = req.app.get('db').collection('settings')
+  const settings = mongo.db.collection('settings')
   const result = await settings.findOne(req.ownerFilter)
   res.status(200).send([].concat(standardLicenses.map(l => ({ href: l.href, title: l.title })), (result && result.licenses) || []))
 })
 
 // Get datasets metadata settings as owner
 router.get('/:type/:id/datasets-metadata', isOwnerMember, async (req, res) => {
-  const settings = req.app.get('db').collection('settings')
+  const settings = mongo.db.collection('settings')
   const result = await settings.findOne(req.ownerFilter)
   res.status(200).send((result && result.datasetsMetadata) || {})
 })
 
 // Get publication sites as owner
 router.get('/:type/:id/publication-sites', isOwnerMember, async (req, res) => {
-  const db = req.app.get('db')
+  const db = mongo.db
   const filter = [req.ownerFilter]
   if (req.owner.department) {
     filter.push({ ...req.ownerFilter, department: { $exists: false } })
@@ -197,7 +198,7 @@ router.get('/:type/:id/publication-sites', isOwnerMember, async (req, res) => {
 // create/update publication sites as owner (used by data-fair-portals to sync portals)
 router.post('/:type/:id/publication-sites', isOwnerAdmin, async (req, res) => {
   debugPublicationSites('post site', req.body)
-  const db = req.app.get('db')
+  const db = mongo.db
   let settings = await db.collection('settings').findOne(req.ownerFilter, { projection: { _id: 0 } })
   if (!settings) {
     settings = {}
@@ -239,7 +240,7 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, async (req, res) => {
 // delete publication sites as owner (used by data-fair-portals to sync portals)
 router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, async (req, res) => {
   debugPublicationSites('delete site', req.params)
-  const db = req.app.get('db')
+  const db = mongo.db
   let settings = await db.collection('settings').findOne(req.ownerFilter, { projection: { _id: 0 } })
   if (!settings) {
     settings = {}

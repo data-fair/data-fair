@@ -11,6 +11,7 @@ import CacheableLookup from 'cacheable-lookup'
 import remoteServiceAPIDocs from '../../contract/remote-service-api-docs.js'
 import mongoEscape from 'mongo-escape'
 import config from '#config'
+import mongo from '#mongo'
 import servicePatch from '../../contract/remote-service-patch.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as rateLimiting from '../misc/utils/rate-limiting.js'
@@ -44,7 +45,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
   const user = req.user
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findRemoteServices(req.app.get('db'), i18n.getLocale(req), publicationSite, publicBaseUrl, reqQuery, user)
+  const response = await findRemoteServices(mongo.db, i18n.getLocale(req), publicationSite, publicBaseUrl, reqQuery, user)
   res.json(response)
 })
 
@@ -60,7 +61,7 @@ actionsRouter.get('', cacheHeaders.noCache, async (req, res) => {
   const user = req.user
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findActions(req.app.get('db'), i18n.getLocale(req), publicationSite, publicBaseUrl, reqQuery, user)
+  const response = await findActions(mongo.db, i18n.getLocale(req), publicationSite, publicBaseUrl, reqQuery, user)
   res.json(response)
 })
 
@@ -81,7 +82,7 @@ router.post('', async (req, res) => {
   let i = 1
   while (!insertOk) {
     try {
-      await req.app.get('db').collection('remote-services').insertOne(mongoEscape.escape(service, true))
+      await mongo.db.collection('remote-services').insertOne(mongoEscape.escape(service, true))
       insertOk = true
     } catch (err) {
       if (err.code !== 11000 || !err.errmsg.includes('x-api-id')) throw err
@@ -96,7 +97,7 @@ router.post('', async (req, res) => {
 
 // Shared middleware
 const readService = async (req, res, next) => {
-  const service = await req.app.get('db').collection('remote-services')
+  const service = await mongo.db.collection('remote-services')
     .findOne({ id: req.params.remoteServiceId }, { projection: { _id: 0 } })
   if (!service) return res.status(404).send('Remote Api not found')
   req.remoteService = req.resource = mongoEscape.unescape(service, true)
@@ -137,7 +138,7 @@ router.put('/:remoteServiceId', attemptInsert, readService, async (req, res) => 
   if (newService.apiDoc) {
     newService.actions = computeActions(newService.apiDoc)
   }
-  await req.app.get('db').collection('remote-services').replaceOne({ id: req.params.remoteServiceId }, mongoEscape.escape(newService, true))
+  await mongo.db.collection('remote-services').replaceOne({ id: req.params.remoteServiceId }, mongoEscape.escape(newService, true))
   debugMasterData('replaced remote service')
   res.status(200).json(clean(newService, req.user))
 })
@@ -157,7 +158,7 @@ router.patch('/:remoteServiceId', readService, async (req, res) => {
     patch.actions = computeActions(patch.apiDoc)
   }
 
-  const patchedService = await req.app.get('db').collection('remote-services')
+  const patchedService = await mongo.db.collection('remote-services')
     .findOneAndUpdate({ id: req.params.remoteServiceId }, { $set: mongoEscape.escape(patch, true) }, { returnDocument: 'after' })
   debugMasterData('patched remote service')
   res.status(200).json(clean(mongoEscape.unescape(patchedService, req.user)))
@@ -168,7 +169,7 @@ router.delete('/:remoteServiceId', readService, async (req, res) => {
   if (!req.user) return res.status(401).type('text/plain').send()
   if (!req.user.adminMode) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
   debugMasterData(`DELETE remote service manually by ${req.user?.name} (${req.user?.id})`, req.params.remoteServiceId)
-  await req.app.get('db').collection('remote-services').deleteOne({
+  await mongo.db.collection('remote-services').deleteOne({
     id: req.params.remoteServiceId
   })
   res.sendStatus(204)
@@ -189,7 +190,7 @@ router.post('/:remoteServiceId/_update', readService, async (req, res) => {
   req.remoteService.updatedBy = { id: req.user.id, name: req.user.name }
   req.remoteService.apiDoc = reponse.data
   req.remoteService.actions = computeActions(req.remoteService.apiDoc)
-  await req.app.get('db').collection('remote-services').replaceOne({
+  await mongo.db.collection('remote-services').replaceOne({
     id: req.params.remoteServiceId
   }, mongoEscape.escape(req.remoteService, true))
   res.status(200).json(clean(req.remoteService, req.user))
@@ -209,7 +210,7 @@ async function getAppOwner (req) {
   if (!refererAppId) return
   debug('Referer application id', refererAppId)
 
-  const refererApp = await req.app.get('db').collection('applications').findOne({ id: refererAppId }, { projection: { owner: 1 } })
+  const refererApp = await mongo.db.collection('applications').findOne({ id: refererAppId }, { projection: { owner: 1 } })
   if (!refererApp) return console.warn(`remote service proxy called from outside a known application referer=${referer} id=${refererAppId}`)
 
   return refererApp.owner
@@ -230,7 +231,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', rateLimiting.middleware('remote
   const accessFilter = [{ public: true }]
   if (appOwner) accessFilter.push({ privateAccess: { $elemMatch: { type: appOwner.type, id: appOwner.id } } })
 
-  const remoteService = await req.app.get('db').collection('remote-services')
+  const remoteService = await mongo.db.collection('remote-services')
     .findOne({ id: req.params.remoteServiceId, $or: accessFilter }, { projection: { _id: 0, id: 1, server: 1, apiKey: 1 } })
 
   if (!remoteService) return res.status(404).send('service distant inconnu')

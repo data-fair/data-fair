@@ -84,7 +84,7 @@ export const findActions = async (db, locale, publicationSite, publicBaseUrl, re
     { $match: query }, // filter after the unwind to select individual actions
     { $count: 'count' }
   ]
-  const countRes = await req.app.get('db').collection('remote-services').aggregate(countPipeline).toArray()
+  const countRes = await mongo.db.collection('remote-services').aggregate(countPipeline).toArray()
   console.log('countRes', countRes) */
 
   const actionsQuery = { ...query }

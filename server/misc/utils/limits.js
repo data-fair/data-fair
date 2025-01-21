@@ -1,8 +1,8 @@
 import express from 'express'
 import config from '#config'
+import mongo from '#mongo'
 import moment from 'moment'
 import * as ajv from '../utils/ajv.js'
-import * as dbUtils from './db.js'
 
 const limitTypeSchema = { type: 'object', properties: { limit: { type: 'number' }, consumption: { type: 'number' } } }
 const schema = {
@@ -22,10 +22,7 @@ const schema = {
 }
 const validate = ajv.compile(schema)
 
-export const init = async (db) => {
-  await dbUtils.ensureIndex(db, 'limits', { id: 'text', name: 'text' }, { name: 'fulltext' })
-  await dbUtils.ensureIndex(db, 'limits', { type: 1, id: 1 }, { name: 'limits-find-current', unique: true })
-}
+export const init = async (db) => {}
 
 export const getLimits = async (db, consumer) => {
   const coll = db.collection('limits')
@@ -113,7 +110,7 @@ const isAccountMember = (req, res, next) => {
 
 // Endpoint for customers service to create/update limits
 router.post('/:type/:id', isSuperAdmin, async (req, res, next) => {
-  const db = req.app.get('db')
+  const db = mongo.db
   req.body.type = req.params.type
   req.body.id = req.params.id
   validate(req.body)
@@ -130,7 +127,7 @@ router.post('/:type/:id', isSuperAdmin, async (req, res, next) => {
 
 // A user can get limits information for himself only
 router.get('/:type/:id', isAccountMember, async (req, res, next) => {
-  const limits = await getLimits(req.app.get('db'), { type: req.params.type, id: req.params.id })
+  const limits = await getLimits(mongo.db, { type: req.params.type, id: req.params.id })
   if (!limits) return res.status(404).send()
   delete limits._id
   res.send(limits)
@@ -140,7 +137,7 @@ router.get('/', isSuperAdmin, async (req, res, next) => {
   const filter = {}
   if (req.query.type) filter.type = req.query.type
   if (req.query.id) filter.id = req.query.id
-  const results = await req.app.get('db').collection('limits')
+  const results = await mongo.db.collection('limits')
     .find(filter)
     .sort({ lastUpdate: -1 })
     .project({ _id: 0 })

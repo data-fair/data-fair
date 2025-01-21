@@ -1,4 +1,4 @@
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import moment from 'moment-timezone'
 import config from '#config'
 import { prepareQuery, aliasName } from './commons.js'
@@ -52,18 +52,18 @@ export const assertMetricAccepted = (field, metric) => {
   const metricType = getMetricType(field)
   const acceptedAggs = acceptedMetricAggsByType[metricType]
   if (!acceptedAggs?.includes(metric)) {
-    throw createError(400, `Impossible de calculer une métrique sur le champ ${field.key}. La métrique "${metric}", n'est pas supportée pour ce type de champ.`)
+    throw httpError(400, `Impossible de calculer une métrique sur le champ ${field.key}. La métrique "${metric}", n'est pas supportée pour ce type de champ.`)
   }
 }
 
 export const agg = async (client, dataset, query) => {
-  if (!query.metric) throw createError(400, '"metric" parameter is required')
+  if (!query.metric) throw httpError(400, '"metric" parameter is required')
   const metricField = query.field || query.metric_field
-  if (!metricField) throw createError(400, '"field" parameter is required')
+  if (!metricField) throw httpError(400, '"field" parameter is required')
   const field = dataset.schema.find(f => f.key === metricField)
-  if (!field) throw createError(400, `Impossible de calculer une métrique sur le champ ${metricField}, il n'existe pas dans le jeu de données.`)
+  if (!field) throw httpError(400, `Impossible de calculer une métrique sur le champ ${metricField}, il n'existe pas dans le jeu de données.`)
   if (field['x-capabilities'] && field['x-capabilities'].values === false) {
-    throw createError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
+    throw httpError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
   }
   assertMetricAccepted(field, query.metric)
 
@@ -115,9 +115,9 @@ export const simpleMetricsAgg = async (client, dataset, query) => {
 
   for (const metricField of fields) {
     const field = dataset.schema.find(f => f.key === metricField)
-    if (!field) throw createError(400, `Impossible de calculer des métriques sur le champ ${metricField}, il n'existe pas dans le jeu de données.`)
+    if (!field) throw httpError(400, `Impossible de calculer des métriques sur le champ ${metricField}, il n'existe pas dans le jeu de données.`)
     if (field['x-capabilities'] && field['x-capabilities'].values === false) {
-      throw createError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
+      throw httpError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
     }
     if (globalMetrics) {
       for (const metric of globalMetrics) {

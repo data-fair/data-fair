@@ -1,4 +1,5 @@
 import config from '#config'
+import mongo from '#mongo'
 import clone from '@data-fair/lib-utils/clone.js'
 
 export default async () => {
@@ -6,7 +7,7 @@ export default async () => {
     if (!req.url.startsWith('/embed/')) return next()
     const [resourceType, resourceId, embedView] = req.url.replace('/embed/', '').split(/[/?]/)
     if (resourceType === 'dataset') {
-      const dataset = await req.app.get('db').collection('datasets').findOne({ id: resourceId }, { projection: { owner: 1, id: 1, title: 1 } })
+      const dataset = await mongo.db.collection('datasets').findOne({ id: resourceId }, { projection: { owner: 1, id: 1, title: 1 } })
       if (dataset) {
         const ownerHeader = { type: dataset.owner.type, id: dataset.owner.id }
         if (dataset.owner.department) ownerHeader.department = dataset.owner.department

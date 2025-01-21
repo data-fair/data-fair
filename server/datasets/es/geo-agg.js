@@ -1,16 +1,16 @@
 
 import config from '#config'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import geohash from '../../misc/utils/geohash.js'
 import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem } from './commons.js'
 
 export default async (client, dataset, query, publicBaseUrl) => {
-  if (!dataset.bbox) throw createError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
+  if (!dataset.bbox) throw httpError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
   const bbox = getQueryBBOX(query) || dataset.bbox
   const aggSize = query.agg_size ? Number(query.agg_size) : 20
-  if (aggSize > 1000) throw createError(400, '"agg_size" cannot be more than 1000')
+  if (aggSize > 1000) throw httpError(400, '"agg_size" cannot be more than 1000')
   const size = query.size ? Number(query.size) : 1
-  if (size > 100) throw createError(400, '"size" cannot be more than 100')
+  if (size > 100) throw httpError(400, '"size" cannot be more than 100')
   const precision = geohash.bbox2precision(bbox, aggSize)
 
   const esQuery = prepareQuery(dataset, query)

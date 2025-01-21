@@ -1,4 +1,5 @@
 import config from '#config'
+import mongo from '#mongo'
 import debugLib from 'debug'
 import { CronJob } from 'cron'
 import catalogs from '../catalogs/plugins/index.js'
@@ -6,7 +7,7 @@ import { internalError } from '@data-fair/lib-node/observer.js'
 
 export const process = async function (app, catalog) {
   const debug = debugLib(`worker:catalog-harvester:${catalog.id}`)
-  const db = app.get('db')
+  const db = mongo.db
   const date = new Date()
 
   const patch = { autoUpdate: JSON.parse(JSON.stringify(catalog.autoUpdate || {})) }

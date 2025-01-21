@@ -1,10 +1,11 @@
 import util from 'util'
 import config from '#config'
+import mongo from '#mongo'
 import express from 'express'
 import axios from '../misc/utils/axios.js'
 import slug from 'slugify'
 import jsonRefs from 'json-refs'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import Extractor from 'html-extractor'
 import i18n from 'i18n'
 import * as i18nUtils from '../i18n/utils.js'
@@ -101,7 +102,7 @@ async function syncBaseApp (db, baseApp) {
 }
 
 router.post('', async (req, res) => {
-  const db = req.app.get('db')
+  const db = mongo.db
   if (!req.body.url || Object.keys(req.body).length !== 1) {
     return res.status(400).type('text/plain').send(req.__('Initializing a base application only accepts the "url" part.'))
   }
@@ -112,7 +113,7 @@ router.post('', async (req, res) => {
 })
 
 router.patch('/:id', async (req, res) => {
-  const db = req.app.get('db')
+  const db = mongo.db
   if (!req.user || !req.user.adminMode) return res.status(403).type('text/plain').send()
   const patch = req.body
   const storedBaseApp = await db.collection('base-applications')
@@ -134,10 +135,10 @@ const getQuery = (req, showAll = false) => {
   if (req.query.privateAccess) {
     for (const p of req.query.privateAccess.split(',')) {
       const [type, id] = p.split(':')
-      if (!req.user) throw createError(401)
+      if (!req.user) throw httpError(401)
       if (!req.user.adminMode) {
-        if (type === 'user' && id !== req.user.id) throw createError(403)
-        if (type === 'organization' && !req.user.organizations.find(o => o.id === id)) throw createError(403)
+        if (type === 'user' && id !== req.user.id) throw httpError(403)
+        if (type === 'organization' && !req.user.organizations.find(o => o.id === id)) throw httpError(403)
       }
       privateAccess.push({ type, id })
       accessFilter.push({ privateAccess: { $elemMatch: { type, id } } })
@@ -151,7 +152,7 @@ const getQuery = (req, showAll = false) => {
 
 // Get the list. Non admin users can only see the public and non deprecated ones.
 router.get('', cacheHeaders.noCache, async (req, res) => {
-  const db = req.app.get('db')
+  const db = mongo.db
   const { query, privateAccess } = getQuery(req)
   if (req.query.applicationName) query.$and.push({ $or: [{ applicationName: req.query.applicationName }, { 'meta.application-name': req.query.applicationName }] })
   if (req.query.q) query.$and.push({ $text: { $search: req.query.q } })
@@ -251,7 +252,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
 })
 
 router.get('/:id/icon', async (req, res, next) => {
-  const db = req.app.get('db')
+  const db = mongo.db
   const { query } = getQuery(req, req.user && req.user.adminMode)
   query.$and.push({ id: req.params.id })
   const baseApp = await db.collection('base-applications').findOne(query, { url: 1 })
@@ -260,7 +261,7 @@ router.get('/:id/icon', async (req, res, next) => {
   await getThumbnail(req, res, iconUrl)
 })
 router.get('/:id/thumbnail', async (req, res, next) => {
-  const db = req.app.get('db')
+  const db = mongo.db
   const { query } = getQuery(req, req.user && req.user.adminMode)
   query.$and.push({ id: req.params.id })
   const baseApp = await db.collection('base-applications').findOne(query, { url: 1 })

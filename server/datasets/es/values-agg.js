@@ -1,5 +1,5 @@
 import config from '#config'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } from './commons.js'
 import capabilities from '../../../contract/capabilities.js'
 import { assertMetricAccepted } from './metric-agg.js'
@@ -7,7 +7,7 @@ import { assertMetricAccepted } from './metric-agg.js'
 export default async (client, dataset, query, addGeoData, publicBaseUrl, explain, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
   const fields = dataset.schema.map(f => f.key)
   // nested grouping by a serie of fields
-  if (!query.field) throw createError(400, 'Le paramètre "field" est obligatoire')
+  if (!query.field) throw httpError(400, 'Le paramètre "field" est obligatoire')
   const valuesFields = query.field.split(';')
   // matching properties from the schema
   const props = valuesFields.map(f => dataset.schema.find(p => p.key === f))
@@ -22,9 +22,9 @@ export default async (client, dataset, query, addGeoData, publicBaseUrl, explain
   let combinedMaxSize = 1
   const aggTypes = []
   for (let i = 0; i < valuesFields.length; i++) {
-    if (!props[i]) throw createError(400, `Le paramètre "field" référence un champ inconnu ${valuesFields[i]}`)
+    if (!props[i]) throw httpError(400, `Le paramètre "field" référence un champ inconnu ${valuesFields[i]}`)
     if (props[i]['x-capabilities'] && props[i]['x-capabilities'].values === false) {
-      throw createError(400, `Impossible de grouper sur le champ ${props[i].key}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
+      throw httpError(400, `Impossible de grouper sur le champ ${props[i].key}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
     }
     intervals[i] = intervals[i] || 'value' // default is to group by strict value (simple terms aggregation)
     aggTypes[i] = 'terms'
@@ -35,12 +35,12 @@ export default async (client, dataset, query, addGeoData, publicBaseUrl, explain
         aggTypes[i] = 'histogram'
         intervals[i] = Number(intervals[i])
       } else {
-        throw createError(400, `Grouper pas interval est seulement compatible avec les nombres et dates. ${props[i].key} n'est pas du bon type.`)
+        throw httpError(400, `Grouper pas interval est seulement compatible avec les nombres et dates. ${props[i].key} n'est pas du bon type.`)
       }
     }
 
     if (aggSizes[i] === undefined) aggSizes[i] = 20
-    if (aggSizes[i] > 1000) throw createError(400, '"agg_size" cannot be more than 1000')
+    if (aggSizes[i] > 1000) throw httpError(400, '"agg_size" cannot be more than 1000')
     combinedMaxSize *= aggSizes[i]
     if (sorts[i] === valuesFields[i]) sorts[i] = '_key'
     if (sorts[i] === '-' + valuesFields[i]) sorts[i] = '-_key'
@@ -61,7 +61,7 @@ export default async (client, dataset, query, addGeoData, publicBaseUrl, explain
   const size = query.size ? Number(query.size) : 0
   combinedMaxSize *= size
   // TODO: remove the condition on size and only use combinedMaxSize, but to do this we must check if we break some existing usage
-  if (size > 100 && combinedMaxSize > 100000) throw createError(400, '"size" x "agg_size" cannot be more than 100000')
+  if (size > 100 && combinedMaxSize > 100000) throw httpError(400, '"size" x "agg_size" cannot be more than 100000')
 
   // Get a ES query to filter the aggregation results
   delete query.sort
@@ -87,10 +87,10 @@ export default async (client, dataset, query, addGeoData, publicBaseUrl, explain
       let missing = missings[i]
       if (valuesField?.type === 'number' || valuesField?.type === 'integer') {
         missing = Number(missing)
-        if (isNaN(missing)) throw createError(400, 'missing should be a number')
+        if (isNaN(missing)) throw httpError(400, 'missing should be a number')
       }
       if (valuesField?.type === 'boolean') {
-        if (!['true', 'false'].includes(missing)) throw createError(400, 'missing should be a boolean')
+        if (!['true', 'false'].includes(missing)) throw httpError(400, 'missing should be a boolean')
         missing = missing === 'true'
       }
       currentAggLevel.values[aggTypes[i]].missing = missing
@@ -111,7 +111,7 @@ export default async (client, dataset, query, addGeoData, publicBaseUrl, explain
       if (query.metric && query.metric_field) {
         const metricField = dataset.schema.find(p => p.key === query.metric_field)
         if (!metricField) {
-          throw createError(400, `Impossible de calculer une métrique sur le champ ${query.metric_field}, il n'existe pas dans le jeu de données.`)
+          throw httpError(400, `Impossible de calculer une métrique sur le champ ${query.metric_field}, il n'existe pas dans le jeu de données.`)
         }
         assertMetricAccepted(metricField, query.metric)
 
@@ -128,7 +128,7 @@ export default async (client, dataset, query, addGeoData, publicBaseUrl, explain
           const [field, metric] = extraMetric.split(':')
           const metricField = dataset.schema.find(p => p.key === field)
           if (!metricField) {
-            throw createError(400, `Impossible de calculer une métrique sur le champ ${field}, il n'existe pas dans le jeu de données.`)
+            throw httpError(400, `Impossible de calculer une métrique sur le champ ${field}, il n'existe pas dans le jeu de données.`)
           }
           assertMetricAccepted(metricField, metric)
           currentAggLevel.values.aggs = currentAggLevel.values.aggs ?? {}
@@ -192,7 +192,7 @@ const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl) => 
   if (!aggRes.values) return response
   response.total_other = aggRes.values.sum_other_doc_count
   if (aggRes.values.buckets.length > 10000) {
-    throw createError(400, 'Résultats d\'aggrégation trop nombreux. Abandon.')
+    throw httpError(400, 'Résultats d\'aggrégation trop nombreux. Abandon.')
   }
   response.aggs = aggRes.values.buckets.map(b => {
     const aggItem = {

@@ -3,9 +3,10 @@ import express from 'express'
 import slug from 'slugify'
 import moment from 'moment'
 import config from '#config'
+import mongo from '#mongo'
 import fs from 'fs-extra'
 import util from 'util'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
 import sanitizeHtml from '../../shared/sanitize-html.js'
 import { nanoid } from 'nanoid'
@@ -31,6 +32,7 @@ import * as attachments from '../misc/utils/attachments.js'
 import * as clamav from '../misc/utils/clamav.js'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
 import pump from '../misc/utils/pipe.js'
+import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 
 const unlink = util.promisify(fs.unlink)
 const validate = ajv.compile(applicationSchema)
@@ -85,7 +87,7 @@ router.get('', cacheHeaders.listBased, async (req, res) => {
   const user = req.user
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findApplications(req.app.get('db'), req.locale, publicationSite, publicBaseUrl, reqQuery, user)
+  const response = await findApplications(mongo.db, req.locale, publicationSite, publicBaseUrl, reqQuery, user)
   res.json(response)
 })
 
@@ -96,7 +98,7 @@ const initNew = async (req) => {
   application.createdAt = application.updatedAt = date
   application.createdBy = application.updatedBy = { id: req.user.id, name: req.user.name }
   application.permissions = []
-  await curateApplication(req.app.get('db'), application)
+  await curateApplication(mongo.db, application)
   return application
 }
 
@@ -119,7 +121,7 @@ router.post('', async (req, res) => {
   let i = 1
   while (!insertOk) {
     try {
-      await req.app.get('db').collection('applications').insertOne(application)
+      await mongo.db.collection('applications').insertOne(application)
       insertOk = true
     } catch (err) {
       if (err.code !== 11000) throw err
@@ -145,7 +147,7 @@ const readApplication = async (req, res, next) => {
   const mainPublicationSite = req.mainPublicationSite
 
   const tolerateStale = !!publicationSite
-  const application = await findUtils.getByUniqueRef(req.app.get('db'), publicationSite, mainPublicationSite, req.params, 'application', null, tolerateStale)
+  const application = await findUtils.getByUniqueRef(mongo.db, publicationSite, mainPublicationSite, req.params, 'application', null, tolerateStale)
   if (!application) return res.status(404).send(req.__('errors.missingApp'))
 
   // @ts-ignore
@@ -156,7 +158,7 @@ const readApplication = async (req, res, next) => {
 }
 
 const readBaseApp = async (req, res, next) => {
-  req.baseApp = await req.app.get('db').collection('base-applications').findOne({ url: req.application.url })
+  req.baseApp = await mongo.db.collection('base-applications').findOne({ url: req.application.url })
   if (!req.baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
   next()
 }
@@ -166,7 +168,7 @@ const readBaseApp = async (req, res, next) => {
 // disabled for now
 
 const setFullUpdatedAt = async (req, res, next) => {
-  const db = req.app.get('db')
+  const db = mongo.db
   // the dates of last modification / finalization of both the app, the base-app and the datasets it uses
   const updateDates = [req.application.updatedAt]
   const baseApp = await db.collection('base-applications')
@@ -189,7 +191,7 @@ const setFullUpdatedAt = async (req, res, next) => {
 
 router.use('/:applicationId/permissions', readApplication, permissions.router('applications', 'application', async (req, patchedApplication) => {
   // this callback function is called when the resource becomes public
-  await publicationSites.onPublic(req.app.get('db'), patchedApplication, 'application')
+  await publicationSites.onPublic(mongo.db, patchedApplication, 'application')
 }))
 
 // retrieve a application by its id
@@ -210,7 +212,7 @@ const attemptInsert = async (req, res, next) => {
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (permissions.canDoForOwner(newApplication.owner, 'applications', 'post', req.user)) {
     try {
-      await req.app.get('db').collection('applications').insertOne(newApplication)
+      await mongo.db.collection('applications').insertOne(newApplication)
 
       await import('@data-fair/lib-express/events-log.js')
         .then((eventsLog) => eventsLog.default.info('df.applications.create', `created application ${newApplication.slug} (${newApplication.id})`, { req, account: newApplication.owner }))
@@ -242,7 +244,7 @@ router.put('/:applicationId', attemptInsert, readApplication, permissions.middle
       .then((eventsLog) => eventsLog.default.info('df.applications.update', `updated application ${newApplication.slug} (${newApplication.id})`, { req, account: newApplication.owner }))
   }
 
-  await req.app.get('db').collection('applications').replaceOne({ id: req.params.applicationId }, newApplication)
+  await mongo.db.collection('applications').replaceOne({ id: req.params.applicationId }, newApplication)
   res.status(200).json(clean(newApplication, req.publicBaseUrl, req.publicationSite))
 })
 
@@ -254,7 +256,7 @@ router.patch('/:applicationId',
   permissions.middleware('writeDescription', 'write'),
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
   async (req, res) => {
-    const db = req.app.get('db')
+    const db = mongo.db
     const patch = req.body
     validatePatch(patch)
     validateURLFriendly(i18n.getLocale(req), patch.slug)
@@ -284,7 +286,7 @@ router.patch('/:applicationId',
         .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })
     } catch (err) {
       if (err.code !== 11000) throw err
-      throw createError(400, req.__('errors.dupSlug'))
+      throw httpError(400, req.__('errors.dupSlug'))
     }
 
     await import('@data-fair/lib-express/events-log.js')
@@ -300,7 +302,7 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
   // @ts-ignore
   const application = req.application
 
-  const db = req.app.get('db')
+  const db = mongo.db
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
   if (!permissions.canDoForOwner(req.body, 'applications', 'post', req.user)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
 
@@ -350,7 +352,7 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
   // @ts-ignore
   const application = req.application
 
-  const db = req.app.get('db')
+  const db = mongo.db
   await db.collection('applications').deleteOne({ id: req.params.applicationId })
   await db.collection('journals').deleteOne({ type: 'application', id: req.params.applicationId })
   await db.collection('applications-keys').deleteOne({ _id: application.id })
@@ -386,7 +388,7 @@ const writeConfig = async (req, res) => {
   // @ts-ignore
   const application = req.application
 
-  const db = req.app.get('db')
+  const db = mongo.db
   validateConfiguration(req.body)
   await db.collection('applications').updateOne(
     { id: req.params.applicationId },
@@ -424,7 +426,7 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
   const application = req.application
 
   validateConfiguration(req.body)
-  await req.app.get('db').collection('applications').updateOne(
+  await mongo.db.collection('applications').updateOne(
     { id: req.params.applicationId },
     {
       $unset: {
@@ -448,7 +450,7 @@ router.delete('/:applicationId/configuration-draft', readApplication, permission
   // @ts-ignore
   const application = req.application
 
-  await req.app.get('db').collection('applications').updateOne(
+  await mongo.db.collection('applications').updateOne(
     { id: req.params.applicationId },
     {
       $unset: {
@@ -475,7 +477,7 @@ router.get('/:applicationId/base-application', readApplication, permissions.midd
 })
 
 router.get('/:applicationId/api-docs.json', readApplication, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
-  const settings = await req.app.get('db').collection('settings')
+  const settings = await mongo.db.collection('settings')
     .findOne({ type: req.application.owner.type, id: req.application.owner.id }, { projection: { info: 1 } })
   res.send(applicationAPIDocs(req.application, (settings && settings.info) || {}))
 })
@@ -485,7 +487,7 @@ router.get('/:applicationId/status', readApplication, permissions.middleware('re
 })
 
 router.get('/:applicationId/journal', readApplication, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, async (req, res) => {
-  const journal = await req.app.get('db').collection('journals').findOne({
+  const journal = await mongo.db.collection('journals').findOne({
     type: 'application',
     id: req.application.id,
     'owner.type': req.application.owner.type,
@@ -508,10 +510,10 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
 
   if (draftMode) {
     // websocket notifications of draft mode errors
-    await req.app.get('db').collection('applications').updateOne({ id: req.application.id }, { $set: { errorMessageDraft: message } })
-    await req.app.publish(`applications/${req.params.applicationId}/draft-error`, req.body)
+    await mongo.db.collection('applications').updateOne({ id: req.application.id }, { $set: { errorMessageDraft: message } })
+    await wsEmitter.emit(`applications/${req.params.applicationId}/draft-error`, req.body)
   } else if (req.application.configuration) {
-    await req.app.get('db').collection('applications').updateOne({ id: req.application.id }, { $set: { status: 'error', errorMessage: message } })
+    await mongo.db.collection('applications').updateOne({ id: req.application.id }, { $set: { status: 'error', errorMessage: message } })
     await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application')
   }
   res.status(204).send()
@@ -526,7 +528,7 @@ router.get('/:applicationId/print', readApplication, permissions.middleware('rea
 
 // keys for readonly access to application
 router.get('/:applicationId/keys', readApplication, permissions.middleware('getKeys', 'admin'), async (req, res) => {
-  const applicationKeys = await req.app.get('db').collection('applications-keys').findOne({ _id: req.application.id })
+  const applicationKeys = await mongo.db.collection('applications-keys').findOne({ _id: req.application.id })
   res.send((applicationKeys && applicationKeys.keys) || [])
 })
 router.post('/:applicationId/keys', readApplication, permissions.middleware('setKeys', 'admin'), async (req, res) => {
@@ -537,7 +539,7 @@ router.post('/:applicationId/keys', readApplication, permissions.middleware('set
   for (const key of req.body) {
     if (!key.id) key.id = nanoid()
   }
-  await req.app.get('db').collection('applications-keys').replaceOne({ _id: application.id }, { _id: application.id, keys: req.body, owner: application.owner }, { upsert: true })
+  await mongo.db.collection('applications-keys').replaceOne({ _id: application.id }, { _id: application.id, keys: req.body, owner: application.owner }, { upsert: true })
 
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.applications.writeKeys', `wrote application keys ${application.slug} (${application.id})`, { req, account: application.owner }))

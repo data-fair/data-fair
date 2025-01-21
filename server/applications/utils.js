@@ -1,4 +1,5 @@
 import config from '#config'
+import mongo from '#mongo'
 import memoize from 'memoizee'
 import path from 'path'
 import fs from 'fs-extra'
@@ -8,7 +9,7 @@ import { prepareMarkdownContent } from '../misc/utils/markdown.js'
 import * as findUtils from '../misc/utils/find.js'
 import clone from '@data-fair/lib-utils/clone.js'
 import * as datasetUtils from '../datasets/utils/index.js'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { getPseudoUser } from '../misc/utils/users.js'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
 import { ownerDir } from '../datasets/utils/files.js'
@@ -63,7 +64,7 @@ const memoizedGetFreshDataset = memoize(async (id, db) => {
  * @param {boolean} draft
  */
 export const refreshConfigDatasetsRefs = async (req, application, draft) => {
-  const db = req.app.get('db')
+  const db = mongo.db
   // @ts-ignore
   const publicBaseUrl = req.publicBaseUrl
   // @ts-ignore
@@ -99,7 +100,7 @@ export const refreshConfigDatasetsRefs = async (req, application, draft) => {
       if (freshDataset) {
         const pseudoUser = getPseudoUser(application.owner, 'application config', application.id, 'admin')
         if (!permissions.list('datasets', freshDataset, pseudoUser).includes('readDescription')) {
-          throw createError(403, `permission manquante sur le jeu de données référencé dans l'application ${freshDataset.id}`)
+          throw httpError(403, `permission manquante sur le jeu de données référencé dans l'application ${freshDataset.id}`)
         }
 
         datasetUtils.clean(req, freshDataset)
@@ -153,7 +154,7 @@ export const storage = async (db, es, application) => {
 
 // After a change that might impact consumed storage, we store the value
 export const updateStorage = async (app, application, deleted = false, checkRemaining = false) => {
-  const db = app.get('db')
+  const db = mongo.db
   const es = app.get('es')
   if (application.draftReason) {
     console.log(new Error('updateStorage should not be called on a draft dataset'))

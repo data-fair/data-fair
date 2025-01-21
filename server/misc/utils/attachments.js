@@ -1,8 +1,9 @@
 import config from '#config'
+import mongo from '#mongo'
 import debugLib from 'debug'
 import fs from 'fs-extra'
 import multer from 'multer'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mime from 'mime-types'
 import { metadataAttachmentsDir as datasetAttachmentsDir, metadataAttachmentPath as datasetAttachmentPath } from '../../datasets/utils/files.js'
 import { attachmentsDir as applicationAttachmentsDir, attachmentPath as applicationAttachmentPath } from '../../applications/utils.js'
@@ -38,17 +39,17 @@ const metadataUploadMulter = multer({
   fileFilter: async function fileFilter (req, file, cb) {
     try {
       // manage disk storage quota
-      if (!req.get('Content-Length')) throw createError(411, 'Content-Length is mandatory')
+      if (!req.get('Content-Length')) throw httpError(411, 'Content-Length is mandatory')
       const contentLength = Number(req.get('Content-Length'))
-      if (Number.isNaN(contentLength)) throw createError(400, 'Content-Length is not a number')
+      if (Number.isNaN(contentLength)) throw httpError(400, 'Content-Length is not a number')
       // Approximate size of multi-part overhead and owner metadata
       const estimatedFileSize = contentLength - 210
       const attachmentLimit = config.defaultLimits.attachmentStorage
       if (attachmentLimit !== -1 && attachmentLimit < estimatedFileSize) {
         debugLimits('attachmentStorage/metadataUpload', { attachmentLimit, estimatedFileSize })
-        throw createError(413, 'Attachment size exceeds the authorized limit')
+        throw httpError(413, 'Attachment size exceeds the authorized limit')
       }
-      const remaining = await limits.remaining(req.app.get('db'), req.resource.owner)
+      const remaining = await limits.remaining(mongo.db, req.resource.owner)
       const debugInfo = { owner: req.resource.owner, remaining: { ...remaining }, estimatedFileSize }
       if (remaining.storage !== -1) {
         // Ignore the size of the attachment we are overwriting
@@ -60,7 +61,7 @@ const metadataUploadMulter = multer({
         remaining.storage = Math.max(0, remaining.storage - estimatedFileSize)
         if (remaining.storage === 0) {
           debugLimits('exceedLimitStorage/metadataUpload', debugInfo)
-          throw createError(429, req.__('errors.exceedLimitStorage'))
+          throw httpError(429, req.__('errors.exceedLimitStorage'))
         }
       }
       // mime type is broken on windows it seems.. detect based on extension instead

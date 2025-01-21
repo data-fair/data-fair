@@ -2,7 +2,7 @@
 // https://geocatalogue.lannion-tregor.com/geonetwork/
 
 import path from 'path'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import memoize from 'memoizee'
 import mime from 'mime'
 import slug from 'slugify'
@@ -61,23 +61,23 @@ export const httpParams = async (catalog) => {
 }
 
 export const searchOrganizations = async (catalogUrl, q) => {
-  throw createError(501, 'La récupération d\'une liste d\'organisations depuis catalogue DCAT n\'est pas disponible')
+  throw httpError(501, 'La récupération d\'une liste d\'organisations depuis catalogue DCAT n\'est pas disponible')
 }
 
 export const publishDataset = async (catalog, dataset, publication) => {
-  throw createError(501, 'La publication de jeux de données vers catalogue DCAT n\'est pas disponible')
+  throw httpError(501, 'La publication de jeux de données vers catalogue DCAT n\'est pas disponible')
 }
 
 export const deleteDataset = async (catalog, dataset, publication) => {
-  throw createError(501, `Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
+  throw httpError(501, `Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
 }
 
 export const publishApplication = async (catalog, application, publication, datasets) => {
-  throw createError(501, 'La publication d\'applications vers catalogue DCAT n\'est pas disponible')
+  throw httpError(501, 'La publication d\'applications vers catalogue DCAT n\'est pas disponible')
 }
 
 export const deleteApplication = async (catalog, application, publication) => {
-  throw createError(501, 'La dépublication d\'applications vers catalogue DCAT n\'est pas disponible')
+  throw httpError(501, 'La dépublication d\'applications vers catalogue DCAT n\'est pas disponible')
 }
 
 export const listDatasets = async (catalog, p, settings) => {

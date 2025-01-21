@@ -10,10 +10,11 @@ import * as datasetsService from '../datasets/service.js'
 import { tmpDir } from '../datasets/utils/files.js'
 import debugLib from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import mongo from '#mongo'
 
 export const process = async function (app, dataset) {
   const debug = debugLib(`worker:rest-exporter-csv:${dataset.id}`)
-  const db = app.get('db')
+  const db = mongo.db
   const date = new Date()
   const patch = { exports: JSON.parse(JSON.stringify(dataset.exports)) }
   patch.exports.restToCSV.lastExport = { date }

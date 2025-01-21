@@ -1,5 +1,5 @@
 import express from 'express'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
 import mime from 'mime'
 import * as findUtils from '../utils/find.js'
@@ -7,6 +7,7 @@ import * as datasetUtils from '../../datasets/utils/index.js'
 import * as permissions from '../../misc/utils/permissions.js'
 import catalogApiDocs from '../../../contract/site-catalog-api-docs.js'
 import dcatContext from '../utils/dcat/context.js'
+import mongo from '#mongo'
 
 const router = express.Router()
 export default router
@@ -14,13 +15,13 @@ export default router
 router.use((req, res, next) => {
   if (req.mainPublicationSite) req.publicationSite = req.mainPublicationSite
   if (!req.publicationSite) {
-    return next(createError(400, 'catalog API can only be used from a publication site, not the back-office'))
+    return next(httpError(400, 'catalog API can only be used from a publication site, not the back-office'))
   }
   next()
 })
 
 router.get('/datasets', async (req, res) => {
-  const datasets = req.app.get('db').collection('datasets')
+  const datasets = mongo.db.collection('datasets')
   req.resourceType = 'datasets'
 
   const extraFilters = [{ publicationSites: `${req.publicationSite.type}:${req.publicationSite.id}` }]
@@ -56,7 +57,7 @@ router.get('/datasets', async (req, res) => {
 })
 
 router.get('/api-docs.json', async (req, res) => {
-  const settings = await req.app.get('db').collection('settings')
+  const settings = await mongo.db.collection('settings')
     .findOne({ type: req.publicationSite.owner.type, id: req.publicationSite.owner.id }, { projection: { info: 1 } })
   res.json(catalogApiDocs(req.publicBaseUrl, req.publicationSite, (settings && settings.info) || {}))
 })
@@ -83,7 +84,7 @@ router.get('/dcat', async (req, res) => {
 
   // TODO: pagination ?
 
-  const datasets = await req.app.get('db').collection('datasets')
+  const datasets = await mongo.db.collection('datasets')
     .find(query)
     .limit(10000)
     .project({

@@ -3,12 +3,13 @@
 
 import express from 'express'
 import * as findUtils from '../utils/find.js'
+import mongo from '#mongo'
 
 const router = express.Router()
 export default router
 
 router.get('', async (req, res) => {
-  const db = req.app.get('db')
+  const db = mongo.db
   const query = findUtils.query(req, { status: 'status' })
   const size = findUtils.pagination(req.query)[1]
   const [datasets, applications] = await Promise.all([

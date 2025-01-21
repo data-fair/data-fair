@@ -1,5 +1,6 @@
 import express from 'express'
 import config from '#config'
+import mongo from '#mongo'
 import fs from 'fs'
 import path from 'path'
 import https from 'https'
@@ -37,7 +38,7 @@ const setResource = async (req, res, next) => {
   // @ts-ignore
   const publicBaseUrl = req.publicBaseUrl
 
-  const db = req.app.get('db')
+  const db = mongo.db
 
   const tolerateStale = !!publicationSite
   // protected application can be given either as /applicationKey:applicationId or /applicationId?key=applicationKey
@@ -56,7 +57,7 @@ const setResource = async (req, res, next) => {
     'owner.department': application.owner.department ? application.owner.department : { $exists: false }
   }
   if (applicationKeyId) {
-    const applicationKey = await req.app.get('db').collection('applications-keys')
+    const applicationKey = await mongo.db.collection('applications-keys')
       .findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
     if (applicationKey) {
       if (applicationKey._id === application.id) {
@@ -64,7 +65,7 @@ const setResource = async (req, res, next) => {
         req.matchingApplicationKey = true
       } else {
         // ths application key can be matched to a parent application key (case of dashboards, etc)
-        const isParentApplicationKey = await req.app.get('db').collection('applications')
+        const isParentApplicationKey = await mongo.db.collection('applications')
           .count({ id: applicationKey._id, 'configuration.applications.id': application.id, ...ownerFilter })
         if (isParentApplicationKey) {
           // @ts-ignore
@@ -86,7 +87,7 @@ router.get('/:applicationId/manifest.json', setResource, async (req, res) => {
   if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchingApplicationKey) {
     return res.status(403).type('text/plain').send()
   }
-  const baseApp = await req.app.get('db').collection('base-applications').findOne({ url: req.application.url }, { projection: { id: 1, meta: 1 } })
+  const baseApp = await mongo.db.collection('base-applications').findOne({ url: req.application.url }, { projection: { id: 1, meta: 1 } })
   if (!baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
   res.setHeader('Content-Type', 'application/manifest+json')
   res.send({
@@ -191,7 +192,7 @@ if (inIframe()) {
 /** @type {string} */
 let minifiedIframeRedirectSrc
 router.all(['/:applicationId/*extraPath', '/:applicationId'], setResource, async (req, res, next) => {
-  const db = req.app.get('db')
+  const db = mongo.db
 
   if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchingApplicationKey) {
     return res.redirect(`${req.publicBaseUrl}/app/${req.params.applicationId}/login`)

@@ -1,10 +1,10 @@
 
 import config from '#config'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.js'
 
 export default async (client, dataset, query = {}, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
-  if (!dataset.bbox) throw createError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
+  if (!dataset.bbox) throw httpError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
 
   const esQuery = prepareQuery(dataset, query)
   esQuery.size = 0

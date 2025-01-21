@@ -6,7 +6,7 @@ import { stringify as csvStrStream } from 'csv-stringify'
 import flatten from 'flat'
 import tmp from 'tmp-promise'
 import mimeTypeStream from 'mime-type-stream'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { createGunzip } from 'zlib'
 import DecodeStream from '../../misc/utils/decode-stream.js'
 import { csvTypes } from './types.js'
@@ -122,7 +122,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
             .filter(k => k !== '')
             .filter(k => !schema.find(p => p['x-originalName'] === k || p.key === k))
           if (unknownKeys.length) {
-            return callback(createError(400, `Colonnes inconnues ${unknownKeys.join(', ')}`))
+            return callback(httpError(400, `Colonnes inconnues ${unknownKeys.join(', ')}`))
           }
           const readonlyKeys = Object.keys(chunk)
             .filter(k => k !== '_i' && k !== '_id')
@@ -131,7 +131,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
               return prop && (prop['x-calculated'] || prop['x-extension'])
             })
           if (readonlyKeys.length) {
-            return callback(createError(400, `Colonnes en lecture seule ${readonlyKeys.join(', ')}`))
+            return callback(httpError(400, `Colonnes en lecture seule ${readonlyKeys.join(', ')}`))
           }
         }
         for (const prop of schema) {
@@ -166,7 +166,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
       }
     }))
   } else {
-    throw createError(400, 'mime-type is not supported ' + mimeType)
+    throw httpError(400, 'mime-type is not supported ' + mimeType)
   }
 
   return streams

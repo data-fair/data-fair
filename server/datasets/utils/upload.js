@@ -1,6 +1,6 @@
 import fs from 'fs-extra'
 import multer from 'multer'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { nanoid } from 'nanoid'
 import mime from 'mime-types'
 import resolvePath from 'resolve-path'
@@ -71,13 +71,13 @@ const middleware = multer({
           if (file.mimetype === 'application/gzip' && basicTypes.includes(mime.lookup(file.originalname.slice(0, file.originalname.length - 3)))) {
             // gzip of a csv or other basic type is also accepted, file-normalizer will proceed
           } else {
-            throw createError(400, file.mimetype + ' type is not supported')
+            throw httpError(400, file.mimetype + ' type is not supported')
           }
         }
       } else if (file.fieldname === 'attachments') {
-        if (file.mimetype !== 'application/zip') throw createError(400, 'Les fichiers joints doivent être embarqués dans une archive zip')
+        if (file.mimetype !== 'application/zip') throw httpError(400, 'Les fichiers joints doivent être embarqués dans une archive zip')
       } else {
-        throw createError(400, `Fichier dans un champ non supporté: "${file.fieldname}"`)
+        throw httpError(400, `Fichier dans un champ non supporté: "${file.fieldname}"`)
       }
       debug('File accepted', file.originalname)
       cb(null, true)
@@ -99,12 +99,12 @@ export const getFiles = async (req, res) => {
 }
 
 export const getFormBody = (body) => {
-  if (!body) throw createError(400, 'Missing body')
+  if (!body) throw httpError(400, 'Missing body')
   if (body.body) {
     try {
       return JSON.parse(body.body)
     } catch (err) {
-      throw createError('400', `Invalid JSON in body part, ${err.message}`)
+      throw httpError('400', `Invalid JSON in body part, ${err.message}`)
     }
   }
   for (const key of Object.keys(datasetSchema.properties)) {
@@ -116,7 +116,7 @@ export const getFormBody = (body) => {
           try {
             body[key] = JSON.parse(body[key])
           } catch (err) {
-            throw createError('400', `Invalid JSON in part "${key}", ${err.message}`)
+            throw httpError('400', `Invalid JSON in part "${key}", ${err.message}`)
           }
         }
       }

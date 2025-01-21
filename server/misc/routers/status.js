@@ -1,11 +1,12 @@
 import config from '#config'
+import mongo from '#mongo'
 import moment from 'moment'
 import axios from '../utils/axios.js'
 import fs from 'fs-extra'
 import * as clamav from '../utils/clamav.js'
 
 async function mongoStatus (req) {
-  await req.app.get('db').command({ ping: 1 })
+  await mongo.db.command({ ping: 1 })
 }
 
 async function esStatus (req) {
