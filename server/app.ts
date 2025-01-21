@@ -1,4 +1,3 @@
-import eventToPromise from 'event-to-promise'
 import express from 'express'
 import config from '#config'
 import memoize from 'memoizee'
@@ -10,6 +9,7 @@ import * as observe from './misc/utils/observe.js'
 import * as metrics from './misc/utils/metrics.js'
 import debug from 'debug'
 import EventEmitter from 'node:events'
+import eventPromise from '@data-fair/lib-utils/event-promise.js'
 
 const debugDomain = debug('domain')
 
@@ -205,7 +205,7 @@ export const run = async () => {
     wss = new WebSocketServer({ server })
     if (!config.listenWhenReady) {
       server.listen(config.port)
-      await eventToPromise(server, 'listening')
+      await eventPromise(server, 'listening')
     }
   }
 
@@ -267,7 +267,7 @@ export const run = async () => {
 
     if (config.listenWhenReady) {
       server.listen(config.port)
-      await eventToPromise(server, 'listening')
+      await eventPromise(server, 'listening')
     }
   }
 
@@ -299,7 +299,7 @@ export const stop = async () => {
   if (config.mode.includes('server')) {
     wss.close()
     wsUtils.stop(wss)
-    await eventToPromise(wss, 'close')
+    await eventPromise(wss, 'close')
     await httpTerminator.terminate()
   }
 

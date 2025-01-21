@@ -1,22 +1,22 @@
 import { strict as assert } from 'node:assert'
 import WebSocket from 'ws'
-import eventToPromise from 'event-to-promise'
+import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import config from 'config'
 
 async function receive (cli) {
-  const res = await eventToPromise(cli, 'message')
-  return JSON.parse(res.data)
+  const res = await eventPromise(cli, 'message')
+  return JSON.parse(res)
 }
 
 describe('ws', () => {
   it('Connect to web socket server', async () => {
     const cli = new WebSocket(config.publicUrl)
-    await eventToPromise(cli, 'open')
+    await eventPromise(cli, 'open')
   })
 
   it('Receive error when sending bad input', async () => {
     const cli = new WebSocket(config.publicUrl)
-    await eventToPromise(cli, 'open')
+    await eventPromise(cli, 'open')
     cli.send('{blabla}')
     let msg = await receive(cli)
     assert.equal(msg.type, 'error')
@@ -27,7 +27,7 @@ describe('ws', () => {
 
   it('Subscribe to channel', async () => {
     const cli = new WebSocket(config.publicUrl)
-    await eventToPromise(cli, 'open')
+    await eventPromise(cli, 'open')
     cli.send(JSON.stringify({ type: 'subscribe', channel: 'test_channel' }))
     const msg = await receive(cli)
     assert.equal(msg.type, 'subscribe-confirm')
@@ -43,7 +43,7 @@ describe('ws', () => {
 
   it.skip('Send lots of events', async () => {
     const cli = new WebSocket(config.publicUrl)
-    await eventToPromise(cli, 'open')
+    await eventPromise(cli, 'open')
     cli.send(JSON.stringify({ type: 'subscribe', channel: 'test_channel' }))
     const msg = await receive(cli)
     assert.equal(msg.type, 'subscribe-confirm')

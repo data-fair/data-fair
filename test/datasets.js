@@ -2,7 +2,7 @@ import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import fs from 'fs-extra'
 import FormData from 'form-data'
-import eventToPromise from 'event-to-promise'
+import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import WebSocket from 'ws'
 import config from 'config'
 import * as workers from '../server/workers/index.js'
@@ -12,7 +12,7 @@ let notifier
 describe('datasets', () => {
   before('prepare notifier', async () => {
     notifier = (await import('./resources/app-notifier.js')).default
-    await eventToPromise(notifier, 'listening')
+    await eventPromise(notifier, 'listening')
   })
 
   it('Get datasets when not authenticated', async () => {
@@ -245,7 +245,7 @@ describe('datasets', () => {
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
 
-    const webhook = await testUtils.timeout(eventToPromise(notifier, 'webhook'), 2000, 'webhook not received')
+    const webhook = await testUtils.timeout(eventPromise(notifier, 'webhook'), 2000, 'webhook not received')
     res = await ax.get(webhook.href + '/api-docs.json')
     assert.equal(res.status, 200)
     assert.equal(res.data.openapi, '3.1.0')
@@ -264,10 +264,10 @@ describe('datasets', () => {
     res = await ax.post(webhook.href, form, { headers: testUtils.formHeaders(form) })
 
     assert.equal(res.status, 200)
-    const wsRes = await testUtils.timeout(eventToPromise(wsCli, 'message'), 1000, 'ws message not received')
+    const wsRes = await testUtils.timeout(eventPromise(wsCli, 'message'), 1000, 'ws message not received')
 
-    assert.equal(JSON.parse(wsRes.data).channel, 'datasets/' + datasetId + '/journal')
-    await testUtils.timeout(eventToPromise(notifier, 'webhook'), 2000, 'second webhook not received')
+    assert.equal(JSON.parse(wsRes).channel, 'datasets/' + datasetId + '/journal')
+    await testUtils.timeout(eventPromise(notifier, 'webhook'), 2000, 'second webhook not received')
     res = await ax.get('/api/v1/datasets/' + datasetId + '/journal')
 
     assert.equal(res.data.length, 5)
@@ -285,7 +285,7 @@ describe('datasets', () => {
     assert.ok(res.data.dataUpdatedAt > res.data.createdAt)
     assert.ok(res.data.updatedAt > res.data.dataUpdatedAt)
 
-    await testUtils.timeout(eventToPromise(notifier, 'webhook'), 4000, 'third webhook not received')
+    await testUtils.timeout(eventPromise(notifier, 'webhook'), 4000, 'third webhook not received')
 
     res = await ax.get('/api/v1/datasets/' + datasetId + '/schema?mimeType=application/tableschema%2Bjson')
     const { valid } = await validate(res.data)

@@ -189,7 +189,6 @@
     "deep-equal": "^2.1.0",
     "escape-html": "^1.0.3",
     "escape-string-regexp": "^4.0.0",
-    "event-to-promise": "^0.8.0",
     "exceljs": "^4.4.0",
     "expr-eval": "^2.0.2",
     "express": "^5.0.1",
