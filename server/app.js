@@ -4,7 +4,7 @@ import memoize from 'memoizee'
 import * as dbUtils from './misc/utils/db.js'
 import * as esUtils from './datasets/es/index.js'
 import * as wsUtils from './misc/utils/ws.js'
-import * as locksUtils from './misc/utils/locks.js'
+import locks from '@data-fair/lib-node/locks.js'
 import * as observe from './misc/utils/observe.js'
 import * as metrics from './misc/utils/metrics.js'
 import debug from 'debug'
@@ -211,9 +211,9 @@ export const run = async () => {
 
   const { db, client } = await dbUtils.connect()
 
-  await locksUtils.init(db)
+  await locks.start(db)
   if (config.mode.includes('worker')) {
-    const ack = await locksUtils.acquire(db, 'upgrade', 'worker')
+    const ack = await locks.acquire('upgrade', 'worker')
     if (!ack) {
       console.warn('upgrade scripts lock is already acquired, skip them')
       // IMPORTANT: this behaviour of running the worker when the upgrade scripts are still running implies
@@ -223,7 +223,7 @@ export const run = async () => {
       // are not considered "up" and the previous versions keep running in the mean time
     } else {
       await (await import('../upgrade/index.js')).default(db, client)
-      await locksUtils.release(db, 'upgrade')
+      await locks.release('upgrade')
     }
   }
 
@@ -307,7 +307,7 @@ export const stop = async () => {
     await (await import('./workers/index.js')).stop()
   }
 
-  await locksUtils.stop(app.get('db'))
+  await locks.stop()
 
   if (config.mode !== 'task' && config.observer.active) {
     const { stopObserver } = await import('@data-fair/lib-node/observer.js')

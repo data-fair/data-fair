@@ -1,7 +1,7 @@
 import config from '#config'
 import createError from 'http-errors'
 import i18n from 'i18n'
-import * as locks from '../misc/utils/locks.js'
+import locks from '@data-fair/lib-node/locks.js'
 import * as usersUtils from '../misc/utils/users.js'
 import { getOwnerRole } from '../misc/utils/permissions.js'
 import { checkStorage as checkStorageFn } from './utils/storage.js'
@@ -38,7 +38,6 @@ export const checkStorage = (overwrite, indexed = false) => async (req, res, nex
  * @returns
  */
 export const lockDataset = (_shouldLock = true) => async (req, res, next) => {
-  const db = req.app.get('db')
   // @ts-ignore
   const shouldLock = typeof _shouldLock === 'function' ? _shouldLock(req.body, req.query) : _shouldLock
   if (!shouldLock) return next()
@@ -46,9 +45,9 @@ export const lockDataset = (_shouldLock = true) => async (req, res, next) => {
   const datasetId = req.dataset ? req.dataset.id : req.params.datasetId
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
     const lockKey = `dataset:${datasetId}`
-    const ack = await locks.acquire(db, lockKey, `${req.method} ${req.originalUrl}`)
+    const ack = await locks.acquire(lockKey, `${req.method} ${req.originalUrl}`)
     if (ack) {
-      res.on('close', () => locks.release(db, lockKey).catch(err => console.error('failure to release dataset lock', err)))
+      res.on('close', () => locks.release(lockKey).catch(err => console.error('failure to release dataset lock', err)))
       return next()
     } else {
       // dataset found but locked : we cannot safely work on it, wait a little while before failing

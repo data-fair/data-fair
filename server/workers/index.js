@@ -1,7 +1,7 @@
 import config from '#config'
 import { Histogram } from 'prom-client'
 import * as metrics from '../misc/utils/metrics.js'
-import * as locks from '../misc/utils/locks.js'
+import locks from '@data-fair/lib-node/locks.js'
 import * as journals from '../misc/utils/journals.js'
 import debug from 'debug'
 import mergeDraft from '../datasets/utils/merge-draft.js'
@@ -416,7 +416,7 @@ async function iter (app, resource, type) {
     resource.errorStatus = resource.status
     hookRejection = { resource, message: errorMessage }
   } finally {
-    await locks.release(db, `${type}:${resource.id}`)
+    await locks.release(`${type}:${resource.id}`)
     if (hookRejection) {
       if (hooks[taskKey]) hooks[taskKey].reject(hookRejection)
       if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject(hookRejection)
@@ -434,11 +434,11 @@ async function acquireNext (db, type, filter) {
   const cursor = db.collection(type + 's').aggregate([{ $match: filter }, { $project: { id: 1 } }, { $sample: { size: 100 } }])
   while (await cursor.hasNext()) {
     const resource = await cursor.next()
-    const ack = await locks.acquire(db, `${type}:${resource.id}`, 'worker')
+    const ack = await locks.acquire(`${type}:${resource.id}`, 'worker')
     if (!ack) continue
     // check that there was no race condition and that the resource is still in the state required to work on it
     const updatedResource = await db.collection(type + 's').findOne({ ...filter, id: resource.id })
     if (updatedResource) return updatedResource
-    else await locks.release(db, `${type}:${resource.id}`)
+    else await locks.release(`${type}:${resource.id}`)
   }
 }
