@@ -37,6 +37,8 @@ export const run = async () => {
       directoryUrl: config.directoryUrl,
       privateDirectoryUrl: config.privateDirectoryUrl
     })
+    const { session: libSession } = await import('@data-fair/lib-express/index.js')
+    libSession.init(config.directoryUrl)
     app.set('session', session)
 
     app.set('trust proxy', 1)
