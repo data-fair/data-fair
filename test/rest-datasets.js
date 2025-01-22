@@ -535,6 +535,7 @@ describe('REST datasets', () => {
     // revisions collection is part of storage consumption
     res = await ax.get('/api/v1/stats')
     const storageSize = res.data.limits.store_bytes.consumption
+    console.log(res.data.limits.store_bytes)
     assert.ok(storageSize > 280)
     res = await ax.get('/api/v1/datasets/resthist')
     assert.equal(res.data.storage.size, storageSize)

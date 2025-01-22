@@ -1,5 +1,5 @@
 
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import streamJsonParser from 'stream-json/Parser.js'
 import streamJsonPick from 'stream-json/filters/Pick.js'
 import streamValues from 'stream-json/streamers/StreamValues.js'
@@ -53,7 +53,7 @@ export const process = async function (app, dataset) {
   if (crs && crs.properties && crs.properties.name) {
     const code = crs.properties.name.replace('urn:ogc:def:crs:', '').replace('::', ':')
     const projection = projections.find(p => p.code === code || p.aliases.includes(code))
-    if (!projection) throw createError(400, `[noretry] La projection ${code} dans la propriété "crs" du geojson n'est pas supportée.`)
+    if (!projection) throw httpError(400, `[noretry] La projection ${code} dans la propriété "crs" du geojson n'est pas supportée.`)
     dataset.projection = { code: projection.code, title: projection.title }
     dataset.file.schema[0]['x-refersTo'] = 'http://data.ign.fr/def/geometrie#Geometry'
   }

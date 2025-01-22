@@ -1,8 +1,8 @@
 import crypto from 'crypto'
-import config from 'config'
+import config from '#config'
 import * as datasetUtils from '../utils/index.js'
-import * as metrics from '../../misc/utils/metrics.js'
 import { aliasName, esProperty } from './commons.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 export const indexDefinition = async (dataset) => {
   const body = JSON.parse(JSON.stringify(indexBase(dataset)))
@@ -79,7 +79,7 @@ const safeDeleteIndex = async (client, index) => {
   try {
     await client.indices.delete({ index })
   } catch (err) {
-    metrics.internalError('es-delete-index', err)
+    internalError('es-delete-index', err)
   }
 }
 

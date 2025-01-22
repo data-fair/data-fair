@@ -1,6 +1,6 @@
 import * as webhooks from './webhooks.js'
 import * as permissions from './permissions.js'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 
 const getPublicationSiteInfo = async (db, owner, publicationSite) => {
   const [type, id] = publicationSite.split(':')
@@ -30,7 +30,7 @@ export const applyPatch = async (db, previousResource, resource, user, resourceT
     type: resource.owner.type,
     id: resource.owner.id
   }, { projection: { _id: 0, type: 1, id: 1, department: 1, publicationSites: 1 } })
-  if (!publicationSitesSettings) throw createError(404, 'unknown settings')
+  if (!publicationSitesSettings) throw httpError(404, 'unknown settings')
   publicationSitesSettings.publicationSites = publicationSitesSettings.publicationSites || []
   const publicationSitesSettingsObj = {}
   for (const p of publicationSitesSettings.publicationSites) {
@@ -42,12 +42,12 @@ export const applyPatch = async (db, previousResource, resource, user, resourceT
     // send a notification either because the publicationSite was added, or because the visibility changed
     if (!previousPublicationSites.includes(publicationSite)) {
       const publicationSiteInfo = await getPublicationSiteInfo(db, resource.owner, publicationSite)
-      if (!publicationSiteInfo) throw createError(404, 'unknown publication site')
+      if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
       if (!user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && user.activeAccount.type === 'organization' && user.activeAccount.id === resource.owner.id && !publicationSiteInfo.department && user.activeAccount.department) {
-        throw createError(403, 'fail to publish: publication site does not belong to user department')
+        throw httpError(403, 'fail to publish: publication site does not belong to user department')
       }
       if (!publicationSiteInfo.settings?.staging && !permissions.can(resourceType + 's', resource, 'writePublicationSites', user)) {
-        throw createError(403, 'fail to publish: publication site requires permission to publish')
+        throw httpError(403, 'fail to publish: publication site requires permission to publish')
       }
       const sender = { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
       webhooks.trigger(db, resourceType, resource, { type: `published:${publicationSite}` }, sender)
@@ -60,10 +60,10 @@ export const applyPatch = async (db, previousResource, resource, user, resourceT
     if (!newPublicationSites.includes(publicationSite)) {
       const publicationSiteInfo = await getPublicationSiteInfo(db, resource.owner, publicationSite)
       if (!user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && user.activeAccount.type === 'organization' && user.activeAccount.id === resource.owner.id && !publicationSiteInfo.department && user.activeAccount.department) {
-        throw createError(403, 'fail to unpublish: publication site does not belong to user department')
+        throw httpError(403, 'fail to unpublish: publication site does not belong to user department')
       }
       if (publicationSiteInfo && !publicationSiteInfo.settings?.staging && !permissions.can(resourceType + 's', resource, 'writePublicationSites', user)) {
-        throw createError(403, 'fail to unpublish: publication site requires permission to unpublish')
+        throw httpError(403, 'fail to unpublish: publication site requires permission to unpublish')
       }
     }
   }
@@ -71,7 +71,7 @@ export const applyPatch = async (db, previousResource, resource, user, resourceT
     // send a notification because the publication was requeststed
     if (!previousRequestedPublicationSites.includes(requestedPublicationSite)) {
       const publicationSiteInfo = await getPublicationSiteInfo(db, resource.owner, requestedPublicationSite)
-      if (!publicationSiteInfo) throw createError(404, 'unknown publication site')
+      if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
       const sender = { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
       webhooks.trigger(db, resourceType, resource, { type: `publication-requested:${requestedPublicationSite}`, body: `${resource.title || resource.id} - ${user.name}` }, sender)
     }
@@ -81,7 +81,7 @@ export const applyPatch = async (db, previousResource, resource, user, resourceT
     if (!previousTopics.find(t => t.id === topic.id)) {
       for (const publicationSite of newPublicationSites) {
         const publicationSiteInfo = await getPublicationSiteInfo(db, resource.owner, publicationSite)
-        if (!publicationSiteInfo) throw createError(404, 'unknown publication site')
+        if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
         const sender = { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
         webhooks.trigger(db, resourceType, resource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender)
       }
@@ -93,7 +93,7 @@ export const applyPatch = async (db, previousResource, resource, user, resourceT
 export const onPublic = async (db, patchedResource, resourceType) => {
   for (const publicationSite of patchedResource.publicationSites || []) {
     const publicationSiteInfo = await getPublicationSiteInfo(db, patchedResource.owner, publicationSite)
-    if (!publicationSiteInfo) throw createError(404, 'unknown publication site')
+    if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
     const sender = { type: patchedResource.owner.type, id: patchedResource.owner.id, department: publicationSiteInfo.department }
     webhooks.trigger(db, resourceType, patchedResource, { type: `published:${publicationSite}` })
     for (const topic of patchedResource.topics || []) {

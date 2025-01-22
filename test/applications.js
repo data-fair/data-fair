@@ -93,15 +93,21 @@ describe('Applications', () => {
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/', configuration: { datasets: [{ id: dataset.id, href: datasetRefInit.href }] } })
     const appId = res.data.id
 
+    res = await ax.get(`/app/${appId}/dir1/info.txt`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data, 'into txt dir1')
     // The same content is returned with or without a trailing slash
     res = await ax.get(`/app/${appId}/`)
     assert.equal(res.status, 200)
-    res = await ax.get('/app/' + appId)
-    assert.equal(res.status, 200)
-
-    // The HTML content is returned
     assert.ok(res.headers['content-type'].startsWith('text/html'))
     assert.ok(res.data.includes('My app body'))
+    res = await ax.get('/app/' + appId)
+    assert.equal(res.status, 200)
+    assert.ok(res.data.includes('My app body'))
+    res = await ax.get(`/app/${appId}/index.html`)
+    assert.equal(res.status, 200)
+    assert.ok(res.data.includes('My app body'))
+
     // The configuration is injected
     assert.ok(res.data.includes('window.APPLICATION={'))
     const application = JSON.parse(/>window\.APPLICATION=(.*);</.exec(res.data)[1])

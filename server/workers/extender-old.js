@@ -2,13 +2,14 @@
 import extensionsUtils from '../misc/utils/extensions.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import debugLib from 'debug'
+import mongo from '#mongo'
 
 export const eventsPrefix = 'extend'
 
 export const process = async function (app, dataset) {
   const debug = debugLib(`worker:extender:${dataset.id}`)
 
-  const db = app.get('db')
+  const db = mongo.db
   const collection = db.collection('datasets')
 
   // Perform all extensions with remote services.
@@ -33,7 +34,7 @@ export const process = async function (app, dataset) {
 
   if (!dataset.isRest) {
     debug('write full version of the file')
-    await datasetUtils.writeFullFile(app.get('db'), app.get('es'), dataset)
+    await datasetUtils.writeFullFile(mongo.db, app.get('es'), dataset)
   }
 
   const result = { status: 'extended' }

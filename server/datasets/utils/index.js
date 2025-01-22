@@ -1,10 +1,9 @@
 
 import path from 'path'
-import config from 'config'
+import config from '#config'
 import slug from 'slugify'
 import { CronJob } from 'cron'
-import * as locks from '../../misc/utils/locks.js'
-import * as metrics from '../../misc/utils/metrics.js'
+import locks from '@data-fair/lib-node/locks.js'
 import nanoid from '../../misc/utils/nanoid.js'
 import * as visibilityUtils from '../../misc/utils/visibility.js'
 import { prepareThumbnailUrl } from '../../misc/utils/thumbnails.js'
@@ -17,6 +16,7 @@ import * as dataStreamsUtils from './data-streams.js'
 import * as schemaUtils from './schema.js'
 import * as readApiKeyUtils from './read-api-key.js'
 import mergeDraft from './merge-draft.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 export { default as mergeDraft } from './merge-draft.js'
 export * from './types.js'
@@ -57,15 +57,15 @@ export const reindex = async (db, dataset) => {
   if (dataset.isVirtual) patch.status = 'indexed'
   else if (dataset.isRest) patch.status = 'analyzed'
   if (dataset.draftReason) patch = { 'draft.status': patch.status }
-  return (await db.collection('datasets')
-    .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
+  return await db.collection('datasets')
+    .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })
 }
 
 export const refinalize = async (db, dataset) => {
   let patch = { status: 'indexed' }
   if (dataset.draftReason) patch = { 'draft.status': patch.status }
-  return (await db.collection('datasets')
-    .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })).value
+  return await db.collection('datasets')
+    .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })
 }
 
 // Generate ids and try insertion until there is no conflict on id
@@ -79,19 +79,19 @@ export const insertWithId = async (db, dataset, onClose) => {
   let i = 1
   while (!insertOk) {
     const idLockKey = `dataset:${dataset.id}`
-    const idAck = locks.acquire(db, idLockKey, 'insertWithBaseid')
+    const idAck = locks.acquire(idLockKey, 'insertWithBaseid')
     if (!idAck) throw new Error(`dataset id ${dataset.id} is locked`)
     if (onClose) {
       onClose(() => {
         // console.log('releasing dataset lock on id', idLockKey)
-        locks.release(db, idLockKey).catch(err => {
-          metrics.internalError('dataset-lock-id', err)
+        locks.release(idLockKey).catch(err => {
+          internalError('dataset-lock-id', err)
         })
       })
     }
 
     const slugLockKey = `dataset:slug:${owner.type}:${owner.id}:${dataset.slug}`
-    const slugAck = locks.acquire(db, slugLockKey, 'insertWithBaseid')
+    const slugAck = locks.acquire(slugLockKey, 'insertWithBaseid')
     if (slugAck) {
       try {
         await db.collection('datasets').insertOne(dataset)
@@ -99,17 +99,17 @@ export const insertWithId = async (db, dataset, onClose) => {
         if (onClose) {
           onClose(() => {
             // console.log('releasing dataset lock on slug', slugLockKey)
-            locks.release(db, slugLockKey).catch(err => {
-              metrics.internalError('dataset-lock-slug', err)
+            locks.release(slugLockKey).catch(err => {
+              internalError('dataset-lock-slug', err)
             })
           })
         } else {
-          await locks.release(db, idLockKey)
-          await locks.release(db, slugLockKey)
+          await locks.release(idLockKey)
+          await locks.release(slugLockKey)
         }
         break
       } catch (err) {
-        await locks.release(db, slugLockKey)
+        await locks.release(slugLockKey)
         if (err.code !== 11000) throw err
         if (err.keyValue) {
           if (err.keyValue.id) throw err

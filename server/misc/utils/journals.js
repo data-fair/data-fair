@@ -1,10 +1,11 @@
-
+import mongo from '#mongo'
 import moment from 'moment'
 import * as webhooks from './webhooks.js'
+import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 
 export const log = async function (app, resource, event, type = 'dataset', noStoreEvent = false) {
   try {
-    const db = app.get('db')
+    const db = mongo.db
     event.date = moment().toISOString()
     if (resource.draftReason) event.draft = true
 
@@ -18,7 +19,7 @@ export const log = async function (app, resource, event, type = 'dataset', noSto
     }
 
     // websockets notifications
-    await app.publish(`${type}s/${resource.id}/journal`, { ...event, store: !noStoreEvent })
+    await wsEmitter.emit(`${type}s/${resource.id}/journal`, { ...event, store: !noStoreEvent })
 
     webhooks.trigger(db, type, resource, event)
   } catch (err) {

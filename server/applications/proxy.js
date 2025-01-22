@@ -1,5 +1,6 @@
 import express from 'express'
-import config from 'config'
+import config from '#config'
+import mongo from '#mongo'
 import fs from 'fs'
 import path from 'path'
 import https from 'https'
@@ -9,15 +10,14 @@ import axios from '../misc/utils/axios.js'
 import * as parse5 from 'parse5'
 import pump from '../misc/utils/pipe.js'
 import CacheableLookup from 'cacheable-lookup'
-import asyncWrap from '../misc/utils/async-handler.js'
 import * as findUtils from '../misc/utils/find.js'
 import * as permissions from '../misc/utils/permissions.js'
 import * as serviceWorkers from '../misc/utils/service-workers.js'
-import * as metrics from '../misc/utils/metrics.js'
 import { refreshConfigDatasetsRefs } from './utils.js'
 import vIframePJson from '../../node_modules/@koumoul/v-iframe/package.json' with {type: 'json'}
 import iFrameResizerPJson from '../../node_modules/iframe-resizer/package.json' with {type: 'json'}
 import Debug from 'debug'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 const debugIframeRedirect = Debug('iframe-redirect')
 
@@ -30,7 +30,7 @@ const loginHtml = fs.readFileSync(path.join(import.meta.dirname, './resources/lo
 
 const brandEmbed = config.brand.embed && parse5.parseFragment(config.brand.embed)
 
-const setResource = asyncWrap(async (req, res, next) => {
+const setResource = async (req, res, next) => {
   // @ts-ignore
   const publicationSite = req.publicationSite
   // @ts-ignore
@@ -38,7 +38,7 @@ const setResource = asyncWrap(async (req, res, next) => {
   // @ts-ignore
   const publicBaseUrl = req.publicBaseUrl
 
-  const db = req.app.get('db')
+  const db = mongo.db
 
   const tolerateStale = !!publicationSite
   // protected application can be given either as /applicationKey:applicationId or /applicationId?key=applicationKey
@@ -57,7 +57,7 @@ const setResource = asyncWrap(async (req, res, next) => {
     'owner.department': application.owner.department ? application.owner.department : { $exists: false }
   }
   if (applicationKeyId) {
-    const applicationKey = await req.app.get('db').collection('applications-keys')
+    const applicationKey = await mongo.db.collection('applications-keys')
       .findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
     if (applicationKey) {
       if (applicationKey._id === application.id) {
@@ -65,7 +65,7 @@ const setResource = asyncWrap(async (req, res, next) => {
         req.matchingApplicationKey = true
       } else {
         // ths application key can be matched to a parent application key (case of dashboards, etc)
-        const isParentApplicationKey = await req.app.get('db').collection('applications')
+        const isParentApplicationKey = await mongo.db.collection('applications')
           .count({ id: applicationKey._id, 'configuration.applications.id': application.id, ...ownerFilter })
         if (isParentApplicationKey) {
           // @ts-ignore
@@ -81,13 +81,13 @@ const setResource = asyncWrap(async (req, res, next) => {
   // @ts-ignore
   req.application = req.resource = application
   next()
-})
+}
 
-router.get('/:applicationId/manifest.json', setResource, asyncWrap(async (req, res) => {
+router.get('/:applicationId/manifest.json', setResource, async (req, res) => {
   if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchingApplicationKey) {
     return res.status(403).type('text/plain').send()
   }
-  const baseApp = await req.app.get('db').collection('base-applications').findOne({ url: req.application.url }, { projection: { id: 1, meta: 1 } })
+  const baseApp = await mongo.db.collection('base-applications').findOne({ url: req.application.url }, { projection: { id: 1, meta: 1 } })
   if (!baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
   res.setHeader('Content-Type', 'application/manifest+json')
   res.send({
@@ -112,7 +112,7 @@ router.get('/:applicationId/manifest.json', setResource, asyncWrap(async (req, r
       }
     })
   })
-}))
+})
 
 // Login is a special small UI page on /app/appId/login
 // this is so that we expose a minimalist password based auth in the scope of the current application
@@ -159,7 +159,7 @@ const fetchHTML = async (cleanApplicationUrl, targetUrl) => {
       return res.data
     }
   } catch (err) {
-    metrics.internalError('app-fetch', err)
+    internalError('app-fetch', err)
     if (cacheEntry) return cacheEntry.content
     throw err
     // in case of failure, serve from simple cache
@@ -191,8 +191,8 @@ if (inIframe()) {
 
 /** @type {string} */
 let minifiedIframeRedirectSrc
-router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => {
-  const db = req.app.get('db')
+router.all(['/:applicationId/*extraPath', '/:applicationId'], setResource, async (req, res, next) => {
+  const db = mongo.db
 
   if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchingApplicationKey) {
     return res.redirect(`${req.publicBaseUrl}/app/${req.params.applicationId}/login`)
@@ -229,16 +229,16 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   // merge incoming an target URL elements
   const incomingUrl = new URL('http://host' + req.url)
   const targetUrl = new URL(cleanApplicationUrl.replace(config.applicationsPrivateMapping[0], config.applicationsPrivateMapping[1]))
-  let extraPath = req.params['0']
-  if (extraPath === '') extraPath = '/index.html'
-  else if (incomingUrl.pathname.endsWith('/')) extraPath += '/index.html'
-  targetUrl.pathname = path.join(targetUrl.pathname, extraPath)
+  const extraPathParts = req.params.extraPath ? [...req.params.extraPath] : []
+  if (!req.params.extraPath || incomingUrl.pathname.endsWith('/')) extraPathParts.push('index.html')
+  targetUrl.pathname = path.join(targetUrl.pathname, ...extraPathParts)
   targetUrl.search = incomingUrl.searchParams
 
-  if (extraPath !== '/index.html') {
+  if (extraPathParts.length !== 1 || extraPathParts[0] !== 'index.html') {
     // TODO: check the logs in production, if this line never appears then we can cleanup the code
     console.warn('serving anything else than /index.html from application-proxy is deprecated', targetUrl.href)
-    return await deprecatedProxy(cleanApplicationUrl, targetUrl, req, res)
+    await deprecatedProxy(cleanApplicationUrl, targetUrl, req, res)
+    return
   }
   res.setHeader('x-resource', JSON.stringify({ type: req.resourceType, id: req.resource.id, title: encodeURIComponent(req.resource.title) }))
   res.setHeader('x-operation', JSON.stringify({ class: 'read', id: 'openApplication', track: 'openApplication' }))
@@ -382,7 +382,7 @@ router.all('/:applicationId*', setResource, asyncWrap(async (req, res, next) => 
   res.set('cache-control', 'private, max-age=0, must-revalidate')
   res.set('pragma', 'no-cache')
   res.send(parse5.serialize(document))
-}))
+})
 
 const deprecatedProxy = async (cleanApplicationUrl, targetUrl, req, res) => {
   const options = {
@@ -423,11 +423,11 @@ const deprecatedProxy = async (cleanApplicationUrl, targetUrl, req, res) => {
         reject(err)
       }
     })
-
-    cacheAppReq.on('error', err => reject(err))
-    cacheAppReq.on('request', req => {
-      req.on('error', err => reject(err))
-      req.end()
+    cacheAppReq.on('error', err => {
+      console.log('REJECT', err)
+      reject(err)
     })
+    cacheAppReq.on('error', err => reject(err))
+    cacheAppReq.end()
   })
 }

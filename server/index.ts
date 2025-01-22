@@ -1,6 +1,7 @@
-import config from 'config'
+import config from '#config'
 import * as metrics from './misc/utils/metrics.js'
 import * as app from './app.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 app.run().then(app => {
   if (config.mode.includes('worker')) {
@@ -25,8 +26,8 @@ app.run().then(app => {
     console.error(err.message)
     process.exit(-1)
   } else {
-    metrics.internalError('df-process', err)
-      .finally(() => process.exit(-1))
+    internalError('df-process', err)
+    process.exit(-1)
   }
 })
 
@@ -36,7 +37,7 @@ process.on('SIGTERM', function onSigterm () {
     console.log('shutting down now')
     process.exit()
   }, err => {
-    metrics.internalError('stop-process', err)
+    internalError('stop-process', err)
     process.exit(-1)
   })
 })

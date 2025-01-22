@@ -1,5 +1,5 @@
 
-import config from 'config'
+import config from '#config'
 import { prepareQuery, aliasName } from './commons.js'
 
 async function * iterHits (es, dataset, query = { size: 1000 }) {

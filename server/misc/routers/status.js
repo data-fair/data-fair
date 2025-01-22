@@ -1,12 +1,12 @@
-import config from 'config'
+import config from '#config'
+import mongo from '#mongo'
 import moment from 'moment'
 import axios from '../utils/axios.js'
 import fs from 'fs-extra'
-import asyncWrap from '../utils/async-handler.js'
 import * as clamav from '../utils/clamav.js'
 
 async function mongoStatus (req) {
-  await req.app.get('db').command({ ping: 1 })
+  await mongo.db.command({ ping: 1 })
 }
 
 async function esStatus (req) {
@@ -74,13 +74,13 @@ async function getStatus (req) {
   }
 }
 
-export const status = asyncWrap(async (req, res, next) => {
+export const status = async (req, res, next) => {
   const status = await getStatus(req)
   res.send(status)
-})
+}
 
-export const ping = asyncWrap(async (req, res, next) => {
+export const ping = async (req, res, next) => {
   const status = await getStatus(req)
   if (status.status === 'error') res.status(500)
   res.send(status.status)
-})
+}

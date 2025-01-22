@@ -1,4 +1,4 @@
-import config from 'config'
+import config from '#config'
 import equal from 'deep-equal'
 import axios from '../../misc/utils/axios.js'
 import debugLib from 'debug'

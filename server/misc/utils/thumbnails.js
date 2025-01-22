@@ -4,7 +4,8 @@ import pump from '../utils/pipe.js'
 import dayjs from 'dayjs'
 import tmp from 'tmp-promise'
 import { Binary } from 'mongodb'
-import config from 'config'
+import config from '#config'
+import mongo from '#mongo'
 import axios from './axios.js'
 import { setNoCache } from './cache-headers.js'
 import { tmpDir } from '../../datasets/utils/files.js'
@@ -96,7 +97,7 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
 }
 
 export const getThumbnail = async (req, res, url, filePath, thumbnailsOpts = {}) => {
-  const db = req.app.get('db')
+  const db = mongo.db
   const sharpOptions = { fit: req.query.fit || 'cover', position: req.query.position || 'center' }
   // resizeMode was mostly adapted from thumbor and comes from dataset schema
   // but it is fairly easy to match it to sharp options

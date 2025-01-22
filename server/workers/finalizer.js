@@ -1,5 +1,5 @@
 // Finalize dataset for publication
-import config from 'config'
+import config from '#config'
 import * as esUtils from '../datasets/es/index.js'
 import * as geoUtils from '../datasets/utils/geo.js'
 import * as datasetUtils from '../datasets/utils/index.js'
@@ -9,6 +9,7 @@ import * as virtualDatasetsUtils from '../datasets/utils/virtual.js'
 import taskProgress from '../datasets/utils/task-progress.js'
 import * as restDatasetsUtils from '../datasets/utils/rest.js'
 import dayjs from 'dayjs'
+import mongo from '#mongo'
 
 import debugLib from 'debug'
 
@@ -19,7 +20,7 @@ export const process = async function (app, _dataset) {
 
   const debug = debugLib(`worker:finalizer:${dataset.id}`)
 
-  const db = app.get('db')
+  const db = mongo.db
   const es = app.get('es')
   const collection = db.collection('datasets')
   const queryableDataset = { ...dataset }
@@ -141,7 +142,7 @@ export const process = async function (app, _dataset) {
   }
 
   if (dataset.draftReason && dataset.validateDraft) {
-    const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
+    const datasetFull = await mongo.db.collection('datasets').findOne({ id: dataset.id })
     await datasetService.validateDraft(app, dataset, datasetFull, result)
     await datasetService.applyPatch(app, datasetFull, result)
     dataset = datasetFull

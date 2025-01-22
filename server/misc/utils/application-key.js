@@ -1,7 +1,7 @@
 // a midleware to check if the endpoint is called from an application with an unauthenticated readOnly application key
 import requestIp from 'request-ip'
-import config from 'config'
-import asyncWrap from './async-handler.js'
+import config from '#config'
+import mongo from '#mongo'
 import * as rateLimiting from './rate-limiting.js'
 
 const matchingHost = (req) => {
@@ -10,7 +10,7 @@ const matchingHost = (req) => {
   return false
 }
 
-export default asyncWrap(async (req, res, next) => {
+export default async (req, res, next) => {
   const referer = req.headers.referer || req.headers.referrer
   if (!referer) return next()
   let refererUrl
@@ -40,10 +40,10 @@ export default asyncWrap(async (req, res, next) => {
       }
     }
     if (!applicationKeyId) return next()
-    applicationKey = await req.app.get('db').collection('applications-keys').findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
+    applicationKey = await mongo.db.collection('applications-keys').findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
     if (!applicationKey) return next()
     appId = applicationKey._id
-    const isParentApplicationKey = await req.app.get('db').collection('applications')
+    const isParentApplicationKey = await mongo.db.collection('applications')
       .count({
         id: applicationKey._id,
         $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': req.dataset.id }],
@@ -63,17 +63,17 @@ export default asyncWrap(async (req, res, next) => {
       }
     }
     if (!applicationKeyId) return next()
-    applicationKey = await req.app.get('db').collection('applications-keys').findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
+    applicationKey = await mongo.db.collection('applications-keys').findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
     if (!applicationKey) return next()
     if (applicationKey._id !== appId) {
       // the application key can be matched to a parent application key (case of dashboards, etc)
-      const isParentApplicationKey = await req.app.get('db').collection('applications')
+      const isParentApplicationKey = await mongo.db.collection('applications')
         .count({ id: applicationKey._id, 'configuration.applications.id': appId, ...ownerFilter })
       if (!isParentApplicationKey) return next()
     }
   }
 
-  const matchingApplication = await req.app.get('db').collection('applications')
+  const matchingApplication = await mongo.db.collection('applications')
     .findOne({
       id: appId,
       $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': req.dataset.id }],
@@ -119,4 +119,4 @@ export default asyncWrap(async (req, res, next) => {
     }
   }
   next()
-})
+}

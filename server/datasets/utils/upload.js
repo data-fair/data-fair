@@ -1,13 +1,12 @@
 import fs from 'fs-extra'
 import multer from 'multer'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { nanoid } from 'nanoid'
 import mime from 'mime-types'
 import resolvePath from 'resolve-path'
 import datasetSchema from '../../../contract/dataset.js'
 import * as datasetUtils from './index.js'
 import { tmpDir, fsyncFile } from './files.js'
-import asyncWrap from '../../misc/utils/async-handler.js'
 import promisifyMiddleware from '../../misc/utils/promisify-middleware.js'
 import { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes } from './types.js'
 import debugLib from 'debug'
@@ -24,7 +23,7 @@ const storage = multer.diskStorage({
   destination: async function (req, file, cb) {
     try {
       if (req.dataset) {
-        req.uploadDir = datasetUtils.loadingDir({ ...req.dataset, draftReason: req.query.draft === 'true' })
+        req.uploadDir = datasetUtils.loadingDir({ ...req.dataset, draftReason: req.query.draft === 'true' || req._draft })
       } else {
         // a tmp dir in case of new dataset, it will be moved into the actual dataset directory
         // after upload completion and final id atttribution
@@ -72,13 +71,13 @@ const middleware = multer({
           if (file.mimetype === 'application/gzip' && basicTypes.includes(mime.lookup(file.originalname.slice(0, file.originalname.length - 3)))) {
             // gzip of a csv or other basic type is also accepted, file-normalizer will proceed
           } else {
-            throw createError(400, file.mimetype + ' type is not supported')
+            throw httpError(400, file.mimetype + ' type is not supported')
           }
         }
       } else if (file.fieldname === 'attachments') {
-        if (file.mimetype !== 'application/zip') throw createError(400, 'Les fichiers joints doivent être embarqués dans une archive zip')
+        if (file.mimetype !== 'application/zip') throw httpError(400, 'Les fichiers joints doivent être embarqués dans une archive zip')
       } else {
-        throw createError(400, `Fichier dans un champ non supporté: "${file.fieldname}"`)
+        throw httpError(400, `Fichier dans un champ non supporté: "${file.fieldname}"`)
       }
       debug('File accepted', file.originalname)
       cb(null, true)
@@ -100,12 +99,12 @@ export const getFiles = async (req, res) => {
 }
 
 export const getFormBody = (body) => {
-  if (!body) throw createError(400, 'Missing body')
+  if (!body) throw httpError(400, 'Missing body')
   if (body.body) {
     try {
       return JSON.parse(body.body)
     } catch (err) {
-      throw createError('400', `Invalid JSON in body part, ${err.message}`)
+      throw httpError(400, `Invalid JSON in body part, ${err.message}`)
     }
   }
   for (const key of Object.keys(datasetSchema.properties)) {
@@ -117,7 +116,7 @@ export const getFormBody = (body) => {
           try {
             body[key] = JSON.parse(body[key])
           } catch (err) {
-            throw createError('400', `Invalid JSON in part "${key}", ${err.message}`)
+            throw httpError(400, `Invalid JSON in part "${key}", ${err.message}`)
           }
         }
       }
@@ -129,9 +128,9 @@ export const getFormBody = (body) => {
   return body
 }
 
-export const fsyncFiles = asyncWrap(async (req, res, next) => {
+export const fsyncFiles = async (req, res, next) => {
   for (const file of req.files || []) {
     await fsyncFile(file.path)
   }
   next()
-})
+}

@@ -1,16 +1,18 @@
-import eventToPromise from 'event-to-promise'
 import express from 'express'
-import config from 'config'
+import config from '#config'
+import mongo from '#mongo'
 import memoize from 'memoizee'
-import * as dbUtils from './misc/utils/db.js'
 import * as esUtils from './datasets/es/index.js'
-import * as wsUtils from './misc/utils/ws.js'
-import * as locksUtils from './misc/utils/locks.js'
+import * as wsServer from '@data-fair/lib-express/ws-server.js'
+import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
+import locks from '@data-fair/lib-node/locks.js'
 import * as observe from './misc/utils/observe.js'
-import asyncWrap from './misc/utils/async-handler.js'
 import * as metrics from './misc/utils/metrics.js'
 import debug from 'debug'
 import EventEmitter from 'node:events'
+import eventPromise from '@data-fair/lib-utils/event-promise.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 
 const debugDomain = debug('domain')
 
@@ -19,7 +21,7 @@ if (process.env.NODE_ENV === 'test') {
   global.events = new EventEmitter()
 }
 
-let app, server, wss, httpTerminator
+let app, server, httpTerminator
 
 // Run app and return it in a promise
 export const run = async () => {
@@ -119,7 +121,7 @@ export const run = async () => {
     if (process.env.NODE_ENV === 'test') {
       global.memoizedGetPublicationSiteSettings = memoizedGetPublicationSiteSettings
     }
-    app.use('/', asyncWrap(async (req, res, next) => {
+    app.use('/', async (req, res, next) => {
       const u = originalUrl(req)
       const urlParts = { protocol: parsedPublicUrl.protocol, hostname: u.hostname, pathname: basePath.slice(0, -1) }
       if (u.port !== 443 && u.port !== 80) urlParts.port = u.port
@@ -128,9 +130,9 @@ export const run = async () => {
       const mainDomain = req.publicBaseUrl === config.publicUrl
 
       const publicationSiteUrl = parsedPublicUrl.protocol + '//' + u.hostname + ((u.port && u.port !== 80 && u.port !== 443) ? ':' + u.port : '')
-      const settings = await memoizedGetPublicationSiteSettings(publicationSiteUrl, mainDomain && req.query.publicationSites, req.app.get('db'))
+      const settings = await memoizedGetPublicationSiteSettings(publicationSiteUrl, mainDomain && req.query.publicationSites, mongo.db)
       if (!settings && !mainDomain) {
-        metrics.internalError('publication-site-unknown', 'no publication site is associated to URL ' + publicationSiteUrl)
+        internalError('publication-site-unknown', 'no publication site is associated to URL ' + publicationSiteUrl)
         return res.status(404).send('publication site unknown')
       }
       if (settings) {
@@ -157,7 +159,7 @@ export const run = async () => {
       req.publicBasePath = basePath
       debugDomain('req.publicBasePath', req.publicBasePath)
       next()
-    }))
+    })
 
     // Business routers
     const { middleware: apiKey } = await import('./misc/utils/api-key.js')
@@ -193,7 +195,6 @@ export const run = async () => {
     app.use('/streamsaver/mitm.html', express.static('node_modules/streamsaver/mitm.html'))
     app.use('/streamsaver/sw.js', express.static('node_modules/streamsaver/sw.js'))
 
-    const { WebSocketServer } = await import('ws')
     server = (await import('http')).createServer(app)
     const { createHttpTerminator } = await import('http-terminator')
     httpTerminator = createHttpTerminator({ server })
@@ -203,18 +204,19 @@ export const run = async () => {
     server.keepAliveTimeout = (60 * 1000) + 1000
     server.headersTimeout = (60 * 1000) + 2000
     server.requestTimeout = (15 * 60 * 1000)
-    wss = new WebSocketServer({ server })
+
     if (!config.listenWhenReady) {
       server.listen(config.port)
-      await eventToPromise(server, 'listening')
+      await eventPromise(server, 'listening')
     }
   }
 
-  const { db, client } = await dbUtils.connect()
+  await mongo.init()
+  const { db, client } = mongo
 
-  await locksUtils.init(db)
+  await locks.start(db)
   if (config.mode.includes('worker')) {
-    const ack = await locksUtils.acquire(db, 'upgrade', 'worker')
+    const ack = await locks.acquire('upgrade', 'worker')
     if (!ack) {
       console.warn('upgrade scripts lock is already acquired, skip them')
       // IMPORTANT: this behaviour of running the worker when the upgrade scripts are still running implies
@@ -224,33 +226,41 @@ export const run = async () => {
       // are not considered "up" and the previous versions keep running in the mean time
     } else {
       await (await import('../upgrade/index.js')).default(db, client)
-      await locksUtils.release(db, 'upgrade')
+      await locks.release('upgrade')
     }
   }
 
-  await Promise.all([
-    dbUtils.init(db),
-    esUtils.init().then(es => app.set('es', es))
-  ])
-  app.set('db', db)
-  app.set('mongoClient', client)
+  app.set('es', await esUtils.init())
 
-  app.publish = await wsUtils.initPublisher(db)
+  await wsEmitter.init(db)
 
   if (config.mode.includes('server')) {
-    const errorHandler = (await import('@data-fair/lib/express/error-handler.js')).default
+    const errorHandler = (await import('@data-fair/lib-express/error-handler.js')).default
 
     // Error management
     app.use(errorHandler)
 
     const limits = await import('./misc/utils/limits.js')
+    const permissions = await import('./misc/utils/permissions.js')
+    const { readApiKey } = await import('./misc/utils/api-key.js')
     await Promise.all([
       (await import('./misc/utils/capture.js')).init(),
       (await import('./misc/utils/cache.js')).init(db),
       (await import('./remote-services/utils.js')).init(db),
       (await import('./base-applications/router.js')).init(db),
       limits.init(db),
-      wsUtils.initServer(wss, db, app.get('session'))
+      wsServer.start(server, db, async (channel, sessionState, message) => {
+        if (process.env.NODE_ENV === 'test') {
+          // TODO: remove this ugly exception, this code should be tested
+          return true
+        }
+        const [type, id, subject] = channel.split('/')
+        const resource = await db.collection(type).findOne({ id })
+        if (!resource) throw httpError(404, `Ressource ${type}/${id} inconnue.`)
+        let user = sessionState.user
+        if (message.apiKey) user = await readApiKey(db, message.apiKey, type, message.account)
+        return !permissions.can(type, resource, `realtime-${subject}`, user)
+      })
     ])
     // At this stage the server is ready to respond to API requests
     app.set('api-ready', true)
@@ -268,7 +278,7 @@ export const run = async () => {
 
     if (config.listenWhenReady) {
       server.listen(config.port)
-      await eventToPromise(server, 'listening')
+      await eventPromise(server, 'listening')
     }
   }
 
@@ -279,7 +289,7 @@ export const run = async () => {
   // special mode: run the process to execute a single worker tasks
   // for  extra resiliency to fatal memory exceptions
   if (config.mode === 'task') {
-    const resource = await app.get('db').collection(process.argv[3] + 's').findOne({ id: process.argv[4] })
+    const resource = await mongo.db.collection(process.argv[3] + 's').findOne({ id: process.argv[4] })
     if (process.env.DATASET_DRAFT === 'true') {
       const datasetUtils = await import('./datasets/utils/index.js')
 
@@ -288,7 +298,7 @@ export const run = async () => {
     const task = await (await import('./workers/index.js')).tasks[process.argv[2]]()
     await task.process(app, resource)
   } else if (config.observer.active) {
-    const { startObserver } = await import('@data-fair/lib/node/observer.js')
+    const { startObserver } = await import('@data-fair/lib-node/observer.js')
     await metrics.init(db)
     await startObserver()
   }
@@ -298,9 +308,7 @@ export const run = async () => {
 
 export const stop = async () => {
   if (config.mode.includes('server')) {
-    wss.close()
-    wsUtils.stop(wss)
-    await eventToPromise(wss, 'close')
+    await wsServer.stop()
     await httpTerminator.terminate()
   }
 
@@ -308,17 +316,17 @@ export const stop = async () => {
     await (await import('./workers/index.js')).stop()
   }
 
-  await locksUtils.stop(app.get('db'))
+  await locks.stop()
 
   if (config.mode !== 'task' && config.observer.active) {
-    const { stopObserver } = await import('@data-fair/lib/node/observer.js')
+    const { stopObserver } = await import('@data-fair/lib-node/observer.js')
     await stopObserver()
   }
 
   // this timeout is because we can have a few small pending operations after worker and server were closed
   await new Promise(resolve => setTimeout(resolve, 1000))
   await Promise.all([
-    app.get('mongoClient').close(),
+    mongo.client.close(),
     app.get('es').close()
   ])
 }

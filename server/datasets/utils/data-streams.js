@@ -6,15 +6,15 @@ import { stringify as csvStrStream } from 'csv-stringify'
 import { flatten } from 'flat'
 import tmp from 'tmp-promise'
 import mimeTypeStream from 'mime-type-stream'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { createGunzip } from 'zlib'
 import DecodeStream from '../../misc/utils/decode-stream.js'
-import * as metrics from '../../misc/utils/metrics.js'
 import { csvTypes } from './types.js'
 import * as fieldsSniffer from './fields-sniffer.js'
 import * as restDatasetsUtils from './rest.js'
 import { filePath, fullFilePath, tmpDir } from './files.js'
 import pump from '../../misc/utils/pipe.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 export const formatLine = (item, schema) => {
   for (const key of Object.keys(item)) {
@@ -122,7 +122,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
             .filter(k => k !== '')
             .filter(k => !schema.find(p => p['x-originalName'] === k || p.key === k))
           if (unknownKeys.length) {
-            return callback(createError(400, `Colonnes inconnues ${unknownKeys.join(', ')}`))
+            return callback(httpError(400, `Colonnes inconnues ${unknownKeys.join(', ')}`))
           }
           const readonlyKeys = Object.keys(chunk)
             .filter(k => k !== '_i' && k !== '_id')
@@ -131,7 +131,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
               return prop && (prop['x-calculated'] || prop['x-extension'])
             })
           if (readonlyKeys.length) {
-            return callback(createError(400, `Colonnes en lecture seule ${readonlyKeys.join(', ')}`))
+            return callback(httpError(400, `Colonnes en lecture seule ${readonlyKeys.join(', ')}`))
           }
         }
         for (const prop of schema) {
@@ -166,7 +166,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
       }
     }))
   } else {
-    throw createError(400, 'mime-type is not supported ' + mimeType)
+    throw httpError(400, 'mime-type is not supported ' + mimeType)
   }
 
   return streams
@@ -181,7 +181,7 @@ export const readStreams = async (db, dataset, raw = false, full = false, ignore
     // we should not have to do this
     // this is a weird thing, maybe an unsolved race condition ?
     // let's wait a bit and try again to mask this problem temporarily
-    metrics.internalError('indexer-missing-file', 'file missing when indexer started working ' + p)
+    internalError('indexer-missing-file', 'file missing when indexer started working ' + p)
     await new Promise(resolve => setTimeout(resolve, 10000))
   }
 

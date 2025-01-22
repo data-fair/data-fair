@@ -1,8 +1,9 @@
-import _config from 'config'
+import config from '#config'
+import mongo from '#mongo'
 import crypto from 'node:crypto'
 import fs from 'fs-extra'
 import path from 'path'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { nanoid } from 'nanoid'
 import pump from '../../misc/utils/pipe.js'
 import * as ajv from '../../misc/utils/ajv.js'
@@ -20,7 +21,6 @@ import duration from 'dayjs/plugin/duration.js'
 import * as storageUtils from './storage.js'
 import * as extensionsUtils from './extensions.js'
 import * as findUtils from '../../misc/utils/find.js'
-import * as metrics from '../../misc/utils/metrics.js'
 import * as fieldsSniffer from './fields-sniffer.js'
 import { transformFileStreams, formatLine } from './data-streams.js'
 import { attachmentPath, lsAttachments, tmpDir } from './files.js'
@@ -28,9 +28,9 @@ import { jsonSchema } from './schema.js'
 import * as esUtils from '../../datasets/es/index.js'
 import { tabularTypes } from './types.js'
 import Piscina from 'piscina'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 dayjs.extend(duration)
-const config = /** @type {any} */(_config)
 
 export const sheet2csvPiscina = new Piscina({
   filename: path.resolve(import.meta.dirname, '../threads/sheet2csv.js'),
@@ -113,7 +113,7 @@ export const initDataset = async (db, dataset) => {
 }
 
 export const configureHistory = async (app, dataset) => {
-  const db = app.get('db')
+  const db = mongo.db
   const revisionsCollectionExists = (await db.listCollections({ name: revisionsCollectionName(dataset) }).toArray()).length === 1
   if (!dataset.rest.history) {
     if (revisionsCollectionExists) {
@@ -307,9 +307,9 @@ export const applyTransactions = async (db, dataset, user, transacs, validate, l
   const deletePreviousFilters = []
   for (const transac of transacs) {
     const { _action, ...body } = transac
-    if (!actions.includes(_action)) throw createError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
+    if (!actions.includes(_action)) throw httpError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
     Object.assign(body, linesOwnerCols(linesOwner))
-    if (!body._id) throw createError(400, '"_id" attribute is required')
+    if (!body._id) throw httpError(400, '"_id" attribute is required')
 
     const operation = {
       _id: body._id,
@@ -552,7 +552,7 @@ export const applyTransactions = async (db, dataset, user, transacs, validate, l
  * @returns {{operations: Operation[], bulkOpResult: any}}
  */
 const applyReqTransactions = async (req, transacs, validate, tmpDataset) => {
-  return applyTransactions(req.app.get('db'), req.dataset, req.user, transacs, validate, req.linesOwner, tmpDataset)
+  return applyTransactions(mongo.db, req.dataset, req.user, transacs, validate, req.linesOwner, tmpDataset)
 }
 
 const initSummary = () => ({ nbOk: 0, nbNotModified: 0, nbErrors: 0, nbCreated: 0, nbModified: 0, nbDeleted: 0, errors: [] })
@@ -679,7 +679,7 @@ async function manageAttachment (req, keepExisting) {
     const relativePath = path.join(lineId, fileMd5, req.file.originalname)
     await fs.rename(req.file.path, attachmentPath(req.dataset, relativePath))
     if (!pathField) {
-      throw createError(400, 'Le schéma ne prévoit pas d\'associer une pièce jointe')
+      throw httpError(400, 'Le schéma ne prévoit pas d\'associer une pièce jointe')
     }
     req.body[pathField.key] = relativePath
   } else if (!keepExisting) {
@@ -692,7 +692,7 @@ async function manageAttachment (req, keepExisting) {
 // bulk operations are processed by the workers, but single line changes are processed in real time
 // this allows for read-after-write when editing the dataset
 async function commitSingleLine (app, dataset, lineId) {
-  const db = app.get('db')
+  const db = mongo.db
   const esClient = app.get('es')
   if (dataset.extensions && dataset.extensions.find(e => e.active)) {
     await extensionsUtils.extend(app, dataset, dataset.extensions, 'singleLine', true, lineId)
@@ -713,7 +713,7 @@ async function commitSingleLine (app, dataset, lineId) {
 }
 
 export const readLine = async (req, res, next) => {
-  const db = req.app.get('db')
+  const db = mongo.db
   const c = collection(db, req.dataset)
   const line = await c.findOne({ _id: req.params.lineId, ...linesOwnerFilter(req.linesOwner) })
   if (!line) return res.status(404).send('Identifiant de ligne inconnu')
@@ -734,7 +734,7 @@ export const deleteLine = async (req, res, next) => {
   if (operation._error) return res.status(operation._status).send(operation._error)
   await commitSingleLine(req.app, dataset, req.params.lineId)
 
-  await import('@data-fair/lib/express/events-log.js')
+  await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
   // TODO: delete the attachment if it is the primary key ?
@@ -758,7 +758,7 @@ export const createOrUpdateLine = async (req, res, next) => {
   if (operation._error) return res.status(operation._status).send(operation._error)
   await commitSingleLine(req.app, dataset, req.body._id)
 
-  await import('@data-fair/lib/express/events-log.js')
+  await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
   const line = getLineFromOperation(operation)
@@ -777,7 +777,7 @@ export const patchLine = async (req, res, next) => {
   if (operation._error) return res.status(operation._status).send(operation._error)
   await commitSingleLine(req.app, dataset, fullLine._id)
 
-  await import('@data-fair/lib/express/events-log.js')
+  await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
   const line = getLineFromOperation(operation)
@@ -789,13 +789,13 @@ export const deleteAllLines = async (req, res, next) => {
   // @ts-ignore
   const dataset = req.dataset
 
-  const db = req.app.get('db')
+  const db = mongo.db
   const esClient = req.app.get('es')
   await initDataset(db, req.dataset)
   const indexName = await esUtils.initDatasetIndex(esClient, req.dataset)
   await esUtils.switchAlias(esClient, req.dataset, indexName)
 
-  await import('@data-fair/lib/express/events-log.js')
+  await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
@@ -809,7 +809,7 @@ export const bulkLines = async (req, res, next) => {
   const dataset = req.dataset
 
   try {
-    const db = req.app.get('db')
+    const db = mongo.db
     const validate = compileSchema(req.dataset, req.user.adminMode)
     const drop = req.query.drop === 'true'
 
@@ -911,7 +911,7 @@ export const bulkLines = async (req, res, next) => {
         await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
       }
     } catch (err) {
-      metrics.internalError('bulk-lines', err)
+      internalError('bulk-lines', err)
       if (firstBatch) {
         res.writeHeader(err.statusCode || 500, { 'Content-Type': 'application/json' })
       }
@@ -924,7 +924,7 @@ export const bulkLines = async (req, res, next) => {
       }
     }
 
-    await import('@data-fair/lib/express/events-log.js')
+    await import('@data-fair/lib-express/events-log.js')
       .then((eventsLog) => eventsLog.default.info('df.datasets.rest.bulkLines', `applied operations in bulk to dataset ${dataset.slug} (${dataset.id}), ${JSON.stringify(summary)}`, { req, account: dataset.owner }))
 
     res.write(JSON.stringify(summary, null, 2))
@@ -939,16 +939,16 @@ export const bulkLines = async (req, res, next) => {
 }
 
 export const syncAttachmentsLines = async (req, res, next) => {
-  const db = req.app.get('db')
+  const db = mongo.db
   const dataset = req.dataset
   const validate = compileSchema(req.dataset, req.user.adminMode)
 
   const pathField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (!pathField) {
-    throw createError(400, 'Le schéma ne prévoit pas de pièce jointe')
+    throw httpError(400, 'Le schéma ne prévoit pas de pièce jointe')
   }
   if (!dataset.primaryKey || !dataset.primaryKey.length === 1 || dataset.primaryKey[0] !== pathField.key) {
-    throw createError(400, 'Le schéma ne définit par le chemin de la pièce jointe comme clé primaire')
+    throw httpError(400, 'Le schéma ne définit par le chemin de la pièce jointe comme clé primaire')
   }
 
   const files = await lsAttachments(dataset)
@@ -979,7 +979,7 @@ export const readRevisions = async (req, res, next) => {
   if (!req.dataset.rest || !req.dataset.rest.history) {
     return res.status(400).type('text/plain').send('L\'historisation des lignes n\'est pas activée pour ce jeu de données.')
   }
-  const rc = revisionsCollection(req.app.get('db'), req.dataset)
+  const rc = revisionsCollection(mongo.db, req.dataset)
   const filter = req.params.lineId ? { _lineId: req.params.lineId } : {}
   Object.assign(filter, linesOwnerFilter(req.linesOwner))
   const countFilter = { ...filter }
@@ -1149,6 +1149,6 @@ export const applyTTL = async (app, dataset) => {
   const patch = { 'rest.ttl.checkedAt': new Date().toISOString() }
   if (summary.nbOk) patch._partialRestStatus = 'updated'
 
-  await app.get('db').collection('datasets')
+  await mongo.db.collection('datasets')
     .updateOne({ id: dataset.id }, { $set: patch })
 }

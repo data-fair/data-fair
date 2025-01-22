@@ -1,6 +1,9 @@
+import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
+import mongo from '#mongo'
+
 const updateProgress = async (app, datasetId, task, progress) => {
-  await app.publish('datasets/' + datasetId + '/task-progress', { task, progress })
-  await app.get('db').collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $set: { taskProgress: { task, progress } } })
+  await wsEmitter.emit('datasets/' + datasetId + '/task-progress', { task, progress })
+  await mongo.db.collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $set: { taskProgress: { task, progress } } })
 }
 
 export default (app, datasetId, task, nbSteps, progressCallback) => {
@@ -31,11 +34,11 @@ export default (app, datasetId, task, nbSteps, progressCallback) => {
     async end (error = false) {
       if (error) {
         const taskProgress = { task, progress: lastProgress, error }
-        await app.publish('datasets/' + datasetId + '/task-progress', taskProgress)
-        await app.get('db').collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $set: { taskProgress } })
+        await wsEmitter.emit('datasets/' + datasetId + '/task-progress', taskProgress)
+        await mongo.db.collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $set: { taskProgress } })
       } else if (task === 'finalize') {
-        await app.publish('datasets/' + datasetId + '/task-progress', {})
-        await app.get('db').collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $unset: { taskProgress: 1 } })
+        await wsEmitter.emit('datasets/' + datasetId + '/task-progress', {})
+        await mongo.db.collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $unset: { taskProgress: 1 } })
       } else {
         await updateProgress(app, datasetId, task, 100)
       }

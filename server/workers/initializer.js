@@ -12,12 +12,13 @@ import iterHits from '../datasets/es/iter-hits.js'
 import taskProgress from '../datasets/utils/task-progress.js'
 import * as filesUtils from '../datasets/utils/files.js'
 import debugLib from 'debug'
+import mongo from '#mongo'
 
 export const eventsPrefix = 'initialize'
 
 export const process = async function (app, dataset) {
   const debug = debugLib(`worker:initializer:${dataset.id}`)
-  const db = app.get('db')
+  const db = mongo.db
 
   /** @type {any} */
   const patch = { updatedAt: (new Date()).toISOString() }
@@ -168,7 +169,7 @@ export const process = async function (app, dataset) {
     }
 
     if (dataset.draftReason) {
-      const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
+      const datasetFull = await mongo.db.collection('datasets').findOne({ id: dataset.id })
       const datasetFullPatch = { initFrom: null }
       // we apply schema not only to the draft but also to the main dataset info so that file validation rules apply correctly
       if (patch.schema) datasetFullPatch.schema = patch.schema

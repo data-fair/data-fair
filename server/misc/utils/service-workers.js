@@ -1,6 +1,6 @@
 // Prepare dynamic service workers configurations for data-fair applications
 
-import config from 'config'
+import config from '#config'
 import escapeStringRegexp from 'escape-string-regexp'
 import { minify } from 'terser'
 

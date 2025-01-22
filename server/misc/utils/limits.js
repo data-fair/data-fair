@@ -1,9 +1,8 @@
 import express from 'express'
-import config from 'config'
+import config from '#config'
+import mongo from '#mongo'
 import moment from 'moment'
 import * as ajv from '../utils/ajv.js'
-import asyncWrap from './async-handler.js'
-import * as dbUtils from './db.js'
 
 const limitTypeSchema = { type: 'object', properties: { limit: { type: 'number' }, consumption: { type: 'number' } } }
 const schema = {
@@ -23,10 +22,7 @@ const schema = {
 }
 const validate = ajv.compile(schema)
 
-export const init = async (db) => {
-  await dbUtils.ensureIndex(db, 'limits', { id: 'text', name: 'text' }, { name: 'fulltext' })
-  await dbUtils.ensureIndex(db, 'limits', { type: 1, id: 1 }, { name: 'limits-find-current', unique: true })
-}
+export const init = async (db) => {}
 
 export const getLimits = async (db, consumer) => {
   const coll = db.collection('limits')
@@ -80,13 +76,13 @@ export const remaining = async (db, consumer) => {
 }
 
 export const incrementConsumption = async (db, consumer, type, inc) => {
-  return (await db.collection('limits')
-    .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $inc: { [`${type}.consumption`]: inc } }, { returnDocument: 'after', upsert: true })).value
+  return await db.collection('limits')
+    .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $inc: { [`${type}.consumption`]: inc } }, { returnDocument: 'after', upsert: true })
 }
 
 export const setConsumption = async (db, consumer, type, value) => {
-  return (await db.collection('limits')
-    .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $set: { [`${type}.consumption`]: value } }, { returnDocument: 'after', upsert: true })).value
+  return await db.collection('limits')
+    .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $set: { [`${type}.consumption`]: value } }, { returnDocument: 'after', upsert: true })
 }
 
 export const router = express.Router()
@@ -113,8 +109,8 @@ const isAccountMember = (req, res, next) => {
 }
 
 // Endpoint for customers service to create/update limits
-router.post('/:type/:id', isSuperAdmin, asyncWrap(async (req, res, next) => {
-  const db = req.app.get('db')
+router.post('/:type/:id', isSuperAdmin, async (req, res, next) => {
+  const db = mongo.db
   req.body.type = req.params.type
   req.body.id = req.params.id
   validate(req.body)
@@ -127,25 +123,25 @@ router.post('/:type/:id', isSuperAdmin, asyncWrap(async (req, res, next) => {
   await db.collection('limits')
     .replaceOne({ type: req.params.type, id: req.params.id }, req.body, { upsert: true })
   res.send(req.body)
-}))
+})
 
 // A user can get limits information for himself only
-router.get('/:type/:id', isAccountMember, asyncWrap(async (req, res, next) => {
-  const limits = await getLimits(req.app.get('db'), { type: req.params.type, id: req.params.id })
+router.get('/:type/:id', isAccountMember, async (req, res, next) => {
+  const limits = await getLimits(mongo.db, { type: req.params.type, id: req.params.id })
   if (!limits) return res.status(404).send()
   delete limits._id
   res.send(limits)
-}))
+})
 
-router.get('/', isSuperAdmin, asyncWrap(async (req, res, next) => {
+router.get('/', isSuperAdmin, async (req, res, next) => {
   const filter = {}
   if (req.query.type) filter.type = req.query.type
   if (req.query.id) filter.id = req.query.id
-  const results = await req.app.get('db').collection('limits')
+  const results = await mongo.db.collection('limits')
     .find(filter)
     .sort({ lastUpdate: -1 })
     .project({ _id: 0 })
     .limit(10000)
     .toArray()
   res.send({ results, count: results.length })
-}))
+})

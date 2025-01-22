@@ -65,6 +65,7 @@ describe('Attachments', () => {
   })
 
   it('Keep attachments when updating data', async () => {
+    console.log(1)
     const ax = global.ax.cdurning2
 
     // Send dataset with a CSV and attachments in an archive

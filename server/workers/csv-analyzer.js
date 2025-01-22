@@ -1,5 +1,5 @@
 import * as journals from '../misc/utils/journals.js'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import iconv from 'iconv-lite'
 import datasetFileSample from '../datasets/utils/file-sample.js'
 import * as csvSniffer from '../misc/utils/csv-sniffer.js'
@@ -17,12 +17,12 @@ export const process = async function (app, dataset) {
 
   debug('extract file sample')
   const fileSample = await datasetFileSample(datasetUtils.filePath(dataset))
-  if (!fileSample) throw createError(400, '[noretry] Échec d\'échantillonage du fichier tabulaire, il est vide')
+  if (!fileSample) throw httpError(400, '[noretry] Échec d\'échantillonage du fichier tabulaire, il est vide')
   let decodedSample
   try {
     decodedSample = dataset.file.encoding === 'UTF-8' ? fileSample.toString() : iconv.decode(fileSample, dataset.file.encoding)
   } catch (err) {
-    throw createError(400, `[noretry] Échec de décodage du fichier selon l'encodage détecté ${dataset.file.encoding}`)
+    throw httpError(400, `[noretry] Échec de décodage du fichier selon l'encodage détecté ${dataset.file.encoding}`)
   }
   decodedSample = outOfCharacter.replace(decodedSample)
 
@@ -39,7 +39,7 @@ export const process = async function (app, dataset) {
 
   const keys = new Set([])
   for (const field of dataset.file.schema) {
-    if (keys.has(field.key)) throw createError(400, `[noretry] Échec de l'analyse du fichier tabulaire, il contient plusieurs fois la colonne "${field.key}".`)
+    if (keys.has(field.key)) throw httpError(400, `[noretry] Échec de l'analyse du fichier tabulaire, il contient plusieurs fois la colonne "${field.key}".`)
     keys.add(field.key)
   }
 
@@ -61,12 +61,12 @@ export const process = async function (app, dataset) {
     if (!field) continue // do not keep columns with empty string as header
     const escapedKey = fieldsSniffer.escapeKey(field, dataset)
     const fileField = dataset.file.schema.find(f => f.key === escapedKey)
-    if (!fileField) throw createError(400, `[noretry] Champ ${field} présent dans la donnée mais absent de l'analyse initiale du fichier`)
+    if (!fileField) throw httpError(400, `[noretry] Champ ${field} présent dans la donnée mais absent de l'analyse initiale du fichier`)
     const existingField = dataset.schema && dataset.schema.find(f => f.key === escapedKey)
     Object.assign(fileField, fieldsSniffer.sniff([...sampleValues[field]], attachments, existingField))
   }
   if (attachments.length && !dataset.file.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
-    throw createError(400, `[noretry] Vous avez chargé des pièces jointes, mais aucune colonne ne contient les chemins vers ces pièces jointes. Valeurs attendues : ${attachments.slice(0, 3).join(', ')}.`)
+    throw httpError(400, `[noretry] Vous avez chargé des pièces jointes, mais aucune colonne ne contient les chemins vers ces pièces jointes. Valeurs attendues : ${attachments.slice(0, 3).join(', ')}.`)
   }
   const emptyCols = dataset.file.schema.filter(p => p.type === 'empty')
   if (emptyCols.length) {

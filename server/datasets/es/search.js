@@ -1,5 +1,5 @@
-import config from 'config'
-import createError from 'http-errors'
+import config from '#config'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { aliasName, prepareQuery } from './commons.js'
 
 export default async (client, dataset, query, publicBaseUrl) => {
@@ -9,10 +9,10 @@ export default async (client, dataset, query, publicBaseUrl) => {
     // Select fields to return
     const collapseField = dataset.schema.find(f => f.key === query.collapse)
     if (!collapseField) {
-      throw createError(400, `Impossible d'utiliser "collapse" sur le champ ${query.collapse}, il n'existe pas dans le jeu de données.`)
+      throw httpError(400, `Impossible d'utiliser "collapse" sur le champ ${query.collapse}, il n'existe pas dans le jeu de données.`)
     }
     /* if (collapseField.separator) {
-      throw createError(400, `Impossible d'utiliser "collapse" sur le champ ${query.collapse}, il est multivalué.`)
+      throw httpError(400, `Impossible d'utiliser "collapse" sur le champ ${query.collapse}, il est multivalué.`)
     } */
     esQuery.collapse = { field: query.collapse }
     // number after which we accept that cardinality is approximative

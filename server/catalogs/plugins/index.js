@@ -1,7 +1,8 @@
 import fs from 'fs-extra'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { nanoid } from 'nanoid'
-import config from 'config'
+import config from '#config'
+import mongo from '#mongo'
 import standardLicenses from '../../../contract/licenses.js'
 import path from 'path'
 import mime from 'mime'
@@ -51,8 +52,8 @@ export const init = async (catalogUrl) => {
 // to fetch resources
 export const httpParams = async (catalog, url) => {
   const connector = connectors.find(c => c.key === catalog.type)
-  if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
-  if (!connector.httpParams) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
+  if (!connector) throw httpError(404, 'No connector found for catalog type ' + catalog.type)
+  if (!connector.httpParams) throw httpError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
   if (url.startsWith(catalog.url)) {
     const catalogHttpParams = await connector.httpParams(catalog)
     debug(`Use HTTP params from catalog ${JSON.stringify(catalogHttpParams)}`)
@@ -65,8 +66,8 @@ export const httpParams = async (catalog, url) => {
 
 export const listDatasets = async (db, catalog, params) => {
   const connector = connectors.find(c => c.key === catalog.type)
-  if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
-  if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
+  if (!connector) throw httpError(404, 'No connector found for catalog type ' + catalog.type)
+  if (!connector.listDatasets) throw httpError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
   const settings = (await db.collection('settings').findOne({ type: catalog.owner.type, id: catalog.owner.id })) || {}
   settings.licenses = [].concat(standardLicenses, settings.licenses || [])
   const datasets = await connector.listDatasets(catalog, params, settings)
@@ -103,12 +104,12 @@ const getDatasetPatch = (catalog, dataset, props = {}) => {
 }
 
 const insertDataset = async (app, newDataset) => {
-  await datasetUtils.insertWithId(app.get('db'), newDataset)
+  await datasetUtils.insertWithId(mongo.db, newDataset)
   await journals.log(app, newDataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + newDataset.id }, 'dataset')
 }
 
 export const updateAllHarvestedDatasets = async (app, catalog) => {
-  const datasets = await listDatasets(app.get('db'), catalog, {})
+  const datasets = await listDatasets(mongo.db, catalog, {})
   for (const dataset of datasets.results) {
     if (dataset.harvestedDataset) {
       await harvestDataset(app, catalog, dataset.id)
@@ -124,18 +125,18 @@ export const updateAllHarvestedDatasets = async (app, catalog) => {
 // create a simple metadata only dataset
 export const harvestDataset = async (app, catalog, datasetId) => {
   const connector = connectors.find(c => c.key === catalog.type)
-  if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
-  if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
+  if (!connector) throw httpError(404, 'No connector found for catalog type ' + catalog.type)
+  if (!connector.listDatasets) throw httpError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
 
-  const settings = (await app.get('db').collection('settings').findOne({ type: catalog.owner.type, id: catalog.owner.id })) || {}
+  const settings = (await mongo.db.collection('settings').findOne({ type: catalog.owner.type, id: catalog.owner.id })) || {}
   settings.licenses = [].concat(standardLicenses, settings.licenses || [])
   const dataset = await connector.getDataset(catalog, datasetId, settings)
-  if (!dataset) throw createError(404, 'Dataset not found')
-  if (!dataset.page) throw createError(404, 'Dataset is missing a page link to be harvested')
+  if (!dataset) throw httpError(404, 'Dataset not found')
+  if (!dataset.page) throw httpError(404, 'Dataset is missing a page link to be harvested')
 
   const date = moment().toISOString()
 
-  const harvestedDataset = await app.get('db').collection('datasets').findOne({
+  const harvestedDataset = await mongo.db.collection('datasets').findOne({
     'owner.type': catalog.owner.type,
     'owner.id': catalog.owner.id,
     origin: dataset.page
@@ -165,7 +166,7 @@ export const harvestDataset = async (app, catalog, datasetId) => {
     }
     debug('apply patch to dataset', harvestedDataset.id, patch)
     if (Object.keys(patch).length) {
-      await app.get('db').collection('datasets').updateOne({ id: harvestedDataset.id }, { $set: patch })
+      await mongo.db.collection('datasets').updateOne({ id: harvestedDataset.id }, { $set: patch })
     }
   } else {
     debug('create new metadata dataset', dataset.title)
@@ -188,21 +189,21 @@ export const harvestDataset = async (app, catalog, datasetId) => {
 // create a file dataset from the resource of a dataset on the remote portal
 export const harvestDatasetResource = async (app, catalog, datasetId, resourceId, forceDownload = true) => {
   const connector = connectors.find(c => c.key === catalog.type)
-  if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
-  if (!connector.listDatasets) throw createError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
+  if (!connector) throw httpError(404, 'No connector found for catalog type ' + catalog.type)
+  if (!connector.listDatasets) throw httpError(501, `The connector for the catalog type ${catalog.type} cannot do this action`)
 
-  const settings = (await app.get('db').collection('settings').findOne({ type: catalog.owner.type, id: catalog.owner.id })) || {}
+  const settings = (await mongo.db.collection('settings').findOne({ type: catalog.owner.type, id: catalog.owner.id })) || {}
   settings.licenses = [].concat(standardLicenses, settings.licenses || [])
   const dataset = await connector.getDataset(catalog, datasetId, settings)
-  if (!dataset) throw createError(404, 'Dataset not found')
+  if (!dataset) throw httpError(404, 'Dataset not found')
   const resource = (dataset.resources || []).find(r => r.id === resourceId)
-  if (!resource) throw createError(404, 'Resource not found')
-  if (!resource.url) throw createError(404, 'Resource is missing a url to be harvested')
-  // if (!uploadUtils.allowedTypes.has(resource.mime)) throw createError(404, 'Resource format not supported')
+  if (!resource) throw httpError(404, 'Resource not found')
+  if (!resource.url) throw httpError(404, 'Resource is missing a url to be harvested')
+  // if (!uploadUtils.allowedTypes.has(resource.mime)) throw httpError(404, 'Resource format not supported')
 
   const date = moment().toISOString()
 
-  const harvestedDataset = await app.get('db').collection('datasets').findOne({
+  const harvestedDataset = await mongo.db.collection('datasets').findOne({
     'remoteFile.url': resource.url,
     'remoteFile.catalog': catalog.id
   }, { projection: { id: 1, remoteFile: 1, updatedAt: 1 } })
@@ -233,7 +234,7 @@ export const harvestDatasetResource = async (app, catalog, datasetId, resourceId
     if (harvestedDataset.remoteFile?.url !== remoteFile.url || forceDownload) patch.status = 'imported'
     debug('apply patch to existing resource dataset', harvestedDataset.id, patch)
     if (Object.keys(patch).length) {
-      await app.get('db').collection('datasets').updateOne({ id: harvestedDataset.id }, { $set: patch })
+      await mongo.db.collection('datasets').updateOne({ id: harvestedDataset.id }, { $set: patch })
     }
   } else {
     debug('create new resource dataset', title)
@@ -261,13 +262,13 @@ export const harvestDatasetResource = async (app, catalog, datasetId, resourceId
 
 export const searchOrganizations = async (type, url, q) => {
   const connector = connectors.find(c => c.key === type)
-  if (!connector) throw createError(404, 'No connector found for catalog type ' + type)
-  if (!connector.optionalCapabilities.includes('searchOrganizations')) throw createError(501, `The connector for the catalog type ${type} cannot do this action`)
+  if (!connector) throw httpError(404, 'No connector found for catalog type ' + type)
+  if (!connector.optionalCapabilities.includes('searchOrganizations')) throw httpError(501, `The connector for the catalog type ${type} cannot do this action`)
   return connector.searchOrganizations(url, q)
 }
 
 export const processPublications = async function (app, type, resource) {
-  const db = app.get('db')
+  const db = mongo.db
   const resourcesCollection = db.collection(type + 's')
   const catalogsCollection = db.collection('catalogs')
   resource.public = permissionsUtil.isPublic(type + 's', resource)
@@ -328,8 +329,8 @@ export const processPublications = async function (app, type, resource) {
 
   try {
     const connector = connectors.find(c => c.key === catalog.type)
-    if (!connector) throw createError(404, 'No connector found for catalog type ' + catalog.type)
-    if (!connector.publishApplication) throw createError(501, `The connector for the catalog type ${type} cannot do this action`)
+    if (!connector) throw httpError(404, 'No connector found for catalog type ' + catalog.type)
+    if (!connector.publishApplication) throw httpError(501, `The connector for the catalog type ${type} cannot do this action`)
     let res
 
     if (processedPublication.status === 'deleted') {

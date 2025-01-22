@@ -1,7 +1,7 @@
-import _config from 'config'
+import config from '#config'
+import mongo from '#mongo'
 import { Histogram } from 'prom-client'
-import * as metrics from '../misc/utils/metrics.js'
-import * as locks from '../misc/utils/locks.js'
+import locks from '@data-fair/lib-node/locks.js'
 import * as journals from '../misc/utils/journals.js'
 import debug from 'debug'
 import mergeDraft from '../datasets/utils/merge-draft.js'
@@ -9,8 +9,7 @@ import taskProgress from '../datasets/utils/task-progress.js'
 import { basicTypes, csvTypes } from '../datasets/utils/types.js'
 import moment from 'moment'
 import { spawn } from 'child-process-promise'
-
-const config = /** @type {any} */(_config)
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 const workersTasksHistogram = new Histogram({
   name: 'df_datasets_workers_tasks',
@@ -78,7 +77,7 @@ export const start = async (app) => {
   const debugLoop = debug('worker-loop')
 
   debugLoop('start worker loop with config', config.worker)
-  const db = app.get('db')
+  const db = mongo.db
 
   // initialize empty promise pool
   for (let i = 0; i < config.worker.concurrency; i++) {
@@ -127,7 +126,7 @@ export const start = async (app) => {
     promisePool[freeSlot] = iter(app, resource, type)
     promisePool[freeSlot]._resource = `${type}/${resource.id} (${resource.slug}) - ${resource.status}`
     promisePool[freeSlot].catch(err => {
-      metrics.internalError('worker-iter', err)
+      internalError('worker-iter', err)
     })
     // always empty the slot after the promise is finished
     promisePool[freeSlot].finally(() => {
@@ -193,7 +192,7 @@ const getTypesFilters = () => {
 }
 
 async function iter (app, resource, type) {
-  const db = app.get('db')
+  const db = mongo.db
   const now = new Date().toISOString()
 
   let taskKey
@@ -321,7 +320,7 @@ async function iter (app, resource, type) {
     endTask = workersTasksHistogram.startTimer({ task: taskKey })
     if (config.worker.spawnTask) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
-      const spawnPromise = spawn('node', ['server', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task', DATASET_DRAFT: '' + !!resource.draftReason } })
+      const spawnPromise = spawn('node', ['--experimental-strip-types', '--no-warnings', 'server/index.ts', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task', DATASET_DRAFT: '' + !!resource.draftReason } })
       spawnPromise.childProcess.stdout.on('data', data => {
         data = data.toString()
         console.log(`[${type}/${resource.id}/${taskKey}/stdout] ${data}`)
@@ -341,7 +340,7 @@ async function iter (app, resource, type) {
     endTask({ status: 'ok' })
     debug(`finished task ${taskKey} - ${type} / ${resource.slug} (${resource.id})${resource.draftReason ? ' - draft' : ''}`)
 
-    const newResource = await app.get('db').collection(type + 's').findOne({ id: resource.id })
+    const newResource = await mongo.db.collection(type + 's').findOne({ id: resource.id })
     if (task.eventsPrefix && newResource) {
       const noStoreEvent = type === 'dataset' && (task.eventsPrefix !== 'finalize' || !!resource._partialRestStatus)
       if (resource.draftReason) {
@@ -375,7 +374,7 @@ async function iter (app, resource, type) {
 
     if (endTask) endTask({ status: 'error' })
 
-    // metrics.internalError('task', errorMessage)
+    // internalError('task', errorMessage)
 
     console.warn(`failure in worker ${taskKey} - ${type} / ${resource.slug} (${resource.id})`, errorMessage)
     if (!config.worker.spawnTask || !errorMessage) console.debug(err)
@@ -413,12 +412,12 @@ async function iter (app, resource, type) {
       patch.$unset = { [propertyPrefix + 'errorRetry']: 1 }
     }
 
-    await app.get('db').collection(type + 's').updateOne({ id: resource.id }, patch)
+    await mongo.db.collection(type + 's').updateOne({ id: resource.id }, patch)
     resource.status = 'error'
     resource.errorStatus = resource.status
-    hookRejection = { resource, message: errorMessage }
+    hookRejection = { resource, taskKey, message: errorMessage }
   } finally {
-    await locks.release(db, `${type}:${resource.id}`)
+    await locks.release(`${type}:${resource.id}`)
     if (hookRejection) {
       if (hooks[taskKey]) hooks[taskKey].reject(hookRejection)
       if (hooks[taskKey + '/' + resource.id]) hooks[taskKey + '/' + resource.id].reject(hookRejection)
@@ -436,11 +435,11 @@ async function acquireNext (db, type, filter) {
   const cursor = db.collection(type + 's').aggregate([{ $match: filter }, { $project: { id: 1 } }, { $sample: { size: 100 } }])
   while (await cursor.hasNext()) {
     const resource = await cursor.next()
-    const ack = await locks.acquire(db, `${type}:${resource.id}`, 'worker')
+    const ack = await locks.acquire(`${type}:${resource.id}`, 'worker')
     if (!ack) continue
     // check that there was no race condition and that the resource is still in the state required to work on it
     const updatedResource = await db.collection(type + 's').findOne({ ...filter, id: resource.id })
     if (updatedResource) return updatedResource
-    else await locks.release(db, `${type}:${resource.id}`)
+    else await locks.release(`${type}:${resource.id}`)
   }
 }

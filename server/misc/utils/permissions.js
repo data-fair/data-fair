@@ -1,4 +1,5 @@
-import config from 'config'
+import config from '#config'
+import mongo from '#mongo'
 import express from 'express'
 import permissionsSchema from '../../../contract/permissions.js'
 import * as apiDocsUtil from './api-docs.js'
@@ -283,7 +284,7 @@ export const router = (resourceType, resourceName, onPublicCallback) => {
       if ((!permission.type && permission.id) || (permission.type && !(permission.id || permission.email))) valid = false
     }
     if (!valid) return res.status(400).type('text/plain').send('Error in permissions format')
-    const resources = req.app.get('db').collection(resourceType)
+    const resources = mongo.db.collection(resourceType)
     try {
       const resource = await req[resourceName]
       const wasPublic = isPublic(resourceType, resource)

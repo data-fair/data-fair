@@ -1,9 +1,8 @@
 
-import config from 'config'
+import config from '#config'
 import { Transform } from 'node:stream'
 import { RateLimiter, TokenBucket } from '../../../node_modules/limiter/dist/cjs/index.js' // cf https://github.com/jhurliman/node-rate-limiter/issues/80#issuecomment-1649261071
 import requestIp from 'request-ip'
-import asyncWrap from './async-handler.js'
 import debug from 'debug'
 
 const debugLimits = debug('limits')
@@ -95,7 +94,7 @@ const throttledEnd = async (res, buffer, tokenBucket) => {
   res._originalEnd()
 }
 
-export const middleware = (_limitType) => asyncWrap(async (req, res, next) => {
+export const middleware = (_limitType) => async (req, res, next) => {
   const limitType = _limitType || ((req.user && req.user.id) ? 'user' : 'anonymous')
 
   const ignoreRateLimiting = config.secretKeys.ignoreRateLimiting && req.get('x-ignore-rate-limiting') === config.secretKeys.ignoreRateLimiting
@@ -128,4 +127,4 @@ export const middleware = (_limitType) => asyncWrap(async (req, res, next) => {
     }
   }
   next()
-})
+}

@@ -1,11 +1,12 @@
 import * as virtualDatasetsUtils from './virtual.js'
 import * as esUtils from '../es/index.js'
 import * as restDatasetsUtils from './rest.js'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
 import fs from 'fs-extra'
 import * as limits from '../../misc/utils/limits.js'
-import config from 'config'
+import config from '#config'
+import mongo from '#mongo'
 import debug from 'debug'
 import { dataFiles, lsAttachments, lsMetadataAttachments, attachmentPath, metadataAttachmentPath } from './files.js'
 
@@ -29,11 +30,11 @@ export const checkStorage = async (db, locale, owner, overwriteDataset, contentL
 
   if (config.defaultLimits.datasetStorage !== -1 && config.defaultLimits.datasetStorage < estimatedContentSize) {
     debugLimits('datasetStorage/checkStorage', debugInfo)
-    throw createError(413, 'Vous avez atteint la limite de votre espace de stockage pour ce jeu de données.')
+    throw httpError(413, 'Vous avez atteint la limite de votre espace de stockage pour ce jeu de données.')
   }
   if (config.defaultLimits.datasetIndexed !== -1 && config.defaultLimits.datasetIndexed < estimatedContentSize) {
     debugLimits('datasetIndexed/checkStorage', debugInfo)
-    throw createError(413, 'Vous dépassez la taille de données indexées autorisée pour ce jeu de données.')
+    throw httpError(413, 'Vous dépassez la taille de données indexées autorisée pour ce jeu de données.')
   }
   const remaining = await limits.remaining(db, owner)
   debugInfo.remaining = { ...remaining }
@@ -48,11 +49,11 @@ export const checkStorage = async (db, locale, owner, overwriteDataset, contentL
   if (!storageOk || !indexedOk) {
     if (!storageOk) {
       debugLimits('exceedLimitStorage/checkStorage', debugInfo)
-      throw createError(429, i18n.__({ locale, phrase: 'errors.exceedLimitStorage' }))
+      throw httpError(429, i18n.__({ locale, phrase: 'errors.exceedLimitStorage' }))
     }
     if (!indexedOk) {
       debugLimits('exceedLimitIndexed/checkStorage', debugInfo)
-      throw createError(429, i18n.__({ locale, phrase: 'errors.exceedLimitIndexed' }))
+      throw httpError(429, i18n.__({ locale, phrase: 'errors.exceedLimitIndexed' }))
     }
   }
 }
@@ -114,8 +115,8 @@ export const storage = async (db, es, dataset) => {
   // storage used by mongodb collections
   if (dataset.isRest) {
     const collection = await restDatasetsUtils.collection(db, dataset)
-    const stats = await collection.stats()
-    storage.collection = { size: stats.size, count: stats.count }
+    const stats = await collection.aggregate([{ $collStats: { storageStats: {} } }]).next()
+    storage.collection = { size: stats.storageStats.size, count: stats.storageStats.count }
     storage.size += storage.collection.size
     storage.indexed = {
       size: storage.collection.size,
@@ -125,9 +126,9 @@ export const storage = async (db, es, dataset) => {
     if (dataset.rest && dataset.rest.history) {
       try {
         const revisionsCollection = await restDatasetsUtils.revisionsCollection(db, dataset)
-        const revisionsStats = await revisionsCollection.stats()
+        const revisionsStats = await revisionsCollection.aggregate([{ $collStats: { storageStats: {} } }]).next()
         // we remove 60 bytes per line that are not really part of the original payload but added by _action, _updatedAt, _hash and _i.
-        storage.revisions = { size: revisionsStats.size, count: revisionsStats.count }
+        storage.revisions = { size: revisionsStats.storageStats.size, count: revisionsStats.storageStats.count }
         storage.size += storage.revisions.size
       } catch (err) {
         // ignore, this is probably a new dataset whose revisions collection was not initialized
@@ -163,7 +164,7 @@ export const storage = async (db, es, dataset) => {
 
 // After a change that might impact consumed storage, we store the value
 export const updateStorage = async (app, dataset, deleted = false, checkRemaining = false) => {
-  const db = app.get('db')
+  const db = mongo.db
   const es = app.get('es')
   if (dataset.draftReason) {
     console.log(new Error('updateStorage should not be called on a draft dataset'))
@@ -199,15 +200,15 @@ export const updateTotalStorage = async (db, owner, checkRemaining = false) => {
     const remaining = await limits.remaining(db, owner)
     if (remaining.storage === 0) {
       debugLimits('exceedLimitStorage/updateTotalStorage', { owner, remaining })
-      throw createError(429, 'Vous avez atteint la limite de votre espace de stockage.')
+      throw httpError(429, 'Vous avez atteint la limite de votre espace de stockage.')
     }
     if (remaining.indexed === 0) {
       debugLimits('exceedLimitIndexed/updateTotalStorage', { owner, remaining })
-      throw createError(429, 'Vous avez atteint la limite de votre espace de données indexées.')
+      throw httpError(429, 'Vous avez atteint la limite de votre espace de données indexées.')
     }
     if (remaining.nbDatasets === 0) {
       debugLimits('exceedLimitNbDatasets/updateTotalStorage', { owner, remaining })
-      throw createError(429, 'Vous avez atteint la limite de votre nombre de jeux de données.')
+      throw httpError(429, 'Vous avez atteint la limite de votre nombre de jeux de données.')
     }
   }
   return totalStorage

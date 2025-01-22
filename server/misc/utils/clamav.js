@@ -1,13 +1,10 @@
 import path from 'path'
 import { Socket } from 'node:net'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { PromiseSocket } from 'promise-socket'
 import { Counter } from 'prom-client'
-import asyncWrap from './async-handler.js'
 import debugLib from 'debug'
-import _config from 'config'
-
-const config = /** @type {any} */(_config)
+import config from '#config'
 
 const debug = debugLib('clamav')
 
@@ -35,10 +32,10 @@ export const ping = async () => {
   if (result !== 'PONG') throw new Error('expected "PONG" in response')
 }
 
-export const middleware = asyncWrap(async (req, res, next) => {
+export const middleware = async (req, res, next) => {
   await checkFiles(req.files, req.user)
   next()
-})
+}
 
 export const checkFiles = async (files, user) => {
   if (!config.clamav.active) return true
@@ -46,13 +43,13 @@ export const checkFiles = async (files, user) => {
     const remotePath = path.join(config.clamav.dataDir, path.relative(config.dataDir, file.path))
     const result = await runCommand(`SCAN ${remotePath}`)
     if (result.endsWith('OK')) continue
-    if (result.endsWith('ERROR')) throw createError('failure while applying antivirus ' + result.slice(0, -6))
+    if (result.endsWith('ERROR')) throw new Error('failure while applying antivirus ' + result.slice(0, -6))
     if (result.endsWith('FOUND')) {
       infectedFilesCounter.inc()
       console.warn('[infected-file] a user attempted to upload an infected file', result, user, file)
-      throw createError(400, 'malicious file detected')
+      throw httpError(400, 'malicious file detected')
     }
-    throw createError('Unexpected result from antivirus ' + result)
+    throw new Error('Unexpected result from antivirus ' + result)
   }
   return true
 }

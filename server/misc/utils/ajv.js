@@ -1,7 +1,7 @@
 
 import fs from 'fs-extra'
 import path from 'path'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { ajv, errorsText, localize } from '../../../shared/ajv.js'
 
 // cf https://github.com/ajv-validator/ajv/issues/1745
@@ -20,7 +20,7 @@ export const compile = (schema, throws = true) => {
       (localize[locale] || localize.fr)(validate.errors)
       const message = errorsText(validate.errors)
       if (throws) {
-        throw createError(400, message)
+        throw httpError(400, message)
       } else {
         myValidate.errors = message
         return false

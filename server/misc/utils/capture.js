@@ -1,14 +1,14 @@
 import fs from 'fs-extra'
-import config from 'config'
+import config from '#config'
 import path from 'path'
 import request from 'request'
-import eventToPromise from 'event-to-promise'
+import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import pump from '../utils/pipe.js'
 import * as rateLimiting from '../utils/rate-limiting.js'
 import debug from 'debug'
 import * as permissionsUtils from './permissions.js'
-import * as metrics from './metrics.js'
 import resolvePath from 'resolve-path'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 const captureUrl = config.privateCaptureUrl || config.captureUrl
 
@@ -89,7 +89,7 @@ const stream2file = async (reqOpts, capturePath) => {
   let captureRes
   const captureReq = request(reqOpts)
   await Promise.all([
-    eventToPromise(captureReq, 'response').then(r => { captureRes = r }),
+    eventPromise(captureReq, 'response').then(r => { captureRes = r }),
     pump(captureReq, fs.createWriteStream(capturePath))
   ])
   if (captureRes.statusCode >= 400) {
@@ -131,7 +131,7 @@ export const screenshot = async (req, res) => {
     } catch (err) {
       // catch err locally as this method is called without waiting for result
 
-      metrics.internalError('app-thumbnail', err)
+      internalError('app-thumbnail', err)
 
       // In case of error do not keep corrupted or empty file
       await fs.remove(capturePath)

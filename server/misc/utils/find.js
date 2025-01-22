@@ -1,10 +1,8 @@
-import _config from 'config'
-import createError from 'http-errors'
+import config from '#config'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
 import * as permissions from './permissions.js'
 import * as visibility from './visibility.js'
-
-const config = /** @type {any} */(_config)
 
 // Util functions shared accross the main find (GET on collection) endpoints
 
@@ -60,7 +58,7 @@ export const query = (reqQuery, locale, user, resourceType, fieldsMap, globalMod
     // they are managed by superadmin and then are shared by public / privateAccess attributes
 
     const showAll = reqQuery.showAll === 'true'
-    if (showAll && !user.adminMode) throw createError(400, 'Only super admins can override permissions filter with showAll parameter')
+    if (showAll && !user.adminMode) throw httpError(400, 'Only super admins can override permissions filter with showAll parameter')
 
     const accessFilter = []
     if (!showAll) {
@@ -71,10 +69,10 @@ export const query = (reqQuery, locale, user, resourceType, fieldsMap, globalMod
     if (reqQuery.privateAccess) {
       for (const p of reqQuery.privateAccess.split(',')) {
         const [type, id] = p.split(':')
-        if (!user) throw createError(401)
+        if (!user) throw httpError(401)
         if (!user.adminMode) {
-          if (type === 'user' && id !== user.id) throw createError(403, i18n.__({ locale, phrase: 'errors.missingPermission' }))
-          if (type === 'organization' && !user.organizations.find((/** @type{any} */o) => o.id === id)) throw createError(403, i18n.__({ locale, phrase: 'errors.missingPermission' }))
+          if (type === 'user' && id !== user.id) throw httpError(403, i18n.__({ locale, phrase: 'errors.missingPermission' }))
+          if (type === 'organization' && !user.organizations.find((/** @type{any} */o) => o.id === id)) throw httpError(403, i18n.__({ locale, phrase: 'errors.missingPermission' }))
         }
         privateAccess.push({ type, id })
         accessFilter.push({ privateAccess: { $elemMatch: { type, id } } })
@@ -181,7 +179,7 @@ export const pagination = (reqQuery, defaultSize = 12) => {
     skip = (parseInt(reqQuery.page) - 1) * size
   }
 
-  if ((size + skip) > 10000) throw createError(400, '"size + skip" cannot be more than 10000')
+  if ((size + skip) > 10000) throw httpError(400, '"size + skip" cannot be more than 10000')
 
   return [skip, size]
 }

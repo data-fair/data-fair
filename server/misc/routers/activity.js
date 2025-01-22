@@ -2,14 +2,14 @@
 // for now we create something similar based on recently updated datasets and applications
 
 import express from 'express'
-import asyncWrap from '../utils/async-handler.js'
 import * as findUtils from '../utils/find.js'
+import mongo from '#mongo'
 
 const router = express.Router()
 export default router
 
-router.get('', asyncWrap(async (req, res) => {
-  const db = req.app.get('db')
+router.get('', async (req, res) => {
+  const db = mongo.db
   const query = findUtils.query(req, { status: 'status' })
   const size = findUtils.pagination(req.query)[1]
   const [datasets, applications] = await Promise.all([
@@ -33,4 +33,4 @@ router.get('', asyncWrap(async (req, res) => {
   res.send({
     results
   })
-}))
+})

@@ -114,4 +114,4 @@ VOLUME /data
 EXPOSE 8080
 
 # --single-child is necessary for worker to wait on its tasks
-CMD ["dumb-init", "--single-child", "node", "--max-http-header-size", "64000", "server"]
+CMD ["dumb-init", "--single-child", "node", "--max-http-header-size", "64000", "--experimental-strip-types", "--no-warnings", "server/index.ts"]

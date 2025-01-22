@@ -1,8 +1,7 @@
 import { join } from 'path'
-import * as metrics from '../misc/utils/metrics.js'
 import * as journals from '../misc/utils/journals.js'
 import fs from 'fs-extra'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { Writable } from 'stream'
 import pump from '../misc/utils/pipe.js'
 import * as es from '../datasets/es/index.js'
@@ -14,6 +13,8 @@ import taskProgress from '../datasets/utils/task-progress.js'
 import { tmpDir } from '../datasets/utils/files.js'
 import * as attachmentsUtils from '../datasets/utils/attachments.js'
 import debugModule from 'debug'
+import { internalError } from '@data-fair/lib-node/observer.js'
+import mongo from '#mongo'
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
 export const eventsPrefix = 'index'
@@ -26,12 +27,12 @@ export const process = async function (app, dataset) {
     throw new Error('This is a test error')
   }
   if (global.process.env.NODE_ENV === 'test' && dataset.slug === 'trigger-test-error-400') {
-    throw createError(400, '[noretry] This is a test 400 error')
+    throw httpError(400, '[noretry] This is a test 400 error')
   }
 
   if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape indexation.')
 
-  const db = app.get('db')
+  const db = mongo.db
   const esClient = app.get('es')
 
   const partialUpdate = dataset._partialRestStatus === 'updated' || dataset._partialRestStatus === 'extended'
@@ -52,7 +53,7 @@ export const process = async function (app, dataset) {
     try {
       indexName = await es.initDatasetIndex(esClient, dataset)
     } catch (err) {
-      metrics.internalError('es-init-index', err)
+      internalError('es-init-index', err)
       const { message } = es.extractError(err)
       throw new Error(message)
     }

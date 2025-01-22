@@ -1,4 +1,4 @@
-// TODO: replace this with @data-fair/lib/node/observer.js
+// TODO: replace this with @data-fair/lib-node/observer.js
 
 import client from 'prom-client'
 import debug from 'debug'
@@ -34,7 +34,7 @@ export const reqStep = (req, stepName) => {
 
   const now = Date.now()
   const duration = now - (stepName === 'total' ? req[reqObserveKey].start : req[reqObserveKey].step)
-  reqStepHisto.labels(req[reqObserveKey].routeName, stepName).observe(duration / 1000)
+  reqStepHisto.labels(Array.isArray(req[reqObserveKey].routeName) ? req[reqObserveKey].routeName[0] : req[reqObserveKey].routeName, stepName).observe(duration / 1000)
   debugReq('request', req.method, req.originalUrl, stepName, duration, 'ms')
   if (duration > 1000 && stepName !== 'total' && stepName !== 'finish') {
     console.log('slow request', req.method, req.originalUrl, stepName, duration, 'ms')

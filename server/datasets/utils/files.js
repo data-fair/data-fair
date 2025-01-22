@@ -1,10 +1,8 @@
-import _config from 'config'
+import config from '#config'
 import fs from 'fs-extra'
 import path from 'path'
 import nodeDir from 'node-dir'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
-
-const config = /** @type {any} */(_config)
 
 export const dataDir = path.resolve(config.dataDir)
 

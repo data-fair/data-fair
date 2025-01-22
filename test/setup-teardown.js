@@ -1,7 +1,7 @@
-import config from 'config'
+import config from '#config'
+import mongo from '#mongo'
 import fs from 'fs-extra'
 import nock from 'nock'
-
 import * as workers from '../server/workers/index.js'
 import axios from 'axios'
 import debugModule from 'debug'
@@ -53,6 +53,7 @@ before('global mocks', async () => {
   nock('http://monapp1.com/')
     .persist()
     .get('/index.html').query(true).reply(200, html)
+    .get('/dir1/info.txt').query(true).reply(200, 'into txt dir1')
     .get('/config-schema.json').query(true).reply(200, {
       type: 'object',
       required: ['datasets'],
@@ -98,9 +99,9 @@ before('global mocks', async () => {
 
 before('init globals', async () => {
   debug('init globals')
-  const { db, client } = await (await import('../server/misc/utils/db.js')).connect()
-  global.db = db
-  global.mongoClient = client
+  await mongo.init()
+  global.db = mongo.db
+  global.mongoClient = mongo.client
   global.es = await (await import('../server/datasets/es/index.js')).init()
 
   global.ax = {}

@@ -1,8 +1,9 @@
-import _config from 'config'
+import config from '#config'
+import mongo from '#mongo'
 import path from 'node:path'
 import equal from 'deep-equal'
 import moment from 'moment'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mime from 'mime-types'
 import { CronJob } from 'cron'
 import * as geo from './geo.js'
@@ -12,8 +13,8 @@ import * as extensions from './extensions.js'
 import * as schemaUtils from './schema.js'
 import datasetPatchSchema from '../../../contract/dataset-patch.js'
 import * as virtualDatasetsUtils from './virtual.js'
+import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 
-const config = /** @type {any} */(_config)
 export const validatePatch = ajv.compile(datasetPatchSchema)
 
 /**
@@ -27,7 +28,7 @@ export const validatePatch = ajv.compile(datasetPatchSchema)
  * @returns {Promise<{removedRestProps?: any[], attemptMappingUpdate?: boolean, isEmpty?: boolean}>}
  */
 export const preparePatch = async (app, patch, dataset, user, locale, draftValidationMode, files) => {
-  const db = app.get('db')
+  const db = mongo.db
 
   patch.id = dataset.id
   patch.slug = patch.slug || dataset.slug
@@ -45,8 +46,8 @@ export const preparePatch = async (app, patch, dataset, user, locale, draftValid
     else if (dataset.remoteFile && !dataset.originalFile) patch.status = 'imported'
     else patch.status = 'stored'
 
-    await app.publish('datasets/' + dataset.id + '/task-progress', {})
-    await app.get('db').collection('journals').updateOne({ type: 'dataset', id: dataset.id }, { $unset: { taskProgress: 1 } })
+    await wsEmitter.emit('datasets/' + dataset.id + '/task-progress', {})
+    await mongo.db.collection('journals').updateOne({ type: 'dataset', id: dataset.id }, { $unset: { taskProgress: 1 } })
   }
 
   const datasetFile = files && files.find(f => f.fieldname === 'file' || f.fieldname === 'dataset')
@@ -70,7 +71,7 @@ export const preparePatch = async (app, patch, dataset, user, locale, draftValid
     patch._attachmentsTargets = []
     for (const attachment of patch.attachments) {
       if (['file', 'remoteFile'].includes(attachment.type) && attachment.name && !attachment.mimetype) {
-        if (!path.extname(attachment.name)) throw createError(400, `Le nom de fichier de la pièce jointe ${attachment.name} ne contient pas d'extension.`)
+        if (!path.extname(attachment.name)) throw httpError(400, `Le nom de fichier de la pièce jointe ${attachment.name} ne contient pas d'extension.`)
         const mimetype = mime.lookup(attachment.name)
         if (mimetype) attachment.mimetype = mimetype
       }
@@ -81,7 +82,7 @@ export const preparePatch = async (app, patch, dataset, user, locale, draftValid
         } else {
           const existingAttachmentTarget = dataset._attachmentsTargets?.find(a => a.name === attachment.name)
           if (!existingAttachmentTarget) {
-            throw createError(400, `Impossible de créer la pièce jointe ${attachment.name} sans URL cible`)
+            throw httpError(400, `Impossible de créer la pièce jointe ${attachment.name} sans URL cible`)
           }
           const attachmentTarget = { ...existingAttachmentTarget, ...attachment }
           patch._attachmentsTargets.push(attachmentTarget)
@@ -141,7 +142,7 @@ export const preparePatch = async (app, patch, dataset, user, locale, draftValid
     // be extra sure that primaryKeyMode is preserved
     patch.rest.primaryKeyMode = patch.rest.primaryKeyMode || dataset.rest.primaryKeyMode
     if (patch.rest.primaryKeyMode !== dataset.rest.primaryKeyMode) {
-      throw createError(400, 'Impossible de changer le mode de clé primaire')
+      throw httpError(400, 'Impossible de changer le mode de clé primaire')
     }
   }
 

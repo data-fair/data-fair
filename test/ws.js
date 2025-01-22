@@ -1,22 +1,23 @@
 import { strict as assert } from 'node:assert'
 import WebSocket from 'ws'
-import eventToPromise from 'event-to-promise'
+import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import config from 'config'
+import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 
 async function receive (cli) {
-  const res = await eventToPromise(cli, 'message')
-  return JSON.parse(res.data)
+  const res = await eventPromise(cli, 'message')
+  return JSON.parse(res)
 }
 
 describe('ws', () => {
   it('Connect to web socket server', async () => {
     const cli = new WebSocket(config.publicUrl)
-    await eventToPromise(cli, 'open')
+    await eventPromise(cli, 'open')
   })
 
   it('Receive error when sending bad input', async () => {
     const cli = new WebSocket(config.publicUrl)
-    await eventToPromise(cli, 'open')
+    await eventPromise(cli, 'open')
     cli.send('{blabla}')
     let msg = await receive(cli)
     assert.equal(msg.type, 'error')
@@ -27,13 +28,13 @@ describe('ws', () => {
 
   it('Subscribe to channel', async () => {
     const cli = new WebSocket(config.publicUrl)
-    await eventToPromise(cli, 'open')
+    await eventPromise(cli, 'open')
     cli.send(JSON.stringify({ type: 'subscribe', channel: 'test_channel' }))
     const msg = await receive(cli)
     assert.equal(msg.type, 'subscribe-confirm')
     assert.equal(msg.channel, 'test_channel')
     const [, msg2] = await Promise.all([
-      global.app.publish('test_channel', 'test_data'),
+      wsEmitter.emit('test_channel', 'test_data'),
       receive(cli)
     ])
     assert.equal(msg2.type, 'message')
@@ -43,7 +44,7 @@ describe('ws', () => {
 
   it.skip('Send lots of events', async () => {
     const cli = new WebSocket(config.publicUrl)
-    await eventToPromise(cli, 'open')
+    await eventPromise(cli, 'open')
     cli.send(JSON.stringify({ type: 'subscribe', channel: 'test_channel' }))
     const msg = await receive(cli)
     assert.equal(msg.type, 'subscribe-confirm')
@@ -61,7 +62,7 @@ describe('ws', () => {
       })
     })
     for (const i of Array(nbMessages).keys()) {
-      await global.app.publish('test_channel', 'test_data' + i)
+      wsEmitter.emit('test_channel', 'test_data' + i)
       await new Promise(resolve => setTimeout(resolve, interval))
     }
     await allReceivedPromise

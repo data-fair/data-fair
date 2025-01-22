@@ -3,7 +3,7 @@
 import { pipeline } from 'node:stream/promises'
 import path from 'path'
 import fs from 'fs-extra'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import ogr2ogr from 'ogr2ogr'
 import pump from '../misc/utils/pipe.js'
 import { stringify as csvStrStream } from 'csv-stringify'
@@ -19,11 +19,9 @@ import { tmpDir as mainTmpDir } from '../datasets/utils/files.js'
 import * as icalendar from '../misc/utils/icalendar.js'
 import * as xlsx from '../misc/utils/xlsx.js'
 import * as i18nUtils from '../i18n/utils.js'
-import * as metrics from '../misc/utils/metrics.js'
-import _config from 'config'
+import config from '#config'
 import debugLib from 'debug'
-
-const config = /** @type {any} */(_config)
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 export const eventsPrefix = 'normalize'
 
@@ -42,7 +40,7 @@ export const process = async function (app, dataset) {
     // we should not have to do this
     // this is a weird thing, maybe an unsolved race condition ?
     // let's wait a bit and try again to mask this problem temporarily
-    metrics.internalError('normalizer-missing-file', 'file missing when normalizer started working ' + originalFilePath)
+    internalError('normalizer-missing-file', 'file missing when normalizer started working ' + originalFilePath)
     await new Promise(resolve => setTimeout(resolve, 10000))
   }
 
@@ -73,7 +71,7 @@ export const process = async function (app, dataset) {
       }
     } else {
       if (await fs.pathExists(datasetUtils.attachmentsDir(dataset))) {
-        throw createError(400, '[noretry] Vous avez chargé un fichier zip comme fichier de données principal, mais il y a également des pièces jointes chargées.')
+        throw httpError(400, '[noretry] Vous avez chargé un fichier zip comme fichier de données principal, mais il y a également des pièces jointes chargées.')
       }
       await fs.move(tmpDir, datasetUtils.attachmentsDir(dataset))
       const csvFilePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
@@ -115,7 +113,7 @@ export const process = async function (app, dataset) {
   if (datasetUtils.calendarTypes.has(dataset.originalFile.mimetype)) {
     // TODO : store these file size limits in config file ?
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
-      throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
+      throw httpError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
     const { eventsStream, infos } = await icalendar.parse(originalFilePath)
     const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
@@ -134,7 +132,7 @@ export const process = async function (app, dataset) {
     dataset.analysis = { escapeKeyAlgorithm: 'legacy' }
   } else if (datasetUtils.tabularTypes.has(dataset.originalFile.mimetype)) {
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
-      throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
+      throw httpError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
     const filePath = resolvePath(datasetUtils.dir(dataset), baseName + '.csv')
     await pipeline(xlsx.iterCSV(originalFilePath), fs.createWriteStream(filePath))
@@ -146,12 +144,12 @@ export const process = async function (app, dataset) {
     }
   } else if (isShapefile || datasetUtils.geographicalTypes.has(dataset.originalFile.mimetype)) {
     if (config.ogr2ogr.skip) {
-      throw createError(400, '[noretry] Les fichiers de type shapefile ne sont pas supportés sur ce service.')
+      throw httpError(400, '[noretry] Les fichiers de type shapefile ne sont pas supportés sur ce service.')
     }
     if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
       // this rule is deactivated as ogr2ogr actually seems to take a negligible amount of RAM
       // for the transformation we use it for
-      // throw createError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
+      // throw httpError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
     }
     const ogrOptions = ['-lco', 'RFC7946=YES', '-t_srs', 'EPSG:4326']
     if (dataset.originalFile.mimetype === 'application/gpx+xml') {
@@ -182,7 +180,7 @@ export const process = async function (app, dataset) {
   await fs.remove(tmpDir)
 
   if (!dataset.file) {
-    throw createError(400, `[noretry] Le format de ce fichier n'est pas supporté (${dataset.originalFile.mimetype}).`)
+    throw httpError(400, `[noretry] Le format de ce fichier n'est pas supporté (${dataset.originalFile.mimetype}).`)
   }
 
   dataset.status = 'normalized'

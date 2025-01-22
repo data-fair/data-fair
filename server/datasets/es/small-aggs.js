@@ -1,11 +1,11 @@
 
-import config from 'config'
-import createError from 'http-errors'
+import config from '#config'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.js'
 
 export const max = async (client, dataset, fieldKey, query) => {
   const field = dataset.schema.find(p => p.key === fieldKey)
-  if (!field) throw createError(400, `field "${fieldKey}" is unknown`)
+  if (!field) throw httpError(400, `field "${fieldKey}" is unknown`)
   const esQuery = prepareQuery(dataset, query)
   esQuery.size = 0
   esQuery.aggs = {
@@ -24,7 +24,7 @@ export const max = async (client, dataset, fieldKey, query) => {
 
 export const min = async (client, dataset, fieldKey, query) => {
   const field = dataset.schema.find(p => p.key === fieldKey)
-  if (!field) throw createError(400, `field "${fieldKey}" is unknown`)
+  if (!field) throw httpError(400, `field "${fieldKey}" is unknown`)
   const esQuery = prepareQuery(dataset, query)
   esQuery.size = 0
   esQuery.aggs = {

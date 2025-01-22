@@ -1,7 +1,7 @@
 
 import * as datasetUtils from '../../datasets/utils/index.js'
 import capabilitiesSchema from '../../../contract/capabilities.js'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 
 // blacklisted fields are fields that are present in a grandchild but not re-exposed
 // by the child.. it must not be possible to access those fields in the case
@@ -48,7 +48,7 @@ export const prepareSchema = async (db, dataset) => {
   const schemas = await childrenSchemas(db, dataset.owner, dataset.virtual.children, blackListedFields)
   for (const field of schema) {
     if (blackListedFields.has(field.key)) {
-      throw createError(400, `Le champ "${field.key}" est interdit. Il est présent dans un jeu de données enfant mais est protégé.`)
+      throw httpError(400, `Le champ "${field.key}" est interdit. Il est présent dans un jeu de données enfant mais est protégé.`)
     }
     const matchingFields = []
     for (const s of schemas) {
@@ -91,13 +91,13 @@ export const prepareSchema = async (db, dataset) => {
         if (['number', 'integer'].includes(field.type) && ['number', 'integer'].includes(f.type)) {
           message += ' Vous pouvez corriger cette incohérence en forçant le traitement des colonnes comme des nombres flottants dans tous les jeux enfants.'
         }
-        throw createError(400, message)
+        throw httpError(400, message)
       }
-      if (f.separator !== field.separator) throw createError(400, `Le champ "${field.key}" a des séparateurs contradictoires  (${field.separator}, ${f.separator}).`)
+      if (f.separator !== field.separator) throw httpError(400, `Le champ "${field.key}" a des séparateurs contradictoires  (${field.separator}, ${f.separator}).`)
       let format = f.format
       if (format === 'uri-reference') format = undefined
-      if (format !== field.format) throw createError(400, `Le champ "${field.key}" a des formats contradictoires (${field.format || 'non défini'}, ${f.format || 'non défini'}).`)
-      if (f['x-refersTo'] !== field['x-refersTo']) throw createError(400, `Le champ "${field.key}" a des concepts contradictoires (${field['x-refersTo'] || 'non défini'}, ${f['x-refersTo'] || 'non défini'}).`)
+      if (format !== field.format) throw httpError(400, `Le champ "${field.key}" a des formats contradictoires (${field.format || 'non défini'}, ${f.format || 'non défini'}).`)
+      if (f['x-refersTo'] !== field['x-refersTo']) throw httpError(400, `Le champ "${field.key}" a des concepts contradictoires (${field['x-refersTo'] || 'non défini'}, ${f['x-refersTo'] || 'non défini'}).`)
       for (const key in f['x-capabilities'] || {}) {
         if (capabilitiesDefaultFalse.includes(key)) {
           if (f['x-capabilities'][key] === false || !(key in f['x-capabilities'])) field['x-capabilities'][key] = false
@@ -121,7 +121,7 @@ export const prepareSchema = async (db, dataset) => {
   const fieldsByConcept = {}
   for (const f of schema) {
     if (!f || !f['x-refersTo']) continue
-    if (fieldsByConcept[f['x-refersTo']]) throw createError(400, `Le concept "${f['x-refersTo']}" est référencé par plusieurs champs (${fieldsByConcept[f['x-refersTo']]}, ${f.key}).`)
+    if (fieldsByConcept[f['x-refersTo']]) throw httpError(400, `Le concept "${f['x-refersTo']}" est référencé par plusieurs champs (${fieldsByConcept[f['x-refersTo']]}, ${f.key}).`)
     fieldsByConcept[f['x-refersTo']] = f.key
   }
 
@@ -168,11 +168,11 @@ export const descendants = async (db, dataset, tolerateStale = false, extraPrope
   const virtualDescendantsWithFilters = res[0].descendants
     .filter(d => d.isVirtual && (d.virtual.filters?.length || d.virtual.filterActiveAccount))
   if (virtualDescendantsWithFilters.length) {
-    throw createError(501, 'Le jeu de données virtuel ne peut pas être requêté, il utilise un autre jeu de données virtuel avec des filtres ce qui n\'est pas supporté.')
+    throw httpError(501, 'Le jeu de données virtuel ne peut pas être requêté, il utilise un autre jeu de données virtuel avec des filtres ce qui n\'est pas supporté.')
   }
   const physicalDescendants = res[0].descendants.filter(d => !d.isVirtual)
   if (physicalDescendants.length === 0 && throwEmpty) {
-    throw createError(501, 'Le jeu de données virtuel ne peut pas être requêté, il n\'utilise aucun jeu de données requêtable.')
+    throw httpError(501, 'Le jeu de données virtuel ne peut pas être requêté, il n\'utilise aucun jeu de données requêtable.')
   }
   return extraProperties ? physicalDescendants : physicalDescendants.map(d => d.id)
 }

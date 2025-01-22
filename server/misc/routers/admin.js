@@ -1,34 +1,34 @@
 import express from 'express'
 import * as status from './status.js'
-import asyncWrap from '../utils/async-handler.js'
 import * as findUtils from '../utils/find.js'
 import * as baseAppsUtils from '../../base-applications/utils.js'
 import * as cacheHeaders from '../utils/cache-headers.js'
+import mongo from '#mongo'
 
 const router = express.Router()
 export default router
 
 // All routes in the router are only for the super admins of the service
-router.use(asyncWrap(async (req, res, next) => {
+router.use(async (req, res, next) => {
   if (!req.user) return res.status(401).type('text/plain').send()
   if (!req.user.adminMode) return res.status(403).type('text/plain').send()
   next()
-}))
+})
 
 router.use(cacheHeaders.noCache)
 
 let info = { version: process.env.NODE_ENV }
-router.get('/info', asyncWrap(async (req, res) => {
+router.get('/info', async (req, res) => {
   try { info = (await import('../../../BUILD.json', { with: { type: 'json' } })).default } catch (err) {}
   res.json(info)
-}))
+})
 
 router.get('/status', (req, res, next) => {
   status.status(req, res, next)
 })
 
-router.get('/datasets-errors', asyncWrap(async (req, res, next) => {
-  const datasets = req.app.get('db').collection('datasets')
+router.get('/datasets-errors', async (req, res, next) => {
+  const datasets = mongo.db.collection('datasets')
   const query = { status: 'error' }
   const [skip, size] = findUtils.pagination(req.query)
 
@@ -48,10 +48,10 @@ router.get('/datasets-errors', asyncWrap(async (req, res, next) => {
   const [count, results] = await Promise.all([datasets.countDocuments(query), aggregatePromise])
 
   res.send({ count, results })
-}))
+})
 
-router.get('/datasets-es-warnings', asyncWrap(async (req, res, next) => {
-  const datasets = req.app.get('db').collection('datasets')
+router.get('/datasets-es-warnings', async (req, res, next) => {
+  const datasets = mongo.db.collection('datasets')
   const query = { esWarning: { $exists: true, $ne: null } }
   const [skip, size] = findUtils.pagination(req.query)
 
@@ -65,10 +65,10 @@ router.get('/datasets-es-warnings', asyncWrap(async (req, res, next) => {
   const [count, results] = await Promise.all([datasets.countDocuments(query), resultsPromise])
 
   res.send({ count, results })
-}))
+})
 
-router.get('/applications-errors', asyncWrap(async (req, res, next) => {
-  const applications = req.app.get('db').collection('applications')
+router.get('/applications-errors', async (req, res, next) => {
+  const applications = mongo.db.collection('applications')
   const query = { errorMessage: { $exists: true } }
   const [skip, size] = findUtils.pagination(req.query)
   const resultsPromise = applications
@@ -80,10 +80,10 @@ router.get('/applications-errors', asyncWrap(async (req, res, next) => {
   const [count, results] = await Promise.all([applications.countDocuments(query), resultsPromise])
 
   res.send({ count, results })
-}))
+})
 
-router.get('/applications-draft-errors', asyncWrap(async (req, res, next) => {
-  const applications = req.app.get('db').collection('applications')
+router.get('/applications-draft-errors', async (req, res, next) => {
+  const applications = mongo.db.collection('applications')
   const query = { errorMessageDraft: { $exists: true } }
   const [skip, size] = findUtils.pagination(req.query)
   const resultsPromise = applications
@@ -95,10 +95,10 @@ router.get('/applications-draft-errors', asyncWrap(async (req, res, next) => {
   const [count, results] = await Promise.all([applications.countDocuments(query), resultsPromise])
 
   res.send({ count, results })
-}))
+})
 
-router.get('/owners', asyncWrap(async (req, res) => {
-  const limits = req.app.get('db').collection('limits')
+router.get('/owners', async (req, res) => {
+  const limits = mongo.db.collection('limits')
   const [skip, size] = findUtils.pagination(req.query)
   const query = {}
   if (req.query.q) query.$text = { $search: req.query.q }
@@ -142,10 +142,10 @@ router.get('/owners', asyncWrap(async (req, res) => {
   const aggPromise = limits.aggregate(agg).toArray()
   const [count, results] = await Promise.all([limits.countDocuments(query), aggPromise])
   res.send({ count, results })
-}))
+})
 
-router.get('/base-applications', asyncWrap(async (req, res) => {
-  const baseApps = req.app.get('db').collection('base-applications')
+router.get('/base-applications', async (req, res) => {
+  const baseApps = mongo.db.collection('base-applications')
   const [skip, size] = findUtils.pagination(req.query)
   const query = {}
   if (req.query.public) query.public = true
@@ -193,4 +193,4 @@ router.get('/base-applications', asyncWrap(async (req, res) => {
     result.privateAccess = result.privateAccess || []
   }
   res.send({ count, results })
-}))
+})

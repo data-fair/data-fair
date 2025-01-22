@@ -10,6 +10,7 @@ import * as schemaUtils from '../datasets/utils/schema.js'
 import taskProgress from '../datasets/utils/task-progress.js'
 import truncateMiddle from 'truncate-middle'
 import debugLib from 'debug'
+import mongo from '#mongo'
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
 export const eventsPrefix = 'validate'
@@ -58,7 +59,7 @@ export const process = async function (app, dataset) {
   if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape validation.')
   if (dataset.isRest) throw new Error('Un jeu de données éditable ne devrait pas passer par l\'étape validation.')
 
-  const db = app.get('db')
+  const db = mongo.db
 
   const patch = { status: dataset.status === 'validation-updated' ? 'finalized' : 'validated' }
 
@@ -68,7 +69,7 @@ export const process = async function (app, dataset) {
       patch.validateDraft = true
     }
 
-    const datasetFull = await app.get('db').collection('datasets').findOne({ id: dataset.id })
+    const datasetFull = await mongo.db.collection('datasets').findOne({ id: dataset.id })
     if (datasetFull.status === 'draft' && !datasetFull.schema?.length) {
       // nothing pre-existing schema to compare to
     } else {

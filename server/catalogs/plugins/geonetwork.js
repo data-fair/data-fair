@@ -1,7 +1,7 @@
 // this type of catalog can be tested using this URL as an example:
 // https://geocatalogue.lannion-tregor.com/geonetwork/
 
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import axios from '../../misc/utils/axios.js'
 import { findLicense } from '../../misc/utils/licenses.js'
 import debugLib from 'debug'
@@ -29,23 +29,23 @@ export const httpParams = async (catalog) => {
 }
 
 export const searchOrganizations = async (catalogUrl, q) => {
-  throw createError(501, 'La récupération d\'une liste d\'organisations depuis GeoNetwork n\'est pas disponible')
+  throw httpError(501, 'La récupération d\'une liste d\'organisations depuis GeoNetwork n\'est pas disponible')
 }
 
 export const publishDataset = async (catalog, dataset, publication) => {
-  throw createError(501, 'La publication de jeux de données vers GeoNetwork n\'est pas disponible')
+  throw httpError(501, 'La publication de jeux de données vers GeoNetwork n\'est pas disponible')
 }
 
 export const deleteDataset = async (catalog, dataset, publication) => {
-  throw createError(501, `Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
+  throw httpError(501, `Attention, le jeux de données n'a pas été supprimé sur ${catalog.url}, vous devez le supprimer manuellement`)
 }
 
 export const publishApplication = async (catalog, application, publication, datasets) => {
-  throw createError(501, 'La publication d\'applications vers GeoNetwork n\'est pas disponible')
+  throw httpError(501, 'La publication d\'applications vers GeoNetwork n\'est pas disponible')
 }
 
 export const deleteApplication = async (catalog, application, publication) => {
-  throw createError(501, 'La dépublication d\'applications vers GeoNetwork n\'est pas disponible')
+  throw httpError(501, 'La dépublication d\'applications vers GeoNetwork n\'est pas disponible')
 }
 
 export const listDatasets = async (catalog, p) => {
@@ -85,7 +85,7 @@ export const getDataset = async (catalog, datasetId, settings) => {
 /*
 import xml2js from 'xml-js'
 import url from 'url';
-import createError from 'http-errors';
+import { httpError } from '@data-fair/lib-utils/http-errors.js';
 import axios from '../../misc/utils/axios.js';
 import { findLicense } from '../../misc/utils/licenses.js';
 import debugLib from 'debug';

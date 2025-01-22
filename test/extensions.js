@@ -4,7 +4,7 @@ import nock from 'nock'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import config from 'config'
-import eventToPromise from 'event-to-promise'
+import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import dayjs from 'dayjs'
 import * as restDatasetsUtils from '../server/datasets/utils/rest.js'
 import * as workers from '../server/workers/index.js'
@@ -455,7 +455,7 @@ koumoul,19 rue de la voie lactée saint avé
     let nockScope = getExtensionNock({ lat: 10, lon: 10 })
     let [, inputsEvent] = await Promise.all([
       ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: '19 rue de la voie lactée saint avé' }),
-      eventToPromise(global.events, 'extension-inputs')
+      eventPromise(global.events, 'extension-inputs')
     ])
     assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
@@ -473,7 +473,7 @@ koumoul,19 rue de la voie lactée saint avé
     nockScope = getExtensionNock({ lat: 11, lon: 11 });
     [, inputsEvent] = await Promise.all([
       ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'another address' }),
-      eventToPromise(global.events, 'extension-inputs')
+      eventPromise(global.events, 'extension-inputs')
     ])
     assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
@@ -487,7 +487,7 @@ koumoul,19 rue de la voie lactée saint avé
     nockScope = getExtensionNock({ error: 'unknown' });
     [, inputsEvent] = await Promise.all([
       ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'unknown address' }),
-      eventToPromise(global.events, 'extension-inputs')
+      eventPromise(global.events, 'extension-inputs')
     ])
     assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
@@ -499,7 +499,7 @@ koumoul,19 rue de la voie lactée saint avé
     // add a line that uses cache
     [, inputsEvent] = await Promise.all([
       ax.post(`/api/v1/datasets/${dataset.id}/lines`, { address: 'another address' }),
-      eventToPromise(global.events, 'extension-inputs')
+      eventPromise(global.events, 'extension-inputs')
     ])
     assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalizer/${dataset.id}`)
@@ -512,7 +512,7 @@ koumoul,19 rue de la voie lactée saint avé
     nockScope = getExtensionNock({ lat: 12, lon: 12 });
     [, inputsEvent] = await Promise.all([
       ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ _id: anotherAddress2._id, address: 'yet another address' }]),
-      eventToPromise(global.events, 'extension-inputs')
+      eventPromise(global.events, 'extension-inputs')
     ])
     // assert.equal(inputsEvent, 1)
     dataset = await workers.hook(`finalizer/${dataset.id}`)

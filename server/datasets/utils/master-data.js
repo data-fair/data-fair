@@ -1,12 +1,12 @@
 import { Readable, Transform, Writable } from 'stream'
-import createError from 'http-errors'
+import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mimeTypeStream from 'mime-type-stream'
 import { flatten } from 'flat'
 import * as virtualDatasetsUtils from './virtual.js'
 import batchStream from '../../misc/utils/batch-stream.js'
 import * as esUtils from '../es/index.js'
-import * as metrics from '../../misc/utils/metrics.js'
 import pump from '../../misc/utils/pipe.js'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 export const bulkSearchPromise = async (streams, data) => {
   const buffers = []
@@ -25,12 +25,12 @@ export const bulkSearchPromise = async (streams, data) => {
 
 export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, select) => {
   const bulkSearch = dataset.masterData && dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.find(bs => bs.id === bulkSearchId)
-  if (!bulkSearch) throw createError(404, `Recherche en masse "${bulkSearchId}" inconnue`)
+  if (!bulkSearch) throw httpError(404, `Recherche en masse "${bulkSearchId}" inconnue`)
 
   if (dataset.isVirtual) dataset.descendants = await virtualDatasetsUtils.descendants(db, dataset, true)
   const _source = (select && select !== '*') ? select.split(',') : dataset.schema.filter(prop => !prop['x-calculated']).map(prop => prop.key)
   const unknownField = _source.find(s => !dataset.schema.find(p => p.key === s))
-  if (unknownField) throw createError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données.`)
+  if (unknownField) throw httpError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données.`)
 
   const finalizeResponseLine = (responseLine, lineKey, error) => {
     responseLine = flatten(responseLine)
@@ -61,7 +61,7 @@ export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearch
     }
     for (const input of bulkSearch.input) {
       if ([null, undefined].includes(line[input.property.key])) {
-        throw createError(400, `la propriété en entrée ${input.property.key} est obligatoire`)
+        throw httpError(400, `la propriété en entrée ${input.property.key} est obligatoire`)
       }
       if (input.type === 'equals') {
         qs.push(`${esUtils.escapeFilter(input.property.key)}:"${esUtils.escapeFilter(line[input.property.key])}"`)
@@ -76,7 +76,7 @@ export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearch
         const [lat, lon] = line[input.property.key].split(',')
         params.geo_distance = `${lon},${lat},${input.distance}`
       } else {
-        throw createError(400, `input type ${input.type} is not supported`)
+        throw httpError(400, `input type ${input.type} is not supported`)
       }
     }
     if (qs.length) params.qs = qs.map(f => `(${f})`).join(' AND ')
@@ -103,9 +103,9 @@ export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearch
           try {
             esResponse = await esUtils.multiSearch(es, dataset, queries)
           } catch (err) {
-            metrics.internalError('masterdata-multi-query', err)
+            internalError('masterdata-multi-query', err)
             const { message, status } = esUtils.extractError(err)
-            throw createError(status, message)
+            throw httpError(status, message)
           }
           for (const i in esResponse.responses) {
             const line = lines[i]
@@ -114,7 +114,7 @@ export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearch
             const response = esResponse.responses[i]
 
             if (response.error) {
-              metrics.internalError('masterdata-item-query', esUtils.extractError(response.error))
+              internalError('masterdata-item-query', esUtils.extractError(response.error))
               this.push(finalizeResponseLine({}, lineKey, esUtils.extractError(response.error).message))
               continue
             }

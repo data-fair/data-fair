@@ -1,13 +1,13 @@
-import config from 'config'
-import asyncWrap from './misc/utils/async-handler.js'
-import clone from './misc/utils/clone.js'
+import config from '#config'
+import mongo from '#mongo'
+import clone from '@data-fair/lib-utils/clone.js'
 
 export default async () => {
-  const trackEmbed = asyncWrap(async (req, res, next) => {
+  const trackEmbed = async (req, res, next) => {
     if (!req.url.startsWith('/embed/')) return next()
     const [resourceType, resourceId, embedView] = req.url.replace('/embed/', '').split(/[/?]/)
     if (resourceType === 'dataset') {
-      const dataset = await req.app.get('db').collection('datasets').findOne({ id: resourceId }, { projection: { owner: 1, id: 1, title: 1 } })
+      const dataset = await mongo.db.collection('datasets').findOne({ id: resourceId }, { projection: { owner: 1, id: 1, title: 1 } })
       if (dataset) {
         const ownerHeader = { type: dataset.owner.type, id: dataset.owner.id }
         if (dataset.owner.department) ownerHeader.department = dataset.owner.department
@@ -18,7 +18,7 @@ export default async () => {
       }
     }
     next()
-  })
+  }
   if (config.proxyNuxt) {
     const { createProxyMiddleware } = await import('http-proxy-middleware')
     // in dev mode the nuxt dev server is already running, we re-expose it

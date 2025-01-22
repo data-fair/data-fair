@@ -2,11 +2,11 @@
 // Useful both for functionalities and help respect GDPR rules
 
 import express from 'express'
-import config from 'config'
+import config from '#config'
 import fs from 'fs-extra'
-import asyncWrap from '../utils/async-handler.js'
 import * as datasetsService from '../../datasets/service.js'
 import { ownerDir } from '../../datasets/utils/files.js'
+import mongo from '#mongo'
 
 const router = express.Router()
 export default router
@@ -21,11 +21,11 @@ router.use((req, res, next) => {
 const collectionNames = ['applications', 'datasets', 'catalogs', 'applications-keys', 'journals']
 
 // notify a name change
-router.post('/:type/:id', asyncWrap(async (req, res) => {
+router.post('/:type/:id', async (req, res) => {
   const identity = { ...req.params, name: req.body.name }
 
   for (const c of collectionNames) {
-    const collection = req.app.get('db').collection(c)
+    const collection = mongo.db.collection(c)
     await collection.updateMany({ 'owner.type': identity.type, 'owner.id': identity.id }, { $set: { 'owner.name': identity.name } })
     if (req.body.departments) {
       for (const department of req.body.departments) {
@@ -53,23 +53,23 @@ router.post('/:type/:id', asyncWrap(async (req, res) => {
   }
 
   // settings and limits
-  await req.app.get('db').collection('settings').updateOne({ type: identity.type, id: identity.id, department: { $exists: false } }, { $set: { name: identity.name } }, { upsert: true })
-  await req.app.get('db').collection('limits').updateOne({ type: identity.type, id: identity.id }, { $set: { name: identity.name } })
+  await mongo.db.collection('settings').updateOne({ type: identity.type, id: identity.id, department: { $exists: false } }, { $set: { name: identity.name } }, { upsert: true })
+  await mongo.db.collection('limits').updateOne({ type: identity.type, id: identity.id }, { $set: { name: identity.name } })
 
   res.send()
-}))
+})
 
 // Remove resources owned, permissions and anonymize created and updated
-router.delete('/:type/:id', asyncWrap(async (req, res) => {
+router.delete('/:type/:id', async (req, res) => {
   const identity = req.params
 
-  const datasetsCursor = req.app.get('db').collection('datasets').find({ 'owner.type': identity.type, 'owner.id': identity.id })
+  const datasetsCursor = mongo.db.collection('datasets').find({ 'owner.type': identity.type, 'owner.id': identity.id })
   for await (const dataset of datasetsCursor) {
     await datasetsService.deleteDataset(req.app, dataset)
   }
 
   for (const c of collectionNames) {
-    const collection = req.app.get('db').collection(c)
+    const collection = mongo.db.collection(c)
     await collection.deleteMany({ 'owner.type': identity.type, 'owner.id': identity.id })
 
     // permissions
@@ -88,24 +88,24 @@ router.delete('/:type/:id', asyncWrap(async (req, res) => {
   }
 
   // settings and limits
-  await req.app.get('db').collection('settings').deleteMany({ type: identity.type, id: identity.id })
-  await req.app.get('db').collection('limits').deleteOne({ type: identity.type, id: identity.id })
+  await mongo.db.collection('settings').deleteMany({ type: identity.type, id: identity.id })
+  await mongo.db.collection('limits').deleteOne({ type: identity.type, id: identity.id })
 
   // whole data directory
   await fs.remove(ownerDir(identity))
 
   res.send()
-}))
+})
 
 // Ask for a report of every piece of data in the service related to an identity
-router.get('/:type/:id/report', asyncWrap(async (req, res) => {
+router.get('/:type/:id/report', async (req, res) => {
   const collections = [{ id: 'remote-services', title: 'Configurations de services' }, { id: 'applications', title: 'Configurations d\'applications' }, { id: 'datasets', title: 'Jeux de données' }]
   const report = {
     owns: [],
     hasPermissions: []
   }
   for (const c of collections) {
-    const collection = req.app.get('db').collection(c.id)
+    const collection = mongo.db.collection(c.id)
     const results = (await collection.find({ 'owner.type': req.query.type, 'owner.id': req.query.id }).toArray())
     report.owns.push({ collection: c.title, items: results.map(item => ({ title: item.title || item.id, href: config.publicUrl + '/' + c.id.substring(0, c.id.length - 1) + '/' + item.id + '/description' })) })
     // permissions
@@ -130,4 +130,4 @@ router.get('/:type/:id/report', asyncWrap(async (req, res) => {
     }
   }
   res.send(report)
-}))
+})

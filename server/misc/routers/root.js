@@ -3,10 +3,10 @@ import express from 'express'
 import * as status from './status.js'
 import apiDocs from '../../../contract/api-docs.js'
 import projections from '../../../contract/projections.js'
-import asyncWrap from '../utils/async-handler.js'
 import * as settingsUtils from '../utils/settings.js'
 import * as ajv from '../utils/ajv.js'
-import config from 'config'
+import config from '#config'
+import mongo from '#mongo'
 
 const validateApi = ajv.compile('openapi-3.1')
 const router = express.Router()
@@ -19,9 +19,9 @@ router.get('/api-docs.json', (req, res) => {
   res.json(apiDocs(req.user))
 })
 
-router.get('/vocabulary', asyncWrap(async (req, res) => {
-  res.json(await settingsUtils.getFullOwnerVocabulary(req.app.get('db'), req.user && req.user.activeAccount, req.locale))
-}))
+router.get('/vocabulary', async (req, res) => {
+  res.json(await settingsUtils.getFullOwnerVocabulary(mongo.db, req.user && req.user.activeAccount, req.locale))
+})
 
 router.get('/projections', (req, res) => {
   if (!req.user) return res.status(401).type('text/plain').send()

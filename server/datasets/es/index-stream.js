@@ -1,10 +1,10 @@
 import { Transform } from 'stream'
-import config from 'config'
+import config from '#config'
 import truncateMiddle from 'truncate-middle'
 import * as extensionsUtils from '../utils/extensions.js'
-import * as metrics from '../../misc/utils/metrics.js'
 import { nanoid } from 'nanoid'
 import debugLib from 'debug'
+import { internalError } from '@data-fair/lib-node/observer.js'
 
 const debug = debugLib('index-stream')
 
@@ -86,7 +86,7 @@ class IndexStream extends Transform {
           // refresh can take some time on large datasets, try one more time
           return new Promise(resolve => setTimeout(resolve, 30000)).finally(() => {
             return this.options.esClient.indices.refresh({ index: this.options.indexName }).catch(err => {
-              metrics.internalError('es-refresh-index', err)
+              internalError('es-refresh-index', err)
               throw new Error('Échec pendant le rafraichissement de la donnée après indexation.')
             })
           })
@@ -138,7 +138,7 @@ class IndexStream extends Transform {
       this.body = []
       this.bulkChars = 0
     } catch (err) {
-      metrics.internalError('es-bulk-index', err)
+      internalError('es-bulk-index', err)
       throw new Error('Échec pendant l\'indexation d\'un paquet de données.')
     }
   }
