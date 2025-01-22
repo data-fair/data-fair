@@ -1094,7 +1094,7 @@ router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), ap
           const data = await stream2text(response.data)
           if (data) message = data
         }
-        throw httpError('Échec de téléchargement du fichier : ' + message)
+        throw httpError(502, 'Échec de téléchargement du fichier : ' + message)
       }
 
       if (response.status === 304) {

@@ -2,6 +2,7 @@ import { strict as assert } from 'node:assert'
 import WebSocket from 'ws'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import config from 'config'
+import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 
 async function receive (cli) {
   const res = await eventPromise(cli, 'message')
@@ -33,7 +34,7 @@ describe('ws', () => {
     assert.equal(msg.type, 'subscribe-confirm')
     assert.equal(msg.channel, 'test_channel')
     const [, msg2] = await Promise.all([
-      global.app.publish('test_channel', 'test_data'),
+      wsEmitter.emit('test_channel', 'test_data'),
       receive(cli)
     ])
     assert.equal(msg2.type, 'message')
@@ -61,7 +62,7 @@ describe('ws', () => {
       })
     })
     for (const i of Array(nbMessages).keys()) {
-      await global.app.publish('test_channel', 'test_data' + i)
+      wsEmitter.emit('test_channel', 'test_data' + i)
       await new Promise(resolve => setTimeout(resolve, interval))
     }
     await allReceivedPromise

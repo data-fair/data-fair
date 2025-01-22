@@ -43,13 +43,13 @@ export const checkFiles = async (files, user) => {
     const remotePath = path.join(config.clamav.dataDir, path.relative(config.dataDir, file.path))
     const result = await runCommand(`SCAN ${remotePath}`)
     if (result.endsWith('OK')) continue
-    if (result.endsWith('ERROR')) throw httpError('failure while applying antivirus ' + result.slice(0, -6))
+    if (result.endsWith('ERROR')) throw new Error('failure while applying antivirus ' + result.slice(0, -6))
     if (result.endsWith('FOUND')) {
       infectedFilesCounter.inc()
       console.warn('[infected-file] a user attempted to upload an infected file', result, user, file)
       throw httpError(400, 'malicious file detected')
     }
-    throw httpError('Unexpected result from antivirus ' + result)
+    throw new Error('Unexpected result from antivirus ' + result)
   }
   return true
 }

@@ -415,7 +415,7 @@ async function iter (app, resource, type) {
     await mongo.db.collection(type + 's').updateOne({ id: resource.id }, patch)
     resource.status = 'error'
     resource.errorStatus = resource.status
-    hookRejection = { resource, message: errorMessage }
+    hookRejection = { resource, taskKey, message: errorMessage }
   } finally {
     await locks.release(`${type}:${resource.id}`)
     if (hookRejection) {

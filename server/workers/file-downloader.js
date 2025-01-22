@@ -63,7 +63,7 @@ export const process = async function (app, dataset) {
       const data = await stream2text(response.data)
       if (data) message = data
     }
-    throw httpError('[noretry] Échec de téléchargement du fichier : ' + message)
+    throw httpError(response.status, '[noretry] Échec de téléchargement du fichier : ' + message)
   }
 
   await pump(

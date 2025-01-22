@@ -104,7 +104,7 @@ export const getFormBody = (body) => {
     try {
       return JSON.parse(body.body)
     } catch (err) {
-      throw httpError('400', `Invalid JSON in body part, ${err.message}`)
+      throw httpError(400, `Invalid JSON in body part, ${err.message}`)
     }
   }
   for (const key of Object.keys(datasetSchema.properties)) {
@@ -116,7 +116,7 @@ export const getFormBody = (body) => {
           try {
             body[key] = JSON.parse(body[key])
           } catch (err) {
-            throw httpError('400', `Invalid JSON in part "${key}", ${err.message}`)
+            throw httpError(400, `Invalid JSON in part "${key}", ${err.message}`)
           }
         }
       }
