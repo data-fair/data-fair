@@ -320,7 +320,7 @@ async function iter (app, resource, type) {
     endTask = workersTasksHistogram.startTimer({ task: taskKey })
     if (config.worker.spawnTask) {
       // Run a task in a dedicated child process for  extra resiliency to fatal memory exceptions
-      const spawnPromise = spawn('node', ['--experimental-strip-types', 'server/index.ts', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task', DATASET_DRAFT: '' + !!resource.draftReason } })
+      const spawnPromise = spawn('node', ['--experimental-strip-types', '--no-warnings', 'server/index.ts', taskKey, type, resource.id], { env: { ...process.env, DEBUG: '', MODE: 'task', DATASET_DRAFT: '' + !!resource.draftReason } })
       spawnPromise.childProcess.stdout.on('data', data => {
         data = data.toString()
         console.log(`[${type}/${resource.id}/${taskKey}/stdout] ${data}`)
