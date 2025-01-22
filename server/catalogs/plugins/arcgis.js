@@ -78,7 +78,7 @@ export const listDatasets = async (catalog, p) => {
       for (const layer of featureServer.layers ?? []) {
         const layerUrl = serviceUrl + '/' + layer.id
         const dataset = {
-          id: `${service.id}-${layer.id}`,
+          id: `${service.id ?? service.name}-${layer.id}`,
           title: `${service.name} (${service.type}) - ${layer.name}`,
           page: layerUrl,
           resources: [{
