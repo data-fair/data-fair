@@ -1,25 +1,31 @@
-import mongo from '@data-fair/lib-node/mongo.js'
+import { Mongo } from '@data-fair/lib-node/mongo.js'
 import config from '#config'
 
 export class DfMongo {
+  /** @type {Mongo} */
+  mongo
+
   get client () {
-    return mongo.client
+    return this.mongo.client
   }
 
   get db () {
-    return mongo.db
+    return this.mongo.db
   }
 
   // TODO: export typed collections
 
+  constructor () {
+    this.mongo = new Mongo()
+  }
+
   init = async () => {
     // manage retro-compatibility with STORAGE_MONGO_URL and STORAGE_MONGO_CLIENT_OPTIONS
-    const url = config.storage.mongo.url ?? config.mongo.url
-    const options = { ...(config.storage.mongo.options ?? config.mongo.options) }
+    const options = { ...config.mongo.options }
     // workers generate a lot of opened sockets if we do not change this setting
     if (config.mode === 'task') options.maxPoolSize = 1
-    await mongo.connect(url, options)
-    await mongo.configure({
+    await this.mongo.connect(config.mongo.url, options)
+    await this.mongo.configure({
       datasets: {
         id_1: [{ id: 1 }, { unique: true }],
         'unique-refs': [{ _uniqueRefs: 1, 'owner.type': 1, 'owner.id': 1 }, { unique: true }], // used to prevent conflicts accross ids and slugs
