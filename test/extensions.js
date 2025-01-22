@@ -667,7 +667,7 @@ other,unknown address
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     assert.equal(res.data.type, 'FeatureCollection')
     assert.equal(res.data.features.length, 1)
-    assert.equal(res.data.features[0].properties.label, 'koumoul')
+    assert.equal(res.data.features[0].properties.Label, 'koumoul')
     assert.equal(res.data.features[0].properties._etablissements.NOMEN_LONG, 'KOUMOUL')
   })
 

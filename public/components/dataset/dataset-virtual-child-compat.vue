@@ -31,9 +31,9 @@ fr:
   typeMismatch: "le type \"{childType}\" de la colonne {field} ne correspond pas au type dans le jeu virtuel \"{parentType}\""
   statusError: le jeu de données est en erreur
   none: aucun
-  conceptMismatch: "le concept \"{childConcept}\" de la colonne {field} ne correspond pas au concept dans le jeu virtuel \"{parentConcept}\""
-  disabledConfig: "la configuration technique \"{param}\" de la colonne {field} est désactivée mais active dans le jeu virtuel"
-  unusedConfig: "la configuration technique \"{param}\" de la colonne {field} est activée mais inactive dans le jeu virtuel"
+  conceptMismatch: "le concept \"{childConcept}\" de la colonne \"{field}\" ne correspond pas au concept dans le jeu virtuel \"{parentConcept}\""
+  disabledConfig: "la configuration technique \"{param}\" de la colonne \"{field}\" est désactivée mais active dans le jeu virtuel"
+  unusedConfig: "la configuration technique \"{param}\" de la colonne \"{field}\" est activée mais inactive dans le jeu virtuel"
   warning: avertissement
   error: erreur
 en:
@@ -42,9 +42,9 @@ en:
   typeMismatch: "the type \"{childType}\" of the column {field} does not match the type in the virtual dataset \"{parentType}\""
   statusError: the dataset is in error state
   none: none
-  conceptMismatch: "the concept \"{childConcept}\" of the column {field} does not match the concept in the virtual dataset \"{parentConcept}\""
-  disabledConfig: "technical configuration \"{param}\" of the column {field} is disabled but active in the virtual dataset"
-  unusedConfig: "technical configuration \"{param}\" of the column {field} is active but disabled in the virtual dataset"
+  conceptMismatch: "the concept \"{childConcept}\" of the column \"{field}\" does not match the concept in the virtual dataset \"{parentConcept}\""
+  disabledConfig: "technical configuration \"{param}\" of the column \"{field}\" is disabled but active in the virtual dataset"
+  unusedConfig: "technical configuration \"{param}\" of the column \"{field}\" is active but disabled in the virtual dataset"
   warning: warning
   error: error
 </i18n>
@@ -94,8 +94,8 @@ export default {
             parentType: parentType.title
           }))
         }
-        const childConcept = (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].description) || this.$t('none')
-        const parentConcept = (parentField['x-refersTo'] && this.vocabulary && this.vocabulary[parentField['x-refersTo']] && this.vocabulary[parentField['x-refersTo']].description) || this.$t('none')
+        const childConcept = (field['x-refersTo'] && this.vocabulary && this.vocabulary[field['x-refersTo']] && this.vocabulary[field['x-refersTo']].title) || this.$t('none')
+        const parentConcept = (parentField['x-refersTo'] && this.vocabulary && this.vocabulary[parentField['x-refersTo']] && this.vocabulary[parentField['x-refersTo']].title) || this.$t('none')
         if (childConcept !== parentConcept) {
           messages.error.push(this.$t('conceptMismatch', {
             field: field.title || field['x-originalName'] || field.key,

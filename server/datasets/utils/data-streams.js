@@ -3,7 +3,7 @@ import { Writable, Transform } from 'stream'
 import csv from 'csv-parser'
 import JSONStream from 'JSONStream'
 import { stringify as csvStrStream } from 'csv-stringify'
-import flatten from 'flat'
+import { flatten } from 'flat'
 import tmp from 'tmp-promise'
 import mimeTypeStream from 'mime-type-stream'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
@@ -246,8 +246,19 @@ export const writeExtendedStreams = async (db, dataset, extensions) => {
   } else if (dataset.file.mimetype === 'application/geo+json') {
     transforms.push(new Transform({
       transform (chunk, encoding, callback) {
-        const { geometry, ...properties } = chunk
+        const { geometry } = chunk
         if (!geometry) return callback()
+        const properties = {}
+        for (const field of relevantSchema) {
+          if (field.key in chunk) {
+            properties[field['x-originalName'] || field.key] = chunk[field.key]
+          }
+        }
+        for (const ext of extensions) {
+          if (ext.propertyPrefix in chunk) {
+            properties[ext.propertyPrefix] = chunk[ext.propertyPrefix]
+          }
+        }
         const feature = { type: 'Feature', properties, geometry: JSON.parse(geometry) }
         callback(null, feature)
       },

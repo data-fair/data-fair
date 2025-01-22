@@ -1268,7 +1268,7 @@ router.get('/:datasetId/thumbnail', readDataset(), apiKeyMiddleware, permissions
   if (!req.dataset.image) return res.status(404).send("dataset doesn't have an image")
   await getThumbnail(req, res, req.dataset.image)
 })
-router.get('/:datasetId/thumbnail/:thumbnailId', readDataset(), apiKeyMiddleware, permissions.middleware('readLines', 'read'), async (req, res, next) => {
+router.get('/:datasetId/thumbnail/:thumbnailId', readDataset({ fillDescendants: true }), apiKeyMiddleware, permissions.middleware('readLines', 'read'), async (req, res, next) => {
   const url = Buffer.from(req.params.thumbnailId, 'hex').toString()
   if (req.dataset.attachmentsAsImage && url.startsWith('/attachments/')) {
     await getThumbnail(req, res, `${config.publicUrl}/api/v1/datasets/${req.dataset.id}${url}`, datasetUtils.attachmentPath(req.dataset, url.replace('/attachments/', '')), req.dataset.thumbnails)

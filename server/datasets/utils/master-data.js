@@ -1,7 +1,7 @@
 import { Readable, Transform, Writable } from 'stream'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mimeTypeStream from 'mime-type-stream'
-import flatten from 'flat'
+import { flatten } from 'flat'
 import * as virtualDatasetsUtils from './virtual.js'
 import batchStream from '../../misc/utils/batch-stream.js'
 import * as esUtils from '../es/index.js'
@@ -89,7 +89,7 @@ export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearch
   let lineIndex = 0
   return [
     ioStream.parser(),
-    batchStream(1000),
+    batchStream(200),
     new Transform({
       async transform (lines, encoding, callback) {
         try {
@@ -114,7 +114,7 @@ export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearch
             const response = esResponse.responses[i]
 
             if (response.error) {
-              internalError('masterdata-item-query', response.error)
+              internalError('masterdata-item-query', esUtils.extractError(response.error))
               this.push(finalizeResponseLine({}, lineKey, esUtils.extractError(response.error).message))
               continue
             }
