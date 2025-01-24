@@ -1039,12 +1039,13 @@ router.get('/:datasetId/min/:fieldKey', readDataset({ fillDescendants: true }), 
 // For datasets with attached files
 router.get('/:datasetId/attachments/*attachmentPath', readDataset(), applicationKey, apiKeyMiddleware, permissions.middleware('downloadAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
   // the transform stream option was patched into "send" module using patch-package
-  res.download(
-    path.join(...req.params.attachmentPath),
-    null,
+  const relFilePath = path.join(...req.params.attachmentPath)
+  res.sendFile(
+    relFilePath,
     {
       transformStream: res.throttle('static'),
-      root: attachmentsDir(req.dataset)
+      root: attachmentsDir(req.dataset),
+      headers: { 'Content-Disposition': `inline; filename="${path.basename(relFilePath)}"` }
     }
   )
 })
