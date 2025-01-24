@@ -43,7 +43,7 @@ services:
     profiles:
       - dev
       - test
-    image: ghcr.io/data-fair/simple-directory:master
+    image: ghcr.io/data-fair/simple-directory:7
     network_mode: host
     depends_on:
       - mongodb
