@@ -21,7 +21,7 @@ export const process = async function (app, catalog) {
   }
 
   const job = new CronJob(config.catalogAutoUpdates.cron, () => {})
-  patch.autoUpdate.nextUpdate = job.nextDates().toISOString()
+  patch.autoUpdate.nextUpdate = job.nextDate().toISO()
 
   await db.collection('catalogs').updateOne({ id: catalog.id }, { $set: patch })
   debug('done')

@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert'
-import validateDcat from '../server/misc/utils/dcat/validate.js'
+import validateDcat from '../api/src/misc/utils/dcat/validate.js'
 
 describe('publication sites', () => {
   it('should fail to publish dataset on unknown site', async () => {

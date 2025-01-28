@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert'
-import * as sniffer from '../server/datasets/utils/fields-sniffer.js'
+import * as sniffer from '../api/src/datasets/utils/fields-sniffer.js'
 
 describe('field sniffer', () => {
   it('Work with booleans', () => {

@@ -13,12 +13,12 @@ export default async (client, dataset, query = {}, allowPartialResults = false, 
   const geoCornersProp = dataset.schema.find(p => p.key === '_geocorners')
   const geoCorners = geoCornersProp && (!geoCornersProp['x-capabilities'] || geoCornersProp['x-capabilities'].geoCorners !== false)
   esQuery.aggs = { bbox: { geo_bounds: { field: geoCorners ? '_geocorners' : '_geopoint' } } }
-  const esResponse = (await client.search({
+  const esResponse = await client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout,
     allow_partial_search_results: allowPartialResults
-  })).body
+  })
   const response = { total: esResponse.hits.total.value }
   // ES bounds to standard bounding box: left,bottom,right,top
   const bounds = esResponse.aggregations.bbox.bounds

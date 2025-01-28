@@ -234,7 +234,7 @@ export const curateDataset = (dataset, existingDataset) => {
 
   if (dataset.remoteFile?.autoUpdate?.active) {
     const job = new CronJob(config.remoteFilesAutoUpdates.cron, () => {})
-    dataset.remoteFile.autoUpdate.nextUpdate = job.nextDates().toISOString()
+    dataset.remoteFile.autoUpdate.nextUpdate = job.nextDate().toISO()
   } else if (dataset.remoteFile?.autoUpdate) {
     delete dataset.remoteFile.autoUpdate.nextUpdate
   }

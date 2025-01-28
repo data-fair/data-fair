@@ -13,12 +13,12 @@ export const max = async (client, dataset, fieldKey, query) => {
       max: { field: fieldKey }
     }
   }
-  const esResponse = (await client.search({
+  const esResponse = await client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
-  })).body
+  })
   return esResponse.aggregations.max.value
 }
 
@@ -32,11 +32,11 @@ export const min = async (client, dataset, fieldKey, query) => {
       min: { field: fieldKey }
     }
   }
-  const esResponse = (await client.search({
+  const esResponse = await client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
-  })).body
+  })
   return esResponse.aggregations.min.value
 }

@@ -35,12 +35,12 @@ export default async (client, dataset, query, publicBaseUrl) => {
       [query.metric]: { field: query.metric_field }
     }
   }
-  const esResponse = (await client.search({
+  const esResponse = await client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
-  })).body
+  })
   return prepareGeoAggResponse(esResponse, dataset, query, publicBaseUrl)
 }
 

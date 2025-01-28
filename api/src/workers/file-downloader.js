@@ -26,7 +26,7 @@ export const process = async function (app, dataset) {
   const db = mongo.db
 
   await fs.ensureDir(tmpDir)
-  const tmpFile = await tmp.file({ dir: tmpDir })
+  const tmpFile = await tmp.file({ tmpdir: tmpDir })
 
   let catalogHttpParams = {}
   if (dataset.remoteFile.catalog) {
@@ -139,7 +139,7 @@ export const process = async function (app, dataset) {
     patch.remoteFile.autoUpdate = {
       ...patch.remoteFile.autoUpdate,
       lastUpdate: new Date().toISOString(),
-      nextUpdate: job.nextDates().toISOString()
+      nextUpdate: job.nextDate().toISO()
     }
   }
 

@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import nock from 'nock'
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 
 describe('datasets based on remote files', () => {
   it('manage failure to fetch file', async () => {

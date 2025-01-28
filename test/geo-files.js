@@ -3,12 +3,12 @@ import * as testUtils from './resources/test-utils.js'
 import fs from 'node:fs'
 import config from 'config'
 import FormData from 'form-data'
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 
 describe('geo files support', () => {
   it('Process uploaded geojson dataset', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/geo/geojson-example.geojson')
+    const datasetFd = fs.readFileSync('./resources/geo/geojson-example.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
     const ax = global.ax.dmeadus
@@ -56,7 +56,7 @@ describe('geo files support', () => {
   })
 
   it('Upload geojson with CRS (projection)', async () => {
-    const datasetFd = fs.readFileSync('./test/resources/geo/geojson-crs.geojson')
+    const datasetFd = fs.readFileSync('./resources/geo/geojson-crs.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
     const ax = global.ax.dmeadus
@@ -76,7 +76,7 @@ describe('geo files support', () => {
 
   it('Upload geojson dataset with some schema info', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/geo/geojson-example.geojson')
+    const datasetFd = fs.readFileSync('./resources/geo/geojson-example.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
     form.append('schema', JSON.stringify([{
@@ -100,7 +100,7 @@ describe('geo files support', () => {
 
   it('Upload geojson dataset with some managed fixes', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/geo/geojson-broken-globalid.geojson')
+    const datasetFd = fs.readFileSync('./resources/geo/geojson-broken-globalid.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-broken-globalid.geojson')
     form.append('extras', JSON.stringify({
@@ -117,7 +117,7 @@ describe('geo files support', () => {
 
   it('Log error for geojson with broken feature', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/geo/geojson-broken.geojson')
+    const datasetFd = fs.readFileSync('./resources/geo/geojson-broken.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
     const ax = global.ax.dmeadus
@@ -144,7 +144,7 @@ describe('geo files support', () => {
     }
 
     // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/geo/stations.zip')
+    const datasetFd = fs.readFileSync('./resources/geo/stations.zip')
     const form = new FormData()
     form.append('file', datasetFd, 'stations.zip')
     const ax = global.ax.dmeadus
@@ -167,7 +167,7 @@ describe('geo files support', () => {
     }
 
     // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/geo/stations2.zip')
+    const datasetFd = fs.readFileSync('./resources/geo/stations2.zip')
     const form = new FormData()
     form.append('file', datasetFd, 'stations2.zip')
     const ax = global.ax.dmeadus
@@ -205,7 +205,7 @@ describe('geo files support', () => {
     config.defaultLimits.totalStorage = config.defaultLimits.datasetStorage = 10000000
 
     // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/geo/paths.gpx')
+    const datasetFd = fs.readFileSync('./resources/geo/paths.gpx')
     const form = new FormData()
     form.append('file', datasetFd, 'paths.gpx')
     const ax = global.ax.dmeadus

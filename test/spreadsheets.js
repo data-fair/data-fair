@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
-import * as xlsx from '../server/misc/utils/xlsx.js'
+import * as xlsx from '../api/src/misc/utils/xlsx.js'
 
 describe('Spreadsheets conversions', () => {
   const checkDateDataset = async (ext) => {
@@ -31,7 +31,7 @@ describe('Spreadsheets conversions', () => {
 
   it('should manage XLSX file create by excel', async () => {
     const dates = []
-    for await (const line of xlsx.iterCSV('test/resources/datasets/Les aides financières ADEME.xlsx')) {
+    for await (const line of xlsx.iterCSV('resources/datasets/Les aides financières ADEME.xlsx')) {
       dates.push(line.split(',')[2])
     }
     assert.equal(dates[1], '2019-03-20')
@@ -40,7 +40,7 @@ describe('Spreadsheets conversions', () => {
 
   it('should manage another XLSX file created by excel', async () => {
     const dates = []
-    for await (const line of xlsx.iterCSV('test/resources/datasets/date-time.xlsx')) {
+    for await (const line of xlsx.iterCSV('resources/datasets/date-time.xlsx')) {
       dates.push(line.split(',')[1])
     }
     assert.equal(dates[1], '2050-01-01T00:00:00.000Z')

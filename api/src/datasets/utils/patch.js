@@ -117,7 +117,7 @@ export const preparePatch = async (app, patch, dataset, user, locale, draftValid
   if (patch.exports && patch.exports.restToCSV) {
     if (patch.exports.restToCSV.active) {
       const job = new CronJob(config.exportRestDatasets.cron, () => {})
-      patch.exports.restToCSV.nextExport = job.nextDates().toISOString()
+      patch.exports.restToCSV.nextExport = job.nextDate().toISO()
     } else {
       delete patch.exports.restToCSV.nextExport
     }

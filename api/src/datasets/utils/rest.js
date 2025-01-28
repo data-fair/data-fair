@@ -1115,7 +1115,7 @@ export const applyTTL = async (app, dataset) => {
         try {
           if (this.reading) return
           this.reading = true
-          let { body } = await es.search({
+          let body = await es.search({
             index: esUtils.aliasName(dataset),
             scroll: '15m',
             size: 1,
@@ -1130,7 +1130,7 @@ export const applyTTL = async (app, dataset) => {
             for (const hit of body.hits.hits) {
               this.push(hit)
             }
-            body = (await es.scroll({ scrollId: body._scroll_id, scroll: '15m' })).body
+            body = await es.scroll({ scroll_id: body._scroll_id, scroll: '15m' })
           }
           this.push(null)
         } catch (err) {

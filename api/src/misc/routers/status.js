@@ -20,7 +20,7 @@ async function esStatus (req) {
   } else {
     throw new Error('Health status is ' + healthStatus)
   }
-  const ingestAttachment = (await es.cat.plugins({ format: 'json' })).body.find(p => p.component === 'ingest-attachment')
+  const ingestAttachment = (await es.cat.plugins({ format: 'json' })).find(p => p.component === 'ingest-attachment')
   if (!ingestAttachment) throw new Error('Ingest attachment plugin is not installed.')
 }
 

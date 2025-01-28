@@ -4,8 +4,8 @@ import fs from 'node:fs'
 import nock from 'nock'
 import FormData from 'form-data'
 import config from 'config'
-import * as workers from '../server/workers/index.js'
-import * as esUtils from '../server/datasets/es/index.js'
+import * as workers from '../api/src/workers/index.js'
+import * as esUtils from '../api/src/datasets/es/index.js'
 
 // Prepare mock for outgoing HTTP requests
 nock('http://test-catalog.com').persist()
@@ -14,7 +14,7 @@ nock('http://test-catalog.com').persist()
 describe('workers', () => {
   it('Process newly uploaded CSV dataset', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
     const ax = global.ax.dmeadus
@@ -65,7 +65,7 @@ describe('workers', () => {
     assert.equal(mapping2.properties._geopoint.type, 'geo_point')
 
     // Reupload data with bad localization
-    const datasetFd2 = fs.readFileSync('./test/resources/datasets/bad-format.csv')
+    const datasetFd2 = fs.readFileSync('./resources/datasets/bad-format.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset.csv')
     await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
@@ -84,7 +84,7 @@ describe('workers', () => {
     const catalog = (await ax.post('/api/v1/catalogs', { url: 'http://test-catalog.com', title: 'Test catalog', apiKey: 'apiKey', type: 'udata' })).data
 
     // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
@@ -105,7 +105,7 @@ describe('workers', () => {
 
   it('Run tasks in children processes', async function () {
     config.worker.spawnTask = true
-    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
     const ax = global.ax.dmeadus
@@ -142,7 +142,7 @@ describe('workers', () => {
 
   it('Manage expected failure in children processes', async function () {
     config.worker.spawnTask = true
-    const datasetFd = fs.readFileSync('./test/resources/geo/geojson-broken.geojson')
+    const datasetFd = fs.readFileSync('./resources/geo/geojson-broken.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-broken2.geojson')
     const ax = global.ax.dmeadus
@@ -177,7 +177,7 @@ describe('workers', () => {
 
     const form = new FormData()
     form.append('title', 'trigger test error')
-    form.append('file', fs.readFileSync('./test/resources/datasets/dataset1.csv'), 'dataset.csv')
+    form.append('file', fs.readFileSync('./resources/datasets/dataset1.csv'), 'dataset.csv')
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
 

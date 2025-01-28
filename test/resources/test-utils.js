@@ -8,8 +8,8 @@ export const formHeaders = (form) => {
 }
 
 export const sendDataset = async (fileName, ax, opts, body) => {
-  const workers = await import('../../server/workers/index.js')
-  const datasetFd = fs.readFileSync(path.resolve('./test/resources/', fileName))
+  const workers = await import('../../api/src/workers/index.js')
+  const datasetFd = fs.readFileSync(path.resolve('./resources/', fileName))
   const form = new FormData()
   form.append('file', datasetFd, fileName)
   if (body) form.append('body', JSON.stringify(body))

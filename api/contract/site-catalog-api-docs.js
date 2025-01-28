@@ -1,5 +1,5 @@
 import config from 'config'
-import pJson from '../package.json' with {type: 'json'}
+import pJson from '../../package.json' with {type: 'json'}
 import dataset from './dataset.js'
 import * as utils from './utils.js'
 

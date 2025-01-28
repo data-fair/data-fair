@@ -34,7 +34,7 @@ export const process = async function (app, dataset) {
   const debug = debugLib(`worker:file-normalizer:${dataset.id}`)
   const originalFilePath = datasetUtils.originalFilePath(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
-  const tmpDir = (await tmp.dir({ dir: mainTmpDir, unsafeCleanup: true })).path
+  const tmpDir = (await tmp.dir({ tmpdir: mainTmpDir, unsafeCleanup: true })).path
 
   if (!await fs.pathExists(originalFilePath)) {
     // we should not have to do this

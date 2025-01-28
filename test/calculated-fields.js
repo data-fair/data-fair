@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 
 describe('Calculated fields', () => {
   it('Should add special calculated fields', async () => {

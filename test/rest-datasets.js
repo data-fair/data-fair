@@ -4,14 +4,14 @@ import * as testUtils from './resources/test-utils.js'
 import path from 'node:path'
 import fs from 'fs-extra'
 import FormData from 'form-data'
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 import moment from 'moment'
 import zlib from 'zlib'
 import { Writable } from 'stream'
 import iconv from 'iconv-lite'
 import { promisify } from 'util'
-import * as restDatasetsUtils from '../server/datasets/utils/rest.js'
-import { attachmentsDir, lsAttachments } from '../server/datasets/utils/files.js'
+import * as restDatasetsUtils from '../api/src/datasets/utils/rest.js'
+import { attachmentsDir, lsAttachments } from '../api/src/datasets/utils/files.js'
 import pumpOg from 'pump'
 
 const pump = promisify(pumpOg)
@@ -264,7 +264,7 @@ describe('REST datasets', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentContent = fs.readFileSync('./test/resources/datasets/files/dir1/test.pdf')
+    const attachmentContent = fs.readFileSync('./resources/datasets/files/dir1/test.pdf')
     form.append('attachment', attachmentContent, 'dir1/test.pdf')
     form.append('attr1', 10)
     res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: testUtils.formHeaders(form) })
@@ -307,7 +307,7 @@ describe('REST datasets', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentContent = fs.readFileSync('./test/resources/datasets/files/dir1/test.pdf')
+    const attachmentContent = fs.readFileSync('./resources/datasets/files/dir1/test.pdf')
     form.append('attachment', attachmentContent, 'dir1/test.pdf')
     form.append('_body', '{"attr1":10}')
     res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: testUtils.formHeaders(form) })
@@ -333,7 +333,7 @@ describe('REST datasets', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentsContent = fs.readFileSync('./test/resources/datasets/files.zip')
+    const attachmentsContent = fs.readFileSync('./resources/datasets/files.zip')
     form.append('attachments', attachmentsContent, 'files.zip')
     form.append('actions', Buffer.from(JSON.stringify([
       { _id: 'line1', attr1: 'test1', attachmentPath: 'test.odt' },
@@ -365,7 +365,7 @@ describe('REST datasets', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentsContent = fs.readFileSync('./test/resources/datasets/files.zip')
+    const attachmentsContent = fs.readFileSync('./resources/datasets/files.zip')
     form.append('attachments', attachmentsContent, 'files.zip')
     form.append('actions', Buffer.from(JSON.stringify([]), 'utf8'), 'actions.json')
 
@@ -435,7 +435,7 @@ describe('REST datasets', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    form.append('actions', await fs.readFile('test/resources/rest/access.log.ndjson'), 'actions.ndjson')
+    form.append('actions', await fs.readFile('resources/rest/access.log.ndjson'), 'actions.ndjson')
     res = await ax.post('/api/v1/datasets/restndjson/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbErrors, 0)
@@ -459,7 +459,7 @@ describe('REST datasets', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    form.append('actions', await fs.readFile('test/resources/rest/access.log.ndjson'), 'actions.ndjson')
+    form.append('actions', await fs.readFile('resources/rest/access.log.ndjson'), 'actions.ndjson')
     await assert.rejects(ax.post('/api/v1/datasets/restndjson/_bulk_lines', form, { headers: testUtils.formHeaders(form) }), (err) => {
       assert.equal(err.status, 400)
       assert.equal(err.data.nbErrors, 20)
@@ -694,7 +694,7 @@ describe('REST datasets', () => {
 
     // create line with an attachment
     const form = new FormData()
-    const attachmentContent = fs.readFileSync('./test/resources/datasets/files/dir1/test.pdf')
+    const attachmentContent = fs.readFileSync('./resources/datasets/files/dir1/test.pdf')
     form.append('attachment', attachmentContent, 'dir1/test.pdf')
     form.append('attr1', 'test1')
     form.append('attr2', 'test1')
@@ -708,7 +708,7 @@ describe('REST datasets', () => {
 
     // patch the attachment
     const form2 = new FormData()
-    const attachmentContent2 = fs.readFileSync('./test/resources/datasets/files/test.odt')
+    const attachmentContent2 = fs.readFileSync('./resources/datasets/files/test.odt')
     form2.append('attachment', attachmentContent2, 'dir1/test.pdf')
     form2.append('attr2', 'test2')
     res = await ax.patch(`/api/v1/datasets/resthistattach/lines/${line._id}`, form2, { headers: testUtils.formHeaders(form2) })
@@ -1189,7 +1189,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     let dataset = res.data
 
     const form = new FormData()
-    form.append('actions', fs.readFileSync('./test/resources/datasets/actions.xlsx'), 'actions.xlsx')
+    form.append('actions', fs.readFileSync('./resources/datasets/actions.xlsx'), 'actions.xlsx')
     await ax.post('/api/v1/datasets/restxlsxfile/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
     dataset = await workers.hook('finalizer/restxlsxfile')
     assert.equal(dataset.count, 2)
@@ -1210,7 +1210,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     let dataset = res.data
 
     const form = new FormData()
-    form.append('actions', fs.readFileSync('./test/resources/datasets/actions.xlsx'), 'actions.ods')
+    form.append('actions', fs.readFileSync('./resources/datasets/actions.xlsx'), 'actions.ods')
     await ax.post('/api/v1/datasets/restodsfile/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
     dataset = await workers.hook('finalizer/restodsfile')
     assert.equal(dataset.count, 2)
@@ -1232,7 +1232,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
     // Create a line with an attached file
     const form = new FormData()
-    const actionsContent = fs.readFileSync('./test/resources/datasets/dataset1.zip')
+    const actionsContent = fs.readFileSync('./resources/datasets/dataset1.zip')
     form.append('actions', actionsContent, 'dataset1.zip')
     await ax.post('/api/v1/datasets/restcsvzip/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
     dataset = await workers.hook('finalizer/restcsvzip')

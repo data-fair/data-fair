@@ -60,13 +60,13 @@ export const updateDatasetMapping = async (client, dataset, oldDataset) => {
 const getAliases = async (client, dataset) => {
   let prodAlias
   try {
-    prodAlias = (await client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: null }) })).body
+    prodAlias = await client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: null }) })
   } catch (err) {
     if (err.statusCode !== 404) throw err
   }
   let draftAlias
   try {
-    draftAlias = (await client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: true }) })).body
+    draftAlias = await client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: true }) })
   } catch (err) {
     if (err.statusCode !== 404) throw err
   }
@@ -197,11 +197,11 @@ const indexBase = (dataset) => {
 
 export const datasetInfos = async (client, dataset) => {
   // const indices = await client.indices.get({index: `${indexPrefix(dataset)}-*`})
-  const indices = (await client.cat.indices({ index: `${indexPrefix(dataset)}-*`, format: 'json' })).body
+  const indices = await client.cat.indices({ index: `${indexPrefix(dataset)}-*`, format: 'json' })
   for (const index of indices) {
-    index.definition = (await client.indices.get({ index: index.index })).body[index.index]
+    index.definition = (await client.indices.get({ index: index.index }))[index.index]
   }
-  const alias = (await client.indices.getAlias({ index: aliasName(dataset) })).body
+  const alias = await client.indices.getAlias({ index: aliasName(dataset) })
   const aliasedIndexName = Object.keys(alias ?? {})[0]
   const index = indices.find(index => index.index === aliasedIndexName)
   return {

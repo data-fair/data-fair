@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import config from 'config'
-import { aliasName, extractError } from '../server/datasets/es/commons.js'
+import { aliasName, extractError } from '../api/src/datasets/es/commons.js'
 
 describe('Elasticsearch errors management', () => {
   it('Extract simple message from a full ES error', async function () {

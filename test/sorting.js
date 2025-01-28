@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert'
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 
 describe('Sorting', () => {
   it('Ignore case and diacritics', async () => {

@@ -12,7 +12,7 @@ async function * iterHits (es, dataset, query = { size: 1000 }) {
       body: esQuery,
       timeout: config.elasticsearch.searchTimeout,
       allow_partial_search_results: false
-    })).body.hits.hits
+    })).hits.hits
     yield hits
     if (hits.length < query.size) break
     esQuery.search_after = hits[hits.length - 1].sort

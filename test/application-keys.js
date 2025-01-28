@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import config from 'config'
-import * as workers from '../server/workers/index.js'
-import * as rateLimitingUtils from '../server/misc/utils/rate-limiting.js'
+import * as workers from '../api/src/workers/index.js'
+import * as rateLimitingUtils from '../api/src/misc/utils/rate-limiting.js'
 
 describe('Applications keys for unauthenticated readOnly access', () => {
   it('Empty array by default', async () => {

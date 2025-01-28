@@ -1,12 +1,12 @@
-import config from '#config'
-import mongo from '#mongo'
+import config from '../api/src/config.ts'
+import mongo from '../api/src/mongo.js'
 import fs from 'fs-extra'
 import nock from 'nock'
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 import axios from 'axios'
 import debugModule from 'debug'
-import * as app from '../server/app.js'
-import * as rateLimiting from '../server/misc/utils/rate-limiting.js'
+import * as app from '../api/src/app.js'
+import * as rateLimiting from '../api/src/misc/utils/rate-limiting.js'
 import { axiosAuth } from '@data-fair/sd-express'
 
 const debug = debugModule('test')
@@ -102,7 +102,7 @@ before('init globals', async () => {
   await mongo.init()
   global.db = mongo.db
   global.mongoClient = mongo.client
-  global.es = await (await import('../server/datasets/es/index.js')).init()
+  global.es = await (await import('../api/src/datasets/es/index.js')).init()
 
   global.ax = {}
   global.ax.builder = async (email, org, opts = {}) => {

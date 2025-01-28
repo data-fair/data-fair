@@ -6,8 +6,8 @@ import FormData from 'form-data'
 import config from 'config'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import dayjs from 'dayjs'
-import * as restDatasetsUtils from '../server/datasets/utils/rest.js'
-import * as workers from '../server/workers/index.js'
+import * as restDatasetsUtils from '../api/src/datasets/utils/rest.js'
+import * as workers from '../api/src/workers/index.js'
 
 describe('Extensions', () => {
   it('Extend dataset using remote service', async function () {
@@ -53,7 +53,7 @@ describe('Extensions', () => {
         .map(JSON.stringify).join('\n') + '\n'
     })
     const form = new FormData()
-    let content = await fs.readFile('test/resources/datasets/dataset-extensions.csv')
+    let content = await fs.readFile('resources/datasets/dataset-extensions.csv')
     content += 'me,3 les noés la chapelle caro\n'
     form.append('file', content, 'dataset.csv')
     res = await ax.post(`/api/v1/datasets/${dataset.id}`, form, { headers: testUtils.formHeaders(form) })
@@ -805,7 +805,7 @@ other,unknown address
     assert.ok(dataset.schema.find(field => field.key === 'employees'))
 
     const form = new FormData()
-    form.append('file', fs.readFileSync('./test/resources/datasets/dataset2.csv'), 'dataset2.csv')
+    form.append('file', fs.readFileSync('./resources/datasets/dataset2.csv'), 'dataset2.csv')
     dataset = (await ax.put(`/api/v1/datasets/${dataset.id}`, form, { headers: testUtils.formHeaders(form), params: { draft: true } })).data
 
     await assert.rejects(workers.hook(`finalizer/${dataset.id}`), (err) => {

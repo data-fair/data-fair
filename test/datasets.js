@@ -5,7 +5,7 @@ import FormData from 'form-data'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import WebSocket from 'ws'
 import config from 'config'
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 import { validate } from 'tableschema'
 
 let notifier
@@ -87,7 +87,7 @@ describe('datasets', () => {
     assert.deepEqual(res.data.results[0].owner, undefined)
   })
 
-  const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+  const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
 
   it('Failure to upload dataset exceeding limit', async () => {
     const ax = global.ax.dmeadus
@@ -241,7 +241,7 @@ describe('datasets', () => {
     const ax = global.ax.cdurning2
     await ax.put('/api/v1/settings/user/cdurning2', { webhooks: [{ title: 'test', events: ['dataset-finalize-end'], target: { type: 'http', params: { url: 'http://localhost:5900' } } }] })
     let form = new FormData()
-    form.append('file', fs.readFileSync('./test/resources/datasets/Antennes du CD22.csv'), 'Antennes du CD22.csv')
+    form.append('file', fs.readFileSync('./resources/datasets/Antennes du CD22.csv'), 'Antennes du CD22.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
 
@@ -260,7 +260,7 @@ describe('datasets', () => {
 
     // Send again the data to the same dataset
     form = new FormData()
-    form.append('file', fs.readFileSync('./test/resources/datasets/Antennes du CD22.csv'), 'Antennes du CD22.csv')
+    form.append('file', fs.readFileSync('./resources/datasets/Antennes du CD22.csv'), 'Antennes du CD22.csv')
     res = await ax.post(webhook.href, form, { headers: testUtils.formHeaders(form) })
 
     assert.equal(res.status, 200)

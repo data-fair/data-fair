@@ -5,7 +5,7 @@ import FormData from 'form-data'
 
 const sendAttachment = async (ax, datasetId, attachmentName) => {
   const attachmentForm = new FormData()
-  attachmentForm.append('attachment', fs.readFileSync('./test/resources/' + attachmentName), attachmentName)
+  attachmentForm.append('attachment', fs.readFileSync('./resources/' + attachmentName), attachmentName)
   await ax.post(`/api/v1/datasets/${datasetId}/metadata-attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
   await ax.patch('/api/v1/datasets/' + datasetId, { attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
 }

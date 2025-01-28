@@ -2,7 +2,7 @@ import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import fs from 'fs-extra'
 import path from 'node:path'
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 import FormData from 'form-data'
 
 describe('Archive conversions', () => {
@@ -35,7 +35,7 @@ describe('Archive conversions', () => {
 
   it('should extract a gzipped file on PUT and replace it', async () => {
     const ax = global.ax.dmeadus
-    const gzippedContent = fs.readFileSync(path.resolve('./test/resources/datasets/dataset1.csv.gz'))
+    const gzippedContent = fs.readFileSync(path.resolve('./resources/datasets/dataset1.csv.gz'))
     const form = new FormData()
     form.append('file', gzippedContent, 'dataset1.csv.gz')
     await ax.put('/api/v1/datasets/dataset-compressed', form, { headers: testUtils.formHeaders(form) })
@@ -46,7 +46,7 @@ describe('Archive conversions', () => {
     const schema = dataset.schema.filter(p => !p['x-calculated'])
     const locProp = schema.find(p => p.key === 'loc')
     locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
-    const csvContent = fs.readFileSync(path.resolve('./test/resources/datasets/dataset1.csv'))
+    const csvContent = fs.readFileSync(path.resolve('./resources/datasets/dataset1.csv'))
     const form2 = new FormData()
     form2.append('file', csvContent, 'dataset1.csv')
     form2.append('schema', JSON.stringify(schema))

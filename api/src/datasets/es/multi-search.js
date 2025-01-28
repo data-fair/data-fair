@@ -8,7 +8,7 @@ export default async (client, dataset, queries) => {
     body.push(prepareQuery(dataset, query))
   }
 
-  const esResponse = (await client.msearch({ body })).body
+  const esResponse = await client.msearch({ body })
 
   return esResponse
 }

@@ -1,6 +1,6 @@
 import config from 'config'
 import status from './status.json' with {type: 'json'}
-import pJson from '../package.json' with {type: 'json'}
+import pJson from '../../package.json' with {type: 'json'}
 import dataset from './dataset.js'
 import datasetPatch from './dataset-patch.js'
 import datasetPost from './dataset-post.js'

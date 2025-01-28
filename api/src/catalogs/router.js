@@ -152,7 +152,7 @@ router.patch('/:catalogId', readCatalog, permissions.middleware('writeDescriptio
   if (patch.autoUpdate) {
     if (patch.autoUpdate.active) {
       const job = new CronJob(config.catalogAutoUpdates.cron, () => {})
-      patch.autoUpdate.nextUpdate = job.nextDates().toISOString()
+      patch.autoUpdate.nextUpdate = job.nextDate().toISO()
     } else {
       delete patch.autoUpdate.nextUpdate
     }

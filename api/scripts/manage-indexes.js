@@ -11,17 +11,15 @@ const maxDuration = 60 * 60 * 1000
 const start = new Date().getTime()
 
 async function main () {
-  const { db } = await require('../server/misc/utils/db').connect()
-  const es = await require('../server/datasets/es').init()
-  // @ts-ignore
-  const indexes = (await es.cat.indices({ index: `${config.indicesPrefix}-*`, format: 'json' })).body
-  // @ts-ignore
+  const { db } = await require('../src/misc/utils/db').connect()
+  const es = await require('../src/datasets/es').init()
+  const indexes = (await es.cat.indices({ index: `${config.indicesPrefix}-*`, format: 'json' }))
   for (const index of indexes) {
     if (new Date().getTime() - start > maxDuration) {
       console.error('Max duration exceeded, stop')
       break
     }
-    const getAliasRes = (await es.indices.getAlias({ index: index.index })).body
+    const getAliasRes = await es.indices.getAlias({ index: index.index })
     const aliases = getAliasRes[index.index] && getAliasRes[index.index].aliases && Object.keys(getAliasRes[index.index].aliases)
     const alias = aliases.find((/** @type {any} */ alias) => index.index.startsWith(alias))
     if (!alias) {
@@ -34,7 +32,7 @@ async function main () {
       console.warn(`alias ${alias} does not have matching dataset in database`, index['store.size'])
       continue
     }
-    const segments = (await es.cat.segments({ index: index.index, format: 'json' })).body
+    const segments = await es.cat.segments({ index: index.index, format: 'json' })
 
     // force merge is recommended on read-only indexes only, so rest datasets are excluded
     if (segments.length > 2 && !dataset.isRest) {

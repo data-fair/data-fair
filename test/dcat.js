@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 import fs from 'node:fs'
 import path from 'node:path'
-import normalize from '../server/misc/utils/dcat/normalize.js'
-import validate from '../server/misc/utils/dcat/validate.js'
+import normalize from '../api/src/misc/utils/dcat/normalize.js'
+import validate from '../api/src/misc/utils/dcat/validate.js'
 import cioExample from './resources/dcat/example-cio.json' with { type: 'json' }
 import semiceuExample from './resources/dcat/example-semiceu.json' with { type: 'json' }
 const odsRdfExample = fs.readFileSync(path.join(import.meta.dirname, '/resources/dcat/ods-export.rdf'), 'utf-8')

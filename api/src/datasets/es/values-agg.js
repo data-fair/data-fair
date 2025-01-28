@@ -164,12 +164,12 @@ export default async (client, dataset, query, addGeoData, publicBaseUrl, explain
   }
   // Bound complexity with a timeout
   if (explain) explain.esQuery = esQuery
-  const esResponse = (await client.search({
+  const esResponse = await client.search({
     index: aliasName(dataset),
     body: esQuery,
     timeout,
     allow_partial_search_results: allowPartialResults
-  })).body
+  })
   if (explain) explain.esResponse = esResponse
 
   const response = { total: esResponse.hits.total.value }
