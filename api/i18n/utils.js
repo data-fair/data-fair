@@ -1,7 +1,7 @@
 import config from '#config'
 import i18n from 'i18n'
 import { join } from 'path'
-import vocabularyRaw from '../../contract/vocabulary.json' with {type: 'json'}
+import vocabularyRaw from '../contract/vocabulary.json' with {type: 'json'}
 
 const defaultLocale = /** @type {'en' | 'fr'} */(config.i18n.defaultLocale)
 

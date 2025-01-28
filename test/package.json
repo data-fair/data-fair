@@ -1,0 +1,12 @@
+{
+  "name": "@data-fair/data-fair-test",
+  "type": "module",
+  "scripts": {
+    "test": "NODE_ENV=test NODE_OPTIONS=--experimental-strip-types EVENTS_LOG_LEVEL=warn mocha --exit --bail --timeout 30000 test/"
+  },
+  "dependencies": {
+    "mocha": "^11.1.0",
+    "nock": "^14.0.0",
+    "tableschema": "^1.12.6"
+  }
+}
