@@ -12,7 +12,7 @@ async function mongoStatus (req) {
 async function esStatus (req) {
   const es = req.app.get('es')
   const health = await es.cluster.health()
-  const healthStatus = health?.body?.status
+  const healthStatus = health?.status
   if (healthStatus === 'green') {
     // OK
   } else if (config.elasticsearch.acceptYellowStatus && healthStatus === 'yellow') {

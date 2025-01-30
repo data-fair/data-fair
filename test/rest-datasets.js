@@ -283,7 +283,7 @@ describe('REST datasets', () => {
     assert.equal(attachments.length, 1)
     assert.equal(attachments[0], res.data.results[0].attachmentPath)
 
-    assert.equal((await fs.readdir('data/test/tmp')).length, 0)
+    assert.equal((await fs.readdir('../data/test/tmp')).length, 0)
 
     await ax.delete('/api/v1/datasets/rest5/lines/' + line._id)
     await workers.hook('finalizer/rest5')
@@ -466,7 +466,7 @@ describe('REST datasets', () => {
       assert.equal(err.data.nbOk, 0)
       return true
     })
-    assert.equal((await fs.readdir('data/test/tmp')).length, 0)
+    assert.equal((await fs.readdir('../data/test/tmp')).length, 0)
   })
 
   it('The size of the mongodb collection is part of storage consumption', async () => {
@@ -888,7 +888,7 @@ describe('REST datasets', () => {
     })
     let dataset = res.data
     await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attr1,attr2,attr3,attr4
-line1,test1,test1,oui,2015-03-18T00:58:59
+line1,test1,test1,oui,2015-03-18T00:58:59Z
 line2,test1,test1,non,
 line3,test1,test1,true,`, { headers: { 'content-type': 'text/csv' } })
     dataset = await workers.hook('finalizer/restcsv')
@@ -898,7 +898,7 @@ line3,test1,test1,true,`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(lines[0].attr1, 'test1')
     assert.equal(lines[0].attr2, 'test1')
     assert.equal(lines[0].attr3, true)
-    assert.equal(lines[0].attr4, '2015-03-18T00:58:59')
+    assert.equal(lines[0].attr4, '2015-03-18T00:58:59Z')
     assert.equal(lines[1]._id, 'line2')
     assert.equal(lines[1].attr1, 'test1')
     assert.equal(lines[1].attr2, 'test1')

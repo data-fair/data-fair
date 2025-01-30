@@ -5,7 +5,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { ajv, errorsText, localize } from '../../../../shared/ajv.js'
 
 // cf https://github.com/ajv-validator/ajv/issues/1745
-let openApiSchemaStr = fs.readFileSync(path.join(import.meta.dirname, '../../../contract/openapi-3.1.json'), 'utf8')
+let openApiSchemaStr = fs.readFileSync(path.resolve(import.meta.dirname, '../../../contract/openapi-3.1.json'), 'utf8')
 openApiSchemaStr = openApiSchemaStr.replace(/"\$dynamicRef": "#meta"/g, '"$ref": "#/$defs/schema"')
 const openApiSchema = JSON.parse(openApiSchemaStr)
 

@@ -26,7 +26,7 @@ export default router
 
 const cacheableLookup = new CacheableLookup()
 
-const loginHtml = fs.readFileSync(path.join(import.meta.dirname, './resources/login.html'), 'utf8')
+const loginHtml = fs.readFileSync(path.resolve(import.meta.dirname, './resources/login.html'), 'utf8')
 
 const brandEmbed = config.brand.embed && parse5.parseFragment(config.brand.embed)
 

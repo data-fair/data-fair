@@ -305,7 +305,7 @@ describe('datasets', () => {
     res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.ok(res.data.store_bytes.consumption > 150)
     assert.ok(res.data.store_bytes.consumption < 300)
-    assert.deepEqual(await fs.readdir('data/test/user/dmeadus0/datasets/dataset-name/'), ['dataset-name.csv'])
+    assert.deepEqual(await fs.readdir('../data/test/user/dmeadus0/datasets/dataset-name/'), ['dataset-name.csv'])
 
     const form2 = new FormData()
     form2.append('file', datasetFd, 'dataset-name2.csv')
@@ -318,7 +318,7 @@ describe('datasets', () => {
     res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.ok(res.data.store_bytes.consumption > 150)
     assert.ok(res.data.store_bytes.consumption < 300)
-    assert.deepEqual(await fs.readdir('data/test/user/dmeadus0/datasets/dataset-name/'), ['dataset-name2.csv'])
+    assert.deepEqual(await fs.readdir('../data/test/user/dmeadus0/datasets/dataset-name/'), ['dataset-name2.csv'])
   })
 
   it('Upload new dataset and detect types', async () => {

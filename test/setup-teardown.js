@@ -150,7 +150,7 @@ before('init globals', async () => {
 before('scratch all', async () => {
   debug('scratch all')
   await global.db.dropDatabase()
-  await fs.remove('./data/test')
+  await fs.remove('../data/test')
   await global.es.indices.delete({ index: 'dataset-test-*', ignore_unavailable: true }).catch(err => { console.log(err) })
   debug('scratch all ok')
 })
@@ -189,9 +189,9 @@ beforeEach('scratch data', async function () {
       global.db.collection('extensions-cache').deleteMany({}),
       global.db.collection('remote-services').deleteMany({ id: /dataset:(.*)/ }),
       global.db.collection('journals').deleteMany({}),
-      fs.emptyDir('./data/test')
+      fs.emptyDir('../data/test')
     ])
-    await fs.ensureDir('./data/test/captures')
+    await fs.ensureDir('../data/test/captures')
     global.memoizedGetPublicationSiteSettings.clear()
     rateLimiting.clear()
   } catch (err) {

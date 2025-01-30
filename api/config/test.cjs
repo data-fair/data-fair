@@ -7,7 +7,7 @@ module.exports = {
   openapiViewerUrl: 'http://localhost:5600/api-doc/',
   captureUrl: 'http://localhost:5600/capture',
   privateCaptureUrl: 'http://localhost:8087',
-  dataDir: './data/test',
+  dataDir: '../data/test',
   brand: {
     embed: '<div>application embed</div>'
   },

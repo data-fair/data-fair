@@ -82,14 +82,14 @@ describe('datasets in draft mode', () => {
     assert.equal(res.data.results[1].id, 'bidule')
 
     // validate the draft
-    assert.ok(await fs.pathExists(`data/test/user/dmeadus0/datasets-drafts/${dataset.id}`))
+    assert.ok(await fs.pathExists(`../data/test/user/dmeadus0/datasets-drafts/${dataset.id}`))
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
     dataset = await workers.hook('finalizer')
     assert.equal(dataset.status, 'finalized')
     assert.ok(!dataset.draftReason)
     assert.equal(dataset.count, 2)
     assert.ok(dataset.bbox)
-    assert.ok(!await fs.pathExists(`data/test/user/dmeadus0/datasets-drafts/${dataset.id}`))
+    assert.ok(!await fs.pathExists(`../data/test/user/dmeadus0/datasets-drafts/${dataset.id}`))
     console.log(dataset.dataUpdatedAt, dataset.dataUpdatedBy)
 
     // querying lines is now possible
@@ -110,9 +110,9 @@ describe('datasets in draft mode', () => {
     assert.equal(journal.pop().type, 'draft-validated')
     assert.equal(journal.pop().type, 'finalize-end')
 
-    assert.ok(await fs.pathExists(`data/test/user/dmeadus0/datasets/${dataset.id}`))
+    assert.ok(await fs.pathExists(`../data/test/user/dmeadus0/datasets/${dataset.id}`))
     res = await ax.delete('/api/v1/datasets/' + dataset.id)
-    assert.ok(!await fs.pathExists(`data/test/user/dmeadus0/datasets/${dataset.id}`))
+    assert.ok(!await fs.pathExists(`../data/test/user/dmeadus0/datasets/${dataset.id}`))
   })
 
   it('create a draft when updating the data file', async () => {
@@ -671,10 +671,10 @@ other
     assert.equal(res.status, 201)
     const dataset = await workers.hook('finalizer/' + res.data.id)
 
-    assert.ok(await fs.pathExists('data/test/user/dmeadus0/datasets-drafts/' + dataset.id))
-    assert.ok(!await fs.pathExists('data/test/user/dmeadus0/datasets/' + dataset.id))
+    assert.ok(await fs.pathExists('../data/test/user/dmeadus0/datasets-drafts/' + dataset.id))
+    assert.ok(!await fs.pathExists('../data/test/user/dmeadus0/datasets/' + dataset.id))
     res = await ax.delete('/api/v1/datasets/' + dataset.id)
-    assert.ok(!await fs.pathExists('data/test/user/dmeadus0/datasets-drafts/' + dataset.id))
+    assert.ok(!await fs.pathExists('../data/test/user/dmeadus0/datasets-drafts/' + dataset.id))
     await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}`), err => err.status === 404)
   })
 })

@@ -6,6 +6,7 @@ describe('status', () => {
     await assert.rejects(global.ax.superadminPersonal.get('/api/v1/admin/status'), (err) => err.status === 403)
     const res = await global.ax.superadmin.get('/api/v1/admin/status')
     assert.equal(res.status, 200)
+    console.log(res.data)
     assert.equal(res.data.status, 'ok')
     assert.equal(res.data.details.length, 5)
   })
