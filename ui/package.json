@@ -5,9 +5,12 @@
     "dev": "NODE_CONFIG_DIR=../api/config/ NODE_ENV=development nuxt",
     "postinstall": "patch-package",
     "lint": "eslint .",
-    "lint-fix": "eslint --fix ."
+    "lint-fix": "eslint --fix .",
+    "build": "NODE_CONFIG_DIR=../api/config/ nuxt build --no-generate",
+    "analyze": "NODE_CONFIG_DIR=../api/config/ nuxt build --analyze"
   },
   "devDependencies": {
+    "@data-fair/data-fair-api": "*",
     "@data-fair/frame": "^0.8.4",
     "@data-fair/sd-vue": "^3.0.1",
     "@koumoul/nuxt-config-inject": "^0.4.12",
@@ -30,6 +33,7 @@
     "form-data": "^4.0.1",
     "js-file-download": "^0.4.12",
     "less": "^4.2.2",
+    "less-loader": "^7.3.0",
     "maplibre-gl": "^5.0.1",
     "marked": "^4.3.0",
     "nuxt": "^2.18.1",

@@ -1,6 +1,6 @@
-FROM node:22.11.0-alpine3.20 AS base
+FROM node:22.13.1-alpine3.21 AS base
 
-RUN npm install -g npm@11.0.0
+RUN npm install -g npm@11.1.0
 
 WORKDIR /webapp
 
@@ -11,7 +11,7 @@ FROM base AS geodeps
 RUN apk add --no-cache curl cmake make g++ linux-headers
 RUN apk add --no-cache gdal gdal-dev
 RUN apk add --no-cache boost-dev gmp gmp-dev mpfr-dev
-RUN apk add --no-cache libressl3.8-libcrypto
+RUN apk add --no-cache libressl4.0-libcrypto
 
 # build CGAL (not yet present in alpine repos)
 WORKDIR /tmp
@@ -49,7 +49,7 @@ RUN test -f /usr/lib/libproj.so
 # check that geo execs actually load
 RUN prepair --help
 
-RUN apk add --no-cache unzip dumb-init
+RUN apk add --no-cache unzip
 
 ######################################
 # Stage: nodejs dependencies and build
@@ -59,20 +59,26 @@ RUN apk add --no-cache python3 make g++ curl
 RUN apk add --no-cache sqlite-dev
 
 ADD package.json .
+ADD ui/package.json ui/package.json
+ADD api/package.json api/package.json
+ADD shared/package.json shared/package.json
 ADD package-lock.json .
 ADD patches patches
+ADD ui/patches ui/patches
+
 # use clean-modules on the same line as npm ci to be lighter in the cache
 RUN npm ci && \
-    ./node_modules/.bin/clean-modules --yes --exclude exceljs/lib/doc/ --exclude mocha/lib/test.js --exclude "**/*.mustache"
-
-# Adding UI files
-ADD public public
-ADD nuxt.config.cjs .
-ADD config config
-ADD shared shared
-ADD contract contract
+    ./node_modules/.bin/clean-modules --yes --exclude exceljs/lib/doc/ --exclude mocha/lib/test.js --exclude "**/*.mustache" --exclude yaml/dist/doc/
 
 # Build UI
+ADD ui ui 
+RUN mkdir -p /webapp/ui/node_modules
+ADD api/config api/config
+ADD api/contract api/contract
+ADD api/src/config.ts api/src/config.ts
+RUN mkdir -p /webapp/api/node_modules
+ADD shared shared
+RUN mkdir -p /webapp/shared/node_modules
 ENV NODE_ENV=production
 RUN npm run build
 
@@ -87,25 +93,28 @@ MAINTAINER "contact@koumoul.com"
 
 # We could copy /webapp whole, but this is better for layering / efficient cache use
 COPY --from=builder /webapp/node_modules /webapp/node_modules
-COPY --from=builder /webapp/nuxt-dist /webapp/nuxt-dist
-ADD nuxt.config.cjs nuxt.config.cjs
-ADD public/static public/static
-ADD server server
-ADD scripts scripts
-ADD upgrade upgrade
-ADD config config
+COPY --from=builder /webapp/api/node_modules /webapp/api/node_modules
+COPY --from=builder /webapp/ui/node_modules /webapp/ui/node_modules
+COPY --from=builder /webapp/shared/node_modules /webapp/shared/node_modules
+COPY --from=builder /webapp/ui/nuxt-dist /webapp/ui/nuxt-dist
+ADD ui/nuxt.config.js ui/nuxt.config.js
+ADD ui/public/static ui/public/static
+ADD api/src api/src
+ADD api/scripts api/scripts
+ADD api/config api/config
+ADD api/contract api/contract
 ADD shared shared
-ADD contract contract
+ADD upgrade upgrade
 
 # Adding licence, manifests, etc.
 ADD package.json .
 ADD README.md BUILD.json* ./
 ADD LICENSE .
-ADD nodemon.json .
 
 # configure node webapp environment
 ENV NODE_ENV=production
 ENV DEBUG db,upgrade*
+
 # the following line would be a good practice
 # unfortunately it is a problem to activate now that the service was already deployed
 # with volumes belonging to root
@@ -113,5 +122,4 @@ ENV DEBUG db,upgrade*
 VOLUME /data
 EXPOSE 8080
 
-# --single-child is necessary for worker to wait on its tasks
-CMD ["dumb-init", "--single-child", "node", "--max-http-header-size", "64000", "--experimental-strip-types", "--no-warnings", "server/index.ts"]
+CMD ["node", "--max-http-header-size", "64000", "--experimental-strip-types", "--no-warnings", "api/index.ts"]
