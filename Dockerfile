@@ -4,8 +4,7 @@ RUN npm install -g npm@11.1.0
 
 WORKDIR /webapp
 
-######################################################
-# Stage: install prepair that depends on gdal and cgal
+##########################
 FROM base AS geodeps
 
 RUN apk add --no-cache curl cmake make g++ linux-headers
@@ -33,9 +32,7 @@ RUN mv prepair /usr/bin/prepair
 
 RUN prepair --help
 
-############################################################################################################
-# Stage: prepare a base image with all native utils pre-installed, used both by builder and definitive image
-
+##########################
 FROM base AS nativedeps
 
 # these are also geodeps, but we need to install them here as they pull many dependencies
@@ -51,26 +48,35 @@ RUN prepair --help
 
 RUN apk add --no-cache unzip
 
-######################################
-# Stage: nodejs dependencies and build
-FROM nativedeps AS builder
+##########################
+FROM base AS package-strip
 
-RUN apk add --no-cache python3 make g++ curl
-RUN apk add --no-cache sqlite-dev
+RUN apk add --no-cache jq moreutils
+ADD package.json package-lock.json ./
+# remove version from manifest for better caching when building a release
+RUN jq '.version="build"' package.json | sponge package.json
+RUN jq '.version="build"' package-lock.json | sponge package-lock.json
 
-ADD package.json .
+##########################
+FROM nativedeps AS installer
+
+RUN apk add --no-cache python3 make g++
+RUN npm i -g clean-modules@3.0.4 patch-package@8.0.0
+COPY --from=package-strip /webapp/package.json package.json
+COPY --from=package-strip /webapp/package-lock.json package-lock.json
 ADD ui/package.json ui/package.json
 ADD api/package.json api/package.json
 ADD shared/package.json shared/package.json
-ADD package-lock.json .
 ADD patches patches
 ADD ui/patches ui/patches
+# full deps install used for building
+# also used to fill the npm cache for faster install of api deps
+RUN npm ci --omit=dev --omit=optional --omit=peer --no-audit --no-fund
+RUN npm ls @mdi/js property-expr @koumoul/vjsf
 
-# use clean-modules on the same line as npm ci to be lighter in the cache
-RUN npm ci && \
-    ./node_modules/.bin/clean-modules --yes --exclude exceljs/lib/doc/ --exclude mocha/lib/test.js --exclude "**/*.mustache" --exclude yaml/dist/doc/
+##########################
+FROM installer AS builder
 
-# Build UI
 ADD ui ui 
 RUN mkdir -p /webapp/ui/node_modules
 ADD api/config api/config
@@ -82,34 +88,27 @@ RUN mkdir -p /webapp/shared/node_modules
 ENV NODE_ENV=production
 RUN npm run build
 
-# Cleanup /webapp/node_modules so it can be copied by next stage
-RUN npm prune --production && \
-    rm -rf node_modules/.cache
+##########################
+FROM installer AS api-installer
 
-##################################
-# Stage: main nodejs service stage
-FROM nativedeps
-MAINTAINER "contact@koumoul.com"
+RUN npm ci -w api --prefer-offline --omit=dev --omit=optional --omit=peer --no-audit --no-fund && \
+    npx clean-modules --yes
+RUN mkdir -p /webapp/api/node_modules
+
+##########################
+FROM nativedeps AS main
 
 # We could copy /webapp whole, but this is better for layering / efficient cache use
-COPY --from=builder /webapp/node_modules /webapp/node_modules
-COPY --from=builder /webapp/api/node_modules /webapp/api/node_modules
-COPY --from=builder /webapp/ui/node_modules /webapp/ui/node_modules
-COPY --from=builder /webapp/shared/node_modules /webapp/shared/node_modules
+COPY --from=api-installer /webapp/node_modules /webapp/node_modules
+COPY --from=api-installer /webapp/api/node_modules /webapp/api/node_modules
 COPY --from=builder /webapp/ui/nuxt-dist /webapp/ui/nuxt-dist
 ADD ui/nuxt.config.js ui/nuxt.config.js
 ADD ui/public/static ui/public/static
-ADD api/src api/src
-ADD api/scripts api/scripts
-ADD api/config api/config
-ADD api/contract api/contract
-ADD shared shared
-ADD upgrade upgrade
+ADD /api api
+ADD /shared shared
+ADD /upgrade upgrade
 
-# Adding licence, manifests, etc.
-ADD package.json .
-ADD README.md BUILD.json* ./
-ADD LICENSE .
+ADD package.json README.md LICENSE BUILD.json* ./
 
 # configure node webapp environment
 ENV NODE_ENV=production
@@ -121,5 +120,6 @@ ENV DEBUG db,upgrade*
 #USER node
 VOLUME /data
 EXPOSE 8080
+EXPOSE 9090
 
 CMD ["node", "--max-http-header-size", "64000", "--experimental-strip-types", "--no-warnings", "api/index.ts"]
