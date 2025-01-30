@@ -93,6 +93,7 @@ FROM installer AS api-installer
 
 RUN npm ci -w api --prefer-offline --omit=dev --omit=optional --omit=peer --no-audit --no-fund && \
     npx clean-modules --yes
+RUN npm i -w api --include=optional sharp@0.33.5
 RUN mkdir -p /app/api/node_modules
 
 ##########################
