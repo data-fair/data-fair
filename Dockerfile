@@ -2,7 +2,7 @@ FROM node:22.13.1-alpine3.21 AS base
 
 RUN npm install -g npm@11.1.0
 
-WORKDIR /webapp
+WORKDIR /app
 
 ##########################
 FROM base AS geodeps
@@ -62,8 +62,8 @@ FROM nativedeps AS installer
 
 RUN apk add --no-cache python3 make g++
 RUN npm i -g clean-modules@3.0.4 patch-package@8.0.0
-COPY --from=package-strip /webapp/package.json package.json
-COPY --from=package-strip /webapp/package-lock.json package-lock.json
+COPY --from=package-strip /app/package.json package.json
+COPY --from=package-strip /app/package-lock.json package-lock.json
 ADD ui/package.json ui/package.json
 ADD api/package.json api/package.json
 ADD shared/package.json shared/package.json
@@ -78,13 +78,13 @@ RUN npm ls @mdi/js property-expr @koumoul/vjsf
 FROM installer AS builder
 
 ADD ui ui 
-RUN mkdir -p /webapp/ui/node_modules
+RUN mkdir -p /app/ui/node_modules
 ADD api/config api/config
 ADD api/contract api/contract
 ADD api/src/config.ts api/src/config.ts
-RUN mkdir -p /webapp/api/node_modules
+RUN mkdir -p /app/api/node_modules
 ADD shared shared
-RUN mkdir -p /webapp/shared/node_modules
+RUN mkdir -p /app/shared/node_modules
 ENV NODE_ENV=production
 RUN npm run build
 
@@ -93,15 +93,15 @@ FROM installer AS api-installer
 
 RUN npm ci -w api --prefer-offline --omit=dev --omit=optional --omit=peer --no-audit --no-fund && \
     npx clean-modules --yes
-RUN mkdir -p /webapp/api/node_modules
+RUN mkdir -p /app/api/node_modules
 
 ##########################
 FROM nativedeps AS main
 
-# We could copy /webapp whole, but this is better for layering / efficient cache use
-COPY --from=api-installer /webapp/node_modules /webapp/node_modules
-COPY --from=api-installer /webapp/api/node_modules /webapp/api/node_modules
-COPY --from=builder /webapp/ui/nuxt-dist /webapp/ui/nuxt-dist
+# We could copy /app whole, but this is better for layering / efficient cache use
+COPY --from=api-installer /app/node_modules /app/node_modules
+COPY --from=api-installer /app/api/node_modules /app/api/node_modules
+COPY --from=builder /app/ui/nuxt-dist /app/ui/nuxt-dist
 ADD ui/nuxt.config.js ui/nuxt.config.js
 ADD ui/public/static ui/public/static
 ADD /api api
@@ -109,6 +109,8 @@ ADD /shared shared
 ADD /upgrade upgrade
 
 ADD package.json README.md LICENSE BUILD.json* ./
+
+WORKDIR /app/api
 
 # configure node webapp environment
 ENV NODE_ENV=production
@@ -122,4 +124,4 @@ VOLUME /data
 EXPOSE 8080
 EXPOSE 9090
 
-CMD ["node", "--max-http-header-size", "64000", "--experimental-strip-types", "--no-warnings", "api/index.ts"]
+CMD ["node", "--max-http-header-size", "64000", "--experimental-strip-types", "--no-warnings", "index.ts"]
