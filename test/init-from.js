@@ -5,8 +5,8 @@ import FormData from 'form-data'
 import nock from 'nock'
 import * as workers from '../api/src/workers/index.js'
 
-describe('Datasets with auto-initialization from another one', () => {
-  it('Create REST dataset with copied information from file dataset', async () => {
+describe('Datasets with auto-initialization from another one', function () {
+  it('Create REST dataset with copied information from file dataset', async function () {
     const ax = global.ax.dmeadus
 
     const dataset = await testUtils.sendDataset('datasets/date-formats.csv', ax)
@@ -59,7 +59,7 @@ describe('Datasets with auto-initialization from another one', () => {
     assert.equal(lines.results[0].datetime_fr, '2025-01-13T19:42:00+01:00')
   })
 
-  it('Create file dataset with copied information from another file dataset', async () => {
+  it('Create file dataset with copied information from another file dataset', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
 
@@ -94,7 +94,7 @@ describe('Datasets with auto-initialization from another one', () => {
     assert.ok(fileData.startsWith('id,adr,'))
   })
 
-  it('Create file dataset that doesn\'t match imported schema', async () => {
+  it('Create file dataset that doesn\'t match imported schema', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
 
@@ -127,7 +127,7 @@ describe('Datasets with auto-initialization from another one', () => {
     assert.equal(event.type, 'finalize-end')
   })
 
-  it('Create remote file dataset that doesn\'t match imported schema', async () => {
+  it('Create remote file dataset that doesn\'t match imported schema', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
 
@@ -159,7 +159,7 @@ describe('Datasets with auto-initialization from another one', () => {
     assert.equal(event.type, 'finalize-end')
   })
 
-  it('Create file dataset with copied information from a rest dataset', async () => {
+  it('Create file dataset with copied information from a rest dataset', async function () {
     const ax = global.ax.dmeadus
     const dataset = (await ax.post('/api/v1/datasets/rest1', {
       isRest: true,
@@ -200,7 +200,7 @@ describe('Datasets with auto-initialization from another one', () => {
     assert.ok(fileData.startsWith('"attr1",'))
   })
 
-  it('Prevent initializing a dataset when missing permissions', async () => {
+  it('Prevent initializing a dataset when missing permissions', async function () {
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', global.ax.ngernier4)
 
     const ax = global.ax.dmeadus
@@ -216,7 +216,7 @@ describe('Datasets with auto-initialization from another one', () => {
     assert.rejects(workers.hook('finalizer/' + res.data.id), err => err.message.includes('permission manquante'))
   })
 
-  it('Initialize dataset in a department from dataset in orga', async () => {
+  it('Initialize dataset in a department from dataset in orga', async function () {
     const ax = global.ax.dmeadusOrg
 
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)

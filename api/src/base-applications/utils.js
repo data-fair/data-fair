@@ -1,4 +1,3 @@
-
 import { marked } from 'marked'
 import { prepareThumbnailUrl } from '../misc/utils/thumbnails.js'
 

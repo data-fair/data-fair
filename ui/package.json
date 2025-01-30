@@ -3,7 +3,9 @@
   "type": "module",
   "scripts": {
     "dev": "NODE_CONFIG_DIR=../api/config/ NODE_ENV=development nuxt",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "lint": "eslint .",
+    "lint-fix": "eslint --fix ."
   },
   "devDependencies": {
     "@data-fair/frame": "^0.8.4",

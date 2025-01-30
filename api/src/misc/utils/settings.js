@@ -1,4 +1,3 @@
-
 import sanitizeHtml from '../../../../shared/sanitize-html.js'
 import * as i18nUtils from '../../../i18n/utils.js'
 

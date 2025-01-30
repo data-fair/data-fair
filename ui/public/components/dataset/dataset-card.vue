@@ -39,8 +39,12 @@
             style="overflow: hidden;"
           >
             <v-list-item-avatar class="ml-0 my-0">
-              <v-icon v-if="dataset.remoteFile">mdi-cloud-download</v-icon>
-              <v-icon v-else>mdi-file</v-icon>
+              <v-icon v-if="dataset.remoteFile">
+                mdi-cloud-download
+              </v-icon>
+              <v-icon v-else>
+                mdi-file
+              </v-icon>
             </v-list-item-avatar>
             <span>{{ (dataset.originalFile || dataset.file).name | truncate(40,4) }} {{ (dataset.originalFile?.size || dataset.file?.size) | bytes($i18n.locale) }}</span>
           </v-list-item>

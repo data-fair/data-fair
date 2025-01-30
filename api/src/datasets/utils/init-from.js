@@ -1,4 +1,3 @@
-
 import { getOwnerRole } from '../../misc/utils/permissions.js'
 
 export const prepareInitFrom = (dataset, user) => {

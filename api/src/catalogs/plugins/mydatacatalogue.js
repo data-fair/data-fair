@@ -1,4 +1,3 @@
-
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import axios from '../../misc/utils/axios.js'
 

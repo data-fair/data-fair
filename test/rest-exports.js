@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.js'
 
-describe('REST datasets exported', () => {
-  it('Configure automatic export of CSV file from REST dataset', async () => {
+describe('REST datasets exported', function () {
+  it('Configure automatic export of CSV file from REST dataset', async function () {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets/rest', {
       isRest: true,

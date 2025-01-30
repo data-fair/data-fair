@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 
-describe('permissions', () => {
-  it('apply permissions to datasets', async () => {
+describe('permissions', function () {
+  it('apply permissions to datasets', async function () {
     // A dataset with restricted permissions
     let res = await global.ax.dmeadus.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })
     const datasetId = res.data.id
@@ -89,7 +89,7 @@ describe('permissions', () => {
     }
   })
 
-  it('apply permissions to datasets in organization and departments', async () => {
+  it('apply permissions to datasets in organization and departments', async function () {
     // A dataset made accessible to all users of owner organization
     const res = await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })
     const datasetId = res.data.id
@@ -117,7 +117,7 @@ describe('permissions', () => {
     await global.ax.ddecruce5Org.get('/api/v1/datasets/' + datasetId)
   })
 
-  it('apply permission to any authenticated user', async () => {
+  it('apply permission to any authenticated user', async function () {
     const res = await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })
     const datasetId = res.data.id
     assert.equal((await global.ax.bhazeldean7.get('/api/v1/datasets')).data.count, 0)
@@ -130,7 +130,7 @@ describe('permissions', () => {
     await global.ax.bhazeldean7Org.get('/api/v1/datasets/' + datasetId)
   })
 
-  it('give permission to patch a dataset info except for potentiel breaking changes', async () => {
+  it('give permission to patch a dataset info except for potentiel breaking changes', async function () {
     // A dataset with restricted permissions
     let res = await global.ax.dmeadus.post('/api/v1/datasets', {
       isRest: true,

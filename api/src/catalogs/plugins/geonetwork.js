@@ -152,7 +152,7 @@ function prepareDatasetFromCatalog (catalog, item, settings) {
         id: key,
         format: 'shapefile',
         mime: 'application/zip',
-        title: title,
+        title,
         url: shapefileUrl.href
       }
     }).filter(l => !!l)

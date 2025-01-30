@@ -6,7 +6,7 @@ import * as workers from '../api/src/workers/index.js'
 
 // run this test manually with "DEBUG=workers WORKER_CONCURRENCY=4 DEFAULT_LIMITS_DATASET_STORAGE=10000000 npm test"
 
-describe('concurrency', () => {
+describe('concurrency', function () {
   it.skip('Upload datasets in parallel', async function () {
     this.timeout(120000)
 

@@ -606,7 +606,6 @@ export const getQueryBBOX = (query) => {
 }
 
 export const prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicUrl) => {
-
   // re-join splitted items
   for (const field of dataset.schema) {
     if (field.separator && hit._source[field.key] && Array.isArray(hit._source[field.key])) {

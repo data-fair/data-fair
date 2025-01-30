@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.js'
 
-describe('Date filters', () => {
-  it('Date match special filter on date field with date-time format', async () => {
+describe('Date filters', function () {
+  it('Date match special filter on date field with date-time format', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets/rest-date-match', {
       isRest: true,
@@ -35,7 +35,7 @@ describe('Date filters', () => {
     assert.deepEqual(res.data.results.map(result => result.date1), ['2023-11-20T23:00:00.000Z', '2023-11-21T23:00:00.000Z', '2023-11-22T08:00:00.000Z'])
   })
 
-  it('Date match special filter on startDate and endDate fields with date-time format', async () => {
+  it('Date match special filter on startDate and endDate fields with date-time format', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets/rest-date-match', {
       isRest: true,

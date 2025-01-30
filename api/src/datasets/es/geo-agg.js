@@ -1,4 +1,3 @@
-
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import geohash from '../../misc/utils/geohash.js'

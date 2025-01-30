@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.js'
 
-describe('Sorting', () => {
-  it('Ignore case and diacritics', async () => {
+describe('Sorting', function () {
+  it('Ignore case and diacritics', async function () {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets/restsort1', {
       isRest: true,

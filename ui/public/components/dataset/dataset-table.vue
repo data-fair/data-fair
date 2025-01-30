@@ -128,7 +128,9 @@
                         color="primary"
                         @click="selectedLines = []"
                       >
-                        <v-icon size="20">mdi-checkbox-marked</v-icon>
+                        <v-icon size="20">
+                          mdi-checkbox-marked
+                        </v-icon>
                       </v-btn>
                       <v-btn
                         v-else-if="selectedLines.length"
@@ -138,7 +140,9 @@
                         color="grey"
                         @click="selectedLines = []"
                       >
-                        <v-icon size="20">mdi-checkbox-marked</v-icon>
+                        <v-icon size="20">
+                          mdi-checkbox-marked
+                        </v-icon>
                       </v-btn>
                       <v-btn
                         v-else
@@ -148,7 +152,9 @@
                         :title="$t('selectAllLines')"
                         @click="selectedLines = [...data.results]"
                       >
-                        <v-icon size="20">mdi-checkbox-blank-outline</v-icon>
+                        <v-icon size="20">
+                          mdi-checkbox-blank-outline
+                        </v-icon>
                       </v-btn>
                       <v-btn
                         v-if="can('deleteLine') && selectedLines.length >=2"
@@ -158,7 +164,9 @@
                         :title="$t('deleteAllLines')"
                         @click="deletingLines = [...selectedLines]; deleteSelectedLinesDialog = true;"
                       >
-                        <v-icon size="20">mdi-trash-can-outline</v-icon>
+                        <v-icon size="20">
+                          mdi-trash-can-outline
+                        </v-icon>
                       </v-btn>
                       <v-btn
                         v-if="can('updateLine') && selectedLines.length >= 2"
@@ -167,7 +175,9 @@
                         :title="$t('editAllLines')"
                         @click="editingLines = [...selectedLines]; editSelectedLinesDialog = true;"
                       >
-                        <v-icon size="20">mdi-pencil</v-icon>
+                        <v-icon size="20">
+                          mdi-pencil
+                        </v-icon>
                       </v-btn>
                     </div>
                   </v-card>
@@ -227,7 +237,9 @@
                       :title="$t('unselectLine')"
                       @click="selectedLines = selectedLines.filter(line => line._id !== item._id)"
                     >
-                      <v-icon size="20">mdi-checkbox-marked</v-icon>
+                      <v-icon size="20">
+                        mdi-checkbox-marked
+                      </v-icon>
                     </v-btn>
                     <v-btn
                       v-else
@@ -236,7 +248,9 @@
                       :title="$t('selectLine')"
                       @click="selectedLines.push(item)"
                     >
-                      <v-icon size="20">mdi-checkbox-blank-outline</v-icon>
+                      <v-icon size="20">
+                        mdi-checkbox-blank-outline
+                      </v-icon>
                     </v-btn>
                   </template>
                   <v-btn
@@ -247,7 +261,9 @@
                     :title="$t('deleteLine')"
                     @click="deletingLines = [{...item}]; deleteLineDialog = true;"
                   >
-                    <v-icon size="20">mdi-trash-can-outline</v-icon>
+                    <v-icon size="20">
+                      mdi-trash-can-outline
+                    </v-icon>
                   </v-btn>
                   <v-btn
                     v-if="can('updateLine')"
@@ -256,7 +272,9 @@
                     :title="$t('editLine')"
                     @click="showEditLineDialog(item);"
                   >
-                    <v-icon size="20">mdi-pencil</v-icon>
+                    <v-icon size="20">
+                      mdi-pencil
+                    </v-icon>
                   </v-btn>
                   <v-btn
                     v-if="dataset.rest && dataset.rest.history && can('readLineRevisions')"
@@ -265,7 +283,9 @@
                     :title="$t('showRevisions')"
                     @click="showHistoryDialog(item)"
                   >
-                    <v-icon size="20">mdi-history</v-icon>
+                    <v-icon size="20">
+                      mdi-history
+                    </v-icon>
                   </v-btn>
                 </template>
               </div>

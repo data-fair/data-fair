@@ -1,7 +1,7 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import equal from 'deep-equal'
-import vocabulary from '../../../contract/vocabulary.json' with { type: 'json' }
+import vocabulary from '../../../contract/vocabulary.js'
 import * as geoUtils from './geo.js'
 import * as i18nUtils from '../../../i18n/utils.js'
 import * as settingsUtils from '../../misc/utils/settings.js'

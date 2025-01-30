@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.js'
 
-describe('meta only datasets', () => {
-  it('Create simple meta only datasets', async () => {
+describe('meta only datasets', function () {
+  it('Create simple meta only datasets', async function () {
     const ax = global.ax.dmeadus
 
     const res = await ax.post('/api/v1/datasets', { isMetaOnly: true, title: 'a meta only dataset' })

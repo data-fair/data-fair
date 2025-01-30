@@ -13,8 +13,12 @@
         v-if="stats.limits && stats.limits.store_bytes && stats.limits.store_bytes.limit && stats.limits.store_bytes.limit !== -1"
         path="storageWithLimit"
       >
-        <template #bytes><b>{{ stats.limits.store_bytes.consumption | bytes($i18n.locale) }}</b></template>
-        <template #bytesLimit><b>{{ stats.limits.store_bytes.limit | bytes($i18n.locale) }}</b></template>
+        <template #bytes>
+          <b>{{ stats.limits.store_bytes.consumption | bytes($i18n.locale) }}</b>
+        </template>
+        <template #bytesLimit>
+          <b>{{ stats.limits.store_bytes.limit | bytes($i18n.locale) }}</b>
+        </template>
       </i18n>
       <i18n
         v-else-if="stats.limits && stats.limits.store_bytes"
@@ -24,7 +28,9 @@
           {{ stats.limits.store_bytes.consumption | bytes($i18n.locale) }}
         </template>
       </i18n>
-      <nuxt-link to="/storage">{{ $t('seeDetails') }}</nuxt-link>
+      <nuxt-link to="/storage">
+        {{ $t('seeDetails') }}
+      </nuxt-link>
     </v-card-text>
     <storage-treemap
       v-if="stats && datasets && datasets.results.length"

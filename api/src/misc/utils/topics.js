@@ -1,4 +1,3 @@
-
 // propagate topics modifications to applications and datasets
 export const updateTopics = async (db, owner, oldTopics, newTopics) => {
   for (const topic of newTopics) {

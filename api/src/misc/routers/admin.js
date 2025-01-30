@@ -1,4 +1,6 @@
 import express from 'express'
+import path from 'node:path'
+import { readFileSync } from 'node:fs'
 import * as status from './status.js'
 import * as findUtils from '../utils/find.js'
 import * as baseAppsUtils from '../../base-applications/utils.js'
@@ -19,7 +21,9 @@ router.use(cacheHeaders.noCache)
 
 let info = { version: process.env.NODE_ENV }
 router.get('/info', async (req, res) => {
-  try { info = (await import('../../../BUILD.json', { with: { type: 'json' } })).default } catch (err) {}
+  try {
+    info = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../../BUILD.json'), 'utf8'))
+  } catch (err) {}
   res.json(info)
 })
 

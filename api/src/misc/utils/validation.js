@@ -1,4 +1,3 @@
-
 import i18n from 'i18n'
 import slugify from 'slugify'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'

@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 
-describe('resource ownership', () => {
-  it('Upload new dataset in user zone then change ownership to organization', async () => {
+describe('resource ownership', function () {
+  it('Upload new dataset in user zone then change ownership to organization', async function () {
     const ax = global.ax.dmeadus
     let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     // a public permission, this should be preserved
@@ -39,7 +39,7 @@ describe('resource ownership', () => {
     assert.deepEqual(newPermissions[newPermissions.length - 1], { operations: ['readDescription', 'list'] })
   })
 
-  it('Upload new dataset in org zone then change ownership to department', async () => {
+  it('Upload new dataset in org zone then change ownership to department', async function () {
     const ax = global.ax.dmeadusOrg
     let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     // a public permission, this should be preserved

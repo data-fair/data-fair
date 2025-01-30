@@ -1,4 +1,3 @@
-
 exports.description = 'applications contain a reference to their base application with some useful info'
 
 exports.exec = async (db, debug) => {

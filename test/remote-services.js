@@ -1,19 +1,22 @@
 import { strict as assert } from 'node:assert'
 import nock from 'nock'
+import path from 'node:path'
+import { readFileSync } from 'node:fs'
 
-describe('remote-services', () => {
-  it('Get external APIs when not authenticated', async () => {
+const geocoderApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, './resources/geocoder-api.json'), 'utf8'))
+
+describe('remote-services', function () {
+  it('Get external APIs when not authenticated', async function () {
     const ax = global.ax.anonymous
     const res = await ax.get('/api/v1/remote-services')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 2)
   })
 
-  it('Post a minimal external API, read it, update it and delete it', async () => {
+  it('Post a minimal external API, read it, update it and delete it', async function () {
     const ax = global.ax.superadmin
-    const { default: apiDoc } = await import('./resources/geocoder-api.json', { with: { type: 'json' } })
-    apiDoc.info['x-api-id'] = 'geocoder2'
-    let res = await ax.post('/api/v1/remote-services', { apiDoc, apiKey: { in: 'header', name: 'x-apiKey' }, public: true })
+    geocoderApi.info['x-api-id'] = 'geocoder2'
+    let res = await ax.post('/api/v1/remote-services', { apiDoc: geocoderApi, apiKey: { in: 'header', name: 'x-apiKey' }, public: true })
     assert.equal(res.status, 201)
     const eaId = res.data.id
     res = await ax.get('/api/v1/remote-services')
@@ -49,7 +52,7 @@ describe('remote-services', () => {
     assert.equal(res.data.count, 2)
   })
 
-  it('Unknown external service', async () => {
+  it('Unknown external service', async function () {
     const ax = global.ax.anonymous
     try {
       await ax.get('/api/v1/remote-services/unknownId')
@@ -59,7 +62,7 @@ describe('remote-services', () => {
     }
   })
 
-  it('Unknown referer', async () => {
+  it('Unknown referer', async function () {
     const ax = global.ax.anonymous
     try {
       await ax.get('/api/v1/remote-services/geocoder-koumoul/proxy/coords', { headers: { referer: 'https://test.com' } })
@@ -69,7 +72,7 @@ describe('remote-services', () => {
     }
   })
 
-  it('Handle timeout errors from proxied service', async () => {
+  it('Handle timeout errors from proxied service', async function () {
     const ax = global.ax.superadmin
 
     // it is necessary to create an application, only applications are allowed to use remote-services' proxies
@@ -83,7 +86,7 @@ describe('remote-services', () => {
     }
   })
 
-  it('Prevent abusing remote service re-exposition', async () => {
+  it('Prevent abusing remote service re-exposition', async function () {
     const ax = global.ax.superadmin
 
     // it is necessary to create an application, only applications are allowed to use remote-services' proxies
@@ -102,7 +105,7 @@ describe('remote-services', () => {
     }
   })
 
-  it('Get unpacked actions inside remote services', async () => {
+  it('Get unpacked actions inside remote services', async function () {
     const ax = global.ax.anonymous
     let res = await ax.get('/api/v1/remote-services-actions')
     assert.equal(res.data.results.length, 4)

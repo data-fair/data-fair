@@ -41,8 +41,12 @@
                 small
                 @click="cycle = !cycle"
               >
-                <v-icon v-if="cycle">mdi-pause</v-icon>
-                <v-icon v-else>mdi-play</v-icon>
+                <v-icon v-if="cycle">
+                  mdi-pause
+                </v-icon>
+                <v-icon v-else>
+                  mdi-play
+                </v-icon>
               </v-btn>
               <v-img
                 :src="app.image"

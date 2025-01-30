@@ -1,4 +1,3 @@
-
 import fs from 'fs-extra'
 import path from 'path'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'

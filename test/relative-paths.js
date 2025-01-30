@@ -4,8 +4,8 @@ import fs from 'fs-extra'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.js'
 
-describe('safe relative paths management', () => {
-  it('relative path in dataset file name', async () => {
+describe('safe relative paths management', function () {
+  it('relative path in dataset file name', async function () {
     const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', fs.readFileSync('./resources/datasets/dataset1.csv'), '../dataset1.csv')
@@ -15,7 +15,7 @@ describe('safe relative paths management', () => {
     assert.equal(dataset.file.name, 'dataset1.csv')
   })
 
-  it('relative path in dataset id', async () => {
+  it('relative path in dataset id', async function () {
     const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', fs.readFileSync('./resources/datasets/dataset1.csv'), 'dataset1.csv')
@@ -27,7 +27,7 @@ describe('safe relative paths management', () => {
     await assert.rejects(ax.post('/api/v1/datasets/' + encodeURIComponent('../dataset1'), form2, { headers: testUtils.formHeaders(form2) }), err => err.status === 404)
   })
 
-  it('relative path in attachment name', async () => {
+  it('relative path in attachment name', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/datasets/files.zip')
     const form = new FormData()

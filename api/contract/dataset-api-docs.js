@@ -7,7 +7,7 @@ import capabilities from './capabilities.js'
 import * as datasetUtils from '../src/datasets/utils/index.js'
 import { acceptedMetricAggs } from '../src/datasets/es/metric-agg.js'
 import * as utils from './utils.js'
-import pJson from '../../package.json' with {type: 'json'}
+import pJson from './p-json.js'
 
 const config = /** @type {any} */(_config)
 

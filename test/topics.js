@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 
-describe('topics', () => {
-  it('Search and apply facets', async () => {
+describe('topics', function () {
+  it('Search and apply facets', async function () {
     const ax = global.ax.dmeadus
 
     // 2 datasets in organization zone

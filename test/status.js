@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 
-describe('status', () => {
-  it('Get status', async () => {
+describe('status', function () {
+  it('Get status', async function () {
     await assert.rejects(global.ax.anonymous.get('/api/v1/admin/status'), (err) => err.status === 401)
     await assert.rejects(global.ax.superadminPersonal.get('/api/v1/admin/status'), (err) => err.status === 403)
     const res = await global.ax.superadmin.get('/api/v1/admin/status')
@@ -11,7 +11,7 @@ describe('status', () => {
     assert.equal(res.data.details.length, 5)
   })
 
-  it('Ping service', async () => {
+  it('Ping service', async function () {
     const res = await global.ax.anonymous.get('/api/v1/ping')
     assert.equal(res.status, 200)
     assert.equal(res.data, 'ok')

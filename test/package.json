@@ -2,7 +2,9 @@
   "name": "@data-fair/data-fair-test",
   "type": "module",
   "scripts": {
-    "test": "NODE_CONFIG_DIR=../api/config/ NODE_ENV=test NODE_OPTIONS=--experimental-strip-types EVENTS_LOG_LEVEL=warn mocha --exit --bail --timeout 30000 ./"
+    "test": "NODE_CONFIG_DIR=../api/config/ NODE_ENV=test NODE_OPTIONS=--experimental-strip-types EVENTS_LOG_LEVEL=warn mocha --exit --bail --timeout 30000 ./",
+    "lint": "eslint .",
+    "lint-fix": "eslint --fix ."
   },
   "devDependencies": {
     "mocha": "^11.1.0",

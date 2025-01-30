@@ -2,7 +2,7 @@ import config from 'config'
 import applicationSchema from './application.js'
 import journalSchema from './journal.js'
 import * as permissionsDoc from '../src/misc/utils/permissions.js'
-import pJson from '../../package.json' with {type: 'json'}
+import pJson from './p-json.js'
 
 /**
  *

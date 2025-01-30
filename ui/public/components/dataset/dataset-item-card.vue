@@ -67,9 +67,15 @@
                 style="position:absolute;top:16px;right:-4px;"
                 :color="header.value === pagination.sortBy[0] ? 'primary' : 'default'"
               >
-                <template v-if="header.value === pagination.sortBy[0] && !pagination.sortDesc[0]">mdi-sort-ascending</template>
-                <template v-else-if="header.value === pagination.sortBy[0] && pagination.sortDesc[0]">mdi-sort-descending</template>
-                <template v-else>mdi-menu-down</template>
+                <template v-if="header.value === pagination.sortBy[0] && !pagination.sortDesc[0]">
+                  mdi-sort-ascending
+                </template>
+                <template v-else-if="header.value === pagination.sortBy[0] && pagination.sortDesc[0]">
+                  mdi-sort-descending
+                </template>
+                <template v-else>
+                  mdi-menu-down
+                </template>
               </v-icon>
             </v-input>
             <dataset-table-header-menu
@@ -91,7 +97,9 @@
                   class="pl-2"
                   @click="$set(detailDialog, header.field.key, true); hide()"
                 >
-                  <v-list-item-icon class="mr-2"><v-icon>mdi-magnify-plus</v-icon></v-list-item-icon>
+                  <v-list-item-icon class="mr-2">
+                    <v-icon>mdi-magnify-plus</v-icon>
+                  </v-list-item-icon>
                   <v-list-item-content>
                     <v-list-item-title>{{ $t('showFullValue') }}</v-list-item-title>
                   </v-list-item-content>

@@ -28,9 +28,15 @@
       style="position:absolute;top:12px;right:2px;"
       :color="header.value === pagination.sortBy[0] ? 'primary' : 'default'"
     >
-      <template v-if="header.value === pagination.sortBy[0] && !pagination.sortDesc[0]">mdi-sort-ascending</template>
-      <template v-else-if="header.value === pagination.sortBy[0] && pagination.sortDesc[0]">mdi-sort-descending</template>
-      <template v-else>mdi-menu-down</template>
+      <template v-if="header.value === pagination.sortBy[0] && !pagination.sortDesc[0]">
+        mdi-sort-ascending
+      </template>
+      <template v-else-if="header.value === pagination.sortBy[0] && pagination.sortDesc[0]">
+        mdi-sort-descending
+      </template>
+      <template v-else>
+        mdi-menu-down
+      </template>
     </v-icon>
   </th>
 </template>

@@ -169,7 +169,7 @@ export default {
           this._tableWrapper.removeEventListener('released', this.onScrollReleased)
         }
         this._tableWrapper = tableWrapper
-        // eslint-disable-next-line no-new
+
         this._perfectScrollbar = new PerfectScrollbar(this._tableWrapper)
         // this._tableWrapper.addEventListener('scroll', this.onTableScroll)
         tableWrapper.addEventListener('ps-scroll-x', this.onTableScrollX)

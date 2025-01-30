@@ -2,7 +2,7 @@ import path from 'node:path'
 import semver from 'semver'
 import fs from 'node:fs'
 import debugModule from 'debug'
-import pjson from '../package.json' with {type: 'json'}
+import pjson from '../api/contract/p-json.js'
 
 const debug = debugModule('upgrade')
 

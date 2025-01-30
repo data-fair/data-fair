@@ -1,4 +1,3 @@
-
 import { aliasName, prepareQuery } from './commons.js'
 
 export default async (client, dataset, query) => {

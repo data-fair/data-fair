@@ -1,4 +1,4 @@
-import {URL} from 'url'
+import { URL } from 'url'
 import _config from '../api/src/config.ts'
 import clone from '@data-fair/lib-utils/clone.js'
 import nuxtConfigInject from '@koumoul/nuxt-config-inject'
@@ -50,7 +50,7 @@ module.exports = {
     extend (webpackConfig, { isServer, isDev, isClient }) {
       const webpack = require('webpack')
       // Ignore all locale files of moment.js, those we want are loaded in plugins/moment.js
-      webpackConfig.plugins.push(new webpack.IgnorePlugin({resourceRegExp: /^\.\/locale$/, contextRegExp: /moment$/}))
+      webpackConfig.plugins.push(new webpack.IgnorePlugin({ resourceRegExp: /^\.\/locale$/, contextRegExp: /moment$/ }))
       // source-map to debug in production
       webpackConfig.devtool = webpackConfig.devtool || 'source-map'
     },

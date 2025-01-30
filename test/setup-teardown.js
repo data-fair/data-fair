@@ -1,3 +1,7 @@
+/* eslint-disable mocha/no-sibling-hooks */
+/* eslint-disable mocha/no-top-level-hooks */
+import path from 'node:path'
+import { readFileSync } from 'node:fs'
 import config from '../api/src/config.ts'
 import mongo from '../api/src/mongo.js'
 import fs from 'fs-extra'
@@ -7,15 +11,16 @@ import axios from 'axios'
 import debugModule from 'debug'
 import * as app from '../api/src/app.js'
 import * as rateLimiting from '../api/src/misc/utils/rate-limiting.js'
+// eslint-disable-next-line no-restricted-imports
 import { axiosAuth } from '@data-fair/sd-express'
+
+const geocoderApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, './resources/geocoder-api.json'), 'utf8'))
+const sireneApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, './resources/sirene-api.json'), 'utf8'))
 
 const debug = debugModule('test')
 
-before('global mocks', async () => {
+before('global mocks', async function () {
   debug('preparing mocks')
-
-  const { default: geocoderApi } = await import('./resources/geocoder-api.json', { with: { type: 'json' } })
-  const { default: sireneApi } = await import('./resources/sirene-api.json', { with: { type: 'json' } })
 
   // fake remote service
   nock('http://test.com')
@@ -97,7 +102,7 @@ before('global mocks', async () => {
   debug('mocks ok')
 })
 
-before('init globals', async () => {
+before('init globals', async function () {
   debug('init globals')
   await mongo.init()
   global.db = mongo.db
@@ -147,7 +152,7 @@ before('init globals', async () => {
   debug('init globals ok')
 })
 
-before('scratch all', async () => {
+before('scratch all', async function () {
   debug('scratch all')
   await global.db.dropDatabase()
   await fs.remove('../data/test')
@@ -201,7 +206,7 @@ beforeEach('scratch data', async function () {
   debug('scratch data ok')
 })
 
-after('stop app', async () => {
+after('stop app', async function () {
   debug('stop app')
   await Promise.race([
     new Promise(resolve => setTimeout(resolve, 5000)),
@@ -210,7 +215,7 @@ after('stop app', async () => {
   debug('stop app ok')
 })
 
-after('cleanup globals', async () => {
+after('cleanup globals', async function () {
   debug('cleanup globals')
   await global.es.close()
   await global.mongoClient.close()

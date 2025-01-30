@@ -184,7 +184,9 @@
 
         <v-stepper-content step="3">
           <template v-if="file && similarDatasets && similarDatasets.length">
-            <p class="mb-1">{{ $tc('similarDatasets', similarDatasets.length) }}</p>
+            <p class="mb-1">
+              {{ $tc('similarDatasets', similarDatasets.length) }}
+            </p>
             <v-card
               tile
               outlined

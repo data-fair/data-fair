@@ -4,8 +4,8 @@ import config from 'config'
 import fs from 'fs-extra'
 import tmp from 'tmp-promise'
 
-describe('rate limiting', () => {
-  it('should throttle content download', async () => {
+describe('rate limiting', function () {
+  it('should throttle content download', async function () {
     const ax = await global.ax.hlalonde3
 
     // higher storage limit first
@@ -51,7 +51,7 @@ describe('rate limiting', () => {
     assert.ok((t1 - t0 > 250) && (t1 - t0 < 900), 'throttled download should be around 400ms, got ' + (t1 - t0))
   })
 
-  it('should block requests when there are too many', async () => {
+  it('should block requests when there are too many', async function () {
     const ax = await global.ax.dmeadus
     const promises = []
     for (let i = 0; i < 200; i++) {

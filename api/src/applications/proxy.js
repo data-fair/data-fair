@@ -1,7 +1,7 @@
 import express from 'express'
 import config from '#config'
 import mongo from '#mongo'
-import fs from 'fs'
+import fs, { readFileSync } from 'fs'
 import path from 'path'
 import https from 'https'
 import http from 'http'
@@ -14,10 +14,11 @@ import * as findUtils from '../misc/utils/find.js'
 import * as permissions from '../misc/utils/permissions.js'
 import * as serviceWorkers from '../misc/utils/service-workers.js'
 import { refreshConfigDatasetsRefs } from './utils.js'
-import vIframePJson from '../../../node_modules/@koumoul/v-iframe/package.json' with {type: 'json'}
-import iFrameResizerPJson from '../../../node_modules/iframe-resizer/package.json' with {type: 'json'}
 import Debug from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
+
+const vIframePJson = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../../node_modules/@koumoul/v-iframe/package.json'), 'utf8'))
+const iFrameResizerPJson = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../../node_modules/iframe-resizer/package.json'), 'utf8'))
 
 const debugIframeRedirect = Debug('iframe-redirect')
 

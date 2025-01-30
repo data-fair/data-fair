@@ -11,8 +11,8 @@ import * as esUtils from '../api/src/datasets/es/index.js'
 nock('http://test-catalog.com').persist()
   .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
 
-describe('workers', () => {
-  it('Process newly uploaded CSV dataset', async () => {
+describe('workers', function () {
+  it('Process newly uploaded CSV dataset', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
@@ -77,7 +77,7 @@ describe('workers', () => {
     assert.ok(res.data[0].data.startsWith('100% des lignes sont en erreur'))
   })
 
-  it('Publish a dataset after finalization', async () => {
+  it('Publish a dataset after finalization', async function () {
     const ax = global.ax.dmeadus
 
     // Prepare a catalog
@@ -205,7 +205,7 @@ describe('workers', () => {
     config.worker.errorRetryDelay = 0
   })
 
-  it('Update dataset schema and apply only required worker tasks', async () => {
+  it('Update dataset schema and apply only required worker tasks', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     assert.equal(dataset.status, 'finalized')

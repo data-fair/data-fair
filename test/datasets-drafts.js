@@ -13,8 +13,8 @@ import * as esUtils from '../api/src/datasets/es/index.js'
 nock('http://test-catalog.com').persist()
   .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
 
-describe('datasets in draft mode', () => {
-  it('create new dataset in draft mode and validate it', async () => {
+describe('datasets in draft mode', function () {
+  it('create new dataset in draft mode and validate it', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
@@ -115,7 +115,7 @@ describe('datasets in draft mode', () => {
     assert.ok(!await fs.pathExists(`../data/test/user/dmeadus0/datasets/${dataset.id}`))
   })
 
-  it('create a draft when updating the data file', async () => {
+  it('create a draft when updating the data file', async function () {
     // listen to all notifications
     const notifications = []
     global.events.on('notification', (n) => notifications.push(n))
@@ -196,7 +196,7 @@ describe('datasets in draft mode', () => {
     assert.equal(notifications.shift().topic.key, 'data-fair:dataset-finalize-end:' + dataset.slug)
   })
 
-  it('create a draft when updating the data file and cancel it', async () => {
+  it('create a draft when updating the data file and cancel it', async function () {
     // listen to all notifications
     const notifications = []
     global.events.on('notification', (n) => notifications.push(n))
@@ -249,7 +249,7 @@ describe('datasets in draft mode', () => {
     assert.equal(journal.length, 0)
   })
 
-  it('create a draft when updating the data file and auto-validate if it\'s schema is compatible', async () => {
+  it('create a draft when updating the data file and auto-validate if it\'s schema is compatible', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
@@ -296,7 +296,7 @@ describe('datasets in draft mode', () => {
     assert.equal(evt.draft, undefined)
   })
 
-  it('create a draft when updating the data file but do not auto-validate if there are some validation errors', async () => {
+  it('create a draft when updating the data file but do not auto-validate if there are some validation errors', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
@@ -324,7 +324,7 @@ describe('datasets in draft mode', () => {
     })
   })
 
-  it('create a draft at creation and update it with multiple follow-up uploads', async () => {
+  it('create a draft at creation and update it with multiple follow-up uploads', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
@@ -373,7 +373,7 @@ describe('datasets in draft mode', () => {
     assert.equal(dataset.file.name, 'dataset1-draft3.csv')
   })
 
-  it('create a draft and update it with second file upload', async () => {
+  it('create a draft and update it with second file upload', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
@@ -413,7 +413,7 @@ describe('datasets in draft mode', () => {
     assert.equal(dataset.file.name, 'dataset1-draft2.csv')
   })
 
-  it('create a draft of a large file and index a sample', async () => {
+  it('create a draft of a large file and index a sample', async function () {
     let content = 'col'
     for (let i = 0; i < 2000; i++) {
       content += '\nval' + i
@@ -435,7 +435,7 @@ describe('datasets in draft mode', () => {
     assert.equal(res.data.total, 2000)
   })
 
-  it('Create a draft with attachments', async () => {
+  it('Create a draft with attachments', async function () {
     const ax = global.ax.dmeadus
 
     // Send dataset with a CSV and attachments in an archive
@@ -468,7 +468,7 @@ describe('datasets in draft mode', () => {
     assert.equal(res.data.total, 2)
   })
 
-  it('Create a draft with attachments then data uploaded separately', async () => {
+  it('Create a draft with attachments then data uploaded separately', async function () {
     const ax = global.ax.dmeadus
 
     // Send dataset with a CSV and attachments in an archive
@@ -511,7 +511,7 @@ describe('datasets in draft mode', () => {
     assert.equal(lines.results[0]['_file.content'], 'This is another test libreoffice file.')
   })
 
-  it('Create a draft with data then attachments uploaded separately', async () => {
+  it('Create a draft with data then attachments uploaded separately', async function () {
     const ax = global.ax.dmeadus
 
     // Send dataset with a CSV and attachments in an archive
@@ -547,7 +547,7 @@ describe('datasets in draft mode', () => {
     assert.equal(lines.results[0]['_file.content'], 'This is another test libreoffice file.')
   })
 
-  it('Create a draft of a geo file that requires conversion', async () => {
+  it('Create a draft of a geo file that requires conversion', async function () {
     if (config.ogr2ogr.skip) {
       return console.log('Skip ogr2ogr test in this environment')
     }
@@ -578,7 +578,7 @@ describe('datasets in draft mode', () => {
     assert.equal(res.data.total, 86)
   })
 
-  it('Manage error status in draft mode', async () => {
+  it('Manage error status in draft mode', async function () {
     const ax = global.ax.dmeadus
 
     // Initial dataset with addresses
@@ -610,7 +610,7 @@ other,unknown address
     assert.equal(dataset.status, 'error')
   })
 
-  it('Fails when draft file is missing the input properties', async () => {
+  it('Fails when draft file is missing the input properties', async function () {
     const ax = global.ax.dmeadus
 
     // Initial dataset with addresses
@@ -660,7 +660,7 @@ other
     })
   })
 
-  it('Delete a dataset in draft state', async () => {
+  it('Delete a dataset in draft state', async function () {
     const ax = global.ax.dmeadus
 
     // Send dataset

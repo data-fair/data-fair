@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.js'
 
-describe('data pagination', () => {
-  it('get deeper into data', async () => {
+describe('data pagination', function () {
+  it('get deeper into data', async function () {
     const ax = global.ax.dmeadus
 
     const schema = [{ key: 'attr1', type: 'integer' }, { key: 'attr2', type: 'integer' }]

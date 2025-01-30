@@ -1,4 +1,3 @@
-
 import * as datasetUtils from '../../datasets/utils/index.js'
 import capabilitiesSchema from '../../../contract/capabilities.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'

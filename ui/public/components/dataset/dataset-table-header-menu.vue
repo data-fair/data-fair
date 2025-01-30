@@ -30,7 +30,9 @@
           class="pl-2"
           @click="$emit('hide');showMenu=false"
         >
-          <v-list-item-icon class="mr-2"><v-icon>mdi-eye-off-outline</v-icon></v-list-item-icon>
+          <v-list-item-icon class="mr-2">
+            <v-icon>mdi-eye-off-outline</v-icon>
+          </v-list-item-icon>
           <v-list-item-content>
             <v-list-item-title>{{ $t('hide') }}</v-list-item-title>
           </v-list-item-content>
@@ -46,7 +48,9 @@
             :class="{'v-item--active v-list-item--active': header.value === fixedCol}"
             @click="$emit('fixCol');showMenu=false"
           >
-            <v-list-item-icon class="mr-2"><v-icon>mdi-format-horizontal-align-left</v-icon></v-list-item-icon>
+            <v-list-item-icon class="mr-2">
+              <v-icon>mdi-format-horizontal-align-left</v-icon>
+            </v-list-item-icon>
             <v-list-item-content>
               <v-list-item-title>{{ $t('fixLeft') }}</v-list-item-title>
             </v-list-item-content>
@@ -63,7 +67,9 @@
               class="pl-2"
               @click="toggleSort(false)"
             >
-              <v-list-item-icon class="mr-2"><v-icon>mdi-sort-ascending</v-icon></v-list-item-icon>
+              <v-list-item-icon class="mr-2">
+                <v-icon>mdi-sort-ascending</v-icon>
+              </v-list-item-icon>
               <v-list-item-content>
                 <v-list-item-title>{{ $t('sortAsc') }}</v-list-item-title>
               </v-list-item-content>
@@ -72,7 +78,9 @@
               class="pl-2"
               @click="toggleSort(true)"
             >
-              <v-list-item-icon class="mr-2"><v-icon>mdi-sort-descending</v-icon></v-list-item-icon>
+              <v-list-item-icon class="mr-2">
+                <v-icon>mdi-sort-descending</v-icon>
+              </v-list-item-icon>
               <v-list-item-content>
                 <v-list-item-title>{{ $t('sortDesc') }}</v-list-item-title>
               </v-list-item-content>
@@ -88,7 +96,9 @@
             :class="{'v-item--active v-list-item--active': showHelp}"
             @click="showHelp = !showHelp"
           >
-            <v-list-item-icon class="mr-2"><v-icon>mdi-information</v-icon></v-list-item-icon>
+            <v-list-item-icon class="mr-2">
+              <v-icon>mdi-information</v-icon>
+            </v-list-item-icon>
             <v-list-item-content>
               <v-list-item-title>{{ $t('showHelp') }}</v-list-item-title>
             </v-list-item-content>

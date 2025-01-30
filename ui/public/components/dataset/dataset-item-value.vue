@@ -113,8 +113,12 @@
             :title="$t('showFullValue')"
             @click="detailDialog = true;"
           >
-            <v-icon v-if="dense">mdi-loupe</v-icon>
-            <v-icon v-else>mdi-magnify-plus</v-icon>
+            <v-icon v-if="dense">
+              mdi-loupe
+            </v-icon>
+            <v-icon v-else>
+              mdi-magnify-plus
+            </v-icon>
           </v-btn>
         </template>
       </div>

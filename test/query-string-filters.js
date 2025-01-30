@@ -2,7 +2,7 @@ import { strict as assert } from 'node:assert'
 
 import * as workers from '../api/src/workers/index.js'
 
-describe('query modes', () => {
+describe('query modes', function () {
   it('Use the full power of ES query string syntax', async function () {
     // Load a few lines
     const ax = global.ax.dmeadus

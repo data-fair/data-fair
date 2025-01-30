@@ -101,7 +101,9 @@
           <v-list-item-action><v-icon>mdi-cog</v-icon></v-list-item-action>
           <v-list-item-content>
             <v-list-item-title>{{ $t('params') }}</v-list-item-title>
-            <v-list-item-subtitle v-if="!activeAccount.department">{{ $t('paramsSub') }}</v-list-item-subtitle>
+            <v-list-item-subtitle v-if="!activeAccount.department">
+              {{ $t('paramsSub') }}
+            </v-list-item-subtitle>
           </v-list-item-content>
         </v-list-item>
 

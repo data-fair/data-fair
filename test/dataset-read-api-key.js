@@ -1,8 +1,8 @@
 import * as testUtils from './resources/test-utils.js'
 import { strict as assert } from 'node:assert'
 
-describe('Dataset API keys', () => {
-  it('Use an api key defined on the dataset', async () => {
+describe('Dataset API keys', function () {
+  it('Use an api key defined on the dataset', async function () {
     const ax = global.ax.dmeadus
     let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     dataset = (await ax.patch(`/api/v1/datasets/${dataset.id}`, { readApiKey: { active: true, interval: 'P1W' } })).data

@@ -3,11 +3,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import normalize from '../api/src/misc/utils/dcat/normalize.js'
 import validate from '../api/src/misc/utils/dcat/validate.js'
-import cioExample from './resources/dcat/example-cio.json' with { type: 'json' }
-import semiceuExample from './resources/dcat/example-semiceu.json' with { type: 'json' }
 const odsRdfExample = fs.readFileSync(path.join(import.meta.dirname, '/resources/dcat/ods-export.rdf'), 'utf-8')
+const cioExample = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, './resources/dcat/example-cio.json'), 'utf8'))
+const semiceuExample = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, './resources/dcat/example-semiceu.json'), 'utf8'))
 
-describe('DCAT support', () => {
+describe('DCAT support', function () {
   it('Should preserve serialization of a valid example', async function () {
     const normalizedDcat = await normalize(cioExample)
     normalizedDcat['@context'] = cioExample['@context']

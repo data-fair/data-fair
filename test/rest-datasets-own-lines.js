@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as workers from '../api/src/workers/index.js'
 
-describe('REST datasets with owner specific lines', () => {
-  it('Create empty REST dataset with activated line ownership', async () => {
+describe('REST datasets with owner specific lines', function () {
+  it('Create empty REST dataset with activated line ownership', async function () {
     // the dataset is created in an organization
     let res = await global.ax.dmeadusOrg.post('/api/v1/datasets', {
       isRest: true,
@@ -110,7 +110,7 @@ describe('REST datasets with owner specific lines', () => {
     await assert.rejects(global.ax.cdurning2.get(`/api/v1/datasets/${dataset.id}/schema`), (err) => err.status === 403)
   })
 
-  it('Handle a dataset with line ownership and a primary key that includes _owner', async () => {
+  it('Handle a dataset with line ownership and a primary key that includes _owner', async function () {
     // the dataset is created in an organization
     let res = await global.ax.dmeadusOrg.post('/api/v1/datasets', {
       isRest: true,

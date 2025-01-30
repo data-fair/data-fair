@@ -5,8 +5,8 @@ import FormData from 'form-data'
 
 import * as workers from '../api/src/workers/index.js'
 
-describe('values aggs', () => {
-  it('Get values buckets', async () => {
+describe('values aggs', function () {
+  it('Get values buckets', async function () {
     const datasetData = fs.readFileSync('./resources/datasets/dataset2.csv')
     const form = new FormData()
     form.append('file', datasetData, 'dataset.csv')
@@ -126,7 +126,7 @@ describe('values aggs', () => {
     assert.equal(res.data[0], '2017-10-10T00:00:00.000Z')
   })
 
-  it('Get values buckets based on number values', async () => {
+  it('Get values buckets based on number values', async function () {
     const ax = global.ax.dmeadus
     const dataset = (await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -163,7 +163,7 @@ describe('values aggs', () => {
     })
   })
 
-  it('Get values buckets based on boolean values', async () => {
+  it('Get values buckets based on boolean values', async function () {
     const ax = global.ax.dmeadus
     const dataset = (await ax.post('/api/v1/datasets', {
       isRest: true,

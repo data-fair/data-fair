@@ -144,7 +144,9 @@
                   >
                     <v-list-item-content class="pa-0">
                       {{ $t('classNames.' +permClass) }}
-                      <template v-if="!(item.classes || []).includes(permClass)">({{ classOperations.filter(o => (item.operations || []).find(oid => o.id && o.id === oid)).map(o => o.title.toLowerCase().replace('.', '')).join(' - ') }})</template>
+                      <template v-if="!(item.classes || []).includes(permClass)">
+                        ({{ classOperations.filter(o => (item.operations || []).find(oid => o.id && o.id === oid)).map(o => o.title.toLowerCase().replace('.', '')).join(' - ') }})
+                      </template>
                     </v-list-item-content>
                   </v-list-item>
                 </template>

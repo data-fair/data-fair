@@ -1,4 +1,3 @@
-
 import { stringify as csvStrStream } from 'csv-stringify'
 import { stringify as csvStrSync } from 'csv-stringify/sync'
 import { Transform } from 'stream'

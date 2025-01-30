@@ -1,4 +1,3 @@
-
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import streamJsonParser from 'stream-json/Parser.js'
 import streamJsonPick from 'stream-json/filters/Pick.js'

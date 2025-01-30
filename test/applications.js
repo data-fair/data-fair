@@ -11,15 +11,15 @@ const sendAttachment = async (ax, appId, attachmentName) => {
   await ax.patch('/api/v1/applications/' + appId, { attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
 }
 
-describe('Applications', () => {
-  it('Get applications when not authenticated', async () => {
+describe('Applications', function () {
+  it('Get applications when not authenticated', async function () {
     const ax = global.ax.anonymous
     const res = await ax.get('/api/v1/applications')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 0)
   })
 
-  it('Access an unknown applicationId on proxy endpoint', async () => {
+  it('Access an unknown applicationId on proxy endpoint', async function () {
     const ax = global.ax.anonymous
     try {
       await ax.get('/app/unknownId')
@@ -29,7 +29,7 @@ describe('Applications', () => {
     }
   })
 
-  it('Post an application configuration, read it, update it and delete it', async () => {
+  it('Post an application configuration, read it, update it and delete it', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     assert.equal(res.status, 201)
@@ -54,7 +54,7 @@ describe('Applications', () => {
     assert.equal(res.data.count, 0)
   })
 
-  it('Manage the custom configuration part of the object', async () => {
+  it('Manage the custom configuration part of the object', async function () {
     const ax = global.ax.dmeadus
 
     const dataset = await testUtils.sendDataset('datasets/split.csv', ax)
@@ -82,7 +82,7 @@ describe('Applications', () => {
     assert.equal(res.data.datasets[0].title, 'changed title')
   })
 
-  it('Use an application through the application proxy', async () => {
+  it('Use an application through the application proxy', async function () {
     const ax = global.ax.dmeadus
     const adminAx = global.ax.alban
 
@@ -129,7 +129,7 @@ describe('Applications', () => {
     assert.equal(res.data.includes('<div>application embed</div>'), false)
   })
 
-  it('Read base app info of an application', async () => {
+  it('Read base app info of an application', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id
@@ -206,7 +206,7 @@ describe('Applications', () => {
     assert.equal(res.headers['content-type'], 'application/pdf')
   })
 
-  it('Sort applications by title', async () => {
+  it('Sort applications by title', async function () {
     const ax = global.ax.dmeadus
 
     await ax.post('/api/v1/applications', { title: 'aa', url: 'http://monapp1.com/' })
@@ -221,7 +221,7 @@ describe('Applications', () => {
     assert.deepEqual(res.data.results.map(d => d.title), ['bb', 'àb', 'àb', 'aa', '1a'])
   })
 
-  it('Upload a simple attachment on an application', async () => {
+  it('Upload a simple attachment on an application', async function () {
     const ax = global.ax.dmeadus
     let { data: app } = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
 

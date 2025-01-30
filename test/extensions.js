@@ -9,7 +9,7 @@ import dayjs from 'dayjs'
 import * as restDatasetsUtils from '../api/src/datasets/utils/rest.js'
 import * as workers from '../api/src/workers/index.js'
 
-describe('Extensions', () => {
+describe('Extensions', function () {
   it('Extend dataset using remote service', async function () {
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
@@ -253,7 +253,7 @@ describe('Extensions', () => {
 koumoul,82898347800011,47.687173,-2.748514,,,KOUMOUL`)
   })
 
-  it('Manage errors during extension', async () => {
+  it('Manage errors during extension', async function () {
     const ax = global.ax.dmeadus
 
     // Initial dataset with addresses
@@ -298,7 +298,7 @@ other,unknown address
     assert.equal(dataset.status, 'error')
   })
 
-  it('Manage empty queries', async () => {
+  it('Manage empty queries', async function () {
     const ax = global.ax.dmeadus
 
     // Initial dataset with addresses
@@ -329,7 +329,7 @@ empty,
     await workers.hook('finalizer')
   })
 
-  it('Delete extended file when removing extensions', async () => {
+  it('Delete extended file when removing extensions', async function () {
     const ax = global.ax.dmeadus
 
     // Initial dataset with addresses
@@ -382,7 +382,7 @@ koumoul,19 rue de la voie lactée saint avé
     }
   })
 
-  it('Do not add already present concept', async () => {
+  it('Do not add already present concept', async function () {
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
     let dataset = await testUtils.sendDataset('datasets/dataset-siret-extensions.csv', ax)
@@ -431,7 +431,7 @@ koumoul,19 rue de la voie lactée saint avé
     assert.ok(!extSiret['x-refersTo'])
   })
 
-  it('Extend a REST dataset', async () => {
+  it('Extend a REST dataset', async function () {
     const ax = global.ax.dmeadus
 
     const getExtensionNock = (result) => nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
@@ -530,7 +530,7 @@ koumoul,19 rue de la voie lactée saint avé
     assert.equal(res.data.results[0][extensionKey + '.lat'], undefined)
   })
 
-  it('Remove extensions when input properties got removed', async () => {
+  it('Remove extensions when input properties got removed', async function () {
     const ax = global.ax.dmeadus
 
     // Initial dataset with addresses
@@ -570,7 +570,7 @@ other,unknown address
     })
   })
 
-  it('Preserve extension when schema is overwritten at file upload ', async () => {
+  it('Preserve extension when schema is overwritten at file upload ', async function () {
     const ax = global.ax.dmeadus
 
     // Initial dataset with addresses

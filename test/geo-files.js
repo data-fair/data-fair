@@ -5,8 +5,8 @@ import config from 'config'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.js'
 
-describe('geo files support', () => {
-  it('Process uploaded geojson dataset', async () => {
+describe('geo files support', function () {
+  it('Process uploaded geojson dataset', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/geo/geojson-example.geojson')
     const form = new FormData()
@@ -55,7 +55,7 @@ describe('geo files support', () => {
     assert.ok(jsonWkt.results[0].geometry.startsWith('LINESTRING'))
   })
 
-  it('Upload geojson with CRS (projection)', async () => {
+  it('Upload geojson with CRS (projection)', async function () {
     const datasetFd = fs.readFileSync('./resources/geo/geojson-crs.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
@@ -74,7 +74,7 @@ describe('geo files support', () => {
     assert.ok(lines[0]._geopoint.startsWith('46.19'))
   })
 
-  it('Upload geojson dataset with some schema info', async () => {
+  it('Upload geojson dataset with some schema info', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/geo/geojson-example.geojson')
     const form = new FormData()
@@ -98,7 +98,7 @@ describe('geo files support', () => {
     await workers.hook('finalizer/' + dataset.id)
   })
 
-  it('Upload geojson dataset with some managed fixes', async () => {
+  it('Upload geojson dataset with some managed fixes', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/geo/geojson-broken-globalid.geojson')
     const form = new FormData()
@@ -115,7 +115,7 @@ describe('geo files support', () => {
     assert.equal(dataset.count, 2)
   })
 
-  it('Log error for geojson with broken feature', async () => {
+  it('Log error for geojson with broken feature', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/geo/geojson-broken.geojson')
     const form = new FormData()
@@ -138,7 +138,7 @@ describe('geo files support', () => {
     }
   })
 
-  it('Process uploaded shapefile dataset', async () => {
+  it('Process uploaded shapefile dataset', async function () {
     if (config.ogr2ogr.skip) {
       return console.log('Skip ogr2ogr test in this environment')
     }
@@ -161,7 +161,7 @@ describe('geo files support', () => {
     await workers.hook('finalizer/' + dataset.id)
   })
 
-  it('Process shapefile dataset where zip file has different name from contents', async () => {
+  it('Process shapefile dataset where zip file has different name from contents', async function () {
     if (config.ogr2ogr.skip) {
       return console.log('Skip ogr2ogr test in this environment')
     }
@@ -181,7 +181,7 @@ describe('geo files support', () => {
     await workers.hook('finalizer/' + dataset.id)
   })
 
-  it('Upload CSV file with WKT geometries', async () => {
+  it('Upload CSV file with WKT geometries', async function () {
     const ax = global.ax.dmeadus
     let dataset = await testUtils.sendDataset('geo/wkt.csv', ax)
     dataset.schema.find(p => p.key === 'geom')['x-refersTo'] = 'https://purl.org/geojson/vocab#geometry'
@@ -197,7 +197,7 @@ describe('geo files support', () => {
     assert.ok(wkt.startsWith('GEOMETRYCOLLECTION'))
   })
 
-  it('Process uploaded GPX dataset', async () => {
+  it('Process uploaded GPX dataset', async function () {
     if (config.ogr2ogr.skip) {
       return console.log('Skip ogr2ogr test in this environment')
     }

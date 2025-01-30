@@ -620,7 +620,7 @@ export default {
       if (dates[0]) temporal.start = dates[0]
       if (dates[1]) temporal.end = dates[1]
       this.$set(this.dataset, 'temporal', temporal)
-      this.patch({ temporal: temporal })
+      this.patch({ temporal })
     },
     formatTemporal (temporal) {
       if (!temporal || !temporal.start) return ''

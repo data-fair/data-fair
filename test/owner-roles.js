@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 
-describe('owner roles', () => {
-  it('user can do everything in his own account', async () => {
+describe('owner roles', function () {
+  it('user can do everything in his own account', async function () {
     const dataset = (await global.ax.dmeadus.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Danna Meadus')
     await global.ax.dmeadus.get(`/api/v1/datasets/${dataset.id}`)
@@ -17,7 +17,7 @@ describe('owner roles', () => {
     await global.ax.dmeadus.get(`/api/v1/catalogs/${catalog.id}`)
   })
 
-  it('organization admin can do everything', async () => {
+  it('organization admin can do everything', async function () {
     const dataset = (await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Fivechat')
     await global.ax.dmeadusOrg.get(`/api/v1/datasets/${dataset.id}`)
@@ -34,7 +34,7 @@ describe('owner roles', () => {
     await global.ax.dmeadusOrg.delete(`/api/v1/catalogs/${catalog.id}`)
   })
 
-  it('organization contrib has limited capabilities', async () => {
+  it('organization contrib has limited capabilities', async function () {
     // can create a dataset and use it, but not administrate it
     const dataset = (await global.ax.ngernier4Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Fivechat')
@@ -60,7 +60,7 @@ describe('owner roles', () => {
     }
   })
 
-  it('organization user has even more limited capabilities', async () => {
+  it('organization user has even more limited capabilities', async function () {
     await assert.rejects(global.ax.bhazeldean7Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' }), err => err.status === 403)
     const dataset = (await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.name, 'Fivechat')
@@ -81,7 +81,7 @@ describe('owner roles', () => {
     await assert.rejects(global.ax.bhazeldean7Org.post('/api/v1/catalogs', {}), err => err.status === 403)
   })
 
-  it('departments can be used to restrict contrib capabilities', async () => {
+  it('departments can be used to restrict contrib capabilities', async function () {
     // dataset is not attached to specific department at first
     const dataset = (await global.ax.dmeadusOrg.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.department, undefined)
@@ -151,7 +151,7 @@ describe('owner roles', () => {
     await assert.rejects(global.ax.icarlens9Org.patch(`/api/v1/datasets/${dataset.id}`, { description: 'desc' }), err => err.status === 403)
   })
 
-  it('department restriction is automatically applied', async () => {
+  it('department restriction is automatically applied', async function () {
     const dataset = (await global.ax.ddecruce5Org.post('/api/v1/datasets', { isRest: true, title: 'A dataset' })).data
     assert.equal(dataset.owner.department, 'dep1')
   })

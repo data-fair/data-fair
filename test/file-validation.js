@@ -38,8 +38,8 @@ const schema = [
   }
 ]
 
-describe('file datasets with validation rules', () => {
-  it('create a valid dataset with initial validation rules', async () => {
+describe('file datasets with validation rules', function () {
+  it('create a valid dataset with initial validation rules', async function () {
     // Create a valid dataset
     const form = new FormData()
     form.append('file', fs.readFileSync('./resources/datasets/dataset1.csv'), 'dataset1.csv')
@@ -50,7 +50,7 @@ describe('file datasets with validation rules', () => {
     assert.equal(dataset.count, 2)
   })
 
-  it('create an invalid dataset with initial validation rules', async () => {
+  it('create an invalid dataset with initial validation rules', async function () {
     // Create a valid dataset
     const form = new FormData()
     form.append('file', fs.readFileSync('./resources/datasets/dataset1-invalid.csv'), 'dataset1.csv')
@@ -63,7 +63,7 @@ describe('file datasets with validation rules', () => {
     })
   })
 
-  it('create a valid dataset then patch compatible validation rules', async () => {
+  it('create a valid dataset then patch compatible validation rules', async function () {
     // Create a valid dataset
     const form = new FormData()
     form.append('file', fs.readFileSync('./resources/datasets/dataset1.csv'), 'dataset1.csv')
@@ -77,7 +77,7 @@ describe('file datasets with validation rules', () => {
     assert.equal(dataset.status, 'finalized')
   })
 
-  it('create a valid dataset then patch incompatible validation rules', async () => {
+  it('create a valid dataset then patch incompatible validation rules', async function () {
     // Create a valid dataset
     const form = new FormData()
     form.append('file', fs.readFileSync('./resources/datasets/dataset1-invalid.csv'), 'dataset1.csv')

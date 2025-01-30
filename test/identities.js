@@ -4,8 +4,8 @@ import fs from 'fs-extra'
 import path from 'node:path'
 import config from 'config'
 
-describe('identities', () => {
-  it('Check secret key', async () => {
+describe('identities', function () {
+  it('Check secret key', async function () {
     const ax = global.ax.anonymous
     try {
       await ax.post('/api/v1/identities/user/test', { name: 'Another Name' }, { params: { key: 'bad key' } })
@@ -15,7 +15,7 @@ describe('identities', () => {
     }
   })
 
-  it('Propagate name change to a dataset', async () => {
+  it('Propagate name change to a dataset', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     assert.equal(dataset.owner.name, 'Danna Meadus')
@@ -25,7 +25,7 @@ describe('identities', () => {
     assert.equal(res.data.owner.name, 'Another Name')
   })
 
-  it('Delete an identity completely', async () => {
+  it('Delete an identity completely', async function () {
     const ax = global.ax.icarlens9
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     assert.equal(dataset.owner.name, 'Issie Carlens')

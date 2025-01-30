@@ -1,5 +1,4 @@
 import config from '#config'
-import * as metrics from './src/misc/utils/metrics.js'
 import * as app from './src/app.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 

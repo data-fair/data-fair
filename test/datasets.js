@@ -8,28 +8,30 @@ import config from 'config'
 import * as workers from '../api/src/workers/index.js'
 import { validate } from 'tableschema'
 
+const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
+
 let notifier
-describe('datasets', () => {
-  before('prepare notifier', async () => {
+describe('datasets', function () {
+  before('prepare notifier', async function () {
     notifier = (await import('./resources/app-notifier.js')).default
     await eventPromise(notifier, 'listening')
   })
 
-  it('Get datasets when not authenticated', async () => {
+  it('Get datasets when not authenticated', async function () {
     const ax = global.ax.anonymous
     const res = await ax.get('/api/v1/datasets')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 0)
   })
 
-  it('Get datasets when authenticated', async () => {
+  it('Get datasets when authenticated', async function () {
     const ax = await global.ax.alone
     const res = await ax.get('/api/v1/datasets')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 0)
   })
 
-  it('Search and apply some params (facets, raw, count, select, etc)', async () => {
+  it('Search and apply some params (facets, raw, count, select, etc)', async function () {
     const ax = global.ax.dmeadus
     const axOrg = global.ax.dmeadusOrg
 
@@ -87,16 +89,14 @@ describe('datasets', () => {
     assert.deepEqual(res.data.results[0].owner, undefined)
   })
 
-  const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
-
-  it('Failure to upload dataset exceeding limit', async () => {
+  it('Failure to upload dataset exceeding limit', async function () {
     const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', Buffer.alloc(160000), 'largedataset.csv')
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 413)
   })
 
-  it('Failure to upload multiple datasets exceeding limit', async () => {
+  it('Failure to upload multiple datasets exceeding limit', async function () {
     const ax = global.ax.dmeadus
     let form = new FormData()
     form.append('file', Buffer.alloc(110000), 'largedataset1.csv')
@@ -108,7 +108,7 @@ describe('datasets', () => {
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 429)
   })
 
-  it('Upload new dataset in user zone', async () => {
+  it('Upload new dataset in user zone', async function () {
     const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
@@ -127,7 +127,7 @@ describe('datasets', () => {
     assert.equal(dataset.count, 2)
   })
 
-  it('Upload new dataset in user zone with title', async () => {
+  it('Upload new dataset in user zone with title', async function () {
     const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
@@ -139,7 +139,7 @@ describe('datasets', () => {
     await workers.hook('finalizer/' + res.data.id)
   })
 
-  it('Upload new dataset in organization zone', async () => {
+  it('Upload new dataset in organization zone', async function () {
     const ax = global.ax.dmeadusOrg
     const form = new FormData()
     form.append('file', datasetFd, 'dataset2.csv')
@@ -150,7 +150,7 @@ describe('datasets', () => {
     await workers.hook('finalizer/' + res.data.id)
   })
 
-  it('Upload new dataset in organization zone with explicit department', async () => {
+  it('Upload new dataset in organization zone with explicit department', async function () {
     const ax = global.ax.dmeadusOrg
     const form = new FormData()
     form.append('file', datasetFd, 'dataset2.csv')
@@ -163,7 +163,7 @@ describe('datasets', () => {
     await workers.hook('finalizer/' + res.data.id)
   })
 
-  it('Uploading same file twice should increment slug', async () => {
+  it('Uploading same file twice should increment slug', async function () {
     const ax = global.ax.dmeadusOrg
     for (const i of [1, 2, 3]) {
       const form = new FormData()
@@ -175,7 +175,7 @@ describe('datasets', () => {
     }
   })
 
-  it('Upload new dataset with pre-filled attributes', async () => {
+  it('Upload new dataset with pre-filled attributes', async function () {
     const ax = global.ax.dmeadusOrg
     const form = new FormData()
     form.append('title', 'A dataset with pre-filled title')
@@ -186,7 +186,7 @@ describe('datasets', () => {
     await workers.hook('finalizer/' + res.data.id)
   })
 
-  it('Upload new dataset with JSON body', async () => {
+  it('Upload new dataset with JSON body', async function () {
     const ax = global.ax.dmeadusOrg
     const form = new FormData()
     form.append('body', JSON.stringify({ title: 'A dataset with both file and JSON body', publications: [{ catalog: 'test', status: 'waiting' }] }))
@@ -196,7 +196,7 @@ describe('datasets', () => {
     await workers.hook('finalizer/' + res.data.id)
   })
 
-  it('Upload new dataset with defined id', async () => {
+  it('Upload new dataset with defined id', async function () {
     const ax = global.ax.dmeadus
     let form = new FormData()
     form.append('title', 'my title')
@@ -214,7 +214,7 @@ describe('datasets', () => {
     await workers.hook('finalizer/my-dataset-id')
   })
 
-  it('Reject some not URL friendly id', async () => {
+  it('Reject some not URL friendly id', async function () {
     const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('title', 'my title')
@@ -222,7 +222,7 @@ describe('datasets', () => {
     await assert.rejects(ax.post('/api/v1/datasets/my dataset id', form, { headers: testUtils.formHeaders(form) }), err => err.status === 400)
   })
 
-  it('Reject some other pre-filled attributes', async () => {
+  it('Reject some other pre-filled attributes', async function () {
     const ax = global.ax.dmeadusOrg
     const form = new FormData()
     form.append('id', 'pre-filling id is not possible')
@@ -230,13 +230,13 @@ describe('datasets', () => {
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 400)
   })
 
-  it('Fail to upload new dataset when not authenticated', async () => {
+  it('Fail to upload new dataset when not authenticated', async function () {
     const ax = global.ax.anonymous
     const form = new FormData()
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 401)
   })
 
-  it('Upload dataset - full test with webhooks', async () => {
+  it('Upload dataset - full test with webhooks', async function () {
     const wsCli = new WebSocket(config.publicUrl)
     const ax = global.ax.cdurning2
     await ax.put('/api/v1/settings/user/cdurning2', { webhooks: [{ title: 'test', events: ['dataset-finalize-end'], target: { type: 'http', params: { url: 'http://localhost:5900' } } }] })
@@ -281,7 +281,7 @@ describe('datasets', () => {
     const schema = res.data.schema
     schema.find(field => field.key === 'lat')['x-refersTo'] = 'http://schema.org/latitude'
     schema.find(field => field.key === 'lon')['x-refersTo'] = 'http://schema.org/longitude'
-    res = await ax.patch(webhook.href, { schema: schema })
+    res = await ax.patch(webhook.href, { schema })
     assert.ok(res.data.dataUpdatedAt > res.data.createdAt)
     assert.ok(res.data.updatedAt > res.data.dataUpdatedAt)
 
@@ -296,7 +296,7 @@ describe('datasets', () => {
     await assert.rejects(ax.get('/api/v1/datasets/' + datasetId), err => err.status === 404)
   })
 
-  it('Upload dataset and update with different file name', async () => {
+  it('Upload dataset and update with different file name', async function () {
     const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset-name.csv')
@@ -321,7 +321,7 @@ describe('datasets', () => {
     assert.deepEqual(await fs.readdir('../data/test/user/dmeadus0/datasets/dataset-name/'), ['dataset-name2.csv'])
   })
 
-  it('Upload new dataset and detect types', async () => {
+  it('Upload new dataset and detect types', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset-types.csv', ax)
     assert.equal(dataset.schema[0].key, 'string1')
@@ -349,7 +349,7 @@ describe('datasets', () => {
     assert.equal(dataset.schema[7].type, 'number')
   })
 
-  it('Upload dataset and update it\'s data and schema', async () => {
+  it('Upload dataset and update it\'s data and schema', async function () {
     const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset-name.csv')
@@ -373,7 +373,7 @@ describe('datasets', () => {
     assert.equal(res.data.schema.filter(f => f.ignoreDetection).length, 6)
   })
 
-  it('Sort datasets by title', async () => {
+  it('Sort datasets by title', async function () {
     const ax = global.ax.dmeadus
 
     for (const title of ['aa', 'bb', 'àb', ' àb', '1a']) {

@@ -2,7 +2,7 @@ import { strict as assert } from 'node:assert'
 
 import * as workers from '../api/src/workers/index.js'
 
-describe('Wildcard fields', () => {
+describe('Wildcard fields', function () {
   const items = {
     t1: 'prefix',
     t2: 'prefixsuite',

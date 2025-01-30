@@ -5,8 +5,8 @@ import fs from 'node:fs'
 import * as workers from '../api/src/workers/index.js'
 import FormData from 'form-data'
 
-describe('Attachments', () => {
-  it('Process newly uploaded attachments alone', async () => {
+describe('Attachments', function () {
+  it('Process newly uploaded attachments alone', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/datasets/files.zip')
     const form = new FormData()
@@ -37,7 +37,7 @@ describe('Attachments', () => {
     assert.equal(res.status, 200)
   })
 
-  it('Process newly uploaded attachments along with data file', async () => {
+  it('Process newly uploaded attachments along with data file', async function () {
     const ax = global.ax.cdurning2
 
     // Send dataset with a CSV and attachments in an archive
@@ -64,7 +64,7 @@ describe('Attachments', () => {
     assert.equal(odtItem['_file.content'], 'This is a test libreoffice file.')
   })
 
-  it('Keep attachments when updating data', async () => {
+  it('Keep attachments when updating data', async function () {
     console.log(1)
     const ax = global.ax.cdurning2
 
@@ -87,7 +87,7 @@ describe('Attachments', () => {
     assert.equal(lines.results[0]['_file.content'], 'This is a test libreoffice file.')
   })
 
-  it('Update attachments with data', async () => {
+  it('Update attachments with data', async function () {
     const ax = global.ax.cdurning2
 
     // Send dataset with a CSV and attachments in an archive
@@ -110,7 +110,7 @@ describe('Attachments', () => {
     assert.equal(lines.results[0]['_file.content'], 'This is another test libreoffice file.')
   })
 
-  it('Update attachments only then data only', async () => {
+  it('Update attachments only then data only', async function () {
     const ax = global.ax.cdurning2
 
     // Send dataset with a CSV and attachments in an archive
@@ -142,7 +142,7 @@ describe('Attachments', () => {
     assert.equal(lines.results[0]['_file.content'], 'This is another test libreoffice file.')
   })
 
-  it('Detect wrong attachment path', async () => {
+  it('Detect wrong attachment path', async function () {
     const ax = global.ax.cdurning2
 
     // Send dataset with a CSV and attachments in an archive
@@ -160,7 +160,7 @@ describe('Attachments', () => {
     })
   })
 
-  it('Detect missing attachment paths', async () => {
+  it('Detect missing attachment paths', async function () {
     const ax = global.ax.cdurning2
 
     // Send dataset with a CSV and attachments in an archive

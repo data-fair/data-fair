@@ -1,6 +1,8 @@
 <template lang="html">
   <div>
-    <v-btn to="/_dev/update-dataset">back</v-btn>
+    <v-btn to="/_dev/update-dataset">
+      back
+    </v-btn>
     <v-iframe
       src="http://localhost:5600/data-fair/embed/workflow/update-dataset"
       :query-params-extra="{

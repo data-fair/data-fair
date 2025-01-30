@@ -3,7 +3,7 @@ import * as testUtils from './resources/test-utils.js'
 import config from 'config'
 import { aliasName, extractError } from '../api/src/datasets/es/commons.js'
 
-describe('Elasticsearch errors management', () => {
+describe('Elasticsearch errors management', function () {
   it('Extract simple message from a full ES error', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)

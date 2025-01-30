@@ -1,4 +1,3 @@
-
 // the context defines the referenced vocabularies and their short aliases
 // when using jsonld.compact these short aliases are applied
 // inspired by https://resources.data.gov/schemas/dcat-us/v1.1/schema/catalog.jsonld

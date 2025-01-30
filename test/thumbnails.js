@@ -7,8 +7,8 @@ import FormData from 'form-data'
 
 import * as workers from '../api/src/workers/index.js'
 
-describe('thumbnails', () => {
-  it(' should create thumbnails for datasets with illustrations', async () => {
+describe('thumbnails', function () {
+  it(' should create thumbnails for datasets with illustrations', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets/thumbnails1', {
       isRest: true,
@@ -46,7 +46,7 @@ describe('thumbnails', () => {
     nockScope.done()
   })
 
-  it('should create thumbnail for the image metadata of a dataset', async () => {
+  it('should create thumbnail for the image metadata of a dataset', async function () {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets/thumbnail', {
       isRest: true,
@@ -65,7 +65,7 @@ describe('thumbnails', () => {
   })
 
   // keep this test skipped most of the time as it depends on an outside service
-  it.skip('should provide a redirect for an unsupported image format', async () => {
+  it.skip('should provide a redirect for an unsupported image format', async function () {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets/thumbnail', {
       isRest: true,
@@ -79,7 +79,7 @@ describe('thumbnails', () => {
     assert.equal(res.headers['content-type'], 'image/jpg')
   })
 
-  it('should create thumbnails from attachments', async () => {
+  it('should create thumbnails from attachments', async function () {
     const ax = global.ax.dmeadusOrg
     const form = new FormData()
     form.append('attachmentsAsImage', 'true')

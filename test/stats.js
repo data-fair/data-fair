@@ -4,8 +4,8 @@ import fs from 'node:fs'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.js'
 
-describe('stats', () => {
-  it('Get simple stats', async () => {
+describe('stats', function () {
+  it('Get simple stats', async function () {
     const ax = global.ax.dmeadus
     const datasetData = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()

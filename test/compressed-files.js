@@ -5,8 +5,8 @@ import path from 'node:path'
 import * as workers from '../api/src/workers/index.js'
 import FormData from 'form-data'
 
-describe('Archive conversions', () => {
-  it('should extract a zipped csv file', async () => {
+describe('Archive conversions', function () {
+  it('should extract a zipped csv file', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.zip', ax)
     assert.equal(dataset.originalFile.name, 'dataset1.zip')
@@ -15,7 +15,7 @@ describe('Archive conversions', () => {
     assert.equal(dataset.schema[0].key, 'id')
   })
 
-  it('should extract a zipped geojson file', async () => {
+  it('should extract a zipped geojson file', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('geo/geojson-example.zip', ax)
     assert.equal(dataset.originalFile.name, 'geojson-example.zip')
@@ -24,7 +24,7 @@ describe('Archive conversions', () => {
     assert.equal(dataset.schema[1].key, 'prop1')
   })
 
-  it('should extract a gzipped csv file', async () => {
+  it('should extract a gzipped csv file', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv.gz', ax)
     assert.equal(dataset.originalFile.name, 'dataset1.csv.gz')
@@ -33,7 +33,7 @@ describe('Archive conversions', () => {
     assert.equal(dataset.schema[0].key, 'id')
   })
 
-  it('should extract a gzipped file on PUT and replace it', async () => {
+  it('should extract a gzipped file on PUT and replace it', async function () {
     const ax = global.ax.dmeadus
     const gzippedContent = fs.readFileSync(path.resolve('./resources/datasets/dataset1.csv.gz'))
     const form = new FormData()
@@ -57,7 +57,7 @@ describe('Archive conversions', () => {
     assert.ok(dataset.bbox)
   })
 
-  it('should extract a gzipped geojson file', async () => {
+  it('should extract a gzipped geojson file', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('geo/geojson-example.geojson.gz', ax)
     assert.equal(dataset.originalFile.name, 'geojson-example.geojson.gz')

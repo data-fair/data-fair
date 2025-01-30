@@ -1,6 +1,5 @@
 import config from 'config'
-import status from './status.json' with {type: 'json'}
-import pJson from '../../package.json' with {type: 'json'}
+import status from './status.js'
 import dataset from './dataset.js'
 import datasetPatch from './dataset-patch.js'
 import datasetPost from './dataset-post.js'
@@ -11,6 +10,7 @@ import catalogPatch from './catalog-patch.js'
 import application from './application.js'
 import applicationPatch from './application-patch.js'
 import * as utils from './utils.js'
+import pJson from './p-json.js'
 
 const servers = [{
   // @ts-ignore

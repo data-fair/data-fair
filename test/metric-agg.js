@@ -2,7 +2,7 @@ import { strict as assert } from 'node:assert'
 
 import * as workers from '../api/src/workers/index.js'
 
-describe('metric agg', () => {
+describe('metric agg', function () {
   beforeEach(async function () {
     // Load a few lines
     const ax = global.ax.dmeadus

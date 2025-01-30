@@ -1,4 +1,3 @@
-
 import { customAlphabet } from 'nanoid'
 
 // uppercase cannot be used in ES index names

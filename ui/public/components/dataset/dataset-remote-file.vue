@@ -35,7 +35,9 @@
           @click="forceUpdate"
         >
           {{ $t('forceUpdate') }}
-          <v-icon right>mdi-refresh</v-icon>
+          <v-icon right>
+            mdi-refresh
+          </v-icon>
         </v-btn>
       </v-row>
       <v-row class="ma-0 mt-2">

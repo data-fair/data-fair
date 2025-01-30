@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 import validateDcat from '../api/src/misc/utils/dcat/validate.js'
 
-describe('publication sites', () => {
-  it('should fail to publish dataset on unknown site', async () => {
+describe('publication sites', function () {
+  it('should fail to publish dataset on unknown site', async function () {
     const ax = global.ax.dmeadusOrg
 
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
@@ -10,7 +10,7 @@ describe('publication sites', () => {
       err => err.status === 404)
   })
 
-  it('should fail to publish application on unknown site', async () => {
+  it('should fail to publish application on unknown site', async function () {
     const ax = global.ax.dmeadusOrg
 
     const app = (await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })).data
@@ -18,7 +18,7 @@ describe('publication sites', () => {
       err => err.status === 404)
   })
 
-  it('should fail to request publication of dataset on unknown site', async () => {
+  it('should fail to request publication of dataset on unknown site', async function () {
     const ax = global.ax.dmeadusOrg
 
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
@@ -26,7 +26,7 @@ describe('publication sites', () => {
       err => err.status === 404)
   })
 
-  it('should publish dataset on a org site', async () => {
+  it('should publish dataset on a org site', async function () {
     const ax = global.ax.dmeadusOrg
 
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
@@ -37,7 +37,7 @@ describe('publication sites', () => {
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] })
   })
 
-  it('should publish dataset on a org site and access it from re-exposition of data-fair', async () => {
+  it('should publish dataset on a org site and access it from re-exposition of data-fair', async function () {
     const ax = global.ax.dmeadusOrg
 
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
@@ -85,7 +85,7 @@ describe('publication sites', () => {
     assert.ok(dcatCatalog.dataset?.length, 1)
   })
 
-  it('should publish application on a org site', async () => {
+  it('should publish application on a org site', async function () {
     const ax = global.ax.dmeadusOrg
 
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
@@ -96,7 +96,7 @@ describe('publication sites', () => {
     await ax.patch(`/api/v1/applications/${app.id}`, { publicationSites: ['data-fair-portals:portal1'] })
   })
 
-  it('department admin should fail to publish dataset on org site', async () => {
+  it('department admin should fail to publish dataset on org site', async function () {
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
     await global.ax.dmeadusOrg.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
 
@@ -105,7 +105,7 @@ describe('publication sites', () => {
       err => err.status === 403)
   })
 
-  it('department admin can request publishing dataset on org site', async () => {
+  it('department admin can request publishing dataset on org site', async function () {
     let notif
     global.events.on('notification', (n) => { notif = n })
 
@@ -121,7 +121,7 @@ describe('publication sites', () => {
     assert.equal(notif.sender.department, undefined)
   })
 
-  it('department admin can publish dataset on department site', async () => {
+  it('department admin can publish dataset on department site', async function () {
     await global.ax.dmeadusOrg.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', { type: 'data-fair-portals', id: 'portalorg', url: 'http://portal.com' })
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
     await global.ax.hlalonde3Org.post('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites', portal)
@@ -144,7 +144,7 @@ describe('publication sites', () => {
     await global.ax.hlalonde3Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] })
   })
 
-  it('department contrib cannot publish dataset on department site', async () => {
+  it('department contrib cannot publish dataset on department site', async function () {
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
     await global.ax.hlalonde3Org.post('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites', portal)
 
@@ -153,7 +153,7 @@ describe('publication sites', () => {
       err => err.status === 403)
   })
 
-  it('department contrib can request publishing dataset on department site', async () => {
+  it('department contrib can request publishing dataset on department site', async function () {
     let notif
     global.events.on('notification', (n) => { notif = n })
 
@@ -169,7 +169,7 @@ describe('publication sites', () => {
     assert.equal(notif.sender.department, 'dep1')
   })
 
-  it('contrib can publish on a "staging" publication site', async () => {
+  it('contrib can publish on a "staging" publication site', async function () {
     const portalProd = { type: 'data-fair-portals', id: 'portal-staging', url: 'http://portal.com', settings: { staging: true } }
     await global.ax.dmeadusOrg.post('/api/v1/settings/organization/KWqAGZ4mG:dep1/publication-sites', portalProd)
     const portalStaging = { type: 'data-fair-portals', id: 'portal-prod', url: 'http://portal.com' }
