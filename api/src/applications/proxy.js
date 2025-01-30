@@ -1,7 +1,7 @@
 import express from 'express'
 import config from '#config'
 import mongo from '#mongo'
-import fs, { readFileSync } from 'fs'
+import fs from 'fs'
 import path from 'path'
 import https from 'https'
 import http from 'http'
@@ -16,9 +16,6 @@ import * as serviceWorkers from '../misc/utils/service-workers.js'
 import { refreshConfigDatasetsRefs } from './utils.js'
 import Debug from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
-
-const vIframePJson = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../../node_modules/@koumoul/v-iframe/package.json'), 'utf8'))
-const iFrameResizerPJson = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../../node_modules/iframe-resizer/package.json'), 'utf8'))
 
 const debugIframeRedirect = Debug('iframe-redirect')
 
@@ -353,7 +350,7 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setResource, async
         tagName: 'script',
         attrs: [
           { name: 'type', value: 'text/javascript' },
-          { name: 'src', value: `https://cdn.jsdelivr.net/npm/@koumoul/v-iframe@${vIframePJson.version}/content-window.min.js` }
+          { name: 'src', value: 'https://cdn.jsdelivr.net/npm/@koumoul/v-iframe@1/content-window.min.js' }
         ],
         parentNode: body
       })
@@ -366,7 +363,7 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setResource, async
         tagName: 'script',
         attrs: [
           { name: 'type', value: 'text/javascript' },
-          { name: 'src', value: `https://cdn.jsdelivr.net/npm/iframe-resizer@${iFrameResizerPJson.version}/js/iframeResizer.contentWindow.min.js` }
+          { name: 'src', value: 'https://cdn.jsdelivr.net/npm/iframe-resizer@$4/js/iframeResizer.contentWindow.min.js' }
         ]
       })
     }
