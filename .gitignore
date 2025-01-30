@@ -11,7 +11,8 @@ node_modules
 /ui/nuxt-dist
 /ui/src/assets/css/
 /ui/src/assets/fonts/
-/doc-dist
+/doc/dist
+/doc/.nuxt
 /doc/static/install/*/data
 .cache-require-paths.json
 /api/config/local-*
