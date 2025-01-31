@@ -1,3 +1,4 @@
+import { resolve } from 'node:path'
 import express from 'express'
 import config from '#config'
 import mongo from '#mongo'
@@ -219,7 +220,7 @@ export const run = async () => {
 
   await locks.start(db)
   if (config.mode.includes('worker')) {
-    await upgradeScripts(db, locks)
+    await upgradeScripts(db, locks, resolve(import.meta.dirname, '../..'))
   }
 
   app.set('es', await esUtils.init())
