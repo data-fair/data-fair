@@ -7,13 +7,15 @@ import en from 'vuetify/es5/locale/en.js'
 
 let config = clone(_config)
 
+const nuxtDir = process.env.NUXT_DIR || ''
+
 config.basePath = new URL(config.publicUrl + '/').pathname
 
 const isBuilding = process.argv[2] === 'build'
 
 if (process.env.NODE_ENV === 'production') {
   if (isBuilding) config = nuxtConfigInject.prepare(config)
-  else nuxtConfigInject.replace(config, ['nuxt-dist/**/*', 'public/static/**/*'])
+  else nuxtConfigInject.replace(config, [nuxtDir + 'nuxt-dist/**/*', nuxtDir + 'public/static/**/*'])
 }
 
 let vuetifyOptions = {}
@@ -42,7 +44,7 @@ const nuxtConfig = {
   ssr: false,
   components: true,
   srcDir: 'public/',
-  buildDir: 'nuxt-dist',
+  buildDir: nuxtDir + 'nuxt-dist',
   build: {
     // always the same url to fetch static resource, even in multi-domain mode
     publicPath: config.publicUrl + '/_nuxt/',

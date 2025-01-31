@@ -34,12 +34,12 @@ export default async () => {
     // no UI during tests
     return { trackEmbed, render: (req, res, next) => next() }
   } else {
+    process.env.NUXT_DIR = resolve(import.meta.dirname, '../../ui') + '/'
     const { Nuxt } = await import('nuxt-start')
     const nuxtConfig = clone((await import('@data-fair/data-fair-ui/nuxt.config.js')).default)
 
     // Prepare nuxt for rendering and serving UI
     nuxtConfig.dev = false
-    nuxtConfig.buildDir = resolve(import.meta.dirname, '../../ui/nuxt-dist')
     const nuxt = new Nuxt(nuxtConfig)
     return {
       trackEmbed,
