@@ -1,3 +1,4 @@
+import { resolve } from 'node:path'
 import config from '#config'
 import mongo from '#mongo'
 import clone from '@data-fair/lib-utils/clone.js'
@@ -34,10 +35,11 @@ export default async () => {
     return { trackEmbed, render: (req, res, next) => next() }
   } else {
     const { Nuxt } = await import('nuxt-start')
-    const nuxtConfig = clone((await import('../../ui/nuxt.config.js')).default)
+    const nuxtConfig = clone((await import('@data-fair/data-fair-ui/nuxt.config.js')).default)
 
     // Prepare nuxt for rendering and serving UI
     nuxtConfig.dev = false
+    nuxtConfig.buildDir = resolve(import.meta.dirname, '../../ui/nuxt-dist')
     const nuxt = new Nuxt(nuxtConfig)
     return {
       trackEmbed,

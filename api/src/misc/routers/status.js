@@ -31,7 +31,7 @@ async function jwksStatus (req) {
 
 async function nuxtStatus (req) {
   if (process.env.NODE_ENV === 'test') return
-  const nuxtConfig = (await import('../../../nuxt.config.js')).default
+  const nuxtConfig = (await import('@data-fair/data-fair-ui/nuxt.config.js')).default
   const dir = nuxtConfig.buildDir || '.nuxt'
   await fs.writeFile(`${dir}/check-access.txt`, 'ok')
   if (req.app.get('nuxt')) await req.app.get('nuxt').renderRoute('/')
