@@ -37,7 +37,7 @@ if (process.env.NODE_ENV !== 'production' || isBuilding) {
   }
 }
 
-module.exports = {
+export default {
   telemetry: false,
   ssr: false,
   components: true,

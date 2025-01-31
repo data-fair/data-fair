@@ -103,7 +103,7 @@ FROM nativedeps AS main
 COPY --from=api-installer /app/node_modules /app/node_modules
 COPY --from=api-installer /app/api/node_modules /app/api/node_modules
 COPY --from=builder /app/ui/nuxt-dist /app/ui/nuxt-dist
-ADD ui/nuxt.config.cjs ui/nuxt.config.cjs
+ADD ui/nuxt.config.js ui/nuxt.config.js
 ADD ui/public/static ui/public/static
 ADD /api api
 ADD /shared shared

@@ -34,7 +34,7 @@ export default async () => {
     return { trackEmbed, render: (req, res, next) => next() }
   } else {
     const { Nuxt } = await import('nuxt-start')
-    const nuxtConfig = clone((await import('../../ui/nuxt.config.cjs')).default)
+    const nuxtConfig = clone((await import('../../ui/nuxt.config.js')).default)
 
     // Prepare nuxt for rendering and serving UI
     nuxtConfig.dev = false
