@@ -2,8 +2,8 @@ import { URL } from 'url'
 import _config from '@data-fair/data-fair-api/src/config.ts'
 import clone from '@data-fair/lib-utils/clone.js'
 import nuxtConfigInject from '@koumoul/nuxt-config-inject'
-import fr from 'vuetify/es5/locale/fr'
-import en from 'vuetify/es5/locale/en'
+import fr from 'vuetify/es5/locale/fr.js'
+import en from 'vuetify/es5/locale/en.js'
 
 let config = clone(_config)
 
