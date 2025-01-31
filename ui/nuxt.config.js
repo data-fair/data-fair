@@ -37,7 +37,7 @@ if (process.env.NODE_ENV !== 'production' || isBuilding) {
   }
 }
 
-export default {
+const nuxtConfig = {
   telemetry: false,
   ssr: false,
   components: true,
@@ -152,9 +152,11 @@ export default {
 }
 
 if (config.theme.cssUrl) {
-  module.exports.head.link.push({ rel: 'stylesheet', href: config.theme.cssUrl })
+  nuxtConfig.head.link.push({ rel: 'stylesheet', href: config.theme.cssUrl })
 }
 
 if (config.theme.cssText) {
-  module.exports.head.style.push({ type: 'text/css', cssText: config.theme.cssText })
+  nuxtConfig.head.style.push({ type: 'text/css', cssText: config.theme.cssText })
 }
+
+export default nuxtConfig
