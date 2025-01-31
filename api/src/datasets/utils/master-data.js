@@ -4,7 +4,7 @@ import mimeTypeStream from 'mime-type-stream'
 import { flatten } from 'flat'
 import * as virtualDatasetsUtils from './virtual.js'
 import batchStream from '../../misc/utils/batch-stream.js'
-import * as esUtils from '../es/index.js'
+import * as esUtils from '../es/index.ts'
 import pump from '../../misc/utils/pipe.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 

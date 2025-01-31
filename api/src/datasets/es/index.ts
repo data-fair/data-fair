@@ -1,5 +1,5 @@
 import config from '#config'
-import elasticsearch from '@elastic/elasticsearch'
+import elasticsearch, { type ClientOptions } from '@elastic/elasticsearch'
 
 export * from './manage-indices.js'
 export * from './commons.js'
@@ -21,15 +21,15 @@ export const init = async () => {
     node = config.elasticsearch.host
     if (!node.startsWith('http')) node = 'http://' + node
   }
-  const options = {
+  const options: ClientOptions = {
     node,
     auth: config.elasticsearch.auth,
     requestTimeout: 240000, // same as timeout in bulk indexing requests
     ...config.elasticsearch.options
   }
   if (config.elasticsearch.ca) {
-    options.ssl = options.ssl ?? {} // note, in v8 this becomes "tls"
-    options.ssl.ca = config.elasticsearch.ca
+    options.tls = options.tls ?? {} // note, in v8 this becomes "tls"
+    options.tls.ca = config.elasticsearch.ca
   }
   const client = new elasticsearch.Client(options)
   try {

@@ -107,7 +107,7 @@ before('init globals', async function () {
   await mongo.init()
   global.db = mongo.db
   global.mongoClient = mongo.client
-  global.es = await (await import('../api/src/datasets/es/index.js')).init()
+  global.es = await (await import('../api/src/datasets/es/index.ts')).init()
 
   global.ax = {}
   global.ax.builder = async (email, org, opts = {}) => {

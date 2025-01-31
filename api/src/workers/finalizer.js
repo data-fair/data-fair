@@ -1,6 +1,6 @@
 // Finalize dataset for publication
 import config from '#config'
-import * as esUtils from '../datasets/es/index.js'
+import * as esUtils from '../datasets/es/index.ts'
 import * as geoUtils from '../datasets/utils/geo.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetService from '../datasets/service.js'

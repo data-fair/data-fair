@@ -5,7 +5,7 @@ import nock from 'nock'
 import FormData from 'form-data'
 import config from 'config'
 import * as workers from '../api/src/workers/index.js'
-import * as esUtils from '../api/src/datasets/es/index.js'
+import * as esUtils from '../api/src/datasets/es/index.ts'
 
 // Prepare mock for outgoing HTTP requests
 nock('http://test-catalog.com').persist()

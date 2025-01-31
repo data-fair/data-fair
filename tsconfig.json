@@ -8,8 +8,7 @@
     "strict": true,
     "allowJs": true,
     "checkJs": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true
+    "skipLibCheck": true
   },
-  "exclude": ["node_modules", "types", "public", "nuxt-dist", "data", ".nuxt", "upgrade", "test"]
+  "exclude": ["node_modules", "types", "public", "nuxt-dist", "data", ".nuxt", "upgrade"]
 }
