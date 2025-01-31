@@ -2,7 +2,7 @@ import { marked } from 'marked'
 import truncateMiddle from 'truncate-middle'
 import truncateHTML from 'truncate-html'
 import memoize from 'memoizee'
-import sanitizeHtml from '../../../../shared/sanitize-html.js'
+import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 
 const prepare = (key, updatedAt, html, truncate, text) => {
   if (html) text = marked.parse(text).trim()

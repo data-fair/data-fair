@@ -10,10 +10,13 @@
     "analyze": "NODE_CONFIG_DIR=../api/config/ nuxt build --analyze"
   },
   "dependencies": {
+    "@koumoul/nuxt-config-inject": "^0.4.12",
+    "vuetify": "^2.7.2"
+  },
+  "devDependencies": {
     "@data-fair/data-fair-api": "*",
     "@data-fair/frame": "^0.8.4",
     "@data-fair/sd-vue": "^3.0.1",
-    "@koumoul/nuxt-config-inject": "^0.4.12",
     "@koumoul/v-iframe": "^1.4.1",
     "@koumoul/vjsf": "^2.23.3",
     "@koumoul/vue-multianalytics": "^1.11.4",
@@ -51,7 +54,6 @@
     "vue-moment": "^4.1.0",
     "vue-window-size": "^0.6.2",
     "vuedraggable": "^2.24.3",
-    "vuetify": "^2.7.2",
     "web-streams-polyfill": "^3.3.3",
     "webpack": "^4.47.0"
   }

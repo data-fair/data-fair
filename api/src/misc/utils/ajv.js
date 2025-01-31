@@ -1,7 +1,7 @@
 import fs from 'fs-extra'
 import path from 'path'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { ajv, errorsText, localize } from '../../../../shared/ajv.js'
+import { ajv, errorsText, localize } from '@data-fair/data-fair-shared/ajv.js'
 
 // cf https://github.com/ajv-validator/ajv/issues/1745
 let openApiSchemaStr = fs.readFileSync(path.resolve(import.meta.dirname, '../../../contract/openapi-3.1.json'), 'utf8')

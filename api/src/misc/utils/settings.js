@@ -1,4 +1,4 @@
-import sanitizeHtml from '../../../../shared/sanitize-html.js'
+import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 import * as i18nUtils from '../../../i18n/utils.js'
 
 export const getPrivateOwnerVocabulary = async (db, owner) => {

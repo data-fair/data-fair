@@ -5,7 +5,7 @@ import vocabulary from '../../../contract/vocabulary.js'
 import * as geoUtils from './geo.js'
 import * as i18nUtils from '../../../i18n/utils.js'
 import * as settingsUtils from '../../misc/utils/settings.js'
-import { cleanJsonSchemaProperty } from '../../../../shared/schema.js'
+import { cleanJsonSchemaProperty } from '@data-fair/data-fair-shared/schema.js'
 import capabilitiesSchema from '../../../contract/capabilities.js'
 
 const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter(key => capabilitiesSchema.properties[key]?.default === false)

@@ -71,8 +71,7 @@ ADD patches patches
 ADD ui/patches ui/patches
 # full deps install used for building
 # also used to fill the npm cache for faster install of api deps
-RUN npm ci --omit=dev --omit=optional --omit=peer --no-audit --no-fund
-RUN npm ls @mdi/js property-expr @koumoul/vjsf
+RUN npm ci --omit=optional --omit=peer --no-audit --no-fund
 
 ##########################
 FROM installer AS builder

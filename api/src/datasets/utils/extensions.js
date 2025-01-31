@@ -20,10 +20,10 @@ import * as permissionsUtils from '../../misc/utils/permissions.js'
 import { getPseudoUser } from '../../misc/utils/users.js'
 import randomSeed from 'random-seed'
 import debugLib from 'debug'
-import exprEval from '../../../../shared/expr-eval.js'
-import { getExtensionKey } from '../../../../shared/utils/extensions.js'
+import exprEval from '@data-fair/data-fair-shared/expr-eval.js'
+import { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 
-export { getExtensionKey } from '../../../../shared/utils/extensions.js'
+export { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 
 const debugMasterData = debugLib('master-data')
 const debug = debugLib('extensions')
