@@ -10,7 +10,7 @@
     "#mongo": "./src/mongo.js"
   },
   "dependencies": {
-    "@data-fair/data-fair-api": "*",
+    "@data-fair/data-fair-ui": "*",
     "@data-fair/data-fair-shared": "*",
     "@data-fair/lib-express": "^1.12.6",
     "@data-fair/lib-node": "^2.3.2",

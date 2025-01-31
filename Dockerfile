@@ -71,7 +71,7 @@ ADD patches patches
 ADD ui/patches ui/patches
 # full deps install used for building
 # also used to fill the npm cache for faster install of api deps
-RUN npm ci --omit=optional --omit=peer --no-audit --no-fund
+RUN npm ci --omit=peer --no-audit --no-fund
 
 ##########################
 FROM installer AS builder
@@ -90,9 +90,10 @@ RUN npm run build
 ##########################
 FROM installer AS api-installer
 
-RUN npm ci -w api --prefer-offline --omit=dev --omit=optional --omit=peer --no-audit --no-fund && \
-    npx clean-modules --yes "!exceljs/lib/doc/" "!**/*.mustache"
-RUN npm i -w api --include=optional sharp@0.33.5
+RUN cp -rf node_modules/@img/sharp-linuxmusl-x64 /tmp/sharp-linuxmusl-x64 && \
+    npm ci -w api --prefer-offline --omit=dev --omit=optional --omit=peer --no-audit --no-fund && \
+    npx clean-modules --yes "!exceljs/lib/doc/" "!**/*.mustache" && \
+    cp -rf /tmp/sharp-linuxmusl-x64 node_modules/@img/sharp-linuxmusl-x64 
 RUN mkdir -p /app/api/node_modules
 
 ##########################
