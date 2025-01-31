@@ -1,9 +1,8 @@
-
 import { strict as assert } from 'node:assert'
 import config from 'config'
 import { nanoid } from 'nanoid'
 
-describe('Cache headers', () => {
+describe('Cache headers', function () {
   const createDataset = async (ax) => {
     // Set the correct owner
     let dataset = (await ax.post('/api/v1/datasets', {
@@ -15,7 +14,7 @@ describe('Cache headers', () => {
     return dataset
   }
 
-  it('Uses private cache-control for newly created dataset', async () => {
+  it('Uses private cache-control for newly created dataset', async function () {
     const ax = global.ax.dmeadus
     const dataset = await createDataset(ax)
     const id = dataset.id
@@ -37,7 +36,7 @@ describe('Cache headers', () => {
     assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=' + config.cache.timestampedPublicMaxAge)
   })
 
-  it('Supports private cache revalidation', async () => {
+  it('Supports private cache revalidation', async function () {
     const ax = global.ax.dmeadus
     const dataset = await createDataset(ax)
     const id = dataset.id
@@ -52,7 +51,7 @@ describe('Cache headers', () => {
     await assert.rejects(ax.get(`/api/v1/datasets/${id}/lines`, { headers: { 'if-modified-since': res.headers['last-modified'] } }), (err) => err.status === 304)
   })
 
-  it('Manage public cache-control header based on permissions', async () => {
+  it('Manage public cache-control header based on permissions', async function () {
     const ax = global.ax.dmeadus
     const axAnonymous = global.ax.anonymous
     const dataset = await createDataset(ax)
@@ -74,7 +73,7 @@ describe('Cache headers', () => {
     // console.log(res.headers)
   })
 
-  it('Supports public cache revalidation', async () => {
+  it('Supports public cache revalidation', async function () {
     const ax = global.ax.dmeadus
     const dataset = await createDataset(ax)
     const id = dataset.id
@@ -98,7 +97,7 @@ describe('Cache headers', () => {
     await assert.rejects(ax.get(`/api/v1/datasets/${id}/lines`, { headers: { 'x-cache-bypass': '0', 'if-modified-since': res.headers['last-modified'] } }), (err) => err.status === 304)
   })
 
-  it('Supports caching of lists', async () => {
+  it('Supports caching of lists', async function () {
     const ax = global.ax.dmeadus
     await createDataset(ax)
     const dataset = await createDataset(ax)

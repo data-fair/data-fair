@@ -1,10 +1,10 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 
-describe('Calculated fields', () => {
-  it('Should add special calculated fields', async () => {
+describe('Calculated fields', function () {
+  it('Should add special calculated fields', async function () {
     const ax = global.ax.dmeadus
 
     // 1 dataset in user zone
@@ -21,7 +21,7 @@ describe('Calculated fields', () => {
     assert.ok(res.data.results[0]._id)
   })
 
-  it('Should split by separator if specified', async () => {
+  it('Should split by separator if specified', async function () {
     const ax = global.ax.dmeadus
 
     // 1 dataset in user zone

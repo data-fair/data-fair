@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 
-describe('Text formats', () => {
+describe('Text formats', function () {
   it('Detect and parse text formats', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/text-formats.csv', ax)

@@ -1,9 +1,9 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 
-describe('search', () => {
-  it('Get lines in dataset', async () => {
+describe('search', function () {
+  it('Get lines in dataset', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     // Update schema to specify geo point
@@ -142,7 +142,7 @@ describe('search', () => {
     assert.ok(Number(res.headers['content-length']) > 5000)
   })
 
-  it('search lines and collapse on field', async () => {
+  it('search lines and collapse on field', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/collapsable.csv', ax)
 

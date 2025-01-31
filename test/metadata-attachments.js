@@ -5,13 +5,13 @@ import FormData from 'form-data'
 
 const sendAttachment = async (ax, datasetId, attachmentName) => {
   const attachmentForm = new FormData()
-  attachmentForm.append('attachment', fs.readFileSync('./test/resources/' + attachmentName), attachmentName)
+  attachmentForm.append('attachment', fs.readFileSync('./resources/' + attachmentName), attachmentName)
   await ax.post(`/api/v1/datasets/${datasetId}/metadata-attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
   await ax.patch('/api/v1/datasets/' + datasetId, { attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
 }
 
-describe('Datasets with metadata attachments', () => {
-  it('Upload a simple attachment', async () => {
+describe('Datasets with metadata attachments', function () {
+  it('Upload a simple attachment', async function () {
     const ax = global.ax.dmeadus
     await ax.put('/api/v1/datasets/attachments1', { isRest: true, title: 'attachments1' })
 
@@ -25,7 +25,7 @@ describe('Datasets with metadata attachments', () => {
     await assert.rejects(ax.get('/api/v1/datasets/attachments1/metadata-attachments/avatar.jpeg', { headers: { 'If-Modified-Since': downloadAttachmentRes.headers['last-modified'] } }), { status: 304 })
   })
 
-  it('Create an attachment with a private target URL', async () => {
+  it('Create an attachment with a private target URL', async function () {
     const ax = global.ax.dmeadus
     await ax.put('/api/v1/datasets/attachments2', { isRest: true, title: 'attachments2' })
 
@@ -61,7 +61,7 @@ describe('Datasets with metadata attachments', () => {
     assert.equal(downloadAttachmentRes4.headers['x-remote-status'], 'DOWNLOAD')
   })
 
-  it('Attachment supports Range query (used for PMTILES support)', async () => {
+  it('Attachment supports Range query (used for PMTILES support)', async function () {
     const ax = global.ax.dmeadus
     await ax.put('/api/v1/datasets/attachments1', { isMetaOnly: true, title: 'attachments1' })
 

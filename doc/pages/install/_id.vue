@@ -13,7 +13,7 @@ const flatten = require('flat')
 const context = require.context('.', true, /\.md$/)
 
 // Used to flatten var definitions from custom-environment-variables.js
-const defaults = Object.assign({}, require('../../../config/default.js'), require('../../../config/production.js'))
+const defaults = Object.assign({}, require('../../../api/config/default'), require('../../../api/config/production'))
 function flattenVars (vars, flatVars = [], prefix = '') {
   Object.keys(vars).forEach(v => {
     const key = prefix + v
@@ -26,7 +26,7 @@ function flattenVars (vars, flatVars = [], prefix = '') {
   return flatVars
 }
 
-const customEnvVars = flattenVars(require('../../../config/custom-environment-variables'))
+const customEnvVars = flattenVars(require('../../../api/config/custom-environment-variables'))
 
 const varDescriptions = flatten({
   mode: 'Use this parameter to run both the Web server and the dataset processing loop or run them separately. Pissible values: "server_worker", "server", "worker".',

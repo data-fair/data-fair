@@ -4,17 +4,17 @@ import fs from 'node:fs'
 import nock from 'nock'
 import FormData from 'form-data'
 import config from 'config'
-import * as workers from '../server/workers/index.js'
-import * as esUtils from '../server/datasets/es/index.js'
+import * as workers from '../api/src/workers/index.js'
+import * as esUtils from '../api/src/datasets/es/index.ts'
 
 // Prepare mock for outgoing HTTP requests
 nock('http://test-catalog.com').persist()
   .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
 
-describe('workers', () => {
-  it('Process newly uploaded CSV dataset', async () => {
+describe('workers', function () {
+  it('Process newly uploaded CSV dataset', async function () {
     // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
     const ax = global.ax.dmeadus
@@ -37,7 +37,7 @@ describe('workers', () => {
     assert.equal(dataset.count, 2)
     const idProp = dataset.schema.find(p => p.key === 'id')
     assert.equal(idProp['x-cardinality'], 2)
-    const esIndices = (await global.es.indices.get({ index: esUtils.aliasName(dataset) })).body
+    const esIndices = await global.es.indices.get({ index: esUtils.aliasName(dataset) })
     const esIndex = Object.values(esIndices)[0]
     const mapping = esIndex.mappings
     assert.equal(mapping.properties.id.type, 'keyword')
@@ -55,7 +55,7 @@ describe('workers', () => {
     dataset = await workers.hook('finalizer')
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.count, 2)
-    const esIndices2 = (await global.es.indices.get({ index: esUtils.aliasName(dataset) })).body
+    const esIndices2 = await global.es.indices.get({ index: esUtils.aliasName(dataset) })
     const esIndex2 = Object.values(esIndices2)[0]
     const mapping2 = esIndex2.mappings
     assert.equal(mapping2.properties.id.type, 'keyword')
@@ -65,7 +65,7 @@ describe('workers', () => {
     assert.equal(mapping2.properties._geopoint.type, 'geo_point')
 
     // Reupload data with bad localization
-    const datasetFd2 = fs.readFileSync('./test/resources/datasets/bad-format.csv')
+    const datasetFd2 = fs.readFileSync('./resources/datasets/bad-format.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset.csv')
     await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
@@ -77,14 +77,14 @@ describe('workers', () => {
     assert.ok(res.data[0].data.startsWith('100% des lignes sont en erreur'))
   })
 
-  it('Publish a dataset after finalization', async () => {
+  it('Publish a dataset after finalization', async function () {
     const ax = global.ax.dmeadus
 
     // Prepare a catalog
     const catalog = (await ax.post('/api/v1/catalogs', { url: 'http://test-catalog.com', title: 'Test catalog', apiKey: 'apiKey', type: 'udata' })).data
 
     // Send dataset
-    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
@@ -105,7 +105,7 @@ describe('workers', () => {
 
   it('Run tasks in children processes', async function () {
     config.worker.spawnTask = true
-    const datasetFd = fs.readFileSync('./test/resources/datasets/dataset1.csv')
+    const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset.csv')
     const ax = global.ax.dmeadus
@@ -142,7 +142,7 @@ describe('workers', () => {
 
   it('Manage expected failure in children processes', async function () {
     config.worker.spawnTask = true
-    const datasetFd = fs.readFileSync('./test/resources/geo/geojson-broken.geojson')
+    const datasetFd = fs.readFileSync('./resources/geo/geojson-broken.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-broken2.geojson')
     const ax = global.ax.dmeadus
@@ -177,7 +177,7 @@ describe('workers', () => {
 
     const form = new FormData()
     form.append('title', 'trigger test error')
-    form.append('file', fs.readFileSync('./test/resources/datasets/dataset1.csv'), 'dataset.csv')
+    form.append('file', fs.readFileSync('./resources/datasets/dataset1.csv'), 'dataset.csv')
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
 
@@ -205,7 +205,7 @@ describe('workers', () => {
     config.worker.errorRetryDelay = 0
   })
 
-  it('Update dataset schema and apply only required worker tasks', async () => {
+  it('Update dataset schema and apply only required worker tasks', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     assert.equal(dataset.status, 'finalized')

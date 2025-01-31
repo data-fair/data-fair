@@ -5,8 +5,8 @@ import 'moment-timezone'
 
 const localeTimeZone = moment.tz.guess()
 
-describe('icalendar dataset', () => {
-  it('Upload dataset in iCalendar format', async () => {
+describe('icalendar dataset', function () {
+  it('Upload dataset in iCalendar format', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('calendar/calendar.ics', ax)
     assert.equal(dataset.count, 1)
@@ -22,7 +22,7 @@ describe('icalendar dataset', () => {
     assert.equal(moment(res.data.results[0].DTEND).format('YYYY-MM-DD-HH:mm'), '2008-02-14-00:00')
   })
 
-  it('Upload dataset in iCalendar format with X-WR-TIMEZONE param', async () => {
+  it('Upload dataset in iCalendar format with X-WR-TIMEZONE param', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('calendar/calendar-xwr-timezone.ics', ax)
     assert.equal(dataset.count, 1)
@@ -37,7 +37,7 @@ describe('icalendar dataset', () => {
     assert.equal(moment(res.data.results[0].DTSTART).tz('America/New_York').format('YYYY-MM-DD-HH:mm'), '2008-02-12-00:00')
   })
 
-  it('Upload dataset in iCalendar format with VTIMEZONE param', async () => {
+  it('Upload dataset in iCalendar format with VTIMEZONE param', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('calendar/calendar-vtimezone.ics', ax)
     assert.equal(dataset.count, 1)
@@ -52,7 +52,7 @@ describe('icalendar dataset', () => {
     assert.equal(moment(res.data.results[0].DTSTART).tz('America/Los_Angeles').format('YYYY-MM-DD-HH:mm'), '2008-02-12-00:00')
   })
 
-  it('Upload dataset with recurring event', async () => {
+  it('Upload dataset with recurring event', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('calendar/calendar-rrule.ics', ax)
     assert.equal(dataset.count, 92)

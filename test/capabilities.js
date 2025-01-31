@@ -2,10 +2,10 @@ import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import fs from 'fs-extra'
 import FormData from 'form-data'
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 
-describe('Properties capabilities', () => {
-  it('Disable case-sensitive sort', async () => {
+describe('Properties capabilities', function () {
+  it('Disable case-sensitive sort', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets/rest-insensitive', {
       isRest: true,
@@ -28,7 +28,7 @@ describe('Properties capabilities', () => {
     assert.deepEqual(res.data.results.map(result => result.str1), ['Test2', 'test1', 'test2', 'test3'])
   })
 
-  it('Disable values (agg and sort)', async () => {
+  it('Disable values (agg and sort)', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets/rest-values', {
       isRest: true,
@@ -84,7 +84,7 @@ describe('Properties capabilities', () => {
     }
   })
 
-  it('Enable text agg', async () => {
+  it('Enable text agg', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets/rest-textagg', {
       isRest: true,
@@ -112,7 +112,7 @@ describe('Properties capabilities', () => {
     assert.equal(res.data.total, 4)
   })
 
-  it('Disable keyword indexing', async () => {
+  it('Disable keyword indexing', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets/rest-index', {
       isRest: true,
@@ -152,7 +152,7 @@ describe('Properties capabilities', () => {
     }
   })
 
-  it('Disable text indexing', async () => {
+  it('Disable text indexing', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets/rest-text', {
       isRest: true,
@@ -183,7 +183,7 @@ describe('Properties capabilities', () => {
     assert.equal(res.data.total, 0)
   })
 
-  it('Disable geoshape indexing', async () => {
+  it('Disable geoshape indexing', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets/rest-geoshape', {
       isRest: true,
@@ -227,13 +227,13 @@ describe('Properties capabilities', () => {
     assert.equal(res.data.total, 2)
   })
 
-  it('Disable extracting text from attachment', async () => {
+  it('Disable extracting text from attachment', async function () {
     const ax = global.ax.cdurning2
 
     // Send dataset with a CSV and attachments in an archive
     const form = new FormData()
-    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     let dataset = res.data
     assert.equal(res.status, 201)

@@ -4,20 +4,20 @@ import * as testUtils from './resources/test-utils.js'
 import path from 'node:path'
 import fs from 'fs-extra'
 import FormData from 'form-data'
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 import moment from 'moment'
 import zlib from 'zlib'
 import { Writable } from 'stream'
 import iconv from 'iconv-lite'
 import { promisify } from 'util'
-import * as restDatasetsUtils from '../server/datasets/utils/rest.js'
-import { attachmentsDir, lsAttachments } from '../server/datasets/utils/files.js'
+import * as restDatasetsUtils from '../api/src/datasets/utils/rest.js'
+import { attachmentsDir, lsAttachments } from '../api/src/datasets/utils/files.js'
 import pumpOg from 'pump'
 
 const pump = promisify(pumpOg)
 
-describe('REST datasets', () => {
-  it('Create empty REST datasets', async () => {
+describe('REST datasets', function () {
+  it('Create empty REST datasets', async function () {
     const ax = global.ax.dmeadus
 
     let res = await ax.post('/api/v1/datasets', { isRest: true, title: 'a rest dataset' })
@@ -43,7 +43,7 @@ describe('REST datasets', () => {
     assert.equal(res.data.title, 'a rest dataset updated')
   })
 
-  it('Perform CRUD operations on REST datasets', async () => {
+  it('Perform CRUD operations on REST datasets', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets/rest1', {
       isRest: true,
@@ -84,7 +84,7 @@ describe('REST datasets', () => {
     await assert.rejects(ax.post('/api/v1/datasets/rest1/lines', { _id: 'id1', attr1: 'test4', _action: 'update' }), err => err.status === 404)
   })
 
-  it('Reject properly json missing content-type', async () => {
+  it('Reject properly json missing content-type', async function () {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets/restjson', {
       isRest: true,
@@ -98,7 +98,7 @@ describe('REST datasets', () => {
     })
   })
 
-  it('Perform CRUD operations in bulks', async () => {
+  it('Perform CRUD operations in bulks', async function () {
     const ax = global.ax.dmeadus
     await ax.put('/api/v1/datasets/rest2', {
       isRest: true,
@@ -184,7 +184,7 @@ describe('REST datasets', () => {
     assert.equal(line4.attr2, 'test1')
   })
 
-  it('Use dataset schema to validate inputs', async () => {
+  it('Use dataset schema to validate inputs', async function () {
     const ax = global.ax.dmeadus
     await ax.put('/api/v1/datasets/rest4', {
       isRest: true,
@@ -264,7 +264,7 @@ describe('REST datasets', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentContent = fs.readFileSync('./test/resources/datasets/files/dir1/test.pdf')
+    const attachmentContent = fs.readFileSync('./resources/datasets/files/dir1/test.pdf')
     form.append('attachment', attachmentContent, 'dir1/test.pdf')
     form.append('attr1', 10)
     res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: testUtils.formHeaders(form) })
@@ -283,7 +283,7 @@ describe('REST datasets', () => {
     assert.equal(attachments.length, 1)
     assert.equal(attachments[0], res.data.results[0].attachmentPath)
 
-    assert.equal((await fs.readdir('data/test/tmp')).length, 0)
+    assert.equal((await fs.readdir('../data/test/tmp')).length, 0)
 
     await ax.delete('/api/v1/datasets/rest5/lines/' + line._id)
     await workers.hook('finalizer/rest5')
@@ -307,7 +307,7 @@ describe('REST datasets', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentContent = fs.readFileSync('./test/resources/datasets/files/dir1/test.pdf')
+    const attachmentContent = fs.readFileSync('./resources/datasets/files/dir1/test.pdf')
     form.append('attachment', attachmentContent, 'dir1/test.pdf')
     form.append('_body', '{"attr1":10}')
     res = await ax.post('/api/v1/datasets/rest5/lines', form, { headers: testUtils.formHeaders(form) })
@@ -319,7 +319,7 @@ describe('REST datasets', () => {
     assert.equal(res.data.results[0].attr1, 10)
   })
 
-  it('Send attachments with bulk request', async () => {
+  it('Send attachments with bulk request', async function () {
     const ax = await global.ax.ngernier4
     let res = await ax.post('/api/v1/datasets/rest6', {
       isRest: true,
@@ -333,7 +333,7 @@ describe('REST datasets', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentsContent = fs.readFileSync('./test/resources/datasets/files.zip')
+    const attachmentsContent = fs.readFileSync('./resources/datasets/files.zip')
     form.append('attachments', attachmentsContent, 'files.zip')
     form.append('actions', Buffer.from(JSON.stringify([
       { _id: 'line1', attr1: 'test1', attachmentPath: 'test.odt' },
@@ -351,7 +351,7 @@ describe('REST datasets', () => {
     assert.equal(res.data.results.find(l => l._id === 'line1')['_file.content'], 'This is a test libreoffice file.')
   })
 
-  it('Synchronize all lines with the content of the attachments directory', async () => {
+  it('Synchronize all lines with the content of the attachments directory', async function () {
     const ax = await global.ax.ngernier4
     let res = await ax.post('/api/v1/datasets/restsync', {
       isRest: true,
@@ -365,7 +365,7 @@ describe('REST datasets', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentsContent = fs.readFileSync('./test/resources/datasets/files.zip')
+    const attachmentsContent = fs.readFileSync('./resources/datasets/files.zip')
     form.append('attachments', attachmentsContent, 'files.zip')
     form.append('actions', Buffer.from(JSON.stringify([]), 'utf8'), 'actions.json')
 
@@ -408,7 +408,7 @@ describe('REST datasets', () => {
     assert.equal(res.data.total, 1)
   })
 
-  it('Send bulk requests in ndjson file', async () => {
+  it('Send bulk requests in ndjson file', async function () {
     const ax = await global.ax.ngernier4
     let res = await ax.post('/api/v1/datasets/restndjson', {
       isRest: true,
@@ -435,7 +435,7 @@ describe('REST datasets', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    form.append('actions', await fs.readFile('test/resources/rest/access.log.ndjson'), 'actions.ndjson')
+    form.append('actions', await fs.readFile('resources/rest/access.log.ndjson'), 'actions.ndjson')
     res = await ax.post('/api/v1/datasets/restndjson/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 200)
     assert.equal(res.data.nbErrors, 0)
@@ -446,7 +446,7 @@ describe('REST datasets', () => {
     assert.equal(res.data.total, 20)
   })
 
-  it('Send bulk requests in ndjson file and receive errors', async () => {
+  it('Send bulk requests in ndjson file and receive errors', async function () {
     const ax = await global.ax.ngernier4
     await ax.post('/api/v1/datasets/restndjson', {
       isRest: true,
@@ -459,17 +459,17 @@ describe('REST datasets', () => {
 
     // Create a line with an attached file
     const form = new FormData()
-    form.append('actions', await fs.readFile('test/resources/rest/access.log.ndjson'), 'actions.ndjson')
+    form.append('actions', await fs.readFile('resources/rest/access.log.ndjson'), 'actions.ndjson')
     await assert.rejects(ax.post('/api/v1/datasets/restndjson/_bulk_lines', form, { headers: testUtils.formHeaders(form) }), (err) => {
       assert.equal(err.status, 400)
       assert.equal(err.data.nbErrors, 20)
       assert.equal(err.data.nbOk, 0)
       return true
     })
-    assert.equal((await fs.readdir('data/test/tmp')).length, 0)
+    assert.equal((await fs.readdir('../data/test/tmp')).length, 0)
   })
 
-  it('The size of the mongodb collection is part of storage consumption', async () => {
+  it('The size of the mongodb collection is part of storage consumption', async function () {
     // Load a few lines
     const ax = await global.ax.builder('ccherryholme1@icio.us:passwd')
     await ax.post('/api/v1/datasets/rest7', {
@@ -495,7 +495,7 @@ describe('REST datasets', () => {
     assert.equal(res.data.storage.collection.size, storageSize)
   })
 
-  it('Use the history mode', async () => {
+  it('Use the history mode', async function () {
     const ax = await global.ax.hlalonde3
     let res = await ax.post('/api/v1/datasets/resthist', {
       isRest: true,
@@ -551,7 +551,7 @@ describe('REST datasets', () => {
     assert.equal(res.data.results[0]._action, 'delete')
   })
 
-  it('Store history with at least primary key info', async () => {
+  it('Store history with at least primary key info', async function () {
     const ax = await global.ax.hlalonde3
     let res = await ax.post('/api/v1/datasets/resthistprimary', {
       isRest: true,
@@ -575,7 +575,7 @@ describe('REST datasets', () => {
     assert.equal(res.data.results[0].attr2, 'test2')
   })
 
-  it('Force _updatedAt value to fill existing history', async () => {
+  it('Force _updatedAt value to fill existing history', async function () {
     const ax = await global.ax.superadminPersonal
     const axAdmin = await global.ax.superadmin
     await ax.post('/api/v1/datasets/resthistfill', {
@@ -615,7 +615,7 @@ describe('REST datasets', () => {
     assert.equal(history[0].attr1, 'test-now')
   })
 
-  it('Define a TTL on revisions in history', async () => {
+  it('Define a TTL on revisions in history', async function () {
     const ax = await global.ax.hlalonde3
 
     let res = await ax.post('/api/v1/datasets/resthistttl', {
@@ -652,7 +652,7 @@ describe('REST datasets', () => {
     assert.ok(!indexes.find(i => i.name === 'history-ttl'))
   })
 
-  it('Toggle the history mode', async () => {
+  it('Toggle the history mode', async function () {
     const ax = await global.ax.hlalonde3
     let res = await ax.post('/api/v1/datasets/resthisttoggle', {
       isRest: true,
@@ -678,7 +678,7 @@ describe('REST datasets', () => {
     assert.equal(res.data.storage.revisions, undefined)
   })
 
-  it('Use history mode with attachments', async () => {
+  it('Use history mode with attachments', async function () {
     const ax = await global.ax.hlalonde3
     let res = await ax.post('/api/v1/datasets/resthistattach', {
       isRest: true,
@@ -694,7 +694,7 @@ describe('REST datasets', () => {
 
     // create line with an attachment
     const form = new FormData()
-    const attachmentContent = fs.readFileSync('./test/resources/datasets/files/dir1/test.pdf')
+    const attachmentContent = fs.readFileSync('./resources/datasets/files/dir1/test.pdf')
     form.append('attachment', attachmentContent, 'dir1/test.pdf')
     form.append('attr1', 'test1')
     form.append('attr2', 'test1')
@@ -708,7 +708,7 @@ describe('REST datasets', () => {
 
     // patch the attachment
     const form2 = new FormData()
-    const attachmentContent2 = fs.readFileSync('./test/resources/datasets/files/test.odt')
+    const attachmentContent2 = fs.readFileSync('./resources/datasets/files/test.odt')
     form2.append('attachment', attachmentContent2, 'dir1/test.pdf')
     form2.append('attr2', 'test2')
     res = await ax.patch(`/api/v1/datasets/resthistattach/lines/${line._id}`, form2, { headers: testUtils.formHeaders(form2) })
@@ -737,7 +737,7 @@ describe('REST datasets', () => {
     assert.equal(attachments.length, 2)
   })
 
-  it('Apply a TTL on some date-field', async () => {
+  it('Apply a TTL on some date-field', async function () {
     const ax = await global.ax.hlalonde3
     await ax.post('/api/v1/datasets/restttl', {
       isRest: true,
@@ -805,7 +805,7 @@ describe('REST datasets', () => {
     assert.equal(dataset.count, 3)
   })
 
-  it('Applying the exact same data twice in history mode should not duplicate revisions', async () => {
+  it('Applying the exact same data twice in history mode should not duplicate revisions', async function () {
     const ax = await global.ax.hlalonde3
     let res = await ax.post('/api/v1/datasets/resthistidem', {
       isRest: true,
@@ -850,7 +850,7 @@ describe('REST datasets', () => {
     assert.equal(res.data.total, 1)
   })
 
-  it('Delete all lines from a rest dataset', async () => {
+  it('Delete all lines from a rest dataset', async function () {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets/restdel', {
       isRest: true,
@@ -874,7 +874,7 @@ describe('REST datasets', () => {
     assert.equal(await collection.countDocuments({}), 0)
   })
 
-  it('Send bulk actions as a CSV body', async () => {
+  it('Send bulk actions as a CSV body', async function () {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
@@ -888,7 +888,7 @@ describe('REST datasets', () => {
     })
     let dataset = res.data
     await ax.post('/api/v1/datasets/restcsv/_bulk_lines', `_id,attr1,attr2,attr3,attr4
-line1,test1,test1,oui,2015-03-18T00:58:59
+line1,test1,test1,oui,2015-03-18T00:58:59Z
 line2,test1,test1,non,
 line3,test1,test1,true,`, { headers: { 'content-type': 'text/csv' } })
     dataset = await workers.hook('finalizer/restcsv')
@@ -898,7 +898,7 @@ line3,test1,test1,true,`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(lines[0].attr1, 'test1')
     assert.equal(lines[0].attr2, 'test1')
     assert.equal(lines[0].attr3, true)
-    assert.equal(lines[0].attr4, '2015-03-18T00:58:59')
+    assert.equal(lines[0].attr4, '2015-03-18T00:58:59Z')
     assert.equal(lines[1]._id, 'line2')
     assert.equal(lines[1].attr1, 'test1')
     assert.equal(lines[1].attr2, 'test1')
@@ -927,7 +927,7 @@ line4;test1;test1;oui,2015-03-18T00:58:59`, { headers: { 'content-type': 'text/c
     assert.equal(dataset.count, 4)
   })
 
-  it('Send bulk actions as a CSV body with automatic adjustment of keys', async () => {
+  it('Send bulk actions as a CSV body with automatic adjustment of keys', async function () {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
@@ -950,7 +950,7 @@ test2,test2`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(lines[1].attr2, 'test2')
   })
 
-  it('Resend downloaded csv as bulk actions', async () => {
+  it('Resend downloaded csv as bulk actions', async function () {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
@@ -979,7 +979,7 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(lines.length, 6)
   })
 
-  it('Validate bulk actions sent as csv', async () => {
+  it('Validate bulk actions sent as csv', async function () {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets/restcsv', {
       isRest: true,
@@ -1085,7 +1085,7 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
     return true
   })
 
-  it('Send bulk actions as a gzipped CSV', async () => {
+  it('Send bulk actions as a gzipped CSV', async function () {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets/restgzcsv', {
       isRest: true,
@@ -1105,7 +1105,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     assert.equal(lines[1].attr1, 'test1')
   })
 
-  it('Send bulk as a .csv file', async () => {
+  it('Send bulk as a .csv file', async function () {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets/restcsvfile', {
       isRest: true,
@@ -1129,7 +1129,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     assert.equal(lines[1].attr1, 'test1')
   })
 
-  it('Send bulk as a .csv file with other encoding', async () => {
+  it('Send bulk as a .csv file with other encoding', async function () {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets/restcsvfile', {
       isRest: true,
@@ -1155,7 +1155,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     assert.equal(lines[1].testé2, 'testé1')
   })
 
-  it('Send bulk as a .csv.gz file', async () => {
+  it('Send bulk as a .csv.gz file', async function () {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets/restcsvgz', {
       isRest: true,
@@ -1179,7 +1179,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     assert.equal(lines[1].attr1, 'test1')
   })
 
-  it('Send bulk as a .xlsx file', async () => {
+  it('Send bulk as a .xlsx file', async function () {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets/restxlsxfile', {
       isRest: true,
@@ -1189,7 +1189,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     let dataset = res.data
 
     const form = new FormData()
-    form.append('actions', fs.readFileSync('./test/resources/datasets/actions.xlsx'), 'actions.xlsx')
+    form.append('actions', fs.readFileSync('./resources/datasets/actions.xlsx'), 'actions.xlsx')
     await ax.post('/api/v1/datasets/restxlsxfile/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
     dataset = await workers.hook('finalizer/restxlsxfile')
     assert.equal(dataset.count, 2)
@@ -1200,7 +1200,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     assert.equal(lines[1].attr2, 'Test2-2')
   })
 
-  it('Send bulk as a .ods file', async () => {
+  it('Send bulk as a .ods file', async function () {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets/restodsfile', {
       isRest: true,
@@ -1210,7 +1210,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     let dataset = res.data
 
     const form = new FormData()
-    form.append('actions', fs.readFileSync('./test/resources/datasets/actions.xlsx'), 'actions.ods')
+    form.append('actions', fs.readFileSync('./resources/datasets/actions.xlsx'), 'actions.ods')
     await ax.post('/api/v1/datasets/restodsfile/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
     dataset = await workers.hook('finalizer/restodsfile')
     assert.equal(dataset.count, 2)
@@ -1221,7 +1221,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     assert.equal(lines[1].attr2, 'Test2-2')
   })
 
-  it('Send bulk as a .zip file', async () => {
+  it('Send bulk as a .zip file', async function () {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets/restcsvzip', {
       isRest: true,
@@ -1232,7 +1232,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
     // Create a line with an attached file
     const form = new FormData()
-    const actionsContent = fs.readFileSync('./test/resources/datasets/dataset1.zip')
+    const actionsContent = fs.readFileSync('./resources/datasets/dataset1.zip')
     form.append('actions', actionsContent, 'dataset1.zip')
     await ax.post('/api/v1/datasets/restcsvzip/_bulk_lines', form, { headers: testUtils.formHeaders(form) })
     dataset = await workers.hook('finalizer/restcsvzip')
@@ -1242,7 +1242,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
     assert.equal(lines[1].id, 'bidule')
   })
 
-  it('Use the primary key defined by the user', async () => {
+  it('Use the primary key defined by the user', async function () {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets/restkey', {
       isRest: true,
@@ -1279,7 +1279,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(lines[0].attr3, 'test3')
   })
 
-  it('Perform CRUD operations in larger bulk and keep request alive', async () => {
+  it('Perform CRUD operations in larger bulk and keep request alive', async function () {
     const ax = global.ax.dmeadus
     await ax.put('/api/v1/datasets/rest2', {
       isRest: true,
@@ -1309,7 +1309,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(i, 6)
   })
 
-  it('Removing a property triggers mongo unset and reindexing', async () => {
+  it('Removing a property triggers mongo unset and reindexing', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets/restunset', {
       isRest: true,
@@ -1334,7 +1334,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.ok(!res.data.results[0].attr2)
   })
 
-  it('Activating/deactivating storeUpdatedBy', async () => {
+  it('Activating/deactivating storeUpdatedBy', async function () {
     const ax = global.ax.dmeadusOrg
     let res = await ax.post('/api/v1/datasets/updatedby', {
       isRest: true,
@@ -1387,7 +1387,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.ok(!res.data.results[0]._updatedByName)
   })
 
-  it('Use drop option to recreate all data', async () => {
+  it('Use drop option to recreate all data', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets/restdrop', {
       isRest: true,
@@ -1443,7 +1443,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.results[1].attr1, 'test3-1')
   })
 
-  it('Use drop option to recreate all data and manage history', async () => {
+  it('Use drop option to recreate all data and manage history', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets/restdrophist', {
       isRest: true,
@@ -1501,7 +1501,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.results[2].attr2, 'v1')
   })
 
-  it('Specify a date-time format', async () => {
+  it('Specify a date-time format', async function () {
     const ax = await global.ax.hlalonde3
     await ax.post('/api/v1/datasets/restdatetimeformat', {
       isRest: true,

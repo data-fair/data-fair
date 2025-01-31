@@ -6,10 +6,10 @@ import FormData from 'form-data'
 import config from 'config'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import dayjs from 'dayjs'
-import * as restDatasetsUtils from '../server/datasets/utils/rest.js'
-import * as workers from '../server/workers/index.js'
+import * as restDatasetsUtils from '../api/src/datasets/utils/rest.js'
+import * as workers from '../api/src/workers/index.js'
 
-describe('Extensions', () => {
+describe('Extensions', function () {
   it('Extend dataset using remote service', async function () {
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
@@ -53,7 +53,7 @@ describe('Extensions', () => {
         .map(JSON.stringify).join('\n') + '\n'
     })
     const form = new FormData()
-    let content = await fs.readFile('test/resources/datasets/dataset-extensions.csv')
+    let content = await fs.readFile('resources/datasets/dataset-extensions.csv')
     content += 'me,3 les noés la chapelle caro\n'
     form.append('file', content, 'dataset.csv')
     res = await ax.post(`/api/v1/datasets/${dataset.id}`, form, { headers: testUtils.formHeaders(form) })
@@ -253,7 +253,7 @@ describe('Extensions', () => {
 koumoul,82898347800011,47.687173,-2.748514,,,KOUMOUL`)
   })
 
-  it('Manage errors during extension', async () => {
+  it('Manage errors during extension', async function () {
     const ax = global.ax.dmeadus
 
     // Initial dataset with addresses
@@ -298,7 +298,7 @@ other,unknown address
     assert.equal(dataset.status, 'error')
   })
 
-  it('Manage empty queries', async () => {
+  it('Manage empty queries', async function () {
     const ax = global.ax.dmeadus
 
     // Initial dataset with addresses
@@ -329,7 +329,7 @@ empty,
     await workers.hook('finalizer')
   })
 
-  it('Delete extended file when removing extensions', async () => {
+  it('Delete extended file when removing extensions', async function () {
     const ax = global.ax.dmeadus
 
     // Initial dataset with addresses
@@ -382,7 +382,7 @@ koumoul,19 rue de la voie lactée saint avé
     }
   })
 
-  it('Do not add already present concept', async () => {
+  it('Do not add already present concept', async function () {
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
     let dataset = await testUtils.sendDataset('datasets/dataset-siret-extensions.csv', ax)
@@ -431,7 +431,7 @@ koumoul,19 rue de la voie lactée saint avé
     assert.ok(!extSiret['x-refersTo'])
   })
 
-  it('Extend a REST dataset', async () => {
+  it('Extend a REST dataset', async function () {
     const ax = global.ax.dmeadus
 
     const getExtensionNock = (result) => nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
@@ -530,7 +530,7 @@ koumoul,19 rue de la voie lactée saint avé
     assert.equal(res.data.results[0][extensionKey + '.lat'], undefined)
   })
 
-  it('Remove extensions when input properties got removed', async () => {
+  it('Remove extensions when input properties got removed', async function () {
     const ax = global.ax.dmeadus
 
     // Initial dataset with addresses
@@ -570,7 +570,7 @@ other,unknown address
     })
   })
 
-  it('Preserve extension when schema is overwritten at file upload ', async () => {
+  it('Preserve extension when schema is overwritten at file upload ', async function () {
     const ax = global.ax.dmeadus
 
     // Initial dataset with addresses
@@ -805,7 +805,7 @@ other,unknown address
     assert.ok(dataset.schema.find(field => field.key === 'employees'))
 
     const form = new FormData()
-    form.append('file', fs.readFileSync('./test/resources/datasets/dataset2.csv'), 'dataset2.csv')
+    form.append('file', fs.readFileSync('./resources/datasets/dataset2.csv'), 'dataset2.csv')
     dataset = (await ax.put(`/api/v1/datasets/${dataset.id}`, form, { headers: testUtils.formHeaders(form), params: { draft: true } })).data
 
     await assert.rejects(workers.hook(`finalizer/${dataset.id}`), (err) => {

@@ -5,7 +5,7 @@ import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import FormData from 'form-data'
 
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 
 const initMaster = async (ax, info, masterData, id = 'master') => {
   if (Array.isArray(masterData)) {
@@ -86,8 +86,8 @@ const lonProperty = {
   'x-refersTo': 'http://schema.org/longitude'
 }
 
-describe('Master data management', () => {
-  it('should define and use a dataset as master-data remote-service used for extensions', async () => {
+describe('Master data management', function () {
+  it('should define and use a dataset as master-data remote-service used for extensions', async function () {
     const ax = global.ax.superadmin
 
     const { remoteService, apiDoc } = await initMaster(
@@ -220,7 +220,7 @@ describe('Master data management', () => {
     assert.ok(!results[0]['_siret.extra'])
   })
 
-  it('accept an input with elasticsearch special chars', async () => {
+  it('accept an input with elasticsearch special chars', async function () {
     const ax = global.ax.superadmin
 
     const { remoteService } = await initMaster(
@@ -257,7 +257,7 @@ describe('Master data management', () => {
     assert.equal(results[0]['_siret.extra'], 'Extra information')
   })
 
-  it('manage query syntax errors', async () => {
+  it('manage query syntax errors', async function () {
     const ax = global.ax.superadmin
 
     const { remoteService } = await initMaster(
@@ -297,7 +297,7 @@ describe('Master data management', () => {
     assert.ok(journal[0].data.includes('Impossible d\'effectuer cette recherche'))
   })
 
-  it('should extend a geojson file from a master-data dataset', async () => {
+  it('should extend a geojson file from a master-data dataset', async function () {
     const ax = global.ax.superadmin
 
     const { remoteService } = await initMaster(
@@ -343,7 +343,7 @@ describe('Master data management', () => {
     assert.equal(results[0]['_siret.denomination'], 'Dénomination string')
   })
 
-  it('not return calculated properties', async () => {
+  it('not return calculated properties', async function () {
     const ax = global.ax.superadmin
 
     const { remoteService } = await initMaster(
@@ -377,7 +377,7 @@ describe('Master data management', () => {
     assert.ok(!slave.schema.find(p => p.key === '_siret._rand'))
   })
 
-  it('return multiple levels of extended properties', async () => {
+  it('return multiple levels of extended properties', async function () {
     const ax = global.ax.superadmin
 
     const { remoteService } = await initMaster(
@@ -448,7 +448,7 @@ describe('Master data management', () => {
     assert.equal(lines.results[0]['_siret2.extra2'], 'Extra information 2')
   })
 
-  it('should handle sorting to chose ambiguous result', async () => {
+  it('should handle sorting to chose ambiguous result', async function () {
     const ax = global.ax.superadmin
     await initMaster(
       ax,
@@ -499,7 +499,7 @@ describe('Master data management', () => {
     assert.equal(resultsDesc[1].extra, 'Extra information 3')
   })
 
-  it('should handle date-in-interval search type', async () => {
+  it('should handle date-in-interval search type', async function () {
     const ax = global.ax.superadmin
     await initMaster(
       ax,
@@ -533,7 +533,7 @@ describe('Master data management', () => {
     assert.ok(results[2]._error.includes('pas de ligne'))
   })
 
-  it('should handle geo-distance search type', async () => {
+  it('should handle geo-distance search type', async function () {
     const ax = global.ax.superadmin
     await initMaster(
       ax,
@@ -567,7 +567,7 @@ describe('Master data management', () => {
     assert.ok(results[2]._error.includes('pas de ligne'))
   })
 
-  it('should prevent using master-data without access to remote service', async () => {
+  it('should prevent using master-data without access to remote service', async function () {
     const { remoteService } = await initMaster(
       global.ax.dmeadus,
       [siretProperty, { key: 'extra', type: 'string' }],
@@ -595,7 +595,7 @@ describe('Master data management', () => {
     await assert.rejects(workers.hook('finalizer/slave'), err => err.message.startsWith('Try to apply extension'))
   })
 
-  it('should prevent using master-data without permission on dataset', async () => {
+  it('should prevent using master-data without permission on dataset', async function () {
     const { remoteService } = await initMaster(
       global.ax.dmeadus,
       [siretProperty, { key: 'extra', type: 'string' }],
@@ -628,7 +628,7 @@ describe('Master data management', () => {
     await assert.rejects(workers.hook('finalizer/slave'), err => err.message.startsWith('permission manquante'))
   })
 
-  it('should support using master-data from other account if visibility is ok', async () => {
+  it('should support using master-data from other account if visibility is ok', async function () {
     const { remoteService, master } = await initMaster(
       global.ax.dmeadus,
       [siretProperty, { key: 'extra', type: 'string' }],
@@ -669,7 +669,7 @@ describe('Master data management', () => {
     assert.equal(results[0]['_siret.extra'], 'Extra information')
   })
 
-  it('should support chaining extensions', async () => {
+  it('should support chaining extensions', async function () {
     const ax = global.ax.dmeadus
     const { remoteService } = await initMaster(
       ax,
@@ -784,7 +784,7 @@ describe('Master data management', () => {
     assert.equal(lines[0]['_country.name'], 'France')
   })
 
-  it('should listing remote services actions', async () => {
+  it('should listing remote services actions', async function () {
     const ax = global.ax.dmeadus
     const { remoteService } = await initMaster(
       ax,

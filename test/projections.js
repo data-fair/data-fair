@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 
-describe('projections', () => {
+describe('projections', function () {
   it('Create REST dataset and apply specific projection to simple coords', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', {

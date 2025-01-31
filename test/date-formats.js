@@ -1,9 +1,9 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import FormData from 'form-data'
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 
-describe('Date formats', () => {
+describe('Date formats', function () {
   it('Detect and parse usual french date formats', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/date-formats.csv', ax)
@@ -118,7 +118,7 @@ describe('Date formats', () => {
     assert.equal(results[0].horodatage, '2050-01-01T00:00:00-10:00')
   })
 
-  it('Accept formatted date in geojson', async () => {
+  it('Accept formatted date in geojson', async function () {
     const form = new FormData()
     form.append('file', JSON.stringify({
       type: 'FeatureCollection',

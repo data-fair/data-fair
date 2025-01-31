@@ -1,12 +1,13 @@
 import * as testUtils from './resources/test-utils.js'
 import { strict as assert } from 'node:assert'
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 
-describe('Elasticsearch disk watermarks', () => {
-  afterEach(() => {
+describe('Elasticsearch disk watermarks', function () {
+  afterEach(function () {
     process.env.READ_ONLY_ES_INDEX = 'false'
   })
-  it('Manage read only index error', async () => {
+
+  it('Manage read only index error', async function () {
     const ax = global.ax.dmeadus
     let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
 

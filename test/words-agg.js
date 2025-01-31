@@ -1,9 +1,9 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 
-describe('words aggs', () => {
-  it('Get words buckets', async () => {
+describe('words aggs', function () {
+  it('Get words buckets', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: [{ key: 'adr', type: 'string', 'x-capabilities': { textAgg: true } }] })

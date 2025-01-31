@@ -1,9 +1,9 @@
 import { strict as assert } from 'node:assert'
 
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 
-describe('truncate', () => {
-  it('Truncate results for faster previews', async () => {
+describe('truncate', function () {
+  it('Truncate results for faster previews', async function () {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets/truncate1', {
       isRest: true,

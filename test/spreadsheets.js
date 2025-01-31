@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
-import * as xlsx from '../server/misc/utils/xlsx.js'
+import * as xlsx from '../api/src/misc/utils/xlsx.js'
 
-describe('Spreadsheets conversions', () => {
+describe('Spreadsheets conversions', function () {
   const checkDateDataset = async (ext) => {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dates.' + ext, ax)
@@ -19,35 +19,37 @@ describe('Spreadsheets conversions', () => {
     assert.equal(res.data.results[2].coldate, '2020-12-20')
   }
 
-  it('should manage CSV file created by Libre Office with date col', async () => {
+  it('should manage CSV file created by Libre Office with date col', async function () {
     await checkDateDataset('csv')
   })
-  it('should manage ODS file created by Libre Office with date col', async () => {
+
+  it('should manage ODS file created by Libre Office with date col', async function () {
     await checkDateDataset('ods')
   })
-  it('should manage XLSX file created by Libre Office with date col', async () => {
+
+  it('should manage XLSX file created by Libre Office with date col', async function () {
     await checkDateDataset('xlsx')
   })
 
-  it('should manage XLSX file create by excel', async () => {
+  it('should manage XLSX file create by excel', async function () {
     const dates = []
-    for await (const line of xlsx.iterCSV('test/resources/datasets/Les aides financières ADEME.xlsx')) {
+    for await (const line of xlsx.iterCSV('resources/datasets/Les aides financières ADEME.xlsx')) {
       dates.push(line.split(',')[2])
     }
     assert.equal(dates[1], '2019-03-20')
     assert.equal(dates[2], '2018-04-05')
   })
 
-  it('should manage another XLSX file created by excel', async () => {
+  it('should manage another XLSX file created by excel', async function () {
     const dates = []
-    for await (const line of xlsx.iterCSV('test/resources/datasets/date-time.xlsx')) {
+    for await (const line of xlsx.iterCSV('resources/datasets/date-time.xlsx')) {
       dates.push(line.split(',')[1])
     }
     assert.equal(dates[1], '2050-01-01T00:00:00.000Z')
     assert.equal(dates[2], '2050-01-01T01:00:00.000Z')
   })
 
-  it('should manage a sparse XLSX file', async () => {
+  it('should manage a sparse XLSX file', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/sparse.xlsx', ax)
     assert.equal(dataset.schema.filter(p => p.key.startsWith('col')).length, 4)
@@ -63,7 +65,7 @@ describe('Spreadsheets conversions', () => {
     assert.equal(res.data.results[2].col5, 'i')
   })
 
-  it('should manage a XLSX with formula and links', async () => {
+  it('should manage a XLSX with formula and links', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/misc.xlsx', ax)
     assert.equal(dataset.schema.find(p => p.key === 'col1').type, 'integer')

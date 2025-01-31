@@ -1,9 +1,9 @@
 import { strict as assert } from 'node:assert'
 import nock from 'nock'
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 
-describe('datasets based on remote files', () => {
-  it('manage failure to fetch file', async () => {
+describe('datasets based on remote files', function () {
+  it('manage failure to fetch file', async function () {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets', { remoteFile: { url: 'http://localhost:5600/notafile' } })
     const dataset = res.data
@@ -16,7 +16,7 @@ describe('datasets based on remote files', () => {
     assert.ok(journal[0].data.includes('404 - Not Found'))
   })
 
-  it('manage fetching a file in unsupported format', async () => {
+  it('manage fetching a file in unsupported format', async function () {
     const ax = global.ax.dmeadus
     const nockScope = nock('http://test-remote.com')
       .get('/data.ppt').reply(200, 'fake ppt')
@@ -32,7 +32,7 @@ describe('datasets based on remote files', () => {
     assert.ok(journal[0].data.includes('Le format de ce fichier n\'est pas supporté'))
   })
 
-  it('manage fetching a geojson with json mime type', async () => {
+  it('manage fetching a geojson with json mime type', async function () {
     const ax = global.ax.dmeadus
     const nockScope = nock('http://test-remote.com')
       .get('/data.geojson').reply(200, '{"type":"FeatureCollection","features": [{}]}', { 'content-type': 'application/json' })
@@ -45,7 +45,7 @@ describe('datasets based on remote files', () => {
     nockScope.done()
   })
 
-  it('fetch a file and create a dataset', async () => {
+  it('fetch a file and create a dataset', async function () {
     const ax = global.ax.dmeadus
     let nockScope = nock('http://test-remote.com')
       .get('/data.csv').reply(200, 'col\nval1\nval2')

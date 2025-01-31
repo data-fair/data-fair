@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 
-describe('user-notifications about dataset', () => {
-  it('send user notification', async () => {
+describe('user-notifications about dataset', function () {
+  it('send user notification', async function () {
     const ax = global.ax.dmeadus
     const dataset = (await ax.post('/api/v1/datasets', {
       isRest: true,

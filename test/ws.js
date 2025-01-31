@@ -9,13 +9,13 @@ async function receive (cli) {
   return JSON.parse(res)
 }
 
-describe('ws', () => {
-  it('Connect to web socket server', async () => {
+describe('ws', function () {
+  it('Connect to web socket server', async function () {
     const cli = new WebSocket(config.publicUrl)
     await eventPromise(cli, 'open')
   })
 
-  it('Receive error when sending bad input', async () => {
+  it('Receive error when sending bad input', async function () {
     const cli = new WebSocket(config.publicUrl)
     await eventPromise(cli, 'open')
     cli.send('{blabla}')
@@ -26,7 +26,7 @@ describe('ws', () => {
     assert.equal(msg.type, 'error')
   })
 
-  it('Subscribe to channel', async () => {
+  it('Subscribe to channel', async function () {
     const cli = new WebSocket(config.publicUrl)
     await eventPromise(cli, 'open')
     cli.send(JSON.stringify({ type: 'subscribe', channel: 'test_channel' }))
@@ -42,7 +42,7 @@ describe('ws', () => {
     assert.equal(msg2.data, 'test_data')
   })
 
-  it.skip('Send lots of events', async () => {
+  it.skip('Send lots of events', async function () {
     const cli = new WebSocket(config.publicUrl)
     await eventPromise(cli, 'open')
     cli.send(JSON.stringify({ type: 'subscribe', channel: 'test_channel' }))

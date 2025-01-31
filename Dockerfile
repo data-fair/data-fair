@@ -1,17 +1,16 @@
-FROM node:22.11.0-alpine3.20 AS base
+FROM node:22.13.1-alpine3.21 AS base
 
-RUN npm install -g npm@11.0.0
+RUN npm install -g npm@11.1.0
 
-WORKDIR /webapp
+WORKDIR /app
 
-######################################################
-# Stage: install prepair that depends on gdal and cgal
+##########################
 FROM base AS geodeps
 
 RUN apk add --no-cache curl cmake make g++ linux-headers
 RUN apk add --no-cache gdal gdal-dev
 RUN apk add --no-cache boost-dev gmp gmp-dev mpfr-dev
-RUN apk add --no-cache libressl3.8-libcrypto
+RUN apk add --no-cache libressl4.0-libcrypto
 
 # build CGAL (not yet present in alpine repos)
 WORKDIR /tmp
@@ -33,9 +32,7 @@ RUN mv prepair /usr/bin/prepair
 
 RUN prepair --help
 
-############################################################################################################
-# Stage: prepare a base image with all native utils pre-installed, used both by builder and definitive image
-
+##########################
 FROM base AS nativedeps
 
 # these are also geodeps, but we need to install them here as they pull many dependencies
@@ -49,69 +46,85 @@ RUN test -f /usr/lib/libproj.so
 # check that geo execs actually load
 RUN prepair --help
 
-RUN apk add --no-cache unzip dumb-init
+RUN apk add --no-cache unzip
 
-######################################
-# Stage: nodejs dependencies and build
-FROM nativedeps AS builder
+##########################
+FROM base AS package-strip
 
-RUN apk add --no-cache python3 make g++ curl
-RUN apk add --no-cache sqlite-dev
+RUN apk add --no-cache jq moreutils
+ADD package.json package-lock.json ./
+# remove version from manifest for better caching when building a release
+RUN jq '.version="build"' package.json | sponge package.json
+RUN jq '.version="build"' package-lock.json | sponge package-lock.json
 
-ADD package.json .
-ADD package-lock.json .
+##########################
+FROM nativedeps AS installer
+
+RUN apk add --no-cache python3 make g++
+RUN npm i -g clean-modules@3.0.4 patch-package@8.0.0
+COPY --from=package-strip /app/package.json package.json
+COPY --from=package-strip /app/package-lock.json package-lock.json
+ADD ui/package.json ui/package.json
+ADD api/package.json api/package.json
+ADD shared/package.json shared/package.json
 ADD patches patches
-# use clean-modules on the same line as npm ci to be lighter in the cache
-RUN npm ci && \
-    ./node_modules/.bin/clean-modules --yes --exclude exceljs/lib/doc/ --exclude mocha/lib/test.js --exclude "**/*.mustache"
+ADD ui/patches ui/patches
+# full deps install used for building
+# also used to fill the npm cache for faster install of api deps
+RUN npm ci --omit=peer --no-audit --no-fund
 
-# Adding UI files
-ADD public public
-ADD nuxt.config.cjs .
-ADD config config
+##########################
+FROM installer AS builder
+
+ADD ui ui 
+RUN mkdir -p /app/ui/node_modules
+ADD api/config api/config
+ADD api/contract api/contract
+ADD api/src/config.ts api/src/config.ts
+RUN mkdir -p /app/api/node_modules
 ADD shared shared
-ADD contract contract
-
-# Build UI
+RUN mkdir -p /app/shared/node_modules
 ENV NODE_ENV=production
 RUN npm run build
 
-# Cleanup /webapp/node_modules so it can be copied by next stage
-RUN npm prune --production && \
-    rm -rf node_modules/.cache
+##########################
+FROM installer AS api-installer
 
-##################################
-# Stage: main nodejs service stage
-FROM nativedeps
-MAINTAINER "contact@koumoul.com"
+RUN cp -rf node_modules/@img/sharp-linuxmusl-x64 /tmp/sharp-linuxmusl-x64 && \
+    cp -rf node_modules/@img/sharp-libvips-linuxmusl-x64 /tmp/sharp-libvips-linuxmusl-x64 && \
+    npm ci -w api --prefer-offline --omit=dev --omit=optional --omit=peer --no-audit --no-fund && \
+    npx clean-modules --yes "!exceljs/lib/doc/" "!**/*.mustache" && \
+    cp -rf /tmp/sharp-linuxmusl-x64 node_modules/@img/sharp-linuxmusl-x64 && \
+    cp -rf /tmp/sharp-libvips-linuxmusl-x64 node_modules/@img/sharp-libvips-linuxmusl-x64
+RUN mkdir -p /app/api/node_modules
 
-# We could copy /webapp whole, but this is better for layering / efficient cache use
-COPY --from=builder /webapp/node_modules /webapp/node_modules
-COPY --from=builder /webapp/nuxt-dist /webapp/nuxt-dist
-ADD nuxt.config.cjs nuxt.config.cjs
-ADD public/static public/static
-ADD server server
-ADD scripts scripts
-ADD upgrade upgrade
-ADD config config
-ADD shared shared
-ADD contract contract
+##########################
+FROM nativedeps AS main
 
-# Adding licence, manifests, etc.
-ADD package.json .
-ADD README.md BUILD.json* ./
-ADD LICENSE .
-ADD nodemon.json .
+# We could copy /app whole, but this is better for layering / efficient cache use
+COPY --from=api-installer /app/node_modules /app/node_modules
+COPY --from=api-installer /app/api/node_modules /app/api/node_modules
+COPY --from=builder /app/ui/nuxt-dist /app/ui/nuxt-dist
+ADD ui/nuxt.config.js ui/nuxt.config.js
+ADD ui/public/static ui/public/static
+ADD /api api
+ADD /shared shared
+ADD /upgrade upgrade
+
+ADD package.json README.md LICENSE BUILD.json* ./
+
+WORKDIR /app/api
 
 # configure node webapp environment
 ENV NODE_ENV=production
 ENV DEBUG db,upgrade*
+
 # the following line would be a good practice
 # unfortunately it is a problem to activate now that the service was already deployed
 # with volumes belonging to root
 #USER node
 VOLUME /data
 EXPOSE 8080
+EXPOSE 9090
 
-# --single-child is necessary for worker to wait on its tasks
-CMD ["dumb-init", "--single-child", "node", "--max-http-header-size", "64000", "--experimental-strip-types", "--no-warnings", "server/index.ts"]
+CMD ["node", "--max-http-header-size", "64000", "--experimental-strip-types", "--no-warnings", "index.ts"]

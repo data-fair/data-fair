@@ -1,8 +1,8 @@
 import { strict as assert } from 'node:assert'
-import * as sniffer from '../server/datasets/utils/fields-sniffer.js'
+import * as sniffer from '../api/src/datasets/utils/fields-sniffer.js'
 
-describe('field sniffer', () => {
-  it('Work with booleans', () => {
+describe('field sniffer', function () {
+  it('Work with booleans', function () {
     assert.equal(sniffer.sniff(['true', 'false']).type, 'boolean')
     assert.equal(sniffer.sniff(['true', 'False', '1', '-1', 'vrai', 'oui']).type, 'boolean')
     assert.equal(sniffer.sniff(['true', '']).type, 'boolean')
@@ -18,7 +18,7 @@ describe('field sniffer', () => {
     assert.equal(sniffer.format('no', { type: 'boolean' }), false)
   })
 
-  it('Work with numbers', () => {
+  it('Work with numbers', function () {
     assert.equal(sniffer.sniff(['1.1', '2.2']).type, 'number')
     assert.equal(sniffer.sniff(['1', '22']).type, 'integer')
     assert.equal(sniffer.sniff(['1', '10 426']).type, 'integer')
@@ -35,18 +35,18 @@ describe('field sniffer', () => {
     assert.equal(sniffer.sniff(['_0', '   10 426']).type, 'integer')
   })
 
-  it('Work with dates', () => {
+  it('Work with dates', function () {
     assert.deepEqual(sniffer.sniff([' 2017-11-29', '2017-12-12']), { type: 'string', format: 'date' })
     assert.deepEqual(sniffer.sniff([' 2017-11-29T12:24:36.816Z ']), { type: 'string', format: 'date-time' })
     assert.deepEqual(sniffer.sniff(['2019-11-14T14:00:12']), { type: 'string', format: 'date-time', dateTimeFormat: 'YYYY-MM-DDTHH:mm:ss' })
   })
 
-  it('Work with keywords and texts', () => {
+  it('Work with keywords and texts', function () {
     assert.deepEqual(sniffer.sniff(['id1', 'id2']), { type: 'string' })
     assert.deepEqual(sniffer.sniff(['id1', 'a text with whitespaces']), { type: 'string' })
   })
 
-  it('Default type is empty (will be removed from schema)', () => {
+  it('Default type is empty (will be removed from schema)', function () {
     assert.deepEqual(sniffer.sniff([]), { type: 'empty' })
   })
 })

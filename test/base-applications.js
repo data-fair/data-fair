@@ -1,15 +1,15 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 
-describe('Base applications', () => {
-  it('Get public base applications', async () => {
+describe('Base applications', function () {
+  it('Get public base applications', async function () {
     const ax = global.ax.anonymous
     const res = await ax.get('/api/v1/base-applications')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 1)
   })
 
-  it('Get privately readable base app', async () => {
+  it('Get privately readable base app', async function () {
     // Only public at first
     const ax = global.ax.dmeadus
     let res = await ax.get('/api/v1/base-applications?privateAccess=user:dmeadus0')
@@ -38,7 +38,7 @@ describe('Base applications', () => {
     assert.equal(baseApp.privateAccess.length, 1)
   })
 
-  it('Get base apps completed with contextual dataset', async () => {
+  it('Get base apps completed with contextual dataset', async function () {
     const ax = global.ax.dmeadus
     const adminAx = global.ax.superadmin
     await adminAx.patch('/api/v1/base-applications/http:monapp2.com', { privateAccess: [{ type: 'user', id: 'dmeadus0' }] })

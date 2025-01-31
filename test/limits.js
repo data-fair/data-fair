@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import FormData from 'form-data'
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 import config from 'config'
 
 const baseLimit = {
@@ -11,8 +11,8 @@ const baseLimit = {
   lastUpdate: new Date().toISOString()
 }
 
-describe('limits', () => {
-  it('Manage a user storage limit', async () => {
+describe('limits', function () {
+  it('Manage a user storage limit', async function () {
     const ax = global.ax.dmeadus
 
     // Just fill up a little
@@ -60,7 +60,7 @@ describe('limits', () => {
     assert.equal(res.data.nb_datasets.consumption, 9)
   })
 
-  it('A user cannot change limits', async () => {
+  it('A user cannot change limits', async function () {
     const ax = global.ax.dmeadus
     try {
       await ax.post('/api/v1/limits/user/dmeadus0', baseLimit)
@@ -70,7 +70,7 @@ describe('limits', () => {
     }
   })
 
-  it('A user can read his limits', async () => {
+  it('A user can read his limits', async function () {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/limits/user/dmeadus0', baseLimit, { params: { key: config.secretKeys.limits } })
     const res = await ax.get('/api/v1/limits/user/dmeadus0')
@@ -78,7 +78,7 @@ describe('limits', () => {
     assert.equal(res.data.store_bytes.limit, 300000)
   })
 
-  it('A user cannot read the list of limits', async () => {
+  it('A user cannot read the list of limits', async function () {
     const ax = global.ax.dmeadus
     try {
       await ax.get('/api/v1/limits')
@@ -88,7 +88,7 @@ describe('limits', () => {
     }
   })
 
-  it('A super admin can read the list of limits', async () => {
+  it('A super admin can read the list of limits', async function () {
     const ax = global.ax.alban
     await ax.post('/api/v1/limits/user/dmeadus0', baseLimit, { params: { key: config.secretKeys.limits } })
     const res = await ax.get('/api/v1/limits')

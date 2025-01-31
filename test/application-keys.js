@@ -1,11 +1,11 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import config from 'config'
-import * as workers from '../server/workers/index.js'
-import * as rateLimitingUtils from '../server/misc/utils/rate-limiting.js'
+import * as workers from '../api/src/workers/index.js'
+import * as rateLimitingUtils from '../api/src/misc/utils/rate-limiting.js'
 
-describe('Applications keys for unauthenticated readOnly access', () => {
-  it('Empty array by default', async () => {
+describe('Applications keys for unauthenticated readOnly access', function () {
+  it('Empty array by default', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id
@@ -15,7 +15,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     assert.equal(res.data.length, 0)
   })
 
-  it('Restricted to admins', async () => {
+  it('Restricted to admins', async function () {
     const res = await global.ax.dmeadusOrg.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id
 
@@ -27,7 +27,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     }
   })
 
-  it('Automatically filled ids', async () => {
+  it('Automatically filled ids', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id
@@ -38,7 +38,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     assert.ok(!!res.data[0].id)
   })
 
-  it('Use an application key to access application', async () => {
+  it('Use an application key to access application', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id
@@ -63,7 +63,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     assert.equal(res.status, 200)
   })
 
-  it('Use an application key to access datasets referenced in config', async () => {
+  it('Use an application key to access datasets referenced in config', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id
@@ -93,7 +93,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     assert.equal(res.status, 200)
   })
 
-  it('Use an application key to access child applications and previews (used for dashboards)', async () => {
+  it('Use an application key to access child applications and previews (used for dashboards)', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     const dataset2 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
@@ -145,7 +145,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
     await assert.rejects(global.ax.anonymous.get(`/api/v1/datasets/${otherOwnerDataset.id}`, { headers: { referrer: config.publicUrl + `/embed/dataset/${encodeURIComponent(key + ':' + otherOwnerDataset.id)}/` } }), { status: 403 })
   })
 
-  it('Reject an application without the read permission', async () => {
+  it('Reject an application without the read permission', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id
@@ -166,7 +166,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
       err => err.status === 403)
   })
 
-  it('Use an application key to post lines into referenced datasets', async () => {
+  it('Use an application key to post lines into referenced datasets', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id
@@ -211,7 +211,7 @@ describe('Applications keys for unauthenticated readOnly access', () => {
       err => err.status === 429)
   })
 
-  it('Use an application key to manage own lines', async () => {
+  it('Use an application key to manage own lines', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id

@@ -5,14 +5,14 @@ const metaMarked = require('@hackmd/meta-marked')
 
 // Additional dynamic routes for generate
 const langs = ['fr', 'en']
-const paths = dir.files('doc/pages/', { sync: true })
+const paths = dir.files('pages/', { sync: true })
   .filter(f => f.endsWith('.md'))
   .filter(f => {
     const markdown = metaMarked(fs.readFileSync(f, 'utf8'))
     return markdown.meta.published !== false
   })
   .map(f => {
-    let path = f.replace('.md', '').replace('doc/pages/', '')
+    let path = f.replace('.md', '').replace('pages/', '')
     for (const lang of langs) path = path.replace(new RegExp(`-${lang}$`), '')
     return path
   })
@@ -29,7 +29,6 @@ const targetURL = new URL(process.env.TARGET || 'http://localhost:3144/')
 module.exports = {
   telemetry: false,
   ssr: true,
-  srcDir: 'doc/',
   target: 'static',
   components: true,
   build: {
@@ -45,7 +44,6 @@ module.exports = {
     }
   },
   generate: {
-    dir: 'doc-dist',
     routes
   },
   loading: { color: '#1e88e5' }, // Customize the progress bar color

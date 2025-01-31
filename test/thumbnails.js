@@ -5,10 +5,10 @@ import fs from 'node:fs'
 import nock from 'nock'
 import FormData from 'form-data'
 
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 
-describe('thumbnails', () => {
-  it(' should create thumbnails for datasets with illustrations', async () => {
+describe('thumbnails', function () {
+  it(' should create thumbnails for datasets with illustrations', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets/thumbnails1', {
       isRest: true,
@@ -30,8 +30,8 @@ describe('thumbnails', () => {
     assert.ok(res.data.results[0]._thumbnail.endsWith('width=300&height=200'))
     const nockScope = nock('http://test-thumbnail.com')
       .get('/image.png').reply(200, () => '')
-      .get('/avatar.jpg').reply(200, () => fs.readFileSync('test/resources/avatar.jpeg'))
-      .get('/wikipedia.gif').reply(200, () => fs.readFileSync('test/resources/wikipedia.gif'))
+      .get('/avatar.jpg').reply(200, () => fs.readFileSync('resources/avatar.jpeg'))
+      .get('/wikipedia.gif').reply(200, () => fs.readFileSync('resources/wikipedia.gif'))
       .persist()
     await assert.rejects(ax.get(res.data.results[0]._thumbnail, { maxRedirects: 0 }), (err) => err.status === 302)
     const thumbres = await ax.get(res.data.results[1]._thumbnail)
@@ -46,7 +46,7 @@ describe('thumbnails', () => {
     nockScope.done()
   })
 
-  it('should create thumbnail for the image metadata of a dataset', async () => {
+  it('should create thumbnail for the image metadata of a dataset', async function () {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets/thumbnail', {
       isRest: true,
@@ -57,7 +57,7 @@ describe('thumbnails', () => {
     let res = await ax.get('/api/v1/datasets/thumbnail')
     assert.ok(res.data.thumbnail)
     const nockScope = nock('http://test-thumbnail.com')
-      .get('/dataset-image.jpg').reply(200, () => fs.readFileSync('test/resources/avatar.jpeg'))
+      .get('/dataset-image.jpg').reply(200, () => fs.readFileSync('resources/avatar.jpeg'))
     res = await ax.get(res.data.thumbnail)
     assert.equal(res.headers['content-type'], 'image/png')
     assert.equal(res.headers['x-thumbnails-cache-status'], 'MISS')
@@ -65,7 +65,7 @@ describe('thumbnails', () => {
   })
 
   // keep this test skipped most of the time as it depends on an outside service
-  it.skip('should provide a redirect for an unsupported image format', async () => {
+  it.skip('should provide a redirect for an unsupported image format', async function () {
     const ax = global.ax.dmeadus
     await ax.post('/api/v1/datasets/thumbnail', {
       isRest: true,
@@ -79,12 +79,12 @@ describe('thumbnails', () => {
     assert.equal(res.headers['content-type'], 'image/jpg')
   })
 
-  it('should create thumbnails from attachments', async () => {
+  it('should create thumbnails from attachments', async function () {
     const ax = global.ax.dmeadusOrg
     const form = new FormData()
     form.append('attachmentsAsImage', 'true')
-    form.append('dataset', fs.readFileSync('./test/resources/datasets/attachments.csv'), 'attachments.csv')
-    form.append('attachments', fs.readFileSync('./test/resources/datasets/files.zip'), 'files.zip')
+    form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
     let dataset = await workers.hook('finalizer/' + res.data.id)
     assert.ok(dataset.draft.schema.some((field) => field.key === '_attachment_url' && field['x-refersTo'] === 'http://schema.org/image'))

@@ -1,9 +1,9 @@
 import { strict as assert } from 'node:assert'
 
-import * as workers from '../server/workers/index.js'
+import * as workers from '../api/src/workers/index.js'
 
-describe('markdown contents management', () => {
-  it('Get dataset description and content as HTML', async () => {
+describe('markdown contents management', function () {
+  it('Get dataset description and content as HTML', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -39,7 +39,7 @@ describe('markdown contents management', () => {
     assert.equal(res.data.results[0].prop1, '<p>This is a <strong>markdo...</strong></p>')
   })
 
-  it('Dataset description can also contain HTML tags', async () => {
+  it('Dataset description can also contain HTML tags', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -52,7 +52,7 @@ describe('markdown contents management', () => {
     assert.equal(res.data.description, '<p>This is a <span>html</span><span> description</span>.</p>')
   })
 
-  it('Get application description as HTML', async () => {
+  it('Get application description as HTML', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/applications', {
       title: 'app markdown',

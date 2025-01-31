@@ -1,13 +1,13 @@
 import * as testUtils from './resources/test-utils.js'
 import { strict as assert } from 'node:assert'
 
-describe('API keys', () => {
-  it('Reject wrong api key', async () => {
+describe('API keys', function () {
+  it('Reject wrong api key', async function () {
     const ax = await global.ax.builder(null, null, { headers: { 'x-apiKey': 'wrong' } })
     await assert.rejects(ax.get('/api/v1/stats'), { status: 401 })
   })
 
-  it('Create and use a User level api key', async () => {
+  it('Create and use a User level api key', async function () {
     const res = await global.ax.dmeadus.put('/api/v1/settings/user/dmeadus0', {
       apiKeys: [
         { title: 'key1', scopes: ['stats'] },
@@ -35,7 +35,7 @@ describe('API keys', () => {
     assert.equal(dataset.owner.id, 'dmeadus0')
   })
 
-  it('Create and use an organization level api key', async () => {
+  it('Create and use an organization level api key', async function () {
     const res = await global.ax.dmeadusOrg.put('/api/v1/settings/organization/KWqAGZ4mG', {
       apiKeys: [
         { title: 'key1', scopes: ['datasets'] }
@@ -53,7 +53,7 @@ describe('API keys', () => {
     assert.equal(dataset.owner.id, 'KWqAGZ4mG')
   })
 
-  it('Create and use a department level api key', async () => {
+  it('Create and use a department level api key', async function () {
     const res = await global.ax.hlalonde3Org.put('/api/v1/settings/organization/KWqAGZ4mG:dep1', {
       apiKeys: [
         { title: 'key1', scopes: ['datasets'] }
