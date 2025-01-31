@@ -92,7 +92,7 @@ RUN npm run build
 FROM installer AS api-installer
 
 RUN npm ci -w api --prefer-offline --omit=dev --omit=optional --omit=peer --no-audit --no-fund && \
-    npx clean-modules --yes --exclude exceljs/lib/doc/ --exclude "**/*.mustache"
+    npx clean-modules --yes "!exceljs/lib/doc/" "!**/*.mustache"
 RUN npm i -w api --include=optional sharp@0.33.5
 RUN mkdir -p /app/api/node_modules
 
