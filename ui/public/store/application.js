@@ -100,8 +100,8 @@ export default () => ({
       })).results
       otherVersions.forEach(a => { a.version = a.version || a.url.split('/').slice(-2, -1).pop() })
 
-      otherVersions = otherVersions.filter(a => compareVersions.validate(a.version))
-      otherVersions.sort((a1, a2) => compareVersions(a2.version, a1.version)).reverse()
+      otherVersions = otherVersions.filter(a => validateVersion(a.version))
+      otherVersions.sort((a1, a2) => compareVersions(a2.version, a1.version, '<'))
 
       commit('setAny', { otherVersions })
     },
