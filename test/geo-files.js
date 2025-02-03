@@ -82,9 +82,6 @@ describe('geo files support', function () {
     dataset = await workers.hook('finalizer/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
 
-    const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
-    console.log(journal)
-
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
     assert.equal(lines.length, 2)
   })

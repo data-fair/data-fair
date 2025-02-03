@@ -12,7 +12,7 @@ services:
     profiles:
       - dev
       - test
-    image: ghcr.io/data-fair/elasticsearch:master
+    image: ghcr.io/data-fair/elasticsearch:7.x
     ports:
       - 9200:9200
       - 9300:9300
