@@ -73,50 +73,51 @@ export default async (req, res, next) => {
     }
   }
 
-  const matchingApplication = await mongo.db.collection('applications')
-    .findOne({
-      id: appId,
-      $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': req.dataset.id }],
-      ...ownerFilter
-    }, { projection: { 'configuration.datasets': 1 } })
-  if (matchingApplication) {
+  if (appId) {
+    const matchingApplication = await mongo.db.collection('applications')
+      .findOne({
+        id: appId,
+        $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': req.dataset.id }],
+        ...ownerFilter
+      }, { projection: { 'configuration.datasets': 1 } })
+    if (matchingApplication) {
     // this is basically the "crowd-sourcing" use case
     // we apply some anti-spam protection
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      if (req.method !== 'GET' && req.method !== 'HEAD') {
       // 1rst level of anti-spam prevention, no cross origin requests on this route
-      if (!matchingHost(req)) {
-        return res.status(405).send(req.__('errors.noCrossDomain'))
-      }
+        if (!matchingHost(req)) {
+          return res.status(405).send(req.__('errors.noCrossDomain'))
+        }
 
-      // 2nd level of anti-spam protection, validate that the user was present on the page for a few seconds before sending
-      const { verifyToken } = req.app.get('session')
-      if (!req.get('x-anonymousToken')) return res.status(401).type('text/plain').send(req.__('errors.requireAnonymousToken'))
-      try {
-        await verifyToken(req.get('x-anonymousToken'))
-      } catch (err) {
-        if (err.name === 'NotBeforeError') {
-          return res.status(429).type('text/plain').send(req.__('errors.looksLikeSpam'))
-        } else {
-          return res.status(401).type('text/plain').send('Invalid token')
+        // 2nd level of anti-spam protection, validate that the user was present on the page for a few seconds before sending
+        const { verifyToken } = req.app.get('session')
+        if (!req.get('x-anonymousToken')) return res.status(401).type('text/plain').send(req.__('errors.requireAnonymousToken'))
+        try {
+          await verifyToken(req.get('x-anonymousToken'))
+        } catch (err) {
+          if (err.name === 'NotBeforeError') {
+            return res.status(429).type('text/plain').send(req.__('errors.looksLikeSpam'))
+          } else {
+            return res.status(401).type('text/plain').send('Invalid token')
+          }
+        }
+
+        // 3rd level of anti-spam protection, simple rate limiting based on ip
+        if (!rateLimiting.consume(req, 'postApplicationKey')) {
+          console.warn('Rate limit error for application key', requestIp.getClientIp(req), req.originalUrl)
+          return res.status(429).type('text/plain').send(req.__('errors.exceedAnonymousRateLimiting'))
         }
       }
 
-      // 3rd level of anti-spam protection, simple rate limiting based on ip
-      if (!rateLimiting.consume(req, 'postApplicationKey')) {
-        console.warn('Rate limit error for application key', requestIp.getClientIp(req), req.originalUrl)
-        return res.status(429).type('text/plain').send(req.__('errors.exceedAnonymousRateLimiting'))
+      // apply some permissions based on app configuration
+      // some dataset might need to be readable, some other writable only for createLine, etc
+      const matchingApplicationDataset = matchingApplication.configuration.datasets.find(d => d.href === datasetHref)
+      req.bypassPermissions = matchingApplicationDataset.applicationKeyPermissions || { classes: ['read'] }
+      req.user = req.user || {
+        id: applicationKey.id,
+        name: applicationKey.title,
+        isApplicationKey: true
       }
-    }
-
-    // apply some permissions based on app configuration
-    // some dataset might need to be readable, some other writable only for createLine, etc
-    const matchingApplicationDataset = matchingApplication.configuration.datasets.find(d => d.href === datasetHref)
-    req.bypassPermissions = matchingApplicationDataset.applicationKeyPermissions || { classes: ['read'] }
-    console.log('Bypassing permissions for application key', req.bypassPermissions, appId, referer, new Error('hello'))
-    req.user = req.user || {
-      id: applicationKey.id,
-      name: applicationKey.title,
-      isApplicationKey: true
     }
   }
   next()
