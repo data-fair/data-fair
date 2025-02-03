@@ -139,6 +139,17 @@ describe('datasets', function () {
     await workers.hook('finalizer/' + res.data.id)
   })
 
+  it('Upload new dataset with utf8 filename', async function () {
+    const ax = global.ax.dmeadus
+    const form = new FormData()
+    form.append('file', datasetFd, '1-Réponse N° 1.csv')
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+    assert.equal(res.data.slug, '1-reponse-n-1')
+    assert.equal(res.data.title, '1 Réponse N° 1')
+    await workers.hook('finalizer/' + res.data.id)
+  })
+
   it('Upload new dataset in organization zone', async function () {
     const ax = global.ax.dmeadusOrg
     const form = new FormData()
