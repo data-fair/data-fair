@@ -112,7 +112,7 @@ export default async (req, res, next) => {
     // some dataset might need to be readable, some other writable only for createLine, etc
     const matchingApplicationDataset = matchingApplication.configuration.datasets.find(d => d.href === datasetHref)
     req.bypassPermissions = matchingApplicationDataset.applicationKeyPermissions || { classes: ['read'] }
-    console.log('Bypassing permissions for application key', req.bypassPermissions, new Error('hello'))
+    console.log('Bypassing permissions for application key', req.bypassPermissions, appId, referer, new Error('hello'))
     req.user = req.user || {
       id: applicationKey.id,
       name: applicationKey.title,
