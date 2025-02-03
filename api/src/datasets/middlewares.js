@@ -72,7 +72,7 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
   const mainPublicationSite = req.mainPublicationSite
   const tolerateStale = !!publicationSite && !acceptedStatuses
   const useDraft = req.query.draft === 'true' || alwaysDraft
-
+  console.log('tolerateState', tolerateStale)
   const { dataset, datasetFull } = tolerateStale
     ? await service.memoizedGetDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, tolerateStale, acceptedStatuses, req.body)
     : await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, tolerateStale, acceptedStatuses, req.body)
