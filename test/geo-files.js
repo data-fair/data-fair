@@ -55,6 +55,37 @@ describe('geo files support', function () {
     assert.ok(jsonWkt.results[0].geometry.startsWith('LINESTRING'))
   })
 
+  it('Upload geojson with geometry type GeometryCollection', async function () {
+    // Send dataset
+    const datasetFd = fs.readFileSync('./resources/geo/geojson-geometry-collection.geojson')
+    const form = new FormData()
+    form.append('file', datasetFd, 'geojson-geometry-collection.geojson')
+    const ax = global.ax.dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+
+    // Dataset received and parsed
+    let dataset = await workers.hook('geojsonAnalyzer')
+    assert.equal(dataset.status, 'analyzed')
+    assert.equal(dataset.schema.length, 6)
+    const idField = dataset.schema.find(field => field.key === 'id')
+    assert.equal(idField.type, 'string')
+    const descField = dataset.schema.find(field => field.key === 'desc')
+    assert.equal(descField.type, 'string')
+    assert.ok(!descField.format)
+    const boolField = dataset.schema.find(field => field.key === 'bool')
+    assert.equal(boolField.type, 'boolean')
+    const intField = dataset.schema.find(field => field.key === 'int')
+    assert.equal(intField.type, 'integer')
+
+    // ES indexation and finalization
+    dataset = await workers.hook('finalizer/' + dataset.id)
+    assert.equal(dataset.status, 'finalized')
+
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
+    assert.equal(lines.length, 2)
+  })
+
   it('Upload geojson with CRS (projection)', async function () {
     const datasetFd = fs.readFileSync('./resources/geo/geojson-crs.geojson')
     const form = new FormData()

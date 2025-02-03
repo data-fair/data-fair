@@ -136,7 +136,13 @@ export const geometry2fields = async (dataset, doc) => {
       const projection = dataset.projection && dataset.projection.code && projections.find(p => p.code === dataset.projection.code)
       if (dataset.projection && !projection) throw new Error(`La projection ${dataset.projection.code} n'est pas supportée.`)
       if (projection) {
-        projCoordinates(projection, geometry.coordinates)
+        if (geometry.type === 'GeometryCollection') {
+          for (const geom of geometry.geometries) {
+            projCoordinates(projection, geom.coordinates)
+          }
+        } else {
+          projCoordinates(projection, geometry.coordinates)
+        }
       }
     }
     capabilities = projectGeomProp['x-capabilities']
@@ -153,20 +159,23 @@ export const geometry2fields = async (dataset, doc) => {
   } catch (err) {
     debug('Failure while applying cleanCoords to geojson', err)
   }
-  try {
-    rewind(feature, { mutate: true })
-  } catch (err) {
-    debug('Failure while applying rewind to geojson', err)
-  }
-  try {
-    if (['Polygon', 'MultiPolygon'].includes(feature.geometry.type)) {
-      const kinked = !!kinks(feature).features.length
-      if (kinked) {
-        await customUnkink(feature)
-      }
+  const geometries = feature.geometry.type === 'GeometryCollection' ? feature.geometry.geometries : [feature.geometry]
+  for (const geometry of geometries) {
+    try {
+      rewind(geometry, { mutate: true })
+    } catch (err) {
+      debug('Failure while applying rewind to geojson', err)
     }
-  } catch (err) {
-    debug('Failure while removing self intersections from geojson polygons', err)
+    try {
+      if (['Polygon', 'MultiPolygon'].includes(geometry.type)) {
+        const kinked = !!kinks(geometry).features.length
+        if (kinked) {
+          await customUnkink(geometry)
+        }
+      }
+    } catch (err) {
+      debug('Failure while removing self intersections from geojson polygons', err)
+    }
   }
 
   // check if simplify is a good idea ? too CPU intensive for our backend ?
@@ -242,12 +251,11 @@ export const result2wkt = esResponse => {
 
 // Simple wrapping of the command line prepair https://github.com/tudelft3d/prepair
 // help fixing some polygons
-const customUnkink = async (feature) => {
-  let tmpFile
+const customUnkink = async (geometry) => {
   try {
-    if (feature.geometry.type === 'MultiPolygon') {
+    if (geometry.type === 'MultiPolygon') {
       const newCoordinates = []
-      for (const coordinates of feature.geometry.coordinates) {
+      for (const coordinates of geometry.coordinates) {
         const childPolygon = { type: 'Feature', geometry: { type: 'Polygon', coordinates } }
         await prepair(childPolygon)
         if (childPolygon.geometry.type === 'Polygon') newCoordinates.push(childPolygon.geometry.coordinates)
@@ -257,27 +265,28 @@ const customUnkink = async (feature) => {
           }
         }
       }
-      feature.geometry.coordinates = newCoordinates
+      geometry.coordinates = newCoordinates
     } else {
-      await prepair(feature)
+      await prepair(geometry)
     }
   } catch (err) {
     debug('Failed to use the prepair command line tool', err)
-    const unkinked = unkink(feature)
-    feature.geometry = { type: 'MultiPolygon', coordinates: unkinked.features.map(f => f.geometry.coordinates) }
+    const unkinked = unkink(geometry)
+    geometry.type = 'MultiPolygon'
+    geometry.coordinates = unkinked.features.map(f => f.geometry.coordinates)
   }
-  if (tmpFile) tmpFile.cleanup()
 }
 
-const prepair = async (feature) => {
+const prepair = async (geometry) => {
   let tmpFile
   try {
     // const wkt = wktParser.convert(feature.geometry)
     tmpFile = await tmp.file({ postfix: '.geojson', tmpdir: tmpDir })
-    await writeFile(tmpFile.fd, JSON.stringify(feature))
+    await writeFile(tmpFile.fd, JSON.stringify({ type: 'Feature', geometry }))
     const repaired = await exec(`prepair --ogr '${tmpFile.path}'`, { maxBuffer: 100000000 })
-    feature.geometry = wktToGeoJSON(repaired.stdout)
-    return feature
+    const repairedGeometry = wktToGeoJSON(repaired.stdout)
+    geometry.coordinates = repairedGeometry.coordinates
+    return geometry
   } catch (err) {
     if (tmpFile) tmpFile.cleanup()
     throw err

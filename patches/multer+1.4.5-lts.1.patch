@@ -1,0 +1,13 @@
+diff --git a/node_modules/multer/lib/make-middleware.js b/node_modules/multer/lib/make-middleware.js
+index 6627cf4..e92a3b0 100644
+--- a/node_modules/multer/lib/make-middleware.js
++++ b/node_modules/multer/lib/make-middleware.js
+@@ -25,7 +25,7 @@ function makeMiddleware (setup) {
+     var busboy
+ 
+     try {
+-      busboy = Busboy({ headers: req.headers, limits: limits, preservePath: preservePath })
++      busboy = Busboy({ headers: req.headers, limits: limits, preservePath: preservePath, defParamCharset: 'utf8' })
+     } catch (err) {
+       return next(err)
+     }

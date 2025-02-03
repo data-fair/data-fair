@@ -50,7 +50,7 @@ module.exports = {
     title: 'Mydatacatalogue',
     href: 'https://app.dawizz.fr/mydatacatalogue/'
   }],
-  proxyNuxt: false,
+  proxyNuxt: true,
   extraNavigationItems: [
     {
       id: 'test',

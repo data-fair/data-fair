@@ -1,7 +1,7 @@
 // A module of the store for the currently worked on application
 // Used in the application vue and all its tabs and their components
 import Vue from 'vue'
-import { compareVersions } from 'compare-versions'
+import { compare as compareVersions, validate as validateVersion } from 'compare-versions'
 import eventBus from '~/event-bus'
 
 export default () => ({
@@ -34,8 +34,8 @@ export default () => ({
     },
     availableVersions: (state) => {
       let availableVersions = [...state.otherVersions]
-      if (compareVersions.validate(state.prodBaseApp.version)) {
-        availableVersions = availableVersions.filter(a => compareVersions.compare(a.version, state.prodBaseApp.version, '>'))
+      if (validateVersion(state.prodBaseApp.version)) {
+        availableVersions = availableVersions.filter(a => compareVersions(a.version, state.prodBaseApp.version, '>'))
       }
       if (!availableVersions.find(b => b.url === state.prodBaseApp.url)) {
         availableVersions.push(state.prodBaseApp)
@@ -100,8 +100,8 @@ export default () => ({
       })).results
       otherVersions.forEach(a => { a.version = a.version || a.url.split('/').slice(-2, -1).pop() })
 
-      otherVersions = otherVersions.filter(a => compareVersions.validate(a.version))
-      otherVersions.sort((a1, a2) => compareVersions(a2.version, a1.version)).reverse()
+      otherVersions = otherVersions.filter(a => validateVersion(a.version))
+      otherVersions.sort((a1, a2) => compareVersions(a2.version, a1.version, '<'))
 
       commit('setAny', { otherVersions })
     },
