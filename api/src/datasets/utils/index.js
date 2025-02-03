@@ -161,7 +161,6 @@ export const clean = (req, dataset, draft = false) => {
   const select = query.select ? query.select.split(',') : []
   if (query.raw !== 'true') {
     dataset.userPermissions = permissions.list('datasets', dataset, req.user, req.bypassPermissions)
-    console.log('dataset.userPermissions', dataset.id, req.user?.activeAccount, req.bypassPermissions, dataset.userPermissions.length)
     const thumbnail = query.thumbnail || '300x200'
     if (draft) mergeDraft(dataset)
     if (!select.includes('-public')) dataset.public = permissions.isPublic('datasets', dataset)
