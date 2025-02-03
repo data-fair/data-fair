@@ -136,7 +136,13 @@ export const geometry2fields = async (dataset, doc) => {
       const projection = dataset.projection && dataset.projection.code && projections.find(p => p.code === dataset.projection.code)
       if (dataset.projection && !projection) throw new Error(`La projection ${dataset.projection.code} n'est pas supportée.`)
       if (projection) {
-        projCoordinates(projection, geometry.coordinates)
+        if (geometry.type === 'GeometryCollection') {
+          for (const geom of geometry.geometries) {
+            projCoordinates(projection, geom.coordinates)
+          }
+        } else {
+          projCoordinates(projection, geometry.coordinates)
+        }
       }
     }
     capabilities = projectGeomProp['x-capabilities']
