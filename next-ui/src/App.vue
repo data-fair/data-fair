@@ -1,7 +1,5 @@
 <template>
-  <v-app
-    :class="appClass"
-  >
+  <v-app>
     <v-main>
       <v-container fluid>
         <RouterView />

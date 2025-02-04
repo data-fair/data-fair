@@ -37,5 +37,8 @@
     "vue-router": "^4.4.5",
     "vue-tsc": "^2.1.10",
     "vuetify": "^3.7.6"
+  },
+  "dependencies": {
+    "ofetch": "^1.4.1"
   }
 }

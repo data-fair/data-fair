@@ -1,5 +1,5 @@
 import { ofetch } from 'ofetch'
-import type { UiConfig } from '../../api/src/ui-config'
+import type { UiConfig } from '@data-fair/data-fair-api/src/ui-config'
 
 export const $uiConfig = (window as any).__UI_CONFIG as UiConfig
 export const $sitePath = (window as any).__SITE_PATH as string

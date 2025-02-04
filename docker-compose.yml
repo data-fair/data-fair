@@ -43,7 +43,7 @@ services:
     profiles:
       - dev
       - test
-    image: ghcr.io/data-fair/simple-directory:7
+    image: ghcr.io/data-fair/simple-directory:8
     network_mode: host
     depends_on:
       - mongodb
@@ -69,6 +69,8 @@ services:
       - LIST_ORGANIZATIONS_MODE=authenticated
       - OBSERVER_ACTIVE=false
       - ROLES_DEFAULTS=["admin","contrib","user"]
+      - CONTACT=contact@test.com
+      - CIPHER_PASSWORD=test
     volumes:
       - ./test/resources/users.json:/webapp/data/users.json
       - ./test/resources/organizations.json:/webapp/data/organizations.json

@@ -142,10 +142,8 @@ declare global {
   // @ts-ignore
   export type { Component, ComponentPublicInstance, ComputedRef, DirectiveBinding, ExtractDefaultPropTypes, ExtractPropTypes, ExtractPublicPropTypes, InjectionKey, PropType, Ref, MaybeRef, MaybeRefOrGetter, VNode, WritableComputedRef } from 'vue'
   import('vue')
-  // @ts-ignore
-  export type { Organization, User, Member, Partner, Invitation, Site, Limits } from '@sd/api/types'
-  import('@sd/api/types')
 }
+
 // for vue template auto import
 import { UnwrapRef } from 'vue'
 declare module 'vue' {
@@ -178,42 +176,6 @@ declare module 'vue' {
     readonly isReadonly: UnwrapRef<typeof import('vue')['isReadonly']>
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
-    readonly mdiAccount: UnwrapRef<typeof import('@mdi/js')['mdiAccount']>
-    readonly mdiAccountCircle: UnwrapRef<typeof import('@mdi/js')['mdiAccountCircle']>
-    readonly mdiAccountGroup: UnwrapRef<typeof import('@mdi/js')['mdiAccountGroup']>
-    readonly mdiAccountSwitch: UnwrapRef<typeof import('@mdi/js')['mdiAccountSwitch']>
-    readonly mdiAlertCircle: UnwrapRef<typeof import('@mdi/js')['mdiAlertCircle']>
-    readonly mdiBell: UnwrapRef<typeof import('@mdi/js')['mdiBell']>
-    readonly mdiCalendar: UnwrapRef<typeof import('@mdi/js')['mdiCalendar']>
-    readonly mdiCancel: UnwrapRef<typeof import('@mdi/js')['mdiCancel']>
-    readonly mdiCellphone: UnwrapRef<typeof import('@mdi/js')['mdiCellphone']>
-    readonly mdiCheck: UnwrapRef<typeof import('@mdi/js')['mdiCheck']>
-    readonly mdiCheckCircle: UnwrapRef<typeof import('@mdi/js')['mdiCheckCircle']>
-    readonly mdiCog: UnwrapRef<typeof import('@mdi/js')['mdiCog']>
-    readonly mdiConnection: UnwrapRef<typeof import('@mdi/js')['mdiConnection']>
-    readonly mdiDelete: UnwrapRef<typeof import('@mdi/js')['mdiDelete']>
-    readonly mdiDevices: UnwrapRef<typeof import('@mdi/js')['mdiDevices']>
-    readonly mdiDotsVertical: UnwrapRef<typeof import('@mdi/js')['mdiDotsVertical']>
-    readonly mdiDownload: UnwrapRef<typeof import('@mdi/js')['mdiDownload']>
-    readonly mdiEmail: UnwrapRef<typeof import('@mdi/js')['mdiEmail']>
-    readonly mdiEye: UnwrapRef<typeof import('@mdi/js')['mdiEye']>
-    readonly mdiEyeOffOutline: UnwrapRef<typeof import('@mdi/js')['mdiEyeOffOutline']>
-    readonly mdiEyeOutline: UnwrapRef<typeof import('@mdi/js')['mdiEyeOutline']>
-    readonly mdiFamilyTree: UnwrapRef<typeof import('@mdi/js')['mdiFamilyTree']>
-    readonly mdiFileTable: UnwrapRef<typeof import('@mdi/js')['mdiFileTable']>
-    readonly mdiGraph: UnwrapRef<typeof import('@mdi/js')['mdiGraph']>
-    readonly mdiInformation: UnwrapRef<typeof import('@mdi/js')['mdiInformation']>
-    readonly mdiMagnify: UnwrapRef<typeof import('@mdi/js')['mdiMagnify']>
-    readonly mdiMonitorCellphoneStar: UnwrapRef<typeof import('@mdi/js')['mdiMonitorCellphoneStar']>
-    readonly mdiPencil: UnwrapRef<typeof import('@mdi/js')['mdiPencil']>
-    readonly mdiPlus: UnwrapRef<typeof import('@mdi/js')['mdiPlus']>
-    readonly mdiRefresh: UnwrapRef<typeof import('@mdi/js')['mdiRefresh']>
-    readonly mdiRss: UnwrapRef<typeof import('@mdi/js')['mdiRss']>
-    readonly mdiSend: UnwrapRef<typeof import('@mdi/js')['mdiSend']>
-    readonly mdiShieldAlert: UnwrapRef<typeof import('@mdi/js')['mdiShieldAlert']>
-    readonly mdiSort: UnwrapRef<typeof import('@mdi/js')['mdiSort']>
-    readonly mdiThemeLightDark: UnwrapRef<typeof import('@mdi/js')['mdiThemeLightDark']>
-    readonly mdiWeb: UnwrapRef<typeof import('@mdi/js')['mdiWeb']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
@@ -270,7 +232,6 @@ declare module 'vue' {
     readonly useSession: UnwrapRef<typeof import('@data-fair/lib-vue/session.js')['useSession']>
     readonly useSessionAuthenticated: UnwrapRef<typeof import('@data-fair/lib-vue/session.js')['useSessionAuthenticated']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
-    readonly useStore: UnwrapRef<typeof import('../src/composables/use-store')['default']>
     readonly useStringSearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useStringSearchParam']>
     readonly useStringsArraySearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useStringsArraySearchParam']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>

@@ -12,12 +12,9 @@ import microTemplate from '@data-fair/lib-utils/micro-template.js'
 import { autoImports, settingsPath } from '@data-fair/lib-vuetify/vite.js'
 import { commonjsDeps } from '@koumoul/vjsf/utils/build.js'
 
-// const devSitePath = '/site-prefix'
-const devSitePath = ''
-
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: devSitePath + '/simple-directory',
+  base: '/data-fair/next-ui',
   optimizeDeps: { include: commonjsDeps },
   build: {
     rollupOptions: {
@@ -32,14 +29,6 @@ export default defineConfig({
     },
   },
   plugins: [
-    // we used this once to download fonts and prepare webfonts.css but we moved
-    // and slightly transformed the result in public/fonts
-    /* webfontDownload([
-      'https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap'
-    ], {
-      injectAsStyleTag: false,
-      assetsSubfolder: 'fonts'
-    }), */
     VueRouter({
       dts: './dts/typed-router.d.ts',
       exclude: process.env.NODE_ENV === 'development' ? [] : ['src/pages/dev.vue']
@@ -54,50 +43,7 @@ export default defineConfig({
         ...(autoImports as any),
         unheadVueComposablesImports,
         {
-          from: '@sd/api/types',
-          imports: ['Organization', 'User', 'Member', 'Partner', 'Invitation', 'Site', 'Limits'],
-          type: true,
-        },
-        {
-          '~/context': ['$uiConfig', '$sitePath', '$siteUrl', '$sdUrl', '$apiPath', '$fetch'],
-          '@mdi/js': [
-            'mdiAccount',
-            'mdiAccountCircle',
-            'mdiAccountGroup',
-            'mdiAccountSwitch',
-            'mdiAlertCircle',
-            'mdiBell',
-            'mdiCalendar',
-            'mdiCancel',
-            'mdiCellphone',
-            'mdiCheck',
-            'mdiCheckCircle',
-            'mdiCog',
-            'mdiConnection',
-            'mdiDelete',
-            'mdiDevices',
-            'mdiDotsVertical',
-            'mdiDownload',
-            'mdiEmail',
-            'mdiEye',
-            'mdiEyeOffOutline',
-            'mdiEyeOutline',
-            'mdiFamilyTree',
-            'mdiFileTable',
-            'mdiGraph',
-            'mdiInformation',
-            'mdiMagnify',
-            'mdiPencil',
-            'mdiPlus',
-            'mdiRefresh',
-            'mdiRss',
-            'mdiSend',
-            'mdiShieldAlert',
-            'mdiSort',
-            'mdiWeb',
-            'mdiMonitorCellphoneStar',
-            'mdiThemeLightDark'
-          ]
+          '~/context': ['$uiConfig', '$sitePath', '$siteUrl', '$sdUrl', '$apiPath', '$fetch']
         }
       ],
       dirs: [
@@ -112,13 +58,13 @@ export default defineConfig({
         // in production this injection will be performed by an express middleware
         if (process.env.NODE_ENV !== 'development') return html
         const { uiConfig } = await import('../api/src/ui-config.ts')
-        return microTemplate(html, { SITE_PATH: devSitePath, UI_CONFIG: JSON.stringify(uiConfig) })
+        return microTemplate(html, { SITE_PATH: '', UI_CONFIG: JSON.stringify(uiConfig) })
       }
     }
   ],
   experimental: {
     renderBuiltUrl (filename, { hostType }) {
-      if (hostType === 'html') return '{SITE_PATH}/simple-directory/' + filename
+      if (hostType === 'html') return '{SITE_PATH}/data-fair/next-ui/' + filename
       return { relative: true }
     }
   },
