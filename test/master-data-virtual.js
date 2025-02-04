@@ -14,7 +14,7 @@ const initMaster = async (ax, schema, id = 'master') => {
       virtualDatasets: { active: true }
     }
   })
-  const master = (await ax.get('api/v1/datasets/' + id)).data
+  const master = (await ax.get('/api/v1/datasets/' + id)).data
 
   await ax.put(`/api/v1/datasets/${master.id}/permissions`, [{ classes: ['read'] }])
 

@@ -43,7 +43,7 @@ services:
     profiles:
       - dev
       - test
-    image: ghcr.io/data-fair/simple-directory:8
+    image: ghcr.io/data-fair/simple-directory:master
     network_mode: host
     depends_on:
       - mongodb
@@ -61,6 +61,7 @@ services:
       - NUXT_BUILD_BLOCKING=false
       - NO_UI=${NO_UI}
       - AUTHRATELIMIT_ATTEMPTS=200
+      - AUTHRATELIMIT_DURATION=1
       - DEFAULT_MAX_CREATED_ORGS=10
       - ANONYMOUS_ACTION_NOT_BEFORE=1s
       - MANAGE_DEPARTMENTS=true

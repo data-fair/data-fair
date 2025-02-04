@@ -193,7 +193,7 @@ describe('Applications keys for unauthenticated readOnly access', function () {
     assert.deepEqual(res.data.userPermissions, ['createLine', 'readSchema', 'readDescription'])
     res = await global.ax.anonymous.get('/api/v1/datasets/restcrowd/schema', { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } })
     assert.equal(res.status, 200)
-    const anonymousToken = (await global.ax.anonymous.get('http://localhost:8080/api/auth/anonymous-action')).data
+    const anonymousToken = (await global.ax.anonymous.get(config.directoryUrl + '/api/auth/anonymous-action')).data
     // rejected because token is too young
     await assert.rejects(
       global.ax.anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } }),
@@ -231,7 +231,7 @@ describe('Applications keys for unauthenticated readOnly access', function () {
     })
     res = await ax.post(`/api/v1/applications/${appId}/keys`, [{ title: 'Access key' }])
     const key = res.data[0].id
-    const anonymousToken = (await global.ax.cdurning2.get('http://localhost:8080/api/auth/anonymous-action')).data
+    const anonymousToken = (await global.ax.cdurning2.get(config.directoryUrl + '/api/auth/anonymous-action')).data
     await new Promise(resolve => setTimeout(resolve, 2000))
     const headers = { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken }
 
