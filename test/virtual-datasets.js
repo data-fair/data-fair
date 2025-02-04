@@ -703,6 +703,7 @@ describe('virtual datasets', function () {
     let res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'childattach',
+      attachmentsAsImage: true,
       schema: [
         { key: 'attr1', type: 'integer' },
         { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
@@ -712,15 +713,15 @@ describe('virtual datasets', function () {
 
     // Create a line with an attached file
     const form = new FormData()
-    const attachmentContent = fs.readFileSync('./resources/datasets/files/dir1/test.pdf')
-    form.append('attachment', attachmentContent, 'dir1/test.pdf')
+    const attachmentContent = fs.readFileSync('resources/avatar.jpeg')
+    form.append('attachment', attachmentContent, 'dir1/avatar.jpeg')
     form.append('attr1', '10')
     res = await ax.post(`/api/v1/datasets/${child.id}/lines`, form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
     const line = res.data
     assert.ok(line._id)
     assert.ok(line.attachmentPath.startsWith(res.data._id + '/'))
-    assert.ok(line.attachmentPath.endsWith('/test.pdf'))
+    assert.ok(line.attachmentPath.endsWith('/avatar.jpeg'))
     await workers.hook('finalizer/' + child.id)
     const lines = (await ax.get(`/api/v1/datasets/${child.id}/lines`)).data.results
     assert.equal(lines.length, 1)
@@ -734,13 +735,14 @@ describe('virtual datasets', function () {
         children: [child.id],
         filterActiveAccount: true
       },
+      attachmentsAsImage: true,
       title: 'a virtual dataset',
       schema: [{ key: 'attr1' }]
     })
     const virtualDataset = await workers.hook('finalizer/' + res.data.id)
 
     await assert.rejects(
-      ax.get(`/api/v1/datasets/${virtualDataset.id}/attachments/badid/dir1/test.pdf`),
+      ax.get(`/api/v1/datasets/${virtualDataset.id}/attachments/badid/dir1/avatar.jpeg`),
       { data: 'Child dataset not found' }
     )
 
@@ -757,6 +759,14 @@ describe('virtual datasets', function () {
     })
 
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/attachments/${child.id}/${attachmentPath}`)
+    assert.equal(res.status, 200)
+
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
+    assert.equal(res.data.results[0]._attachment_url, `http://localhost:5600/data-fair/api/v1/datasets/${virtualDataset.id}/attachments/${child.id}/${attachmentPath}`)
+
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines?thumbnail=true`)
+    assert.ok(res.data.results[0]._thumbnail)
+    res = await ax.get(res.data.results[0]._thumbnail)
     assert.equal(res.status, 200)
   })
 })
