@@ -13,7 +13,7 @@ export const log = async function (app, resource, event, type = 'dataset', noSto
       await db.collection('journals')
         .updateOne(
           { id: resource.id, type, 'owner.type': resource.owner.type, 'owner.id': resource.owner.id },
-          { $push: { events: event } },
+          { $push: { events: { $each: [event], $slice: -1000 } } },
           { upsert: true }
         )
     }
