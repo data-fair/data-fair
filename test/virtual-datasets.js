@@ -1,6 +1,7 @@
+import fs from 'node:fs'
 import { strict as assert } from 'node:assert'
+import FormData from 'form-data'
 import * as testUtils from './resources/test-utils.js'
-
 import * as workers from '../api/src/workers/index.js'
 
 describe('virtual datasets', function () {
@@ -695,5 +696,67 @@ describe('virtual datasets', function () {
     res = await global.ax.hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
+  })
+
+  it('a virtual dataset of a dataset with attachments re-expose those attachments', async function () {
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'childattach',
+      schema: [
+        { key: 'attr1', type: 'integer' },
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ]
+    })
+    const child = res.data
+
+    // Create a line with an attached file
+    const form = new FormData()
+    const attachmentContent = fs.readFileSync('./resources/datasets/files/dir1/test.pdf')
+    form.append('attachment', attachmentContent, 'dir1/test.pdf')
+    form.append('attr1', '10')
+    res = await ax.post(`/api/v1/datasets/${child.id}/lines`, form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+    const line = res.data
+    assert.ok(line._id)
+    assert.ok(line.attachmentPath.startsWith(res.data._id + '/'))
+    assert.ok(line.attachmentPath.endsWith('/test.pdf'))
+    await workers.hook('finalizer/' + child.id)
+    const lines = (await ax.get(`/api/v1/datasets/${child.id}/lines`)).data.results
+    assert.equal(lines.length, 1)
+    const attachmentPath = lines[0].attachmentPath
+    res = await ax.get(`/api/v1/datasets/${child.id}/attachments/${attachmentPath}`)
+    assert.equal(res.status, 200)
+
+    res = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      virtual: {
+        children: [child.id],
+        filterActiveAccount: true
+      },
+      title: 'a virtual dataset',
+      schema: [{ key: 'attr1' }]
+    })
+    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${virtualDataset.id}/attachments/badid/dir1/test.pdf`),
+      { data: 'Child dataset not found' }
+    )
+
+    await assert.rejects(
+      ax.get(`/api/v1/datasets/${virtualDataset.id}/attachments/${child.id}/${attachmentPath}`),
+      { data: 'No attachment column found' }
+    )
+
+    await ax.patch(`/api/v1/datasets/${virtualDataset.id}`, {
+      schema: [
+        { key: 'attr1', type: 'integer' },
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ]
+    })
+
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/attachments/${child.id}/${attachmentPath}`)
+    assert.equal(res.status, 200)
   })
 })

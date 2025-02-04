@@ -43,7 +43,7 @@ import * as publicationSites from '../misc/utils/publication-sites.js'
 import * as clamav from '../misc/utils/clamav.js'
 import * as apiKeyUtils from '../misc/utils/api-key.js'
 import { syncDataset as syncRemoteService } from '../remote-services/utils.js'
-import { findDatasets, applyPatch, deleteDataset, createDataset } from './service.js'
+import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetDataset } from './service.js'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/schema.js'
 import { dir, attachmentsDir } from './utils/files.js'
 import { preparePatch, validatePatch } from './utils/patch.js'
@@ -1037,17 +1037,36 @@ router.get('/:datasetId/min/:fieldKey', readDataset({ fillDescendants: true }), 
 })
 
 // For datasets with attached files
-router.get('/:datasetId/attachments/*attachmentPath', readDataset(), applicationKey, apiKeyMiddleware, permissions.middleware('downloadAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, (req, res, next) => {
-  // the transform stream option was patched into "send" module using patch-package
-  const relFilePath = path.join(...req.params.attachmentPath)
-  res.sendFile(
-    relFilePath,
-    {
-      transformStream: res.throttle('static'),
-      root: attachmentsDir(req.dataset),
-      headers: { 'Content-Disposition': `inline; filename="${path.basename(relFilePath)}"` }
-    }
-  )
+router.get('/:datasetId/attachments/*attachmentPath', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('downloadAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
+  if (req.dataset.isVirtual) {
+    const childDatasetId = req.params.attachmentPath[0]
+    if (!req.dataset.descendants?.find(c => c === childDatasetId)) return res.status(404).send('Child dataset not found')
+    const { dataset: childDataset } = await memoizedGetDataset(childDatasetId, req.publicationSite, req.mainPublicationSite, false, false, false, mongo.db, true, undefined, undefined)
+    const documentProp = req.dataset.schema.find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
+    const childDocumentProp = childDataset.schema.find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
+    if (!documentProp || documentProp.key !== childDocumentProp.key) return res.status(404).send('No attachment column found')
+
+    const relFilePath = path.join(...req.params.attachmentPath.slice(1))
+    res.sendFile(
+      relFilePath,
+      {
+        transformStream: res.throttle('static'),
+        root: attachmentsDir(childDataset),
+        headers: { 'Content-Disposition': `inline; filename="${path.basename(relFilePath)}"` }
+      }
+    )
+  } else {
+    // the transform stream option was patched into "send" module using patch-package
+    const relFilePath = path.join(...req.params.attachmentPath)
+    res.sendFile(
+      relFilePath,
+      {
+        transformStream: res.throttle('static'),
+        root: attachmentsDir(req.dataset),
+        headers: { 'Content-Disposition': `inline; filename="${path.basename(relFilePath)}"` }
+      }
+    )
+  }
 })
 
 // Direct access to data files
