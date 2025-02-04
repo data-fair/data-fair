@@ -69,6 +69,7 @@
   "workspaces": [
     "api",
     "ui",
+    "next-ui",
     "doc",
     "shared",
     "test"
