@@ -363,7 +363,7 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setResource, async
         tagName: 'script',
         attrs: [
           { name: 'type', value: 'text/javascript' },
-          { name: 'src', value: 'https://cdn.jsdelivr.net/npm/iframe-resizer@$4/js/iframeResizer.contentWindow.min.js' }
+          { name: 'src', value: 'https://cdn.jsdelivr.net/npm/iframe-resizer@4/js/iframeResizer.contentWindow.min.js' }
         ]
       })
     }
