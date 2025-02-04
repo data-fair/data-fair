@@ -68,7 +68,6 @@ ADD ui/package.json ui/package.json
 ADD api/package.json api/package.json
 ADD shared/package.json shared/package.json
 ADD patches patches
-ADD ui/patches ui/patches
 # full deps install used for building
 # also used to fill the npm cache for faster install of api deps
 RUN npm ci --omit=peer --no-audit --no-fund
