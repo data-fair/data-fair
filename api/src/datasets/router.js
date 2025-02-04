@@ -1231,6 +1231,11 @@ router.get('/:datasetId/journal', readDataset({ acceptInitialDraft: true }), api
     id: req.dataset.id,
     'owner.type': req.dataset.owner.type,
     'owner.id': req.dataset.owner.id
+  }, {
+    projection: {
+      // arbitrary limit at 1000 events
+      events: { $slice: -1000 }
+    }
   })
   if (!journal) return res.send([])
   delete journal.owner
