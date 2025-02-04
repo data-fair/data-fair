@@ -118,7 +118,6 @@ class IndexStream extends Transform {
         this.push({ _id, ...line })
       }
       if (res.errors) {
-        console.log('ERRORS', res.items.map(i => i.index.error))
         for (let i = 0; i < res.items.length; i++) {
           const item = {
             _i: (this.options.updateMode ? bodyClone[(i * 2) + 1].doc : bodyClone[(i * 2) + 1])._i,
