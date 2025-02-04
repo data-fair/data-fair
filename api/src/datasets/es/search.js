@@ -32,6 +32,12 @@ export default async (client, dataset, query, publicBaseUrl) => {
     if (hit._source && hit._source._attachment_url) {
       if (config.oldPublicUrl) hit._source._attachment_url = hit._source._attachment_url.replace(config.oldPublicUrl, config.publicUrl)
       if (publicBaseUrl) hit._source._attachment_url = hit._source._attachment_url.replace(config.publicUrl, publicBaseUrl)
+      if (dataset.isVirtual) {
+        const url = new URL(hit._source._attachment_url)
+        const childDatasetId = url.pathname.split('/')[5]
+        url.pathname = url.pathname.replace(`/data-fair/api/v1/datasets/${childDatasetId}/attachments/`, `/data-fair/api/v1/datasets/${dataset.id}/attachments/${childDatasetId}/`)
+        hit._source._attachment_url = url.href
+      }
     }
   }
 
