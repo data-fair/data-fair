@@ -19,5 +19,7 @@ declare module 'vue-router/auto-routes' {
    */
   export interface RouteNamedMap {
     '/dev': RouteRecordInfo<'/dev', '/dev', Record<never, never>, Record<never, never>>,
+    '/embed/application/[id]/config': RouteRecordInfo<'/embed/application/[id]/config', '/embed/application/:id/config', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    '/embed/dataset/[id]/table': RouteRecordInfo<'/embed/dataset/[id]/table', '/embed/dataset/:id/table', { id: ParamValue<true> }, { id: ParamValue<false> }>,
   }
 }

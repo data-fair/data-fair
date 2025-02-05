@@ -24,6 +24,7 @@
     "@vitejs/plugin-vue": "^5.1.2",
     "@vueuse/core": "^11.2.0",
     "debug": "^4.4.0",
+    "eslint-plugin-vuetify": "^2.5.1",
     "sass-embedded": "^1.79.4",
     "ufo": "^1.5.4",
     "unplugin-auto-import": "^0.18.3",
