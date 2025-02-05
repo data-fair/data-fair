@@ -106,6 +106,7 @@ RUN cp -rf node_modules/@img/sharp-linuxmusl-x64 /tmp/sharp-linuxmusl-x64 && \
     cp -rf /tmp/sharp-linuxmusl-x64 node_modules/@img/sharp-linuxmusl-x64 && \
     cp -rf /tmp/sharp-libvips-linuxmusl-x64 node_modules/@img/sharp-libvips-linuxmusl-x64
 RUN mkdir -p /app/api/node_modules
+RUN mkdir -p /app/shared/node_modules
 
 ##########################
 FROM nativedeps AS main
@@ -113,6 +114,7 @@ FROM nativedeps AS main
 # We could copy /app whole, but this is better for layering / efficient cache use
 COPY --from=api-installer /app/node_modules /app/node_modules
 COPY --from=api-installer /app/api/node_modules /app/api/node_modules
+COPY --from=api-installer /app/shared/node_modules /app/shared/node_modules
 COPY --from=builder /app/ui/nuxt-dist /app/ui/nuxt-dist
 COPY --from=next-ui-builder /app/next-ui/dist next-ui/dist
 ADD ui/nuxt.config.js ui/nuxt.config.js
