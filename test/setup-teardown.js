@@ -11,8 +11,8 @@ import axios from 'axios'
 import debugModule from 'debug'
 import * as app from '../api/src/app.js'
 import * as rateLimiting from '../api/src/misc/utils/rate-limiting.js'
-// eslint-disable-next-line no-restricted-imports
-import { axiosAuth } from '@data-fair/sd-express'
+
+import { axiosAuth } from '@data-fair/lib-node/axios-auth.js'
 
 const geocoderApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, './resources/geocoder-api.json'), 'utf8'))
 const sireneApi = JSON.parse(readFileSync(path.resolve(import.meta.dirname, './resources/sirene-api.json'), 'utf8'))
@@ -110,44 +110,46 @@ before('init globals', async function () {
   global.es = await (await import('../api/src/datasets/es/index.ts')).init()
 
   global.ax = {}
-  global.ax.builder = async (email, org, opts = {}) => {
+  global.ax.builder = async (email, password, org, adminMode = false, opts = {}) => {
     debug('prepare axios instance', email)
     opts.baseURL = config.publicUrl
     opts.headers = opts.headers || {}
     opts.headers['x-cache-bypass'] = opts.headers['x-cache-bypass'] || '1'
 
     let ax
-    if (email) ax = await axiosAuth(email, org, opts)
-    else ax = axios.create(opts)
+    if (email) {
+      ax = await axiosAuth({
+        email,
+        password,
+        directoryUrl: config.directoryUrl,
+        org,
+        axiosOpts: opts,
+        adminMode
+      })
+    } else ax = axios.create(opts)
 
-    // customize axios errors for shorter stack traces when a request fails in a test
-    ax.interceptors.response.use(response => response, error => {
-      if (!error.response) return Promise.reject(error)
-      delete error.response.request
-      return Promise.reject(error.response)
-    })
     debug('axios instance ok')
     return ax
   }
   await Promise.all([
     global.ax.builder().then(ax => { global.ax.anonymous = ax }),
-    global.ax.builder('dmeadus0@answers.com:passwd').then(ax => { global.ax.dmeadus = ax }),
-    global.ax.builder('dmeadus0@answers.com:passwd', 'KWqAGZ4mG').then(ax => { global.ax.dmeadusOrg = ax }),
-    global.ax.builder('cdurning2@desdev.cn:passwd').then(ax => { global.ax.cdurning2 = ax }),
-    global.ax.builder('alone@no.org:passwd').then(ax => { global.ax.alone = ax }),
-    global.ax.builder('superadmin@test.com:superpasswd:adminMode').then(ax => { global.ax.superadmin = ax }),
-    global.ax.builder('superadmin@test.com:superpasswd').then(ax => { global.ax.superadminPersonal = ax }),
-    global.ax.builder('alban.mouton@koumoul.com:passwd:adminMode').then(ax => { global.ax.alban = ax }),
-    global.ax.builder('hlalonde3@desdev.cn:passwd').then(ax => { global.ax.hlalonde3 = ax }),
-    global.ax.builder('hlalonde3@desdev.cn:passwd', 'KWqAGZ4mG').then(ax => { global.ax.hlalonde3Org = ax }),
-    global.ax.builder('ngernier4@usa.gov:passwd').then(ax => { global.ax.ngernier4 = ax }),
-    global.ax.builder('ddecruce5@phpbb.com:passwd').then(ax => { global.ax.ddecruce5 = ax }),
-    global.ax.builder('ddecruce5@phpbb.com:passwd', 'KWqAGZ4mG').then(ax => { global.ax.ddecruce5Org = ax }),
-    global.ax.builder('bhazeldean7@cnbc.com:passwd').then(ax => { global.ax.bhazeldean7 = ax }),
-    global.ax.builder('bhazeldean7@cnbc.com:passwd', 'KWqAGZ4mG').then(ax => { global.ax.bhazeldean7Org = ax }),
-    global.ax.builder('ngernier4@usa.gov:passwd', 'KWqAGZ4mG').then(ax => { global.ax.ngernier4Org = ax }),
-    global.ax.builder('icarlens9@independent.co.uk:passwd').then(ax => { global.ax.icarlens9 = ax }),
-    global.ax.builder('icarlens9@independent.co.uk:passwd', 'KWqAGZ4mG').then(ax => { global.ax.icarlens9Org = ax })
+    global.ax.builder('dmeadus0@answers.com', 'passwd').then(ax => { global.ax.dmeadus = ax }),
+    global.ax.builder('dmeadus0@answers.com', 'passwd', 'KWqAGZ4mG').then(ax => { global.ax.dmeadusOrg = ax }),
+    global.ax.builder('cdurning2@desdev.cn', 'passwd').then(ax => { global.ax.cdurning2 = ax }),
+    global.ax.builder('alone@no.org', 'passwd').then(ax => { global.ax.alone = ax }),
+    global.ax.builder('superadmin@test.com', 'superpasswd', undefined, true).then(ax => { global.ax.superadmin = ax }),
+    global.ax.builder('superadmin@test.com', 'superpasswd').then(ax => { global.ax.superadminPersonal = ax }),
+    global.ax.builder('alban.mouton@koumoul.com', 'passwd', undefined, true).then(ax => { global.ax.alban = ax }),
+    global.ax.builder('hlalonde3@desdev.cn', 'passwd').then(ax => { global.ax.hlalonde3 = ax }),
+    global.ax.builder('hlalonde3@desdev.cn', 'passwd', 'KWqAGZ4mG').then(ax => { global.ax.hlalonde3Org = ax }),
+    global.ax.builder('ngernier4@usa.gov', 'passwd').then(ax => { global.ax.ngernier4 = ax }),
+    global.ax.builder('ddecruce5@phpbb.com', 'passwd').then(ax => { global.ax.ddecruce5 = ax }),
+    global.ax.builder('ddecruce5@phpbb.com', 'passwd', 'KWqAGZ4mG').then(ax => { global.ax.ddecruce5Org = ax }),
+    global.ax.builder('bhazeldean7@cnbc.com', 'passwd').then(ax => { global.ax.bhazeldean7 = ax }),
+    global.ax.builder('bhazeldean7@cnbc.com', 'passwd', 'KWqAGZ4mG').then(ax => { global.ax.bhazeldean7Org = ax }),
+    global.ax.builder('ngernier4@usa.gov', 'passwd', 'KWqAGZ4mG').then(ax => { global.ax.ngernier4Org = ax }),
+    global.ax.builder('icarlens9@independent.co.uk', 'passwd').then(ax => { global.ax.icarlens9 = ax }),
+    global.ax.builder('icarlens9@independent.co.uk', 'passwd', 'KWqAGZ4mG').then(ax => { global.ax.icarlens9Org = ax })
   ])
   debug('init globals ok')
 })

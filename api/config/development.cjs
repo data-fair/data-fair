@@ -5,6 +5,7 @@ const host = 'localhost'
 
 module.exports = {
   port: 5599,
+  serveUi: false,
   dataDir: '../data/development',
   publicUrl: `http://${host}:5600/data-fair`,
   wsPublicUrl: `ws://${host}:5600/data-fair`,

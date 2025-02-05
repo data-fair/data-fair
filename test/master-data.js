@@ -20,7 +20,7 @@ const initMaster = async (ax, info, masterData, id = 'master') => {
     masterData,
     ...info
   })
-  const master = (await ax.get('api/v1/datasets/' + id)).data
+  const master = (await ax.get('/api/v1/datasets/' + id)).data
 
   const apiDocUrl = master.href + '/api-docs.json'
   const apiDoc = (await ax.get(apiDocUrl)).data
@@ -443,7 +443,7 @@ describe('Master data management', function () {
 
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }])
     await workers.hook('finalizer/slave')
-    const lines = (await ax.get('api/v1/datasets/slave/lines')).data
+    const lines = (await ax.get('/api/v1/datasets/slave/lines')).data
     assert.equal(lines.results[0]['_siret2._siret.extra'], 'Extra information')
     assert.equal(lines.results[0]['_siret2.extra2'], 'Extra information 2')
   })

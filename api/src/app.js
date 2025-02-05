@@ -1,6 +1,7 @@
 import { resolve } from 'node:path'
 import express from 'express'
 import config from '#config'
+import uiConfig from './ui-config.ts'
 import mongo from '#mongo'
 import memoize from 'memoizee'
 import * as esUtils from './datasets/es/index.ts'
@@ -15,6 +16,7 @@ import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import upgradeScripts from '@data-fair/lib-node/upgrade-scripts.js'
+import { createSpaMiddleware } from '@data-fair/lib-express/serve-spa.js'
 
 const debugDomain = debug('domain')
 
@@ -198,6 +200,10 @@ export const run = async () => {
     // see https://github.com/jimmywarting/StreamSaver.js/issues/183
     app.use('/streamsaver/mitm.html', express.static('node_modules/streamsaver/mitm.html'))
     app.use('/streamsaver/sw.js', express.static('node_modules/streamsaver/sw.js'))
+
+    if (config.serveUi) {
+      app.use('/next-ui', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, { ignoreSitePath: true }))
+    }
 
     server = (await import('http')).createServer(app)
     const { createHttpTerminator } = await import('http-terminator')

@@ -10,10 +10,10 @@
     "#mongo": "./src/mongo.js"
   },
   "dependencies": {
-    "@data-fair/data-fair-ui": "*",
     "@data-fair/data-fair-shared": "*",
-    "@data-fair/lib-express": "^1.12.7",
-    "@data-fair/lib-node": "^2.3.2",
+    "@data-fair/data-fair-ui": "*",
+    "@data-fair/lib-express": "^1.13.0",
+    "@data-fair/lib-node": "^2.4.0",
     "@data-fair/lib-utils": "^1.3.0",
     "@data-fair/sd-express": "^1.4.3",
     "@elastic/elasticsearch": "^8.17.0",
@@ -32,7 +32,6 @@
     "ajv": "^8.17.1",
     "ajv-draft-04": "^1.0.0",
     "ajv-formats": "^3.0.1",
-    "ajv-i18n": "^4.2.0",
     "cacheable-lookup": "^7.0.0",
     "chardet": "^2.0.0",
     "child-process-promise": "^2.2.1",
@@ -49,7 +48,6 @@
     "deep-equal": "^2.2.3",
     "escape-html": "^1.0.3",
     "exceljs": "^4.4.0",
-    "expr-eval": "^2.0.2",
     "express": "^5.0.1",
     "fast-json-stable-stringify": "^2.1.0",
     "flat": "^6.0.1",
@@ -146,10 +144,10 @@
     "@types/random-seed": "^0.3.5",
     "@types/request-ip": "^0.0.41",
     "@types/resolve-path": "^1.4.3",
-    "@types/sanitize-html": "^2.13.0",
     "@types/split2": "^4.2.3",
     "@types/stream-json": "^1.7.8",
     "@types/truncate-middle": "^1.0.4",
-    "http-proxy-middleware": "^3.0.3"
+    "http-proxy-middleware": "^3.0.3",
+    "tough-cookie": "^5.1.0"
   }
 }

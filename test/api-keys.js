@@ -3,7 +3,7 @@ import { strict as assert } from 'node:assert'
 
 describe('API keys', function () {
   it('Reject wrong api key', async function () {
-    const ax = await global.ax.builder(null, null, { headers: { 'x-apiKey': 'wrong' } })
+    const ax = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': 'wrong' } })
     await assert.rejects(ax.get('/api/v1/stats'), { status: 401 })
   })
 
@@ -21,11 +21,11 @@ describe('API keys', function () {
     assert.ok(key2)
 
     // Right scope
-    const axKey1 = await global.ax.builder(null, null, { headers: { 'x-apiKey': key1 } })
+    const axKey1 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key1 } })
     await axKey1.get('/api/v1/stats')
 
     // Wrong scope
-    const axKey2 = await global.ax.builder(null, null, { headers: { 'x-apiKey': key2 } })
+    const axKey2 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key2 } })
     await assert.rejects(axKey2.get('/api/v1/stats'), { status: 403 })
 
     // Set the correct owner
@@ -46,7 +46,7 @@ describe('API keys', function () {
     assert.ok(key1)
 
     // Set the correct owner
-    const axKey1 = await global.ax.builder(null, null, { headers: { 'x-apiKey': key1 } })
+    const axKey1 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key1 } })
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', axKey1)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'organization')
@@ -64,7 +64,7 @@ describe('API keys', function () {
     assert.ok(key1)
 
     // Set the correct owner
-    const axKey1 = await global.ax.builder(null, null, { headers: { 'x-apiKey': key1 } })
+    const axKey1 = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': key1 } })
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', axKey1)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'organization')

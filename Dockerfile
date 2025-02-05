@@ -67,6 +67,7 @@ COPY --from=package-strip /app/package-lock.json package-lock.json
 ADD ui/package.json ui/package.json
 ADD api/package.json api/package.json
 ADD shared/package.json shared/package.json
+ADD next-ui/package.json next-ui/package.json
 ADD patches patches
 # full deps install used for building
 # also used to fill the npm cache for faster install of api deps
@@ -87,6 +88,15 @@ ENV NODE_ENV=production
 RUN npm run build
 
 ##########################
+FROM installer AS next-ui-builder
+
+ADD /api/config api/config
+ADD /api/src/config.ts api/src/config.ts
+ADD /api/src/ui-config.ts api/src/ui-config.ts
+ADD /next-ui next-ui
+RUN npm -w next-ui run build
+
+##########################
 FROM installer AS api-installer
 
 RUN cp -rf node_modules/@img/sharp-linuxmusl-x64 /tmp/sharp-linuxmusl-x64 && \
@@ -96,6 +106,7 @@ RUN cp -rf node_modules/@img/sharp-linuxmusl-x64 /tmp/sharp-linuxmusl-x64 && \
     cp -rf /tmp/sharp-linuxmusl-x64 node_modules/@img/sharp-linuxmusl-x64 && \
     cp -rf /tmp/sharp-libvips-linuxmusl-x64 node_modules/@img/sharp-libvips-linuxmusl-x64
 RUN mkdir -p /app/api/node_modules
+RUN mkdir -p /app/shared/node_modules
 
 ##########################
 FROM nativedeps AS main
@@ -103,7 +114,9 @@ FROM nativedeps AS main
 # We could copy /app whole, but this is better for layering / efficient cache use
 COPY --from=api-installer /app/node_modules /app/node_modules
 COPY --from=api-installer /app/api/node_modules /app/api/node_modules
+COPY --from=api-installer /app/shared/node_modules /app/shared/node_modules
 COPY --from=builder /app/ui/nuxt-dist /app/ui/nuxt-dist
+COPY --from=next-ui-builder /app/next-ui/dist next-ui/dist
 ADD ui/nuxt.config.js ui/nuxt.config.js
 ADD ui/public/static ui/public/static
 ADD /api api

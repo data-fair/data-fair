@@ -471,7 +471,7 @@ describe('REST datasets', function () {
 
   it('The size of the mongodb collection is part of storage consumption', async function () {
     // Load a few lines
-    const ax = await global.ax.builder('ccherryholme1@icio.us:passwd')
+    const ax = await global.ax.builder('ccherryholme1@icio.us', 'passwd')
     await ax.post('/api/v1/datasets/rest7', {
       isRest: true,
       title: 'rest7',
@@ -1364,7 +1364,7 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
 
     res = await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { apiKeys: [{ title: 'api key', scopes: ['datasets'] }] })
     const apiKey = res.data.apiKeys[0]
-    const axAPIKey = await global.ax.builder(null, null, { headers: { 'x-apiKey': apiKey.clearKey } })
+    const axAPIKey = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': apiKey.clearKey } })
     await axAPIKey.post('/api/v1/datasets/updatedby/lines', { attr1: 'test1', attr2: 'test3' })
     await workers.hook('finalizer/updatedby')
     res = await ax.get('/api/v1/datasets/updatedby/lines')
