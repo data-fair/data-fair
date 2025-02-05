@@ -60,8 +60,8 @@
 <script setup lang="ts">
 import { mdiTable, mdiPencil } from '@mdi/js'
 
-const datasetsFetch = useFetch<{ count: number, results: any[] }>($apiPath + '/datasets', { query: { limit: 10000 } })
-const appsFetch = useFetch<{ count: number, results: any[] }>($apiPath + '/applications', { query: { limit: 10000 } })
+const datasetsFetch = useFetch<{ count: number, results: any[] }>($apiPath + '/datasets', { query: { size: 10000 } })
+const appsFetch = useFetch<{ count: number, results: any[] }>($apiPath + '/applications', { query: { size: 10000 } })
 </script>
 
 <style>
