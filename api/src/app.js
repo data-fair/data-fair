@@ -202,7 +202,7 @@ export const run = async () => {
     app.use('/streamsaver/sw.js', express.static('node_modules/streamsaver/sw.js'))
 
     if (config.serveUi) {
-      app.use(await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, { ignoreSitePath: true }))
+      app.use('/next-ui', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, { ignoreSitePath: true }))
     }
 
     server = (await import('http')).createServer(app)
