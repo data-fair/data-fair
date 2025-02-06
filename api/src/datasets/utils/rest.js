@@ -818,7 +818,7 @@ export const bulkLines = async (req, res, next) => {
 
     // If attachments are sent, add them to the existing ones
     if (req.files && req.files.attachments && req.files.attachments[0]) {
-      await db.collection('datasets').updateOne({ id: req.dataset.id }, { $push: { _newRestAttachments: req.files.attachments[0].filename } })
+      await db.collection('datasets').updateOne({ id: req.dataset.id }, { $push: { _newRestAttachments: (drop ? 'drop:' : '') + req.files.attachments[0].filename } })
     }
 
     // The list of actions/operations/transactions is either in a "actions" file

@@ -40,7 +40,11 @@ export const process = async function (app, dataset) {
   const newRestAttachments = dataset._newRestAttachments
   if (newRestAttachments?.length) {
     for (const a of newRestAttachments) {
-      await attachmentsUtils.addAttachments(dataset, join(tmpDir, a))
+      if (a.startsWith('drop:')) {
+        await attachmentsUtils.replaceAllAttachments(dataset, join(tmpDir, a.replace('drop:', '')))
+      } else {
+        await attachmentsUtils.addAttachments(dataset, join(tmpDir, a))
+      }
       await db.collection('datasets').updateOne({ id: dataset.id }, { $pull: { _newRestAttachments: a } })
     }
   }
