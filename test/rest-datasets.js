@@ -294,7 +294,7 @@ describe('REST datasets', function () {
     assert.equal(attachments.length, 0)
   })
 
-  it('Send attachment with multipart an special _body jey', async function () {
+  it('Send attachment with multipart and special _body key', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets/rest5', {
       isRest: true,
@@ -331,7 +331,6 @@ describe('REST datasets', function () {
     })
     const dataset = res.data
 
-    // Create a line with an attached file
     const form = new FormData()
     const attachmentsContent = fs.readFileSync('./resources/datasets/files.zip')
     form.append('attachments', attachmentsContent, 'files.zip')
@@ -349,6 +348,42 @@ describe('REST datasets', function () {
     res = await ax.get('/api/v1/datasets/rest6/lines')
     assert.equal(res.data.total, 2)
     assert.equal(res.data.results.find(l => l._id === 'line1')['_file.content'], 'This is a test libreoffice file.')
+
+    // add 1 more line
+    const form2 = new FormData()
+    const attachmentsContent2 = fs.readFileSync('./resources/datasets/files3.zip')
+    form2.append('attachments', attachmentsContent2, 'files3.zip')
+    form2.append('actions', Buffer.from(JSON.stringify([
+      { _id: 'line3', attr1: 'test2', attachmentPath: 'files3/test2.odt' }
+    ]), 'utf8'), 'actions.json')
+    res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form2, { headers: testUtils.formHeaders(form2) })
+    assert.equal(res.status, 200)
+    assert.equal(res.data.nbOk, 1)
+    await workers.hook('finalizer/rest6')
+    const ls2 = await lsAttachments(dataset)
+    assert.equal(ls2.length, 3)
+
+    res = await ax.get('/api/v1/datasets/rest6/lines')
+    assert.equal(res.data.total, 3)
+    assert.equal(res.data.results.find(l => l._id === 'line3')['_file.content'], 'This is another test libreoffice file.')
+
+    // 1 more time but in "drop" mode
+    const form3 = new FormData()
+    const attachmentsContent3 = fs.readFileSync('./resources/datasets/files2.zip')
+    form3.append('attachments', attachmentsContent3, 'files2.zip')
+    form3.append('actions', Buffer.from(JSON.stringify([
+      { _id: 'line4', attr1: 'test3', attachmentPath: 'test.odt' }
+    ]), 'utf8'), 'actions.json')
+    res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form3, { headers: testUtils.formHeaders(form3), params: { drop: true } })
+    assert.equal(res.status, 200)
+    assert.equal(res.data.nbOk, 1)
+    await workers.hook('finalizer/rest6')
+    const ls3 = await lsAttachments(dataset)
+    assert.equal(ls3.length, 1)
+
+    res = await ax.get('/api/v1/datasets/rest6/lines')
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results.find(l => l._id === 'line4')['_file.content'], 'This is another test libreoffice file.')
   })
 
   it('Synchronize all lines with the content of the attachments directory', async function () {
