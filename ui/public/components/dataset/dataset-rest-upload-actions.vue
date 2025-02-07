@@ -124,6 +124,18 @@
                 />
               </template>
             </v-file-input>
+            <template v-if="dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')">
+              <!--<p v-t="'attachmentsMsg'" />-->
+              <v-file-input
+                v-model="attachmentsFile"
+                :label="$t('selectAttachmentsFile')"
+                outlined
+                dense
+                class="my-4"
+                clearable
+                accept=".zip"
+              />
+            </template>
             <v-progress-linear
               v-if="importing"
               v-model="uploadProgress"
@@ -182,6 +194,8 @@ fr:
   drop: Cochez pour supprimer toutes les lignes existantes avant d'importer les nouvelles
   dropped: "Toutes les lignes existantes ont été supprimées"
   cancelled: "Suppression des lignes existantes et autres opérations annulées à cause des erreurs"
+  selectAttachmentsFile: sélectionnez un fichier zip de pièces jointes
+  attachmentsMsg: Optionnellement vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal. Dans ce cas le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
 en:
   loadLines: Load multiple lines from a file
   selectFile: select or drag and drop a file
@@ -198,6 +212,8 @@ en:
   drop: Check to delete all existing lines before importing new ones
   dropped: "All existing lines have been deleted"
   cancelled: "Deletion of existing lines and other operations cancelled because of errors"
+  selectAttachmentsFile: select an attachments zip file
+  attachmentsMsg: Optionally you can load a zip archive containing files to be used as attachments to the lines of the main dataset file. In this case the main data file must have a column that contains paths of the attachments in the archive.
 </i18n>
 
 <script>
@@ -207,6 +223,7 @@ export default {
     form: false,
     dialog: false,
     file: null,
+    attachmentsFile: null,
     importing: false,
     result: null,
     uploadProgress: 0,
@@ -242,6 +259,9 @@ export default {
       }
       const formData = new FormData()
       formData.append('actions', this.file)
+      if (this.attachmentsFile) {
+        formData.append('attachments', this.attachmentsFile)
+      }
       this.importing = true
       try {
         this.result = await this.$axios.$post(`api/v1/datasets/${this.dataset.id}/_bulk_lines`, formData, options)
