@@ -37,4 +37,17 @@ describe('root', function () {
       assert.equal(err.status, 400)
     }
   })
+
+  it('serves streamsaver resources', async function () {
+    const ax = global.ax.anonymous
+    const mitm = await ax.get('/streamsaver/mitm.html')
+    assert.equal(mitm.status, 200)
+    assert.equal(mitm.headers['content-type'], 'text/html; charset=utf-8')
+    assert.ok(mitm.data.includes('mitm.html is the lite "man in the middle"'))
+
+    const sw = await ax.get('/streamsaver/sw.js')
+    assert.equal(sw.status, 200)
+    assert.equal(sw.headers['content-type'], 'application/javascript; charset=utf-8')
+    assert.ok(sw.data.includes('self.onmessage'))
+  })
 })

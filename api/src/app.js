@@ -1,4 +1,4 @@
-import { resolve } from 'node:path'
+import { resolve, parse as parsePath, join } from 'node:path'
 import express from 'express'
 import config from '#config'
 import uiConfig from './ui-config.ts'
@@ -198,8 +198,9 @@ export const run = async () => {
 
     // self hosting of streamsaver man in the middle service worker
     // see https://github.com/jimmywarting/StreamSaver.js/issues/183
-    app.use('/streamsaver/mitm.html', express.static('node_modules/streamsaver/mitm.html'))
-    app.use('/streamsaver/sw.js', express.static('node_modules/streamsaver/sw.js'))
+    const streamsaverPath = parsePath(new URL(import.meta.resolve('streamsaver')).pathname).dir
+    app.use('/streamsaver/mitm.html', express.static(join(streamsaverPath, 'mitm.html')))
+    app.use('/streamsaver/sw.js', express.static(join(streamsaverPath, 'sw.js')))
 
     if (config.serveUi) {
       app.use('/next-ui', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, { ignoreSitePath: true }))
