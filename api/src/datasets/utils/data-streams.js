@@ -86,10 +86,12 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
           if (fileSchema) {
             const unknownKey = Object.keys(chunk)
               .filter(k => k !== '_i')
+              .filter(k => !!chunk[k]?.trim())
               .find(k => !fileSchema.find(p => {
                 escapedKeys[k] = escapedKeys[k] || fieldsSniffer.escapeKey(k, dataset)
                 return p.key === escapedKeys[k]
               }))
+
             if (unknownKey) {
               return callback(new Error(`Échec du traitement de la ligne ${(chunk._i + 1).toLocaleString()} du fichier. Le format est probablement invalide.`))
             }

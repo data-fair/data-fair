@@ -307,4 +307,17 @@ describe('CSV cases', function () {
     const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 56)
   })
+
+  it('A CSV with extra ; sep at end of lines', async function () {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('csv-cases/trailing-seps.csv', ax)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.file.props.escapeChar, '"')
+    assert.equal(dataset.file.props.quote, '"')
+    assert.equal(dataset.file.props.fieldsDelimiter, ';')
+    assert.equal(dataset.file.props.linesDelimiter, '\r\n')
+    assert.equal(dataset.schema.filter(p => !p['x-calculated']).length, 8)
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 7)
+  })
 })

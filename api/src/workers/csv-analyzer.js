@@ -61,9 +61,14 @@ export const process = async function (app, dataset) {
     if (!field) continue // do not keep columns with empty string as header
     const escapedKey = fieldsSniffer.escapeKey(field, dataset)
     const fileField = dataset.file.schema.find(f => f.key === escapedKey)
-    if (!fileField) throw httpError(400, `[noretry] Champ ${field} présent dans la donnée mais absent de l'analyse initiale du fichier`)
-    const existingField = dataset.schema && dataset.schema.find(f => f.key === escapedKey)
-    Object.assign(fileField, fieldsSniffer.sniff([...sampleValues[field]], attachments, existingField))
+    if (fileField) {
+      const existingField = dataset.schema && dataset.schema.find(f => f.key === escapedKey)
+      Object.assign(fileField, fieldsSniffer.sniff([...sampleValues[field]], attachments, existingField))
+    } else {
+      if (sampleValues[field].size) {
+        throw httpError(400, `[noretry] Champ ${field} présent dans la donnée mais absent de l'analyse initiale du fichier`)
+      }
+    }
   }
   if (attachments.length && !dataset.file.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) {
     throw httpError(400, `[noretry] Vous avez chargé des pièces jointes, mais aucune colonne ne contient les chemins vers ces pièces jointes. Valeurs attendues : ${attachments.slice(0, 3).join(', ')}.`)

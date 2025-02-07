@@ -2,7 +2,10 @@ import { Writable } from 'stream'
 import csv from 'csv-parser'
 import escapeStringRegexp from 'escape-string-regexp'
 import pump from '../utils/pipe.js'
-import debug from 'debug'
+import debugModule from 'debug'
+import intoStream from 'into-stream'
+
+const debug = debugModule('csv-sniffer')
 
 const possibleLinesDelimiters = ['\r\n', '\n']
 // const possibleLinesDelimiters = ['\n']
@@ -13,8 +16,6 @@ const possibleQuoteChars = ['"', "'"]
 // const possibleQuoteChars = ["'"]
 
 export const sniff = async (sample) => {
-  const intoStream = (await import('into-stream')).default
-
   // the parameters combination with the most successfully extracted values is probably the best one
   const combinations = []
   for (const ld of possibleLinesDelimiters) {
@@ -49,9 +50,9 @@ export const sniff = async (sample) => {
         const checkChunk = (chunk) => {
           for (const key of Object.keys(chunk)) {
             // none matching labels and object keys means a failure of csv-parse to parse a line
-            if (!labels.includes(key)) {
+            if (!labels.includes(key) && !!chunk[key]?.trim()) {
               scoreParts.missingLabels -= 10
-              debug('Unmatched object key, score -= 10')
+              debug('Unmatched object key, score -= 10', key, "'" + chunk[key] + "'")
             }
           }
           for (const key of labels) {
