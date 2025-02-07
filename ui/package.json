@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@koumoul/nuxt-config-inject": "^0.4.12",
-    "vuetify": "^2.7.2"
+    "vuetify": "^2.7.2",
+    "streamsaver": "^2.0.6"
   },
   "devDependencies": {
     "@data-fair/data-fair-api": "*",
@@ -47,7 +48,6 @@
     "property-expr": "^2.0.6",
     "reconnecting-websocket": "^4.4.0",
     "scrolling-element": "^1.0.2",
-    "streamsaver": "^2.0.6",
     "timezones.json": "^1.7.1",
     "tinycolor2": "^1.6.0",
     "vue-clamp": "^0.4.1",
