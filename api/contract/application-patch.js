@@ -2,7 +2,7 @@
 // It is the part that can be user defined and sent in a patch
 // the rest is read only fields
 
-import application from './application.js'
+import application from '../types/application/schema.js'
 const patchKeys = ['configuration', 'url', 'urlDraft', 'description', 'image', 'slug', 'title', 'publications', 'publicationSites', 'requestedPublicationSites', 'extras', 'topics', 'preferLargeDisplay', 'attachments']
 
 const appPatch = {

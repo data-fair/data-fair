@@ -1,9 +1,9 @@
-import owner from './owner.js'
-import eventBy from './event-by.js'
-import permissions from './permissions.js'
-import publicationSchema from './publication.js'
-import configurationSchema from './app-configuration.js'
-import topic from './topic.js'
+import owner from '../../contract/owner.js'
+import eventBy from '../../contract/event-by.js'
+import permissions from '../../contract/permissions.js'
+import publicationSchema from '../../contract/publication.js'
+import configurationSchema from '../../contract/app-configuration.js'
+import topic from '../../contract/topic.js'
 
 const baseAppReference = {
   type: 'object',
@@ -18,6 +18,7 @@ const baseAppReference = {
 
 export default {
   title: 'Application',
+  'x-exports': ['types'],
   type: 'object',
   additionalProperties: false,
   required: ['url'],

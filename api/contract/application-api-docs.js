@@ -1,5 +1,5 @@
 import config from 'config'
-import applicationSchema from './application.js'
+import applicationSchema from '../types/application/schema.js'
 import journalSchema from './journal.js'
 import * as permissionsDoc from '../src/misc/utils/permissions.js'
 import pJson from './p-json.js'

@@ -4,6 +4,7 @@
   "description": "",
   "main": "server",
   "scripts": {
+    "build-types": "df-build-types ./api/types",
     "test": "npm -w test run test",
     "test-deps": "docker compose --profile test up -d --wait",
     "report": "nyc report --reporter=html",
@@ -55,6 +56,7 @@
   "devDependencies": {
     "@commitlint/cli": "^17.5.0",
     "@commitlint/config-conventional": "^17.4.4",
+    "@data-fair/lib-types-builder": "^1.7.0",
     "@koumoul/gh-pages-multi": "^0.7.1",
     "@types/node": "^22.12.0",
     "clean-modules": "^2.0.4",

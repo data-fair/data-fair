@@ -16,3 +16,4 @@ node_modules
 /doc/static/install/*/data
 .cache-require-paths.json
 /api/config/local-*
+.type/
