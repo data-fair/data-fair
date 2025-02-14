@@ -471,11 +471,11 @@ export const applyCalculations = async (dataset, item) => {
     const filePath = attachmentPath(dataset, flatItem[attachmentField.key])
     if (await fs.pathExists(filePath)) {
       const stats = await fs.stat(filePath)
-      if (stats.size > config.defaultLimits.attachmentIndexed) {
-        warning = 'Pièce jointe trop volumineuse pour être analysée'
-      } else {
-        item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${flatItem[attachmentField.key]}`
-        if (!attachmentField['x-capabilities'] || attachmentField['x-capabilities'].indexAttachment !== false) {
+      item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${flatItem[attachmentField.key]}`
+      if (!attachmentField['x-capabilities'] || attachmentField['x-capabilities'].indexAttachment !== false) {
+        if (stats.size > config.defaultLimits.attachmentIndexed) {
+          warning = 'Pièce jointe trop volumineuse pour être analysée'
+        } else {
           item._file_raw = (await fs.readFile(filePath)).toString('base64')
         }
       }
