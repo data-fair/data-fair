@@ -19,6 +19,7 @@ Vue.filter('cellValues', function (values, property, truncate = 50) {
       if (typeof value === 'string') return value === 'true' ? 'oui' : 'non'
       return value ? 'oui' : 'non'
     }
+    if (property.type === 'number' || property.type === 'integer') return value.toLocaleString()
     return truncateMiddle(value + '', truncate, 0, '...')
   }).join(', ')
 })
