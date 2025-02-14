@@ -2,7 +2,6 @@ import owner from '../../contract/owner.js'
 import eventBy from '../../contract/event-by.js'
 import permissions from '../../contract/permissions.js'
 import publicationSchema from '../../contract/publication.js'
-import configurationSchema from '../../contract/app-configuration.js'
 import topic from '../../contract/topic.js'
 
 const baseAppReference = {
@@ -17,11 +16,12 @@ const baseAppReference = {
 }
 
 export default {
+  $id: 'https://github.com/data-fair/data-fair/application',
   title: 'Application',
-  'x-exports': ['types'],
+  'x-exports': ['types', 'validate', 'resolvedSchema'],
   type: 'object',
   additionalProperties: false,
-  required: ['url'],
+  required: ['id', 'slug', 'url'],
   properties: {
     id: {
       type: 'string',
@@ -77,8 +77,8 @@ export default {
       enum: ['created', 'configured-draft', 'configured', 'error']
     },
     owner,
-    configuration: configurationSchema,
-    configurationDraft: configurationSchema,
+    configuration: { $ref: 'https://github.com/data-fair/data-fair/app-config' },
+    configurationDraft: { $ref: 'https://github.com/data-fair/data-fair/app-config' },
     url: {
       type: 'string',
       deprecated: true,

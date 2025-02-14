@@ -4,7 +4,7 @@
   "description": "",
   "main": "server",
   "scripts": {
-    "build-types": "df-build-types ./api/types",
+    "build-types": "df-build-types ./api/",
     "test": "npm -w test run test",
     "test-deps": "docker compose --profile test up -d --wait",
     "report": "nyc report --reporter=html",

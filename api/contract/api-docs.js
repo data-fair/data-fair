@@ -8,7 +8,7 @@ import remoteServicePatch from './remote-service-patch.js'
 import catalog from './catalog.js'
 import catalogPatch from './catalog-patch.js'
 import application from '../types/application/schema.js'
-import applicationPatch from './application-patch.js'
+import applicationPatchReq from '../doc/applications/patch-req/schema.js'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
 
@@ -46,7 +46,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
         remoteService: { ...remoteService },
         remoteServicePatch: { ...remoteServicePatch },
         application,
-        applicationPatch,
+        applicationPatch: applicationPatchReq.properties.body,
         catalog,
         catalogPatch
       },

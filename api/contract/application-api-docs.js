@@ -1,5 +1,5 @@
 import config from 'config'
-import applicationSchema from '../types/application/schema.js'
+import { resolvedSchema as applicationSchema } from '../types/application/index.js'
 import journalSchema from './journal.js'
 import * as permissionsDoc from '../src/misc/utils/permissions.js'
 import pJson from './p-json.js'
@@ -27,11 +27,6 @@ export default (application, info) => {
           type: 'apiKey',
           in: 'header',
           name: 'x-apiKey'
-        },
-        sdCookie: {
-          type: 'apiKey',
-          in: 'cookie',
-          name: 'id_token'
         }
       }
     },
