@@ -206,6 +206,8 @@ export const preparePatch = async (app, patch, dataset, user, locale, draftValid
     patch.status = reindexerStatus
   } else if (removedRestProps.length) {
     patch.status = 'analyzed'
+  } else if (dataset.file && patch.schema && datasetUtils.schemasTransformChange(patch.schema, dataset.schema)) {
+    patch.status = 'analyzed'
   } else if (dataset.file && patch.schema && ['validation-updated', 'finalized'].includes(dataset.status) && datasetUtils.schemasFullyCompatible(patch.schema, dataset.schema, true) && datasetUtils.schemaHasValidationRules(patch.schema) && !datasetUtils.schemasValidationCompatible(patch.schema, dataset.schema)) {
     patch.status = 'validation-updated'
   } else if (patch.schema && !datasetUtils.schemasFullyCompatible(patch.schema, dataset.schema, true)) {

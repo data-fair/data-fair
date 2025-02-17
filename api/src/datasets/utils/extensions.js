@@ -79,7 +79,7 @@ export const prepareExtensions = (locale, extensions, oldExtensions = []) => {
 
 // Apply an extension to a dataset: meaning, query a remote service in batches
 // and add the result either to a "full" file or to the collection in case of a rest dataset
-const compileExpression = exprEval(config.defaultTimezone).compile
+export const compileExpression = exprEval(config.defaultTimezone).compile
 export const extend = async (app, dataset, extensions, updateMode, ignoreDraftLimit, lineId) => {
   debugMasterData(`extend dataset ${dataset.id} (${dataset.slug})`, extensions)
   const db = mongo.db
@@ -109,8 +109,8 @@ export const extend = async (app, dataset, extensions, updateMode, ignoreDraftLi
       detailedExtensions.push({ ...extension, extensionKey, inputMapping, remoteService, action, errorKey, idInput })
     } else if (extension.type === 'exprEval') {
       const property = dataset.schema.find(p => p.key === extension.property.key)
-      const evaluate = compileExpression(extension.expr, property)
       try {
+        const evaluate = compileExpression(extension.expr, property)
         detailedExtensions.push({
           ...extension,
           evaluate

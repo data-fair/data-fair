@@ -15,6 +15,7 @@ import * as restDatasetsUtils from './rest.js'
 import { filePath, fullFilePath, tmpDir } from './files.js'
 import pump from '../../misc/utils/pipe.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import { compileExpression } from './extensions.js'
 
 export const formatLine = (item, schema) => {
   for (const key of Object.keys(item)) {
@@ -171,7 +172,46 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
     throw httpError(400, 'mime-type is not supported ' + mimeType)
   }
 
+  if (!raw) {
+    const transformExprStream = getTransformExprStream(schema)
+    if (transformExprStream) {
+      streams.push(transformExprStream)
+    }
+  }
+
   return streams
+}
+
+export const getTransformExprStream = (schema) => {
+  const transformExprs = []
+  for (const property of schema) {
+    if (property['x-transform']?.expr) {
+      try {
+        transformExprs.push({
+          expr: property['x-transform']?.expr,
+          property,
+          compiledExpression: compileExpression(property['x-transform']?.expr, property)
+        })
+      } catch (err) {
+        throw new Error(`[noretry] échec de l'analyse de l'expression "${property['x-transform']?.expr}" : ${err.message}`)
+      }
+    }
+  }
+  if (!transformExprs.length) return null
+  return new Transform({
+    objectMode: true,
+    transform (item, encoding, callback) {
+      for (const transformExpr of transformExprs) {
+        try {
+          item[transformExpr.property.key] = transformExpr.compiledExpression({ value: item[transformExpr.property.key] })
+        } catch (err) {
+          const message = `[noretry] échec de l'évaluation de l'expression "${transformExpr.expr}" : ${err.message}`
+          throw new Error(message)
+        }
+      }
+      callback(null, item)
+    }
+  })
 }
 
 // Read the dataset file and get a stream of line items

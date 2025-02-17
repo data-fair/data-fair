@@ -121,7 +121,17 @@ const schema = {
       },
       'x-cardinality': {
         type: 'integer',
-        description: 'The number of distinct values for this field'
+        description: 'The number of distinct values for this field',
+        readOnly: true
+      },
+      'x-transform': {
+        type: 'object',
+        description: 'Transformation to apply to the field',
+        properties: {
+          expr: {
+            type: 'string'
+          }
+        }
       }
     }
   }

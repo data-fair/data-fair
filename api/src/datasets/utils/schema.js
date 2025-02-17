@@ -292,7 +292,7 @@ export const schemasValidationCompatible = (newSchema, oldSchema) => {
 /** @type {(p1:any, p2:any) => boolean} */
 const sortSchema = (p1, p2) => p1.key.localeCompare(p2.key)
 
-const innociousSchemaProps = validationProps.concat(['title', 'description', 'icon', 'x-display', 'x-master', 'x-labels', 'x-group', 'x-cardinality', 'readOnly', 'enum', 'x-originalName', 'ignoreDetection'])
+const innociousSchemaProps = validationProps.concat(['title', 'description', 'icon', 'x-display', 'x-master', 'x-labels', 'x-group', 'x-cardinality', 'readOnly', 'enum', 'x-originalName', 'ignoreDetection', 'x-transform'])
 
 const removeInnocuous = (p) => {
   const cleanProp = { ...p }
@@ -332,4 +332,10 @@ export const getSchemaBreakingChanges = (schema, patchedSchema, ignoreExtensions
     }
   }
   return breakingChanges
+}
+
+export const schemasTransformChange = (schema, patchedSchema) => {
+  const schemaTransform1 = schema.filter(p => p['x-transform']).map(p => ({ key: p.key, transform: p['x-transform'] })).sort(sortSchema)
+  const schemaTransform2 = patchedSchema.filter(p => p['x-transform']).map(p => ({ key: p.key, transform: p['x-transform'] })).sort(sortSchema)
+  return !equal(schemaTransform1, schemaTransform2)
 }
