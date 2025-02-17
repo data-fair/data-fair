@@ -1587,4 +1587,35 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.ok(res.data.results[1]._geopoint)
     assert.ok(res.data.results[1]._geocorners)
   })
+
+  it('Send attachment with special chars', async function () {
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'rest attachment ko',
+      schema: [
+        { key: 'attachmentPath', type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
+      ]
+    })
+    const dataset = res.data
+
+    // Create a line with an attached file
+    const form = new FormData()
+    const attachmentContent = fs.readFileSync('./resources/datasets/files/dir1/test.pdf')
+    form.append('attachment', attachmentContent, 'Capture d’écran du 2024-11-19 10-20-57.png')
+    res = await ax.post(`/api/v1/datasets/${dataset.id}/lines`, form, { headers: testUtils.formHeaders(form) })
+    assert.equal(res.status, 201)
+    const line = res.data
+    assert.ok(line._id)
+    assert.ok(line.attachmentPath.startsWith(res.data._id + '/'))
+    assert.ok(line.attachmentPath.endsWith('/Capture d’écran du 2024-11-19 10-20-57.png'))
+    await workers.hook('finalizer/' + dataset.id)
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0]['_file.content'], 'This is a test pdf file.')
+    console.log(res.data.results[0])
+    res = await ax.get(res.data.results[0]._attachment_url)
+    assert.equal(res.headers['content-disposition'], "inline; filename=\"Capture d?écran du 2024-11-19 10-20-57.png\"; filename*=UTF-8''Capture%20d%E2%80%99%C3%A9cran%20du%202024-11-19%2010-20-57.png")
+  })
 })
