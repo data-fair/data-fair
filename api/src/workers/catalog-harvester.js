@@ -2,7 +2,7 @@ import config from '#config'
 import mongo from '#mongo'
 import debugLib from 'debug'
 import { CronJob } from 'cron'
-import catalogs from '../catalogs/plugins/index.js'
+import * as catalogs from '../catalogs/plugins/index.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 
 export const process = async function (app, catalog) {
