@@ -7,7 +7,12 @@ const prepareApplicationStore = (id: string) => {
   const applicationFetch = useFetch<Application>($apiPath + `/applications/${id}`)
   const application = computed(() => applicationFetch.data.value)
 
-  return { id, application, applicationFetch }
+  return {
+    id,
+    applicationLink: $siteUrl + '/data-fair/app/' + id,
+    application,
+    applicationFetch
+  }
 }
 
 export const createApplicationStore = (id: string) => {

@@ -1,140 +1,140 @@
-<template lang="html">
-  {{ application }}
-  <!--<v-container :fluid="$vuetify.breakpoint.lgAndDown">
-    <no-ssr>
-      <v-row>
-        <v-col
-          cols="6"
-          md="7"
-          lg="8"
-          class="pa-0"
-        >
-          <v-col>
-            <v-alert
-              v-if="!!application.errorMessageDraft"
-              type="error"
-              border="start"
-              variant="outlined"
-            >
-              <p
-                class="mb-0"
-                v-html="application.errorMessageDraft"
-              />
-            </v-alert>
-            <v-sheet
-              v-else
-              light
-              class="pa-2"
-              border
-              tile
-              :style="`max-height:${windowHeight - 74}px;overflow-y:auto;`"
-            >
-              <v-iframe
-                v-if="showDraftPreview"
-                :aspect-ratio="4/3"
-                :src="applicationLink + '?embed=true&draft=true'"
-              />
-            </v-sheet>
-          </v-col>
-        </v-col>
-        <v-col
-          cols="6"
-          md="5"
-          lg="4"
-          class="pa-0"
-        >
-          <v-form
-            v-if="draftSchema && editConfig"
-            ref="configForm"
-            v-model="formValid"
-            @submit="validateDraft"
-          >
-            <v-sheet
-              light
-              class="pa-2"
-              :style="`max-height:${windowHeight - 110}px;overflow-y:auto;scrollbar-gutter: stable;`"
-            >
-              <v-select
-                v-model="editUrl"
-                :disabled="!can('writeConfig')"
-                :loading="!availableVersions"
-                :items="availableVersions"
-                :item-title="(baseApp => `${baseApp.title} (${baseApp.version})`)"
-                item-value="url"
-                :label="$t('changeVersion')"
-                @update:model-value="saveUrlDraft"
-              />
-
-              <v-checkbox
-                v-if="application.owner?.department"
-                v-model="showFullOrg"
-                :label="`Voir les sources de données de l'organisation ${application.owner.name} entière`"
-              />
-
-              <lazy-v-jsf
-                :key="`vjsf-${showFullOrg}`"
-                v-model="editConfig"
-                :schema="draftSchema"
-                :options="vjsfOptions"
-                @change="saveDraft"
-              />
-            </v-sheet>
-            <v-row class="mt-3 ml-0 mr-3">
-              <v-spacer />
-              <v-btn
-                v-t="'cancel'"
-                :disabled="!hasDraft"
-                color="warning"
-                variant="flat"
-                @click="showCancelDialog = true"
-              />
-              <v-btn
-                v-t="'validate'"
-                :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
-                color="accent"
-                class="ml-2"
-                type="submit"
-              />
-              <v-spacer />
-            </v-row>
-          </v-form>
-        </v-col>
-      </v-row>
-
-      <v-dialog
-        v-model="showCancelDialog"
-        max-width="500px"
+<template>
+  <v-container
+    v-if="application"
+    :fluid="display.lgAndDown.value"
+  >
+    <v-row>
+      <v-col
+        cols="6"
+        md="7"
+        lg="8"
+        class="pa-0"
       >
-        <v-card border>
-          <v-card-title
-            v-t="'removeDraft'"
-            primary-title
-          />
-          <v-card-text>
-            <v-alert
-              v-t="'removeDraftWarning'"
-              :value="true"
-              type="error"
+        <v-col>
+          {{ iframeHeight }} - {{ configFetch.data.value }}
+          <v-alert
+            v-if="!!application.errorMessageDraft"
+            type="error"
+            border="start"
+            variant="outlined"
+          >
+            <p
+              class="mb-0"
+              v-text="application.errorMessageDraft"
             />
-          </v-card-text>
-          <v-card-actions>
+          </v-alert>
+          <v-sheet
+            v-else
+            light
+            class="pa-2"
+            border
+            tile
+            :style="`max-height:${windowHeight - 74}px;overflow-y:auto;`"
+          >
+            <d-frame
+              v-if="showDraftPreview"
+              :aspect-ratio="4/3"
+              :src="applicationLink + '?embed=true&draft=true'"
+            />
+          </v-sheet>
+        </v-col>
+      </v-col>
+      <v-col
+        cols="6"
+        md="5"
+        lg="4"
+        class="pa-0"
+      >
+        <v-form
+          v-if="draftSchema && editConfig"
+          ref="configForm"
+          v-model="formValid"
+          @submit="validateDraft"
+        >
+          <v-sheet
+            light
+            class="pa-2"
+            :style="`max-height:${windowHeight - 110}px;overflow-y:auto;scrollbar-gutter: stable;`"
+          >
+            <v-select
+              v-model="editUrl"
+              :disabled="!can('writeConfig')"
+              :loading="!availableVersions"
+              :items="availableVersions"
+              :item-title="(baseApp => `${baseApp.title} (${baseApp.version})`)"
+              item-value="url"
+              :label="$t('changeVersion')"
+              @update:model-value="saveUrlDraft"
+            />
+
+            <v-checkbox
+              v-if="application.owner?.department"
+              v-model="showFullOrg"
+              :label="`Voir les sources de données de l'organisation ${application.owner.name} entière`"
+            />
+
+            <lazy-v-jsf
+              :key="`vjsf-${showFullOrg}`"
+              v-model="editConfig"
+              :schema="draftSchema"
+              :options="vjsfOptions"
+              @change="saveDraft"
+            />
+          </v-sheet>
+          <v-row class="mt-3 ml-0 mr-3">
             <v-spacer />
             <v-btn
               v-t="'cancel'"
-              variant="text"
-              @click="showCancelDialog = false"
+              :disabled="!hasDraft"
+              color="warning"
+              variant="flat"
+              @click="showCancelDialog = true"
             />
             <v-btn
-              v-t="'confirm'"
-              color="warning"
-              @click="cancelDraft(); showCancelDialog = false;"
+              v-t="'validate'"
+              :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
+              color="accent"
+              class="ml-2"
+              type="submit"
             />
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
-    </no-ssr>
+            <v-spacer />
+          </v-row>
+        </v-form>
+      </v-col>
+    </v-row>
+
+    <v-dialog
+      v-model="showCancelDialog"
+      max-width="500px"
+    >
+      <v-card border>
+        <v-card-title
+          v-t="'removeDraft'"
+          primary-title
+        />
+        <v-card-text>
+          <v-alert
+            v-t="'removeDraftWarning'"
+            :value="true"
+            type="error"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            v-t="'cancel'"
+            variant="text"
+            @click="showCancelDialog = false"
+          />
+          <v-btn
+            v-t="'confirm'"
+            color="warning"
+            @click="cancelDraft(); showCancelDialog = false;"
+          />
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
-  -->
 </template>
 
 <i18n lang="yaml">
@@ -154,20 +154,79 @@ en:
   removeDraftWarning: Warning ! The draft will be lost and the application will get back to its previously validated state.
 </i18n>
 
-<script setup lang="ts">
-// import { useWindowSize } from '@vueuse/core'
+<script lang="ts" setup>
+import { useWindowSize } from '@vueuse/core'
+import { useDisplay } from 'vuetify'
+import '@data-fair/frame/lib/d-frame.js'
+import { v2compat } from '@koumoul/vjsf/compat/v2'
+import { clone } from '@json-layout/core'
 
-// const { roDataset } = defineProps({
-//   roDataset: { type: Boolean, default: false }
-// })
+const display = useDisplay()
+const { sendUiNotif } = useUiNotif()
 
-// const { id, application } = useApplicationStore()
-// const configFetch = useFetch<AppConfig>($apiPath + `/applications/${id}/configuration`, {})
+const { roDataset } = defineProps({
+  roDataset: { type: Boolean, default: false }
+})
 
-// const { height: windowHeight } = useWindowSize()
-// const iframeHeight = computed(() => Math.max(300, Math.min(windowHeight.value - 100, 450)))
+const { id, application, applicationLink } = useApplicationStore()
+const configFetch = useFetch<AppConfig>($apiPath + `/applications/${id}/configuration`, {})
 
-// const showForm = ref(false)
+const { height: windowHeight } = useWindowSize()
+const iframeHeight = computed(() => Math.max(300, Math.min(windowHeight.value - 100, 450)))
+
+const showForm = ref(false)
+const showDraftPreview = ref(true)
+
+const editUrl = ref<string>()
+watch(() => application.value?.urlDraft, (url) => {
+  editUrl.value = url || application.value?.url
+})
+
+const draftSchema = ref<any>()
+const schemaFetch = useFetch<any>(() => editUrl.value + 'config-schema.json')
+watch(schemaFetch.data, (schema) => {
+  if (schema) {
+    if (typeof schema !== 'object') {
+      sendUiNotif({ type: 'error', msg: 'Schema fetched is not a valid JSON' })
+    } else {
+      draftSchema.value = completeSchema(clone(schema))
+      showForm.value = true
+    }
+  }
+})
+
+const completeSchema = (schema: any) => {
+  let datasetsProp
+  if (schema.definitions && schema.definitions.datasets) {
+    datasetsProp = schema.definitions.datasets
+  } else if (schema.properties && schema.properties.datasets) {
+    datasetsProp = schema.properties && schema.properties.datasets
+  } else if (schema.allOf) {
+    const datasetsAllOf = schema.allOf.find(a => a.properties && a.properties.datasets)
+    if (datasetsAllOf) datasetsProp = datasetsAllOf.properties.datasets
+  }
+  if (!datasetsProp) {
+    console.error('dit not find a "datasets" property in schema')
+  } else {
+    if (roDataset) {
+      datasetsProp.readOnly = true
+    }
+
+    const fixFromUrl = (fromUrl: string) => {
+      return fromUrl.replace('owner={context.owner.type}:{context.owner.id}', '{context.datasetFilter}')
+    }
+    // manage retro-compatibility of use of "context.owner" to "context.datasetsFilter"
+    if (datasetsProp['x-fromUrl']) datasetsProp['x-fromUrl'] = fixFromUrl(datasetsProp['x-fromUrl'])
+    if (datasetsProp.items['x-fromUrl']) datasetsProp.items['x-fromUrl'] = fixFromUrl(datasetsProp.items['x-fromUrl'])
+    if (Array.isArray(datasetsProp.items)) {
+      for (const item of datasetsProp.items) {
+        if (item['x-fromUrl']) item['x-fromUrl'] = fixFromUrl(item['x-fromUrl'])
+      }
+    }
+  }
+
+  return v2compat(schema)
+}
 
 </script>
 
