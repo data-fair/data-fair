@@ -31,7 +31,7 @@ const getCacheEntry = async (db, url, filePath, sharpOptions) => {
       debug('found fresh cache entry for url based on lastUpdate', entry.lastUpdated)
       return { entry, status: 'HIT' }
     }
-    tmpFile = filePath = await tmp.tmpName({ tmpdir: tmpDir })
+    tmpFile = filePath = await tmp.tmpName({ prefix: 'cache-entry-', tmpdir: tmpDir })
     // creating empty file before streaming seems to fix some weird bugs with NFS
     await fs.ensureFile(filePath)
     try {

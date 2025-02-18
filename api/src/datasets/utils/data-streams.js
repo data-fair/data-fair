@@ -264,7 +264,7 @@ export const readStreams = async (db, dataset, raw = false, full = false, ignore
 // Used by extender worker to produce the "full" version of the file
 export const writeExtendedStreams = async (db, dataset, extensions) => {
   if (dataset.isRest) return restDatasetsUtils.writeExtendedStreams(db, dataset, extensions)
-  const tmpFullFile = await tmp.tmpName({ tmpdir: tmpDir })
+  const tmpFullFile = await tmp.tmpName({ tmpdir: tmpDir, prefix: 'full-' })
   // creating empty file before streaming seems to fix some weird bugs with NFS
   await fs.ensureFile(tmpFullFile)
 

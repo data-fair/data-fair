@@ -3,6 +3,10 @@ import fs from 'fs-extra'
 import path from 'path'
 import nodeDir from 'node-dir'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
+import debugModule from 'debug'
+
+const debugCleanTmp = debugModule('clean-tmp')
+debugCleanTmp.enabled = true
 
 export const dataDir = path.resolve(config.dataDir)
 
@@ -191,4 +195,18 @@ export const fsyncFile = async (p) => {
   const fd = await fs.open(p, 'r')
   await fs.fsync(fd)
   await fs.close(fd)
+}
+
+export const cleanTmp = async () => {
+  debugCleanTmp('check tmp dir for old files')
+  const delay = 14 * 24 * 60 * 60 * 1000 // 14 day
+  await fs.ensureDir(tmpDir)
+  const dir = await fs.opendir(tmpDir)
+  for await (const dirent of dir) {
+    const stats = await fs.stat(path.join(tmpDir, dirent.name))
+    if (stats.mtimeMs < Date.now() - delay) {
+      debugCleanTmp(`remove old ${dirent.isDirectory() ? 'directory' : 'file'} ${dirent.name} - ${stats.mtime}`)
+      await fs.remove(path.join(tmpDir, dirent.name))
+    }
+  }
 }

@@ -19,7 +19,7 @@ export const process = async function (app, dataset) {
   const patch = { exports: JSON.parse(JSON.stringify(dataset.exports)) }
   patch.exports.restToCSV.lastExport = { date }
   try {
-    const tmpFile = await tmp.tmpName({ tmpdir: tmpDir })
+    const tmpFile = await tmp.tmpName({ tmpdir: tmpDir, prefix: 'rest-exporter-csv-' })
     // creating empty file before streaming seems to fix some weird bugs with NFS
     await fs.ensureFile(tmpFile)
     debug('write into file', tmpFile)
