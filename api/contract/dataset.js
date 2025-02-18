@@ -130,6 +130,12 @@ const schema = {
         properties: {
           expr: {
             type: 'string'
+          },
+          examples: {
+            type: 'array',
+            items: {
+              type: 'string'
+            }
           }
         }
       }

@@ -83,15 +83,29 @@
                 :editable="editable && !noBreakingChanges && currentPropRef.editable && !dataset.isVirtual"
               />
             </div>
-            <div class="mx-1">
+            <div
+              v-if="dataset.file && !currentPropRef.prop['x-calculated'] && !currentPropRef.prop['x-extension']"
+              class="mx-1"
+            >
+              <dataset-property-transform
+                :property="currentPropRef.prop"
+                :editable="editable && !noBreakingChanges && currentPropRef.editable"
+              />
+            </div>
+            <div
+              v-if="!currentPropRef.prop['x-calculated'] && !currentPropRef.prop['x-extension']"
+              class="mx-1"
+            >
               <dataset-property-validation
                 :property="currentPropRef.prop"
                 :editable="editable && !noBreakingChanges && currentPropRef.editable && !dataset.isVirtual"
               />
             </div>
-            <div class="mx-1">
+            <div
+              v-if="(currentPropRef.prop.type === 'string' && (!currentPropRef.prop.format || currentPropRef.prop.format === 'uri-reference') || currentPropRef.prop.type === 'boolean')"
+              class="mx-1"
+            >
               <dataset-property-labels
-                v-if="(currentPropRef.prop.type === 'string' && (!currentPropRef.prop.format || currentPropRef.prop.format === 'uri-reference') || currentPropRef.prop.type === 'boolean')"
                 :property="currentPropRef.prop"
                 :editable="editable && currentPropRef.editable && !dataset.isVirtual"
                 :is-rest="dataset.isRest"
