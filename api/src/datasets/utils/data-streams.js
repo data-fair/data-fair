@@ -138,9 +138,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
           }
         }
         for (const prop of schema) {
-          const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
-          const value = fieldsSniffer.format(chunk[prop['x-originalName'] || prop.key] ?? chunk[prop.key], prop, fileProp)
-          if (value !== null) line[prop.key] = value
+          line[prop.key] = chunk[prop['x-originalName'] || prop.key] ?? chunk[prop.key]
         }
         line._i = chunk._i
         callback(null, line)
@@ -160,9 +158,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
         } else {
           const line = { _i: this.i = (this.i || 0) + 1 }
           for (const prop of schema) {
-            const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
-            const value = fieldsSniffer.format(item[prop['x-originalName'] || prop.key], prop, fileProp)
-            if (value !== null) line[prop.key] = value
+            line[prop.key] = item[prop['x-originalName'] || prop.key] ?? item[prop.key]
           }
           callback(null, line)
         }
@@ -173,7 +169,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
   }
 
   if (!raw) {
-    const transformExprStream = getTransformExprStream(schema)
+    const transformExprStream = getTransformStream(schema, fileSchema)
     if (transformExprStream) {
       streams.push(transformExprStream)
     }
@@ -182,31 +178,28 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
   return streams
 }
 
-export const getTransformExprStream = (schema) => {
-  const transformExprs = []
-  for (const property of schema) {
-    if (property['x-transform']?.expr) {
-      try {
-        transformExprs.push({
-          expr: property['x-transform']?.expr,
-          property,
-          compiledExpression: compileExpression(property['x-transform']?.expr, property)
-        })
-      } catch (err) {
-        throw new Error(`[noretry] échec de l'analyse de l'expression "${property['x-transform']?.expr}" : ${err.message}`)
-      }
-    }
-  }
-  if (!transformExprs.length) return null
+export const getTransformStream = (schema, fileSchema) => {
+  const compiledExpressions = {}
   return new Transform({
     objectMode: true,
     transform (item, encoding, callback) {
-      for (const transformExpr of transformExprs) {
-        try {
-          item[transformExpr.property.key] = transformExpr.compiledExpression({ value: item[transformExpr.property.key] })
-        } catch (err) {
-          const message = `[noretry] échec de l'évaluation de l'expression "${transformExpr.expr}" : ${err.message}`
-          throw new Error(message)
+      for (const prop of schema) {
+        if (prop['x-transform']?.expr) {
+          compiledExpressions[prop.key] = compiledExpressions[prop.key] || compileExpression(prop['x-transform']?.expr, prop)
+          try {
+            item[prop.key] = compiledExpressions[prop.key]({ value: item[prop.key] })
+          } catch (err) {
+            const message = `[noretry] échec de l'évaluation de l'expression "${prop['x-transform']?.expr}" : ${err.message}`
+            throw new Error(message)
+          }
+        } else {
+          const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
+          const value = fieldsSniffer.format(item[prop.key], prop, fileProp)
+          if (value === null) {
+            delete item[prop.key]
+          } else {
+            item[prop.key] = value
+          }
         }
       }
       callback(null, item)

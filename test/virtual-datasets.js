@@ -141,7 +141,7 @@ describe('virtual datasets', function () {
       return true
     })
 
-    datasetInt.schema.find(p => p.key === 'num').ignoreIntegerDetection = true
+    datasetInt.schema.find(p => p.key === 'num')['x-transform'] = { type: 'number' }
     await ax.patch('/api/v1/datasets/' + datasetInt.id, {
       schema: datasetInt.schema
     })
@@ -393,7 +393,7 @@ describe('virtual datasets', function () {
     let virtualDateField = virtualDataset.schema.find(f => f.key === 'some_date')
     assert.equal(virtualDateField.format, 'date')
 
-    dateField.ignoreDetection = true
+    dateField['x-transform'] = { type: 'string' }
     res = await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     dataset = await workers.hook('finalizer/' + dataset.id)
     dateField = dataset.schema.find(f => f.key === 'some_date')
@@ -423,7 +423,7 @@ describe('virtual datasets', function () {
     let virtualDateField = virtualDataset.schema.find(f => f.key === 'some_date')
     assert.equal(virtualDateField.format, 'date')
 
-    dateField.ignoreDetection = true
+    dateField['x-transform'] = { type: 'string' }
     res = await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     dataset = await workers.hook('finalizer/' + dataset.id)
     dateField = dataset.schema.find(f => f.key === 'some_date')
@@ -453,7 +453,7 @@ describe('virtual datasets', function () {
     await workers.hook('finalizer/' + virtualDataset.id)
 
     const dateField = dataset1.schema.find(f => f.key === 'some_date')
-    dateField.ignoreDetection = true
+    dateField['x-transform'] = { type: 'string' }
     res = await ax.patch('/api/v1/datasets/' + dataset1.id, { schema: dataset1.schema })
     await workers.hook('finalizer/' + dataset1.id)
 
