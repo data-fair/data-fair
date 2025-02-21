@@ -73,7 +73,7 @@ export default (defaultTimezone) => {
 
   parser.functions.PHRASE = function (arg) {
     if (typeof arg !== 'string') return arg
-    return arg.charAt(0).toUpperCase() + arg.substring(1)
+    return arg.charAt(0).toUpperCase() + arg.substring(1).toLowerCase()
   }
 
   parser.functions.PAD_LEFT = function (arg, length, pad) {
