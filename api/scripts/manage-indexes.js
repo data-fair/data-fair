@@ -1,43 +1,59 @@
 // check and optimize the state of the indexes managed by data-fair
 // check for orphans, merge segments, etc
-// DO NOT RUN this at peak activity, force merge is expensive
+
+// Run this script FORCE_MERGE=1 for a full merge of all indexes
+// DO NOT RUN do this at peak activity, force merge is expensive
 // https://www.elastic.co/guide/en/elasticsearch/reference/current/size-your-shards.html#:~:text=Aim%20for%20shard%20sizes%20between,and%20may%20tax%20node%20resources.
 
-import config from 'config'
+import config from '#config'
+import mongo from '#mongo'
+import * as esUtils from '../src/datasets/es/index.ts'
 
 // this script if often run outside of peak activity
 // we do not want it to last forever if ever it detects that it has a lot of work to do
 const maxDuration = 60 * 60 * 1000
 const start = new Date().getTime()
 
+const forceMerge = process.env.FORCE_MERGE === '1'
+
 async function main () {
-  const { db } = await require('../src/misc/utils/db').connect()
-  const es = await require('../src/datasets/es').init()
+  await mongo.connect()
+  const db = mongo.db
+  const es = await esUtils.init()
   const indexes = (await es.cat.indices({ index: `${config.indicesPrefix}-*`, format: 'json' }))
   for (const index of indexes) {
+    const indexName = index.index
+    if (!indexName) {
+      console.log('index has no name', index)
+      continue
+    }
     if (new Date().getTime() - start > maxDuration) {
       console.error('Max duration exceeded, stop')
       break
     }
-    const getAliasRes = await es.indices.getAlias({ index: index.index })
-    const aliases = getAliasRes[index.index] && getAliasRes[index.index].aliases && Object.keys(getAliasRes[index.index].aliases)
-    const alias = aliases.find((/** @type {any} */ alias) => index.index.startsWith(alias))
+    const getAliasRes = await es.indices.getAlias({ index: indexName })
+    const aliases = getAliasRes[indexName] && getAliasRes[indexName].aliases && Object.keys(getAliasRes[indexName].aliases)
+    const alias = aliases.find((/** @type {any} */ alias) => indexName.startsWith(alias))
     if (!alias) {
-      console.warn(`index ${index.index} does not have matching alias`, index['store.size'])
+      console.warn(`index ${indexName} does not have matching alias`, index['store.size'])
       continue
     }
-    // @ts-ignore
+
     const dataset = await db.collection('datasets').findOne({ id: alias.replace(`${config.indicesPrefix}-`, '') })
     if (!dataset) {
       console.warn(`alias ${alias} does not have matching dataset in database`, index['store.size'])
       continue
     }
-    const segments = await es.cat.segments({ index: index.index, format: 'json' })
+    const segments = await es.cat.segments({ index: indexName, format: 'json' })
 
     // force merge is recommended on read-only indexes only, so rest datasets are excluded
     if (segments.length > 2 && !dataset.isRest) {
-      await es.indices.forcemerge({ index: index.index, max_num_segments: 1 })
-      console.log(`merged segments for index ${index.index}, number of segments=${segments.length}`)
+      if (forceMerge) {
+        await es.indices.forcemerge({ index: indexName, max_num_segments: 1 })
+        console.log(`merged segments for index ${indexName}, number of segments=${segments.length}`)
+      } else {
+        console.log(`should merge segments for index ${indexName} ? number of segments=${segments.length}`)
+      }
     }
   }
 }
