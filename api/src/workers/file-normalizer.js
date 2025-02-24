@@ -15,7 +15,7 @@ import resolvePath from 'resolve-path'
 import { displayBytes } from '../misc/utils/bytes.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetService from '../datasets/service.js'
-import { tmpDir as mainTmpDir } from '../datasets/utils/files.js'
+import { tmpDir as mainTmpDir, unzip } from '../datasets/utils/files.js'
 import * as icalendar from '../misc/utils/icalendar.js'
 import * as xlsx from '../misc/utils/xlsx.js'
 import * as i18nUtils from '../../i18n/utils.js'
@@ -26,8 +26,10 @@ import { internalError } from '@data-fair/lib-node/observer.js'
 export const eventsPrefix = 'normalize'
 
 async function decompress (mimetype, filePath, dirPath) {
-  const exec = (await import('../misc/utils/exec.js')).default
-  if (mimetype === 'application/zip') await exec('unzip', ['-o', '-q', filePath, '-d', dirPath])
+  if (mimetype === 'application/zip') {
+    await unzip(filePath, dirPath)
+    // await exec('unzip', ['-o', '-q', filePath, '-d', dirPath])
+  }
 }
 
 export const process = async function (app, dataset) {

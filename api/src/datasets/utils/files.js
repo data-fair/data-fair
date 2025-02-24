@@ -3,6 +3,8 @@ import fs from 'fs-extra'
 import path from 'path'
 import nodeDir from 'node-dir'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
+import pump from '../../misc/utils/pipe.js'
+import unzipper from 'unzipper'
 
 export const dataDir = path.resolve(config.dataDir)
 
@@ -191,4 +193,13 @@ export const fsyncFile = async (p) => {
   const fd = await fs.open(p, 'r')
   await fs.fsync(fd)
   await fs.close(fd)
+}
+
+export const unzip = async (zipFile, targetDir) => {
+  // we used to use the unzip command line tool but this patch (https://sourceforge.net/p/infozip/patches/29/)
+  // was missing in the version in our alpine docker image
+  await pump(
+    fs.createReadStream(zipFile),
+    unzipper.Extract({ path: targetDir })
+  )
 }

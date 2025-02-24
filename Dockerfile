@@ -46,8 +46,6 @@ RUN test -f /usr/lib/libproj.so
 # check that geo execs actually load
 RUN prepair --help
 
-RUN apk add --no-cache unzip
-
 ##########################
 FROM base AS package-strip
 
