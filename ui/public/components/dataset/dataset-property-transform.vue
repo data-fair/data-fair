@@ -34,6 +34,28 @@
       </v-toolbar>
       <v-card-text class="px-3">
         <tutorial-alert
+          id="transform-type"
+          persistent
+          :initial="true"
+        >
+          <p>Vous pouvez définir un type de propriété surchargé pour cette colonne. De cette manière vous pouvez définir un type différent de celui détecté automatiquement depuis l'analyse du fichier.</p>
+          <p>Si le type choisi ne peut pas être obtenu à partir des données brutes vous pouvez saisir une expression de transformation ci-dessous.</p>
+        </tutorial-alert>
+
+        <v-select
+          v-model="overwritePropertyType"
+          :items="rawPropertyTypes"
+          :item-text="item => item.title"
+          :item-value="item => `${item.type}${item.format || item['x-display']}`"
+          return-object
+          label="Surcharger le type"
+          outlined
+          dense
+          persistent-placeholder
+          :placeholder="'type détecté: ' + detectedPropertyType?.title?.toLowerCase()"
+        />
+
+        <tutorial-alert
           id="expr-eval-transform"
           persistent
           :initial="true"
@@ -136,6 +158,34 @@ export default {
   },
   computed: {
     ...mapState('session', ['user']),
+    ...mapState(['propertyTypes']),
+    rawPropertyTypes () {
+      return this.propertyTypes.filter(p => !p['x-display'])
+    },
+    detectedPropertyType: {
+      get () {
+        return this.rawPropertyTypes.find(p => p.type === this.property.type && (p.format || null) === (this.property.format || null))
+      }
+    },
+    overwritePropertyType: {
+      get () {
+        if (!this.property['x-transform']?.type) return null
+        return this.rawPropertyTypes.find(p => p.type === this.property['x-transform'].type && (p.format || null) === (this.property['x-transform'].format || null))
+      },
+      set (propertyType) {
+        if (!propertyType) {
+          this.$delete(this.property['x-transform'], 'type')
+          this.$delete(this.property['x-transform'], 'format')
+        } else {
+          this.$set(this.property['x-transform'], 'type', propertyType.type)
+          if (propertyType.format) {
+            this.$set(this.property['x-transform'], 'format', propertyType.format)
+          } else {
+            this.$delete(this.property['x-transform'], 'format')
+          }
+        }
+      }
+    },
     expr () {
       return this.property['x-transform'].expr || ''
     },
