@@ -212,7 +212,9 @@ export const harvestDatasetResource = async (app, catalog, datasetId, resourceId
   const remoteFile = {
     url: resource.url,
     catalog: catalog.id,
-    size: resource.size
+  }
+  if (resource.size) {
+    remoteFile.size = resource.size
   }
   if (resource.mime) {
     remoteFile.mimetype = resource.mime
