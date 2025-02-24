@@ -21,7 +21,7 @@ async function main () {
   await mongo.connect()
   const db = mongo.db
   const es = await esUtils.init()
-  const indexes = (await es.cat.indices({ index: `${config.indicesPrefix}-*`, format: 'json', h: 'index,store.size,docs.count,creation.date.string' }))
+  const indexes = (await es.cat.indices({ index: `${config.indicesPrefix}-*`, format: 'json', s: 'index', h: 'index,store.size,docs.count,creation.date.string' }))
   for (const index of indexes) {
     const indexName = index.index
     if (!indexName) {
@@ -36,9 +36,9 @@ async function main () {
     const aliases = getAliasRes[indexName] && getAliasRes[indexName].aliases && Object.keys(getAliasRes[indexName].aliases)
     const alias = aliases.find((/** @type {any} */ alias) => indexName.startsWith(alias))
     if (!alias) {
-      console.warn(`index ${indexName} does not have matching alias, size=${index['store.size']}, docs.count=${index['docs.count']}, creation.date=${index['creation.date.string']}`)
+      console.log(`index ${indexName} does not have matching alias, size=${index['store.size']}, docs.count=${index['docs.count']}, creation.date=${index['creation.date.string']}`)
       if (deleteOrphans) {
-        console.warn(`deleting orphan index ${indexName}`)
+        console.log(`deleting orphan index ${indexName}`)
         await es.indices.delete({ index: indexName })
       }
       continue
@@ -46,9 +46,9 @@ async function main () {
 
     const dataset = await db.collection('datasets').findOne({ id: alias.replace(`${config.indicesPrefix}-`, '') })
     if (!dataset) {
-      console.warn(`alias ${alias} does not have matching dataset in database`, index['store.size'])
+      console.log(`alias ${alias} does not have matching dataset in database`, index['store.size'])
       if (deleteOrphans) {
-        console.warn(`deleting orphan index ${indexName}`)
+        console.log(`deleting orphan index ${indexName}`)
         await es.indices.delete({ index: indexName })
       }
       continue
