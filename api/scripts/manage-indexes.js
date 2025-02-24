@@ -15,6 +15,7 @@ const maxDuration = 60 * 60 * 1000
 const start = new Date().getTime()
 
 const forceMerge = process.env.FORCE_MERGE === '1'
+const deleteOrphans = process.env.DELETE_ORPHANS === '1'
 
 async function main () {
   await mongo.connect()
@@ -36,12 +37,20 @@ async function main () {
     const alias = aliases.find((/** @type {any} */ alias) => indexName.startsWith(alias))
     if (!alias) {
       console.warn(`index ${indexName} does not have matching alias, size=${index['store.size']}, docs.count=${index['docs.count']}, creation.date=${index['creation.date.string']}`)
+      if (deleteOrphans) {
+        console.warn(`deleting orphan index ${indexName}`)
+        await es.indices.delete({ index: indexName })
+      }
       continue
     }
 
     const dataset = await db.collection('datasets').findOne({ id: alias.replace(`${config.indicesPrefix}-`, '') })
     if (!dataset) {
       console.warn(`alias ${alias} does not have matching dataset in database`, index['store.size'])
+      if (deleteOrphans) {
+        console.warn(`deleting orphan index ${indexName}`)
+        await es.indices.delete({ index: indexName })
+      }
       continue
     }
     const segments = await es.cat.segments({ index: indexName, format: 'json' })
