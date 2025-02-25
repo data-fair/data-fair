@@ -198,7 +198,7 @@ export const unzip = async (zipFile, targetDir) => {
   // we used to use the unzip command line tool but this patch (https://sourceforge.net/p/infozip/patches/29/)
   // was missing in the version in our alpine docker image
   const directory = await unzipper.Open.file(zipFile)
-  const files = directory.files.map(f => f.path)
+  const files = directory.files.filter(f => f.type === 'File').map(f => f.path)
   await directory.extract({ path: targetDir })
   return files
 }
