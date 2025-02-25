@@ -349,6 +349,20 @@ describe('REST datasets', function () {
     assert.equal(res.data.total, 2)
     assert.equal(res.data.results.find(l => l._id === 'line1')['_file.content'], 'This is a test libreoffice file.')
 
+    // overwrite 1 line
+    const form1 = new FormData()
+    const attachmentsContent1 = fs.readFileSync('./resources/datasets/files2.zip')
+    form1.append('attachments', attachmentsContent1, 'files2.zip')
+    form1.append('actions', Buffer.from(JSON.stringify([]), 'utf8'), 'actions.json')
+    res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form1, { headers: testUtils.formHeaders(form1) })
+    assert.equal(res.status, 200)
+    await workers.hook('finalizer/rest6')
+    const ls1 = await lsAttachments(dataset)
+    assert.equal(ls1.length, 2)
+    res = await ax.get('/api/v1/datasets/rest6/lines')
+    assert.equal(res.data.total, 2)
+    assert.equal(res.data.results.find(l => l._id === 'line1')['_file.content'], 'This is another test libreoffice file.')
+
     // add 1 more line
     const form2 = new FormData()
     const attachmentsContent2 = fs.readFileSync('./resources/datasets/files3.zip')
@@ -384,6 +398,29 @@ describe('REST datasets', function () {
     res = await ax.get('/api/v1/datasets/rest6/lines')
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results.find(l => l._id === 'line4')['_file.content'], 'This is another test libreoffice file.')
+
+    // with an accented filename and a missing file
+    const form4 = new FormData()
+    const attachmentsContent4 = fs.readFileSync('./resources/datasets/files4.zip')
+    form4.append('attachments', attachmentsContent4, 'files4.zip')
+    form4.append('actions', Buffer.from(JSON.stringify([
+      { _id: 'line5', attr1: 'test5', attachmentPath: 'testé.txt' },
+      { _id: 'line6', attr1: 'test6', attachmentPath: 'test-missing.txt' }
+    ]), 'utf8'), 'actions.json')
+    res = await ax.post('/api/v1/datasets/rest6/_bulk_lines', form4, { headers: testUtils.formHeaders(form4) })
+    assert.equal(res.status, 200)
+    assert.equal(res.data.nbOk, 2)
+    await workers.hook('finalizer/rest6')
+    const ls4 = await lsAttachments(dataset)
+    assert.equal(ls4.length, 2)
+
+    res = await ax.get('/api/v1/datasets/rest6/lines')
+    assert.equal(res.data.total, 3)
+    const line5 = res.data.results.find(l => l._id === 'line5')
+    assert.equal(line5['_file.content'], 'This a txt file with accented filename.')
+    assert.ok(!res.data.results.find(l => l._id === 'line6')._attachment_url)
+    res = await ax.get(line5._attachment_url)
+    assert.equal(res.data, 'This a txt file with accented filename.')
   })
 
   it('Synchronize all lines with the content of the attachments directory', async function () {

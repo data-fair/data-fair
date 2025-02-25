@@ -5,8 +5,9 @@ export const addAttachments = async (dataset, attachmentsArchive) => {
   const dir = attachmentsDir(dataset)
   await fs.ensureDir(dir)
   // await exec('unzip', ['-o', '-q', attachmentsArchive, '-d', dir])
-  await unzip(attachmentsArchive, dir)
+  const files = await unzip(attachmentsArchive, dir)
   await fs.remove(attachmentsArchive)
+  return files
 }
 
 export const replaceAllAttachments = async (dataset, attachmentsFilePath) => {
@@ -14,8 +15,9 @@ export const replaceAllAttachments = async (dataset, attachmentsFilePath) => {
   await fs.ensureDir(dir)
   await fs.emptyDir(dir)
   // await exec('unzip', ['-o', '-q', attachmentsFilePath, '-d', dir])
-  await unzip(attachmentsFilePath, dir)
+  const files = await unzip(attachmentsFilePath, dir)
   await fs.remove(attachmentsFilePath)
+  return files
 }
 
 export const removeAll = async (dataset) => {

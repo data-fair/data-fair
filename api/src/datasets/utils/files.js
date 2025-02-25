@@ -4,7 +4,6 @@ import path from 'path'
 import nodeDir from 'node-dir'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
 import unzipper from 'unzipper'
-import eventPromise from '@data-fair/lib-utils/event-promise.js'
 
 export const dataDir = path.resolve(config.dataDir)
 
@@ -198,11 +197,8 @@ export const fsyncFile = async (p) => {
 export const unzip = async (zipFile, targetDir) => {
   // we used to use the unzip command line tool but this patch (https://sourceforge.net/p/infozip/patches/29/)
   // was missing in the version in our alpine docker image
-  const readStream = fs.createReadStream(zipFile)
-  const extract = unzipper.Extract({ path: targetDir })
-  readStream.pipe(extract)
-  await Promise.all([
-    eventPromise(readStream, 'close'),
-    eventPromise(extract, 'close')
-  ])
+  const directory = await unzipper.Open.file(zipFile)
+  const files = directory.files.map(f => f.path)
+  await directory.extract({ path: targetDir })
+  return files
 }

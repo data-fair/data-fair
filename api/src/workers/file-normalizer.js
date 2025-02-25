@@ -8,7 +8,6 @@ import ogr2ogr from 'ogr2ogr'
 import pump from '../misc/utils/pipe.js'
 import { stringify as csvStrStream } from 'csv-stringify'
 import tmp from 'tmp-promise'
-import dir from 'node-dir'
 import mime from 'mime-types'
 import zlib from 'node:zlib'
 import resolvePath from 'resolve-path'
@@ -25,13 +24,6 @@ import { internalError } from '@data-fair/lib-node/observer.js'
 
 export const eventsPrefix = 'normalize'
 
-async function decompress (mimetype, filePath, dirPath) {
-  if (mimetype === 'application/zip') {
-    await unzip(filePath, dirPath)
-    // await exec('unzip', ['-o', '-q', filePath, '-d', dirPath])
-  }
-}
-
 export const process = async function (app, dataset) {
   const debug = debugLib(`worker:file-normalizer:${dataset.id}`)
   const originalFilePath = datasetUtils.originalFilePath(dataset)
@@ -47,12 +39,9 @@ export const process = async function (app, dataset) {
   }
 
   let isShapefile = false
-  if (datasetUtils.archiveTypes.has(dataset.originalFile.mimetype)) {
+  if (dataset.originalFile.mimetype === 'application/zip') {
     debug('decompress', dataset.originalFile.mimetype, originalFilePath, tmpDir)
-    await decompress(dataset.originalFile.mimetype, originalFilePath, tmpDir)
-    const files = (await dir.promiseFiles(tmpDir))
-      .map(f => path.relative(tmpDir, f))
-      .filter(p => path.basename(p).toLowerCase() !== 'thumbs.db')
+    const files = (await unzip(originalFilePath, tmpDir)).filter(p => path.basename(p).toLowerCase() !== 'thumbs.db')
     const filePaths = files.map(f => path.parse(f))
 
     // Check if this archive is actually a shapefile source
