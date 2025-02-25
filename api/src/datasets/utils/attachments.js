@@ -1,5 +1,5 @@
 import fs from 'fs-extra'
-import { attachmentsDir, unzip } from '../../datasets/utils/files.js'
+import { attachmentsDir, unzip } from '../../datasets/utils/files.ts'
 
 export const addAttachments = async (dataset, attachmentsArchive) => {
   const dir = attachmentsDir(dataset)

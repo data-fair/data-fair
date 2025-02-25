@@ -12,7 +12,7 @@ import DecodeStream from '../../misc/utils/decode-stream.js'
 import { csvTypes } from './types.js'
 import * as fieldsSniffer from './fields-sniffer.js'
 import * as restDatasetsUtils from './rest.js'
-import { filePath, fullFilePath, tmpDir } from './files.js'
+import { filePath, fullFilePath, tmpDir } from './files.ts'
 import pump from '../../misc/utils/pipe.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 

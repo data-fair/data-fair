@@ -11,7 +11,7 @@ import { Writable } from 'stream'
 import iconv from 'iconv-lite'
 import { promisify } from 'util'
 import * as restDatasetsUtils from '../api/src/datasets/utils/rest.js'
-import { attachmentsDir, lsAttachments } from '../api/src/datasets/utils/files.js'
+import { attachmentsDir, lsAttachments } from '../api/src/datasets/utils/files.ts'
 import pumpOg from 'pump'
 
 const pump = promisify(pumpOg)
