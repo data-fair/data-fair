@@ -10,7 +10,7 @@ import * as datasetsService from '../datasets/service.js'
 import * as restDatasetsUtils from '../datasets/utils/rest.js'
 import * as heapUtils from '../misc/utils/heap.js'
 import taskProgress from '../datasets/utils/task-progress.js'
-import { tmpDir } from '../datasets/utils/files.js'
+import { tmpDir } from '../datasets/utils/files.ts'
 import * as attachmentsUtils from '../datasets/utils/attachments.js'
 import debugModule from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
@@ -37,14 +37,23 @@ export const process = async function (app, dataset) {
 
   const partialUpdate = dataset._partialRestStatus === 'updated' || dataset._partialRestStatus === 'extended'
 
+  const attachmentsProperty = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+
   const newRestAttachments = dataset._newRestAttachments
-  if (newRestAttachments?.length) {
+  if (attachmentsProperty && newRestAttachments?.length) {
     for (const a of newRestAttachments) {
+      let newAttachments
       if (a.startsWith('drop:')) {
-        await attachmentsUtils.replaceAllAttachments(dataset, join(tmpDir, a.replace('drop:', '')))
+        newAttachments = await attachmentsUtils.replaceAllAttachments(dataset, join(tmpDir, a.replace('drop:', '')))
       } else {
-        await attachmentsUtils.addAttachments(dataset, join(tmpDir, a))
+        newAttachments = await attachmentsUtils.addAttachments(dataset, join(tmpDir, a))
       }
+      const bulkOp = restDatasetsUtils.collection(db, dataset).initializeUnorderedBulkOp()
+      for (const a of newAttachments) {
+        bulkOp.find({ [attachmentsProperty.key]: a }).update({ $set: { _needsIndexing: true } })
+        // TODO: add option to remove attachments that don't match any line ?
+      }
+      await bulkOp.execute()
       await db.collection('datasets').updateOne({ id: dataset.id }, { $pull: { _newRestAttachments: a } })
     }
   }
@@ -63,8 +72,8 @@ export const process = async function (app, dataset) {
     }
     debug(`Initialize new dataset index ${indexName}`)
   }
-  const attachments = !!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
-  const indexStream = es.indexStream({ esClient, indexName, dataset, attachments })
+
+  const indexStream = es.indexStream({ esClient, indexName, dataset, attachments: !!attachmentsProperty })
 
   if (!dataset.extensions || dataset.extensions.filter(e => e.active).length === 0) {
     if (dataset.file && await fs.pathExists(datasetUtils.fullFilePath(dataset))) {

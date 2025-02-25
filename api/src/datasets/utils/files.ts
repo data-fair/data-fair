@@ -4,73 +4,75 @@ import path from 'path'
 import nodeDir from 'node-dir'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
 import unzipper from 'unzipper'
-import eventPromise from '@data-fair/lib-utils/event-promise.js'
+import iconvLite from 'iconv-lite'
+import chardet from 'chardet'
+import { type Account } from '@data-fair/lib-express'
 
 export const dataDir = path.resolve(config.dataDir)
 
 export const tmpDir = path.join(dataDir, 'tmp')
 
-export const ownerDir = (owner) => {
+export const ownerDir = (owner: Account) => {
   return resolvePath(dataDir, path.join(owner.type, owner.id))
 }
 
-export const dir = (dataset) => {
+export const dir = (dataset: any) => {
   return resolvePath(
     ownerDir(dataset.owner),
     path.join(dataset.draftReason ? 'datasets-drafts' : 'datasets', dataset.id)
   )
 }
 
-export const loadingDir = (dataset) => {
+export const loadingDir = (dataset: any) => {
   return resolvePath(dir(dataset), 'loading')
 }
 
-export const loadedFilePath = (dataset) => {
+export const loadedFilePath = (dataset: any) => {
   return resolvePath(loadingDir(dataset), dataset.loaded?.dataset?.name)
 }
 
-export const filePath = (dataset) => {
+export const filePath = (dataset: any) => {
   return resolvePath(dir(dataset), dataset.file.name)
 }
 
-export const originalFilePath = (dataset) => {
+export const originalFilePath = (dataset: any) => {
   return resolvePath(dir(dataset), dataset.originalFile.name)
 }
 
-export const fullFileName = (dataset) => {
+export const fullFileName = (dataset: any) => {
   const parsed = path.parse(dataset.file.name)
   return `${parsed.name}-full${parsed.ext}`
 }
 
-export const fullFilePath = (dataset) => {
+export const fullFilePath = (dataset: any) => {
   return resolvePath(dir(dataset), fullFileName(dataset))
 }
 
-export const exportedFilePath = (dataset, ext) => {
+export const exportedFilePath = (dataset: any, ext: string) => {
   return resolvePath(dir(dataset), `${dataset.id}-last-export${ext}`)
 }
 
-export const loadedAttachmentsFilePath = (dataset) => {
+export const loadedAttachmentsFilePath = (dataset: any) => {
   return resolvePath(loadingDir(dataset), 'attachments.zip')
 }
 
-export const attachmentsDir = (dataset) => {
+export const attachmentsDir = (dataset: any) => {
   return resolvePath(dir(dataset), 'attachments')
 }
 
-export const attachmentPath = (dataset, name) => {
+export const attachmentPath = (dataset: any, name: string) => {
   return resolvePath(attachmentsDir(dataset), name)
 }
 
-export const metadataAttachmentsDir = (dataset) => {
+export const metadataAttachmentsDir = (dataset: any) => {
   return resolvePath(dir(dataset), 'metadata-attachments')
 }
 
-export const metadataAttachmentPath = (dataset, name) => {
+export const metadataAttachmentPath = (dataset: any, name: string) => {
   return resolvePath(metadataAttachmentsDir(dataset), name)
 }
 
-export const lsAttachments = async (dataset) => {
+export const lsAttachments = async (dataset: any) => {
   const dirName = attachmentsDir(dataset)
   if (!await fs.pathExists(dirName)) return []
   const files = (await nodeDir.promiseFiles(dirName))
@@ -78,7 +80,7 @@ export const lsAttachments = async (dataset) => {
   return files.filter(p => path.basename(p).toLowerCase() !== 'thumbs.db')
 }
 
-export const lsMetadataAttachments = async (dataset) => {
+export const lsMetadataAttachments = async (dataset: any) => {
   const dirName = metadataAttachmentsDir(dataset)
   if (!await fs.pathExists(dirName)) return []
   const files = (await nodeDir.promiseFiles(dirName))
@@ -86,8 +88,8 @@ export const lsMetadataAttachments = async (dataset) => {
   return files
 }
 
-export const lsFiles = async (dataset) => {
-  const infos = {}
+export const lsFiles = async (dataset: any) => {
+  const infos: any = {}
   if (dataset.file) {
     const fp = filePath(dataset)
     infos.file = { filePath: fp, size: (await fs.promises.stat(fp)).size }
@@ -109,14 +111,14 @@ export const lsFiles = async (dataset) => {
   return infos
 }
 
-export const dataFiles = async (dataset, publicBaseUrl = config.publicUrl) => {
+export const dataFiles = async (dataset: any, publicBaseUrl = config.publicUrl) => {
   if (dataset.isVirtual || dataset.isMetaOnly) return []
   const d = dir(dataset)
   if (!await fs.pathExists(d)) {
     return []
   }
   const files = await fs.readdir(d)
-  const results = []
+  const results: any[] = []
   if (dataset.originalFile) {
     if (!files.includes(dataset.originalFile.name)) {
       console.warn('Original data file not found', d, dataset.originalFile.name)
@@ -195,14 +197,29 @@ export const fsyncFile = async (p) => {
   await fs.close(fd)
 }
 
-export const unzip = async (zipFile, targetDir) => {
+export const unzip = async (zipFile: string, targetDir: string) => {
   // we used to use the unzip command line tool but this patch (https://sourceforge.net/p/infozip/patches/29/)
   // was missing in the version in our alpine docker image
-  const readStream = fs.createReadStream(zipFile)
-  const extract = unzipper.Extract({ path: targetDir })
-  readStream.pipe(extract)
-  await Promise.all([
-    eventPromise(readStream, 'close'),
-    eventPromise(extract, 'close')
-  ])
+  // so we use unzipper with chardet + iconv-lite to manage encoded file names
+  const directory = await unzipper.Open.file(zipFile)
+  const fileNames = Buffer.concat(directory.files.map(f => f.pathBuffer))
+  const encoding = chardet.detect(fileNames)
+  const files: string[] = []
+  for (const file of directory.files) {
+    if (file.type === 'Directory') continue
+    const filePath = (!file.isUnicode && encoding && encoding !== 'ASCII' && encoding !== 'UTF-8')
+      ? iconvLite.decode(file.pathBuffer, 'CP437')
+      : file.path
+    files.push(filePath)
+    const fullPath = path.join(targetDir, filePath)
+    await fs.ensureDir(path.dirname(fullPath))
+    await new Promise<void>((resolve, reject) => {
+      file
+        .stream()
+        .pipe(fs.createWriteStream(fullPath))
+        .on('error', reject)
+        .on('finish', resolve)
+    })
+  }
+  return files
 }

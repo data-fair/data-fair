@@ -5,7 +5,7 @@ import express from 'express'
 import config from '#config'
 import fs from 'fs-extra'
 import * as datasetsService from '../../datasets/service.js'
-import { ownerDir } from '../../datasets/utils/files.js'
+import { ownerDir } from '../../datasets/utils/files.ts'
 import mongo from '#mongo'
 
 const router = express.Router()
