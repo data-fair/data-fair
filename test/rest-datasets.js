@@ -417,10 +417,12 @@ describe('REST datasets', function () {
     res = await ax.get('/api/v1/datasets/rest6/lines')
     assert.equal(res.data.total, 3)
     const line5 = res.data.results.find(l => l._id === 'line5')
+    const line6 = res.data.results.find(l => l._id === 'line6')
     assert.equal(line5['_file.content'], 'This a txt file with accented filename.')
-    assert.ok(!res.data.results.find(l => l._id === 'line6')._attachment_url)
     res = await ax.get(line5._attachment_url)
     assert.equal(res.data, 'This a txt file with accented filename.')
+    assert.ok(!line6['_file.content'])
+    await assert.rejects(ax.get(line6._attachment_url), { status: 404 })
   })
 
   it('Synchronize all lines with the content of the attachments directory', async function () {

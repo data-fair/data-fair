@@ -1058,7 +1058,6 @@ router.get('/:datasetId/attachments/*attachmentPath', readDataset({ fillDescenda
       (err) => err ? reject(err) : resolve(true)
     ))
   } else {
-    console.log('attachmentsDir', req.params.attachmentPath)
     // the transform stream option was patched into "send" module using patch-package
     const relFilePath = path.join(...req.params.attachmentPath)
     await new Promise((resolve, reject) => res.sendFile(
