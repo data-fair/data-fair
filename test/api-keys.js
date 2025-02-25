@@ -71,4 +71,24 @@ describe('API keys', function () {
     assert.equal(dataset.owner.id, 'KWqAGZ4mG')
     assert.equal(dataset.owner.department, 'dep1')
   })
+
+  it('Create and use a adminMode/asAccount api key', async function () {
+    const res = await global.ax.superadmin.put('/api/v1/settings/user/dmeadus0', {
+      apiKeys: [
+        { title: 'admin key', scopes: ['datasets'], adminMode: true, asAccount: true }
+      ]
+    })
+    const key = res.data.apiKeys[0].clearKey
+    assert.ok(key)
+    const axKey = await global.ax.builder(undefined, undefined, undefined, undefined, {
+      headers: { 'x-apiKey': key, 'x-account': JSON.stringify({ type: 'organization', id: 'KWqAGZ4mG', name: encodeURIComponent('Fivechat testé') }) }
+    })
+
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', axKey)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.owner.type, 'organization')
+    assert.equal(dataset.owner.id, 'KWqAGZ4mG')
+    console.log(dataset.owner)
+    assert.equal(dataset.owner.name, 'Fivechat testé')
+  })
 })

@@ -15,7 +15,7 @@ import * as limits from '../misc/utils/limits.js'
 import * as catalogs from '../catalogs/plugins/index.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetService from '../datasets/service.js'
-import { tmpDir } from '../datasets/utils/files.js'
+import { tmpDir } from '../datasets/utils/files.ts'
 import debugLib from 'debug'
 
 export const eventsPrefix = 'download'

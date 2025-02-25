@@ -45,7 +45,7 @@ import * as apiKeyUtils from '../misc/utils/api-key.js'
 import { syncDataset as syncRemoteService } from '../remote-services/utils.js'
 import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetDataset } from './service.js'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/schema.js'
-import { dir, attachmentsDir } from './utils/files.js'
+import { dir, attachmentsDir } from './utils/files.ts'
 import { preparePatch, validatePatch } from './utils/patch.js'
 import { updateTotalStorage } from './utils/storage.js'
 import { checkStorage, lockDataset, readDataset } from './middlewares.js'
@@ -1058,7 +1058,6 @@ router.get('/:datasetId/attachments/*attachmentPath', readDataset({ fillDescenda
       (err) => err ? reject(err) : resolve(true)
     ))
   } else {
-    console.log('attachmentsDir', req.params.attachmentPath)
     // the transform stream option was patched into "send" module using patch-package
     const relFilePath = path.join(...req.params.attachmentPath)
     await new Promise((resolve, reject) => res.sendFile(

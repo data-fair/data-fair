@@ -13,7 +13,7 @@ import tmp from 'tmp-promise'
 import proj4 from 'proj4'
 import { wktToGeoJSON, geojsonToWKT } from '@terraformer/wkt'
 import debugLib from 'debug'
-import { tmpDir } from './files.js'
+import { tmpDir } from './files.ts'
 import projections from '../../../contract/projections.js'
 
 const writeFile = util.promisify(fs.writeFile)

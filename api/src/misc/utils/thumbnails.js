@@ -8,7 +8,7 @@ import config from '#config'
 import mongo from '#mongo'
 import axios from './axios.js'
 import { setNoCache } from './cache-headers.js'
-import { tmpDir } from '../../datasets/utils/files.js'
+import { tmpDir } from '../../datasets/utils/files.ts'
 import debugLib from 'debug'
 
 const debug = debugLib('thumbnails')

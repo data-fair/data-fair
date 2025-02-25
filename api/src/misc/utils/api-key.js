@@ -23,7 +23,12 @@ export const readApiKey = async (db, rawApiKey, scope, asAccount, req) => {
     let user
     if (apiKey.adminMode && apiKey.asAccount) {
       if (!asAccount) throw httpError(403, 'Cette clé d\'API requiert de spécifier le compte à incarner')
-      const account = typeof asAccount === 'string' ? JSON.parse(asAccount) : asAccount
+      let account = asAccount
+      if (typeof asAccount === 'string') {
+        account = JSON.parse(asAccount)
+        if (account.name) account.name = decodeURIComponent(account.name)
+        if (account.departmentName) account.departmentName = decodeURIComponent(account.departmentName)
+      }
       user = { isApiKey: true }
       if (account.type === 'user') {
         user.id = account.id
