@@ -194,6 +194,7 @@ export default {
       if (!this.property['x-transform'].examples) return null
       return this.property['x-transform'].examples.map(example => {
         try {
+          if (!example) return { result: '' }
           return { result: this.parsedExpression({ value: example }) }
         } catch (err) {
           return { error: err.message }
