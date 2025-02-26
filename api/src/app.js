@@ -17,7 +17,7 @@ import { internalError } from '@data-fair/lib-node/observer.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import upgradeScripts from '@data-fair/lib-node/upgrade-scripts.js'
 import { createSpaMiddleware } from '@data-fair/lib-express/serve-spa.js'
-import { cleanTmp } from './datasets/utils/files.js'
+import { cleanTmp } from './datasets/utils/files.ts'
 
 const debugDomain = debug('domain')
 

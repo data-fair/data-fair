@@ -37,6 +37,7 @@
           id="transform-type"
           persistent
           :initial="true"
+          class="mb-2"
         >
           <p>Vous pouvez définir un type de propriété surchargé pour cette colonne. De cette manière vous pouvez définir un type différent de celui détecté automatiquement depuis l'analyse du fichier.</p>
           <p>Si le type choisi ne peut pas être obtenu à partir des données brutes vous pouvez saisir une expression de transformation ci-dessous.</p>
@@ -52,6 +53,7 @@
           outlined
           dense
           persistent-placeholder
+          clearable
           :placeholder="'type détecté: ' + detectedPropertyType?.title?.toLowerCase()"
         />
 
@@ -99,7 +101,6 @@
                   dense
                   text
                   class="mb-0"
-                  style="max-height: 42px"
                 >
                   {{ exampleResults[i].error }}
                 </v-alert>
@@ -203,22 +204,37 @@ export default {
   watch: {
     expr: {
       handler () {
-        if (!this.expr.trim()) {
-          this.parsingError = this.$t('emptyExpr')
-        } else {
-          try {
-            this.parsedExpression = compile(this.expr, this.property)
-            this.parsingError = null
-          } catch (err) {
-            this.parsingError = err.message
-            return null
-          }
-        }
+        this.setExpression()
       },
       immediate: true
+    },
+    overwritePropertyType () {
+      this.setExpression()
     }
   },
   methods: {
+    setExpression () {
+      if (!this.expr.trim()) {
+        this.parsingError = this.$t('emptyExpr')
+      } else {
+        const exprProperty = { ...this.property }
+        if (this.overwritePropertyType) {
+          exprProperty.type = this.overwritePropertyType.type
+          if (this.overwritePropertyType.format) {
+            exprProperty.format = this.overwritePropertyType.format
+          } else {
+            delete exprProperty.format
+          }
+        }
+        try {
+          this.parsedExpression = compile(this.expr, exprProperty)
+          this.parsingError = null
+        } catch (err) {
+          this.parsingError = err.message
+          return null
+        }
+      }
+    },
     toggle (show) {
       if (show) {
         if (!this.property['x-transform']) {
