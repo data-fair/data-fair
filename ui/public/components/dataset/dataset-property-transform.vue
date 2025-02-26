@@ -11,7 +11,7 @@
         depressed
         dark
         v-bind="attrs"
-        :color="expr.trim() ? 'success' : 'default'"
+        :color="(expr.trim() || overwritePropertyType) ? 'success' : 'default'"
         :title="$t('transform')"
         v-on="on"
       >
