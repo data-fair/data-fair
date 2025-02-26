@@ -40,7 +40,7 @@
           class="mb-2"
         >
           <p>Vous pouvez définir un type de propriété surchargé pour cette colonne. De cette manière vous pouvez définir un type différent de celui détecté automatiquement depuis l'analyse du fichier.</p>
-          <p>Si le type choisi ne peut pas être obtenu à partir des données brutes vous pouvez saisir une expression de transformation ci-dessous.</p>
+          <p class="mb-0">Si le type choisi ne peut pas être obtenu à partir des données brutes vous pouvez saisir une expression de transformation ci-dessous.</p>
         </tutorial-alert>
 
         <v-select
