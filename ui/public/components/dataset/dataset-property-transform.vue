@@ -15,7 +15,7 @@
         :title="$t('transform')"
         v-on="on"
       >
-        <v-icon>mdi-database-import</v-icon>
+        <v-icon>mdi-database-cog</v-icon>
       </v-btn>
     </template>
     <v-card v-if="dialog">
@@ -39,7 +39,7 @@
           :initial="true"
           class="mb-2"
         >
-          <p>Vous pouvez définir un type de propriété surchargé pour cette colonne. De cette manière vous pouvez définir un type différent de celui détecté automatiquement depuis l'analyse du fichier.</p>
+          <p>Vous pouvez surcharger le type de cette colonne. De cette manière vous pouvez définir un type différent de celui détecté automatiquement depuis l'analyse du fichier.</p>
           <p class="mb-0">Si le type choisi ne peut pas être obtenu à partir des données brutes vous pouvez saisir une expression de transformation ci-dessous.</p>
         </tutorial-alert>
 
@@ -89,6 +89,7 @@
                 v-col
                 outlined
                 dense
+                :placeholder="$t('examplePlaceholder')"
                 :hide-details="true"
                 :disabled="!editable"
               />
@@ -105,7 +106,7 @@
                   {{ exampleResults[i].error }}
                 </v-alert>
                 <v-alert
-                  v-else
+                  v-else-if="examples[i]"
                   color="success"
                   dense
                   text
@@ -128,7 +129,9 @@
 fr:
   transform: Transformation
   expr: Expression
-  examples: "Exemples :"
+  examples: "Testez l'expression avec des exemples :"
+  examplePlaceholder: Saisissez une valeur
+  missingValue: le paramètre "value" n'est pas utilisé par cette expression
   exprEvalHelp: "Appliquez une transformation aux données de cette colonne quand elles sont chargées.<br><br>
   Une expression (ou formule) est utilisée pour transformer chaque valeur.
   Elle doit suivre la syntaxe du module <a href=\"https://github.com/silentmatt/expr-eval\">expr-eval</a>.
@@ -137,7 +140,8 @@ fr:
 en:
   transform: Transformation
   expr: Expression
-  examples: "Examples:"
+  examples: "Test the expression with examples:"
+  examplePlaceholder: Type a value
 </i18n>
 
 <script>
@@ -151,8 +155,7 @@ export default {
     return {
       dialog: false,
       parsingError: null,
-      parsedExpression: null,
-      examples: ['', '', '', '']
+      parsedExpression: null
     }
   },
   computed: {
@@ -188,6 +191,9 @@ export default {
     expr () {
       return this.property['x-transform']?.expr || ''
     },
+    examples () {
+      return this.property['x-transform']?.examples || ['']
+    },
     exampleResults () {
       if (!this.property['x-transform'].examples) return null
       return this.property['x-transform'].examples.map(example => {
@@ -209,12 +215,28 @@ export default {
     },
     overwritePropertyType () {
       this.setExpression()
+    },
+    examples: {
+      handler () {
+        this.prepareExamples()
+      },
+      deep: true
     }
   },
   methods: {
+    prepareExamples () {
+      if (this.examples.length > 1 && !this.examples[this.examples.length - 1] && !this.examples[this.examples.length - 2]) {
+        this.examples.pop()
+      }
+      if (this.examples[this.examples.length - 1]) {
+        this.examples.push('')
+      }
+    },
     setExpression () {
       if (!this.expr.trim()) {
         this.parsingError = null
+      } else if (!this.expr.includes('value')) {
+        this.parsingError = this.$t('missingValue')
       } else {
         const exprProperty = { ...this.property }
         if (this.overwritePropertyType) {
@@ -243,7 +265,9 @@ export default {
           this.$set(this.property['x-transform'], 'expr', '')
         }
         if (!this.property['x-transform'].examples) {
-          this.$set(this.property['x-transform'], 'examples', ['', '', '', '', ''])
+          this.$set(this.property['x-transform'], 'examples', [''])
+        } else {
+          this.prepareExamples()
         }
       } else {
         if (!this.property['x-transform'].expr && !this.property['x-transform'].type) {
