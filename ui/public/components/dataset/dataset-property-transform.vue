@@ -128,7 +128,6 @@
 fr:
   transform: Transformation
   expr: Expression
-  emptyExpr: Saisissez une expression
   examples: "Exemples :"
   exprEvalHelp: "Appliquez une transformation aux données de cette colonne quand elles sont chargées.<br><br>
   Une expression (ou formule) est utilisée pour transformer chaque valeur.
@@ -138,7 +137,6 @@ fr:
 en:
   transform: Transformation
   expr: Expression
-  emptyExpr: Write an expression
   examples: "Examples:"
 </i18n>
 
@@ -188,7 +186,7 @@ export default {
       }
     },
     expr () {
-      return this.property['x-transform'].expr || ''
+      return this.property['x-transform']?.expr || ''
     },
     exampleResults () {
       if (!this.property['x-transform'].examples) return null
@@ -216,7 +214,7 @@ export default {
   methods: {
     setExpression () {
       if (!this.expr.trim()) {
-        this.parsingError = this.$t('emptyExpr')
+        this.parsingError = null
       } else {
         const exprProperty = { ...this.property }
         if (this.overwritePropertyType) {
@@ -239,13 +237,16 @@ export default {
     toggle (show) {
       if (show) {
         if (!this.property['x-transform']) {
-          this.$set(this.property, 'x-transform', { expr: '' })
+          this.$set(this.property, 'x-transform', {})
+        }
+        if (!this.property['x-transform'].expr) {
+          this.$set(this.property['x-transform'], 'expr', '')
         }
         if (!this.property['x-transform'].examples) {
           this.$set(this.property['x-transform'], 'examples', ['', '', '', '', ''])
         }
       } else {
-        if (!this.property['x-transform'].expr) {
+        if (!this.property['x-transform'].expr && !this.property['x-transform'].type) {
           this.$delete(this.property, 'x-transform')
         }
       }
