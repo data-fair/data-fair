@@ -138,7 +138,8 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
         }
         for (const prop of schema) {
           const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
-          const value = fieldsSniffer.format(chunk[prop['x-originalName'] || prop.key] ?? chunk[prop.key], prop, fileProp)
+          const originalName = fileSchema ? fileProp?.['x-originalName'] : prop['x-originalName']
+          const value = fieldsSniffer.format(chunk[originalName || prop.key] ?? chunk[prop.key], prop, fileProp)
           if (value !== null) line[prop.key] = value
         }
         line._i = chunk._i
@@ -160,7 +161,8 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
           const line = { _i: this.i = (this.i || 0) + 1 }
           for (const prop of schema) {
             const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
-            const value = fieldsSniffer.format(item[prop['x-originalName'] || prop.key], prop, fileProp)
+            const originalName = fileSchema ? fileProp?.['x-originalName'] : prop['x-originalName']
+            const value = fieldsSniffer.format(item[originalName || prop.key] ?? item[prop.key], prop, fileProp)
             if (value !== null) line[prop.key] = value
           }
           callback(null, line)
