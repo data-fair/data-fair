@@ -185,12 +185,16 @@ export const getTransformStream = (schema, fileSchema) => {
     transform (item, encoding, callback) {
       for (const prop of schema) {
         if (prop['x-transform']?.expr) {
-          compiledExpressions[prop.key] = compiledExpressions[prop.key] || compileExpression(prop['x-transform']?.expr, prop)
-          try {
-            item[prop.key] = compiledExpressions[prop.key]({ value: item[prop.key] })
-          } catch (err) {
-            const message = `[noretry] échec de l'évaluation de l'expression "${prop['x-transform']?.expr}" : ${err.message}`
-            throw new Error(message)
+          if ([null, undefined, ''].includes(item[prop.key])) {
+            item[prop.key] = null
+          } else {
+            compiledExpressions[prop.key] = compiledExpressions[prop.key] || compileExpression(prop['x-transform']?.expr, prop)
+            try {
+              item[prop.key] = compiledExpressions[prop.key]({ value: item[prop.key] })
+            } catch (err) {
+              const message = `[noretry] échec de l'évaluation de l'expression "${prop['x-transform']?.expr}" : ${err.message}`
+              throw new Error(message)
+            }
           }
         } else {
           const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
