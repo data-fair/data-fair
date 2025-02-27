@@ -10,6 +10,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
 import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 import { nanoid } from 'nanoid'
+import contentDisposition from 'content-disposition'
 import applicationAPIDocs from '../../contract/application-api-docs.js'
 import * as ajv from '../misc/utils/ajv.js'
 import applicationKeys from '../../contract/application-keys.js'
@@ -574,14 +575,15 @@ router.get('/:applicationId/attachments/*attachmentPath', readApplication, permi
     )
   }
 
-  res.sendFile(
+  await new Promise((resolve, reject) => res.sendFile(
     relFilePath,
     {
       // transformStream: res.throttle('static'),
       root: attachmentsDir(req.application),
-      headers: { 'Content-Disposition': `inline; filename="${path.basename(relFilePath)}"` }
-    }
-  )
+      headers: { 'Content-Disposition': contentDisposition(path.basename(relFilePath), { type: 'inline' }) }
+    },
+    (err) => err ? reject(err) : resolve(true)
+  ))
 })
 
 router.delete('/:applicationId/attachments/*attachmentPath', readApplication, permissions.middleware('deleteAttachment', 'write'), async (req, res, next) => {

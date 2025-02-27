@@ -1,4 +1,4 @@
-FROM node:22.13.1-alpine3.21 AS base
+FROM node:22.14.0-alpine3.21 AS base
 
 RUN npm install -g npm@11.1.0
 
@@ -45,8 +45,6 @@ RUN ln -s /usr/lib/libproj.so.25 /usr/lib/libproj.so
 RUN test -f /usr/lib/libproj.so
 # check that geo execs actually load
 RUN prepair --help
-
-RUN apk add --no-cache unzip
 
 ##########################
 FROM base AS package-strip

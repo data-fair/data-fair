@@ -110,6 +110,10 @@ describe('datasets in draft mode', function () {
     assert.equal(journal.pop().type, 'draft-validated')
     assert.equal(journal.pop().type, 'finalize-end')
 
+    const es = await esUtils.init()
+    const indices = await es.indices.get({ index: `${esUtils.indexPrefix(dataset)}-*` })
+    assert.equal(Object.keys(indices).length, 1)
+
     assert.ok(await fs.pathExists(`../data/test/user/dmeadus0/datasets/${dataset.id}`))
     res = await ax.delete('/api/v1/datasets/' + dataset.id)
     assert.ok(!await fs.pathExists(`../data/test/user/dmeadus0/datasets/${dataset.id}`))
@@ -153,6 +157,10 @@ describe('datasets in draft mode', function () {
     // schema should respect the new order of columns
     assert.deepEqual(dataset.draft.schema.filter(c => !c['x-calculated']).map(c => c.key), ['id', 'somedate', 'employees', 'adr'])
 
+    const es = await esUtils.init()
+    let indices = await es.indices.get({ index: `${esUtils.indexPrefix(dataset)}-*` })
+    assert.equal(Object.keys(indices).length, 2)
+
     // validate the draft
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
     dataset = await workers.hook('finalizer')
@@ -163,6 +171,9 @@ describe('datasets in draft mode', function () {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 6)
     assert.equal(res.data.results[0].id, 'koumoul')
+
+    indices = await es.indices.get({ index: `${esUtils.indexPrefix(dataset)}-*` })
+    assert.equal(Object.keys(indices).length, 1)
 
     // the journal kept traces of all changes (draft and not)
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
@@ -184,6 +195,9 @@ describe('datasets in draft mode', function () {
     evt = journal.pop()
     assert.equal(evt.type, 'finalize-end')
     assert.equal(evt.draft, undefined)
+
+    indices = await es.indices.get({ index: `${esUtils.indexPrefix(dataset)}-*` })
+    assert.equal(Object.keys(indices).length, 1)
 
     // the notifications contain the same thing as the journal minus not very interesting events
     // and adding some extra events were triggerred when validating the draft
@@ -221,12 +235,19 @@ describe('datasets in draft mode', function () {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
     assert.equal(res.data.total, 6)
 
+    const es = await esUtils.init()
+    let indices = await es.indices.get({ index: `${esUtils.indexPrefix(dataset)}-*` })
+    assert.equal(Object.keys(indices).length, 2)
+
     // cancel the draft
     await ax.delete(`/api/v1/datasets/${dataset.id}/draft`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`, { params: { draft: true } })).data
     assert.equal(dataset.draftReason, undefined)
+
+    indices = await es.indices.get({ index: `${esUtils.indexPrefix(dataset)}-*` })
+    assert.equal(Object.keys(indices).length, 1)
 
     // the journal kept traces of all changes (draft and not)
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data

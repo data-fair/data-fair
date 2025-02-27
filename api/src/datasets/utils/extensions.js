@@ -9,7 +9,7 @@ import stringify from 'json-stable-stringify'
 import { flatten } from 'flat'
 import equal from 'deep-equal'
 import axios from '../../misc/utils/axios.js'
-import { fullFilePath, fsyncFile, attachmentPath } from './files.js'
+import { fullFilePath, fsyncFile, attachmentPath } from './files.ts'
 import { readStreams, writeExtendedStreams } from './data-streams.js'
 import * as restDatasetsUtils from './rest.js'
 import * as geoUtils from './geo.js'
@@ -20,6 +20,7 @@ import * as permissionsUtils from '../../misc/utils/permissions.js'
 import { getPseudoUser } from '../../misc/utils/users.js'
 import randomSeed from 'random-seed'
 import debugLib from 'debug'
+import { parseURL } from 'ufo'
 import exprEval from '@data-fair/data-fair-shared/expr-eval.js'
 import { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 
@@ -468,15 +469,20 @@ export const applyCalculations = async (dataset, item) => {
   // Add base64 content of attachments
   const attachmentField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (attachmentField && flatItem[attachmentField.key]) {
-    const filePath = attachmentPath(dataset, flatItem[attachmentField.key])
-    if (await fs.pathExists(filePath)) {
-      const stats = await fs.stat(filePath)
-      item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${flatItem[attachmentField.key]}`
-      if (!attachmentField['x-capabilities'] || attachmentField['x-capabilities'].indexAttachment !== false) {
-        if (stats.size > config.defaultLimits.attachmentIndexed) {
-          warning = 'Pièce jointe trop volumineuse pour être analysée'
-        } else {
-          item._file_raw = (await fs.readFile(filePath)).toString('base64')
+    const attachmentValue = flatItem[attachmentField.key]
+    const isURL = !!parseURL(attachmentValue).host
+    if (!isURL) {
+      item._attachment_url = `${config.publicUrl}/api/v1/datasets/${dataset.id}/attachments/${attachmentValue}`
+      const filePath = attachmentPath(dataset, attachmentValue)
+      if (await fs.pathExists(filePath)) {
+        const stats = await fs.stat(filePath)
+
+        if (!attachmentField['x-capabilities'] || attachmentField['x-capabilities'].indexAttachment !== false) {
+          if (stats.size > config.defaultLimits.attachmentIndexed) {
+            warning = 'Pièce jointe trop volumineuse pour être analysée'
+          } else {
+            item._file_raw = (await fs.readFile(filePath)).toString('base64')
+          }
         }
       }
     }

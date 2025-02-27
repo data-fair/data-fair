@@ -22,7 +22,7 @@ export const indexDefinition = async (dataset) => {
   return body
 }
 
-function indexPrefix (dataset) {
+export function indexPrefix (dataset) {
   return `${config.indicesPrefix}-${dataset.id}-${crypto.createHash('sha1').update(dataset.id).digest('hex').slice(0, 12)}`
 }
 
@@ -90,7 +90,7 @@ export const deleteIndex = async (client, dataset) => {
   if (dataset.draftReason) {
     // in case of a draft dataset, delete all indices not used by the production alias
     const previousIndices = await client.indices.get({ index: `${indexPrefix(dataset)}-*`, ignore_unavailable: true })
-    for (const index in previousIndices.body) {
+    for (const index in previousIndices) {
       if (prodAlias && prodAlias[index]) continue
       await safeDeleteIndex(client, index)
     }
@@ -114,7 +114,7 @@ export const switchAlias = async (client, dataset, tempId) => {
   // Delete indices of this dataset that are not referenced by either the draft or prod aliases
   const { prodAlias, draftAlias } = await getAliases(client, dataset)
   const indices = await client.indices.get({ index: `${indexPrefix(dataset)}-*`, ignore_unavailable: true })
-  for (const index in indices.body) {
+  for (const index in indices) {
     if (prodAlias && prodAlias[index]) continue
     if (draftAlias && draftAlias[index]) continue
     await safeDeleteIndex(client, index)

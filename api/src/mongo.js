@@ -19,12 +19,16 @@ export class DfMongo {
     this.mongo = new Mongo()
   }
 
-  init = async () => {
+  connect = async () => {
     // manage retro-compatibility with STORAGE_MONGO_URL and STORAGE_MONGO_CLIENT_OPTIONS
     const options = { ...config.mongo.options }
     // workers generate a lot of opened sockets if we do not change this setting
     if (config.mode === 'task') options.maxPoolSize = 1
     await this.mongo.connect(config.mongo.url, options)
+  }
+
+  init = async () => {
+    await this.connect()
     await this.mongo.configure({
       datasets: {
         id_1: [{ id: 1 }, { unique: true }],

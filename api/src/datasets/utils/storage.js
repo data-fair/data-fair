@@ -8,7 +8,7 @@ import * as limits from '../../misc/utils/limits.js'
 import config from '#config'
 import mongo from '#mongo'
 import debug from 'debug'
-import { dataFiles, lsAttachments, lsMetadataAttachments, attachmentPath, metadataAttachmentPath } from './files.js'
+import { dataFiles, lsAttachments, lsMetadataAttachments, attachmentPath, metadataAttachmentPath } from './files.ts'
 
 const debugLimits = debug('limits')
 

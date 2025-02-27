@@ -37,6 +37,21 @@ describe('Attachments', function () {
     assert.equal(res.status, 200)
   })
 
+  it.skip('Process attachments with encoded filenames', async function () {
+    const datasetFd = fs.readFileSync('/home/alban/tmp/tmp.zip')
+    const form = new FormData()
+    form.append('dataset', datasetFd, 'files-encoded-name.zip')
+    const ax = global.ax.dmeadus
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const dataset = await workers.hook(`finalizer/${res.data.id}`)
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?size=1000`)
+    // console.log(res.data.results)
+    const line = res.data.results.find(line => line.file.startsWith('2021-200_'))
+    res = await ax.get(line._attachment_url)
+    assert.equal(res.headers['content-type'], 'application/pdf')
+  })
+
   it('Process newly uploaded attachments along with data file', async function () {
     const ax = global.ax.cdurning2
 

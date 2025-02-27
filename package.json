@@ -1,6 +1,6 @@
 {
   "name": "data-fair",
-  "version": "4.33.0",
+  "version": "4.34.0",
   "description": "",
   "main": "server",
   "scripts": {
@@ -59,6 +59,7 @@
     "@data-fair/lib-types-builder": "^1.7.0",
     "@koumoul/gh-pages-multi": "^0.7.1",
     "@types/node": "^22.12.0",
+    "@types/unzipper": "^0.10.10",
     "clean-modules": "^2.0.4",
     "eslint-plugin-mocha": "^10.5.0",
     "eslint-plugin-vue": "^9.32.0",

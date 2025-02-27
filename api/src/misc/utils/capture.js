@@ -110,7 +110,10 @@ export const screenshot = async (req, res) => {
       const stats = await fs.stat(capturePath)
       if (stats.mtime.toISOString() > req.resource.updatedAt) {
         res.set('x-capture-cache-status', 'HIT')
-        return res.sendFile(capturePath)
+        await new Promise((resolve, reject) => res.sendFile(
+          capturePath,
+          (err) => err ? reject(err) : resolve(true)
+        ))
       } else {
         res.set('x-capture-cache-status', 'EXPIRED')
       }
@@ -127,7 +130,10 @@ export const screenshot = async (req, res) => {
         await stream2file(reqOpts, capturePath)
       }
       await stream2file(reqOpts, capturePath)
-      return res.sendFile(capturePath)
+      return await new Promise((resolve, reject) => res.sendFile(
+        capturePath,
+        (err) => err ? reject(err) : resolve(true)
+      ))
     } catch (err) {
       // catch err locally as this method is called without waiting for result
 

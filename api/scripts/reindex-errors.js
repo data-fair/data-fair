@@ -1,8 +1,9 @@
-import dbUtils from '../server/misc/utils/db.js'
-import datasetUtils from '../server/datasets/utils/index.js'
+import mongo from '#mongo'
+import * as datasetUtils from '../src/datasets/utils/index.js'
 
 async function main () {
-  const { db } = await dbUtils.connect()
+  await mongo.connect()
+  const db = mongo.db
   const cursor = await db.collection('datasets').find({})
   while (await cursor.hasNext()) {
     const dataset = await cursor.next()

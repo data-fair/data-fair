@@ -4,13 +4,15 @@ import path from 'path'
 import { Histogram } from 'prom-client'
 import locks from '@data-fair/lib-node/locks.js'
 import * as journals from '../misc/utils/journals.js'
-import debug from 'debug'
+import debugModule from 'debug'
 import mergeDraft from '../datasets/utils/merge-draft.js'
 import taskProgress from '../datasets/utils/task-progress.js'
 import { basicTypes, csvTypes } from '../datasets/utils/types.js'
 import moment from 'moment'
 import { spawn } from 'child-process-promise'
 import { internalError } from '@data-fair/lib-node/observer.js'
+
+const debug = debugModule('workers')
 
 const workersTasksHistogram = new Histogram({
   name: 'df_datasets_workers_tasks',
@@ -75,7 +77,7 @@ export const runningTasks = () => {
 /* eslint no-unmodified-loop-condition: 0 */
 // Run main loop !
 export const start = async (app) => {
-  const debugLoop = debug('worker-loop')
+  const debugLoop = debugModule('worker-loop')
 
   debugLoop('start worker loop with config', config.worker)
   const db = mongo.db

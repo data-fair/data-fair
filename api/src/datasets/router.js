@@ -45,13 +45,14 @@ import * as apiKeyUtils from '../misc/utils/api-key.js'
 import { syncDataset as syncRemoteService } from '../remote-services/utils.js'
 import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetDataset } from './service.js'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/data-schema.js'
-import { dir, attachmentsDir } from './utils/files.js'
+import { dir, attachmentsDir } from './utils/files.ts'
 import { preparePatch, validatePatch } from './utils/patch.js'
 import { updateTotalStorage } from './utils/storage.js'
 import { checkStorage, lockDataset, readDataset } from './middlewares.js'
 import config from '#config'
 import mongo from '#mongo'
 import debugModule from 'debug'
+import contentDisposition from 'content-disposition'
 import { internalError } from '@data-fair/lib-node/observer.js'
 
 const validatePost = ajv.compile(datasetPostSchema.properties.body)
@@ -105,10 +106,10 @@ router.get('/:datasetId', readDataset({ acceptInitialDraft: true }), apiKeyMiddl
 const sendSchema = (req, res, schema) => {
   schema = filterSchema(schema, req.query)
   if (req.query.mimeType === 'application/tableschema+json') {
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-tableschema.json"`)
+    res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '-tableschema.json'))
     schema = tableSchema(schema)
   } else if (req.query.mimeType === 'application/schema+json') {
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}-schema.json"`)
+    res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '-schema.json'))
     schema = jsonSchema(schema, req.publicBaseUrl)
   } else {
     for (const field of schema) {
@@ -792,14 +793,14 @@ const readLines = async (req, res) => {
     // geojson format benefits from bbox info
     geojson.bbox = (await esUtils.bboxAgg(req.app.get('es'), req.dataset, { ...query })).bbox
     observe.reqStep(req, 'bboxAgg')
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.geojson"`)
+    res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.geojson'))
     return res.status(200).send(geojson)
   }
 
   if (query.format === 'wkt') {
     const wkt = geo.result2wkt(esResponse)
     observe.reqStep(req, 'result2wkt')
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.wkt"`)
+    res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.wkt'))
     return res.status(200).send(wkt)
   }
 
@@ -829,7 +830,7 @@ const readLines = async (req, res) => {
   if (query.format === 'csv') {
     const csv = await outputs.results2csv(req, result.results)
     observe.reqStep(req, 'results2csv')
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.csv"`)
+    res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.csv'))
     return res.status(200).send(csv)
   }
 
@@ -838,13 +839,13 @@ const readLines = async (req, res) => {
     observe.reqStep(req, 'stringify')
     const sheet = await outputs.results2sheet(req, result.results)
     observe.reqStep(req, 'results2xlsx')
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.xlsx"`)
+    res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.xlsx'))
     return res.status(200).send(sheet)
   }
   if (query.format === 'ods') {
     const sheet = await outputs.results2sheet(req, result.results, 'ods')
     observe.reqStep(req, 'results2ods')
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.slug}.ods"`)
+    res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.ods'))
     return res.status(200).send(sheet)
   }
 
@@ -1047,25 +1048,27 @@ router.get('/:datasetId/attachments/*attachmentPath', readDataset({ fillDescenda
     if (!documentProp || documentProp.key !== childDocumentProp.key) return res.status(404).send('No attachment column found')
 
     const relFilePath = path.join(...req.params.attachmentPath.slice(1))
-    res.sendFile(
+    await new Promise((resolve, reject) => res.sendFile(
       relFilePath,
       {
         transformStream: res.throttle('static'),
         root: attachmentsDir(childDataset),
-        headers: { 'Content-Disposition': `inline; filename="${path.basename(relFilePath)}"` }
-      }
-    )
+        headers: { 'Content-Disposition': contentDisposition(path.basename(relFilePath), { type: 'inline' }) }
+      },
+      (err) => err ? reject(err) : resolve(true)
+    ))
   } else {
     // the transform stream option was patched into "send" module using patch-package
     const relFilePath = path.join(...req.params.attachmentPath)
-    res.sendFile(
+    await new Promise((resolve, reject) => res.sendFile(
       relFilePath,
       {
         transformStream: res.throttle('static'),
         root: attachmentsDir(req.dataset),
-        headers: { 'Content-Disposition': `inline; filename="${path.basename(relFilePath)}"` }
-      }
-    )
+        headers: { 'Content-Disposition': contentDisposition(path.basename(relFilePath), { type: 'inline' }) }
+      },
+      (err) => err ? reject(err) : resolve(true)
+    ))
   }
 })
 
@@ -1156,14 +1159,15 @@ router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), ap
     )
   }
 
-  res.sendFile(
+  await new Promise((resolve, reject) => res.sendFile(
     relFilePath,
     {
       transformStream: res.throttle('static'),
       root: datasetUtils.metadataAttachmentsDir(req.dataset),
-      headers: { 'Content-Disposition': `inline; filename="${path.basename(relFilePath)}"` }
-    }
-  )
+      headers: { 'Content-Disposition': contentDisposition(path.basename(relFilePath), { type: 'inline' }) }
+    },
+    (err) => err ? reject(err) : resolve(true)
+  ))
   // res.sendFile(req.params.attachmentPath)
 })
 
@@ -1179,7 +1183,7 @@ router.get('/:datasetId/raw', readDataset(), apiKeyMiddleware, permissions.middl
   if (req.dataset.isRest && req.user.adminMode) {
     const query = { ...req.query }
     query.select = query.select || ['_id'].concat(req.dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)).join(',')
-    res.setHeader('content-disposition', `attachment; filename="${req.dataset.id}.csv"`)
+    res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.csv'))
     // add BOM for excel, cf https://stackoverflow.com/a/17879474
     res.write('\ufeff')
     await pump(

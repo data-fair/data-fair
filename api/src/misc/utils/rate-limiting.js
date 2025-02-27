@@ -70,7 +70,7 @@ class Throttle extends Transform {
     this.tokenBucket.lastUsed = Date.now()
     let pos = 0
     while (chunk.length > pos) {
-      const slice = chunk.slice(pos, pos + this.tokenBucket.bucketSize)
+      const slice = chunk.subarray(pos, pos + this.tokenBucket.bucketSize)
       await this.tokenBucket.bucket.removeTokens(slice.length)
       this.push(slice)
       pos += slice.length
@@ -85,7 +85,7 @@ class Throttle extends Transform {
 const throttledEnd = async (res, buffer, tokenBucket) => {
   let pos = 0
   while (buffer.length > pos) {
-    const slice = buffer.slice(pos, pos + tokenBucket.bucketSize)
+    const slice = buffer.subarray(pos, pos + tokenBucket.bucketSize)
     await tokenBucket.bucket.removeTokens(slice.length)
     res.write(slice)
     pos += slice.length
