@@ -1,5 +1,4 @@
 import config from 'config'
-import status from './status.js'
 import dataset from './dataset.js'
 import datasetPatch from './dataset-patch.js'
 import datasetPost from './dataset-post.js'
@@ -65,29 +64,6 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     },
     security: [{ apiKey: [] }, { sdCookie: [] }],
     paths: {
-      '/status': {
-        get: {
-          summary: 'Etat de santé du service.',
-          tags: ['Administration'],
-          operationId: 'getStatus',
-          'x-operationType': 'http://schema.org/CheckAction',
-          responses: {
-            200: {
-              description: 'Etat de santé du service',
-              content: {
-                'application/json': {
-                  schema: status,
-                  examples: [{
-                    status: 'ok',
-                    message: 'Service is ok',
-                    details: 'Service is ok'
-                  }]
-                }
-              }
-            }
-          }
-        }
-      },
       '/ping': {
         get: {
           summary: 'Etat de santé du service simplifié.',
@@ -106,7 +82,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       },
       '/api-docs.json': {
         get: {
-          summary: 'Cette documentation d\'API au format Open API v3',
+          summary: 'Cette documentation d\'API au format OpenAPI v3.',
           tags: ['Administration'],
           operationId: 'getApiDoc',
           responses: {
@@ -128,7 +104,6 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           operationId: 'getVocabulary',
           responses: {
             200: {
-              description: 'Service ok',
               content: {
                 'application/json': {
                   schema: {
@@ -136,13 +111,15 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
                     items: {
                       type: 'object',
                       properties: {
+                        id: { type: 'string' },
                         title: { type: 'string' },
                         description: { type: 'string' },
                         identifiers: {
                           type: 'array',
                           items: { type: 'string' }
                         },
-                        type: { type: 'string' }
+                        type: { type: 'string' },
+                        tag: { type: 'string' }
                       }
                     }
                   }
@@ -175,7 +152,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           ],
           responses: {
             200: {
-              description: 'Liste des jeux de données que l\'utilisateur est autorisé à voir',
+              description: 'Liste des jeux de données que l\'utilisateur est autorisé à voir.',
               content: {
                 'application/json': {
                   schema: {
@@ -215,7 +192,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           },
           responses: {
             200: {
-              description: 'Métadonnées sur le dataset créé',
+              description: 'Métadonnées sur le dataset créé.',
               content: {
                 'application/json': {
                   schema: {
@@ -235,7 +212,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           tags: ['Jeux de données'],
           responses: {
             200: {
-              description: 'Informations d\'un jeu de données',
+              description: 'Informations d\'un jeu de données.',
               content: {
                 'application/json': {
                   schema: {
@@ -263,7 +240,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           },
           responses: {
             201: {
-              description: 'Jeu de données créé',
+              description: 'Jeu de données créé.',
               content: {
                 'application/json': {
                   schema: {
@@ -301,7 +278,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           },
           responses: {
             200: {
-              description: 'Informations du jeu de données modifié',
+              description: 'Informations du jeu de données modifié.',
               content: {
                 'application/json': {
                   schema: {
@@ -318,7 +295,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           tags: ['Jeux de données'],
           responses: {
             204: {
-              description: 'Jeu de données supprimé'
+              description: 'Jeu de données supprimé.'
             }
           }
         }
@@ -341,7 +318,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           ],
           responses: {
             200: {
-              description: 'Liste des applications que l\'utilisateur est autorisé à voir',
+              description: 'Liste des applications que l\'utilisateur est autorisé à voir.',
               content: {
                 'application/json': {
                   schema: {
@@ -372,14 +349,16 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             description: 'Les informations de configuration de l\'application',
             required: true,
             content: {
-              schema: {
-                $ref: '#/components/schemas/application'
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/application'
+                }
               }
             }
           },
           responses: {
             201: {
-              description: 'Les informations de configuration de l\'application',
+              description: 'Les informations de configuration de l\'application.',
               content: {
                 'application/json': {
                   schema: {
@@ -399,7 +378,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           tags: ['Applications'],
           responses: {
             200: {
-              description: 'Informations d\'une application',
+              description: 'Informations d\'une application.',
               content: {
                 'application/json': {
                   schema: {
@@ -427,7 +406,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           },
           responses: {
             201: {
-              description: 'Application créée',
+              description: 'Application créée.',
               content: {
                 'application/json': {
                   schema: {
@@ -465,7 +444,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           },
           responses: {
             200: {
-              description: 'Informations de l\'application modifiée',
+              description: 'Informations de l\'application modifiée.',
               content: {
                 'application/json': {
                   schema: {
@@ -482,7 +461,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           tags: ['Applications'],
           responses: {
             204: {
-              description: 'Application supprimée'
+              description: 'Application supprimée.'
             }
           }
         }
@@ -815,13 +794,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     },
     externalDocs: {
       description: 'Documentation sur Github',
-      url: 'https://data-fair.github.io'
-    },
-    definitions: {
-      API: {
-        type: 'object',
-        description: 'Open API v3 compliant documentation'
-      }
+      url: 'https://data-fair.github.io/master/'
     }
   }
 
@@ -834,8 +807,6 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
   delete doc.paths['/catalogs']
   // @ts-ignore
   delete doc.paths['/catalogs/{id}']
-  // @ts-ignore
-  delete doc.paths['/status']
 
   return doc
 }

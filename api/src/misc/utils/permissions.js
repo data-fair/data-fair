@@ -322,7 +322,7 @@ export const apiDoc = {
     tags: ['Permissions'],
     responses: {
       200: {
-        description: 'Liste des permissions',
+        description: 'Liste des permissions.',
         content: {
           'application/json': {
             schema: permissionsSchema
@@ -337,7 +337,7 @@ export const apiDoc = {
     'x-permissionClass': 'admin',
     tags: ['Permissions'],
     requestBody: {
-      description: 'Liste des permissions',
+      description: 'Liste des permissions.',
       required: true,
       content: {
         'application/json': {
@@ -347,7 +347,7 @@ export const apiDoc = {
     },
     responses: {
       200: {
-        description: 'Liste des permissions',
+        description: 'Liste des permissions.',
         content: {
           'application/json': {
             schema: permissionsSchema

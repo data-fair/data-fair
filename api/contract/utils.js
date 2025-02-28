@@ -32,19 +32,24 @@ export const ownerParams = [/* {
     in: 'query',
     name: 'mine',
     description: 'Voir uniquement les ressources de mon compte actif',
-    example: true,
+    required: false,
     schema: {
-      type: 'boolean'
+      type: 'boolean',
+      default: true
     }
   }, {
     in: 'query',
     name: 'owner',
-    description: 'Restreindre sur le propriétaire (par exemple "organization:myorg" ou "user:myuser")',
+    description: 'Restreindre par propriétaire',
     required: false,
     schema: {
       type: 'array',
       items: {
-        type: 'string'
+        type: 'string',
+        examples: [
+          'organization:myorg',
+          'user:myuser'
+        ]
       }
     },
     style: 'form',
@@ -54,13 +59,26 @@ export const ownerParams = [/* {
 export const visibilityParams = [{
   in: 'query',
   name: 'visibility',
-  description: 'Filtrer sur la visibilité de la ressource. "public" = voir les ressources publiques, "private" = voir les ressources privées (celles sur lesquelles aucune permission particulière n\'a été appliquée), "protected" = voir les ressources protégées (celles sur lesquelles une permission a été donnée à des utilisateurs).',
-  require: 'false',
+  description: 'Filtrer sur la visibilité de la ressource.\n"public" = voir les ressources publiques\n"private" = voir les ressources privées (celles sur lesquelles aucune permission particulière n\'a été appliquée)\n"protected" = voir les ressources protégées (celles sur lesquelles une permission a été donnée à des utilisateurs).',
+  required: false,
   schema: {
     type: 'array',
     items: {
       type: 'string',
-      enum: ['public', 'private', 'protected']
+      oneOf: [
+        {
+          const: 'public',
+          title: 'Ressources publiques'
+        },
+        {
+          const: 'private',
+          title: 'Ressources privées'
+        },
+        {
+          const: 'protected',
+          title: 'Ressources protégées'
+        }
+      ]
     }
   },
   style: 'form',
@@ -116,11 +134,12 @@ export const booleanParam = (name, description) => ({
 export const paginationParams = [{
   in: 'query',
   name: 'page',
-  description: 'Numéro de page (à partir de 1)',
+  description: 'Numéro de page',
   required: false,
   schema: {
     type: 'integer',
-    default: 1
+    default: 1,
+    min: 1
   }
 }, {
   in: 'query',
@@ -129,6 +148,7 @@ export const paginationParams = [{
   required: false,
   schema: {
     type: 'integer',
-    default: 10
+    default: 10,
+    min: 1
   }
 }]
