@@ -91,7 +91,6 @@ export const selectParam = (values) => ({
   description: 'La liste des colonnes à retourner',
   required: false,
   schema: {
-    default: ['title'],
     type: 'array',
     items: {
       type: 'string',

@@ -202,7 +202,6 @@ Exemple: ma_colonne,-ma_colonne2`,
       name: 'select',
       description: 'La liste des colonnes à retourner',
       schema: {
-        default: ['*'],
         type: 'array',
         items: {
           type: 'string',
@@ -267,7 +266,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
   const aggSizeParam = {
     in: 'query',
     name: 'agg_size',
-    description: 'Le nombre de buckets pour l\'agrégation (défaut 20)',
+    description: 'Le nombre de buckets pour l\'agrégation',
     schema: {
       default: 20,
       type: 'integer',
@@ -295,7 +294,9 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
   - **pbf** pour tuiles vectorielles
   - **geojson** et **wkt** pour formats géographiques`,
     schema: {
-      enum: [null, 'json', 'csv', 'xlsx', 'ods'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson', 'wkt'] : [])
+      default: 'json',
+      type: 'string',
+      enum: ['json', 'csv', 'xlsx', 'ods'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson', 'wkt'] : [])
     }
   }
 
@@ -383,7 +384,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     ],
     responses: {
       200: {
-        description: 'La liste des colonnes',
+        description: 'La liste des colonnes.',
         content: {
           'application/json': {
             schema: {
@@ -485,7 +486,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               default: 1,
               type: 'integer'
             }
-          // @ts-ignore
+            // @ts-ignore
           }].concat(hitsParams()).concat([formatParam, htmlParam]).concat(filterParams).concat([{
             in: 'query',
             name: 'collapse',
@@ -603,7 +604,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               type: 'string',
               enum: ['asc', 'desc']
             }
-          // @ts-ignore
+            // @ts-ignore
           }].concat(filterParams),
           // TODO: document sort param and interval
           responses: {
@@ -656,7 +657,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                 type: 'string'
               }
             }
-          // @ts-ignore
+            // @ts-ignore
           ].concat(filterParams),
           responses: {
             200: {
@@ -705,7 +706,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                 }
               }
             }
-          // @ts-ignore
+            // @ts-ignore
           ].concat(filterParams),
           responses: {
             200: {
@@ -745,7 +746,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               default: 'lang',
               enum: ['lang', 'standard']
             }
-          // @ts-ignore
+            // @ts-ignore
           }].concat(filterParams),
           // TODO: document sort param and interval
           responses: {
@@ -832,7 +833,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     },
     externalDocs: {
       description: 'Documentation sur Github',
-      url: 'https://data-fair.github.io'
+      url: 'https://data-fair.github.io/master/'
     }
   }
 
