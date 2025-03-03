@@ -22,18 +22,18 @@ export default (dataset, publicUrl = config.publicUrl, user, info) => {
   const title = `API privée du jeu de données : ${dataset.title || dataset.id}`
 
   let description = `
-Cette documentation interactive à destination des développeurs permet de gérer et consommer les ressources du jeu de données "${dataset.title || dataset.id}".
+Cette documentation interactive à destination des développeurs permet de gérer et consommer les ressources du jeu de données "**${dataset.title || dataset.id}**".
 `
 
   if (dataset.isVirtual) {
     description += `
-Ce jeu de données est virtuel. C'est à dire qu'il est constitué de redirections vers un ensemble de jeux de données et qu'il n'a pas été créé à partir d'un fichier téléchargeable.
+Ce jeu de données est virtuel. Cela signifie qu'il est constitué de redirections vers un ensemble de jeux de données et qu'il n'a pas été créé à partir d'un fichier téléchargeable.
 `
   }
 
   if (dataset.isRest) {
     description += `
-Ce jeu de données est éditable. C'est à dire qu'il est constitué dynamiquement à partir de lectures / écritures de lignes et qu'il n'a pas été créé à partir d'un fichier téléchargeable.
+Ce jeu de données est éditable. Cela signifie qu'il est constitué dynamiquement à partir de lectures / écritures de lignes et qu'il n'a pas été créé à partir d'un fichier téléchargeable.
 `
   }
 
@@ -72,7 +72,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   Object.assign(api.paths['/'], {
     patch: {
-      summary: 'Mettre à jour les informations du jeu de données',
+      summary: 'Mettre à jour les informations du jeu de données.',
       operationId: 'writeDescription',
       'x-permissionClass': 'write',
       'x-altPermissions': [
@@ -80,7 +80,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       ],
       tags: ['Métadonnées'],
       requestBody: {
-        description: 'Fichier à charger et informations de propriété',
+        description: 'Fichier à charger et informations de propriété.',
         required: true,
         content: {
           'application/json': {
@@ -90,7 +90,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       },
       responses: {
         200: {
-          description: 'Les informations du jeu de données',
+          description: 'Les informations du jeu de données.',
           content: {
             'application/json': {
               schema: { $ref: '#/components/schemas/datasetSchema' }
@@ -100,12 +100,12 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       }
     },
     post: {
-      summary: 'Mettre à jour les données du jeu de données',
+      summary: 'Mettre à jour les données du jeu de données.',
       operationId: 'writeData',
       'x-permissionClass': 'write',
       tags: ['Données'],
       requestBody: {
-        description: 'Fichier à charger et autres informations',
+        description: 'Fichier à charger et autres informations.',
         required: true,
         content: {
           'multipart/form-data': {
@@ -115,7 +115,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       },
       responses: {
         200: {
-          description: 'Métadonnées sur le dataset modifié',
+          description: 'Métadonnées sur le dataset modifié.',
           content: {
             'application/json': {
               schema: { $ref: '#/components/schemas/datasetSchema' }
@@ -125,13 +125,13 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       }
     },
     delete: {
-      summary: 'Supprimer le jeu de données',
+      summary: 'Supprimer le jeu de données.',
       operationId: 'delete',
       'x-permissionClass': 'admin',
       tags: ['Métadonnées'],
       responses: {
         204: {
-          description: 'Suppression effectuée'
+          description: 'Suppression effectuée.'
         }
       }
     }
@@ -139,7 +139,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   api.paths['/metadata-attachments'] = {
     post: {
-      summary: 'Charger une pièce jointe aux métadonnées',
+      summary: 'Charger une pièce jointe aux métadonnées.',
       operationId: 'postMetadataAttachment',
       'x-permissionClass': 'write',
       tags: ['Métadonnées']
@@ -148,14 +148,14 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   api.paths['/metadata-attachments/{attachmentId}'] = {
     delete: {
-      summary: 'Supprimer une pièce jointe aux métadonnées',
+      summary: 'Supprimer une pièce jointe aux métadonnées.',
       operationId: 'deleteMetadataAttachment',
       'x-permissionClass': 'write',
       tags: ['Métadonnées'],
       parameters: [{
         in: 'path',
         name: 'attachmentId',
-        description: 'Identifiant de la pièce jointe',
+        description: 'Identifiant de la pièce jointe.',
         required: true,
         schema: {
           type: 'string'
@@ -166,13 +166,13 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   api.paths['/private-api-docs.json'] = {
     get: {
-      summary: 'Accéder à la documentation privée de l\'API',
+      summary: 'Accéder à la documentation privée de l\'API.',
       operationId: 'readPrivateApiDoc',
       'x-permissionClass': 'readAdvanced',
       tags: ['Métadonnées'],
       responses: {
         200: {
-          description: 'La documentation privée de l\'API',
+          description: 'La documentation privée de l\'API.',
           content: {
             'application/json': {
               schema: {
@@ -187,13 +187,13 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   api.paths['/journal'] = {
     get: {
-      summary: 'Accéder au journal',
+      summary: 'Accéder au journal.',
       operationId: 'readJournal',
       'x-permissionClass': 'readAdvanced',
       tags: ['Métadonnées'],
       responses: {
         200: {
-          description: 'Le journal',
+          description: 'Le journal.',
           content: {
             'application/json': {
               schema: journalSchema
@@ -206,7 +206,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   api.paths['/user-notification'] = {
     post: {
-      summary: 'Envoyer une notification relative au jeu de données à la visibilité interne au compte',
+      summary: 'Envoyer une notification relative au jeu de données à la visibilité interne au compte.',
       operationId: 'sendUserNotification',
       'x-permissionClass': 'write',
       'x-altPermissions': [{ id: 'sendUserNotificationPublic', class: 'write', title: 'Envoyer une notification relative au jeu de données à la visibilité externe au compte' }],
@@ -217,13 +217,13 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   if (dataset.file) {
     api.paths['/draft'] = {
       post: {
-        summary: 'Valider le brouillon',
+        summary: 'Valider le brouillon.',
         operationId: 'validateDraft',
         'x-permissionClass': 'write',
         tags: ['Données']
       },
       delete: {
-        summary: 'Annuler le brouillon',
+        summary: 'Annuler le brouillon.',
         operationId: 'cancelDraft',
         'x-permissionClass': 'write',
         tags: ['Données']
@@ -247,13 +247,13 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     api.paths['/lines/{lineId}'] = {
       parameters: [lineId],
       get: {
-        summary: 'Récupérer une ligne de données',
+        summary: 'Récupérer une ligne de données.',
         operationId: 'readLine',
         'x-permissionClass': 'read',
         tags: ['Données éditables'],
         responses: {
           200: {
-            description: 'Le contenu d\'une ligne de données',
+            description: 'Le contenu d\'une ligne de données.',
             content: {
               'application/json': {
                 schema: readLineSchema
@@ -263,12 +263,12 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         }
       },
       put: {
-        summary: 'Remplacer une ligne de données',
+        summary: 'Remplacer une ligne de données.',
         operationId: 'updateLine',
         'x-permissionClass': 'write',
         tags: ['Données éditables'],
         requestBody: {
-          description: 'Le contenu d\'une ligne de données',
+          description: 'Le contenu d\'une ligne de données.',
           required: true,
           content: {
             'application/json': {
@@ -278,7 +278,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         },
         responses: {
           200: {
-            description: 'La ligne de données modifiée',
+            description: 'La ligne de données modifiée.',
             content: {
               'application/json': {
                 schema: readLineSchema
@@ -288,12 +288,12 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         }
       },
       patch: {
-        summary: 'Modifier une ligne de données',
+        summary: 'Modifier une ligne de données.',
         operationId: 'patchLine',
         'x-permissionClass': 'write',
         tags: ['Données éditables'],
         requestBody: {
-          description: 'Le contenu partiel d\'une ligne de données',
+          description: 'Le contenu partiel d\'une ligne de données.',
           required: true,
           content: {
             'application/json': {
@@ -303,7 +303,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         },
         responses: {
           200: {
-            description: 'La ligne de données après modification',
+            description: 'La ligne de données après modification.',
             content: {
               'application/json': {
                 schema: readLineSchema
@@ -313,13 +313,13 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         }
       },
       delete: {
-        summary: 'Supprimer une ligne de données',
+        summary: 'Supprimer une ligne de données.',
         operationId: 'deleteLine',
         'x-permissionClass': 'write',
         tags: ['Données éditables'],
         responses: {
           204: {
-            description: 'La ligne de données a été supprimée'
+            description: 'La ligne de données a été supprimée.'
           }
         }
       }
@@ -327,12 +327,12 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     api.paths['/lines'] = {
       ...api.paths['/lines'],
       post: {
-        summary: 'Ajouter une ligne de données',
+        summary: 'Ajouter une ligne de données.',
         operationId: 'createLine',
         'x-permissionClass': 'write',
         tags: ['Données éditables'],
         requestBody: {
-          description: 'Le contenu d\'une ligne de données',
+          description: 'Le contenu d\'une ligne de données.',
           required: true,
           content: {
             'application/json': {
@@ -342,7 +342,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         },
         responses: {
           201: {
-            description: 'La ligne de données ajoutée',
+            description: 'La ligne de données ajoutée.',
             content: {
               'application/json': {
                 schema: readLineSchema
@@ -352,25 +352,25 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         }
       },
       delete: {
-        summary: 'Supprimer toutes les lignes de données',
+        summary: 'Supprimer toutes les lignes de données.',
         operationId: 'deleteAllLines',
         'x-permissionClass': 'write',
         tags: ['Données éditables'],
         responses: {
           204: {
-            description: 'Toutes les lignes de données ont été supprimées'
+            description: 'Toutes les lignes de données ont été supprimées.'
           }
         }
       }
     }
     api.paths['/_bulk_lines'] = {
       post: {
-        summary: 'Créer/modifier/supprimer de multiples lignes en une seule opération',
+        summary: 'Créer/modifier/supprimer de multiples lignes en une seule opération.',
         operationId: 'bulkLines',
         'x-permissionClass': 'write',
         tags: ['Données éditables'],
         requestBody: {
-          description: 'Les opérations à appliquer',
+          description: 'Les opérations à appliquer.',
           required: true,
           content: {
             'application/json': {
@@ -386,7 +386,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         },
         responses: {
           200: {
-            description: 'Le résultat des opérations',
+            description: 'Le résultat des opérations.',
             content: {
               'application/json': {
                 schema: {
@@ -451,12 +451,12 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     Object.assign(api.paths, {
       '/_diagnose': {
         get: {
-          summary: 'Récupérer des informations techniques',
+          summary: 'Récupérer des informations techniques.',
           tags: ['Administration'],
           'x-permissionClass': 'superadmin',
           responses: {
             200: {
-              description: 'Informations techniques de diagnostic',
+              description: 'Informations techniques de diagnostic.',
               content: {
                 'application/json': {}
               }
@@ -466,12 +466,12 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       },
       '/_reindex': {
         post: {
-          summary: 'Forcer la reindexation',
+          summary: 'Forcer la reindexation.',
           tags: ['Administration'],
           'x-permissionClass': 'superadmin',
           responses: {
             200: {
-              description: 'accusé de réception de la demande de reindexation',
+              description: 'Accusé de réception de la demande de reindexation.',
               content: {
                 'application/json': {}
               }
@@ -481,12 +481,12 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       },
       '/_refinalize': {
         post: {
-          summary: 'Forcer la re-finalisation',
+          summary: 'Forcer la re-finalisation.',
           tags: ['Administration'],
           'x-permissionClass': 'superadmin',
           responses: {
             200: {
-              description: 'accusé de réception de la demande de re-finalisation',
+              description: 'Accusé de réception de la demande de re-finalisation.',
               content: {
                 'application/json': {}
               }
@@ -496,12 +496,12 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       },
       '/_lock': {
         delete: {
-          summary: 'Supprimer les locks',
+          summary: 'Supprimer les locks.',
           tags: ['Administration'],
           'x-permissionClass': 'superadmin',
           responses: {
             204: {
-              description: 'accusé de réception de la demande de suppression des locks'
+              description: 'Accusé de réception de la demande de suppression des locks.'
             }
           }
         }
@@ -511,12 +511,12 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   if (dataset.isRest && user.adminMode) {
     api.paths['/_sync_attachments_lines'] = {
       post: {
-        summary: 'Re-synchroniser les lignes du jeux de données avec les pièces jointes présentes',
+        summary: 'Re-synchroniser les lignes du jeux de données avec les pièces jointes présentes.',
         tags: ['Administration'],
         'x-permissionClass': 'superadmin',
         responses: {
           200: {
-            description: 'accusé de réception de la demande re-synchronisation',
+            description: 'Accusé de réception de la demande re-synchronisation.',
             content: {
               'application/json': {}
             }
@@ -533,13 +533,13 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   if (dataset.readApiKey?.active) {
     api.paths['/read-api-key'] = {
       get: {
-        summary: 'Récupérer la clé API de lecture',
+        summary: 'Récupérer la clé API de lecture.',
         operationId: 'getReadApiKey',
         'x-permissionClass': 'read',
         tags: ['Métadonnées'],
         responses: {
           200: {
-            description: 'La clé API de lecture',
+            description: 'La clé API de lecture.',
             content: {
               'application/json': {
                 schema: {

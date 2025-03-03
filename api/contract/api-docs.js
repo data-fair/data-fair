@@ -11,13 +11,6 @@ import applicationPatch from './application-patch.js'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
 
-const servers = [{
-  // @ts-ignore
-  url: `${config.publicUrl}/api/v1`,
-  // @ts-ignore
-  description: `Instance DataFair - ${new URL(config.publicUrl).hostname}`
-}]
-
 export default () => {
   const doc = {
     openapi: '3.1.0',
@@ -36,7 +29,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       'x-api-id': 'data-fair'
       // @ts-ignore
     }, config.info),
-    servers,
+    servers: [{
+      // @ts-ignore
+      url: `${config.publicUrl}/api/v1`,
+      // @ts-ignore
+      description: `Instance DataFair - ${new URL(config.publicUrl).hostname}`
+    }],
     components: {
       schemas: {
         dataset,
@@ -66,9 +64,9 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     paths: {
       '/ping': {
         get: {
-          summary: 'Etat de santé du service simplifié.',
-          tags: ['Administration'],
+          summary: 'Obtenir l\'état de santé du service.',
           operationId: 'ping',
+          tags: ['Administration'],
           'x-operationType': 'http://schema.org/CheckAction',
           responses: {
             200: {
@@ -82,12 +80,12 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       },
       '/api-docs.json': {
         get: {
-          summary: 'Cette documentation d\'API au format OpenAPI v3.',
-          tags: ['Administration'],
+          summary: 'Accéder à cette documentation au format OpenAPI v3.',
           operationId: 'getApiDoc',
+          tags: ['Administration'],
           responses: {
             200: {
-              description: 'Etat de santé du service',
+              description: 'Etat de santé du service.',
               content: {
                 'application/json': {
                   schema: { type: 'object' }
@@ -99,9 +97,9 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       },
       '/vocabulary': {
         get: {
-          summary: 'La liste des concepts utilisables pour annoter la donnée sur ce service.',
-          tags: ['Administration'],
+          summary: 'Lister les concepts utilisables pour annoter la donnée sur ce service.',
           operationId: 'getVocabulary',
+          tags: ['Administration'],
           responses: {
             200: {
               content: {
@@ -180,7 +178,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           operationId: 'postDataset',
           tags: ['Jeux de données'],
           requestBody: {
-            description: 'Fichier à charger et autres informations',
+            description: 'Fichier à charger et autres informations.',
             required: true,
             content: {
               'multipart/form-data': {
@@ -228,7 +226,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           operationId: 'putDataset',
           tags: ['Jeux de données'],
           requestBody: {
-            description: 'Fichier à charger et autres informations',
+            description: 'Fichier à charger et autres informations.',
             required: true,
             content: {
               'multipart/form-data': {
@@ -250,7 +248,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
               }
             },
             200: {
-              description: 'Jeu de données modifié',
+              description: 'Jeu de données modifié.',
               content: {
                 'application/json': {
                   schema: {
@@ -266,7 +264,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           operationId: 'patchDataset',
           tags: ['Jeux de données'],
           requestBody: {
-            description: 'Informations à modifier',
+            description: 'Informations à modifier.',
             required: true,
             content: {
               'application/json': {
@@ -346,7 +344,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           operationId: 'postApplication',
           tags: ['Applications'],
           requestBody: {
-            description: 'Les informations de configuration de l\'application',
+            description: 'Les informations de configuration de l\'application.',
             required: true,
             content: {
               'application/json': {
@@ -394,7 +392,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           operationId: 'putApplication',
           tags: ['Applications'],
           requestBody: {
-            description: 'Informations de l\'application',
+            description: 'Informations de l\'application.',
             required: true,
             content: {
               'application/json': {
@@ -416,7 +414,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
               }
             },
             200: {
-              description: 'Application modifiée',
+              description: 'Application modifiée.',
               content: {
                 'application/json': {
                   schema: {
@@ -428,11 +426,11 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         patch: {
-          summary: 'Modifier seulement certaines informations.',
+          summary: 'Modifier certaines informations d\'une application.',
           operationId: 'patchApplication',
           tags: ['Applications'],
           requestBody: {
-            description: 'Informations à modifier',
+            description: 'Informations à modifier.',
             required: true,
             content: {
               'application/json': {
@@ -481,7 +479,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           ],
           responses: {
             200: {
-              description: 'Liste des services distants que l\'utilisateur est autorisé à voir',
+              description: 'Liste des services distants que l\'utilisateur est autorisé à voir.',
               content: {
                 'application/json': {
                   schema: {
@@ -541,7 +539,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           tags: ['Services distants'],
           responses: {
             200: {
-              description: 'Informations d\'un service distant',
+              description: 'Informations d\'un service distant.',
               content: {
                 'application/json': {
                   schema: {
@@ -557,7 +555,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           operationId: 'putRemoteService',
           tags: ['Services distants'],
           requestBody: {
-            description: 'Informations du service distant',
+            description: 'Informations du service distant.',
             required: true,
             content: {
               'application/json': {
@@ -569,7 +567,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           },
           responses: {
             201: {
-              description: 'Service distant créé',
+              description: 'Service distant créé.',
               content: {
                 'application/json': {
                   schema: {
@@ -579,7 +577,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
               }
             },
             200: {
-              description: 'Service distant modifié',
+              description: 'Service distant modifié.',
               content: {
                 'application/json': {
                   schema: {
@@ -591,11 +589,11 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         patch: {
-          summary: 'Modifier seulement certaines informations.',
+          summary: 'Modifier certaines informations d\'un service distant.',
           operationId: 'patchRemoteService',
           tags: ['Services distants'],
           requestBody: {
-            description: 'Informations à modifier',
+            description: 'Informations à modifier.',
             required: true,
             content: {
               'application/json': {
@@ -607,7 +605,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           },
           responses: {
             200: {
-              description: 'Informations du service distant modifié',
+              description: 'Informations du service distant modifié.',
               content: {
                 'application/json': {
                   schema: {
@@ -624,7 +622,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           tags: ['Services distants'],
           responses: {
             204: {
-              description: 'Service distant supprimé'
+              description: 'Service distant supprimé.'
             }
           }
         }
@@ -643,7 +641,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           ],
           responses: {
             200: {
-              description: 'Liste des catalogues que l\'utilisateur est autorisé à voir',
+              description: 'Liste des catalogues que l\'utilisateur est autorisé à voir.',
               content: {
                 'application/json': {
                   schema: {
@@ -703,7 +701,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           tags: ['Catalogues'],
           responses: {
             200: {
-              description: 'Informations d\'un catalogue',
+              description: 'Informations d\'un catalogue.',
               content: {
                 'application/json': {
                   schema: {
@@ -719,7 +717,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           operationId: 'putCatalog',
           tags: ['Catalogues'],
           requestBody: {
-            description: 'Informations du catalogue',
+            description: 'Informations du catalogue.',
             required: true,
             content: {
               'application/json': {
@@ -731,7 +729,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           },
           responses: {
             201: {
-              description: 'Catalogue créé',
+              description: 'Catalogue créé.',
               content: {
                 'application/json': {
                   schema: {
@@ -741,7 +739,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
               }
             },
             200: {
-              description: 'Catalogue modifié',
+              description: 'Catalogue modifié.',
               content: {
                 'application/json': {
                   schema: {
@@ -753,11 +751,11 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         patch: {
-          summary: 'Modifier seulement certaines informations.',
+          summary: 'Modifier certaines informations d\'un catalogue.',
           operationId: 'patchCatalog',
           tags: ['Catalogues'],
           requestBody: {
-            description: 'Informations à modifier',
+            description: 'Informations à modifier.',
             required: true,
             content: {
               'application/json': {
@@ -769,7 +767,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           },
           responses: {
             200: {
-              description: 'Informations du catalogue modifié',
+              description: 'Informations du catalogue modifié.',
               content: {
                 'application/json': {
                   schema: {
@@ -786,7 +784,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           tags: ['Catalogues'],
           responses: {
             204: {
-              description: 'Catalogue supprimé'
+              description: 'Catalogue supprimé.'
             }
           }
         }

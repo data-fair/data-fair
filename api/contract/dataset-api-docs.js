@@ -64,6 +64,7 @@ export default (dataset, publicUrl = config.publicUrl, ownerInfo, publicationSit
     .filter((/** @type {any} */ p) => p.type === 'number')
   const imageProperty = schema.find((/** @type {any} */f) => f['x-refersTo'] === 'http://schema.org/image')
 
+  /** @type {any} */
   const filterParams = [{
     in: 'query',
     name: 'q',
@@ -129,7 +130,13 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       name: 'bbox',
       description: "Un filtre pour restreindre les résultats à une zone géographique. Le format est 'gauche,bas,droite,haut' autrement dit 'lonMin,latMin,lonMax,latMax'.",
       schema: {
-        type: 'string'
+        type: 'string',
+        enum: [
+          'lonMin',
+          'latMin',
+          'lonMax',
+          'latMax'
+        ]
       }
     })
     filterParams.push({
@@ -165,7 +172,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
     const params = [{
       in: 'query',
       name: 'size',
-      description: `Le nombre de résultats à retourner (taille de la pagination), ${defaultSize} par défaut`,
+      description: 'Le nombre de résultats à retourner (taille de la pagination).',
       schema: {
         default: defaultSize,
         type: 'integer',
@@ -311,11 +318,9 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
     }
   } */
 
-  let description = `
-Cette documentation interactive à destination des développeurs permet de consommer les ressources du jeu de données "${dataset.title || dataset.slug}".
-`
+  const description = `
+Cette documentation interactive à destination des développeurs permet de consommer les ressources du jeu de données "**${dataset.title || dataset.slug}**".
 
-  description += `
 Pour protéger l'infrastructure de publication de données, les appels sont limités par quelques règles simples :
 
 - ${anonymousApiRate}
@@ -327,7 +332,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
    * @returns {any}
    */
   const readSchema = (safe) => ({
-    summary: `Récupérer la liste des colonnes${safe ? ' - les indices sur le contenu de la donnée sont purgés' : ''}`,
+    summary: `Récupérer la liste des colonnes.${safe ? ' - les indices sur le contenu de la donnée sont purgés' : ''}`,
     operationId: safe ? 'readSafeSchema' : 'readSchema',
     'x-permissionClass': 'read',
     tags: ['Métadonnées'],
@@ -423,7 +428,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     paths: {
       '/': {
         get: {
-          summary: 'Récupérer les informations du jeu de données',
+          summary: 'Récupérer les informations du jeu de données.',
           operationId: 'readDescription',
           'x-permissionClass': 'read',
           tags: ['Métadonnées'],
@@ -441,7 +446,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/data-files': {
         get: {
-          summary: 'Récupérer la liste des fichiers de données',
+          summary: 'Récupérer la liste des fichiers de données.',
           operationId: 'readDataFiles',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -459,7 +464,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/lines': {
         get: {
-          summary: 'Requêter les lignes du jeu de données',
+          summary: 'Requêter les lignes du jeu de données.',
           operationId: 'readLines',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -522,7 +527,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/values_agg': {
         get: {
-          summary: 'Récupérer des informations agrégées en fonction des valeurs d\'une colonne',
+          summary: 'Récupérer des informations agrégées en fonction des valeurs d\'une colonne.',
           operationId: 'getValuesAgg',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -568,7 +573,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/values/{field}': {
         get: {
-          summary: 'Récupérer la liste des valeurs distinctes d\'une colonne éventuellement filtrée par le paramètre q',
+          summary: 'Récupérer la liste des valeurs distinctes d\'une colonne.',
           operationId: 'getValues',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -617,7 +622,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/metric_agg': {
         get: {
-          summary: 'Calculer une métrique sur un ensemble de lignes',
+          summary: 'Calculer une métrique sur un ensemble de lignes.',
           operationId: 'getMetricAgg',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -669,7 +674,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/simple_metrics_agg': {
         get: {
-          summary: 'Calculer des métriques simples standards sur toutes les colonnes possibles ou sur une liste de colonnes',
+          summary: 'Calculer des métriques simples standards sur toutes les colonnes possibles ou sur une liste de colonnes.',
           operationId: 'getSimpleMetricsAgg',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -677,7 +682,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             {
               in: 'query',
               name: 'fields',
-              description: 'Les colonnes sur lesquelles calculer les métriques',
+              description: 'Les colonnes sur lesquelles calculer les métriques.',
               schema: {
                 type: 'array',
                 items: {
@@ -718,7 +723,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/words_agg': {
         get: {
-          summary: 'Récupérer des mots significatifs dans un jeu de données',
+          summary: 'Récupérer des mots significatifs dans un jeu de données.',
           operationId: 'getWordsAgg',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -759,7 +764,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/raw': {
         get: {
-          summary: 'Télécharger le jeu de données',
+          summary: 'Télécharger le jeu de données.',
           operationId: 'downloadOriginalData',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -779,7 +784,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/full': {
         get: {
-          summary: 'Télécharger le jeu de données enrichi',
+          summary: 'Télécharger le jeu de données enrichi.',
           operationId: 'downloadFullData',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -805,7 +810,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/api-docs.json': {
         get: {
-          summary: 'Accéder à la documentation publique de l\'API',
+          summary: 'Accéder à la documentation publique de l\'API.',
           operationId: 'readApiDoc',
           'x-permissionClass': 'read',
           tags: ['Métadonnées'],
@@ -861,7 +866,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
   if (dataset.bbox && dataset.bbox.length === 4) {
     api.paths['/geo_agg'] = {
       get: {
-        summary: 'Récupérer des informations agrégées spatialement sur le jeu de données',
+        summary: 'Récupérer des informations agrégées spatialement sur le jeu de données.',
         operationId: 'getGeoAgg',
         'x-permissionClass': 'read',
         tags: ['Données'],
@@ -923,7 +928,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     api.paths['/revisions'] = {
       get: {
         parameters: [size, before],
-        summary: 'Récupérer les révisions de lignes triées du plus récent au plus ancien',
+        summary: 'Récupérer les révisions de lignes triées du plus récent au plus ancien.',
         operationId: 'readRevisions',
         'x-permissionClass': 'read',
         tags: ['Données éditables'],
@@ -941,7 +946,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             type: 'string'
           }
         }, size, before],
-        summary: 'Récupérer les révisions d\'une ligne triées du plus récent au plus ancien',
+        summary: 'Récupérer les révisions d\'une ligne triées du plus récent au plus ancien.',
         operationId: 'readLineRevisions',
         'x-permissionClass': 'read',
         tags: ['Données éditables'],

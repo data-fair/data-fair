@@ -14,7 +14,7 @@ export default (application, info) => {
   const api = {
     openapi: '3.1.0',
     info: {
-      title: `Intégration de l'application : ${application.title || application.id}`,
+      title: `API de l'application : ${application.title || application.id}`,
       version: pJson.version,
       // @ts-ignore
       termsOfService: config.info.termsOfService,
@@ -38,12 +38,14 @@ export default (application, info) => {
     security: [{ apiKey: [] }, { sdCookie: [] }],
     servers: [{
       // @ts-ignore
-      url: `${config.publicUrl}/api/v1/applications/${application.id}`
+      url: `${config.publicUrl}/api/v1/applications/${application.id}`,
+      // @ts-ignore
+      description: `Application Data Fair - ${new URL(config.publicUrl).hostname} - ${application.title}`
     }],
     paths: {
       '/': {
         get: {
-          summary: 'Récupérer les informations de description de l\'application.',
+          summary: 'Récupérer les informations de l\'application.',
           operationId: 'readDescription',
           'x-permissionClass': 'read',
           tags: ['Configuration'],
