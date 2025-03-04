@@ -181,12 +181,6 @@ export const preparePatch = async (app, patch, dataset, user, locale, draftValid
       patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...dataset, ...patch })
       patch.status = 'indexed'
     }
-  } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && df.ignoreDetection !== f.ignoreDetection))) {
-    // some ignoreDetection param has changed on a field, trigger full analysis / re-indexing
-    patch.status = 'loaded'
-  } else if (patch.schema && patch.schema.find(f => dataset.schema.find(df => df.key === f.key && df.ignoreIntegerDetection !== f.ignoreIntegerDetection))) {
-    // some ignoreIntegerDetection param has changed on a field, trigger full analysis / re-indexing
-    patch.status = 'loaded'
   } else if (patch.extensions && !dataset.isRest) {
     // extensions have changed, trigger full re-indexing
     // in "rest" dataset no need for full reindexing if the schema is still compatible, extension-updater worker will suffice
@@ -205,6 +199,8 @@ export const preparePatch = async (app, patch, dataset, user, locale, draftValid
     // some timeZone has changed on a field, trigger full re-indexing
     patch.status = reindexerStatus
   } else if (removedRestProps.length) {
+    patch.status = 'analyzed'
+  } else if (dataset.file && patch.schema && datasetUtils.schemasTransformChange(patch.schema, dataset.schema)) {
     patch.status = 'analyzed'
   } else if (dataset.file && patch.schema && ['validation-updated', 'finalized'].includes(dataset.status) && datasetUtils.schemasFullyCompatible(patch.schema, dataset.schema, true) && datasetUtils.schemaHasValidationRules(patch.schema) && !datasetUtils.schemasValidationCompatible(patch.schema, dataset.schema)) {
     patch.status = 'validation-updated'

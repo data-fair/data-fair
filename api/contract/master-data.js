@@ -240,7 +240,6 @@ export const endpoints = (dataset) => {
         description: f.description || ''
       }
       delete a[f.key].key
-      delete a[f.key].ignoreDetection
       delete a[f.key].separator
       delete a[f.key].icon
       delete a[f.key].label
@@ -327,7 +326,6 @@ export const endpoints = (dataset) => {
       inputProperties[input.property.key].title = inputProperties[input.property.key].title || ''
       inputProperties[input.property.key].description = inputProperties[input.property.key].description || ''
       delete inputProperties[input.property.key].key
-      delete inputProperties[input.property.key].ignoreDetection
       delete inputProperties[input.property.key].separator
       delete inputProperties[input.property.key].icon
       delete inputProperties[input.property.key].label

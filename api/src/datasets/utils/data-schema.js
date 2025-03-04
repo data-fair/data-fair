@@ -104,6 +104,11 @@ export const cleanSchema = (dataset) => {
       if (!fileField.format) delete f.format
       else f.format = fileField.format
     }
+    if (f['x-transform'] && f['x-transform'].type) {
+      f.type = f['x-transform'].type
+      if (f['x-transform'].format) f.format = f['x-transform'].format
+      else delete f.format
+    }
 
     // apply type from concepts to the actual field (for example SIRET might be parsed a interger, but should be returned a string)
     if (f['x-refersTo']) {
@@ -292,7 +297,7 @@ export const schemasValidationCompatible = (newSchema, oldSchema) => {
 /** @type {(p1:any, p2:any) => boolean} */
 const sortSchema = (p1, p2) => p1.key.localeCompare(p2.key)
 
-const innociousSchemaProps = validationProps.concat(['title', 'description', 'icon', 'x-display', 'x-master', 'x-labels', 'x-group', 'x-cardinality', 'readOnly', 'enum', 'x-originalName', 'ignoreDetection'])
+const innociousSchemaProps = validationProps.concat(['title', 'description', 'icon', 'x-display', 'x-master', 'x-labels', 'x-group', 'x-cardinality', 'readOnly', 'enum', 'x-originalName', 'x-transform'])
 
 const removeInnocuous = (p) => {
   const cleanProp = { ...p }
@@ -332,4 +337,10 @@ export const getSchemaBreakingChanges = (schema, patchedSchema, ignoreExtensions
     }
   }
   return breakingChanges
+}
+
+export const schemasTransformChange = (schema, patchedSchema) => {
+  const schemaTransform1 = schema.filter(p => p['x-transform']).map(p => ({ key: p.key, transform: p['x-transform'] })).sort(sortSchema)
+  const schemaTransform2 = patchedSchema.filter(p => p['x-transform']).map(p => ({ key: p.key, transform: p['x-transform'] })).sort(sortSchema)
+  return !equal(schemaTransform1, schemaTransform2)
 }

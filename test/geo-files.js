@@ -115,7 +115,6 @@ describe('geo files support', function () {
       'x-originalName': 'prop1',
       title: 'Code région',
       type: 'string',
-      ignoreDetection: true,
       'x-refersTo': 'http://rdf.insee.fr/def/geo#codeRegion'
     }]))
     const ax = global.ax.dmeadus

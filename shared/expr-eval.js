@@ -6,6 +6,7 @@ import timezone from 'dayjs/plugin/timezone.js'
 import utc from 'dayjs/plugin/utc.js'
 import { ajv, errorsText, localize } from './ajv.js'
 import { cleanJsonSchemaProperty } from './schema.js'
+import slug from 'slugify'
 
 dayjs.extend(customParseFormat)
 dayjs.extend(timezone)
@@ -61,10 +62,31 @@ export default (defaultTimezone) => {
     return arg.trim().replace(/\W+/g, ' ')
   }
 
-  /** parser.functions.SPLIT = parser.functions.TEXTSPLIT = function (arg, separator) {
+  parser.functions.TITLE = function (arg) {
     if (typeof arg !== 'string') return arg
-    return arg.split(separator)
-  } */
+    // cf https://stackoverflow.com/a/196991/10132434
+    return arg.replace(
+      /\w\S*/g,
+      text => text.charAt(0).toUpperCase() + text.substring(1).toLowerCase()
+    )
+  }
+
+  parser.functions.PHRASE = function (arg) {
+    if (typeof arg !== 'string') return arg
+    return arg.charAt(0).toUpperCase() + arg.substring(1).toLowerCase()
+  }
+
+  parser.functions.PAD_LEFT = function (arg, length, pad) {
+    if (typeof arg !== 'string') arg = '' + arg
+    if (typeof pad !== 'string') pad = '' + pad
+    return arg.padStart(length, pad)
+  }
+
+  parser.functions.PAD_RIGHT = function (arg, length, pad) {
+    if (typeof arg !== 'string') arg = '' + arg
+    if (typeof pad !== 'string') pad = '' + pad
+    return arg.padEnd(length, pad)
+  }
 
   parser.functions.SUBSTRING = function (arg, start, length) {
     if (typeof arg !== 'string') return arg
@@ -92,6 +114,11 @@ export default (defaultTimezone) => {
       if (end === -1) return undefined
     }
     return arg.substring(start, end)
+  }
+
+  parser.functions.SLUG = function (arg, replacement = '-') {
+    if (typeof arg !== 'string') arg = '' + arg
+    return slug.default(arg, { lower: true, strict: true, replacement })
   }
 
   parser.functions.SUM = function () {
@@ -166,6 +193,17 @@ export default (defaultTimezone) => {
 
   parser.functions.DEFINED = function (arg) {
     return arg !== undefined && arg !== null
+  }
+
+  parser.functions.JSON_PARSE = function (arg) {
+    if (typeof arg !== 'string') return arg
+    if (!arg) return undefined
+    return JSON.parse(arg)
+  }
+
+  parser.functions.GET = function (arg, key, def) {
+    if (typeof arg !== 'object') return arg
+    return arg[key] ?? def
   }
 
   return {

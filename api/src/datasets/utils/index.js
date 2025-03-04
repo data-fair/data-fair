@@ -43,6 +43,7 @@ export const extendedSchema = schemaUtils.extendedSchema
 export const schemasFullyCompatible = schemaUtils.schemasFullyCompatible
 export const schemasValidationCompatible = schemaUtils.schemasValidationCompatible
 export const schemaHasValidationRules = schemaUtils.schemaHasValidationRules
+export const schemasTransformChange = schemaUtils.schemasTransformChange
 export const jsonSchema = schemaUtils.jsonSchema
 export const createReadApiKey = readApiKeyUtils.create
 
