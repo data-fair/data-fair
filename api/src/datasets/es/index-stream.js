@@ -155,7 +155,6 @@ class IndexStream extends Transform {
       else itemMsg += item.error.reason
       return truncateMiddle(itemMsg, 80, 60, '...')
     }).join('\n<br>')
-
     if (leftOutErrors > 0) msg += `\n<br>${leftOutErrors} autres erreurs...`
     // blocking if more than 50% lines are broken in a way
     if (this.nbErroredItems > this.i / 2) throw new Error('[noretry] ' + msg)

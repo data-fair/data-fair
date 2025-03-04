@@ -83,15 +83,29 @@
                 :editable="editable && !noBreakingChanges && currentPropRef.editable && !dataset.isVirtual"
               />
             </div>
-            <div class="mx-1">
+            <div
+              v-if="dataset.file && !currentPropRef.prop['x-calculated'] && !currentPropRef.prop['x-extension']"
+              class="mx-1"
+            >
+              <dataset-property-transform
+                :property="currentPropRef.prop"
+                :editable="editable && !noBreakingChanges && currentPropRef.editable"
+              />
+            </div>
+            <div
+              v-if="!currentPropRef.prop['x-calculated'] && !currentPropRef.prop['x-extension']"
+              class="mx-1"
+            >
               <dataset-property-validation
                 :property="currentPropRef.prop"
                 :editable="editable && !noBreakingChanges && currentPropRef.editable && !dataset.isVirtual"
               />
             </div>
-            <div class="mx-1">
+            <div
+              v-if="(currentPropRef.prop.type === 'string' && (!currentPropRef.prop.format || currentPropRef.prop.format === 'uri-reference') || currentPropRef.prop.type === 'boolean')"
+              class="mx-1"
+            >
               <dataset-property-labels
-                v-if="(currentPropRef.prop.type === 'string' && (!currentPropRef.prop.format || currentPropRef.prop.format === 'uri-reference') || currentPropRef.prop.type === 'boolean')"
                 :property="currentPropRef.prop"
                 :editable="editable && currentPropRef.editable && !dataset.isVirtual"
                 :is-rest="dataset.isRest"
@@ -177,30 +191,6 @@
               <help-tooltip>{{ $t('separatorHelp') }}</help-tooltip>
             </template>
           </v-select>
-          <v-checkbox
-            v-if="dataset.file && dataset.file.mimetype === 'text/csv'"
-            v-model="currentPropRef.prop.ignoreDetection"
-            :disabled="!editable || noBreakingChanges || !currentPropRef.editable"
-            :label="$t('ignoreDetection')"
-            hide-details
-            dense
-          >
-            <template #append>
-              <help-tooltip>{{ $t('ignoreDetectionHelp') }}</help-tooltip>
-            </template>
-          </v-checkbox>
-          <v-checkbox
-            v-if="dataset.file && dataset.file.mimetype === 'text/csv' && ['integer', 'number'].includes(currentPropRef.prop.type)"
-            v-model="currentPropRef.prop.ignoreIntegerDetection"
-            :disabled="!editable || noBreakingChanges || !currentPropRef.editable"
-            :label="$t('ignoreIntegerDetection')"
-            hide-details
-            dense
-          >
-            <template #append>
-              <help-tooltip>{{ $t('ignoreIntegerDetectionHelp') }}</help-tooltip>
-            </template>
-          </v-checkbox>
           <v-checkbox
             v-if="dataset.isRest && !currentPropRef.prop['x-extension']"
             v-model="currentPropRef.prop.readOnly"
@@ -331,8 +321,6 @@ fr:
   "markdown": "texte formatté"
   group: Groupe
   groupHelp: Les groupes aident à la sélection de colonnes. Particulièrement utile quand il y a de nombreuses colonnes.
-  ignoreDetection: Ignorer la détection de type
-  ignoreDetectionHelp: Si vous cochez cette case la détection automatique de type sera désactivée et la colonne sera traitée comme un simple texte.
   ignoreIntegerDetection: Traiter comme un nombre flottant
   ignoreIntegerDetectionHelp: Si vous cochez cette case la détection du type "nombre entier" sera désactivée et le nombre sera traité comme un nombre flottant. Cette étape peut être nécessaire pour rendre compatibles des jeux de données avant de les joindre dans un jeu virtuel.
   readOnly: Lecture seule
@@ -363,8 +351,6 @@ en:
   "markdown": "formatted text"
   group: Group
   groupHelp: Groups help selecting columns. Particularly useful whan there are many columns.
-  ignoreDetection: Ignore type detection
-  ignoreDetectionHelp: If you check this box the automatic detection of type will be disabled and the column will be processed as a simple string.
   ignoreIntegerDetection: Handle as a floating number
   ignoreIntegerDetectionHelp: If you check this box the detection of the type integer will be disabled and column will be processed as a floating number. This step might be necessary to make datasets compatibles before joining them in a virtual dataset.
   readOnly: Read only

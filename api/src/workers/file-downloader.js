@@ -26,7 +26,7 @@ export const process = async function (app, dataset) {
   const db = mongo.db
 
   await fs.ensureDir(tmpDir)
-  const tmpFile = await tmp.file({ tmpdir: tmpDir })
+  const tmpFile = await tmp.file({ tmpdir: tmpDir, prefix: 'download-' })
 
   let catalogHttpParams = {}
   if (dataset.remoteFile.catalog) {

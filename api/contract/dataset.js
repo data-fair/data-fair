@@ -121,7 +121,29 @@ const schema = {
       },
       'x-cardinality': {
         type: 'integer',
-        description: 'The number of distinct values for this field'
+        description: 'The number of distinct values for this field',
+        readOnly: true
+      },
+      'x-transform': {
+        type: 'object',
+        description: 'Transformation to apply to the field',
+        properties: {
+          expr: {
+            type: 'string'
+          },
+          examples: {
+            type: 'array',
+            items: {
+              type: 'string'
+            }
+          },
+          type: {
+            type: 'string'
+          },
+          format: {
+            type: 'string'
+          }
+        }
       }
     }
   }
@@ -135,8 +157,6 @@ const fileSchema = {
     required: ['key'],
     properties: {
       ...schema.properties,
-      ignoreDetection: { type: 'boolean', default: false },
-      ignoreIntegerDetection: { type: 'boolean', default: false },
       separator: { type: ['string', 'null'] },
       dateFormat: { type: ['string', 'null'] },
       dateTimeFormat: { type: ['string', 'null'] },

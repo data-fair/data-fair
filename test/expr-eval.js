@@ -6,9 +6,20 @@ describe('expression engine based on expr-eval', function () {
   it('should evaluate simple expressions', function () {
     assert.equal(parser.parse('a + b').evaluate({ a: 1, b: 2 }), 3)
     assert.equal(parser.parse('UPPER(a)').evaluate({ a: 'a' }), 'A')
+    assert.equal(parser.parse('LOWER(a)').evaluate({ a: 'A' }), 'a')
     assert.equal(parser.parse('REPLACE(a,"A",b)').evaluate({ a: 'aAa', b: 'B' }), 'aBa')
     assert.equal(parser.parse('REPLACE(a,"A",b)').evaluate({ a: 'aAaAa', b: 'BA' }), 'aBAaBAa')
     assert.equal(parser.parse('REPLACE(a,"A\\u005C","B")').evaluate({ a: 'aA\\a', b: 'B' }), 'aBa')
+    assert.equal(parser.parse('TITLE(a)').evaluate({ a: 'my title' }), 'My Title')
+    assert.equal(parser.parse('PHRASE(a)').evaluate({ a: 'my phrase' }), 'My phrase')
+    assert.equal(parser.parse('PAD_RIGHT(a, 5, "-")').evaluate({ a: 'ABC' }), 'ABC--')
+    assert.equal(parser.parse('PAD_LEFT(a, 5, "-")').evaluate({ a: 'ABC' }), '--ABC')
+    assert.equal(parser.parse('SLUG(a)').evaluate({ a: 'My title' }), 'my-title')
+    assert.equal(parser.parse('SLUG(a, "_")').evaluate({ a: 'My title' }), 'my_title')
+
+    assert.equal(parser.parse('GET(JSON_PARSE(a), "prop")').evaluate({ a: '{"prop": "My prop"}' }), 'My prop')
+    assert.equal(parser.parse('GET(JSON_PARSE(a), "prop2")').evaluate({ a: '{"prop": "My prop"}' }), undefined)
+    assert.equal(parser.parse('GET(JSON_PARSE(a), "prop2")').evaluate({ a: '' }), undefined)
 
     assert.equal(parser.parse('STRPOS(a, x)').evaluate({ x: 'A', a: 'aAb' }), 1)
     assert.equal(parser.parse('STRPOS(a, x)').evaluate({ x: 'A', a: null }), -1)

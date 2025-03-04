@@ -86,7 +86,7 @@ export default {
   computed: {
     ...mapState('session', ['user']),
     relevantCapabilities () {
-      const type = this.property.ignoreDetection ? 'string' : this.property.type
+      const type = this.property.type
       if (type === 'number' || type === 'integer') {
         return ['index', 'textStandard', 'values']
       } else if (type === 'boolean') {
