@@ -1,7 +1,7 @@
 export const idParam = {
   in: 'path',
   name: 'id',
-  description: 'identifiant',
+  description: 'Identifiant',
   required: true,
   schema: {
     type: 'string'

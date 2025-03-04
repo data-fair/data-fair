@@ -20,7 +20,7 @@ export default {
   computed: {
     ...mapState(['env']),
     src () {
-      const url = this.env.openapiViewerUrl + '?proxy=false&hide-toolbar=true'
+      const url = this.env.openapiViewerUrl + '?hide-toolbar=true'
       return url + '&url=' + this.url
     }
   }
