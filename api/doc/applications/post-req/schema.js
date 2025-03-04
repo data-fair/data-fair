@@ -3,6 +3,7 @@ import applicationSchema from '#types/application/schema.js'
 
 const body = jsonSchema(applicationSchema)
   .removeFromRequired(['id', 'slug'])
+  .removeProperties(['owner'])
   .set({ 'x-exports': ['validate', 'types'] })
   .removeId()
   .schema
