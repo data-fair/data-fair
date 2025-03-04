@@ -601,8 +601,7 @@ class TransactionStream extends Writable {
     delete chunk._i
     if (['create', 'createOrUpdate'].includes(chunk._action) && !chunk._id) {
       chunk._id = getLineId(chunk, this.options.req.dataset) || nanoid()
-    }
-    if (chunk._action === 'delete' && !chunk._id) { // delete by primary key
+    } else if (!chunk._id) { // delete by primary key
       chunk._id = getLineId(chunk, this.options.req.dataset)
     }
 
