@@ -6,4 +6,3 @@ export const $sitePath = (window as any).__SITE_PATH as string
 export const $siteUrl = window.location.origin + $sitePath
 export const $apiPath = $sitePath + '/data-fair/api/v1'
 export const $fetch = ofetch.create({ baseURL: $apiPath })
-export const $wsUrl = $siteUrl.replace('http:', 'ws:').replace('https:', 'wss:')

@@ -32,9 +32,9 @@
             :style="`max-height:${windowHeight - 74}px;overflow-y:auto;`"
           >
             <d-frame
-              v-if="showDraftPreview"
               :aspect-ratio="4/3"
               :src="applicationLink + '?embed=true&draft=true'"
+              :reload="reloadDraftPreview"
             />
           </v-sheet>
         </v-col>
@@ -81,13 +81,46 @@
           </v-sheet>
           <v-row class="mt-3 ml-0 mr-3">
             <v-spacer />
-            <v-btn
-              v-t="'cancel'"
-              :disabled="!hasDraft"
-              color="warning"
-              variant="flat"
-              @click="showCancelDialog = true"
-            />
+            <v-dialog>
+              <template #activator="{ props }">
+                <v-btn
+                  v-t="'cancel'"
+                  :disabled="!hasDraft"
+                  color="warning"
+                  variant="flat"
+                  v-bind="props"
+                />
+              </template>
+              <template #default="{ isActive }">
+                <v-card>
+                  <v-card-title
+                    v-t="'removeDraft'"
+                    primary-title
+                  />
+                  <v-card-text>
+                    <v-alert
+                      v-t="'removeDraftWarning'"
+                      :value="true"
+                      type="error"
+                    />
+                  </v-card-text>
+                  <v-card-actions>
+                    <v-spacer />
+                    <v-btn
+                      v-t="'cancel'"
+                      variant="text"
+                      @click="isActive.value = false"
+                    />
+                    <v-btn
+                      v-t="'confirm'"
+                      color="warning"
+                      @click="cancelDraft(); isActive.value = false;"
+                    />
+                  </v-card-actions>
+                </v-card>
+              </template>
+            </v-dialog>
+
             <v-btn
               v-t="'validate'"
               :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
@@ -100,38 +133,6 @@
         </v-form>
       </v-col>
     </v-row>
-
-    <v-dialog
-      v-model="showCancelDialog"
-      max-width="500px"
-    >
-      <v-card border>
-        <v-card-title
-          v-t="'removeDraft'"
-          primary-title
-        />
-        <v-card-text>
-          <v-alert
-            v-t="'removeDraftWarning'"
-            :value="true"
-            type="error"
-          />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn
-            v-t="'cancel'"
-            variant="text"
-            @click="showCancelDialog = false"
-          />
-          <v-btn
-            v-t="'confirm'"
-            color="warning"
-            @click="cancelDraft(); showCancelDialog = false;"
-          />
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </v-container>
 </template>
 
@@ -168,7 +169,7 @@ const { roDataset } = defineProps({
   roDataset: { type: Boolean, default: false }
 })
 
-const { application, applicationLink, patch, canWriteConfig, configFetch, configDraftFetch, configDraft, writeConfigDraft } = useApplicationStore()
+const { application, applicationLink, patch, canWriteConfig, configFetch, configDraftFetch, configDraft, writeConfigDraft, cancelConfigDraft } = useApplicationStore()
 const { availableVersions } = useApplicationVersions()
 useApplicationWatch('draft-error')
 
@@ -237,18 +238,8 @@ const completeSchema = (schema: any) => {
   return v2compat(schema)
 }
 
-const showDraftPreview = ref(true)
-const refreshDraftPreview = () => {
-  showDraftPreview.value = false
-  setTimeout(() => { showDraftPreview.value = true }, 1)
-}
-watch(configDraftFetch.data, refreshDraftPreview)
-const showProdPreview = ref(true)
-const refreshProdPreview = () => {
-  showProdPreview.value = false
-  setTimeout(() => { showProdPreview.value = true }, 1)
-}
-watch(configFetch.data, refreshProdPreview)
+const reloadDraftPreview = ref(0)
+watch(configDraftFetch.data, () => { reloadDraftPreview.value++ })
 
 const vjsfOptions = computed<Options>(() => ({
   disableAll: !canWriteConfig.value,
@@ -266,6 +257,20 @@ const vjsfOptions = computed<Options>(() => ({
   arrayItemCardProps: { outlined: true, tile: true },
   dialogCardProps: { outlined: true }
 }))
+
+const cancelDraft = async () => {
+  if (!canWriteConfig.value) return
+  await patch({ urlDraft: application.value?.url })
+  await cancelConfigDraft()
+  reloadDraftPreview.value++
+}
+
+const validateDraft = async () => {
+  if (!canWriteConfig.value || !configDraft.value) return
+  await patch({ url: application.value?.urlDraft, urlDraft: '' })
+  await writeConfigDraft(configDraft.value)
+  reloadDraftPreview.value++
+}
 </script>
 
 <!--<script>

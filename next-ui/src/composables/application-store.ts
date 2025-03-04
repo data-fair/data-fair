@@ -30,6 +30,10 @@ const prepareApplicationStore = (id: string) => {
     await $fetch<AppConfig>('/applications/' + id + '/configuration-draft', { method: 'PUT', body: config })
     configDraft.value = config
   }
+  const cancelConfigDraft = async () => {
+    await $fetch('/applications/' + id + '/configuration-draft', { method: 'DELETE' })
+    configDraft.value = config.value
+  }
 
   const baseAppFetch = useFetch<BaseApp>(`api/v1/applications/${id}/base-application`, { immediate: false })
   const privateAccess = computed(() => application.value && `${application.value.owner.type}:${application.value.owner.id}`)
@@ -53,6 +57,7 @@ const prepareApplicationStore = (id: string) => {
     configDraftFetch,
     configDraft,
     writeConfigDraft,
+    cancelConfigDraft,
     baseAppFetch,
     baseAppsFetch,
   }

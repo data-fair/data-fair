@@ -3,7 +3,7 @@ type WatchKey = 'draft-error'
 export const useApplicationWatch = (keys: WatchKey | WatchKey[]) => {
   const { id, application } = useApplicationStore()
   if (!Array.isArray(keys)) keys = [keys]
-  const ws = useWS($wsUrl)
+  const ws = useWS('/data-fair/')
   if (keys.includes('draft-error')) {
     ws?.subscribe(`applications/${id}/draft-error`, (message) => {
       if (!application.value) return
