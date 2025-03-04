@@ -11,7 +11,7 @@
         depressed
         dark
         v-bind="attrs"
-        title="libellés"
+        :title="$t('labels')"
         v-on="on"
       >
         <v-icon>mdi-tag-text-outline</v-icon>

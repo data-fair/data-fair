@@ -5,7 +5,6 @@
   >
     <template #activator="{on, attrs}">
       <v-btn
-        v-if="!property['x-calculated'] && !property['x-extension']"
         fab
         small
         depressed

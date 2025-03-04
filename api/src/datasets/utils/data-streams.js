@@ -15,6 +15,7 @@ import * as restDatasetsUtils from './rest.js'
 import { filePath, fullFilePath, tmpDir } from './files.ts'
 import pump from '../../misc/utils/pipe.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import { compileExpression } from './extensions.js'
 
 export const formatLine = (item, schema) => {
   for (const key of Object.keys(item)) {
@@ -138,8 +139,8 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
         }
         for (const prop of schema) {
           const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
-          const value = fieldsSniffer.format(chunk[prop['x-originalName'] || prop.key] ?? chunk[prop.key], prop, fileProp)
-          if (value !== null) line[prop.key] = value
+          const originalName = fileSchema ? fileProp?.['x-originalName'] : prop['x-originalName']
+          line[prop.key] = chunk[originalName || prop.key] ?? chunk[prop.key]
         }
         line._i = chunk._i
         callback(null, line)
@@ -160,8 +161,8 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
           const line = { _i: this.i = (this.i || 0) + 1 }
           for (const prop of schema) {
             const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
-            const value = fieldsSniffer.format(item[prop['x-originalName'] || prop.key], prop, fileProp)
-            if (value !== null) line[prop.key] = value
+            const originalName = fileSchema ? fileProp?.['x-originalName'] : prop['x-originalName']
+            line[prop.key] = item[originalName || prop.key] ?? item[prop.key]
           }
           callback(null, line)
         }
@@ -171,7 +172,47 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
     throw httpError(400, 'mime-type is not supported ' + mimeType)
   }
 
+  if (!raw) {
+    const transformExprStream = getTransformStream(schema, fileSchema)
+    if (transformExprStream) {
+      streams.push(transformExprStream)
+    }
+  }
+
   return streams
+}
+
+export const getTransformStream = (schema, fileSchema) => {
+  const compiledExpressions = {}
+  return new Transform({
+    objectMode: true,
+    transform (item, encoding, callback) {
+      for (const prop of schema) {
+        if (prop['x-transform']?.expr) {
+          if ([null, undefined, ''].includes(item[prop.key])) {
+            item[prop.key] = null
+          } else {
+            compiledExpressions[prop.key] = compiledExpressions[prop.key] || compileExpression(prop['x-transform']?.expr, prop)
+            try {
+              item[prop.key] = compiledExpressions[prop.key]({ value: item[prop.key] })
+            } catch (err) {
+              const message = `[noretry] échec de l'évaluation de l'expression "${prop['x-transform']?.expr}" : ${err.message}`
+              throw new Error(message)
+            }
+          }
+        } else {
+          const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
+          const value = fieldsSniffer.format(item[prop.key], prop, fileProp)
+          if (value === null) {
+            delete item[prop.key]
+          } else {
+            item[prop.key] = value
+          }
+        }
+      }
+      callback(null, item)
+    }
+  })
 }
 
 // Read the dataset file and get a stream of line items
@@ -224,7 +265,7 @@ export const readStreams = async (db, dataset, raw = false, full = false, ignore
 // Used by extender worker to produce the "full" version of the file
 export const writeExtendedStreams = async (db, dataset, extensions) => {
   if (dataset.isRest) return restDatasetsUtils.writeExtendedStreams(db, dataset, extensions)
-  const tmpFullFile = await tmp.tmpName({ tmpdir: tmpDir })
+  const tmpFullFile = await tmp.tmpName({ tmpdir: tmpDir, prefix: 'full-' })
   // creating empty file before streaming seems to fix some weird bugs with NFS
   await fs.ensureFile(tmpFullFile)
 

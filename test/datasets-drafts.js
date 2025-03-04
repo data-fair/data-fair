@@ -698,4 +698,31 @@ other
     assert.ok(!await fs.pathExists('../data/test/user/dmeadus0/datasets-drafts/' + dataset.id))
     await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}`), err => err.status === 404)
   })
+
+  it('Accepts a new file with compatible keys but different names', async function () {
+    const form = new FormData()
+    form.append('file', fs.readFileSync('./resources/datasets/dataset1-names.csv'), 'dataset1.csv')
+    const ax = global.ax.dmeadus
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    dataset = await workers.hook('finalizer/' + dataset.id)
+    assert.equal(dataset.schema[0].key, 'id')
+    assert.equal(dataset.schema[0]['x-originalName'], 'Id')
+    let lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
+    assert.equal(lines[1].id, 'bidule 2')
+    let csv = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines?format=csv')).data
+    assert.ok(csv.startsWith('"Id","Adr"'))
+
+    const form2 = new FormData()
+    form2.append('file', fs.readFileSync('./resources/datasets/dataset1.csv'), 'dataset1.csv')
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
+    dataset = await workers.hook('finalizer/' + dataset.id)
+    assert.equal(dataset.schema[0].key, 'id')
+    assert.equal(dataset.schema[0]['x-originalName'], 'Id')
+    assert.equal(dataset.file.schema[0].key, 'id')
+    assert.equal(dataset.file.schema[0]['x-originalName'], 'id')
+    lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
+    assert.equal(lines[1].id, 'bidule')
+    csv = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines?format=csv')).data
+    assert.ok(csv.startsWith('"Id","Adr"'))
+  })
 })
