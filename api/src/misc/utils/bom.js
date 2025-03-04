@@ -16,7 +16,7 @@ export const hasBOM = function (buffer) {
 export const removeBOM = function (buffer) {
   // multiple strip BOM because of badly formatted files from some clients
   while (hasBOM(buffer)) {
-    buffer = buffer.slice(3)
+    buffer = buffer.subarray(3)
   }
   return buffer
 }

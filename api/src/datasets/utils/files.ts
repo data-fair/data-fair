@@ -7,6 +7,10 @@ import unzipper from 'unzipper'
 import iconvLite from 'iconv-lite'
 import chardet from 'chardet'
 import { type Account } from '@data-fair/lib-express'
+import debugModule from 'debug'
+
+const debugCleanTmp = debugModule('clean-tmp')
+debugCleanTmp.enabled = true
 
 export const dataDir = path.resolve(config.dataDir)
 
@@ -191,10 +195,24 @@ export const dataFiles = async (dataset: any, publicBaseUrl = config.publicUrl) 
 /**
  * @param {string} p
  */
-export const fsyncFile = async (p) => {
+export const fsyncFile = async (p: string) => {
   const fd = await fs.open(p, 'r')
   await fs.fsync(fd)
   await fs.close(fd)
+}
+
+export const cleanTmp = async () => {
+  debugCleanTmp('check tmp dir for old files')
+  const delay = 14 * 24 * 60 * 60 * 1000 // 14 day
+  await fs.ensureDir(tmpDir)
+  const dir = await fs.opendir(tmpDir)
+  for await (const dirent of dir) {
+    const stats = await fs.stat(path.join(tmpDir, dirent.name))
+    if (stats.mtimeMs < Date.now() - delay) {
+      debugCleanTmp(`remove old ${dirent.isDirectory() ? 'directory' : 'file'} ${dirent.name} - ${stats.mtime}`)
+      await fs.remove(path.join(tmpDir, dirent.name))
+    }
+  }
 }
 
 export const unzip = async (zipFile: string, targetDir: string) => {

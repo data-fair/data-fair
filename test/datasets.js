@@ -371,7 +371,7 @@ describe('datasets', function () {
     schema.forEach(f => {
       delete f.enum
       delete f['x-cardinality']
-      f.ignoreDetection = true
+      f['x-transform'] = { type: 'string' }
       f.type = 'string'
       delete f.format
     })
@@ -381,7 +381,7 @@ describe('datasets', function () {
     res = await ax.post('/api/v1/datasets/dataset-name', form2, { headers: testUtils.formHeaders(form2) })
     await workers.hook('finalizer/dataset-name')
     res = await ax.get('/api/v1/datasets/dataset-name')
-    assert.equal(res.data.schema.filter(f => f.ignoreDetection).length, 6)
+    assert.equal(res.data.schema.filter(f => f['x-transform']).length, 6)
   })
 
   it('Sort datasets by title', async function () {
