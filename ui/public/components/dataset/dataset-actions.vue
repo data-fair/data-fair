@@ -418,7 +418,6 @@ fr:
   integrate: Intégrer dans un site
   viewSite: Voir sur {title}
   useAPI: Utiliser l'API
-  switchPublicAPIDoc: Voir l'API publique
   delete: Supprimer
   deleteAllLines: Supprimer toutes les lignes
   changeOwner: Changer le propriétaire
@@ -505,7 +504,6 @@ export default {
     uploadProgress: 0,
     newOwner: null,
     showIntegrationDialog: false,
-    publicAPIDoc: true,
     showNotifDialog: false,
     showWebhooksDialog: false
   }),

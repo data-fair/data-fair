@@ -5,7 +5,7 @@
   >
     <open-api
       v-if="resourceUrl"
-      :url="resourceUrl + '/api-docs.json'"
+      :url="resourceUrl + (can('readPrivateApiDoc') ? '/private-api-docs.json' : '/api-docs.json')"
     />
   </v-container>
 </template>
@@ -16,7 +16,7 @@ import { mapState, mapGetters } from 'vuex'
 export default {
   computed: {
     ...mapState('dataset', ['dataset']),
-    ...mapGetters('dataset', ['resourceUrl'])
+    ...mapGetters('dataset', ['resourceUrl', 'can'])
   },
   created () {
     if (this.dataset) {

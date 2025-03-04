@@ -2,6 +2,7 @@
   <d-frame
     :src="src"
     height="100vh"
+    resize="no"
   />
 </template>
 
