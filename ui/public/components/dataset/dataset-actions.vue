@@ -84,7 +84,7 @@
     </template>
     <v-list-item
       v-if="can('readApiDoc') && !error"
-      @click="showAPIDialog = true"
+      @click="$router.push({ path: `/dataset/${dataset.id}/api-docs` })"
     >
       <v-list-item-icon>
         <v-icon color="primary">

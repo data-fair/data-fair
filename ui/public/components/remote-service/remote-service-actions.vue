@@ -16,7 +16,7 @@
     </v-list-item>
 
     <v-list-item
-      @click="showAPIDialog = true"
+      @click="$router.push({ path: `/remote-service/${remoteService.id}/api-docs` })"
     >
       <v-list-item-icon>
         <v-icon color="primary">

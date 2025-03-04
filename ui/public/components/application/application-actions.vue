@@ -76,7 +76,7 @@
 
     <v-list-item
       v-if="can('readApiDoc')"
-      @click="showAPIDialog = true"
+      @click="$router.push({ path: `/application/${application.id}/api-docs` })"
     >
       <v-list-item-icon>
         <v-icon color="primary">
