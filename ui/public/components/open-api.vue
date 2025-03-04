@@ -1,22 +1,16 @@
 <template lang="html">
-  <div class="open-api">
-    <v-iframe :src="src" />
-  </div>
+  <d-frame
+    :src="src"
+    height="100vh"
+  />
 </template>
 
 <script>
 import { mapState } from 'vuex'
-import 'iframe-resizer/js/iframeResizer'
-import VIframe from '@koumoul/v-iframe'
+import '@data-fair/frame/lib/d-frame.js'
 
 export default {
-  components: {
-    VIframe
-  },
   props: ['url'],
-  data () {
-    return { height: null }
-  },
   computed: {
     ...mapState(['env']),
     src () {
@@ -28,8 +22,4 @@ export default {
 </script>
 
 <style lang="css">
-.open-api .v-iframe iframe {
-  background-color: white;
-  border: none;
-}
 </style>
