@@ -138,7 +138,9 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
           }
         }
         for (const prop of schema) {
-          line[prop.key] = chunk[prop['x-originalName'] || prop.key] ?? chunk[prop.key]
+          const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
+          const originalName = fileSchema ? fileProp?.['x-originalName'] : prop['x-originalName']
+          line[prop.key] = chunk[originalName || prop.key] ?? chunk[prop.key]
         }
         line._i = chunk._i
         callback(null, line)
@@ -158,7 +160,9 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
         } else {
           const line = { _i: this.i = (this.i || 0) + 1 }
           for (const prop of schema) {
-            line[prop.key] = item[prop['x-originalName'] || prop.key] ?? item[prop.key]
+            const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
+            const originalName = fileSchema ? fileProp?.['x-originalName'] : prop['x-originalName']
+            line[prop.key] = item[originalName || prop.key] ?? item[prop.key]
           }
           callback(null, line)
         }
