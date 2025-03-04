@@ -202,34 +202,6 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-
-    <v-dialog
-      v-model="showAPIDialog"
-      fullscreen
-    >
-      <v-card outlined>
-        <v-toolbar
-          dense
-          flat
-          color="transparent"
-        >
-          <v-toolbar-title />
-          <v-spacer />
-          <v-btn
-            icon
-            @click.native="showAPIDialog = false"
-          >
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </v-toolbar>
-        <v-card-text v-if="showAPIDialog">
-          <open-api
-            v-if="resourceUrl"
-            :url="resourceUrl + '/api-docs.json'"
-          />
-        </v-card-text>
-      </v-card>
-    </v-dialog>
   </v-list>
 </template>
 
@@ -284,7 +256,6 @@ export default {
     showDeleteDialog: false,
     showIntegrationDialog: false,
     showOwnerDialog: false,
-    showAPIDialog: false,
     newOwner: null
   }),
   computed: {

@@ -169,44 +169,6 @@
     />
 
     <v-dialog
-      v-model="showAPIDialog"
-      fullscreen
-    >
-      <v-card outlined>
-        <v-toolbar
-          dense
-          flat
-          color="transparent"
-        >
-          <v-switch
-            v-if="dataset.public && can('readPrivateApiDoc') && can('readApiDoc')"
-            v-model="publicAPIDoc"
-            :label="$t('switchPublicAPIDoc')"
-            class="my-3"
-            hide-details
-          />
-          <v-spacer />
-          <v-btn
-            icon
-            @click.native="showAPIDialog = false"
-          >
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </v-toolbar>
-        <v-card-text v-if="showAPIDialog && resourceUrl">
-          <open-api
-            v-if="publicAPIDoc"
-            :url="resourceUrl + '/api-docs.json' + (dataset.draftReason ? '?draft=true' : '')"
-          />
-          <open-api
-            v-else
-            :url="resourceUrl + '/private-api-docs.json' + (dataset.draftReason ? '?draft=true' : '')"
-          />
-        </v-card-text>
-      </v-card>
-    </v-dialog>
-
-    <v-dialog
       v-model="showDeleteDialog"
       max-width="500"
     >
@@ -543,7 +505,6 @@ export default {
     uploadProgress: 0,
     newOwner: null,
     showIntegrationDialog: false,
-    showAPIDialog: false,
     publicAPIDoc: true,
     showNotifDialog: false,
     showWebhooksDialog: false
