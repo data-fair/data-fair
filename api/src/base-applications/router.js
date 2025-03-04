@@ -22,12 +22,12 @@ export const router = express.Router()
 // Fill the collection using the default base applications from config
 // and cleanup non-public apps that are not used anywhere
 export const init = async (db) => {
-  await clean(db)
+  await removeDeprecated(db)
   await Promise.all(config.applications.map(app => failSafeInitBaseApp(db, app)))
 }
 
 // Auto removal of deprecated apps used in 0 configs
-async function clean (db) {
+async function removeDeprecated (db) {
   const baseApps = await db.collection('base-applications').find({ deprecated: true }).limit(10000).toArray()
   for (const baseApp of baseApps) {
     const nbApps = await db.collection('applications').countDocuments({ url: baseApp.url })

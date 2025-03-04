@@ -11,7 +11,7 @@
         class="pa-0"
       >
         <v-col>
-          {{ iframeHeight }} - {{ configFetch.data.value }}
+          {{ editUrl }}
           <v-alert
             v-if="!!application.errorMessageDraft"
             type="error"
@@ -57,14 +57,14 @@
             :style="`max-height:${windowHeight - 110}px;overflow-y:auto;scrollbar-gutter: stable;`"
           >
             <v-select
-              v-model="editUrl"
-              :disabled="!can('writeConfig')"
+              :model-value="editUrl"
+              :disabled="!canWriteConfig"
               :loading="!availableVersions"
               :items="availableVersions"
               :item-title="(baseApp => `${baseApp.title} (${baseApp.version})`)"
               item-value="url"
               :label="$t('changeVersion')"
-              @update:model-value="saveUrlDraft"
+              @update:model-value="patch({urlDraft: $event})"
             />
 
             <v-checkbox
@@ -72,13 +72,11 @@
               v-model="showFullOrg"
               :label="`Voir les sources de données de l'organisation ${application.owner.name} entière`"
             />
-
-            <lazy-v-jsf
-              :key="`vjsf-${showFullOrg}`"
+            <vjsf
               v-model="editConfig"
               :schema="draftSchema"
               :options="vjsfOptions"
-              @change="saveDraft"
+              @change="writeConfigDraft"
             />
           </v-sheet>
           <v-row class="mt-3 ml-0 mr-3">
@@ -158,8 +156,10 @@ en:
 import { useWindowSize } from '@vueuse/core'
 import { useDisplay } from 'vuetify'
 import '@data-fair/frame/lib/d-frame.js'
+import Vjsf, { type Options } from '@koumoul/vjsf'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 import { clone } from '@json-layout/core'
+import { type AppConfig } from '#api/types'
 
 const display = useDisplay()
 const { sendUiNotif } = useUiNotif()
@@ -168,24 +168,34 @@ const { roDataset } = defineProps({
   roDataset: { type: Boolean, default: false }
 })
 
-const { id, application, applicationLink } = useApplicationStore()
-const configFetch = useFetch<AppConfig>($apiPath + `/applications/${id}/configuration`, {})
+const { application, applicationLink, patch, canWriteConfig, configFetch, configDraftFetch, configDraft, writeConfigDraft } = useApplicationStore()
+const { availableVersions } = useApplicationVersions()
+useApplicationWatch('draft-error')
+
+if (!configFetch.initialized.value) configFetch.refresh()
+if (!configDraftFetch.initialized.value) configDraftFetch.refresh()
+
+const editUrl = computed(() => application.value?.urlDraft || application.value?.url)
+const editConfig = ref<AppConfig | null>(null)
+watch(configDraft, (config) => { editConfig.value = config })
+// return true if some local changes were not yet synced with the server
+const hasModification = computed(() => {
+  if (configDraft.value !== editConfig.value) return true // shallom comparison is ok as vjsf returns immutable objects
+  if (application.value?.urlDraft && editUrl.value !== application.value.urlDraft) return true
+  return false
+})
+const hasDraft = computed(() => application.value?.status === 'configured-draft')
 
 const { height: windowHeight } = useWindowSize()
-const iframeHeight = computed(() => Math.max(300, Math.min(windowHeight.value - 100, 450)))
+// const iframeHeight = computed(() => Math.max(300, Math.min(windowHeight.value - 100, 450)))
 
 const showForm = ref(false)
-const showDraftPreview = ref(true)
-
-const editUrl = ref<string>()
-watch(() => application.value?.urlDraft, (url) => {
-  editUrl.value = url || application.value?.url
-})
-
 const draftSchema = ref<any>()
-const schemaFetch = useFetch<any>(() => editUrl.value + 'config-schema.json')
+const schemaUrl = computed(() => editUrl.value && (editUrl.value + 'config-schema.json'))
+const schemaFetch = useFetch<any>(schemaUrl)
 watch(schemaFetch.data, (schema) => {
   if (schema) {
+    console.log('SCHEMA', schema)
     if (typeof schema !== 'object') {
       sendUiNotif({ type: 'error', msg: 'Schema fetched is not a valid JSON' })
     } else {
@@ -224,10 +234,38 @@ const completeSchema = (schema: any) => {
       }
     }
   }
-
   return v2compat(schema)
 }
 
+const showDraftPreview = ref(true)
+const refreshDraftPreview = () => {
+  showDraftPreview.value = false
+  setTimeout(() => { showDraftPreview.value = true }, 1)
+}
+watch(configDraftFetch.data, refreshDraftPreview)
+const showProdPreview = ref(true)
+const refreshProdPreview = () => {
+  showProdPreview.value = false
+  setTimeout(() => { showProdPreview.value = true }, 1)
+}
+watch(configFetch.data, refreshProdPreview)
+
+const vjsfOptions = computed<Options>(() => ({
+  disableAll: !canWriteConfig.value,
+  context: { owner: application.value?.owner, ownerFilter: application.value?.ownerFilter, datasetFilter: application.value?.datasetFilter, remoteServiceFilter: application.value?.remoteServiceFilter, attachments: application.value?.attachments },
+  locale: 'fr',
+  rootDisplay: 'expansion-panels',
+  expansionPanelsProps: {
+    value: 0,
+    hover: true
+  },
+  dialogProps: {
+    maxWidth: 500,
+    overlayOpacity: 0 // better when inside an iframe
+  },
+  arrayItemCardProps: { outlined: true, tile: true },
+  dialogCardProps: { outlined: true }
+}))
 </script>
 
 <!--<script>
@@ -259,20 +297,6 @@ export default {
   computed: {
     ...mapState('application', ['application', 'config', 'configDraft', 'prodBaseApp']),
     ...mapGetters('application', ['applicationLink', 'can', 'availableVersions']),
-    hasModification () {
-      if (JSON.stringify(this.editConfig) !== JSON.stringify(this.configDraft)) return true
-      if (this.application.urlDraft) {
-        return this.editUrl !== this.application.urlDraft
-      }
-      return false
-    },
-    hasDraft () {
-      // (JSON.stringify(this.config) !== JSON.stringify(this.configDraft) || (this.application.urlDraft && this.application.urlDraft !== this.application.url)
-      return this.application.status === 'configured-draft'
-    },
-    configClone () {
-      return JSON.parse(JSON.stringify(this.config))
-    },
     vjsfOptions () {
       const owner = this.application.owner
       let ownerFilter = `${owner.type}:${owner.id}`
@@ -280,7 +304,7 @@ export default {
       const datasetFilter = `owner=${ownerFilter}`
       const remoteServiceFilter = `privateAccess=${ownerFilter}`
       return {
-        disableAll: !this.can('writeConfig'),
+        disableAll: !this.canWriteConfig,
         context: { owner, ownerFilter, datasetFilter, remoteServiceFilter, attachments: this.application.attachments },
         locale: 'fr',
         rootDisplay: 'expansion-panels',
@@ -296,14 +320,6 @@ export default {
         arrayItemCardProps: { outlined: true, tile: true },
         dialogCardProps: { outlined: true }
       }
-    }
-  },
-  watch: {
-    configDraft () {
-      this.refreshDraftPreview()
-    },
-    config () {
-      this.refreshProdPreview()
     }
   },
   async created () {
@@ -385,47 +401,20 @@ export default {
       this.showDraftConfig = false
       setTimeout(() => { this.showDraftConfig = true }, 1)
     },
-    refreshDraftPreview () {
-      this.showDraftPreview = false
-      setTimeout(() => { this.showDraftPreview = true }, 1)
-    },
-    refreshProdPreview () {
-      this.showProdPreview = false
-      setTimeout(() => { this.showProdPreview = true }, 1)
-    },
     async fetchStatus () {
       const application = await this.$axios.$get(`api/v1/applications/${this.application.id}`)
       this.$store.commit('application/patch', { status: application.status, errorMessage: application.errorMessage, errorMessageDraft: application.errorMessageDraft })
     },
-    async saveDraft () {
-      if (!this.can('writeConfig')) return
-      if (this.$refs.configForm && !this.$refs.configForm.validate()) return
-      await this.writeConfigDraft(this.editConfig)
-      await this.fetchStatus()
-      // errors in draft app should be pushed by websocket, but to be extra safe we check after 5 seconds
-      await new Promise(resolve => setTimeout(resolve, 5000))
-      await this.fetchStatus()
-    },
-    async saveUrlDraft (e) {
-      if (!this.can('writeConfig')) return
-      this.patchAndCommit({ urlDraft: this.editUrl, silent: true })
-      await this.fetchStatus()
-      await this.fetchSchema()
-      this.refreshDraftPreview()
-      // errors in draft app should be pushed by websocket, but to be extra safe we check after 5 seconds
-      await new Promise(resolve => setTimeout(resolve, 5000))
-      await this.fetchStatus()
-    },
     async validateDraft (e) {
       e.preventDefault()
-      if (!this.can('writeConfig')) return
+      if (!this.canWriteConfig) return
       this.patchAndCommit({ url: this.application.urlDraft })
       await this.writeConfig(this.configDraft)
       this.fetchStatus()
       this.fetchProdBaseApp()
     },
     async cancelDraft () {
-      if (!this.can('writeConfig')) return
+      if (!this.canWriteConfig) return
       this.patchAndCommit({ urlDraft: this.application.url, silent: true })
       await this.cancelConfigDraft()
       await this.fetchConfigs()

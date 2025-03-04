@@ -21,7 +21,7 @@ export default {
   'x-exports': ['types', 'validate', 'resolvedSchema'],
   type: 'object',
   additionalProperties: false,
-  required: ['id', 'slug', 'url'],
+  required: ['id', 'slug', 'url', 'owner'],
   properties: {
     id: {
       type: 'string',

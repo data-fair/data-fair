@@ -12,7 +12,10 @@ declare global {
   const $sitePath: typeof import('~/context')['$sitePath']
   const $siteUrl: typeof import('~/context')['$siteUrl']
   const $uiConfig: typeof import('~/context')['$uiConfig']
+  const $wsUrl: typeof import('~/context')['$wsUrl']
   const EffectScope: typeof import('vue')['EffectScope']
+  const applicationStore: typeof import('../src/composables/application-store')['default']
+  const applicationVersions: typeof import('../src/composables/application-versions')['default']
   const computed: typeof import('vue')['computed']
   const createApp: typeof import('vue')['createApp']
   const createApplicationStore: typeof import('../src/composables/application-store')['createApplicationStore']
@@ -102,6 +105,8 @@ declare global {
   const triggerRef: typeof import('vue')['triggerRef']
   const unref: typeof import('vue')['unref']
   const useApplicationStore: typeof import('../src/composables/application-store')['useApplicationStore']
+  const useApplicationVersions: typeof import('../src/composables/application-versions')['useApplicationVersions']
+  const useApplicationWatch: typeof import('../src/composables/application-watch')['useApplicationWatch']
   const useAsyncAction: typeof import('@data-fair/lib-vue/async-action.js')['useAsyncAction']
   const useAttrs: typeof import('vue')['useAttrs']
   const useBooleanSearchParam: typeof import('@data-fair/lib-vue/reactive-search-params.js')['useBooleanSearchParam']
@@ -157,7 +162,10 @@ declare module 'vue' {
     readonly $sitePath: UnwrapRef<typeof import('~/context')['$sitePath']>
     readonly $siteUrl: UnwrapRef<typeof import('~/context')['$siteUrl']>
     readonly $uiConfig: UnwrapRef<typeof import('~/context')['$uiConfig']>
+    readonly $wsUrl: UnwrapRef<typeof import('~/context')['$wsUrl']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
+    readonly applicationStore: UnwrapRef<typeof import('../src/composables/application-store')['default']>
+    readonly applicationVersions: UnwrapRef<typeof import('../src/composables/application-versions')['default']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
     readonly createApplicationStore: UnwrapRef<typeof import('../src/composables/application-store')['createApplicationStore']>
@@ -211,6 +219,8 @@ declare module 'vue' {
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly useApplicationStore: UnwrapRef<typeof import('../src/composables/application-store')['useApplicationStore']>
+    readonly useApplicationVersions: UnwrapRef<typeof import('../src/composables/application-versions')['useApplicationVersions']>
+    readonly useApplicationWatch: UnwrapRef<typeof import('../src/composables/application-watch')['useApplicationWatch']>
     readonly useAsyncAction: UnwrapRef<typeof import('@data-fair/lib-vue/async-action.js')['useAsyncAction']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
     readonly useBooleanSearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useBooleanSearchParam']>
