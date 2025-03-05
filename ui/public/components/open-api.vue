@@ -1,8 +1,9 @@
 <template lang="html">
   <d-frame
     :src="src"
-    height="100vh"
+    :height="`${windowHeight - 48}px`"
     resize="no"
+    sync-params
   />
 </template>
 
