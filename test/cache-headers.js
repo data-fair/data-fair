@@ -23,12 +23,12 @@ describe('Cache headers', function () {
     assert.equal(dataset.owner.id, 'dmeadus0')
 
     let res = await ax.get(`/api/v1/datasets/${id}/lines`)
-    assert.equal(res.headers['cache-control'], 'no-cache, private')
+    assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=0')
     assert.equal(res.headers['x-cache-status'], 'BYPASS')
 
     // same but without bypassing the cache
     res = await ax.get(`/api/v1/datasets/${id}/lines`, { headers: { 'x-cache-bypass': '0' } })
-    assert.equal(res.headers['cache-control'], 'no-cache, private')
+    assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=0')
     assert.equal(res.headers['x-cache-status'], 'MISS')
 
     // the finalizedAt parameter extends the max-age
@@ -105,7 +105,7 @@ describe('Cache headers', function () {
     await ax.put(`/api/v1/datasets/${id}/permissions`, [{ classes: ['read', 'list'] }])
 
     let res = await ax.get('/api/v1/datasets')
-    assert.equal(res.headers['cache-control'], 'no-cache, private')
+    assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=0')
     assert.equal(res.data.count, 2)
 
     // sending etag in if-none-match should return a 304
@@ -113,12 +113,12 @@ describe('Cache headers', function () {
 
     res = await ax.get('/api/v1/datasets', { params: { select: '-userPermissions' } })
     // use base userPermissions is remove but we might see private/protected resources
-    assert.equal(res.headers['cache-control'], 'no-cache, private')
+    assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=0')
     assert.equal(res.data.count, 2)
 
     res = await ax.get('/api/v1/datasets', { params: { visibility: 'public' } })
     // only public resources but userPermissions depends on current user
-    assert.equal(res.headers['cache-control'], 'no-cache, private')
+    assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=0')
     assert.equal(res.data.count, 1)
 
     res = await ax.get('/api/v1/datasets', { params: { select: '-userPermissions', visibility: 'public' } })

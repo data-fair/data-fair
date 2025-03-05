@@ -37,12 +37,12 @@ describe('thumbnails', function () {
     const thumbres = await ax.get(res.data.results[1]._thumbnail)
     assert.equal(thumbres.headers['content-type'], 'image/png')
     assert.equal(thumbres.headers['x-thumbnails-cache-status'], 'MISS')
-    assert.equal(thumbres.headers['cache-control'], 'no-cache, private')
+    assert.equal(thumbres.headers['cache-control'], 'must-revalidate, private, max-age=0')
 
     const thumbresGif = await ax.get(res.data.results[2]._thumbnail)
     assert.equal(thumbresGif.headers['content-type'], 'image/webp')
     assert.equal(thumbresGif.headers['x-thumbnails-cache-status'], 'MISS')
-    assert.equal(thumbresGif.headers['cache-control'], 'no-cache, private')
+    assert.equal(thumbresGif.headers['cache-control'], 'must-revalidate, private, max-age=0')
     nockScope.done()
   })
 
