@@ -11,7 +11,6 @@
         class="pa-0"
       >
         <v-col>
-          {{ editUrl }}
           <v-alert
             v-if="!!application.errorMessageDraft"
             type="error"
@@ -57,6 +56,7 @@
             :style="`max-height:${windowHeight - 110}px;overflow-y:auto;scrollbar-gutter: stable;`"
           >
             <v-select
+              v-if="availableVersions"
               :model-value="editUrl"
               :disabled="!canWriteConfig"
               :loading="!availableVersions"
@@ -73,6 +73,7 @@
               :label="`Voir les sources de données de l'organisation ${application.owner.name} entière`"
             />
             <vjsf
+              v-if="vjsfOptions"
               v-model="editConfig"
               :schema="draftSchema"
               :options="vjsfOptions"
@@ -157,7 +158,7 @@ en:
 import { useWindowSize } from '@vueuse/core'
 import { useDisplay } from 'vuetify'
 import '@data-fair/frame/lib/d-frame.js'
-import Vjsf, { type Options } from '@koumoul/vjsf'
+import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 import { clone } from '@json-layout/core'
 import { type AppConfig } from '#api/types'
@@ -213,7 +214,7 @@ const completeSchema = (schema: any) => {
   } else if (schema.properties && schema.properties.datasets) {
     datasetsProp = schema.properties && schema.properties.datasets
   } else if (schema.allOf) {
-    const datasetsAllOf = schema.allOf.find(a => a.properties && a.properties.datasets)
+    const datasetsAllOf = schema.allOf.find((a: any) => a.properties && a.properties.datasets)
     if (datasetsAllOf) datasetsProp = datasetsAllOf.properties.datasets
   }
   if (!datasetsProp) {
@@ -240,23 +241,33 @@ const completeSchema = (schema: any) => {
 
 const reloadDraftPreview = ref(0)
 watch(configDraftFetch.data, () => { reloadDraftPreview.value++ })
+const formValid = ref(false)
+const showFullOrg = ref(false)
 
-const vjsfOptions = computed<Options>(() => ({
-  disableAll: !canWriteConfig.value,
-  context: { owner: application.value?.owner, ownerFilter: application.value?.ownerFilter, datasetFilter: application.value?.datasetFilter, remoteServiceFilter: application.value?.remoteServiceFilter, attachments: application.value?.attachments },
-  locale: 'fr',
-  rootDisplay: 'expansion-panels',
-  expansionPanelsProps: {
-    value: 0,
-    hover: true
-  },
-  dialogProps: {
-    maxWidth: 500,
-    overlayOpacity: 0 // better when inside an iframe
-  },
-  arrayItemCardProps: { outlined: true, tile: true },
-  dialogCardProps: { outlined: true }
-}))
+const vjsfOptions = computed<VjsfOptions | null>(() => {
+  if (!application.value) return null
+  const owner = application.value.owner
+  let ownerFilter = `${owner.type}:${owner.id}`
+  if (owner.department && !showFullOrg.value) ownerFilter += ':' + owner.department
+  const datasetFilter = `owner=${ownerFilter}`
+  const remoteServiceFilter = `privateAccess=${ownerFilter}`
+  return {
+    disableAll: !canWriteConfig.value,
+    context: { owner: application.value?.owner, ownerFilter, datasetFilter, remoteServiceFilter, attachments: application.value?.attachments },
+    locale: 'fr',
+    rootDisplay: 'expansion-panels',
+    expansionPanelsProps: {
+      value: 0,
+      hover: true
+    },
+    dialogProps: {
+      maxWidth: 500,
+      overlayOpacity: 0 // better when inside an iframe
+    },
+    arrayItemCardProps: { outlined: true, tile: true },
+    dialogCardProps: { outlined: true }
+  }
+})
 
 const cancelDraft = async () => {
   if (!canWriteConfig.value) return
@@ -271,6 +282,7 @@ const validateDraft = async () => {
   await writeConfigDraft(configDraft.value)
   reloadDraftPreview.value++
 }
+
 </script>
 
 <!--<script>

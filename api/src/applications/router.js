@@ -58,9 +58,15 @@ const curateApplication = async (db, application) => {
   const projection = { id: 1, url: 1, meta: 1, datasetsFilters: 1 }
   if (application.url) {
     application.baseApp = await db.collection('base-applications').findOne({ url: application.url }, { projection })
+    if (!application.baseApp) {
+      throw httpError(400, 'Base application not found')
+    }
   }
   if (application.urlDraft) {
     application.baseAppDraft = await db.collection('base-applications').findOne({ url: application.urlDraft }, { projection })
+    if (!application.baseAppDraft) {
+      throw httpError(400, 'Base draft application not found')
+    }
   }
   setUniqueRefs(application)
 }
