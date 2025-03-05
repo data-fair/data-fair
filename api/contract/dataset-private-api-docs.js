@@ -158,6 +158,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         description: 'Identifiant de la pièce jointe.',
         required: true,
         schema: {
+          title: 'Identifiant de la pièce jointe.',
           type: 'string'
         }
       }]
@@ -241,6 +242,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       description: 'L\'identifiant de la ligne',
       required: true,
       schema: {
+        title: 'Identifiant de la ligne',
         type: 'string'
       }
     }

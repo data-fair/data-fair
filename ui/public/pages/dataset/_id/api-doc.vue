@@ -14,6 +14,12 @@
 import { mapState, mapGetters } from 'vuex'
 
 export default {
+  async fetch ({ store, route }) {
+    if (store.state.dataset?.datasetId !== route.params.id) {
+      store.dispatch('dataset/clear')
+      await store.dispatch('dataset/setId', { datasetId: route.params.id, draftMode: true })
+    }
+  },
   computed: {
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['resourceUrl', 'can'])

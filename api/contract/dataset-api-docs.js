@@ -76,6 +76,7 @@ export default (dataset, publicUrl = config.publicUrl, ownerInfo, publicationSit
   Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html) correspondante.
     `,
     schema: {
+      title: 'Recherche textuelle',
       type: 'string'
     }
   }, {
@@ -89,6 +90,7 @@ export default (dataset, publicUrl = config.publicUrl, ownerInfo, publicationSit
   Le mode "complete" permet d'enrichir automatiquement la requête soumise par l'utilisateur pour un résultat intuitif dans le contexte d'un champ de type autocomplete. Attention ce mode est potentiellement moins performant et à limiter à des jeux de données au volume raisonnable.
     `,
     schema: {
+      title: 'Mode de recherche',
       type: 'string',
       default: 'simple',
       enum: [null, 'simple', 'complete']
@@ -102,6 +104,7 @@ export default (dataset, publicUrl = config.publicUrl, ownerInfo, publicationSit
   Par défaut toutes les colonnes supportant une recherche textuelle sont utilisées.
     `,
     schema: {
+      title: 'Colonnes de recherche',
       type: 'array',
       items: {
         type: 'string',
@@ -121,6 +124,7 @@ Exemple: ma_colonne:"du texte" AND ma_colonne2:valeur
 Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html) correspondante.
   `,
     schema: {
+      title: 'Recherche textuelle avancée',
       type: 'string'
     }
   }]
@@ -130,6 +134,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       name: 'bbox',
       description: "Un filtre pour restreindre les résultats à une zone géographique. Le format est 'gauche,bas,droite,haut' autrement dit 'lonMin,latMin,lonMax,latMax'.",
       schema: {
+        title: 'Filtre par zone géographique',
         type: 'string',
         enum: [
           'lonMin',
@@ -148,6 +153,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
   Le format est 'x,y,z'.
     `,
       schema: {
+        title: 'Filtre par tuile géographique',
         type: 'string'
       }
     })
@@ -162,6 +168,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
   Si les documents contiennent des géométries la distance est calculée à partir de leurs centroïdes à moins que la distance soit 0 auquel cas le filtre retourne tous les documents dont la géométrie contient le point passé en paramètre.
     `,
       schema: {
+        title: 'Filtre par distance géographique',
         type: 'string'
       }
     })
@@ -174,6 +181,7 @@ Pour plus d'information voir la documentation [ElasticSearch](https://www.elasti
       name: 'size',
       description: 'Le nombre de résultats à retourner (taille de la pagination).',
       schema: {
+        title: 'Taille de la pagination',
         default: defaultSize,
         type: 'integer',
         maximum: maxSize
@@ -188,8 +196,8 @@ Par défaut le tri est ascendant, si un nom de colonne est préfixé par un "-" 
 
 Exemple: ma_colonne,-ma_colonne2`,
       schema: {
+        title: 'Ordre des résultats',
         type: 'array',
-        default: [],
         items: {
           type: 'string',
           enum: valuesProperties.length ? valuesProperties.map((/** @type {any} */ p) => p.key) : undefined
@@ -202,6 +210,7 @@ Exemple: ma_colonne,-ma_colonne2`,
       name: 'select',
       description: 'La liste des colonnes à retourner',
       schema: {
+        title: 'La liste des colonnes à retourner',
         type: 'array',
         items: {
           type: 'string',
@@ -294,6 +303,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
   - **pbf** pour tuiles vectorielles
   - **geojson** et **wkt** pour formats géographiques`,
     schema: {
+      title: 'Format de sérialisation',
       default: 'json',
       type: 'string',
       enum: ['json', 'csv', 'xlsx', 'ods'].concat(dataset.bbox && dataset.bbox.length === 4 ? ['pbf', 'geojson', 'wkt'] : [])
@@ -305,6 +315,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
     name: 'html',
     description: 'Effectuer le rendu des contenus formattés de **markdown** vers **HTML**',
     schema: {
+      title: 'Rendu HTML des contenus markdown',
       type: 'boolean'
     }
   }
@@ -344,19 +355,21 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
         description: 'Définir le format du schéma',
         required: false,
         schema: {
+          title: 'Format du schéma',
           type: 'string',
           default: 'application/json',
           enum: ['application/json', 'application/tableschema+json', 'application/schema+json']
         }
       },
-      utils.filterParam('type', 'Filtre sur le type de colonne', ['string', 'boolean', 'integer', 'number']),
-      utils.filterParam('format', 'Filtre sur de format d\'une colonne de type chaine de caractère', ['uri-reference', 'date', 'date-time']),
+      utils.filterParam('type', 'Filtre sur le type de colonne', undefined, ['string', 'boolean', 'integer', 'number']),
+      utils.filterParam('format', 'Filtre sur de format d\'une colonne', 'Filtre sur de format d\'une colonne de type chaine de caractère', ['uri-reference', 'date', 'date-time']),
       {
         in: 'query',
         name: 'capability',
         description: 'Restreindre aux colonnes ayant une capacité particulière',
         required: false,
         schema: {
+          title: 'Restreindre par capacité de la colonne',
           type: 'string',
           enum: [null, ...Object.keys(capabilities.properties)]
         }
@@ -367,6 +380,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
         description: 'Restreindre aux colonnes ayant une énumération de valeurs (moins de 50 valeurs distinctes)',
         required: false,
         schema: {
+          title: 'Restreindre par colonnes énumérables',
           type: 'string',
           enum: ['false', 'true']
         }
@@ -374,9 +388,10 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       {
         in: 'query',
         name: 'calculated',
-        description: 'Include les colonnes calculées (non issues du fichier d\'origine)',
+        description: 'Inclure les colonnes calculées (non issues du fichier d\'origine)',
         required: false,
         schema: {
+          title: 'Inclure les colonnes calculées',
           type: 'string',
           enum: ['true', 'false']
         }
@@ -472,19 +487,21 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           // @ts-ignore
           parameters: [{
             in: 'query',
-            name: 'page',
-            description: 'Le numéro de la page (indice de la pagination). Débute à 1. Pour paginer sur de gros volumes de données utilisez plutôt le paramètre after',
-            schema: {
-              default: 1,
-              type: 'integer'
-            }
-          }, {
-            in: 'query',
             name: 'after',
             description: 'Pagination en profondeur. Automatiquement renseigné par la propriété next du résultat de la requête précédente',
             schema: {
-              default: 1,
-              type: 'integer'
+              title: 'Pagination en profondeur',
+              type: 'integer',
+              default: 1
+            }
+          }, {
+            in: 'query',
+            name: 'page',
+            description: 'Le numéro de la page (indice de la pagination). Débute à 1. *Pour paginer sur de gros volumes de données utilisez plutôt le paramètre **after***',
+            schema: {
+              title: 'Numéro de la page',
+              type: 'integer',
+              default: 1
             }
             // @ts-ignore
           }].concat(hitsParams()).concat([formatParam, htmlParam]).concat(filterParams).concat([{
@@ -538,6 +555,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             description: 'La colonne en fonction des valeurs desquelles grouper les lignes du jeu de données',
             required: true,
             schema: {
+              title: 'Colonne de groupement',
               type: 'string',
               enum: stringValuesProperties.length ? stringValuesProperties.map((/** @type {any} */ p) => p.key) : undefined
             }
@@ -546,6 +564,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             name: 'metric',
             description: 'La métrique à appliquer',
             schema: {
+              title: 'Métrique',
               type: 'string',
               enum: ['avg', 'sum', 'min', 'max']
             }
@@ -554,6 +573,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             name: 'missing',
             description: 'Nom du groupe des lignes pour lesquelles la colonne de groupement est vide',
             schema: {
+              title: 'Groupe des valeurs manquantes',
               type: 'string'
             }
           }, aggSizeParam].concat(filterParams).concat(hitsParams(0, 100)),
@@ -581,9 +601,10 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           parameters: [{
             in: 'path',
             name: 'field',
-            description: 'La colonne de laquelle lister les valeurs',
+            description: 'La colonne pour laquelle récupérer les valeurs distinctes',
             required: true,
             schema: {
+              title: 'Colonne',
               type: 'string',
               enum: stringValuesProperties.length ? stringValuesProperties.map((/** @type {any} */ p) => p.key) : undefined
             }
@@ -592,6 +613,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             name: 'size',
             description: 'Le nombre de résultats à retourner (taille de la pagination). 10 par défaut',
             schema: {
+              title: 'Taille de la pagination',
               default: 10,
               type: 'integer',
               maximum: 10000
@@ -599,10 +621,20 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           }, {
             in: 'query',
             name: 'sort',
-            description: 'Tri des valeurs ("asc" ou "desc"). "asc" par défaut',
+            description: 'Tri des valeurs ("**asc**" ou "**desc**").\n"**asc**" par défaut',
             schema: {
+              title: 'Ordre de tri',
               type: 'string',
-              enum: ['asc', 'desc']
+              oneOf: [
+                {
+                  const: 'asc',
+                  title: 'Ascendant'
+                },
+                {
+                  const: 'desc',
+                  title: 'Descendant'
+                }
+              ]
             }
             // @ts-ignore
           }].concat(filterParams),
@@ -634,6 +666,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               description: 'La métrique à calculer',
               required: true,
               schema: {
+                title: 'Métrique à calculer',
                 type: 'string',
                 enum: acceptedMetricAggs
               }
@@ -643,6 +676,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               name: 'field',
               description: 'La colonne sur laquelle calculer la métrique',
               schema: {
+                title: 'Colonne pour le calcul de métrique',
                 type: 'string',
                 enum: valuesProperties.length ? schema.map((/** @type {any} */ p) => p.key) : undefined
               },
@@ -654,6 +688,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               description: 'Les pourcentages sur lesquels calculer la métrique percentiles (inutile pour les autres métriques). La valeur par défaut est "1,5,25,50,75,95,99"',
               required: false,
               schema: {
+                title: 'Pourcentages sur lesquels calculer la métrique percentiles',
                 type: 'string'
               }
             }
@@ -685,6 +720,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               name: 'fields',
               description: 'Les colonnes sur lesquelles calculer les métriques.',
               schema: {
+                title: 'Colonnes sur lesquelles calculer les métriques',
                 type: 'array',
                 items: {
                   type: 'string',
@@ -699,6 +735,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               name: 'metrics',
               description: 'Les métriques à appliquer. Des métriques par défaut sont appliquées en fonction du type de champ.',
               schema: {
+                title: 'Métriques à appliquer',
                 type: 'array',
                 items: {
                   type: 'string',
@@ -734,6 +771,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             description: 'La colonne sur lequel effectuer l\'analyse',
             required: true,
             schema: {
+              title: 'Colonne pour l\'analyse',
               type: 'string',
               enum: textAggProperties.length ? textAggProperties.map((/** @type {any} */ p) => p.key) : undefined
             }
@@ -742,6 +780,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             name: 'analysis',
             description: 'Le type d\'analyse textuelle effectuée sur la colonne. L\'analyse "lang" est intelligente en fonction de la langue, elle calcule la racine grammaticale des mots et ignore les mots les moins significatifs. L\'analyse "standard" effectue un travail plus basique d\'extraction de mots bruts depuis le texte',
             schema: {
+              title: 'Type d\'analyse à effectuer',
               type: 'string',
               default: 'lang',
               enum: ['lang', 'standard']
@@ -896,6 +935,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       name: 'before',
       description: 'Pagination pour remonter dans l\'historique. Automatiquement renseigné par la propriété next du résultat de la requête précédente',
       schema: {
+        title: 'Pagination pour remonter dans l\'historique',
         default: 1,
         type: 'integer'
       }
@@ -944,6 +984,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           description: 'L\'identifiant de la ligne',
           required: true,
           schema: {
+            title: 'Identifiant de la ligne',
             type: 'string'
           }
         }, size, before],

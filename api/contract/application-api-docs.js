@@ -241,6 +241,7 @@ export default (application, info) => {
             description: 'Identifiant de la pièce jointe.',
             required: true,
             schema: {
+              title: 'Identifiant de la pièce jointe.',
               type: 'string'
             }
           }],

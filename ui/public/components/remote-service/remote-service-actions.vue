@@ -16,7 +16,7 @@
     </v-list-item>
 
     <v-list-item
-      @click="$router.push({ path: `/remote-service/${remoteService.id}/api-docs` })"
+      @click="$router.push({ path: `/remote-service/${remoteService.id}/api-doc` })"
     >
       <v-list-item-icon>
         <v-icon color="primary">
