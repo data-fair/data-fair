@@ -1318,7 +1318,7 @@ line2,test1,test1`), { headers: { 'content-type': 'text/csv+gzip' } })
 
   it('Use the primary key defined by the user', async function () {
     const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets/restkey', {
+    let res = await ax.post('/api/v1/datasets/restkey', {
       isRest: true,
       title: 'restkey',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }, { key: 'attr3', type: 'string' }],
@@ -1350,6 +1350,15 @@ test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(dataset.count, 1)
     lines = (await ax.get('/api/v1/datasets/restkey/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0].attr1, 'test2')
+    assert.equal(lines[0].attr3, 'test3')
+
+    // the primary key can also be used in a csv body
+    res = await ax.post('/api/v1/datasets/restkey/_bulk_lines', `_action,attr1,attr2,attr3
+patch,test2,test2,test2
+patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
+    dataset = await workers.hook('finalizer/restkey')
+    assert.equal(dataset.count, 1)
+    lines = (await ax.get('/api/v1/datasets/restkey/lines', { params: { sort: '_i' } })).data.results
     assert.equal(lines[0].attr3, 'test3')
   })
 

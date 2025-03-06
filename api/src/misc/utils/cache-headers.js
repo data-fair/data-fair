@@ -11,10 +11,8 @@ export const setNoCache = (req, res) => {
   // cf https://stackoverflow.com/questions/12205632/express-returns-304-for-ie-repeative-requests
   if (useragent.is(req.headers['user-agent']).ie) {
     res.setHeader('Expires', '-1')
-    res.setHeader('Cache-Control', 'must-revalidate, private')
-  } else {
-    res.setHeader('Cache-Control', 'no-cache, private')
   }
+  res.setHeader('Cache-Control', 'must-revalidate, private, max-age=0')
 }
 
 // adapt headers based on the state of the currently requested resource
