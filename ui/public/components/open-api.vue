@@ -12,12 +12,21 @@ import { mapState } from 'vuex'
 import '@data-fair/frame/lib/d-frame.js'
 
 export default {
-  props: ['url'],
+  props: {
+    type: {
+      type: String,
+      required: true
+    },
+    id: {
+      type: String,
+      required: false,
+      default: ''
+    }
+  },
   computed: {
     ...mapState(['env']),
     src () {
-      const url = this.env.openapiViewerUrl + '?hide-toolbar=true'
-      return url + '&url=' + this.url
+      return this.env.openapiViewerUrl + `?urlType=${this.type}` + (this.id ? `&id=${this.id}` : '')
     }
   }
 }
