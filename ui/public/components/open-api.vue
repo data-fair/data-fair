@@ -26,7 +26,7 @@ export default {
   computed: {
     ...mapState(['env']),
     src () {
-      return this.env.openapiViewerUrl + `?urlType=${this.type}` + (this.id ? `&id=${this.id}` : '')
+      return this.env.openapiViewerUrl + `?drawerLocation=right&urlType=${this.type}` + (this.id ? `&id=${this.id}` : '')
     }
   }
 }
