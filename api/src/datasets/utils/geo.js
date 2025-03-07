@@ -7,7 +7,6 @@ import rewind from '@turf/rewind'
 import cleanCoords from '@turf/clean-coords'
 import kinks from '@turf/kinks'
 import unkink from '@turf/unkink-polygon'
-import { flatten } from 'flat'
 import { exec } from 'child-process-promise'
 import tmp from 'tmp-promise'
 import proj4 from 'proj4'
@@ -192,23 +191,25 @@ export const geometry2fields = async (dataset, doc) => {
   return fields
 }
 
-export const result2geojson = esResponse => {
+export const result2geojson = (esResponse, flatten) => {
   return {
     type: 'FeatureCollection',
     total: esResponse.hits.total.value,
     features: esResponse.hits.hits.map(hit => {
-      const { _geoshape, ...properties } = hit._source
-      let geometry = _geoshape
+      const properties = hit._source
+      let geometry = properties._geoshape
+      delete properties._geoshape
       if (!geometry && properties._geopoint) {
         const [lat, lon] = properties._geopoint.split(',')
         delete properties._geopoint
         geometry = { type: 'Point', coordinates: [Number(lon), Number(lat)] }
       }
+      properties._id = hit._id
       return {
         type: 'Feature',
         id: hit._id,
         geometry,
-        properties: flatten({ ...properties, _id: hit._id }, { safe: true })
+        properties: flatten(properties)
       }
     })
   }

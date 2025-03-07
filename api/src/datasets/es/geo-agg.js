@@ -2,6 +2,7 @@ import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import geohash from '../../misc/utils/geohash.js'
 import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem } from './commons.js'
+import { getFlatten } from '../utils/flatten.ts'
 
 export default async (client, dataset, query, publicBaseUrl) => {
   if (!dataset.bbox) throw httpError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
@@ -45,6 +46,7 @@ export default async (client, dataset, query, publicBaseUrl) => {
 
 const prepareGeoAggResponse = (esResponse, dataset, query, publicBaseUrl) => {
   const response = { total: esResponse.hits.total.value }
+  const flatten = getFlatten(dataset)
   response.aggs = esResponse.aggregations.geo.buckets.map(b => {
     const center = geohash.hash2coord(b.key)
     const aggItem = {
@@ -53,7 +55,7 @@ const prepareGeoAggResponse = (esResponse, dataset, query, publicBaseUrl) => {
       centroid: b.centroid.location,
       center: { lat: center[1], lon: center[0] },
       bbox: geohash.hash2bbox(b.key),
-      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query, publicBaseUrl)) : []
+      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query, flatten, publicBaseUrl)) : []
     }
     if (b.metric) {
       aggItem.metric = b.metric.value
