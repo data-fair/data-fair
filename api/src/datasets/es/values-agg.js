@@ -3,6 +3,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } from './commons.js'
 import capabilities from '../../../contract/capabilities.js'
 import { assertMetricAccepted } from './metric-agg.js'
+import { getFlatten } from '../utils/flatten.ts'
 
 export default async (client, dataset, query, addGeoData, publicBaseUrl, explain, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
   const fields = dataset.schema.map(f => f.key)
@@ -194,11 +195,12 @@ const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl) => 
   if (aggRes.values.buckets.length > 10000) {
     throw httpError(400, 'Résultats d\'aggrégation trop nombreux. Abandon.')
   }
+  const flatten = getFlatten(dataset)
   response.aggs = aggRes.values.buckets.map(b => {
     const aggItem = {
       total: b.doc_count,
       value: b.key_as_string || b.key,
-      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query, publicBaseUrl)) : []
+      results: b.topHits ? b.topHits.hits.hits.map(hit => prepareResultItem(hit, dataset, query, flatten, publicBaseUrl)) : []
     }
     if (b.metric) {
       aggItem.metric = b.metric.value

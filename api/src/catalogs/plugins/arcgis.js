@@ -19,7 +19,13 @@ export const optionalCapabilities = [
 
 const memoizedFetch = memoize(async (url) => {
   return (await axios.get(url, { params: { f: 'json' } })).data
-}, { promise: true, maxAge: 1000 * 60 * 5 })
+}, {
+  profileName: 'arcgisFetch',
+  primitive: true,
+  promise: true,
+  max: 100,
+  maxAge: 1000 * 60 * 5 // 5 minutes
+})
 
 /**
  * @param {string} catalogUrl

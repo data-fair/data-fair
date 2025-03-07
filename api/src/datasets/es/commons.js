@@ -2,7 +2,6 @@
 
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { flatten } from 'flat'
 import queryParser from 'lucene-query-parser'
 import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 import truncateMiddle from 'truncate-middle'
@@ -605,7 +604,7 @@ export const getQueryBBOX = (query) => {
   return bbox
 }
 
-export const prepareResultItem = (hit, dataset, query, publicBaseUrl = config.publicUrl) => {
+export const prepareResultItem = (hit, dataset, query, flatten, publicBaseUrl = config.publicUrl) => {
   // re-join splitted items
   for (const field of dataset.schema) {
     if (field.separator && hit._source[field.key] && Array.isArray(hit._source[field.key])) {
@@ -613,7 +612,7 @@ export const prepareResultItem = (hit, dataset, query, publicBaseUrl = config.pu
     }
   }
 
-  const res = flatten(hit._source, { safe: true })
+  const res = flatten(hit._source)
   res._score = hit._score
   if (dataset.schema.find(f => f.key === '_id')) {
     if (!query.select || query.select === '*' || query.select.split(',').includes('_id')) {

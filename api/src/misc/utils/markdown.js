@@ -18,9 +18,10 @@ const prepare = (key, updatedAt, html, truncate, text) => {
   return text
 }
 const memoizedPrepare = memoize(prepare, {
+  profileName: 'prepareMarkdownContent',
   primitive: true,
   max: 10000,
-  maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+  maxAge: 1000 * 60 * 60, // 1 hour
   length: 4 // this way the cache key is key/updatedAt/html/truncate and text that can be large is not used as a key
 })
 
