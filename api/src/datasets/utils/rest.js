@@ -27,7 +27,7 @@ import { attachmentPath, lsAttachments, tmpDir } from './files.ts'
 import { jsonSchema } from './schema.js'
 import * as esUtils from '../../datasets/es/index.ts'
 import { tabularTypes } from './types.js'
-import Piscina from 'piscina'
+import { Piscina } from 'piscina'
 import { internalError } from '@data-fair/lib-node/observer.js'
 
 dayjs.extend(duration)

@@ -2,7 +2,7 @@ import { stringify as csvStrStream } from 'csv-stringify'
 import { stringify as csvStrSync } from 'csv-stringify/sync'
 import { Transform } from 'stream'
 import path from 'path'
-import Piscina from 'piscina'
+import { Piscina } from 'piscina'
 
 export const results2sheetPiscina = new Piscina({
   filename: path.resolve(import.meta.dirname, '../../datasets/threads/results2sheet.js'),
