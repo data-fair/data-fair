@@ -605,13 +605,6 @@ export const getQueryBBOX = (query) => {
 }
 
 export const prepareResultItem = (hit, dataset, query, flatten, publicBaseUrl = config.publicUrl) => {
-  // re-join splitted items
-  for (const field of dataset.schema) {
-    if (field.separator && hit._source[field.key] && Array.isArray(hit._source[field.key])) {
-      hit._source[field.key] = hit._source[field.key].join(field.separator)
-    }
-  }
-
   const res = flatten(hit._source)
   res._score = hit._score
   if (dataset.schema.find(f => f.key === '_id')) {

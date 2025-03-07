@@ -4,7 +4,7 @@
 
 import memoize from 'memoizee'
 
-const compileFlatten = (datasetId: string, finalizedAt: string, dataset: any) => {
+const compileFlatten = (datasetId: string, finalizedAt: string, preserveArrays: boolean, dataset: any) => {
   let jitCode = ''
   const nestedKeys: string[] = []
   for (const prop of dataset.schema) {
@@ -26,6 +26,9 @@ const compileFlatten = (datasetId: string, finalizedAt: string, dataset: any) =>
         nestedKeys.push(key[0])
       }
     }
+    if (prop.separator && !preserveArrays) {
+      jitCode += `if (Array.isArray(o["${prop.key}"])) { o["${prop.key}"] = o["${prop.key}"].join("${prop.separator}"); }\n`
+    }
   }
   for (const nestedKey of nestedKeys) {
     jitCode += `delete o["${nestedKey}"];\n`
@@ -40,9 +43,9 @@ const memoizedCompileFlatter = memoize(compileFlatten, {
   max: 10000,
   maxAge: 1000 * 60 * 60, // 1 hour
   primitive: true,
-  length: 2, // datasetId, finalizedAt are the keys
+  length: 3, // datasetId/finalizedAt/preserveArrays are the keys
 })
 
-export const getFlatten = (dataset: any) => {
-  return memoizedCompileFlatter(dataset.id, dataset.finalizedAt, dataset)
+export const getFlatten = (dataset: any, preserveArrays: boolean = false) => {
+  return memoizedCompileFlatter(dataset.id, dataset.finalizedAt, preserveArrays, dataset)
 }

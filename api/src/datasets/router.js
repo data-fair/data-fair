@@ -790,7 +790,7 @@ const readLines = async (req, res) => {
   }
 
   if (query.format === 'geojson') {
-    const flatten = getFlatten(req.dataset)
+    const flatten = getFlatten(req.dataset, true)
     const geojson = geo.result2geojson(esResponse, flatten)
     observe.reqStep(req, 'result2geojson')
     // geojson format benefits from bbox info
@@ -808,7 +808,7 @@ const readLines = async (req, res) => {
   }
 
   if (vectorTileRequested) {
-    const flatten = getFlatten(req.dataset)
+    const flatten = getFlatten(req.dataset, true)
     const tile = await tiles.geojson2pbf(geo.result2geojson(esResponse, flatten), xyz)
     observe.reqStep(req, 'geojson2pbf')
     // 204 = no-content, better than 404
