@@ -26,7 +26,7 @@ export default {
   created () {
     if (this.$store.state.remoteService) {
       this.$store.dispatch('breadcrumbs', [
-        { text: this.$t('remoteServices'), to: '/remote-services' },
+        { text: this.$t('services'), to: '/remote-services' },
         { text: this.remoteService.title || this.remoteService.id, to: `/remote-service/${this.remoteService.id}`, exact: true },
         { text: 'API Docs' }
       ])

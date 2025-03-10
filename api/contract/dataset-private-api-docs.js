@@ -455,6 +455,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         get: {
           summary: 'Récupérer des informations techniques.',
           tags: ['Administration'],
+          operationId: 'diagnose',
           'x-permissionClass': 'superadmin',
           responses: {
             200: {
@@ -470,6 +471,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         post: {
           summary: 'Forcer la reindexation.',
           tags: ['Administration'],
+          operationId: 'reindex',
           'x-permissionClass': 'superadmin',
           responses: {
             200: {
@@ -485,6 +487,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         post: {
           summary: 'Forcer la re-finalisation.',
           tags: ['Administration'],
+          operationId: 'refinalize',
           'x-permissionClass': 'superadmin',
           responses: {
             200: {
@@ -500,6 +503,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         delete: {
           summary: 'Supprimer les locks.',
           tags: ['Administration'],
+          operationId: 'deleteLocks',
           'x-permissionClass': 'superadmin',
           responses: {
             204: {
@@ -515,6 +519,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       post: {
         summary: 'Re-synchroniser les lignes du jeux de données avec les pièces jointes présentes.',
         tags: ['Administration'],
+        operationId: 'syncAttachmentsLines',
         'x-permissionClass': 'superadmin',
         responses: {
           200: {
