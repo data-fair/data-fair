@@ -1,5 +1,6 @@
 export default {
   type: 'object',
+  title: 'Journal',
   description: 'History journal of a resource',
   required: ['id', 'type', 'events'],
   properties: {
