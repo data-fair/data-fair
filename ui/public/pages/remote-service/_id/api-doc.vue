@@ -5,7 +5,7 @@
   >
     <open-api
       v-if="resourceUrl"
-      :url="resourceUrl"
+      :url="resourceUrl + '/api-docs.json'"
     />
     <!--
     <open-api
