@@ -1,35 +1,42 @@
 <template lang="html">
-  <div class="open-api">
-    <v-iframe :src="src" />
-  </div>
+  <d-frame
+    :src="src"
+    :height="`${windowHeight - 48}px`"
+    resize="no"
+    sync-params
+  />
 </template>
 
 <script>
 import { mapState } from 'vuex'
-import 'iframe-resizer/js/iframeResizer'
-import VIframe from '@koumoul/v-iframe'
+import '@data-fair/frame/lib/d-frame.js'
 
 export default {
-  components: {
-    VIframe
-  },
-  props: ['url'],
-  data () {
-    return { height: null }
+  props: {
+    // type: {
+    //   type: String,
+    //   required: true
+    // },
+    // id: {
+    //   type: String,
+    //   required: false,
+    //   default: ''
+    // },
+    url: {
+      type: String,
+      required: false,
+      default: ''
+    }
   },
   computed: {
     ...mapState(['env']),
     src () {
-      const url = this.env.openapiViewerUrl + '?proxy=false&hide-toolbar=true'
-      return url + '&url=' + this.url
+      return this.env.openapiViewerUrl + '?hide-toolbar=true&drawerLocation=right' + '&url=' + this.url
+      // return this.env.openapiViewerUrl + `?drawerLocation=right&urlType=${this.type}` + (this.id ? `&id=${this.id}` : '')
     }
   }
 }
 </script>
 
 <style lang="css">
-.open-api .v-iframe iframe {
-  background-color: white;
-  border: none;
-}
 </style>

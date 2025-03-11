@@ -349,7 +349,6 @@ export const endpoints = (dataset) => {
           name: 'select',
           description: 'La liste des colonnes à retourner',
           schema: {
-            default: [],
             type: 'array',
             items: {
               type: 'string',
