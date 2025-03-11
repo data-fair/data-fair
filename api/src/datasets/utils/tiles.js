@@ -1,5 +1,5 @@
 import path from 'path'
-import Piscina from 'piscina'
+import { Piscina } from 'piscina'
 
 export const geojson2pbfPiscina = new Piscina({
   filename: path.resolve(import.meta.dirname, '../../datasets/threads/geojson2pbf.js'),

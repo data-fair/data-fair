@@ -7,6 +7,11 @@
       v-if="resourceUrl"
       :url="resourceUrl"
     />
+    <!--
+    <open-api
+      type="general"
+    />
+    -->
   </v-container>
 </template>
 

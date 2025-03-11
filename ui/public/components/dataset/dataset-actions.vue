@@ -84,7 +84,7 @@
     </template>
     <v-list-item
       v-if="can('readApiDoc') && !error"
-      @click="showAPIDialog = true"
+      @click="$router.push({ path: `/dataset/${dataset.id}/api-doc` })"
     >
       <v-list-item-icon>
         <v-icon color="primary">
@@ -167,44 +167,6 @@
       :title="$t('integrate')"
       @hide="showIntegrationDialog = false"
     />
-
-    <v-dialog
-      v-model="showAPIDialog"
-      fullscreen
-    >
-      <v-card outlined>
-        <v-toolbar
-          dense
-          flat
-          color="transparent"
-        >
-          <v-switch
-            v-if="dataset.public && can('readPrivateApiDoc') && can('readApiDoc')"
-            v-model="publicAPIDoc"
-            :label="$t('switchPublicAPIDoc')"
-            class="my-3"
-            hide-details
-          />
-          <v-spacer />
-          <v-btn
-            icon
-            @click.native="showAPIDialog = false"
-          >
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </v-toolbar>
-        <v-card-text v-if="showAPIDialog && resourceUrl">
-          <open-api
-            v-if="publicAPIDoc"
-            :url="resourceUrl + '/api-docs.json' + (dataset.draftReason ? '?draft=true' : '')"
-          />
-          <open-api
-            v-else
-            :url="resourceUrl + '/private-api-docs.json' + (dataset.draftReason ? '?draft=true' : '')"
-          />
-        </v-card-text>
-      </v-card>
-    </v-dialog>
 
     <v-dialog
       v-model="showDeleteDialog"
@@ -456,7 +418,6 @@ fr:
   integrate: Intégrer dans un site
   viewSite: Voir sur {title}
   useAPI: Utiliser l'API
-  switchPublicAPIDoc: Voir l'API publique
   delete: Supprimer
   deleteAllLines: Supprimer toutes les lignes
   changeOwner: Changer le propriétaire
@@ -543,8 +504,6 @@ export default {
     uploadProgress: 0,
     newOwner: null,
     showIntegrationDialog: false,
-    showAPIDialog: false,
-    publicAPIDoc: true,
     showNotifDialog: false,
     showWebhooksDialog: false
   }),

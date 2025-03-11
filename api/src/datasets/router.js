@@ -54,6 +54,7 @@ import mongo from '#mongo'
 import debugModule from 'debug'
 import contentDisposition from 'content-disposition'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import { getFlatten } from './utils/flatten.ts'
 
 const validatePost = ajv.compile(datasetPostSchema.properties.body)
 const validateUserNotification = ajv.compile(userNotificationSchema)
@@ -594,10 +595,11 @@ router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset
   } catch (err) {
     await manageESError(req, err)
   }
+  const flatten = getFlatten(req.dataset)
   const result = {
     total: esResponse.hits.total.value,
     results: esResponse.hits.hits.map(hit => {
-      const item = esUtils.prepareResultItem(hit, req.dataset, req.query, req.publicBaseUrl)
+      const item = esUtils.prepareResultItem(hit, req.dataset, req.query, flatten, req.publicBaseUrl)
       let label = item[singleSearch.output.key]
       if (singleSearch.label && item[singleSearch.label.key]) label += ` (${item[singleSearch.label.key]})`
       return { output: item[singleSearch.output.key], label, score: item._score || undefined }
@@ -788,7 +790,8 @@ const readLines = async (req, res) => {
   }
 
   if (query.format === 'geojson') {
-    const geojson = geo.result2geojson(esResponse)
+    const flatten = getFlatten(req.dataset, true)
+    const geojson = geo.result2geojson(esResponse, flatten)
     observe.reqStep(req, 'result2geojson')
     // geojson format benefits from bbox info
     geojson.bbox = (await esUtils.bboxAgg(req.app.get('es'), req.dataset, { ...query })).bbox
@@ -805,7 +808,8 @@ const readLines = async (req, res) => {
   }
 
   if (vectorTileRequested) {
-    const tile = await tiles.geojson2pbf(geo.result2geojson(esResponse), xyz)
+    const flatten = getFlatten(req.dataset, true)
+    const tile = await tiles.geojson2pbf(geo.result2geojson(esResponse, flatten), xyz)
     observe.reqStep(req, 'geojson2pbf')
     // 204 = no-content, better than 404
     if (!tile) return res.status(204).send()
@@ -819,10 +823,11 @@ const readLines = async (req, res) => {
   if (nextLinkURL) result.next = nextLinkURL.href
   if (query.collapse) result.totalCollapse = esResponse.aggregations.totalCollapse.value
   result.results = []
+  const flatten = getFlatten(req.dataset)
   for (let i = 0; i < esResponse.hits.hits.length; i++) {
     // avoid blocking the event loop
     if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
-    result.results.push(esUtils.prepareResultItem(esResponse.hits.hits[i], req.dataset, query, req.publicBaseUrl))
+    result.results.push(esUtils.prepareResultItem(esResponse.hits.hits[i], req.dataset, query, flatten, req.publicBaseUrl))
   }
 
   observe.reqStep(req, 'prepareResultItems')

@@ -6,7 +6,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import memoize from 'memoizee'
 import mime from 'mime'
 import slug from 'slugify'
-import Piscina from 'piscina'
+import { Piscina } from 'piscina'
 import validate from '../../misc/utils/dcat/validate.js'
 import { findLicense } from '../../misc/utils/licenses.js'
 import debugLib from 'debug'
@@ -21,7 +21,7 @@ export const optionalCapabilities = [
   'autoUpdate'
 ]
 
-const fetchDCATPiscina = new Piscina({
+export const fetchDCATPiscina = new Piscina({
   filename: path.resolve(import.meta.dirname, '../threads/fetch-dcat.js'),
   minThreads: 0,
   idleTimeout: 60 * 60 * 1000,

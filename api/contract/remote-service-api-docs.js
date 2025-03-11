@@ -131,7 +131,7 @@ export default (remoteService) => {
     },
     externalDocs: {
       description: 'Documentation sur Github',
-      url: 'https://data-fair.github.io'
+      url: 'https://data-fair.github.io/master/'
     },
     definitions: {
       API: {

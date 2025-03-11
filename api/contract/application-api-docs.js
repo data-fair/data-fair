@@ -1,7 +1,7 @@
 import config from 'config'
 import { resolvedSchema as applicationSchema } from '../types/application/index.js'
 import journalSchema from './journal.js'
-import * as permissionsDoc from '../src/misc/utils/permissions.js'
+import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.js'
 import pJson from './p-json.js'
 
 /**
@@ -14,7 +14,7 @@ export default (application, info) => {
   const api = {
     openapi: '3.1.0',
     info: {
-      title: `Intégration de l'application : ${application.title || application.id}`,
+      title: `API de l'application : ${application.title || application.id}`,
       version: pJson.version,
       // @ts-ignore
       termsOfService: config.info.termsOfService,
@@ -33,12 +33,14 @@ export default (application, info) => {
     security: [{ apiKey: [] }, { sdCookie: [] }],
     servers: [{
       // @ts-ignore
-      url: `${config.publicUrl}/api/v1/applications/${application.id}`
+      url: `${config.publicUrl}/api/v1/applications/${application.id}`,
+      // @ts-ignore
+      description: `Application Data Fair - ${new URL(config.publicUrl).hostname} - ${application.title}`
     }],
     paths: {
       '/': {
         get: {
-          summary: 'Récupérer les informations de description de l\'application.',
+          summary: 'Récupérer les informations de l\'application.',
           operationId: 'readDescription',
           'x-permissionClass': 'read',
           tags: ['Configuration'],
@@ -69,7 +71,7 @@ export default (application, info) => {
           },
           responses: {
             200: {
-              description: 'Les informations de configuration de l\'application',
+              description: 'Les informations de configuration de l\'application.',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/applicationSchema' }
@@ -79,13 +81,13 @@ export default (application, info) => {
           }
         },
         delete: {
-          summary: 'Pour supprimer cette configuration de l\'application',
+          summary: 'Supprimer cette configuration de l\'application.',
           operationId: 'delete',
           'x-permissionClass': 'admin',
           tags: ['Configuration'],
           responses: {
             204: {
-              description: 'Aucun contenu'
+              description: 'Aucun contenu.'
             }
           }
         }
@@ -141,13 +143,13 @@ export default (application, info) => {
       },
       '/api-docs.json': {
         get: {
-          summary: 'Accéder à la documentation de l\'API',
+          summary: 'Accéder à cette documentation au format OpenAPI v3.',
           operationId: 'readApiDoc',
           'x-permissionClass': 'read',
           tags: ['Informations'],
           responses: {
             200: {
-              description: 'La documentation de l\'API',
+              description: 'La documentation de l\'API.',
               content: {
                 'application/json': {
                   schema: {
@@ -161,13 +163,13 @@ export default (application, info) => {
       },
       '/journal': {
         get: {
-          summary: 'Accéder au journal',
+          summary: 'Lister les événements du journal de l\'application.',
           operationId: 'readJournal',
           'x-permissionClass': 'readAdvanced',
           tags: ['Informations'],
           responses: {
             200: {
-              description: 'Le journal.',
+              description: 'Le journal de l\'application.',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/journalSchema' }
@@ -179,13 +181,13 @@ export default (application, info) => {
       },
       '/capture': {
         get: {
-          summary: 'Une capture d\'écran',
+          summary: 'Générer une capture d\'écran de l\'application.',
           operationId: 'readCapture',
           'x-permissionClass': 'read',
           tags: ['Informations'],
           responses: {
             200: {
-              description: 'La capture',
+              description: 'La capture d\'écran générée.',
               content: {
                 'image/png': {}
               }
@@ -195,13 +197,13 @@ export default (application, info) => {
       },
       '/print': {
         get: {
-          summary: 'Une impression PDF',
+          summary: 'Générer une impression PDF de l\'application.',
           operationId: 'readPrint',
           'x-permissionClass': 'read',
           tags: ['Informations'],
           responses: {
             200: {
-              description: 'La capture',
+              description: 'Le PDF généré.',
               content: {
                 'application/pdf': {}
               }
@@ -211,34 +213,45 @@ export default (application, info) => {
       },
       '/attachments': {
         post: {
-          summary: 'Charger une pièce jointe',
+          summary: 'Charger une pièce jointe.',
           operationId: 'postAttachment',
           'x-permissionClass': 'write',
-          tags: ['Métadonnées']
+          tags: ['Métadonnées'],
+          responses: {
+            204: {
+              description: 'Aucun contenu.'
+            }
+          }
         }
       },
       '/attachments/{attachmentId}': {
         delete: {
-          summary: 'Supprimer une pièce jointe',
+          summary: 'Supprimer une pièce jointe.',
           operationId: 'deleteAttachment',
           'x-permissionClass': 'write',
           tags: ['Métadonnées'],
           parameters: [{
             in: 'path',
             name: 'attachmentId',
-            description: 'Identifiant de la pièce jointe',
+            description: 'Identifiant de la pièce jointe.',
             required: true,
             schema: {
+              title: 'Identifiant de la pièce jointe.',
               type: 'string'
             }
-          }]
+          }],
+          responses: {
+            204: {
+              description: 'Aucun contenu.'
+            }
+          }
         }
       },
       '/permissions': permissionsDoc
     },
     externalDocs: {
       description: 'Documentation sur Github',
-      url: 'https://data-fair.github.io'
+      url: 'https://data-fair.github.io/master/'
     }
   }
   return api
