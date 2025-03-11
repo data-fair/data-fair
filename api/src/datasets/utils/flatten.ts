@@ -2,6 +2,8 @@
 // for this reason we tried to optimize it as much as possible
 // we compile a function to prevent looping on keys and we memoize the function to avoid recompiling it every time
 
+// TODO: would it be safer to use a code generator, for example https://www.npmjs.com/package/astring ?
+
 import memoize from 'memoizee'
 
 const compileFlatten = (datasetId: string, finalizedAt: string, preserveArrays: boolean, dataset: any) => {
