@@ -4,14 +4,20 @@
     class="pa-0"
   >
     <open-api
+      v-if="resourceUrl"
+      :url="resourceUrl"
+    />
+    <!--
+    <open-api
       :id="remoteService.id"
       type="remoteService"
     />
+    -->
   </v-container>
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 
 export default {
   async fetch ({ store, route }) {
@@ -22,6 +28,7 @@ export default {
   },
   computed: {
     ...mapState('remoteService', ['remoteService']),
+    ...mapGetters('remoteService', ['resourceUrl'])
   },
   created () {
     if (this.$store.state.remoteService) {

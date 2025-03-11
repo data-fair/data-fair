@@ -107,7 +107,7 @@ en:
 </i18n>
 
 <script>
-import { mapState, mapActions, mapGetters } from 'vuex'
+import { mapState, mapActions } from 'vuex'
 
 export default {
   data: () => ({
@@ -116,7 +116,6 @@ export default {
   computed: {
     ...mapState('session', ['user']),
     ...mapState('remoteService', ['remoteService']),
-    ...mapGetters('remoteService', ['resourceUrl'])
   },
   methods: {
     ...mapActions('remoteService', ['remove', 'refresh']),

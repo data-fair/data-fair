@@ -4,8 +4,14 @@
     class="pa-0"
   >
     <open-api
+      v-if="resourceUrl"
+      :url="resourceUrl"
+    />
+    <!--
+    <open-api
       type="general"
     />
+    -->
   </v-container>
 </template>
 
