@@ -16,15 +16,10 @@
             type="error"
             border="start"
             variant="outlined"
-          >
-            <p
-              class="mb-0"
-              v-text="application.errorMessageDraft"
-            />
-          </v-alert>
+            :text="application.errorMessageDraft"
+          />
           <v-sheet
             v-else
-            light
             class="pa-2"
             border
             tile
@@ -51,9 +46,8 @@
           @submit="validateDraft"
         >
           <v-sheet
-            light
             class="pa-2"
-            :style="`max-height:${windowHeight - 110}px;overflow-y:auto;scrollbar-gutter: stable;`"
+            :style="`max-height:${windowHeight - 110}px;overflow-y:auto;scrollbar-gutter: stable;background-color:transparent;`"
           >
             <v-select
               v-if="availableVersions"
@@ -63,7 +57,7 @@
               :items="availableVersions"
               :item-title="(baseApp => `${baseApp.title} (${baseApp.version})`)"
               item-value="url"
-              :label="$t('changeVersion')"
+              :label="t('changeVersion')"
               @update:model-value="patch({urlDraft: $event})"
             />
 
@@ -77,7 +71,8 @@
               v-model="editConfig"
               :schema="draftSchema"
               :options="vjsfOptions"
-              @change="writeConfigDraft"
+              class="mr-1"
+              @change="writeConfigDraft(editConfig)"
             />
           </v-sheet>
           <v-row class="mt-3 ml-0 mr-3">
@@ -85,50 +80,53 @@
             <v-dialog>
               <template #activator="{ props }">
                 <v-btn
-                  v-t="'cancel'"
                   :disabled="!hasDraft"
                   color="warning"
                   variant="flat"
                   v-bind="props"
-                />
+                >
+                  {{ t('cancel') }}
+                </v-btn>
               </template>
               <template #default="{ isActive }">
                 <v-card>
                   <v-card-title
-                    v-t="'removeDraft'"
+                    :title="t('removeDraft')"
                     primary-title
                   />
                   <v-card-text>
                     <v-alert
-                      v-t="'removeDraftWarning'"
-                      :value="true"
+                      :title="t('removeDraftWarning')"
                       type="error"
                     />
                   </v-card-text>
                   <v-card-actions>
                     <v-spacer />
                     <v-btn
-                      v-t="'cancel'"
                       variant="text"
                       @click="isActive.value = false"
-                    />
+                    >
+                      {{ t('cancel') }}
+                    </v-btn>
                     <v-btn
-                      v-t="'confirm'"
                       color="warning"
                       @click="cancelDraft(); isActive.value = false;"
-                    />
+                    >
+                      {{ t('confirm') }}
+                    </v-btn>
                   </v-card-actions>
                 </v-card>
               </template>
             </v-dialog>
 
             <v-btn
-              v-t="'validate'"
               :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
               color="accent"
               class="ml-2"
               type="submit"
-            />
+            >
+              {{ t('validate') }}
+            </v-btn>
             <v-spacer />
           </v-row>
         </v-form>
@@ -165,6 +163,7 @@ import { type AppConfig } from '#api/types'
 
 const display = useDisplay()
 const { sendUiNotif } = useUiNotif()
+const { t } = useI18n()
 
 const { roDataset } = defineProps({
   roDataset: { type: Boolean, default: false }
@@ -252,9 +251,13 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
   const datasetFilter = `owner=${ownerFilter}`
   const remoteServiceFilter = `privateAccess=${ownerFilter}`
   return {
-    disableAll: !canWriteConfig.value,
-    context: { owner: application.value?.owner, ownerFilter, datasetFilter, remoteServiceFilter, attachments: application.value?.attachments },
+    titleDepth: 4,
+    density: 'comfortable',
     locale: 'fr',
+    fetchBaseURL: $sitePath + '/data-fair/',
+    context: { owner: application.value?.owner, ownerFilter, datasetFilter, remoteServiceFilter, attachments: application.value?.attachments },
+
+    disableAll: !canWriteConfig.value,
     rootDisplay: 'expansion-panels',
     expansionPanelsProps: {
       value: 0,

@@ -19,7 +19,13 @@ const prepareApplicationStore = (id: string) => {
   const config = ref<AppConfig | null>(null)
   watch(configFetch.data, () => { config.value = configFetch.data.value })
   const writeConfig = async (config: AppConfig) => {
-    await $fetch<AppConfig>('/applications/' + id + '/configuration', { method: 'PUT', body: config })
+    await $fetch<AppConfig>('/applications/' + id + '/configuration', {
+      method: 'PUT',
+      body: config,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
     config.value = config
   }
 
@@ -27,7 +33,13 @@ const prepareApplicationStore = (id: string) => {
   const configDraft = ref<AppConfig | null>(null)
   watch(configDraftFetch.data, () => { configDraft.value = configDraftFetch.data.value })
   const writeConfigDraft = async (config: AppConfig) => {
-    await $fetch<AppConfig>('/applications/' + id + '/configuration-draft', { method: 'PUT', body: config })
+    await $fetch<AppConfig>('/applications/' + id + '/configuration-draft', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
     configDraft.value = config
   }
   const cancelConfigDraft = async () => {

@@ -17,7 +17,7 @@
     "@data-fair/lib-vue": "^1.17.0",
     "@data-fair/lib-vuetify": "^1.9.1",
     "@intlify/unplugin-vue-i18n": "^5.2.0",
-    "@koumoul/vjsf": "^3.10.4",
+    "@koumoul/vjsf": "^3.12.2",
     "@mdi/js": "^7.4.47",
     "@types/config": "^3.3.5",
     "@unhead/vue": "^1.11.10",
