@@ -56,7 +56,7 @@
     "@commitlint/cli": "^17.5.0",
     "@commitlint/config-conventional": "^17.4.4",
     "@koumoul/gh-pages-multi": "^0.7.1",
-    "@types/node": "^22.14.0",
+    "@types/node": "^22.12.0",
     "@types/unzipper": "^0.10.10",
     "clean-modules": "^2.0.4",
     "eslint-plugin-mocha": "^10.5.0",
