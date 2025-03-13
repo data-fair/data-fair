@@ -467,7 +467,7 @@ export default {
         id: 'webhooks',
         title: this.$t('webhooks')
       })
-      if (this.user.adminMode) {
+      if (this.env.compatODS && this.user.adminMode) {
         sections.push({
           id: 'compat',
           title: this.$t('compat')

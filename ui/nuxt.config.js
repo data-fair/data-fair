@@ -134,7 +134,8 @@ const nuxtConfig = {
     i18n: config.i18n,
     defaultTimeZone: config.defaultTimeZone,
     dateFormats: config.dateFormats,
-    dateTimeFormats: config.dateTimeFormats
+    dateTimeFormats: config.dateTimeFormats,
+    compatODS: config.compatODS
   },
   head: {
     title: config.brand.title,
