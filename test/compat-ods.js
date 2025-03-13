@@ -9,5 +9,10 @@ describe.only('compatibility layer for ods api', function () {
     assert.equal(res.status, 200)
     assert.equal(res.data.results.length, 2)
     assert.equal(res.data.total_count, 2)
+
+    const res2 = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
+    assert.equal(res2.status, 200)
+    assert.equal(res2.data.results.length, 2)
+    assert.equal(res2.data.total_count, 2)
   })
 })

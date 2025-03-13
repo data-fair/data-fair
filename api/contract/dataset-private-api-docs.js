@@ -16,7 +16,8 @@ import datasetPatchSchema from './dataset-patch.js'
  * @returns
  */
 // @ts-ignore
-export default (dataset, publicUrl = config.publicUrl, user, info) => {
+export default (dataset, publicUrl = config.publicUrl, user, settings) => {
+  const info = settings.info || {}
   const { api, userApiRate, anonymousApiRate, bulkLineSchema } = datasetAPIDocs(dataset, publicUrl, info)
 
   const title = `API privée du jeu de données : ${dataset.title || dataset.id}`
@@ -448,6 +449,59 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   }
 
   api.paths['/permissions'] = permissionsDoc
+
+  if (settings.compatODS) {
+    const schema = dataset.schema || []
+
+    api.paths['/compat-ods/records'] = {
+      get: {
+        summary: 'Récupérer les enregistrements.',
+        operationId: 'readCompatODSRecords',
+        'x-permissionClass': 'read',
+        tags: ['Compatibilité ODS'],
+        deprecated: true,
+        parameters: [{
+          in: 'query',
+          name: 'select',
+          schema: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: schema.length ? schema.map((/** @type {any} */ p) => p.key) : undefined
+            }
+          },
+          style: 'form',
+          explode: false
+        }, {
+          in: 'query',
+          name: 'limit',
+          schema: {
+            type: 'integer',
+            default: 20
+          }
+        }, {
+          in: 'query',
+          name: 'offset',
+          schema: {
+            type: 'integer',
+            default: 0
+          }
+        }],
+        responses: {
+          200: {
+            description: 'Les enregistrements.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object'
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   if (!dataset.isMetaOnly && user.adminMode) {
     Object.assign(api.paths, {

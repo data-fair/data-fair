@@ -293,6 +293,12 @@ export default {
           }
         }
       }
+    },
+    compatODS: {
+      type: 'boolean',
+      title: 'Compatibilité ODS',
+      description: 'Active la compatibilité avec l\'API ODS',
+      default: false
     }
   }
 }
