@@ -422,7 +422,6 @@ const deprecatedProxy = async (cleanApplicationUrl, targetUrl, req, res) => {
       }
     })
     cacheAppReq.on('error', err => {
-      console.log('REJECT', err)
       reject(err)
     })
     cacheAppReq.on('error', err => reject(err))

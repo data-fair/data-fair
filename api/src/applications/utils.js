@@ -157,7 +157,7 @@ export const updateStorage = async (app, application, deleted = false, checkRema
   const db = mongo.db
   const es = app.get('es')
   if (application.draftReason) {
-    console.log(new Error('updateStorage should not be called on a draft dataset'))
+    console.warn(new Error('updateStorage should not be called on a draft dataset'))
     return
   }
   if (!deleted) {

@@ -46,7 +46,6 @@ export const init = async (db) => {
         // same as "utilization" from piscina but without dividing by maxThreads
         // this way we get an approximation of the CPU usage of the threads
         // also we reset the histogram after each collection
-        console.log(piscina.histogram)
         const completed = piscina.completed - (tasks[task]?.completed ?? 0)
         const duration = piscina.duration - (tasks[task]?.duration ?? 0)
         const value = completed ? ((completed * piscina.histogram.runTime.mean) / duration) : 0
