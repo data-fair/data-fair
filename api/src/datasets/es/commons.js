@@ -401,8 +401,8 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
           qShould.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
         }
       } else {
-      // default "simple" mode uses ES simple query string directly
-      // only tuning is that we match both on stemmed and raw inner fields to boost exact matches
+        // default "simple" mode uses ES simple query string directly
+        // only tuning is that we match both on stemmed and raw inner fields to boost exact matches
         if (qSearchFields.length) {
           qShould.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
         }
