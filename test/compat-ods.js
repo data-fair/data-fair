@@ -32,6 +32,18 @@ describe.only('compatibility layer for ods api', function () {
       whereParser.parse('id = "koumoul"', { dataset: { schema: [{ key: 'id' }] } }),
       [{ term: { id: 'koumoul' } }]
     )
+    assert.deepEqual(
+      whereParser.parse('nb > 12', { dataset: { schema: [{ key: 'nb' }] } }),
+      [{ range: { nb: { gt: 12 } } }]
+    )
+    assert.deepEqual(
+      whereParser.parse('nb > 12 AND nb < 30', { dataset: { schema: [{ key: 'nb' }] } }),
+      [{ bool: { filter: [{ range: { nb: { gt: 12 } } }, { range: { nb: { lt: 30 } } }] } }]
+    )
+    assert.deepEqual(
+      whereParser.parse('nb > 12 OR id: "koumoul"', { dataset: { schema: [{ key: 'nb' }, { key: 'id' }] } }),
+      [{ bool: { should: [{ range: { nb: { gt: 12 } } }, { term: { id: 'koumoul' } }] } }]
+    )
   })
 
   it('exposes records api on 2 urls', async function () {

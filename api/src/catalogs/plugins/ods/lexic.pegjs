@@ -46,6 +46,9 @@ SourceCharacter
 _
   = WhiteSpace*
 
+__
+  = WhiteSpace+
+
 WhiteSpace "whitespace"
   = "\t"
   / "\v"
