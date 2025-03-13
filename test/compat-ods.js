@@ -1,18 +1,61 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
+import * as whereParser from '../api/src/catalogs/plugins/ods/where.peg.js'
 
-describe('compatibility layer for ods api', function () {
-  it('simple use of records api', async function () {
+describe.only('compatibility layer for ods api', function () {
+  it.only('contains a parser for the where syntax', function () {
+    assert.deepEqual(
+      whereParser.parse('"koumoul"', { searchFields: ['id'] }),
+      [{
+        multi_match: {
+          query: 'koumoul',
+          fields: ['id'],
+          operator: 'and',
+          type: 'cross_fields'
+        }
+      }]
+    )
+
+    assert.deepEqual(
+      whereParser.parse('id:"koumoul"', { dataset: { schema: [{ key: 'id' }] } }),
+      [{ term: { id: 'koumoul' } }]
+    )
+    assert.deepEqual(
+      whereParser.parse('id: "koumoul"', { dataset: { schema: [{ key: 'id' }] } }),
+      [{ term: { id: 'koumoul' } }]
+    )
+    assert.deepEqual(
+      whereParser.parse('id : "koumoul"', { dataset: { schema: [{ key: 'id' }] } }),
+      [{ term: { id: 'koumoul' } }]
+    )
+    assert.deepEqual(
+      whereParser.parse('id = "koumoul"', { dataset: { schema: [{ key: 'id' }] } }),
+      [{ term: { id: 'koumoul' } }]
+    )
+  })
+
+  it('exposes records api on 2 urls', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
-    const res = await ax.get(`/api/v1/compat-ods/v2.1/catalog/datasets/${dataset.id}/records`)
+    let res = await ax.get(`/api/v1/compat-ods/v2.1/catalog/datasets/${dataset.id}/records`)
     assert.equal(res.status, 200)
     assert.equal(res.data.results.length, 2)
     assert.equal(res.data.total_count, 2)
 
-    const res2 = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
-    assert.equal(res2.status, 200)
-    assert.equal(res2.data.results.length, 2)
-    assert.equal(res2.data.total_count, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.results.length, 2)
+    assert.equal(res.data.total_count, 2)
+
+    // simple filters
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { query: { where: 'id: "koumoul"' } })
+    assert.equal(res.data.results.length, 1)
+    assert.equal(res.data.total_count, 1)
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { query: { where: 'id = "koumoul"' } })
+    assert.equal(res.data.results.length, 1)
+    assert.equal(res.data.total_count, 1)
+
+    assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { query: { where: 'id: koumoul' } }), { status: 400 })
   })
 })

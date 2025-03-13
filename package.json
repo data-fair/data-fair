@@ -19,7 +19,8 @@
     "doc": "nuxt --port 3144 --config-file doc/nuxt.config.js",
     "build-doc": "npm -w doc run build",
     "serve-doc": "npm -w doc run serve",
-    "postinstall": "patch-package",
+    "build-parsers": "peggy --dts --format es --output api/src/catalogs/plugins/ods/where.peg.js api/src/catalogs/plugins/ods/where.pegjs api/src/catalogs/plugins/ods/lexic.pegjs",
+    "postinstall": "patch-package && npm run build-parsers",
     "prepare": "husky || true",
     "check-types": "tsc",
     "quality": "npm run test-deps && npm run lint && npm run test && npm audit --omit=dev --audit-level=critical"
@@ -64,6 +65,7 @@
     "husky": "^9.1.7",
     "neostandard": "^0.12.0",
     "patch-package": "^8.0.0",
+    "peggy": "^4.2.0",
     "semver-extract": "^1.2.0",
     "typescript": "~5.6.3"
   },

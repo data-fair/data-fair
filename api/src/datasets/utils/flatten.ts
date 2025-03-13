@@ -40,7 +40,7 @@ const compileFlatten = (datasetId: string, finalizedAt: string, preserveArrays: 
   return new Function('o', jitCode)
 }
 
-const memoizedCompileFlatter = memoize(compileFlatten, {
+const memoizedCompileFlatten = memoize(compileFlatten, {
   profileName: 'flatten',
   max: 10000,
   maxAge: 1000 * 60 * 60, // 1 hour
@@ -49,5 +49,5 @@ const memoizedCompileFlatter = memoize(compileFlatten, {
 })
 
 export const getFlatten = (dataset: any, preserveArrays: boolean = false) => {
-  return memoizedCompileFlatter(dataset.id, dataset.finalizedAt, preserveArrays, dataset)
+  return memoizedCompileFlatten(dataset.id, dataset.finalizedAt, preserveArrays, dataset)
 }
