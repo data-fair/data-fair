@@ -17,7 +17,7 @@ import datasetPatchSchema from './dataset-patch.js'
  */
 // @ts-ignore
 export default (dataset, publicUrl = config.publicUrl, user, settings) => {
-  const info = settings.info || {}
+  const info = settings?.info || {}
   const { api, userApiRate, anonymousApiRate, bulkLineSchema } = datasetAPIDocs(dataset, publicUrl, info)
 
   const title = `API privée du jeu de données : ${dataset.title || dataset.id}`
@@ -450,7 +450,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   api.paths['/permissions'] = permissionsDoc
 
-  if (settings.compatODS) {
+  if (settings?.compatODS) {
     const schema = dataset.schema || []
 
     api.paths['/compat-ods/records'] = {
