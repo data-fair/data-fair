@@ -2,8 +2,8 @@ import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import * as whereParser from '../api/src/catalogs/plugins/ods/where.peg.js'
 
-describe.only('compatibility layer for ods api', function () {
-  it.only('contains a parser for the where syntax', function () {
+describe('compatibility layer for ods api', function () {
+  it('contains a parser for the where syntax', function () {
     assert.deepEqual(
       whereParser.parse('"koumoul"', { searchFields: ['id'] }),
       [{
@@ -43,6 +43,25 @@ describe.only('compatibility layer for ods api', function () {
     assert.deepEqual(
       whereParser.parse('nb > 12 OR id: "koumoul"', { dataset: { schema: [{ key: 'nb' }, { key: 'id' }] } }),
       [{ bool: { should: [{ range: { nb: { gt: 12 } } }, { term: { id: 'koumoul' } }] } }]
+    )
+    assert.deepEqual(
+      whereParser.parse('nb > 12 OR id: "koumoul" AND nb <= 12', { dataset: { schema: [{ key: 'nb' }, { key: 'id' }] } }),
+      [{ bool: { should: [{ range: { nb: { gt: 12 } } }, { bool: { filter: [{ term: { id: 'koumoul' } }, { range: { nb: { lte: 12 } } }] } }] } }]
+    )
+    assert.deepEqual(
+      whereParser.parse('(nb > 12 OR nb < 10) AND id = "koumoul"', { dataset: { schema: [{ key: 'nb' }, { key: 'id' }] } }),
+      [{
+        bool: {
+          filter: [
+            { bool: { should: [{ range: { nb: { gt: 12 } } }, { range: { nb: { lt: 10 } } }] } },
+            { term: { id: 'koumoul' } }
+          ]
+        }
+      }]
+    )
+    assert.deepEqual(
+      whereParser.parse('NOT id = "koumoul"', { dataset: { schema: [{ key: 'id' }] } }),
+      [{ bool: { must_not: [{ term: { id: 'koumoul' } }] } }]
     )
   })
 

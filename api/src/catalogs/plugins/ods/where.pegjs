@@ -17,10 +17,12 @@ start
 Filter
   = OrFilter
 
-SimpleFilter
+PrimaryFilter
   = StringFilter
   / EqualityFilter
   / ComparisonFilter
+  / NotFilter
+  / "(" _ filter:Filter _ ")" { return filter }
 
 EqualityFilter
   = key:IdentifierName _ EqualOperator _ value:Literal {
@@ -44,10 +46,10 @@ ComparisonFilter
   }
 
 ComparisonOperator
-  = "<"
-  / "<="
-  / ">"
+  = "<="
+  / "<"
   / ">="
+  / ">"
 
 StringFilter
   = literal:StringLiteral {
@@ -70,8 +72,8 @@ Or
   / "OR"
 
 AndFilter
-  = before:SimpleFilter
-    after:(__ And __ SimpleFilter)* {
+  = before:PrimaryFilter
+    after:(__ And __ PrimaryFilter)* {
       if (!after.length) return before
       return {
         bool: {
@@ -84,3 +86,16 @@ And
   = "and"
   / "AND"
 
+
+NotFilter
+  = _ Not __ filter:PrimaryFilter {
+    return {
+      bool: {
+        must_not: [filter]
+      }
+    }
+  }
+
+Not
+  = "not"
+  / "NOT"
