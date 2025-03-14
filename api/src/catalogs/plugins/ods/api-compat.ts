@@ -36,10 +36,6 @@ const getRecords = async (req, res, next) => {
     compatReqCounter.inc({ endpoint: 'records', status: 'unsupported' })
     throw httpError(400, 'le paramètre "group_by" n\'est pas supporté par cette couche de compatibilité pour la version d\'API précédente.')
   }
-  if (query.order_by) {
-    compatReqCounter.inc({ endpoint: 'records', status: 'unsupported' })
-    throw httpError(400, 'le paramètre "order_by" n\'est pas supporté par cette couche de compatibilité pour la version d\'API précédente.')
-  }
 
   const esQuery: any = {}
   esQuery.size = query.limit ? Number(query.limit) : 20
@@ -50,13 +46,35 @@ const getRecords = async (req, res, next) => {
   // do not include by default heavy calculated fields used for indexing geo data
   esQuery._source = (query.select && query.select !== '*' && typeof query.select === 'string')
     ? query.select.split(',')
-    : fields.filter(key => key !== '_geoshape' && key !== '_geocorners')
+    : fields.filter(key => !key.startsWith('_'))
   if (esQuery._source.some(s => s.includes(' as ') || s.includes(' AS '))) {
     compatReqCounter.inc({ endpoint: 'records', status: 'unsupported' })
     throw httpError(400, 'la syntaxe " as " n\'est pas supportée dans le paramètre "select" de cette couche de compatibilité pour la version d\'API précédente.')
   }
   const unknownField = esQuery._source.find(s => !fields.includes(s))
   if (unknownField) throw httpError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données ou alors il correspond à une capacité d'aggrégation non supportée par cette couche de compatibilité pour la version d'API précédente.`)
+
+  const orderBy = query.order_by ? query.order_by.split(',') : []
+  // recreate the sort string with our syntax
+  const sortStr = orderBy.map(o => {
+    const [field, order] = o.split(' ').filter(Boolean)
+    return (order === 'desc' || order === 'DESC') ? ('-' + field) : field
+  }).join(',')
+  esQuery.sort = sortStr ? esUtils.parseSort(sortStr, fields, dataset) : []
+  // implicitly sort by score after other criteria
+  if (!esQuery.sort.some(s => !!s._score) && query.where) esQuery.sort.push('_score')
+  // every other things equal, sort by original line order
+  // this is very important as it provides a tie-breaker for search_after pagination
+  if (fields.includes('_updatedAt')) {
+    if (!esQuery.sort.some(s => !!s._updatedAt)) esQuery.sort.push({ _updatedAt: 'desc' })
+    if (!esQuery.sort.some(s => !!s._i)) esQuery.sort.push({ _i: 'desc' })
+  } else {
+    if (!esQuery.sort.some(s => !!s._i)) esQuery.sort.push('_i')
+  }
+  if (dataset.isVirtual) {
+    // _i is not a good enough tie-breaker in the case of virtual datasets
+    if (!esQuery.sort.some(s => !!s._rand)) esQuery.sort.push('_rand')
+  }
 
   const filter: any[] = []
   const must: any[] = []

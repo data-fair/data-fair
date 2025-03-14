@@ -88,5 +88,12 @@ describe('compatibility layer for ods api', function () {
     assert.equal(res.data.total_count, 1)
 
     assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { where: 'id: koumoul' } }), { status: 400 })
+
+    // sorting
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { order_by: 'id,nb' } })
+    assert.equal(res.data.results[0].id, 'bidule')
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { order_by: 'id DESC,nb' } })
+    assert.equal(res.data.results[0].id, 'koumoul')
   })
 })
