@@ -31,12 +31,6 @@ const getRecords = async (req, res, next) => {
   const publicBaseUrl = (req as any).publicBaseUrl as string
   const query = req.query
 
-  // first reject unsupported parameters
-  if (query.group_by) {
-    compatReqCounter.inc({ endpoint: 'records', status: 'unsupported' })
-    throw httpError(400, 'le paramètre "group_by" n\'est pas supporté par cette couche de compatibilité pour la version d\'API précédente.')
-  }
-
   const esQuery: any = {}
   esQuery.size = query.limit ? Number(query.limit) : 20
   if (query.offset) esQuery.from = Number(query.offset)
@@ -106,6 +100,47 @@ const getRecords = async (req, res, next) => {
     }
   }
 
+  const groupBy: string[] = query.group_by?.split(',')
+  if (groupBy?.length) {
+    for (const groupByKey of groupBy) {
+      if (!fields.includes(groupByKey)) {
+        compatReqCounter.inc({ endpoint: 'records', status: 'invalid-group-by' })
+        throw httpError(400, `Impossible de grouper par le champ ${groupByKey}, il n'existe pas dans le jeu de données ou alors il correspond à une capacité d'aggrégation non supportée par cette couche de compatibilité pour la version d'API précédente.`)
+      }
+    }
+    const bucketSort = {
+      bucket_sort: {
+        size: esQuery.size,
+        from: esQuery.from
+      }
+    }
+    if (groupBy.length > 1) {
+      esQuery.aggs = {
+        group_by: {
+          multi_terms: {
+            terms: groupBy.map(field => ({ field }))
+          },
+          aggs: {
+            sort: bucketSort
+          }
+        }
+      }
+    } else {
+      esQuery.aggs = {
+        group_by: {
+          terms: { field: groupBy[0] },
+          aggs: {
+            sort: bucketSort
+          }
+        }
+      }
+    }
+    esQuery.size = 0
+    delete esQuery.from
+    delete esQuery._source
+    delete esQuery.sort
+  }
+
   const minimumShouldMatch = should.length ? 1 : 0
   esQuery.query = { bool: { filter, must, should, mustNot, minimum_should_match: minimumShouldMatch } }
 
@@ -123,16 +158,36 @@ const getRecords = async (req, res, next) => {
     throw httpError(status, message)
   }
 
-  const result = { total_count: esResponse.hits.total.value, results: [] as any[] }
-  const flatten = getFlatten(dataset)
-  for (let i = 0; i < esResponse.hits.hits.length; i++) {
+  if (groupBy?.length) {
+    const result = { results: [] }
+    const buckets = esResponse.aggregations.group_by.buckets
+    if (groupBy.length > 1) {
+      for (const bucket of buckets) {
+        const item: any = {}
+        for (let i = 0; i < groupBy.length; i++) {
+          item[groupBy[i]] = bucket.key[i]
+        }
+        result.results.push(item)
+      }
+    } else {
+      for (const bucket of buckets) {
+        const item: any = {}
+        item[groupBy[0]] = bucket.key
+        result.results.push(item)
+      }
+    }
+    res.send(result)
+  } else {
+    const result = { total_count: esResponse.hits.total.value, results: [] as any[] }
+    const flatten = getFlatten(dataset)
+    for (let i = 0; i < esResponse.hits.hits.length; i++) {
     // avoid blocking the event loop
-    if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
-    result.results.push(esUtils.prepareResultItem(esResponse.hits.hits[i], dataset, query, flatten, publicBaseUrl))
+      if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
+      result.results.push(esUtils.prepareResultItem(esResponse.hits.hits[i], dataset, query, flatten, publicBaseUrl))
+    }
+    compatReqCounter.inc({ endpoint: 'records', status: 'ok' })
+    res.send(result)
   }
-
-  compatReqCounter.inc({ endpoint: 'records', status: 'ok' })
-  res.send(result)
 }
 
 // mimic ods api pattern to capture all deprecated traffic
