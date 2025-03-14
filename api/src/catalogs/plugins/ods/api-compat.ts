@@ -9,6 +9,8 @@ import { getFlatten } from '../../../datasets/utils/flatten.ts'
 import config from '#config'
 import datasetsRouter from '../../../datasets/router.js'
 import { parse as parseWhere } from './where.peg.js'
+import mongo from '#mongo'
+import memoize from 'memoizee'
 
 const compatReqCounter = new Counter({
   name: 'df_compat_ods_req',
@@ -24,12 +26,28 @@ router.use('/v2.1/catalog/datasets', (req, res, next) => {
   next()
 })
 
+const getCompatODS = memoize(async (type: string, id: string) => {
+  const settings = await mongo.db.collection('settings')
+    .findOne({ type, id }, { projection: { compatODS: 1 } })
+  return settings && settings.compatODS
+}, {
+  profileName: 'getCompatODS',
+  promise: true,
+  primitive: true,
+  max: 10000,
+  maxAge: 1000 * 60, // 1 minute
+})
+
 const getRecords = async (req, res, next) => {
   (res as any).throttleEnd()
+
   const esClient = req.app.get('es') as any
   const dataset = (req as any).dataset
   const publicBaseUrl = (req as any).publicBaseUrl as string
   const query = req.query
+
+  if (!config.compatODS) throw httpError(404, 'unknown API')
+  if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
   const esQuery: any = {}
   esQuery.size = query.limit ? Number(query.limit) : 20

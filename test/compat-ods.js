@@ -66,8 +66,12 @@ describe('compatibility layer for ods api', function () {
   })
 
   it('exposes records api on 2 urls', async function () {
-    const ax = global.ax.dmeadus
+    const ax = global.ax.dmeadusOrg
+
+    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
     let res = await ax.get(`/api/v1/compat-ods/v2.1/catalog/datasets/${dataset.id}/records`)
     assert.equal(res.status, 200)
     assert.equal(res.data.results.length, 2)
