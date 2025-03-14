@@ -8,6 +8,7 @@ import { Counter } from 'prom-client'
 import { getFlatten } from '../../../datasets/utils/flatten.ts'
 import config from '#config'
 import datasetsRouter from '../../../datasets/router.js'
+import { parse as parseWhere } from './where.peg.js'
 
 const compatReqCounter = new Counter({
   name: 'df_compat_ods_req',
@@ -75,6 +76,16 @@ const getRecords = async (req, res, next) => {
   // Envorced filter in case of rest datasets with line ownership
   if (query.owner) {
     filter.push({ term: { _owner: query.owner } })
+  }
+
+  if (query.where) {
+    const { searchFields } = esUtils.getFilterableFields(dataset)
+    try {
+      must.push(parseWhere(query.where, { searchFields, dataset }))
+    } catch (err: any) {
+      compatReqCounter.inc({ endpoint: 'records', status: 'invalid-where' })
+      throw httpError(400, 'le paramètre "where" est invalide : ' + err.message)
+    }
   }
 
   const minimumShouldMatch = should.length ? 1 : 0

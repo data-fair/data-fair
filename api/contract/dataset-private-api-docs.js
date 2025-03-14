@@ -474,6 +474,24 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           explode: false
         }, {
           in: 'query',
+          name: 'where',
+          schema: {
+            type: 'string'
+          }
+        }, {
+          in: 'query',
+          name: 'group_by',
+          schema: {
+            type: 'string'
+          }
+        }, {
+          in: 'query',
+          name: 'order_by',
+          schema: {
+            type: 'string'
+          }
+        }, {
+          in: 'query',
           name: 'limit',
           schema: {
             type: 'integer',

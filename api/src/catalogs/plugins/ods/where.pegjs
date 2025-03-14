@@ -12,7 +12,7 @@ const esOperators = {
 }}
 
 start
-  = Filter*
+  = Filter
 
 Filter
   = OrFilter
@@ -77,7 +77,7 @@ AndFilter
       if (!after.length) return before
       return {
         bool: {
-          filter: [before, ...after.map(a => a[3])]
+          must: [before, ...after.map(a => a[3])]
         }
       }
    }
