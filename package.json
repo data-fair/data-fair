@@ -20,7 +20,7 @@
     "build-doc": "npm -w doc run build",
     "serve-doc": "npm -w doc run serve",
     "build-parsers": "peggy --dts --format es --output api/src/catalogs/plugins/ods/where.peg.js api/src/catalogs/plugins/ods/where.pegjs api/src/catalogs/plugins/ods/lexic.pegjs",
-    "postinstall": "patch-package && npm run build-parsers",
+    "postinstall": "patch-package",
     "prepare": "husky || true",
     "check-types": "tsc",
     "quality": "npm run test-deps && npm run lint && npm run test && npm audit --omit=dev --audit-level=critical"
