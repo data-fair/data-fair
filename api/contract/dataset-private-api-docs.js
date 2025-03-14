@@ -456,6 +456,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     api.paths['/compat-ods/records'] = {
       get: {
         summary: 'Récupérer les enregistrements.',
+        description: 'AVERTISSEMENT : Cette opération est un prototype en cours de conception. Elle permettra de récupérer les enregistrements du jeu de données de manière identique à l\'API "/records" du portail précédent.',
         operationId: 'readCompatODSRecords',
         'x-permissionClass': 'read',
         tags: ['Compatibilité ODS'],
