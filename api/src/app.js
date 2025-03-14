@@ -184,6 +184,9 @@ export const run = async () => {
     app.use('/api/v1/identities', (await import('./misc/routers/identities.js')).default)
     app.use('/api/v1/activity', (await import('./misc/routers/activity.js')).default)
     app.use('/api/v1/limits', limits.router)
+    if (config.compatODS) {
+      app.use('/api/v1/compat-ods', rateLimiting.middleware(), (await import('./catalogs/plugins/ods/api-compat.ts')).default)
+    }
 
     app.use('/api/', (req, res) => {
       return res.status(404).send('unknown api endpoint')

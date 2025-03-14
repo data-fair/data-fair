@@ -109,5 +109,6 @@ module.exports = {
   elasticsearch: {
     acceptYellowStatus: true,
     singleLineOpRefresh: true
-  }
+  },
+  compatODS: true
 }

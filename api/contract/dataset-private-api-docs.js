@@ -12,12 +12,12 @@ import datasetPatchSchema from './dataset-patch.js'
  * @param {any} dataset
  * @param {string} publicUrl
  * @param {any} user
- * @param {any} info
+ * @param {any} settings
  * @returns
  */
 // @ts-ignore
-export default (dataset, publicUrl = config.publicUrl, user, info) => {
-  const { api, userApiRate, anonymousApiRate, bulkLineSchema } = datasetAPIDocs(dataset, publicUrl, info)
+export default (dataset, publicUrl = config.publicUrl, user, settings) => {
+  const { api, userApiRate, anonymousApiRate, bulkLineSchema } = datasetAPIDocs(dataset, publicUrl, settings)
 
   const title = `API privée du jeu de données : ${dataset.title || dataset.id}`
 

@@ -299,5 +299,9 @@ module.exports = {
   extensionUpdateDelay: {
     __name: 'EXTENSION_UPDATE_DELAY',
     __format: 'json'
+  },
+  compatODS: {
+    __name: 'COMPAT_ODS',
+    __format: 'json'
   }
 }

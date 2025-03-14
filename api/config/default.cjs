@@ -341,5 +341,6 @@ module.exports = {
   },
   assertImmutable: false,
   remoteAttachmentCacheDuration: 1000 * 5,
-  extensionUpdateDelay: 600
+  extensionUpdateDelay: 600,
+  compatODS: false,
 }
