@@ -54,6 +54,19 @@
         </v-list>
       </v-col>
     </v-row>
+
+    <v-row>
+      <v-col>
+        <v-list>
+          <v-list-subheader>Settings</v-list-subheader>
+          <v-list-item
+            :to="`/embed/settings/${session.state.account.type}/${session.state.account.id}/api-keys`"
+          >
+            <v-list-item-title>API Keys</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
@@ -62,6 +75,7 @@ import { mdiTable, mdiPencil } from '@mdi/js'
 
 const datasetsFetch = useFetch<{ count: number, results: any[] }>($apiPath + '/datasets', { query: { size: 10000 } })
 const appsFetch = useFetch<{ count: number, results: any[] }>($apiPath + '/applications', { query: { size: 10000 } })
+const session = useSessionAuthenticated()
 </script>
 
 <style>

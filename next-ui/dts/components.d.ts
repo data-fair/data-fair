@@ -37,6 +37,8 @@ declare module 'vue' {
     ResendPartnerInvitation: typeof import('./../src/components/resend-partner-invitation.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SettingsApiKeys: typeof import('./../src/components/settings/settings-api-keys.vue')['default']
+    SettingsApiKeyUseMenu: typeof import('./../src/components/settings/settings-api-key-use-menu.vue')['default']
     SitePatch: typeof import('./../src/components/site-patch.vue')['default']
     SitePost: typeof import('./../src/components/site-post.vue')['default']
   }
