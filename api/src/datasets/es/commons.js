@@ -16,6 +16,7 @@ import * as geo from '../utils/geo.js'
 import { geojsonToWKT } from '@terraformer/wkt'
 import capabilities from '../../../contract/capabilities.js'
 import turfDistance from '@turf/distance'
+import memoize from 'memoizee'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -222,7 +223,7 @@ export const requiredCapability = (prop, filterName, capability = 'index') => {
   }
 }
 
-export const getFilterableFields = (dataset, q, qFields) => {
+export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
   // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
   // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
   const searchFields = []
@@ -237,7 +238,7 @@ export const getFilterableFields = (dataset, q, qFields) => {
       continue
     }
 
-    const isQField = q && f.key !== '_id' && (!qFields || qFields.includes(f.key))
+    const isQField = hasQ && f.key !== '_id' && (!qFields || qFields.includes(f.key))
     const esProp = esProperty(f)
     if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
       searchFields.push(f.key)
@@ -268,7 +269,15 @@ export const getFilterableFields = (dataset, q, qFields) => {
     }
   }
   return { searchFields, qSearchFields, qStandardFields, qWildcardFields }
-}
+}, {
+  profileName: 'getFilterableFields',
+  primitive: true,
+  normalizer: ([dataset, hasQ, qFields]) => {
+    return `${dataset.id}:${dataset.finalizedAt}:${!!hasQ}:${qFields ? qFields.join(',') : ''}`
+  },
+  max: 10000,
+  maxAge: 1000 * 60 * 60, // 1 hour
+})
 
 export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) => {
   const esQuery = {}

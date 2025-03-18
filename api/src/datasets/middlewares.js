@@ -77,11 +77,6 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
     ? await service.memoizedGetDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, tolerateStale, acceptedStatuses, req.body)
     : await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, tolerateStale, acceptedStatuses, req.body)
 
-  /**
-   * can be used to check the memoizee cache usage, first import memoizee/profile on top of app.js
-   * if (tolerateStale) {
-    console.log('memProfile', require('memoizee/profile').log())
-  } */
   if (!dataset) {
     if (acceptMissing) return next()
     return res.status(404).send('Dataset not found')
