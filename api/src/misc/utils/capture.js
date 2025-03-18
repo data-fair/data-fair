@@ -110,7 +110,7 @@ export const screenshot = async (req, res) => {
       const stats = await fs.stat(capturePath)
       if (stats.mtime.toISOString() > req.resource.updatedAt) {
         res.set('x-capture-cache-status', 'HIT')
-        await new Promise((resolve, reject) => res.sendFile(
+        return await new Promise((resolve, reject) => res.sendFile(
           capturePath,
           (err) => err ? reject(err) : resolve(true)
         ))
@@ -129,7 +129,6 @@ export const screenshot = async (req, res) => {
         await new Promise(resolve => setTimeout(resolve, 4000))
         await stream2file(reqOpts, capturePath)
       }
-      await stream2file(reqOpts, capturePath)
       return await new Promise((resolve, reject) => res.sendFile(
         capturePath,
         (err) => err ? reject(err) : resolve(true)
