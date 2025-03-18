@@ -4,15 +4,9 @@
     class="pa-0"
   >
     <open-api
-      v-if="resourceUrl"
-      :url="resourceUrl + (can('readPrivateApiDoc') ? '/private-api-docs.json' : '/api-docs.json')"
-    />
-    <!--
-    <open-api
       :id="dataset.id"
       :type="can('readPrivateApiDoc') ? 'privateDataset' : 'dataset'"
     />
-    -->
   </v-container>
 </template>
 
@@ -28,7 +22,7 @@ export default {
   },
   computed: {
     ...mapState('dataset', ['dataset']),
-    ...mapGetters('dataset', ['resourceUrl', 'can'])
+    ...mapGetters('dataset', ['can'])
   },
   created () {
     if (this.dataset) {

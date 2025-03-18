@@ -94,7 +94,7 @@ export default (dataset, publicUrl = config.publicUrl, settings, publicationSite
       title: 'Mode de recherche',
       type: 'string',
       default: 'simple',
-      enum: [null, 'simple', 'complete']
+      enum: ['simple', 'complete']
     }
   }, {
     in: 'query',
@@ -216,7 +216,8 @@ Exemple: ma_colonne,-ma_colonne2`,
         items: {
           type: 'string',
           enum: schema.length ? schema.map((/** @type {any} */ p) => p.key) : undefined
-        }
+        },
+        default: 'all'
       },
       style: 'form',
       explode: false

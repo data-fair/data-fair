@@ -4,24 +4,13 @@
     class="pa-0"
   >
     <open-api
-      v-if="resourceUrl"
-      :url="resourceUrl"
-    />
-    <!--
-    <open-api
       type="general"
     />
-    -->
   </v-container>
 </template>
 
 <script>
 export default {
-  computed: {
-    resourceUrl () {
-      return this.$store.state.env.publicUrl + '/api/v1/api-docs.json'
-    }
-  }
 }
 </script>
 
