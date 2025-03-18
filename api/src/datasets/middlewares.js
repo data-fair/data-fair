@@ -1,7 +1,6 @@
 import config from '#config'
 import mongo from '#mongo'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import i18n from 'i18n'
 import locks from '@data-fair/lib-node/locks.js'
 import * as usersUtils from '../misc/utils/users.js'
 import { getOwnerRole } from '../misc/utils/permissions.js'
@@ -28,7 +27,7 @@ export const checkStorage = (overwrite, indexed = false) => async (req, res, nex
   const resource = req.resource
   const db = mongo.db
   const owner = resource ? resource.owner : usersUtils.owner(req)
-  await checkStorageFn(db, i18n.getLocale(req), owner, overwrite && resource, contentLength, indexed)
+  await checkStorageFn(db, req.getLocale(), owner, overwrite && resource, contentLength, indexed)
   next()
 }
 
@@ -77,11 +76,6 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
     ? await service.memoizedGetDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, tolerateStale, acceptedStatuses, req.body)
     : await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, tolerateStale, acceptedStatuses, req.body)
 
-  /**
-   * can be used to check the memoizee cache usage, first import memoizee/profile on top of app.js
-   * if (tolerateStale) {
-    console.log('memProfile', require('memoizee/profile').log())
-  } */
   if (!dataset) {
     if (acceptMissing) return next()
     return res.status(404).send('Dataset not found')

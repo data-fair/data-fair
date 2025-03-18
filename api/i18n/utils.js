@@ -12,7 +12,23 @@ i18n.configure({
   objectNotation: true
 })
 
-export const middleware = i18n.init
+// export const middleware = i18n.init
+export const middleware = (req, res, next) => {
+  // optimization that only applies i18n.init middleware on demand and initially only binds to the Request prototype
+  // eslint-disable-next-line no-proto
+  const proto = req.__proto__
+  if (!proto.__) {
+    proto.__ = function () {
+      i18n.init(this)
+      return i18n.__.apply(this, arguments)
+    }
+    proto.getLocale = function () {
+      i18n.init(this)
+      return this.locale
+    }
+  }
+  next()
+}
 
 /** @typedef {{identifiers: string[], title: string, description: string, tag: string | undefined}} LocalizedConcept */
 

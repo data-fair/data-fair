@@ -16,6 +16,7 @@ import * as geo from '../utils/geo.js'
 import { geojsonToWKT } from '@terraformer/wkt'
 import capabilities from '../../../contract/capabilities.js'
 import turfDistance from '@turf/distance'
+import memoize from 'memoizee'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -167,17 +168,6 @@ function checkQuery (query, schema, esFields, currentField) {
 </ul>`)
     }
   }
-  if (!esFields) {
-    esFields = ['<implicit>']
-    for (const prop of schema) {
-      const capabilities = prop['x-capabilities'] || []
-      if (capabilities.index !== false) esFields.push(prop.key)
-      if (capabilities.text !== false) esFields.push(prop.key + '.text')
-      if (capabilities.textStandard !== false) esFields.push(prop.key + '.text_standard')
-      if (capabilities.insensitive !== false) esFields.push(prop.key + '.keyword_insensitive')
-      if (capabilities.wildcard) esFields.push(prop.key + '.wildcard')
-    }
-  }
   query.field = query.field && query.field.replace(/\\/g, '')
   if (query.field === '<implicit>' && currentField) query.field = currentField
   if (query.field === '_exists_') {
@@ -185,10 +175,10 @@ function checkQuery (query, schema, esFields, currentField) {
     if (!schema.find(p => p.key === field)) {
       throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
     }
-    if (!esFields.includes(field)) {
+    if (field !== '<implicit>' && !esFields.includes(field)) {
       throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilities.properties.index.title}" n'est pas activée dans la configuration technique du champ.`)
     }
-  } else if (query.field && !esFields.includes(query.field)) {
+  } else if (query.field && query.field !== '<implicit>' && !esFields.includes(query.field)) {
     const suffix = capabilitiesSuffixes.find(cs => query.field.endsWith(cs[0]))
     if (suffix) {
       if (!schema.find(p => p.key + suffix[0] === query.field)) {
@@ -222,7 +212,7 @@ export const requiredCapability = (prop, filterName, capability = 'index') => {
   }
 }
 
-export const getFilterableFields = (dataset, q, qFields) => {
+export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
   // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
   // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
   const searchFields = []
@@ -230,14 +220,22 @@ export const getFilterableFields = (dataset, q, qFields) => {
   const qSearchFields = []
   const qStandardFields = []
   const qWildcardFields = []
+  const esFields = []
 
   for (const f of dataset.schema) {
+    const capabilities = f['x-capabilities'] || []
+    if (capabilities.index !== false) esFields.push(f.key)
+    if (capabilities.text !== false) esFields.push(f.key + '.text')
+    if (capabilities.textStandard !== false) esFields.push(f.key + '.text_standard')
+    if (capabilities.insensitive !== false) esFields.push(f.key + '.keyword_insensitive')
+    if (capabilities.wildcard) esFields.push(f.key + '.wildcard')
+
     if (f.key === '_id') {
       searchFields.push('_id')
       continue
     }
 
-    const isQField = q && f.key !== '_id' && (!qFields || qFields.includes(f.key))
+    const isQField = hasQ && f.key !== '_id' && (!qFields || qFields.includes(f.key))
     const esProp = esProperty(f)
     if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
       searchFields.push(f.key)
@@ -267,8 +265,16 @@ export const getFilterableFields = (dataset, q, qFields) => {
       }
     }
   }
-  return { searchFields, qSearchFields, qStandardFields, qWildcardFields }
-}
+  return { searchFields, qSearchFields, qStandardFields, qWildcardFields, esFields }
+}, {
+  profileName: 'getFilterableFields',
+  primitive: true,
+  normalizer: ([dataset, hasQ, qFields]) => {
+    return `${dataset.id}:${dataset.finalizedAt}:${!!hasQ}:${qFields ? qFields.join(',') : ''}`
+  },
+  max: 10000,
+  maxAge: 1000 * 60 * 60, // 1 hour
+})
 
 export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) => {
   const esQuery = {}
@@ -372,9 +378,9 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   if (q) q = q.trim()
 
   if (q || query.qs) {
-    const { searchFields, qSearchFields, qStandardFields, qWildcardFields } = getFilterableFields(dataset, q, qFields)
+    const { searchFields, qSearchFields, qStandardFields, qWildcardFields, esFields } = getFilterableFields(dataset, q, qFields)
     if (query.qs) {
-      checkQuery(query.qs, dataset.schema)
+      checkQuery(query.qs, dataset.schema, esFields)
       const qs = { query_string: { query: query.qs, fields: searchFields } }
       if (qsAsFilter) filter.push(qs)
       else must.push(qs)

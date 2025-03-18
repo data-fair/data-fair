@@ -175,7 +175,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
   // optionally complete informations based on a dataset to guide user in selecting suitable application
   if (req.query.dataset) {
     let datasetBBox, datasetVocabulary, datasetTypes, datasetId, datasetCount
-    const vocabulary = i18nUtils.vocabulary[req.locale]
+    const vocabulary = i18nUtils.vocabulary[req.getLocale()]
     if (req.query.dataset === 'any') {
       // match constraints against all datasets of current account
       const filter = { 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id }
@@ -228,7 +228,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
                 if (filter.concepts.length === 1) {
                   requirements.push(req.__('appRequire.aConcept', { concept: vocabulary[filter.concepts[0]].title }))
                 } else {
-                  requirements.push(req.__('appRequire.oneOfConcepts', { concepts: filter.concepts.map(concept => vocabulary[concept].title).join(res.__('appRequire.orJoin')) }))
+                  requirements.push(req.__('appRequire.oneOfConcepts', { concepts: filter.concepts.map(concept => vocabulary[concept].title).join(req.__('appRequire.orJoin')) }))
                 }
               }
             }
@@ -236,7 +236,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
               if (filter['field-type'].length === 1) {
                 requirements.push(req.__('appRequire.aType', { type: filter['field-type'][0] }))
               } else {
-                requirements.push(req.__('appRequire.oneOfTypes', { types: filter['field-type'].join(res.__('appRequire.orJoin')) }))
+                requirements.push(req.__('appRequire.oneOfTypes', { types: filter['field-type'].join(req.__('appRequire.orJoin')) }))
               }
             }
           }
