@@ -168,9 +168,6 @@ function checkQuery (query, schema, esFields, currentField) {
 </ul>`)
     }
   }
-  if (!esFields) {
-    esFields = ['<implicit>']
-  }
   query.field = query.field && query.field.replace(/\\/g, '')
   if (query.field === '<implicit>' && currentField) query.field = currentField
   if (query.field === '_exists_') {
