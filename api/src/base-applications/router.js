@@ -175,7 +175,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
   // optionally complete informations based on a dataset to guide user in selecting suitable application
   if (req.query.dataset) {
     let datasetBBox, datasetVocabulary, datasetTypes, datasetId, datasetCount
-    const vocabulary = i18nUtils.vocabulary[req.locale]
+    const vocabulary = i18nUtils.vocabulary[req.getLocale()]
     if (req.query.dataset === 'any') {
       // match constraints against all datasets of current account
       const filter = { 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id }

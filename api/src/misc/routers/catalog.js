@@ -1,6 +1,5 @@
 import express from 'express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import i18n from 'i18n'
 import mime from 'mime'
 import * as findUtils from '../utils/find.js'
 import * as datasetUtils from '../../datasets/utils/index.js'
@@ -35,7 +34,7 @@ router.get('/datasets', async (req, res) => {
 
   if (req.query.file === 'true') extraFilters.push({ file: { $exists: true } })
 
-  const query = findUtils.query(req, i18n.getLocale(req), req.user, 'datasets', { topics: 'topics.id' }, false, extraFilters)
+  const query = findUtils.query(req, req.getLocale(), req.user, 'datasets', { topics: 'topics.id' }, false, extraFilters)
   const sort = findUtils.sort(req.query.sort || '-createdAt')
   const project = findUtils.project(req.query.select, [], req.query.raw === 'true')
   const [skip, size] = findUtils.pagination(req.query)

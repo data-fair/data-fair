@@ -7,7 +7,6 @@ import mongo from '#mongo'
 import fs from 'fs-extra'
 import util from 'util'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import i18n from 'i18n'
 import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 import { nanoid } from 'nanoid'
 import contentDisposition from 'content-disposition'
@@ -88,7 +87,7 @@ router.get('', cacheHeaders.listBased, async (req, res) => {
   const user = req.user
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findApplications(mongo.db, req.locale, publicationSite, publicBaseUrl, reqQuery, user)
+  const response = await findApplications(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, user)
   res.json(response)
 })
 
@@ -108,7 +107,7 @@ router.post('', async (req, res) => {
   const application = await initNew(req)
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', req.user)) return res.status(403).type('text/plain').send()
   validate(application)
-  validateURLFriendly(i18n.getLocale(req), application.slug)
+  validateURLFriendly(req.getLocale(), application.slug)
 
   // Generate ids and try insertion until there is no conflict on id
   const toks = application.url.split('/').filter(part => !!part)
@@ -260,7 +259,7 @@ router.patch('/:applicationId',
     const db = mongo.db
     const patch = req.body
     validatePatch(patch)
-    validateURLFriendly(i18n.getLocale(req), patch.slug)
+    validateURLFriendly(req.getLocale(), patch.slug)
 
     // Retry previously failed publications
     if (!patch.publications) {

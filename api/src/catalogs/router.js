@@ -3,7 +3,6 @@ import mongo from '#mongo'
 import express from 'express'
 import moment from 'moment'
 import slug from 'slugify'
-import i18n from 'i18n'
 import mongoEscape from 'mongo-escape'
 import { CronJob } from 'cron'
 import catalogAPIDocs from '../../contract/catalog-api-docs.js'
@@ -54,7 +53,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
   const user = req.user
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findCatalogs(mongo.db, i18n.getLocale(req), reqQuery, user)
+  const response = await findCatalogs(mongo.db, req.getLocale(), reqQuery, user)
   res.json(response)
 })
 

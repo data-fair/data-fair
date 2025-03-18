@@ -4,7 +4,6 @@ import https from 'https'
 import express from 'express'
 import moment from 'moment'
 import slug from 'slugify'
-import i18n from 'i18n'
 import axios from '../misc/utils/axios.js'
 import pump from '../misc/utils/pipe.js'
 import CacheableLookup from 'cacheable-lookup'
@@ -45,7 +44,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
   const user = req.user
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findRemoteServices(mongo.db, i18n.getLocale(req), publicationSite, publicBaseUrl, reqQuery, user)
+  const response = await findRemoteServices(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, user)
   res.json(response)
 })
 
@@ -61,7 +60,7 @@ actionsRouter.get('', cacheHeaders.noCache, async (req, res) => {
   const user = req.user
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findActions(mongo.db, i18n.getLocale(req), publicationSite, publicBaseUrl, reqQuery, user)
+  const response = await findActions(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, user)
   res.json(response)
 })
 

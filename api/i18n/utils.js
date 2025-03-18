@@ -22,6 +22,10 @@ export const middleware = (req, res, next) => {
       i18n.init(this)
       return i18n.__.apply(this, arguments)
     }
+    proto.getLocale = function () {
+      i18n.init(this)
+      return this.locale
+    }
   }
   next()
 }
