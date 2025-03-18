@@ -13,16 +13,11 @@ import '@data-fair/frame/lib/d-frame.js'
 
 export default {
   props: {
-    // type: {
-    //   type: String,
-    //   required: true
-    // },
-    // id: {
-    //   type: String,
-    //   required: false,
-    //   default: ''
-    // },
-    url: {
+    type: {
+      type: String,
+      required: true
+    },
+    id: {
       type: String,
       required: false,
       default: ''
@@ -31,8 +26,7 @@ export default {
   computed: {
     ...mapState(['env']),
     src () {
-      return this.env.openapiViewerUrl + '?hide-toolbar=true&drawerLocation=right' + '&url=' + this.url
-      // return this.env.openapiViewerUrl + `?drawerLocation=right&urlType=${this.type}` + (this.id ? `&id=${this.id}` : '')
+      return this.env.openapiViewerUrl + `?drawerLocation=right&urlType=${this.type}` + (this.id ? `&id=${this.id}` : '')
     }
   }
 }
