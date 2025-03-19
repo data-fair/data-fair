@@ -98,5 +98,6 @@ module.exports = {
     description: 'Ce service expose les données cartographiques traitées par Koumoul sous divers formats standards.',
     server: 'https://staging-koumoul.com/tileserver'
   }],
-  compatODS: true
+  compatODS: true,
+  openapiViewerV2: false
 }
