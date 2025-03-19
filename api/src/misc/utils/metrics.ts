@@ -1,5 +1,5 @@
 import type { Db } from 'mongodb'
-import { Gauge, Counter } from 'prom-client'
+import { Gauge } from 'prom-client'
 import { servicePromRegistry } from '@data-fair/lib-node/observer.js'
 // @ts-ignore
 import memoizeeProfile from 'memoizee/profile.js'
@@ -57,15 +57,15 @@ export const init = async (db: Db) => {
   })
 
   // eslint-disable-next-line no-new
-  new Counter({
+  new Gauge({
     name: 'df_memoize_total',
     help: 'Total number of memoized function uses',
     labelNames: ['fn', 'status'],
     async collect () {
       for (const [key, stats] of Object.entries(memoizeeProfile.statistics)) {
         const name = key.split(', ')[0]
-        this.labels({ fn: name, status: 'miss' }).inc((stats as { initial: number }).initial)
-        this.labels({ fn: name, status: 'hit' }).inc((stats as { cached: number }).cached)
+        this.labels({ fn: name, status: 'miss' }).set((stats as { initial: number }).initial)
+        this.labels({ fn: name, status: 'hit' }).set((stats as { cached: number }).cached)
       }
     }
   })
