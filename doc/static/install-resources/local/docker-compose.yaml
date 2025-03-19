@@ -30,7 +30,7 @@ services:
       - PUBLIC_URL=${BASE_URL}/data-fair
       - DIRECTORY_URL=${BASE_URL}/simple-directory
       - PRIVATE_DIRECTORY_URL=http://simple-directory:8080
-      - OPENAPI_VIEWER_URL=${BASE_URL}/api-doc/
+      - OPENAPI_VIEWER_URL=${BASE_URL}/openapi-viewer/
       - THUMBOR_URL=${BASE_URL}/thumbor/
       - THUMBOR_KEY=${SECRET}
       - CAPTURE_URL=${BASE_URL}/capture/
@@ -89,7 +89,7 @@ services:
       - PUBLIC_URL=${BASE_URL}/notify
       - DIRECTORY_URL=${BASE_URL}/simple-directory
       - PRIVATE_DIRECTORY_URL=http://simple-directory:8080
-      - OPENAPI_VIEWER_URL=${BASE_URL}/api-doc/
+      - OPENAPI_VIEWER_URL=${BASE_URL}/openapi-viewer/
       - MONGO_URL=mongodb://mongo:27017/notify
       - SECRET_IDENTITIES=${SECRET}
       - SECRET_NOTIFICATIONS=${SECRET}

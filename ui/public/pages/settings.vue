@@ -320,6 +320,35 @@
                       </v-container>
                     </template>
                   </layout-section-tabs>
+
+                  <layout-section-tabs
+                    v-if="section.id === 'compat'"
+                    svg-no-margin
+                    admin
+                    :section="section"
+                  >
+                    <template #extension>
+                      <p>
+                        Gérez les compatibilités de votre organisation avec d'autres services. Peut-être particulièrement utile en période de transition.
+                      </p>
+                    </template>
+                    <template #tabs-items>
+                      <v-container
+                        fluid
+                        class="py-1"
+                      >
+                        <v-row>
+                          <v-col>
+                            <v-checkbox
+                              v-model="settings.compatODS"
+                              :label="$t('compatODS')"
+                              @change="save()"
+                            />
+                          </v-col>
+                        </v-row>
+                      </v-container>
+                    </template>
+                  </layout-section-tabs>
                 </div>
               </template>
             </template>
@@ -344,6 +373,8 @@ fr:
   privateVocab: Vocabulaire privé
   publicationSites: Portails
   info: Informations de contact
+  compat: Gestion des compatibilités
+  compatODS: Activer la compatibilité ODS
 en:
   licences: Licenses
   topics: Topics
@@ -353,6 +384,8 @@ en:
   privateVocab: Private vocabulary
   publicationSites: Portals
   info: Contact information
+  compat: Compatibility management
+  compatODS: Enable ODS compatibility
 </i18n>
 
 <script>
@@ -434,6 +467,12 @@ export default {
         id: 'webhooks',
         title: this.$t('webhooks')
       })
+      if (this.env.compatODS && this.user.adminMode) {
+        sections.push({
+          id: 'compat',
+          title: this.$t('compat')
+        })
+      }
       return sections
     },
     settingsUrl () {

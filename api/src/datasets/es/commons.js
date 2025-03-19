@@ -16,6 +16,7 @@ import * as geo from '../utils/geo.js'
 import { geojsonToWKT } from '@terraformer/wkt'
 import capabilities from '../../../contract/capabilities.js'
 import turfDistance from '@turf/distance'
+import memoize from 'memoizee'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -167,17 +168,6 @@ function checkQuery (query, schema, esFields, currentField) {
 </ul>`)
     }
   }
-  if (!esFields) {
-    esFields = ['<implicit>']
-    for (const prop of schema) {
-      const capabilities = prop['x-capabilities'] || []
-      if (capabilities.index !== false) esFields.push(prop.key)
-      if (capabilities.text !== false) esFields.push(prop.key + '.text')
-      if (capabilities.textStandard !== false) esFields.push(prop.key + '.text_standard')
-      if (capabilities.insensitive !== false) esFields.push(prop.key + '.keyword_insensitive')
-      if (capabilities.wildcard) esFields.push(prop.key + '.wildcard')
-    }
-  }
   query.field = query.field && query.field.replace(/\\/g, '')
   if (query.field === '<implicit>' && currentField) query.field = currentField
   if (query.field === '_exists_') {
@@ -185,10 +175,10 @@ function checkQuery (query, schema, esFields, currentField) {
     if (!schema.find(p => p.key === field)) {
       throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
     }
-    if (!esFields.includes(field)) {
+    if (field !== '<implicit>' && !esFields.includes(field)) {
       throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilities.properties.index.title}" n'est pas activée dans la configuration technique du champ.`)
     }
-  } else if (query.field && !esFields.includes(query.field)) {
+  } else if (query.field && query.field !== '<implicit>' && !esFields.includes(query.field)) {
     const suffix = capabilitiesSuffixes.find(cs => query.field.endsWith(cs[0]))
     if (suffix) {
       if (!schema.find(p => p.key + suffix[0] === query.field)) {
@@ -215,12 +205,76 @@ function checkQuery (query, schema, esFields, currentField) {
  * @param {any} prop
  * @param {string} capability
  */
-const requiredCapability = (prop, filterName, capability = 'index') => {
+export const requiredCapability = (prop, filterName, capability = 'index') => {
   const propCapabilities = prop['x-capabilities'] ?? {}
   if (propCapabilities[capability] === false || (['wildcard', 'textAgg'].includes(capability) && propCapabilities[capability] !== true)) {
     throw httpError(400, `Impossible d'appliquer un filtre ${filterName} sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties[capability]?.title}" n'est pas activée dans la configuration technique du champ.`)
   }
 }
+
+export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
+  // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
+  // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
+  const searchFields = []
+  // const wildcardFields = []
+  const qSearchFields = []
+  const qStandardFields = []
+  const qWildcardFields = []
+  const esFields = []
+
+  for (const f of dataset.schema) {
+    const capabilities = f['x-capabilities'] || []
+    if (capabilities.index !== false) esFields.push(f.key)
+    if (capabilities.text !== false) esFields.push(f.key + '.text')
+    if (capabilities.textStandard !== false) esFields.push(f.key + '.text_standard')
+    if (capabilities.insensitive !== false) esFields.push(f.key + '.keyword_insensitive')
+    if (capabilities.wildcard) esFields.push(f.key + '.wildcard')
+
+    if (f.key === '_id') {
+      searchFields.push('_id')
+      continue
+    }
+
+    const isQField = hasQ && f.key !== '_id' && (!qFields || qFields.includes(f.key))
+    const esProp = esProperty(f)
+    if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
+      searchFields.push(f.key)
+      if (isQField) qSearchFields.push(f.key)
+    }
+    if (esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) {
+      // automatic boost of some special properties well suited for full-text search
+      let suffix = ''
+      if (f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label') suffix = '^3'
+      if (f['x-refersTo'] === 'http://schema.org/description') suffix = '^2'
+      if (f['x-refersTo'] === 'https://schema.org/DefinedTermSet') suffix = '^2'
+
+      if (esProp.fields.text) {
+        searchFields.push(f.key + '.text' + suffix)
+        if (isQField) qSearchFields.push(f.key + '.text' + suffix)
+      }
+      if (esProp.fields.text_standard) {
+        searchFields.push(f.key + '.text_standard' + suffix)
+        if (isQField) {
+          qSearchFields.push(f.key + '.text_standard' + suffix)
+          qStandardFields.push(f.key + '.text_standard' + suffix)
+        }
+      }
+      if (esProp.fields.wildcard) {
+        // wildcardFields.push(f.key + '.wildcard')
+        if (isQField) qWildcardFields.push(f.key + '.wildcard')
+      }
+    }
+  }
+  return { searchFields, qSearchFields, qStandardFields, qWildcardFields, esFields }
+}, {
+  profileName: 'getFilterableFields',
+  primitive: true,
+  normalizer: ([dataset, hasQ, qFields]) => {
+    return `${dataset.id}:${dataset.finalizedAt}:${!!hasQ}:${qFields ? qFields.join(',') : ''}`
+  },
+  max: 10000,
+  maxAge: 1000 * 60 * 60, // 1 hour
+})
 
 export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) => {
   const esQuery = {}
@@ -324,52 +378,9 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   if (q) q = q.trim()
 
   if (q || query.qs) {
-    // query and simple query string for a lot of functionalities in a simple exposition (too open ??)
-    // const multiFields = [...fields].concat(dataset.schema.filter(f => f.type === 'string').map(f => f.key + '.text'))
-    const searchFields = []
-    const wildcardFields = []
-    const qSearchFields = []
-    const qStandardFields = []
-    const qWildcardFields = []
-
-    for (const f of dataset.schema) {
-      if (f.key === '_id') {
-        searchFields.push('_id')
-        continue
-      }
-
-      const isQField = q && f.key !== '_id' && (!qFields || qFields.includes(f.key))
-      const esProp = esProperty(f)
-      if (esProp.index !== false && esProp.enabled !== false && esProp.type === 'keyword') {
-        searchFields.push(f.key)
-        if (isQField) qSearchFields.push(f.key)
-      }
-      if (esProp.fields && (esProp.fields.text || esProp.fields.text_standard)) {
-      // automatic boost of some special properties well suited for full-text search
-        let suffix = ''
-        if (f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label') suffix = '^3'
-        if (f['x-refersTo'] === 'http://schema.org/description') suffix = '^2'
-        if (f['x-refersTo'] === 'https://schema.org/DefinedTermSet') suffix = '^2'
-
-        if (esProp.fields.text) {
-          searchFields.push(f.key + '.text' + suffix)
-          if (isQField) qSearchFields.push(f.key + '.text' + suffix)
-        }
-        if (esProp.fields.text_standard) {
-          searchFields.push(f.key + '.text_standard' + suffix)
-          if (isQField) {
-            qSearchFields.push(f.key + '.text_standard' + suffix)
-            qStandardFields.push(f.key + '.text_standard' + suffix)
-          }
-        }
-        if (esProp.fields.wildcard) {
-          wildcardFields.push(f.key + '.wildcard')
-          if (isQField) qWildcardFields.push(f.key + '.wildcard')
-        }
-      }
-    }
+    const { searchFields, qSearchFields, qStandardFields, qWildcardFields, esFields } = getFilterableFields(dataset, q, qFields)
     if (query.qs) {
-      checkQuery(query.qs, dataset.schema)
+      checkQuery(query.qs, dataset.schema, esFields)
       const qs = { query_string: { query: query.qs, fields: searchFields } }
       if (qsAsFilter) filter.push(qs)
       else must.push(qs)
@@ -401,8 +412,8 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
           qShould.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
         }
       } else {
-      // default "simple" mode uses ES simple query string directly
-      // only tuning is that we match both on stemmed and raw inner fields to boost exact matches
+        // default "simple" mode uses ES simple query string directly
+        // only tuning is that we match both on stemmed and raw inner fields to boost exact matches
         if (qSearchFields.length) {
           qShould.push({ simple_query_string: { query: q, fields: qSearchFields, ...sqsOptions } })
         }

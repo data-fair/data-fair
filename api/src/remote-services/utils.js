@@ -71,11 +71,11 @@ export const syncDataset = async (db, dataset) => {
   )) {
     debugMasterData(`sync a dataset with master data to a remote service ${dataset.id} (${dataset.slug}) -> ${id}`, dataset.masterData)
     const settings = await db.collection('settings')
-      .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { info: 1 } })
+      .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { info: 1, compatODS: 1 } })
 
     const existingService = await db.collection('remote-services')
       .findOne({ id })
-    const apiDoc = datasetAPIDocs(dataset, config.publicUrl, (settings && settings.info) || {}).api
+    const apiDoc = datasetAPIDocs(dataset, config.publicUrl, settings).api
     const service = initNew({
       id,
       apiDoc,

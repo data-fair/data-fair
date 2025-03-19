@@ -112,6 +112,7 @@ const nuxtConfig = {
     map: config.map,
     brand: config.brand,
     openapiViewerUrl: config.openapiViewerUrl,
+    openapiViewerV2: config.openapiViewerV2,
     browserLogLevel: config.browserLogLevel,
     analytics: config.analytics,
     captureUrl: config.captureUrl,
@@ -134,7 +135,8 @@ const nuxtConfig = {
     i18n: config.i18n,
     defaultTimeZone: config.defaultTimeZone,
     dateFormats: config.dateFormats,
-    dateTimeFormats: config.dateTimeFormats
+    dateTimeFormats: config.dateTimeFormats,
+    compatODS: config.compatODS
   },
   head: {
     title: config.brand.title,

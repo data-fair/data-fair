@@ -86,6 +86,7 @@ services:
     ports:
       - 5680:8080
     environment:
+      - USE_SIMPLE_DIRECTORY=true
       - ALLOWED_URLS={"general":"http://localhost:5600/data-fair/api/v1/api-docs.json","dataset":"http://localhost:5600/data-fair/api/v1/datasets/{id}/api-docs.json","privateDataset":"http://localhost:5600/data-fair/api/v1/datasets/{id}/private-api-docs.json","application":"http://localhost:5600/data-fair/api/v1/applications/{id}/api-docs.json","remoteService":"http://localhost:5600/data-fair/api/v1/remote-services/{id}/api-docs.json"}
 
   capture:

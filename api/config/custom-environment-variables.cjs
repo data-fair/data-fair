@@ -299,5 +299,13 @@ module.exports = {
   extensionUpdateDelay: {
     __name: 'EXTENSION_UPDATE_DELAY',
     __format: 'json'
+  },
+  compatODS: {
+    __name: 'COMPAT_ODS',
+    __format: 'json'
+  },
+  openapiViewerV2: {
+    __name: 'OPENAPI_VIEWER_V2',
+    __format: 'json'
   }
 }

@@ -2,6 +2,8 @@
 // for this reason we tried to optimize it as much as possible
 // we compile a function to prevent looping on keys and we memoize the function to avoid recompiling it every time
 
+// TODO: would it be safer to use a code generator, for example https://www.npmjs.com/package/astring ?
+
 import memoize from 'memoizee'
 
 const compileFlatten = (datasetId: string, finalizedAt: string, preserveArrays: boolean, dataset: any) => {
@@ -38,7 +40,7 @@ const compileFlatten = (datasetId: string, finalizedAt: string, preserveArrays: 
   return new Function('o', jitCode)
 }
 
-const memoizedCompileFlatter = memoize(compileFlatten, {
+const memoizedCompileFlatten = memoize(compileFlatten, {
   profileName: 'flatten',
   max: 10000,
   maxAge: 1000 * 60 * 60, // 1 hour
@@ -47,5 +49,5 @@ const memoizedCompileFlatter = memoize(compileFlatten, {
 })
 
 export const getFlatten = (dataset: any, preserveArrays: boolean = false) => {
-  return memoizedCompileFlatter(dataset.id, dataset.finalizedAt, preserveArrays, dataset)
+  return memoizedCompileFlatten(dataset.id, dataset.finalizedAt, preserveArrays, dataset)
 }

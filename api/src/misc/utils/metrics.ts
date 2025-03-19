@@ -1,10 +1,10 @@
-import { Gauge } from 'prom-client'
+import type { Db } from 'mongodb'
+import { Gauge, Counter } from 'prom-client'
 import { servicePromRegistry } from '@data-fair/lib-node/observer.js'
+// @ts-ignore
+import memoizeeProfile from 'memoizee/profile.js'
 
-/**
- * @param {import('mongodb').Db} db
- */
-export const init = async (db) => {
+export const init = async (db: Db) => {
   // global metrics based on db connection
 
   // eslint-disable-next-line no-new
@@ -46,13 +46,26 @@ export const init = async (db) => {
         // same as "utilization" from piscina but without dividing by maxThreads
         // this way we get an approximation of the CPU usage of the threads
         // also we reset the histogram after each collection
-        console.log(piscina.histogram)
         const completed = piscina.completed - (tasks[task]?.completed ?? 0)
         const duration = piscina.duration - (tasks[task]?.duration ?? 0)
         const value = completed ? ((completed * piscina.histogram.runTime.mean) / duration) : 0
         this.set({ task }, value)
         tasks[task] = { completed: piscina.completed, duration: piscina.duration }
         piscina.histogram.resetRunTime()
+      }
+    }
+  })
+
+  // eslint-disable-next-line no-new
+  new Counter({
+    name: 'df_memoize_total',
+    help: 'Total number of memoized function uses',
+    labelNames: ['fn', 'status'],
+    async collect () {
+      for (const [key, stats] of Object.entries(memoizeeProfile.statistics)) {
+        const name = key.split(', ')[0]
+        this.labels({ fn: name, status: 'miss' }).inc((stats as { initial: number }).initial)
+        this.labels({ fn: name, status: 'hit' }).inc((stats as { cached: number }).cached)
       }
     }
   })

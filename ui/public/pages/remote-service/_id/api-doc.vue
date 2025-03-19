@@ -4,15 +4,14 @@
     class="pa-0"
   >
     <open-api
-      v-if="resourceUrl"
-      :url="resourceUrl + '/api-docs.json'"
+      v-if="resourceUrl && !env.openapiViewerV2"
+      :url="resourceUrl"
     />
-    <!--
     <open-api
+      v-else
       :id="remoteService.id"
       type="remoteService"
     />
-    -->
   </v-container>
 </template>
 
@@ -27,6 +26,7 @@ export default {
     }
   },
   computed: {
+    ...mapState(['env']),
     ...mapState('remoteService', ['remoteService']),
     ...mapGetters('remoteService', ['resourceUrl'])
   },

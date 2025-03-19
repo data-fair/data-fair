@@ -4,23 +4,22 @@
     class="pa-0"
   >
     <open-api
-      v-if="resourceUrl"
-      :url="resourceUrl"
+      v-if="!env.openapiViewerV2"
+      :url="env.publicUrl + '/api/v1/api-docs.json'"
     />
-    <!--
     <open-api
+      v-else
       type="general"
     />
-    -->
   </v-container>
 </template>
 
 <script>
+import { mapState } from 'vuex'
+
 export default {
   computed: {
-    resourceUrl () {
-      return this.$store.state.env.publicUrl + '/api/v1/api-docs.json'
-    }
+    ...mapState(['env'])
   }
 }
 </script>

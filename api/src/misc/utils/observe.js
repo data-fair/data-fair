@@ -37,7 +37,9 @@ export const reqStep = (req, stepName) => {
   reqStepHisto.labels(Array.isArray(req[reqObserveKey].routeName) ? req[reqObserveKey].routeName[0] : req[reqObserveKey].routeName, stepName).observe(duration / 1000)
   debugReq('request', req.method, req.originalUrl, stepName, duration, 'ms')
   if (duration > 1000 && stepName !== 'total' && stepName !== 'finish') {
-    console.log('slow request', req.method, req.originalUrl, stepName, duration, 'ms')
+    const referer = req.headers.referer || req.headers.referrer || 'unknown'
+    const user = req.user ? `${req.user.name}(${req.user.id})` : 'anonymous'
+    console.log(`slow request ${req.method} ${req.originalUrl} ${stepName} ${duration}ms referer=${referer} user=${user}`)
   }
   req[reqObserveKey].step = now
 }

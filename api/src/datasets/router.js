@@ -8,7 +8,6 @@ import { Counter } from 'prom-client'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import pump from '../misc/utils/pipe.js'
 import mongodb from 'mongodb'
-import i18n from 'i18n'
 import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 import LinkHeader from 'http-link-header'
 import equal from 'deep-equal'
@@ -84,7 +83,7 @@ router.get('', apiKeyMiddleware, cacheHeaders.listBased, async (req, res) => {
   const user = req.user
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findDatasets(mongo.db, i18n.getLocale(req), publicationSite, publicBaseUrl, reqQuery, user)
+  const response = await findDatasets(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, user)
   for (const r of response.results) {
     datasetUtils.clean(req, r)
   }
@@ -182,7 +181,7 @@ router.patch('/:datasetId',
 
     const patch = req.body
     const db = mongo.db
-    const locale = i18n.getLocale(req)
+    const locale = req.getLocale()
 
     validatePatch(patch)
     validateURLFriendly(locale, patch.slug)
@@ -321,7 +320,8 @@ router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft:
 const createDatasetRoute = async (req, res) => {
   const db = mongo.db
   const es = req.app.get('es')
-  const locale = i18n.getLocale(req)
+  console.log(req)
+  const locale = req.getLocale()
   // @ts-ignore
   const user = /** @type {any} */(req.user)
   const draft = req.query.draft === 'true'
@@ -412,7 +412,7 @@ const updateDatasetRoute = async (req, res, next) => {
   req._draft = true
 
   const db = mongo.db
-  const locale = i18n.getLocale(req)
+  const locale = req.getLocale()
 
   const files = await uploadUtils.getFiles(req, res)
 
@@ -1224,14 +1224,14 @@ router.get('/:datasetId/full', readDataset(), apiKeyMiddleware, permissions.midd
 
 router.get('/:datasetId/api-docs.json', readDataset(), apiKeyMiddleware, permissions.middleware('readApiDoc', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
   const settings = await mongo.db.collection('settings')
-    .findOne({ type: req.dataset.owner.type, id: req.dataset.owner.id }, { projection: { info: 1 } })
-  res.send(datasetAPIDocs(req.dataset, req.publicBaseUrl, (settings && settings.info) || {}, req.publicationSite).api)
+    .findOne({ type: req.dataset.owner.type, id: req.dataset.owner.id }, { projection: { info: 1, compatODS: 1 } })
+  res.send(datasetAPIDocs(req.dataset, req.publicBaseUrl, settings, req.publicationSite).api)
 })
 
 router.get('/:datasetId/private-api-docs.json', readDataset(), apiKeyMiddleware, permissions.middleware('readPrivateApiDoc', 'readAdvanced'), cacheHeaders.noCache, async (req, res) => {
   const settings = await mongo.db.collection('settings')
-    .findOne({ type: req.dataset.owner.type, id: req.dataset.owner.id }, { projection: { info: 1 } })
-  res.send(privateDatasetAPIDocs(req.dataset, req.publicBaseUrl, req.user, (settings && settings.info) || {}))
+    .findOne({ type: req.dataset.owner.type, id: req.dataset.owner.id }, { projection: { info: 1, compatODS: 1 } })
+  res.send(privateDatasetAPIDocs(req.dataset, req.publicBaseUrl, req.user, settings))
 })
 
 router.get('/:datasetId/journal', readDataset({ acceptInitialDraft: true }), apiKeyMiddleware, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, async (req, res) => {

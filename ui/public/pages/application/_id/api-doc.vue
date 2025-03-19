@@ -4,15 +4,14 @@
     class="pa-0"
   >
     <open-api
-      v-if="resourceUrl"
+      v-if="resourceUrl && !env.openapiViewerV2"
       :url="resourceUrl + '/api-docs.json'"
     />
-    <!--
     <open-api
+      v-else
       :id="application.id"
       type="application"
     />
-    -->
   </v-container>
 </template>
 
@@ -27,6 +26,7 @@ export default {
     }
   },
   computed: {
+    ...mapState(['env']),
     ...mapState('application', ['application']),
     ...mapGetters('application', ['resourceUrl'])
   },
