@@ -37,7 +37,8 @@ export default (remoteService) => {
     paths: {
       '/': {
         get: {
-          summary: 'Récupérer les informations de configuration du service distant.',
+          summary: 'Informations service',
+          description: 'Récupérer les informations de configuration du service distant.',
           operationId: 'readDescription',
           'x-permissionClass': 'read',
           tags: ['Configuration'],
@@ -53,7 +54,8 @@ export default (remoteService) => {
           }
         },
         patch: {
-          summary: 'Mettre à jour les informations de configuration du service distant.',
+          summary: 'Mettre à jour la configuration',
+          description: 'Mettre à jour les informations de configuration du service distant.',
           operationId: 'writeDescription',
           'x-permissionClass': 'write',
           tags: ['Configuration'],
@@ -78,7 +80,8 @@ export default (remoteService) => {
           }
         },
         delete: {
-          summary: 'Pour supprimer cette configuration du service distant',
+          summary: 'Supprimer le service',
+          description: 'Pour supprimer cette configuration du service distant.',
           operationId: 'delete',
           'x-permissionClass': 'admin',
           tags: ['Configuration'],
@@ -91,7 +94,8 @@ export default (remoteService) => {
       },
       '/_update': {
         get: {
-          summary: 'Se resynchroniser avec l\'API du service distant',
+          summary: 'Se resynchroniser',
+          description: 'Se resynchroniser avec l\'API du service distant.',
           operationId: 'updateApiDoc',
           'x-permissionClass': 'write',
           tags: ['Configuration'],
@@ -109,7 +113,8 @@ export default (remoteService) => {
       },
       '/api-docs.json': {
         get: {
-          summary: 'Accéder à la documentation de l\'API',
+          summary: 'Documentation OpenAPI',
+          description: 'Accéder à cette documentation au format OpenAPI v3.',
           operationId: 'readApiDoc',
           'x-permissionClass': 'read',
           tags: ['Informations'],

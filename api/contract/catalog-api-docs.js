@@ -36,7 +36,8 @@ export default (catalog) => {
     paths: {
       '/': {
         get: {
-          summary: 'Récupérer les informations de configuration du catalogue.',
+          summary: 'Informations du catalogue',
+          description: 'Récupérer les informations de configuration du catalogue.',
           operationId: 'readDescription',
           'x-permissionClass': 'read',
           tags: ['Configuration'],
@@ -52,7 +53,8 @@ export default (catalog) => {
           }
         },
         patch: {
-          summary: 'Mettre à jour les informations de configuration du catalogue.',
+          summary: 'Mettre à jour le catalogue',
+          description: 'Mettre à jour les informations de configuration du catalogue.',
           operationId: 'writeDescription',
           'x-permissionClass': 'write',
           tags: ['Configuration'],
@@ -67,7 +69,7 @@ export default (catalog) => {
           },
           responses: {
             200: {
-              description: 'Les informations de configuration du catalogue',
+              description: 'Les informations de configuration du catalogue.',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/catalogSchema' }
@@ -77,13 +79,14 @@ export default (catalog) => {
           }
         },
         delete: {
-          summary: 'Pour supprimer cette configuration du catalogue',
+          summary: 'Supprimer le catalogue',
+          description: 'Pour supprimer cette configuration du catalogue.',
           operationId: 'delete',
           'x-permissionClass': 'admin',
           tags: ['Configuration'],
           responses: {
             204: {
-              description: 'Aucun contenu'
+              description: 'Suppression réussie.'
             }
           }
         }

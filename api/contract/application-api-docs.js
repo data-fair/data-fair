@@ -21,7 +21,7 @@ export default (application, info) => {
       contact: { ...(info.contact || {}) }
     },
     components: {
-      schemas: { applicationSchema, journalSchema },
+      schemas: { applicationSchema },
       securitySchemes: {
         apiKey: {
           type: 'apiKey',
@@ -45,7 +45,8 @@ export default (application, info) => {
     paths: {
       '/': {
         get: {
-          summary: 'Récupérer les informations de l\'application.',
+          summary: 'Informations de l\'application',
+          description: 'Récupérer les informations de l\'application.',
           operationId: 'readDescription',
           'x-permissionClass': 'read',
           tags: ['Configuration'],
@@ -61,7 +62,8 @@ export default (application, info) => {
           }
         },
         patch: {
-          summary: 'Mettre à jour la description de l\'application.',
+          summary: 'Mettre à jour l\'application',
+          description: 'Mettre à jour les informations de l\'application.',
           operationId: 'writeDescription',
           'x-permissionClass': 'write',
           tags: ['Configuration'],
@@ -76,7 +78,7 @@ export default (application, info) => {
           },
           responses: {
             200: {
-              description: 'Les informations de configuration de l\'application.',
+              description: 'Les informations de configuration modifiées de l\'application.',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/applicationSchema' }
@@ -86,26 +88,28 @@ export default (application, info) => {
           }
         },
         delete: {
-          summary: 'Supprimer cette configuration de l\'application.',
+          summary: 'Supprimer l\'application',
+          description: 'Supprimer cette application.',
           operationId: 'delete',
           'x-permissionClass': 'admin',
           tags: ['Configuration'],
           responses: {
             204: {
-              description: 'Aucun contenu.'
+              description: 'Application supprimée.'
             }
           }
         }
       },
       '/config': {
         get: {
-          summary: 'Utiliser l\'application.', // To use an application, we must be able to read its configuration
+          summary: 'Configuration actuelle',
+          description: 'Récupérer la configuration de l\'application.',
           operationId: 'readConfig',
           'x-permissionClass': 'read',
           tags: ['Paramétrage'],
           responses: {
             200: {
-              description: 'Le paramétrage de l\'application.',
+              description: 'La configuration de l\'application.',
               content: {
                 'application/json': {
                   schema: {
@@ -117,12 +121,13 @@ export default (application, info) => {
           }
         },
         put: {
-          summary: 'Mettre à jour le paramétrage de l\'application.',
+          summary: 'Mettre à jour la configuration',
+          description: 'Mettre à jour la configuration de l\'application.',
           operationId: 'writeConfig',
           'x-permissionClass': 'write',
           tags: ['Paramétrage'],
           requestBody: {
-            description: 'Le paramétrage de l\'application.',
+            description: 'La configuration de l\'application.',
             required: true,
             content: {
               'application/json': {
@@ -134,7 +139,7 @@ export default (application, info) => {
           },
           responses: {
             200: {
-              description: 'Le paramétrage de l\'application.',
+              description: 'La configuration modifiée de l\'application.',
               content: {
                 'application/json': {
                   schema: {
@@ -148,7 +153,8 @@ export default (application, info) => {
       },
       '/api-docs.json': {
         get: {
-          summary: 'Accéder à cette documentation au format OpenAPI v3.',
+          summary: 'Documentation OpenAPI',
+          description: 'Accéder à cette documentation au format OpenAPI v3.',
           operationId: 'readApiDoc',
           'x-permissionClass': 'read',
           tags: ['Informations'],
@@ -168,16 +174,17 @@ export default (application, info) => {
       },
       '/journal': {
         get: {
-          summary: 'Lister les événements du journal de l\'application.',
+          summary: 'Liste des événements',
+          description: 'Lister les événements du journal de l\'application.',
           operationId: 'readJournal',
           'x-permissionClass': 'readAdvanced',
           tags: ['Informations'],
           responses: {
             200: {
-              description: 'Le journal de l\'application.',
+              description: 'Le journal d\'événements de l\'application.',
               content: {
                 'application/json': {
-                  schema: { $ref: '#/components/schemas/journalSchema' }
+                  schema: journalSchema
                 }
               }
             }
@@ -186,7 +193,8 @@ export default (application, info) => {
       },
       '/capture': {
         get: {
-          summary: 'Générer une capture d\'écran de l\'application.',
+          summary: 'Capture PNG',
+          description: 'Générer une capture d\'écran de l\'application.',
           operationId: 'readCapture',
           'x-permissionClass': 'read',
           tags: ['Informations'],
@@ -202,7 +210,8 @@ export default (application, info) => {
       },
       '/print': {
         get: {
-          summary: 'Générer une impression PDF de l\'application.',
+          summary: 'Impression PDF',
+          description: 'Générer une impression PDF de l\'application.',
           operationId: 'readPrint',
           'x-permissionClass': 'read',
           tags: ['Informations'],
@@ -218,20 +227,22 @@ export default (application, info) => {
       },
       '/attachments': {
         post: {
-          summary: 'Charger une pièce jointe.',
+          summary: 'Charger une pièce jointe',
+          description: 'Charger une pièce jointe dans les métadonnées.',
           operationId: 'postAttachment',
           'x-permissionClass': 'write',
           tags: ['Métadonnées'],
           responses: {
             204: {
-              description: 'Aucun contenu.'
+              description: 'La pièce jointe a été chargée.'
             }
           }
         }
       },
       '/attachments/{attachmentId}': {
         delete: {
-          summary: 'Supprimer une pièce jointe.',
+          summary: 'Supprimer une pièce jointe',
+          description: 'Supprimer une pièce jointe des métadonnées.',
           operationId: 'deleteAttachment',
           'x-permissionClass': 'write',
           tags: ['Métadonnées'],
@@ -247,7 +258,7 @@ export default (application, info) => {
           }],
           responses: {
             204: {
-              description: 'Aucun contenu.'
+              description: 'La pièce jointe a été supprimée.'
             }
           }
         }
