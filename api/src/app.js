@@ -1,3 +1,4 @@
+import * as metrics from './misc/utils/metrics.ts' // import early so that memoizee can be used in the following imports
 import { resolve, parse as parsePath, join } from 'node:path'
 import express from 'express'
 import config from '#config'
@@ -9,7 +10,6 @@ import * as wsServer from '@data-fair/lib-express/ws-server.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import locks from '@data-fair/lib-node/locks.js'
 import * as observe from './misc/utils/observe.js'
-import * as metrics from './misc/utils/metrics.ts'
 import debug from 'debug'
 import EventEmitter from 'node:events'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
