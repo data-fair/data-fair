@@ -4,6 +4,11 @@
     class="pa-0"
   >
     <open-api
+      v-if="resourceUrl && !env.openapiViewerV2"
+      :url="resourceUrl + '/api-docs.json'"
+    />
+    <open-api
+      v-else
       :id="application.id"
       type="application"
     />
@@ -11,7 +16,7 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 
 export default {
   async fetch ({ store, route }) {
@@ -21,7 +26,9 @@ export default {
     }
   },
   computed: {
+    ...mapState(['env']),
     ...mapState('application', ['application']),
+    ...mapGetters('application', ['resourceUrl'])
   },
   created () {
     if (this.application) {

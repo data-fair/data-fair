@@ -15,18 +15,23 @@ export default {
   props: {
     type: {
       type: String,
-      required: true
+      // required: true
+      default: ''
     },
     id: {
       type: String,
-      required: false,
+      default: ''
+    },
+    url: {
+      type: String,
       default: ''
     }
   },
   computed: {
     ...mapState(['env']),
     src () {
-      return this.env.openapiViewerUrl + `?drawerLocation=right&urlType=${this.type}` + (this.id ? `&id=${this.id}` : '')
+      if (this.env.openapiViewerV2) return this.env.openapiViewerUrl + `?drawerLocation=right&urlType=${this.type}` + (this.id ? `&id=${this.id}` : '')
+      else return this.env.openapiViewerUrl + '?hide-toolbar=true&drawerLocation=right' + '&url=' + this.url
     }
   }
 }

@@ -343,4 +343,5 @@ module.exports = {
   remoteAttachmentCacheDuration: 1000 * 5,
   extensionUpdateDelay: 600,
   compatODS: false,
+  openapiViewerV2: false
 }
