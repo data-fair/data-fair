@@ -64,7 +64,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     paths: {
       '/ping': {
         get: {
-          summary: 'Obtenir l\'état de santé du service.',
+          summary: 'Obtenir l\'état de santé du service',
           operationId: 'ping',
           tags: ['Administration'],
           'x-operationType': 'http://schema.org/CheckAction',

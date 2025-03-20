@@ -346,7 +346,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
    * @returns {any}
    */
   const readSchema = (safe) => ({
-    summary: safe ? 'Schéma réduit' : 'Schéma',
+    summary: safe ? 'Lire le schéma réduit' : 'Lire le schéma',
     description: `Récupérer la liste des colonnes et leurs détails.${safe ? '\n*Les indices sur le contenu de la donnée sont purgés*' : ''}`,
     operationId: safe ? 'readSafeSchema' : 'readSchema',
     'x-permissionClass': 'read',

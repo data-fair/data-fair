@@ -213,7 +213,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   api.paths['/user-notification'] = {
     post: {
-      summary: 'Envoiyer une notification',
+      summary: 'Envoyer une notification',
       description: 'Envoyer une notification relative au jeu de données à la visibilité interne au compte.',
       operationId: 'sendUserNotification',
       'x-permissionClass': 'write',
