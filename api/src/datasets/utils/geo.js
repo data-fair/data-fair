@@ -284,11 +284,19 @@ const prepair = async (geometry) => {
     // const wkt = wktParser.convert(feature.geometry)
     tmpFile = await tmp.file({ prefix: 'prepair-', postfix: '.geojson', tmpdir: tmpDir })
     await writeFile(tmpFile.fd, JSON.stringify({ type: 'Feature', geometry }))
-    const repaired = await exec(`prepair --ogr '${tmpFile.path}'`, { maxBuffer: 100000000 })
+    const cmd = `prepair --ogr '${tmpFile.path}'`
+    debug('run command: ', cmd)
+    const repaired = await exec(cmd, { maxBuffer: 100000000 })
     const repairedGeometry = wktToGeoJSON(repaired.stdout)
     geometry.coordinates = repairedGeometry.coordinates
     return geometry
   } finally {
-    if (tmpFile) tmpFile.cleanup()
+    if (tmpFile) {
+      if (debug.enabled) {
+        debug('preserving tmp file for debug', tmpFile.path)
+      } else {
+        tmpFile.cleanup()
+      }
+    }
   }
 }
