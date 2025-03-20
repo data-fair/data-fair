@@ -320,7 +320,6 @@ router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft:
 const createDatasetRoute = async (req, res) => {
   const db = mongo.db
   const es = req.app.get('es')
-  console.log(req)
   const locale = req.getLocale()
   // @ts-ignore
   const user = /** @type {any} */(req.user)
