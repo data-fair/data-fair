@@ -339,8 +339,8 @@ export const endpoints = (dataset) => {
     endpoints[`/master-data/bulk-searchs/${bulkSearch.id}`] = {
       post: {
         tags: ['Données de référence'],
-        summary: 'Rechercher en masse',
-        description: bulkSearch.title + '. ' + (bulkSearch.description || ''),
+        summary: bulkSearch.title,
+        description: bulkSearch.description || '',
         operationId: `masterData_bulkSearch_${bulkSearch.id}`,
         'x-operationType': 'http://schema.org/SearchAction',
         'x-permissionClass': 'read',
