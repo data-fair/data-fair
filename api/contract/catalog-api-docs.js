@@ -36,7 +36,7 @@ export default (catalog) => {
     paths: {
       '/': {
         get: {
-          summary: 'Informations du catalogue',
+          summary: 'Lire les informations',
           description: 'Récupérer les informations de configuration du catalogue.',
           operationId: 'readDescription',
           'x-permissionClass': 'read',

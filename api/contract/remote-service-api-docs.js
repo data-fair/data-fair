@@ -37,7 +37,7 @@ export default (remoteService) => {
     paths: {
       '/': {
         get: {
-          summary: 'Informations service',
+          summary: 'Lire les informations',
           description: 'Récupérer les informations de configuration du service distant.',
           operationId: 'readDescription',
           'x-permissionClass': 'read',
@@ -54,7 +54,7 @@ export default (remoteService) => {
           }
         },
         patch: {
-          summary: 'Mettre à jour la configuration',
+          summary: 'Modifier le service',
           description: 'Mettre à jour les informations de configuration du service distant.',
           operationId: 'writeDescription',
           'x-permissionClass': 'write',
@@ -94,7 +94,7 @@ export default (remoteService) => {
       },
       '/_update': {
         get: {
-          summary: 'Se resynchroniser',
+          summary: 'Resynchroniser le service',
           description: 'Se resynchroniser avec l\'API du service distant.',
           operationId: 'updateApiDoc',
           'x-permissionClass': 'write',
@@ -113,7 +113,7 @@ export default (remoteService) => {
       },
       '/api-docs.json': {
         get: {
-          summary: 'Documentation OpenAPI',
+          summary: 'Obtenir la documentation OpenAPI',
           description: 'Accéder à cette documentation au format OpenAPI v3.',
           operationId: 'readApiDoc',
           'x-permissionClass': 'read',

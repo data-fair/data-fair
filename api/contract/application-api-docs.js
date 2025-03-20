@@ -45,7 +45,7 @@ export default (application, info) => {
     paths: {
       '/': {
         get: {
-          summary: 'Informations de l\'application',
+          summary: 'Lire les informations',
           description: 'Récupérer les informations de l\'application.',
           operationId: 'readDescription',
           'x-permissionClass': 'read',
@@ -62,7 +62,7 @@ export default (application, info) => {
           }
         },
         patch: {
-          summary: 'Mettre à jour l\'application',
+          summary: 'Modifier l\'application',
           description: 'Mettre à jour les informations de l\'application.',
           operationId: 'writeDescription',
           'x-permissionClass': 'write',
@@ -102,7 +102,7 @@ export default (application, info) => {
       },
       '/config': {
         get: {
-          summary: 'Configuration actuelle',
+          summary: 'Lire la configuration actuelle',
           description: 'Récupérer la configuration de l\'application.',
           operationId: 'readConfig',
           'x-permissionClass': 'read',
@@ -121,7 +121,7 @@ export default (application, info) => {
           }
         },
         put: {
-          summary: 'Mettre à jour la configuration',
+          summary: 'Modifier la configuration',
           description: 'Mettre à jour la configuration de l\'application.',
           operationId: 'writeConfig',
           'x-permissionClass': 'write',
@@ -153,7 +153,7 @@ export default (application, info) => {
       },
       '/api-docs.json': {
         get: {
-          summary: 'Documentation OpenAPI',
+          summary: 'Obtenir la documentation OpenAPI',
           description: 'Accéder à cette documentation au format OpenAPI v3.',
           operationId: 'readApiDoc',
           'x-permissionClass': 'read',
@@ -174,7 +174,7 @@ export default (application, info) => {
       },
       '/journal': {
         get: {
-          summary: 'Liste des événements',
+          summary: 'Lister les événements',
           description: 'Lister les événements du journal de l\'application.',
           operationId: 'readJournal',
           'x-permissionClass': 'readAdvanced',
@@ -193,7 +193,7 @@ export default (application, info) => {
       },
       '/capture': {
         get: {
-          summary: 'Capture PNG',
+          summary: 'Générer une capture PNG',
           description: 'Générer une capture d\'écran de l\'application.',
           operationId: 'readCapture',
           'x-permissionClass': 'read',
@@ -210,7 +210,7 @@ export default (application, info) => {
       },
       '/print': {
         get: {
-          summary: 'Impression PDF',
+          summary: 'Générer une impression PDF',
           description: 'Générer une impression PDF de l\'application.',
           operationId: 'readPrint',
           'x-permissionClass': 'read',

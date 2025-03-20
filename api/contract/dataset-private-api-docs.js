@@ -72,7 +72,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   Object.assign(api.paths['/'], {
     patch: {
-      summary: 'Mettre à jour le jeu de données',
+      summary: 'Modifier le jeu de données',
       description: 'Mettre à jour les informations du jeu de données.',
       operationId: 'writeDescription',
       'x-permissionClass': 'write',
@@ -171,7 +171,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   api.paths['/private-api-docs.json'] = {
     get: {
-      summary: 'Documentation privée OpenAPI',
+      summary: 'Obtenir la documentation privée OpenAPI',
       description: 'Accéder à cette documentation privée au format OpenAPI v3.',
       operationId: 'readPrivateApiDoc',
       'x-permissionClass': 'readAdvanced',
@@ -193,7 +193,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   api.paths['/journal'] = {
     get: {
-      summary: 'Liste des événements',
+      summary: 'Lister les événements',
       description: 'Lister les événements du journal du jeu de données.',
       operationId: 'readJournal',
       'x-permissionClass': 'readAdvanced',
@@ -213,7 +213,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   api.paths['/user-notification'] = {
     post: {
-      summary: 'Envoi de notification',
+      summary: 'Envoiyer une notification',
       description: 'Envoyer une notification relative au jeu de données à la visibilité interne au compte.',
       operationId: 'sendUserNotification',
       'x-permissionClass': 'write',
@@ -384,7 +384,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     }
     api.paths['/_bulk_lines'] = {
       post: {
-        summary: 'Opérations en masse',
+        summary: 'Effectuer des opérations en masse',
         description: 'Créer/modifier/supprimer de multiples lignes en une seule opération.',
         operationId: 'bulkLines',
         'x-permissionClass': 'write',
@@ -475,7 +475,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
     Object.assign(api.paths, {
       '/_diagnose': {
         get: {
-          summary: 'Informations techniques',
+          summary: 'Lire les informations techniques',
           description: 'Récupérer des informations techniques.',
           tags: ['Administration'],
           operationId: 'diagnose',
@@ -540,7 +540,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   if (dataset.isRest && user.adminMode) {
     api.paths['/_sync_attachments_lines'] = {
       post: {
-        summary: 'Re-synchronisation',
+        summary: 'Forcer la synchronisation',
         description: 'Re-synchroniser les lignes du jeux de données avec les pièces jointes présentes.',
         tags: ['Administration'],
         operationId: 'syncAttachmentsLines',
@@ -564,7 +564,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   if (dataset.readApiKey?.active) {
     api.paths['/read-api-key'] = {
       get: {
-        summary: 'Clé d\'API',
+        summary: 'Obtenir la clé d\'API',
         description: 'Récupérer la clé API de lecture.',
         operationId: 'getReadApiKey',
         'x-permissionClass': 'read',

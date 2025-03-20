@@ -346,8 +346,8 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
    * @returns {any}
    */
   const readSchema = (safe) => ({
-    summary: safe ? 'Schéma purgé' : 'Schéma',
-    description: `Récupérer la liste des colonnes.${safe ? '\n*les indices sur le contenu de la donnée sont purgés*' : ''}`,
+    summary: safe ? 'Schéma réduit' : 'Schéma',
+    description: `Récupérer la liste des colonnes et leurs détails.${safe ? '\n*Les indices sur le contenu de la donnée sont purgés*' : ''}`,
     operationId: safe ? 'readSafeSchema' : 'readSchema',
     'x-permissionClass': 'read',
     tags: ['Métadonnées'],
@@ -447,7 +447,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     paths: {
       '/': {
         get: {
-          summary: 'Informations du jeu de données',
+          summary: 'Lire les informations',
           description: 'Récupérer les informations du jeu de données.',
           operationId: 'readDescription',
           'x-permissionClass': 'read',
@@ -466,7 +466,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/data-files': {
         get: {
-          summary: 'Liste des fichiers',
+          summary: 'Lister les fichiers',
           description: 'Récupérer la liste des fichiers de données.',
           operationId: 'readDataFiles',
           'x-permissionClass': 'read',
@@ -485,7 +485,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/lines': {
         get: {
-          summary: 'Requêter les lignes',
+          summary: 'Lire les lignes',
           description: 'Requêter les lignes du jeu de données.',
           operationId: 'readLines',
           'x-permissionClass': 'read',
@@ -551,7 +551,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/values_agg': {
         get: {
-          summary: 'Agrégation de valeurs',
+          summary: 'Agréger les valeurs',
           description: 'Récupérer des informations agrégées en fonction des valeurs d\'une colonne.',
           operationId: 'getValuesAgg',
           'x-permissionClass': 'read',
@@ -601,7 +601,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/values/{field}': {
         get: {
-          summary: 'Valeurs distinctes',
+          summary: 'Lister les valeurs distinctes',
           description: 'Récupérer la liste des valeurs distinctes d\'une colonne.',
           operationId: 'getValues',
           'x-permissionClass': 'read',
@@ -664,7 +664,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       '/metric_agg': {
         get: {
           summary: 'Calculer une métrique',
-          description: 'Calculer une métrique sur un ensemble de lignes.',
+          description: 'Calculer une métrique sur une colonne.',
           operationId: 'getMetricAgg',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -694,11 +694,12 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             {
               in: 'query',
               name: 'percents',
-              description: 'Les pourcentages sur lesquels calculer la métrique percentiles (inutile pour les autres métriques). La valeur par défaut est "1,5,25,50,75,95,99"',
+              description: 'Les pourcentages sur lesquels calculer la métrique percentiles (inutile pour les autres métriques).',
               required: false,
               schema: {
                 title: 'Pourcentages sur lesquels calculer la métrique percentiles',
-                type: 'string'
+                type: 'string',
+                default: '1,5,25,50,75,95,99'
               }
             }
             // @ts-ignore
@@ -719,12 +720,25 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/simple_metrics_agg': {
         get: {
-          summary: 'Métriques simples',
+          summary: 'Calculer des métriques simples',
           description: 'Calculer des métriques simples standards sur toutes les colonnes possibles ou sur une liste de colonnes.',
           operationId: 'getSimpleMetricsAgg',
           'x-permissionClass': 'read',
           tags: ['Données'],
           parameters: [
+            {
+              in: 'query',
+              name: 'metrics',
+              description: 'Les métriques à appliquer. Des métriques par défaut sont appliquées en fonction du type de champ.',
+              schema: {
+                title: 'Métriques à appliquer',
+                type: 'array',
+                items: {
+                  type: 'string',
+                  enum: acceptedMetricAggs
+                }
+              }
+            },
             {
               in: 'query',
               name: 'fields',
@@ -739,19 +753,6 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
               },
               style: 'form',
               explode: false
-            },
-            {
-              in: 'query',
-              name: 'metrics',
-              description: 'Les métriques à appliquer. Des métriques par défaut sont appliquées en fonction du type de champ.',
-              schema: {
-                title: 'Métriques à appliquer',
-                type: 'array',
-                items: {
-                  type: 'string',
-                  enum: acceptedMetricAggs
-                }
-              }
             }
             // @ts-ignore
           ].concat(filterParams),
@@ -771,8 +772,8 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/words_agg': {
         get: {
-          summary: 'Mots significatifs',
-          description: 'Récupérer des mots significatifs dans un jeu de données.',
+          summary: 'Lister les mots significatifs',
+          description: 'Récupérer des mots significatifs d\'une colonne dans un jeu de données.',
           operationId: 'getWordsAgg',
           'x-permissionClass': 'read',
           tags: ['Données'],
@@ -789,7 +790,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           }, {
             in: 'query',
             name: 'analysis',
-            description: 'Le type d\'analyse textuelle effectuée sur la colonne. L\'analyse "lang" est intelligente en fonction de la langue, elle calcule la racine grammaticale des mots et ignore les mots les moins significatifs. L\'analyse "standard" effectue un travail plus basique d\'extraction de mots bruts depuis le texte',
+            description: 'Le type d\'analyse textuelle effectuée sur la colonne.\nL\'analyse "**lang**" est intelligente en fonction de la langue, elle calcule la racine grammaticale des mots et ignore les mots les moins significatifs.\nL\'analyse "**standard**" effectue un travail plus basique d\'extraction de mots bruts depuis le texte',
             schema: {
               title: 'Type d\'analyse à effectuer',
               type: 'string',
@@ -836,7 +837,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/full': {
         get: {
-          summary: 'Télécharger enrichi',
+          summary: 'Télécharger (données enrichies)',
           description: 'Télécharger le jeu de données enrichi.',
           operationId: 'downloadFullData',
           'x-permissionClass': 'read',
@@ -863,7 +864,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
       },
       '/api-docs.json': {
         get: {
-          summary: 'Documentation OpenAPI',
+          summary: 'Obtenir la documentation OpenAPI',
           description: 'Accéder à cette documentation publique au format OpenAPI v3.',
           operationId: 'readApiDoc',
           'x-permissionClass': 'read',
@@ -920,7 +921,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
   if (dataset.bbox && dataset.bbox.length === 4) {
     api.paths['/geo_agg'] = {
       get: {
-        summary: 'Agrégation spatiale',
+        summary: 'Agréger spatialement',
         description: 'Récupérer des informations agrégées spatialement sur le jeu de données.',
         operationId: 'getGeoAgg',
         'x-permissionClass': 'read',
@@ -1019,8 +1020,8 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
 
     api.paths['/compat-ods/records'] = {
       get: {
-        summary: 'Récupérer les enregistrements.',
-        description: 'AVERTISSEMENT : Cette opération est un prototype en cours de conception. Elle permettra de récupérer les enregistrements du jeu de données de manière identique à l\'API "/records" du portail précédent.',
+        summary: 'Récupérer les enregistrements',
+        description: '**AVERTISSEMENT** : Cette opération est un prototype en cours de conception. Elle permettra de récupérer les enregistrements du jeu de données de manière identique à l\'API "/records" du portail précédent.',
         operationId: 'readCompatODSRecords',
         'x-permissionClass': 'read',
         tags: ['Compatibilité ODS'],

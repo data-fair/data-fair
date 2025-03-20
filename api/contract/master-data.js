@@ -280,7 +280,7 @@ export const endpoints = (dataset) => {
     endpoints[`/master-data/single-searchs/${singleSearch.id}`] = {
       get: {
         tags: ['Données de référence'],
-        summary: 'Recherche unitaire',
+        summary: 'Rechercher unitairement',
         description: singleSearch.title + '. ' + (singleSearch.description || ''),
         operationId: `masterData_singleSearch_${singleSearch.id}`,
         'x-operationType': 'http://schema.org/SearchAction',
@@ -339,7 +339,7 @@ export const endpoints = (dataset) => {
     endpoints[`/master-data/bulk-searchs/${bulkSearch.id}`] = {
       post: {
         tags: ['Données de référence'],
-        summary: 'Recherche en masse',
+        summary: 'Rechercher en masse',
         description: bulkSearch.title + '. ' + (bulkSearch.description || ''),
         operationId: `masterData_bulkSearch_${bulkSearch.id}`,
         'x-operationType': 'http://schema.org/SearchAction',

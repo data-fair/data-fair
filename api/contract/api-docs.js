@@ -64,8 +64,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     paths: {
       '/ping': {
         get: {
-          summary: 'Etat de santé',
-          description: 'Obtenir l\'état de santé du service.',
+          summary: 'Obtenir l\'état de santé du service.',
           operationId: 'ping',
           tags: ['Administration'],
           'x-operationType': 'http://schema.org/CheckAction',
@@ -81,7 +80,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       },
       '/api-docs.json': {
         get: {
-          summary: 'Documentation OpenAPI',
+          summary: 'Obtenir la documentation OpenAPI',
           description: 'Accéder à cette documentation au format OpenAPI v3.',
           operationId: 'getApiDoc',
           tags: ['Administration'],
@@ -101,7 +100,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       },
       '/vocabulary': {
         get: {
-          summary: 'Liste les concepts',
+          summary: 'Lister les concepts',
           description: 'Récupérer la liste des concepts utilisables pour annoter la donnée sur ce service.',
           operationId: 'getVocabulary',
           tags: ['Administration'],
@@ -134,7 +133,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       },
       '/datasets': {
         get: {
-          summary: 'Liste des jeux de données',
+          summary: 'Lister les jeux de données',
           description: 'Récupérer la liste des jeux de données.',
           operationId: 'listDatasets',
           tags: ['Jeux de données'],
@@ -211,7 +210,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       '/datasets/{id}': {
         parameters: [utils.idParam],
         get: {
-          summary: 'Informations d\'un jeu de données',
+          summary: 'Lire les informations d\'un jeu de données',
           description: 'Récupérer les informations d\'un jeu de données.',
           operationId: 'getDataset',
           tags: ['Jeux de données'],
@@ -309,7 +308,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       },
       '/applications': {
         get: {
-          summary: 'Liste des applications',
+          summary: 'Lister les applications',
           description: 'Récupérer la liste des applications.',
           operationId: 'listApplications',
           tags: ['Applications'],
@@ -381,7 +380,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       '/applications/{id}': {
         parameters: [utils.idParam],
         get: {
-          summary: 'Informations d\'une application',
+          summary: 'Lire les informations d\'une application',
           description: 'Récupérer les informations d\'une application.',
           operationId: 'getApplication',
           tags: ['Applications'],
@@ -479,7 +478,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       },
       '/remote-services': {
         get: {
-          summary: 'Liste des services',
+          summary: 'Lister les services',
           description: 'Récupérer la liste des services distants.',
           operationId: 'listRemoteServices',
           tags: ['Services distants'],
@@ -549,7 +548,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       '/remote-services/{id}': {
         parameters: [utils.idParam],
         get: {
-          summary: 'Informations d\'un service',
+          summary: 'Lire les informations d\'un service',
           description: 'Récupérer les informations d\'un service distant.',
           operationId: 'getRemoteService',
           tags: ['Services distants'],
@@ -648,7 +647,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       },
       '/catalogs': {
         get: {
-          summary: 'Liste des catalogues',
+          summary: 'Lister les catalogues',
           description: 'Récupérer la liste des catalogues.',
           operationId: 'listCatalogs',
           tags: ['Catalogues'],
@@ -716,7 +715,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       '/catalogs/{id}': {
         parameters: [utils.idParam],
         get: {
-          summary: 'Informations d\'un catalogue',
+          summary: 'Lire les informations d\'un catalogue',
           description: 'Récupérer les informations d\'un catalogue.',
           operationId: 'getCatalog',
           tags: ['Catalogues'],
