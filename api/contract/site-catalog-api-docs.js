@@ -42,7 +42,8 @@ export default (publicUrl, publicationSite, info) => {
     paths: {
       '/api-docs.json': {
         get: {
-          summary: 'Cette documentation d\'API au format Open API v3',
+          summary: 'Obtenir la documentation OpenAPI',
+          description: 'Accéder à cette documentation au format OpenAPI v3.',
           tags: ['Catalogue'],
           operationId: 'getApiDoc',
           responses: {
@@ -59,7 +60,8 @@ export default (publicUrl, publicationSite, info) => {
       },
       '/datasets': {
         get: {
-          summary: 'Récupérer la liste des jeux de données.',
+          summary: 'Lister les jeux de données',
+          description: 'Récupérer la liste des jeux de données.',
           operationId: 'listDatasets',
           tags: ['Catalogue'],
           parameters: [
@@ -98,7 +100,8 @@ export default (publicUrl, publicationSite, info) => {
       },
       '/dcat': {
         get: {
-          summary: 'Récupérer la liste des jeux de données au format DCAT (JSON-LD).',
+          summary: 'Lister les jeux de données (DCAT)',
+          description: 'Récupérer la liste des jeux de données au format DCAT (JSON-LD).',
           operation: 'dcat',
           tags: ['Catalogue'],
           responses: {

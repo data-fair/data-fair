@@ -316,7 +316,8 @@ export const router = (resourceType, resourceName, onPublicCallback) => {
 
 export const apiDoc = {
   get: {
-    summary: 'Récupérer la liste des permissions.',
+    summary: 'Liste des permissions',
+    description: 'Récupérer la liste des permissions.',
     operationId: 'getPermissions',
     'x-permissionClass': 'admin',
     tags: ['Permissions'],
@@ -332,7 +333,8 @@ export const apiDoc = {
     }
   },
   put: {
-    summary: 'Définir la liste des permissions.',
+    summary: 'Définir les permissions',
+    description: 'Définir la liste des permissions.',
     operationId: 'setPermissions',
     'x-permissionClass': 'admin',
     tags: ['Permissions'],

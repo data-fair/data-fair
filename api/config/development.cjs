@@ -99,5 +99,5 @@ module.exports = {
     server: 'https://staging-koumoul.com/tileserver'
   }],
   compatODS: true,
-  openapiViewerV2: false
+  openapiViewerV2: true
 }
