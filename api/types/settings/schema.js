@@ -47,9 +47,15 @@ export default {
     },
     webhooks: {
       type: 'array',
-      title: "Liste d'appels extérieurs",
-      'x-sortable': false,
-      'x-itemTitle': 'none',
+      title: 'Webhooks',
+      layout: {
+        messages: {
+          addItem: 'Add a webhook',
+          'x-i18n-addItem': {
+            fr: 'Ajouter un webhook'
+          }
+        }
+      },
       items: {
         type: 'object',
         additionalProperties: false,
@@ -57,11 +63,18 @@ export default {
         properties: {
           title: {
             type: 'string',
-            title: 'Titre'
+            title: 'Title',
+            'x-i18n-title': {
+              fr: 'Titre'
+            }
           },
           events: {
             type: 'array',
-            title: 'Événements déclencheurs',
+            title: 'Events',
+            'x-i18n-title': {
+              fr: 'Événements déclencheurs'
+            },
+            minItems: 1,
             items: {
               type: 'string',
               oneOf: [{
@@ -125,7 +138,18 @@ export default {
     },
     licenses: {
       type: 'array',
-      description: 'List of licenses',
+      title: 'Licenses',
+      'x-i18n-title': {
+        fr: 'Licences',
+      },
+      layout: {
+        messages: {
+          addItem: 'Add a license',
+          'x-i18n-addItem': {
+            fr: 'Ajouter une licence'
+          }
+        }
+      },
       items: {
         type: 'object',
         additionalProperties: false,
@@ -133,11 +157,21 @@ export default {
         properties: {
           title: {
             type: 'string',
-            description: 'Short title for the license'
+            title: 'Title',
+            'x-i18n-title': {
+              fr: 'Titre'
+            }
           },
           href: {
             type: 'string',
-            description: 'The URL where the license can be read'
+            title: 'URL',
+            'x-i18n-title': {
+              fr: 'URL'
+            },
+            description: 'The URL where the license can be read',
+            'x-i18n-description': {
+              fr: 'L\'URL où la licence peut être lue'
+            }
           }
         }
       }

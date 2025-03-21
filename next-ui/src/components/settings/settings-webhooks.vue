@@ -3,10 +3,10 @@
     v-model="valid"
   >
     <vjsf
-      v-model="licenses"
-      :schema="settingsSchema.properties.licenses"
+      v-model="webhooks"
+      :schema="settingsSchema.properties.webhooks"
       :options="vjsfOptions"
-      @update:model-value="valid ? emit('updated', { ...settings, licenses: $event }) : null"
+      @update:model-value="valid ? emit('updated', { ...settings, webhooks: $event }) : null"
     />
   </v-form>
 </template>
@@ -20,7 +20,7 @@ const { settings } = defineProps<{
 }>()
 
 const valid = ref(true)
-const licenses = ref(settings.licenses)
+const webhooks = ref(settings.webhooks)
 
 const emit = defineEmits<{
   (event: 'updated', settings: Settings): void

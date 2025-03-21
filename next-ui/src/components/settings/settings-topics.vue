@@ -6,7 +6,7 @@
       v-model="topics"
       :schema="settingsSchema.properties.topics"
       :options="vjsfOptions"
-      @update:model-value="updateTopics($event)"
+      @update:model-value="valid ? emit('updated', { ...settings, topics: $event }) : null"
     />
   </v-form>
 </template>
@@ -20,23 +20,11 @@ const { settings } = defineProps<{
 }>()
 
 const valid = ref(true)
-const watchUpdating = ref(false)
 const topics = ref(settings.topics)
 
 const emit = defineEmits<{
   (event: 'updated', settings: Settings): void
 }>()
-
-const updateTopics = (topics: Settings['topics']) => {
-  if (!watchUpdating.value && valid.value) {
-    emit('updated', { ...settings, topics })
-  }
-}
-watch(() => settings, () => {
-  watchUpdating.value = true
-  topics.value = settings.topics
-  watchUpdating.value = false
-})
 
 const vjsfOptions: VjsfOptions = {
   readOnlyPropertiesMode: 'hide',

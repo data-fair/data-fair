@@ -3,7 +3,7 @@
     data-iframe-height
     fluid
   >
-    <settings-topics
+    <settings-webhooks
       v-if="settings"
       :settings="settings"
       @updated="save.execute($event)"
@@ -14,7 +14,7 @@
 <script setup lang="ts">
 import type { Settings } from '#api/types'
 
-const route = useRoute<'/embed/settings/[type]/[id]/topics'>()
+const route = useRoute<'/embed/settings/[type]/[id]/webhooks'>()
 const settings = ref<Settings | null>(null)
 
 const save = useAsyncAction(async (updatedSettings: Settings) => {

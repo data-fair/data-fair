@@ -16,5 +16,6 @@ declare module 'vue' {
     SettingsApiKeyUseMenu: typeof import('./../src/components/settings/settings-api-key-use-menu.vue')['default']
     SettingsLicenses: typeof import('./../src/components/settings/settings-licenses.vue')['default']
     SettingsTopics: typeof import('./../src/components/settings/settings-topics.vue')['default']
+    SettingsWebhooks: typeof import('./../src/components/settings/settings-webhooks.vue')['default']
   }
 }
