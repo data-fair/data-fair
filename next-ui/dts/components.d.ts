@@ -14,5 +14,6 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     SettingsApiKeys: typeof import('./../src/components/settings/settings-api-keys.vue')['default']
     SettingsApiKeyUseMenu: typeof import('./../src/components/settings/settings-api-key-use-menu.vue')['default']
+    SettingsLicenses: typeof import('./../src/components/settings/settings-licenses.vue')['default']
   }
 }

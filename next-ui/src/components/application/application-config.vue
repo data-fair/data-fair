@@ -41,13 +41,13 @@
       >
         <v-form
           v-if="draftSchema && editConfig"
-          ref="configForm"
           v-model="formValid"
           @submit="validateDraft"
         >
           <v-sheet
-            class="pa-2"
-            :style="`max-height:${windowHeight - 110}px;overflow-y:auto;scrollbar-gutter: stable;background-color:transparent;`"
+            class="overflow-auto pa-4"
+            color="rgb(0,0,0,0)"
+            :max-height="windowHeight - 110"
           >
             <v-select
               v-if="availableVersions"
@@ -71,10 +71,10 @@
               v-model="editConfig"
               :schema="draftSchema"
               :options="vjsfOptions"
-              class="mr-1"
               @change="writeConfigDraft(editConfig)"
             />
           </v-sheet>
+
           <v-row class="mt-3 ml-0 mr-3">
             <v-spacer />
             <v-dialog>
@@ -97,18 +97,18 @@
                   <v-card-text>
                     <v-alert
                       :title="t('removeDraftWarning')"
-                      type="error"
+                      type="warning"
                     />
                   </v-card-text>
                   <v-card-actions>
                     <v-spacer />
                     <v-btn
-                      variant="text"
                       @click="isActive.value = false"
                     >
                       {{ t('cancel') }}
                     </v-btn>
                     <v-btn
+                      variant="elevated"
                       color="warning"
                       @click="cancelDraft(); isActive.value = false;"
                     >
@@ -235,6 +235,7 @@ const completeSchema = (schema: any) => {
       }
     }
   }
+  if (!schema.layout?.comp) schema.layout = 'expansion-panels'
   return v2compat(schema)
 }
 
@@ -257,18 +258,7 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
     fetchBaseURL: $sitePath + '/data-fair/',
     context: { owner: application.value?.owner, ownerFilter, datasetFilter, remoteServiceFilter, attachments: application.value?.attachments },
 
-    disableAll: !canWriteConfig.value,
-    rootDisplay: 'expansion-panels',
-    expansionPanelsProps: {
-      value: 0,
-      hover: true
-    },
-    dialogProps: {
-      maxWidth: 500,
-      overlayOpacity: 0 // better when inside an iframe
-    },
-    arrayItemCardProps: { outlined: true, tile: true },
-    dialogCardProps: { outlined: true }
+    disableAll: !canWriteConfig.value // TODO
   }
 })
 

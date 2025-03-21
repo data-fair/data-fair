@@ -1,12 +1,16 @@
 <template>
   <v-data-table-virtual
     v-if="dataset"
-    :group-by="[{ key: 'x-group' }]"
+    :group-by="dataset.schema.some(f => 'x-group' in f) ? [{ key: 'x-group' }] : []"
     :headers="headers"
     :items="dataset.schema.filter(f => !f['x-calculated'])"
+    density="comfortable"
     hide-default-footer
     fixed-header
   >
+    <template #header.data-table-group>
+      {{ t('group') }}
+    </template>
     <template #item.title="{ item }">
       {{ item.title || item['x-originalName'] || item.key }}
     </template>
@@ -59,12 +63,14 @@ fr:
   downloadSchema: Télécharger le schéma
   jsonSchema: Schéma JSON
   tableSchema: Schéma Table
+  group: Groupe
   key: Clé
   name: Nom
   type: Type
   x-refersTo: Concept
   description: Description
 en:
+  group: Group
   downloadSchema: Download the schema
   jsonSchema: JSON Schema
   tableSchema: Table Schema
