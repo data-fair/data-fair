@@ -1,10 +1,11 @@
-import { } from '#api/types'
+import { Event } from '#api/types'
 
 // we do not use SSR, so we can use a simple module level singleton
 let store: ReturnType<typeof prepareDatasetStore> | undefined
 
 type Dataset = Record<string, any>
   & Record<'schema', { type: string, format?: string, [key: string]: any }[]> // TODO
+  & Record<'journal', Event[]>
 
 const prepareDatasetStore = (id: string) => {
   const datasetFetch = useFetch<Dataset>($apiPath + `/datasets/${id}`)

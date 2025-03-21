@@ -69,6 +69,21 @@
           >
             <v-list-item-title>API Keys</v-list-item-title>
           </v-list-item>
+          <v-list-item
+            :to="`/embed/settings/${session.state.account.type}/${session.state.account.id}/licenses`"
+          >
+            <v-list-item-title>Licenses</v-list-item-title>
+          </v-list-item>
+          <v-list-item
+            :to="`/embed/settings/${session.state.account.type}/${session.state.account.id}/topics`"
+          >
+            <v-list-item-title>Topics</v-list-item-title>
+          </v-list-item>
+          <v-list-item
+            :to="`/embed/settings/${session.state.account.type}/${session.state.account.id}/webhooks`"
+          >
+            <v-list-item-title>Webhooks</v-list-item-title>
+          </v-list-item>
         </v-list>
       </v-col>
     </v-row>

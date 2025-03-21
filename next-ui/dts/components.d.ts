@@ -9,7 +9,9 @@ declare module 'vue' {
   export interface GlobalComponents {
     ApplicationConfig: typeof import('./../src/components/application/application-config.vue')['default']
     ConfirmMenu: typeof import('./../src/components/confirm-menu.vue')['default']
+    DatasetCalendar: typeof import('./../src/components/dataset/dataset-calendar.vue')['default']
     DatasetSchemaView: typeof import('./../src/components/dataset/dataset-schema-view.vue')['default']
+    Journal: typeof import('./../src/components/journal.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SettingsApiKeys: typeof import('./../src/components/settings/settings-api-keys.vue')['default']

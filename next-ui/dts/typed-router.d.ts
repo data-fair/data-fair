@@ -21,6 +21,7 @@ declare module 'vue-router/auto-routes' {
     '/dev': RouteRecordInfo<'/dev', '/dev', Record<never, never>, Record<never, never>>,
     '/embed/application/[id]/config': RouteRecordInfo<'/embed/application/[id]/config', '/embed/application/:id/config', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/embed/dataset/[id]/fields': RouteRecordInfo<'/embed/dataset/[id]/fields', '/embed/dataset/:id/fields', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    '/embed/dataset/[id]/journal': RouteRecordInfo<'/embed/dataset/[id]/journal', '/embed/dataset/:id/journal', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/embed/dataset/[id]/table': RouteRecordInfo<'/embed/dataset/[id]/table', '/embed/dataset/:id/table', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/embed/settings/[type]/[id]/api-keys': RouteRecordInfo<'/embed/settings/[type]/[id]/api-keys', '/embed/settings/:type/:id/api-keys', { type: ParamValue<true>, id: ParamValue<true> }, { type: ParamValue<false>, id: ParamValue<false> }>,
     '/embed/settings/[type]/[id]/licenses': RouteRecordInfo<'/embed/settings/[type]/[id]/licenses', '/embed/settings/:type/:id/licenses', { type: ParamValue<true>, id: ParamValue<true> }, { type: ParamValue<false>, id: ParamValue<false> }>,
