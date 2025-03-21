@@ -24,5 +24,6 @@ declare module 'vue-router/auto-routes' {
     '/embed/dataset/[id]/table': RouteRecordInfo<'/embed/dataset/[id]/table', '/embed/dataset/:id/table', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/embed/settings/[type]/[id]/api-keys': RouteRecordInfo<'/embed/settings/[type]/[id]/api-keys', '/embed/settings/:type/:id/api-keys', { type: ParamValue<true>, id: ParamValue<true> }, { type: ParamValue<false>, id: ParamValue<false> }>,
     '/embed/settings/[type]/[id]/licenses': RouteRecordInfo<'/embed/settings/[type]/[id]/licenses', '/embed/settings/:type/:id/licenses', { type: ParamValue<true>, id: ParamValue<true> }, { type: ParamValue<false>, id: ParamValue<false> }>,
+    '/embed/settings/[type]/[id]/topics': RouteRecordInfo<'/embed/settings/[type]/[id]/topics', '/embed/settings/:type/:id/topics', { type: ParamValue<true>, id: ParamValue<true> }, { type: ParamValue<false>, id: ParamValue<false> }>,
   }
 }

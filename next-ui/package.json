@@ -12,6 +12,9 @@
     "lint": "eslint .",
     "lint-fix": "eslint --fix ."
   },
+  "imports": {
+    "#api/types": "../api/types/index.ts"
+  },
   "devDependencies": {
     "@data-fair/frame": "^0.12.0",
     "@data-fair/lib-vue": "^1.17.0",

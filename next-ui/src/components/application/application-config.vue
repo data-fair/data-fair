@@ -257,8 +257,7 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
     locale: 'fr',
     fetchBaseURL: $sitePath + '/data-fair/',
     context: { owner: application.value?.owner, ownerFilter, datasetFilter, remoteServiceFilter, attachments: application.value?.attachments },
-
-    disableAll: !canWriteConfig.value // TODO
+    readOnly: !canWriteConfig.value
   }
 })
 

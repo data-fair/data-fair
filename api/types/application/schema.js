@@ -2,7 +2,6 @@ import owner from '../../contract/owner.js'
 import eventBy from '../../contract/event-by.js'
 import permissions from '../../contract/permissions.js'
 import publicationSchema from '../../contract/publication.js'
-import topic from '../../contract/topic.js'
 
 const baseAppReference = {
   type: 'object',
@@ -119,7 +118,9 @@ export default {
       type: 'array',
       title: 'Liste de thématiques',
       'x-itemTitle': 'title',
-      items: topic
+      items: {
+        $ref: 'https://github.com/data-fair/data-fair/topic'
+      }
     },
     extras: {
       type: 'object',

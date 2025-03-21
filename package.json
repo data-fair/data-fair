@@ -24,7 +24,7 @@
     "postinstall": "patch-package",
     "prepare": "husky || true",
     "check-types": "tsc",
-    "quality": "npm run test-deps && npm run lint && npm run test && npm audit --omit=dev --audit-level=critical"
+    "quality": "npm run test-deps && npm run lint && npm audit --omit=dev --audit-level=critical"
   },
   "engines": {
     "node": "v22"

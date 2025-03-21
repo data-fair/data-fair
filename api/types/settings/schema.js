@@ -1,11 +1,10 @@
-import topic from '../../contract/topic.js'
 import _publicationSites from '../../contract/publication-sites.js'
 const publicationSites = _publicationSites()
 
 export default {
   $id: 'https://github.com/data-fair/data-fair/settings',
   title: 'Settings',
-  'x-exports': ['types'],
+  'x-exports': ['types', 'resolvedSchema'],
   type: 'object',
   required: ['id', 'type'],
   additionalProperties: false,
@@ -182,9 +181,21 @@ export default {
     },
     topics: {
       type: 'array',
-      title: 'Liste de thématiques',
-      'x-itemTitle': 'title',
-      items: topic
+      title: 'Topics',
+      'x-i18n-title': {
+        fr: 'Thématiques'
+      },
+      layout: {
+        messages: {
+          addItem: 'Add a topic',
+          'x-i18n-addItem': {
+            fr: 'Ajouter une thématique'
+          }
+        }
+      },
+      items: {
+        $ref: 'https://github.com/data-fair/data-fair/topic'
+      }
     },
     publicationSites,
     operationsPermissions: {
