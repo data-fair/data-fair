@@ -256,13 +256,15 @@ const customUnkink = async (geometry) => {
     if (geometry.type === 'MultiPolygon') {
       const newCoordinates = []
       for (const coordinates of geometry.coordinates) {
-        const childPolygon = { type: 'Feature', geometry: { type: 'Polygon', coordinates } }
+        const childPolygon = { type: 'Polygon', coordinates }
         await prepair(childPolygon)
-        if (childPolygon.geometry.type === 'Polygon') newCoordinates.push(childPolygon.geometry.coordinates)
-        else {
+        if (childPolygon.type === 'Polygon') newCoordinates.push(childPolygon.coordinates)
+        else if (childPolygon.type === 'MultiPolygon') {
           for (const c of childPolygon.geometry.coordinates) {
             newCoordinates.push(c)
           }
+        } else {
+          throw new Error('Unexpected geometry type after prepair')
         }
       }
       geometry.coordinates = newCoordinates
@@ -287,8 +289,9 @@ const prepair = async (geometry) => {
     const cmd = `prepair --ogrin '${fileIn}' --ogrout '${fileOut}'`
     debug('run command: ', cmd)
     await exec(cmd, { maxBuffer: 100000000 })
-    const repairedGeometry = JSON.parse(await readFile(fileOut, 'utf8'))
-    geometry.coordinates = repairedGeometry?.features[0]?.geometry?.coordinates
+    const repairedGeojson = JSON.parse(await readFile(fileOut, 'utf8'))
+    geometry.coordinates = repairedGeojson?.features[0]?.geometry?.coordinates
+    geometry.type = repairedGeojson?.features[0]?.geometry?.type
     return geometry
   } finally {
     if (debug.enabled) {
