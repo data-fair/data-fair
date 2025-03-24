@@ -5,22 +5,27 @@ let store: ReturnType<typeof prepareDatasetStore> | undefined
 
 type Dataset = Record<string, any>
   & Record<'schema', { type: string, format?: string, [key: string]: any }[]> // TODO
-  & Record<'journal', Event[]>
 
-const prepareDatasetStore = (id: string) => {
+const prepareDatasetStore = (id: string, draftMode: boolean | undefined = undefined) => {
   const datasetFetch = useFetch<Dataset>($apiPath + `/datasets/${id}`)
   const dataset = ref<Dataset | null>(null)
   watch(datasetFetch.data, () => { dataset.value = datasetFetch.data.value })
 
+  const journalFetch = useFetch<Event[]>($apiPath + `/datasets/${id}/journal`, { query: { draftMode }, immediate: false, watch: false })
+  const journal = ref<Event[] | null>(null)
+  watch(journalFetch.data, () => { journal.value = journalFetch.data.value })
+
   return {
     id,
     dataset,
-    datasetFetch
+    datasetFetch,
+    journalFetch,
+    journal
   }
 }
 
-export const createDatasetStore = (id: string) => {
-  store = prepareDatasetStore(id)
+export const createDatasetStore = (id: string, draftMode: boolean | undefined = undefined) => {
+  store = prepareDatasetStore(id, draftMode)
   return store
 }
 

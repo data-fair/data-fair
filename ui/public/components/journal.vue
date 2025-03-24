@@ -75,9 +75,6 @@
         />
       </template>
     </v-list>
-    <pre>
-      {{ JSON.stringify(events, null, 2) }}
-    </pre>
   </v-sheet>
 </template>
 

@@ -20,6 +20,11 @@
               <v-list-item-title>{{ dataset.title }} ({{ dataset.slug }} / {{ dataset.id }})</v-list-item-title>
               <template #append>
                 <v-btn
+                  :icon="mdiTimelineTextOutline"
+                  :to="`/embed/dataset/${dataset.id}/journal`"
+                  variant="flat"
+                />
+                <v-btn
                   :icon="mdiViewList"
                   :to="`/embed/dataset/${dataset.id}/fields`"
                   variant="flat"
@@ -91,7 +96,7 @@
 </template>
 
 <script setup lang="ts">
-import { mdiTable, mdiPencil, mdiViewList } from '@mdi/js'
+import { mdiTable, mdiPencil, mdiViewList, mdiTimelineTextOutline } from '@mdi/js'
 
 const datasetsFetch = useFetch<{ count: number, results: any[] }>($apiPath + '/datasets', { query: { size: 10000 } })
 const appsFetch = useFetch<{ count: number, results: any[] }>($apiPath + '/applications', { query: { size: 10000 } })

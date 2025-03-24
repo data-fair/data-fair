@@ -2,12 +2,13 @@ import type { Event } from '#api/types'
 
 type WatchKey = 'journal'
 
-const { sendUiNotif } = useUiNotif()
-
 export const useDatasetWatch = (keys: WatchKey | WatchKey[]) => {
-  const { id, dataset } = useDatasetStore()
+  const { sendUiNotif } = useUiNotif()
+  const { id, dataset, journal } = useDatasetStore()
+
   if (!Array.isArray(keys)) keys = [keys]
   const ws = useWS('/data-fair/')
+
   if (keys.includes('journal')) {
     ws?.subscribe(`datasets/${id}/journal`, async (event: Event) => {
       if (!dataset.value) return
@@ -29,8 +30,8 @@ export const useDatasetWatch = (keys: WatchKey | WatchKey[]) => {
       // }
 
       if (event.store) { // ignore event that is not stored, prevent different render after refresh
-        if (!dataset.value.journal.find(e => e.date === event.date)) {
-          dataset.value.journal.unshift(event)
+        if (!journal.value?.find(e => e.date === event.date)) {
+          journal.value?.unshift(event)
         }
       }
 
