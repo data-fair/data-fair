@@ -11,21 +11,22 @@ RUN apk add --no-cache curl cmake make g++ linux-headers
 RUN apk add --no-cache gdal gdal-dev
 RUN apk add --no-cache boost-dev gmp gmp-dev mpfr-dev
 RUN apk add --no-cache libressl4.0-libcrypto
+RUN apk add --no-cache git
 
 # build CGAL (not yet present in alpine repos)
 WORKDIR /tmp
-RUN curl -L https://github.com/CGAL/cgal/releases/download/releases%2FCGAL-4.14.3/CGAL-4.14.3.tar.xz -o cgal.tar.xz
+RUN curl -L https://github.com/CGAL/cgal/releases/download/v5.6.2/CGAL-5.6.2.tar.xz -o cgal.tar.xz
 RUN tar -xf cgal.tar.xz
-WORKDIR /tmp/CGAL-4.14.3
+WORKDIR /tmp/CGAL-5.6.2
 RUN cmake -D CMAKE_BUILD_TYPE=Release .
 RUN make
 RUN make install
 
 # build prepair from source
 WORKDIR /tmp
-RUN curl -L https://github.com/tudelft3d/prepair/archive/v0.7.1.tar.gz -o prepair.tar.gz
-RUN tar -xzf prepair.tar.gz
-WORKDIR /tmp/prepair-0.7.1
+RUN git clone https://github.com/data-fair/prepair.git
+WORKDIR /tmp/prepair
+RUN git checkout fix-build-filesystem
 RUN cmake -D CMAKE_BUILD_TYPE=Release .
 RUN make
 RUN mv prepair /usr/bin/prepair
@@ -37,9 +38,11 @@ FROM base AS nativedeps
 
 # these are also geodeps, but we need to install them here as they pull many dependencies
 RUN apk add --no-cache gmp gdal-tools
+RUN apk add --no-cache boost
 RUN test -f /usr/bin/ogr2ogr
 COPY --from=geodeps /usr/bin/prepair /usr/bin/prepair
-COPY --from=geodeps /usr/local/lib/libCGAL.so.13 /usr/local/lib/libCGAL.so.13
+# COPY --from=geodeps /usr/local/lib/libCGAL.so.13 /usr/local/lib/libCGAL.so.13
+COPY --from=geodeps /usr/local/include/CGAL /usr/local/include/CGAL
 COPY --from=geodeps /usr/lib/libmpfr.so.6 /usr/lib/libmpfr.so.6
 RUN ln -s /usr/lib/libproj.so.25 /usr/lib/libproj.so
 RUN test -f /usr/lib/libproj.so
