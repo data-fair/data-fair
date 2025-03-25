@@ -168,6 +168,21 @@ describe('geo files support', function () {
     }
   })
 
+  // This test is disabled because it depends on prepair which is not available in the CI
+  it('Fix some polygons', async function () {
+    if (config.ogr2ogr.skip) {
+      return console.log('Skip prepair test in this environment')
+    }
+    const datasetFd = fs.readFileSync('./resources/geo/kinked-multipolygons.geojson')
+    const form = new FormData()
+    form.append('file', datasetFd, 'geojson-example.geojson')
+    const ax = global.ax.dmeadus
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const dataset = res.data
+    assert.equal(res.status, 201)
+    await workers.hook('indexer/' + dataset.id)
+  })
+
   it('Process uploaded shapefile dataset', async function () {
     if (config.ogr2ogr.skip) {
       return console.log('Skip ogr2ogr test in this environment')

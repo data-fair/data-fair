@@ -1,5 +1,5 @@
-import util from 'util'
-import fs from 'fs'
+import { join } from 'path'
+import { readFile, writeFile } from 'node:fs/promises'
 import pointOnFeature from '@turf/point-on-feature'
 import bboxPolygon from '@turf/bbox-polygon'
 import turfBbox from '@turf/bbox'
@@ -15,7 +15,6 @@ import debugLib from 'debug'
 import { tmpDir } from './files.ts'
 import projections from '../../../contract/projections.js'
 
-const writeFile = util.promisify(fs.writeFile)
 const debug = debugLib('geo')
 
 const geomUri = 'https://purl.org/geojson/vocab#geometry'
@@ -257,13 +256,15 @@ const customUnkink = async (geometry) => {
     if (geometry.type === 'MultiPolygon') {
       const newCoordinates = []
       for (const coordinates of geometry.coordinates) {
-        const childPolygon = { type: 'Feature', geometry: { type: 'Polygon', coordinates } }
+        const childPolygon = { type: 'Polygon', coordinates }
         await prepair(childPolygon)
-        if (childPolygon.geometry.type === 'Polygon') newCoordinates.push(childPolygon.geometry.coordinates)
-        else {
+        if (childPolygon.type === 'Polygon') newCoordinates.push(childPolygon.coordinates)
+        else if (childPolygon.type === 'MultiPolygon') {
           for (const c of childPolygon.geometry.coordinates) {
             newCoordinates.push(c)
           }
+        } else {
+          throw new Error('Unexpected geometry type after prepair')
         }
       }
       geometry.coordinates = newCoordinates
@@ -279,24 +280,24 @@ const customUnkink = async (geometry) => {
 }
 
 const prepair = async (geometry) => {
-  let tmpFile
+  const tmpGeojsonDir = await tmp.dir({ prefix: 'prepair-', tmpdir: tmpDir, unsafeCleanup: true })
   try {
     // const wkt = wktParser.convert(feature.geometry)
-    tmpFile = await tmp.file({ prefix: 'prepair-', postfix: '.geojson', tmpdir: tmpDir })
-    await writeFile(tmpFile.fd, JSON.stringify({ type: 'Feature', geometry }))
-    const cmd = `prepair --ogr '${tmpFile.path}'`
+    const fileIn = join(tmpGeojsonDir.path, 'in.geojson')
+    const fileOut = join(tmpGeojsonDir.path, 'out.geojson')
+    await writeFile(fileIn, JSON.stringify({ type: 'Feature', geometry }))
+    const cmd = `prepair --ogrin '${fileIn}' --ogrout '${fileOut}'`
     debug('run command: ', cmd)
-    const repaired = await exec(cmd, { maxBuffer: 100000000 })
-    const repairedGeometry = wktToGeoJSON(repaired.stdout)
-    geometry.coordinates = repairedGeometry.coordinates
+    await exec(cmd, { maxBuffer: 100000000 })
+    const repairedGeojson = JSON.parse(await readFile(fileOut, 'utf8'))
+    geometry.coordinates = repairedGeojson?.features[0]?.geometry?.coordinates
+    geometry.type = repairedGeojson?.features[0]?.geometry?.type
     return geometry
   } finally {
-    if (tmpFile) {
-      if (debug.enabled) {
-        debug('preserving tmp file for debug', tmpFile.path)
-      } else {
-        tmpFile.cleanup()
-      }
+    if (debug.enabled) {
+      debug('preserving tmp file for debug', tmpGeojsonDir.path)
+    } else {
+      tmpGeojsonDir.cleanup()
     }
   }
 }
