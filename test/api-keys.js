@@ -1,7 +1,7 @@
 import * as testUtils from './resources/test-utils.js'
 import { strict as assert } from 'node:assert'
 
-describe.only('API keys', function () {
+describe('API keys', function () {
   it('Reject wrong api key', async function () {
     const ax = await global.ax.builder(undefined, undefined, undefined, undefined, { headers: { 'x-apiKey': 'wrong' } })
     await assert.rejects(ax.get('/api/v1/stats'), { status: 401 })

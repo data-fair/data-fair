@@ -64,7 +64,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     paths: {
       '/ping': {
         get: {
-          summary: 'Obtenir l\'état de santé du service.',
+          summary: 'Obtenir l\'état de santé du service',
           operationId: 'ping',
           tags: ['Administration'],
           'x-operationType': 'http://schema.org/CheckAction',
@@ -80,15 +80,18 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       },
       '/api-docs.json': {
         get: {
-          summary: 'Accéder à cette documentation au format OpenAPI v3.',
+          summary: 'Obtenir la documentation OpenAPI',
+          description: 'Accéder à cette documentation au format OpenAPI v3.',
           operationId: 'getApiDoc',
           tags: ['Administration'],
           responses: {
             200: {
-              description: 'Etat de santé du service.',
+              description: 'La documentation de l\'API',
               content: {
                 'application/json': {
-                  schema: { type: 'object' }
+                  schema: {
+                    type: 'object'
+                  }
                 }
               }
             }
@@ -97,7 +100,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       },
       '/vocabulary': {
         get: {
-          summary: 'Lister les concepts utilisables pour annoter la donnée sur ce service.',
+          summary: 'Lister les concepts',
+          description: 'Récupérer la liste des concepts utilisables pour annoter la donnée sur ce service.',
           operationId: 'getVocabulary',
           tags: ['Administration'],
           responses: {
@@ -129,7 +133,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       },
       '/datasets': {
         get: {
-          summary: 'Récupérer la liste des jeux de données.',
+          summary: 'Lister les jeux de données',
+          description: 'Récupérer la liste des jeux de données.',
           operationId: 'listDatasets',
           tags: ['Jeux de données'],
           parameters: [
@@ -174,7 +179,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         post: {
-          summary: 'Importer un jeu de données.',
+          summary: 'Créer un jeu de données',
           operationId: 'postDataset',
           tags: ['Jeux de données'],
           requestBody: {
@@ -205,7 +210,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       '/datasets/{id}': {
         parameters: [utils.idParam],
         get: {
-          summary: 'Récupérer les informations d\'un jeu de données.',
+          summary: 'Lire les informations d\'un jeu de données',
+          description: 'Récupérer les informations d\'un jeu de données.',
           operationId: 'getDataset',
           tags: ['Jeux de données'],
           responses: {
@@ -222,7 +228,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         put: {
-          summary: 'Créer ou mettre à jour un jeu de données.',
+          summary: 'Créer ou mettre à jour un jeu de données',
+          description: 'Créer ou mettre à jour un jeu de données.',
           operationId: 'putDataset',
           tags: ['Jeux de données'],
           requestBody: {
@@ -260,7 +267,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         patch: {
-          summary: 'Modifier seulement certaines informations.',
+          summary: 'Modifier un jeu de données',
+          description: 'Modifier seulement certaines informations d\'un jeu de données.',
           operationId: 'patchDataset',
           tags: ['Jeux de données'],
           requestBody: {
@@ -288,7 +296,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         delete: {
-          summary: 'Supprimer un jeu de données.',
+          summary: 'Supprimer un jeu de données',
           operationId: 'deleteDataset',
           tags: ['Jeux de données'],
           responses: {
@@ -300,7 +308,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       },
       '/applications': {
         get: {
-          summary: 'Récupérer la liste des applications.',
+          summary: 'Lister les applications',
+          description: 'Récupérer la liste des applications.',
           operationId: 'listApplications',
           tags: ['Applications'],
           parameters: [
@@ -340,7 +349,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         post: {
-          summary: 'Configurer une application.',
+          summary: 'Configurer une application',
           operationId: 'postApplication',
           tags: ['Applications'],
           requestBody: {
@@ -371,7 +380,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       '/applications/{id}': {
         parameters: [utils.idParam],
         get: {
-          summary: 'Récupérer les informations d\'une application.',
+          summary: 'Lire les informations d\'une application',
+          description: 'Récupérer les informations d\'une application.',
           operationId: 'getApplication',
           tags: ['Applications'],
           responses: {
@@ -388,7 +398,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         put: {
-          summary: 'Créer ou mettre à jour une application.',
+          summary: 'Créer ou mettre à jour une application',
+          description: 'Créer ou mettre à jour une application.',
           operationId: 'putApplication',
           tags: ['Applications'],
           requestBody: {
@@ -426,7 +437,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         patch: {
-          summary: 'Modifier certaines informations d\'une application.',
+          summary: 'Modifier une informations',
+          description: 'Modifier seulement certaines informations d\'une application.',
           operationId: 'patchApplication',
           tags: ['Applications'],
           requestBody: {
@@ -454,7 +466,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         delete: {
-          summary: 'Supprimer une application.',
+          summary: 'Supprimer une application',
           operationId: 'deleteApplication',
           tags: ['Applications'],
           responses: {
@@ -466,7 +478,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       },
       '/remote-services': {
         get: {
-          summary: 'Récupérer la liste des services distants.',
+          summary: 'Lister les services',
+          description: 'Récupérer la liste des services distants.',
           operationId: 'listRemoteServices',
           tags: ['Services distants'],
           parameters: [
@@ -503,7 +516,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         post: {
-          summary: 'Configurer un service distant.',
+          summary: 'Configurer un service',
+          description: 'Configurer un service distant.',
           operationId: 'postRemoteService',
           tags: ['Services distants'],
           requestBody: {
@@ -534,7 +548,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       '/remote-services/{id}': {
         parameters: [utils.idParam],
         get: {
-          summary: 'Récupérer les informations d\'un service distant.',
+          summary: 'Lire les informations d\'un service',
+          description: 'Récupérer les informations d\'un service distant.',
           operationId: 'getRemoteService',
           tags: ['Services distants'],
           responses: {
@@ -551,7 +566,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         put: {
-          summary: 'Créer ou mettre à jour un service distant.',
+          summary: 'Créer ou mettre à jour un service',
+          description: 'Créer ou mettre à jour un service distant.',
           operationId: 'putRemoteService',
           tags: ['Services distants'],
           requestBody: {
@@ -589,7 +605,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         patch: {
-          summary: 'Modifier certaines informations d\'un service distant.',
+          summary: 'Modifier une informations',
+          description: 'Modifier seulement certaines informations d\'un service distant.',
           operationId: 'patchRemoteService',
           tags: ['Services distants'],
           requestBody: {
@@ -617,7 +634,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         delete: {
-          summary: 'Supprimer un service distant.',
+          summary: 'Supprimer un service',
+          description: 'Supprimer un service distant.',
           operationId: 'deleteRemoteService',
           tags: ['Services distants'],
           responses: {
@@ -629,7 +647,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       },
       '/catalogs': {
         get: {
-          summary: 'Récupérer la liste des catalogues.',
+          summary: 'Lister les catalogues',
+          description: 'Récupérer la liste des catalogues.',
           operationId: 'listCatalogs',
           tags: ['Catalogues'],
           parameters: [
@@ -665,7 +684,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         post: {
-          summary: 'Configurer un catalogue.',
+          summary: 'Configurer un catalogue',
           operationId: 'postCatalog',
           tags: ['Catalogues'],
           requestBody: {
@@ -696,7 +715,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
       '/catalogs/{id}': {
         parameters: [utils.idParam],
         get: {
-          summary: 'Récupérer les informations d\'un catalogue.',
+          summary: 'Lire les informations d\'un catalogue',
+          description: 'Récupérer les informations d\'un catalogue.',
           operationId: 'getCatalog',
           tags: ['Catalogues'],
           responses: {
@@ -713,7 +733,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         put: {
-          summary: 'Créer ou mettre à jour un catalogue.',
+          summary: 'Créer ou mettre à jour un catalogue',
           operationId: 'putCatalog',
           tags: ['Catalogues'],
           requestBody: {
@@ -751,7 +771,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         patch: {
-          summary: 'Modifier certaines informations d\'un catalogue.',
+          summary: 'Modifier une informations',
+          description: 'Modifier seulement certaines informations d\'un catalogue.',
           operationId: 'patchCatalog',
           tags: ['Catalogues'],
           requestBody: {
@@ -779,7 +800,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         },
         delete: {
-          summary: 'Supprimer un catalogue.',
+          summary: 'Supprimer un catalogue',
           operationId: 'deleteCatalog',
           tags: ['Catalogues'],
           responses: {
