@@ -210,6 +210,44 @@ export default [
     }
   },
   {
+    id: 'region',
+    title: {
+      fr: 'Région',
+      en: 'Region'
+    },
+    description: {
+      fr: "Nom d'une région",
+      en: 'Name of a region'
+    },
+    identifiers: [
+      'https://schema.org/addressRegion'
+    ],
+    type: 'string',
+    tag: {
+      fr: 'Adresse',
+      en: 'Address'
+    }
+  },
+  {
+    id: 'departement',
+    title: {
+      fr: 'Département',
+      en: 'Department (France)'
+    },
+    description: {
+      fr: "Nom d'un département français",
+      en: 'Name of a french department'
+    },
+    identifiers: [
+      'http://rdf.insee.fr/def/geo#Departement'
+    ],
+    type: 'string',
+    tag: {
+      fr: 'Adresse',
+      en: 'Address'
+    }
+  },
+  {
     id: 'addressId',
     title: {
       fr: "Identifiant d'adresse",
