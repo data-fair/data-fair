@@ -13,7 +13,7 @@ const prepareApplicationStore = (id: string) => {
     if (applicationFetch.data.value) Object.assign(applicationFetch.data.value, patch)
   }
 
-  const canWriteConfig = computed(() => application.value?.userPermissions.includes('write:config'))
+  const canWriteConfig = computed(() => application.value?.userPermissions.includes('writeConfig'))
 
   const configFetch = useFetch<AppConfig>($apiPath + `/applications/${id}/configuration`, { immediate: false })
   const config = ref<AppConfig | null>(null)

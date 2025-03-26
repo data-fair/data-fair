@@ -42,7 +42,6 @@
         <v-form
           v-if="draftSchema && editConfig"
           v-model="formValid"
-          @submit="validateDraft"
         >
           <v-sheet
             class="overflow-auto pa-4"
@@ -71,7 +70,7 @@
               v-model="editConfig"
               :schema="draftSchema"
               :options="vjsfOptions"
-              @change="writeConfigDraft(editConfig)"
+              @update:model-value="saveDraft()"
             />
           </v-sheet>
 
@@ -123,7 +122,7 @@
               :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
               color="accent"
               class="ml-2"
-              type="submit"
+              @click="validateDraft"
             >
               {{ t('validate') }}
             </v-btn>
@@ -160,6 +159,7 @@ import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 import { clone } from '@json-layout/core'
 import { type AppConfig } from '#api/types'
+import { VForm } from 'vuetify/components'
 
 const display = useDisplay()
 const { sendUiNotif } = useUiNotif()
@@ -169,7 +169,7 @@ const { roDataset } = defineProps({
   roDataset: { type: Boolean, default: false }
 })
 
-const { application, applicationLink, patch, canWriteConfig, configFetch, configDraftFetch, configDraft, writeConfigDraft, cancelConfigDraft } = useApplicationStore()
+const { application, applicationLink, patch, canWriteConfig, configFetch, configDraftFetch, configDraft, writeConfig, writeConfigDraft, cancelConfigDraft } = useApplicationStore()
 const { availableVersions } = useApplicationVersions()
 useApplicationWatch('draft-error')
 
@@ -188,7 +188,6 @@ const hasModification = computed(() => {
 const hasDraft = computed(() => application.value?.status === 'configured-draft')
 
 const { height: windowHeight } = useWindowSize()
-// const iframeHeight = computed(() => Math.max(300, Math.min(windowHeight.value - 100, 450)))
 
 const showForm = ref(false)
 const draftSchema = ref<any>()
@@ -196,7 +195,6 @@ const schemaUrl = computed(() => editUrl.value && (editUrl.value + 'config-schem
 const schemaFetch = useFetch<any>(schemaUrl)
 watch(schemaFetch.data, (schema) => {
   if (schema) {
-    console.log('SCHEMA', schema)
     if (typeof schema !== 'object') {
       sendUiNotif({ type: 'error', msg: 'Schema fetched is not a valid JSON' })
     } else {
@@ -257,9 +255,16 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
     locale: 'fr',
     fetchBaseURL: $sitePath + '/data-fair/',
     context: { owner: application.value?.owner, ownerFilter, datasetFilter, remoteServiceFilter, attachments: application.value?.attachments },
-    readOnly: !canWriteConfig.value
+    readOnly: !canWriteConfig.value,
+    updateOn: 'blur'
   }
 })
+
+const saveDraft = async () => {
+  if (!canWriteConfig.value || !formValid.value || !editConfig.value) return
+  await writeConfigDraft(editConfig.value)
+  reloadDraftPreview.value++
+}
 
 const cancelDraft = async () => {
   if (!canWriteConfig.value) return
@@ -271,7 +276,7 @@ const cancelDraft = async () => {
 const validateDraft = async () => {
   if (!canWriteConfig.value || !configDraft.value) return
   await patch({ url: application.value?.urlDraft, urlDraft: '' })
-  await writeConfigDraft(configDraft.value)
+  await writeConfig(configDraft.value)
   reloadDraftPreview.value++
 }
 
