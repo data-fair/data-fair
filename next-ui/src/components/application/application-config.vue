@@ -31,14 +31,16 @@
         cols="6"
         md="5"
         lg="4"
+        class="pa-0"
       >
         <v-form
           v-if="draftSchema && editConfig"
           v-model="formValid"
         >
           <v-sheet
-            class="overflow-auto pa-4"
+            class="pa-4"
             color="rgb(0,0,0,0)"
+            style="overflow-y: auto; overflow-x:hidden;"
             :max-height="windowHeight - 60"
           >
             <v-select
