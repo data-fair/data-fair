@@ -2,6 +2,7 @@
   <v-container
     v-if="application"
     :fluid="display.lgAndDown.value"
+    :class="display.lgAndDown.value ? 'pa-0' : ''"
   >
     <v-row>
       <v-col
@@ -10,34 +11,25 @@
         lg="8"
         class="pa-0"
       >
-        <v-col>
-          <v-alert
-            v-if="!!application.errorMessageDraft"
-            type="error"
-            border="start"
-            variant="outlined"
-            :text="application.errorMessageDraft"
-          />
-          <v-sheet
-            v-else
-            class="pa-2"
-            border
-            tile
-            :style="`max-height:${windowHeight - 74}px;overflow-y:auto;`"
-          >
-            <d-frame
-              :aspect-ratio="4/3"
-              :src="applicationLink + '?embed=true&draft=true'"
-              :reload="reloadDraftPreview"
-            />
-          </v-sheet>
-        </v-col>
+        <v-alert
+          v-if="!!application.errorMessageDraft"
+          type="error"
+          border="start"
+          variant="outlined"
+          :text="application.errorMessageDraft"
+        />
+        <d-frame
+          v-else
+          height="100vh"
+          resize="no"
+          :src="applicationLink + '?embed=true&draft=true'"
+          :reload="reloadDraftPreview"
+        />
       </v-col>
       <v-col
         cols="6"
         md="5"
         lg="4"
-        class="pa-0"
       >
         <v-form
           v-if="draftSchema && editConfig"
@@ -46,7 +38,7 @@
           <v-sheet
             class="overflow-auto pa-4"
             color="rgb(0,0,0,0)"
-            :max-height="windowHeight - 110"
+            :max-height="windowHeight - 60"
           >
             <v-select
               v-if="availableVersions"
