@@ -1,4 +1,4 @@
-import { Event } from '#api/types'
+import type { Event } from '#api/types'
 
 // we do not use SSR, so we can use a simple module level singleton
 let store: ReturnType<typeof prepareDatasetStore> | undefined

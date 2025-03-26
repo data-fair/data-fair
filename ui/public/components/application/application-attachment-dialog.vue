@@ -104,7 +104,7 @@ en:
 <script>
 import { mapState, mapActions } from 'vuex'
 import eventBus from '~/event-bus'
-import applicationSchema from '@data-fair/data-fair-api/types/application/schema'
+import applicationSchema from '../../../../api/types/application/schema'
 
 export default {
   props: ['value', 'index'],

@@ -81,6 +81,7 @@ ADD ui ui
 RUN mkdir -p /app/ui/node_modules
 ADD api/config api/config
 ADD api/contract api/contract
+ADD api/types api/types
 ADD api/src/config.ts api/src/config.ts
 RUN mkdir -p /app/api/node_modules
 ADD shared shared
@@ -94,6 +95,8 @@ FROM installer AS next-ui-builder
 ADD /api/config api/config
 ADD /api/src/config.ts api/src/config.ts
 ADD /api/src/ui-config.ts api/src/ui-config.ts
+ADD /api/types api/types
+ADD /shared shared
 ADD /next-ui next-ui
 RUN npm -w next-ui run build
 

@@ -1,4 +1,4 @@
-import { Vocabulary } from '#api/types'
+import type { Vocabulary } from '#api/types'
 
 // we do not use SSR, so we can use a simple module level singleton
 let storeSingleton: ReturnType<typeof createStore>
