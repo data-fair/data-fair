@@ -90,10 +90,16 @@ export default {
     baseApp: baseAppReference,
     baseAppDraft: baseAppReference,
     errorMessage: {
-      type: 'string'
+      oneOf: [
+        { type: 'string' },
+        { type: 'object', properties: { message: { type: 'string' } } }
+      ]
     },
     errorMessageDraft: {
-      type: 'string'
+      oneOf: [
+        { type: 'string' },
+        { type: 'object', properties: { message: { type: 'string' } } }
+      ]
     },
     publications: {
       type: 'array',

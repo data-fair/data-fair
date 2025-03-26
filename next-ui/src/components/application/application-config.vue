@@ -4,7 +4,7 @@
     :fluid="display.lgAndDown.value"
     :class="display.lgAndDown.value ? 'pa-0' : ''"
   >
-    <v-row>
+    <v-row :class="display.lgAndDown.value ? 'ma-0' : ''">
       <v-col
         cols="6"
         md="7"
@@ -16,7 +16,8 @@
           type="error"
           border="start"
           variant="outlined"
-          :text="application.errorMessageDraft"
+          :text="typeof application.errorMessageDraft === 'string' ? application.errorMessageDraft : application.errorMessageDraft.message"
+          class="ma-4"
         />
         <d-frame
           v-else
@@ -68,7 +69,7 @@
 
           <v-row class="mt-3 ml-0 mr-3">
             <v-spacer />
-            <v-dialog>
+            <v-dialog max-width="500">
               <template #activator="{ props }">
                 <v-btn
                   :disabled="!hasDraft"
@@ -230,7 +231,6 @@ const completeSchema = (schema: any) => {
 }
 
 const reloadDraftPreview = ref(0)
-watch(configDraftFetch.data, () => { reloadDraftPreview.value++ })
 const formValid = ref(false)
 const showFullOrg = ref(false)
 
@@ -248,7 +248,8 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
     fetchBaseURL: $sitePath + '/data-fair/',
     context: { owner: application.value?.owner, ownerFilter, datasetFilter, remoteServiceFilter, attachments: application.value?.attachments },
     readOnly: !canWriteConfig.value,
-    updateOn: 'blur'
+    updateOn: 'blur',
+    initialValidation: 'always',
   }
 })
 
