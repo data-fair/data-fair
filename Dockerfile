@@ -121,6 +121,7 @@ FROM nativedeps AS main
 # We could copy /app whole, but this is better for layering / efficient cache use
 COPY --from=api-installer /app/node_modules /app/node_modules
 COPY --from=api-installer /app/api/node_modules /app/api/node_modules
+COPY --from=api-installer /app/api/types /app/api/types
 COPY --from=api-installer /app/shared/node_modules /app/shared/node_modules
 COPY --from=builder /app/ui/nuxt-dist /app/ui/nuxt-dist
 COPY --from=next-ui-builder /app/next-ui/dist next-ui/dist
