@@ -74,6 +74,10 @@ ADD patches patches
 # also used to fill the npm cache for faster install of api deps
 RUN npm ci --omit=peer --no-audit --no-fund
 
+ADD /api/types api/types
+ADD /api/contract api/contract
+RUN npm run build-types
+
 ##########################
 FROM installer AS builder
 
@@ -95,11 +99,8 @@ FROM installer AS next-ui-builder
 ADD /api/config api/config
 ADD /api/src/config.ts api/src/config.ts
 ADD /api/src/ui-config.ts api/src/ui-config.ts
-ADD /api/types api/types
-ADD /api/contract api/contract
 ADD /shared shared
 ADD /next-ui next-ui
-RUN npm run build-types
 RUN npm -w next-ui run build
 
 ##########################
