@@ -19,7 +19,7 @@ const config = /** @type {any} */(_config)
 const apiRate = (key, label) => {
   // @ts-ignore
   const defaultLimits = config.defaultLimits
-  return `Un utilisateur ${label} ne peut pas effectuer plus de ${defaultLimits.apiRate[key].nb} requêtes par interval de ${defaultLimits.apiRate[key].duration} seconde${defaultLimits.apiRate[key].duration > 1 ? 's' : ''}.
+  return `Un utilisateur ${label} ne peut pas effectuer plus de ${defaultLimits.apiRate[key].nb} requêtes par intervalle de ${defaultLimits.apiRate[key].duration} seconde${defaultLimits.apiRate[key].duration > 1 ? 's' : ''}.
   Sa vitesse de téléchargement totale sera limitée à ${prettyBytes(defaultLimits.apiRate[key].bandwidth.static)}/s pour les contenus statiques (fichiers de données, pièces jointes, etc.) et à ${prettyBytes(defaultLimits.apiRate[key].bandwidth.dynamic)}/s pour les autres appels.`
 }
 const userApiRate = apiRate('user', 'authentifié (session ou clé d\'API)')

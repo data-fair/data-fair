@@ -104,7 +104,7 @@ en:
 <script>
 import { mapState, mapActions } from 'vuex'
 import eventBus from '~/event-bus'
-import applicationSchema from '~/../../api/contract/application.js'
+import applicationSchema from '../../../../api/types/application/schema'
 
 export default {
   props: ['value', 'index'],

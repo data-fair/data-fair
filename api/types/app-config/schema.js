@@ -1,4 +1,7 @@
 export default {
+  $id: 'https://github.com/data-fair/data-fair/app-config',
+  'x-exports': ['types', 'validate'],
+  title: 'App config',
   type: 'object',
   description: 'A free format configuration object used by applications. A minimal common structure is used to ensure proper linking between applications and datasets and remote services',
   additionalProperties: true,

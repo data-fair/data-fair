@@ -14,6 +14,7 @@ import { createHead } from '@unhead/vue'
 import App from './App.vue'
 import dFrameContent from '@data-fair/frame/lib/vue-router/d-frame-content.js'
 import debugModule from 'debug'
+import DOMPurify from 'dompurify'
 
 const debug = debugModule('df:main');
 
@@ -49,5 +50,16 @@ const debug = debugModule('df:main');
 
   await router.isReady()
   debug('Router is ready')
+
+  const vSafeHtml = {
+    beforeMount (el: HTMLElement, binding: any) {
+      el.innerHTML = DOMPurify.sanitize(binding.value)
+    },
+    updated (el: HTMLElement, binding: any) {
+      el.innerHTML = DOMPurify.sanitize(binding.value)
+    }
+  }
+
+  app.directive('safe-html', vSafeHtml)
   app.mount('#app')
 })()

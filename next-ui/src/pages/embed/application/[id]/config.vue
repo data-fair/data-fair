@@ -1,13 +1,14 @@
-<template>
-  <v-container>
-    <h2 class="text-h4 mb-4">
-      Data Fair application config - TODO
-    </h2>
-  </v-container>
+<template lang="html">
+  <application-config
+    :ro-dataset="$route.query.roDataset === 'true'"
+    data-iframe-height
+  />
 </template>
 
 <script setup lang="ts">
-</script>
+import { createApplicationStore } from '~/composables/application-store'
 
-<style>
-</style>
+const route = useRoute<'/embed/application/[id]/config'>()
+
+createApplicationStore(route.params.id)
+</script>

@@ -1,9 +1,7 @@
-import owner from './owner.js'
-import eventBy from './event-by.js'
-import permissions from './permissions.js'
-import publicationSchema from './publication.js'
-import configurationSchema from './app-configuration.js'
-import topic from './topic.js'
+import owner from '../../contract/owner.js'
+import eventBy from '../../contract/event-by.js'
+import permissions from '../../contract/permissions.js'
+import publicationSchema from '../../contract/publication.js'
 
 const baseAppReference = {
   type: 'object',
@@ -17,10 +15,12 @@ const baseAppReference = {
 }
 
 export default {
+  $id: 'https://github.com/data-fair/data-fair/application',
   title: 'Application',
+  'x-exports': ['types', 'validate', 'resolvedSchema'],
   type: 'object',
   additionalProperties: false,
-  required: ['url'],
+  required: ['id', 'slug', 'url', 'owner'],
   properties: {
     id: {
       type: 'string',
@@ -76,8 +76,8 @@ export default {
       enum: ['created', 'configured-draft', 'configured', 'error']
     },
     owner,
-    configuration: configurationSchema,
-    configurationDraft: configurationSchema,
+    configuration: { $ref: 'https://github.com/data-fair/data-fair/app-config' },
+    configurationDraft: { $ref: 'https://github.com/data-fair/data-fair/app-config' },
     url: {
       type: 'string',
       deprecated: true,
@@ -90,10 +90,16 @@ export default {
     baseApp: baseAppReference,
     baseAppDraft: baseAppReference,
     errorMessage: {
-      type: 'string'
+      oneOf: [
+        { type: 'string' },
+        { type: 'object', properties: { message: { type: 'string' } } }
+      ]
     },
     errorMessageDraft: {
-      type: 'string'
+      oneOf: [
+        { type: 'string' },
+        { type: 'object', properties: { message: { type: 'string' } } }
+      ]
     },
     publications: {
       type: 'array',
@@ -118,7 +124,9 @@ export default {
       type: 'array',
       title: 'Liste de thématiques',
       'x-itemTitle': 'title',
-      items: topic
+      items: {
+        $ref: 'https://github.com/data-fair/data-fair/topic'
+      }
     },
     extras: {
       type: 'object',

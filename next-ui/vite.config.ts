@@ -43,7 +43,7 @@ export default defineConfig({
         ...(autoImports as any),
         unheadVueComposablesImports,
         {
-          '~/context': ['$uiConfig', '$sitePath', '$siteUrl', '$sdUrl', '$apiPath', '$fetch']
+          '~/context': ['$uiConfig', '$sitePath', '$siteUrl', '$sdUrl', '$apiPath', '$fetch', '$wsUrl']
         }
       ],
       dirs: [

@@ -20,6 +20,16 @@
               <v-list-item-title>{{ dataset.title }} ({{ dataset.slug }} / {{ dataset.id }})</v-list-item-title>
               <template #append>
                 <v-btn
+                  :icon="mdiTimelineTextOutline"
+                  :to="`/embed/dataset/${dataset.id}/journal`"
+                  variant="flat"
+                />
+                <v-btn
+                  :icon="mdiViewList"
+                  :to="`/embed/dataset/${dataset.id}/fields`"
+                  variant="flat"
+                />
+                <v-btn
                   :icon="mdiTable"
                   :to="`/embed/dataset/${dataset.id}/table`"
                   variant="flat"
@@ -54,14 +64,43 @@
         </v-list>
       </v-col>
     </v-row>
+
+    <v-row>
+      <v-col>
+        <v-list>
+          <v-list-subheader>Settings</v-list-subheader>
+          <v-list-item
+            :to="`/embed/settings/${session.state.account.type}/${session.state.account.id}/api-keys`"
+          >
+            <v-list-item-title>API Keys</v-list-item-title>
+          </v-list-item>
+          <v-list-item
+            :to="`/embed/settings/${session.state.account.type}/${session.state.account.id}/licenses`"
+          >
+            <v-list-item-title>Licenses</v-list-item-title>
+          </v-list-item>
+          <v-list-item
+            :to="`/embed/settings/${session.state.account.type}/${session.state.account.id}/topics`"
+          >
+            <v-list-item-title>Topics</v-list-item-title>
+          </v-list-item>
+          <v-list-item
+            :to="`/embed/settings/${session.state.account.type}/${session.state.account.id}/webhooks`"
+          >
+            <v-list-item-title>Webhooks</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { mdiTable, mdiPencil } from '@mdi/js'
+import { mdiTable, mdiPencil, mdiViewList, mdiTimelineTextOutline } from '@mdi/js'
 
 const datasetsFetch = useFetch<{ count: number, results: any[] }>($apiPath + '/datasets', { query: { size: 10000 } })
 const appsFetch = useFetch<{ count: number, results: any[] }>($apiPath + '/applications', { query: { size: 10000 } })
+const session = useSessionAuthenticated()
 </script>
 
 <style>

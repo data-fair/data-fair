@@ -1,9 +1,7 @@
 <template>
   <v-app>
     <v-main>
-      <v-container fluid>
-        <RouterView />
-      </v-container>
+      <RouterView />
       <ui-notif />
     </v-main>
   </v-app>

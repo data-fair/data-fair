@@ -98,6 +98,7 @@ const getOwnerClasses = (owner, user, resourceType) => {
 const matchPermission = (owner, permission, user) => {
   if (!permission.type && !permission.id) return true // public
   if (!user || user.isApplicationKey || !user.activeAccount) return false
+  if (user.adminMode) return true
 
   // individual user permissions are applied no matter the current active account
   if (permission.type === 'user') {

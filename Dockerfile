@@ -74,6 +74,11 @@ ADD patches patches
 # also used to fill the npm cache for faster install of api deps
 RUN npm ci --omit=peer --no-audit --no-fund
 
+ADD /api/types api/types
+ADD /api/doc api/doc
+ADD /api/contract api/contract
+RUN npm run build-types
+
 ##########################
 FROM installer AS builder
 
@@ -81,6 +86,7 @@ ADD ui ui
 RUN mkdir -p /app/ui/node_modules
 ADD api/config api/config
 ADD api/contract api/contract
+ADD api/types api/types
 ADD api/src/config.ts api/src/config.ts
 RUN mkdir -p /app/api/node_modules
 ADD shared shared
@@ -94,6 +100,7 @@ FROM installer AS next-ui-builder
 ADD /api/config api/config
 ADD /api/src/config.ts api/src/config.ts
 ADD /api/src/ui-config.ts api/src/ui-config.ts
+ADD /shared shared
 ADD /next-ui next-ui
 RUN npm -w next-ui run build
 
@@ -115,6 +122,8 @@ FROM nativedeps AS main
 # We could copy /app whole, but this is better for layering / efficient cache use
 COPY --from=api-installer /app/node_modules /app/node_modules
 COPY --from=api-installer /app/api/node_modules /app/api/node_modules
+COPY --from=api-installer /app/api/types /app/api/types
+COPY --from=api-installer /app/api/doc /app/api/doc
 COPY --from=api-installer /app/shared/node_modules /app/shared/node_modules
 COPY --from=builder /app/ui/nuxt-dist /app/ui/nuxt-dist
 COPY --from=next-ui-builder /app/next-ui/dist next-ui/dist

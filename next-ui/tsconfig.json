@@ -21,6 +21,9 @@
     "noFallthroughCasesInSwitch": true,
 
     "paths": {
+      "#api/types": ["../api/types/index.ts"],
+      "#api/doc": ["../api/doc/index.ts"],
+      "#shared/*": ["../shared/*"],
       "~/*": ["./src/*"]
     },
 

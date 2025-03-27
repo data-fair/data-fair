@@ -12,8 +12,6 @@ import { nanoid } from 'nanoid'
 import contentDisposition from 'content-disposition'
 import applicationAPIDocs from '../../contract/application-api-docs.js'
 import * as ajv from '../misc/utils/ajv.js'
-import applicationSchema from '../../contract/application.js'
-import applicationPatch from '../../contract/application-patch.js'
 import applicationKeys from '../../contract/application-keys.js'
 import * as baseAppsUtils from '../base-applications/utils.js'
 import * as permissions from '../misc/utils/permissions.js'
@@ -33,11 +31,9 @@ import * as clamav from '../misc/utils/clamav.js'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
 import pump from '../misc/utils/pipe.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
+import { patchKeys } from '#doc/applications/patch-req/schema.js'
 
 const unlink = util.promisify(fs.unlink)
-const validate = ajv.compile(applicationSchema)
-const validateConfiguration = ajv.compile(applicationSchema.properties.configuration)
-const validatePatch = ajv.compile(applicationPatch)
 const validateKeys = ajv.compile(applicationKeys)
 
 const router = express.Router()
@@ -61,9 +57,15 @@ const curateApplication = async (db, application) => {
   const projection = { id: 1, url: 1, meta: 1, datasetsFilters: 1 }
   if (application.url) {
     application.baseApp = await db.collection('base-applications').findOne({ url: application.url }, { projection })
+    if (!application.baseApp) {
+      throw httpError(400, 'Base application not found')
+    }
   }
   if (application.urlDraft) {
     application.baseAppDraft = await db.collection('base-applications').findOne({ url: application.urlDraft }, { projection })
+    if (!application.baseAppDraft) {
+      throw httpError(400, 'Base draft application not found')
+    }
   }
   setUniqueRefs(application)
 }
@@ -91,8 +93,9 @@ router.get('', cacheHeaders.listBased, async (req, res) => {
   res.json(response)
 })
 
-const initNew = async (req) => {
+const initNew = async (req, id) => {
   const application = { ...req.body }
+  if (id) application.id = id
   application.owner = usersUtils.owner(req)
   const date = moment().toISOString()
   application.createdAt = application.updatedAt = date
@@ -104,10 +107,10 @@ const initNew = async (req) => {
 
 // Create an application configuration
 router.post('', async (req, res) => {
-  const application = await initNew(req)
+  const application = await initNew((await import('#doc/applications/post-req/index.js')).returnValid(req))
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', req.user)) return res.status(403).type('text/plain').send()
-  validate(application)
-  validateURLFriendly(req.getLocale(), application.slug)
+
+  if (application.slug) validateURLFriendly(req.getLocale(), application.slug)
 
   // Generate ids and try insertion until there is no conflict on id
   const toks = application.url.split('/').filter(part => !!part)
@@ -159,6 +162,7 @@ const readApplication = async (req, res, next) => {
 
 const readBaseApp = async (req, res, next) => {
   req.baseApp = await mongo.db.collection('base-applications').findOne({ url: req.application.url })
+  baseAppsUtils.clean(req.publicBaseUrl, req.baseApp)
   if (!req.baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
   next()
 }
@@ -202,10 +206,8 @@ router.get('/:applicationId', readApplication, permissions.middleware('readDescr
 
 // PUT used to create or update
 const attemptInsert = async (req, res, next) => {
-  const newApplication = await initNew(req)
-  newApplication.id = req.params.applicationId
-
-  validate(newApplication)
+  const { returnValid } = await import('#types/application/index.js')
+  const newApplication = returnValid(await initNew(req, req.params.applicationId))
 
   permissions.initResourcePermissions(newApplication)
 
@@ -231,7 +233,7 @@ router.put('/:applicationId', attemptInsert, readApplication, permissions.middle
   const newApplication = req.body
   // preserve all readonly properties, the rest is overwritten
   for (const key of Object.keys(req.application)) {
-    if (!applicationPatch.properties[key]) {
+    if (!patchKeys.includes([key])) {
       newApplication[key] = req.application[key]
     }
   }
@@ -257,9 +259,8 @@ router.patch('/:applicationId',
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
   async (req, res) => {
     const db = mongo.db
-    const patch = req.body
-    validatePatch(patch)
-    validateURLFriendly(req.getLocale(), patch.slug)
+    const { body: patch } = (await import('#doc/applications/patch-req/index.js')).returnValid(req)
+    if (patch.slug) validateURLFriendly(req.getLocale(), patch.slug)
 
     // Retry previously failed publications
     if (!patch.publications) {
@@ -389,7 +390,8 @@ const writeConfig = async (req, res) => {
   const application = req.application
 
   const db = mongo.db
-  validateConfiguration(req.body)
+  const { returnValid } = await import('#types/app-config/index.js')
+  const appConfig = returnValid(req.body)
   await db.collection('applications').updateOne(
     { id: req.params.applicationId },
     {
@@ -397,7 +399,7 @@ const writeConfig = async (req, res) => {
         errorMessage: ''
       },
       $set: {
-        configuration: req.body,
+        configuration: appConfig,
         updatedAt: moment().toISOString(),
         updatedBy: { id: req.user.id, name: req.user.name },
         lastConfigured: moment().toISOString(),
@@ -425,7 +427,8 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
   // @ts-ignore
   const application = req.application
 
-  validateConfiguration(req.body)
+  const { returnValid } = await import('#types/app-config/index.js')
+  const appConfig = returnValid(req.body)
   await mongo.db.collection('applications').updateOne(
     { id: req.params.applicationId },
     {
@@ -433,7 +436,7 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
         errorMessageDraft: ''
       },
       $set: {
-        configurationDraft: req.body,
+        configurationDraft: appConfig,
         updatedAt: moment().toISOString(),
         updatedBy: { id: req.user.id, name: req.user.name },
         status: 'configured-draft'

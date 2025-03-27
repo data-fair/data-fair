@@ -12,10 +12,16 @@ declare global {
   const $sitePath: typeof import('~/context')['$sitePath']
   const $siteUrl: typeof import('~/context')['$siteUrl']
   const $uiConfig: typeof import('~/context')['$uiConfig']
+  const $wsUrl: typeof import('~/context')['$wsUrl']
   const EffectScope: typeof import('vue')['EffectScope']
+  const applicationStore: typeof import('../src/composables/application-store')['default']
+  const applicationVersions: typeof import('../src/composables/application-versions')['default']
   const computed: typeof import('vue')['computed']
   const createApp: typeof import('vue')['createApp']
+  const createApplicationStore: typeof import('../src/composables/application-store')['createApplicationStore']
+  const createDatasetStore: typeof import('../src/composables/dataset-store')['createDatasetStore']
   const customRef: typeof import('vue')['customRef']
+  const datasetStore: typeof import('../src/composables/dataset-store')['default']
   const defineAsyncComponent: typeof import('vue')['defineAsyncComponent']
   const defineComponent: typeof import('vue')['defineComponent']
   const dfPersonalMenu: typeof import('@data-fair/lib-vuetify/personal-menu.vue')['default']
@@ -33,42 +39,6 @@ declare global {
   const isReadonly: typeof import('vue')['isReadonly']
   const isRef: typeof import('vue')['isRef']
   const markRaw: typeof import('vue')['markRaw']
-  const mdiAccount: typeof import('@mdi/js')['mdiAccount']
-  const mdiAccountCircle: typeof import('@mdi/js')['mdiAccountCircle']
-  const mdiAccountGroup: typeof import('@mdi/js')['mdiAccountGroup']
-  const mdiAccountSwitch: typeof import('@mdi/js')['mdiAccountSwitch']
-  const mdiAlertCircle: typeof import('@mdi/js')['mdiAlertCircle']
-  const mdiBell: typeof import('@mdi/js')['mdiBell']
-  const mdiCalendar: typeof import('@mdi/js')['mdiCalendar']
-  const mdiCancel: typeof import('@mdi/js')['mdiCancel']
-  const mdiCellphone: typeof import('@mdi/js')['mdiCellphone']
-  const mdiCheck: typeof import('@mdi/js')['mdiCheck']
-  const mdiCheckCircle: typeof import('@mdi/js')['mdiCheckCircle']
-  const mdiCog: typeof import('@mdi/js')['mdiCog']
-  const mdiConnection: typeof import('@mdi/js')['mdiConnection']
-  const mdiDelete: typeof import('@mdi/js')['mdiDelete']
-  const mdiDevices: typeof import('@mdi/js')['mdiDevices']
-  const mdiDotsVertical: typeof import('@mdi/js')['mdiDotsVertical']
-  const mdiDownload: typeof import('@mdi/js')['mdiDownload']
-  const mdiEmail: typeof import('@mdi/js')['mdiEmail']
-  const mdiEye: typeof import('@mdi/js')['mdiEye']
-  const mdiEyeOffOutline: typeof import('@mdi/js')['mdiEyeOffOutline']
-  const mdiEyeOutline: typeof import('@mdi/js')['mdiEyeOutline']
-  const mdiFamilyTree: typeof import('@mdi/js')['mdiFamilyTree']
-  const mdiFileTable: typeof import('@mdi/js')['mdiFileTable']
-  const mdiGraph: typeof import('@mdi/js')['mdiGraph']
-  const mdiInformation: typeof import('@mdi/js')['mdiInformation']
-  const mdiMagnify: typeof import('@mdi/js')['mdiMagnify']
-  const mdiMonitorCellphoneStar: typeof import('@mdi/js')['mdiMonitorCellphoneStar']
-  const mdiPencil: typeof import('@mdi/js')['mdiPencil']
-  const mdiPlus: typeof import('@mdi/js')['mdiPlus']
-  const mdiRefresh: typeof import('@mdi/js')['mdiRefresh']
-  const mdiRss: typeof import('@mdi/js')['mdiRss']
-  const mdiSend: typeof import('@mdi/js')['mdiSend']
-  const mdiShieldAlert: typeof import('@mdi/js')['mdiShieldAlert']
-  const mdiSort: typeof import('@mdi/js')['mdiSort']
-  const mdiThemeLightDark: typeof import('@mdi/js')['mdiThemeLightDark']
-  const mdiWeb: typeof import('@mdi/js')['mdiWeb']
   const nextTick: typeof import('vue')['nextTick']
   const onActivated: typeof import('vue')['onActivated']
   const onBeforeMount: typeof import('vue')['onBeforeMount']
@@ -86,6 +56,8 @@ declare global {
   const onUnmounted: typeof import('vue')['onUnmounted']
   const onUpdated: typeof import('vue')['onUpdated']
   const onWatcherCleanup: typeof import('vue')['onWatcherCleanup']
+  const propTypeIcon: typeof import('../src/utils/dataset')['propTypeIcon']
+  const propTypeTitle: typeof import('../src/utils/dataset')['propTypeTitle']
   const provide: typeof import('vue')['provide']
   const reactive: typeof import('vue')['reactive']
   const readonly: typeof import('vue')['readonly']
@@ -100,12 +72,17 @@ declare global {
   const toValue: typeof import('vue')['toValue']
   const triggerRef: typeof import('vue')['triggerRef']
   const unref: typeof import('vue')['unref']
+  const useApplicationStore: typeof import('../src/composables/application-store')['useApplicationStore']
+  const useApplicationVersions: typeof import('../src/composables/application-versions')['useApplicationVersions']
+  const useApplicationWatch: typeof import('../src/composables/application-watch')['useApplicationWatch']
   const useAsyncAction: typeof import('@data-fair/lib-vue/async-action.js')['useAsyncAction']
   const useAttrs: typeof import('vue')['useAttrs']
   const useBooleanSearchParam: typeof import('@data-fair/lib-vue/reactive-search-params.js')['useBooleanSearchParam']
   const useConceptFilters: typeof import('@data-fair/lib-vue/concept-filters.js')['useConceptFilters']
   const useCssModule: typeof import('vue')['useCssModule']
   const useCssVars: typeof import('vue')['useCssVars']
+  const useDatasetStore: typeof import('../src/composables/dataset-store')['useDatasetStore']
+  const useDatasetWatch: typeof import('../src/composables/dataset-watch')['useDatasetWatch']
   const useFetch: typeof import('@data-fair/lib-vue/fetch.js')['useFetch']
   const useHead: typeof import('@unhead/vue')['useHead']
   const useHeadSafe: typeof import('@unhead/vue')['useHeadSafe']
@@ -155,10 +132,16 @@ declare module 'vue' {
     readonly $sitePath: UnwrapRef<typeof import('~/context')['$sitePath']>
     readonly $siteUrl: UnwrapRef<typeof import('~/context')['$siteUrl']>
     readonly $uiConfig: UnwrapRef<typeof import('~/context')['$uiConfig']>
+    readonly $wsUrl: UnwrapRef<typeof import('~/context')['$wsUrl']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
+    readonly applicationStore: UnwrapRef<typeof import('../src/composables/application-store')['default']>
+    readonly applicationVersions: UnwrapRef<typeof import('../src/composables/application-versions')['default']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
+    readonly createApplicationStore: UnwrapRef<typeof import('../src/composables/application-store')['createApplicationStore']>
+    readonly createDatasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['createDatasetStore']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
+    readonly datasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['default']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
     readonly dfPersonalMenu: UnwrapRef<typeof import('@data-fair/lib-vuetify/personal-menu.vue')['default']>
@@ -193,6 +176,8 @@ declare module 'vue' {
     readonly onUnmounted: UnwrapRef<typeof import('vue')['onUnmounted']>
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
+    readonly propTypeIcon: UnwrapRef<typeof import('../src/utils/dataset')['propTypeIcon']>
+    readonly propTypeTitle: UnwrapRef<typeof import('../src/utils/dataset')['propTypeTitle']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
@@ -207,12 +192,17 @@ declare module 'vue' {
     readonly toValue: UnwrapRef<typeof import('vue')['toValue']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
+    readonly useApplicationStore: UnwrapRef<typeof import('../src/composables/application-store')['useApplicationStore']>
+    readonly useApplicationVersions: UnwrapRef<typeof import('../src/composables/application-versions')['useApplicationVersions']>
+    readonly useApplicationWatch: UnwrapRef<typeof import('../src/composables/application-watch')['useApplicationWatch']>
     readonly useAsyncAction: UnwrapRef<typeof import('@data-fair/lib-vue/async-action.js')['useAsyncAction']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
     readonly useBooleanSearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useBooleanSearchParam']>
     readonly useConceptFilters: UnwrapRef<typeof import('@data-fair/lib-vue/concept-filters.js')['useConceptFilters']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVars: UnwrapRef<typeof import('vue')['useCssVars']>
+    readonly useDatasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['useDatasetStore']>
+    readonly useDatasetWatch: UnwrapRef<typeof import('../src/composables/dataset-watch')['useDatasetWatch']>
     readonly useFetch: UnwrapRef<typeof import('@data-fair/lib-vue/fetch.js')['useFetch']>
     readonly useHead: UnwrapRef<typeof import('@unhead/vue')['useHead']>
     readonly useHeadSafe: UnwrapRef<typeof import('@unhead/vue')['useHeadSafe']>
@@ -232,6 +222,7 @@ declare module 'vue' {
     readonly useSession: UnwrapRef<typeof import('@data-fair/lib-vue/session.js')['useSession']>
     readonly useSessionAuthenticated: UnwrapRef<typeof import('@data-fair/lib-vue/session.js')['useSessionAuthenticated']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
+    readonly useStore: UnwrapRef<typeof import('../src/composables/use-store')['default']>
     readonly useStringSearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useStringSearchParam']>
     readonly useStringsArraySearchParam: UnwrapRef<typeof import('@data-fair/lib-vue/reactive-search-params.js')['useStringsArraySearchParam']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
