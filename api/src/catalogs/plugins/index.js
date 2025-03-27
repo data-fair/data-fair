@@ -78,9 +78,11 @@ export const listDatasets = async (db, catalog, params) => {
       origin: dataset.page
     }, { projection: { id: 1, remoteFile: 1, isMetaOnly: 1, updatedAt: 1 } }).toArray()
     dataset.harvestedDataset = harvestedDatasets.find(d => d.isMetaOnly)
-    for (const resource of dataset.resources) {
+    if (dataset.resources) {
+      for (const resource of dataset.resources) {
       // resource.harvestable = uploadUtils.allowedTypes.has(resource.mime)
-      resource.harvestedDataset = harvestedDatasets.find(hd => hd.remoteFile && hd.remoteFile.url === resource.url)
+        resource.harvestedDataset = harvestedDatasets.find(hd => hd.remoteFile && hd.remoteFile.url === resource.url)
+      }
     }
   }
   return datasets
