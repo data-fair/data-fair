@@ -210,7 +210,11 @@ export const cleanTmp = async () => {
     const stats = await fs.stat(path.join(tmpDir, dirent.name))
     if (stats.mtimeMs < Date.now() - delay) {
       debugCleanTmp(`remove old ${dirent.isDirectory() ? 'directory' : 'file'} ${dirent.name} - ${stats.mtime}`)
-      await fs.remove(path.join(tmpDir, dirent.name))
+      try {
+        await fs.remove(path.join(tmpDir, dirent.name))
+      } catch (e) {
+        // ignore error if file has been deleted in the meantime
+      }
     }
   }
 }

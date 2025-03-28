@@ -80,7 +80,7 @@ export const listDatasets = async (db, catalog, params) => {
     dataset.harvestedDataset = harvestedDatasets.find(d => d.isMetaOnly)
     if (dataset.resources) {
       for (const resource of dataset.resources) {
-      // resource.harvestable = uploadUtils.allowedTypes.has(resource.mime)
+        // resource.harvestable = uploadUtils.allowedTypes.has(resource.mime)
         resource.harvestedDataset = harvestedDatasets.find(hd => hd.remoteFile && hd.remoteFile.url === resource.url)
       }
     }
