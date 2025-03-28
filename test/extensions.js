@@ -690,6 +690,26 @@ other,unknown address
     assert.equal(res.data.results[1].calc1, 'bidule - adresse inconnue')
   })
 
+  it('Extend dataset using static value expression and x-originalName', async function () {
+    const ax = global.ax.dmeadus
+    // Initial dataset with addresses
+    let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
+    let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: dataset.schema,
+      extensions: [{ active: true, type: 'exprEval', expr: '"Test"', property: { 'x-originalName': 'Test', key: 'test', type: 'string' } }]
+    })
+    assert.equal(res.status, 200)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    assert.ok(dataset.schema.find(field => field.key === 'test'))
+
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 2)
+    console.log(res.data.results)
+    assert.equal(res.data.results[0].test, 'Test')
+    assert.equal(res.data.results[1].test, 'Test')
+  })
+
   it('Extend dataset using more complex expression', async function () {
     const ax = global.ax.dmeadus
     // Initial dataset with addresses
