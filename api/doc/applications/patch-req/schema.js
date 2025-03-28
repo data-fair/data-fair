@@ -5,13 +5,12 @@ export const patchKeys = ['configuration', 'url', 'urlDraft', 'description', 'im
 
 const body = jsonSchema(applicationSchema)
   .makePatchSchema(patchKeys)
-  .set({ 'x-exports': ['validate', 'types'] })
   .schema
 
 export default {
   $id: 'https://github.com/data-fair/data-fair/applications/patch-req',
   title: 'Patch application req',
-  'x-exports': ['validate', 'types'],
+  'x-exports': ['validate', 'types', 'resolvedSchema'],
   type: 'object',
   required: ['body'],
   properties: { body }
