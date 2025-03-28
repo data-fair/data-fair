@@ -1,5 +1,7 @@
 import config from 'config'
 import { resolvedSchema as applicationSchema } from '../types/application/index.js'
+import { resolvedSchema as appConfigSchema } from '../types/app-config/index.js'
+
 import journalSchema from './journal.js'
 import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.js'
 import pJson from './p-json.js'
@@ -95,7 +97,7 @@ export default (application, info) => {
           }
         }
       },
-      '/config': {
+      '/configuration': {
         get: {
           summary: 'Lire la configuration actuelle',
           description: 'Récupérer la configuration de l\'application.',
@@ -107,9 +109,7 @@ export default (application, info) => {
               description: 'La configuration de l\'application.',
               content: {
                 'application/json': {
-                  schema: {
-                    type: 'object'
-                  }
+                  schema: appConfigSchema
                 }
               }
             }
@@ -126,9 +126,7 @@ export default (application, info) => {
             required: true,
             content: {
               'application/json': {
-                schema: {
-                  type: 'object'
-                }
+                schema: appConfigSchema
               }
             }
           },
@@ -137,11 +135,66 @@ export default (application, info) => {
               description: 'La configuration modifiée de l\'application.',
               content: {
                 'application/json': {
-                  schema: {
-                    type: 'object'
-                  }
+                  schema: appConfigSchema
                 }
               }
+            }
+          }
+        }
+      },
+      '/configuration-draft': {
+        get: {
+          summary: 'Lire le brouillon',
+          description: 'Récupérer le brouillon de la configuration de l\'application.',
+          operationId: 'readConfigDraft',
+          'x-permissionClass': 'read',
+          tags: ['Paramétrage'],
+          responses: {
+            200: {
+              description: 'Le brouillon de la configuration de l\'application.',
+              content: {
+                'application/json': {
+                  schema: appConfigSchema
+                }
+              }
+            }
+          }
+        },
+        put: {
+          summary: 'Modifier le brouillon',
+          description: 'Mettre à jour le brouillon de la configuration de l\'application.',
+          operationId: 'writeConfigDraft',
+          'x-permissionClass': 'write',
+          tags: ['Paramétrage'],
+          requestBody: {
+            description: 'Le brouillon de la configuration de l\'application.',
+            required: true,
+            content: {
+              'application/json': {
+                schema: appConfigSchema
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Le brouillon de la configuration modifié de l\'application.',
+              content: {
+                'application/json': {
+                  schema: appConfigSchema
+                }
+              }
+            }
+          }
+        },
+        delete: {
+          summary: 'Supprimer le brouillon',
+          description: 'Annuler le brouillon de la configuration de l\'application et revenir à la configuration actuelle.',
+          operationId: 'deleteConfigDraft',
+          'x-permissionClass': 'write',
+          tags: ['Paramétrage'],
+          responses: {
+            204: {
+              description: 'Brouillon de la configuration supprimé.'
             }
           }
         }
@@ -223,13 +276,43 @@ export default (application, info) => {
       '/attachments': {
         post: {
           summary: 'Charger une pièce jointe',
-          description: 'Charger une pièce jointe dans les métadonnées.',
+          description: 'Charger une pièce jointe dans les métadonnées.\n**Attention, il faut ensuite ajouter la pièce jointe aux informations de l\'application via la route <code>operationId: writeDescription</code> pour qu\'elle soit répertoriée.**',
           operationId: 'postAttachment',
           'x-permissionClass': 'write',
           tags: ['Métadonnées'],
+          requestBody: {
+            description: 'La pièce jointe à charger.',
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    attachment: {
+                      type: 'string',
+                      format: 'binary'
+                    }
+                  }
+                }
+              }
+            }
+          },
           responses: {
-            204: {
-              description: 'La pièce jointe a été chargée.'
+            200: {
+              description: 'La pièce jointe a correctement été chargée.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      mimetype: { type: 'string' },
+                      name: { type: 'string' },
+                      size: { type: 'integer' },
+                      updateAt: { type: 'string', format: 'date-time' }
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -237,7 +320,7 @@ export default (application, info) => {
       '/attachments/{attachmentId}': {
         delete: {
           summary: 'Supprimer une pièce jointe',
-          description: 'Supprimer une pièce jointe des métadonnées.',
+          description: 'Supprimer une pièce jointe des métadonnées.\n**Attention, il faut ensuite supprimer la pièce jointe des informations de l\'application via la route <code>operationId: writeDescription</code> pour qu\'elle ne soit plus répertoriée.**',
           operationId: 'deleteAttachment',
           'x-permissionClass': 'write',
           tags: ['Métadonnées'],
