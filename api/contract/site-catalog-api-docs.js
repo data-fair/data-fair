@@ -44,7 +44,6 @@ export default (publicUrl, publicationSite, info) => {
         get: {
           summary: 'Obtenir la documentation OpenAPI',
           description: 'Accéder à cette documentation au format OpenAPI v3.',
-          tags: ['Catalogue'],
           operationId: 'getApiDoc',
           responses: {
             200: {
@@ -63,7 +62,6 @@ export default (publicUrl, publicationSite, info) => {
           summary: 'Lister les jeux de données',
           description: 'Récupérer la liste des jeux de données.',
           operationId: 'listDatasets',
-          tags: ['Catalogue'],
           parameters: [
             utils.qParam,
             utils.selectParam(Object.keys(dataset.properties)),
@@ -103,7 +101,6 @@ export default (publicUrl, publicationSite, info) => {
           summary: 'Lister les jeux de données (DCAT)',
           description: 'Récupérer la liste des jeux de données au format DCAT (JSON-LD).',
           operation: 'dcat',
-          tags: ['Catalogue'],
           responses: {
             200: {
               description: 'Liste des jeux de données au format DCAT (JSON-LD)',
