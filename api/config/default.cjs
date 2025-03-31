@@ -13,9 +13,10 @@ module.exports = {
   openapiViewerUrl: 'https://koumoul.com/openapi-viewer/',
   captureUrl: 'http://capture:8080',
   privateCaptureUrl: null,
-  notifyUrl: null,
-  privateNotifyUrl: null,
-  notifyWSUrl: null,
+  notifyUrl: null, // DEPRECATED
+  privateNotifyUrl: null, // DEPRECATED
+  notifyWSUrl: null, // DEPRECATED
+  privateEventsUrl: null,
   subscriptionUrl: null,
   pluginsDir: './plugins',
   mongo: {
@@ -154,7 +155,8 @@ module.exports = {
   secretKeys: {
     identities: null,
     limits: null,
-    notifications: null,
+    notifications: null, // DEPRECATED
+    events: null,
     ignoreRateLimiting: null
   },
   // Configure outgoing http calls

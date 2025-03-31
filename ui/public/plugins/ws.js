@@ -48,7 +48,11 @@ export default ({ store, env }) => {
   configureWS(wsPublicUrl)
 
   // only configure notify websocket in main back-office mode, not multi-domain embeds
-  if (env.notifyWSUrl && new URL(env.notifyWSUrl).hostname === window.location.hostname) {
-    configureWS(env.notifyWSUrl, '-notify')
+  if (new URL(env.notifyWSUrl).hostname === window.location.hostname) {
+    if (env.eventsIntegration) {
+      configureWS('/events/', '-notify')
+    } else if (env.notifyWSUrl) {
+      configureWS(env.notifyWSUrl, '-notify')
+    }
   }
 }

@@ -13,6 +13,7 @@ module.exports = {
   notifyUrl: 'NOTIFY_URL',
   privateNotifyUrl: 'PRIVATE_NOTIFY_URL',
   notifyWSUrl: 'NOTIFY_WS_URL',
+  privateEventsUrl: 'PRIVATE_EVENTS_URL',
   subscriptionUrl: 'SUBSCRIPTION_URL',
   mongo: {
     url: 'MONGO_URL',
@@ -86,6 +87,7 @@ module.exports = {
     identities: 'SECRET_IDENTITIES',
     limits: 'SECRET_LIMITS',
     notifications: 'SECRET_NOTIFICATIONS',
+    events: 'SECRET_EVENTS',
     masterData: 'SECRET_MASTER_DATA',
     ignoreRateLimiting: 'SECRET_IGNORE_RATE_LIMITING'
   },

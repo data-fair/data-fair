@@ -116,8 +116,9 @@ const nuxtConfig = {
     browserLogLevel: config.browserLogLevel,
     analytics: config.analytics,
     captureUrl: config.captureUrl,
-    notifyUrl: config.notifyUrl,
-    notifyWSUrl: config.notifyWSUrl,
+    notifyUrl: config.notifyUrl, // DEPRECATED
+    notifyWSUrl: config.notifyWSUrl, // DEPRECATED
+    eventsIntegration: !!config.privateEventsUrl,
     subscriptionUrl: config.subscriptionUrl,
     theme: config.theme,
     baseAppsCategories: config.baseAppsCategories,
