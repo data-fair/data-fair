@@ -411,7 +411,7 @@ const writeConfig = async (req, res) => {
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.applications.writeConfig', `wrote application config ${application.slug} (${application.id})`, { req, account: application.owner }))
 
-  await journals.log(req.app, application, { type: 'config-updated' }, 'application')
+  await journals.log(req.app, application, { type: 'config-updated' }, 'application', false, req.user)
   await syncDatasets(db, { configuration: req.body })
   res.status(200).json(req.body)
 }
@@ -446,7 +446,7 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.applications.validateDraft', `vaidated application config draft ${application.slug} (${application.id})`, { req, account: application.owner }))
 
-  await journals.log(req.app, application, { type: 'config-draft-updated' }, 'application')
+  await journals.log(req.app, application, { type: 'config-draft-updated' }, 'application', false, req.user)
   res.status(200).json(req.body)
 })
 router.delete('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), async (req, res, next) => {
@@ -471,7 +471,7 @@ router.delete('/:applicationId/configuration-draft', readApplication, permission
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.applications.cancelDraft', `cancelled application config draft ${application.slug} (${application.id})`, { req, account: application.owner }))
 
-  await journals.log(req.app, application, { type: 'config-draft-cancelled' }, 'application')
+  await journals.log(req.app, application, { type: 'config-draft-cancelled' }, 'application', false, req.user)
   res.status(200).json(req.body)
 })
 
@@ -517,7 +517,7 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
     await wsEmitter.emit(`applications/${req.params.applicationId}/draft-error`, req.body)
   } else if (req.application.configuration) {
     await mongo.db.collection('applications').updateOne({ id: req.application.id }, { $set: { status: 'error', errorMessage: message } })
-    await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application')
+    await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application', false, req.user)
   }
   res.status(204).send()
 })

@@ -7,7 +7,7 @@ import debugLib from 'debug'
 
 const debug = debugLib('webhooks')
 
-export const trigger = async (db, type, resource, event, sender) => {
+export const trigger = async (db, type, resource, event, sender, user) => {
   const eventKey = resource.draftReason ? `${type}-draft-${event.type}` : `${type}-${event.type}`
   const eventType = settingsSchema.properties.webhooks.items.properties.events.items.oneOf
     .find(eventType => eventType.const === eventKey)
@@ -27,7 +27,12 @@ export const trigger = async (db, type, resource, event, sender) => {
     visibility: permissions.isPublic(type + 's', resource) ? 'public' : 'private'
   }
   if (event.data) notif.body += ' - ' + event.data
-  notifications.send(notif)
+  const pseudoSessionState = {}
+  if (user) {
+    pseudoSessionState.user = { id: user.id, name: user.name }
+    if (user.organization) pseudoSessionState.organization = user.organization
+  }
+  notifications.send(notif, false, pseudoSessionState)
 
   const settingsFilter = {
     id: resource.owner.id,

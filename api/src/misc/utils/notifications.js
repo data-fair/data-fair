@@ -6,7 +6,7 @@ import eventsQueue from '@data-fair/lib-node/events-queue.js'
 
 const debug = debugLib('notifications')
 
-export const send = async (notification, subscribedOnly = false) => {
+export const send = async (notification, subscribedOnly, sessionState) => {
   if (global.events) global.events.emit('notification', notification)
   debug('send notification', notification)
   const notifyUrl = config.privateNotifyUrl || config.notifyUrl
@@ -17,7 +17,7 @@ export const send = async (notification, subscribedOnly = false) => {
         notification.subscribedRecipient = notification.recipient
         delete notification.recipient
       }
-      eventsQueue.pushEvent(notification)
+      eventsQueue.pushEvent(notification, sessionState)
     } else if (notifyUrl) {
       await axios.post(`${notifyUrl}/api/v1/notifications`, notification, { params: { key: config.secretKeys.notifications, subscribedOnly } })
         .catch(err => { internalError('notif-push', err) })

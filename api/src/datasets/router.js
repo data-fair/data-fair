@@ -53,6 +53,7 @@ import mongo from '#mongo'
 import debugModule from 'debug'
 import contentDisposition from 'content-disposition'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import { session } from '@data-fair/lib-express'
 import { getFlatten } from './utils/flatten.ts'
 
 const validatePost = ajv.compile(datasetPostSchema.properties.body)
@@ -196,7 +197,7 @@ router.patch('/:datasetId',
       await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
 
       if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
-        await journals.log(req.app, dataset, { type: 'structure-updated' }, 'dataset')
+        await journals.log(req.app, dataset, { type: 'structure-updated' }, 'dataset', false, req.user)
       }
 
       await import('@data-fair/lib-express/events-log.js')
@@ -381,7 +382,7 @@ const createDatasetRoute = async (req, res) => {
     await import('@data-fair/lib-express/events-log.js')
       .then((eventsLog) => eventsLog.default.info('df.datasets.create', `created a dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
 
-    await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset')
+    await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset', false, req.user)
     await syncRemoteService(db, dataset)
 
     res.status(201).send(clean(req, dataset, draft))
@@ -456,7 +457,7 @@ const updateDatasetRoute = async (req, res, next) => {
       await import('@data-fair/lib-express/events-log.js')
         .then((eventsLog) => eventsLog.default.info('df.datasets.update', `updated dataset ${dataset.slug} (${dataset.id}) keys ${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner }))
 
-      if (files) await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset')
+      if (files) await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset', false, req.user)
       await syncRemoteService(db, dataset)
     }
   } catch (err) {
@@ -484,7 +485,7 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
 
   const patch = { status: 'validated', validateDraft: true }
   await applyPatch(req.app, dataset, patch)
-  await journals.log(req.app, dataset, { type: 'draft-validated', data: 'validation manuelle' }, 'dataset')
+  await journals.log(req.app, dataset, { type: 'draft-validated', data: 'validation manuelle' }, 'dataset', false, req.user)
 
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
@@ -506,7 +507,7 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
   if (!datasetFull.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
-  await journals.log(req.app, dataset, { type: 'draft-cancelled' }, 'dataset')
+  await journals.log(req.app, dataset, { type: 'draft-cancelled' }, 'dataset', false, req.user)
   const patchedDataset = await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $unset: { draft: '' } }, { returnDocument: 'after' })
   await fs.remove(dir(dataset))
@@ -1292,7 +1293,8 @@ router.post(
       recipient: userNotification.recipient,
       extra: { user: { id: req.user.id, name: req.user.name } }
     }
-    await notifications.send(notif, true)
+    const sessionState = await session.req(req)
+    await notifications.send(notif, true, sessionState)
     res.send(notif)
   }
 )

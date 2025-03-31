@@ -14,9 +14,10 @@ module.exports = {
   openapiViewerUrl: `http://${host}:5600/openapi-viewer/`,
   captureUrl: `http://${host}:5600/capture`,
   privateCaptureUrl: 'http://localhost:8087',
-  notifyUrl: `http://${host}:5600/notify`,
-  privateNotifyUrl: 'http://localhost:8088',
-  notifyWSUrl: 'ws://localhost:8088',
+  // notifyUrl: `http://${host}:5600/notify`,
+  // privateNotifyUrl: 'http://localhost:8088',
+  // notifyWSUrl: 'ws://localhost:8088',
+  privateEventsUrl: 'http://localhost:8088',
   // subscriptionUrl: 'https://staging-koumoul.com/s/customers/embed/subscription',
   defaultLimits: {
     totalStorage: 10000000000,
@@ -59,6 +60,13 @@ module.exports = {
       iframe: `http://${host}:5600/data-fair/_dev/extra`,
       basePath: '/data-fair',
       icon: 'mdi-link'
+    },
+    {
+      id: 'events',
+      title: 'Traçabilité',
+      iframe: `http://${host}:5600/events/embed/events`,
+      basePath: '/events',
+      icon: 'mdi-clipboard-text-clock'
     }
   ],
   extraAdminNavigationItems: [
