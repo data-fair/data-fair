@@ -16,7 +16,7 @@
     "@data-fair/data-fair-shared": "*",
     "@data-fair/data-fair-ui": "*",
     "@data-fair/lib-express": "^1.13.0",
-    "@data-fair/lib-node": "^2.6.0",
+    "@data-fair/lib-node": "^2.6.1",
     "@data-fair/lib-utils": "^1.5.0",
     "@data-fair/sd-express": "^1.4.3",
     "@elastic/elasticsearch": "^8.17.1",

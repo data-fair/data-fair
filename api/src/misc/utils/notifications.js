@@ -15,6 +15,12 @@ export const send = async (notification, subscribedOnly, sessionState) => {
         notification.subscribedRecipient = notification.recipient
         delete notification.recipient
       }
+      if (sessionState.user?.isApiKey) {
+        notification.originator = { apiKey: { id: sessionState.user.id.replace('apiKey:', ''), title: sessionState.user.name } }
+      }
+      if (!sessionState.user) {
+        notification.originator = { internalProcess: { id: 'data-fair', title: 'Data Fair' } }
+      }
       debug('send notification to events queue', notification)
       eventsQueue.pushEvent(notification, sessionState)
     } else if (notifyUrl) {

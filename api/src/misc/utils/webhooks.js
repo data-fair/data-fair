@@ -30,7 +30,7 @@ export const trigger = async (db, type, resource, event, sender, user) => {
   if (event.data) notif.body += ' - ' + event.data
   const pseudoSessionState = {}
   if (user) {
-    pseudoSessionState.user = { id: user.id, name: user.name }
+    pseudoSessionState.user = { id: user.id, name: user.name, apiKey: user.isApiKey }
     if (user.organization) pseudoSessionState.organization = user.organization
   }
   notifications.send(notif, false, pseudoSessionState)
