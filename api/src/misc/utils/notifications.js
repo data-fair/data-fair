@@ -18,6 +18,7 @@ export const send = async (notification, subscribedOnly, sessionState) => {
       debug('send notification to events queue', notification)
       eventsQueue.pushEvent(notification, sessionState)
     } else if (notifyUrl) {
+      delete notification.resource
       debug('send notification to old notifications endpoint', notification)
       await axios.post(`${notifyUrl}/api/v1/notifications`, notification, { params: { key: config.secretKeys.notifications, subscribedOnly } })
         .catch(err => { internalError('notif-push', err) })

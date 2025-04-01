@@ -1291,7 +1291,8 @@ router.post(
       urlParams: { ...urlParams, datasetId: req.dataset.id, datasetSlug: req.dataset.slug, userId: req.user.id },
       visibility: userNotification.visibility,
       recipient: userNotification.recipient,
-      extra: { user: { id: req.user.id, name: req.user.name } }
+      extra: { user: { id: req.user.id, name: req.user.name } },
+      resource: { type: 'dataset', id: req.dataset.id }
     }
     const sessionState = await session.req(req)
     await notifications.send(notif, true, sessionState)

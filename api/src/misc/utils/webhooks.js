@@ -24,7 +24,8 @@ export const trigger = async (db, type, resource, event, sender, user) => {
     // body: event.data || '',
     body: event.body || resource.title || resource.id,
     urlParams: { id: resource.id, slug: resource.slug },
-    visibility: permissions.isPublic(type + 's', resource) ? 'public' : 'private'
+    visibility: permissions.isPublic(type + 's', resource) ? 'public' : 'private',
+    resource: { type, id: resource.id }
   }
   if (event.data) notif.body += ' - ' + event.data
   const pseudoSessionState = {}
