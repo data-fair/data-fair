@@ -9,7 +9,6 @@ const debug = debugLib('notifications')
 export const send = async (notification, subscribedOnly, sessionState) => {
   if (global.events) global.events.emit('notification', notification)
   const notifyUrl = config.privateNotifyUrl || config.notifyUrl
-  if (!notifyUrl) return
   if (process.env.NODE_ENV !== 'test') {
     if (config.privateEventsUrl) {
       if (subscribedOnly) {
