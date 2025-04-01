@@ -40,6 +40,17 @@ if (process.env.NODE_ENV !== 'production' || isBuilding) {
   }
 }
 
+const eventsIntegration = !!config.privateEventsUrl
+if (eventsIntegration && !config.extraNavigationItems.some(e => e.id === 'events')) {
+  config.extraNavigationItems.push({
+    id: 'events',
+    title: 'Traçabilité',
+    iframe: '/events/embed/events',
+    basePath: '/events',
+    icon: 'mdi-clipboard-text-clock'
+  })
+}
+
 const nuxtConfig = {
   telemetry: false,
   ssr: false,
@@ -119,7 +130,7 @@ const nuxtConfig = {
     captureUrl: config.captureUrl,
     notifyUrl: config.privateEventsUrl ? (publicUrl.origin + '/events') : config.notifyUrl, // DEPRECATED
     notifyWSUrl: config.notifyWSUrl, // DEPRECATED
-    eventsIntegration: !!config.privateEventsUrl,
+    eventsIntegration,
     subscriptionUrl: config.subscriptionUrl,
     theme: config.theme,
     baseAppsCategories: config.baseAppsCategories,

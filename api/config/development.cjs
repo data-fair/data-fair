@@ -60,13 +60,6 @@ module.exports = {
       iframe: `http://${host}:5600/data-fair/_dev/extra`,
       basePath: '/data-fair',
       icon: 'mdi-link'
-    },
-    {
-      id: 'events',
-      title: 'Traçabilité',
-      iframe: `http://${host}:5600/events/embed/events`,
-      basePath: '/events',
-      icon: 'mdi-clipboard-text-clock'
     }
   ],
   extraAdminNavigationItems: [
