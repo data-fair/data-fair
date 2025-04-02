@@ -36,7 +36,7 @@ module.exports = {
   */
   secretKeys: {
     identities: 'dev_secret',
-    notifications: 'secret-notifications'
+    events: 'secret-notifications'
   },
   cache: {
     disabled: true
