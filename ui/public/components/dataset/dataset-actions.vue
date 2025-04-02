@@ -106,7 +106,7 @@
       </v-list-item-content>
     </v-list-item>
     <v-list-item
-      v-if="can('readJournal') && env.eventsIntegration"
+      v-if="can('changeOwner') && env.eventsIntegration"
       :to="`/dataset/${dataset.id}/events`"
     >
       <v-list-item-icon>
