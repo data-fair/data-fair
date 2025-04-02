@@ -54,6 +54,8 @@ import debugModule from 'debug'
 import contentDisposition from 'content-disposition'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { session } from '@data-fair/lib-express'
+import eventsQueue from '@data-fair/lib-node/events-queue.js'
+import eventsLog from '@data-fair/lib-express/events-log.js'
 import { getFlatten } from './utils/flatten.ts'
 
 const validatePost = ajv.compile(datasetPostSchema.properties.body)
@@ -200,8 +202,19 @@ router.patch('/:datasetId',
         await journals.log(req.app, dataset, { type: 'structure-updated' }, 'dataset', false, req.user)
       }
 
-      await import('@data-fair/lib-express/events-log.js')
-        .then((eventsLog) => eventsLog.default.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner }))
+      eventsLog.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
+
+      const sessionState = await session.req(req)
+      const draft = !!dataset.draftReason
+      eventsQueue.pushEvent({
+        title: `Propriétés modifiées sur un ${draft ? 'brouillon de ' : ''}jeu de données`,
+        body: `${draft ? 'brouillon ' : ''}${dataset.title} (${dataset.slug}), ${Object.keys(patch)?.join(', ')}`,
+        topic: {
+          key: `data-fair:dataset${draft ? '-draft' : ''}-patched-properties:${dataset.id}`
+        },
+        sender: dataset.owner,
+        resource: { type: 'dataset', title: dataset.title, id: dataset.id }
+      }, sessionState)
 
       await syncRemoteService(db, dataset)
     }
@@ -283,15 +296,27 @@ router.put('/:datasetId/owner', readDataset(), apiKeyMiddleware, permissions.mid
     }
   }
 
-  const eventLogMessage = `changed owner of dataset ${dataset.slug} (${dataset.id}), ${dataset.owner.name} (${dataset.owner.type}:${dataset.owner.id}) -> ${req.body.name} (${req.body.type}:${req.body.id})`
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.changeOwnerFrom', eventLogMessage, { req, account: dataset.owner }))
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.changeOwnerTo', eventLogMessage, { req, account: req.body }))
+  const arrowStr = `${dataset.owner.name} (${dataset.owner.type}:${dataset.owner.id}) -> ${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
+  const eventLogMessage = `changed dataset owner ${dataset.slug} (${dataset.id}), ${arrowStr}`
+
+  eventsLog.info('df.datasets.changeOwnerFrom', eventLogMessage, { req, account: dataset.owner })
+  eventsLog.info('df.datasets.changeOwnerTo', eventLogMessage, { req, account: patch.owner })
+  const sessionState = await session.req(req)
+  const event = {
+    title: 'Changement de propriétaire d\'un jeu de données',
+    body: `${dataset.title} (${dataset.slug}), ${arrowStr}`,
+    topic: {
+      key: `data-fair:dataset-change-owner:${dataset.id}`
+    },
+    resource: { type: 'dataset', title: dataset.title, id: dataset.id },
+    sender: { ...dataset.owner, role: 'admin' }
+  }
+  eventsQueue.pushEvent(event, sessionState)
+  eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, admin: true } }, sessionState)
 
   await syncRemoteService(mongo.db, patchedDataset)
 
-  await updateTotalStorage(mongo.db, req.dataset.owner)
+  await updateTotalStorage(mongo.db, dataset.owner)
   await updateTotalStorage(mongo.db, patch.owner)
 
   res.status(200).json(clean(req, patchedDataset))
@@ -309,8 +334,17 @@ router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft:
     await deleteDataset(req.app, datasetFull)
   }
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.delete', `deleted dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
+  eventsLog.info('df.datasets.delete', `dataset deleted ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
+  const sessionState = await session.req(req)
+  eventsQueue.pushEvent({
+    title: 'Jeu de données supprimé',
+    body: `${dataset.title} (${dataset.slug})`,
+    topic: {
+      key: `data-fair:dataset-delete:${dataset.id}`
+    },
+    sender: dataset.owner,
+    resource: { type: 'dataset', title: dataset.title, id: dataset.id }
+  }, sessionState)
 
   await syncRemoteService(mongo.db, { ...datasetFull, masterData: null })
   await updateTotalStorage(mongo.db, datasetFull.owner)
@@ -379,8 +413,7 @@ const createDatasetRoute = async (req, res) => {
       })
     }
 
-    await import('@data-fair/lib-express/events-log.js')
-      .then((eventsLog) => eventsLog.default.info('df.datasets.create', `created a dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
+    eventsLog.info('df.datasets.create', `created a dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
 
     await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset', false, req.user)
     await syncRemoteService(db, dataset)
@@ -454,8 +487,19 @@ const updateDatasetRoute = async (req, res, next) => {
       await publicationSites.applyPatch(db, dataset, { ...dataset, ...patch }, user, 'dataset')
       await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
 
-      await import('@data-fair/lib-express/events-log.js')
-        .then((eventsLog) => eventsLog.default.info('df.datasets.update', `updated dataset ${dataset.slug} (${dataset.id}) keys ${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner }))
+      eventsLog.info('df.datasets.update', `updated dataset ${dataset.slug} (${dataset.id}) keys ${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
+
+      const sessionState = await session.req(req)
+      const draft = !!dataset.draftReason
+      eventsQueue.pushEvent({
+        title: `Propriétés modifiées sur un ${draft ? 'brouillon de ' : ''}jeu de données`,
+        body: `${draft ? 'brouillon ' : ''}${dataset.title} (${dataset.slug}), ${Object.keys(patch)?.join(', ')}`,
+        topic: {
+          key: `data-fair:dataset${draft ? '-draft' : ''}-patched-properties:${dataset.id}`
+        },
+        sender: dataset.owner,
+        resource: { type: 'dataset', title: dataset.title, id: dataset.id }
+      }, sessionState)
 
       if (files) await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset', false, req.user)
       await syncRemoteService(db, dataset)
@@ -487,8 +531,17 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
   await applyPatch(req.app, dataset, patch)
   await journals.log(req.app, dataset, { type: 'draft-validated', data: 'validation manuelle' }, 'dataset', false, req.user)
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
+  eventsLog.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
+  const sessionState = await session.req(req)
+  eventsQueue.pushEvent({
+    title: 'Brouillon validé',
+    body: `${dataset.title} (${dataset.slug})`,
+    topic: {
+      key: `data-fair:dataset-draft-validated:${dataset.id}`
+    },
+    sender: dataset.owner,
+    resource: { type: 'dataset', title: dataset.title, id: dataset.id }
+  }, sessionState)
 
   return res.send(dataset)
 })
@@ -513,8 +566,18 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
   await fs.remove(dir(dataset))
   await esUtils.deleteIndex(req.app.get('es'), dataset)
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.cancelDraft', `cancelled dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
+  eventsLog.info('df.datasets.cancelDraft', `cancelled dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
+
+  const sessionState = await session.req(req)
+  eventsQueue.pushEvent({
+    title: 'Brouillon annulé',
+    body: `${dataset.title} (${dataset.slug})`,
+    topic: {
+      key: `data-fair:dataset-draft-cancelled:${dataset.id}`
+    },
+    sender: dataset.owner,
+    resource: { type: 'dataset', title: dataset.title, id: dataset.id }
+  }, sessionState)
 
   await datasetUtils.updateStorage(req.app, patchedDataset)
   return res.send(patchedDataset)

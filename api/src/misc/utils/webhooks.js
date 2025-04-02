@@ -17,15 +17,18 @@ export const trigger = async (db, type, resource, event, sender, user) => {
   // first send notifications before actual webhooks
   sender = sender || { ...resource.owner }
   delete sender.role
+  let body = event.body
+  if (!body && resource.title) body = `${resource.title} (${resource.slug || resource.id})`
+  if (!body) body = resource.slug || resource.id
   const notif = {
     sender,
     topic: { key: `data-fair:${eventKey}:${resource.slug || resource.id}` },
     title: eventType ? eventType.title : '',
     // body: event.data || '',
-    body: event.body || resource.title || resource.id,
+    body,
     urlParams: { id: resource.id, slug: resource.slug },
     visibility: permissions.isPublic(type + 's', resource) ? 'public' : 'private',
-    resource: { type, id: resource.id }
+    resource: { type, id: resource.id, title: resource.title }
   }
   if (event.data) notif.body += ' - ' + event.data
   const pseudoSessionState = {}

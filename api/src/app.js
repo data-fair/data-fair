@@ -36,7 +36,7 @@ export const run = async () => {
   // a middleware for performance analysis
   app.use(observe.observeReqMiddleware)
 
-  if (config.privateEventsUrl) await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events })
+  await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
 
   if (config.mode.includes('server')) {
     const limits = await import('./misc/utils/limits.js')
