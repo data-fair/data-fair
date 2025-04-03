@@ -7,7 +7,7 @@ import fs from 'fs-extra'
 describe('file datasets with transformation rules', function () {
   it('create a dataset and apply a simple transformation', async function () {
     const form = new FormData()
-    form.append('file', 'id\nTest\nTest2', 'dataset1.csv')
+    form.append('file', 'id\n Test\nTest2', 'dataset1.csv')
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
     dataset = await workers.hook('finalizer/' + dataset.id)
@@ -18,14 +18,14 @@ describe('file datasets with transformation rules', function () {
     assert.equal(lines[1].id, 'Test2')
 
     const schema = dataset.schema
-    schema[0]['x-transform'] = { expr: 'LOWER(value)' }
+    schema[0]['x-transform'] = { expr: 'PAD_LEFT(LOWER(value), 6, "0")' }
     const patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema })).data
     assert.equal(patched.status, 'analyzed')
     dataset = await workers.hook('finalizer/' + dataset.id)
 
     lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
-    assert.equal(lines[0].id, 'test')
-    assert.equal(lines[1].id, 'test2')
+    assert.equal(lines[0].id, '00test')
+    assert.equal(lines[1].id, '0test2')
   })
 
   it('create a dataset and overwrite the type of 2 columns and add an extension', async function () {

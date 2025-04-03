@@ -196,7 +196,8 @@ export const getTransformStream = (schema, fileSchema, applyTransform = false) =
           } else {
             compiledExpressions[prop.key] = compiledExpressions[prop.key] || compileExpression(prop['x-transform']?.expr, prop)
             try {
-              item[prop.key] = compiledExpressions[prop.key]({ value: item[prop.key] })
+              const value = typeof item[prop.key] === 'string' ? item[prop.key].trim() : item[prop.key]
+              item[prop.key] = compiledExpressions[prop.key]({ value })
             } catch (err) {
               const message = `[noretry] échec de l'évaluation de l'expression "${prop['x-transform']?.expr}" : ${err.message}`
               throw new Error(message)
