@@ -32,7 +32,7 @@ export const formatLine = (item, schema) => {
 }
 
 // used both by readStream and bulk transactions in rest datasets
-export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, encoding, skipDecoding, dataset, autoAdjustKeys = false) => {
+export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, encoding, skipDecoding, dataset, autoAdjustKeys = false, applyTransform = false) => {
   const streams = []
 
   // file is gzipped
@@ -175,7 +175,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
   }
 
   if (!raw) {
-    const transformExprStream = getTransformStream(schema, fileSchema)
+    const transformExprStream = getTransformStream(schema, fileSchema, applyTransform)
     if (transformExprStream) {
       streams.push(transformExprStream)
     }
@@ -184,15 +184,15 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
   return streams
 }
 
-export const getTransformStream = (schema, fileSchema) => {
+export const getTransformStream = (schema, fileSchema, applyTransform = false) => {
   const compiledExpressions = {}
   return new Transform({
     objectMode: true,
     transform (item, encoding, callback) {
       for (const prop of schema) {
-        if (prop['x-transform']?.expr) {
+        if (applyTransform && prop['x-transform']?.expr) {
           if ([null, undefined, ''].includes(item[prop.key])) {
-            item[prop.key] = null
+            delete item[prop.key]
           } else {
             compiledExpressions[prop.key] = compiledExpressions[prop.key] || compileExpression(prop['x-transform']?.expr, prop)
             try {
@@ -240,7 +240,7 @@ export const readStreams = async (db, dataset, raw = false, full = false, ignore
       }
     }))
   }
-  streams = streams.concat(transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, false, full ? 'UTF-8' : dataset.file.encoding, false, dataset))
+  streams = streams.concat(transformFileStreams(dataset.file.mimetype, dataset.schema, dataset.file.schema, full ? {} : dataset.file.props, raw, false, full ? 'UTF-8' : dataset.file.encoding, false, dataset, false, !full))
 
   // manage interruption in case of draft mode
   const limit = (dataset.draftReason && !ignoreDraftLimit) ? 100 : -1
@@ -287,7 +287,17 @@ export const writeExtendedStreams = async (db, dataset, extensions) => {
       },
       objectMode: true
     }))
-    transforms.push(csvStrStream({ columns: relevantSchema.map(field => field['x-originalName'] || field.key), header: true }))
+    transforms.push(csvStrStream({
+      columns: relevantSchema.map(field => field['x-originalName'] || field.key),
+      header: true,
+      cast: {
+        boolean: (v) => {
+          if (v === true) return '1'
+          if (v === false) return '0'
+          return ''
+        }
+      }
+    }))
   } else if (dataset.file.mimetype === 'application/geo+json') {
     transforms.push(new Transform({
       transform (chunk, encoding, callback) {
