@@ -109,6 +109,12 @@ export const refreshConfigDatasetsRefs = async (req, application, draft) => {
           if (key in freshDataset) dataset[key] = freshDataset[key]
         }
       }
+      if (datasetFilters.properties) {
+        for (const key of Object.keys(datasetFilters.properties)) {
+          if (datasetFilters.properties[key].default && !(key in dataset)) dataset[key] = datasetFilters.properties[key].default
+          if (datasetFilters.properties[key].const) dataset[key] = datasetFilters.properties[key].const
+        }
+      }
     }
   }
 }

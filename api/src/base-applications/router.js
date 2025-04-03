@@ -70,14 +70,20 @@ async function initBaseApp (db, app) {
 
     // Read the config schema to deduce filters on datasets
     const datasetsDefinition = (configSchema.properties && configSchema.properties.datasets) || (configSchema.allOf && configSchema.allOf[0].properties && configSchema.allOf[0].properties.datasets)
-    let datasetsUrls = []
+    let datasetsFetches = []
     if (datasetsDefinition) {
-      if (datasetsDefinition['x-fromUrl']) datasetsUrls = [datasetsDefinition['x-fromUrl']]
-      if (datasetsDefinition.items && datasetsDefinition.items['x-fromUrl']) datasetsUrls = [datasetsDefinition.items['x-fromUrl']]
-      if (Array.isArray(datasetsDefinition.items)) datasetsUrls = datasetsDefinition.items.map(item => item['x-fromUrl'])
+      if (datasetsDefinition['x-fromUrl']) datasetsFetches = [datasetsDefinition['x-fromUrl']]
+      if (datasetsDefinition.items && datasetsDefinition.items['x-fromUrl']) datasetsFetches = [{ fromUrl: datasetsDefinition.items['x-fromUrl'], properties: datasetsDefinition.items.properties }]
+      if (Array.isArray(datasetsDefinition.items)) datasetsFetches = datasetsDefinition.items.map(item => ({ fromUrl: item['x-fromUrl'], properties: item.properties }))
     }
-    const datasetsQueries = datasetsUrls.map(datasetsUrl => new URL(datasetsUrl, config.publicUrl).searchParams)
-    patch.datasetsFilters = datasetsQueries.map(prepareQuery)
+    const datasetsFilters = []
+    for (const datasetFetch of datasetsFetches) {
+      const info = prepareQuery(new URL(datasetFetch.fromUrl, config.publicUrl).searchParams)
+      info.fromUrl = datasetFetch.fromUrl
+      if (datasetFetch.properties) info.properties = datasetFetch.properties
+      datasetsFilters.push(info)
+    }
+    patch.datasetsFilters = datasetsFilters
   } catch (err) {
     patch.hasConfigSchema = false
     internalError('app-config-schema', err)
