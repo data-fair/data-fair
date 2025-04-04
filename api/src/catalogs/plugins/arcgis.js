@@ -72,7 +72,7 @@ export const listDatasets = async (catalog, p) => {
     for (const folder of rootData.folders) {
       debug('get folder', folder)
       const folderData = await memoizedFetch(catalog.url + folder)
-      services.push(...folderData.services)
+      if (folderData.services) services.push(...folderData.services)
     }
   }
   const datasets = []
