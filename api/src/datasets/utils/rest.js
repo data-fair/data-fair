@@ -874,7 +874,7 @@ export const bulkLines = async (req, res, next) => {
     // these formats are read strictly as is
     const raw = mimeType === 'application/x-ndjson' || mimeType === 'application/json'
 
-    const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, null, true)
+    const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, null, true, false)
 
     const summary = initSummary()
     const transactionStream = new TransactionStream({ req, validate, summary, tmpDataset })

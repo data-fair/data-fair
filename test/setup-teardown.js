@@ -87,6 +87,10 @@ before('global mocks', async function () {
                 },
                 finalizedAt: {
                   type: 'string'
+                },
+                applicationKeyPermissions: {
+                  type: 'object',
+                  const: { operations: ['readSafeSchema', 'createLine'] }
                 }
               }
             }

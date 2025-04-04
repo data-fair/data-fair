@@ -70,6 +70,7 @@ describe('Applications', function () {
     assert.equal(res.status, 200)
     assert.equal(res.data.datasets.length, 1)
     assert.equal(res.data.datasets[0].title, 'split')
+    assert.deepEqual(res.data.datasets[0].applicationKeyPermissions, { operations: ['readSafeSchema', 'createLine'] })
     res = await ax.get('/api/v1/applications', { params: { dataset: 'nope' } })
     assert.equal(res.data.count, 0)
     res = await ax.get('/api/v1/applications', { params: { dataset: dataset.id } })
@@ -114,7 +115,7 @@ describe('Applications', function () {
     assert.ok(application.configuration)
     assert.ok(application.configuration.datasets?.length, 1)
     const datasetRef = application.configuration.datasets[0]
-    assert.deepEqual(Object.keys(datasetRef).sort(), ['finalizedAt', 'href', 'id', 'schema', 'slug', 'title', 'userPermissions'])
+    assert.deepEqual(Object.keys(datasetRef).sort(), ['applicationKeyPermissions', 'finalizedAt', 'href', 'id', 'schema', 'slug', 'title', 'userPermissions'])
 
     // A link to the manifest is injected
     assert.ok(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/data-fair/app/${appId}/manifest.json">`))
