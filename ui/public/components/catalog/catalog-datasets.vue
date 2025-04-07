@@ -72,7 +72,7 @@
                   />
                   <v-btn
                     v-else
-                    :disabled="!!dataset.resources.find(r => r.harvestedDataset)"
+                    :disabled="!!dataset.resources?.find(r => r.harvestedDataset)"
                     color="primary"
                     icon
                     ripple
