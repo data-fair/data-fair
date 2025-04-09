@@ -116,6 +116,7 @@ const nuxtConfig = {
     browserLogLevel: config.browserLogLevel,
     analytics: config.analytics,
     captureUrl: config.captureUrl,
+    catalogsUrl: config.catalogsUrl,
     notifyUrl: config.notifyUrl,
     notifyWSUrl: config.notifyWSUrl,
     subscriptionUrl: config.subscriptionUrl,

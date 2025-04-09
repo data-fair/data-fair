@@ -16,9 +16,10 @@ export default {
     }
   },
   async created () {
-    let owner = this.resource.owner.type + ':' + this.resource.owner.id
-    if (!this.resource.owner.department) owner += ':-'
-    this.catalogs = (await this.$axios.$get('api/v1/catalogs', { params: { owner } })).results
+    // let owner = this.resource.owner.type + ':' + this.resource.owner.id
+    // if (!this.resource.owner.department) owner += ':-'
+    // this.catalogs = (await this.$axios.$get('api/v1/catalogs', { params: { owner } })).results
+    this.catalogs = (await this.$axios.$get(this.env.catalogsUrl + '/api/catalogs')).results
     eventBus.$on(this.journalChannel, this.onJournalEvent)
   },
   async destroyed () {
@@ -30,10 +31,10 @@ export default {
     }
   },
   computed: {
-    ...mapGetters(['userOwnerRole']),
+    ...mapGetters(['userOwnerRole', 'env']),
     ...mapGetters('session', ['activeAccount']),
     catalogsById () {
-      return this.catalogs.reduce((a, c) => { a[c.id] = c; return a }, {})
+      return this.catalogs.reduce((a, c) => { a[c._id] = c; return a }, {})
     },
     authorizedCatalogs () {
       if (this.userOwnerRole(this.resource.owner) !== 'admin') return []
@@ -65,7 +66,7 @@ export default {
     },
     catalogLabel (catalog) {
       if (!catalog) return 'catalogue inconnu'
-      let label = `${catalog.title} - ${catalog.url}`
+      let label = catalog.title
       if (catalog.organization && catalog.organization.id) label += ` (${catalog.organization.name})`
       return label
     }

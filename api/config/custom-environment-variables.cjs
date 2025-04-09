@@ -12,6 +12,8 @@ module.exports = {
   privateCaptureUrl: 'PRIVATE_CAPTURE_URL',
   notifyUrl: 'NOTIFY_URL',
   privateNotifyUrl: 'PRIVATE_NOTIFY_URL',
+  catalogsUrl: 'CATALOGS_URL',
+  privateCatalogsUrl: 'PRIVATE_CATALOGS_URL',
   notifyWSUrl: 'NOTIFY_WS_URL',
   subscriptionUrl: 'SUBSCRIPTION_URL',
   mongo: {
@@ -86,6 +88,7 @@ module.exports = {
     identities: 'SECRET_IDENTITIES',
     limits: 'SECRET_LIMITS',
     notifications: 'SECRET_NOTIFICATIONS',
+    catalogs: 'SECRET_CATALOGS',
     masterData: 'SECRET_MASTER_DATA',
     ignoreRateLimiting: 'SECRET_IGNORE_RATE_LIMITING'
   },

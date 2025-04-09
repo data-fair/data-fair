@@ -101,7 +101,7 @@
                 c => !!c,
                 c => !(dataset.publications || []).find(p => p.catalog === c) || $t('alreadyPublished')
               ]"
-              item-value="id"
+              item-value="_id"
               :label="$t('catalog')"
               required
             />
@@ -299,6 +299,7 @@ export default {
     }
   },
   computed: {
+    ...mapState(['env']),
     ...mapState('dataset', ['dataset']),
     ...mapGetters('dataset', ['journalChannel', 'can']),
     resource () {
@@ -310,7 +311,7 @@ export default {
       if (!this.searchCatalogDatasets || this.searchCatalogDatasets === (this.newPublication.addToDataset && this.newPublication.addToDataset.title)) return
       this.catalogDatasetsLoading = true
       const catalog = this.catalogsById[this.newPublication.catalog]
-      this.catalogDatasets = (await this.$axios.$get(`api/v1/catalogs/${catalog.id}/datasets`, { params: { q: this.searchCatalogDatasets } }))
+      this.catalogDatasets = (await this.$axios.$get(`${this.env.catalogsUrl}/api/catalogs/${catalog.id}/datasets`, { params: { q: this.searchCatalogDatasets } }))
         .results
         .map(r => ({ id: r.id, title: r.title }))
       this.catalogDatasetsLoading = false

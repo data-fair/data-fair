@@ -15,6 +15,8 @@ module.exports = {
   privateCaptureUrl: null,
   notifyUrl: null,
   privateNotifyUrl: null,
+  catalogsUrl: null,
+  privateCatalogsUrl: null,
   notifyWSUrl: null,
   subscriptionUrl: null,
   pluginsDir: './plugins',
@@ -155,6 +157,7 @@ module.exports = {
     identities: null,
     limits: null,
     notifications: null,
+    catalogs: null,
     ignoreRateLimiting: null
   },
   // Configure outgoing http calls

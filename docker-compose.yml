@@ -119,6 +119,18 @@ services:
       - SECRET_SENDMAILS=secret-sendmails
       - PROMETHEUS_ACTIVE=false
 
+  catalogs:
+    profiles:
+      - dev_Disable
+    image: ghcr.io/data-fair/catalogs:master
+    network_mode: host
+    depends_on:
+      - mongodb
+    environment:
+      - PORT=8089
+      - PRIVATE_DIRECTORY_URL=http://localhost:5600/simple-directory
+      - PRIVATE_EVENTS_URL=http://localhost:5600/notify
+
   clamav:
     image: clamav/clamav:1.1
     profiles:

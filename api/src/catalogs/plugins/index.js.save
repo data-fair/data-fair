@@ -7,7 +7,6 @@ import standardLicenses from '../../../contract/licenses.js'
 import path from 'path'
 import mime from 'mime'
 import moment from 'moment'
-import axios from '../../misc/utils/axios.js'
 import * as journals from '../../misc/utils/journals.js'
 import * as permissionsUtil from '../../misc/utils/permissions.js'
 import * as datasetUtils from '../../datasets/utils/index.js'
@@ -18,7 +17,6 @@ import * as geonetworkConnector from './geonetwork.js'
 import * as mydatacatalogueConnector from './mydatacatalogue.js'
 import * as udataConnector from './udata.js'
 import * as arcgisConnector from './arcgis.js'
-import publication from '../../../contract/publication.js'
 
 export const connectors = [
   { key: 'data-fair', ...dataFairConnector },
@@ -273,28 +271,28 @@ export const searchOrganizations = async (type, url, q) => {
   return connector.searchOrganizations(url, q)
 }
 
-/**
- * Publish (or delete) a resource (dataset or app) to a catalog
- * @param {string} type dataset or application
- * @param {*} resource The resource to publish
- */
 export const processPublications = async function (app, type, resource) {
-  const resourcesCollection = mongo.db.collection(type + 's')
+  const db = mongo.db
+  const resourcesCollection = db.collection(type + 's')
+  const catalogsCollection = db.collection('catalogs')
   resource.public = permissionsUtil.isPublic(type + 's', resource)
-
-  // Add an id for each publication if not already set
-  for (const p of resource.publications) if (!p.id) p.id = nanoid()
+  for (const p of resource.publications) {
+    if (!p.id) p.id = nanoid()
+  }
   await resourcesCollection.updateOne({ id: resource.id }, { $set: { publications: resource.publications } })
 
   const processedPublication = resource.publications.find(p => ['waiting', 'deleted'].includes(p.status))
 
-  /**
-   * Patch the publication in the resource
-   * @param {*} error The error message if the publication failed
-   * @returns {Promise<any>}
-   */
-  async function setResult (error) {
+  async function setResult (error, nonBlocking) {
     const patch = {}
+
+    if ((!error || nonBlocking) && processedPublication.status === 'deleted') {
+      // Deletion worked
+      return resourcesCollection.updateOne(
+        { id: resource.id },
+        { $pull: { publications: { id: processedPublication.id } } }
+      )
+    }
 
     if (error) {
       // Publishing or deletion failed
@@ -306,12 +304,6 @@ export const processPublications = async function (app, type, resource) {
       patch['publications.$.publishedAt'] = new Date().toISOString()
       patch['publications.$.result'] = processedPublication.result
       patch['publications.$.targetUrl'] = processedPublication.targetUrl
-    } else if (processedPublication.status === 'deleted') {
-      // Deletion worked, we can remove the publication from the resource
-      return resourcesCollection.updateOne(
-        { id: resource.id },
-        { $pull: { publications: { id: processedPublication.id } } }
-      )
     }
 
     if (Object.keys(patch).length) {
@@ -322,36 +314,45 @@ export const processPublications = async function (app, type, resource) {
     }
   }
 
+  const catalog = await catalogsCollection.findOne({ id: processedPublication.catalog })
+
+  if (!catalog) {
+    await journals.log(app, resource, {
+      type: 'error',
+      data: `Une publication fait référence à un catalogue inexistant (${processedPublication.id})`
+    }, type)
+    return setResult('Catalogue inexistant', true)
+  }
+  if (catalog.owner.type !== resource.owner.type || catalog.owner.id !== resource.owner.id) {
+    await journals.log(app, resource, {
+      type: 'error',
+      data: `Une publication fait référence à un catalogue qui n'appartient pas au propriétaire de la resource à publier (${processedPublication.id})`
+    }, type)
+    return setResult('Le catalogue n\'appartient pas au propriétaire de la resource à publier', true)
+  }
+
   try {
+    const connector = connectors.find(c => c.key === catalog.type)
+    if (!connector) throw httpError(404, 'No connector found for catalog type ' + catalog.type)
+    if (!connector.publishApplication) throw httpError(501, `The connector for the catalog type ${type} cannot do this action`)
+    let res
+
     if (processedPublication.status === 'deleted') {
-      // if (type === 'dataset') connector.deleteDataset(catalog, resource, processedPublication)
-      // if (type === 'application') connector.deleteApplication(catalog, resource, processedPublication)
-      // await journals.log(app, resource, { type: 'publication', data: `Suppression de la publication vers ${catalog.title || catalog.url}` }, type)
+      if (type === 'dataset') res = await connector.deleteDataset(catalog, resource, processedPublication)
+      if (type === 'application') res = await connector.deleteApplication(catalog, resource, processedPublication)
+      await journals.log(app, resource, { type: 'publication', data: `Suppression de la publication vers ${catalog.title || catalog.url}` }, type)
     } else if (processedPublication.status === 'waiting') {
       const firstPublication = !processedPublication.result
-      if (type === 'dataset') {
-        await axios.post(`${config.privateCatalogsUrl}/api/catalogs/${processedPublication.catalog}/dataset`, {
-          dataset: resource,
-          publication: processedPublication
-        }, {
-          headers: {
-            'x-secret-key': config.secretKeys.catalogs,
-          }
-        })
-      }
-      // if (type === 'application') {
-      //   const datasets = await getApplicationDatasets(db, resource)
-      //   // Next line is only here for compatibility.. in next generation of apps, all datasets references should be in .datasets"
-      //   res = await connector.publishApplication(catalog, resource, processedPublication, datasets)
-      // }
-      // TODO: Get this from the response of publishDataset
-      const catalog = {
-        title: 'Titre du catalogue',
-        url: 'https://catalogue.url',
+      if (type === 'dataset') res = await connector.publishDataset(catalog, resource, processedPublication)
+      if (type === 'application') {
+        const datasets = await getApplicationDatasets(db, resource)
+        // Next line is only here for compatibility.. in next generation of apps, all datasets references should be in .datasets"
+        res = await connector.publishApplication(catalog, resource, processedPublication, datasets)
       }
       if (firstPublication) await journals.log(app, resource, { type: 'publication', data: `Nouvelle publication vers ${catalog.title || catalog.url}` }, type)
       else await journals.log(app, resource, { type: 'publication', data: `Publication mise à jour vers ${catalog.title || catalog.url}` }, type)
     }
+    await setResult(null, res)
   } catch (err) {
     console.warn('Error while processing publication', err)
     await journals.log(app, resource, { type: 'error', data: err.message || err }, type)

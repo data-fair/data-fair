@@ -16,6 +16,8 @@ module.exports = {
   privateCaptureUrl: 'http://localhost:8087',
   notifyUrl: `http://${host}:5600/notify`,
   privateNotifyUrl: 'http://localhost:8088',
+  catalogsUrl: `http://${host}:5600/catalogs`,
+  privateCatalogsUrl: 'http://localhost:8089',
   notifyWSUrl: 'ws://localhost:8088',
   // subscriptionUrl: 'https://staging-koumoul.com/s/customers/embed/subscription',
   defaultLimits: {
@@ -35,7 +37,8 @@ module.exports = {
   */
   secretKeys: {
     identities: 'dev_secret',
-    notifications: 'secret-notifications'
+    notifications: 'secret-notifications',
+    catalogs: 'secret-catalogs'
   },
   cache: {
     disabled: true
