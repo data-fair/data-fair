@@ -264,7 +264,7 @@ export const run = async () => {
         if (!resource) throw httpError(404, `Ressource ${type}/${id} inconnue.`)
         let user = sessionState.user
         if (message.apiKey) user = await readApiKey(db, message.apiKey, type, message.account)
-        return !permissions.can(type, resource, `realtime-${subject}`, user)
+        return permissions.can(type, resource, `realtime-${subject}`, user)
       })
     ])
     // At this stage the server is ready to respond to API requests
