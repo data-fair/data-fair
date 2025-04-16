@@ -15,7 +15,6 @@ module.exports = {
   privateCaptureUrl: null,
   notifyUrl: null,
   privateNotifyUrl: null,
-  catalogsUrl: null,
   privateCatalogsUrl: null,
   notifyWSUrl: null,
   subscriptionUrl: null,

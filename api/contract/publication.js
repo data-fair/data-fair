@@ -1,18 +1,23 @@
 export default {
   type: 'object',
-  required: ['catalog', 'status'],
+  required: ['catalogId', 'status'],
   additionalProperties: false,
   properties: {
-    id: {
-      type: 'string'
-    },
-    catalog: {
+    publicationId: {
       type: 'string',
-      description: 'L\'identifiant du catalogue de destination de cette publication.'
+      description: 'Id of this publication, for a better search in database'
+    },
+    catalogId: {
+      type: 'string',
+      description: 'Id of the catalog where the resource is published'
+    },
+    remoteDatasetId: {
+      type: 'string',
+      description: 'Id of the dataset in the remote catalog'
     },
     status: {
       type: 'string',
-      description: 'A simple flag to clearly identify the publications that were successful. If "published" then the targetUrl key should be defined, If "error" then the error key should be defined.',
+      description: 'A simple flag to clearly identify the publications that were successful. If "error" then the error key should be defined.',
       enum: ['waiting', 'published', 'error', 'deleted']
     },
     publishedAt: {
@@ -22,13 +27,6 @@ export default {
     },
     error: {
       type: 'string'
-    },
-    targetUrl: {
-      type: 'string'
-    },
-    result: {
-      type: 'object',
-      description: 'The result of pushing the publication. The structure of this object is permissive and depends on the type of catalog'
     }
   }
 }

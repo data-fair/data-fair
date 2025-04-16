@@ -6,7 +6,7 @@ export default {
     return {
       addPublicationDialog: false,
       newPublicationValid: false,
-      newPublication: { catalog: null, status: 'waiting' },
+      newPublication: { catalogId: null, status: 'waiting' },
       newPublicationAction: 'newDataset',
       deletePublicationInd: null,
       rePublishInd: null,
@@ -19,7 +19,7 @@ export default {
     // let owner = this.resource.owner.type + ':' + this.resource.owner.id
     // if (!this.resource.owner.department) owner += ':-'
     // this.catalogs = (await this.$axios.$get('api/v1/catalogs', { params: { owner } })).results
-    this.catalogs = (await this.$axios.$get(this.env.catalogsUrl + '/api/catalogs')).results
+    this.catalogs = (await this.$axios.$get(window.location.origin + '/catalogs/api/catalogs')).results
     eventBus.$on(this.journalChannel, this.onJournalEvent)
   },
   async destroyed () {
@@ -27,7 +27,7 @@ export default {
   },
   watch: {
     addPublicationDialog () {
-      this.newPublication = { catalog: null, status: 'waiting' }
+      this.newPublication = { catalogId: null, status: 'waiting' }
     }
   },
   computed: {

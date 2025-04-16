@@ -12,7 +12,6 @@ module.exports = {
   privateCaptureUrl: 'PRIVATE_CAPTURE_URL',
   notifyUrl: 'NOTIFY_URL',
   privateNotifyUrl: 'PRIVATE_NOTIFY_URL',
-  catalogsUrl: 'CATALOGS_URL',
   privateCatalogsUrl: 'PRIVATE_CATALOGS_URL',
   notifyWSUrl: 'NOTIFY_WS_URL',
   subscriptionUrl: 'SUBSCRIPTION_URL',

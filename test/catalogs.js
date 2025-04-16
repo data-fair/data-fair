@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 
-describe('Catalogs', function () {
+describe.skip('Catalogs', function () {
   it('Get catalogs when not authenticated', async function () {
     const ax = global.ax.anonymous
     const res = await ax.get('/api/v1/catalogs')

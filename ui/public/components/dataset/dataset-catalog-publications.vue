@@ -22,13 +22,13 @@
         v-for="(publication, i) in dataset.publications"
         :key="publication.id"
       >
-        <v-list-item-content v-if="catalogsById[publication.catalog]">
+        <v-list-item-content v-if="catalogsById[publication.catalogId]">
           <v-list-item-title
             v-if="publication.addToDataset && publication.addToDataset.id"
-            v-t="{path: 'resourcePublication', args: {dataset: publication.addToDataset.title, catalog: catalogsById[publication.catalog].title}}"
+            v-t="{path: 'resourcePublication', args: {dataset: publication.addToDataset.title, catalog: catalogsById[publication.catalogId].title}}"
           />
           <v-list-item-title v-else>
-            {{ $t('datasetPublication', {catalog: catalogsById[publication.catalog].title}) }}
+            {{ $t('datasetPublication', {catalog: catalogsById[publication.catalogId].title}) }}
             <span v-if="publication.publishedAt">({{ publication.publishedAt | moment('lll') }})</span>
           </v-list-item-title>
           <v-list-item-subtitle v-if="publication.status==='published'">
@@ -54,12 +54,12 @@
         </v-list-item-content>
         <v-list-item-content
           v-else
-          v-t="{path: 'unknownCatalog', args: {datalog: publication.catalog}}"
+          v-t="{path: 'unknownCatalog', args: {datalog: publication.catalogId}}"
         />
         <v-list-item-action>
           <v-row>
             <v-btn
-              v-if="catalogsById[publication.catalog] && userOwnerRole(catalogsById[publication.catalog].owner) === 'admin' && ['error', 'published'].includes(publication.status)"
+              v-if="catalogsById[publication.catalogId] && userOwnerRole(catalogsById[publication.catalogId].owner) === 'admin' && ['error', 'published'].includes(publication.status)"
               color="warning"
               icon
               :title="$t('republish')"
@@ -69,7 +69,7 @@
               <v-icon>mdi-play</v-icon>
             </v-btn>
             <v-btn
-              v-if="(!catalogsById[publication.catalog] && can('writePublications')) || (catalogsById[publication.catalog] && userOwnerRole(catalogsById[publication.catalog].owner) === 'admin')"
+              v-if="(!catalogsById[publication.catalogId] && can('writePublications')) || (catalogsById[publication.catalogId] && userOwnerRole(catalogsById[publication.catalogId].owner) === 'admin')"
               color="warning"
               icon
               :title="$t('deletePublication')"
@@ -94,12 +94,12 @@
         <v-card-text v-if="catalogs && addPublicationDialog">
           <v-form v-model="newPublicationValid">
             <v-select
-              v-model="newPublication.catalog"
+              v-model="newPublication.catalogId"
               :items="authorizedCatalogs"
               :item-text="catalogLabel"
               :rules="[
                 c => !!c,
-                c => !(dataset.publications || []).find(p => p.catalog === c) || $t('alreadyPublished')
+                c => !(dataset.publications || []).find(p => p.catalogId === c) || $t('alreadyPublished')
               ]"
               item-value="_id"
               :label="$t('catalog')"
@@ -108,7 +108,7 @@
 
             <v-select
               v-model="newPublicationAction"
-              :disabled="!newPublication.catalog"
+              :disabled="!newPublication.catalogId"
               :label="$t('newPublicationAction')"
               :items="[
                 {text: $t('newPublicationActions.newDataset'), value: 'newDataset'},
@@ -118,7 +118,7 @@
             />
 
             <v-autocomplete
-              v-if="newPublication.catalog && newPublicationAction === 'addToDataset'"
+              v-if="newPublication.catalogId && newPublicationAction === 'addToDataset'"
               v-model="newPublication.addToDataset"
               :items="catalogDatasets"
               :loading="catalogDatasetsLoading"
@@ -134,7 +134,7 @@
             />
 
             <v-autocomplete
-              v-if="newPublication.catalog && newPublicationAction === 'replaceDataset'"
+              v-if="newPublication.catalogId && newPublicationAction === 'replaceDataset'"
               v-model="newPublication.replaceDataset"
               :items="catalogDatasets"
               :loading="catalogDatasetsLoading"
@@ -310,10 +310,10 @@ export default {
     async searchCatalogDatasets () {
       if (!this.searchCatalogDatasets || this.searchCatalogDatasets === (this.newPublication.addToDataset && this.newPublication.addToDataset.title)) return
       this.catalogDatasetsLoading = true
-      const catalog = this.catalogsById[this.newPublication.catalog]
-      this.catalogDatasets = (await this.$axios.$get(`${this.env.catalogsUrl}/api/catalogs/${catalog.id}/datasets`, { params: { q: this.searchCatalogDatasets } }))
+      const catalog = this.catalogsById[this.newPublication.catalogId]
+      this.catalogDatasets = (await this.$axios.$get(`${window.location.origin}/catalogs/api/catalogs/${catalog._id}/datasets`, { params: { q: this.searchCatalogDatasets } }))
         .results
-        .map(r => ({ id: r.id, title: r.title }))
+        .map(r => ({ catalogId: r.catalogId, title: r.title }))
       this.catalogDatasetsLoading = false
     },
     addPublicationDialog () {

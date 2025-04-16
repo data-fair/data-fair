@@ -90,7 +90,7 @@
         <v-card-text v-if="catalogs">
           <v-form v-model="newPublicationValid">
             <v-select
-              v-model="newPublication.catalog"
+              v-model="newPublication.catalogId"
               :items="catalogs"
               :item-text="catalogLabel"
               :rules="[
