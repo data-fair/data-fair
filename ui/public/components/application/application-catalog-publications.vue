@@ -27,14 +27,8 @@
             {{ $t('appPublication', {catalog: catalogsById[publication.catalog].title}) }}
             <span v-if="publication.publishedAt">({{ publication.publishedAt | moment('lll') }})</span>
           </v-list-item-title>
-          <v-list-item-subtitle v-if="publication.status==='published'">
-            <a
-              :href="publication.targetUrl"
-              target="_blank"
-            >{{ publication.targetUrl }}</a>
-          </v-list-item-subtitle>
           <v-list-item-subtitle
-            v-else-if="publication.status==='error'"
+            v-if="publication.status==='error'"
             style="color:red;"
           >
             {{ publication.error }}

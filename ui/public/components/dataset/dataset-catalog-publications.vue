@@ -119,13 +119,12 @@
 
             <v-autocomplete
               v-if="newPublication.catalogId && newPublicationAction === 'addToDataset'"
-              v-model="newPublication.addToDataset"
+              v-model="newPublication.remoteDatasetId"
               :items="catalogDatasets"
               :loading="catalogDatasetsLoading"
               :search-input.sync="searchCatalogDatasets"
               class="mb-4"
               :label="$t('searchDataset')"
-              return-object
               item-text="title"
               item-value="id"
               persistent-hint
@@ -135,13 +134,12 @@
 
             <v-autocomplete
               v-if="newPublication.catalogId && newPublicationAction === 'replaceDataset'"
-              v-model="newPublication.replaceDataset"
+              v-model="newPublication.remoteDatasetId"
               :items="catalogDatasets"
               :loading="catalogDatasetsLoading"
               :search-input.sync="searchCatalogDatasets"
               class="mb-4"
               :label="$t('searchDataset')"
-              return-object
               item-text="title"
               item-value="id"
               persistent-hint
@@ -308,12 +306,11 @@ export default {
   },
   watch: {
     async searchCatalogDatasets () {
-      if (!this.searchCatalogDatasets || this.searchCatalogDatasets === (this.newPublication.addToDataset && this.newPublication.addToDataset.title)) return
+      if (!this.searchCatalogDatasets) return
       this.catalogDatasetsLoading = true
       const catalog = this.catalogsById[this.newPublication.catalogId]
       this.catalogDatasets = (await this.$axios.$get(`${window.location.origin}/catalogs/api/catalogs/${catalog._id}/datasets`, { params: { q: this.searchCatalogDatasets } }))
         .results
-        .map(r => ({ catalogId: r.catalogId, title: r.title }))
       this.catalogDatasetsLoading = false
     },
     addPublicationDialog () {

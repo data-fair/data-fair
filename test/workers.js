@@ -93,14 +93,13 @@ describe('workers', function () {
     assert.equal(dataset.status, 'finalized')
 
     // Update dataset to ask for a publication
-    res = await ax.patch('/api/v1/datasets/' + dataset.id, { publications: [{ catalog: catalog.id, status: 'waiting' }] })
+    res = await ax.patch('/api/v1/datasets/' + dataset.id, { publications: [{ catalogId: catalog.id, status: 'waiting' }] })
     assert.equal(res.status, 200)
 
     // Go through the publisher worker
     dataset = await workers.hook('datasetPublisher')
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.publications[0].status, 'published')
-    assert.equal(dataset.publications[0].targetUrl, 'http://test-catalog.com/datasets/my-dataset')
   })
 
   it('Run tasks in children processes', async function () {

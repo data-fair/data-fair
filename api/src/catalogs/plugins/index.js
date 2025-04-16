@@ -44,6 +44,7 @@ export const processPublications = async function (app, type, resource) {
       processedPublication.status = patch['publications.$.status'] = 'published'
       patch['publications.$.publishedAt'] = new Date().toISOString()
       patch['publications.$.remoteDatasetId'] = processedPublication.remoteDatasetId
+      if (processedPublication.remoteResourceId) patch['publications.$.remoteResourceId'] = processedPublication.remoteResourceId
     } else if (processedPublication.status === 'deleted') {
       // Deletion worked, we can remove the publication from the resource
       return resourcesCollection.updateOne(
