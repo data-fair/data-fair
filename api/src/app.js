@@ -262,9 +262,10 @@ export const run = async () => {
         const [type, id, subject] = channel.split('/')
         const resource = await db.collection(type).findOne({ id })
         if (!resource) throw httpError(404, `Ressource ${type}/${id} inconnue.`)
-        let user = sessionState.user
+        let user
+        if (sessionState.user) user = { ...sessionState.user, activeAccount: sessionState.account }
         if (message.apiKey) user = await readApiKey(db, message.apiKey, type, message.account)
-        return !permissions.can(type, resource, `realtime-${subject}`, user)
+        return permissions.can(type, resource, `realtime-${subject}`, user)
       })
     ])
     // At this stage the server is ready to respond to API requests
