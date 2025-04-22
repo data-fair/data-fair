@@ -191,6 +191,7 @@ router.patch('/:datasetId',
         if (err.code !== 11000) throw err
         throw httpError(400, req.__('errors.dupSlug'))
       })
+    console.log('PATCH', patch)
     if (!isEmpty) {
       await publicationSites.applyPatch(db, dataset, { ...dataset, ...patch }, user, 'dataset')
       await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)

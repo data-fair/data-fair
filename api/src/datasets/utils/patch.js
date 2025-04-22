@@ -113,6 +113,8 @@ export const preparePatch = async (app, patch, dataset, user, locale, draftValid
     patch.schema = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
   }
 
+  console.log('compatible ?', datasetUtils.schemasFullyCompatible(patch.schema, dataset.schema, true), datasetUtils.schemasFullyCompatible(patch.schema, dataset.schema))
+
   // manage automatic export of REST datasets into files
   if (patch.exports && patch.exports.restToCSV) {
     if (patch.exports.restToCSV.active) {

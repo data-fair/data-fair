@@ -23,6 +23,7 @@ import debugLib from 'debug'
 import { parseURL } from 'ufo'
 import exprEval from '@data-fair/data-fair-shared/expr-eval.js'
 import { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
+import * as fieldsSniffer from './fields-sniffer.js'
 
 export { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 
@@ -381,11 +382,12 @@ export const prepareExtensionsSchema = async (db, schema, extensions) => {
         .filter(output => !output.concept || output.concept !== 'http://schema.org/identifier')
         .filter(output => selectFields.length === 0 || selectFields.includes(output.name))
         .map(output => {
-          const key = extensionKey + '.' + output.name
+          const overwrite = extension.overwrite?.[output.name] ?? {}
+          const key = overwrite['x-originalName'] ? fieldsSniffer.escapeKey(overwrite['x-originalName']) : (extensionKey + '.' + output.name)
           const existingField = schema.find(field => field.key === key)
           if (existingField) return existingField
           // this is for compatibility, new extensions should always have propertyPrefix
-          const originalName = extension.propertyPrefix ? key : output.name
+          const originalName = overwrite['x-originalName'] ?? (extension.propertyPrefix ? key : output.name)
           const field = {
             key,
             'x-originalName': originalName,
