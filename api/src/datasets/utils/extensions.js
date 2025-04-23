@@ -264,15 +264,10 @@ class ExtensionsStream extends Transform {
           const selectFields = extension.select || []
           const selectedResult = Object.keys(result)
             .filter(key => selectFields.length === 0 || selectFields.includes(key) || key === extension.errorKey)
-            .filter(key => !!this.dataset.schema.find(p => p.key === extension.extensionKey + '.' + key))
+            // .filter(key => !!this.dataset.schema.find(p => p.key === extension.extensionKey + '.' + key))
             .reduce((a, key) => { a[key] = result[key]; return a }, {})
 
           const i = result[extension.idInput.name]
-          if (this.onlyEmitChanges && !equal(this.buffer[i][extension.extensionKey], selectedResult)) {
-            changesIndexes.add(i)
-          }
-          this.buffer[i][extension.extensionKey] = selectedResult
-
           if (!localMasterData) {
             // TODO: do this in bulk ?
             await this.db.collection('extensions-cache')
@@ -282,6 +277,24 @@ class ExtensionsStream extends Transform {
                 { upsert: true }
               )
           }
+
+          let hasChanges = false
+
+          if (extension.overwrite) {
+            for (const key in extension.overwrite) {
+              if (extension.overwrite[key]['x-originalName'] && key in selectedResult) {
+                const propKey = fieldsSniffer.escapeKey(extension.overwrite[key]['x-originalName'])
+                if (this.onlyEmitChanges && !equal(this.buffer[i][propKey], selectedResult[key])) hasChanges = true
+                this.buffer[i][propKey] = selectedResult[key]
+                delete selectedResult[key]
+              }
+            }
+          }
+
+          if (this.onlyEmitChanges && !equal(this.buffer[i][extension.extensionKey], selectedResult)) hasChanges = true
+          if (hasChanges) changesIndexes.add(i)
+
+          this.buffer[i][extension.extensionKey] = selectedResult
         }
       } else if (extension.evaluate && extension.property) {
         for (const i in this.buffer) {

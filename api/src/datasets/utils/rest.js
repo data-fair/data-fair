@@ -1038,7 +1038,16 @@ export const readStreams = async (db, dataset, filter = {}, progress) => {
 export const writeExtendedStreams = (db, dataset, extensions) => {
   const patchedKeys = []
   for (const extension of extensions) {
-    if (extension.type === 'remoteService') patchedKeys.push(extension.propertyPrefix)
+    if (extension.type === 'remoteService') {
+      patchedKeys.push(extension.propertyPrefix)
+      if (extension.overwrite) {
+        for (const key in extension.overwrite) {
+          if (extension.overwrite[key]['x-originalName']) {
+            patchedKeys.push(fieldsSniffer.escapeKey(extension.overwrite[key]['x-originalName']))
+          }
+        }
+      }
+    }
     if (extension.type === 'exprEval') patchedKeys.push(extension.property.key)
   }
   const c = collection(db, dataset)

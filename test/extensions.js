@@ -431,7 +431,7 @@ koumoul,19 rue de la voie lactée saint avé
     assert.ok(!extSiret['x-refersTo'])
   })
 
-  it('Extend a REST dataset', async function () {
+  it.only('Extend a REST dataset', async function () {
     const ax = global.ax.dmeadus
 
     const getExtensionNock = (result) => nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
@@ -451,6 +451,7 @@ koumoul,19 rue de la voie lactée saint avé
     })).data
     await workers.hook(`finalizer/${dataset.id}`)
 
+    console.log('SEND LINE')
     // extend first inserted line
     let nockScope = getExtensionNock({ lat: 10, lon: 10 })
     let [, inputsEvent] = await Promise.all([
@@ -458,6 +459,7 @@ koumoul,19 rue de la voie lactée saint avé
       eventPromise(global.events, 'extension-inputs')
     ])
     assert.equal(inputsEvent, 1)
+    console.log('OK')
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     nockScope.done()
     // console.log(dataset)
@@ -465,6 +467,7 @@ koumoul,19 rue de la voie lactée saint avé
     // A search to check results
     const extensionKey = dataset.extensions[0].propertyPrefix
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    console.log(res.data)
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0][extensionKey + '.lat'], 10)
     assert.equal(res.data.results[0][extensionKey + '.lon'], 10)
