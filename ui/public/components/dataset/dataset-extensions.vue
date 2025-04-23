@@ -33,7 +33,8 @@
                     type: extension.type,
                     remoteService: extension.remoteService,
                     action: extension.action.id,
-                    select: defaultFields[extension.action.id] || []
+                    select: defaultFields[extension.action.id] || [],
+                    overwrite: {}
                   })"
                 >
                   <v-list-item-content>
@@ -115,6 +116,25 @@
                     chips
                     deletable-chips
                   />
+                  <v-btn
+                    text
+                    @click="showOverwrite = showOverwrite === idx ? null : idx"
+                  >
+                    Surcharger les clés des colonnes <v-icon v-if="showOverwrite === idx">mdi-menu-up</v-icon><v-icon v-else>mdi-menu-down</v-icon>
+                  </v-btn>
+                  <template v-if="showOverwrite === idx">
+                    <div
+                      v-for="propKey of extension.select?.length ? extension.select : selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags.map(p => p.name)"
+                      :key="propKey"
+                    >
+                      <v-text-field
+                        :label="propKey"
+                        :value="extension.overwrite?.[propKey]?.['x-originalName']"
+                        :placeholder="extension.propertyPrefix"
+                        @input="val => setOverwriteOriginalName(extension, propKey, val)"
+                      />
+                    </div>
+                  </template>
                   <v-checkbox
                     v-if="extension.remoteService.startsWith('dataset:') && dataset.isRest"
                     v-model="extension.autoUpdate"
@@ -273,7 +293,8 @@ export default {
         postCoords: ['lat', 'lon'],
         findCityBulk: ['population.popMuni', 'DEP', 'REG'],
         findParcellesBulk: ['lat', 'lon']
-      }
+      },
+      showOverwrite: null
     }
   },
   computed: {
@@ -407,6 +428,16 @@ export default {
         if (fieldTitle) msg += ` (colonne ${fieldTitle})`
         return msg
       }).join(', ')
+    },
+    setOverwriteOriginalName (extension, propKey, value) {
+      console.log('SET VALUE', value)
+      if (value) {
+        if (!extension.overwrite) this.$set(extension, 'overwrite', {})
+        if (!extension.overwrite[propKey]) this.$set(extension.overwrite, propKey, {})
+        this.$set(extension.overwrite[propKey], 'x-originalName', value)
+      } else {
+        delete extension.overwrite[propKey]['x-originalName']
+      }
     }
   }
 }
