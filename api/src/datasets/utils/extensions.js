@@ -263,8 +263,7 @@ class ExtensionsStream extends Transform {
         for (const result of results) {
           const selectFields = extension.select || []
           const selectedResult = Object.keys(result)
-            .filter(key => selectFields.length === 0 || selectFields.includes(key) || key === extension.errorKey)
-            // .filter(key => !!this.dataset.schema.find(p => p.key === extension.extensionKey + '.' + key))
+            .filter(key => ((selectFields.length === 0 && !!this.dataset.schema.find(p => p.key === extension.extensionKey + '.' + key)) || selectFields.includes(key) || key === extension.errorKey))
             .reduce((a, key) => { a[key] = result[key]; return a }, {})
 
           const i = result[extension.idInput.name]
