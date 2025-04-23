@@ -238,6 +238,35 @@ describe('Master data management', function () {
     assert.equal(results[1]['siretextra'], 'Extra information 2')
     assert.ok(!results[0]['_siret.extra'])
 
+    // overwrite some attributes of the extended property one more time
+    await ax.patch('/api/v1/datasets/slave', {
+      extensions: [{
+        active: true,
+        type: 'remoteService',
+        remoteService: remoteService.id,
+        action: 'masterData_bulkSearch_siret',
+        select: ['extra'],
+        overwrite: {
+          extra: {
+            'x-originalName': 'siretExtExtra',
+            title: 'Extra extended'
+          }
+        },
+        needsUpdate: true
+      }]
+    })
+    await workers.hook('extender/slave')
+    slave = await workers.hook('finalizer/slave')
+    assert.equal(slave.schema.find(p => p.key === '_siret.extra'), undefined)
+    assert.equal(slave.schema.find(p => p.key === 'siretextra'), undefined)
+    extraProp = slave.schema.find(p => p.key === 'siretextextra')
+    assert.ok(extraProp)
+    results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
+    assert.equal(results[0]['siretextextra'], 'Extra information 2')
+    assert.equal(results[1]['siretextextra'], 'Extra information 2')
+    assert.ok(!results[0]['_siret.extra'])
+    assert.ok(!results[0]['siretextra'])
+
     // patching the dataset to remove extension
     await ax.patch('/api/v1/datasets/slave', {
       extensions: []
