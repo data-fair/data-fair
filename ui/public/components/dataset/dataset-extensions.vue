@@ -80,105 +80,138 @@
           />
         </v-col>
       </v-row>
-      <v-row
-        v-if="localExtensions"
-        class="mt-0"
-      >
-        <v-col
-          v-for="(extension, idx) in localExtensions"
-          :key="idx"
-          cols="12"
-          md="6"
+      <v-form v-model="valid">
+        <v-row
+          v-if="localExtensions"
+          class="mt-0"
         >
-          <v-card
-            :loading="!ready"
-            height="100%"
-            :outlined="!extensionHasChanges(extension)"
+          <v-col
+            v-for="(extension, idx) in localExtensions"
+            :key="idx"
+            cols="12"
+            md="6"
           >
-            <template v-if="extension.type === 'remoteService'">
-              <template v-if="remoteServicesMap[extension.remoteService]?.actions[extension.action]">
+            <v-card
+              :loading="!ready"
+              height="100%"
+              :outlined="!extensionHasChanges(extension)"
+            >
+              <template v-if="extension.type === 'remoteService'">
+                <template v-if="remoteServicesMap[extension.remoteService]?.actions[extension.action]">
+                  <v-card-title>
+                    {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
+                  </v-card-title>
+                  <v-card-text style="margin-bottom:40px;">
+                    Lien : {{ extensionLinkInfo(extension) }}
+                    <v-autocomplete
+                      v-if="selectFields[extension.remoteService + '_' + extension.action]?.fieldsAndTags"
+                      v-model="extension.select"
+                      :disabled="!can('writeDescriptionBreaking')"
+                      :items="selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
+                      item-value="name"
+                      item-text="title"
+                      :label="$t('additionalCols')"
+                      multiple
+                      :placeholder="$t('allColsOut')"
+                      persistent-hint
+                      chips
+                      deletable-chips
+                    />
+                    <v-btn
+                      text
+                      @click="showOverwrite = showOverwrite === idx ? null : idx"
+                    >
+                      Surcharger les clés des colonnes <v-icon v-if="showOverwrite === idx">mdi-menu-up</v-icon><v-icon v-else>mdi-menu-down</v-icon>
+                    </v-btn>
+                    <div v-show="showOverwrite === idx">
+                      <div
+                        v-for="propKey of extension.select?.length ? extension.select : selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags.map(p => p.name)"
+                        :key="propKey"
+                      >
+                        <v-text-field
+                          :label="propKey"
+                          :value="extension.overwrite?.[propKey]?.['x-originalName']"
+                          :placeholder="extension.propertyPrefix"
+                          :rules="[v => validPropertyOverwrite(extension, propKey, v) || '']"
+                          validate-on="eager"
+                          @input="val => setOverwriteOriginalName(extension, propKey, val)"
+                        />
+                      </div>
+                    </div>
+                    <v-checkbox
+                      v-if="extension.remoteService.startsWith('dataset:') && dataset.isRest"
+                      v-model="extension.autoUpdate"
+                      :label="$t('autoUpdate')"
+                      :messages="extension.nextUpdate"
+                    >
+                      <template #message>
+                        {{ $t('nextUpdate') }} {{ extension.nextUpdate | moment("from", "now") }}
+                      </template>
+                    </v-checkbox>
+                  </v-card-text>
+                  <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
+                    <confirm-menu
+                      v-if="can('writeDescriptionBreaking') && dataset.isRest"
+                      yes-color="primary"
+                      icon="mdi-refresh"
+                      :btn-props="{color: 'primary', icon: true}"
+                      :text="$t('confirmRefreshText')"
+                      :tooltip="$t('confirmRefreshTooltip')"
+                      @confirm="updateExtension(idx)"
+                    />
+                    <dataset-extension-details-dialog
+                      :extension="extension"
+                      :disabled="extensionHasChanges(extension)"
+                    />
+                    <confirm-menu
+                      v-if="can('writeDescriptionBreaking')"
+                      yes-color="warning"
+                      :text="$t('confirmDeleteText')"
+                      :tooltip="$t('confirmDeleteTooltip')"
+                      @confirm="removeExtension(idx)"
+                    />
+                  </v-card-actions>
+                </template>
+                <template v-else>
+                  <v-card-text style="margin-bottom:40px;">
+                    <v-alert
+                      outlined
+                      type="warning"
+                    >
+                      Donnée de référence non disponible ({{ extension.remoteService }} / {{ extension?.action?.replace('masterData_bulkSearch_', '') }}).
+                      <br>
+                      Soit la donnée de référence n'existe plus, soit le concept servant de liaison n'est plus présent dans votre jeu de données.
+                    </v-alert>
+                  </v-card-text>
+                  <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
+                    <confirm-menu
+                      v-if="can('writeDescriptionBreaking')"
+                      yes-color="warning"
+                      :text="$t('confirmDeleteText')"
+                      :tooltip="$t('confirmDeleteTooltip')"
+                      @confirm="removeExtension(idx)"
+                    />
+                  </v-card-actions>
+                </template>
+              </template>
+              <template v-if="extension.type === 'exprEval'">
                 <v-card-title>
-                  {{ remoteServicesMap[extension.remoteService].actions[extension.action].summary }}
+                  {{ extension.property?.['x-originalName'] || $t('newExprEval') }}
                 </v-card-title>
                 <v-card-text style="margin-bottom:40px;">
-                  Lien : {{ extensionLinkInfo(extension) }}
-                  <v-autocomplete
-                    v-if="selectFields[extension.remoteService + '_' + extension.action]?.fieldsAndTags"
-                    v-model="extension.select"
-                    :disabled="!can('writeDescriptionBreaking')"
-                    :items="selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags"
-                    item-value="name"
-                    item-text="title"
-                    :label="$t('additionalCols')"
-                    multiple
-                    :placeholder="$t('allColsOut')"
-                    persistent-hint
-                    chips
-                    deletable-chips
-                  />
-                  <v-btn
-                    text
-                    @click="showOverwrite = showOverwrite === idx ? null : idx"
+                  <v-text-field
+                    v-model="extension.expr"
+                    disabled
+                    :label="$t('expr')"
+                    hide-details
                   >
-                    Surcharger les clés des colonnes <v-icon v-if="showOverwrite === idx">mdi-menu-up</v-icon><v-icon v-else>mdi-menu-down</v-icon>
-                  </v-btn>
-                  <template v-if="showOverwrite === idx">
-                    <div
-                      v-for="propKey of extension.select?.length ? extension.select : selectFields[extension.remoteService + '_' + extension.action].fieldsAndTags.map(p => p.name)"
-                      :key="propKey"
-                    >
-                      <v-text-field
-                        :label="propKey"
-                        :value="extension.overwrite?.[propKey]?.['x-originalName']"
-                        :placeholder="extension.propertyPrefix"
-                        @input="val => setOverwriteOriginalName(extension, propKey, val)"
+                    <template #append>
+                      <dataset-extension-expr-eval-preview-dialog
+                        v-if="can('writeDescriptionBreaking')"
+                        :extension="extension"
                       />
-                    </div>
-                  </template>
-                  <v-checkbox
-                    v-if="extension.remoteService.startsWith('dataset:') && dataset.isRest"
-                    v-model="extension.autoUpdate"
-                    :label="$t('autoUpdate')"
-                    :messages="extension.nextUpdate"
-                  >
-                    <template #message>
-                      {{ $t('nextUpdate') }} {{ extension.nextUpdate | moment("from", "now") }}
                     </template>
-                  </v-checkbox>
-                </v-card-text>
-                <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
-                  <confirm-menu
-                    v-if="can('writeDescriptionBreaking') && dataset.isRest"
-                    yes-color="primary"
-                    icon="mdi-refresh"
-                    :btn-props="{color: 'primary', icon: true}"
-                    :text="$t('confirmRefreshText')"
-                    :tooltip="$t('confirmRefreshTooltip')"
-                    @confirm="updateExtension(idx)"
-                  />
-                  <dataset-extension-details-dialog
-                    :extension="extension"
-                    :disabled="extensionHasChanges(extension)"
-                  />
-                  <confirm-menu
-                    v-if="can('writeDescriptionBreaking')"
-                    yes-color="warning"
-                    :text="$t('confirmDeleteText')"
-                    :tooltip="$t('confirmDeleteTooltip')"
-                    @confirm="removeExtension(idx)"
-                  />
-                </v-card-actions>
-              </template>
-              <template v-else>
-                <v-card-text style="margin-bottom:40px;">
-                  <v-alert
-                    outlined
-                    type="warning"
-                  >
-                    Donnée de référence non disponible ({{ extension.remoteService }} / {{ extension?.action?.replace('masterData_bulkSearch_', '') }}).
-                    <br>
-                    Soit la donnée de référence n'existe plus, soit le concept servant de liaison n'est plus présent dans votre jeu de données.
-                  </v-alert>
+                  </v-text-field>
                 </v-card-text>
                 <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
                   <confirm-menu
@@ -190,39 +223,10 @@
                   />
                 </v-card-actions>
               </template>
-            </template>
-            <template v-if="extension.type === 'exprEval'">
-              <v-card-title>
-                {{ extension.property?.['x-originalName'] || $t('newExprEval') }}
-              </v-card-title>
-              <v-card-text style="margin-bottom:40px;">
-                <v-text-field
-                  v-model="extension.expr"
-                  disabled
-                  :label="$t('expr')"
-                  hide-details
-                >
-                  <template #append>
-                    <dataset-extension-expr-eval-preview-dialog
-                      v-if="can('writeDescriptionBreaking')"
-                      :extension="extension"
-                    />
-                  </template>
-                </v-text-field>
-              </v-card-text>
-              <v-card-actions style="position:absolute; bottom: 0px;width:100%;">
-                <confirm-menu
-                  v-if="can('writeDescriptionBreaking')"
-                  yes-color="warning"
-                  :text="$t('confirmDeleteText')"
-                  :tooltip="$t('confirmDeleteTooltip')"
-                  @confirm="removeExtension(idx)"
-                />
-              </v-card-actions>
-            </template>
-          </v-card>
-        </v-col>
-      </v-row>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-form>
 
       <v-row class="px-2">
         <v-spacer />
@@ -230,7 +234,7 @@
           v-t="'apply'"
           color="primary"
           depressed
-          :disabled="!hasChanges"
+          :disabled="!hasChanges || !valid"
           @click="applyExtensions()"
         />
       </v-row>
@@ -278,6 +282,7 @@ en:
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex'
 import logger from '~/logger'
+import { escapeKey } from '../../assets/dataset-utils'
 
 export default {
   data () {
@@ -294,7 +299,8 @@ export default {
         findCityBulk: ['population.popMuni', 'DEP', 'REG'],
         findParcellesBulk: ['lat', 'lon']
       },
-      showOverwrite: null
+      showOverwrite: null,
+      valid: false
     }
   },
   computed: {
@@ -429,14 +435,35 @@ export default {
         return msg
       }).join(', ')
     },
+    validPropertyOverwrite (extension, name, newName) {
+      newName = newName?.trim()
+      if (!newName) return true
+      const key = escapeKey(newName)
+      return !this.dataset.schema.some(f => {
+        if (f['x-extension'] === extension.remoteService + '/' + extension.action) {
+          if (extension.select?.includes(newName)) return true
+          if (extension.overwrite) {
+            for (const [overwriteKey, overwriteValue] of Object.entries(extension.overwrite)) {
+              console.log('check overwrite')
+              if (overwriteKey !== name && overwriteValue['x-originalName']?.trim() && escapeKey(overwriteValue['x-originalName'].trim()) === key) {
+                return true
+              }
+            }
+          }
+          return false
+        } else {
+          return f.key === key
+        }
+      })
+    },
     setOverwriteOriginalName (extension, propKey, value) {
-      console.log('SET VALUE', value)
+      if (value) value = value.trim()
       if (value) {
         if (!extension.overwrite) this.$set(extension, 'overwrite', {})
         if (!extension.overwrite[propKey]) this.$set(extension.overwrite, propKey, {})
         this.$set(extension.overwrite[propKey], 'x-originalName', value)
       } else {
-        delete extension.overwrite[propKey]['x-originalName']
+        this.$delete(extension.overwrite[propKey], 'x-originalName')
       }
     }
   }
