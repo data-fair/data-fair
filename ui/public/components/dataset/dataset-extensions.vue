@@ -131,7 +131,7 @@
                         <v-text-field
                           :label="propKey"
                           :value="extension.overwrite?.[propKey]?.['x-originalName']"
-                          :placeholder="extension.propertyPrefix"
+                          :placeholder="extension.propertyPrefix + '.' + propKey"
                           :rules="[v => validPropertyOverwrite(extension, propKey, v) || '']"
                           validate-on="eager"
                           @input="val => setOverwriteOriginalName(extension, propKey, val)"

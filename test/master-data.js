@@ -225,7 +225,6 @@ describe('Master data management', function () {
             title: 'Extra extended'
           }
         },
-        needsUpdate: true
       }]
     })
     await workers.hook('extender/slave')
@@ -252,7 +251,6 @@ describe('Master data management', function () {
             title: 'Extra extended'
           }
         },
-        needsUpdate: true
       }]
     })
     await workers.hook('extender/slave')

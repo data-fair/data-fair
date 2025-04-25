@@ -39,28 +39,34 @@ const debug = debugLib('extensions')
  */
 export const prepareExtensions = (locale, extensions, oldExtensions = []) => {
   for (const e of extensions) {
-    if (e.type === 'remoteService' && !e.shortId && !e.propertyPrefix) {
+    if (e.type === 'remoteService') {
       const oldExtension = oldExtensions.find((/** @type {any} */oldE) => oldE.remoteService === e.remoteService && oldE.action === e.action)
       if (oldExtension) {
-        // do not reprocess already assigned shortIds / propertyPrefixes to prevent compatibility break
-        if (oldExtension.shortId) e.shortId = oldExtension.shortId
-        if (oldExtension.propertyPrefix) e.propertyPrefix = oldExtension.propertyPrefix
-      } else {
-        // only apply to new extensions to prevent compatibility break
-        let propertyPrefix = e.action.toLowerCase()
-        for (const term of ['masterdata', 'find', 'bulk', 'search']) {
-          propertyPrefix = propertyPrefix.replace(term, '')
-        }
-        for (const char of [':', '-', '.', ' ']) {
-          propertyPrefix = propertyPrefix.replace(char, '_')
-        }
-        if (propertyPrefix.startsWith('post')) propertyPrefix = propertyPrefix.replace('post', '')
-        e.propertyPrefix = propertyPrefix.replace(/__/g, '_').replace(/^_/, '').replace(/_$/, '')
-        e.propertyPrefix = '_' + e.propertyPrefix
+        if (!equal(oldExtension.select, e.select)) e.needsUpdate = true
+        if (!equal(oldExtension.overwrite, e.overwrite)) e.needsUpdate = true
+      }
+      if (!e.shortId && !e.propertyPrefix) {
+        if (oldExtension) {
+          // do not reprocess already assigned shortIds / propertyPrefixes to prevent compatibility break
+          if (oldExtension.shortId) e.shortId = oldExtension.shortId
+          if (oldExtension.propertyPrefix) e.propertyPrefix = oldExtension.propertyPrefix
+        } else {
+          // only apply to new extensions to prevent compatibility break
+          let propertyPrefix = e.action.toLowerCase()
+          for (const term of ['masterdata', 'find', 'bulk', 'search']) {
+            propertyPrefix = propertyPrefix.replace(term, '')
+          }
+          for (const char of [':', '-', '.', ' ']) {
+            propertyPrefix = propertyPrefix.replace(char, '_')
+          }
+          if (propertyPrefix.startsWith('post')) propertyPrefix = propertyPrefix.replace('post', '')
+          e.propertyPrefix = propertyPrefix.replace(/__/g, '_').replace(/^_/, '').replace(/_$/, '')
+          e.propertyPrefix = '_' + e.propertyPrefix
 
-        e.needsUpdate = true
+          e.needsUpdate = true
 
-        // TODO: also check if there is a conflict with an existing calculate property ?
+          // TODO: also check if there is a conflict with an existing calculate property ?
+        }
       }
     }
     if (e.type === 'exprEval' && e.active) {
