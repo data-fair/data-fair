@@ -1,7 +1,7 @@
 import config from 'config'
-import dataset from './dataset.js'
-import datasetPatch from './dataset-patch.js'
-import datasetPost from './dataset-post.js'
+import { resolvedSchema as dataset } from '#types/dataset/index.js'
+import datasetPatch from '../doc/datasets/patch-req/schema.js'
+import datasetPost from '../doc/datasets/post-req/schema.js'
 import remoteService from './remote-service.js'
 import remoteServicePatch from './remote-service-patch.js'
 import catalog from './catalog.js'
@@ -38,8 +38,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     components: {
       schemas: {
         dataset,
-        datasetPatch,
-        datasetPost,
+        datasetPatch: datasetPatch.properties.body,
+        datasetPost: datasetPost.properties.body,
         remoteService: { ...remoteService },
         remoteServicePatch: { ...remoteServicePatch },
         application,

@@ -921,7 +921,7 @@ const datasetProperties = {
 
 const dataset = {
   $id: 'https://github.com/data-fair/data-fair/dataset',
-  'x-exports': ['types'],
+  'x-exports': ['types', 'resolvedSchema'],
   title: 'Dataset',
   type: 'object',
   additionalProperties: false,

@@ -7,15 +7,11 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mime from 'mime-types'
 import { CronJob } from 'cron'
 import * as geo from './geo.js'
-import * as ajv from '../../misc/utils/ajv.js'
 import * as datasetUtils from './index.js'
 import * as extensions from './extensions.js'
 import * as schemaUtils from './data-schema.js'
-import datasetPatchSchema from '../../../contract/dataset-patch.js'
 import * as virtualDatasetsUtils from './virtual.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
-
-export const validatePatch = ajv.compile(datasetPatchSchema)
 
 /**
  * @param {any} app

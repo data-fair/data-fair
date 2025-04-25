@@ -1,6 +1,6 @@
 import config from 'config'
 import pJson from './p-json.js'
-import dataset from './dataset.js'
+import { resolvedSchema as datasetSchema } from '#types/dataset/index.js'
 import * as utils from './utils.js'
 
 export default (publicUrl, publicationSite, info) => {
@@ -23,7 +23,7 @@ export default (publicUrl, publicationSite, info) => {
     servers,
     components: {
       schemas: {
-        dataset
+        dataset: datasetSchema
       },
       securitySchemes: {
         apiKey: {
@@ -64,7 +64,7 @@ export default (publicUrl, publicationSite, info) => {
           operationId: 'listDatasets',
           parameters: [
             utils.qParam,
-            utils.selectParam(Object.keys(dataset.properties)),
+            utils.selectParam(Object.keys(datasetSchema.properties)),
             utils.booleanParam('files', 'Restreindre aux jeux avec fichiers attachés'),
             utils.booleanParam('bbox', 'Restreindre aux jeux géographiques'),
             utils.booleanParam('queryable', 'Restreindre aux jeux requêtables et utilisables dans des applications'),

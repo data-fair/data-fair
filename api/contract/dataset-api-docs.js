@@ -1,13 +1,14 @@
 import _config from 'config'
 import prettyBytes from 'pretty-bytes'
-import datasetSchema from './dataset.js'
+import { resolvedSchema as datasetSchema } from '#types/dataset/index.js'
 import * as masterData from './master-data.js'
-import dataFiles from './data-files.js'
 import capabilities from './capabilities.js'
 import * as datasetUtils from '../src/datasets/utils/index.js'
 import { acceptedMetricAggs } from '../src/datasets/es/metric-agg.js'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
+
+const dataFiles = datasetSchema.properties.storage.properties.dataFiles
 
 const config = /** @type {any} */(_config)
 

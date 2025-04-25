@@ -1,14 +1,12 @@
-// A dataset post is a subset of the dataset object that can be pushed when initially creating it
-import dataset from './dataset.js'
-import datasetPatch from './dataset-patch.js'
+import datasetSchema from '#types/dataset/schema.js'
+import datasetPatch from '../patch-req/schema.js'
 
-const postKeys = ['isVirtual', 'isRest', 'isMetaOnly', 'owner', 'remoteFile']
 const body = {
-  title: 'Dataset JSON body',
+  title: 'Post dataset JSON body',
   type: 'object',
   additionalProperties: false,
   properties: {
-    ...datasetPatch.properties,
+    ...datasetPatch.properties.body.properties,
     initFrom: {
       type: 'object',
       additionalProperties: false,
@@ -25,17 +23,21 @@ const body = {
           }
         }
       }
-    }
+    },
+    isVirtual: datasetSchema.properties.isVirtual,
+    isRest: datasetSchema.properties.isRest,
+    isMetaOnly: datasetSchema.properties.isMetaOnly,
+    owner: datasetSchema.properties.owner,
+    remoteFile: datasetSchema.properties.remoteFile
   }
 }
-postKeys.forEach(k => {
-  body.properties[k] = dataset.properties[k]
-})
 
 export default {
-  title: 'Dataset post',
+  $id: 'https://github.com/data-fair/data-fair/datasets/post-req',
+  title: 'Post dataset req',
+  'x-exports': ['validate', 'types'],
   type: 'object',
-  additionalProperties: false,
+  required: ['body'],
   properties: {
     body,
     file: {

@@ -1,11 +1,11 @@
 import config from 'config'
 import datasetAPIDocs from './dataset-api-docs.js'
-import datasetPost from './dataset-post.js'
+import datasetPost from '../doc/datasets/post-req/schema.js'
+import datasetPatch from '../doc/datasets/patch-req/schema.js'
 import journalSchema from './journal.js'
 import { visibility } from '../src/misc/utils/visibility.js'
 import * as permissionsDoc from '../src/misc/utils/permissions.js'
 import * as datasetUtils from '../src/datasets/utils/index.js'
-import datasetPatchSchema from './dataset-patch.js'
 
 /**
  *
@@ -80,7 +80,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         required: true,
         content: {
           'application/json': {
-            schema: datasetPatchSchema
+            schema: datasetPatch.properties.body
           }
         }
       },
@@ -106,7 +106,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         required: true,
         content: {
           'multipart/form-data': {
-            schema: datasetPost
+            schema: datasetPost.properties.body
           }
         }
       },
