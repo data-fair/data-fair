@@ -1,6 +1,6 @@
 import _config from 'config'
 import prettyBytes from 'pretty-bytes'
-import { resolvedSchema as datasetSchema } from '#types/dataset/index.js'
+import { resolvedSchema as datasetSchema } from '#types/dataset/index.ts'
 import * as masterData from './master-data.js'
 import capabilities from './capabilities.js'
 import * as datasetUtils from '../src/datasets/utils/index.js'

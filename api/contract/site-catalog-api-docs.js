@@ -1,6 +1,6 @@
 import config from 'config'
 import pJson from './p-json.js'
-import { resolvedSchema as datasetSchema } from '#types/dataset/index.js'
+import { resolvedSchema as datasetSchema } from '#types/dataset/index.ts'
 import * as utils from './utils.js'
 
 export default (publicUrl, publicationSite, info) => {

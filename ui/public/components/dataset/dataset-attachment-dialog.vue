@@ -106,7 +106,7 @@ en:
 <script>
 import { mapState, mapActions } from 'vuex'
 import eventBus from '~/event-bus'
-import datasetSchema from '~/../../api/contract/dataset.js'
+import datasetSchema from '../../../../api/types/dataset/schema'
 
 export default {
   props: ['value', 'index'],

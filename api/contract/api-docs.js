@@ -1,5 +1,5 @@
 import config from 'config'
-import { resolvedSchema as dataset } from '#types/dataset/index.js'
+import { resolvedSchema as dataset } from '#types/dataset/index.ts'
 import datasetPatch from '../doc/datasets/patch-req/schema.js'
 import datasetPost from '../doc/datasets/post-req/schema.js'
 import remoteService from './remote-service.js'
