@@ -4,6 +4,7 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import FormData from 'form-data'
+import * as restDatasetsUtils from '../api/src/datasets/utils/rest.js'
 
 import * as workers from '../api/src/workers/index.js'
 
@@ -265,6 +266,18 @@ describe('Master data management', function () {
     assert.ok(!results[0]['_siret.extra'])
     assert.ok(!results[0]['siretextra'])
 
+    // patching title has no effect
+    await ax.patch('/api/v1/datasets/slave', { title: 'Slave 2' })
+    results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
+    assert.equal(results[0]['siretextextra'], 'Extra information 2')
+
+    // forcing a reindex has no effect
+    await global.ax.superadmin.post('/api/v1/datasets/slave/_reindex')
+    slave = await workers.hook('finalizer/slave')
+    assert.equal(slave.schema.find(p => p.key === '_siret.extra'), undefined)
+    assert.equal(slave.schema.find(p => p.key === 'siretextra'), undefined)
+    extraProp = slave.schema.find(p => p.key === 'siretextextra')
+
     // patching the dataset to remove extension
     await ax.patch('/api/v1/datasets/slave', {
       extensions: []
@@ -272,6 +285,12 @@ describe('Master data management', function () {
     await workers.hook('finalizer/slave')
     results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.ok(!results[0]['_siret.extra'])
+    assert.ok(!results[0]['siretextextra'])
+    assert.ok(!results[0]['siretextra'])
+    const docs = await restDatasetsUtils.collection(global.db, slave).find({}).toArray()
+    assert.ok(!docs[0]['_siret'])
+    assert.ok(!docs[0]['siretextextra'])
+    assert.ok(!docs[0]['siretextra'])
   })
 
   it('accept an input with elasticsearch special chars', async function () {
