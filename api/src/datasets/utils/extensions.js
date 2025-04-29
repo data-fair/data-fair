@@ -299,6 +299,8 @@ class ExtensionsStream extends Transform {
                 debugOverwrite('key not found in result', key)
               }
             }
+          } else {
+            debugOverwrite('no extension overwrite to apply')
           }
 
           if (this.onlyEmitChanges && !equal(this.buffer[i][extension.extensionKey], selectedResult)) hasChanges = true
