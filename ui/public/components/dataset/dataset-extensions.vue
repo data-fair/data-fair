@@ -441,10 +441,9 @@ export default {
       const key = escapeKey(newName)
       return !this.dataset.schema.some(f => {
         if (f['x-extension'] === extension.remoteService + '/' + extension.action) {
-          if (extension.select?.includes(newName)) return true
+          if (extension.select?.includes(newName) && name !== newName) return true
           if (extension.overwrite) {
             for (const [overwriteKey, overwriteValue] of Object.entries(extension.overwrite)) {
-              console.log('check overwrite')
               if (overwriteKey !== name && overwriteValue['x-originalName']?.trim() && escapeKey(overwriteValue['x-originalName'].trim()) === key) {
                 return true
               }
