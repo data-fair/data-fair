@@ -257,7 +257,7 @@ class ExtensionsStream extends Transform {
         }
 
         const localMasterData = extension.remoteService.server.startsWith(`${config.publicUrl}/api/v1/datasets/`)
-        debug('is extension local ?', localMasterData)
+        debug('is extension local ?', localMasterData, extension.remoteService.server, `${config.publicUrl}/api/v1/datasets/`)
 
         // TODO: no need to use a cache in the special case of a locale master-data dataset ?
         const inputCacheKeys = inputs.map(input => stringify([input, extension.select || []]))
