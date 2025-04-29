@@ -120,7 +120,7 @@ export const preparePatch = async (app, patch, dataset, user, locale, draftValid
     patch.exports.lastExport = dataset?.exports?.restToCSV?.lastExport
   }
 
-  const removedRestProps = (dataset.isRest && patch.schema && dataset.schema.filter(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))) ?? []
+  const removedRestProps = (dataset.isRest && patch.schema && dataset.schema.filter(df => !df['x-calculated'] && !patch.schema.find(f => f.key === df.key))) ?? []
   if (dataset.isRest && dataset.rest?.storeUpdatedBy && patch.rest && !patch.rest.storeUpdatedBy) {
     removedRestProps.push({ key: '_updatedBy' })
     removedRestProps.push({ key: '_updatedByName' })

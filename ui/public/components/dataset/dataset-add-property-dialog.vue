@@ -16,7 +16,7 @@
         >
           <v-text-field
             v-model="newPropertyKey"
-            :rules="[v => !!v || '', v => !schema.find(f => f['x-originalName'] === v || f.key === v) || '']"
+            :rules="[v => validNewPropertyKey(v) || '']"
             name="key"
             label="Clé"
           />
@@ -75,7 +75,7 @@ export default {
   },
   data () {
     return {
-      newPropertyKey: null,
+      newPropertyKey: '',
       newPropertyType: null
     }
   },
@@ -89,9 +89,15 @@ export default {
     }
   },
   methods: {
+    validNewPropertyKey (name) {
+      name = name?.trim()
+      if (!name) return false
+      const key = escapeKey(name)
+      return !this.schema.some(f => f.key === key)
+    },
     addProperty () {
       if (this.$refs.form.validate()) {
-        this.$emit('add', { key: escapeKey(this.newPropertyKey), 'x-originalName': this.newPropertyKey, ...this.newPropertyType, title: '' })
+        this.$emit('add', { key: escapeKey(this.newPropertyKey), 'x-originalName': this.newPropertyKey.trim(), ...this.newPropertyType, title: '' })
         this.$emit('input', false)
       }
     }

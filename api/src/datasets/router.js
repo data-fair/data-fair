@@ -374,6 +374,9 @@ const createDatasetRoute = async (req, res) => {
         })
       })
     }
+    if (dataset.isMetaOnly) {
+      await datasetUtils.updateStorage(req.app, dataset)
+    }
 
     await import('@data-fair/lib-express/events-log.js')
       .then((eventsLog) => eventsLog.default.info('df.datasets.create', `created a dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))

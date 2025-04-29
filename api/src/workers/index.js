@@ -280,6 +280,7 @@ async function iter (app, resource, type) {
         taskKey = 'restExporterCSV'
       } else if (
         resource?.readApiKey?.active &&
+        resource.readApiKey.renewAt &&
         resource.readApiKey.renewAt < now
       ) {
         taskKey = 'readApiKeyRenewer'

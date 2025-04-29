@@ -263,7 +263,7 @@ export const run = async () => {
         const resource = await db.collection(type).findOne({ id })
         if (!resource) throw httpError(404, `Ressource ${type}/${id} inconnue.`)
         let user
-        if (sessionState.user) user = { ...sessionState.user, activeAccount: sessionState.account }
+        if (sessionState.user) user = { ...sessionState.user, activeAccount: { ...sessionState.account, role: sessionState.accountRole } }
         if (message.apiKey) user = await readApiKey(db, message.apiKey, type, message.account)
         return permissions.can(type, resource, `realtime-${subject}`, user)
       })
