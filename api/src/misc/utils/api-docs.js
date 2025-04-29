@@ -14,25 +14,16 @@ export const operationsClasses = {
     readAdvanced: ['readJournal', 'realtime-draft-error'],
     write: ['writeDescription', 'writeConfig', 'postAttachment', 'deleteAttachment'],
     admin: ['delete', 'getPermissions', 'setPermissions', 'getKeys', 'setKeys', 'writePublications', 'writePublicationSites']
-  },
-  catalogs: {
-    list: ['list'],
-    read: ['readDescription', 'readApiDoc'],
-    write: ['writeDescription'],
-    admin: ['delete', 'getPermissions', 'setPermissions'],
-    use: ['readDatasets', 'harvestDataset', 'harvestDatasetResource']
   }
 }
 
 export const adminOperationsClasses = {
-  datasets: ['manageMasterData'],
-  catalogs: ['post']
+  datasets: ['manageMasterData']
 }
 
 export const contribOperationsClasses = {
   datasets: ['post'],
-  applications: ['post'],
-  catalogs: ['list', 'read', 'use']
+  applications: ['post']
 }
 
 // WARNING: this util is used both in UI and server

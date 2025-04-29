@@ -1,5 +1,4 @@
 import { strict as assert } from 'node:assert'
-import validateDcat from '../api/src/misc/utils/dcat/validate.js'
 
 describe('publication sites', function () {
   it('should fail to publish dataset on unknown site', async function () {
@@ -73,16 +72,6 @@ describe('publication sites', function () {
     assert.ok(await ax.get(`http://localhost:5601/data-fair/api/v1/datasets/${dataset.id}/lines`))
     publishedDatasets = (await ax.get('http://localhost:5601/data-fair/api/v1/datasets')).data
     assert.equal(publishedDatasets.results.length, 1)
-
-    const datasetsCatalog = (await ax.get('http://localhost:5601/data-fair/api/v1/catalog/datasets')).data
-    assert.equal(datasetsCatalog.results.length, 1)
-    assert.equal(datasetsCatalog.count, 1)
-
-    const dcatCatalog = (await ax.get('http://localhost:5601/data-fair/api/v1/catalog/dcat')).data
-    const valid = validateDcat(dcatCatalog)
-    if (!valid) console.error('DCAT validation failed', validateDcat.errors)
-    assert.ok(valid)
-    assert.ok(dcatCatalog.dataset?.length, 1)
   })
 
   it('should publish application on a org site', async function () {

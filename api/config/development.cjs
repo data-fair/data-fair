@@ -46,13 +46,6 @@ module.exports = {
     spawnTask: false
   },
   browserLogLevel: 'debug',
-  catalogs: [{
-    title: 'Data.gouv.fr',
-    href: 'https://www.data.gouv.fr'
-  }, {
-    title: 'Mydatacatalogue',
-    href: 'https://app.dawizz.fr/mydatacatalogue/'
-  }],
   proxyNuxt: true,
   extraNavigationItems: [
     {

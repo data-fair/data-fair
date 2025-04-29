@@ -28,16 +28,6 @@ before('global mocks', async function () {
     .get('/geocoder/api-docs.json').reply(200, geocoderApi)
     .get('/sirene/api-docs.json').reply(200, sireneApi)
 
-  // fake catalog
-  nock('http://test-catalog.com')
-    .persist()
-    .get('/api/1/site/').reply(200, { title: 'My catalog' })
-    .get('/api/1/organizations/suggest/?q=koumoul').reply(200, [{ name: 'Koumoul' }])
-    .get('/api/1/datasets/suggest/?q=test').reply(200, [{ title: 'Test dataset' }])
-  // fake catalog
-  nock('http://not-a-catalog.com')
-    .persist()
-
   // fake applications
   const html = `
     <html>
@@ -193,7 +183,6 @@ beforeEach('scratch data', async function () {
       global.db.collection('datasets').deleteMany({}),
       global.db.collection('applications').deleteMany({}),
       global.db.collection('applications-keys').deleteMany({}),
-      global.db.collection('catalogs').deleteMany({}),
       global.db.collection('limits').deleteMany({}),
       global.db.collection('settings').deleteMany({}),
       global.db.collection('locks').deleteMany({}),

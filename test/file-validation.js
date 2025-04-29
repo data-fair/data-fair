@@ -1,13 +1,8 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import fs from 'fs-extra'
-import nock from 'nock'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.js'
-
-// Prepare mock for outgoing HTTP requests
-nock('http://test-catalog.com').persist()
-  .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
 
 const schema = [
   {

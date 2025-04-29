@@ -39,9 +39,4 @@ router.get('/configurable-remote-services', (req, res) => {
   res.json(remoteServices)
 })
 
-router.get('/configurable-catalogs', (req, res) => {
-  if (!req.user) return res.status(401).type('text/plain').send()
-  res.json(config.catalogs)
-})
-
 export default router

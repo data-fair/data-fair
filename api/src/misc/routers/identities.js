@@ -18,7 +18,7 @@ router.use((req, res, next) => {
   next()
 })
 
-const collectionNames = ['applications', 'datasets', 'catalogs', 'applications-keys', 'journals']
+const collectionNames = ['applications', 'datasets', 'applications-keys', 'journals']
 
 // notify a name change
 router.post('/:type/:id', async (req, res) => {

@@ -36,7 +36,6 @@ export const tasks = {
   ttlManager: async () => import('./ttl-manager.js'),
   restExporterCSV: async () => import('./rest-exporter-csv.js'),
   applicationPublisher: async () => import('./application-publisher.js'),
-  catalogHarvester: async () => import('./catalog-harvester.js'),
   readApiKeyRenewer: async () => import('./read-api-key-renewer.js')
 }
 

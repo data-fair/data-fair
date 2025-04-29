@@ -1,15 +1,15 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import fs from 'node:fs'
-import nock from 'nock'
+// import nock from 'nock'
 import FormData from 'form-data'
 import config from 'config'
 import * as workers from '../api/src/workers/index.js'
 import * as esUtils from '../api/src/datasets/es/index.ts'
 
 // Prepare mock for outgoing HTTP requests
-nock('http://test-catalog.com').persist()
-  .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
+// nock('http://test-catalog.com').persist()
+//   .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
 
 describe('workers', function () {
   it('Process newly uploaded CSV dataset', async function () {
@@ -77,30 +77,30 @@ describe('workers', function () {
     assert.ok(res.data[0].data.startsWith('100% des lignes sont en erreur'))
   })
 
-  it('Publish a dataset after finalization', async function () {
-    const ax = global.ax.dmeadus
+  // it('Publish a dataset after finalization', async function () {
+  //   const ax = global.ax.dmeadus
 
-    // Prepare a catalog
-    const catalog = (await ax.post('/api/v1/catalogs', { url: 'http://test-catalog.com', title: 'Test catalog', apiKey: 'apiKey', type: 'udata' })).data
+  //   // Prepare a catalog
+  //   const catalog = (await ax.post('/api/v1/catalogs', { url: 'http://test-catalog.com', title: 'Test catalog', apiKey: 'apiKey', type: 'udata' })).data
 
-    // Send dataset
-    const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
-    const form = new FormData()
-    form.append('file', datasetFd, 'dataset.csv')
-    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    assert.equal(res.status, 201)
-    let dataset = await workers.hook('finalizer')
-    assert.equal(dataset.status, 'finalized')
+  //   // Send dataset
+  //   const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
+  //   const form = new FormData()
+  //   form.append('file', datasetFd, 'dataset.csv')
+  //   let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+  //   assert.equal(res.status, 201)
+  //   let dataset = await workers.hook('finalizer')
+  //   assert.equal(dataset.status, 'finalized')
 
-    // Update dataset to ask for a publication
-    res = await ax.patch('/api/v1/datasets/' + dataset.id, { publications: [{ catalogId: catalog.id, status: 'waiting' }] })
-    assert.equal(res.status, 200)
+  //   // Update dataset to ask for a publication
+  //   res = await ax.patch('/api/v1/datasets/' + dataset.id, { publications: [{ catalogId: catalog.id, status: 'waiting' }] })
+  //   assert.equal(res.status, 200)
 
-    // Go through the publisher worker
-    dataset = await workers.hook('datasetPublisher')
-    assert.equal(dataset.status, 'finalized')
-    assert.equal(dataset.publications[0].status, 'published')
-  })
+  //   // Go through the publisher worker
+  //   dataset = await workers.hook('datasetPublisher')
+  //   assert.equal(dataset.status, 'finalized')
+  //   assert.equal(dataset.publications[0].status, 'published')
+  // })
 
   it('Run tasks in children processes', async function () {
     config.worker.spawnTask = true

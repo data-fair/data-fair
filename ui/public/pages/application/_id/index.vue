@@ -173,13 +173,6 @@
                 >
                   <v-icon>mdi-presentation</v-icon>&nbsp;&nbsp;{{ $t('portals') }}
                 </v-tab>
-
-                <!-- disabled as we have a problem : topic is now a required property in udata
-                     we will need to show a select based on https://www.data.gouv.fr/api/1/topics/?page=1&page_size=20
-                <v-tab href="#share-publications">
-                  <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
-                </v-tab>
-                -->
               </template>
               <template #tabs-items>
                 <tutorial-alert
@@ -211,10 +204,6 @@
                 >
                   <application-publication-sites :publication-sites="publicationSites" />
                 </v-tab-item>
-
-                <!--<v-tab-item value="share-publications">
-                  <application-catalog-publications />
-                </v-tab-item>-->
               </template>
             </layout-section-tabs>
 
@@ -274,7 +263,6 @@ fr:
   permissions: Permissions
   protectedLink: Lien protégé
   portals: Portails
-  catalogs: Catalogues
   tutorialShare: Configurez des portails pour mieux partager vos données au public ou en interne.
   activity: Activité
   journal: Journal
@@ -295,7 +283,6 @@ en:
   permissions: Permissions
   protectedLink: Protected link
   portals: Portals
-  catalogs: Catalogs
   tutorialShare: Configure portals to better publish your data privately or publicly.
   activity: Activity
   journal: Journal

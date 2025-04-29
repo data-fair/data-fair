@@ -130,6 +130,8 @@ services:
       - PORT=8089
       - PRIVATE_DIRECTORY_URL=http://localhost:5600/simple-directory
       - PRIVATE_EVENTS_URL=http://localhost:5600/notify
+      - SECRET_EVENTS=secret-notifications
+      - SECRET_CATALOGS=secret-catalogs
 
   clamav:
     image: clamav/clamav:1.1

@@ -210,10 +210,6 @@ module.exports = {
   defaultRemoteKey: {
     value: 'DEFAULT_REMOTE_KEY'
   },
-  catalogs: {
-    __name: 'CATALOGS',
-    __format: 'json'
-  },
   disableSharing: {
     __name: 'DISABLE_SHARING',
     __format: 'json'

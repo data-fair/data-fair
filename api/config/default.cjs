@@ -268,11 +268,6 @@ module.exports = {
     server: 'https://koumoul.com/s/tileserver'
   }],
   remoteServicesPrivateMapping: ['', ''], // an optional 2 items array mapping url prefixes from remote service to the local equivalent
-  catalogs: [{
-    title: 'Data.gouv.fr',
-    href: 'https://www.data.gouv.fr',
-    logo: 'https://static.data.gouv.fr/_themes/gouvfr/img/logo-header.svg'
-  }],
   // A global default API key for backend to backend calls to remote services
   defaultRemoteKey: {
     in: 'header',

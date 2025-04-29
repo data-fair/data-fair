@@ -147,7 +147,6 @@ fr:
   deleteKeyDetails: Voulez vous vraiment supprimer cette clé d'API ? Si des programmes l'utilisent ils cesseront de fonctionner.
   datasets: Jeux de données
   applications: Applications
-  catalogs: Connecteurs aux catalogues
   stats: Récupération d'informations statistiques
 en:
   addApiKey: Add an API key
@@ -166,7 +165,6 @@ en:
   deleteKeyDetails: Do you really want to delete this API key ? Softwares or scripts that use this key won't work anymore.
   datasets: Datasets
   applications: Applications
-  catalogs: Catalogs
   stats: Stats
 </i18n>
 
@@ -228,7 +226,6 @@ const removeApiKey = (rowIndex: number) => {
 const scopes = [
   'datasets',
   'applications',
-  'catalogs',
   'stats'
 ]
 

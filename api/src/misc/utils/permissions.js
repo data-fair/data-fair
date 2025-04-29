@@ -17,8 +17,7 @@ export const middleware = function (operationId, operationClass, trackingCategor
       res.status(403).type('text/plain')
       const denomination = {
         datasets: 'Le jeu de données',
-        applications: 'L\'application',
-        catalogs: 'Le connecteur'
+        applications: 'L\'application'
       }[req.resourceType] || 'La ressource'
       if (operationId === 'readDescription') {
         if (!req.user) {
@@ -182,8 +181,6 @@ export const filter = function (user, resourceType) {
 }
 
 export const filterCan = function (user, resourceType, operation = 'list') {
-  const ignoreDepartment = resourceType === 'catalogs'
-
   const operationFilter = []
   for (const op of operation.split(',')) {
     const operationClass = apiDocsUtil.classByOperation[resourceType][op]
@@ -216,7 +213,7 @@ export const filterCan = function (user, resourceType, operation = 'list') {
         }
         // user is privileged admin of owner organization with or without department
         if (listRoles.includes(user.organization.role)) {
-          if (user.organization.department && !ignoreDepartment) or.push({ 'owner.type': 'organization', 'owner.id': user.organization.id, 'owner.department': user.organization.department })
+          if (user.organization.department) or.push({ 'owner.type': 'organization', 'owner.id': user.organization.id, 'owner.department': user.organization.department })
           else or.push({ 'owner.type': 'organization', 'owner.id': user.organization.id })
         }
 

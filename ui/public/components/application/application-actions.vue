@@ -176,9 +176,6 @@
                 <li>
                   sur quels portails l'application est-elle publiée ?
                 </li>
-                <li>
-                  sur quels catalogues l'application est-elle publiée ?
-                </li>
               </ul>
             </p>
             <p>

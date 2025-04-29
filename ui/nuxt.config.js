@@ -132,6 +132,7 @@ const nuxtConfig = {
     disableApplications: config.disableApplications,
     disableRemoteServices: config.disableRemoteServices,
     disablePublicationSites: config.disablePublicationSites,
+    enableCatalogs: !!config.privateCatalogsUrl,
     i18n: config.i18n,
     defaultTimeZone: config.defaultTimeZone,
     dateFormats: config.dateFormats,

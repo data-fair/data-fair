@@ -1,5 +1,8 @@
 <template lang="html">
-  <dataset-catalog-publications data-iframe-height />
+  <dataset-catalog-publications
+    v-if="env.enableCatalogs"
+    data-iframe-height
+  />
 </template>
 
 <script>

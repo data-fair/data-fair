@@ -120,7 +120,7 @@
               <p v-if="!!apiKey.clearKey">
                 {{ $t('secretKey') }} : {{ apiKey.clearKey }}
               </p>
-              <p>{{ $t('scope') }} : {{ apiKey.scopes.map(scope => scopes.find(s => s.value === scope).text).join(' - ') }}</p>
+              <p>{{ $t('scope') }} : {{ apiKey.scopes.map(scope => scopes.find(s => s.value === scope)?.text).join(' - ') }}</p>
             </v-card-text>
             <v-card-actions>
               <v-spacer />
@@ -190,7 +190,6 @@ export default {
     scopes: [
       { value: 'datasets', text: 'jeux de données' },
       { value: 'applications', text: 'applications' },
-      { value: 'catalogs', text: 'connecteurs aux catalogues' },
       { value: 'stats', text: 'récupération d\'informations statistiques' }
     ]
   }),
