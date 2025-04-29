@@ -68,7 +68,8 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
       objectMode: true,
       transform (item, encoding, callback) {
         const hasContent = Object.keys(item).reduce((a, b) => a || ![undefined, '\n', '\r', '\r\n', ''].includes(item[b]), false)
-        item._i = this.i = (this.i || 0) + 1
+        this.i = (this.i || 0) + 1
+        item._i = this.i
         if (hasContent) callback(null, item)
         else callback()
       }
@@ -159,13 +160,15 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
         if (raw) {
           callback(null, item)
         } else {
-          const line = { _i: this.i = (this.i || 0) + 1 }
+          const line = {}
           for (const prop of schema) {
             const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
             let originalName = prop['x-originalName']
             if (fileSchema && !prop['x-calculated'] && !prop['x-extension']) originalName = fileProp?.['x-originalName']
             line[prop.key] = item[originalName || prop.key] ?? item[prop.key]
           }
+          this.i = (this.i || 0) + 1
+          line._i = this.i
           callback(null, line)
         }
       }
