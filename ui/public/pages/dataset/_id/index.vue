@@ -283,7 +283,7 @@
                 </v-tab>
 
                 <v-tab
-                  v-if="['admin', 'contrib'].includes(userOwnerRole(dataset.owner)) && env.enableCatalogs"
+                  v-if="['admin', 'contrib'].includes(userOwnerRole(dataset.owner)) && env.catalogsIntegration"
                   href="#share-publications"
                 >
                   <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
@@ -338,7 +338,7 @@
                 </v-tab-item>
 
                 <v-tab-item
-                  v-if="env.enableCatalogs"
+                  v-if="env.catalogsIntegration"
                   value="share-publications"
                 >
                   <dataset-catalog-publications />

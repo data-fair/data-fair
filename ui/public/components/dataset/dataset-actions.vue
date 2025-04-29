@@ -266,7 +266,7 @@
                 <li>
                   sur quels portails le jeu de données est-il publié ?
                 </li>
-                <li v-if="env.enableCatalogs">
+                <li v-if="env.catalogsIntegration">
                   sur quels catalogues le jeu de données est-il publié ?
                 </li>
                 <li>

@@ -108,20 +108,6 @@
         </v-list-item>
 
         <v-list-item
-          v-if="canAdminDep && env.enableCatalogs"
-          :nuxt="true"
-          dense
-          :to="`/catalogs`"
-          :class="routePrefix === 'catalog' ? 'v-list-item--active' : ''"
-        >
-          <v-list-item-action><v-icon>mdi-transit-connection</v-icon></v-list-item-action>
-          <v-list-item-content>
-            <v-list-item-title>{{ $t('catalogs') }}</v-list-item-title>
-            <v-list-item-subtitle>{{ $t('catalogsSub') }}</v-list-item-subtitle>
-          </v-list-item-content>
-        </v-list-item>
-
-        <v-list-item
           v-if="canContrib"
           :nuxt="true"
           dense
