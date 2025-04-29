@@ -387,7 +387,7 @@ describe('Master data management', function () {
     await ax.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
     await workers.hook('finalizer/master')
 
-    // create another slave from a geojson file
+    // create a slave from a geojson file
     let geojsonSlave = await testUtils.sendDataset('datasets/dataset-siret-extensions.geojson', ax)
     geojsonSlave.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
     let res = await ax.patch(`/api/v1/datasets/${geojsonSlave.id}`, {
@@ -409,11 +409,40 @@ describe('Master data management', function () {
     assert.equal(res.data.features[0].properties.Label, 'koumoul')
     assert.equal(res.data.features[0].properties._siret.extra, 'Extra information')
     assert.equal(res.data.features[0].properties._siret.denomination, 'Dénomination string')
-    const results = (await ax.get(`/api/v1/datasets/${geojsonSlave.id}/lines`)).data.results
+    let results = (await ax.get(`/api/v1/datasets/${geojsonSlave.id}/lines`)).data.results
     assert.equal(results[0].siret, '82898347800011')
     assert.equal(results[0].label, 'koumoul')
     assert.equal(results[0]['_siret.extra'], 'Extra information')
     assert.equal(results[0]['_siret.denomination'], 'Dénomination string')
+
+    // patch the extension to overwrite keys
+    await ax.patch(`/api/v1/datasets/${geojsonSlave.id}`, {
+      extensions: [{
+        active: true,
+        type: 'remoteService',
+        remoteService: remoteService.id,
+        action: 'masterData_bulkSearch_siret',
+        select: ['extra', 'denomination'],
+        overwrite: {
+          extra: {
+            'x-originalName': 'siretExtra'
+          },
+          denomination: {
+            'x-originalName': 'siretDenomination'
+          }
+        }
+      }]
+    })
+    geojsonSlave = await workers.hook(`finalizer/${geojsonSlave.id}`)
+    res = await ax.get(`/api/v1/datasets/${geojsonSlave.id}/full`)
+    assert.equal(res.data.features.length, 1)
+    assert.equal(res.data.features[0].properties.siretExtra, 'Extra information')
+    assert.equal(res.data.features[0].properties.siretDenomination, 'Dénomination string')
+    results = (await ax.get(`/api/v1/datasets/${geojsonSlave.id}/lines`)).data.results
+    assert.equal(results[0].siret, '82898347800011')
+    assert.equal(results[0].label, 'koumoul')
+    assert.equal(results[0].siretextra, 'Extra information')
+    assert.equal(results[0].siretdenomination, 'Dénomination string')
   })
 
   it('not return calculated properties', async function () {
