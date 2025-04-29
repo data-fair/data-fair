@@ -29,6 +29,7 @@ export { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js
 
 const debugMasterData = debugLib('master-data')
 const debug = debugLib('extensions')
+const debugOverwrite = debugLib('extensions-overwrite')
 
 /**
  * create short ids for extensions that will be used as prefix of the properties ids in the schema
@@ -286,12 +287,16 @@ class ExtensionsStream extends Transform {
           let hasChanges = false
 
           if (extension.overwrite) {
+            debugOverwrite('apply overwrite from extension', extension.overwrite, selectedResult)
             for (const key in extension.overwrite) {
               if (extension.overwrite[key]['x-originalName'] && key in selectedResult) {
                 const propKey = fieldsSniffer.escapeKey(extension.overwrite[key]['x-originalName'])
+                debugOverwrite('key found in result', key, propKey)
                 if (this.onlyEmitChanges && !equal(this.buffer[i][propKey], selectedResult[key])) hasChanges = true
                 this.buffer[i][propKey] = selectedResult[key]
                 delete selectedResult[key]
+              } else {
+                debugOverwrite('key not found in result', key)
               }
             }
           }
