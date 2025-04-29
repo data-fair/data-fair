@@ -696,6 +696,21 @@ const datasetProperties = {
               type: 'string'
             }
           },
+          overwriteProperties: {
+            type: 'object',
+            description: 'Les attributs à surcharger sur les proprités résultats de l\'enrichissement',
+            additionalProperties: {
+              type: 'object',
+              properties: {
+                title: {
+                  type: 'string'
+                },
+                'x-originalName': {
+                  type: 'string'
+                }
+              }
+            }
+          },
           shortId: {
             type: 'string',
             description: 'Id court (déprécié)',
