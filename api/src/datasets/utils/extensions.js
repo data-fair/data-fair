@@ -267,6 +267,19 @@ class ExtensionsStream extends Transform {
         }
         if (typeof data === 'object') data = JSON.stringify(data) // axios parses the object when there is only one
         const results = data.split('\n').filter(line => !!line).map(JSON.parse)
+
+        const overwrittenKeys = []
+        if (extension.overwrite) {
+          for (const name in extension.overwrite) {
+            if (extension.overwrite[name]['x-originalName']) {
+              const propKey = fieldsSniffer.escapeKey(extension.overwrite[name]['x-originalName'])
+              overwrittenKeys.push([name, propKey])
+            }
+          }debugOverwrite('apply overwritten key from extension', overwrittenKeys)
+        } else {
+          debugOverwrite('no extension overwrite to apply')
+        }
+
         for (const result of results) {
           const selectFields = extension.select || []
           const selectedResult = Object.keys(result)
@@ -286,22 +299,13 @@ class ExtensionsStream extends Transform {
 
           let hasChanges = false
 
-          if (extension.overwrite) {
-            debugOverwrite('apply overwrite from extension', extension.overwrite, selectedResult)
-            for (const key in extension.overwrite) {
-              if (extension.overwrite[key]['x-originalName'] && key in selectedResult) {
-                const propKey = fieldsSniffer.escapeKey(extension.overwrite[key]['x-originalName'])
-                debugOverwrite('key found in result', key, propKey)
-                if (this.onlyEmitChanges && !equal(this.buffer[i][propKey], selectedResult[key])) hasChanges = true
-                this.buffer[i][propKey] = selectedResult[key]
-                delete selectedResult[key]
-              } else {
-                debugOverwrite('key not found in result', key)
-              }
-            }
-          } else {
-            debugOverwrite('no extension overwrite to apply')
+          if (overwrittenKeys.length) debugOverwrite('apply overwritten keys to result', selectedResult)
+          for (const [name, newKey] of overwrittenKeys) {
+            if (this.onlyEmitChanges && !equal(this.buffer[i][newKey], selectedResult[name])) hasChanges = true
+            this.buffer[i][newKey] = selectedResult[name]
+            delete selectedResult[name]
           }
+          if (overwrittenKeys.length) debugOverwrite('...altered result', selectedResult, this.buffer[i])
 
           if (this.onlyEmitChanges && !equal(this.buffer[i][extension.extensionKey], selectedResult)) hasChanges = true
           if (hasChanges) changesIndexes.add(i)
