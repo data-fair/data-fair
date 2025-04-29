@@ -161,6 +161,23 @@ export const extend = async (app, dataset, extensions, updateMode, ignoreDraftLi
   debug('Extension is over')
 }
 
+const applyExtensionResult = (extensionKey, overwrittenKeys, item, selectedResult, onlyEmitChanges) => {
+  let hasChanges = false
+  if (overwrittenKeys.length) debugOverwrite('apply overwritten keys to result', selectedResult)
+  const objValue = overwrittenKeys.length ? { ...selectedResult } : selectedResult
+  for (const [name, newKey] of overwrittenKeys) {
+    if (onlyEmitChanges && !equal(item[newKey], objValue[name])) hasChanges = true
+    item[newKey] = objValue[name]
+    delete objValue[name]
+  }
+  if (overwrittenKeys.length) debugOverwrite('...altered result', selectedResult, item)
+
+  if (onlyEmitChanges && !equal(item[extensionKey], objValue)) hasChanges = true
+  item[extensionKey] = objValue
+
+  return hasChanges
+}
+
 // Perform HTTP requests to a remote service to extend data
 class ExtensionsStream extends Transform {
   constructor ({ extensions, dataset, db, es, onlyEmitChanges }) {
@@ -199,6 +216,18 @@ class ExtensionsStream extends Transform {
     for (const extension of this.extensions) {
       debug(`Send req with ${this.buffer.length} items`, this.reqOpts)
       if (extension.type === 'remoteService') {
+        const overwrittenKeys = []
+        if (extension.overwrite) {
+          for (const name in extension.overwrite) {
+            if (extension.overwrite[name]['x-originalName']) {
+              const propKey = fieldsSniffer.escapeKey(extension.overwrite[name]['x-originalName'])
+              overwrittenKeys.push([name, propKey])
+            }
+          }debugOverwrite('apply overwritten key from extension', overwrittenKeys)
+        } else {
+          debugOverwrite('no extension overwrite to apply')
+        }
+
         const opts = {
           method: extension.action.operation.method,
           url: extension.remoteService.server.replace(config.remoteServicesPrivateMapping[0], config.remoteServicesPrivateMapping[1]) + extension.action.operation.path,
@@ -228,6 +257,7 @@ class ExtensionsStream extends Transform {
         }
 
         const localMasterData = extension.remoteService.server.startsWith(`${config.publicUrl}/api/v1/datasets/`)
+        debug('is extension local ?', localMasterData)
 
         // TODO: no need to use a cache in the special case of a locale master-data dataset ?
         const inputCacheKeys = inputs.map(input => stringify([input, extension.select || []]))
@@ -237,13 +267,15 @@ class ExtensionsStream extends Transform {
           if (Object.keys(inputs[i]).length === 1) continue
           let cachedValue
           if (!localMasterData) {
-          // TODO: read cached values in a bulk read ?
+            // TODO: read cached values in a bulk read ?
             cachedValue = await this.db.collection('extensions-cache')
               .findOneAndUpdate({ extensionKey: extensionCacheKey, input: inputCacheKeys[i] }, { $set: { lastUsed: new Date() } })
           }
 
-          if (cachedValue) this.buffer[i][extension.extensionKey] = cachedValue.output
-          else opts.data += JSON.stringify(inputs[i]) + '\n'
+          if (cachedValue) {
+            const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], cachedValue.output, this.onlyEmitChanges)
+            if (hasChanges) changesIndexes.add(i)
+          } else opts.data += JSON.stringify(inputs[i]) + '\n'
         }
         if (!opts.data) continue
 
@@ -268,18 +300,6 @@ class ExtensionsStream extends Transform {
         if (typeof data === 'object') data = JSON.stringify(data) // axios parses the object when there is only one
         const results = data.split('\n').filter(line => !!line).map(JSON.parse)
 
-        const overwrittenKeys = []
-        if (extension.overwrite) {
-          for (const name in extension.overwrite) {
-            if (extension.overwrite[name]['x-originalName']) {
-              const propKey = fieldsSniffer.escapeKey(extension.overwrite[name]['x-originalName'])
-              overwrittenKeys.push([name, propKey])
-            }
-          }debugOverwrite('apply overwritten key from extension', overwrittenKeys)
-        } else {
-          debugOverwrite('no extension overwrite to apply')
-        }
-
         for (const result of results) {
           const selectFields = extension.select || []
           const selectedResult = Object.keys(result)
@@ -297,20 +317,8 @@ class ExtensionsStream extends Transform {
               )
           }
 
-          let hasChanges = false
-
-          if (overwrittenKeys.length) debugOverwrite('apply overwritten keys to result', selectedResult)
-          for (const [name, newKey] of overwrittenKeys) {
-            if (this.onlyEmitChanges && !equal(this.buffer[i][newKey], selectedResult[name])) hasChanges = true
-            this.buffer[i][newKey] = selectedResult[name]
-            delete selectedResult[name]
-          }
-          if (overwrittenKeys.length) debugOverwrite('...altered result', selectedResult, this.buffer[i])
-
-          if (this.onlyEmitChanges && !equal(this.buffer[i][extension.extensionKey], selectedResult)) hasChanges = true
+          const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], selectedResult, this.onlyEmitChanges)
           if (hasChanges) changesIndexes.add(i)
-
-          this.buffer[i][extension.extensionKey] = selectedResult
         }
       } else if (extension.evaluate && extension.property) {
         for (const i in this.buffer) {
