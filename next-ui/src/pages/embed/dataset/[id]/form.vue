@@ -22,7 +22,8 @@
           v-model="line"
           :own-lines="ownLinesMode"
           :readonly-cols="Object.keys(queryContext.data)"
-          @on-file-upload="(f) => {file = f}"
+          :loading="saveLine.loading.value"
+          @on-file-upload="(f: File) => {file = f}"
         />
         <v-row>
           <v-spacer />
