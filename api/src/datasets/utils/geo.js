@@ -202,8 +202,9 @@ export const result2geojson = (esResponse, flatten) => {
     total: esResponse.hits.total.value,
     features: esResponse.hits.hits.map(hit => {
       const properties = hit._source
-      let geometry = properties._geoshape
+      let geometry = properties._geoshape ?? properties._geoshape_simple
       delete properties._geoshape
+      delete properties._geoshape_simple
       if (!geometry && properties._geopoint) {
         const [lat, lon] = properties._geopoint.split(',')
         delete properties._geopoint

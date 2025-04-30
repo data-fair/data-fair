@@ -673,7 +673,8 @@ const readLines = async (req, res) => {
 
   if (['geojson', 'mvt', 'vt', 'pbf'].includes(query.format)) {
     query.select = (query.select ? query.select : tiles.defaultSelect(req.dataset).join(','))
-    if (!query.select.includes('_geoshape') && req.dataset.schema.find(p => p.key === '_geoshape')) query.select += ',_geoshape'
+    if (!query.select.includes('_geoshape_simple') && req.dataset.schema.find(p => p.key === '_geoshape_simple')) query.select += ',_geoshape_simple'
+    else if (!query.select.includes('_geoshape') && req.dataset.schema.find(p => p.key === '_geoshape')) query.select += ',_geoshape'
     if (!query.select.includes('_geopoint')) query.select += ',_geopoint'
   }
   if (query.format === 'wkt') {
