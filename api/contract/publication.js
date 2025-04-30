@@ -15,6 +15,10 @@ export default {
       type: 'string',
       description: 'Id of the dataset in the remote catalog'
     },
+    remoteResourceId: {
+      type: 'string',
+      description: 'Id of the resource in the remote catalog'
+    },
     status: {
       type: 'string',
       description: 'A simple flag to clearly identify the publications that were successful. If "error" then the error key should be defined.',
