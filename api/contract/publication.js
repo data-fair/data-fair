@@ -27,6 +27,10 @@ export default {
     },
     error: {
       type: 'string'
+    },
+    isResource: {
+      type: 'boolean',
+      description: 'True if the publication is a resource, false or undefined if it is a dataset'
     }
   }
 }

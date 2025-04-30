@@ -319,6 +319,7 @@ export default {
     newPublicationAction (v) {
       delete this.newPublication.addToDataset
       delete this.newPublication.replaceDataset
+      if (v === 'addToDataset') this.newPublication.isResource = true
     }
   },
   methods: {
