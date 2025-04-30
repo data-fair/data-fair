@@ -12,7 +12,6 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import axios from '../misc/utils/axios.js'
 import pump from '../misc/utils/pipe.js'
 import * as limits from '../misc/utils/limits.js'
-import * as catalogs from '../catalogs/plugins/index.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetService from '../datasets/service.js'
 import { tmpDir } from '../datasets/utils/files.ts'
@@ -29,16 +28,6 @@ export const process = async function (app, dataset) {
   const tmpFile = await tmp.file({ tmpdir: tmpDir, prefix: 'download-' })
   const now = new Date().toISOString()
 
-  let catalogHttpParams = {}
-  if (dataset.remoteFile.catalog) {
-    const catalog = await mongo.db.collection('catalogs')
-      .findOne(
-        { id: dataset.remoteFile.catalog, 'owner.type': dataset.owner.type, 'owner.id': dataset.owner.id },
-        { projection: { _id: 0 } })
-    if (!catalog) throw httpError(400, '[noretry] Le fichier distant référence un catalogue inexistant. Il a probablement été supprimé.')
-    catalogHttpParams = await catalogs.httpParams(catalog, dataset.remoteFile.url)
-  }
-
   const size = dataset.remoteFile.size || 0
   const remaining = await limits.remaining(db, dataset.owner)
   if (remaining.storage !== -1 && remaining.storage < size) throw httpError(429, '[noretry] Vous avez atteint la limite de votre espace de stockage.')
@@ -46,14 +35,14 @@ export const process = async function (app, dataset) {
 
   // creating empty file before streaming seems to fix some weird bugs with NFS
   await fs.ensureFile(tmpFile.path)
-  const headers = catalogHttpParams.headers ? { ...catalogHttpParams.headers } : {}
+  /** @type {Record<string, any>} */
+  const headers = {}
   if (!dataset.remoteFile.forceUpdate) {
     if (dataset.remoteFile?.etag) headers['If-None-Match'] = dataset.remoteFile.etag
     if (dataset.remoteFile?.lastModified) headers['If-Modified-Since'] = dataset.remoteFile.lastModified
   }
   const response = await axios.get(dataset.remoteFile.url, {
     responseType: 'stream',
-    ...catalogHttpParams,
     headers,
     validateStatus: () => true
   })
