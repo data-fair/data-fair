@@ -176,6 +176,10 @@ module.exports = {
     // size of cache of vector tiles in mongodb (in mb)
     mongoSize: 2000 // 2G
   },
+  tiles: {
+    geojsonvtTolerance: 100000,
+    simplifyZoomBase: 8
+  },
   analytics: {}, // a "modules" definition for @koumoul/vue-multianalytics
   browserLogLevel: 'error',
   nuxtDev: false,

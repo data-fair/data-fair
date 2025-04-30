@@ -73,12 +73,16 @@ export const esProperty = prop => {
   // Hardcoded calculated properties
   if (prop.key === '_geopoint') esProp = { type: 'geo_point' }
   if (prop.key === '_geoshape') {
-    // if geometry is present, _geoshape will always be here too, but maybe not fully indexed dependeing on capabilities
+    // if geometry is present, _geoshape will always be here too, but maybe not fully indexed depending on capabilities
     if (!prop['x-capabilities'] || prop['x-capabilities'].geoShape !== false) {
       esProp = { type: 'geo_shape' }
     } else {
       esProp = { enabled: false }
     }
+  }
+  if (prop.key === '_geoshape_simple') {
+    // this alternate geometry is only stored, not indexed
+    esProp = { enabled: false }
   }
   if (prop.key === '_geocorners') esProp = { type: 'geo_point' }
   if (prop.key === '_i') esProp = { type: 'long' }

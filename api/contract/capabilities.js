@@ -57,6 +57,13 @@ export default {
       title: 'Formes géométriques complexes',
       description: 'Désactivez cette capacité si la donnée ne contient que des géométries basiques de points ou bien si requêter les géométries uniquement à partir de leurs centroïdes est suffisant pour vos besoins.'
     },
+    geoShapeSimple: {
+      type: 'boolean',
+      default: true,
+      'x-display': 'switch',
+      title: 'Versions simplifiées des géométries',
+      description: 'Activez cette capacité pour précalculer des géométries simplifiées à l\'indexation qui seront utilisées notamment pour construire des tuiles cartographiques plus complètes et plus rapides aux niveaux de zoom faibles.'
+    },
     indexAttachment: {
       type: 'boolean',
       default: true,

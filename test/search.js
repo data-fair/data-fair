@@ -3,7 +3,7 @@ import * as testUtils from './resources/test-utils.js'
 import * as workers from '../api/src/workers/index.js'
 
 describe('search', function () {
-  it('Get lines in dataset', async function () {
+  it.only('Get lines in dataset', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     // Update schema to specify geo point
@@ -114,6 +114,7 @@ describe('search', function () {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=63,44,7&format=pbf&q=koumoul`)
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'application/x-protobuf')
+    console.log(res.headers)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=3,4,7&format=pbf`)
     assert.equal(res.status, 204)
 

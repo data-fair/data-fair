@@ -7,6 +7,7 @@ import rewind from '@turf/rewind'
 import cleanCoords from '@turf/clean-coords'
 import kinks from '@turf/kinks'
 import unkink from '@turf/unkink-polygon'
+import simplify from '@turf/simplify'
 import { exec } from 'child-process-promise'
 import tmp from 'tmp-promise'
 import proj4 from 'proj4'
@@ -14,7 +15,9 @@ import { wktToGeoJSON, geojsonToWKT } from '@terraformer/wkt'
 import debugLib from 'debug'
 import { tmpDir } from './files.ts'
 import projections from '../../../contract/projections.js'
+import _config from 'config'
 
+const config = /** @type {any} */(_config)
 const debug = debugLib('geo')
 
 const geomUri = 'https://purl.org/geojson/vocab#geometry'
@@ -187,6 +190,9 @@ export const geometry2fields = async (dataset, doc) => {
     fields._geocorners = polygon.geometry.coordinates[0].map(c => c[1] + ',' + c[0])
   }
   fields._geoshape = feature.geometry
+  if (capabilities?.geoShapeSimple) {
+    fields._geoshape_simple = simplifyForZoom(feature.geometry, config.tiles.simplifyZoomBase)
+  }
   return fields
 }
 
@@ -300,4 +306,12 @@ const prepair = async (geometry) => {
       tmpGeojsonDir.cleanup()
     }
   }
+}
+
+export const simplifyForZoom = (geometry, zoom) => {
+  // apply same logic for tolerance calculation as geojson-vt that we use to create vector tiles
+  // https://github.com/mapbox/geojson-vt/blob/main/src/convert.js#L32
+  const tolerance = Math.pow(config.tiles.geojsonvtTolerance / ((1 << zoom) * 4096), 2)
+
+  return simplify(geometry, { tolerance })
 }
