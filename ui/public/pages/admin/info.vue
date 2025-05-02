@@ -57,20 +57,27 @@
     available: disponible
     services:
       data-fair/data-fair: Data Fair - Back Office
+      data-fair/catalogs: Catalogs management
 
   en:
     installed: installed
     available: available
     services:
       data-fair/data-fair: Data Fair - Back Office
+      data-fair/catalogs: Catalogs management
   </i18n>
 
 <script>
 // TODO: make this list dynamic when we contractualize the secondary services
 // replace extra_nav_items and other parameters by simple activation params
 const services = [
-  { name: 'data-fair/data-fair', infoUrl: '/data-fair/api/v1/admin/info' }
+  { name: 'data-fair/data-fair', infoUrl: '/data-fair/api/v1/admin/info' },
+  { name: 'data-fair/catalogs', infoUrl: '/catalogs/api/admin/info' }
 ]
+
+if (process.env.catalogsIntegration) {
+  services.push({ name: 'data-fair/catalogs', infoUrl: '/catalogs/api/admin/info' })
+}
 
 export default {
   middleware: ['admin-required'],
