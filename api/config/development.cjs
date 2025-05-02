@@ -16,7 +16,6 @@ module.exports = {
   privateCaptureUrl: 'http://localhost:8087',
   notifyUrl: `http://${host}:5600/notify`,
   privateNotifyUrl: 'http://localhost:8088',
-  privateCatalogsUrl: 'http://localhost:8089',
   notifyWSUrl: 'ws://localhost:8088',
   // subscriptionUrl: 'https://staging-koumoul.com/s/customers/embed/subscription',
   defaultLimits: {

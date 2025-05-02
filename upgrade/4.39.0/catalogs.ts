@@ -5,8 +5,12 @@ import axios from 'axios'
 const applyChanges = false
 
 const upgradeScript: UpgradeScript = {
-  description: 'Export catalogs',
+  description: 'Export catalogs managment',
   async exec (db, debug) {
+    if (!config.privateCatalogsUrl) {
+      debug('[info] Catalogs service is not enabled, skipping catalogs migration')
+      return
+    }
     /*
       1. Créer les nouveaux catalogs dans le projet catalogs via la private url
         -> Se baser sur les types
