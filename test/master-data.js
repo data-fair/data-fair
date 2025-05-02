@@ -4,6 +4,7 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import FormData from 'form-data'
+import * as restDatasetsUtils from '../api/src/datasets/utils/rest.js'
 
 import * as workers from '../api/src/workers/index.js'
 
@@ -175,7 +176,7 @@ describe('Master data management', function () {
     await workers.hook('extender/slave')
     let slave = await workers.hook('finalizer/slave')
 
-    const extraProp = slave.schema.find(p => p.key === '_siret.extra')
+    let extraProp = slave.schema.find(p => p.key === '_siret.extra')
     assert.ok(extraProp)
     assert.ok(extraProp['x-labels'])
     assert.equal(extraProp['x-labels'].value1, 'label1')
@@ -211,6 +212,72 @@ describe('Master data management', function () {
     results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_siret.extra'], 'Extra information 2')
 
+    // overwrite some attributes of the extended property
+    await ax.patch('/api/v1/datasets/slave', {
+      extensions: [{
+        active: true,
+        type: 'remoteService',
+        remoteService: remoteService.id,
+        action: 'masterData_bulkSearch_siret',
+        select: ['extra'],
+        overwrite: {
+          extra: {
+            'x-originalName': 'siretExtra',
+            title: 'Extra extended'
+          }
+        },
+      }]
+    })
+    await workers.hook('extender/slave')
+    slave = await workers.hook('finalizer/slave')
+    assert.equal(slave.schema.find(p => p.key === '_siret.extra'), undefined)
+    extraProp = slave.schema.find(p => p.key === 'siretextra')
+    assert.ok(extraProp)
+    results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
+    assert.equal(results[0]['siretextra'], 'Extra information 2')
+    assert.equal(results[1]['siretextra'], 'Extra information 2')
+    assert.ok(!results[0]['_siret.extra'])
+
+    // overwrite some attributes of the extended property one more time
+    await ax.patch('/api/v1/datasets/slave', {
+      extensions: [{
+        active: true,
+        type: 'remoteService',
+        remoteService: remoteService.id,
+        action: 'masterData_bulkSearch_siret',
+        select: ['extra'],
+        overwrite: {
+          extra: {
+            'x-originalName': 'siretExtExtra',
+            title: 'Extra extended'
+          }
+        },
+      }]
+    })
+    await workers.hook('extender/slave')
+    slave = await workers.hook('finalizer/slave')
+    assert.equal(slave.schema.find(p => p.key === '_siret.extra'), undefined)
+    assert.equal(slave.schema.find(p => p.key === 'siretextra'), undefined)
+    extraProp = slave.schema.find(p => p.key === 'siretextextra')
+    assert.ok(extraProp)
+    results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
+    assert.equal(results[0]['siretextextra'], 'Extra information 2')
+    assert.equal(results[1]['siretextextra'], 'Extra information 2')
+    assert.ok(!results[0]['_siret.extra'])
+    assert.ok(!results[0]['siretextra'])
+
+    // patching title has no effect
+    await ax.patch('/api/v1/datasets/slave', { title: 'Slave 2' })
+    results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
+    assert.equal(results[0]['siretextextra'], 'Extra information 2')
+
+    // forcing a reindex has no effect
+    await global.ax.superadmin.post('/api/v1/datasets/slave/_reindex')
+    slave = await workers.hook('finalizer/slave')
+    assert.equal(slave.schema.find(p => p.key === '_siret.extra'), undefined)
+    assert.equal(slave.schema.find(p => p.key === 'siretextra'), undefined)
+    extraProp = slave.schema.find(p => p.key === 'siretextextra')
+
     // patching the dataset to remove extension
     await ax.patch('/api/v1/datasets/slave', {
       extensions: []
@@ -218,6 +285,12 @@ describe('Master data management', function () {
     await workers.hook('finalizer/slave')
     results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.ok(!results[0]['_siret.extra'])
+    assert.ok(!results[0]['siretextextra'])
+    assert.ok(!results[0]['siretextra'])
+    const docs = await restDatasetsUtils.collection(global.db, slave).find({}).toArray()
+    assert.ok(!docs[0]['_siret'])
+    assert.ok(!docs[0]['siretextextra'])
+    assert.ok(!docs[0]['siretextra'])
   })
 
   it('accept an input with elasticsearch special chars', async function () {
@@ -314,7 +387,7 @@ describe('Master data management', function () {
     await ax.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
     await workers.hook('finalizer/master')
 
-    // create another slave from a geojson file
+    // create a slave from a geojson file
     let geojsonSlave = await testUtils.sendDataset('datasets/dataset-siret-extensions.geojson', ax)
     geojsonSlave.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
     let res = await ax.patch(`/api/v1/datasets/${geojsonSlave.id}`, {
@@ -336,11 +409,40 @@ describe('Master data management', function () {
     assert.equal(res.data.features[0].properties.Label, 'koumoul')
     assert.equal(res.data.features[0].properties._siret.extra, 'Extra information')
     assert.equal(res.data.features[0].properties._siret.denomination, 'Dénomination string')
-    const results = (await ax.get(`/api/v1/datasets/${geojsonSlave.id}/lines`)).data.results
+    let results = (await ax.get(`/api/v1/datasets/${geojsonSlave.id}/lines`)).data.results
     assert.equal(results[0].siret, '82898347800011')
     assert.equal(results[0].label, 'koumoul')
     assert.equal(results[0]['_siret.extra'], 'Extra information')
     assert.equal(results[0]['_siret.denomination'], 'Dénomination string')
+
+    // patch the extension to overwrite keys
+    await ax.patch(`/api/v1/datasets/${geojsonSlave.id}`, {
+      extensions: [{
+        active: true,
+        type: 'remoteService',
+        remoteService: remoteService.id,
+        action: 'masterData_bulkSearch_siret',
+        select: ['extra', 'denomination'],
+        overwrite: {
+          extra: {
+            'x-originalName': 'siretExtra'
+          },
+          denomination: {
+            'x-originalName': 'siretDenomination'
+          }
+        }
+      }]
+    })
+    geojsonSlave = await workers.hook(`finalizer/${geojsonSlave.id}`)
+    res = await ax.get(`/api/v1/datasets/${geojsonSlave.id}/full`)
+    assert.equal(res.data.features.length, 1)
+    assert.equal(res.data.features[0].properties.siretExtra, 'Extra information')
+    assert.equal(res.data.features[0].properties.siretDenomination, 'Dénomination string')
+    results = (await ax.get(`/api/v1/datasets/${geojsonSlave.id}/lines`)).data.results
+    assert.equal(results[0].siret, '82898347800011')
+    assert.equal(results[0].label, 'koumoul')
+    assert.equal(results[0].siretextra, 'Extra information')
+    assert.equal(results[0].siretdenomination, 'Dénomination string')
   })
 
   it('not return calculated properties', async function () {

@@ -23,11 +23,13 @@ import debugLib from 'debug'
 import { parseURL } from 'ufo'
 import exprEval from '@data-fair/data-fair-shared/expr-eval.js'
 import { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
+import * as fieldsSniffer from './fields-sniffer.js'
 
 export { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 
 const debugMasterData = debugLib('master-data')
 const debug = debugLib('extensions')
+const debugOverwrite = debugLib('extensions-overwrite')
 
 /**
  * create short ids for extensions that will be used as prefix of the properties ids in the schema
@@ -38,28 +40,34 @@ const debug = debugLib('extensions')
  */
 export const prepareExtensions = (locale, extensions, oldExtensions = []) => {
   for (const e of extensions) {
-    if (e.type === 'remoteService' && !e.shortId && !e.propertyPrefix) {
+    if (e.type === 'remoteService') {
       const oldExtension = oldExtensions.find((/** @type {any} */oldE) => oldE.remoteService === e.remoteService && oldE.action === e.action)
       if (oldExtension) {
-        // do not reprocess already assigned shortIds / propertyPrefixes to prevent compatibility break
-        if (oldExtension.shortId) e.shortId = oldExtension.shortId
-        if (oldExtension.propertyPrefix) e.propertyPrefix = oldExtension.propertyPrefix
-      } else {
-        // only apply to new extensions to prevent compatibility break
-        let propertyPrefix = e.action.toLowerCase()
-        for (const term of ['masterdata', 'find', 'bulk', 'search']) {
-          propertyPrefix = propertyPrefix.replace(term, '')
-        }
-        for (const char of [':', '-', '.', ' ']) {
-          propertyPrefix = propertyPrefix.replace(char, '_')
-        }
-        if (propertyPrefix.startsWith('post')) propertyPrefix = propertyPrefix.replace('post', '')
-        e.propertyPrefix = propertyPrefix.replace(/__/g, '_').replace(/^_/, '').replace(/_$/, '')
-        e.propertyPrefix = '_' + e.propertyPrefix
+        if (!equal(oldExtension.select, e.select)) e.needsUpdate = true
+        if (!equal(oldExtension.overwrite, e.overwrite)) e.needsUpdate = true
+      }
+      if (!e.shortId && !e.propertyPrefix) {
+        if (oldExtension) {
+          // do not reprocess already assigned shortIds / propertyPrefixes to prevent compatibility break
+          if (oldExtension.shortId) e.shortId = oldExtension.shortId
+          if (oldExtension.propertyPrefix) e.propertyPrefix = oldExtension.propertyPrefix
+        } else {
+          // only apply to new extensions to prevent compatibility break
+          let propertyPrefix = e.action.toLowerCase()
+          for (const term of ['masterdata', 'find', 'bulk', 'search']) {
+            propertyPrefix = propertyPrefix.replace(term, '')
+          }
+          for (const char of [':', '-', '.', ' ']) {
+            propertyPrefix = propertyPrefix.replace(char, '_')
+          }
+          if (propertyPrefix.startsWith('post')) propertyPrefix = propertyPrefix.replace('post', '')
+          e.propertyPrefix = propertyPrefix.replace(/__/g, '_').replace(/^_/, '').replace(/_$/, '')
+          e.propertyPrefix = '_' + e.propertyPrefix
 
-        e.needsUpdate = true
+          e.needsUpdate = true
 
-        // TODO: also check if there is a conflict with an existing calculate property ?
+          // TODO: also check if there is a conflict with an existing calculate property ?
+        }
       }
     }
     if (e.type === 'exprEval' && e.active) {
@@ -153,6 +161,23 @@ export const extend = async (app, dataset, extensions, updateMode, ignoreDraftLi
   debug('Extension is over')
 }
 
+const applyExtensionResult = (extensionKey, overwrittenKeys, item, selectedResult, onlyEmitChanges) => {
+  let hasChanges = false
+  if (overwrittenKeys.length) debugOverwrite('apply overwritten keys to result', selectedResult)
+  const objValue = overwrittenKeys.length ? { ...selectedResult } : selectedResult
+  for (const [name, newKey] of overwrittenKeys) {
+    if (onlyEmitChanges && !equal(item[newKey], objValue[name])) hasChanges = true
+    item[newKey] = objValue[name]
+    delete objValue[name]
+  }
+  if (overwrittenKeys.length) debugOverwrite('...altered result', selectedResult, item)
+
+  if (onlyEmitChanges && !equal(item[extensionKey], objValue)) hasChanges = true
+  item[extensionKey] = objValue
+
+  return hasChanges
+}
+
 // Perform HTTP requests to a remote service to extend data
 class ExtensionsStream extends Transform {
   constructor ({ extensions, dataset, db, es, onlyEmitChanges }) {
@@ -191,6 +216,18 @@ class ExtensionsStream extends Transform {
     for (const extension of this.extensions) {
       debug(`Send req with ${this.buffer.length} items`, this.reqOpts)
       if (extension.type === 'remoteService') {
+        const overwrittenKeys = []
+        if (extension.overwrite) {
+          for (const name in extension.overwrite) {
+            if (extension.overwrite[name]['x-originalName']) {
+              const propKey = fieldsSniffer.escapeKey(extension.overwrite[name]['x-originalName'])
+              overwrittenKeys.push([name, propKey])
+            }
+          }debugOverwrite('apply overwritten key from extension', overwrittenKeys)
+        } else {
+          debugOverwrite('no extension overwrite to apply')
+        }
+
         const opts = {
           method: extension.action.operation.method,
           url: extension.remoteService.server.replace(config.remoteServicesPrivateMapping[0], config.remoteServicesPrivateMapping[1]) + extension.action.operation.path,
@@ -220,6 +257,7 @@ class ExtensionsStream extends Transform {
         }
 
         const localMasterData = extension.remoteService.server.startsWith(`${config.publicUrl}/api/v1/datasets/`)
+        debug('is extension local ?', localMasterData, extension.remoteService.server, `${config.publicUrl}/api/v1/datasets/`)
 
         // TODO: no need to use a cache in the special case of a locale master-data dataset ?
         const inputCacheKeys = inputs.map(input => stringify([input, extension.select || []]))
@@ -229,13 +267,15 @@ class ExtensionsStream extends Transform {
           if (Object.keys(inputs[i]).length === 1) continue
           let cachedValue
           if (!localMasterData) {
-          // TODO: read cached values in a bulk read ?
+            // TODO: read cached values in a bulk read ?
             cachedValue = await this.db.collection('extensions-cache')
               .findOneAndUpdate({ extensionKey: extensionCacheKey, input: inputCacheKeys[i] }, { $set: { lastUsed: new Date() } })
           }
 
-          if (cachedValue) this.buffer[i][extension.extensionKey] = cachedValue.output
-          else opts.data += JSON.stringify(inputs[i]) + '\n'
+          if (cachedValue) {
+            const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], cachedValue.output, this.onlyEmitChanges)
+            if (hasChanges) changesIndexes.add(i)
+          } else opts.data += JSON.stringify(inputs[i]) + '\n'
         }
         if (!opts.data) continue
 
@@ -259,19 +299,14 @@ class ExtensionsStream extends Transform {
         }
         if (typeof data === 'object') data = JSON.stringify(data) // axios parses the object when there is only one
         const results = data.split('\n').filter(line => !!line).map(JSON.parse)
+
         for (const result of results) {
           const selectFields = extension.select || []
           const selectedResult = Object.keys(result)
-            .filter(key => selectFields.length === 0 || selectFields.includes(key) || key === extension.errorKey)
-            .filter(key => !!this.dataset.schema.find(p => p.key === extension.extensionKey + '.' + key))
+            .filter(key => ((selectFields.length === 0 && !!this.dataset.schema.find(p => p.key === extension.extensionKey + '.' + key)) || selectFields.includes(key) || key === extension.errorKey))
             .reduce((a, key) => { a[key] = result[key]; return a }, {})
 
           const i = result[extension.idInput.name]
-          if (this.onlyEmitChanges && !equal(this.buffer[i][extension.extensionKey], selectedResult)) {
-            changesIndexes.add(i)
-          }
-          this.buffer[i][extension.extensionKey] = selectedResult
-
           if (!localMasterData) {
             // TODO: do this in bulk ?
             await this.db.collection('extensions-cache')
@@ -281,6 +316,9 @@ class ExtensionsStream extends Transform {
                 { upsert: true }
               )
           }
+
+          const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], selectedResult, this.onlyEmitChanges)
+          if (hasChanges) changesIndexes.add(i)
         }
       } else if (extension.evaluate && extension.property) {
         for (const i in this.buffer) {
@@ -381,11 +419,12 @@ export const prepareExtensionsSchema = async (db, schema, extensions) => {
         .filter(output => !output.concept || output.concept !== 'http://schema.org/identifier')
         .filter(output => selectFields.length === 0 || selectFields.includes(output.name))
         .map(output => {
-          const key = extensionKey + '.' + output.name
+          const overwrite = extension.overwrite?.[output.name] ?? {}
+          const key = overwrite['x-originalName'] ? fieldsSniffer.escapeKey(overwrite['x-originalName']) : (extensionKey + '.' + output.name)
           const existingField = schema.find(field => field.key === key)
           if (existingField) return existingField
           // this is for compatibility, new extensions should always have propertyPrefix
-          const originalName = extension.propertyPrefix ? key : output.name
+          const originalName = overwrite['x-originalName'] ?? (extension.propertyPrefix ? key : output.name)
           const field = {
             key,
             'x-originalName': originalName,

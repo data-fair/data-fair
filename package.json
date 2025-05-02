@@ -1,6 +1,6 @@
 {
   "name": "data-fair",
-  "version": "4.38.4",
+  "version": "4.39.0",
   "description": "",
   "main": "server",
   "scripts": {
@@ -59,6 +59,7 @@
     "@commitlint/config-conventional": "^17.4.4",
     "@data-fair/lib-types-builder": "^1.7.0",
     "@koumoul/gh-pages-multi": "^0.7.1",
+    "@types/content-disposition": "^0.5.8",
     "@types/node": "^22.12.0",
     "@types/unzipper": "^0.10.10",
     "clean-modules": "^2.0.4",
