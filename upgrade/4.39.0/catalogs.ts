@@ -1,6 +1,6 @@
 import type { UpgradeScript } from '@data-fair/lib-node/upgrade-scripts.js'
 import config from '../../api/src/config.ts'
-import axios from 'axios'
+import axios from '@data-fair/lib-node/axios.js'
 
 const applyChanges = false
 
@@ -53,6 +53,16 @@ const upgradeScript: UpgradeScript = {
 
     // 1. Create catalogs in the new catalogs service
     debug('[info] Step 1 : Creating catalogs in the new catalogs service')
+    if (applyChanges) {
+      // Check if they are already catalogs in the new catalogs service
+      const res = await axios.get(`${config.privateCatalogsUrl}/api/catalogs`, {
+        headers: { 'x-secret-key': config.secretKeys.catalogs }
+      })
+      if (res.data.length > 0) {
+        debug('[info] Catalogs already exist in the new catalogs service, skipping upgrade')
+        return
+      }
+    }
 
     const catalogs = await db.collection('catalogs').find({}).toArray()
     const pluginsMap = {
@@ -64,7 +74,7 @@ const upgradeScript: UpgradeScript = {
       mydatacatalogue: undefined
     }
     /** Store data-fair catalog id as key and new catalogs catalog id */
-    const catalogsIdsMap: Record<string, string> = {}
+    const newCatalogs: Record<string, any> = {}
     const catalogsStats = {
       total: catalogs.length,
       created: 0,
@@ -73,7 +83,7 @@ const upgradeScript: UpgradeScript = {
     }
 
     // Create catalogs in the new catalogs service
-    catalogs.map(async (catalog) => {
+    for (const catalog of catalogs) {
       const catalogPlugin = pluginsMap[catalog.type]
       if (!catalogPlugin) {
         catalogsStats.notCreatedTypes.add(catalog.type)
@@ -83,13 +93,13 @@ const upgradeScript: UpgradeScript = {
 
       const catalogConfig: Record<string, any> = { url: catalog.url }
       if (catalogPlugin === '@data-fair-catalog-udata') {
-        if (!config.apiKey) debug(`[warn] No API key for udata catalog ${catalog.id}`)
-        config.apiKey = catalog.apiKey || ''
+        if (!catalog.apiKey) debug(`[warn] No API key for udata catalog ${catalog.id}`)
+        catalogConfig.apiKey = catalog.apiKey || ''
         if (catalog.organization) {
-          if (catalog.organization.id && catalog.organization.name) config.organization = catalog.organization
+          if (catalog.organization.id && catalog.organization.name) catalogConfig.organization = catalog.organization
           else debug(`[warn] Invalid organization for udata catalog ${catalog.id} : ${JSON.stringify(catalog.organization)}`)
         }
-        config.portal = catalog.dataFairBaseUrl || 'https://koumoul.com/data-fair'
+        catalogConfig.portal = catalog.dataFairBaseUrl || 'https://koumoul.com/data-fair'
       }
 
       const newCatalog = {
@@ -97,22 +107,32 @@ const upgradeScript: UpgradeScript = {
         description: catalog.description,
         plugin: catalogPlugin,
         owner: catalog.owner,
-        config: catalogConfig
+        config: catalogConfig,
+        created: {
+          id: catalog.createdBy.id,
+          name: catalog.createdBy.name ?? 'catalogs-update',
+          date: catalog.createdAt
+        },
+        updated: {
+          id: catalog.updatedBy.id,
+          name: catalog.updatedBy.name ?? 'catalogs-update',
+          date: catalog.updatedAt
+        }
       }
 
       // Post on catalogs service the new catalog
       debug(`[info] Creating catalog ${catalog.id} (${catalogPlugin})`)
-      const res = await axios.post(`${config.privateCatalogsUrl}/api/v1/projects/catalogs`, newCatalog, {
+      const res = await axios.post(`${config.privateCatalogsUrl}/api/catalogs/_internal`, newCatalog, {
         headers: { 'x-secret-key': config.secretKeys.catalogs }
       })
       catalogsStats.created++
-      catalogsIdsMap[catalog.id] = res.data._id
-    })
+      newCatalogs[catalog.id] = res.data
+    }
 
     // 2. Migrate datasets publications
     debug('[info] Step 2 : Migrating datasets publications')
     const datasets = await db.collection('datasets').find({
-      publication: {
+      publications: {
         $exists: true,
         $ne: []
       }
@@ -122,12 +142,11 @@ const upgradeScript: UpgradeScript = {
       total: datasets.length,
       notMigrated: []
     }
-    datasets.map(async (dataset) => {
+    await Promise.all(datasets.map(async (dataset) => {
       const newPublications: Record<string, any>[] = []
-      let hasChanges = false
 
       for (const publication of dataset.publications) {
-        if (!catalogsIdsMap[publication.catalog]) {
+        if (!newCatalogs[publication.catalog]._id) {
           debug(`[warn skip] Dataset ${dataset.id} publication ${publication.id} not migrated, new id for the catalog ${publication.catalog} not found`)
           datasetsStats.notMigrated.push({ datasetId: dataset.id, publication })
           continue
@@ -135,7 +154,7 @@ const upgradeScript: UpgradeScript = {
 
         const newPublication: Record<string, any> = {
           puiblicationId: publication.id,
-          catalogId: catalogsIdsMap[publication.catalog],
+          catalogId: newCatalogs[publication.catalog]._id,
           status: publication.status
         }
         if (publication.publishedAt) newPublication.publishedAt = publication.publishedAt
@@ -149,7 +168,7 @@ const upgradeScript: UpgradeScript = {
         }
 
         // Get the catalog plugin from the catalog id
-        const catalog = catalogs.find((c) => c.id === newPublication.catalogId)!
+        const catalog = newCatalogs[publication.catalog]
         if (catalog.plugin === '@data-fair-catalog-udata') {
           if (publication.result.id) newPublication.remoteDatasetId = publication.result.id
           else {
@@ -160,10 +179,11 @@ const upgradeScript: UpgradeScript = {
             newPublication.isResource = true
             // Get the remote resource id from udata
             const res = await axios.get(`${catalog.config.url}/api/1/datasets/${newPublication.remoteDatasetId}`, {
-              headers: { 'X-API-KEY': `${catalog.config.apiKey}` }
+              headers: { 'X-API-KEY': `${catalog.config.apiKey}` },
+              validateStatus: (status) => (status >= 200 && status < 300) || status === 404
             })
             if (res.data) {
-              const remoteResource = res.data.resources.find((r: any) => r.extras.datafairDatasetId === dataset.id)
+              const remoteResource = res.data?.resources?.find((r: any) => r.extras.datafairDatasetId === dataset.id)
               if (remoteResource) newPublication.remoteResourceId = remoteResource.id
               else {
                 debug(`[warn skip] Dataset ${dataset.id} publication ${publication.id}: resource not found in the remote catalog.`)
@@ -177,7 +197,6 @@ const upgradeScript: UpgradeScript = {
         }
 
         newPublications.push(newPublication)
-        hasChanges = true
       }
 
       if (applyChanges) {
@@ -186,12 +205,10 @@ const upgradeScript: UpgradeScript = {
           { $set: { publications: newPublications } }
         )
       }
-      if (hasChanges) {
-        debug(`[info] Dataset ${dataset.id} publications migrated :`)
-        // debug(`[info] Before : ${JSON.stringify(dataset.publications, null, 2)}`)
-        debug(`[info] After :${JSON.stringify(newPublications, null, 2)}`)
-      }
-    })
+      debug(`[info] Dataset ${dataset.id} publications migrated :`)
+      // debug(`[info] Before : ${JSON.stringify(dataset.publications, null, 2)}`)
+      debug(`[info] After : ${JSON.stringify(newPublications, null, 2)}`)
+    }))
 
     // 3. Clean the database
     debug('[info] Step 3 : Cleaning the database')
@@ -212,7 +229,7 @@ const upgradeScript: UpgradeScript = {
     debug(`[stats] ${catalogsStats.total} catalogs to migrate`)
     debug(`[stats] ${catalogsStats.created} catalogs migrated`)
     debug(`[stats] Catalogs types not migrated : ${Array.from(catalogsStats.notCreatedTypes).join(', ')}`)
-    debug(`[stats] Catalogs not migrated :\n\t- ${catalogsStats.notCreated}`)
+    debug(`[stats] Catalogs not migrated :\n\t- ${Object.keys(catalogsStats.notCreated).join('\n\t- ')}`)
 
     // Log nb of remote file datasets by catalog
     const datasetsWithRemotesFiles = await db.collection('datasets').find({ 'remoteFile.catalog': { $exists: true } }).toArray()
@@ -222,10 +239,12 @@ const upgradeScript: UpgradeScript = {
       acc[catalogId]++
       return acc
     }, {})
-    debug(`[stats] ${datasets.length} remoteFiles using a catalogs`)
+    debug(`[stats] ${datasetsWithRemotesFiles.length} remoteFiles using a catalogs`)
     for (const [catalogId, count] of Object.entries(remoteFileDatasetsStats)) {
       debug(`[stats] ${catalogId}: ${count} datasets`)
     }
+
+    debug(`[stats] ${cleanStats.nbCatalogs} catalogs removed from datafair`)
   }
 }
 
