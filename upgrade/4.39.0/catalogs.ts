@@ -2,7 +2,7 @@ import type { UpgradeScript } from '@data-fair/lib-node/upgrade-scripts.js'
 import config from '../../api/src/config.ts'
 import axios from '@data-fair/lib-node/axios.js'
 
-const applyChanges = false
+const applyChanges = true
 
 const upgradeScript: UpgradeScript = {
   description: 'Export catalogs managment',
@@ -205,9 +205,11 @@ const upgradeScript: UpgradeScript = {
           { $set: { publications: newPublications } }
         )
       }
-      debug(`[info] Dataset ${dataset.id} publications migrated :`)
-      // debug(`[info] Before : ${JSON.stringify(dataset.publications, null, 2)}`)
-      debug(`[info] After : ${JSON.stringify(newPublications, null, 2)}`)
+      if (newPublications.length > 0) {
+        debug(`[info] Dataset ${dataset.id} publications migrated`)
+        // debug(`[info] Before : ${JSON.stringify(dataset.publications, null, 2)}`)
+        // debug(`[info] After : ${JSON.stringify(newPublications, null, 2)}`)
+      }
     }))
 
     // 3. Clean the database
@@ -244,6 +246,8 @@ const upgradeScript: UpgradeScript = {
       debug(`[stats] ${catalogId}: ${count} datasets`)
     }
 
+    debug(`[stats] ${datasetsStats.total} datasets with publications`)
+    debug(`[stats] ${datasetsStats.notMigrated.length} publications not migrated`)
     debug(`[stats] ${cleanStats.nbCatalogs} catalogs removed from datafair`)
   }
 }
