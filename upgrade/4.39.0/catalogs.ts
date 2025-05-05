@@ -151,7 +151,7 @@ const upgradeScript: UpgradeScript = {
         }
 
         const newPublication: Record<string, any> = {
-          puiblicationId: publication.id,
+          publicationId: publication.id,
           catalogId: newCatalogs[publication.catalog]._id,
           status: publication.status
         }
@@ -162,6 +162,7 @@ const upgradeScript: UpgradeScript = {
         }
         if (!publication.result) {
           debug(`[warn skip] Dataset ${dataset.id} publication ${publication.id} has no result. Status : ${publication.status}`)
+          datasetsStats.notMigrated.push({ datasetId: dataset.id, publication })
           continue
         }
 
@@ -171,6 +172,7 @@ const upgradeScript: UpgradeScript = {
           if (publication.result.id) newPublication.remoteDatasetId = publication.result.id
           else {
             debug(`[warn skip] Dataset ${dataset.id} publication ${publication.id} has no result id.`)
+            datasetsStats.notMigrated.push({ datasetId: dataset.id, publication })
             continue
           }
           if (publication.addToDataset) {
@@ -185,10 +187,12 @@ const upgradeScript: UpgradeScript = {
               if (remoteResource) newPublication.remoteResourceId = remoteResource.id
               else {
                 debug(`[warn skip] Dataset ${dataset.id} publication ${publication.id}: resource not found in the remote catalog.`)
+                datasetsStats.notMigrated.push({ datasetId: dataset.id, publication })
                 continue
               }
             } else {
               debug(`[warn skip] Dataset ${dataset.id} publication ${publication.id}: dataset not found in the remote catalog.`)
+              datasetsStats.notMigrated.push({ datasetId: dataset.id, publication })
               continue
             }
           }
