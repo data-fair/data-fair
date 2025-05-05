@@ -81,6 +81,7 @@
     "test"
   ],
   "dependencies": {
-    "@turf/simplify": "^7.2.0"
+    "@turf/simplify": "^7.2.0",
+    "@turf/truncate": "^7.2.0"
   }
 }

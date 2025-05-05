@@ -177,8 +177,8 @@ module.exports = {
     mongoSize: 2000 // 2G
   },
   tiles: {
-    geojsonvtTolerance: 100000,
-    simplifyZoomBase: 8
+    geojsonvtTolerance: 4, // slightly higher simplification than default (3)
+    vtPrepareMaxZoom: 10
   },
   analytics: {}, // a "modules" definition for @koumoul/vue-multianalytics
   browserLogLevel: 'error',

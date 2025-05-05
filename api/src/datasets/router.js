@@ -671,30 +671,39 @@ const readLines = async (req, res) => {
   // case of own lines query
   if (req.params.owner) query.owner = req.params.owner
 
-  if (['geojson', 'mvt', 'vt', 'pbf'].includes(query.format)) {
-    query.select = (query.select ? query.select : tiles.defaultSelect(req.dataset).join(','))
-    if (!query.select.includes('_geoshape_simple') && req.dataset.schema.find(p => p.key === '_geoshape_simple')) query.select += ',_geoshape_simple'
-    else if (!query.select.includes('_geoshape') && req.dataset.schema.find(p => p.key === '_geoshape')) query.select += ',_geoshape'
-    if (!query.select.includes('_geopoint')) query.select += ',_geopoint'
-  }
-  if (query.format === 'wkt') {
-    if (req.dataset.schema.find(p => p.key === '_geoshape')) query.select = '_geoshape'
-    else query.select = '_geopoint'
-  }
-
-  const sampling = query.sampling || 'neighbors'
-  if (!['max', 'neighbors'].includes(sampling)) return res.status(400).type('text/plain').send('Sampling can be "max" or "neighbors"')
-
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(query.format)
 
   let xyz
   if (vectorTileRequested) {
-    // default is smaller (see es/commons) for other format, but we want filled tiles by default
-    query.size = query.size || config.elasticsearch.maxPageSize + ''
     // sorting by rand provides more homogeneous distribution in tiles
     query.sort = query.sort || '_rand'
     if (!query.xyz) return res.status(400).type('text/plain').send('xyz parameter is required for vector tile format.')
     xyz = query.xyz.split(',').map(Number)
+  }
+  const defaultSampling = req.dataset.schema.find(p => p.key === '_geoshape')?.['x-capabilities']?.vtPrepare ? 'max' : 'neighbors'
+  const sampling = query.sampling || defaultSampling
+  if (!['max', 'neighbors'].includes(sampling)) return res.status(400).type('text/plain').send('Sampling can be "max" or "neighbors"')
+
+  const geoshapeProp = req.dataset.schema.find(p => p.key === '_geoshape')
+  const vtPrepared = vectorTileRequested && xyz[2] <= config.tiles.vtPrepareMaxZoom && geoshapeProp?.['x-capabilities']?.vtPrepare
+
+  if (['geojson', 'mvt', 'vt', 'pbf'].includes(query.format)) {
+    const select = (query.select ? query.select.split(',') : tiles.defaultSelect(req.dataset))
+    if (!vtPrepared && !select.includes('_geoshape') && geoshapeProp) {
+      select.push('_geoshape')
+    }
+    if (!select.includes('_geopoint')) select.push('_geopoint')
+    query.select = select.join(',')
+  }
+
+  if (vectorTileRequested) {
+    // default is smaller (see es/commons) for other format, but we want filled tiles by default
+    if (!('size' in query)) query.size = config.elasticsearch.maxPageSize + ''
+  }
+
+  if (query.format === 'wkt') {
+    if (geoshapeProp) query.select = '_geoshape'
+    else query.select = '_geopoint'
   }
 
   observe.reqStep(req, 'prepare')
@@ -712,16 +721,15 @@ const readLines = async (req, res) => {
     observe.reqStep(req, 'checkTileCache')
     if (value) {
       res.type('application/x-protobuf')
-      res.setHeader('x-tilesmode', 'cache')
+      res.setHeader('x-tilesmode', 'cache/' + sampling)
       res.throttleEnd('static')
       return res.status(200).send(value.buffer)
     }
     cacheHash = hash
   }
 
+  let tilesMode = 'es/' + sampling
   if (vectorTileRequested) {
-    res.setHeader('x-tilesmode', 'es')
-
     const requestedSize = Number(query.size)
     if (sampling === 'neighbors') {
       // count docs in neighboring tiles to perform intelligent sampling
@@ -748,36 +756,52 @@ const readLines = async (req, res) => {
           const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
           const sizeFilter = mainCount * sampleRate
           query.size = Math.min(sizeFilter, requestedSize)
-
-          // only add _geoshape to tile if it is not going to be huge
-          // otherwise features will be shown as points
-          if (req.dataset.storage && req.dataset.storage.indexed && req.dataset.count) {
-            const meanFeatureSize = Math.round(req.dataset.storage.indexed.size / req.dataset.count)
-            const expectedTileSize = meanFeatureSize * maxCount
-            // arbitrary limit at 50mo
-            if (expectedTileSize > (50 * 1000 * 1000)) query.select = query.select.replace(',_geoshape', '')
-          }
         }
       } catch (err) {
         await manageESError(req, err)
       }
 
+      tilesMode += '/' + query.size
       observe.reqStep(req, 'neighborsSampling')
     }
   }
 
+  // eslint-disable-next-line no-unused-vars
+  const [_, size] = findUtils.pagination(query)
+
   let esResponse
-  try {
-    esResponse = await esUtils.search(req.app.get('es'), req.dataset, query, req.publicBaseUrl, query.html === 'true')
-  } catch (err) {
-    await manageESError(req, err)
+  if (vectorTileRequested && sampling === 'max') {
+    let previousEsResponse
+    let totalLength = 0
+    for (let i = 0; i < 3; i++) {
+      if (previousEsResponse) {
+        if (size && previousEsResponse.hits.hits.length === size && totalLength < 10000000) {
+          const lastHit = previousEsResponse.hits.hits[previousEsResponse.hits.hits.length - 1]
+          query.after = JSON.stringify(lastHit.sort).slice(1, -1)
+        } else {
+          break
+        }
+      }
+      try {
+        previousEsResponse = await esUtils.search(req.app.get('es'), req.dataset, query, req.publicBaseUrl, vtPrepared && xyz.join('-'))
+      } catch (err) {
+        await manageESError(req, err)
+        break
+      }
+      totalLength += previousEsResponse.contentLength
+      if (!esResponse) esResponse = previousEsResponse
+      else esResponse.hits.hits = esResponse.hits.hits.concat(previousEsResponse.hits.hits)
+    }
+  } else {
+    try {
+      esResponse = await esUtils.search(req.app.get('es'), req.dataset, query, req.publicBaseUrl, vtPrepared && xyz.join('-'))
+    } catch (err) {
+      await manageESError(req, err)
+    }
   }
   observe.reqStep(req, 'search')
 
   // manage pagination based on search_after, cd https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
-
-  // eslint-disable-next-line no-unused-vars
-  const [_, size] = findUtils.pagination(query)
 
   let nextLinkURL
   if (size && esResponse.hits.hits.length === size) {
@@ -812,13 +836,15 @@ const readLines = async (req, res) => {
 
   if (vectorTileRequested) {
     const flatten = getFlatten(req.dataset, true)
-    const tile = await tiles.geojson2pbf(geo.result2geojson(esResponse, flatten), xyz)
+    const tile = await tiles.geojson2pbf(geo.result2geojson(esResponse, flatten), xyz, vtPrepared)
+    if (vtPrepared) tilesMode += '/prepared'
     observe.reqStep(req, 'geojson2pbf')
     // 204 = no-content, better than 404
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
     if (!config.cache.disabled) cache.set(db, cacheHash, new mongodb.Binary(tile))
+    res.setHeader('x-tilesmode', tilesMode + '/' + esResponse.hits.hits.length)
     return res.status(200).send(tile)
   }
 

@@ -7,7 +7,8 @@ import rewind from '@turf/rewind'
 import cleanCoords from '@turf/clean-coords'
 import kinks from '@turf/kinks'
 import unkink from '@turf/unkink-polygon'
-import simplify from '@turf/simplify'
+import geojsonvt from 'geojson-vt'
+import vtpbf from 'vt-pbf'
 import { exec } from 'child-process-promise'
 import tmp from 'tmp-promise'
 import proj4 from 'proj4'
@@ -51,7 +52,13 @@ export const schemaHasGeometry = (schema) => {
 }
 
 export const geoFieldsKey = (schema) => {
-  return schemaHasGeometry(schema) + '/' + schemaHasGeopoint(schema)
+  const geomPropKey = schemaHasGeometry(schema)
+  let key = geomPropKey + '/' + schemaHasGeopoint(schema)
+  if (geomPropKey) {
+    const geomProp = schema.find(p => p.key === geomPropKey)
+    if (geomProp['x-capabilities']?.vtPrepare) key += '/_vt_prepared'
+  }
+  return key
 }
 
 export const fixLon = (val) => {
@@ -180,7 +187,6 @@ export const geometry2fields = async (dataset, doc) => {
   }
 
   // check if simplify is a good idea ? too CPU intensive for our backend ?
-  // const simplified = turf.simplify({type: 'Feature', geometry: JSON.parse(doc[prop.key])}, {tolerance: 0.01, highQuality: false})
   const point = pointOnFeature(feature)
   const fields = {
     _geopoint: point.geometry.coordinates[1] + ',' + point.geometry.coordinates[0]
@@ -190,8 +196,19 @@ export const geometry2fields = async (dataset, doc) => {
     fields._geocorners = polygon.geometry.coordinates[0].map(c => c[1] + ',' + c[0])
   }
   fields._geoshape = feature.geometry
-  if (capabilities?.geoShapeSimple) {
-    fields._geoshape_simple = simplifyForZoom(feature.geometry, config.tiles.simplifyZoomBase)
+  if (capabilities?.vtPrepare) {
+    fields._vt_prepared = []
+    const vt = geojsonvt(
+      { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: feature.geometry }] },
+      { indexMaxZoom: config.tiles.vtPrepareMaxZoom, tolerance: config.tiles.geojsonvtTolerance, maxZoom: config.tiles.vtPrepareMaxZoom, indexMaxPoints: 0 }
+    )
+    for (const vtTileInfo of Object.values(vt.tiles).filter(f => f.features.length)) {
+      const { x, y, z } = vtTileInfo
+      const tile = vt.getTile(z, x, y)
+      const pbf = Buffer.from(vtpbf.fromGeojsonVt({ f: tile }, { version: 2 }))
+      // console.log(`prepared tile from geojson-vt ${vtTileInfo.z},${vtTileInfo.x},${vtTileInfo.y}\tgeojson=${JSON.stringify(feature.geometry).length.toLocaleString()}\tpbf=${pbf.length.toLocaleString()}\tbase64=${pbf.toString('base64').length.toLocaleString()}`)
+      fields._vt_prepared.push({ xyz: `${x}-${y}-${z}`, pbf: pbf.toString('base64') })
+    }
   }
   return fields
 }
@@ -202,9 +219,8 @@ export const result2geojson = (esResponse, flatten) => {
     total: esResponse.hits.total.value,
     features: esResponse.hits.hits.map(hit => {
       const properties = hit._source
-      let geometry = properties._geoshape ?? properties._geoshape_simple
+      let geometry = properties._geoshape
       delete properties._geoshape
-      delete properties._geoshape_simple
       if (!geometry && properties._geopoint) {
         const [lat, lon] = properties._geopoint.split(',')
         delete properties._geopoint
@@ -307,12 +323,4 @@ const prepair = async (geometry) => {
       tmpGeojsonDir.cleanup()
     }
   }
-}
-
-export const simplifyForZoom = (geometry, zoom) => {
-  // apply same logic for tolerance calculation as geojson-vt that we use to create vector tiles
-  // https://github.com/mapbox/geojson-vt/blob/main/src/convert.js#L32
-  const tolerance = Math.pow(config.tiles.geojsonvtTolerance / ((1 << zoom) * 4096), 2)
-
-  return simplify(geometry, { tolerance })
 }

@@ -153,9 +153,6 @@ export const extendedSchema = async (db, dataset, fixConcept = true) => {
       const geoShape = { 'x-calculated': true, key: '_geoshape', type: 'object', title: 'Géométrie', description: 'Au format d\'une géométrie GeoJSON' }
       if (geomProp['x-capabilities']) geoShape['x-capabilities'] = geomProp['x-capabilities']
       schema.push(geoShape)
-      if (geomProp['x-capabilities']?.geoShapeSimple) {
-        schema.push({ 'x-calculated': true, key: '_geoshape_simple', type: 'object', title: 'Géométrie simplifiée', description: 'Version simplifiée de la géométrie GeoJSON' })
-      }
     }
     if (geomProp && (!geomProp['x-capabilities'] || geomProp['x-capabilities'].geoCorners !== false)) {
       schema.push({ 'x-calculated': true, key: '_geocorners', type: 'array', title: 'Boite englobante de la géométrie', description: 'Sous forme d\'un tableau de coordonnées au format "lat,lon"' })

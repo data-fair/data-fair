@@ -57,12 +57,12 @@ export default {
       title: 'Formes géométriques complexes',
       description: 'Désactivez cette capacité si la donnée ne contient que des géométries basiques de points ou bien si requêter les géométries uniquement à partir de leurs centroïdes est suffisant pour vos besoins.'
     },
-    geoShapeSimple: {
+    vtPrepare: {
       type: 'boolean',
-      default: true,
+      default: false,
       'x-display': 'switch',
-      title: 'Versions simplifiées des géométries',
-      description: 'Activez cette capacité pour précalculer des géométries simplifiées à l\'indexation qui seront utilisées notamment pour construire des tuiles cartographiques plus complètes et plus rapides aux niveaux de zoom faibles.'
+      title: 'Tuiles vectorielles préparées',
+      description: 'Activez cette capacité pour précalculer des éléments utiles à la construction de tuiles vectorielles pour le rendu cartographique du jeu de données. Activez cette option si le jeu de données contient des données géogreaphiques denses à afficher en grande quantité. La contre-partie est une augmentation du temps d\'indexation et du volume de données indexées.'
     },
     indexAttachment: {
       type: 'boolean',
