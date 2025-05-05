@@ -710,7 +710,8 @@ const readLines = async (req, res) => {
 
   // Is the tile cached ?
   let cacheHash
-  if (vectorTileRequested && !config.cache.disabled) {
+  const useVTCache = vectorTileRequested && !config.cache.disabled && !(config.cache.reverseProxyCache && req.publicOperation && req.query.finalizedAt)
+  if (useVTCache) {
     const { hash, value } = await cache.get(db, {
       type: 'tile',
       sampling,
@@ -843,7 +844,7 @@ const readLines = async (req, res) => {
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
-    if (!config.cache.disabled) cache.set(db, cacheHash, new mongodb.Binary(tile))
+    if (useVTCache) cache.set(db, cacheHash, new mongodb.Binary(tile))
     res.setHeader('x-tilesmode', tilesMode + '/' + esResponse.hits.hits.length)
     return res.status(200).send(tile)
   }
@@ -896,7 +897,8 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
   // Is the tile cached ?
   let cacheHash
-  if (vectorTileRequested && !config.cache.disabled) {
+  const useVTCache = vectorTileRequested && !config.cache.disabled && !(config.cache.reverseProxyCache && req.publicOperation && req.query.finalizedAt)
+  if (useVTCache) {
     const { hash, value } = await cache.get(db, {
       type: 'tile-geoagg',
       datasetId: req.dataset.id,
@@ -926,7 +928,7 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
-    if (!config.cache.disabled) cache.set(db, cacheHash, new mongodb.Binary(tile))
+    if (useVTCache) cache.set(db, cacheHash, new mongodb.Binary(tile))
     return res.status(200).send(tile)
   }
 
@@ -942,9 +944,10 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
   const explain = req.query.explain === 'true' && req.user && (req.user.isAdmin || req.user.asAdmin) ? {} : null
 
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
+  const useVTCache = vectorTileRequested && !config.cache.disabled && !(config.cache.reverseProxyCache && req.publicOperation && req.query.finalizedAt)
   // Is the tile cached ?
   let cacheHash
-  if (vectorTileRequested && !config.cache.disabled) {
+  if (vectorTileRequested && useVTCache) {
     const { hash, value } = await cache.get(db, {
       type: 'tile-valuesagg',
       datasetId: req.dataset.id,
@@ -988,7 +991,7 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
-    if (!config.cache.disabled) cache.set(db, cacheHash, new mongodb.Binary(tile))
+    if (useVTCache) cache.set(db, cacheHash, new mongodb.Binary(tile))
     return res.status(200).send(tile)
   }
 

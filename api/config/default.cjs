@@ -174,7 +174,8 @@ module.exports = {
     publicMaxAge: 300, // 5 minutes
     timestampedPublicMaxAge: 60 * 60 * 24 * 7, // 1 week
     // size of cache of vector tiles in mongodb (in mb)
-    mongoSize: 2000 // 2G
+    mongoSize: 2000, // 2G
+    reverseProxyCache: false
   },
   tiles: {
     geojsonvtTolerance: 4, // slightly higher simplification than default (3)
