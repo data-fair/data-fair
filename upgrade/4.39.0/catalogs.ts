@@ -54,12 +54,10 @@ const upgradeScript: UpgradeScript = {
     // 1. Create catalogs in the new catalogs service
     debug('[info] Step 1 : Creating catalogs in the new catalogs service')
     if (applyChanges) {
-      // Check if they are already catalogs in the new catalogs service
-      const res = await axios.get(`${config.privateCatalogsUrl}/api/catalogs`, {
-        headers: { 'x-secret-key': config.secretKeys.catalogs }
-      })
-      if (res.data.length > 0) {
-        debug('[info] Catalogs already exist in the new catalogs service, skipping upgrade')
+      // Check if the catalog collection always exists
+      const catalogsCollection = await db.listCollections({ name: 'catalogs' }).toArray()
+      if (catalogsCollection.length === 0) {
+        debug('[info] Catalogs migration already done, skipping')
         return
       }
     }
