@@ -1,8 +1,9 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { aliasName, prepareQuery } from './commons.js'
+import { type Client } from '@elastic/elasticsearch'
 
-export default async (client, dataset, query, publicBaseUrl) => {
+export default async (client: Client, dataset, query, publicBaseUrl, vtXYZ) => {
   const esQuery = prepareQuery(dataset, query)
 
   if (query.collapse) {
@@ -20,12 +21,28 @@ export default async (client, dataset, query, publicBaseUrl) => {
     esQuery.aggs = { totalCollapse: { cardinality: { field: query.collapse, precision_threshold: precisionThreshold } } }
   }
 
-  const esResponse = await client.search({
-    index: aliasName(dataset),
+  if (vtXYZ) {
+    esQuery.script_fields = {
+      _vt: {
+        script: {
+          lang: 'painless',
+          source: `params['_source']['_vt_prepared'].find(p -> p.xyz == "${vtXYZ}")`
+        }
+      }
+    }
+  }
+
+  const res = await client.transport.request({
+    method: 'POST',
+    path: `/${aliasName(dataset)}/_search`,
     body: esQuery,
-    timeout: config.elasticsearch.searchTimeout,
-    allow_partial_search_results: false
-  })
+    querystring: {
+      allow_partial_search_results: 'true',
+      timeout: config.elasticsearch.searchTimeout
+    }
+  }, { meta: true })
+  const esResponse = res.body
+  esResponse.contentLength = Number(res.headers['content-length'])
 
   for (const hit of esResponse.hits.hits) {
     // TODO: move this to prepareResultItems
@@ -38,6 +55,9 @@ export default async (client, dataset, query, publicBaseUrl) => {
         url.pathname = url.pathname.replace(`/data-fair/api/v1/datasets/${childDatasetId}/attachments/`, `/data-fair/api/v1/datasets/${dataset.id}/attachments/${childDatasetId}/`)
         hit._source._attachment_url = url.href
       }
+    }
+    if (hit.fields?._vt?.[0]) {
+      hit._source._vt = hit.fields?._vt?.[0]?.pbf
     }
   }
 

@@ -18,6 +18,14 @@ export const indexDefinition = async (dataset) => {
         properties[jsProp.key] = esProp
       }
     }
+    if (jsProp.key === '_geoshape' && jsProp['x-capabilities']?.vtPrepare) {
+      properties['_vt_prepared'] = {
+        properties: {
+          xyz: { type: 'keyword', index: true, doc_values: false },
+          pbf: { type: 'binary', index: false, doc_values: false }
+        }
+      }
+    }
   }
   return body
 }

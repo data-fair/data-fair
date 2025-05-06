@@ -11,7 +11,7 @@ import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone.js'
 import utc from 'dayjs/plugin/utc.js'
 import { prepareThumbnailUrl } from '../../misc/utils/thumbnails.js'
-import * as tiles from '../utils/tiles.js'
+import * as tiles from '../utils/tiles.ts'
 import * as geo from '../utils/geo.js'
 import { geojsonToWKT } from '@terraformer/wkt'
 import capabilities from '../../../contract/capabilities.js'
@@ -73,7 +73,7 @@ export const esProperty = prop => {
   // Hardcoded calculated properties
   if (prop.key === '_geopoint') esProp = { type: 'geo_point' }
   if (prop.key === '_geoshape') {
-    // if geometry is present, _geoshape will always be here too, but maybe not fully indexed dependeing on capabilities
+    // if geometry is present, _geoshape will always be here too, but maybe not fully indexed depending on capabilities
     if (!prop['x-capabilities'] || prop['x-capabilities'].geoShape !== false) {
       esProp = { type: 'geo_shape' }
     } else {
@@ -300,6 +300,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
 
   // Select fields to return
   const fields = dataset.schema.map(f => f.key)
+  if (dataset.schema.find(p => p.key === '_geoshape')?.['x-capabilities']?.vtPrepare) fields.push('_vt_prepared')
   // do not include by default heavy calculated fields used for indexing geo data
   esQuery._source = (query.select && query.select !== '*')
     ? query.select.split(',')
@@ -320,9 +321,14 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   // implicitly sort by score after other criteria
   if (!esQuery.sort.some(s => !!s._score) && query.q) esQuery.sort.push('_score')
   // if there is a geo_distance filter, apply a default _geo_distance sort
-  if ((query.geo_distance ?? query._c_geo_distance) && !esQuery.sort.some(s => !!s._geo_distance)) {
-    const [lon, lat] = (query.geo_distance ?? query._c_geo_distance).split(/[,:]/)
-    esQuery.sort.push({ _geo_distance: { _geopoint: { lon, lat }, order: 'asc' } })
+  if ((query.geo_distance ?? query._c_geo_distance)) {
+    if (!esQuery.sort.some(s => !!s._geo_distance)) {
+      const [lon, lat] = (query.geo_distance ?? query._c_geo_distance).split(/[,:]/)
+      esQuery.sort.push({ _geo_distance: { _geopoint: { lon, lat }, order: 'asc' } })
+    }
+    if (!esQuery._source.includes('_geopoint')) {
+      esQuery._source.push('_geopoint')
+    }
   }
   // every other things equal, sort by original line order
   // this is very important as it provides a tie-breaker for search_after pagination

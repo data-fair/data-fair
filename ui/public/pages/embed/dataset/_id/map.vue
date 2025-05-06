@@ -4,6 +4,7 @@
     :show-select="false"
     :single-item="$route.query._id_eq ?? $route.query[`_d_${dataset.id}__id_eq`]"
     :no-interaction="noInteraction"
+    :sampling="$route.query.sampling"
   />
 </template>
 

@@ -7,6 +7,8 @@ import rewind from '@turf/rewind'
 import cleanCoords from '@turf/clean-coords'
 import kinks from '@turf/kinks'
 import unkink from '@turf/unkink-polygon'
+import geojsonvt from 'geojson-vt'
+import vtpbf from 'vt-pbf'
 import { exec } from 'child-process-promise'
 import tmp from 'tmp-promise'
 import proj4 from 'proj4'
@@ -14,7 +16,9 @@ import { wktToGeoJSON, geojsonToWKT } from '@terraformer/wkt'
 import debugLib from 'debug'
 import { tmpDir } from './files.ts'
 import projections from '../../../contract/projections.js'
+import _config from 'config'
 
+const config = /** @type {any} */(_config)
 const debug = debugLib('geo')
 
 const geomUri = 'https://purl.org/geojson/vocab#geometry'
@@ -48,7 +52,13 @@ export const schemaHasGeometry = (schema) => {
 }
 
 export const geoFieldsKey = (schema) => {
-  return schemaHasGeometry(schema) + '/' + schemaHasGeopoint(schema)
+  const geomPropKey = schemaHasGeometry(schema)
+  let key = geomPropKey + '/' + schemaHasGeopoint(schema)
+  if (geomPropKey) {
+    const geomProp = schema.find(p => p.key === geomPropKey)
+    if (geomProp['x-capabilities']?.vtPrepare) key += '/_vt_prepared'
+  }
+  return key
 }
 
 export const fixLon = (val) => {
@@ -177,7 +187,6 @@ export const geometry2fields = async (dataset, doc) => {
   }
 
   // check if simplify is a good idea ? too CPU intensive for our backend ?
-  // const simplified = turf.simplify({type: 'Feature', geometry: JSON.parse(doc[prop.key])}, {tolerance: 0.01, highQuality: false})
   const point = pointOnFeature(feature)
   const fields = {
     _geopoint: point.geometry.coordinates[1] + ',' + point.geometry.coordinates[0]
@@ -187,6 +196,20 @@ export const geometry2fields = async (dataset, doc) => {
     fields._geocorners = polygon.geometry.coordinates[0].map(c => c[1] + ',' + c[0])
   }
   fields._geoshape = feature.geometry
+  if (capabilities?.vtPrepare) {
+    fields._vt_prepared = []
+    const vt = geojsonvt(
+      { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: feature.geometry }] },
+      { indexMaxZoom: config.tiles.vtPrepareMaxZoom, tolerance: config.tiles.geojsonvtTolerance, maxZoom: config.tiles.vtPrepareMaxZoom, indexMaxPoints: 0 }
+    )
+    for (const vtTileInfo of Object.values(vt.tiles).filter(f => f.features.length)) {
+      const { x, y, z } = vtTileInfo
+      const tile = vt.getTile(z, x, y)
+      const pbf = Buffer.from(vtpbf.fromGeojsonVt({ f: tile }, { version: 2 }))
+      // console.log(`prepared tile from geojson-vt ${vtTileInfo.z},${vtTileInfo.x},${vtTileInfo.y}\tgeojson=${JSON.stringify(feature.geometry).length.toLocaleString()}\tpbf=${pbf.length.toLocaleString()}\tbase64=${pbf.toString('base64').length.toLocaleString()}`)
+      fields._vt_prepared.push({ xyz: `${x}-${y}-${z}`, pbf: pbf.toString('base64') })
+    }
+  }
   return fields
 }
 

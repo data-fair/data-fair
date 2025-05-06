@@ -12,7 +12,7 @@ describe('geo files support', function () {
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
     const ax = global.ax.dmeadus
-    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
@@ -53,6 +53,46 @@ describe('geo files support', function () {
 
     const jsonWkt = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { wkt: 'true' } })).data
     assert.ok(jsonWkt.results[0].geometry.startsWith('LINESTRING'))
+
+    // vector tiles
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?q=kinked`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=49,31,6&format=pbf&q=blabla`)
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['content-type'], 'application/x-protobuf')
+    assert.equal(res.headers['x-tilesmode'], 'es/neighbors/10000/1')
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=51,31,6&format=pbf`)
+    assert.equal(res.status, 204)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=49,31,6&format=pbf&q=blabla&sampling=max`)
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['content-type'], 'application/x-protobuf')
+    assert.equal(res.headers['x-tilesmode'], 'es/max/1')
+    // vector tiles with some preparation at index time
+    const geomProp = dataset.schema.find(p => p.key === 'geometry')
+    geomProp['x-capabilities'] = { vtPrepare: true }
+    await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
+    await workers.hook(`indexer/${dataset.id}`)
+    await workers.hook(`finalizer/${dataset.id}`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=49,31,6&format=pbf&q=blabla&sampling=max`)
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['content-type'], 'application/x-protobuf')
+    assert.equal(res.headers['x-tilesmode'], 'es/max/prepared/1')
+
+    // virtual dataset based on this file
+    let virtualDataset = await ax.post('/api/v1/datasets', {
+      title: 'virtual dataset',
+      isVirtual: true,
+      virtual: {
+        children: [dataset.id]
+      },
+      schema: dataset.schema.filter(p => !p.key.startsWith('_')).map(p => ({ key: p.key }))
+    }).then(r => r.data)
+    virtualDataset = await workers.hook(`finalizer/${virtualDataset.id}`)
+    const geomPropVirtual = virtualDataset.schema.find(p => p.key === 'geometry')
+    assert.ok(geomPropVirtual['x-capabilities'].vtPrepare)
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines?xyz=49,31,6&format=pbf&q=blabla&sampling=max`)
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['content-type'], 'application/x-protobuf')
+    assert.equal(res.headers['x-tilesmode'], 'es/max/prepared/1')
   })
 
   it('Upload geojson with geometry type GeometryCollection', async function () {
