@@ -836,6 +836,7 @@ const readLines = async (req, res) => {
   }
 
   if (vectorTileRequested) {
+    if (!esResponse.hits.hits.length) return res.status(204).send()
     const flatten = getFlatten(req.dataset, true)
     const tile = await tiles.geojson2pbf(geo.result2geojson(esResponse, flatten), xyz, vtPrepared)
     if (vtPrepared) tilesMode += '/prepared'
