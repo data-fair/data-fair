@@ -46,9 +46,10 @@ export const consume = (req, limitType) => {
   return rateLimiter.rateLimiter.tryRemoveTokens(1)
 }
 
+const burstFactor = 4
 export const getTokenBucket = (req, limitType, bandwidthType) => {
   const throttlingId = req.user ? req.user.id : requestIp.getClientIp(req)
-  const bucketSize = config.defaultLimits.apiRate[limitType].bandwidth[bandwidthType] / 10
+  const bucketSize = config.defaultLimits.apiRate[limitType].bandwidth[bandwidthType] * burstFactor
   const tokenBucket = tokenBuckets[throttlingId + bandwidthType] = tokenBuckets[throttlingId + bandwidthType] || {
     bucketSize,
     bucket: new TokenBucket({
