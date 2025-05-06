@@ -8,7 +8,7 @@ export const results2sheetPiscina = new Piscina({
   filename: path.resolve(import.meta.dirname, '../../datasets/threads/results2sheet.js'),
   minThreads: 0,
   idleTimeout: 60 * 60 * 1000,
-  maxThreads: 2
+  maxThreads: 1
 })
 
 const csvStringifyOptions = (dataset, query = {}) => {

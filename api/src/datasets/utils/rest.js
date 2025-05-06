@@ -36,7 +36,7 @@ export const sheet2csvPiscina = new Piscina({
   filename: path.resolve(import.meta.dirname, '../threads/sheet2csv.js'),
   minThreads: 0,
   idleTimeout: 60 * 60 * 1000,
-  maxThreads: 2
+  maxThreads: 1
 })
 
 const actions = ['create', 'update', 'createOrUpdate', 'patch', 'delete']
