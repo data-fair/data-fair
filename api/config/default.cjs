@@ -179,7 +179,8 @@ module.exports = {
   },
   tiles: {
     geojsonvtTolerance: 4, // slightly higher simplification than default (3)
-    vtPrepareMaxZoom: 10
+    vtPrepareMaxZoom: 10,
+    maxThreads: 1
   },
   analytics: {}, // a "modules" definition for @koumoul/vue-multianalytics
   browserLogLevel: 'error',

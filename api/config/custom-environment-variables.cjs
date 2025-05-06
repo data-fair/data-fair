@@ -41,6 +41,9 @@ module.exports = {
     },
     reverseProxyCache: 'REVERSE_PROXY_CACHE'
   },
+  tiles: {
+    maxThreads: 'TILES_MAX_THREADS'
+  },
   analytics: {
     __name: 'ANALYTICS',
     __format: 'json'
