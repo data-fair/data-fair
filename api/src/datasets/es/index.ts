@@ -3,7 +3,7 @@ import elasticsearch, { type ClientOptions } from '@elastic/elasticsearch'
 
 export * from './manage-indices.js'
 export * from './commons.js'
-export { default as search } from './search.js'
+export { default as search } from './search.ts'
 export { default as multiSearch } from './multi-search.js'
 export { default as count } from './count.js'
 export { default as valuesAgg } from './values-agg.js'

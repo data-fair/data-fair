@@ -38,7 +38,7 @@ export const init = async (db: Db) => {
       const piscinas = {
         results2sheet: (await import('../../datasets/utils/outputs.js')).results2sheetPiscina,
         sheet2csv: (await import('../../datasets/utils/rest.js')).sheet2csvPiscina,
-        geojson2pbf: (await import('../../datasets/utils/tiles.js')).geojson2pbfPiscina,
+        geojson2pbf: (await import('../../datasets/utils/tiles.ts')).geojson2pbfPiscina,
         fetchDCAT: (await import('../../catalogs/plugins/dcat.js')).fetchDCATPiscina
       }
 

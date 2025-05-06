@@ -38,7 +38,11 @@ module.exports = {
     mongoSize: {
       __name: 'CACHE_MONGO_SIZE',
       __format: 'json'
-    }
+    },
+    reverseProxyCache: 'REVERSE_PROXY_CACHE'
+  },
+  tiles: {
+    maxThreads: 'TILES_MAX_THREADS'
   },
   analytics: {
     __name: 'ANALYTICS',

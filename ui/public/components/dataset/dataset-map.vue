@@ -44,7 +44,7 @@ require('maplibre-gl/dist/maplibre-gl.css')
 const fitBoundsOpts = { maxZoom: 15, padding: 40 }
 
 export default {
-  props: ['heightMargin', 'fixedHeight', 'singleItem', 'navigationPosition', 'noInteraction'],
+  props: ['heightMargin', 'fixedHeight', 'singleItem', 'navigationPosition', 'noInteraction', 'sampling'],
   data: () => ({ mapHeight: 0, query: '' }),
   computed: {
     ...mapState(['env']),
@@ -57,6 +57,7 @@ export default {
       if (this.query) url += '&q=' + encodeURIComponent(this.query)
       if (this.dataset.finalizedAt) url += '&finalizedAt=' + encodeURIComponent(this.dataset.finalizedAt)
       if (this.dataset.draftReason) url += '&draft=true'
+      if (this.sampling) url += '&sampling=' + this.sampling
       return url
     },
     dataLayers () {

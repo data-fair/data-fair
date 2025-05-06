@@ -94,7 +94,7 @@ export default {
       } else if (type === 'string' && (this.property.format === 'date' || this.property.format === 'date-time')) {
         return ['index', 'textStandard', 'values']
       } else if (this.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
-        return ['geoShape']
+        return ['geoShape', 'vtPrepare']
       } else if (this.property['x-refersTo'] === 'http://schema.org/DigitalDocument') {
         return ['indexAttachment']
       } else if (type === 'string') {
