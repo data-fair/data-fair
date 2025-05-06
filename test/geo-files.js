@@ -76,6 +76,23 @@ describe('geo files support', function () {
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'application/x-protobuf')
     assert.equal(res.headers['x-tilesmode'], 'es/max/prepared/1')
+
+    // virtual dataset based on this file
+    let virtualDataset = await ax.post('/api/v1/datasets', {
+      title: 'virtual dataset',
+      isVirtual: true,
+      virtual: {
+        children: [dataset.id]
+      },
+      schema: dataset.schema.filter(p => !p.key.startsWith('_')).map(p => ({ key: p.key }))
+    }).then(r => r.data)
+    virtualDataset = await workers.hook(`finalizer/${virtualDataset.id}`)
+    const geomPropVirtual = virtualDataset.schema.find(p => p.key === 'geometry')
+    assert.ok(geomPropVirtual['x-capabilities'].vtPrepare)
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines?xyz=49,31,6&format=pbf&q=blabla&sampling=max`)
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['content-type'], 'application/x-protobuf')
+    assert.equal(res.headers['x-tilesmode'], 'es/max/prepared/1')
   })
 
   it('Upload geojson with geometry type GeometryCollection', async function () {
