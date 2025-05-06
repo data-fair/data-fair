@@ -22,6 +22,7 @@
           v-model="line"
           :own-lines="ownLinesMode"
           :readonly-cols="Object.keys(queryContext.data)"
+          :extension="extension"
           :loading="saveLine.loading.value"
           @on-file-upload="(f: File) => {file = f}"
         />
@@ -59,6 +60,7 @@ const initialized = ref(false)
 const line = ref<Record<string, any>>({})
 const existingLine = ref<Record<string, any>>()
 const file = ref<File>()
+const extension = useBooleanSearchParam('extension')
 
 const queryContext = computed(() => {
   if (!restDataset.value) return

@@ -37,10 +37,11 @@
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 
-const { readonlyCols, selectedCols, ownLines, loading } = defineProps({
+const { readonlyCols, selectedCols, ownLines, extension, loading } = defineProps({
   readonlyCols: { type: Array as PropType<string[] | null>, default: null },
   selectedCols: { type: Array as PropType<string[] | null>, default: null },
   ownLines: { type: Boolean, default: false },
+  extension: { type: Boolean, default: false },
   loading: { type: Boolean, default: false }
 })
 
@@ -48,7 +49,7 @@ const model = defineModel<any>()
 
 const emits = defineEmits<{ onFileUpload: [file: File] }>()
 
-const { restDataset, jsonSchemaFetch } = useDatasetStore()
+const { id, restDataset, jsonSchemaFetch } = useDatasetStore()
 
 const digitalDocumentField = computed(() => {
   return restDataset.value?.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
@@ -74,8 +75,19 @@ const editSchema = computed(() => {
       schema.properties[key].layout = schema.properties[key].layout ?? {}
       schema.properties[key].layout.comp = 'none'
     }
+    if (!extension && schema.properties[key]['x-extension']) {
+      schema.properties[key].layout = schema.properties[key].layout ?? {}
+      schema.properties[key].layout.comp = 'none'
+    }
   })
   return schema
+})
+
+const editableKeys = computed(() => {
+  return Object.keys(editSchema.value.properties).filter(key => !editSchema.value.properties[key].readOnly)
+})
+const extensionKeys = computed(() => {
+  return Object.keys(editSchema.value.properties).filter(key => editSchema.value.properties[key]['x-extension'])
 })
 
 const vjsfOptions: VjsfOptions = {
@@ -83,8 +95,34 @@ const vjsfOptions: VjsfOptions = {
   density: 'comfortable',
   locale: 'fr',
   fetchBaseURL: $sitePath + '/data-fair/',
-  updateOn: 'blur',
   initialValidation: 'always',
   removeAdditional: true
 }
+
+const simulateExtensionInputStr = computed(() => {
+  if (!extension) return
+  const input: any = {}
+  for (const key of editableKeys.value) {
+    if (model.value[key] !== undefined && model.value[key] !== null) {
+      input[key] = model.value[key]
+    }
+  }
+  return JSON.stringify(input)
+})
+
+watch(simulateExtensionInputStr, () => {
+  if (!simulateExtensionInputStr.value) return
+  const input = JSON.parse(simulateExtensionInputStr.value)
+  if (!Object.keys(input).length) return
+  simulateExtension.execute(input)
+})
+
+const simulateExtension = useAsyncAction(async (body) => {
+  const res = await $fetch(`/datasets/${id}/_simulate-extension`, { method: 'POST', body })
+  const patch: any = {}
+  for (const key of extensionKeys.value) {
+    patch[key] = res[key]
+  }
+  model.value = { ...model.value, ...patch }
+})
 </script>

@@ -1366,7 +1366,8 @@ router.post('/:datasetId/_simulate-extension', readDataset(), permissions.middle
   const line = req.body
   const dataset = clone(req.dataset)
   await extend(req.app, dataset, dataset.extensions, undefined, undefined, undefined, line)
-  res.send(line)
+  const flatten = getFlatten(req.dataset)
+  res.send(flatten(line))
 })
 
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.

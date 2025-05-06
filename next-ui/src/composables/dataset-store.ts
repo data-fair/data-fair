@@ -18,7 +18,7 @@ const prepareDatasetStore = (id: string, draftMode: boolean | undefined = undefi
   const journal = ref<Event[] | null>(null)
   watch(journalFetch.data, () => { journal.value = journalFetch.data.value })
 
-  const jsonSchemaFetch = useFetch<any>($apiPath + `/datasets/${id}/schema`, { query: { draftMode, mimeType: 'application/schema+json' }, immediate: false, watch: false })
+  const jsonSchemaFetch = useFetch<any>($apiPath + `/datasets/${id}/schema`, { query: { draftMode, mimeType: 'application/schema+json', extension: 'true' }, immediate: false, watch: false })
 
   return {
     id,

@@ -115,7 +115,7 @@ describe('Extensions', function () {
     })
     res = await ax.post(`/api/v1/datasets/${dataset.id}/_simulate-extension`, { adr: 'test simulation' })
     nockScope.done()
-    assert.deepEqual(res.data, { adr: 'test simulation', _coords: { lat: 30, lon: 30 } })
+    assert.deepEqual(res.data, { adr: 'test simulation', '_coords.lat': 30, '_coords.lon': 30 })
 
     // remove the extension
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [] })
