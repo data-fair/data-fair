@@ -45,8 +45,10 @@ class PseudoTileLayer {
       if (feature.properties._vt) {
         tile = new VectorTile(new Protobuf(Buffer.from(feature.properties._vt, 'base64')))
         delete feature.properties._vt
-        for (let ff = 0; ff < tile.layers.f.length; ff++) {
-          this.queue.push([f, ff, tile])
+        if (tile) {
+          for (let ff = 0; ff < tile.layers.f.length; ff++) {
+            this.queue.push([f, ff, tile])
+          }
         }
       }
     }
@@ -58,7 +60,9 @@ class PseudoTileLayer {
     if (i !== this.lastI + 1) throw new Error('PseudoTileLayer can only be read sequentially')
     const item = this.queue[i]
     this.lastI = i
-    return new PseudoFeature(this.geojson.features[item[0]].properties, item[2], item[1])
+    const feat = new PseudoFeature(this.geojson.features[item[0]].properties, item[2], item[1])
+    item[2] = 0 // facilitate memory cleaning
+    return feat
   }
 }
 
