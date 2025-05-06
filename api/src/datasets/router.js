@@ -30,6 +30,7 @@ import * as cache from '../misc/utils/cache.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as outputs from './utils/outputs.js'
 import * as limits from '../misc/utils/limits.js'
+import { extend } from './utils/extensions.js'
 import * as notifications from '../misc/utils/notifications.js'
 import userNotificationSchema from '../../contract/user-notification.js'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
@@ -1328,6 +1329,13 @@ router.get('/:datasetId/thumbnail/:thumbnailId', readDataset({ fillDescendants: 
 router.get('/:datasetId/read-api-key', readDataset(), permissions.middleware('getReadApiKey', 'read'), async (req, res, next) => {
   if (!req.dataset._readApiKey) return res.status(404).send("dataset doesn't have a read API key")
   res.send(req.dataset._readApiKey)
+})
+
+router.post('/:datasetId/_simulate-extension', readDataset(), permissions.middleware('simulateExtension', 'write'), async (req, res, next) => {
+  const line = req.body
+  const dataset = clone(req.dataset)
+  await extend(req.app, dataset, dataset.extensions, undefined, undefined, undefined, line)
+  res.send(line)
 })
 
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.
