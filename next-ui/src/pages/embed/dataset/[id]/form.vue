@@ -32,7 +32,7 @@
             color="primary"
             :loading="saveLine.loading.value"
             :disabled="sent || !valid"
-            @click="saveLine"
+            @click="saveLine.execute()"
           >
             Enregistrer
           </v-btn>
