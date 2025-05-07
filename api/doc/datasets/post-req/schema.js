@@ -35,7 +35,7 @@ const body = {
 export default {
   $id: 'https://github.com/data-fair/data-fair/datasets/post-req',
   title: 'Post dataset req',
-  'x-exports': ['validate', 'types'],
+  'x-exports': ['validate', 'types', 'resolvedSchema'],
   type: 'object',
   required: ['body'],
   properties: {

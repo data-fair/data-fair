@@ -10,7 +10,7 @@ const body = jsonSchema(datasetSchema)
 export default {
   $id: 'https://github.com/data-fair/data-fair/datasets/patch-req',
   title: 'Patch dataset req',
-  'x-exports': ['validate', 'types'],
+  'x-exports': ['validate', 'types', 'resolvedSchema'],
   type: 'object',
   required: ['body'],
   properties: { body }
