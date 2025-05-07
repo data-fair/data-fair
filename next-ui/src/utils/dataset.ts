@@ -9,7 +9,7 @@ const propertyTypes = [
   { type: 'boolean', title: 'Booléen', icon: 'mdi-checkbox-marked-circle-outline' }
 ]
 
-export const propTypeTitle = (prop: { type: string, format?: string }) => {
+export const propTypeTitle = (prop: { type?: string, format?: string | null }) => {
   if (prop.type === 'object') return 'Objet JSON'
   if (prop.type === 'array') return 'Tableau JSON'
   if (prop.format) {
