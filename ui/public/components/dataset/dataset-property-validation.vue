@@ -108,7 +108,16 @@
               hide-details="auto"
               @click:clear="delete property.pattern"
             />
+            <v-text-field
+              v-if="property.pattern"
+              v-model="property.patternErrorMessage"
+              :label="$t('patternErrorMessage')"
+              :disabled="!editable"
+              clearable
+              @click:clear="delete property.patternErrorMessage"
+            />
           </template>
+
           <template v-if="property.type === 'string' && property.format === 'date'">
             <tutorial-alert
               id="validation-date-format"
@@ -151,6 +160,7 @@ fr:
   required: information obligatoire
   restricted: cochez cette case pour restreindre les données aux valeurs avec libellés associés
   pattern: Format
+  patternErrorMessage: Message d'erreur en cas de format erroné
   minimum: Minimum
   maximum: Maximum
   minLength: Longueur minimale
@@ -168,6 +178,7 @@ en:
   required: required information
   restricted: check this box to restrict data to values with associated labels
   pattern: Format
+  patternErrorMessage: Error message in cas of format error
   minimum: Minimum
   maximum: Maximum
   minLength: Minimum length

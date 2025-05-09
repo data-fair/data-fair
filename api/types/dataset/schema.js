@@ -90,6 +90,9 @@ const schema = {
         type: 'string',
         format: 'regex'
       },
+      patternErrorMessage: {
+        type: 'string'
+      },
       'x-master': {
         type: 'object',
         properties: {
