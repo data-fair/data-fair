@@ -4,7 +4,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
 import pump from '../../misc/utils/pipe.js'
 import fs from 'fs-extra'
-import { Transform } from 'stream'
+import { Transform, Writable } from 'stream'
 import stringify from 'json-stable-stringify'
 import { flatten } from 'flat'
 import equal from 'deep-equal'
@@ -24,6 +24,7 @@ import { parseURL } from 'ufo'
 import exprEval from '@data-fair/data-fair-shared/expr-eval.js'
 import { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 import * as fieldsSniffer from './fields-sniffer.js'
+import intoStream from 'into-stream'
 
 export { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 
@@ -89,7 +90,7 @@ export const prepareExtensions = (locale, extensions, oldExtensions = []) => {
 // Apply an extension to a dataset: meaning, query a remote service in batches
 // and add the result either to a "full" file or to the collection in case of a rest dataset
 export const compileExpression = exprEval(config.defaultTimezone).compile
-export const extend = async (app, dataset, extensions, updateMode, ignoreDraftLimit, lineId) => {
+export const extend = async (app, dataset, extensions, updateMode, ignoreDraftLimit, lineId, simulationLine) => {
   debugMasterData(`extend dataset ${dataset.id} (${dataset.slug})`, extensions)
   const db = mongo.db
   const es = app.get('es')
@@ -137,7 +138,9 @@ export const extend = async (app, dataset, extensions, updateMode, ignoreDraftLi
   let inputStreams
   const progress = taskProgress(app, dataset.id, 'extend', 100)
   await progress.inc(0)
-  if (dataset.isRest) {
+  if (simulationLine) {
+    inputStreams = [intoStream.object([simulationLine])]
+  } else if (dataset.isRest) {
     let filter = {}
     if (updateMode === 'updatedLines') filter = { _needsExtending: true }
     else if (updateMode === 'singleLine') filter = { _id: lineId }
@@ -146,7 +149,19 @@ export const extend = async (app, dataset, extensions, updateMode, ignoreDraftLi
     inputStreams = await readStreams(db, dataset, false, false, ignoreDraftLimit, progress)
   }
 
-  const writeStreams = await writeExtendedStreams(db, dataset, extensions)
+  let writeStreams
+  if (simulationLine) {
+    writeStreams = [new Writable({
+      objectMode: true,
+      write (extendedLine, encoding, callback) {
+        Object.assign(simulationLine, extendedLine)
+        callback()
+      }
+    })]
+  } else {
+    writeStreams = await writeExtendedStreams(db, dataset, extensions)
+  }
+
   await pump(
     ...inputStreams,
     new ExtensionsStream({ extensions: detailedExtensions, dataset, db, es, onlyEmitChanges: updateMode === 'updatedExtensions' }),

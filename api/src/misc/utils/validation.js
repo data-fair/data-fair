@@ -5,7 +5,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 /**
  *
  * @param {string} locale
- * @param {string} value
+ * @param {string | null | undefined} value
  * @returns
  */
 export const validateURLFriendly = (locale, value) => {

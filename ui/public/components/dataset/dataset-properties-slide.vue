@@ -363,7 +363,7 @@ en:
 
 <script>
 import { mapState, mapGetters, mapActions } from 'vuex'
-import datasetSchema from '~/../../api/contract/dataset.js'
+import datasetSchema from '../../../../api/types/dataset/schema'
 const Draggable = require('vuedraggable')
 
 export default {

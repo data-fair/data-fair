@@ -30,8 +30,8 @@ import * as cache from '../misc/utils/cache.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as outputs from './utils/outputs.js'
 import * as limits from '../misc/utils/limits.js'
+import { extend } from './utils/extensions.js'
 import * as notifications from '../misc/utils/notifications.js'
-import datasetPostSchema from '../../contract/dataset-post.js'
 import userNotificationSchema from '../../contract/user-notification.js'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
 import { bulkSearchStreams } from './utils/master-data.js'
@@ -45,7 +45,7 @@ import { syncDataset as syncRemoteService } from '../remote-services/utils.js'
 import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetDataset } from './service.js'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/data-schema.js'
 import { dir, attachmentsDir } from './utils/files.ts'
-import { preparePatch, validatePatch } from './utils/patch.js'
+import { preparePatch } from './utils/patch.js'
 import { updateTotalStorage } from './utils/storage.js'
 import { checkStorage, lockDataset, readDataset } from './middlewares.js'
 import config from '#config'
@@ -55,7 +55,6 @@ import contentDisposition from 'content-disposition'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { getFlatten } from './utils/flatten.ts'
 
-const validatePost = ajv.compile(datasetPostSchema.properties.body)
 const validateUserNotification = ajv.compile(userNotificationSchema)
 
 const router = express.Router()
@@ -179,11 +178,10 @@ router.patch('/:datasetId',
     // @ts-ignore
     const user = req.user
 
-    const patch = req.body
     const db = mongo.db
     const locale = req.getLocale()
 
-    validatePatch(patch)
+    const { body: patch } = (await import('#doc/datasets/patch-req/index.js')).returnValid(req)
     validateURLFriendly(locale, patch.slug)
 
     const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, user, locale)
@@ -336,8 +334,8 @@ const createDatasetRoute = async (req, res) => {
       debugFiles('POST datasets uploaded some files', files)
     }
 
-    const body = req.body = uploadUtils.getFormBody(req.body)
-    validatePost(body)
+    req.body = uploadUtils.getFormBody(req.body)
+    const { body } = (await import('#doc/datasets/post-req/index.js')).returnValid(req)
 
     const owner = usersUtils.owner(req)
     if (!permissions.canDoForOwner(owner, 'datasets', 'post', user)) {
@@ -423,18 +421,18 @@ const updateDatasetRoute = async (req, res, next) => {
       await clamav.checkFiles(files, user)
     }
 
-    const patch = uploadUtils.getFormBody(req.body)
+    req.body = uploadUtils.getFormBody(req.body)
 
     // this is also done inside preparePatch
     // but in the case of PUT we do it here to tolerate properties usually used at creation time
-    for (const key of Object.keys(patch)) {
-      if (equal(patch[key], dataset[key])) { delete patch[key] }
+    for (const key of Object.keys(req.body)) {
+      if (equal(req.body[key], dataset[key])) { delete req.body[key] }
     }
-    if (patch.owner && patch.owner.type === dataset.owner.type && patch.owner.id === dataset.owner.id) {
-      delete patch.owner
+    if (req.body.owner && req.body.owner.type === dataset.owner.type && req.body.owner.id === dataset.owner.id) {
+      delete req.body.owner
     }
 
-    validatePatch(patch)
+    const { body: patch } = (await import('#doc/datasets/patch-req/index.js')).returnValid(req)
     validateURLFriendly(locale, patch.slug)
 
     // TODO: do not use always as default value when the dataset is public or published ?
@@ -1362,6 +1360,14 @@ router.get('/:datasetId/thumbnail/:thumbnailId', readDataset({ fillDescendants: 
 router.get('/:datasetId/read-api-key', readDataset(), permissions.middleware('getReadApiKey', 'read'), async (req, res, next) => {
   if (!req.dataset._readApiKey) return res.status(404).send("dataset doesn't have a read API key")
   res.send(req.dataset._readApiKey)
+})
+
+router.post('/:datasetId/_simulate-extension', readDataset(), permissions.middleware('simulateExtension', 'write'), async (req, res, next) => {
+  const line = req.body
+  const dataset = clone(req.dataset)
+  await extend(req.app, dataset, dataset.extensions, undefined, undefined, undefined, line)
+  const flatten = getFlatten(req.dataset)
+  res.send(flatten(line))
 })
 
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.

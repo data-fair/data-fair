@@ -65,7 +65,7 @@ en:
 
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex'
-import datasetSchema from '~/../../api/contract/dataset.js'
+import datasetSchema from '../../../../api/types/dataset/schema'
 
 const defaultMasterData = { standardSchema: {}, virtualDatasets: {}, singleSearchs: [], bulkSearchs: [] }
 

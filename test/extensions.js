@@ -105,6 +105,18 @@ describe('Extensions', function () {
     assert.ok(res.data.find(file => file.key === 'full'))
     assert.equal(res.data.length, 2)
 
+    // perform the extension as a simulation on a pseudo line
+    nockScope = nock('http://test.com').post('/geocoder/coords?select=lat,lon').reply(200, (uri, requestBody) => {
+      const inputs = requestBody.trim().split('\n').map(JSON.parse)
+      assert.equal(inputs.length, 1)
+      assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
+      return inputs.map(input => ({ key: input.key, lat: 30, lon: 30 }))
+        .map(JSON.stringify).join('\n') + '\n'
+    })
+    res = await ax.post(`/api/v1/datasets/${dataset.id}/_simulate-extension`, { adr: 'test simulation' })
+    nockScope.done()
+    assert.deepEqual(res.data, { adr: 'test simulation', '_coords.lat': 30, '_coords.lon': 30 })
+
     // remove the extension
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [] })
     assert.equal(res.status, 200)

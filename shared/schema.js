@@ -28,6 +28,12 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl) => {
   if (p['x-refersTo'] === 'http://schema.org/description') cleanProp['x-display'] = 'markdown'
   if (p['x-refersTo'] === 'https://schema.org/color') cleanProp['x-display'] = 'color-picker'
 
+  if (cleanProp.pattern && cleanProp.patternErrorMessage) {
+    // cf https://ajv.js.org/packages/ajv-errors.html
+    cleanProp.errorMessage = cleanProp.errorMessage ?? {}
+    cleanProp.errorMessage.pattern = cleanProp.patternErrorMessage
+  }
+
   delete cleanProp.separator
   delete cleanProp.key
   delete cleanProp.ignoreDetection
