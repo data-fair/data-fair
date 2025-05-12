@@ -83,9 +83,6 @@ const editSchema = computed(() => {
   return schema
 })
 
-const editableKeys = computed(() => {
-  return Object.keys(editSchema.value.properties).filter(key => !editSchema.value.properties[key].readOnly)
-})
 const extensionKeys = computed(() => {
   return Object.keys(editSchema.value.properties).filter(key => editSchema.value.properties[key]['x-extension'])
 })
@@ -102,8 +99,8 @@ const vjsfOptions: VjsfOptions = {
 const simulateExtensionInputStr = computed(() => {
   if (!extension) return
   const input: any = {}
-  for (const key of editableKeys.value) {
-    if (model.value[key] !== undefined && model.value[key] !== null) {
+  for (const key of Object.keys(editSchema.value.properties)) {
+    if (!extensionKeys.value.includes(key) && model.value[key] !== undefined && model.value[key] !== null) {
       input[key] = model.value[key]
     }
   }
