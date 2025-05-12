@@ -21,7 +21,7 @@
         <dataset-edit-line-form
           v-model="line"
           :own-lines="ownLinesMode"
-          :readonly-cols="Object.keys(queryContext.data)"
+          :readonly-cols="readonlyCols"
           :extension="extension"
           :loading="saveLine.loading.value"
           @on-file-upload="(f: File) => {file = f}"
@@ -94,6 +94,8 @@ const queryContext = computed(() => {
   }
   return { filters, data }
 })
+
+const readonlyCols = computed(() => queryContext.value && Object.keys(queryContext.value.data))
 
 watch(queryContext, async () => {
   if (initialized.value || !queryContext.value) return
