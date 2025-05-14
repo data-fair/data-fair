@@ -88,7 +88,7 @@ const lonProperty = {
 }
 
 describe('Master data management', function () {
-  it.only('should define and use a dataset as master-data remote-service used for extensions', async function () {
+  it('should define and use a dataset as master-data remote-service used for extensions', async function () {
     const ax = global.ax.superadmin
 
     const { remoteService, apiDoc } = await initMaster(
@@ -204,7 +204,7 @@ describe('Master data management', function () {
         type: 'remoteService',
         remoteService: remoteService.id,
         action: 'masterData_bulkSearch_siret',
-        select: ['extra']
+        select: ['extra', 'extraMulti']
       }]
     })
     const items2 = [{ siret: '82898347800011', extra: 'Extra information 2', extraFilter: 'filterOk' }]
