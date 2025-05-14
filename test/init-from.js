@@ -62,17 +62,36 @@ describe('Datasets with auto-initialization from another one', function () {
   it('Create REST and file datasets with copied information from virtual dataset', async function () {
     const ax = global.ax.dmeadus
 
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const checkDatasetAttachments = async (dataset) => {
+      let lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
+      assert.equal(lines.results[1].comment, 'a PDF file')
+      assert.equal(lines.total, 3)
+      lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, {
+        params: { select: 'attachment,_file.content', highlight: '_file.content', q: 'test' }
+      })).data
+      assert.equal(lines.total, 2)
+      const odtItem = lines.results.find(item => item.attachment === 'test.odt')
+      assert.ok(odtItem)
+      assert.equal(odtItem['_file.content'], 'This is a test libreoffice file.')
+    }
+
+    const form = new FormData()
+    form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const dataset = await workers.hook('finalizer/' + res.data.id)
+    await checkDatasetAttachments(dataset)
+
     const virtualDataset = await ax.post('/api/v1/datasets', {
       isVirtual: true,
       title: 'virtual',
       virtual: { children: [dataset.id] },
-      schema: [{ key: 'id' }, { key: 'adr' }]
+      schema: [{ key: 'attachment' }, { key: 'comment' }, { key: 'date' }]
     }).then(r => r.data)
     await workers.hook('finalizer/' + virtualDataset.id)
-    let lines = (await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)).data
+    await checkDatasetAttachments(virtualDataset)
 
-    let res = await ax.post('/api/v1/datasets', {
+    res = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'init from virtual / rest',
       initFrom: {
@@ -81,9 +100,7 @@ describe('Datasets with auto-initialization from another one', function () {
       }
     })
     const initFromDatasetRest = await workers.hook('finalizer/' + res.data.id)
-    lines = (await ax.get(`/api/v1/datasets/${initFromDatasetRest.id}/lines`)).data
-    assert.equal(lines.results[0].id, 'bidule')
-    assert.equal(lines.total, 2)
+    await checkDatasetAttachments(initFromDatasetRest)
 
     res = await ax.post('/api/v1/datasets', {
       title: 'init from virtual / file',
@@ -94,13 +111,12 @@ describe('Datasets with auto-initialization from another one', function () {
     })
     const initFromDatasetFile = await workers.hook('finalizer/' + res.data.id)
     assert.equal(initFromDatasetFile.file.name, 'virtual.csv')
-    lines = (await ax.get(`/api/v1/datasets/${initFromDatasetFile.id}/lines`)).data
-    assert.equal(lines.total, 2)
-    assert.equal(lines.results[0].id, 'koumoul')
+    await checkDatasetAttachments(initFromDatasetFile)
     const file = (await ax.get(`/api/v1/datasets/${initFromDatasetFile.id}/data-files/${initFromDatasetFile.file.name}`)).data
-    assert.deepEqual(file.trim(), `"id","adr"
-"koumoul","19 rue de la voie lactée saint avé"
-"bidule","adresse inconnue"`)
+    assert.deepEqual(file.trim(), `"attachment","comment","date"
+"test.odt","an ODT file","2017-12-12"
+"dir1/test.pdf","a PDF file","2018-12-12"
+,"no attachment on this line","2020-01-13"`)
   })
 
   it('Create file dataset with copied information from another file dataset', async function () {
