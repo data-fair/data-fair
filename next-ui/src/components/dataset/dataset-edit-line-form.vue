@@ -110,16 +110,16 @@ const simulateExtensionInputStr = computed(() => {
 watch(simulateExtensionInputStr, () => {
   if (!simulateExtensionInputStr.value) return
   const input = JSON.parse(simulateExtensionInputStr.value)
-  if (!Object.keys(input).length) return
   simulateExtension.execute(input)
 })
 
 const simulateExtension = useAsyncAction(async (body) => {
-  const res = await $fetch(`/datasets/${id}/_simulate-extension`, { method: 'POST', body })
-  const patch: any = {}
+  const res = Object.keys(body).length && await $fetch<Record<string, any>>(`/datasets/${id}/_simulate-extension`, { method: 'POST', body })
+  const newValue = { ...model.value }
   for (const key of extensionKeys.value) {
-    patch[key] = res[key]
+    if (res && res[key] !== undefined) newValue[key] = res[key]
+    else delete newValue[key]
   }
-  model.value = { ...model.value, ...patch }
+  model.value = newValue
 })
 </script>
