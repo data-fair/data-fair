@@ -13,7 +13,7 @@ import * as restDatasetsUtils from './utils/rest.js'
 import * as esUtils from './es/index.ts'
 import * as webhooks from '../misc/utils/webhooks.js'
 import { updateStorage } from './utils/storage.js'
-import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile } from './utils/files.ts'
+import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile, metadataAttachmentsDir } from './utils/files.ts'
 import { getSchemaBreakingChanges } from './utils/data-schema.js'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.js'
 import { validateURLFriendly } from '../misc/utils/validation.js'
@@ -541,6 +541,11 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
   if (await fs.pathExists(attachmentsDir(datasetDraft))) {
     await fs.remove(attachmentsDir(patchedDataset))
     await fs.move(attachmentsDir(datasetDraft), attachmentsDir(patchedDataset))
+  }
+
+  if (await fs.pathExists(metadataAttachmentsDir(datasetDraft))) {
+    await fs.remove(metadataAttachmentsDir(patchedDataset))
+    await fs.move(metadataAttachmentsDir(datasetDraft), metadataAttachmentsDir(patchedDataset))
   }
 
   // replace originalFile

@@ -154,6 +154,37 @@ describe('Datasets with auto-initialization from another one', function () {
     assert.ok(fileData.startsWith('id,adr,'))
   })
 
+  it('Create draft file dataset with copied information from another file dataset', async function () {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+
+    const attachmentForm = new FormData()
+    attachmentForm.append('attachment', fs.readFileSync('./resources/avatar.jpeg'), 'avatar.jpeg')
+    await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
+
+    await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'A description', attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
+
+    const res = await ax.post('/api/v1/datasets', {
+      title: 'init from schema',
+      initFrom: {
+        dataset: dataset.id, parts: ['schema', 'metadataAttachments', 'description', 'data']
+      }
+    }, { params: { draft: true } })
+    assert.equal(res.status, 201)
+    let initFromDataset = await workers.hook('finalizer/' + res.data.id)
+    assert.equal(initFromDataset.draft.file.name, 'dataset1.csv')
+
+    // validate the draft
+    await ax.post(`/api/v1/datasets/${initFromDataset.id}/draft`)
+    initFromDataset = await workers.hook('finalizer/' + res.data.id)
+
+    assert.equal(initFromDataset.file.name, 'dataset1.csv')
+    assert.ok(initFromDataset.storage.metadataAttachments.size > 1000)
+    assert.ok(initFromDataset.attachments.find(a => a.name === 'avatar.jpeg'))
+    const downloadAttachmentRes = await ax.get(`/api/v1/datasets/${initFromDataset.id}/metadata-attachments/avatar.jpeg`)
+    assert.equal(downloadAttachmentRes.status, 200)
+  })
+
   it('Create file dataset that doesn\'t match imported schema', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
