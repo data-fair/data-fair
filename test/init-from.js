@@ -59,6 +59,31 @@ describe('Datasets with auto-initialization from another one', function () {
     assert.equal(lines.results[0].datetime_fr, '2025-01-13T19:42:00+01:00')
   })
 
+  it('Create REST dataset with copied information from virtual dataset', async function () {
+    const ax = global.ax.dmeadus
+
+    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const virtualDataset = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'virtual',
+      virtual: { children: [dataset.id] }
+    }).then(r => r.data)
+    await workers.hook('finalizer/' + virtualDataset.id)
+    let lines = (await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)).data
+
+    const res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'init from schema',
+      initFrom: {
+        dataset: virtualDataset.id,
+        parts: ['schema', 'data']
+      }
+    })
+    const initFromDataset = await workers.hook('finalizer/' + res.data.id)
+    lines = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines`)).data
+    assert.equal(lines.total, 2)
+  })
+
   it('Create file dataset with copied information from another file dataset', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)

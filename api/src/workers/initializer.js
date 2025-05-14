@@ -11,6 +11,8 @@ import { applyTransactions } from '../datasets/utils/rest.js'
 import iterHits from '../datasets/es/iter-hits.js'
 import taskProgress from '../datasets/utils/task-progress.js'
 import * as filesUtils from '../datasets/utils/files.ts'
+import * as virtualDatasetsUtils from '../datasets/utils/virtual.js'
+
 import debugLib from 'debug'
 import mongo from '#mongo'
 
@@ -98,6 +100,9 @@ export const process = async function (app, dataset) {
     }
 
     if (dataset.initFrom.parts.includes('data')) {
+      if (parentDataset.isVirtual) {
+        parentDataset.descendants = await virtualDatasetsUtils.descendants(db, parentDataset)
+      }
       if (dataset.isRest) {
         // from any kind of dataset to rest: copy data in bulk into the mongodb collection
         const select = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => p.key).join(',')
