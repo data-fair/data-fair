@@ -1,5 +1,6 @@
 import fs from 'fs-extra'
 import path from 'path'
+import { Readable, Transform } from 'stream'
 import pump from '../misc/utils/pipe.js'
 import * as restUtils from '../datasets/utils/rest.js'
 import * as datasetUtils from '../datasets/utils/index.js'
@@ -15,6 +16,7 @@ import * as virtualDatasetsUtils from '../datasets/utils/virtual.js'
 
 import debugLib from 'debug'
 import mongo from '#mongo'
+import { getFlatten } from '../datasets/utils/flatten.ts'
 
 export const eventsPrefix = 'initialize'
 
@@ -100,6 +102,7 @@ export const process = async function (app, dataset) {
     }
 
     if (dataset.initFrom.parts.includes('data')) {
+      const flatten = getFlatten(parentDataset)
       if (parentDataset.isVirtual) {
         parentDataset.descendants = await virtualDatasetsUtils.descendants(db, parentDataset)
       }
@@ -107,7 +110,7 @@ export const process = async function (app, dataset) {
         // from any kind of dataset to rest: copy data in bulk into the mongodb collection
         const select = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => p.key).join(',')
         for await (const hits of iterHits(app.get('es'), parentDataset, { size: 1000, select })) {
-          const transactions = hits.map(hit => ({ _action: 'create', _id: hit._id, ...hit._source }))
+          const transactions = hits.map(hit => ({ _action: 'create', _id: hit._id, ...flatten(hit._source) }))
           await applyTransactions(db, dataset, pseudoUser, transactions)
           await progress.inc(transactions.length)
         }
@@ -121,15 +124,33 @@ export const process = async function (app, dataset) {
           await fs.copy(datasetUtils.filePath(parentDataset), datasetUtils.filePath({ ...dataset, ...patch }))
         }
       } else {
-        // from rest to file: make export and use as data file
+        // from rest or virtual to file: make export and use as data file
 
         const fileName = parentDataset.slug + '.csv'
         const filePath = path.join(datasetUtils.loadingDir(dataset), fileName)
 
         // creating empty file before streaming seems to fix some weird bugs with NFS
         await fs.ensureFile(filePath)
+
+        let inputStreams
+        if (parentDataset.isRest) inputStreams = await restUtils.readStreams(db, parentDataset)
+        else if (parentDataset.isVirtual) {
+          const select = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => p.key).join(',')
+          const iter = iterHits(app.get('es'), parentDataset, { size: 1000, select })
+          inputStreams = [
+            Readable.from(iter),
+            new Transform({
+              objectMode: true,
+              transform (items, encoding, callback) {
+                for (const item of items) this.push(flatten(item._source))
+                callback()
+              }
+            })
+          ]
+        }
+
         await pump(
-          ...await restUtils.readStreams(db, parentDataset),
+          ...inputStreams,
           ...(await import('../datasets/utils/outputs.js')).csvStreams({ ...dataset, ...patch }),
           fs.createWriteStream(filePath)
         )
