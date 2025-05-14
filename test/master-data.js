@@ -88,7 +88,7 @@ const lonProperty = {
 }
 
 describe('Master data management', function () {
-  it('should define and use a dataset as master-data remote-service used for extensions', async function () {
+  it.only('should define and use a dataset as master-data remote-service used for extensions', async function () {
     const ax = global.ax.superadmin
 
     const { remoteService, apiDoc } = await initMaster(
@@ -96,7 +96,8 @@ describe('Master data management', function () {
       [
         siretProperty,
         { key: 'extra', type: 'string', 'x-labels': { value1: 'label1' }, 'x-capabilities': { text: false } },
-        { key: 'extraFilter', type: 'string' }
+        { key: 'extraFilter', type: 'string' },
+        { key: 'extraMulti', type: 'string', separator: ', ' }
       ]
       ,
       [{
@@ -120,7 +121,7 @@ describe('Master data management', function () {
 
     // feed some data to the master
     const items = [
-      { siret: '82898347800011', extra: 'Extra information', extraFilter: 'filterOk' },
+      { siret: '82898347800011', extra: 'Extra information', extraFilter: 'filterOk', extraMulti: 'multi1,multi2' },
       { siret: '82898347800012', extra: 'Extra information', extraFilter: 'filterKo' }
     ]
     await ax.post('/api/v1/datasets/master/_bulk_lines', items.map(item => ({ _id: item.siret, ...item })))
@@ -134,6 +135,7 @@ describe('Master data management', function () {
     assert.equal(res.data.length, 2)
     assert.equal(res.data[0].siret, '82898347800011')
     assert.equal(res.data[0].extra, 'Extra information')
+    assert.equal(res.data[0].extraMulti, 'multi1, multi2')
     assert.ok(res.data[1]._error)
     res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', [{ siret: '82898347800011' }, { siret: 'unknown' }])
     assert.equal(res.data.length, 2)
@@ -146,13 +148,13 @@ describe('Master data management', function () {
     assert.equal(res.data[1].siret, '82898347800011')
     assert.equal(res.data[1].extra, 'Extra information')
     res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', 'siret\n82898347800011', { headers: { 'content-type': 'text/csv' } })
-    assert.equal(res.data, `siret,extra,extraFilter,_key,_error
-82898347800011,Extra information,filterOk,0,
+    assert.equal(res.data, `siret,extra,extraFilter,extraMulti,_key,_error
+82898347800011,Extra information,filterOk,"multi1, multi2",0,
 `)
     res = await ax.post('/api/v1/datasets/master/master-data/bulk-searchs/siret', 'siret\nunknown\n82898347800011', { headers: { 'content-type': 'text/csv' } })
-    assert.equal(res.data, `siret,extra,extraFilter,_key,_error
-,,,0,La donnée de référence ne contient pas de ligne correspondante.
-82898347800011,Extra information,filterOk,1,
+    assert.equal(res.data, `siret,extra,extraFilter,extraMulti,_key,_error
+,,,,0,La donnée de référence ne contient pas de ligne correspondante.
+82898347800011,Extra information,filterOk,"multi1, multi2",1,
 `)
 
     // create slave dataset
@@ -170,7 +172,7 @@ describe('Master data management', function () {
         type: 'remoteService',
         remoteService: remoteService.id,
         action: 'masterData_bulkSearch_siret',
-        select: ['extra']
+        select: ['extra', 'extraMulti']
       }]
     })
     await workers.hook('extender/slave')
@@ -182,10 +184,15 @@ describe('Master data management', function () {
     assert.equal(extraProp['x-labels'].value1, 'label1')
     assert.ok(extraProp['x-capabilities'])
     assert.equal(extraProp['x-capabilities'].text, false)
+    const extraMultiProp = slave.schema.find(p => p.key === '_siret.extraMulti')
+    assert.ok(extraMultiProp)
+    assert.equal(extraMultiProp.separator, ', ')
+    assert.deepEqual(extraMultiProp.enum, ['multi1', 'multi2'])
     assert.ok(slave.schema.find(p => p.key === '_siret._error'))
     assert.ok(!slave.schema.find(p => p.key === '_siret.siret'))
     let results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
     assert.equal(results[0]['_siret.extra'], 'Extra information')
+    assert.equal(results[0]['_siret.extraMulti'], 'multi1, multi2')
     assert.equal(results[1]['_siret.extra'], 'Extra information')
     assert.ok(!results[0]['_siret.siret'])
 
