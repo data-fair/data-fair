@@ -610,9 +610,10 @@ router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset
 router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset({ fillDescendants: true }), apiKeyMiddleware, permissions.middleware('bulkSearch', 'read'), async (req, res) => {
   // no buffering of this response in the reverse proxy
   res.setHeader('X-Accel-Buffering', 'no')
+  const flatten = getFlatten(req.dataset)
   await pump(
     req,
-    ...await bulkSearchStreams(mongo.db, req.app.get('es'), req.dataset, req.get('Content-Type'), req.params.bulkSearchId, req.query.select),
+    ...await bulkSearchStreams(mongo.db, req.app.get('es'), req.dataset, req.get('Content-Type'), req.params.bulkSearchId, req.query.select, flatten),
     res
   )
 })
@@ -908,8 +909,9 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
     cacheHash = hash
   }
   let result
+  const flatten = getFlatten(req.dataset)
   try {
-    result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query, req.publicBaseUrl)
+    result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query, req.publicBaseUrl, flatten)
   } catch (err) {
     await manageESError(req, err)
   }
@@ -958,8 +960,9 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
   }
 
   let result
+  const flatten = getFlatten(req.dataset)
   try {
-    result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, { ...req.query }, vectorTileRequested || req.query.format === 'geojson', req.publicBaseUrl, explain)
+    result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, { ...req.query }, vectorTileRequested || req.query.format === 'geojson', req.publicBaseUrl, explain, flatten)
     if (result.next) {
       const nextLinkURL = new URL(`${req.publicBaseUrl}/api/v1/datasets/${req.dataset.id}/values_agg`)
       for (const key of Object.keys(req.query)) {

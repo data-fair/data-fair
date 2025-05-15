@@ -1,4 +1,5 @@
 import fs from 'fs-extra'
+import { flatten } from 'flat'
 import { Writable, Transform } from 'stream'
 import csv from 'csv-parser'
 import JSONStream from 'JSONStream'
@@ -15,7 +16,7 @@ import { filePath, fullFilePath, tmpDir } from './files.ts'
 import pump from '../../misc/utils/pipe.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { compileExpression } from './extensions.js'
-import { getFlatten, getFlattenNoCache } from './flatten.ts'
+import { getFlattenNoCache } from './flatten.ts'
 
 export const formatLine = (item, schema) => {
   for (const key of Object.keys(item)) {
@@ -34,7 +35,6 @@ export const formatLine = (item, schema) => {
 // used both by readStream and bulk transactions in rest datasets
 export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, encoding, skipDecoding, dataset, autoAdjustKeys = false, applyTransform = false) => {
   const streams = []
-  const flatten = getFlatten(dataset)
 
   // file is gzipped
   if (mimeType.endsWith('+gzip')) {

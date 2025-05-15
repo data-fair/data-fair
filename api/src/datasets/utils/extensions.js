@@ -25,6 +25,7 @@ import exprEval from '@data-fair/data-fair-shared/expr-eval.js'
 import { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 import * as fieldsSniffer from './fields-sniffer.js'
 import intoStream from 'into-stream'
+import { getFlatten } from './flatten.ts'
 
 export { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 
@@ -316,7 +317,7 @@ class ExtensionsStream extends Transform {
           }
           const bulkSearchId = extension.action.id.replace('masterData_bulkSearch_', '')
           data = await bulkSearchPromise(
-            await bulkSearchStreams(this.db, this.es, masterDataset, 'application/x-ndjson', bulkSearchId, opts.params.select),
+            await bulkSearchStreams(this.db, this.es, masterDataset, 'application/x-ndjson', bulkSearchId, opts.params.select, getFlatten(masterDataset)),
             opts.data
           )
         } else {

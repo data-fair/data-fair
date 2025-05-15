@@ -3,9 +3,8 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { parseSort, parseOrder, prepareQuery, aliasName, prepareResultItem } from './commons.js'
 import capabilities from '../../../contract/capabilities.js'
 import { assertMetricAccepted } from './metric-agg.js'
-import { getFlatten } from '../utils/flatten.ts'
 
-export default async (client, dataset, query, addGeoData, publicBaseUrl, explain, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
+export default async (client, dataset, query, addGeoData, publicBaseUrl, explain, flatten, allowPartialResults = false, timeout = config.elasticsearch.searchTimeout) => {
   const fields = dataset.schema.map(f => f.key)
   // nested grouping by a serie of fields
   if (!query.field) throw httpError(400, 'Le paramètre "field" est obligatoire')
@@ -175,7 +174,7 @@ export default async (client, dataset, query, addGeoData, publicBaseUrl, explain
 
   const response = { total: esResponse.hits.total.value }
   if (esResponse.timed_out) response.timed_out = true
-  recurseAggResponse(response, esResponse.aggregations, dataset, query, publicBaseUrl)
+  recurseAggResponse(response, esResponse.aggregations, dataset, query, publicBaseUrl, flatten)
 
   if (aggSizes[0] > 0 && response.aggs?.length === aggSizes[0]) {
     const lastValue = response.aggs[response.aggs.length - 1].value
@@ -188,14 +187,13 @@ export default async (client, dataset, query, addGeoData, publicBaseUrl, explain
   return response
 }
 
-const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl) => {
+const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl, flatten) => {
   if (aggRes.card) response.total_values = aggRes.card.value
   if (!aggRes.values) return response
   response.total_other = aggRes.values.sum_other_doc_count
   if (aggRes.values.buckets.length > 10000) {
     throw httpError(400, 'Résultats d\'aggrégation trop nombreux. Abandon.')
   }
-  const flatten = getFlatten(dataset)
   response.aggs = aggRes.values.buckets.map(b => {
     const aggItem = {
       total: b.doc_count,
@@ -211,7 +209,7 @@ const recurseAggResponse = (response, aggRes, dataset, query, publicBaseUrl) => 
       }
     }
     if (b.values) {
-      recurseAggResponse(aggItem, b, dataset, query, publicBaseUrl)
+      recurseAggResponse(aggItem, b, dataset, query, publicBaseUrl, flatten)
     }
     if (b.centroid) {
       aggItem.centroid = b.centroid.location

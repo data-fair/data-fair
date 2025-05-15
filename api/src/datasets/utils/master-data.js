@@ -6,7 +6,6 @@ import batchStream from '../../misc/utils/batch-stream.js'
 import * as esUtils from '../es/index.ts'
 import pump from '../../misc/utils/pipe.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import { getFlatten } from './flatten.ts'
 
 export const bulkSearchPromise = async (streams, data) => {
   const buffers = []
@@ -23,8 +22,7 @@ export const bulkSearchPromise = async (streams, data) => {
   return Buffer.concat(buffers).toString()
 }
 
-export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, select) => {
-  const flatten = getFlatten(dataset)
+export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, select, flatten) => {
   const bulkSearch = dataset.masterData && dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.find(bs => bs.id === bulkSearchId)
   if (!bulkSearch) throw httpError(404, `Recherche en masse "${bulkSearchId}" inconnue`)
 
