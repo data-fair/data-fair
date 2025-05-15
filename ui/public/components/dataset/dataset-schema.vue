@@ -76,7 +76,7 @@
         :properties-refs="filteredProperties"
         :editable="can('writeDescription')"
         :no-breaking-changes="!can('writeDescriptionBreaking')"
-        :sortable="can('writeDescriptionBreaking') && dataset.isRest && !schemaFilter"
+        :sortable="can('writeDescription') && (dataset.isRest || dataset.file) && !schemaFilter"
         @sort="applySort"
         @remove="removeProperty"
       />

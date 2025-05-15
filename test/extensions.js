@@ -48,7 +48,7 @@ describe('Extensions', function () {
       schema: [
         { ...dataset.schema.find(p => p.key === '_coords.lat'), title: 'Overwritten title lat', description: 'Overwritten description lat' },
         { ...dataset.schema.find(p => p.key === '_coords.lon'), title: 'Overwritten title lon', description: 'Overwritten description lon' },
-        ...dataset.schema.filter(p => p.key !== '_coords.lat' && p.key !== '_coords.lon')
+        ...dataset.schema.filter(p => p.key !== '_coords.lat' && p.key !== '_coords.lon').reverse()
       ]
     }).then(r => r.data)
     assert.equal(dataset.status, 'finalized')
@@ -57,6 +57,10 @@ describe('Extensions', function () {
     delete dataset.schema[0].title
     dataset = await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema }).then(r => r.data)
     assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.schema[0].key, '_coords.lat')
+    assert.equal(dataset.schema[0].title, 'Latitude')
+    await global.ax.superadmin.post(`/api/v1/datasets/${dataset.id}/_reindex`)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
     assert.equal(dataset.schema[0].key, '_coords.lat')
     assert.equal(dataset.schema[0].title, 'Latitude')
 
@@ -112,8 +116,8 @@ describe('Extensions', function () {
     // Download extended file
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     const lines = res.data.split('\n')
-    assert.equal(lines[0].trim(), 'label,adr,_coords.lat,_coords.lon')
-    assert.equal(lines[1], 'koumoul,19 rue de la voie lactée saint avé,40,40')
+    assert.equal(lines[0].trim(), '_coords.lat,_coords.lon,adr,label')
+    assert.equal(lines[1], '40,40,19 rue de la voie lactée saint avé,koumoul')
 
     // list generated files
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
