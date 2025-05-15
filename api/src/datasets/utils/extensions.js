@@ -446,8 +446,6 @@ export const prepareExtensionsSchema = async (db, schema, extensions) => {
         .map(output => {
           const overwrite = extension.overwrite?.[output.name] ?? {}
           const key = overwrite['x-originalName'] ? fieldsSniffer.escapeKey(overwrite['x-originalName']) : (extensionKey + '.' + output.name)
-          const existingField = schema.find(field => field.key === key)
-          if (existingField) return existingField
           // this is for compatibility, new extensions should always have propertyPrefix
           const originalName = overwrite['x-originalName'] ?? (extension.propertyPrefix ? key : output.name)
           const field = {
@@ -490,7 +488,11 @@ export const prepareExtensionsSchema = async (db, schema, extensions) => {
   for (const prop of schema) {
     if (prop['x-extension']) {
       const newExtProp = extensionsFields.find(f => f.key === prop.key)
-      if (newExtProp) newSchema.push(newExtProp)
+      if (newExtProp) {
+        if (prop.title) newExtProp.title = prop.title
+        if (prop.description) newExtProp.description = prop.description
+        newSchema.push(newExtProp)
+      }
     } else {
       newSchema.push(prop)
     }

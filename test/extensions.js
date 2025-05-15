@@ -43,16 +43,22 @@ describe('Extensions', function () {
     assert.equal(res.data.results[0][extensionKey + '.lat'], 10)
     assert.equal(res.data.results[0][extensionKey + '.lon'], 10)
 
-    // re-order columns
+    // re-order columns and change titles and descriptions
     dataset = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: [
-        dataset.schema.find(p => p.key === '_coords.lat'),
-        dataset.schema.find(p => p.key === '_coords.lon'),
+        { ...dataset.schema.find(p => p.key === '_coords.lat'), title: 'Overwritten title lat', description: 'Overwritten description lat' },
+        { ...dataset.schema.find(p => p.key === '_coords.lon'), title: 'Overwritten title lon', description: 'Overwritten description lon' },
         ...dataset.schema.filter(p => p.key !== '_coords.lat' && p.key !== '_coords.lon')
       ]
     }).then(r => r.data)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.schema[0].key, '_coords.lat')
+    assert.equal(dataset.schema[0].title, 'Overwritten title lat')
+    delete dataset.schema[0].title
+    dataset = await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema }).then(r => r.data)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.schema[0].key, '_coords.lat')
+    assert.equal(dataset.schema[0].title, 'Latitude')
 
     // Add a line to dataset
     // Re-prepare for extension, it should only process the new line

@@ -297,7 +297,7 @@ export const schemasValidationCompatible = (newSchema, oldSchema) => {
 /** @type {(p1:any, p2:any) => boolean} */
 const sortSchema = (p1, p2) => p1.key.localeCompare(p2.key)
 
-const innociousSchemaProps = validationProps.concat(['title', 'description', 'icon', 'x-display', 'x-master', 'x-labels', 'x-group', 'x-cardinality', 'readOnly', 'enum', 'x-originalName', 'x-transform'])
+const innociousSchemaProps = validationProps.concat(['title', 'description', 'icon', 'x-display', 'x-master', 'x-labels', 'x-group', 'x-cardinality', 'readOnly', 'enum', 'x-originalName', 'x-transform', 'x-concept'])
 
 const removeInnocuous = (p) => {
   const cleanProp = { ...p }
