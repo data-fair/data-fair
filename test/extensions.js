@@ -43,6 +43,17 @@ describe('Extensions', function () {
     assert.equal(res.data.results[0][extensionKey + '.lat'], 10)
     assert.equal(res.data.results[0][extensionKey + '.lon'], 10)
 
+    // re-order columns
+    dataset = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: [
+        dataset.schema.find(p => p.key === '_coords.lat'),
+        dataset.schema.find(p => p.key === '_coords.lon'),
+        ...dataset.schema.filter(p => p.key !== '_coords.lat' && p.key !== '_coords.lon')
+      ]
+    }).then(r => r.data)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.schema[0].key, '_coords.lat')
+
     // Add a line to dataset
     // Re-prepare for extension, it should only process the new line
     nockScope = nock('http://test.com').post('/geocoder/coords').reply(200, (uri, requestBody) => {

@@ -486,7 +486,16 @@ export const prepareExtensionsSchema = async (db, schema, extensions) => {
       extensionsFields.push(fullProperty)
     }
   }
-  return schema.filter(field => !field['x-extension']).concat(extensionsFields)
+  const newSchema = []
+  for (const prop of schema) {
+    if (prop['x-extension']) {
+      const newExtProp = extensionsFields.find(f => f.key === prop.key)
+      if (newExtProp) newSchema.push(newExtProp)
+    } else {
+      newSchema.push(prop)
+    }
+  }
+  return newSchema.concat(extensionsFields.filter(p => !newSchema.some(p2 => p.key === p2.key)))
 }
 
 // check if and extension dosn't have the necessary input
