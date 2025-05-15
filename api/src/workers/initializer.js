@@ -16,7 +16,7 @@ import * as virtualDatasetsUtils from '../datasets/utils/virtual.js'
 
 import debugLib from 'debug'
 import mongo from '#mongo'
-import { getFlatten } from '../datasets/utils/flatten.ts'
+import { getFlattenNoCache } from '../datasets/utils/flatten.ts'
 
 export const eventsPrefix = 'initialize'
 
@@ -104,7 +104,7 @@ export const process = async function (app, dataset) {
     }
 
     if (dataset.initFrom.parts.includes('data')) {
-      const flatten = getFlatten(parentDataset)
+      const flatten = getFlattenNoCache(parentDataset)
       if (parentDataset.isVirtual) {
         parentDataset.descendantsFull = await virtualDatasetsUtils.descendants(db, parentDataset, false, ['owner'])
         parentDataset.descendants = parentDataset.descendantsFull.map(d => d.id)

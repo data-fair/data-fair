@@ -157,13 +157,13 @@ describe('Master data management', function () {
 82898347800011,Extra information,filterOk,"multi1, multi2",1,
 `)
 
-    // create slave dataset
+    // create REST slave dataset
     await ax.put('/api/v1/datasets/slave', {
       isRest: true,
       title: 'slave',
       schema: [siretProperty]
     })
-    await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }, { siret: '82898347800011' }])
+    await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800012' }, {}, { siret: '82898347800011' }, { siret: '82898347800011' }])
     await workers.hook('finalizer/slave')
 
     await ax.patch('/api/v1/datasets/slave', {
@@ -184,17 +184,48 @@ describe('Master data management', function () {
     assert.equal(extraProp['x-labels'].value1, 'label1')
     assert.ok(extraProp['x-capabilities'])
     assert.equal(extraProp['x-capabilities'].text, false)
-    const extraMultiProp = slave.schema.find(p => p.key === '_siret.extraMulti')
+    let extraMultiProp = slave.schema.find(p => p.key === '_siret.extraMulti')
     assert.ok(extraMultiProp)
     assert.equal(extraMultiProp.separator, ', ')
     assert.deepEqual(extraMultiProp.enum, ['multi1', 'multi2'])
     assert.ok(slave.schema.find(p => p.key === '_siret._error'))
     assert.ok(!slave.schema.find(p => p.key === '_siret.siret'))
     let results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
+    assert.equal(results.length, 4)
     assert.equal(results[0]['_siret.extra'], 'Extra information')
     assert.equal(results[0]['_siret.extraMulti'], 'multi1, multi2')
     assert.equal(results[1]['_siret.extra'], 'Extra information')
     assert.ok(!results[0]['_siret.siret'])
+    results = (await ax.get('/api/v1/datasets/slave/lines', { params: { '_siret.extraMulti_eq': 'multi1' } })).data.results
+    assert.equal(results.length, 2)
+
+    // create file slave dataset
+    const form = new FormData()
+    const csvSlave = `siret
+82898347800011
+82898347800012
+`
+    form.append('dataset', csvSlave, 'slave.csv')
+    const slaveFile = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    await workers.hook(`finalizer/${slaveFile.id}`)
+    let lines = (await ax.get(`/api/v1/datasets/${slaveFile.id}/lines`)).data.results
+    await ax.patch(`/api/v1/datasets/${slaveFile.id}`, {
+      schema: [siretProperty],
+      extensions: [{
+        active: true,
+        type: 'remoteService',
+        remoteService: remoteService.id,
+        action: 'masterData_bulkSearch_siret',
+        select: ['extra', 'extraMulti']
+      }]
+    })
+    await workers.hook(`finalizer/${slaveFile.id}`)
+    extraMultiProp = slave.schema.find(p => p.key === '_siret.extraMulti')
+    assert.ok(extraMultiProp)
+    assert.equal(extraMultiProp.separator, ', ')
+    assert.deepEqual(extraMultiProp.enum, ['multi1', 'multi2'])
+    lines = (await ax.get(`/api/v1/datasets/${slaveFile.id}/lines`)).data.results
+    assert.equal(lines[0]['_siret.extraMulti'], 'multi1, multi2')
 
     // activate auto update
     await ax.patch('/api/v1/datasets/slave', {
