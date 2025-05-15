@@ -3,7 +3,6 @@ import { Writable, Transform } from 'stream'
 import csv from 'csv-parser'
 import JSONStream from 'JSONStream'
 import { stringify as csvStrStream } from 'csv-stringify'
-import { flatten } from 'flat'
 import tmp from 'tmp-promise'
 import mimeTypeStream from 'mime-type-stream'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
@@ -16,6 +15,7 @@ import { filePath, fullFilePath, tmpDir } from './files.ts'
 import pump from '../../misc/utils/pipe.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { compileExpression } from './extensions.js'
+import { getFlatten, getFlattenNoCache } from './flatten.ts'
 
 export const formatLine = (item, schema) => {
   for (const key of Object.keys(item)) {
@@ -34,6 +34,7 @@ export const formatLine = (item, schema) => {
 // used both by readStream and bulk transactions in rest datasets
 export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {}, raw = false, noExtra = false, encoding, skipDecoding, dataset, autoAdjustKeys = false, applyTransform = false) => {
   const streams = []
+  const flatten = getFlatten(dataset)
 
   // file is gzipped
   if (mimeType.endsWith('+gzip')) {
@@ -154,7 +155,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
     streams.push(new Transform({
       objectMode: true,
       transform (feature, encoding, callback) {
-        const item = flatten({ ...feature.properties }, { safe: true })
+        const item = flatten({ ...feature.properties })
         if (feature.id) item.id = feature.id
         item.geometry = feature.geometry
         if (raw) {
@@ -271,6 +272,7 @@ export const readStreams = async (db, dataset, raw = false, full = false, ignore
 // Used by extender worker to produce the "full" version of the file
 export const writeExtendedStreams = async (db, dataset, extensions) => {
   if (dataset.isRest) return restDatasetsUtils.writeExtendedStreams(db, dataset, extensions)
+  const flatten = getFlattenNoCache(dataset)
   const tmpFullFile = await tmp.tmpName({ tmpdir: tmpDir, prefix: 'full-' })
   // creating empty file before streaming seems to fix some weird bugs with NFS
   await fs.ensureFile(tmpFullFile)
@@ -286,7 +288,7 @@ export const writeExtendedStreams = async (db, dataset, extensions) => {
 
     transforms.push(new Transform({
       transform (chunk, encoding, callback) {
-        const flatChunk = flatten(chunk, { safe: true })
+        const flatChunk = flatten(chunk)
         callback(null, relevantSchema.map(field => flatChunk[field.key]))
       },
       objectMode: true

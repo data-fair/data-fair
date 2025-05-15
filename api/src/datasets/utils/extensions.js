@@ -176,10 +176,18 @@ export const extend = async (app, dataset, extensions, updateMode, ignoreDraftLi
   debug('Extension is over')
 }
 
-const applyExtensionResult = (extensionKey, overwrittenKeys, item, selectedResult, onlyEmitChanges) => {
+const applyExtensionResult = (extensionKey, overwrittenKeys, item, selectedResult, onlyEmitChanges, separatorOutput) => {
   let hasChanges = false
+
+  const objValue = (overwrittenKeys.length || separatorOutput.length) ? { ...selectedResult } : selectedResult
+
+  for (const output of separatorOutput) {
+    if (typeof objValue[output.name] === 'string') {
+      objValue[output.name] = objValue[output.name].split(output['x-separator'].trim()).map(part => part.trim())
+    }
+  }
+
   if (overwrittenKeys.length) debugOverwrite('apply overwritten keys to result', selectedResult)
-  const objValue = overwrittenKeys.length ? { ...selectedResult } : selectedResult
   for (const [name, newKey] of overwrittenKeys) {
     if (onlyEmitChanges && !equal(item[newKey], objValue[name])) hasChanges = true
     item[newKey] = objValue[name]
@@ -243,6 +251,8 @@ class ExtensionsStream extends Transform {
           debugOverwrite('no extension overwrite to apply')
         }
 
+        const separatorOutput = extension.action.output.filter(o => o['x-separator'])
+
         const opts = {
           method: extension.action.operation.method,
           url: extension.remoteService.server.replace(config.remoteServicesPrivateMapping[0], config.remoteServicesPrivateMapping[1]) + extension.action.operation.path,
@@ -288,7 +298,7 @@ class ExtensionsStream extends Transform {
           }
 
           if (cachedValue) {
-            const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], cachedValue.output, this.onlyEmitChanges)
+            const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], cachedValue.output, this.onlyEmitChanges, separatorOutput)
             if (hasChanges) changesIndexes.add(i)
           } else opts.data += JSON.stringify(inputs[i]) + '\n'
         }
@@ -332,7 +342,7 @@ class ExtensionsStream extends Transform {
               )
           }
 
-          const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], selectedResult, this.onlyEmitChanges)
+          const hasChanges = applyExtensionResult(extension.extensionKey, overwrittenKeys, this.buffer[i], selectedResult, this.onlyEmitChanges, separatorOutput)
           if (hasChanges) changesIndexes.add(i)
         }
       } else if (extension.evaluate && extension.property) {
@@ -454,6 +464,7 @@ export const prepareExtensionsSchema = async (db, schema, extensions) => {
           }
           if (output['x-capabilities']) field['x-capabilities'] = output['x-capabilities']
           if (output['x-labels']) field['x-labels'] = output['x-labels']
+          if (output['x-separator']) field.separator = output['x-separator']
           return field
         }))
       const errorField = action.output.find(o => o.name === '_error') || action.output.find(o => o.name === 'error')
