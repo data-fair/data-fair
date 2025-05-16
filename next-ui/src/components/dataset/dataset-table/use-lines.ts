@@ -8,6 +8,7 @@ export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>) 
   const display = useDisplay()
 
   const truncate = computed(() => {
+    if (!selectedCols.value.length) return null
     if (displayMode.value === 'list') return 200
     const minTruncate = display.mdAndUp.value ? 50 : 40
     const maxTruncate = 200
@@ -16,7 +17,8 @@ export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>) 
     return Math.min(maxTruncate, Math.max(minTruncate, roundedTruncate))
   })
   const baseFetchUrl = computed(() => {
-    return withQuery($apiPath + `/datasets/${id}/lines`, { draftMode, truncate: truncate.value })
+    if (truncate.value === null) return null
+    return withQuery($apiPath + `/datasets/${id}/lines`, { draftMode, size: 20, truncate: truncate.value })
   })
 
   const total = ref<number>()
@@ -25,24 +27,26 @@ export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>) 
 
   type Lines = { total: number, next?: string, results: any[] }
   let abortController: AbortController | undefined
-  const fetchResults = useAsyncAction(async () => {
+  const fetchResults = useAsyncAction(async (reset?: boolean) => {
     if (!next.value) return
     abortController = new AbortController()
     const data = await $fetch<Lines>(next.value)
-    results.value.push(...data.results.map(markRaw))
+    if (reset) results.value = data.results.map(markRaw)
+    else results.value.push(...data.results.map(markRaw))
     next.value = data.next
     total.value = data.total
   })
 
   const reset = () => {
+    if (!baseFetchUrl.value) return
     next.value = baseFetchUrl.value
     total.value = undefined
     if (abortController) abortController.abort()
-    fetchResults.execute()
+    fetchResults.execute(true)
   }
   watch(baseFetchUrl, reset, { immediate: true })
 
-  return { results, fetchResults }
+  return { baseFetchUrl, results, fetchResults }
 }
 
 export default useLines

@@ -1,16 +1,17 @@
 <template>
   <div style="position: relative">
-    {{ displayMode }}
-    <chars-measurer
+    <!--<chars-measurer
       v-model="charsWidths"
       style="position:absolute; top: 0; z-index: -1;"
-    />
+    />-->
     <v-sheet class="pa-0">
       <v-data-table-virtual
         :height="windowHeight"
         :items="results"
         :headers="headers"
         :loading="fetchResults.loading.value"
+        item-key="_id"
+        item-value="_id"
         fixed-header
       >
         <template #loader>
@@ -36,7 +37,7 @@ import useLines from './use-lines'
 import useHeaders from './use-headers'
 
 const { dataset } = useDatasetStore()
-const charsWidths = ref<Record<string, number> | null>(null)
+// const charsWidths = ref<Record<string, number> | null>(null)
 
 const { height: windowHeight } = useWindowSize()
 
@@ -44,9 +45,9 @@ const allCols = computed(() => dataset.value?.schema?.map(p => p.key) ?? [])
 const cols = defineModel<string[]>('cols', { default: [] })
 const selectedCols = computed(() => cols.value.length ? cols.value : allCols.value)
 
-const displayMode = defineModel<string>('display', { default: 'list' })
-const { results, fetchResults } = useLines(displayMode, selectedCols)
-const { headers } = useHeaders(selectedCols, results)
+const displayMode = defineModel<string>('display', { default: 'table' })
+const { baseFetchUrl, results, fetchResults } = useLines(displayMode, selectedCols)
+const { headers } = useHeaders(selectedCols, baseFetchUrl, results)
 
 const onIntersect = (intersect: boolean) => {
   if (!intersect) return

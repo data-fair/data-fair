@@ -18,7 +18,7 @@ const route = useRoute<'/embed/dataset/[id]/table'>()
 provideDatasetStore(route.params.id)
 
 const cols = useStringsArraySearchParam('cols')
-const display = useStringSearchParam('display')
+const display = useStringSearchParam('display', 'table')
 </script>
 
 <style>
