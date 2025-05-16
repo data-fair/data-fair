@@ -59,6 +59,8 @@ declare global {
   const propTypeIcon: typeof import('../src/utils/dataset')['propTypeIcon']
   const propTypeTitle: typeof import('../src/utils/dataset')['propTypeTitle']
   const provide: typeof import('vue')['provide']
+  const provideApplicationStore: typeof import('../src/composables/application-store')['provideApplicationStore']
+  const provideDatasetStore: typeof import('../src/composables/dataset-store')['provideDatasetStore']
   const reactive: typeof import('vue')['reactive']
   const readonly: typeof import('vue')['readonly']
   const ref: typeof import('vue')['ref']
@@ -84,6 +86,7 @@ declare global {
   const useDatasetStore: typeof import('../src/composables/dataset-store')['useDatasetStore']
   const useDatasetWatch: typeof import('../src/composables/dataset-watch')['useDatasetWatch']
   const useFetch: typeof import('@data-fair/lib-vue/fetch.js')['useFetch']
+  const useGlobalStore: typeof import('../src/composables/use-global-store')['default']
   const useHead: typeof import('@unhead/vue')['useHead']
   const useHeadSafe: typeof import('@unhead/vue')['useHeadSafe']
   const useI18n: typeof import('vue-i18n')['useI18n']
@@ -138,8 +141,6 @@ declare module 'vue' {
     readonly applicationVersions: UnwrapRef<typeof import('../src/composables/application-versions')['default']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
-    readonly createApplicationStore: UnwrapRef<typeof import('../src/composables/application-store')['createApplicationStore']>
-    readonly createDatasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['createDatasetStore']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
     readonly datasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['default']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
@@ -179,6 +180,8 @@ declare module 'vue' {
     readonly propTypeIcon: UnwrapRef<typeof import('../src/utils/dataset')['propTypeIcon']>
     readonly propTypeTitle: UnwrapRef<typeof import('../src/utils/dataset')['propTypeTitle']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
+    readonly provideApplicationStore: UnwrapRef<typeof import('../src/composables/application-store')['provideApplicationStore']>
+    readonly provideDatasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['provideDatasetStore']>
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
     readonly ref: UnwrapRef<typeof import('vue')['ref']>

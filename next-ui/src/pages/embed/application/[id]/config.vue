@@ -6,9 +6,9 @@
 </template>
 
 <script setup lang="ts">
-import { createApplicationStore } from '~/composables/application-store'
+import { provideApplicationStore } from '~/composables/application-store'
 
 const route = useRoute<'/embed/application/[id]/config'>()
 
-createApplicationStore(route.params.id)
+provideApplicationStore(route.params.id)
 </script>

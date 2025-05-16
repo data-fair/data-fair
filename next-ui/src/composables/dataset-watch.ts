@@ -1,10 +1,11 @@
 import type { Event } from '#api/types'
+import { type DatasetStore } from './dataset-store'
 
 type WatchKey = 'journal'
 
-export const useDatasetWatch = (keys: WatchKey | WatchKey[]) => {
+export const useDatasetWatch = (datasetStore: DatasetStore, keys: WatchKey | WatchKey[]) => {
   const { sendUiNotif } = useUiNotif()
-  const { id, dataset, journal } = useDatasetStore()
+  const { id, dataset, journal } = datasetStore
 
   if (!Array.isArray(keys)) keys = [keys]
   const ws = useWS('/data-fair/')

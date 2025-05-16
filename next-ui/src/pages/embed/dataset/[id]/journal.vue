@@ -8,12 +8,13 @@
 </template>
 
 <script setup lang="ts">
-import { createDatasetStore } from '~/composables/dataset-store'
+import { provideDatasetStore } from '~/composables/dataset-store'
 
 const route = useRoute<'/embed/dataset/[id]/journal'>()
 
-const { journal, journalFetch } = createDatasetStore(route.params.id)
-useDatasetWatch('journal')
+const datasetStore = provideDatasetStore(route.params.id)
+const { journal, journalFetch } = datasetStore
+useDatasetWatch(datasetStore, 'journal')
 
 if (!journalFetch.initialized.value) journalFetch.refresh()
 </script>
