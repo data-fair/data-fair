@@ -4,6 +4,9 @@
       v-model="charsWidths"
       style="position:absolute; top: 0; z-index: -1;"
     />-->
+    <div>
+      <dataset-select-cols v-model="cols" />
+    </div>
     <v-sheet class="pa-0">
       <v-data-table-virtual
         :height="windowHeight"
