@@ -24,6 +24,7 @@ const createDatasetStore = (id: string, draftMode: boolean | undefined = undefin
 
   return {
     id,
+    draftMode,
     dataset,
     datasetFetch,
     restDataset,

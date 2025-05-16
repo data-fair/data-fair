@@ -8,10 +8,11 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     ApplicationConfig: typeof import('./../src/components/application/application-config.vue')['default']
+    CharSizes: typeof import('./../src/components/char-sizes.vue')['default']
     ConfirmMenu: typeof import('./../src/components/confirm-menu.vue')['default']
     DatasetEditLineForm: typeof import('./../src/components/dataset/dataset-edit-line-form.vue')['default']
     DatasetSchemaView: typeof import('./../src/components/dataset/dataset-schema-view.vue')['default']
-    DatasetTable: typeof import('./../src/components/dataset/dataset-table.vue')['default']
+    DatasetTable: typeof import('./../src/components/dataset/dataset-table/dataset-table.vue')['default']
     JournalView: typeof import('./../src/components/journal-view.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
