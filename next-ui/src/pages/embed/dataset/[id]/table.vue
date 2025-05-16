@@ -3,7 +3,10 @@
     fluid
     class="pa-0"
   >
-    <dataset-table />
+    <dataset-table
+      v-model:cols="cols"
+      :display="display"
+    />
   </v-container>
 </template>
 
@@ -13,6 +16,9 @@ import { provideDatasetStore } from '~/composables/dataset-store'
 const route = useRoute<'/embed/dataset/[id]/table'>()
 
 provideDatasetStore(route.params.id)
+
+const cols = useStringsArraySearchParam('cols')
+const display = useStringSearchParam('display')
 </script>
 
 <style>

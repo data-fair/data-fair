@@ -1,7 +1,8 @@
 <template>
   <div style="position: relative">
-    <char-sizes
-      v-model="chars"
+    {{ displayMode }}
+    <chars-measurer
+      v-model="charsWidths"
       style="position:absolute; top: 0; z-index: -1;"
     />
     <v-sheet class="pa-0">
@@ -32,21 +33,20 @@
 <script lang="ts" setup>
 import { useWindowSize } from '@vueuse/core'
 import useLines from './use-lines'
+import useHeaders from './use-headers'
 
 const { dataset } = useDatasetStore()
-const { results, fetchResults } = useLines()
-
-const chars = ref<Record<string, number> | null>(null)
+const charsWidths = ref<Record<string, number> | null>(null)
 
 const { height: windowHeight } = useWindowSize()
 
-const headers = computed(() => {
-  return dataset.value?.schema?.map(p => ({
-    key: p.key,
-    title: p.title || p['x-originalName'] || p.key,
-    nowrap: true
-  }))
-})
+const allCols = computed(() => dataset.value?.schema?.map(p => p.key) ?? [])
+const cols = defineModel<string[]>('cols', { default: [] })
+const selectedCols = computed(() => cols.value.length ? cols.value : allCols.value)
+
+const displayMode = defineModel<string>('display', { default: 'list' })
+const { results, fetchResults } = useLines(displayMode, selectedCols)
+const { headers } = useHeaders(selectedCols, results)
 
 const onIntersect = (intersect: boolean) => {
   if (!intersect) return

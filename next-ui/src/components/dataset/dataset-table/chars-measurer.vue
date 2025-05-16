@@ -9,14 +9,13 @@
       v-text="char"
     />
     <br>
-    {{ charSizes }}
   </div>
 </template>
 
 <script setup lang="ts">
 import { useCurrentElement } from '@vueuse/core'
 
-const charSizes = defineModel<Record<string, number> | null>({ default: null })
+const charsWidths = defineModel<Record<string, number> | null>({ default: null })
 const letters = 'abcdefghijklmnopqrstuvwxyzéèàçùâêôûîïüöëœ'
 const chars = [
   ...letters,
@@ -34,7 +33,7 @@ onMounted(async () => {
       values[chars[Number(i)]] = Math.ceil(elem.getBoundingClientRect().width * 100) / 100
     }
   })
-  charSizes.value = values
+  charsWidths.value = values
 })
 </script>
 
