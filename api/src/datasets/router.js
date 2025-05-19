@@ -723,7 +723,8 @@ const readLines = async (req, res) => {
       res.type('application/x-protobuf')
       res.setHeader('x-tilesmode', 'cache/' + sampling)
       res.throttleEnd('static')
-      return res.status(200).send(value.buffer)
+      if (value.count && value.total) res.setHeader('x-tilesampling', value.count + '/' + value.total)
+      return res.status(200).send(value.tile ? value.tile.buffer : value.buffer)
     }
     cacheHash = hash
   }
@@ -773,7 +774,7 @@ const readLines = async (req, res) => {
   if (vectorTileRequested && sampling === 'max' && !query.collapse) {
     let previousEsResponse
     let totalLength = 0
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
       if (previousEsResponse) {
         if (size && previousEsResponse.hits.hits.length === size && totalLength < 10000000) {
           const lastHit = previousEsResponse.hits.hits[previousEsResponse.hits.hits.length - 1]
@@ -789,6 +790,7 @@ const readLines = async (req, res) => {
         break
       }
       totalLength += previousEsResponse.contentLength
+
       if (!esResponse) esResponse = previousEsResponse
       else esResponse.hits.hits = esResponse.hits.hits.concat(previousEsResponse.hits.hits)
     }
@@ -844,8 +846,9 @@ const readLines = async (req, res) => {
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
-    if (useVTCache) cache.set(db, cacheHash, new mongodb.Binary(tile))
-    res.setHeader('x-tilesmode', tilesMode + '/' + esResponse.hits.hits.length)
+    if (useVTCache) cache.set(db, cacheHash, { tile: new mongodb.Binary(tile), count: esResponse.hits.hits.length, total: esResponse.hits.total.value })
+    res.setHeader('x-tilesmode', tilesMode)
+    res.setHeader('x-tilesampling', esResponse.hits.hits.length + '/' + esResponse.hits.total.value)
     return res.status(200).send(tile)
   }
 
