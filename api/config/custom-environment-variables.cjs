@@ -42,7 +42,10 @@ module.exports = {
     reverseProxyCache: 'REVERSE_PROXY_CACHE'
   },
   tiles: {
-    maxThreads: 'TILES_MAX_THREADS'
+    maxThreads: {
+      __name: 'TILES_MAX_THREADS',
+      __format: 'json'
+    }
   },
   analytics: {
     __name: 'ANALYTICS',
