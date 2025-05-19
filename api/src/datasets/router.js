@@ -770,7 +770,7 @@ const readLines = async (req, res) => {
   const [_, size] = findUtils.pagination(query)
 
   let esResponse
-  if (vectorTileRequested && sampling === 'max') {
+  if (vectorTileRequested && sampling === 'max' && !query.collapse) {
     let previousEsResponse
     let totalLength = 0
     for (let i = 0; i < 3; i++) {
