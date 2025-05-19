@@ -252,7 +252,7 @@
             v-model="currentPropRef.prop.title"
             :placeholder="currentPropRef.prop['x-originalName'] || ' '"
             :label="$t('label')"
-            :disabled="!editable || !currentPropRef.editable"
+            :disabled="!editable"
             outlined
             dense
             hide-details
@@ -266,7 +266,7 @@
           <markdown-editor
             v-model="currentPropRef.prop.description"
             :label="$t('description')"
-            :disabled="!editable || !currentPropRef.editable"
+            :disabled="!editable"
             :easymde-config="{minHeight: '150px'}"
           >
             <template #append>

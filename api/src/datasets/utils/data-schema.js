@@ -89,7 +89,15 @@ export const mergeFileSchema = (dataset) => {
   for (const field of extensionFields) {
     if (fileFields.find(f => f.key === field.key)) throw httpError(400, `[noretry] Une extension essaie de créer la colonne "${field.key}" mais cette clé est déjà utilisée.`)
   }
-  dataset.schema = fileFields.concat(extensionFields)
+  let schema = []
+  for (const prop of dataset.schema) {
+    const newProp = fileFields.find(p => p.key === prop.key) ?? extensionFields.find(p => p.key === prop.key)
+    if (newProp) schema.push(newProp)
+  }
+  schema = schema
+    .concat(fileFields.filter(p => !schema.some(p2 => p.key === p2.key)))
+    .concat(extensionFields.filter(p => !schema.some(p2 => p.key === p2.key)))
+  dataset.schema = schema
 }
 
 export const cleanSchema = (dataset) => {
@@ -297,7 +305,7 @@ export const schemasValidationCompatible = (newSchema, oldSchema) => {
 /** @type {(p1:any, p2:any) => boolean} */
 const sortSchema = (p1, p2) => p1.key.localeCompare(p2.key)
 
-const innociousSchemaProps = validationProps.concat(['title', 'description', 'icon', 'x-display', 'x-master', 'x-labels', 'x-group', 'x-cardinality', 'readOnly', 'enum', 'x-originalName', 'x-transform'])
+const innociousSchemaProps = validationProps.concat(['title', 'description', 'icon', 'x-display', 'x-master', 'x-labels', 'x-group', 'x-cardinality', 'readOnly', 'enum', 'x-originalName', 'x-transform', 'x-concept'])
 
 const removeInnocuous = (p) => {
   const cleanProp = { ...p }
