@@ -4,15 +4,28 @@
       v-model="charsWidths"
       style="position:absolute; top: 0; z-index: -1;"
     />-->
-    <div>
-      <dataset-select-cols v-model="cols" />
+    <!--<div
+      style="width: 100%; height: 40px"
+      d-flex
+      flex-row
+    >
+      <v-text-field />
+      <v-spacer />
+      <v-btn-group
+        variant="outlined"
+        divided
+        density="compact"
+      >
+        <dataset-select-cols v-model="cols" />
+      </v-btn-group>
     </div>
+    -->
     <v-sheet class="pa-0">
       <v-data-table-virtual
-        :height="windowHeight"
         :items="results"
         :headers="headers"
         :loading="fetchResults.loading.value"
+        :height="height- 40"
         item-key="_id"
         item-value="_id"
         fixed-header
@@ -35,14 +48,13 @@
 </i18n>
 
 <script lang="ts" setup>
-import { useWindowSize } from '@vueuse/core'
 import useLines from './use-lines'
 import useHeaders from './use-headers'
 
+const { height } = defineProps({ height: { type: Number, default: 800 } })
+
 const { dataset } = useDatasetStore()
 // const charsWidths = ref<Record<string, number> | null>(null)
-
-const { height: windowHeight } = useWindowSize()
 
 const allCols = computed(() => dataset.value?.schema?.map(p => p.key) ?? [])
 const cols = defineModel<string[]>('cols', { default: [] })
