@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import FormData from 'form-data'
 import nock from 'nock'
 import * as workers from '../api/src/workers/index.js'
+import config from 'config'
 
 describe('Datasets with auto-initialization from another one', function () {
   it('Create REST dataset with copied information from file dataset', async function () {
@@ -156,29 +157,62 @@ describe('Datasets with auto-initialization from another one', function () {
 
   it('Create draft file dataset with copied information from another file dataset', async function () {
     const ax = global.ax.dmeadus
-    const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const dataset = await testUtils.sendDataset('datasets/dataset-extensions.csv', ax)
 
     const attachmentForm = new FormData()
     attachmentForm.append('attachment', fs.readFileSync('./resources/avatar.jpeg'), 'avatar.jpeg')
     await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
 
-    await ax.patch('/api/v1/datasets/' + dataset.id, { description: 'A description', attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }] })
+    const nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
+      .post('/geocoder/coords?select=lat,lon').reply(200, (uri, requestBody) => {
+        const inputs = requestBody.trim().split('\n').map(JSON.parse)
+        assert.equal(inputs.length, 2)
+        assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
+        return inputs.map((input, i) => ({ key: input.key, lat: 10, lon: 10, matchLevel: 'match' + i }))
+          .map(JSON.stringify).join('\n') + '\n'
+      })
+    dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+
+    await ax.patch('/api/v1/datasets/' + dataset.id, {
+      description: 'A description',
+      schema: dataset.schema,
+      extensions: [{
+        active: true,
+        type: 'remoteService',
+        remoteService: 'geocoder-koumoul',
+        action: 'postCoords',
+        select: ['lat', 'lon'],
+        overwrite: {
+          lat: {
+            'x-originalName': 'latitude'
+          },
+          lon: {
+            'x-originalName': 'longitude'
+          }
+        },
+      }],
+      attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }]
+    })
+    await workers.hook('finalizer/' + dataset.id)
+    nockScope.done()
 
     const res = await ax.post('/api/v1/datasets', {
       title: 'init from schema',
       initFrom: {
-        dataset: dataset.id, parts: ['schema', 'metadataAttachments', 'description', 'data']
+        dataset: dataset.id, parts: ['schema', 'metadataAttachments', 'description', 'data', 'extensions']
       }
     }, { params: { draft: true } })
     assert.equal(res.status, 201)
     let initFromDataset = await workers.hook('finalizer/' + res.data.id)
-    assert.equal(initFromDataset.draft.file.name, 'dataset1.csv')
+    assert.equal(initFromDataset.draft.file.name, 'dataset-extensions.csv')
+    const lines = await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines?draft=true`)
+    assert.equal(lines.data.results[0].latitude, 10)
 
     // validate the draft
     await ax.post(`/api/v1/datasets/${initFromDataset.id}/draft`)
     initFromDataset = await workers.hook('finalizer/' + res.data.id)
 
-    assert.equal(initFromDataset.file.name, 'dataset1.csv')
+    assert.equal(initFromDataset.file.name, 'dataset-extensions.csv')
     assert.ok(initFromDataset.storage.metadataAttachments.size > 1000)
     assert.ok(initFromDataset.attachments.find(a => a.name === 'avatar.jpeg'))
     const downloadAttachmentRes = await ax.get(`/api/v1/datasets/${initFromDataset.id}/metadata-attachments/avatar.jpeg`)
