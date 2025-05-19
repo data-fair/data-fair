@@ -21,7 +21,7 @@
     </div>
     -->
     <v-sheet class="pa-0">
-      <v-data-table-virtual
+      <!--<v-data-table-virtual
         :items="results"
         :headers="headers"
         :loading="fetchResults.loading.value"
@@ -29,6 +29,8 @@
         item-key="_id"
         item-value="_id"
         fixed-header
+        disable-sort
+        no-filter
       >
         <template #loader>
           <v-progress-linear
@@ -40,6 +42,49 @@
           <span v-intersect:quiet="onIntersect" />
         </template>
       </v-data-table-virtual>
+      -->
+      <v-table
+        fixed-header
+        :loading="fetchResults.loading.value"
+        :height="height- 40"
+      >
+        <thead>
+          <tr>
+            <th
+              v-for="header of headers"
+              :key="header.key"
+              class="text-left text-no-wrap"
+            >
+              {{ header.title }}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <v-virtual-scroll
+            :height="300"
+            :items="results"
+            :item-height="52"
+            item-key="_id"
+            renderless
+          >
+            <template #default="{ item, index }">
+              <tr>
+                <td
+                  v-for="header of headers"
+                  :key="header.key"
+                  class="text-no-wrap"
+                >
+                  {{ item[header.key] }}
+                </td>
+              </tr>
+              <span
+                v-if="index === results.length - 1"
+                v-intersect:quiet="onIntersect"
+              />
+            </template>
+          </v-virtual-scroll>
+        </tbody>
+      </v-table>
     </v-sheet>
   </div>
 </template>
