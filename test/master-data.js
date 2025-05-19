@@ -316,6 +316,12 @@ describe('Master data management', function () {
     assert.equal(slave.schema.find(p => p.key === 'siretextra'), undefined)
     extraProp = slave.schema.find(p => p.key === 'siretextextra')
 
+    // re-upload csv that was downloaded extended
+    const csv = (await ax.get('/api/v1/datasets/slave/lines?format=csv')).data
+    res = await ax.post('/api/v1/datasets/slave/_bulk_lines', csv, { headers: { 'content-type': 'text/csv' } })
+    assert.equal(res.data.warnings.length, 1)
+    slave = await workers.hook('finalizer/slave')
+
     // patching the dataset to remove extension
     await ax.patch('/api/v1/datasets/slave', {
       extensions: []

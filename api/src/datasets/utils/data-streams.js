@@ -121,25 +121,26 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
             }
           }
         }
+        let removeKeys = []
         if (noExtra) {
-          const unknownKeys = Object.keys(chunk)
-            .filter(k => k !== '_i')
-            .filter(k => k !== '')
-            .filter(k => !schema.find(p => p['x-originalName'] === k || p.key === k))
+          const keys = Object.keys(chunk)
+          const unknownKeys = keys
+            .filter(k => k !== '_i' && k !== '' && !schema.some(p => p['x-originalName'] === k || p.key === k))
           if (unknownKeys.length) {
             return callback(httpError(400, `Colonnes inconnues ${unknownKeys.join(', ')}`))
           }
-          const readonlyKeys = Object.keys(chunk)
-            .filter(k => k !== '_i' && k !== '_id')
+          removeKeys = keys
             .filter(k => {
+              if (k === '_i' || k === '_id') return false
               const prop = schema.find(p => p['x-originalName'] === k || p.key === k)
               return prop && (prop['x-calculated'] || prop['x-extension'])
             })
-          if (readonlyKeys.length) {
-            return callback(httpError(400, `Colonnes en lecture seule ${readonlyKeys.join(', ')}`))
+          if (removeKeys.length) {
+            this.__warning = `Colonnes issues d'extensions dont le contenu sera écrasé : ${removeKeys.join(', ')}`
           }
         }
         for (const prop of schema) {
+          if (removeKeys.includes(prop.key)) continue
           const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
           let originalName = prop['x-originalName']
           if (fileSchema && !prop['x-calculated'] && !prop['x-extension']) originalName = fileProp?.['x-originalName']
