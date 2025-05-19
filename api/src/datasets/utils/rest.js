@@ -925,6 +925,8 @@ export const bulkLines = async (req, res, next) => {
         await collection(db, tmpDataset).drop()
       }
     }
+    const warnings = parseStreams.map(p => p.__warning).filter(Boolean)
+    if (warnings.length) summary.warnings = warnings
 
     await import('@data-fair/lib-express/events-log.js')
       .then((eventsLog) => eventsLog.default.info('df.datasets.rest.bulkLines', `applied operations in bulk to dataset ${dataset.slug} (${dataset.id}), ${JSON.stringify(summary)}`, { req, account: dataset.owner }))

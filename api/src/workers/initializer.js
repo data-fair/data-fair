@@ -84,7 +84,12 @@ export const process = async function (app, dataset) {
     const progress = taskProgress(app, dataset.id, eventsPrefix, count)
 
     if (dataset.initFrom.parts.includes('schema')) {
-      patch.schema = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => {
+      if (dataset.initFrom.parts.includes('extensions')) {
+        patch.schema = parentDataset.schema.filter(p => !p['x-calculated'] || p['x-extension'])
+      } else {
+        patch.schema = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension'])
+      }
+      patch.schema = patch.schema.map(p => {
         const newProperty = { ...p }
         delete newProperty.enum
         delete newProperty['x-cardinality']
@@ -101,6 +106,22 @@ export const process = async function (app, dataset) {
       if (parentDataset.attachmentsAsImage) patch.attachmentsAsImage = parentDataset.attachmentsAsImage
       if (parentDataset.timeZone) patch.timeZone = parentDataset.timeZone
       if (parentDataset.projection) patch.projection = parentDataset.projection
+    }
+
+    if (dataset.initFrom.parts.includes('extensions')) {
+      patch.extensions = parentDataset.extensions
+    }
+    if (dataset.initFrom.parts.includes('description')) {
+      patch.description = parentDataset.description
+    }
+    if (dataset.initFrom.parts.includes('metadataAttachments')) {
+      for (const metadataAttachment of metadataAttachments) {
+        const newPath = metadataAttachmentPath(dataset, metadataAttachment)
+        await fs.ensureDir(path.dirname(newPath))
+        await fs.copyFile(metadataAttachmentPath(parentDataset, metadataAttachment), newPath)
+        await progress.inc()
+      }
+      patch.attachments = parentDataset.attachments
     }
 
     if (dataset.initFrom.parts.includes('data')) {
@@ -217,22 +238,6 @@ export const process = async function (app, dataset) {
         await fs.copyFile(copyPath, newPath)
         await progress.inc()
       }
-    }
-
-    if (dataset.initFrom.parts.includes('extensions')) {
-      patch.extensions = parentDataset.extensions
-    }
-    if (dataset.initFrom.parts.includes('description')) {
-      patch.description = parentDataset.description
-    }
-    if (dataset.initFrom.parts.includes('metadataAttachments')) {
-      for (const metadataAttachment of metadataAttachments) {
-        const newPath = metadataAttachmentPath(dataset, metadataAttachment)
-        await fs.ensureDir(path.dirname(newPath))
-        await fs.copyFile(metadataAttachmentPath(parentDataset, metadataAttachment), newPath)
-        await progress.inc()
-      }
-      patch.attachments = parentDataset.attachments
     }
 
     if (dataset.draftReason) {
