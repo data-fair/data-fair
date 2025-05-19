@@ -300,7 +300,6 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
 
   // Select fields to return
   const fields = dataset.schema.map(f => f.key)
-  if (dataset.schema.find(p => p.key === '_geoshape')?.['x-capabilities']?.vtPrepare) fields.push('_vt_prepared')
   // do not include by default heavy calculated fields used for indexing geo data
   esQuery._source = (query.select && query.select !== '*')
     ? query.select.split(',')
