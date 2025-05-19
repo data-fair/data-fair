@@ -154,8 +154,8 @@ describe('datasets in draft mode', function () {
     assert.ok(res.data.startsWith('id,adr,some date,loc'))
     res = await ax.get(`/api/v1/datasets/${dataset.id}/raw`, { params: { draft: true } })
     assert.ok(res.data.startsWith('id,somedate,employees,adr'))
-    // schema should respect the new order of columns
-    assert.deepEqual(dataset.draft.schema.filter(c => !c['x-calculated']).map(c => c.key), ['id', 'somedate', 'employees', 'adr'])
+    // schema should preserve the old order of columns
+    assert.deepEqual(dataset.draft.schema.filter(c => !c['x-calculated']).map(c => c.key), ['id', 'adr', 'somedate', 'employees'])
 
     const es = await esUtils.init()
     let indices = await es.indices.get({ index: `${esUtils.indexPrefix(dataset)}-*` })

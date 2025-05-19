@@ -14,7 +14,11 @@
                "prop1": "value1",
                "desc": "bla bla bla",
                "bool": true,
-               "int": 0
+               "int": 0,
+               "obj": {
+                "p1": "p 1",
+                "p2": "p 2"
+               }
            }
        },
        {

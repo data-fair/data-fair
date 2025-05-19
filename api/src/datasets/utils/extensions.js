@@ -25,6 +25,7 @@ import exprEval from '@data-fair/data-fair-shared/expr-eval.js'
 import { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 import * as fieldsSniffer from './fields-sniffer.js'
 import intoStream from 'into-stream'
+import { getFlatten } from './flatten.ts'
 
 export { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 
@@ -316,7 +317,7 @@ class ExtensionsStream extends Transform {
           }
           const bulkSearchId = extension.action.id.replace('masterData_bulkSearch_', '')
           data = await bulkSearchPromise(
-            await bulkSearchStreams(this.db, this.es, masterDataset, 'application/x-ndjson', bulkSearchId, opts.params.select),
+            await bulkSearchStreams(this.db, this.es, masterDataset, 'application/x-ndjson', bulkSearchId, opts.params.select, getFlatten(masterDataset)),
             opts.data
           )
         } else {
@@ -446,8 +447,6 @@ export const prepareExtensionsSchema = async (db, schema, extensions) => {
         .map(output => {
           const overwrite = extension.overwrite?.[output.name] ?? {}
           const key = overwrite['x-originalName'] ? fieldsSniffer.escapeKey(overwrite['x-originalName']) : (extensionKey + '.' + output.name)
-          const existingField = schema.find(field => field.key === key)
-          if (existingField) return existingField
           // this is for compatibility, new extensions should always have propertyPrefix
           const originalName = overwrite['x-originalName'] ?? (extension.propertyPrefix ? key : output.name)
           const field = {
@@ -486,7 +485,20 @@ export const prepareExtensionsSchema = async (db, schema, extensions) => {
       extensionsFields.push(fullProperty)
     }
   }
-  return schema.filter(field => !field['x-extension']).concat(extensionsFields)
+  const newSchema = []
+  for (const prop of schema) {
+    if (prop['x-extension']) {
+      const newExtProp = extensionsFields.find(f => f.key === prop.key)
+      if (newExtProp) {
+        if (prop.title) newExtProp.title = prop.title
+        if (prop.description) newExtProp.description = prop.description
+        newSchema.push(newExtProp)
+      }
+    } else {
+      newSchema.push(prop)
+    }
+  }
+  return newSchema.concat(extensionsFields.filter(p => !newSchema.some(p2 => p.key === p2.key)))
 }
 
 // check if and extension dosn't have the necessary input
