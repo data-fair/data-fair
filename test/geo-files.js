@@ -20,7 +20,7 @@ describe('geo files support', function () {
     // Dataset received and parsed
     let dataset = await workers.hook('geojsonAnalyzer')
     assert.equal(dataset.status, 'analyzed')
-    assert.equal(dataset.schema.length, 6)
+    assert.equal(dataset.schema.length, 8)
     const idField = dataset.schema.find(field => field.key === 'id')
     assert.equal(idField.type, 'string')
     const descField = dataset.schema.find(field => field.key === 'desc')
@@ -30,6 +30,8 @@ describe('geo files support', function () {
     assert.equal(boolField.type, 'boolean')
     const intField = dataset.schema.find(field => field.key === 'int')
     assert.equal(intField.type, 'integer')
+    assert.ok(dataset.schema.find(field => field.key === 'objp1'))
+    assert.ok(dataset.schema.find(field => field.key === 'objp2'))
 
     // ES indexation and finalization
     dataset = await workers.hook('finalizer/' + dataset.id)
@@ -41,6 +43,8 @@ describe('geo files support', function () {
     assert.equal(lines[0]._geocorners, undefined)
     assert.equal(lines[0]._geoshape, undefined)
     assert.equal(lines[0].int, 0)
+    assert.equal(lines[0].objp1, 'p 1')
+    assert.equal(lines[0].objp2, 'p 2')
     assert.equal(lines[1].int, 2)
     assert.equal(lines[2].int, undefined)
 

@@ -43,6 +43,27 @@ describe('Extensions', function () {
     assert.equal(res.data.results[0][extensionKey + '.lat'], 10)
     assert.equal(res.data.results[0][extensionKey + '.lon'], 10)
 
+    // re-order columns and change titles and descriptions
+    dataset = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
+      schema: [
+        { ...dataset.schema.find(p => p.key === '_coords.lat'), title: 'Overwritten title lat', description: 'Overwritten description lat' },
+        { ...dataset.schema.find(p => p.key === '_coords.lon'), title: 'Overwritten title lon', description: 'Overwritten description lon' },
+        ...dataset.schema.filter(p => p.key !== '_coords.lat' && p.key !== '_coords.lon').reverse()
+      ]
+    }).then(r => r.data)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.schema[0].key, '_coords.lat')
+    assert.equal(dataset.schema[0].title, 'Overwritten title lat')
+    delete dataset.schema[0].title
+    dataset = await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema }).then(r => r.data)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.schema[0].key, '_coords.lat')
+    assert.equal(dataset.schema[0].title, 'Latitude')
+    await global.ax.superadmin.post(`/api/v1/datasets/${dataset.id}/_reindex`)
+    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    assert.equal(dataset.schema[0].key, '_coords.lat')
+    assert.equal(dataset.schema[0].title, 'Latitude')
+
     // Add a line to dataset
     // Re-prepare for extension, it should only process the new line
     nockScope = nock('http://test.com').post('/geocoder/coords').reply(200, (uri, requestBody) => {
@@ -95,8 +116,8 @@ describe('Extensions', function () {
     // Download extended file
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
     const lines = res.data.split('\n')
-    assert.equal(lines[0].trim(), 'label,adr,_coords.lat,_coords.lon')
-    assert.equal(lines[1], 'koumoul,19 rue de la voie lactée saint avé,40,40')
+    assert.equal(lines[0].trim(), '_coords.lat,_coords.lon,adr,label')
+    assert.equal(lines[1], '40,40,19 rue de la voie lactée saint avé,koumoul')
 
     // list generated files
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
