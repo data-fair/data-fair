@@ -135,7 +135,7 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
               return prop && (prop['x-calculated'] || prop['x-extension'])
             })
           if (removeKeys.length) {
-            this.__warning = `Colonnes issues d'extensions dont le contenu sera écrasé : ${removeKeys.join(', ')}`
+            this.__warning = `Les valeurs des colonnes suivantes proviennent des extensions et ne seront pas modifiées : ${removeKeys.join(', ')}`
           }
         }
         for (const prop of schema) {
