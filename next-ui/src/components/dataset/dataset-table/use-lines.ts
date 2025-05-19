@@ -30,6 +30,7 @@ export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>) 
   const fetchResults = useAsyncAction(async (reset?: boolean) => {
     if (!next.value) return
     abortController = new AbortController()
+    // await new Promise(resolve => setTimeout(resolve, 2000))
     const data = await $fetch<Lines>(next.value)
     if (reset) results.value = data.results.map(markRaw)
     else results.value.push(...data.results.map(markRaw))

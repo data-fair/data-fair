@@ -1,9 +1,5 @@
 <template>
   <div style="position: relative">
-    <!--<chars-measurer
-      v-model="charsWidths"
-      style="position:absolute; top: 0; z-index: -1;"
-    />-->
     <!--<div
       style="width: 100%; height: 40px"
       d-flex
@@ -21,28 +17,6 @@
     </div>
     -->
     <v-sheet class="pa-0">
-      <!--<v-data-table-virtual
-        :items="results"
-        :headers="headers"
-        :loading="fetchResults.loading.value"
-        :height="height- 40"
-        item-key="_id"
-        item-value="_id"
-        fixed-header
-        disable-sort
-        no-filter
-      >
-        <template #loader>
-          <v-progress-linear
-            indeterminate
-            color="primary"
-          />
-        </template>
-        <template #body.append>
-          <span v-intersect:quiet="onIntersect" />
-        </template>
-      </v-data-table-virtual>
-      -->
       <v-table
         fixed-header
         :loading="fetchResults.loading.value"
@@ -51,12 +25,27 @@
         <thead>
           <tr>
             <th
-              v-for="header of headers"
+              v-for="(header, i) of headers"
               :key="header.key"
               class="text-left text-no-wrap"
+              :style="`min-width: ${colsWidths[i] ?? 50}px`"
             >
               {{ header.title }}
             </th>
+          </tr>
+          <tr v-if="fetchResults.loading.value">
+            <td
+              :colspan="headers?.length"
+              style="position: relative"
+              class="pa-0"
+            >
+              <v-progress-linear
+                indeterminate
+                style="width: 100%; position: absolute; top: 0;"
+                color="primary"
+                height="3"
+              />
+            </td>
           </tr>
         </thead>
         <tbody>
@@ -64,11 +53,10 @@
             :height="300"
             :items="results"
             :item-height="52"
-            item-key="_id"
             renderless
           >
             <template #default="{ item, index }">
-              <tr>
+              <tr v-intersect:quiet="(intersect: boolean) => intersect && onScrollItem(index)">
                 <td
                   v-for="header of headers"
                   :key="header.key"
@@ -77,10 +65,6 @@
                   {{ item[header.key] }}
                 </td>
               </tr>
-              <span
-                v-if="index === results.length - 1"
-                v-intersect:quiet="onIntersect"
-              />
             </template>
           </v-virtual-scroll>
         </tbody>
@@ -93,6 +77,7 @@
 </i18n>
 
 <script lang="ts" setup>
+import { useCurrentElement } from '@vueuse/core'
 import useLines from './use-lines'
 import useHeaders from './use-headers'
 
@@ -107,10 +92,24 @@ const selectedCols = computed(() => cols.value.length ? cols.value : allCols.val
 
 const displayMode = defineModel<string>('display', { default: 'table' })
 const { baseFetchUrl, results, fetchResults } = useLines(displayMode, selectedCols)
-const { headers } = useHeaders(selectedCols, baseFetchUrl, results)
+const { headers } = useHeaders(selectedCols)
 
-const onIntersect = (intersect: boolean) => {
-  if (!intersect) return
-  if (!fetchResults.loading.value) fetchResults.execute()
+const colsWidths = ref<number[]>([])
+const element = useCurrentElement()
+watch(baseFetchUrl, () => {
+  if (!baseFetchUrl.value) return
+  colsWidths.value = []
+})
+const onScrollItem = (index: number) => {
+  if (element.value instanceof HTMLElement) {
+    element.value.querySelectorAll('table>thead th').forEach((h, i) => {
+      // console.log('H', h.clientWidth)
+      colsWidths.value[i] = Math.max(colsWidths.value[i] ?? 50, Math.round(h.clientWidth))
+    })
+  }
+  if (index === results.value.length - 1) {
+    // scrolled until the current end of the table
+    if (!fetchResults.loading.value) fetchResults.execute()
+  }
 }
 </script>
