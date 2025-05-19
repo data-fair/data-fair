@@ -4,6 +4,8 @@ import fs from 'node:fs'
 import config from 'config'
 import FormData from 'form-data'
 import * as workers from '../api/src/workers/index.js'
+import { VectorTile } from '@mapbox/vector-tile'
+import Protobuf from 'pbf'
 
 describe('geo files support', function () {
   it('Process uploaded geojson dataset', async function () {
@@ -89,10 +91,16 @@ describe('geo files support', function () {
     virtualDataset = await workers.hook(`finalizer/${virtualDataset.id}`)
     const geomPropVirtual = virtualDataset.schema.find(p => p.key === 'geometry')
     assert.ok(geomPropVirtual['x-capabilities'].vtPrepare)
-    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines?xyz=49,31,6&format=pbf&q=blabla&sampling=max`)
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines?xyz=49,31,6&format=pbf&q=blabla&sampling=max`, { responseType: 'arraybuffer' })
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'application/x-protobuf')
     assert.equal(res.headers['x-tilesmode'], 'es/max/prepared/1')
+    const vt = new VectorTile(new Protobuf(res.data))
+    assert.ok(vt.layers.results)
+    assert.equal(vt.layers.results.length, 1)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.ok(!res.data.results[0]._vt_prepared)
+    assert.ok(!res.data.results[0]._vt)
   })
 
   it('Upload geojson with geometry type GeometryCollection', async function () {
