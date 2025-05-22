@@ -1,26 +1,39 @@
 <template>
-  <div style="position: relative">
-    <!--<div
-      style="width: 100%; height: 40px"
-      d-flex
-      flex-row
+  <div>
+    <v-toolbar
+      flat
+      density="compact"
     >
-      <v-text-field />
+      <v-text-field
+        placeholder="Rechercher"
+        :append-inner-icon="mdiMagnify"
+        variant="solo"
+        rounded
+        color="primary"
+        hide-details
+        density="compact"
+        style="min-width:170px; max-width:250px;"
+        class="mx-2"
+      />
       <v-spacer />
       <v-btn-group
-        variant="outlined"
         divided
         density="compact"
+        variant="outlined"
+        class="mx-2"
       >
+        <dataset-table-select-display
+          v-if="display.mdAndUp"
+          v-model="displayMode"
+        />
         <dataset-select-cols v-model="cols" />
       </v-btn-group>
-    </div>
-    -->
+    </v-toolbar>
     <v-sheet class="pa-0">
       <v-table
         fixed-header
         :loading="fetchResults.loading.value"
-        :height="height- 40"
+        :height="height- 48"
       >
         <thead>
           <tr>
@@ -77,20 +90,25 @@
 </i18n>
 
 <script lang="ts" setup>
+import { mdiMagnify } from '@mdi/js'
 import { useCurrentElement } from '@vueuse/core'
 import useLines from './use-lines'
 import useHeaders from './use-headers'
+import { useDisplay } from 'vuetify'
 
 const { height } = defineProps({ height: { type: Number, default: 800 } })
+
+const displayMode = defineModel<string>('display', { default: 'table' })
+const cols = defineModel<string[]>('cols', { default: [] })
+
+const display = useDisplay()
 
 const { dataset } = useDatasetStore()
 // const charsWidths = ref<Record<string, number> | null>(null)
 
 const allCols = computed(() => dataset.value?.schema?.map(p => p.key) ?? [])
-const cols = defineModel<string[]>('cols', { default: [] })
 const selectedCols = computed(() => cols.value.length ? cols.value : allCols.value)
 
-const displayMode = defineModel<string>('display', { default: 'table' })
 const { baseFetchUrl, results, fetchResults } = useLines(displayMode, selectedCols)
 const { headers } = useHeaders(selectedCols)
 

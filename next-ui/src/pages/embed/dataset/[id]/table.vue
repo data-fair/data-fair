@@ -6,7 +6,7 @@
   >
     <dataset-table
       v-model:cols="cols"
-      :display="display"
+      v-model:display="display"
       :height="windowHeight"
     />
   </v-container>

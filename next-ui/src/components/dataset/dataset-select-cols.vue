@@ -7,18 +7,18 @@
       <v-btn
         icon
         :color="cols.length ? 'warning' : 'default'"
-
+        size="large"
         :title="$t('selectColsTitle')"
         v-bind="props"
       >
         <v-icon :icon="mdiTableColumnPlusAfter" />
       </v-btn>
     </template>
-    <v-card>
-      <v-list-subheader>{{ t('visibleColumns') }}</v-list-subheader>
+    <v-card :subtitle="t('visibleColumns')">
       <v-card-text class="pt-0">
         <v-btn
           variant="text"
+          color="primary"
           :disabled="!cols.length"
           @click="cols = []"
         >
@@ -71,7 +71,8 @@
               :value="prop.key"
               :label="prop.title || prop['x-originalName'] || prop.key"
               :model-value="cols"
-              denssity="compact"
+              color="primary"
+              density="compact"
               hide-details
               :class="{'ml-3': !!prop['x-group']}"
               @update:model-value="newCols => {cols = newCols ?? []}"
