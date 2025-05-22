@@ -41,7 +41,6 @@ export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>, 
   const reset = () => {
     if (!baseFetchUrl.value) return
     next.value = baseFetchUrl.value
-    total.value = undefined
     if (abortController) abortController.abort()
     fetchResults.execute(true)
   }

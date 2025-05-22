@@ -11,6 +11,7 @@ declare module 'vue' {
     CharSizes: typeof import('./../src/components/char-sizes.vue')['default']
     CharsMeasurer: typeof import('./../src/components/dataset/dataset-table/chars-measurer.vue')['default']
     ConfirmMenu: typeof import('./../src/components/confirm-menu.vue')['default']
+    DatasetDownloadResults: typeof import('./../src/components/dataset/dataset-download-results.vue')['default']
     DatasetEditLineForm: typeof import('./../src/components/dataset/dataset-edit-line-form.vue')['default']
     DatasetNbResults: typeof import('./../src/components/dataset/dataset-nb-results.vue')['default']
     DatasetSchemaView: typeof import('./../src/components/dataset/dataset-schema-view.vue')['default']

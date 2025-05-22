@@ -14,10 +14,11 @@
         v-model="editQ"
         placeholder="Rechercher"
         :append-inner-icon="mdiMagnify"
-        variant="solo"
+        variant="outlined"
         rounded
         color="primary"
         hide-details
+        clearable
         density="compact"
         style="min-width:170px; max-width:250px;"
         class="mx-2"
@@ -37,6 +38,11 @@
           v-model="displayMode"
         />
         <dataset-select-cols v-model="cols" />
+        <dataset-download-results
+          v-if="baseFetchUrl && total !== undefined"
+          :base-url="baseFetchUrl"
+          :total="total"
+        />
       </v-btn-group>
     </v-toolbar>
     <v-sheet class="pa-0">
@@ -113,7 +119,7 @@ const cols = defineModel<string[]>('cols', { default: [] })
 const q = defineModel<string>('q', { default: '' })
 
 const editQ = ref('')
-watch(q, () => { editQ.value = q.value })
+watch(q, () => { editQ.value = q.value }, { immediate: true })
 
 const display = useDisplay()
 
@@ -125,7 +131,7 @@ const selectedCols = computed(() => cols.value.length ? cols.value : allCols.val
 
 const { baseFetchUrl, total, results, fetchResults } = useLines(displayMode, selectedCols, q)
 const { headers } = useHeaders(selectedCols)
-
+watch(total, () => console.log(total.value))
 const colsWidths = ref<number[]>([])
 const element = useCurrentElement()
 watch(baseFetchUrl, () => {

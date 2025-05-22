@@ -61,6 +61,7 @@
     "@koumoul/gh-pages-multi": "^0.7.1",
     "@types/content-disposition": "^0.5.8",
     "@types/node": "^22.12.0",
+    "@types/streamsaver": "^2.0.5",
     "@types/unzipper": "^0.10.10",
     "clean-modules": "^2.0.4",
     "eslint-plugin-mocha": "^10.5.0",

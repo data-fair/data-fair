@@ -1,0 +1,238 @@
+<template>
+  <v-menu
+    v-model="menu"
+    :close-on-content-click="false"
+  >
+    <template #activator="{ props }">
+      <v-btn
+        color="primary"
+        icon
+        size="large"
+        :title="t('downloadTitle')"
+        v-bind="props"
+      >
+        <v-icon :icon="mdiDownload" />
+      </v-btn>
+    </template>
+    <v-sheet>
+      <v-alert
+        v-t="'alert1'"
+        type="info"
+        :value="true"
+        tile
+        variant="text"
+        :icon="false"
+        class="mb-0 mt-1"
+      />
+      <v-list
+        v-if="total > 10000"
+        class="py-0"
+        density="compact"
+        style="position:relative"
+      >
+        <v-list-item
+          target="download"
+          :disabled="largeCsvLoading"
+          @click="downloadLargeCSV.execute()"
+        >
+          <template #prepend>
+            <v-icon :icon="mdiFileDelimitedOutline" />
+          </template>
+          <v-list-item-title v-t="'csv'" />
+        </v-list-item>
+        <v-btn
+          v-if="largeCsvLoading"
+          icon
+          :title="t('cancel')"
+          color="warning"
+          absolute
+          location="right"
+          style="position:absolute;top:6px;right:8px;"
+          @click="cancelLargeCsv"
+        >
+          <v-icon>mdi-cancel</v-icon>
+        </v-btn>
+        <div style="height:4px;width:100%;">
+          <v-progress-linear
+            v-if="largeCsvLoading"
+            :buffer-value="largeCsvBufferValue"
+            :model-value="largeCsvValue"
+            stream
+            height="4"
+            style="margin:0;"
+          />
+        </div>
+      </v-list>
+      <v-alert
+        v-t="'alert2'"
+        type="warning"
+        :value="total > 10000"
+        tile
+        density="compact"
+        variant="text"
+        :icon="false"
+        class="my-0"
+      />
+      <v-list
+        class="pt-0"
+        density="compact"
+      >
+        <v-list-item
+          v-if="total <= 10000"
+          :href="downloadUrls.csv"
+          target="download"
+          @click="clickDownload('csv')"
+        >
+          <template #prepend>
+            <v-icon :icon="mdiFileDelimitedOutline" />
+          </template>
+          <v-list-item-title v-t="'csv'" />
+        </v-list-item>
+        <v-list-item
+          :href="downloadUrls.xlsx"
+          target="download"
+          @click="clickDownload('xlsx')"
+        >
+          <template #prepend>
+            <v-icon :icon="mdiMicrosoftExcel" />
+          </template>
+          <v-list-item-title v-t="'xlsx'" />
+        </v-list-item>
+        <v-list-item
+          :href="downloadUrls.ods"
+          target="download"
+          @click="clickDownload('ods')"
+        >
+          <template #prepend>
+            <v-icon :icon="mdiFileTableOutline" />
+          </template>
+          <v-list-item-title v-t="'ods'" />
+        </v-list-item>
+        <v-list-item
+          v-if="dataset?.bbox"
+          :href="downloadUrls.geojson"
+          target="download"
+          @click="clickDownload('geojson')"
+        >
+          <template #prepend>
+            <v-icon :icon="mdiMap" />
+          </template>
+          <v-list-item-title v-t="'geojson'" />
+        </v-list-item>
+      </v-list>
+    </v-sheet>
+  </v-menu>
+</template>
+
+<i18n lang="yaml">
+fr:
+  downloadTitle: Télécharger les résultats
+  alert1: Ces téléchargements tiennent compte du tri et de la recherche
+  alert2: Les formats suivants sont limités aux 10 000 premières lignes
+  csv: format CSV
+  xlsx: format XLSX
+  ods: format ODS
+  geojson: format GeoJSON
+  cancel: Annuler
+en:
+  downloadTitle: Download results
+  alert1: These downloads take into consideration the current filters and sorting
+  alert2: The next formats are limited to the 10,000 first lines
+  csv: CSV format
+  xlsx: XLSX format
+  ods: ODS format
+  geojson: GeoJSON format
+  cancel: Cancel
+</i18n>
+
+<script setup lang="ts">
+import streamSaver from 'streamsaver'
+import LinkHeader from 'http-link-header'
+import { withQuery } from 'ufo'
+import { mdiFileDelimitedOutline, mdiFileTableOutline, mdiMicrosoftExcel, mdiMap, mdiDownload } from '@mdi/js'
+
+const { baseUrl, total } = defineProps({
+  baseUrl: { type: String, required: true },
+  total: { type: Number, required: true }
+})
+
+const { t } = useI18n()
+const { dataset } = useDatasetStore()
+
+const menu = ref(false)
+const largeCsvLoading = ref(false)
+const largeCsvBufferValue = ref(0)
+const largeCsvValue = ref(0)
+const largeCsvCancelled = ref(false)
+
+const baseParams = { size: 1000, page: 1 }
+const downloadUrls = computed(() => ({
+  csv: withQuery(baseUrl, { ...baseParams, format: 'csv' }),
+  xlsx: withQuery(baseUrl, { ...baseParams, format: 'xlsx' }),
+  ods: withQuery(baseUrl, { ...baseParams, format: 'ods' }),
+  geojson: withQuery(baseUrl, { ...baseParams, format: 'geojson' })
+}))
+
+let fileStream: WritableStream | null = null
+let writer: WritableStreamDefaultWriter | null = null
+const downloadLargeCSV = useAsyncAction(async () => {
+  largeCsvCancelled.value = false
+  largeCsvLoading.value = true
+  try {
+    const { WritableStream } = await import('web-streams-polyfill/ponyfill')
+    // @ts-ignore
+    streamSaver.WritableStream = WritableStream
+    streamSaver.mitm = `${$sitePath}/data-fair/streamsaver/mitm.html`
+    fileStream = streamSaver.createWriteStream(`${dataset.value?.slug}.csv`)
+    writer = fileStream.getWriter()
+    const nbChunks = Math.ceil(total / 10000)
+    let nextUrl = downloadUrls.value.csv
+    for (let chunk = 0; chunk < nbChunks; chunk++) {
+      if (largeCsvCancelled.value) break
+      largeCsvBufferValue.value = ((chunk + 1) / nbChunks) * 100
+      let res
+      try {
+        res = await $fetch(nextUrl)
+      } catch (err) {
+        // 1 retry after 10s for network resilience, short service interruption, etc
+        await new Promise(resolve => setTimeout(resolve, 10000))
+        res = await $fetch(nextUrl)
+      }
+
+      const { data, headers } = res
+      if (headers.link) {
+        nextUrl = withQuery(LinkHeader.parse(headers.link).rel('next')[0].uri, { header: 'false' })
+      }
+      await writer.write(new TextEncoder().encode(data))
+      largeCsvValue.value = ((chunk + 1) / nbChunks) * 100
+    }
+    if (!largeCsvCancelled.value) {
+      writer.close()
+      clickDownload('csv')
+    }
+  } catch (error) {
+    if (!largeCsvCancelled.value && !!error) throw error
+  }
+  largeCsvLoading.value = false
+  largeCsvCancelled.value = false
+  largeCsvBufferValue.value = 0
+  largeCsvValue.value = 0
+  fileStream = null
+  writer = null
+})
+
+const cancelLargeCsv = () => {
+  largeCsvCancelled.value = true
+  if (writer) writer.releaseLock()
+  if (fileStream) fileStream.abort()
+}
+
+const clickDownload = (format: string) => {
+  parent.postMessage({ trackEvent: { action: 'download_filtered', label: `${dataset.value?.slug} - ${format}` } })
+  menu.value = false
+}
+
+</script>
+
+<style lang="css" scoped>
+</style>
