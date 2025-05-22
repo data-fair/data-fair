@@ -401,6 +401,25 @@ export default [
     }
   },
   {
+    id: 'carreau',
+    title: {
+      fr: 'Code de carreau de 200m',
+      en: ''
+    },
+    description: {
+      fr: 'Code de carreau pour les données INSEE carroyées à 200 mètres.',
+      en: ''
+    },
+    identifiers: [
+      'http://rdf.insee.fr/def/geo#Carreau'
+    ],
+    type: 'string',
+    tag: {
+      fr: 'Référentiels administratifs français',
+      en: 'French administrative master-data'
+    }
+  },
+  {
     id: 'latitude',
     title: {
       fr: 'Latitude',

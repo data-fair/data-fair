@@ -587,7 +587,7 @@ export const applyCalculations = async (dataset, item) => {
 
   // split the fields that have a separator in their schema
   for (const field of dataset.schema) {
-    if (field.separator && item[field.key]) {
+    if (field.separator && typeof item[field.key] === 'string') {
       item[field.key] = item[field.key].split(field.separator.trim()).map(part => part.trim())
     }
   }

@@ -128,6 +128,8 @@ fr:
   sortCreatedAtDesc: création plus récente
   sortUpdatedAtAsc: màj plus ancienne
   sortUpdatedAtDesc: màj plus récente
+  sortTitleAsc: ordre alphabétique
+  sortTitleDesc: ordre alphabétique inversé
   owner: Propriétaire
 en:
   noApp: You haven't configured any application yet.
@@ -141,6 +143,8 @@ en:
   sortCreatedAtDesc: creation newer
   sortUpdatedAtAsc: update older
   sortUpdatedAtDesc: update newer
+  sortTitleAsc: alphabetic order
+  sortTitleDesc: reverse alphabetic order
   owner: Owner
 </i18n>
 
@@ -184,7 +188,9 @@ export default {
         { value: 'createdAt:-1', text: this.$t('sortCreatedAtDesc') },
         { value: 'createdAt:1', text: this.$t('sortCreatedAtAsc') },
         { value: 'updatedAt:-1', text: this.$t('sortUpdatedAtDesc') },
-        { value: 'updatedAt:1', text: this.$t('sortUpdatedAtAsc') }
+        { value: 'updatedAt:1', text: this.$t('sortUpdatedAtAsc') },
+        { value: 'title:1', text: this.$t('sortTitleAsc') },
+        { value: 'title:-1', text: this.$t('sortTitleDesc') },
       ]
     }
   },
