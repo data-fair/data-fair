@@ -6,7 +6,7 @@
       <v-btn
         icon
         size="large"
-        :title="$t('selectDisplay')"
+        :title="t('selectDisplay')"
         v-bind="props"
       >
         <v-icon
@@ -59,6 +59,7 @@
     </v-card>
   </v-menu>
 </template>
+
 <i18n lang="yaml">
 fr:
   selectDisplay: Choisir le type d'affichage
@@ -73,6 +74,7 @@ en:
   displayTableDense: Dense table
   displayList: List of cards
 </i18n>
+
 <script setup lang="ts">
 import { useDisplay } from 'vuetify'
 import { mdiTable, mdiTableLarge, mdiViewGridOutline } from '@mdi/js'

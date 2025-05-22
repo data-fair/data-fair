@@ -2,7 +2,7 @@ import { useWindowSize } from '@vueuse/core'
 import { withQuery } from 'ufo'
 import { useDisplay } from 'vuetify'
 
-export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>) => {
+export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>, q: Ref<string>) => {
   const { id, draftMode } = useDatasetStore()
   const { width: windowWidth } = useWindowSize()
   const display = useDisplay()
@@ -18,7 +18,7 @@ export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>) 
   })
   const baseFetchUrl = computed(() => {
     if (truncate.value === null) return null
-    return withQuery($apiPath + `/datasets/${id}/lines`, { draftMode, size: 20, truncate: truncate.value })
+    return withQuery($apiPath + `/datasets/${id}/lines`, { draftMode, size: 20, truncate: truncate.value, q: q.value || undefined })
   })
 
   const total = ref<number>()
@@ -47,7 +47,7 @@ export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>) 
   }
   watch(baseFetchUrl, reset, { immediate: true })
 
-  return { baseFetchUrl, results, fetchResults }
+  return { baseFetchUrl, total, results, fetchResults }
 }
 
 export default useLines

@@ -7,6 +7,7 @@
     <dataset-table
       v-model:cols="cols"
       v-model:display="display"
+      v-model:q="q"
       :height="windowHeight"
     />
   </v-container>
@@ -27,6 +28,7 @@ provideDatasetStore(route.params.id)
 
 const cols = useStringsArraySearchParam('cols')
 const display = useStringSearchParam('display', 'table')
+const q = useStringSearchParam('q')
 </script>
 
 <style>

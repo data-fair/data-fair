@@ -8,7 +8,7 @@
         icon
         :color="cols.length ? 'warning' : 'default'"
         size="large"
-        :title="$t('selectColsTitle')"
+        :title="t('selectColsTitle')"
         v-bind="props"
       >
         <v-icon :icon="mdiTableColumnPlusAfter" />
