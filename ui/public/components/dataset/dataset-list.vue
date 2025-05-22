@@ -150,6 +150,8 @@ fr:
   sortUpdatedAtDesc: màj plus récente
   sortDataUpdatedAtAsc: données plus ancienne
   sortDataUpdatedAtDesc: données plus récente
+  sortTitleAsc: ordre alphabétique
+  sortTitleDesc: ordre alphabétique inversé
   datasets: aucun jeu de données | 1 jeu de données | {count} jeux de données
   owner: Propriétaire
 en:
@@ -162,6 +164,8 @@ en:
   sortUpdatedAtDesc: update newer
   sortDataUpdatedAtAsc: data older
   sortDataUpdatedAtDesc: data newer
+  sortTitleAsc: alphabetic order
+  sortTitleDesc: reverse alphabetic order
   datasets: no dataset | 1 dataset | {count} datasets
   owner: Owner
 </i18n>
@@ -214,7 +218,9 @@ export default {
         { value: 'updatedAt:-1', text: this.$t('sortUpdatedAtDesc') },
         { value: 'updatedAt:1', text: this.$t('sortUpdatedAtAsc') },
         { value: 'dataUpdatedAt:-1', text: this.$t('sortDataUpdatedAtDesc') },
-        { value: 'dataUpdatedAt:1', text: this.$t('sortDataUpdatedAtAsc') }
+        { value: 'dataUpdatedAt:1', text: this.$t('sortDataUpdatedAtAsc') },
+        { value: 'title:1', text: this.$t('sortTitleAsc') },
+        { value: 'title:-1', text: this.$t('sortTitleDesc') },
       ]
     }
   },
