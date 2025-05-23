@@ -31,9 +31,11 @@
           </v-alert>
           <p v-else>
             <img
-              alt="Dernière version disponible"
+              v-if="service.version"
+              :alt="`Version installée : ${service.version}`"
               :src="`https://img.shields.io/badge/${encodeURIComponent($t('installed') + '-' + service.version.replace(/-/g, '--') + '-green')}`"
               :href="`https://github.com/${service.name}/releases`"
+              :title="serviceTitle(service)"
             >
             <a
               :href="`https://github.com/${service.name}/releases`"
@@ -57,12 +59,14 @@
     available: disponible
     services:
       data-fair/data-fair: Data Fair - Back Office
+      data-fair/catalogs: Gestion des catalogues
 
   en:
     installed: installed
     available: available
     services:
       data-fair/data-fair: Data Fair - Back Office
+      data-fair/catalogs: Catalogs management
   </i18n>
 
 <script>
@@ -71,6 +75,10 @@
 const services = [
   { name: 'data-fair/data-fair', infoUrl: '/data-fair/api/v1/admin/info' }
 ]
+
+if (process.env.catalogsIntegration) {
+  services.push({ name: 'data-fair/catalogs', infoUrl: '/catalogs/api/admin/info' })
+}
 
 export default {
   middleware: ['admin-required'],
@@ -81,12 +89,20 @@ export default {
     this.status = await this.$axios.$get('api/v1/admin/status')
     for (const service of services) {
       try {
-        Object.assign(service, await this.$axios.$get('api/v1/admin/info'))
+        Object.assign(service, await this.$axios.$get(window.location.origin + service.infoUrl))
       } catch (err) {
         service.error = err.message ?? err.response?.data ?? err
       }
     }
     this.servicesInfos = services
+  },
+  methods: {
+    serviceTitle (service) {
+      const parts = []
+      if (service.commit) parts.push('commit: ' + service.commit)
+      if (service.date) parts.push('date: ' + service.date)
+      return parts.join('\n')
+    }
   }
 }
 </script>

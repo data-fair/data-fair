@@ -13,6 +13,7 @@ module.exports = {
   openapiViewerUrl: 'https://koumoul.com/openapi-viewer/',
   captureUrl: 'http://capture:8080',
   privateCaptureUrl: null,
+  privateCatalogsUrl: null,
   notifyUrl: null,
   privateNotifyUrl: null,
   notifyWSUrl: null,
@@ -154,6 +155,7 @@ module.exports = {
   secretKeys: {
     identities: null,
     limits: null,
+    catalogs: null,
     notifications: null,
     ignoreRateLimiting: null
   },

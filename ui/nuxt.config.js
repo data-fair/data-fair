@@ -118,6 +118,7 @@ const nuxtConfig = {
     captureUrl: config.captureUrl,
     notifyUrl: config.notifyUrl,
     notifyWSUrl: config.notifyWSUrl,
+    catalogsIntegration: !!config.privateCatalogsUrl,
     subscriptionUrl: config.subscriptionUrl,
     theme: config.theme,
     baseAppsCategories: config.baseAppsCategories,
