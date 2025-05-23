@@ -363,6 +363,25 @@ export default [
     }
   },
   {
+    id: 'codeGrandQuartier',
+    title: {
+      fr: 'Code grand quartier',
+      en: ''
+    },
+    description: {
+      fr: "Les grands quartiers sont des regroupements d'îlots urbains dans le découpage infracommunal IRIS",
+      en: ''
+    },
+    identifiers: [
+      'http://rdf.insee.fr/def/geo#GrandQuartier'
+    ],
+    type: 'string',
+    tag: {
+      fr: 'Référentiels administratifs français',
+      en: 'French administrative master-data'
+    }
+  },
+  {
     id: 'codePays',
     title: {
       fr: 'Code pays (COG)',
