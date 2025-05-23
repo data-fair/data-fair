@@ -7,6 +7,7 @@
     <dataset-map
       v-model:q="q"
       :height="windowHeight"
+      :no-interaction="!interaction"
     />
   </v-container>
 </template>
@@ -25,6 +26,7 @@ const route = useRoute<'/embed/dataset/[id]/map'>()
 provideDatasetStore(route.params.id)
 
 const q = useStringSearchParam('q')
+const interaction = useBooleanSearchParam('interaction', true)
 </script>
 
 <style>

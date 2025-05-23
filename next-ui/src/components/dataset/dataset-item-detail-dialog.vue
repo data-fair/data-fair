@@ -1,12 +1,12 @@
+<!-- eslint-disable vue/no-v-html -->
 <template lang="html">
   <v-dialog
-    :value="value"
+    :model-value="show"
     max-width="700"
-    :overlay-opacity="0"
+    :scrim="false"
   >
     <v-card
-      :loading="!fullValue"
-      outlined
+      :loading="fetchFullValue.loading.value"
     >
       <v-toolbar
         dense
@@ -16,71 +16,54 @@
         <v-spacer />
         <v-btn
           icon
-          @click.native="$emit('input', false)"
+          @click="show = false"
         >
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-toolbar>
-      <v-card-text>
+      <v-card-text v-if="!fetchFullValue.loading">
         <div
-          v-if="field['x-display'] === 'textarea'"
+          v-if="property['x-display'] === 'textarea'"
           class="item-value-detail item-value-detail-textarea"
         >
-          {{ detailValue }}
+          {{ fullValue }}
         </div>
         <div
-          v-else-if="(field['x-display'] === 'markdown' || field['x-refersTo'] === 'http://schema.org/description') && !!fullValue"
+          v-else-if="(property['x-display'] === 'markdown' || property['x-refersTo'] === 'http://schema.org/description') && !!fullValue"
           class="item-value-detail"
           v-html="fullValue"
         />
-        <span v-else>{{ detailValue }}</span>
+        <span v-else>{{ fullValue }}</span>
       </v-card-text>
     </v-card>
   </v-dialog>
 </template>
 
-<script>
-import { mapGetters } from 'vuex'
+<script lang="ts" setup>
+import { type SchemaProperty } from '#api/types'
+import type { ExtendedResult } from './table/use-lines'
 
-export default {
-  props: {
-    item: { type: Object, required: true },
-    field: { type: Object, required: true },
-    value: { type: Boolean, default: false }
-  },
-  data () {
-    return {
-      fullValue: null
-    }
-  },
-  computed: {
-    ...mapGetters('dataset', ['resourceUrl']),
-    itemValue () {
-      return this.item[this.field.key]
-    },
-    detailValue () {
-      return this.fullValue ?? this.itemValue
-    }
-  },
-  watch: {
-    value (val) {
-      if (val) this.fetchFullValue()
-    }
-  },
-  methods: {
-    async fetchFullValue () {
-      if (this.fullValue) return
-      const data = await this.$axios.$get(this.resourceUrl + '/lines', {
-        params: {
-          qs: `_id:"${this.item._id}"`,
-          select: this.field.key,
-          html: true
-        }
-      })
-      this.fullValue = data.results[0]?.[this.field.key]
-    }
-  }
-}
+const { extendedResult, property } = defineProps({
+  extendedResult: { type: Object as () => ExtendedResult, required: true },
+  property: { type: Object as () => SchemaProperty, required: true }
+})
+
+const show = defineModel<boolean>({ default: false })
+watch(show, () => {
+  if (show.value) fetchFullValue.refresh()
+})
+
+const { id } = useDatasetStore()
+
+const fetchFullValue = useFetch<{ results: any[] }>(`${$apiPath}/datasets/${id}/lines`, {
+  query: computed(() => ({
+    qs: `_id:"${extendedResult._id}"`,
+    select: property.key,
+    html: true
+  })),
+  immediate: false
+})
+const fullValue = computed(() => fetchFullValue.data.value?.results[0]?.[property.key])
 </script>
 
 <style>

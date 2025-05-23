@@ -9,6 +9,7 @@
       v-model:display="display"
       v-model:q="q"
       :height="windowHeight"
+      :no-interaction="!interaction"
     />
   </v-container>
 </template>
@@ -29,6 +30,7 @@ provideDatasetStore(route.params.id)
 const cols = useStringsArraySearchParam('cols')
 const display = useStringSearchParam('display', 'table')
 const q = useStringSearchParam('q')
+const interaction = useBooleanSearchParam('interaction', true)
 </script>
 
 <style>

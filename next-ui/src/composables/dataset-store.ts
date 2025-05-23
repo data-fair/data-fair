@@ -22,6 +22,12 @@ const createDatasetStore = (id: string, draftMode: boolean | undefined = undefin
 
   const jsonSchemaFetch = useFetch<any>($apiPath + `/datasets/${id}/schema`, { query: { draftMode, mimeType: 'application/schema+json', extension: 'true' }, immediate: false, watch: false })
 
+  const imageProperty = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/image'))
+  const labelProperty = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://www.w3.org/2000/01/rdf-schema#label'))
+  const descriptionProperty = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/description'))
+  const digitalDocumentProperty = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument'))
+  const webPageProperty = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'https://schema.org/WebPage'))
+
   return {
     id,
     draftMode,
@@ -30,7 +36,12 @@ const createDatasetStore = (id: string, draftMode: boolean | undefined = undefin
     restDataset,
     journalFetch,
     journal,
-    jsonSchemaFetch
+    jsonSchemaFetch,
+    imageProperty,
+    labelField: labelProperty,
+    descriptionField: descriptionProperty,
+    digitalDocumentField: digitalDocumentProperty,
+    webPageField: webPageProperty
   }
 }
 

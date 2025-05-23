@@ -3,6 +3,7 @@
     <v-toolbar
       flat
       density="compact"
+      color="background"
     >
       <dataset-nb-results
         :total="total"
@@ -81,18 +82,30 @@
           <v-virtual-scroll
             :height="300"
             :items="results"
-            :item-height="52"
+            :item-height="lineHeight"
             renderless
           >
             <template #default="{ item, index }">
               <tr v-intersect:quiet="(intersect: boolean) => intersect && onScrollItem(index)">
-                <td
+                <!--<td
                   v-for="header of headers"
                   :key="header.key"
                   class="text-no-wrap"
                 >
                   {{ item.__formatted[header.key] }}
-                </td>
+                </td>-->
+                <dataset-table-cell
+                  v-for="header of headers"
+                  :key="header.key"
+                  :item="item"
+                  :header="header"
+                  :no-interaction="noInteraction"
+                  :line-height="lineHeight"
+                  :table-height="height"
+                  :filters="filters"
+                  :truncate="truncate"
+                  :dense="displayMode === 'table-dense'"
+                />
               </tr>
             </template>
           </v-virtual-scroll>
@@ -112,11 +125,16 @@ import useLines from './use-lines'
 import useHeaders from './use-headers'
 import { useDisplay } from 'vuetify'
 
-const { height } = defineProps({ height: { type: Number, default: 800 } })
+const { height, noInteraction } = defineProps({
+  height: { type: Number, default: 800 },
+  noInteraction: { type: Boolean, default: false },
+})
 
 const displayMode = defineModel<string>('display', { default: 'table' })
 const cols = defineModel<string[]>('cols', { default: [] })
 const q = defineModel<string>('q', { default: '' })
+const lineHeight = 52
+const filters: any[] = []
 
 const editQ = ref('')
 watch(q, () => { editQ.value = q.value }, { immediate: true })
@@ -129,8 +147,8 @@ const { dataset } = useDatasetStore()
 const allCols = computed(() => dataset.value?.schema?.map(p => p.key) ?? [])
 const selectedCols = computed(() => cols.value.length ? cols.value : allCols.value)
 
-const { baseFetchUrl, total, results, fetchResults } = useLines(displayMode, selectedCols, q)
-const { headers } = useHeaders(selectedCols)
+const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, selectedCols, q, noInteraction)
+const { headers } = useHeaders(selectedCols, noInteraction)
 
 const colsWidths = ref<number[]>([])
 const element = useCurrentElement()
