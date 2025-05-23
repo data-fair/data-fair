@@ -1,118 +1,116 @@
 <template>
-  <div>
-    <v-toolbar
-      flat
+  <v-toolbar
+    flat
+    density="compact"
+    color="background"
+  >
+    <dataset-nb-results
+      :total="total"
+      :limit="0"
+      style="min-width:80px;max-width:80px;"
+      class="ml-2"
+    />
+    <v-text-field
+      v-model="editQ"
+      placeholder="Rechercher"
+      :append-inner-icon="mdiMagnify"
+      variant="outlined"
+      rounded
+      color="primary"
+      hide-details
+      clearable
       density="compact"
-      color="background"
+      style="min-width:170px; max-width:250px;"
+      class="mx-2"
+      @keyup.enter="q = editQ"
+      @click:append-inner="q = editQ"
+      @click:clear="q = ''"
+    />
+    <v-spacer />
+    <v-btn-group
+      divided
+      density="compact"
+      variant="outlined"
+      class="mx-2"
     >
-      <dataset-nb-results
+      <dataset-table-select-display
+        v-if="display.mdAndUp"
+        v-model="displayMode"
+      />
+      <dataset-select-cols v-model="cols" />
+      <dataset-download-results
+        v-if="baseFetchUrl && total !== undefined"
+        :base-url="baseFetchUrl"
         :total="total"
-        :limit="0"
-        style="min-width:80px;max-width:80px;"
-        class="ml-2"
       />
-      <v-text-field
-        v-model="editQ"
-        placeholder="Rechercher"
-        :append-inner-icon="mdiMagnify"
-        variant="outlined"
-        rounded
-        color="primary"
-        hide-details
-        clearable
-        density="compact"
-        style="min-width:170px; max-width:250px;"
-        class="mx-2"
-        @keyup.enter="q = editQ"
-        @click:append-inner="q = editQ"
-        @click:clear="q = ''"
-      />
-      <v-spacer />
-      <v-btn-group
-        divided
-        density="compact"
-        variant="outlined"
-        class="mx-2"
-      >
-        <dataset-table-select-display
-          v-if="display.mdAndUp"
-          v-model="displayMode"
-        />
-        <dataset-select-cols v-model="cols" />
-        <dataset-download-results
-          v-if="baseFetchUrl && total !== undefined"
-          :base-url="baseFetchUrl"
-          :total="total"
-        />
-      </v-btn-group>
-    </v-toolbar>
-    <v-sheet class="pa-0">
-      <v-table
-        fixed-header
-        :loading="fetchResults.loading.value"
-        :height="height- 48"
-      >
-        <thead>
-          <tr>
-            <th
-              v-for="(header, i) of headers"
-              :key="header.key"
-              class="text-left text-no-wrap"
-              :style="`min-width: ${colsWidths[i] ?? 50}px`"
-            >
-              {{ header.title }}
-            </th>
-          </tr>
-          <tr v-if="fetchResults.loading.value">
-            <td
-              :colspan="headers?.length"
-              style="position: relative"
-              class="pa-0"
-            >
-              <v-progress-linear
-                indeterminate
-                style="width: 100%; position: absolute; top: 0;"
-                color="primary"
-                height="3"
-              />
-            </td>
-          </tr>
-        </thead>
-        <tbody>
-          <v-virtual-scroll
-            :height="300"
-            :items="results"
-            :item-height="lineHeight"
-            renderless
+    </v-btn-group>
+  </v-toolbar>
+  <v-sheet class="pa-0">
+    <v-table
+      fixed-header
+      :loading="fetchResults.loading.value"
+      :height="height- 48"
+    >
+      <thead>
+        <tr>
+          <th
+            v-for="(header, i) of headers"
+            :key="header.key"
+            class="text-left text-no-wrap"
+            :style="`min-width: ${colsWidths[i] ?? 50}px`"
           >
-            <template #default="{ item, index }">
-              <tr v-intersect:quiet="(intersect: boolean) => intersect && onScrollItem(index)">
-                <!--<td
+            {{ header.title }}
+          </th>
+        </tr>
+        <tr v-if="fetchResults.loading.value">
+          <td
+            :colspan="headers?.length"
+            style="position: relative"
+            class="pa-0"
+          >
+            <v-progress-linear
+              indeterminate
+              style="width: 100%; position: absolute; top: 0;"
+              color="primary"
+              height="3"
+            />
+          </td>
+        </tr>
+      </thead>
+      <tbody>
+        <v-virtual-scroll
+          :height="300"
+          :items="results"
+          :item-height="lineHeight"
+          renderless
+        >
+          <template #default="{ item, index }">
+            <tr v-intersect:quiet="(intersect: boolean) => intersect && onScrollItem(index)">
+              <!--<td
                   v-for="header of headers"
                   :key="header.key"
                   class="text-no-wrap"
                 >
                   {{ item.__formatted[header.key] }}
                 </td>-->
-                <dataset-table-cell
-                  v-for="header of headers"
-                  :key="header.key"
-                  :item="item"
-                  :header="header"
-                  :no-interaction="noInteraction"
-                  :line-height="lineHeight"
-                  :table-height="height"
-                  :filters="filters"
-                  :truncate="truncate"
-                  :dense="displayMode === 'table-dense'"
-                />
-              </tr>
-            </template>
-          </v-virtual-scroll>
-        </tbody>
-      </v-table>
-    </v-sheet>
-  </div>
+              <dataset-table-cell
+                v-for="header of headers"
+                :key="header.key"
+                :item="item"
+                :header="header"
+                :no-interaction="noInteraction"
+                :line-height="lineHeight"
+                :table-height="height"
+                :filters="filters"
+                :truncate="truncate"
+                :dense="displayMode === 'table-dense'"
+              />
+            </tr>
+          </template>
+        </v-virtual-scroll>
+      </tbody>
+    </v-table>
+  </v-sheet>
 </template>
 
 <i18n lang="yaml">

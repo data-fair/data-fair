@@ -62,12 +62,14 @@
         :title="$t('showFullValue')"
         @click="detailDialog = true;"
       >
-        <v-icon v-if="dense">
-          mdi-loupe
-        </v-icon>
-        <v-icon v-else>
-          mdi-magnify-plus
-        </v-icon>
+        <v-icon
+          v-if="dense"
+          :icon="mdiLoupe"
+        />
+        <v-icon
+          v-else
+          :icon="mdiMagnifyMinus"
+        />
       </v-btn>
       <v-btn
         v-else-if="!filters.find(f => f.field.key === property.key) && extendedValue.filterable"
@@ -79,7 +81,7 @@
         :title="$t('filterValue')"
         @click="emit('filter', extendedValue.raw)"
       >
-        <v-icon>mdi-filter-variant</v-icon>
+        <v-icon :icon="mdiFilterVariant" />
       </v-btn>
     </template>
   </div>
@@ -105,6 +107,7 @@ en:
 import { SchemaProperty } from '#api/types'
 import { useTheme } from 'vuetify'
 import type { ExtendedResultValue, ExtendedResult } from './table/use-lines'
+import { mdiFilterVariant, mdiLoupe, mdiMagnifyMinus } from '@mdi/js'
 
 const { extendedValue, property, disableHover } = defineProps({
   extendedResult: { type: Object as () => ExtendedResult, required: true },
