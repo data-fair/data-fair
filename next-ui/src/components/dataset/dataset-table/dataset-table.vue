@@ -91,7 +91,7 @@
                   :key="header.key"
                   class="text-no-wrap"
                 >
-                  {{ item[header.key] }}
+                  {{ item.__formatted[header.key] }}
                 </td>
               </tr>
             </template>
@@ -131,7 +131,7 @@ const selectedCols = computed(() => cols.value.length ? cols.value : allCols.val
 
 const { baseFetchUrl, total, results, fetchResults } = useLines(displayMode, selectedCols, q)
 const { headers } = useHeaders(selectedCols)
-watch(total, () => console.log(total.value))
+
 const colsWidths = ref<number[]>([])
 const element = useCurrentElement()
 watch(baseFetchUrl, () => {

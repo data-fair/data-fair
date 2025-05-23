@@ -28,6 +28,7 @@ declare global {
   const dfTutorialAlert: typeof import('@data-fair/lib-vuetify/tutorial-alert.vue')['default']
   const dfUserAvatar: typeof import('@data-fair/lib-vuetify/user-avatar.vue')['default']
   const effectScope: typeof import('vue')['effectScope']
+  const formatValue: typeof import('../src/utils/dataset')['formatValue']
   const getActiveHead: typeof import('@unhead/vue')['getActiveHead']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
   const getCurrentScope: typeof import('vue')['getCurrentScope']

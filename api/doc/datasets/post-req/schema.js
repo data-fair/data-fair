@@ -48,5 +48,6 @@ export default {
       type: 'string',
       format: 'binary'
     }
-  }
+  },
+  $defs: datasetSchema.$defs
 }

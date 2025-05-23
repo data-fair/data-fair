@@ -2,7 +2,7 @@ import { provide, inject } from 'vue'
 import type { Event, Dataset } from '#api/types'
 import { isRestDataset } from '#shared/types-utils'
 
-type ExtendedDataset = Dataset & { userPermissions: string[] }
+type ExtendedDataset = Dataset & { userPermissions: string[], draftReason?: string }
 
 // we do not use SSR, so we can use a simple module level singleton
 export type DatasetStore = ReturnType<typeof createDatasetStore>
