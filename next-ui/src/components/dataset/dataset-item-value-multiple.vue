@@ -7,11 +7,11 @@
       v-for="(value, i) in extendedValues"
       :key="i"
       :class="{'my-0': true, 'pr-1': value.filterable && dense, 'pr-2': value.filterable && !dense}"
-      :color="hovered[i] ? 'primary' : 'default'"
+      :color="hovered === value ? 'primary' : 'default'"
       :size="dense ? 'small' : undefined"
       @click="emit('filter', value)"
-      @mouseenter="hover(i)"
-      @mouseleave="leave(i)"
+      @mouseenter="emit('hoverstart', markRaw(value))"
+      @mouseleave="emit('hoverstop')"
     >
       <span>
         {{ value.formatted }}
@@ -19,7 +19,7 @@
           v-if="value.filterable && !value.displayDetail"
           :style="{width: '14px'}"
           :size="dense ? 14 : 18"
-        >{{ hovered[i] ? 'mdi-filter-variant' : '' }}</v-icon>
+        >{{ hovered === value ? 'mdi-filter-variant' : '' }}</v-icon>
       </span>
     </v-chip>
   </v-chip-group>
@@ -38,35 +38,21 @@ en:
 import { type SchemaProperty } from '#api/types'
 import { type ExtendedResultValue } from './table/use-lines'
 
-const { extendedValues, disableHover } = defineProps({
+const { extendedValues } = defineProps({
   extendedValues: { type: Array as () => ExtendedResultValue[], required: true },
   property: { type: Object as () => SchemaProperty, required: true },
   filters: { type: Array as () => any[], required: false, default: () => ([]) },
   truncate: { type: Number, default: 50 },
   lineHeight: { type: Number, default: 40 },
-  disableHover: { type: Boolean, default: false },
+  hovered: { type: Object as () => ExtendedResultValue, default: null },
   dense: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['filter'])
-
-const hovered = ref<boolean[]>([])
-
-let _hoverTimeout: ReturnType<typeof setTimeout> | undefined
-const hover = (i: number) => {
-  if (disableHover) return
-  _hoverTimeout = setTimeout(() => { hovered.value[i] = true }, 60)
-}
-
-const leave = (i: number) => {
-  if (disableHover) return
-  if (_hoverTimeout) {
-    clearTimeout(_hoverTimeout)
-    _hoverTimeout = undefined
-  }
-  hovered.value[i] = false
-}
-
+const emit = defineEmits<{
+  filter: [filter: any],
+  hoverstart: [value: ExtendedResultValue],
+  hoverstop: []
+}>()
 </script>
 
 <style>

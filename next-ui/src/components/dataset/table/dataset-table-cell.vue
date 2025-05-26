@@ -3,6 +3,8 @@
     class="pr-0 dataset-table-cell"
     :class="{'pl-2': dense, 'text-no-wrap': true}"
     :style="`height: ${lineHeight}px;position:relative;`"
+    @mouseenter="!Array.isArray(item.values[header.key]) && emit('hoverstart', markRaw(item.values[header.key]) as ExtendedResultValue)"
+    @mouseleave="emit('hoverstop')"
   >
     <template v-if="header.key === '_thumbnail'">
       <v-avatar
@@ -21,33 +23,10 @@
         :style="`right: 4px;top: 50%;transform: translate(0, -50%);z-index:100;background-color:${theme.current.value.dark ? '#212121' : 'white'};`"
         absolute
         :title="$t('showMapPreview')"
-        @click="showMapPreview = true"
+        @click="emit('showMapPreview')"
       >
         <v-icon>mdi-map</v-icon>
       </v-btn>
-      <v-dialog
-        v-model="showMapPreview"
-        max-width="700"
-        :scrim="false"
-      >
-        <v-card
-          v-if="showMapPreview"
-        >
-          <v-btn
-            style="position:absolute;top:4px;right:4px;z-index:1000;"
-            icon
-            @click="showMapPreview = false"
-          >
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-          <dataset-map
-            :key="item._id"
-            :height="mapHeight"
-            navigation-position="top-left"
-            :single-item="item._id"
-          />
-        </v-card>
-      </v-dialog>
     </template>
     <template v-else-if="header.key === '_owner'">
       <v-tooltip
@@ -76,18 +55,23 @@
       :truncate="truncate"
       :dense="dense"
       :line-height="lineHeight"
+      :hovered="hovered"
       @filter="f => emit('filter', f)"
+      @hoverstart="v => emit('hoverstart', v)"
+      @hoverstop="emit('hoverstop')"
     />
     <dataset-item-value
       v-else
       :extended-result="item"
-      :extended-value="item.values[header.key]"
+      :extended-value="item.values[header.key] as ExtendedResultValue"
       :property="header.property"
       :filters="filters"
       :truncate="truncate"
       :dense="dense"
       :line-height="lineHeight"
+      :hovered="hovered === item.values[header.key]"
       @filter="f => emit('filter', f)"
+      @show-detail-dialog="emit('showDetailDialog', markRaw(item.values[header.key] as ExtendedResultValue))"
     />
   </td>
 </template>
@@ -104,27 +88,26 @@ import { useTheme } from 'vuetify'
 import { type TableHeader } from './use-headers'
 import type { ExtendedResult, ExtendedResultValue } from './use-lines'
 
-const { tableHeight } = defineProps({
+defineProps({
   item: { type: Object as () => ExtendedResult, required: true },
   header: { type: Object as () => TableHeader, required: true },
   lineHeight: { type: Number, required: true },
-  tableHeight: { type: Number, required: true },
   filters: { type: Array, required: true },
   truncate: { type: Number, required: true },
   dense: { type: Boolean, default: false },
-  noInteraction: { type: Boolean, default: false }
+  noInteraction: { type: Boolean, default: false },
+  hovered: { type: Object as () => ExtendedResultValue, default: null }
 })
 
-const emit = defineEmits(['filter'])
+const emit = defineEmits<{
+  filter: [filter: any],
+  hoverstart: [value: ExtendedResultValue],
+  hoverstop: [],
+  showMapPreview: [],
+  showDetailDialog: [value: ExtendedResultValue]
+}>()
 
 const theme = useTheme()
-
-const showMapPreview = ref(false)
-
-const mapHeight = computed(() => {
-  return Math.max(400, Math.min(700, tableHeight * 0.8))
-})
-
 </script>
 
 <style>

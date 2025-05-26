@@ -14,11 +14,7 @@
     >{{ extendedValue.formatted }}</a>
   </template>
 
-  <div
-    v-else
-    @mouseenter="hover()"
-    @mouseleave="leave()"
-  >
+  <div v-else>
     <v-avatar
       v-if="property.key === '_updatedByName' && extendedValue.formatted.startsWith($sdUrl)"
       :size="28"
@@ -49,49 +45,36 @@
       <!-- TODO: fetch account name ? -->
       {{ extendedValue.raw }}
     </v-tooltip>
-    <span v-else>
+    <span
+      v-else
+      class="pr-2"
+    >
       {{ extendedValue.formatted }}
     </span>
     <template v-if="hovered">
       <v-btn
         v-if="extendedValue.displayDetail"
-        :icon="dense"
+        :icon="dense ? mdiLoupe : mdiMagnifyMinus"
         size="x-small"
-        :style="`right: 4px;top: 50%;transform: translate(0, -50%);z-index:100;background-color:${theme.current.value.dark ? '#212121' : 'white'};`"
+        class="item-value-hover-action"
+        :style="`background-color:${theme.current.value.dark ? '#212121' : 'white'};`"
         absolute
-        :title="$t('showFullValue')"
-        @click="detailDialog = true;"
-      >
-        <v-icon
-          v-if="dense"
-          :icon="mdiLoupe"
-        />
-        <v-icon
-          v-else
-          :icon="mdiMagnifyMinus"
-        />
-      </v-btn>
+        :title="t('showFullValue')"
+        @click="emit('showDetailDialog')"
+      />
       <v-btn
         v-else-if="!filters.find(f => f.field.key === property.key) && extendedValue.filterable"
-        :icon="dense"
+        :icon="mdiFilterVariant"
         size="x-small"
         color="primary"
-        style="right: 4px;top: 50%;transform: translate(0, -50%);z-index:100;background-color:white;"
+        class="item-value-hover-action"
+        style="background-color:white;"
         absolute
-        :title="$t('filterValue')"
+        :title="t('filterValue')"
         @click="emit('filter', extendedValue.raw)"
-      >
-        <v-icon :icon="mdiFilterVariant" />
-      </v-btn>
+      />
     </template>
   </div>
-
-  <dataset-item-detail-dialog
-    v-if="detailDialog"
-    v-model="detailDialog"
-    :extended-result="extendedResult"
-    :property="property"
-  />
 </template>
 
 <i18n lang="yaml">
@@ -109,39 +92,24 @@ import { useTheme } from 'vuetify'
 import type { ExtendedResultValue, ExtendedResult } from './table/use-lines'
 import { mdiFilterVariant, mdiLoupe, mdiMagnifyMinus } from '@mdi/js'
 
-const { extendedValue, property, disableHover } = defineProps({
+const { extendedValue, property } = defineProps({
   extendedResult: { type: Object as () => ExtendedResult, required: true },
   extendedValue: { type: Object as () => ExtendedResultValue, required: true },
   property: { type: Object as () => SchemaProperty, required: true },
   filters: { type: Array as () => any[], required: false, default: () => ([]) },
   truncate: { type: Number, default: 50 },
   lineHeight: { type: Number, default: 40 },
-  disableHover: { type: Boolean, default: false },
+  hovered: { type: Boolean, default: false },
   dense: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['filter'])
+const emit = defineEmits<{
+  filter: [filter: any],
+  showDetailDialog: []
+}>()
 
 const theme = useTheme()
-
-const hovered = ref(false)
-const detailDialog = ref(false)
-
-let _hoverTimeout: ReturnType<typeof setTimeout> | undefined
-const hover = () => {
-  if (disableHover) return
-  _hoverTimeout = setTimeout(() => { hovered.value = true }, 60)
-}
-
-const leave = () => {
-  if (disableHover) return
-  if (_hoverTimeout) {
-    clearTimeout(_hoverTimeout)
-    _hoverTimeout = undefined
-  }
-  hovered.value = false
-}
-
+const { t } = useI18n()
 </script>
 
 <style>
@@ -154,5 +122,12 @@ const leave = () => {
   top: 8px;
   left: 2px;
   border: 2px solid #ccc;
+}
+.item-value-hover-action {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translate(0, -50%);
+  z-index:100;
 }
 </style>

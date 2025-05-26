@@ -100,10 +100,15 @@
                 :header="header"
                 :no-interaction="noInteraction"
                 :line-height="lineHeight"
-                :table-height="height"
                 :filters="filters"
                 :truncate="truncate"
                 :dense="displayMode === 'table-dense'"
+                :map-preview-height="mapPreviewHeight"
+                :hovered="(hovered === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered && (item.values[header.key] as ExtendedResultValue[]).includes(hovered))) ? hovered : undefined"
+                @hoverstart="hoverStart"
+                @hoverstop="hoverStop"
+                @show-map-preview="showMapPreview = item._id"
+                @show-detail-dialog="v => showDetailDialog = {result: item, property: header.property}"
               />
             </tr>
           </template>
@@ -111,6 +116,37 @@
       </tbody>
     </v-table>
   </v-sheet>
+
+  <v-dialog
+    :model-value="!!showMapPreview"
+    max-width="700"
+    :scrim="false"
+  >
+    <v-card
+      v-if="showMapPreview"
+    >
+      <v-btn
+        style="position:absolute;top:4px;right:4px;z-index:1000;"
+        icon
+        @click="showMapPreview = undefined"
+      >
+        <v-icon>mdi-close</v-icon>
+      </v-btn>
+      <dataset-map
+        :height="mapHeight"
+        navigation-position="top-left"
+        :single-item="showMapPreview"
+      />
+    </v-card>
+  </v-dialog>
+
+  <dataset-item-detail-dialog
+    v-if="showDetailDialog"
+    :model-value="!!showDetailDialog"
+    :extended-result="showDetailDialog.result"
+    :property="showDetailDialog.property"
+    @update:model-value="showDetailDialog = undefined"
+  />
 </template>
 
 <i18n lang="yaml">
@@ -119,9 +155,10 @@
 <script lang="ts" setup>
 import { mdiMagnify } from '@mdi/js'
 import { useCurrentElement } from '@vueuse/core'
-import useLines from './use-lines'
+import useLines, { type ExtendedResultValue, type ExtendedResult } from './use-lines'
 import useHeaders from './use-headers'
 import { useDisplay } from 'vuetify'
+import { type SchemaProperty } from '#api/types'
 
 const { height, noInteraction } = defineProps({
   height: { type: Number, default: 800 },
@@ -133,6 +170,9 @@ const cols = defineModel<string[]>('cols', { default: [] })
 const q = defineModel<string>('q', { default: '' })
 const lineHeight = 52
 const filters: any[] = []
+const mapPreviewHeight = computed(() => {
+  return Math.max(400, Math.min(700, height * 0.8))
+})
 
 const editQ = ref('')
 watch(q, () => { editQ.value = q.value }, { immediate: true })
@@ -166,4 +206,25 @@ const onScrollItem = (index: number) => {
     if (!fetchResults.loading.value) fetchResults.execute()
   }
 }
+
+const hovered = ref<ExtendedResultValue>()
+let _hoverTimeout: ReturnType<typeof setTimeout> | undefined
+const hoverStart = (value: ExtendedResultValue) => {
+  _hoverTimeout = setTimeout(() => { hovered.value = value }, 60)
+}
+
+const hoverStop = () => {
+  if (_hoverTimeout) {
+    clearTimeout(_hoverTimeout)
+    _hoverTimeout = undefined
+  }
+  hovered.value = undefined
+}
+
+const mapHeight = computed(() => {
+  return Math.max(400, Math.min(700, height * 0.8))
+})
+const showMapPreview = ref<string>()
+
+const showDetailDialog = ref<{ result: ExtendedResult, property: SchemaProperty }>()
 </script>
