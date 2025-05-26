@@ -2,7 +2,7 @@
   <v-toolbar
     flat
     density="compact"
-    color="background"
+    color="surface"
   >
     <dataset-nb-results
       :total="total"
@@ -56,7 +56,7 @@
       :height="height- 48"
       class="dataset-table"
     >
-      <thead>
+      <thead ref="thead">
         <tr>
           <template
             v-for="(header, i) of headers"
@@ -65,17 +65,22 @@
             <th
               :id="`header-${header.key}`"
               class="text-left"
-              :style="`min-width: ${colsWidths[i] ?? 50}px;cursor: ${header.property && !noInteraction ? 'pointer' : 'default'}; position: relative;`"
+              :class="{'sticky': header.sticky, 'bg-surface': header.sticky, 'border-e-thin': header.sticky, 'pr-2': header.sticky}"
+              :style="{
+                'min-width': (colsWidths[i] ?? 50) + 'px',
+                cursor: header.property && !noInteraction ? 'pointer' : 'default',
+              }"
               @mouseenter="hoveredHeader = header"
               @mouseleave="hoveredHeader = undefined"
             >
-              <span class="two-lines">{{ header.title }}</span>
-              <v-icon
-                v-if="hoveredHeader?.key === header.key || header.key === sort?.key"
-                style="position:absolute;top:16px;right:2px;"
-                :color="header.key === sort?.key ? 'primary' : 'default'"
-                :icon="header.key === sort?.key ? (sort.direction === 1 ? mdiSortAscending : mdiSortDescending) : mdiMenuDown"
-              />
+              <div class="pr-2 header-wrapper">
+                <span class="two-lines">{{ header.title }}</span>
+                <v-icon
+                  v-if="hoveredHeader?.key === header.key || header.key === sort?.key || true"
+                  :color="header.key === sort?.key ? 'primary' : 'default'"
+                  :icon="header.key === sort?.key ? (sort.direction === 1 ? mdiSortAscending : mdiSortDescending) : mdiMenuDown"
+                />
+              </div>
             </th>
             <dataset-table-header-menu
               v-if="header.property && !noInteraction"
@@ -234,21 +239,18 @@ const { filters, addFilter, queryParams: filtersQueryParams } = useFilters()
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFilters }))
 const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, selectedCols, q, sortStr, extraParams)
-const { headers, hideHeader } = useHeaders(selectedCols, noInteraction)
+const { headers, hideHeader } = useHeaders(selectedCols, noInteraction, fixed)
 
 const colsWidths = ref<number[]>([])
-const element = useCurrentElement()
+const thead = ref<HTMLElement>()
 watch(baseFetchUrl, () => {
   if (!baseFetchUrl.value) return
   colsWidths.value = []
 })
 const onScrollItem = (index: number) => {
-  if (element.value instanceof HTMLElement) {
-    element.value.querySelectorAll('table>thead th').forEach((h, i) => {
-      // console.log('H', h.clientWidth)
-      colsWidths.value[i] = Math.max(colsWidths.value[i] ?? 50, Math.round(h.clientWidth))
-    })
-  }
+  thead.value?.querySelectorAll('table thead th').forEach((h, i) => {
+    colsWidths.value[i] = Math.max(colsWidths.value[i] ?? 50, Math.round(h.clientWidth))
+  })
   if (index === results.value.length - 1) {
     // scrolled until the current end of the table
     if (!fetchResults.loading.value) fetchResults.execute()
@@ -280,6 +282,27 @@ const showDetailDialog = ref<{ result: ExtendedResult, property: SchemaProperty 
 </script>
 
 <style>
+.dataset-table th {
+  z-index: 2;
+}
+.dataset-table .header-wrapper {
+  position: relative;
+  width: 100%;
+}
+.dataset-table .header-wrapper .v-icon {
+  position: absolute;
+  right: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.dataset-table th.sticky {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+}
+.dataset-table th.sticky .v-icon {
+  right: -4px;
+}
 .two-lines {
   display: -webkit-box;
   -webkit-box-orient: vertical;

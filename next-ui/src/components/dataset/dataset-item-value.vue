@@ -58,7 +58,6 @@
         size="x-small"
         class="item-value-hover-action"
         :style="`background-color:${theme.current.value.dark ? '#212121' : 'white'};`"
-        absolute
         :title="t('showFullValue')"
         @click="emit('showDetailDialog')"
       />
@@ -69,7 +68,6 @@
         color="primary"
         class="item-value-hover-action"
         style="background-color:white;"
-        absolute
         :title="t('filterValue')"
         @click="emit('filter')"
       />
@@ -125,7 +123,7 @@ const { t } = useI18n()
 }
 .item-value-hover-action {
   position: absolute;
-  right: 0;
+  right: 2px;
   top: 50%;
   transform: translate(0, -50%);
   z-index:100;

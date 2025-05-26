@@ -6,15 +6,16 @@ export type TableHeader = {
   tooltip?: string,
   filterable?: boolean,
   sortable?: boolean,
-  property?: SchemaProperty
+  property?: SchemaProperty,
+  sticky?: boolean
 }
 
-export const useHeaders = (selectedCols: Ref<string[]>, noInteraction: boolean) => {
+export const useHeaders = (selectedCols: Ref<string[]>, noInteraction: boolean, fixed: Ref<string | undefined>) => {
   const { dataset, imageProperty } = useDatasetStore()
   const { vocabulary } = useStore()
 
   const headers = computed(() => {
-    const headers: TableHeader[] | undefined = dataset.value?.schema?.filter(p => selectedCols.value.includes(p.key)).map((p, i) => ({
+    let headers: TableHeader[] | undefined = dataset.value?.schema?.filter(p => selectedCols.value.includes(p.key)).map((p, i) => ({
       key: p.key,
       title: p.title || p['x-originalName'] || p.key,
       sortable:
@@ -23,7 +24,7 @@ export const useHeaders = (selectedCols: Ref<string[]>, noInteraction: boolean) 
           p.type === 'number' ||
           p.type === 'integer'
         ),
-      tooltip: p.description || (p['x-refersTo'] && vocabulary.value?.[p['x-refersTo']]?.description),
+      tooltip: p.description || (p['x-refersTo'] && vocabulary.value?.[p['x-refersTo']]?.description) || undefined,
       // nowrap: true,
       property: p
     }))
@@ -34,12 +35,20 @@ export const useHeaders = (selectedCols: Ref<string[]>, noInteraction: boolean) 
       if (dataset.value?.bbox && !noInteraction) {
         headers.unshift({ title: '', key: '_map_preview' })
       }
+      if (fixed.value) {
+        const fixedHeader = headers.find(h => h.key === fixed.value)
+        if (fixedHeader) {
+          fixedHeader.sticky = true
+          headers = headers.filter(h => h !== fixedHeader)
+          headers.unshift(fixedHeader)
+        }
+      }
     }
     return headers
   })
 
   const hideHeader = (header: TableHeader) => {
-    if (!selectedCols.value.length) selectedCols.value = dataset.value?.schema?.map(p => p.key)
+    if (!selectedCols.value.length) selectedCols.value = dataset.value?.schema?.map(p => p.key) ?? []
     selectedCols.value = selectedCols.value.filter(sc => sc !== header.key)
   }
   return { headers, hideHeader }

@@ -1,8 +1,10 @@
 <template>
   <td
-    class="pr-0 dataset-table-cell"
-    :class="{'pl-2': dense, 'text-no-wrap': true}"
-    :style="`height: ${lineHeight}px;position:relative;`"
+    class="dataset-table-cell pr-0 text-no-wrap"
+    :class="{'pl-2': dense, 'sticky': header.sticky, 'bg-surface': header.sticky, 'border-e-thin': header.sticky, 'pr-2': header.sticky}"
+    :style="{
+      height: lineHeight + 'px',
+    }"
     @mouseenter="!Array.isArray(item.values[header.key]) && emit('hoverstart', markRaw(item.values[header.key]) as ExtendedResultValue)"
     @mouseleave="emit('hoverstop')"
   >
@@ -112,4 +114,12 @@ const theme = useTheme()
 </script>
 
 <style>
+.dataset-table-cell {
+  position: relative;
+}
+.dataset-table-cell.sticky {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
 </style>
