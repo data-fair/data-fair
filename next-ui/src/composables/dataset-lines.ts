@@ -18,7 +18,7 @@ export type ExtendedResult = {
   values: Record<string, ExtendedResultValue | ExtendedResultValue[]>
 }
 
-export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>, q: Ref<string>, noInteraction: boolean) => {
+export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>, q: Ref<string>, noInteraction: boolean, extraParams: Ref<Record<string, string>>) => {
   const { id, dataset, draftMode } = useDatasetStore()
   const { width: windowWidth } = useWindowSize()
 
@@ -36,7 +36,7 @@ export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>, 
   })
   const baseFetchUrl = computed(() => {
     if (truncate.value === null) return null
-    return withQuery($apiPath + `/datasets/${id}/lines`, { draftMode, size: 20, truncate: truncate.value, q: q.value || undefined })
+    return withQuery($apiPath + `/datasets/${id}/lines`, { draftMode, size: 20, truncate: truncate.value, q: q.value || undefined, ...extraParams.value })
   })
 
   const total = ref<number>()

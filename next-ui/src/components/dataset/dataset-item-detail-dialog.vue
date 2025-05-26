@@ -41,7 +41,7 @@
 
 <script lang="ts" setup>
 import { type SchemaProperty } from '#api/types'
-import type { ExtendedResult } from './table/use-lines'
+import type { ExtendedResult } from '../../composables/dataset-lines'
 
 const { extendedResult, property } = defineProps({
   extendedResult: { type: Object as () => ExtendedResult, required: true },

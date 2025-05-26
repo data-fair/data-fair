@@ -21,6 +21,7 @@ declare global {
   const createApplicationStore: typeof import('../src/composables/application-store')['createApplicationStore']
   const createDatasetStore: typeof import('../src/composables/dataset-store')['createDatasetStore']
   const customRef: typeof import('vue')['customRef']
+  const datasetLines: typeof import('../src/composables/dataset-lines')['default']
   const datasetStore: typeof import('../src/composables/dataset-store')['default']
   const defineAsyncComponent: typeof import('vue')['defineAsyncComponent']
   const defineComponent: typeof import('vue')['defineComponent']
@@ -28,7 +29,7 @@ declare global {
   const dfTutorialAlert: typeof import('@data-fair/lib-vuetify/tutorial-alert.vue')['default']
   const dfUserAvatar: typeof import('@data-fair/lib-vuetify/user-avatar.vue')['default']
   const effectScope: typeof import('vue')['effectScope']
-  const formatValue: typeof import('../src/utils/dataset')['formatValue']
+  const formatValue: typeof import('../src/composables/dataset-lines')['formatValue']
   const getActiveHead: typeof import('@unhead/vue')['getActiveHead']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
@@ -57,6 +58,7 @@ declare global {
   const onUnmounted: typeof import('vue')['onUnmounted']
   const onUpdated: typeof import('vue')['onUpdated']
   const onWatcherCleanup: typeof import('vue')['onWatcherCleanup']
+  const operators: typeof import('../src/composables/dataset-filters')['operators']
   const propTypeIcon: typeof import('../src/utils/dataset')['propTypeIcon']
   const propTypeTitle: typeof import('../src/utils/dataset')['propTypeTitle']
   const provide: typeof import('vue')['provide']
@@ -87,11 +89,13 @@ declare global {
   const useDatasetStore: typeof import('../src/composables/dataset-store')['useDatasetStore']
   const useDatasetWatch: typeof import('../src/composables/dataset-watch')['useDatasetWatch']
   const useFetch: typeof import('@data-fair/lib-vue/fetch.js')['useFetch']
+  const useFilters: typeof import('../src/composables/dataset-filters')['useFilters']
   const useGlobalStore: typeof import('../src/composables/use-global-store')['default']
   const useHead: typeof import('@unhead/vue')['useHead']
   const useHeadSafe: typeof import('@unhead/vue')['useHeadSafe']
   const useI18n: typeof import('vue-i18n')['useI18n']
   const useId: typeof import('vue')['useId']
+  const useLines: typeof import('../src/composables/dataset-lines')['useLines']
   const useLink: typeof import('vue-router')['useLink']
   const useLocaleDayjs: typeof import('@data-fair/lib-vue/locale-dayjs.js')['useLocaleDayjs']
   const useModel: typeof import('vue')['useModel']
@@ -143,6 +147,7 @@ declare module 'vue' {
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
+    readonly datasetLines: UnwrapRef<typeof import('../src/composables/dataset-lines')['default']>
     readonly datasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['default']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
@@ -150,6 +155,7 @@ declare module 'vue' {
     readonly dfTutorialAlert: UnwrapRef<typeof import('@data-fair/lib-vuetify/tutorial-alert.vue')['default']>
     readonly dfUserAvatar: UnwrapRef<typeof import('@data-fair/lib-vuetify/user-avatar.vue')['default']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
+    readonly formatValue: UnwrapRef<typeof import('../src/composables/dataset-lines')['formatValue']>
     readonly getActiveHead: UnwrapRef<typeof import('@unhead/vue')['getActiveHead']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
@@ -178,6 +184,7 @@ declare module 'vue' {
     readonly onUnmounted: UnwrapRef<typeof import('vue')['onUnmounted']>
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
+    readonly operators: UnwrapRef<typeof import('../src/composables/dataset-filters')['operators']>
     readonly propTypeIcon: UnwrapRef<typeof import('../src/utils/dataset')['propTypeIcon']>
     readonly propTypeTitle: UnwrapRef<typeof import('../src/utils/dataset')['propTypeTitle']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
@@ -208,10 +215,12 @@ declare module 'vue' {
     readonly useDatasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['useDatasetStore']>
     readonly useDatasetWatch: UnwrapRef<typeof import('../src/composables/dataset-watch')['useDatasetWatch']>
     readonly useFetch: UnwrapRef<typeof import('@data-fair/lib-vue/fetch.js')['useFetch']>
+    readonly useFilters: UnwrapRef<typeof import('../src/composables/dataset-filters')['useFilters']>
     readonly useHead: UnwrapRef<typeof import('@unhead/vue')['useHead']>
     readonly useHeadSafe: UnwrapRef<typeof import('@unhead/vue')['useHeadSafe']>
     readonly useI18n: UnwrapRef<typeof import('vue-i18n')['useI18n']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
+    readonly useLines: UnwrapRef<typeof import('../src/composables/dataset-lines')['useLines']>
     readonly useLink: UnwrapRef<typeof import('vue-router')['useLink']>
     readonly useLocaleDayjs: UnwrapRef<typeof import('@data-fair/lib-vue/locale-dayjs.js')['useLocaleDayjs']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>

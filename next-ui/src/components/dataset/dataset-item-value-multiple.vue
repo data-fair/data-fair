@@ -16,7 +16,7 @@
       <span>
         {{ value.formatted }}
         <v-icon
-          v-if="value.filterable && !value.displayDetail"
+          v-if="value.filterable && !value.displayDetail && filter?.value !== value.raw"
           :style="{width: '14px'}"
           :size="dense ? 14 : 18"
         >{{ hovered === value ? 'mdi-filter-variant' : '' }}</v-icon>
@@ -36,12 +36,13 @@ en:
 
 <script lang="ts" setup>
 import { type SchemaProperty } from '#api/types'
-import { type ExtendedResultValue } from './table/use-lines'
+import { type DatasetFilter } from '../../composables/dataset-filters'
+import { type ExtendedResultValue } from '../../composables/dataset-lines'
 
 const { extendedValues } = defineProps({
   extendedValues: { type: Array as () => ExtendedResultValue[], required: true },
   property: { type: Object as () => SchemaProperty, required: true },
-  filters: { type: Array as () => any[], required: false, default: () => ([]) },
+  filter: { type: Object as () => DatasetFilter, default: null },
   truncate: { type: Number, default: 50 },
   lineHeight: { type: Number, default: 40 },
   hovered: { type: Object as () => ExtendedResultValue, default: null },
@@ -49,7 +50,7 @@ const { extendedValues } = defineProps({
 })
 
 const emit = defineEmits<{
-  filter: [filter: any],
+  filter: [value: any],
   hoverstart: [value: ExtendedResultValue],
   hoverstop: []
 }>()

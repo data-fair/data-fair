@@ -51,11 +51,11 @@
       v-else-if="Array.isArray(item.values[header.key])"
       :extended-values="item.values[header.key] as ExtendedResultValue[]"
       :property="header.property"
-      :filters="filters"
       :truncate="truncate"
       :dense="dense"
       :line-height="lineHeight"
       :hovered="hovered"
+      :filter="filter"
       @filter="f => emit('filter', f)"
       @hoverstart="v => emit('hoverstart', v)"
       @hoverstop="emit('hoverstop')"
@@ -65,12 +65,12 @@
       :extended-result="item"
       :extended-value="item.values[header.key] as ExtendedResultValue"
       :property="header.property"
-      :filters="filters"
       :truncate="truncate"
       :dense="dense"
       :line-height="lineHeight"
       :hovered="hovered === item.values[header.key]"
-      @filter="f => emit('filter', f)"
+      :filtered="!!filter"
+      @filter="emit('filter', {property: header.property, operator: 'eq', value: (item.values[header.key] as ExtendedResultValue).raw, formattedValue: (item.values[header.key] as ExtendedResultValue).formatted})"
       @show-detail-dialog="emit('showDetailDialog', markRaw(item.values[header.key] as ExtendedResultValue))"
     />
   </td>
@@ -86,13 +86,14 @@
 <script lang="ts" setup>
 import { useTheme } from 'vuetify'
 import { type TableHeader } from './use-headers'
-import type { ExtendedResult, ExtendedResultValue } from './use-lines'
+import type { ExtendedResult, ExtendedResultValue } from '../../../composables/dataset-lines'
+import { DatasetFilter } from '../../../composables/dataset-filters'
 
 defineProps({
   item: { type: Object as () => ExtendedResult, required: true },
   header: { type: Object as () => TableHeader, required: true },
   lineHeight: { type: Number, required: true },
-  filters: { type: Array, required: true },
+  filter: { type: Object as () => DatasetFilter, default: null },
   truncate: { type: Number, required: true },
   dense: { type: Boolean, default: false },
   noInteraction: { type: Boolean, default: false },

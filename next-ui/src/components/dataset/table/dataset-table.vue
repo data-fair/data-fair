@@ -26,6 +26,10 @@
       @click:append-inner="q = editQ"
       @click:clear="q = ''"
     />
+    <dataset-filters
+      v-model="filters"
+      class="flex-grow-1"
+    />
     <v-spacer />
     <v-btn-group
       divided
@@ -105,10 +109,12 @@
                 :dense="displayMode === 'table-dense'"
                 :map-preview-height="mapPreviewHeight"
                 :hovered="(hovered === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered && (item.values[header.key] as ExtendedResultValue[]).includes(hovered))) ? hovered : undefined"
+                :filter="filters.find(f => f.property.key === header.key && f.operator === 'eq' && (Array.isArray(item.values[header.key]) ? (item.values[header.key] as ExtendedResultValue[]).some(v => v.raw === f.value) : (item.values[header.key] as ExtendedResultValue).raw === f.value))"
                 @hoverstart="hoverStart"
                 @hoverstop="hoverStop"
                 @show-map-preview="showMapPreview = item._id"
                 @show-detail-dialog="v => showDetailDialog = {result: item, property: header.property}"
+                @filter="f => addFilter(f)"
               />
             </tr>
           </template>
@@ -155,10 +161,11 @@
 <script lang="ts" setup>
 import { mdiMagnify } from '@mdi/js'
 import { useCurrentElement } from '@vueuse/core'
-import useLines, { type ExtendedResultValue, type ExtendedResult } from './use-lines'
+import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset-lines'
 import useHeaders from './use-headers'
 import { useDisplay } from 'vuetify'
 import { type SchemaProperty } from '#api/types'
+import { useFilters } from '../../../composables/dataset-filters'
 
 const { height, noInteraction } = defineProps({
   height: { type: Number, default: 800 },
@@ -169,7 +176,6 @@ const displayMode = defineModel<string>('display', { default: 'table' })
 const cols = defineModel<string[]>('cols', { default: [] })
 const q = defineModel<string>('q', { default: '' })
 const lineHeight = 52
-const filters: any[] = []
 const mapPreviewHeight = computed(() => {
   return Math.max(400, Math.min(700, height * 0.8))
 })
@@ -185,7 +191,10 @@ const { dataset } = useDatasetStore()
 const allCols = computed(() => dataset.value?.schema?.map(p => p.key) ?? [])
 const selectedCols = computed(() => cols.value.length ? cols.value : allCols.value)
 
-const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, selectedCols, q, noInteraction)
+const { filters, addFilter, queryParams: filtersQueryParams } = useFilters()
+const conceptFilters = useConceptFilters(useReactiveSearchParams())
+const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFilters }))
+const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, selectedCols, q, noInteraction, extraParams)
 const { headers } = useHeaders(selectedCols, noInteraction)
 
 const colsWidths = ref<number[]>([])

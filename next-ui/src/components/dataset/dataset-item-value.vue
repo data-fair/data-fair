@@ -63,7 +63,7 @@
         @click="emit('showDetailDialog')"
       />
       <v-btn
-        v-else-if="!filters.find(f => f.field.key === property.key) && extendedValue.filterable"
+        v-else-if="!filtered && extendedValue.filterable"
         :icon="mdiFilterVariant"
         size="x-small"
         color="primary"
@@ -71,7 +71,7 @@
         style="background-color:white;"
         absolute
         :title="t('filterValue')"
-        @click="emit('filter', extendedValue.raw)"
+        @click="emit('filter')"
       />
     </template>
   </div>
@@ -87,16 +87,16 @@ en:
 </i18n>
 
 <script lang="ts" setup>
-import { SchemaProperty } from '#api/types'
+import { type SchemaProperty } from '#api/types'
 import { useTheme } from 'vuetify'
-import type { ExtendedResultValue, ExtendedResult } from './table/use-lines'
+import type { ExtendedResultValue, ExtendedResult } from '../../composables/dataset-lines'
 import { mdiFilterVariant, mdiLoupe, mdiMagnifyMinus } from '@mdi/js'
 
 const { extendedValue, property } = defineProps({
   extendedResult: { type: Object as () => ExtendedResult, required: true },
   extendedValue: { type: Object as () => ExtendedResultValue, required: true },
   property: { type: Object as () => SchemaProperty, required: true },
-  filters: { type: Array as () => any[], required: false, default: () => ([]) },
+  filtered: { type: Boolean, required: true },
   truncate: { type: Number, default: 50 },
   lineHeight: { type: Number, default: 40 },
   hovered: { type: Boolean, default: false },
@@ -104,7 +104,7 @@ const { extendedValue, property } = defineProps({
 })
 
 const emit = defineEmits<{
-  filter: [filter: any],
+  filter: [],
   showDetailDialog: []
 }>()
 
