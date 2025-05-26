@@ -496,10 +496,11 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
       filter.push({ wildcard: { [`${prop.key}.wildcard`]: `*${query[queryKey]}*` } })
     }
     if (filterSuffix === '_search') {
-      let subfield = 'text_standard'
-      if (prop['x-capabilities']?.text !== false) subfield = 'text'
-      requiredCapability(prop, filterSuffix, 'textStandard')
-      must.push({ match: { [`${prop.key}.${subfield}`]: query[queryKey] } })
+      const subfields = []
+      if (prop['x-capabilities']?.textStandard !== false) subfields.push('text_standard')
+      if (prop['x-capabilities']?.text !== false) subfields.push('text')
+      if (!subfields.length) requiredCapability(prop, filterSuffix, 'textStandard')
+      must.push({ simple_query_string: { query: query[queryKey], fields: subfields.map(subfield => `${prop.key}.${subfield}`) } })
     }
   }
 
