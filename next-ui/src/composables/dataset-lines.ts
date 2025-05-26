@@ -18,7 +18,7 @@ export type ExtendedResult = {
   values: Record<string, ExtendedResultValue | ExtendedResultValue[]>
 }
 
-export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>, q: Ref<string>, noInteraction: boolean, extraParams: Ref<Record<string, string>>) => {
+export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>, q: Ref<string>, sort: Ref<string | undefined>, extraParams: Ref<Record<string, string>>) => {
   const { id, dataset, draftMode } = useDatasetStore()
   const { width: windowWidth } = useWindowSize()
 
@@ -36,7 +36,7 @@ export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>, 
   })
   const baseFetchUrl = computed(() => {
     if (truncate.value === null) return null
-    return withQuery($apiPath + `/datasets/${id}/lines`, { draftMode, size: 20, truncate: truncate.value, q: q.value || undefined, ...extraParams.value })
+    return withQuery($apiPath + `/datasets/${id}/lines`, { draftMode, size: 20, truncate: truncate.value, q: q.value || undefined, sort: sort.value || undefined, ...extraParams.value })
   })
 
   const total = ref<number>()
@@ -63,9 +63,9 @@ export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>, 
       for (const property of dataset.value?.schema ?? []) {
         if (property.separator) {
           const values = raw[property.key]?.split(property.separator).map((v: string) => v.trim()) ?? []
-          extendedResult.values[property.key] = values.map((v: any) => prepareExtendedResultValue(v, property, noInteraction, truncate.value, localeDayjs))
+          extendedResult.values[property.key] = values.map((v: any) => prepareExtendedResultValue(v, property, truncate.value, localeDayjs))
         } else {
-          const extendedValue = prepareExtendedResultValue(raw[property.key], property, noInteraction, truncate.value, localeDayjs)
+          const extendedValue = prepareExtendedResultValue(raw[property.key], property, truncate.value, localeDayjs)
           if (property['x-refersTo'] === 'http://schema.org/DigitalDocument') {
             if (raw._attachment_url) {
               extendedValue.raw = raw._attachment_url
@@ -103,24 +103,22 @@ export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>, 
   return { baseFetchUrl, total, results, fetchResults, truncate }
 }
 
-const prepareExtendedResultValue = (value: any, property: SchemaProperty, noInteraction:boolean, truncate: number = 50, localeDayjs: ReturnType<typeof useLocaleDayjs>): ExtendedResultValue => {
+const prepareExtendedResultValue = (value: any, property: SchemaProperty, truncate: number = 50, localeDayjs: ReturnType<typeof useLocaleDayjs>): ExtendedResultValue => {
   return {
     raw: value,
     formatted: formatValue(value, property, null, localeDayjs),
-    displayDetail: shouldDisplayDetail(value, property, noInteraction, truncate),
-    filterable: isFilterable(value, property, noInteraction)
+    displayDetail: shouldDisplayDetail(value, property, truncate),
+    filterable: isFilterable(value, property)
   }
 }
 
-const shouldDisplayDetail = (value: any, property: SchemaProperty, noInteraction: boolean, truncate: number): boolean => {
-  if (noInteraction) return false
+const shouldDisplayDetail = (value: any, property: SchemaProperty, truncate: number): boolean => {
   if (property['x-refersTo'] === 'http://schema.org/DigitalDocument') return false
   if (property['x-refersTo'] === 'https://schema.org/WebPage') return false
   return property.type === 'string' && !property.separator && value && truncate < value.length
 }
 
-const isFilterable = (value: any, property: SchemaProperty, noInteraction: boolean): boolean => {
-  if (noInteraction) return false
+const isFilterable = (value: any, property: SchemaProperty): boolean => {
   if (property['x-capabilities'] && property['x-capabilities'].index === false) return false
   if (property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
   if (value === undefined || value === null || value === '') return false

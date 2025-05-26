@@ -57,40 +57,38 @@
       class="dataset-table"
     >
       <thead>
-        <!--<tr>
-          <th
-            v-for="(header, i) of headers"
-            :key="header.key"
-            class="text-left text-no-wrap"
-            :style="`min-width: ${colsWidths[i] ?? 50}px`"
-          >
-            {{ header.title }}
-          </th>
-        </tr>-->
         <tr>
           <template
             v-for="(header, i) of headers"
             :key="header.key"
           >
             <th
+              :id="`header-${header.key}`"
               class="text-left"
-              :style="`min-width: ${colsWidths[i] ?? 50}px`"
+              :style="`min-width: ${colsWidths[i] ?? 50}px;cursor: ${header.property && !noInteraction ? 'pointer' : 'default'}; position: relative;`"
+              @mouseenter="hoveredHeader = header"
+              @mouseleave="hoveredHeader = undefined"
             >
               <span class="two-lines">{{ header.title }}</span>
+              <v-icon
+                v-if="hoveredHeader?.key === header.key || header.key === sort?.key"
+                style="position:absolute;top:16px;right:2px;"
+                :color="header.key === sort?.key ? 'primary' : 'default'"
+                :icon="header.key === sort?.key ? (sort.direction === 1 ? mdiSortAscending : mdiSortDescending) : mdiMenuDown"
+              />
             </th>
-          <!--<dataset-table-header-menu
-            v-if="header.field && !noInteraction"
-            :key="'header-menu-' + header.value"
-            :activator="'#header-cell-' + (renderFullHeader ? h : horizontalKeys[header.value])"
-            :header="header"
-            :filters="filters"
-            :filter-height="tableHeight - 20"
-            :pagination="pagination"
-            :fixed-col="fixedCol"
-            @filter="f => addFilter(header.value, f)"
-            @hide="hideHeader(header)"
-            @fix-col="fixedCol = header.value; writeQueryParams()"
-          />-->
+            <dataset-table-header-menu
+              v-if="header.property && !noInteraction"
+              :sort="header.key === sort?.key ? sort.direction : undefined"
+              :activator="`#header-${header.key}`"
+              :header="header"
+              :filters="filters"
+              :filter-height="height - 20"
+              @filter="addFilter"
+              @hide="hideHeader(header)"
+              @fix-col="fixed = header.key"
+              @update:sort="(direction: 1 | -1 | undefined) => {sort = direction ? {direction, key: header.key} : undefined}"
+            />
           </template>
         </tr>
         <tr v-if="fetchResults.loading.value">
@@ -186,10 +184,10 @@
 </i18n>
 
 <script lang="ts" setup>
-import { mdiMagnify } from '@mdi/js'
+import { mdiMagnify, mdiSortDescending, mdiSortAscending, mdiMenuDown } from '@mdi/js'
 import { useCurrentElement } from '@vueuse/core'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset-lines'
-import useHeaders from './use-headers'
+import useHeaders, { TableHeader } from './use-headers'
 import { useDisplay } from 'vuetify'
 import { type SchemaProperty } from '#api/types'
 import { useFilters } from '../../../composables/dataset-filters'
@@ -201,6 +199,8 @@ const { height, noInteraction } = defineProps({
 
 const displayMode = defineModel<string>('display', { default: 'table' })
 const cols = defineModel<string[]>('cols', { default: [] })
+const sortStr = defineModel<string>('sort')
+const fixed = defineModel<string>('fixed')
 const q = defineModel<string>('q', { default: '' })
 const lineHeight = 52
 const mapPreviewHeight = computed(() => {
@@ -209,6 +209,18 @@ const mapPreviewHeight = computed(() => {
 
 const editQ = ref('')
 watch(q, () => { editQ.value = q.value }, { immediate: true })
+
+const sort = computed<{ key: string, direction: 1 | -1 } | undefined>({
+  get () {
+    if (!sortStr.value) return undefined
+    if (sortStr.value.startsWith('-')) return { direction: 1, key: sortStr.value.slice(1) }
+    return { direction: 1, key: sortStr.value }
+  },
+  set (v) {
+    if (!v) sortStr.value = undefined
+    else sortStr.value = (v.direction === -1 ? '-' : '') + v.key
+  }
+})
 
 const display = useDisplay()
 
@@ -221,8 +233,8 @@ const selectedCols = computed(() => cols.value.length ? cols.value : allCols.val
 const { filters, addFilter, queryParams: filtersQueryParams } = useFilters()
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFilters }))
-const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, selectedCols, q, noInteraction, extraParams)
-const { headers } = useHeaders(selectedCols, noInteraction)
+const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, selectedCols, q, sortStr, extraParams)
+const { headers, hideHeader } = useHeaders(selectedCols, noInteraction)
 
 const colsWidths = ref<number[]>([])
 const element = useCurrentElement()
@@ -256,6 +268,8 @@ const hoverStop = () => {
   }
   hovered.value = undefined
 }
+
+const hoveredHeader = ref<TableHeader>()
 
 const mapHeight = computed(() => {
   return Math.max(400, Math.min(700, height * 0.8))

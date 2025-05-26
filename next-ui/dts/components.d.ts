@@ -26,6 +26,7 @@ declare module 'vue' {
     DatasetTable: typeof import('./../src/components/dataset/table/dataset-table.vue')['default']
     DatasetTableCell: typeof import('./../src/components/dataset/table/dataset-table-cell.vue')['default']
     DatasetTableCellAction: typeof import('./../src/components/dataset/table/dataset-table-cell-action.vue')['default']
+    DatasetTableHeaderMenu: typeof import('./../src/components/dataset/table/dataset-table-header-menu.vue')['default']
     DatasetTableSelectDisplay: typeof import('./../src/components/dataset/table/dataset-table-select-display.vue')['default']
     JournalView: typeof import('./../src/components/journal-view.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

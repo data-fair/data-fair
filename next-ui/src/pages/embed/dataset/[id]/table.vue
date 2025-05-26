@@ -8,6 +8,8 @@
       v-model:cols="cols"
       v-model:display="display"
       v-model:q="q"
+      v-model:sort="sort"
+      v-model:fixed="fixed"
       :height="windowHeight"
       :no-interaction="!interaction"
     />
@@ -30,6 +32,8 @@ provideDatasetStore(route.params.id)
 const cols = useStringsArraySearchParam('cols')
 const display = useStringSearchParam('display', 'table')
 const q = useStringSearchParam('q')
+const sort = useStringSearchParam('sort')
+const fixed = useStringSearchParam('fixed')
 const interaction = useBooleanSearchParam('interaction', true)
 </script>
 

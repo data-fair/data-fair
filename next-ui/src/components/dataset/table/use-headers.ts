@@ -1,6 +1,13 @@
 import { type SchemaProperty } from '#api/types'
 
-export type TableHeader = { key: string, title: string, filterable?: boolean, sortable?: boolean, property?: SchemaProperty }
+export type TableHeader = {
+  key: string,
+  title: string,
+  tooltip?: string,
+  filterable?: boolean,
+  sortable?: boolean,
+  property?: SchemaProperty
+}
 
 export const useHeaders = (selectedCols: Ref<string[]>, noInteraction: boolean) => {
   const { dataset, imageProperty } = useDatasetStore()
@@ -30,7 +37,12 @@ export const useHeaders = (selectedCols: Ref<string[]>, noInteraction: boolean) 
     }
     return headers
   })
-  return { headers }
+
+  const hideHeader = (header: TableHeader) => {
+    if (!selectedCols.value.length) selectedCols.value = dataset.value?.schema?.map(p => p.key)
+    selectedCols.value = selectedCols.value.filter(sc => sc !== header.key)
+  }
+  return { headers, hideHeader }
 }
 
 export default useHeaders
