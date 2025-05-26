@@ -54,9 +54,10 @@
       fixed-header
       :loading="fetchResults.loading.value"
       :height="height- 48"
+      class="dataset-table"
     >
       <thead>
-        <tr>
+        <!--<tr>
           <th
             v-for="(header, i) of headers"
             :key="header.key"
@@ -65,6 +66,32 @@
           >
             {{ header.title }}
           </th>
+        </tr>-->
+        <tr>
+          <template
+            v-for="(header, i) of headers"
+            :key="header.key"
+          >
+            <th
+              class="text-left"
+              :style="`min-width: ${colsWidths[i] ?? 50}px`"
+            >
+              <span class="two-lines">{{ header.title }}</span>
+            </th>
+          <!--<dataset-table-header-menu
+            v-if="header.field && !noInteraction"
+            :key="'header-menu-' + header.value"
+            :activator="'#header-cell-' + (renderFullHeader ? h : horizontalKeys[header.value])"
+            :header="header"
+            :filters="filters"
+            :filter-height="tableHeight - 20"
+            :pagination="pagination"
+            :fixed-col="fixedCol"
+            @filter="f => addFilter(header.value, f)"
+            @hide="hideHeader(header)"
+            @fix-col="fixedCol = header.value; writeQueryParams()"
+          />-->
+          </template>
         </tr>
         <tr v-if="fetchResults.loading.value">
           <td
@@ -237,3 +264,13 @@ const showMapPreview = ref<string>()
 
 const showDetailDialog = ref<{ result: ExtendedResult, property: SchemaProperty }>()
 </script>
+
+<style>
+.two-lines {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+</style>

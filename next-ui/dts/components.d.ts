@@ -35,6 +35,6 @@ declare module 'vue' {
     SettingsLicenses: typeof import('./../src/components/settings/settings-licenses.vue')['default']
     SettingsTopics: typeof import('./../src/components/settings/settings-topics.vue')['default']
     SettingsWebhooks: typeof import('./../src/components/settings/settings-webhooks.vue')['default']
-    UseFilters: typeof import('./../src/components/dataset/table/use-filters.vue')['default']
+    UseFilters: typeof import('../src/composables/dataset-filters')['default']
   }
 }
