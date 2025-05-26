@@ -50,8 +50,16 @@ describe('search', function () {
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0].id, 'bidule')
     // perform a full-text search on a column with query params suffixed with _search
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_search=koumoul`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { adr_search: 'lactée' } })
     assert.equal(res.data.total, 1)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { adr_search: 'lactée inconnue' } })
+    assert.equal(res.data.total, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { adr_search: 'lactée +inconnue' } })
+    assert.equal(res.data.total, 0)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { adr_search: 'lacté' } })
+    assert.equal(res.data.total, 1)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { adr_search: 'koumoul' } })
+    assert.equal(res.data.total, 0)
     // perform a wildcard filter on a column with query params suffixed with _contains
     await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/lines?id_contains=oumou`), { status: 400 })
     // perform a prefix filter on a column with query params suffixed with _starts
