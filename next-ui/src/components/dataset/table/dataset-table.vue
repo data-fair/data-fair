@@ -65,7 +65,13 @@
             <th
               :id="`header-${header.key}`"
               class="text-left"
-              :class="{'sticky': header.sticky, 'bg-surface': header.sticky, 'border-e-thin': header.sticky, 'pr-2': header.sticky}"
+              :class="{
+                'sticky': header.sticky,
+                'bg-surface': header.sticky,
+                'border-e-thin': header.sticky,
+                'pr-2': header.sticky,
+                'pl-2': displayMode === 'table-dense'
+              }"
               :style="{
                 'min-width': (colsWidths[i] ?? 50) + 'px',
                 cursor: header.property && !noInteraction ? 'pointer' : 'default',
@@ -113,7 +119,7 @@
       </thead>
       <tbody>
         <v-virtual-scroll
-          :height="300"
+          ref="virtualScroll"
           :items="results"
           :item-height="lineHeight"
           renderless
@@ -190,12 +196,12 @@
 
 <script lang="ts" setup>
 import { mdiMagnify, mdiSortDescending, mdiSortAscending, mdiMenuDown } from '@mdi/js'
-import { useCurrentElement } from '@vueuse/core'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset-lines'
 import useHeaders, { TableHeader } from './use-headers'
 import { useDisplay } from 'vuetify'
 import { type SchemaProperty } from '#api/types'
 import { useFilters } from '../../../composables/dataset-filters'
+import { VVirtualScroll } from 'vuetify/components'
 
 const { height, noInteraction } = defineProps({
   height: { type: Number, default: 800 },
@@ -207,7 +213,7 @@ const cols = defineModel<string[]>('cols', { default: [] })
 const sortStr = defineModel<string>('sort')
 const fixed = defineModel<string>('fixed')
 const q = defineModel<string>('q', { default: '' })
-const lineHeight = 52
+const lineHeight = computed(() => displayMode.value === 'table-dense' ? 28 : 40)
 const mapPreviewHeight = computed(() => {
   return Math.max(400, Math.min(700, height * 0.8))
 })
@@ -241,13 +247,17 @@ const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFil
 const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, selectedCols, q, sortStr, extraParams)
 const { headers, hideHeader } = useHeaders(selectedCols, noInteraction, fixed)
 
+const virtualScroll = ref<VVirtualScroll>()
 const colsWidths = ref<number[]>([])
 const thead = ref<HTMLElement>()
 watch(baseFetchUrl, () => {
   if (!baseFetchUrl.value) return
   colsWidths.value = []
+  virtualScroll.value?.scrollToIndex(0)
 })
 const onScrollItem = (index: number) => {
+  // ignore scroll on deprecated items that will soon be replaced
+  if (fetchResults.loading.value) return
   thead.value?.querySelectorAll('table thead th').forEach((h, i) => {
     colsWidths.value[i] = Math.max(colsWidths.value[i] ?? 50, Math.round(h.clientWidth))
   })

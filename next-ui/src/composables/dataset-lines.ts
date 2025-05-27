@@ -32,7 +32,9 @@ export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>, 
     const maxTruncate = 200
     const estimatedTruncate = windowWidth.value / selectedCols.value.length / 8 // 8px is about a char's width
     const roundedTruncate = Math.round(estimatedTruncate / 20) * 20
-    return Math.min(maxTruncate, Math.max(minTruncate, roundedTruncate))
+    let truncate = Math.min(maxTruncate, Math.max(minTruncate, roundedTruncate))
+    if (displayMode.value === 'table-dense') truncate -= 10
+    return truncate
   })
   const baseFetchUrl = computed(() => {
     if (!dataset.value?.schema) return null
