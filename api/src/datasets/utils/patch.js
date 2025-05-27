@@ -12,6 +12,7 @@ import * as extensions from './extensions.js'
 import * as schemaUtils from './data-schema.js'
 import * as virtualDatasetsUtils from './virtual.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
+import catalogsPublicationQueue from '../../misc/utils/catalogs-publication-queue.ts'
 
 /**
  * @param {any} app
@@ -126,13 +127,16 @@ export const preparePatch = async (app, patch, dataset, user, locale, draftValid
     removedRestProps.push({ key: '_updatedByName' })
   }
 
-  // Re-publish publications
+  // Re-publish publications (for catalogs in datafair)
   if (!patch.publications && dataset.publications && dataset.publications.length) {
     for (const p of dataset.publications) {
       if (p.status !== 'deleted') p.status = 'waiting'
     }
     patch.publications = dataset.publications
   }
+
+  // Re-publish publications (with catalogs service)
+  catalogsPublicationQueue.updatePublication(dataset.id)
 
   if (patch.rest) {
     // be extra sure that primaryKeyMode is preserved

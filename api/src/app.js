@@ -10,6 +10,7 @@ import * as wsServer from '@data-fair/lib-express/ws-server.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import locks from '@data-fair/lib-node/locks.js'
 import * as observe from './misc/utils/observe.js'
+import catalogsPublicationQueue from './misc/utils/catalogs-publication-queue.ts'
 import debug from 'debug'
 import EventEmitter from 'node:events'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
@@ -34,6 +35,10 @@ export const run = async () => {
 
   // a middleware for performance analysis
   app.use(observe.observeReqMiddleware)
+
+  if (config.privateCatalogsUrl) {
+    await catalogsPublicationQueue.start({ catalogsUrl: config.privateCatalogsUrl, catalogsSecret: config.secretKeys.catalogs })
+  }
 
   if (config.mode.includes('server')) {
     const limits = await import('./misc/utils/limits.js')
