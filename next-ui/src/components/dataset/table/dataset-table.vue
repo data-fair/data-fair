@@ -169,11 +169,9 @@
     >
       <v-btn
         style="position:absolute;top:4px;right:4px;z-index:1000;"
-        icon
+        :icon="mdiClose"
         @click="showMapPreview = undefined"
-      >
-        <v-icon>mdi-close</v-icon>
-      </v-btn>
+      />
       <dataset-map
         :height="mapHeight"
         navigation-position="top-left"
@@ -195,7 +193,7 @@
 </i18n>
 
 <script lang="ts" setup>
-import { mdiMagnify, mdiSortDescending, mdiSortAscending, mdiMenuDown } from '@mdi/js'
+import { mdiMagnify, mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset-lines'
 import useHeaders, { TableHeader } from './use-headers'
 import { useDisplay } from 'vuetify'

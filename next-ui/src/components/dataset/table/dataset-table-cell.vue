@@ -20,15 +20,13 @@
     <template v-if="header.key === '_map_preview'">
       <v-btn
         v-if="item._geopoint"
-        icon
+        :icon="mdiMap"
         size="x-small"
         :style="`right: 4px;top: 50%;transform: translate(0, -50%);z-index:100;background-color:${theme.current.value.dark ? '#212121' : 'white'};`"
         absolute
         :title="$t('showMapPreview')"
         @click="emit('showMapPreview')"
-      >
-        <v-icon>mdi-map</v-icon>
-      </v-btn>
+      />
     </template>
     <template v-else-if="header.key === '_owner'">
       <v-tooltip
@@ -86,6 +84,7 @@
 </i18n>
 
 <script lang="ts" setup>
+import { mdiMap } from '@mdi/js'
 import { useTheme } from 'vuetify'
 import { type TableHeader } from './use-headers'
 import type { ExtendedResult, ExtendedResultValue } from '../../../composables/dataset-lines'

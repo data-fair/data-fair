@@ -42,16 +42,14 @@
         </v-list-item>
         <v-btn
           v-if="largeCsvLoading"
-          icon
+          :icon="mdiCancel"
           :title="t('cancel')"
           color="warning"
           absolute
           location="right"
           style="position:absolute;top:6px;right:8px;"
           @click="cancelLargeCsv"
-        >
-          <v-icon>mdi-cancel</v-icon>
-        </v-btn>
+        />
         <div style="height:4px;width:100%;">
           <v-progress-linear
             v-if="largeCsvLoading"
@@ -149,7 +147,7 @@ en:
 import streamSaver from 'streamsaver'
 import LinkHeader from 'http-link-header'
 import { withQuery } from 'ufo'
-import { mdiFileDelimitedOutline, mdiFileTableOutline, mdiMicrosoftExcel, mdiMap, mdiDownload } from '@mdi/js'
+import { mdiFileDelimitedOutline, mdiFileTableOutline, mdiMicrosoftExcel, mdiMap, mdiDownload, mdiCancel } from '@mdi/js'
 
 const { baseUrl, total } = defineProps({
   baseUrl: { type: String, required: true },

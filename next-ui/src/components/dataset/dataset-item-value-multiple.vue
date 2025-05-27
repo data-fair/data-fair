@@ -19,7 +19,8 @@
           v-if="value.filterable && !value.displayDetail && filter?.value !== value.raw"
           :style="{width: '14px'}"
           :size="dense ? 14 : 18"
-        >{{ hovered === value ? 'mdi-filter-variant' : '' }}</v-icon>
+          :icon="hovered === value ? mdiFilterVariant : undefined"
+        />
       </span>
     </v-chip>
   </v-chip-group>
@@ -38,6 +39,7 @@ en:
 import { type SchemaProperty } from '#api/types'
 import { type DatasetFilter } from '../../composables/dataset-filters'
 import { type ExtendedResultValue } from '../../composables/dataset-lines'
+import { mdiFilterVariant } from '@mdi/js'
 
 const { extendedValues } = defineProps({
   extendedValues: { type: Array as () => ExtendedResultValue[], required: true },

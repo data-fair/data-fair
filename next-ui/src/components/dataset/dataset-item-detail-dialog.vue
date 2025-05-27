@@ -15,11 +15,9 @@
       >
         <v-spacer />
         <v-btn
-          icon
+          :icon="mdiClose"
           @click="show = false"
-        >
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
+        />
       </v-toolbar>
       <v-card-text v-if="!fetchFullValue.loading">
         <div
@@ -42,6 +40,7 @@
 <script lang="ts" setup>
 import { type SchemaProperty } from '#api/types'
 import type { ExtendedResult } from '../../composables/dataset-lines'
+import { mdiClose } from '@mdi/js'
 
 const { extendedResult, property } = defineProps({
   extendedResult: { type: Object as () => ExtendedResult, required: true },

@@ -39,27 +39,19 @@
               <v-btn
                 v-if="unfoldedGroups[group]"
                 :key="'fold-down-' + group"
-                icon
+                :icon="mdiMenuDown"
                 style="margin-top:-8px;"
                 :title="$t('fold')"
                 @click="unfoldedGroups[group] = false"
-              >
-                <v-icon>
-                  mdi-menu-down
-                </v-icon>
-              </v-btn>
+              />
               <v-btn
                 v-if="!unfoldedGroups[group]"
                 :key="'fold-up-' + group"
-                icon
+                :icon="mdiMenuLeft"
                 style="margin-top:-8px;"
                 :title="$t('unfold')"
                 @click="unfoldedGroups[group] = true"
-              >
-                <v-icon>
-                  mdi-menu-left
-                </v-icon>
-              </v-btn>
+              />
             </template>
           </v-checkbox>
           <template
@@ -100,7 +92,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiTableColumnPlusAfter } from '@mdi/js'
+import { mdiMenuLeft, mdiMenuDown, mdiTableColumnPlusAfter } from '@mdi/js'
 
 const cols = defineModel<string[]>({ default: [] })
 
