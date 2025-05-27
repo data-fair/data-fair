@@ -15,6 +15,7 @@ export const useHeaders = (selectedCols: Ref<string[]>, noInteraction: boolean, 
   const { vocabulary } = useStore()
 
   const headers = computed(() => {
+    if (!dataset.value?.schema) return
     let headers: TableHeader[] | undefined = dataset.value?.schema?.filter(p => selectedCols.value.includes(p.key)).map((p, i) => ({
       key: p.key,
       title: p.title || p['x-originalName'] || p.key,

@@ -35,6 +35,7 @@ export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>, 
     return Math.min(maxTruncate, Math.max(minTruncate, roundedTruncate))
   })
   const baseFetchUrl = computed(() => {
+    if (!dataset.value?.schema) return null
     if (truncate.value === null) return null
     return withQuery($apiPath + `/datasets/${id}/lines`, { draftMode, size: 20, truncate: truncate.value, q: q.value || undefined, sort: sort.value || undefined, ...extraParams.value })
   })
