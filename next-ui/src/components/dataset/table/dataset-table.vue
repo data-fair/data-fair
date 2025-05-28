@@ -241,7 +241,7 @@
         :icon="mdiClose"
         @click="showMapPreview = undefined"
       />
-      <dataset-map
+      <async-dataset-map
         :height="mapHeight"
         navigation-position="top-left"
         :single-item="showMapPreview"
@@ -270,6 +270,8 @@ import { useDisplay } from 'vuetify'
 import { type SchemaProperty } from '#api/types'
 import { useFilters, findEqFilter } from '../../../composables/dataset-filters'
 import { VVirtualScroll } from 'vuetify/components'
+
+const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/map/dataset-map.vue'))
 
 const { height, noInteraction, edit } = defineProps({
   height: { type: Number, default: 800 },
