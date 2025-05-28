@@ -40,6 +40,7 @@
       <dataset-table-select-display
         v-if="display.mdAndUp"
         v-model="displayMode"
+        :edit="edit"
       />
       <dataset-select-cols v-model="cols" />
       <dataset-download-results
@@ -87,6 +88,7 @@
                 <dataset-table-header-actions
                   v-model:selected-results="selectedResults"
                   :results="results"
+                  :dense="displayMode === 'table-dense'"
                 />
               </div>
               <div
@@ -328,7 +330,7 @@ watch(baseFetchUrl, () => {
   colsWidths.value = []
   virtualScroll.value?.scrollToIndex(0)
 })
-const onScrollItem = (index: number) => {
+const onScrollItem = async (index: number) => {
   // ignore scroll on deprecated items that will soon be replaced
   if (fetchResults.loading.value) return
   thead.value?.querySelectorAll('table thead th').forEach((h, i) => {

@@ -6,14 +6,14 @@
       v-if="selectedResults.some(r => r._id === result._id)"
       :title="t('unselectLine')"
       color="primary"
-      size="large"
+      :size="dense ? 'md' : 'large'"
       variant="text"
       :icon="mdiCheckboxMarked"
       @click="selectedResults = selectedResults.filter(r => r !== result)"
     />
     <v-btn
       v-else
-      size="large"
+      :size="dense ? 'md' : 'large'"
       variant="text"
       :title="t('selectLine')"
       :icon="mdiCheckboxBlankOutline"
@@ -21,7 +21,7 @@
     />
     <v-btn
       v-if="canDeleteLine"
-      size="large"
+      :size="dense ? 'md' : 'large'"
       color="warning"
       :title="t('deleteLine')"
       variant="text"
@@ -31,7 +31,7 @@
     <v-btn
       v-if="canUpdateLine"
       :icon="mdiPencil"
-      size="large"
+      :size="dense ? 'md' : 'large'"
       variant="text"
       :title="t('editLine')"
       @click="editingLines = [result]; editselectedResultsDialog = true;"
@@ -60,6 +60,7 @@ import { type ExtendedResult } from '~/composables/dataset-lines'
 
 defineProps({
   result: { type: Object as () => ExtendedResult, required: true },
+  dense: { type: Boolean, default: false }
 })
 
 const selectedResults = defineModel<ExtendedResult[]>('selected-results', { default: [] })

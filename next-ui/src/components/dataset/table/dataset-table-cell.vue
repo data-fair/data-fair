@@ -50,6 +50,7 @@
       v-else-if="header.key === '_actions'"
       v-model:selected-results="selectedResults"
       :result="result"
+      :dense="dense"
     />
     <!--{{ item.__formatted[header.key] }}-->
     <dataset-item-value-multiple

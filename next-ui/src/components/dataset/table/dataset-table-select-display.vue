@@ -47,6 +47,7 @@
           </template>
         </v-list-item>
         <v-list-item
+          v-if="!edit"
           :active="displayMode === 'list'"
           :title="t('displayList')"
           @click="displayMode = 'list'"
@@ -78,6 +79,8 @@ en:
 <script setup lang="ts">
 import { useDisplay } from 'vuetify'
 import { mdiTable, mdiTableLarge, mdiViewGridOutline } from '@mdi/js'
+
+defineProps({ edit: { type: Boolean, default: false } })
 
 const displayMode = defineModel<string>()
 

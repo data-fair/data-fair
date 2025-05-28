@@ -8,7 +8,7 @@
       v-if="selectedResults.length"
       :title="t('unselectAllLines')"
       :color="selectedResults.length === results.length ? 'primary' : 'grey'"
-      size="large"
+      :size="dense ? 'md' : 'large'"
       variant="text"
       :icon="mdiCheckboxMarked"
       @click="selectedResults = []"
@@ -16,7 +16,7 @@
     <v-btn
       v-else
       :key="'header-actions-check2-' + h"
-      size="large"
+      :size="dense ? 'md' : 'large'"
       variant="text"
       :title="t('selectAllLines')"
       :icon="mdiCheckboxBlankOutline"
@@ -24,7 +24,7 @@
     />
     <v-btn
       v-if="canDeleteLine && selectedResults.length >=2"
-      size="large"
+      :size="dense ? 'md' : 'large'"
       color="warning"
       variant="text"
       :title="t('deleteAllLines')"
@@ -34,7 +34,7 @@
     <v-btn
       v-if="canUpdateLine && selectedResults.length >= 2"
       :icon="mdiPencil"
-      size="large"
+      :size="dense ? 'md' : 'large'"
       variant="text"
       :title="t('editAllLines')"
       @click="editingLines = [...selectedResults]; editselectedResultsDialog = true;"
@@ -62,7 +62,8 @@ import { mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiPencil, mdiTrashCanOutli
 import { type ExtendedResult } from '~/composables/dataset-lines'
 
 defineProps({
-  results: { type: Object as () => ExtendedResult[], required: true }
+  results: { type: Object as () => ExtendedResult[], required: true },
+  dense: { type: Boolean, default: false }
 })
 
 const selectedResults = defineModel<ExtendedResult[]>('selected-results', { default: [] })
