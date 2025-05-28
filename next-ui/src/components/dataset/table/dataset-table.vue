@@ -80,10 +80,23 @@
               @mouseenter="hoveredHeader = header"
               @mouseleave="hoveredHeader = undefined"
             >
-              <div class="pr-2 header-wrapper">
+              <div
+                v-if="header.key === '_actions'"
+                class="header-wrapper"
+              >
+                <dataset-table-header-actions
+                  v-model:selected-results="selectedResults"
+                  :results="results"
+                />
+              </div>
+              <div
+                v-else
+                class="pr-2 header-wrapper"
+              >
                 <span class="two-lines">{{ header.title }}</span>
                 <v-icon
-                  v-if="hoveredHeader?.key === header.key || header.key === sort?.key || true"
+                  v-if="header.property && (hoveredHeader?.key === header.key || header.key === sort?.key)"
+                  class="action-icon"
                   :color="header.key === sort?.key ? 'primary' : 'default'"
                   :icon="header.key === sort?.key ? (sort.direction === 1 ? mdiSortAscending : mdiSortDescending) : mdiMenuDown"
                 />
@@ -137,6 +150,7 @@
               <dataset-table-cell
                 v-for="header of headers"
                 :key="header.key"
+                v-model:selected-results="selectedResults"
                 :result="item"
                 :header="header"
                 :no-interaction="noInteraction"
@@ -250,15 +264,17 @@
 <script lang="ts" setup>
 import { mdiMagnify, mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset-lines'
-import useHeaders, { TableHeader } from './use-headers'
+import useHeaders, { type TableHeader } from './use-headers'
+import useEdition from './use-edition'
 import { useDisplay } from 'vuetify'
 import { type SchemaProperty } from '#api/types'
 import { useFilters, findEqFilter } from '../../../composables/dataset-filters'
 import { VVirtualScroll } from 'vuetify/components'
 
-const { height, noInteraction } = defineProps({
+const { height, noInteraction, edit } = defineProps({
   height: { type: Number, default: 800 },
   noInteraction: { type: Boolean, default: false },
+  edit: { type: Boolean, default: false },
 })
 
 const displayMode = defineModel<string>('display', { default: 'table' })
@@ -266,6 +282,7 @@ const cols = defineModel<string[]>('cols', { default: [] })
 const sortStr = defineModel<string>('sort')
 const fixed = defineModel<string>('fixed')
 const q = defineModel<string>('q', { default: '' })
+
 const lineHeight = computed(() => displayMode.value === 'table-dense' ? 28 : 40)
 const mapPreviewHeight = computed(() => {
   return Math.max(400, Math.min(700, height * 0.8))
@@ -298,7 +315,8 @@ const { filters, addFilter, queryParams: filtersQueryParams } = useFilters()
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFilters }))
 const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, selectedCols, q, sortStr, extraParams)
-const { headers, hideHeader } = useHeaders(selectedCols, noInteraction, fixed)
+const { headers, hideHeader } = useHeaders(selectedCols, noInteraction, edit, fixed)
+const { selectedResults } = useEdition(baseFetchUrl)
 
 const virtualScroll = ref<VVirtualScroll>()
 const colsWidths = ref<number[]>([])
@@ -352,7 +370,7 @@ const showDetailDialog = ref<{ result: ExtendedResult, property: SchemaProperty 
   position: relative;
   width: 100%;
 }
-.dataset-table .header-wrapper .v-icon {
+.dataset-table .header-wrapper .action-icon {
   position: absolute;
   right: -14px;
   top: 50%;
@@ -363,7 +381,7 @@ const showDetailDialog = ref<{ result: ExtendedResult, property: SchemaProperty 
   left: 0;
   z-index: 3;
 }
-.dataset-table th.sticky .v-icon {
+.dataset-table th.sticky .action-icon {
   right: -4px;
 }
 .two-lines {

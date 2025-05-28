@@ -28,6 +28,12 @@ const createDatasetStore = (id: string, draftMode: boolean | undefined = undefin
   const digitalDocumentProperty = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument'))
   const webPageProperty = computed(() => dataset.value?.schema?.find(f => f['x-refersTo'] === 'https://schema.org/WebPage'))
 
+  const canCache: Record<string, ComputedRef<boolean>> = {}
+  const can = (operation: string) => {
+    canCache[operation] = canCache[operation] ?? computed(() => dataset.value?.userPermissions.includes(operation))
+    return canCache[operation]
+  }
+
   return {
     id,
     draftMode,
@@ -41,7 +47,8 @@ const createDatasetStore = (id: string, draftMode: boolean | undefined = undefin
     labelField: labelProperty,
     descriptionField: descriptionProperty,
     digitalDocumentField: digitalDocumentProperty,
-    webPageField: webPageProperty
+    webPageField: webPageProperty,
+    can
   }
 }
 

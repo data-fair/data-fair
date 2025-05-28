@@ -5,7 +5,7 @@
     :style="{
       height: lineHeight + 'px',
     }"
-    @mouseenter="!Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key]) as ExtendedResultValue)"
+    @mouseenter="result.values[header.key] && !Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key]) as ExtendedResultValue)"
     @mouseleave="emit('hoverstop')"
   >
     <template v-if="header.key === '_thumbnail'">
@@ -17,7 +17,7 @@
         <img :src="result._thumbnail">
       </v-avatar>
     </template>
-    <template v-if="header.key === '_map_preview'">
+    <template v-else-if="header.key === '_map_preview'">
       <v-btn
         v-if="result._geopoint"
         :icon="mdiMap"
@@ -46,6 +46,11 @@
         {{ result._owner }}
       </v-tooltip>
     </template>
+    <dataset-table-result-actions
+      v-else-if="header.key === '_actions'"
+      v-model:selected-results="selectedResults"
+      :result="result"
+    />
     <!--{{ item.__formatted[header.key] }}-->
     <dataset-item-value-multiple
       v-else-if="Array.isArray(result.values[header.key])"
@@ -83,7 +88,7 @@ import { mdiMap } from '@mdi/js'
 import { useTheme } from 'vuetify'
 import { type TableHeader } from './use-headers'
 import type { ExtendedResult, ExtendedResultValue } from '../../../composables/dataset-lines'
-import { DatasetFilter } from '../../../composables/dataset-filters'
+import { type DatasetFilter } from '../../../composables/dataset-filters'
 
 defineProps({
   result: { type: Object as () => ExtendedResult, required: true },
@@ -102,6 +107,8 @@ const emit = defineEmits<{
   showMapPreview: [],
   showDetailDialog: [value: ExtendedResultValue]
 }>()
+
+const selectedResults = defineModel<ExtendedResult[]>('selected-results', { default: [] })
 
 const theme = useTheme()
 </script>
