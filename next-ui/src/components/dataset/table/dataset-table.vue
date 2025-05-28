@@ -196,6 +196,7 @@
             @hide="header => hideHeader(header)"
             @hoverstart="hoverStart"
             @hoverstop="hoverStop"
+            @show-detail-dialog="header => showDetailDialog = {result, property: header.property}"
           />
         </v-col>
       </v-row>

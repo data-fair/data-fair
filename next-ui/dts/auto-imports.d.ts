@@ -29,6 +29,7 @@ declare global {
   const dfTutorialAlert: typeof import('@data-fair/lib-vuetify/tutorial-alert.vue')['default']
   const dfUserAvatar: typeof import('@data-fair/lib-vuetify/user-avatar.vue')['default']
   const effectScope: typeof import('vue')['effectScope']
+  const findEqFilter: typeof import('../src/composables/dataset-filters')['findEqFilter']
   const formatValue: typeof import('../src/composables/dataset-lines')['formatValue']
   const getActiveHead: typeof import('@unhead/vue')['getActiveHead']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
@@ -155,6 +156,7 @@ declare module 'vue' {
     readonly dfTutorialAlert: UnwrapRef<typeof import('@data-fair/lib-vuetify/tutorial-alert.vue')['default']>
     readonly dfUserAvatar: UnwrapRef<typeof import('@data-fair/lib-vuetify/user-avatar.vue')['default']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
+    readonly findEqFilter: UnwrapRef<typeof import('../src/composables/dataset-filters')['findEqFilter']>
     readonly formatValue: UnwrapRef<typeof import('../src/composables/dataset-lines')['formatValue']>
     readonly getActiveHead: UnwrapRef<typeof import('@unhead/vue')['getActiveHead']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>

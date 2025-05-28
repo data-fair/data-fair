@@ -37,89 +37,78 @@
         density="compact"
         class="bg-transparent pt-0"
       >
-        <template v-for="(header, i) in otherHeaders">
-          <v-lazy
+        <template
+          v-for="(header, i) in otherHeaders"
+          :key="`input-${header.key}`"
+        >
+          <div
             v-if="result.values[header.key]"
-            :key="`input-${header.key}`"
-            height="40"
-            transition=""
+            :class="`dataset-item-card-value-${result._id}-${i}`"
+            style="position: relative;"
             :style="noInteraction ? '' : 'cursor:pointer'"
-            @mouseenter="!Array.isArray(result.values[header.key]) && emit('hoverstart', result, result.values[header.key] as ExtendedResultValue)"
+            @mouseenter="!Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key] as ExtendedResultValue))"
             @mouseleave="emit('hoverstop')"
           >
-            <v-input
-              :class="`dataset-item-card-value-${result._id}-${i}`"
-              :label="header.title"
-              hide-details
-              style="line-height:20px;"
-            >
-              <dataset-item-value-multiple
-                v-if="Array.isArray(result.values[header.key])"
-                :values="result.values[header.key] as ExtendedResultValue[]"
-                :property="header.property"
-                :dense="true"
-                :hovered="hovered"
-                :filter="findEqFilter(filters, header.property, result)"
-                @filter="f => emit('filter', f)"
-                @hoverstart="v => emit('hoverstart', result, v)"
-                @hoverstop="emit('hoverstop')"
-              />
-              <dataset-item-value
-                v-else
-                :value="result.values[header.key] as ExtendedResultValue"
-                :property="header.property"
-                :filtered="!!findEqFilter(filters, header.property, result)"
-                :disable-hover="true"
-                :dense="true"
-                style="padding-right: 16px;"
-                @filter="emit('filter', {property: header.property, operator: 'eq', value: (result.values[header.key] as ExtendedResultValue).raw, formattedValue: (result.values[header.key] as ExtendedResultValue).formatted})"
-                @show-detail-dialog="emit('showDetailDialog', markRaw(result.values[header.key] as ExtendedResultValue))"
-              />
-              <v-icon
-                v-if="sort && sort.key === header.key"
-                :icon="sort.direction === 1 ? mdiSortAscending : mdiSortDescending"
-                color="primary"
-                class="item-card-value-icon"
-              />
-              <v-icon
-                v-else-if="hovered === result.values[header.key]"
-                :icon="mdiMenuDown"
-                class="item-card-value-icon"
-              />
-            </v-input>
-            <dataset-table-header-menu
-              v-if="!noInteraction"
-              :activator="`.dataset-item-card-value-${item._id}-${i}`"
-              :header="header"
-              :filters="filters"
-              :filter-height="filterHeight"
-              :pagination="pagination"
-              no-fix
-              close-on-filter
-              :local-enum="header.field.separator ? result.values[header.key].split(header.field.separator).map(v => v.trim()) : [result.values[header.key]]"
-              @filter="filter => $emit('filter', {header, filter})"
-              @hide="$emit('hide', header)"
-            >
-              <template #prepend-items="{hide}">
-                <v-list-item
-                  v-if="shouldDisplayDetail(header.field, result.values[header.field.key])"
-                  class="pl-2"
-                  @click="$set(detailDialog, header.field.key, true); hide()"
-                >
-                  <v-list-item-icon class="mr-2">
-                    <v-icon>mdi-magnify-plus</v-icon>
-                  </v-list-item-icon>
-
-                  <v-list-item-title>{{ $t('showFullValue') }}</v-list-item-title>
-                </v-list-item>
-              </template>
-            </dataset-table-header-menu>
-            <dataset-item-detail-dialog
-              v-model="detailDialog[header.field.key]"
-              :item="item"
-              :field="header.field"
+            <div class="text-caption mt-2">
+              {{ header.title }}
+            </div>
+            <dataset-item-value-multiple
+              v-if="Array.isArray(result.values[header.key])"
+              :values="result.values[header.key] as ExtendedResultValue[]"
+              :property="header.property"
+              :dense="true"
+              :hovered="hovered"
+              :filter="findEqFilter(filters, header.property, result)"
+              @filter="f => emit('filter', f)"
+              @hoverstart="v => emit('hoverstart', result, v)"
+              @hoverstop="emit('hoverstop')"
             />
-          </v-lazy>
+            <dataset-item-value
+              v-else
+              :value="result.values[header.key] as ExtendedResultValue"
+              :property="header.property"
+              :filtered="!!findEqFilter(filters, header.property, result)"
+              :disable-hover="true"
+              :dense="true"
+              style="padding-right: 16px;"
+              @filter="emit('filter', {property: header.property, operator: 'eq', value: (result.values[header.key] as ExtendedResultValue).raw, formattedValue: (result.values[header.key] as ExtendedResultValue).formatted})"
+              @show-detail-dialog="emit('showDetailDialog', header)"
+            />
+            <v-icon
+              v-if="sort && sort.key === header.key"
+              :icon="sort.direction === 1 ? mdiSortAscending : mdiSortDescending"
+              color="primary"
+              class="item-card-value-icon"
+            />
+            <v-icon
+              v-else-if="hovered === result.values[header.key]"
+              :icon="mdiMenuDown"
+              class="item-card-value-icon"
+            />
+          </div>
+          <dataset-table-header-menu
+            v-if="!noInteraction && hovered === result.values[header.key]"
+            :activator="`.dataset-item-card-value-${result._id}-${i}`"
+            :header="header"
+            :filters="filters"
+            :filter-height="filterHeight"
+            :sort="header.key === sort?.key ? sort.direction : undefined"
+            no-fix
+            close-on-filter
+            :local-enum="Array.isArray(result.values[header.key]) ? (result.values[header.key] as ExtendedResultValue[]).map(v => v.raw) : [(result.values[header.key] as ExtendedResultValue).raw]"
+            @filter="filter => emit('filter', filter)"
+            @hide="$emit('hide', header)"
+          >
+            <template #prepend-items="{hide}">
+              <v-list-item
+                v-if="(result.values[header.key] as ExtendedResultValue).displayDetail"
+                class="pl-2"
+                :icon="mdiMagnifyPlus"
+                :title="t('showFullValue')"
+                @click="emit('showDetailDialog', header); hide()"
+              />
+            </template>
+          </dataset-table-header-menu>
         </template>
       </v-list>
     </v-card-text>
@@ -138,6 +127,7 @@ import { type DatasetFilter } from '~/composables/dataset-filters'
 import { type ExtendedResult, type ExtendedResultValue } from '~/composables/dataset-lines'
 import { type TableHeader } from './table/use-headers'
 import { findEqFilter } from '~/composables/dataset-filters'
+import { mdiSortAscending, mdiSortDescending, mdiMenuDown, mdiMagnifyPlus } from '@mdi/js'
 
 const { headers } = defineProps({
   result: { type: Object as () => ExtendedResult, required: true },
@@ -156,9 +146,10 @@ const emit = defineEmits<{
   hoverstart: [result: ExtendedResult, value: ExtendedResultValue],
   hoverstop: [],
   showMapPreview: [],
-  showDetailDialog: [value: ExtendedResultValue]
+  showDetailDialog: [header: TableHeader]
 }>()
 
+const { t } = useI18n()
 const { labelField } = useDatasetStore()
 
 const otherHeaders = computed(() => headers.filter(h => {
@@ -188,6 +179,6 @@ const otherHeaders = computed(() => headers.filter(h => {
 .dataset-item-card .item-card-value-icon {
   position:absolute;
   top:16px;
-  right:-4px;
+  right:0px;
 }
 </style>
