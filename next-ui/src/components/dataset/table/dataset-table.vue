@@ -51,6 +51,7 @@
   </v-toolbar>
   <v-sheet class="pa-0">
     <v-table
+      v-if="displayMode === 'table' || displayMode === 'table-dense'"
       fixed-header
       :loading="fetchResults.loading.value"
       :height="height- 48"
@@ -136,16 +137,15 @@
               <dataset-table-cell
                 v-for="header of headers"
                 :key="header.key"
-                :item="item"
+                :result="item"
                 :header="header"
                 :no-interaction="noInteraction"
                 :line-height="lineHeight"
                 :filters="filters"
-                :truncate="truncate"
                 :dense="displayMode === 'table-dense'"
                 :map-preview-height="mapPreviewHeight"
-                :hovered="(hovered === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered && (item.values[header.key] as ExtendedResultValue[]).includes(hovered))) ? hovered : undefined"
-                :filter="filters.find(f => f.property.key === header.key && f.operator === 'eq' && (Array.isArray(item.values[header.key]) ? (item.values[header.key] as ExtendedResultValue[]).some(v => v.raw === f.value) : (item.values[header.key] as ExtendedResultValue).raw === f.value))"
+                :hovered="hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
+                :filter="findEqFilter(filters, header.property, item)"
                 @hoverstart="hoverStart"
                 @hoverstop="hoverStop"
                 @show-map-preview="showMapPreview = item._id"
@@ -157,6 +157,60 @@
         </v-virtual-scroll>
       </tbody>
     </v-table>
+
+    <!--list mode body -->
+    <template v-if="displayMode === 'list' && headers">
+      <div style="height:2px;width:100%;">
+        <v-progress-linear
+          v-if="fetchResults.loading.value"
+          indeterminate
+          height="2"
+          style="margin:0;"
+        />
+      </div>
+
+      <v-row
+        class="ma-0"
+        dense
+      >
+        <v-col
+          v-for="result in results"
+          :key="result._id"
+          cols="12"
+          sm="6"
+          md="4"
+          lg="3"
+          xl="2"
+        >
+          <dataset-item-card
+            :result="result"
+            :filters="filters"
+            :filter-height="height - 20"
+            :selected-fields="selectedCols"
+            :headers="headers"
+            :truncate="truncate"
+            :sort="sort"
+            :no-interaction="noInteraction"
+            :hovered="hovered && hovered[0] === result ? hovered[1] : undefined"
+            @filter="f => addFilter(f)"
+            @hide="header => hideHeader(header)"
+            @hoverstart="hoverStart"
+            @hoverstop="hoverStop"
+          />
+        </v-col>
+      </v-row>
+
+      <!-- list mode show more -->
+      <v-row
+        v-if="results.length"
+        v-intersect:quiet="(intersect: boolean) => intersect && fetchResults.execute()"
+        align="center"
+        class="my-0"
+      >
+        &nbsp;
+      </v-row>
+      <layout-scroll-to-top />
+    </template>
   </v-sheet>
 
   <v-dialog
@@ -198,7 +252,7 @@ import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../.
 import useHeaders, { TableHeader } from './use-headers'
 import { useDisplay } from 'vuetify'
 import { type SchemaProperty } from '#api/types'
-import { useFilters } from '../../../composables/dataset-filters'
+import { useFilters, findEqFilter } from '../../../composables/dataset-filters'
 import { VVirtualScroll } from 'vuetify/components'
 
 const { height, noInteraction } = defineProps({
@@ -265,10 +319,10 @@ const onScrollItem = (index: number) => {
   }
 }
 
-const hovered = ref<ExtendedResultValue>()
+const hovered = ref<[ExtendedResult, ExtendedResultValue]>()
 let _hoverTimeout: ReturnType<typeof setTimeout> | undefined
-const hoverStart = (value: ExtendedResultValue) => {
-  _hoverTimeout = setTimeout(() => { hovered.value = value }, 60)
+const hoverStart = (result: ExtendedResult, value: ExtendedResultValue) => {
+  _hoverTimeout = setTimeout(() => { hovered.value = [result, value] }, 60)
 }
 
 const hoverStop = () => {

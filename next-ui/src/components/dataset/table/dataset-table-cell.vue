@@ -5,21 +5,21 @@
     :style="{
       height: lineHeight + 'px',
     }"
-    @mouseenter="!Array.isArray(item.values[header.key]) && emit('hoverstart', markRaw(item.values[header.key]) as ExtendedResultValue)"
+    @mouseenter="!Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key]) as ExtendedResultValue)"
     @mouseleave="emit('hoverstop')"
   >
     <template v-if="header.key === '_thumbnail'">
       <v-avatar
-        v-if="item._thumbnail"
+        v-if="result._thumbnail"
         tile
         :size="lineHeight"
       >
-        <img :src="item._thumbnail">
+        <img :src="result._thumbnail">
       </v-avatar>
     </template>
     <template v-if="header.key === '_map_preview'">
       <v-btn
-        v-if="item._geopoint"
+        v-if="result._geopoint"
         :icon="mdiMap"
         size="x-small"
         :style="`right: 4px;top: 50%;transform: translate(0, -50%);z-index:100;background-color:${theme.current.value.dark ? '#212121' : 'white'};`"
@@ -30,7 +30,7 @@
     </template>
     <template v-else-if="header.key === '_owner'">
       <v-tooltip
-        v-if="item._owner"
+        v-if="result._owner"
         location="top"
       >
         <template #activator="{props}">
@@ -39,39 +39,34 @@
             v-bind="props"
           >
             <v-avatar :size="28">
-              <img :src="`${$sdUrl}/api/avatars/${item._owner.split(':').join('/')}/avatar.png`">
+              <img :src="`${$sdUrl}/api/avatars/${result._owner.split(':').join('/')}/avatar.png`">
             </v-avatar>
           </span>
         </template>
-        {{ item._owner }}
+        {{ result._owner }}
       </v-tooltip>
     </template>
     <!--{{ item.__formatted[header.key] }}-->
     <dataset-item-value-multiple
-      v-else-if="Array.isArray(item.values[header.key])"
-      :extended-values="item.values[header.key] as ExtendedResultValue[]"
+      v-else-if="Array.isArray(result.values[header.key])"
+      :values="result.values[header.key] as ExtendedResultValue[]"
       :property="header.property"
-      :truncate="truncate"
       :dense="dense"
-      :line-height="lineHeight"
       :hovered="hovered"
       :filter="filter"
       @filter="f => emit('filter', f)"
-      @hoverstart="v => emit('hoverstart', v)"
+      @hoverstart="v => emit('hoverstart', result, v)"
       @hoverstop="emit('hoverstop')"
     />
     <dataset-item-value
       v-else
-      :extended-result="item"
-      :extended-value="item.values[header.key] as ExtendedResultValue"
+      :value="result.values[header.key] as ExtendedResultValue"
       :property="header.property"
-      :truncate="truncate"
       :dense="dense"
-      :line-height="lineHeight"
-      :hovered="hovered === item.values[header.key]"
+      :hovered="hovered === result.values[header.key]"
       :filtered="!!filter"
-      @filter="emit('filter', {property: header.property, operator: 'eq', value: (item.values[header.key] as ExtendedResultValue).raw, formattedValue: (item.values[header.key] as ExtendedResultValue).formatted})"
-      @show-detail-dialog="emit('showDetailDialog', markRaw(item.values[header.key] as ExtendedResultValue))"
+      @filter="emit('filter', {property: header.property, operator: 'eq', value: (result.values[header.key] as ExtendedResultValue).raw, formattedValue: (result.values[header.key] as ExtendedResultValue).formatted})"
+      @show-detail-dialog="emit('showDetailDialog', markRaw(result.values[header.key] as ExtendedResultValue))"
     />
   </td>
 </template>
@@ -91,11 +86,10 @@ import type { ExtendedResult, ExtendedResultValue } from '../../../composables/d
 import { DatasetFilter } from '../../../composables/dataset-filters'
 
 defineProps({
-  item: { type: Object as () => ExtendedResult, required: true },
+  result: { type: Object as () => ExtendedResult, required: true },
   header: { type: Object as () => TableHeader, required: true },
   lineHeight: { type: Number, required: true },
   filter: { type: Object as () => DatasetFilter, default: null },
-  truncate: { type: Number, required: true },
   dense: { type: Boolean, default: false },
   noInteraction: { type: Boolean, default: false },
   hovered: { type: Object as () => ExtendedResultValue, default: null }
@@ -103,7 +97,7 @@ defineProps({
 
 const emit = defineEmits<{
   filter: [filter: any],
-  hoverstart: [value: ExtendedResultValue],
+  hoverstart: [result: ExtendedResult, value: ExtendedResultValue],
   hoverstop: [],
   showMapPreview: [],
   showDetailDialog: [value: ExtendedResultValue]

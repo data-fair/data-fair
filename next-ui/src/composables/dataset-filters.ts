@@ -1,14 +1,19 @@
 import { type SchemaProperty } from '#api/types'
+import { type ExtendedResult, type ExtendedResultValue } from './dataset-lines'
 
 export type DatasetFilter = {
   property: SchemaProperty,
   operator: 'in' | 'nin' | 'eq' | 'neq' | 'gt' | 'lt' | 'gte' | 'lte' | 'search' | 'contains' | 'starts'
-  value: string,
+  value: string | number | boolean,
   formattedValue: string,
   hidden?: boolean
 }
 
 export const operators = ['in', 'nin', 'eq', 'neq', 'gt', 'lt', 'gte', 'lte', 'search', 'contains', 'starts']
+
+export const findEqFilter = (filters: DatasetFilter[], property: SchemaProperty, result: ExtendedResult) => {
+  return filters.find(f => f.property.key === property.key && f.operator === 'eq' && (Array.isArray(result.values[property.key]) ? (item.values[header.key] as ExtendedResultValue[]).some(v => v.raw === f.value) : (result.values[property.key] as ExtendedResultValue).raw === f.value))
+}
 
 export const useFilters = () => {
   const filters = ref<DatasetFilter[]>([])
@@ -43,7 +48,7 @@ export const useFilters = () => {
   const queryParams = computed(() => {
     const params: Record<string, string> = {}
     for (const filter of filters.value) {
-      params[`${filter.property.key}_${filter.operator}`] = filter.value
+      params[`${filter.property.key}_${filter.operator}`] = '' + filter.value
     }
     return params
   })

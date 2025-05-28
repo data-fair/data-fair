@@ -1,82 +1,91 @@
+<!-- eslint-disable vue/no-v-html -->
 <template>
   <v-card
     class="fill-height dataset-item-card"
-    outlined
+    variant="outlined"
   >
     <v-card-title
-      v-if="labelField || item._thumbnail"
+      v-if="labelField || result._thumbnail"
       class="pb-0"
     >
       <v-row class="ma-0">
         <v-avatar
-          v-if="item._thumbnail"
+          v-if="result._thumbnail"
           tile
           style="position:relative;top:-12px;left:-12px;"
         >
-          <img :src="item._thumbnail">
+          <img :src="result._thumbnail">
         </v-avatar>
         <h5
-          v-if="labelField && item[labelField.key]"
+          v-if="labelField && result.values[labelField.key] && !Array.isArray(result.values[labelField.key])"
           style="word-break: normal;line-height:18px"
         >
-          {{ item[labelField.key] }}
+          {{ (result.values[labelField.key] as ExtendedResultValue).formatted }}
         </h5>
       </v-row>
     </v-card-title>
     <v-card-text class="py-0 px-2">
       <div
-        v-if="item._highlight && item._highlight['_file.content'] && item._highlight['_file.content'][0]"
-        v-html="item._highlight['_file.content'][0].replace(/highlighted/g,'accent--text')"
+        v-if="result._highlight && result._highlight['_file.content'] && result._highlight['_file.content'][0]"
+        v-html="result._highlight['_file.content'][0].replace(/highlighted/g,'accent--text')"
       />
       <!--<div
-        v-if="descriptionField && item[descriptionField.key]"
-        :inner-html.prop="(item[descriptionField.key] + '')"
+        v-if="descriptionField && result.values[descriptionField.key]"
+        :inner-html.prop="(result.values[descriptionField.key] + '')"
       />-->
       <v-list
-        dense
-        class="transparent pt-0"
+        density="compact"
+        class="bg-transparent pt-0"
       >
         <template v-for="(header, i) in otherHeaders">
           <v-lazy
-            v-if="item[header.value] !== null && item[header.value] !== undefined && item[header.value] !== ''"
-            :key="`input-${header.value}`"
+            v-if="result.values[header.key]"
+            :key="`input-${header.key}`"
             height="40"
             transition=""
             :style="noInteraction ? '' : 'cursor:pointer'"
-            @mouseenter="hover(header.value)"
-            @mouseleave="leave(header.value)"
+            @mouseenter="!Array.isArray(result.values[header.key]) && emit('hoverstart', result, result.values[header.key] as ExtendedResultValue)"
+            @mouseleave="emit('hoverstop')"
           >
             <v-input
-              :class="`dataset-item-card-value-${item._id}-${i}`"
-              :label="header.text"
+              :class="`dataset-item-card-value-${result._id}-${i}`"
+              :label="header.title"
               hide-details
               style="line-height:20px;"
             >
+              <dataset-item-value-multiple
+                v-if="Array.isArray(result.values[header.key])"
+                :values="result.values[header.key] as ExtendedResultValue[]"
+                :property="header.property"
+                :dense="true"
+                :hovered="hovered"
+                :filter="findEqFilter(filters, header.property, result)"
+                @filter="f => emit('filter', f)"
+                @hoverstart="v => emit('hoverstart', result, v)"
+                @hoverstop="emit('hoverstop')"
+              />
               <dataset-item-value
-                :item="item"
-                :field="header.field"
-                :filters="filters"
-                :truncate="truncate"
+                v-else
+                :value="result.values[header.key] as ExtendedResultValue"
+                :property="header.property"
+                :filtered="!!findEqFilter(filters, header.property, result)"
                 :disable-hover="true"
                 :dense="true"
                 style="padding-right: 16px;"
-                @filter="filter => $emit('filter', {field, filter})"
+                @filter="emit('filter', {property: header.property, operator: 'eq', value: (result.values[header.key] as ExtendedResultValue).raw, formattedValue: (result.values[header.key] as ExtendedResultValue).formatted})"
+                @show-detail-dialog="emit('showDetailDialog', markRaw(result.values[header.key] as ExtendedResultValue))"
               />
               <v-icon
-                v-if="hovered[header.value] || header.value === pagination.sortBy[0]"
-                style="position:absolute;top:16px;right:-4px;"
-                :color="header.value === pagination.sortBy[0] ? 'primary' : 'default'"
-              >
-                <template v-if="header.value === pagination.sortBy[0] && !pagination.sortDesc[0]">
-                  mdi-sort-ascending
-                </template>
-                <template v-else-if="header.value === pagination.sortBy[0] && pagination.sortDesc[0]">
-                  mdi-sort-descending
-                </template>
-                <template v-else>
-                  mdi-menu-down
-                </template>
-              </v-icon>
+                v-if="sort && sort.key === header.key"
+                :icon="sort.direction === 1 ? mdiSortAscending : mdiSortDescending"
+                color="primary"
+                class="item-card-value-icon"
+              />
+              <v-icon
+                v-else-if="hovered === result.values[header.key]"
+                :icon="mdiMenuDown"
+                class="item-card-value-icon"
+              />
             </v-input>
             <dataset-table-header-menu
               v-if="!noInteraction"
@@ -87,22 +96,21 @@
               :pagination="pagination"
               no-fix
               close-on-filter
-              :local-enum="header.field.separator ? item[header.value].split(header.field.separator).map(v => v.trim()) : [item[header.value]]"
+              :local-enum="header.field.separator ? result.values[header.key].split(header.field.separator).map(v => v.trim()) : [result.values[header.key]]"
               @filter="filter => $emit('filter', {header, filter})"
               @hide="$emit('hide', header)"
             >
               <template #prepend-items="{hide}">
                 <v-list-item
-                  v-if="shouldDisplayDetail(header.field, item[header.field.key])"
+                  v-if="shouldDisplayDetail(header.field, result.values[header.field.key])"
                   class="pl-2"
                   @click="$set(detailDialog, header.field.key, true); hide()"
                 >
                   <v-list-item-icon class="mr-2">
                     <v-icon>mdi-magnify-plus</v-icon>
                   </v-list-item-icon>
-                  <v-list-item-content>
-                    <v-list-item-title>{{ $t('showFullValue') }}</v-list-item-title>
-                  </v-list-item-content>
+
+                  <v-list-item-title>{{ $t('showFullValue') }}</v-list-item-title>
                 </v-list-item>
               </template>
             </dataset-table-header-menu>
@@ -125,60 +133,40 @@
     showFullValue: Show full value
   </i18n>
 
-<script>
-import { mapState, mapGetters } from 'vuex'
+<script lang="ts" setup>
+import { type DatasetFilter } from '~/composables/dataset-filters'
+import { type ExtendedResult, type ExtendedResultValue } from '~/composables/dataset-lines'
+import { type TableHeader } from './table/use-headers'
+import { findEqFilter } from '~/composables/dataset-filters'
 
-export default {
-  props: {
-    item: { type: Object, required: true },
-    filters: { type: Array, required: false, default: () => ([]) },
-    filterHeight: { type: Number, required: true },
-    headers: { type: Array, required: true },
-    selectedFields: { type: Array, required: false, default: () => ([]) },
-    pagination: { type: Object, required: true },
-    truncate: { type: Number, default: 50 },
-    noInteraction: { type: Boolean, default: false }
-  },
-  data () {
-    return {
-      hovered: {},
-      detailDialog: {}
-    }
-  },
-  computed: {
-    ...mapState('dataset', ['dataset']),
-    ...mapGetters('dataset', ['labelField', 'descriptionField']),
-    shouldDisplayDetail () {
-      return (field, itemValue) => {
-        if (field['x-refersTo'] === 'http://schema.org/DigitalDocument') return false
-        if (field['x-refersTo'] === 'https://schema.org/WebPage') return false
-        return field.type === 'string' && !field.separator && itemValue && itemValue.length > 20
-      }
-    },
-    otherHeaders () {
-      return this.headers.filter(h => {
-        if (!h.field) return false
-        // if (this.descriptionField && this.descriptionField.key === f.key) return false
-        if (this.labelField && this.labelField.key === h.value) return false
-        return true
-      })
-    }
-  },
-  methods: {
-    hover (value) {
-      if (this.noInteraction) return
-      this._hoverTimeout = setTimeout(() => { this.$set(this.hovered, value, true) }, 60)
-    },
-    leave (value) {
-      if (this.noInteraction) return
-      if (this._hoverTimeout) {
-        clearTimeout(this._hoverTimeout)
-        delete this._hoverTimeout
-      }
-      this.$delete(this.hovered, value)
-    }
-  }
-}
+const { headers } = defineProps({
+  result: { type: Object as () => ExtendedResult, required: true },
+  filters: { type: Array as () => DatasetFilter[], required: false, default: () => ([]) },
+  filterHeight: { type: Number, required: true },
+  headers: { type: Array as () => TableHeader[], required: true },
+  sort: { type: Object as () => { direction: 1 | -1, key: string }, default: null },
+  truncate: { type: Number, default: 50 },
+  noInteraction: { type: Boolean, default: false },
+  hovered: { type: Object as () => ExtendedResultValue, default: null }
+})
+
+const emit = defineEmits<{
+  hide: [header: TableHeader],
+  filter: [filter: DatasetFilter],
+  hoverstart: [result: ExtendedResult, value: ExtendedResultValue],
+  hoverstop: [],
+  showMapPreview: [],
+  showDetailDialog: [value: ExtendedResultValue]
+}>()
+
+const { labelField } = useDatasetStore()
+
+const otherHeaders = computed(() => headers.filter(h => {
+  if (!h.property) return false
+  // if (this.descriptionField && this.descriptionField.key === f.key) return false
+  if (labelField.value && labelField.value.key === h.key) return false
+  return true
+}))
 </script>
 
 <style>
@@ -195,5 +183,11 @@ export default {
   height: 16px;
   bottom: -2px;
   white-space:nowrap;
+}
+
+.dataset-item-card .item-card-value-icon {
+  position:absolute;
+  top:16px;
+  right:-4px;
 }
 </style>

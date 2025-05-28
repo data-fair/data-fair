@@ -15,6 +15,7 @@ export type ExtendedResult = {
   _thumbnail?: string,
   _geopoint?: object,
   _owner?: string,
+  _highlight?: Record<string, string[]>,
   values: Record<string, ExtendedResultValue | ExtendedResultValue[]>
 }
 
@@ -60,6 +61,7 @@ export const useLines = (displayMode: Ref<string>, selectedCols: Ref<string[]>, 
         _thumbnail: raw._thumbnail,
         _geopoint: raw._geopoint,
         _owner: raw._owner,
+        _highlight: raw._highlight,
         values: {}
       }
       // TODO: preserve non property value ? like _thumbnail, etc.

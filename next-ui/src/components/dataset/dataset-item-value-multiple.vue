@@ -41,11 +41,10 @@ import { type DatasetFilter } from '../../composables/dataset-filters'
 import { type ExtendedResultValue } from '../../composables/dataset-lines'
 import { mdiFilterVariant } from '@mdi/js'
 
-const { extendedValues } = defineProps({
-  extendedValues: { type: Array as () => ExtendedResultValue[], required: true },
+const { values: extendedValues } = defineProps({
+  values: { type: Array as () => ExtendedResultValue[], required: true },
   property: { type: Object as () => SchemaProperty, required: true },
   filter: { type: Object as () => DatasetFilter, default: null },
-  truncate: { type: Number, default: 50 },
   lineHeight: { type: Number, default: 40 },
   hovered: { type: Object as () => ExtendedResultValue, default: null },
   dense: { type: Boolean, default: false }
