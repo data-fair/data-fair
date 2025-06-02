@@ -291,6 +291,7 @@ const lineHeight = computed(() => displayMode.value === 'table-dense' ? 28 : 40)
 const mapPreviewHeight = computed(() => {
   return Math.max(400, Math.min(700, height * 0.8))
 })
+const pageSize = computed(() => Math.ceil(((height / lineHeight.value) + 4) / 20) * 20)
 
 const editQ = ref('')
 watch(q, () => { editQ.value = q.value }, { immediate: true })
@@ -318,7 +319,7 @@ const selectedCols = computed(() => cols.value.length ? cols.value : allCols.val
 const { filters, addFilter, queryParams: filtersQueryParams } = useFilters()
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFilters }))
-const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, selectedCols, q, sortStr, extraParams)
+const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams)
 const { headers, hideHeader } = useHeaders(selectedCols, noInteraction, edit, fixed)
 const { selectedResults } = useEdition(baseFetchUrl)
 
