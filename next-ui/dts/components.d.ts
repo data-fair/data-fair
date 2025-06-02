@@ -13,7 +13,8 @@ declare module 'vue' {
     ConfirmMenu: typeof import('./../src/components/confirm-menu.vue')['default']
     copy: typeof import('./../src/components/dataset/dataset-item-value copy.vue')['default']
     DatasetDownloadResults: typeof import('./../src/components/dataset/dataset-download-results.vue')['default']
-    DatasetEditLineForm: typeof import('./../src/components/dataset/dataset-edit-line-form.vue')['default']
+    DatasetEditLineForm: typeof import('./../src/components/dataset/form/dataset-edit-line-form.vue')['default']
+    DatasetEditMultipleLines: typeof import('./../src/components/dataset/form/dataset-edit-multiple-lines.vue')['default']
     DatasetFilters: typeof import('./../src/components/dataset/dataset-filters.vue')['default']
     DatasetItemCard: typeof import('./../src/components/dataset/dataset-item-card.vue')['default']
     DatasetItemDetailDialog: typeof import('./../src/components/dataset/dataset-item-detail-dialog.vue')['default']
@@ -38,6 +39,7 @@ declare module 'vue' {
     SettingsLicenses: typeof import('./../src/components/settings/settings-licenses.vue')['default']
     SettingsTopics: typeof import('./../src/components/settings/settings-topics.vue')['default']
     SettingsWebhooks: typeof import('./../src/components/settings/settings-webhooks.vue')['default']
+    TutorialAlert: typeof import('./../src/components/tutorial/tutorial-alert.vue')['default']
     UseEdition: typeof import('../src/components/dataset/table/use-edition')['default']
     UseFilters: typeof import('../src/composables/dataset-filters')['default']
   }

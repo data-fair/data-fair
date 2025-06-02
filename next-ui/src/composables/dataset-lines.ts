@@ -16,6 +16,9 @@ export type ExtendedResult = {
   _geopoint?: object,
   _owner?: string,
   _highlight?: Record<string, string[]>,
+  raw: Record<string, any>,
+  edited?: Record<string, any>,
+  deleted?: boolean,
   values: Record<string, ExtendedResultValue | ExtendedResultValue[]>
 }
 
@@ -62,7 +65,8 @@ export const useLines = (displayMode: Ref<string>, pageSize: Ref<number>, select
         _geopoint: raw._geopoint,
         _owner: raw._owner,
         _highlight: raw._highlight,
-        values: {}
+        raw: markRaw(raw),
+        values: markRaw({})
       }
       // TODO: preserve non property value ? like _thumbnail, etc.
       for (const property of dataset.value?.schema ?? []) {
@@ -91,8 +95,8 @@ export const useLines = (displayMode: Ref<string>, pageSize: Ref<number>, select
       }
       extendedResults.push(extendedResult)
     }
-    if (reset) results.value = extendedResults.map(markRaw)
-    else results.value.push(...extendedResults.map(markRaw))
+    if (reset) results.value = extendedResults
+    else results.value.push(...extendedResults)
     next.value = data.next
     total.value = data.total
   })

@@ -85,9 +85,10 @@
                 v-if="header.key === '_actions'"
                 class="header-wrapper"
               >
-                <dataset-table-header-actions
+                <async-dataset-table-header-actions
                   v-model:selected-results="selectedResults"
                   :results="results"
+                  :selected-cols="selectedCols"
                   :dense="displayMode === 'table-dense'"
                 />
               </div>
@@ -274,6 +275,7 @@ import { useFilters, findEqFilter } from '../../../composables/dataset-filters'
 import { VVirtualScroll } from 'vuetify/components'
 
 const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/map/dataset-map.vue'))
+const asyncDatasetTableHeaderActions = defineAsyncComponent(() => import('~/components/dataset/table/dataset-table-header-actions.vue'))
 
 const { height, noInteraction, edit } = defineProps({
   height: { type: Number, default: 800 },
