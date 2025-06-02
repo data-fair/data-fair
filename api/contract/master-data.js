@@ -240,7 +240,10 @@ export const endpoints = (dataset) => {
         description: f.description || ''
       }
       delete a[f.key].key
-      delete a[f.key].separator
+      if ('separator' in a[f.key]) {
+        a[f.key]['x-separator'] = a[f.key].separator
+        delete a[f.key].separator
+      }
       delete a[f.key].icon
       delete a[f.key].label
       return a

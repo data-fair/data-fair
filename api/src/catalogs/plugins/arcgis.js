@@ -72,7 +72,7 @@ export const listDatasets = async (catalog, p) => {
     for (const folder of rootData.folders) {
       debug('get folder', folder)
       const folderData = await memoizedFetch(catalog.url + folder)
-      services.push(...folderData.services)
+      if (folderData.services) services.push(...folderData.services)
     }
   }
   const datasets = []
@@ -84,7 +84,7 @@ export const listDatasets = async (catalog, p) => {
       for (const layer of featureServer.layers ?? []) {
         const layerUrl = serviceUrl + '/' + layer.id
         const dataset = {
-          id: `${service.id ?? service.name}-${layer.id}`,
+          id: `${service.id ?? service.name.replace('/', '-')}-${layer.id}`,
           title: `${service.name} (${service.type}) - ${layer.name}`,
           page: layerUrl,
           resources: [{

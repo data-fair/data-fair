@@ -12,8 +12,9 @@ import * as datasetUtils from './utils/index.js'
 import * as restDatasetsUtils from './utils/rest.js'
 import * as esUtils from './es/index.ts'
 import * as webhooks from '../misc/utils/webhooks.js'
+import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.js'
-import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile } from './utils/files.ts'
+import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile, metadataAttachmentsDir } from './utils/files.ts'
 import { getSchemaBreakingChanges } from './utils/data-schema.js'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.js'
 import { validateURLFriendly } from '../misc/utils/validation.js'
@@ -352,6 +353,9 @@ export const deleteDataset = async (app, dataset) => {
   await db.collection('datasets').deleteOne({ id: dataset.id })
   await db.collection('journals').deleteOne({ type: 'dataset', id: dataset.id })
 
+  // notify catalogs that the dataset has been deleted
+  catalogsPublicationQueue.deletePublication(dataset.id)
+
   if (!dataset.isVirtual) {
     try {
       await esUtils.deleteIndex(es, dataset)
@@ -541,6 +545,11 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
   if (await fs.pathExists(attachmentsDir(datasetDraft))) {
     await fs.remove(attachmentsDir(patchedDataset))
     await fs.move(attachmentsDir(datasetDraft), attachmentsDir(patchedDataset))
+  }
+
+  if (await fs.pathExists(metadataAttachmentsDir(datasetDraft))) {
+    await fs.remove(metadataAttachmentsDir(patchedDataset))
+    await fs.move(metadataAttachmentsDir(datasetDraft), metadataAttachmentsDir(patchedDataset))
   }
 
   // replace originalFile

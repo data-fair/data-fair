@@ -1,7 +1,7 @@
 import config from 'config'
-import dataset from './dataset.js'
-import datasetPatch from './dataset-patch.js'
-import datasetPost from './dataset-post.js'
+import { resolvedSchema as dataset } from '#types/dataset/index.ts'
+import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js'
+import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
 import remoteService from './remote-service.js'
 import remoteServicePatch from './remote-service-patch.js'
 import catalog from './catalog.js'
@@ -38,8 +38,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     components: {
       schemas: {
         dataset,
-        datasetPatch,
-        datasetPost,
+        datasetPatch: datasetPatch.properties.body,
+        datasetPost: datasetPost.properties.body,
         remoteService: { ...remoteService },
         remoteServicePatch: { ...remoteServicePatch },
         application,
@@ -142,9 +142,10 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             ...utils.ownerParams,
             utils.booleanParam('raw', 'Ne pas inclure les champs calculés'),
             utils.selectParam(Object.keys(dataset.properties)),
-            utils.filterParam('ids', 'Restreindre sur les identifiants'),
+            utils.filterParam('ids', 'Identifiants de jeux de données', 'Restreins la liste sur un ou plusieurs identifiants de jeux de données.'),
             utils.filterParam('filename', 'Restreindre sur les noms de fichier'),
-            utils.filterParam('concepts', 'Restreindre sur les concepts annotés'),
+            utils.filterParam('concepts', 'Identifiants de concepts', 'Restreins les jeux de données sur un ou plusieurs identifiants de concepts.'),
+            utils.filterParam('topics', 'Identifiants de thématiques', 'Restreins les jeux de données sur un ou plusieurs identifiants de thématiques.'),
             utils.filterParam('field-type', 'Restreindre sur les types de colonnes'),
             utils.filterParam('field-format', 'Restreindre sur les formats des colonnes textes'),
             utils.booleanParam('file', 'Restreindre aux jeux avec fichiers attachés'),

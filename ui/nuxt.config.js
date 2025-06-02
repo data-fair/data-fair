@@ -119,6 +119,7 @@ const nuxtConfig = {
     captureUrl: config.captureUrl,
     notifyUrl: config.privateEventsUrl ? (publicUrl.origin + '/events') : config.notifyUrl, // DEPRECATED
     notifyWSUrl: config.notifyWSUrl, // DEPRECATED
+    catalogsIntegration: !!config.privateCatalogsUrl,
     eventsIntegration: !!config.privateEventsUrl,
     subscriptionUrl: config.subscriptionUrl,
     theme: config.theme,

@@ -27,6 +27,7 @@ export const process = async function (app, dataset) {
 
   await fs.ensureDir(tmpDir)
   const tmpFile = await tmp.file({ tmpdir: tmpDir, prefix: 'download-' })
+  const now = new Date().toISOString()
 
   let catalogHttpParams = {}
   if (dataset.remoteFile.catalog) {
@@ -130,6 +131,7 @@ export const process = async function (app, dataset) {
     patch.loaded.dataset.md5 = md5
     patch.loaded.dataset.size = (await fs.promises.stat(filePath)).size
     patch.status = 'loaded'
+    patch.dataUpdatedAt = now
   }
 
   delete patch.remoteFile.forceUpdate
@@ -138,7 +140,7 @@ export const process = async function (app, dataset) {
     const job = new CronJob(config.remoteFilesAutoUpdates.cron, () => {})
     patch.remoteFile.autoUpdate = {
       ...patch.remoteFile.autoUpdate,
-      lastUpdate: new Date().toISOString(),
+      lastUpdate: now,
       nextUpdate: job.nextDate().toISO()
     }
   }

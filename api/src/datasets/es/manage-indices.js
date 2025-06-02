@@ -10,12 +10,20 @@ export const indexDefinition = async (dataset) => {
   for (const jsProp of await datasetUtils.extendedSchema(null, dataset, false)) {
     const esProp = esProperty(jsProp)
     if (esProp) {
-      if (jsProp['x-extension'] && dataset.extensions && dataset.extensions.find(e => e.type === 'remoteService' && jsProp['x-extension'] === e.remoteService + '/' + e.action)) {
+      if (jsProp['x-extension'] && dataset.extensions && dataset.extensions.find(e => e.type === 'remoteService' && jsProp['x-extension'] === e.remoteService + '/' + e.action && jsProp.key.startsWith(e.propertyPrefix + '.'))) {
         const extKey = jsProp.key.split('.')[0]
         properties[extKey] = properties[extKey] || { dynamic: 'strict', properties: {} }
         properties[extKey].properties[jsProp.key.replace(extKey + '.', '')] = esProp
       } else {
         properties[jsProp.key] = esProp
+      }
+    }
+    if (jsProp.key === '_geoshape' && jsProp['x-capabilities']?.vtPrepare) {
+      properties['_vt_prepared'] = {
+        properties: {
+          xyz: { type: 'keyword', index: true, doc_values: false },
+          pbf: { type: 'binary', index: false, doc_values: false }
+        }
       }
     }
   }

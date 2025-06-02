@@ -1,11 +1,11 @@
 import config from 'config'
 import datasetAPIDocs from './dataset-api-docs.js'
-import datasetPost from './dataset-post.js'
+import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js'
+import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
 import journalSchema from './journal.js'
 import { visibility } from '../src/misc/utils/visibility.js'
 import * as permissionsDoc from '../src/misc/utils/permissions.js'
 import * as datasetUtils from '../src/datasets/utils/index.js'
-import datasetPatchSchema from './dataset-patch.js'
 
 /**
  *
@@ -80,7 +80,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         required: true,
         content: {
           'application/json': {
-            schema: datasetPatchSchema
+            schema: datasetPatch.properties.body
           }
         }
       },
@@ -106,7 +106,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         required: true,
         content: {
           'multipart/form-data': {
-            schema: datasetPost
+            schema: datasetPost.properties.body
           }
         }
       },
@@ -137,17 +137,52 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
   api.paths['/metadata-attachments'] = {
     post: {
       summary: 'Charger une pièce jointe',
-      description: 'Charger une pièce jointe dans les métadonnées.',
+      description: 'Charger une pièce jointe dans les métadonnées.\n**Attention, il faut ensuite ajouter la pièce jointe aux informations du jeu de données via la route <code>operationId: writeDescription</code> pour qu\'elle soit répertoriée.**',
       operationId: 'postMetadataAttachment',
       'x-permissionClass': 'write',
-      tags: ['Métadonnées']
+      tags: ['Métadonnées'],
+      requestBody: {
+        description: 'La pièce jointe à charger.',
+        required: true,
+        content: {
+          'multipart/form-data': {
+            schema: {
+              type: 'object',
+              properties: {
+                attachment: {
+                  type: 'string',
+                  format: 'binary'
+                }
+              }
+            }
+          }
+        }
+      },
+      responses: {
+        200: {
+          description: 'La pièce jointe a correctement été chargée.',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  mimetype: { type: 'string' },
+                  name: { type: 'string' },
+                  size: { type: 'integer' },
+                  updateAt: { type: 'string', format: 'date-time' }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 
   api.paths['/metadata-attachments/{attachmentId}'] = {
     delete: {
       summary: 'Supprimer une pièce jointe',
-      description: 'Supprimer une pièce jointe des métadonnées.',
+      description: 'Supprimer une pièce jointe des métadonnées.\n**Attention, il faut ensuite supprimer la pièce jointe des informations du jeu de données via la route <code>operationId: writeDescription</code> pour qu\'elle ne soit plus répertoriée.**',
       operationId: 'deleteMetadataAttachment',
       'x-permissionClass': 'write',
       tags: ['Métadonnées'],
@@ -160,7 +195,12 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
           title: 'Identifiant de la pièce jointe.',
           type: 'string'
         }
-      }]
+      }],
+      responses: {
+        204: {
+          description: 'La pièce jointe a été supprimée.'
+        }
+      }
     }
   }
 

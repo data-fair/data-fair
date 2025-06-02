@@ -30,7 +30,7 @@
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-toolbar>
-      <v-card-text class="px-3 pb-0">
+      <v-card-text class="px-3">
         <v-form ref="form">
           <tutorial-alert
             v-if="dataset.isRest"
@@ -104,9 +104,20 @@
               :label="$t('pattern')"
               :disabled="!editable"
               clearable
+              :rules="[checkRegexp]"
+              hide-details="auto"
               @click:clear="delete property.pattern"
             />
+            <v-text-field
+              v-if="property.pattern"
+              v-model="property.patternErrorMessage"
+              :label="$t('patternErrorMessage')"
+              :disabled="!editable"
+              clearable
+              @click:clear="delete property.patternErrorMessage"
+            />
           </template>
+
           <template v-if="property.type === 'string' && property.format === 'date'">
             <tutorial-alert
               id="validation-date-format"
@@ -149,6 +160,7 @@ fr:
   required: information obligatoire
   restricted: cochez cette case pour restreindre les données aux valeurs avec libellés associés
   pattern: Format
+  patternErrorMessage: Message d'erreur en cas de format erroné
   minimum: Minimum
   maximum: Maximum
   minLength: Longueur minimale
@@ -156,6 +168,7 @@ fr:
   validationRestMessage: Ces règles de validation seront appliquées dans les formulaires d'édition et vérifiées au moment de la réception de la donnée par la plateforme.
   validationFileMessage: Ces règles de validation seront appliquées lors de l'analyse des nouvelles versions de fichier. Les brouillons ne seront pas automatiquement validés si des erreurs sont détectées.
   validationRegexpMessage: La définition du format est basée sur une expression régulière. Il s'agit d'un paramétrage avancé.
+  validationRegexError: expression régulière invalide
   dateFormatMessage: Vous pouvez choisir un format de date accepté. Par défaut le seul format accepté est ISO 8601.
   dateFormat: Formattage de date
   dateTimeFormatMessage: Vous pouvez choisir un format de date et heure accepté. Par défaut le seul format accepté est IS0 8601.
@@ -165,6 +178,7 @@ en:
   required: required information
   restricted: check this box to restrict data to values with associated labels
   pattern: Format
+  patternErrorMessage: Error message in cas of format error
   minimum: Minimum
   maximum: Maximum
   minLength: Minimum length
@@ -172,6 +186,7 @@ en:
   validationRestMessage: These validation rules will be applied in the edition forms and checked when the data is received by the platform.
   validationFileMessage: These validation rules will be applied when analyzing new file versions. Drafts will not be automatically validated if errors are detected.
   validationRegexpMessage: The format definition is based on a regular expression. This is an advanced setting.
+  validationRegexError: invalid regular expression
   dateFormatMessage: You can chose an accepted date format. By default only ISO 8601 is accepted.
   dateFormat: Date format
   dateTimeFormatMessage: You can chose an accepted datetime format. By default only ISO 8601 is accepted.
@@ -199,6 +214,14 @@ export default {
       this.$set(this.property, prop, parseInt(value))
       if (isNaN(this.property[prop])) {
         delete this.property[prop]
+      }
+    },
+    checkRegexp (v) {
+      try {
+        RegExp(v)
+        return true
+      } catch (err) {
+        return this.$t('validationRegexError')
       }
     }
   }

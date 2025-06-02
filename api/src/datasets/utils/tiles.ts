@@ -1,11 +1,14 @@
 import path from 'path'
 import { Piscina } from 'piscina'
+import _config from 'config'
+
+const config = _config as any
 
 export const geojson2pbfPiscina = new Piscina({
   filename: path.resolve(import.meta.dirname, '../../datasets/threads/geojson2pbf.js'),
   minThreads: 0,
   idleTimeout: 60 * 60 * 1000,
-  maxThreads: 1
+  maxThreads: config.tiles.maxThreads
 })
 
 function tile2long (x, z) {
@@ -23,9 +26,9 @@ export const xyz2bbox = (x, y, z) => {
   return [tile2long(x, z), tile2lat(y + 1, z), tile2long(x + 1, z), tile2lat(y, z)]
 }
 
-export const geojson2pbf = async (geojson, xyz) => {
+export const geojson2pbf = async (geojson, xyz, vtPrepared) => {
   if (!geojson || !geojson.features || !geojson.features.length) return null
-  const buf = Buffer.from(await geojson2pbfPiscina.run({ geojson, xyz }))
+  const buf = Buffer.from(await geojson2pbfPiscina.run({ geojson, xyz, vtPrepared }))
   return buf
 }
 

@@ -36,6 +36,7 @@ const compileFlatten = (datasetId: string, finalizedAt: string, preserveArrays: 
     jitCode += `delete o["${nestedKey}"];\n`
   }
   jitCode += 'return o;'
+
   // eslint-disable-next-line no-new-func
   return new Function('o', jitCode)
 }
@@ -50,4 +51,8 @@ const memoizedCompileFlatten = memoize(compileFlatten, {
 
 export const getFlatten = (dataset: any, preserveArrays: boolean = false) => {
   return memoizedCompileFlatten(dataset.id, dataset.finalizedAt, preserveArrays, dataset)
+}
+
+export const getFlattenNoCache = (dataset: any, preserveArrays: boolean = false) => {
+  return compileFlatten(dataset.id, dataset.finalizedAt, preserveArrays, dataset)
 }

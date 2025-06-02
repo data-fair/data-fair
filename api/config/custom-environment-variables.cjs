@@ -10,6 +10,7 @@ module.exports = {
   openapiViewerUrl: 'OPENAPI_VIEWER_URL',
   captureUrl: 'CAPTURE_URL',
   privateCaptureUrl: 'PRIVATE_CAPTURE_URL',
+  privateCatalogsUrl: 'PRIVATE_CATALOGS_URL',
   notifyUrl: 'NOTIFY_URL',
   privateNotifyUrl: 'PRIVATE_NOTIFY_URL',
   notifyWSUrl: 'NOTIFY_WS_URL',
@@ -38,6 +39,13 @@ module.exports = {
     // size of cache of vector tiles in mongodb (in mb)
     mongoSize: {
       __name: 'CACHE_MONGO_SIZE',
+      __format: 'json'
+    },
+    reverseProxyCache: 'REVERSE_PROXY_CACHE'
+  },
+  tiles: {
+    maxThreads: {
+      __name: 'TILES_MAX_THREADS',
       __format: 'json'
     }
   },
@@ -86,6 +94,7 @@ module.exports = {
   secretKeys: {
     identities: 'SECRET_IDENTITIES',
     limits: 'SECRET_LIMITS',
+    catalogs: 'SECRET_CATALOGS',
     notifications: 'SECRET_NOTIFICATIONS',
     events: 'SECRET_EVENTS',
     masterData: 'SECRET_MASTER_DATA',

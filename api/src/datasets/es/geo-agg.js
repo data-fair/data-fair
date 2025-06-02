@@ -2,9 +2,8 @@ import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import geohash from '../../misc/utils/geohash.js'
 import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem } from './commons.js'
-import { getFlatten } from '../utils/flatten.ts'
 
-export default async (client, dataset, query, publicBaseUrl) => {
+export default async (client, dataset, query, publicBaseUrl, flatten) => {
   if (!dataset.bbox) throw httpError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
   const bbox = getQueryBBOX(query) || dataset.bbox
   const aggSize = query.agg_size ? Number(query.agg_size) : 20
@@ -41,12 +40,11 @@ export default async (client, dataset, query, publicBaseUrl) => {
     timeout: config.elasticsearch.searchTimeout,
     allow_partial_search_results: false
   })
-  return prepareGeoAggResponse(esResponse, dataset, query, publicBaseUrl)
+  return prepareGeoAggResponse(esResponse, dataset, query, publicBaseUrl, flatten)
 }
 
-const prepareGeoAggResponse = (esResponse, dataset, query, publicBaseUrl) => {
+const prepareGeoAggResponse = (esResponse, dataset, query, publicBaseUrl, flatten) => {
   const response = { total: esResponse.hits.total.value }
-  const flatten = getFlatten(dataset)
   response.aggs = esResponse.aggregations.geo.buckets.map(b => {
     const center = geohash.hash2coord(b.key)
     const aggItem = {

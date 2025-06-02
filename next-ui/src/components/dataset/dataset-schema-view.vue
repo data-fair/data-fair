@@ -1,6 +1,6 @@
 <template>
   <v-data-table-virtual
-    v-if="dataset"
+    v-if="dataset?.schema"
     :group-by="dataset.schema.some(f => 'x-group' in f) ? [{ key: 'x-group' }] : []"
     :headers="headers"
     :items="dataset.schema.filter(f => !f['x-calculated'])"
@@ -18,10 +18,10 @@
       {{ propTypeTitle(item) }}
     </template>
     <template #item.x-refersTo="{ item }">
-      {{ vocabulary && vocabulary[item['x-refersTo']] && vocabulary[item['x-refersTo']].title }}
+      {{ vocabulary && item['x-refersTo'] && vocabulary[item['x-refersTo']]?.title }}
     </template>
     <template #item.description="{ item }">
-      <p v-safe-html="item.description || (vocabulary && vocabulary[item['x-refersTo']] && vocabulary[item['x-refersTo']].description)" />
+      <p v-safe-html="item.description || (vocabulary && item['x-refersTo'] && vocabulary[item['x-refersTo']]?.description)" />
     </template>
     <template #top>
       <div class="text-center">

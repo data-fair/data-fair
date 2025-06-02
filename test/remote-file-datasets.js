@@ -60,6 +60,8 @@ describe('datasets based on remote files', function () {
     assert.equal(dataset.count, 2)
     assert.ok(dataset.schema.find(p => p.key === 'col'))
     assert.equal(dataset.originalFile.name, 'data.csv')
+    assert.ok(dataset.dataUpdatedAt)
+    assert.equal(dataset.dataUpdatedAt, dataset.remoteFile.autoUpdate.lastUpdate)
     nockScope.done()
 
     // force change of nextExport date to trigger worker

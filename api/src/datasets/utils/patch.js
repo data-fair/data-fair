@@ -7,15 +7,12 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mime from 'mime-types'
 import { CronJob } from 'cron'
 import * as geo from './geo.js'
-import * as ajv from '../../misc/utils/ajv.js'
 import * as datasetUtils from './index.js'
 import * as extensions from './extensions.js'
 import * as schemaUtils from './data-schema.js'
-import datasetPatchSchema from '../../../contract/dataset-patch.js'
 import * as virtualDatasetsUtils from './virtual.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
-
-export const validatePatch = ajv.compile(datasetPatchSchema)
+import catalogsPublicationQueue from '../../misc/utils/catalogs-publication-queue.ts'
 
 /**
  * @param {any} app
@@ -109,7 +106,7 @@ export const preparePatch = async (app, patch, dataset, user, locale, draftValid
     const extendedSchema = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
     await extensions.checkExtensions(db, extendedSchema, patch.extensions || dataset.extensions)
     patch.schema = await extensions.prepareExtensionsSchema(db, patch.schema || dataset.schema, patch.extensions || dataset.extensions)
-  } else if ('attachmentsAsImage' in patch && patch.attachmentsAsImage !== dataset.attachmentsAsImage) {
+  } else if (patch.schema || ('attachmentsAsImage' in patch && patch.attachmentsAsImage !== dataset.attachmentsAsImage)) {
     patch.schema = await schemaUtils.extendedSchema(db, { ...dataset, ...patch })
   }
 
@@ -124,19 +121,22 @@ export const preparePatch = async (app, patch, dataset, user, locale, draftValid
     patch.exports.lastExport = dataset?.exports?.restToCSV?.lastExport
   }
 
-  const removedRestProps = (dataset.isRest && patch.schema && dataset.schema.filter(df => !df['x-calculated'] && !df['x-extension'] && !patch.schema.find(f => f.key === df.key))) ?? []
+  const removedRestProps = (dataset.isRest && patch.schema && dataset.schema.filter(df => !df['x-calculated'] && !patch.schema.find(f => f.key === df.key))) ?? []
   if (dataset.isRest && dataset.rest?.storeUpdatedBy && patch.rest && !patch.rest.storeUpdatedBy) {
     removedRestProps.push({ key: '_updatedBy' })
     removedRestProps.push({ key: '_updatedByName' })
   }
 
-  // Re-publish publications
+  // Re-publish publications (for catalogs in datafair)
   if (!patch.publications && dataset.publications && dataset.publications.length) {
     for (const p of dataset.publications) {
       if (p.status !== 'deleted') p.status = 'waiting'
     }
     patch.publications = dataset.publications
   }
+
+  // Re-publish publications (with catalogs service)
+  catalogsPublicationQueue.updatePublication(dataset.id)
 
   if (patch.rest) {
     // be extra sure that primaryKeyMode is preserved

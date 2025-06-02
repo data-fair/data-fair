@@ -100,7 +100,7 @@ export const prepareSchema = async (db, dataset) => {
       for (const key in f['x-capabilities'] || {}) {
         if (capabilitiesDefaultFalse.includes(key)) {
           if (f['x-capabilities'][key] === false || !(key in f['x-capabilities'])) field['x-capabilities'][key] = false
-          if (f['x-capabilities'][key] === true && !(key in f['x-capabilities'])) field['x-capabilities'][key] = true
+          if (f['x-capabilities'][key] === true && !(key in field['x-capabilities'])) field['x-capabilities'][key] = true
         } else {
           if (f['x-capabilities'][key] === false) field['x-capabilities'][key] = false
         }

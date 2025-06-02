@@ -1,7 +1,6 @@
 import { Readable, Transform, Writable } from 'stream'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mimeTypeStream from 'mime-type-stream'
-import { flatten } from 'flat'
 import * as virtualDatasetsUtils from './virtual.js'
 import batchStream from '../../misc/utils/batch-stream.js'
 import * as esUtils from '../es/index.ts'
@@ -23,7 +22,7 @@ export const bulkSearchPromise = async (streams, data) => {
   return Buffer.concat(buffers).toString()
 }
 
-export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, select) => {
+export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, select, flatten) => {
   const bulkSearch = dataset.masterData && dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.find(bs => bs.id === bulkSearchId)
   if (!bulkSearch) throw httpError(404, `Recherche en masse "${bulkSearchId}" inconnue`)
 

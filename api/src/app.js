@@ -10,6 +10,7 @@ import * as wsServer from '@data-fair/lib-express/ws-server.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import locks from '@data-fair/lib-node/locks.js'
 import * as observe from './misc/utils/observe.js'
+import catalogsPublicationQueue from './misc/utils/catalogs-publication-queue.ts'
 import debug from 'debug'
 import EventEmitter from 'node:events'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
@@ -37,6 +38,9 @@ export const run = async () => {
   app.use(observe.observeReqMiddleware)
 
   await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
+  if (config.privateCatalogsUrl) {
+    await catalogsPublicationQueue.start({ catalogsUrl: config.privateCatalogsUrl, catalogsSecret: config.secretKeys.catalogs })
+  }
 
   if (config.mode.includes('server')) {
     const limits = await import('./misc/utils/limits.js')
@@ -265,9 +269,10 @@ export const run = async () => {
         const [type, id, subject] = channel.split('/')
         const resource = await db.collection(type).findOne({ id })
         if (!resource) throw httpError(404, `Ressource ${type}/${id} inconnue.`)
-        let user = sessionState.user
+        let user
+        if (sessionState.user) user = { ...sessionState.user, activeAccount: { ...sessionState.account, role: sessionState.accountRole } }
         if (message.apiKey) user = await readApiKey(db, message.apiKey, type, message.account)
-        return !permissions.can(type, resource, `realtime-${subject}`, user)
+        return permissions.can(type, resource, `realtime-${subject}`, user)
       })
     ])
     // At this stage the server is ready to respond to API requests

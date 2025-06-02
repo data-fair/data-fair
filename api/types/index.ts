@@ -1,6 +1,7 @@
 export type { Application } from './application/index.js'
 export type { AppConfig } from './app-config/index.js'
 export type { BaseApp } from './base-app/index.js'
+export type { Dataset, RestDataset } from './dataset/index.ts'
 export type { Event } from './event/index.js'
 export { type Settings, resolvedSchema as settingsSchema } from './settings/index.js'
 export type { Topic } from './topic/index.js'

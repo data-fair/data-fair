@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import FormData from 'form-data'
 import nock from 'nock'
 import * as workers from '../api/src/workers/index.js'
+import config from 'config'
 
 describe('Datasets with auto-initialization from another one', function () {
   it('Create REST dataset with copied information from file dataset', async function () {
@@ -59,6 +60,66 @@ describe('Datasets with auto-initialization from another one', function () {
     assert.equal(lines.results[0].datetime_fr, '2025-01-13T19:42:00+01:00')
   })
 
+  it('Create REST and file datasets with copied information from virtual dataset', async function () {
+    const ax = global.ax.dmeadus
+
+    const checkDatasetAttachments = async (dataset) => {
+      let lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
+      assert.equal(lines.results[1].comment, 'a PDF file')
+      assert.equal(lines.total, 3)
+      lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, {
+        params: { select: 'attachment,_file.content', highlight: '_file.content', q: 'test' }
+      })).data
+      assert.equal(lines.total, 2)
+      const odtItem = lines.results.find(item => item.attachment === 'test.odt')
+      assert.ok(odtItem)
+      assert.equal(odtItem['_file.content'], 'This is a test libreoffice file.')
+    }
+
+    const form = new FormData()
+    form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
+    form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    const dataset = await workers.hook('finalizer/' + res.data.id)
+    await checkDatasetAttachments(dataset)
+
+    const virtualDataset = await ax.post('/api/v1/datasets', {
+      isVirtual: true,
+      title: 'virtual',
+      virtual: { children: [dataset.id] },
+      schema: [{ key: 'attachment' }, { key: 'comment' }, { key: 'date' }]
+    }).then(r => r.data)
+    await workers.hook('finalizer/' + virtualDataset.id)
+    await checkDatasetAttachments(virtualDataset)
+
+    res = await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'init from virtual / rest',
+      initFrom: {
+        dataset: virtualDataset.id,
+        parts: ['schema', 'data']
+      }
+    })
+    const initFromDatasetRest = await workers.hook('finalizer/' + res.data.id)
+    await checkDatasetAttachments(initFromDatasetRest)
+
+    res = await ax.post('/api/v1/datasets', {
+      title: 'init from virtual / file',
+      initFrom: {
+        dataset: virtualDataset.id,
+        parts: ['schema', 'data']
+      }
+    })
+    const initFromDatasetFile = await workers.hook('finalizer/' + res.data.id)
+    assert.equal(initFromDatasetFile.file.name, 'virtual.csv')
+    await checkDatasetAttachments(initFromDatasetFile)
+    const file = (await ax.get(`/api/v1/datasets/${initFromDatasetFile.id}/data-files/${initFromDatasetFile.file.name}`)).data
+    assert.deepEqual(file.trim(), `"attachment","comment","date"
+"test.odt","an ODT file","2017-12-12"
+"dir1/test.pdf","a PDF file","2018-12-12"
+,"no attachment on this line","2020-01-13"`)
+  })
+
   it('Create file dataset with copied information from another file dataset', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
@@ -92,6 +153,70 @@ describe('Datasets with auto-initialization from another one', function () {
     assert.equal(dataFiles.length, 1)
     const fileData = (await ax.get(dataFiles[0].url)).data
     assert.ok(fileData.startsWith('id,adr,'))
+  })
+
+  it('Create draft file dataset with copied information from another file dataset', async function () {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset-extensions.csv', ax)
+
+    const attachmentForm = new FormData()
+    attachmentForm.append('attachment', fs.readFileSync('./resources/avatar.jpeg'), 'avatar.jpeg')
+    await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
+
+    const nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
+      .post('/geocoder/coords?select=lat,lon').reply(200, (uri, requestBody) => {
+        const inputs = requestBody.trim().split('\n').map(JSON.parse)
+        assert.equal(inputs.length, 2)
+        assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
+        return inputs.map((input, i) => ({ key: input.key, lat: 10, lon: 10, matchLevel: 'match' + i }))
+          .map(JSON.stringify).join('\n') + '\n'
+      })
+    dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
+
+    await ax.patch('/api/v1/datasets/' + dataset.id, {
+      description: 'A description',
+      schema: dataset.schema,
+      extensions: [{
+        active: true,
+        type: 'remoteService',
+        remoteService: 'geocoder-koumoul',
+        action: 'postCoords',
+        select: ['lat', 'lon'],
+        overwrite: {
+          lat: {
+            'x-originalName': 'latitude'
+          },
+          lon: {
+            'x-originalName': 'longitude'
+          }
+        },
+      }],
+      attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }]
+    })
+    await workers.hook('finalizer/' + dataset.id)
+    nockScope.done()
+
+    const res = await ax.post('/api/v1/datasets', {
+      title: 'init from schema',
+      initFrom: {
+        dataset: dataset.id, parts: ['schema', 'metadataAttachments', 'description', 'data', 'extensions']
+      }
+    }, { params: { draft: true } })
+    assert.equal(res.status, 201)
+    let initFromDataset = await workers.hook('finalizer/' + res.data.id)
+    assert.equal(initFromDataset.draft.file.name, 'dataset-extensions.csv')
+    const lines = await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines?draft=true`)
+    assert.equal(lines.data.results[0].latitude, 10)
+
+    // validate the draft
+    await ax.post(`/api/v1/datasets/${initFromDataset.id}/draft`)
+    initFromDataset = await workers.hook('finalizer/' + res.data.id)
+
+    assert.equal(initFromDataset.file.name, 'dataset-extensions.csv')
+    assert.ok(initFromDataset.storage.metadataAttachments.size > 1000)
+    assert.ok(initFromDataset.attachments.find(a => a.name === 'avatar.jpeg'))
+    const downloadAttachmentRes = await ax.get(`/api/v1/datasets/${initFromDataset.id}/metadata-attachments/avatar.jpeg`)
+    assert.equal(downloadAttachmentRes.status, 200)
   })
 
   it('Create file dataset that doesn\'t match imported schema', async function () {

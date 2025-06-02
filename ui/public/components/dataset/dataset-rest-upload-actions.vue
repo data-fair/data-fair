@@ -74,6 +74,21 @@
               </li>
             </ul>
           </v-alert>
+          <v-alert
+            v-if="result.warnings?.length"
+            type="warning"
+            :value="true"
+            outlined
+          >
+            <ul>
+              <li
+                v-for="(warning, i) in result.warnings"
+                :key="i"
+              >
+                {{ warning }}
+              </li>
+            </ul>
+          </v-alert>
         </template>
         <v-form
           v-else

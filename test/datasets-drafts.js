@@ -154,8 +154,8 @@ describe('datasets in draft mode', function () {
     assert.ok(res.data.startsWith('id,adr,some date,loc'))
     res = await ax.get(`/api/v1/datasets/${dataset.id}/raw`, { params: { draft: true } })
     assert.ok(res.data.startsWith('id,somedate,employees,adr'))
-    // schema should respect the new order of columns
-    assert.deepEqual(dataset.draft.schema.filter(c => !c['x-calculated']).map(c => c.key), ['id', 'somedate', 'employees', 'adr'])
+    // schema should preserve the old order of columns
+    assert.deepEqual(dataset.draft.schema.filter(c => !c['x-calculated']).map(c => c.key), ['id', 'adr', 'somedate', 'employees'])
 
     const es = await esUtils.init()
     let indices = await es.indices.get({ index: `${esUtils.indexPrefix(dataset)}-*` })
@@ -597,6 +597,19 @@ describe('datasets in draft mode', function () {
     dataset = await workers.hook(`finalizer/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 86)
+
+    let lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
+    assert.equal(lines.total, 86)
+    assert.equal(lines.results.length, 12)
+    assert.ok(lines.next)
+    assert.equal(lines.results[0]._i, 1)
+    assert.equal(lines.results[1]._i, 2)
+    lines = (await ax.get(lines.next)).data
+    assert.equal(lines.total, 86)
+    assert.equal(lines.results.length, 12)
+    assert.ok(lines.next)
+    assert.equal(lines.results[0]._i, 13)
+    assert.equal(lines.results[1]._i, 14)
   })
 
   it('Manage error status in draft mode', async function () {

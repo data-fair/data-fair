@@ -874,7 +874,7 @@ export const bulkLines = async (req, res, next) => {
     // these formats are read strictly as is
     const raw = mimeType === 'application/x-ndjson' || mimeType === 'application/json'
 
-    const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, null, true, false)
+    const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, req.dataset, true, false)
 
     const summary = initSummary()
     const transactionStream = new TransactionStream({ req, validate, summary, tmpDataset })
@@ -925,6 +925,8 @@ export const bulkLines = async (req, res, next) => {
         await collection(db, tmpDataset).drop()
       }
     }
+    const warnings = parseStreams.map(p => p.__warning).filter(Boolean)
+    if (warnings.length) summary.warnings = warnings
 
     await import('@data-fair/lib-express/events-log.js')
       .then((eventsLog) => eventsLog.default.info('df.datasets.rest.bulkLines', `applied operations in bulk to dataset ${dataset.slug} (${dataset.id}), ${JSON.stringify(summary)}`, { req, account: dataset.owner }))
@@ -1038,7 +1040,16 @@ export const readStreams = async (db, dataset, filter = {}, progress) => {
 export const writeExtendedStreams = (db, dataset, extensions) => {
   const patchedKeys = []
   for (const extension of extensions) {
-    if (extension.type === 'remoteService') patchedKeys.push(extension.propertyPrefix)
+    if (extension.type === 'remoteService') {
+      patchedKeys.push(extension.propertyPrefix)
+      if (extension.overwrite) {
+        for (const key in extension.overwrite) {
+          if (extension.overwrite[key]['x-originalName']) {
+            patchedKeys.push(fieldsSniffer.escapeKey(extension.overwrite[key]['x-originalName']))
+          }
+        }
+      }
+    }
     if (extension.type === 'exprEval') patchedKeys.push(extension.property.key)
   }
   const c = collection(db, dataset)

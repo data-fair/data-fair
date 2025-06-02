@@ -50,8 +50,16 @@ describe('search', function () {
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0].id, 'bidule')
     // perform a full-text search on a column with query params suffixed with _search
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_search=koumoul`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { adr_search: 'lactée' } })
     assert.equal(res.data.total, 1)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { adr_search: 'lactée inconnue' } })
+    assert.equal(res.data.total, 2)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { adr_search: 'lactée +inconnue' } })
+    assert.equal(res.data.total, 0)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { adr_search: 'lacté' } })
+    assert.equal(res.data.total, 1)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { adr_search: 'koumoul' } })
+    assert.equal(res.data.total, 0)
     // perform a wildcard filter on a column with query params suffixed with _contains
     await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/lines?id_contains=oumou`), { status: 400 })
     // perform a prefix filter on a column with query params suffixed with _starts
@@ -99,6 +107,7 @@ describe('search', function () {
     assert.equal(res.data.total, 2)
     assert.equal(res.data.results[0].id, 'koumoul')
 
+    // geo queries
     res = await ax.get(`/api/v1/datasets/${dataset.id}/geo_agg?bbox=-3,47,-2,48`)
     assert.equal(res.status, 200)
     assert.equal(res.data.aggs.length, 1)
@@ -111,11 +120,24 @@ describe('search', function () {
     assert.equal(res.data.total, 1)
     assert.equal(res.data.features.length, 1)
     assert.ok(res.data.features[0].geometry)
+    // vector tiles
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=63,44,7&format=pbf&q=koumoul`)
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'application/x-protobuf')
+    assert.equal(res.headers['x-tilesmode'], 'es/neighbors/10000')
+    assert.equal(res.headers['x-tilesampling'], '1/1')
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=3,4,7&format=pbf`)
     assert.equal(res.status, 204)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=63,44,7&format=pbf&q=koumoul&sampling=max`)
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['content-type'], 'application/x-protobuf')
+    assert.equal(res.headers['x-tilesmode'], 'es/max')
+    assert.equal(res.headers['x-tilesampling'], '1/1')
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=63,44,7&format=pbf&q=koumoul&sampling=max`)
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['content-type'], 'application/x-protobuf')
+    assert.equal(res.headers['x-tilesmode'], 'cache/max')
+    assert.equal(res.headers['x-tilesampling'], '1/1')
 
     // CSV export
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?format=csv`)
@@ -124,7 +146,6 @@ describe('search', function () {
     assert.equal(lines[1], '"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526",0,11')
     locProp.title = 'Localisation'
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
-    await workers.hook(`finalizer/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?format=csv`)
     lines = res.data.split('\n')
     assert.equal(lines[0].trim(), '"id","adr","some date","loc","bool","nb"')

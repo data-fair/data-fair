@@ -25,13 +25,13 @@ import * as findUtils from '../misc/utils/find.js'
 import clone from '@data-fair/lib-utils/clone.js'
 import * as attachments from '../misc/utils/attachments.js'
 import * as geo from './utils/geo.js'
-import * as tiles from './utils/tiles.js'
+import * as tiles from './utils/tiles.ts'
 import * as cache from '../misc/utils/cache.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as outputs from './utils/outputs.js'
 import * as limits from '../misc/utils/limits.js'
+import { extend } from './utils/extensions.js'
 import * as notifications from '../misc/utils/notifications.js'
-import datasetPostSchema from '../../contract/dataset-post.js'
 import userNotificationSchema from '../../contract/user-notification.js'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
 import { bulkSearchStreams } from './utils/master-data.js'
@@ -45,7 +45,7 @@ import { syncDataset as syncRemoteService } from '../remote-services/utils.js'
 import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetDataset } from './service.js'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/data-schema.js'
 import { dir, attachmentsDir } from './utils/files.ts'
-import { preparePatch, validatePatch } from './utils/patch.js'
+import { preparePatch } from './utils/patch.js'
 import { updateTotalStorage } from './utils/storage.js'
 import { checkStorage, lockDataset, readDataset } from './middlewares.js'
 import config from '#config'
@@ -58,7 +58,6 @@ import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import { getFlatten } from './utils/flatten.ts'
 
-const validatePost = ajv.compile(datasetPostSchema.properties.body)
 const validateUserNotification = ajv.compile(userNotificationSchema)
 
 const router = express.Router()
@@ -182,11 +181,10 @@ router.patch('/:datasetId',
     // @ts-ignore
     const user = req.user
 
-    const patch = req.body
     const db = mongo.db
     const locale = req.getLocale()
 
-    validatePatch(patch)
+    const { body: patch } = (await import('#doc/datasets/patch-req/index.js')).returnValid(req)
     validateURLFriendly(locale, patch.slug)
 
     const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, user, locale)
@@ -371,8 +369,8 @@ const createDatasetRoute = async (req, res) => {
       debugFiles('POST datasets uploaded some files', files)
     }
 
-    const body = req.body = uploadUtils.getFormBody(req.body)
-    validatePost(body)
+    req.body = uploadUtils.getFormBody(req.body)
+    const { body } = (await import('#doc/datasets/post-req/index.js')).returnValid(req)
 
     const owner = usersUtils.owner(req)
     if (!permissions.canDoForOwner(owner, 'datasets', 'post', user)) {
@@ -411,6 +409,9 @@ const createDatasetRoute = async (req, res) => {
           console.error('failure when send finalize-end to journal after rest dataset creation', err)
         })
       })
+    }
+    if (dataset.isMetaOnly) {
+      await datasetUtils.updateStorage(req.app, dataset)
     }
 
     eventsLog.info('df.datasets.create', `created a dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
@@ -454,18 +455,18 @@ const updateDatasetRoute = async (req, res, next) => {
       await clamav.checkFiles(files, user)
     }
 
-    const patch = uploadUtils.getFormBody(req.body)
+    req.body = uploadUtils.getFormBody(req.body)
 
     // this is also done inside preparePatch
     // but in the case of PUT we do it here to tolerate properties usually used at creation time
-    for (const key of Object.keys(patch)) {
-      if (equal(patch[key], dataset[key])) { delete patch[key] }
+    for (const key of Object.keys(req.body)) {
+      if (equal(req.body[key], dataset[key])) { delete req.body[key] }
     }
-    if (patch.owner && patch.owner.type === dataset.owner.type && patch.owner.id === dataset.owner.id) {
-      delete patch.owner
+    if (req.body.owner && req.body.owner.type === dataset.owner.type && req.body.owner.id === dataset.owner.id) {
+      delete req.body.owner
     }
 
-    validatePatch(patch)
+    const { body: patch } = (await import('#doc/datasets/patch-req/index.js')).returnValid(req)
     validateURLFriendly(locale, patch.slug)
 
     // TODO: do not use always as default value when the dataset is public or published ?
@@ -673,9 +674,10 @@ router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset
 router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset({ fillDescendants: true }), apiKeyMiddleware, permissions.middleware('bulkSearch', 'read'), async (req, res) => {
   // no buffering of this response in the reverse proxy
   res.setHeader('X-Accel-Buffering', 'no')
+  const flatten = getFlatten(req.dataset)
   await pump(
     req,
-    ...await bulkSearchStreams(mongo.db, req.app.get('es'), req.dataset, req.get('Content-Type'), req.params.bulkSearchId, req.query.select),
+    ...await bulkSearchStreams(mongo.db, req.app.get('es'), req.dataset, req.get('Content-Type'), req.params.bulkSearchId, req.query.select, flatten),
     res
   )
 })
@@ -732,36 +734,47 @@ const readLines = async (req, res) => {
   // case of own lines query
   if (req.params.owner) query.owner = req.params.owner
 
-  if (['geojson', 'mvt', 'vt', 'pbf'].includes(query.format)) {
-    query.select = (query.select ? query.select : tiles.defaultSelect(req.dataset).join(','))
-    if (!query.select.includes('_geoshape') && req.dataset.schema.find(p => p.key === '_geoshape')) query.select += ',_geoshape'
-    if (!query.select.includes('_geopoint')) query.select += ',_geopoint'
-  }
-  if (query.format === 'wkt') {
-    if (req.dataset.schema.find(p => p.key === '_geoshape')) query.select = '_geoshape'
-    else query.select = '_geopoint'
-  }
-
-  const sampling = query.sampling || 'neighbors'
-  if (!['max', 'neighbors'].includes(sampling)) return res.status(400).type('text/plain').send('Sampling can be "max" or "neighbors"')
-
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(query.format)
 
   let xyz
   if (vectorTileRequested) {
-    // default is smaller (see es/commons) for other format, but we want filled tiles by default
-    query.size = query.size || config.elasticsearch.maxPageSize + ''
     // sorting by rand provides more homogeneous distribution in tiles
     query.sort = query.sort || '_rand'
     if (!query.xyz) return res.status(400).type('text/plain').send('xyz parameter is required for vector tile format.')
     xyz = query.xyz.split(',').map(Number)
+  }
+  const defaultSampling = req.dataset.schema.find(p => p.key === '_geoshape')?.['x-capabilities']?.vtPrepare ? 'max' : 'neighbors'
+  const sampling = query.sampling || defaultSampling
+  if (!['max', 'neighbors'].includes(sampling)) return res.status(400).type('text/plain').send('Sampling can be "max" or "neighbors"')
+
+  const geoshapeProp = req.dataset.schema.find(p => p.key === '_geoshape')
+  const vtPrepared = vectorTileRequested && xyz[2] <= config.tiles.vtPrepareMaxZoom && geoshapeProp?.['x-capabilities']?.vtPrepare
+
+  if (['geojson', 'mvt', 'vt', 'pbf'].includes(query.format)) {
+    const select = (query.select ? query.select.split(',') : tiles.defaultSelect(req.dataset))
+    if (!vtPrepared && !select.includes('_geoshape') && geoshapeProp) {
+      select.push('_geoshape')
+    }
+    if (!select.includes('_geopoint')) select.push('_geopoint')
+    query.select = select.join(',')
+  }
+
+  if (vectorTileRequested) {
+    // default is smaller (see es/commons) for other format, but we want filled tiles by default
+    if (!('size' in query)) query.size = config.elasticsearch.maxPageSize + ''
+  }
+
+  if (query.format === 'wkt') {
+    if (geoshapeProp) query.select = '_geoshape'
+    else query.select = '_geopoint'
   }
 
   observe.reqStep(req, 'prepare')
 
   // Is the tile cached ?
   let cacheHash
-  if (vectorTileRequested && !config.cache.disabled) {
+  const useVTCache = vectorTileRequested && !config.cache.disabled && !(config.cache.reverseProxyCache && req.publicOperation && req.query.finalizedAt)
+  if (useVTCache) {
     const { hash, value } = await cache.get(db, {
       type: 'tile',
       sampling,
@@ -772,16 +785,16 @@ const readLines = async (req, res) => {
     observe.reqStep(req, 'checkTileCache')
     if (value) {
       res.type('application/x-protobuf')
-      res.setHeader('x-tilesmode', 'cache')
+      res.setHeader('x-tilesmode', 'cache/' + sampling)
       res.throttleEnd('static')
-      return res.status(200).send(value.buffer)
+      if (value.count && value.total) res.setHeader('x-tilesampling', value.count + '/' + value.total)
+      return res.status(200).send(value.tile ? value.tile.buffer : value.buffer)
     }
     cacheHash = hash
   }
 
+  let tilesMode = 'es/' + sampling
   if (vectorTileRequested) {
-    res.setHeader('x-tilesmode', 'es')
-
     const requestedSize = Number(query.size)
     if (sampling === 'neighbors') {
       // count docs in neighboring tiles to perform intelligent sampling
@@ -808,36 +821,53 @@ const readLines = async (req, res) => {
           const sampleRate = requestedSize / Math.max(requestedSize, maxCount)
           const sizeFilter = mainCount * sampleRate
           query.size = Math.min(sizeFilter, requestedSize)
-
-          // only add _geoshape to tile if it is not going to be huge
-          // otherwise features will be shown as points
-          if (req.dataset.storage && req.dataset.storage.indexed && req.dataset.count) {
-            const meanFeatureSize = Math.round(req.dataset.storage.indexed.size / req.dataset.count)
-            const expectedTileSize = meanFeatureSize * maxCount
-            // arbitrary limit at 50mo
-            if (expectedTileSize > (50 * 1000 * 1000)) query.select = query.select.replace(',_geoshape', '')
-          }
         }
       } catch (err) {
         await manageESError(req, err)
       }
 
+      tilesMode += '/' + query.size
       observe.reqStep(req, 'neighborsSampling')
     }
   }
 
+  // eslint-disable-next-line no-unused-vars
+  const [_, size] = findUtils.pagination(query)
+
   let esResponse
-  try {
-    esResponse = await esUtils.search(req.app.get('es'), req.dataset, query, req.publicBaseUrl, query.html === 'true')
-  } catch (err) {
-    await manageESError(req, err)
+  if (vectorTileRequested && sampling === 'max' && !query.collapse) {
+    let previousEsResponse
+    let totalLength = 0
+    for (let i = 0; i < 4; i++) {
+      if (previousEsResponse) {
+        if (size && previousEsResponse.hits.hits.length === size && totalLength < 10000000) {
+          const lastHit = previousEsResponse.hits.hits[previousEsResponse.hits.hits.length - 1]
+          query.after = JSON.stringify(lastHit.sort).slice(1, -1)
+        } else {
+          break
+        }
+      }
+      try {
+        previousEsResponse = await esUtils.search(req.app.get('es'), req.dataset, query, req.publicBaseUrl, vtPrepared && xyz.join('-'))
+      } catch (err) {
+        await manageESError(req, err)
+        break
+      }
+      totalLength += previousEsResponse.contentLength
+
+      if (!esResponse) esResponse = previousEsResponse
+      else esResponse.hits.hits = esResponse.hits.hits.concat(previousEsResponse.hits.hits)
+    }
+  } else {
+    try {
+      esResponse = await esUtils.search(req.app.get('es'), req.dataset, query, req.publicBaseUrl, vtPrepared && xyz.join('-'))
+    } catch (err) {
+      await manageESError(req, err)
+    }
   }
   observe.reqStep(req, 'search')
 
   // manage pagination based on search_after, cd https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html
-
-  // eslint-disable-next-line no-unused-vars
-  const [_, size] = findUtils.pagination(query)
 
   let nextLinkURL
   if (size && esResponse.hits.hits.length === size) {
@@ -871,14 +901,18 @@ const readLines = async (req, res) => {
   }
 
   if (vectorTileRequested) {
+    if (!esResponse.hits.hits.length) return res.status(204).send()
     const flatten = getFlatten(req.dataset, true)
-    const tile = await tiles.geojson2pbf(geo.result2geojson(esResponse, flatten), xyz)
+    const tile = await tiles.geojson2pbf(geo.result2geojson(esResponse, flatten), xyz, vtPrepared)
+    if (vtPrepared) tilesMode += '/prepared'
     observe.reqStep(req, 'geojson2pbf')
     // 204 = no-content, better than 404
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
-    if (!config.cache.disabled) cache.set(db, cacheHash, new mongodb.Binary(tile))
+    if (useVTCache) cache.set(db, cacheHash, { tile: new mongodb.Binary(tile), count: esResponse.hits.hits.length, total: esResponse.hits.total.value })
+    res.setHeader('x-tilesmode', tilesMode)
+    res.setHeader('x-tilesampling', esResponse.hits.hits.length + '/' + esResponse.hits.total.value)
     return res.status(200).send(tile)
   }
 
@@ -930,7 +964,8 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
   // Is the tile cached ?
   let cacheHash
-  if (vectorTileRequested && !config.cache.disabled) {
+  const useVTCache = vectorTileRequested && !config.cache.disabled && !(config.cache.reverseProxyCache && req.publicOperation && req.query.finalizedAt)
+  if (useVTCache) {
     const { hash, value } = await cache.get(db, {
       type: 'tile-geoagg',
       datasetId: req.dataset.id,
@@ -941,8 +976,9 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
     cacheHash = hash
   }
   let result
+  const flatten = getFlatten(req.dataset)
   try {
-    result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query, req.publicBaseUrl)
+    result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query, req.publicBaseUrl, flatten)
   } catch (err) {
     await manageESError(req, err)
   }
@@ -960,7 +996,7 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
-    if (!config.cache.disabled) cache.set(db, cacheHash, new mongodb.Binary(tile))
+    if (useVTCache) cache.set(db, cacheHash, new mongodb.Binary(tile))
     return res.status(200).send(tile)
   }
 
@@ -976,9 +1012,10 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
   const explain = req.query.explain === 'true' && req.user && (req.user.isAdmin || req.user.asAdmin) ? {} : null
 
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
+  const useVTCache = vectorTileRequested && !config.cache.disabled && !(config.cache.reverseProxyCache && req.publicOperation && req.query.finalizedAt)
   // Is the tile cached ?
   let cacheHash
-  if (vectorTileRequested && !config.cache.disabled) {
+  if (vectorTileRequested && useVTCache) {
     const { hash, value } = await cache.get(db, {
       type: 'tile-valuesagg',
       datasetId: req.dataset.id,
@@ -990,8 +1027,9 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
   }
 
   let result
+  const flatten = getFlatten(req.dataset)
   try {
-    result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, { ...req.query }, vectorTileRequested || req.query.format === 'geojson', req.publicBaseUrl, explain)
+    result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, { ...req.query }, vectorTileRequested || req.query.format === 'geojson', req.publicBaseUrl, explain, flatten)
     if (result.next) {
       const nextLinkURL = new URL(`${req.publicBaseUrl}/api/v1/datasets/${req.dataset.id}/values_agg`)
       for (const key of Object.keys(req.query)) {
@@ -1022,7 +1060,7 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
-    if (!config.cache.disabled) cache.set(db, cacheHash, new mongodb.Binary(tile))
+    if (useVTCache) cache.set(db, cacheHash, new mongodb.Binary(tile))
     return res.status(200).send(tile)
   }
 
@@ -1394,6 +1432,14 @@ router.get('/:datasetId/thumbnail/:thumbnailId', readDataset({ fillDescendants: 
 router.get('/:datasetId/read-api-key', readDataset(), permissions.middleware('getReadApiKey', 'read'), async (req, res, next) => {
   if (!req.dataset._readApiKey) return res.status(404).send("dataset doesn't have a read API key")
   res.send(req.dataset._readApiKey)
+})
+
+router.post('/:datasetId/_simulate-extension', readDataset(), permissions.middleware('simulateExtension', 'write'), async (req, res, next) => {
+  const line = req.body
+  const dataset = clone(req.dataset)
+  await extend(req.app, dataset, dataset.extensions, undefined, undefined, undefined, line)
+  const flatten = getFlatten(req.dataset)
+  res.send(flatten(line))
 })
 
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.

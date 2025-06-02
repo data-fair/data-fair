@@ -13,6 +13,27 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
     })
   }
 
+  env.extraAdminNavigationItems = env.extraAdminNavigationItems ?? []
+  if (env.catalogsIntegration) {
+    // env.extraNavigationItems.push({
+    env.extraAdminNavigationItems.push({
+      id: 'catalogs',
+      title: 'Catalogues',
+      can: 'contrib',
+      iframe: '/catalogs/catalogs',
+      basePath: '/catalogs',
+      icon: 'mdi-transit-connection'
+    })
+
+    env.extraAdminNavigationItems.push({
+      id: 'catalogs-plugins',
+      title: 'Plugins - Catalogues',
+      iframe: '/catalogs/admin/plugins',
+      basePath: '/catalogs',
+      icon: 'mdi-transit-connection'
+    })
+  }
+
   store.commit('setAny', {
     env: {
       ...env,

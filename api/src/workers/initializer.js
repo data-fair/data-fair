@@ -1,5 +1,6 @@
 import fs from 'fs-extra'
 import path from 'path'
+import { Readable, Transform } from 'stream'
 import pump from '../misc/utils/pipe.js'
 import * as restUtils from '../datasets/utils/rest.js'
 import * as datasetUtils from '../datasets/utils/index.js'
@@ -11,8 +12,11 @@ import { applyTransactions } from '../datasets/utils/rest.js'
 import iterHits from '../datasets/es/iter-hits.js'
 import taskProgress from '../datasets/utils/task-progress.js'
 import * as filesUtils from '../datasets/utils/files.ts'
+import * as virtualDatasetsUtils from '../datasets/utils/virtual.js'
+
 import debugLib from 'debug'
 import mongo from '#mongo'
+import { getFlattenNoCache } from '../datasets/utils/flatten.ts'
 
 export const eventsPrefix = 'initialize'
 
@@ -44,6 +48,7 @@ export const process = async function (app, dataset) {
     if (!parentDatasetPermissions.includes('readDescription')) {
       throw new Error(`[noretry] permission manquante sur le jeu de données d'initialisation "${parentDataset.slug}" (${parentDataset.id})`)
     }
+    const hasAttachments = parentDataset.schema.find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
 
     let count = 0
     /** @type {any[]} */
@@ -57,14 +62,15 @@ export const process = async function (app, dataset) {
       }
       count += parentDataset.count
 
-      // also copy attachments
-      attachments = await lsAttachments(parentDataset)
-      if (attachments.length) {
-        if (!parentDatasetPermissions.includes('downloadAttachment')) {
-          throw new Error(`[noretry] permission manquante sur le jeu de données d'initialisation "${parentDataset.slug}" (${parentDataset.id})`)
+      if (hasAttachments && !parentDatasetPermissions.includes('downloadAttachment')) {
+        throw new Error(`[noretry] permission manquante sur le jeu de données d'initialisation "${parentDataset.slug}" (${parentDataset.id})`)
+      }
+      if (hasAttachments) {
+        count += attachments.length
+        if (!parentDataset.isVirtual) {
+          attachments = await lsAttachments(parentDataset)
         }
       }
-      count += attachments.length
     }
 
     if (dataset.initFrom.parts.includes('metadataAttachments')) {
@@ -78,7 +84,12 @@ export const process = async function (app, dataset) {
     const progress = taskProgress(app, dataset.id, eventsPrefix, count)
 
     if (dataset.initFrom.parts.includes('schema')) {
-      patch.schema = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => {
+      if (dataset.initFrom.parts.includes('extensions')) {
+        patch.schema = parentDataset.schema.filter(p => !p['x-calculated'] || p['x-extension'])
+      } else {
+        patch.schema = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension'])
+      }
+      patch.schema = patch.schema.map(p => {
         const newProperty = { ...p }
         delete newProperty.enum
         delete newProperty['x-cardinality']
@@ -97,12 +108,42 @@ export const process = async function (app, dataset) {
       if (parentDataset.projection) patch.projection = parentDataset.projection
     }
 
+    if (dataset.initFrom.parts.includes('extensions')) {
+      patch.extensions = parentDataset.extensions
+    }
+    if (dataset.initFrom.parts.includes('description')) {
+      patch.description = parentDataset.description
+    }
+    if (dataset.initFrom.parts.includes('metadataAttachments')) {
+      for (const metadataAttachment of metadataAttachments) {
+        const newPath = metadataAttachmentPath(dataset, metadataAttachment)
+        await fs.ensureDir(path.dirname(newPath))
+        await fs.copyFile(metadataAttachmentPath(parentDataset, metadataAttachment), newPath)
+        await progress.inc()
+      }
+      patch.attachments = parentDataset.attachments
+    }
+
     if (dataset.initFrom.parts.includes('data')) {
+      const flatten = getFlattenNoCache(parentDataset)
+      if (parentDataset.isVirtual) {
+        parentDataset.descendantsFull = await virtualDatasetsUtils.descendants(db, parentDataset, false, ['owner'])
+        parentDataset.descendants = parentDataset.descendantsFull.map(d => d.id)
+      }
       if (dataset.isRest) {
         // from any kind of dataset to rest: copy data in bulk into the mongodb collection
-        const select = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => p.key).join(',')
-        for await (const hits of iterHits(app.get('es'), parentDataset, { size: 1000, select })) {
-          const transactions = hits.map(hit => ({ _action: 'create', _id: hit._id, ...hit._source }))
+        const select = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => p.key)
+        if (hasAttachments && parentDataset.isVirtual) select.push('_attachment_url')
+        for await (const hits of iterHits(app.get('es'), parentDataset, { size: 1000, select: select.join(',') })) {
+          if (hasAttachments && parentDataset.isVirtual) {
+            for (const hit of hits) {
+              if (hit._source._attachment_url) {
+                attachments.push(hit._source._attachment_url)
+                delete hit._source._attachment_url
+              }
+            }
+          }
+          const transactions = hits.map(hit => ({ _action: 'create', _id: hit._id, ...flatten(hit._source) }))
           await applyTransactions(db, dataset, pseudoUser, transactions)
           await progress.inc(transactions.length)
         }
@@ -115,16 +156,54 @@ export const process = async function (app, dataset) {
         if (datasetUtils.originalFilePath(parentDataset) !== datasetUtils.filePath(parentDataset)) {
           await fs.copy(datasetUtils.filePath(parentDataset), datasetUtils.filePath({ ...dataset, ...patch }))
         }
+        await progress.inc(parentDataset.count)
       } else {
-        // from rest to file: make export and use as data file
+        // from rest or virtual to file: make export and use as data file
 
         const fileName = parentDataset.slug + '.csv'
         const filePath = path.join(datasetUtils.loadingDir(dataset), fileName)
 
         // creating empty file before streaming seems to fix some weird bugs with NFS
         await fs.ensureFile(filePath)
+
+        let inputStreams
+        if (parentDataset.isRest) inputStreams = await restUtils.readStreams(db, parentDataset)
+        else if (parentDataset.isVirtual) {
+          const select = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => p.key)
+          if (hasAttachments && parentDataset.isVirtual) select.push('_attachment_url')
+          const iter = iterHits(app.get('es'), parentDataset, { size: 1000, select: select.join(',') })
+          inputStreams = [
+            Readable.from(iter),
+            new Transform({
+              objectMode: true,
+              transform (hits, encoding, callback) {
+                for (const hit of hits) {
+                  if (hasAttachments && parentDataset.isVirtual && hit._source._attachment_url) {
+                    attachments.push(hit._source._attachment_url)
+                    delete hit._source._attachment_url
+                  }
+                  this.push(flatten(hit._source))
+                }
+                callback()
+              }
+            })
+          ]
+        }
+
         await pump(
-          ...await restUtils.readStreams(db, parentDataset),
+          ...inputStreams,
+          new Transform({
+            objectMode: true,
+            async transform (item, encoding, callback) {
+              try {
+                await progress.inc()
+                this.push(item)
+                callback()
+              } catch (err) {
+                callback(err)
+              }
+            }
+          }),
           ...(await import('../datasets/utils/outputs.js')).csvStreams({ ...dataset, ...patch }),
           fs.createWriteStream(filePath)
         )
@@ -140,32 +219,25 @@ export const process = async function (app, dataset) {
           }
         }
       }
+    }
 
-      // also copy attachments
-      if (attachments.length) {
-        for (const attachment of attachments) {
-          const newPath = attachmentPath(dataset, attachment)
-          await fs.ensureDir(path.dirname(newPath))
-          await fs.copyFile(attachmentPath(parentDataset, attachment), newPath)
-          await progress.inc()
+    // also copy attachments
+    if (attachments.length) {
+      for (const attachment of attachments) {
+        let relPath = attachment
+        let copyPath = attachmentPath(parentDataset, attachment)
+        if (parentDataset.isVirtual) {
+          const pathParts = new URL(attachment).pathname.split('/')
+          const descendant = parentDataset.descendantsFull.find(d => d.id === pathParts[5])
+          if (!descendant) continue
+          relPath = pathParts.slice(7).join('/')
+          copyPath = attachmentPath(descendant, relPath)
         }
-      }
-    }
-
-    if (dataset.initFrom.parts.includes('extensions')) {
-      patch.extensions = parentDataset.extensions
-    }
-    if (dataset.initFrom.parts.includes('description')) {
-      patch.description = parentDataset.description
-    }
-    if (dataset.initFrom.parts.includes('metadataAttachments')) {
-      for (const metadataAttachment of metadataAttachments) {
-        const newPath = metadataAttachmentPath(dataset, metadataAttachment)
+        const newPath = attachmentPath(dataset, relPath)
         await fs.ensureDir(path.dirname(newPath))
-        await fs.copyFile(metadataAttachmentPath(parentDataset, metadataAttachment), newPath)
+        await fs.copyFile(copyPath, newPath)
         await progress.inc()
       }
-      patch.attachments = parentDataset.attachments
     }
 
     if (dataset.draftReason) {

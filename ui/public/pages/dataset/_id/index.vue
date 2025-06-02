@@ -290,6 +290,13 @@
                 </v-tab>
 
                 <v-tab
+                  v-if="user.adminMode && env.catalogsIntegration"
+                  href="#share-publications-next"
+                >
+                  <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
+                </v-tab>
+
+                <v-tab
                   v-if="dataset.isRest"
                   href="#share-exports"
                 >
@@ -339,6 +346,13 @@
 
                 <v-tab-item value="share-publications">
                   <dataset-catalog-publications />
+                </v-tab-item>
+
+                <v-tab-item value="share-publications-next">
+                  <d-frame
+                    :src="publicationUrl"
+                    sync-params
+                  />
                 </v-tab-item>
 
                 <v-tab-item value="share-exports">
@@ -501,6 +515,7 @@ en:
 
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex'
+import '@data-fair/frame/lib/d-frame.js'
 
 export default {
   middleware: ['auth-required'],
@@ -537,6 +552,9 @@ export default {
     publicationSites () {
       if (!this.dataset || this.env.disablePublicationSites) return []
       return this.$store.getters.ownerPublicationSites(this.dataset.owner)
+    },
+    publicationUrl () {
+      return window.location.origin + '/catalogs/dataset-publications?dataset-id=' + this.dataset.slug
     },
     fileProperty () {
       if (!this.dataset) return

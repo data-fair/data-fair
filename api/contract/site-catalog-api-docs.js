@@ -1,6 +1,6 @@
 import config from 'config'
 import pJson from './p-json.js'
-import dataset from './dataset.js'
+import { resolvedSchema as datasetSchema } from '#types/dataset/index.ts'
 import * as utils from './utils.js'
 
 export default (publicUrl, publicationSite, info) => {
@@ -23,7 +23,7 @@ export default (publicUrl, publicationSite, info) => {
     servers,
     components: {
       schemas: {
-        dataset
+        dataset: datasetSchema
       },
       securitySchemes: {
         apiKey: {
@@ -44,7 +44,6 @@ export default (publicUrl, publicationSite, info) => {
         get: {
           summary: 'Obtenir la documentation OpenAPI',
           description: 'Accéder à cette documentation au format OpenAPI v3.',
-          tags: ['Catalogue'],
           operationId: 'getApiDoc',
           responses: {
             200: {
@@ -63,10 +62,9 @@ export default (publicUrl, publicationSite, info) => {
           summary: 'Lister les jeux de données',
           description: 'Récupérer la liste des jeux de données.',
           operationId: 'listDatasets',
-          tags: ['Catalogue'],
           parameters: [
             utils.qParam,
-            utils.selectParam(Object.keys(dataset.properties)),
+            utils.selectParam(Object.keys(datasetSchema.properties)),
             utils.booleanParam('files', 'Restreindre aux jeux avec fichiers attachés'),
             utils.booleanParam('bbox', 'Restreindre aux jeux géographiques'),
             utils.booleanParam('queryable', 'Restreindre aux jeux requêtables et utilisables dans des applications'),
@@ -103,7 +101,6 @@ export default (publicUrl, publicationSite, info) => {
           summary: 'Lister les jeux de données (DCAT)',
           description: 'Récupérer la liste des jeux de données au format DCAT (JSON-LD).',
           operation: 'dcat',
-          tags: ['Catalogue'],
           responses: {
             200: {
               description: 'Liste des jeux de données au format DCAT (JSON-LD)',

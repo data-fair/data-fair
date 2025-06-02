@@ -188,12 +188,12 @@
                   "properties": {
                     "lat": {
                       "x-refersTo": "http://schema.org/latitude",
-                      "description": "Latitude",
+                      "title": "Latitude",
                       "type": "number"
                     },
                     "lon": {
                       "x-refersTo": "http://schema.org/longitude",
-                      "description": "Longitude",
+                      "title": "Longitude",
                       "type": "number"
                     },
                     "matchLevel": {
@@ -365,12 +365,12 @@
                       },
                       "lat": {
                         "x-refersTo": "http://schema.org/latitude",
-                        "description": "Latitude",
+                        "title": "Latitude",
                         "type": "number"
                       },
                       "lon": {
                         "x-refersTo": "http://schema.org/longitude",
-                        "description": "Longitude",
+                        "title": "Longitude",
                         "type": "number"
                       },
                       "matchLevel": {
@@ -404,12 +404,12 @@
                     },
                     "lat": {
                       "x-refersTo": "http://schema.org/latitude",
-                      "description": "Latitude",
+                      "title": "Latitude",
                       "type": "number"
                     },
                     "lon": {
                       "x-refersTo": "http://schema.org/longitude",
-                      "description": "Longitude",
+                      "title": "Longitude",
                       "type": "number"
                     },
                     "matchLevel": {

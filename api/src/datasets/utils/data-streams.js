@@ -1,9 +1,9 @@
 import fs from 'fs-extra'
+import { flatten } from 'flat'
 import { Writable, Transform } from 'stream'
 import csv from 'csv-parser'
 import JSONStream from 'JSONStream'
 import { stringify as csvStrStream } from 'csv-stringify'
-import { flatten } from 'flat'
 import tmp from 'tmp-promise'
 import mimeTypeStream from 'mime-type-stream'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
@@ -16,6 +16,7 @@ import { filePath, fullFilePath, tmpDir } from './files.ts'
 import pump from '../../misc/utils/pipe.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { compileExpression } from './extensions.js'
+import { getFlattenNoCache } from './flatten.ts'
 
 export const formatLine = (item, schema) => {
   for (const key of Object.keys(item)) {
@@ -68,7 +69,8 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
       objectMode: true,
       transform (item, encoding, callback) {
         const hasContent = Object.keys(item).reduce((a, b) => a || ![undefined, '\n', '\r', '\r\n', ''].includes(item[b]), false)
-        item._i = this.i = (this.i || 0) + 1
+        this.i = (this.i || 0) + 1
+        item._i = this.i
         if (hasContent) callback(null, item)
         else callback()
       }
@@ -120,24 +122,24 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
           }
         }
         if (noExtra) {
-          const unknownKeys = Object.keys(chunk)
-            .filter(k => k !== '_i')
-            .filter(k => k !== '')
-            .filter(k => !schema.find(p => p['x-originalName'] === k || p.key === k))
+          const keys = Object.keys(chunk)
+          const unknownKeys = keys
+            .filter(k => k !== '_i' && k !== '' && !schema.some(p => p['x-originalName'] === k || p.key === k))
           if (unknownKeys.length) {
             return callback(httpError(400, `Colonnes inconnues ${unknownKeys.join(', ')}`))
           }
-          const readonlyKeys = Object.keys(chunk)
-            .filter(k => k !== '_i' && k !== '_id')
+          const removeKeys = keys
             .filter(k => {
+              if (k === '_i' || k === '_id') return false
               const prop = schema.find(p => p['x-originalName'] === k || p.key === k)
               return prop && (prop['x-calculated'] || prop['x-extension'])
             })
-          if (readonlyKeys.length) {
-            return callback(httpError(400, `Colonnes en lecture seule ${readonlyKeys.join(', ')}`))
+          if (removeKeys.length) {
+            this.__warning = `Les valeurs des colonnes suivantes proviennent des extensions et ne seront pas modifiées : ${removeKeys.join(', ')}`
           }
         }
         for (const prop of schema) {
+          if (noExtra && (prop['x-calculated'] || prop['x-extension'])) continue
           const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
           let originalName = prop['x-originalName']
           if (fileSchema && !prop['x-calculated'] && !prop['x-extension']) originalName = fileProp?.['x-originalName']
@@ -153,19 +155,21 @@ export const transformFileStreams = (mimeType, schema, fileSchema, fileProps = {
     streams.push(new Transform({
       objectMode: true,
       transform (feature, encoding, callback) {
-        const item = flatten({ ...feature.properties }, { safe: true })
+        const item = flatten({ ...feature.properties })
         if (feature.id) item.id = feature.id
         item.geometry = feature.geometry
         if (raw) {
           callback(null, item)
         } else {
-          const line = { _i: this.i = (this.i || 0) + 1 }
+          const line = {}
           for (const prop of schema) {
             const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
             let originalName = prop['x-originalName']
             if (fileSchema && !prop['x-calculated'] && !prop['x-extension']) originalName = fileProp?.['x-originalName']
             line[prop.key] = item[originalName || prop.key] ?? item[prop.key]
           }
+          this.i = (this.i || 0) + 1
+          line._i = this.i
           callback(null, line)
         }
       }
@@ -268,6 +272,7 @@ export const readStreams = async (db, dataset, raw = false, full = false, ignore
 // Used by extender worker to produce the "full" version of the file
 export const writeExtendedStreams = async (db, dataset, extensions) => {
   if (dataset.isRest) return restDatasetsUtils.writeExtendedStreams(db, dataset, extensions)
+  const flatten = getFlattenNoCache(dataset)
   const tmpFullFile = await tmp.tmpName({ tmpdir: tmpDir, prefix: 'full-' })
   // creating empty file before streaming seems to fix some weird bugs with NFS
   await fs.ensureFile(tmpFullFile)
@@ -283,7 +288,7 @@ export const writeExtendedStreams = async (db, dataset, extensions) => {
 
     transforms.push(new Transform({
       transform (chunk, encoding, callback) {
-        const flatChunk = flatten(chunk, { safe: true })
+        const flatChunk = flatten(chunk)
         callback(null, relevantSchema.map(field => flatChunk[field.key]))
       },
       objectMode: true

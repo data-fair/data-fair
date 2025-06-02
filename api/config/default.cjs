@@ -13,6 +13,7 @@ module.exports = {
   openapiViewerUrl: 'https://koumoul.com/openapi-viewer/',
   captureUrl: 'http://capture:8080',
   privateCaptureUrl: null,
+  privateCatalogsUrl: null,
   notifyUrl: null, // DEPRECATED
   privateNotifyUrl: null, // DEPRECATED
   notifyWSUrl: null, // DEPRECATED
@@ -155,6 +156,7 @@ module.exports = {
   secretKeys: {
     identities: null,
     limits: null,
+    catalogs: null,
     notifications: null, // DEPRECATED
     events: null,
     ignoreRateLimiting: null
@@ -176,7 +178,13 @@ module.exports = {
     publicMaxAge: 300, // 5 minutes
     timestampedPublicMaxAge: 60 * 60 * 24 * 7, // 1 week
     // size of cache of vector tiles in mongodb (in mb)
-    mongoSize: 2000 // 2G
+    mongoSize: 2000, // 2G
+    reverseProxyCache: false
+  },
+  tiles: {
+    geojsonvtTolerance: 4, // slightly higher simplification than default (3)
+    vtPrepareMaxZoom: 10,
+    maxThreads: 1
   },
   analytics: {}, // a "modules" definition for @koumoul/vue-multianalytics
   browserLogLevel: 'error',
