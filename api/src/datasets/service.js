@@ -12,6 +12,7 @@ import * as datasetUtils from './utils/index.js'
 import * as restDatasetsUtils from './utils/rest.js'
 import * as esUtils from './es/index.ts'
 import * as webhooks from '../misc/utils/webhooks.js'
+import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.js'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile, metadataAttachmentsDir } from './utils/files.ts'
 import { getSchemaBreakingChanges } from './utils/data-schema.js'
@@ -352,6 +353,9 @@ export const deleteDataset = async (app, dataset) => {
   await db.collection('datasets').deleteOne({ id: dataset.id })
   await db.collection('journals').deleteOne({ type: 'dataset', id: dataset.id })
 
+  // notify catalogs that the dataset has been deleted
+  catalogsPublicationQueue.deletePublication(dataset.id)
+
   if (!dataset.isVirtual) {
     try {
       await esUtils.deleteIndex(es, dataset)
@@ -519,7 +523,7 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
   const patchedDataset = { ...datasetFull, ...patch }
 
   if (datasetFull.file) {
-    webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' })
+    webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' }, null)
     const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema)
     if (breakingChanges.length) {
       webhooks.trigger(db, 'dataset', patchedDataset, {

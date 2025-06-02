@@ -50,9 +50,9 @@ export const applyPatch = async (db, previousResource, resource, user, resourceT
         throw httpError(403, 'fail to publish: publication site requires permission to publish')
       }
       const sender = { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
-      webhooks.trigger(db, resourceType, resource, { type: `published:${publicationSite}` }, sender)
+      webhooks.trigger(db, resourceType, resource, { type: `published:${publicationSite}` }, sender, user)
       for (const topic of newTopics) {
-        webhooks.trigger(db, resourceType, resource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender)
+        webhooks.trigger(db, resourceType, resource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender, user)
       }
     }
   }
@@ -73,7 +73,7 @@ export const applyPatch = async (db, previousResource, resource, user, resourceT
       const publicationSiteInfo = await getPublicationSiteInfo(db, resource.owner, requestedPublicationSite)
       if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
       const sender = { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
-      webhooks.trigger(db, resourceType, resource, { type: `publication-requested:${requestedPublicationSite}`, body: `${resource.title || resource.id} - ${user.name}` }, sender)
+      webhooks.trigger(db, resourceType, resource, { type: `publication-requested:${requestedPublicationSite}`, body: `${resource.title || resource.id} - ${user.name}` }, sender, user)
     }
   }
   for (const topic of newTopics) {
@@ -83,7 +83,7 @@ export const applyPatch = async (db, previousResource, resource, user, resourceT
         const publicationSiteInfo = await getPublicationSiteInfo(db, resource.owner, publicationSite)
         if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
         const sender = { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
-        webhooks.trigger(db, resourceType, resource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender)
+        webhooks.trigger(db, resourceType, resource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender, user)
       }
     }
   }

@@ -84,7 +84,7 @@
     </template>
     <v-list-item
       v-if="can('readApiDoc') && !error"
-      @click="$router.push({ path: `/dataset/${dataset.id}/api-doc` })"
+      :to="`/dataset/${dataset.id}/api-doc`"
     >
       <v-list-item-icon>
         <v-icon color="primary">
@@ -103,6 +103,19 @@
       </v-list-item-icon>
       <v-list-item-content>
         <v-list-item-title v-t="'notifications'" />
+      </v-list-item-content>
+    </v-list-item>
+    <v-list-item
+      v-if="can('changeOwner') && env.eventsIntegration"
+      :to="`/dataset/${dataset.id}/events`"
+    >
+      <v-list-item-icon>
+        <v-icon color="primary">
+          mdi-clipboard-text-clock
+        </v-icon>
+      </v-list-item-icon>
+      <v-list-item-content>
+        <v-list-item-title v-t="'events'" />
       </v-list-item-content>
     </v-list-item>
     <v-list-item
@@ -439,6 +452,7 @@ fr:
   fileTooLarge: Le fichier est trop volumineux pour être importé
   importError: "Erreur pendant l'import du fichier :"
   notifications: Notifications
+  events: Traçabilité
   webhooks: Webhooks
   ok: ok
   attachmentsMsg: Optionnellement vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal. Dans ce cas le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
@@ -472,6 +486,7 @@ en:
   fileTooLarge: The file is too large to be imported
   importError: "Failure to import the file :"
   notifications: Notifications
+  events: Events
   webhooks: Webhooks
   ok: ok
   attachmentsMsg: Optionally you can load a zip archive containing files to be used as attachments to the lines of the main dataset file. In this case the main data file must have a column that contains paths of the attachments in the archive.

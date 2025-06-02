@@ -42,13 +42,15 @@ function configureWS (wsUrl, suffix = '') {
 }
 
 export default ({ store, env }) => {
-  // reconstruct this env var that we used to have but lost when implementing multi-domain exposition
-  const wsPublicUrl = (window.location.origin + env.basePath)
+  const wsBaseUrl = (window.location.origin)
     .replace('http:', 'ws:').replace('https:', 'wss:')
-  configureWS(wsPublicUrl)
+  // reconstruct this env var that we used to have but lost when implementing multi-domain exposition
+  configureWS(wsBaseUrl + env.basePath)
 
   // only configure notify websocket in main back-office mode, not multi-domain embeds
-  if (env.notifyWSUrl && new URL(env.notifyWSUrl).hostname === window.location.hostname) {
+  if (env.eventsIntegration) {
+    configureWS(wsBaseUrl + '/events/', '-notify')
+  } else if (env.notifyWSUrl && new URL(env.notifyWSUrl).hostname === window.location.hostname) {
     configureWS(env.notifyWSUrl, '-notify')
   }
 }

@@ -14,9 +14,11 @@ module.exports = {
   openapiViewerUrl: `http://${host}:5600/openapi-viewer/`,
   captureUrl: `http://${host}:5600/capture`,
   privateCaptureUrl: 'http://localhost:8087',
-  notifyUrl: `http://${host}:5600/notify`,
-  privateNotifyUrl: 'http://localhost:8088',
-  notifyWSUrl: 'ws://localhost:8088',
+  privateCatalogsUrl: `http://${host}:5600/catalogs`,
+  // notifyUrl: `http://${host}:5600/notify`,
+  // privateNotifyUrl: 'http://localhost:8088',
+  // notifyWSUrl: 'ws://localhost:8088',
+  privateEventsUrl: 'http://localhost:8088',
   // subscriptionUrl: 'https://staging-koumoul.com/s/customers/embed/subscription',
   defaultLimits: {
     totalStorage: 10000000000,
@@ -35,7 +37,8 @@ module.exports = {
   */
   secretKeys: {
     identities: 'dev_secret',
-    notifications: 'secret-notifications'
+    events: 'secret-notifications',
+    catalogs: 'secret-catalogs'
   },
   cache: {
     disabled: true
