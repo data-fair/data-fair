@@ -7,7 +7,7 @@ import debugLib from 'debug'
 
 const debug = debugLib('webhooks')
 
-export const trigger = async (db, type, resource, event, sender) => {
+export const trigger = async (db, type, resource, event, sender, user) => {
   const eventKey = resource.draftReason ? `${type}-draft-${event.type}` : `${type}-${event.type}`
   const eventType = settingsSchema.properties.webhooks.items.properties.events.items.oneOf
     .find(eventType => eventType.const === eventKey)
@@ -17,17 +17,26 @@ export const trigger = async (db, type, resource, event, sender) => {
   // first send notifications before actual webhooks
   sender = sender || { ...resource.owner }
   delete sender.role
+  let body = event.body
+  if (!body && resource.title) body = `${resource.title} (${resource.slug || resource.id})`
+  if (!body) body = resource.slug || resource.id
   const notif = {
     sender,
     topic: { key: `data-fair:${eventKey}:${resource.slug || resource.id}` },
     title: eventType ? eventType.title : '',
     // body: event.data || '',
-    body: event.body || resource.title || resource.id,
+    body,
     urlParams: { id: resource.id, slug: resource.slug },
-    visibility: permissions.isPublic(type + 's', resource) ? 'public' : 'private'
+    visibility: permissions.isPublic(type + 's', resource) ? 'public' : 'private',
+    resource: { type, id: resource.id, title: resource.title }
   }
   if (event.data) notif.body += ' - ' + event.data
-  notifications.send(notif)
+  const pseudoSessionState = {}
+  if (user) {
+    pseudoSessionState.user = { id: user.id, name: user.name, apiKey: user.isApiKey }
+    if (user.organization) pseudoSessionState.organization = user.organization
+  }
+  notifications.send(notif, false, pseudoSessionState)
 
   const settingsFilter = {
     id: resource.owner.id,

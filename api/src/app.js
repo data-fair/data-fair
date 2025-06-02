@@ -19,6 +19,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import upgradeScripts from '@data-fair/lib-node/upgrade-scripts.js'
 import { createSpaMiddleware } from '@data-fair/lib-express/serve-spa.js'
 import { cleanTmp } from './datasets/utils/files.ts'
+import eventsQueue from '@data-fair/lib-node/events-queue.js'
 
 const debugDomain = debug('domain')
 
@@ -36,6 +37,7 @@ export const run = async () => {
   // a middleware for performance analysis
   app.use(observe.observeReqMiddleware)
 
+  await eventsQueue.start({ eventsUrl: config.privateEventsUrl, eventsSecret: config.secretKeys.events, inactive: !config.privateEventsUrl })
   if (config.privateCatalogsUrl) {
     await catalogsPublicationQueue.start({ catalogsUrl: config.privateCatalogsUrl, catalogsSecret: config.secretKeys.catalogs })
   }

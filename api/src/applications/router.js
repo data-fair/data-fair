@@ -32,6 +32,9 @@ import { getThumbnail } from '../misc/utils/thumbnails.js'
 import pump from '../misc/utils/pipe.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
+import { session } from '@data-fair/lib-express'
+import eventsQueue from '@data-fair/lib-node/events-queue.js'
+import eventsLog from '@data-fair/lib-express/events-log.js'
 
 const unlink = util.promisify(fs.unlink)
 const validateKeys = ajv.compile(applicationKeys)
@@ -135,8 +138,7 @@ router.post('', async (req, res) => {
   }
   application.status = 'created'
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.applications.create', `created application ${application.slug} (${application.id})`, { req, account: application.owner }))
+  eventsLog.info('df.applications.create', `created application ${application.slug} (${application.id})`, { req, account: application.owner })
 
   await journals.log(req.app, application, { type: 'application-created', href: config.publicUrl + '/application/' + application.id }, 'application')
   res.status(201).json(clean(application, req.publicationSite, req.publicBaseUrl))
@@ -216,12 +218,12 @@ const attemptInsert = async (req, res, next) => {
     try {
       await mongo.db.collection('applications').insertOne(newApplication)
 
-      await import('@data-fair/lib-express/events-log.js')
-        .then((eventsLog) => eventsLog.default.info('df.applications.create', `created application ${newApplication.slug} (${newApplication.id})`, { req, account: newApplication.owner }))
+      eventsLog.info('df.applications.create', `created application ${newApplication.slug} (${newApplication.id})`, { req, account: newApplication.owner })
 
       req.isNewApplication = true
 
       await journals.log(req.app, newApplication, { type: 'application-created', href: config.publicUrl + '/application/' + newApplication.id }, 'application')
+
       return res.status(201).json(clean(newApplication, req.publicBaseUrl, req.publicationSite))
     } catch (err) {
       if (err.code !== 11000) throw err
@@ -242,8 +244,17 @@ router.put('/:applicationId', attemptInsert, readApplication, permissions.middle
   newApplication.created = true
 
   if (!req.isNewApplication) {
-    await import('@data-fair/lib-express/events-log.js')
-      .then((eventsLog) => eventsLog.default.info('df.applications.update', `updated application ${newApplication.slug} (${newApplication.id})`, { req, account: newApplication.owner }))
+    eventsLog.info('df.applications.update', `updated application ${newApplication.slug} (${newApplication.id})`, { req, account: newApplication.owner })
+    const sessionState = await session.req(req)
+    eventsQueue.pushEvent({
+      title: 'Application entièrement modifiée',
+      body: `${newApplication.title} (${newApplication.slug})`,
+      topic: {
+        key: `data-fair:application-updated:${newApplication.id}`
+      },
+      sender: newApplication.owner,
+      resource: { type: 'dataset', title: newApplication.title, id: newApplication.id }
+    }, sessionState)
   }
 
   await mongo.db.collection('applications').replaceOne({ id: req.params.applicationId }, newApplication)
@@ -259,27 +270,29 @@ router.patch('/:applicationId',
   (req, res, next) => req.body.publications ? permissionsWritePublications(req, res, next) : next(),
   async (req, res) => {
     const db = mongo.db
+    // @ts-ignore
+    const application = req.application
     const { body: patch } = (await import('#doc/applications/patch-req/index.js')).returnValid(req)
     if (patch.slug) validateURLFriendly(req.getLocale(), patch.slug)
 
     // Retry previously failed publications
     if (!patch.publications) {
-      const failedPublications = (req.application.publications || []).filter(p => p.status === 'error')
+      const failedPublications = (application.publications || []).filter(p => p.status === 'error')
       if (failedPublications.length) {
         for (const p of failedPublications) {
           p.status = 'waiting'
         }
-        patch.publications = req.application.publications
+        patch.publications = application.publications
       }
     }
 
     patch.updatedAt = moment().toISOString()
     patch.updatedBy = { id: req.user.id, name: req.user.name }
-    patch.id = req.application.id
-    patch.slug = patch.slug || req.application.slug
+    patch.id = application.id
+    patch.slug = patch.slug || application.slug
     await curateApplication(db, patch)
 
-    await publicationSites.applyPatch(db, req.application, { ...req.application, ...patch }, req.user, 'application')
+    await publicationSites.applyPatch(db, application, { ...application, ...patch }, req.user, 'application')
 
     let patchedApplication
     try {
@@ -290,10 +303,20 @@ router.patch('/:applicationId',
       throw httpError(400, req.__('errors.dupSlug'))
     }
 
-    await import('@data-fair/lib-express/events-log.js')
-      .then((eventsLog) => eventsLog.default.info('df.applications.patch', `patched application ${patchedApplication.slug} (${patchedApplication.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: patchedApplication.owner }))
+    eventsLog.info('df.applications.patch', `patched application ${patchedApplication.slug} (${patchedApplication.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: patchedApplication.owner })
 
-    await syncDatasets(db, patchedApplication, req.application)
+    const sessionState = await session.req(req)
+    eventsQueue.pushEvent({
+      title: 'Propriétés modifiées sur une application',
+      body: `${application.title} (${application.slug}), ${Object.keys(patch)?.join(', ')}`,
+      topic: {
+        key: `data-fair:application-patched-properties:${application.id}`
+      },
+      sender: application.owner,
+      resource: { type: 'dataset', title: application.title, id: application.id }
+    }, sessionState)
+
+    await syncDatasets(db, patchedApplication, application)
     res.status(200).json(clean(patchedApplication, req.publicBaseUrl, req.publicationSite))
   }
 )
@@ -338,11 +361,23 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
   const patchedApp = await db.collection('applications')
     .findOneAndUpdate({ id: req.params.applicationId }, { $set: patch }, { returnDocument: 'after' })
 
-  const eventLogMessage = `changed owner of application ${application.slug} (${application.id}), ${application.owner.name} (${application.owner.type}:${application.owner.id}) -> ${req.body.name} (${req.body.type}:${req.body.id})`
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.applications.changeOwnerFrom', eventLogMessage, { req, account: application.owner }))
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.applications.changeOwnerTo', eventLogMessage, { req, account: req.body }))
+  const arrowStr = `${application.owner.name} (${application.owner.type}:${application.owner.id}) -> ${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
+  const eventLogMessage = `changed owner of application ${application.slug} (${application.id}), ${arrowStr}`
+  eventsLog.info('df.applications.changeOwnerFrom', eventLogMessage, { req, account: application.owner })
+  eventsLog.info('df.applications.changeOwnerTo', eventLogMessage, { req, account: req.body })
+
+  const sessionState = await session.req(req)
+  const event = {
+    title: 'Changement de propriétaire d\'une application',
+    body: `${application.title} (${application.slug}), ${arrowStr}`,
+    topic: {
+      key: `data-fair:application-change-owner:${application.id}`
+    },
+    resource: { type: 'application', title: application.title, id: application.id },
+    sender: { ...application.owner, role: 'admin' }
+  }
+  eventsQueue.pushEvent(event, sessionState)
+  eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, admin: true } }, sessionState)
 
   await syncDatasets(db, patchedApp)
   res.status(200).json(clean(patchedApp, req.publicBaseUrl, req.publicationSite))
@@ -368,10 +403,20 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
     console.warn('Failure to remove application directory')
   }
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.applications.delete', `deleted application ${application.slug} (${application.id})`, { req, account: application.owner }))
+  eventsLog.info('df.applications.delete', `deleted application ${application.slug} (${application.id})`, { req, account: application.owner })
 
-  await syncDatasets(db, req.application)
+  const sessionState = await session.req(req)
+  eventsQueue.pushEvent({
+    title: "Suppression d'une application",
+    body: `${application.title} (${application.slug})`,
+    topic: {
+      key: `data-fair:application-delete:${application.id}`
+    },
+    sender: application.owner,
+    resource: { type: 'dataset', title: application.title, id: application.id }
+  }, sessionState)
+
+  await syncDatasets(db, application)
   res.sendStatus(204)
 })
 
@@ -408,10 +453,9 @@ const writeConfig = async (req, res) => {
     }
   )
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.applications.writeConfig', `wrote application config ${application.slug} (${application.id})`, { req, account: application.owner }))
+  eventsLog.info('df.applications.writeConfig', `wrote application config ${application.slug} (${application.id})`, { req, account: application.owner })
 
-  await journals.log(req.app, application, { type: 'config-updated' }, 'application')
+  await journals.log(req.app, application, { type: 'config-updated' }, 'application', false, req.user)
   await syncDatasets(db, { configuration: req.body })
   res.status(200).json(req.body)
 }
@@ -443,10 +487,9 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
       }
     }
   )
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.applications.validateDraft', `vaidated application config draft ${application.slug} (${application.id})`, { req, account: application.owner }))
+  eventsLog.info('df.applications.validateDraft', `vaidated application config draft ${application.slug} (${application.id})`, { req, account: application.owner })
 
-  await journals.log(req.app, application, { type: 'config-draft-updated' }, 'application')
+  await journals.log(req.app, application, { type: 'config-draft-updated' }, 'application', false, req.user)
   res.status(200).json(req.body)
 })
 router.delete('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), async (req, res, next) => {
@@ -468,10 +511,9 @@ router.delete('/:applicationId/configuration-draft', readApplication, permission
     }
   )
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.applications.cancelDraft', `cancelled application config draft ${application.slug} (${application.id})`, { req, account: application.owner }))
+  eventsLog.info('df.applications.cancelDraft', `cancelled application config draft ${application.slug} (${application.id})`, { req, account: application.owner })
 
-  await journals.log(req.app, application, { type: 'config-draft-cancelled' }, 'application')
+  await journals.log(req.app, application, { type: 'config-draft-cancelled' }, 'application', false, req.user)
   res.status(200).json(req.body)
 })
 
@@ -517,7 +559,7 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
     await wsEmitter.emit(`applications/${req.params.applicationId}/draft-error`, req.body)
   } else if (req.application.configuration) {
     await mongo.db.collection('applications').updateOne({ id: req.application.id }, { $set: { status: 'error', errorMessage: message } })
-    await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application')
+    await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application', false, req.user)
   }
   res.status(204).send()
 })
@@ -544,8 +586,18 @@ router.post('/:applicationId/keys', readApplication, permissions.middleware('set
   }
   await mongo.db.collection('applications-keys').replaceOne({ _id: application.id }, { _id: application.id, keys: req.body, owner: application.owner }, { upsert: true })
 
-  await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.applications.writeKeys', `wrote application keys ${application.slug} (${application.id})`, { req, account: application.owner }))
+  eventsLog.info('df.applications.writeKeys', `wrote application keys ${application.slug} (${application.id})`, { req, account: application.owner })
+
+  const sessionState = await session.req(req)
+  eventsQueue.pushEvent({
+    title: "Définition d'une clé de protection d'application",
+    body: `${application.title} (${application.slug})`,
+    topic: {
+      key: `data-fair:application-write-keys:${application.id}`
+    },
+    sender: { ...application.owner, role: 'admin' },
+    resource: { type: 'dataset', title: application.title, id: application.id }
+  }, sessionState)
 
   res.send(req.body)
 })

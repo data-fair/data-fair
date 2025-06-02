@@ -14,9 +14,10 @@ module.exports = {
   captureUrl: 'http://capture:8080',
   privateCaptureUrl: null,
   privateCatalogsUrl: null,
-  notifyUrl: null,
-  privateNotifyUrl: null,
-  notifyWSUrl: null,
+  notifyUrl: null, // DEPRECATED
+  privateNotifyUrl: null, // DEPRECATED
+  notifyWSUrl: null, // DEPRECATED
+  privateEventsUrl: null,
   subscriptionUrl: null,
   pluginsDir: './plugins',
   mongo: {
@@ -156,7 +157,8 @@ module.exports = {
     identities: null,
     limits: null,
     catalogs: null,
-    notifications: null,
+    notifications: null, // DEPRECATED
+    events: null,
     ignoreRateLimiting: null
   },
   // Configure outgoing http calls

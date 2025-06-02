@@ -59,6 +59,9 @@
     available: disponible
     services:
       data-fair/data-fair: Data Fair - Back Office
+      data-fair/simple-directory: Gestion des comptes
+      data-fair/openapi-viewer: Documentation des API
+      data-fair/events: Gestion des événements/notifications
       data-fair/catalogs: Gestion des catalogues
 
   en:
@@ -66,6 +69,9 @@
     available: available
     services:
       data-fair/data-fair: Data Fair - Back Office
+      data-fair/simple-directory: Accounts management
+      data-fair/openapi-viewer: API documentation
+      data-fair/events: Events/notifications management
       data-fair/catalogs: Catalogs management
   </i18n>
 
@@ -73,9 +79,14 @@
 // TODO: make this list dynamic when we contractualize the secondary services
 // replace extra_nav_items and other parameters by simple activation params
 const services = [
-  { name: 'data-fair/data-fair', infoUrl: '/data-fair/api/v1/admin/info' }
+  { name: 'data-fair/data-fair', infoUrl: '/data-fair/api/v1/admin/info' },
+  { name: 'data-fair/simple-directory', infoUrl: '/simple-directory/api/admin/info' },
+  { name: 'data-fair/openapi-viewer', infoUrl: '/openapi-viewer/api/admin/info' }
 ]
 
+if (process.env.eventsIntegration) {
+  services.push({ name: 'data-fair/events', infoUrl: '/events/api/admin/info' })
+}
 if (process.env.catalogsIntegration) {
   services.push({ name: 'data-fair/catalogs', infoUrl: '/catalogs/api/admin/info' })
 }

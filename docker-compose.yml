@@ -83,10 +83,11 @@ services:
     profiles:
       - dev
     image: ghcr.io/data-fair/openapi-viewer:master
-    ports:
-      - 5680:8080
+    network_mode: host
     environment:
+      - PORT=5680
       - USE_SIMPLE_DIRECTORY=true
+      - PRIVATE_DIRECTORY_URL=http://localhost:5600/simple-directory
       - ALLOWED_URLS={"general":"http://localhost:5600/data-fair/api/v1/api-docs.json","dataset":"http://localhost:5600/data-fair/api/v1/datasets/{id}/api-docs.json","privateDataset":"http://localhost:5600/data-fair/api/v1/datasets/{id}/private-api-docs.json","application":"http://localhost:5600/data-fair/api/v1/applications/{id}/api-docs.json","remoteService":"http://localhost:5600/data-fair/api/v1/remote-services/{id}/api-docs.json"}
 
   capture:
@@ -103,21 +104,20 @@ services:
       - PROMETHEUS_ACTIVE=false
       - PUPPETEER_ARGS=["--no-sandbox"]
 
-  notify:
+  events:
     profiles:
       - dev
-    image: ghcr.io/data-fair/notify:master
+    image: ghcr.io/data-fair/events:main
     network_mode: host
     depends_on:
       - mongodb
     environment:
       - PORT=8088
-      - PUBLIC_URL=http://localhost:5600/notify
-      - WS_PUBLIC_URL=ws://localhost:5600/notify
-      - DIRECTORY_URL=http://localhost:5600/simple-directory
-      - SECRET_NOTIFICATIONS=secret-notifications
+      - PRIVATE_DIRECTORY_URL=http://localhost:5600/simple-directory
+      - SECRET_IDENTITIES=secret-identities
+      - SECRET_EVENTS=secret-notifications
       - SECRET_SENDMAILS=secret-sendmails
-      - PROMETHEUS_ACTIVE=false
+      - OBSERVER_ACTIVE=false
 
   catalogs:
     profiles:
