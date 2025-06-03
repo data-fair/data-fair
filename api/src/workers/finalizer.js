@@ -7,7 +7,7 @@ import * as datasetService from '../datasets/service.js'
 import * as attachmentsUtils from '../datasets/utils/attachments.js'
 import * as virtualDatasetsUtils from '../datasets/utils/virtual.js'
 import taskProgress from '../datasets/utils/task-progress.js'
-import * as restDatasetsUtils from '../datasets/utils/rest.js'
+import * as restDatasetsUtils from '../datasets/utils/rest.ts'
 import dayjs from 'dayjs'
 import mongo from '#mongo'
 

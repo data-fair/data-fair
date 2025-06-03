@@ -1,6 +1,6 @@
 import * as virtualDatasetsUtils from './virtual.js'
 import * as esUtils from '../es/index.ts'
-import * as restDatasetsUtils from './rest.js'
+import * as restDatasetsUtils from './rest.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
 import fs from 'fs-extra'

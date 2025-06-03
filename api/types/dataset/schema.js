@@ -810,6 +810,7 @@ const datasetProperties = {
     properties: {
       ttl: {
         type: 'object',
+        required: ['prop', 'delay'],
         properties: {
           active: { type: 'boolean' },
           prop: { type: 'string' },
@@ -943,6 +944,7 @@ const dataset = {
   title: 'Dataset',
   type: 'object',
   additionalProperties: false,
+  required: ['id', 'createdAt'],
   properties: {
     ...datasetProperties,
     draft: {

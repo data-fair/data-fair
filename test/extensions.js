@@ -6,7 +6,7 @@ import FormData from 'form-data'
 import config from 'config'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import dayjs from 'dayjs'
-import * as restDatasetsUtils from '../api/src/datasets/utils/rest.js'
+import * as restDatasetsUtils from '../api/src/datasets/utils/rest.ts'
 import * as workers from '../api/src/workers/index.js'
 
 describe('Extensions', function () {

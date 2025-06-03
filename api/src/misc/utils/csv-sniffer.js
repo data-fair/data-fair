@@ -1,7 +1,7 @@
 import { Writable } from 'stream'
 import csv from 'csv-parser'
 import escapeStringRegexp from 'escape-string-regexp'
-import pump from '../utils/pipe.js'
+import pump from '../utils/pipe.ts'
 import debugModule from 'debug'
 import intoStream from 'into-stream'
 

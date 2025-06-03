@@ -4,8 +4,8 @@ import express from 'express'
 import config from '#config'
 import uiConfig from './ui-config.ts'
 import mongo from '#mongo'
+import es from '#es'
 import memoize from 'memoizee'
-import * as esUtils from './datasets/es/index.ts'
 import * as wsServer from '@data-fair/lib-express/ws-server.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import locks from '@data-fair/lib-node/locks.js'
@@ -242,7 +242,8 @@ export const run = async () => {
     await upgradeScripts(db, locks, resolve(import.meta.dirname, '../..'))
   }
 
-  app.set('es', await esUtils.init())
+  await es.init()
+  app.set('es', await es.client)
 
   await wsEmitter.init(db)
 

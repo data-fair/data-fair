@@ -1,6 +1,6 @@
 import fs from 'fs-extra'
 import sharp from 'sharp'
-import pump from '../utils/pipe.js'
+import pump from '../utils/pipe.ts'
 import dayjs from 'dayjs'
 import tmp from 'tmp-promise'
 import { Binary } from 'mongodb'

@@ -10,7 +10,7 @@ import zlib from 'zlib'
 import { Writable } from 'stream'
 import iconv from 'iconv-lite'
 import { promisify } from 'util'
-import * as restDatasetsUtils from '../api/src/datasets/utils/rest.js'
+import * as restDatasetsUtils from '../api/src/datasets/utils/rest.ts'
 import { attachmentsDir, lsAttachments } from '../api/src/datasets/utils/files.ts'
 import pumpOg from 'pump'
 

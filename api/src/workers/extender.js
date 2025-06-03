@@ -2,7 +2,7 @@ import debugLib from 'debug'
 import * as extensionsUtils from '../datasets/utils/extensions.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetService from '../datasets/service.js'
-import * as restDatasetsUtils from '../datasets/utils/rest.js'
+import * as restDatasetsUtils from '../datasets/utils/rest.ts'
 import mongo from '#mongo'
 
 const debugMasterData = debugLib('master-data')

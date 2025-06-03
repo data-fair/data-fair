@@ -3,7 +3,7 @@
 import path from 'node:path'
 import { readFileSync } from 'node:fs'
 import config from '../api/src/config.ts'
-import mongo from '../api/src/mongo.js'
+import mongo from '../api/src/mongo.ts'
 import fs from 'fs-extra'
 import nock from 'nock'
 import * as workers from '../api/src/workers/index.js'
