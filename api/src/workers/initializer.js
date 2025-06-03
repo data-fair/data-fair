@@ -12,7 +12,7 @@ import { applyTransactions } from '../datasets/utils/rest.ts'
 import iterHits from '../datasets/es/iter-hits.js'
 import taskProgress from '../datasets/utils/task-progress.js'
 import * as filesUtils from '../datasets/utils/files.ts'
-import * as virtualDatasetsUtils from '../datasets/utils/virtual.js'
+import * as virtualDatasetsUtils from '../datasets/utils/virtual.ts'
 
 import debugLib from 'debug'
 import mongo from '#mongo'
@@ -37,7 +37,7 @@ export const process = async function (app, dataset) {
   }
 
   if (dataset.isRest) {
-    await restUtils.initDataset(db, dataset)
+    await restUtils.initDataset(dataset)
   }
 
   if (dataset.initFrom) {
@@ -127,7 +127,7 @@ export const process = async function (app, dataset) {
     if (dataset.initFrom.parts.includes('data')) {
       const flatten = getFlattenNoCache(parentDataset)
       if (parentDataset.isVirtual) {
-        parentDataset.descendantsFull = await virtualDatasetsUtils.descendants(db, parentDataset, false, ['owner'])
+        parentDataset.descendantsFull = await virtualDatasetsUtils.descendants(parentDataset, false, ['owner'])
         parentDataset.descendants = parentDataset.descendantsFull.map(d => d.id)
       }
       if (dataset.isRest) {
@@ -252,6 +252,6 @@ export const process = async function (app, dataset) {
   }
 
   await datasetsService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset)
+  if (!dataset.draftReason) await datasetUtils.updateStorage(dataset)
   debug('done')
 }

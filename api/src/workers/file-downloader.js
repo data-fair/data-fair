@@ -11,7 +11,7 @@ import contentDisposition from 'content-disposition'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import axios from '../misc/utils/axios.js'
 import pump from '../misc/utils/pipe.ts'
-import * as limits from '../misc/utils/limits.js'
+import * as limits from '../misc/utils/limits.ts'
 import * as catalogs from '../catalogs/plugins/index.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetService from '../datasets/service.js'
@@ -40,7 +40,7 @@ export const process = async function (app, dataset) {
   }
 
   const size = dataset.remoteFile.size || 0
-  const remaining = await limits.remaining(db, dataset.owner)
+  const remaining = await limits.remaining(dataset.owner)
   if (remaining.storage !== -1 && remaining.storage < size) throw httpError(429, '[noretry] Vous avez atteint la limite de votre espace de stockage.')
   if (remaining.indexed !== -1 && remaining.indexed < size) throw httpError(429, '[noretry] Vous avez atteint la limite de votre espace de données indexées.')
 

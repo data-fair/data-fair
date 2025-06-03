@@ -4,7 +4,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import locks from '@data-fair/lib-node/locks.js'
 import * as usersUtils from '../misc/utils/users.js'
 import { getOwnerRole } from '../misc/utils/permissions.js'
-import { checkStorage as checkStorageFn } from './utils/storage.js'
+import { checkStorage as checkStorageFn } from './utils/storage.ts'
 import * as service from './service.js'
 import { withQuery } from 'ufo'
 
@@ -25,9 +25,8 @@ export const checkStorage = (overwrite, indexed = false) => async (req, res, nex
 
   // @ts-ignore
   const resource = req.resource
-  const db = mongo.db
   const owner = resource ? resource.owner : usersUtils.owner(req)
-  await checkStorageFn(db, req.getLocale(), owner, overwrite && resource, contentLength, indexed)
+  await checkStorageFn(req.getLocale(), owner, overwrite && resource, contentLength, indexed)
   next()
 }
 

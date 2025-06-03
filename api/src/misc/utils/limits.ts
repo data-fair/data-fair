@@ -3,6 +3,10 @@ import config from '#config'
 import mongo from '#mongo'
 import moment from 'moment'
 import * as ajv from '../utils/ajv.js'
+import type { Account, AccountKeys } from '@data-fair/lib-express'
+import type { Limit, Limits, Request } from '#types'
+import type { Response, NextFunction, RequestHandler } from 'express'
+import type { Filter } from 'mongodb'
 
 const limitTypeSchema = { type: 'object', properties: { limit: { type: 'number' }, consumption: { type: 'number' } } }
 const schema = {
@@ -22,52 +26,49 @@ const schema = {
 }
 const validate = ajv.compile(schema)
 
-export const init = async (db) => {}
-
-export const getLimits = async (db, consumer) => {
-  const coll = db.collection('limits')
+export const getLimits = async (consumer: Account | AccountKeys) => {
   const now = moment()
-  let limits = await coll.findOne({ type: consumer.type, id: consumer.id })
+  let limits = await mongo.limits.findOne<Limits>({ type: consumer.type, id: consumer.id }, { projection: { _id: 0 } })
   if (!limits) {
     limits = {
       type: consumer.type,
       id: consumer.id,
-      name: consumer.name || consumer.id,
+      name: (consumer as Account).name || consumer.id,
       lastUpdate: now.toISOString(),
       defaults: true
     }
     try {
-      await coll.insertOne(limits)
-    } catch (err) {
+      await mongo.limits.insertOne(limits)
+    } catch (err: any) {
       if (err.code !== 11000) throw err
     }
   }
   limits.store_bytes = limits.store_bytes || { consumption: 0 }
-  if ([undefined, null].includes(limits.store_bytes.limit)) limits.store_bytes.limit = config.defaultLimits.totalStorage
+  if (limits.store_bytes.limit === null || limits.store_bytes.limit === undefined) limits.store_bytes.limit = config.defaultLimits.totalStorage
   limits.indexed_bytes = limits.indexed_bytes || { consumption: 0 }
-  if ([undefined, null].includes(limits.indexed_bytes.limit)) limits.indexed_bytes.limit = config.defaultLimits.totalIndexed
+  if (limits.indexed_bytes.limit === null || limits.indexed_bytes.limit === undefined) limits.indexed_bytes.limit = config.defaultLimits.totalIndexed
   limits.nb_datasets = limits.nb_datasets || { consumption: 0 }
-  if ([undefined, null].includes(limits.nb_datasets.limit)) limits.nb_datasets.limit = config.defaultLimits.nbDatasets
+  if (limits.nb_datasets.limit === null || limits.nb_datasets.limit === undefined) limits.nb_datasets.limit = config.defaultLimits.nbDatasets
   return limits
 }
 
-export const get = async (db, consumer, type) => {
-  const limits = await getLimits(db, consumer)
-  const res = (limits && limits[type]) || { limit: 0, consumption: 0 }
+/* const get = async (consumer: AccountKeys, type: keyof Limits) => {
+  const limits = await getLimits(consumer)
+  const res = (limits?.[type] || { limit: 0, consumption: 0 }) as Limit
   res.type = type
   res.lastUpdate = limits ? limits.lastUpdate : new Date().toISOString()
   return res
-}
+} */
 
-const calculateRemainingLimit = (limits, key) => {
-  const limit = limits && limits[key] && limits[key].limit
-  if (limit === -1) return -1
-  const consumption = (limits && limits[key] && limits[key].consumption) || 0
+const calculateRemainingLimit = (limits: Limits, key: keyof Limits) => {
+  const limit = (limits?.[key] as Limit)?.limit
+  if (limit === -1 || limit === null || limit === undefined) return -1
+  const consumption = (limits?.[key] && (limits[key] as Limit).consumption) || 0
   return Math.max(0, limit - consumption)
 }
 
-export const remaining = async (db, consumer) => {
-  const limits = await getLimits(db, consumer)
+export const remaining = async (consumer: AccountKeys) => {
+  const limits = await getLimits(consumer)
   return {
     storage: calculateRemainingLimit(limits, 'store_bytes'),
     indexed: calculateRemainingLimit(limits, 'indexed_bytes'),
@@ -75,25 +76,25 @@ export const remaining = async (db, consumer) => {
   }
 }
 
-export const incrementConsumption = async (db, consumer, type, inc) => {
-  return await db.collection('limits')
+export const incrementConsumption = async (consumer: AccountKeys, type: keyof Limits, inc: number) => {
+  return await mongo.limits
     .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $inc: { [`${type}.consumption`]: inc } }, { returnDocument: 'after', upsert: true })
 }
 
-export const setConsumption = async (db, consumer, type, value) => {
-  return await db.collection('limits')
+export const setConsumption = async (consumer: AccountKeys, type: keyof Limits, value: number) => {
+  return await mongo.limits
     .findOneAndUpdate({ type: consumer.type, id: consumer.id }, { $set: { [`${type}.consumption`]: value } }, { returnDocument: 'after', upsert: true })
 }
 
 export const router = express.Router()
 
-const isSuperAdmin = (req, res, next) => {
+const isSuperAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (req.user && req.user.adminMode) return next()
   if (req.query.key === config.secretKeys.limits) return next()
   res.status(401).type('text/plain').send()
 }
 
-const isAccountMember = (req, res, next) => {
+const isAccountMember = (req: Request, res: Response, next: NextFunction) => {
   if (req.query.key === config.secretKeys.limits) return next()
   if (!req.user) return res.status(401).type('text/plain').send()
   if (req.user.adminMode) return next()
@@ -109,7 +110,7 @@ const isAccountMember = (req, res, next) => {
 }
 
 // Endpoint for customers service to create/update limits
-router.post('/:type/:id', isSuperAdmin, async (req, res, next) => {
+router.post('/:type/:id', isSuperAdmin as RequestHandler, async (req, res, next) => {
   const db = mongo.db
   req.body.type = req.params.type
   req.body.id = req.params.id
@@ -126,18 +127,20 @@ router.post('/:type/:id', isSuperAdmin, async (req, res, next) => {
 })
 
 // A user can get limits information for himself only
-router.get('/:type/:id', isAccountMember, async (req, res, next) => {
-  const limits = await getLimits(mongo.db, { type: req.params.type, id: req.params.id })
-  if (!limits) return res.status(404).send()
-  delete limits._id
+router.get('/:type/:id', isAccountMember as RequestHandler, async (req, res, next) => {
+  const limits = await getLimits({ type: req.params.type as 'user' | 'organization', id: req.params.id })
+  if (!limits) {
+    res.status(404).send()
+    return
+  }
   res.send(limits)
 })
 
-router.get('/', isSuperAdmin, async (req, res, next) => {
-  const filter = {}
+router.get('/', isSuperAdmin as RequestHandler, async (req, res, next) => {
+  const filter: Filter<Limits> = {}
   if (req.query.type) filter.type = req.query.type
   if (req.query.id) filter.id = req.query.id
-  const results = await mongo.db.collection('limits')
+  const results = await mongo.limits
     .find(filter)
     .sort({ lastUpdate: -1 })
     .project({ _id: 0 })

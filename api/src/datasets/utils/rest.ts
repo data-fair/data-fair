@@ -5,10 +5,10 @@ import crypto from 'node:crypto'
 import fs from 'fs-extra'
 import path from 'path'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { ajv } from '@data-fair/data-fair-shared/ajv.js'
 import { errorsText } from '@data-fair/lib-validation'
 import { nanoid } from 'nanoid'
 import pump from '../../misc/utils/pipe.ts'
-import * as ajv from '../../misc/utils/ajv.js'
 import multer from 'multer'
 import mime from 'mime-types'
 import { Readable, Transform, Writable } from 'stream'
@@ -20,7 +20,7 @@ import LinkHeader from 'http-link-header'
 import unzipper from 'unzipper'
 import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration.js'
-import * as storageUtils from './storage.js'
+import * as storageUtils from './storage.ts'
 import * as extensionsUtils from './extensions.js'
 import * as findUtils from '../../misc/utils/find.js'
 import * as fieldsSniffer from './fields-sniffer.js'
@@ -32,13 +32,13 @@ import { tabularTypes } from './types.js'
 import { Piscina } from 'piscina'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RequestWithAuth } from '#types'
-import { NextFunction, Response, type RequestHandler } from 'express'
+import type { NextFunction, Response, RequestHandler } from 'express'
 import type { Account, User } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
-import { RequestWithRestDataset } from '#types/dataset/index.ts'
-import { Collection, Filter, UnorderedBulkOperation, UpdateFilter } from 'mongodb'
+import type { RequestWithRestDataset } from '#types/dataset/index.ts'
+import type { Collection, Filter, UnorderedBulkOperation, UpdateFilter } from 'mongodb'
 import iterHits from '../es/iter-hits.js'
-import { Stream } from 'node:stream'
+import type { Stream } from 'node:stream'
 
 type Operation = {
   _id: string,
@@ -647,7 +647,7 @@ const compileSchema = (dataset: RestDataset, adminMode: boolean) => {
   schema.properties._id = { type: 'string' }
   // super-admins can set _updatedAt and so rewrite history
   if (adminMode) schema.properties._updatedAt = { type: 'string', format: 'date-time' }
-  return ajv.compile(schema, false) as ValidateFunction
+  return ajv.compile(schema)
 }
 
 async function checkMatchingAttachment (req: { body: any }, lineId: string, dir: string, pathField: { key: string }) {
@@ -747,7 +747,7 @@ export const deleteLine = async (req: RequestWithAuth & RequestWithRestDataset &
 
   // TODO: delete the attachment if it is the primary key ?
   res.status(204).send()
-  storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
+  storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
 }
 
 export const createOrUpdateLine = async (req: RequestWithAuth & RequestWithRestDataset, res: Response, next: NextFunction) => {
@@ -768,7 +768,7 @@ export const createOrUpdateLine = async (req: RequestWithAuth & RequestWithRestD
 
   const line = getLineFromOperation(operation)
   res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
-  storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
+  storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
 }
 
 export const patchLine = async (req: RequestWithAuth & RequestWithRestDataset, res: Response, next: NextFunction) => {
@@ -784,7 +784,7 @@ export const patchLine = async (req: RequestWithAuth & RequestWithRestDataset, r
 
   const line = getLineFromOperation(operation)
   res.status(200).send(cleanLine(line))
-  storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
+  storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
 }
 
 export const deleteAllLines = async (req: RequestWithAuth & RequestWithRestDataset, res: Response, next: NextFunction) => {
@@ -798,7 +798,7 @@ export const deleteAllLines = async (req: RequestWithAuth & RequestWithRestDatas
   await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
 
   res.status(204).send()
-  storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
+  storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
 }
 
 type ReqFile = { filename: string, originalname: string, mimetype: string, path: string }
@@ -938,7 +938,7 @@ export const bulkLines = async (req: RequestWithAuth & RequestWithRestDataset & 
     res.write(JSON.stringify(summary, null, 2))
     res.end()
 
-    storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
+    storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
   } finally {
     for (const file of req.files?.actions || []) {
       await fs.unlink(file.path)
@@ -978,7 +978,7 @@ export const syncAttachmentsLines = async (req: RequestWithAuth & RequestWithRes
   await pump([filesStream, transactionStream])
 
   await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
-  await storageUtils.updateStorage(req.app, req.dataset)
+  await storageUtils.updateStorage(req.dataset)
 
   res.send(summary)
 }
@@ -1083,7 +1083,7 @@ class MarkIndexedStream extends Writable {
   bulkOp: UnorderedBulkOperation | null = null
 
   constructor (dataset: RestDataset) {
-    super()
+    super({ objectMode: true })
     this.c = collection(dataset)
   }
 

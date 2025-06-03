@@ -5,7 +5,7 @@ import * as geoUtils from '../datasets/utils/geo.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetService from '../datasets/service.js'
 import * as attachmentsUtils from '../datasets/utils/attachments.js'
-import * as virtualDatasetsUtils from '../datasets/utils/virtual.js'
+import * as virtualDatasetsUtils from '../datasets/utils/virtual.ts'
 import taskProgress from '../datasets/utils/task-progress.js'
 import * as restDatasetsUtils from '../datasets/utils/rest.ts'
 import dayjs from 'dayjs'
@@ -29,8 +29,8 @@ export const process = async function (app, _dataset) {
   const result = { status: 'finalized', schema: dataset.schema }
 
   if (dataset.isVirtual) {
-    queryableDataset.descendants = await virtualDatasetsUtils.descendants(db, dataset, false)
-    queryableDataset.schema = result.schema = await virtualDatasetsUtils.prepareSchema(db, dataset)
+    queryableDataset.descendants = await virtualDatasetsUtils.descendants(dataset, false)
+    queryableDataset.schema = result.schema = await virtualDatasetsUtils.prepareSchema(dataset)
   }
 
   // Add the calculated fields to the schema
@@ -125,14 +125,14 @@ export const process = async function (app, _dataset) {
   result.esWarning = await esUtils.datasetWarning(es, dataset)
 
   if (dataset.isRest) {
-    await restDatasetsUtils.configureHistory(app, dataset)
+    await restDatasetsUtils.configureHistory(dataset)
   }
 
   result.finalizedAt = (new Date()).toISOString()
 
   // virtual datasets have to be re-counted here (others were implicitly counted at index step)
   if (dataset.isVirtual) {
-    const descendants = await virtualDatasetsUtils.descendants(db, dataset, false, ['dataUpdatedAt', 'dataUpdatedBy'])
+    const descendants = await virtualDatasetsUtils.descendants(dataset, false, ['dataUpdatedAt', 'dataUpdatedBy'])
     dataset.descendants = descendants.map(d => d.id)
     const lastDataUpdate = descendants.filter(d => !!d.dataUpdatedAt).sort((d1, d2) => d1.dataUpdatedAt > d2.dataUpdatedAt ? 1 : -1).pop()
     if (lastDataUpdate) {
@@ -164,7 +164,7 @@ export const process = async function (app, _dataset) {
     await attachmentsUtils.removeAll(dataset)
   }
 
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset)
+  if (!dataset.draftReason) await datasetUtils.updateStorage(dataset)
 
   // parent virtual datasets have to be re-finalized too
   if (!dataset.draftReason) {

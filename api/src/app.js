@@ -43,7 +43,7 @@ export const run = async () => {
   }
 
   if (config.mode.includes('server')) {
-    const limits = await import('./misc/utils/limits.js')
+    const limits = await import('./misc/utils/limits.ts')
     const rateLimiting = await import('./misc/utils/rate-limiting.js')
     const session = (await import('@data-fair/sd-express')).default({
       directoryUrl: config.directoryUrl,
@@ -253,7 +253,6 @@ export const run = async () => {
     // Error management
     app.use(errorHandler)
 
-    const limits = await import('./misc/utils/limits.js')
     const permissions = await import('./misc/utils/permissions.js')
     const { readApiKey } = await import('./misc/utils/api-key.js')
     await Promise.all([
@@ -261,7 +260,6 @@ export const run = async () => {
       (await import('./misc/utils/cache.js')).init(db),
       (await import('./remote-services/utils.js')).init(db),
       (await import('./base-applications/router.js')).init(db),
-      limits.init(db),
       wsServer.start(server, db, async (channel, sessionState, message) => {
         if (process.env.NODE_ENV === 'test') {
           // TODO: remove this ugly exception, this code should be tested

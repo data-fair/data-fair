@@ -181,5 +181,5 @@ export const process = async function (app, dataset) {
   if (dataset.analysis) patch.analysis = dataset.analysis
 
   await datasetService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
+  if (!dataset.draftReason) await datasetUtils.updateStorage(dataset, false, true)
 }

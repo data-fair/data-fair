@@ -4,6 +4,7 @@ import path from 'node:path'
 import { readFileSync } from 'node:fs'
 import config from '../api/src/config.ts'
 import mongo from '../api/src/mongo.ts'
+import es from '../api/src/es.ts'
 import fs from 'fs-extra'
 import nock from 'nock'
 import * as workers from '../api/src/workers/index.js'
@@ -111,7 +112,8 @@ before('init globals', async function () {
   await mongo.init()
   global.db = mongo.db
   global.mongoClient = mongo.client
-  global.es = await (await import('../api/src/datasets/es/index.ts')).init()
+  await es.init()
+  global.es = es.client
 
   global.ax = {}
   global.ax.builder = async (email, password, org, adminMode = false, opts = {}) => {

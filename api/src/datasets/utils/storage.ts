@@ -1,32 +1,26 @@
-import * as virtualDatasetsUtils from './virtual.js'
+import * as virtualDatasetsUtils from './virtual.ts'
 import * as esUtils from '../es/index.ts'
 import * as restDatasetsUtils from './rest.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
 import fs from 'fs-extra'
-import * as limits from '../../misc/utils/limits.js'
+import * as limits from '../../misc/utils/limits.ts'
 import config from '#config'
 import mongo from '#mongo'
+import es from '#es'
 import debug from 'debug'
 import { dataFiles, lsAttachments, lsMetadataAttachments, attachmentPath, metadataAttachmentPath } from './files.ts'
+import type { Account, AccountKeys } from '@data-fair/lib-express'
+import type { Dataset, VirtualDataset } from '#types'
+import { isVirtualDataset } from '#types/dataset/index.ts'
+import { isRestDataset } from '@data-fair/data-fair-shared/types-utils.ts'
 
 const debugLimits = debug('limits')
 
-/**
- * @param {import('mongodb').Db} db
- * @param {string} locale
- * @param {any} owner
- * @param {any} overwriteDataset
- * @param {number} contentLength
- * @param {boolean} overwrite
- * @param {boolean} indexed
- * @returns
- */
-export const checkStorage = async (db, locale, owner, overwriteDataset, contentLength, indexed = false) => {
+export const checkStorage = async (locale: string, owner: Account, overwriteDataset: Dataset, contentLength: number, indexed = false) => {
   const estimatedContentSize = contentLength - 210
 
-  /** @type {any} */
-  const debugInfo = { owner, estimatedContentSize }
+  const debugInfo: any = { owner, estimatedContentSize }
 
   if (config.defaultLimits.datasetStorage !== -1 && config.defaultLimits.datasetStorage < estimatedContentSize) {
     debugLimits('datasetStorage/checkStorage', debugInfo)
@@ -36,13 +30,13 @@ export const checkStorage = async (db, locale, owner, overwriteDataset, contentL
     debugLimits('datasetIndexed/checkStorage', debugInfo)
     throw httpError(413, 'Vous dépassez la taille de données indexées autorisée pour ce jeu de données.')
   }
-  const remaining = await limits.remaining(db, owner)
+  const remaining = await limits.remaining(owner)
   debugInfo.remaining = { ...remaining }
   if (overwriteDataset && overwriteDataset.storage) {
     debugInfo.overwriteDataset = overwriteDataset.storage
     // ignore the size of the dataset we are overwriting
-    if (remaining.storage !== -1) remaining.storage += overwriteDataset.storage.size
-    if (remaining.indexed !== -1) remaining.indexed += overwriteDataset.storage.size
+    if (remaining.storage !== -1) remaining.storage += overwriteDataset.storage.size ?? 0
+    if (remaining.indexed !== -1) remaining.indexed += overwriteDataset.storage.size ?? 0
   }
   const storageOk = remaining.storage === -1 || ((remaining.storage - estimatedContentSize) >= 0)
   const indexedOk = !indexed || remaining.indexed === -1 || ((remaining.indexed - estimatedContentSize) >= 0)
@@ -58,28 +52,29 @@ export const checkStorage = async (db, locale, owner, overwriteDataset, contentL
   }
 }
 
-export const storage = async (db, es, dataset) => {
-  const storage = {
+export const storage = async (dataset: Dataset) => {
+  // TODO: apply Storage type
+  const storage: any = {
     size: 0,
     dataFiles: await dataFiles(dataset),
-    indexed: { size: 0, parts: [] },
+    indexed: { size: 0, parts: [] as string[] },
     attachments: { size: 0, count: 0 },
     metadataAttachments: { size: 0, count: 0 },
     masterData: { size: 0, count: 0 }
   }
   for (const df of storage.dataFiles) delete df.url
 
-  if (dataset.isVirtual) {
-    const descendants = await virtualDatasetsUtils.descendants(db, dataset, false, ['storage', 'owner', 'masterData', 'count'], false)
+  if (isVirtualDataset(dataset)) {
+    const descendants = await virtualDatasetsUtils.descendants(dataset, false, ['storage', 'owner', 'masterData', 'count'], false)
     let masterDataSize = 0
     const masterDataCount = 0
     for (const descendant of descendants) {
       if (!descendant?.masterData?.virtualDatasets?.active) continue
       if (descendant.owner.type === dataset.owner.type && descendant.owner.id === dataset.owner.id) continue
-      const remoteService = await db.collection('remote-services').findOne({ id: 'dataset:' + descendant.id })
+      const remoteService = await mongo.db.collection('remote-services').findOne({ id: 'dataset:' + descendant.id })
       if (!remoteService) throw new Error(`missing remote service dataset:${descendant.id}`)
       let storageRatio = remoteService.virtualDatasets?.storageRatio || 0
-      const queryableDataset = { ...dataset }
+      const queryableDataset: VirtualDataset = { ...dataset }
       queryableDataset.descendants = [descendant.id]
       const count = await esUtils.count(es, queryableDataset, {})
       storageRatio *= (count / descendant.count)
@@ -91,7 +86,7 @@ export const storage = async (db, es, dataset) => {
   }
 
   // storage used by data-files
-  const dataFilesObj = storage.dataFiles.reduce((obj, df) => { obj[df.key] = df; return obj }, {})
+  const dataFilesObj = storage.dataFiles.reduce((obj: any, df: any) => { obj[df.key] = df; return obj }, {})
   for (const dataFile of storage.dataFiles) {
     storage.size += dataFile.size
   }
@@ -113,23 +108,27 @@ export const storage = async (db, es, dataset) => {
   }
 
   // storage used by mongodb collections
-  if (dataset.isRest) {
-    const collection = await restDatasetsUtils.collection(db, dataset)
+  if (isRestDataset(dataset)) {
+    const collection = await restDatasetsUtils.collection(dataset)
     const stats = await collection.aggregate([{ $collStats: { storageStats: {} } }]).next()
-    storage.collection = { size: stats.storageStats.size, count: stats.storageStats.count }
-    storage.size += storage.collection.size
-    storage.indexed = {
-      size: storage.collection.size,
-      parts: ['collection']
+    if (stats) {
+      storage.collection = { size: stats.storageStats.size, count: stats.storageStats.count }
+      storage.size += storage.collection.size
+      storage.indexed = {
+        size: storage.collection.size,
+        parts: ['collection']
+      }
     }
 
     if (dataset.rest && dataset.rest.history) {
       try {
-        const revisionsCollection = await restDatasetsUtils.revisionsCollection(db, dataset)
+        const revisionsCollection = await restDatasetsUtils.revisionsCollection(dataset)
         const revisionsStats = await revisionsCollection.aggregate([{ $collStats: { storageStats: {} } }]).next()
-        // we remove 60 bytes per line that are not really part of the original payload but added by _action, _updatedAt, _hash and _i.
-        storage.revisions = { size: revisionsStats.storageStats.size, count: revisionsStats.storageStats.count }
-        storage.size += storage.revisions.size
+        if (revisionsStats) {
+          // we remove 60 bytes per line that are not really part of the original payload but added by _action, _updatedAt, _hash and _i.
+          storage.revisions = { size: revisionsStats.storageStats.size, count: revisionsStats.storageStats.count }
+          storage.size += storage.revisions.size
+        }
       } catch (err) {
         // ignore, this is probably a new dataset whose revisions collection was not initialized
       }
@@ -137,7 +136,7 @@ export const storage = async (db, es, dataset) => {
   }
 
   // storage used by attachments
-  const documentProperty = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+  const documentProperty = dataset.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (documentProperty && !dataset.isVirtual) {
     const attachments = await lsAttachments(dataset)
     for (const attachment of attachments) {
@@ -163,41 +162,39 @@ export const storage = async (db, es, dataset) => {
 }
 
 // After a change that might impact consumed storage, we store the value
-export const updateStorage = async (app, dataset, deleted = false, checkRemaining = false) => {
-  const db = mongo.db
-  const es = app.get('es')
+export const updateStorage = async (dataset: Dataset, deleted = false, checkRemaining = false) => {
   if (dataset.draftReason) {
     console.log(new Error('updateStorage should not be called on a draft dataset'))
     return
   }
   if (!deleted) {
-    await db.collection('datasets').updateOne({ id: dataset.id }, {
+    await mongo.datasets.updateOne({ id: dataset.id }, {
       $set: {
-        storage: await storage(db, es, dataset)
+        storage: await storage(dataset)
       }
     })
   }
-  return updateTotalStorage(db, dataset.owner, checkRemaining)
+  return updateTotalStorage(dataset.owner, checkRemaining)
 }
 
-export const updateTotalStorage = async (db, owner, checkRemaining = false) => {
+export const updateTotalStorage = async (owner: AccountKeys, checkRemaining = false) => {
   const aggQuery = [
     { $match: { 'owner.type': owner.type, 'owner.id': owner.id } },
     { $project: { 'storage.size': 1, 'storage.indexed.size': 1 } },
     { $group: { _id: null, size: { $sum: '$storage.size' }, indexed: { $sum: '$storage.indexed.size' }, count: { $sum: 1 } } }
   ]
-  const res = await db.collection('datasets').aggregate(aggQuery).toArray()
+  const res = await mongo.datasets.aggregate(aggQuery).toArray()
   const totalStorage = { size: (res[0] && res[0].size) || 0, indexed: (res[0] && res[0].indexed) || 0, count: (res[0] && res[0].count) || 0 }
 
-  const appRes = await db.collection('applications').aggregate(aggQuery).toArray()
+  const appRes = await mongo.applications.aggregate(aggQuery).toArray()
   totalStorage.size += (appRes[0] && appRes[0].size) || 0
 
-  await limits.setConsumption(db, owner, 'store_bytes', totalStorage.size)
-  await limits.setConsumption(db, owner, 'indexed_bytes', totalStorage.indexed)
-  await limits.setConsumption(db, owner, 'nb_datasets', totalStorage.count)
+  await limits.setConsumption(owner, 'store_bytes', totalStorage.size)
+  await limits.setConsumption(owner, 'indexed_bytes', totalStorage.indexed)
+  await limits.setConsumption(owner, 'nb_datasets', totalStorage.count)
 
   if (checkRemaining && process.env.NO_STORAGE_CHECK !== 'true') {
-    const remaining = await limits.remaining(db, owner)
+    const remaining = await limits.remaining(owner)
     if (remaining.storage === 0) {
       debugLimits('exceedLimitStorage/updateTotalStorage', { owner, remaining })
       throw httpError(429, 'Vous avez atteint la limite de votre espace de stockage.')

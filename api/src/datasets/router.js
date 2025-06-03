@@ -29,7 +29,7 @@ import * as tiles from './utils/tiles.ts'
 import * as cache from '../misc/utils/cache.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as outputs from './utils/outputs.js'
-import * as limits from '../misc/utils/limits.js'
+import * as limits from '../misc/utils/limits.ts'
 import { extend } from './utils/extensions.js'
 import * as notifications from '../misc/utils/notifications.js'
 import userNotificationSchema from '../../contract/user-notification.js'
@@ -46,7 +46,7 @@ import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetData
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/data-schema.js'
 import { dir, attachmentsDir } from './utils/files.ts'
 import { preparePatch } from './utils/patch.js'
-import { updateTotalStorage } from './utils/storage.js'
+import { updateTotalStorage } from './utils/storage.ts'
 import { checkStorage, lockDataset, readDataset } from './middlewares.js'
 import config from '#config'
 import mongo from '#mongo'
@@ -236,7 +236,7 @@ router.put('/:datasetId/owner', readDataset(), apiKeyMiddleware, permissions.mid
   }
 
   if (req.body.type !== req.dataset.owner.type && req.body.id !== req.dataset.owner.id) {
-    const remaining = await limits.remaining(mongo.db, req.body)
+    const remaining = await limits.remaining(req.body)
     if (remaining.nbDatasets === 0) {
       debugLimits('exceedLimitNbDatasets/changeOwner', { owner: req.body, remaining })
       return res.status(429).type('text/plain').send(req.__('errors.exceedLimitNbDatasets'))
@@ -314,8 +314,8 @@ router.put('/:datasetId/owner', readDataset(), apiKeyMiddleware, permissions.mid
 
   await syncRemoteService(mongo.db, patchedDataset)
 
-  await updateTotalStorage(mongo.db, dataset.owner)
-  await updateTotalStorage(mongo.db, patch.owner)
+  await updateTotalStorage(dataset.owner)
+  await updateTotalStorage(patch.owner)
 
   res.status(200).json(clean(req, patchedDataset))
 })
@@ -345,7 +345,7 @@ router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft:
   }, sessionState)
 
   await syncRemoteService(mongo.db, { ...datasetFull, masterData: null })
-  await updateTotalStorage(mongo.db, datasetFull.owner)
+  await updateTotalStorage(datasetFull.owner)
   res.sendStatus(204)
 })
 
@@ -376,7 +376,7 @@ const createDatasetRoute = async (req, res) => {
     if (!permissions.canDoForOwner(owner, 'datasets', 'post', user)) {
       throw httpError(403, req.__('errors.missingPermission'))
     }
-    if ((await limits.remaining(db, owner)).nbDatasets === 0) {
+    if ((await limits.remaining(owner)).nbDatasets === 0) {
       debugLimits('exceedLimitNbDatasets/beforeUpload', { owner })
       throw httpError(429, req.__('errors.exceedLimitNbDatasets'))
     }
@@ -397,11 +397,11 @@ const createDatasetRoute = async (req, res) => {
     if (dataset.isRest && dataset.status === 'finalized') {
       // case where we simply initialize the empty dataset
       // being empty this is not costly and can be performed by the API
-      await restDatasetsUtils.initDataset(db, dataset)
+      await restDatasetsUtils.initDataset(dataset)
       const indexName = await esUtils.initDatasetIndex(es, dataset)
       await esUtils.switchAlias(es, dataset, indexName)
-      await restDatasetsUtils.configureHistory(req.app, dataset)
-      await datasetUtils.updateStorage(req.app, dataset)
+      await restDatasetsUtils.configureHistory(dataset)
+      await datasetUtils.updateStorage(dataset)
       onClose(() => {
         // this is only to maintain compatibilty, but clients should look for the status in the response
         // and not wait for an event if the dataset is created already finalized
@@ -411,7 +411,7 @@ const createDatasetRoute = async (req, res) => {
       })
     }
     if (dataset.isMetaOnly) {
-      await datasetUtils.updateStorage(req.app, dataset)
+      await datasetUtils.updateStorage(dataset)
     }
 
     eventsLog.info('df.datasets.create', `created a dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
@@ -580,7 +580,7 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
     resource: { type: 'dataset', title: dataset.title, id: dataset.id }
   }, sessionState)
 
-  await datasetUtils.updateStorage(req.app, patchedDataset)
+  await datasetUtils.updateStorage(patchedDataset)
   return res.send(patchedDataset)
 })
 
@@ -1191,7 +1191,7 @@ router.get('/:datasetId/data-files/*filePath', readDataset(), apiKeyMiddleware, 
 router.post('/:datasetId/metadata-attachments', readDataset(), apiKeyMiddleware, permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, async (req, res, next) => {
   req.body.size = (await fs.promises.stat(req.file.path)).size
   req.body.updatedAt = moment().toISOString()
-  await datasetUtils.updateStorage(req.app, req.dataset)
+  await datasetUtils.updateStorage(req.dataset)
   res.status(200).send(req.body)
 })
 router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), apiKeyMiddleware, permissions.middleware('downloadMetadataAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
@@ -1279,7 +1279,7 @@ router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), ap
 
 router.delete('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), apiKeyMiddleware, permissions.middleware('deleteMetadataAttachment', 'write'), async (req, res, next) => {
   await fs.remove(datasetUtils.metadataAttachmentPath(req.dataset, path.join(...req.params.attachmentPath)))
-  await datasetUtils.updateStorage(req.app, req.dataset)
+  await datasetUtils.updateStorage(req.dataset)
   res.status(204).send()
 })
 

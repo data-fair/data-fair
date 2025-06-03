@@ -1,7 +1,7 @@
 import { Readable, Transform, Writable } from 'stream'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mimeTypeStream from 'mime-type-stream'
-import * as virtualDatasetsUtils from './virtual.js'
+import * as virtualDatasetsUtils from './virtual.ts'
 import batchStream from '../../misc/utils/batch-stream.js'
 import * as esUtils from '../es/index.ts'
 import pump from '../../misc/utils/pipe.ts'
@@ -26,7 +26,7 @@ export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearch
   const bulkSearch = dataset.masterData && dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.find(bs => bs.id === bulkSearchId)
   if (!bulkSearch) throw httpError(404, `Recherche en masse "${bulkSearchId}" inconnue`)
 
-  if (dataset.isVirtual) dataset.descendants = await virtualDatasetsUtils.descendants(db, dataset, true)
+  if (dataset.isVirtual) dataset.descendants = await virtualDatasetsUtils.descendants(dataset, true)
   const _source = (select && select !== '*') ? select.split(',') : dataset.schema.filter(prop => !prop['x-calculated']).map(prop => prop.key)
   const unknownField = _source.find(s => !dataset.schema.find(p => p.key === s))
   if (unknownField) throw httpError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données.`)

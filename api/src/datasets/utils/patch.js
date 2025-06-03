@@ -10,7 +10,7 @@ import * as geo from './geo.js'
 import * as datasetUtils from './index.js'
 import * as extensions from './extensions.js'
 import * as schemaUtils from './data-schema.js'
-import * as virtualDatasetsUtils from './virtual.js'
+import * as virtualDatasetsUtils from './virtual.ts'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import catalogsPublicationQueue from '../../misc/utils/catalogs-publication-queue.ts'
 
@@ -178,7 +178,7 @@ export const preparePatch = async (app, patch, dataset, user, locale, draftValid
     }
   } else if (dataset.isVirtual) {
     if (patch.schema || patch.virtual) {
-      patch.schema = await virtualDatasetsUtils.prepareSchema(db, { ...dataset, ...patch })
+      patch.schema = await virtualDatasetsUtils.prepareSchema({ ...dataset, ...patch })
       patch.status = 'indexed'
     }
   } else if (patch.extensions && !dataset.isRest) {

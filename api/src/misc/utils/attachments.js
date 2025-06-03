@@ -1,5 +1,4 @@
 import config from '#config'
-import mongo from '#mongo'
 import debugLib from 'debug'
 import fs from 'fs-extra'
 import multer from 'multer'
@@ -7,7 +6,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mime from 'mime-types'
 import { metadataAttachmentsDir as datasetAttachmentsDir, metadataAttachmentPath as datasetAttachmentPath } from '../../datasets/utils/files.ts'
 import { attachmentsDir as applicationAttachmentsDir, attachmentPath as applicationAttachmentPath } from '../../applications/utils.js'
-import * as limits from './limits.js'
+import * as limits from './limits.ts'
 
 const debug = debugLib('attachments')
 const debugLimits = debugLib('limits')
@@ -49,7 +48,7 @@ const metadataUploadMulter = multer({
         debugLimits('attachmentStorage/metadataUpload', { attachmentLimit, estimatedFileSize })
         throw httpError(413, 'Attachment size exceeds the authorized limit')
       }
-      const remaining = await limits.remaining(mongo.db, req.resource.owner)
+      const remaining = await limits.remaining(req.resource.owner)
       const debugInfo = { owner: req.resource.owner, remaining: { ...remaining }, estimatedFileSize }
       if (remaining.storage !== -1) {
         // Ignore the size of the attachment we are overwriting

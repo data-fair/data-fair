@@ -113,6 +113,6 @@ export const process = async function (app, dataset) {
   await fs.remove(loadingDir)
 
   await datasetsService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset)
+  if (!dataset.draftReason) await datasetUtils.updateStorage(dataset)
   debug('done')
 }

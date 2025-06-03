@@ -79,7 +79,7 @@ export const process = async function (app, dataset) {
     if (dataset.file && await fs.pathExists(datasetUtils.fullFilePath(dataset))) {
       debug('Delete previously extended file')
       await fs.remove(datasetUtils.fullFilePath(dataset))
-      if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
+      if (!dataset.draftReason) await datasetUtils.updateStorage(dataset, false, true)
     }
   }
 

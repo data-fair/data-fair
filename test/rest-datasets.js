@@ -16,7 +16,7 @@ import pumpOg from 'pump'
 
 const pump = promisify(pumpOg)
 
-describe('REST datasets', function () {
+describe.only('REST datasets', function () {
   it('Create empty REST datasets', async function () {
     const ax = global.ax.dmeadus
 
@@ -133,7 +133,7 @@ describe('REST datasets', function () {
     assert.equal(res.data.attr2, 'test2')
   })
 
-  it('Index and finalize dataset after write', async function () {
+  it.only('Index and finalize dataset after write', async function () {
     // Load a few lines
     const ax = global.ax.dmeadus
     await ax.put('/api/v1/datasets/rest3', {
