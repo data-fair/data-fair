@@ -16,7 +16,7 @@ import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.t
 import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile, metadataAttachmentsDir } from './utils/files.ts'
 import { getSchemaBreakingChanges } from './utils/data-schema.js'
-import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.js'
+import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import { validateURLFriendly } from '../misc/utils/validation.js'
 import assertImmutable from '../misc/utils/assert-immutable.js'
 import { curateDataset, titleFromFileName } from './utils/index.js'
@@ -228,8 +228,8 @@ export const createDataset = async (db, es, locale, user, owner, body, files, dr
   dataset.schema = dataset.schema || []
   if (dataset.extensions) {
     prepareExtensions(locale, dataset.extensions)
-    await checkExtensions(db, await datasetUtils.extendedSchema(db, dataset), dataset.extensions)
-    dataset.schema = await prepareExtensionsSchema(db, dataset.schema, dataset.extensions)
+    await checkExtensions(await datasetUtils.extendedSchema(db, dataset), dataset.extensions)
+    dataset.schema = await prepareExtensionsSchema(dataset.schema, dataset.extensions)
   }
   curateDataset(dataset)
   permissions.initResourcePermissions(dataset)
@@ -344,7 +344,7 @@ export const deleteDataset = async (app, dataset) => {
   }
   if (dataset.isRest) {
     try {
-      await restDatasetsUtils.deleteDataset(db, dataset)
+      await restDatasetsUtils.deleteDataset(dataset)
     } catch (err) {
       console.warn('Error while removing mongodb collection for REST dataset', err)
     }
@@ -403,7 +403,7 @@ export const applyPatch = async (app, dataset, patch, removedRestProps, attemptM
         if (e.type === 'remoteService') unset[getExtensionKey(e)] = ''
         if (e.type === 'exprEval') unset[e.property?.key] = ''
       }
-      await restDatasetsUtils.collection(db, dataset).updateMany({},
+      await restDatasetsUtils.collection(dataset).updateMany({},
         { $unset: unset }
       )
     }
@@ -411,7 +411,7 @@ export const applyPatch = async (app, dataset, patch, removedRestProps, attemptM
 
   if (removedRestProps && removedRestProps.length) {
     // some property was removed in rest dataset, trigger full re-indexing
-    await restDatasetsUtils.collection(db, dataset).updateMany({},
+    await restDatasetsUtils.collection(dataset).updateMany({},
       { $unset: removedRestProps.reduce((a, df) => { a[df.key] = ''; return a }, {}) }
     )
   }

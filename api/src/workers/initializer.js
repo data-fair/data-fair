@@ -4,13 +4,14 @@ import { Readable, Transform } from 'stream'
 import pump from '../misc/utils/pipe.ts'
 import * as restUtils from '../datasets/utils/rest.ts'
 import * as datasetUtils from '../datasets/utils/index.js'
+import { updateStorage } from '../datasets/utils/storage.ts'
 import * as datasetsService from '../datasets/service.js'
 import { getPseudoUser } from '../misc/utils/users.js'
 import * as permissionsUtils from '../misc/utils/permissions.js'
 import { lsMetadataAttachments, metadataAttachmentPath, lsAttachments, attachmentPath } from '../datasets/utils/files.ts'
 import { applyTransactions } from '../datasets/utils/rest.ts'
 import iterHits from '../datasets/es/iter-hits.js'
-import taskProgress from '../datasets/utils/task-progress.js'
+import taskProgress from '../datasets/utils/task-progress.ts'
 import * as filesUtils from '../datasets/utils/files.ts'
 import * as virtualDatasetsUtils from '../datasets/utils/virtual.ts'
 
@@ -81,7 +82,7 @@ export const process = async function (app, dataset) {
       count += metadataAttachments.length
     }
 
-    const progress = taskProgress(app, dataset.id, eventsPrefix, count)
+    const progress = taskProgress(dataset.id, eventsPrefix, count)
 
     if (dataset.initFrom.parts.includes('schema')) {
       if (dataset.initFrom.parts.includes('extensions')) {
@@ -144,7 +145,7 @@ export const process = async function (app, dataset) {
             }
           }
           const transactions = hits.map(hit => ({ _action: 'create', _id: hit._id, ...flatten(hit._source) }))
-          await applyTransactions(db, dataset, pseudoUser, transactions)
+          await applyTransactions(dataset, pseudoUser, transactions)
           await progress.inc(transactions.length)
         }
       } else if (parentDataset.file) {
@@ -167,7 +168,7 @@ export const process = async function (app, dataset) {
         await fs.ensureFile(filePath)
 
         let inputStreams
-        if (parentDataset.isRest) inputStreams = await restUtils.readStreams(db, parentDataset)
+        if (parentDataset.isRest) inputStreams = await restUtils.readStreams(parentDataset)
         else if (parentDataset.isVirtual) {
           const select = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => p.key)
           if (hasAttachments && parentDataset.isVirtual) select.push('_attachment_url')
@@ -252,6 +253,6 @@ export const process = async function (app, dataset) {
   }
 
   await datasetsService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(dataset)
+  if (!dataset.draftReason) await updateStorage(dataset)
   debug('done')
 }

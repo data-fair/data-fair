@@ -21,7 +21,7 @@ import unzipper from 'unzipper'
 import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration.js'
 import * as storageUtils from './storage.ts'
-import * as extensionsUtils from './extensions.js'
+import * as extensionsUtils from './extensions.ts'
 import * as findUtils from '../../misc/utils/find.js'
 import * as fieldsSniffer from './fields-sniffer.js'
 import { transformFileStreams, formatLine } from './data-streams.js'
@@ -38,7 +38,6 @@ import { type ValidateFunction } from 'ajv'
 import type { RequestWithRestDataset } from '#types/dataset/index.ts'
 import type { Collection, Filter, UnorderedBulkOperation, UpdateFilter } from 'mongodb'
 import iterHits from '../es/iter-hits.js'
-import type { Stream } from 'node:stream'
 
 type Operation = {
   _id: string,
@@ -238,7 +237,7 @@ const checkMissingIdsRevisions = async (tmpDataset: RestDataset, dataset: RestDa
     const datasetCreatedAt = new Date(dataset.createdAt).getTime()
     let i = 0
     const revisionsBulkOp = revisionsCollection(dataset).initializeUnorderedBulkOp()
-    for await (const missingDoc of mongo.datasets.find({ _id: { $in: [...missingIds] } }).project(getPrimaryKeyProjection(dataset))) {
+    for await (const missingDoc of collection(dataset).find({ _id: { $in: [...missingIds] } }).project(getPrimaryKeyProjection(dataset))) {
       i++
       if (missingDoc._deleted) continue
       const revision: DatasetLineRevision = {
@@ -421,7 +420,7 @@ export const applyTransactions = async (dataset: RestDataset, user: User | undef
       operation._status = 400
       operation._error = 'identifiant de ligne incompatible avec la clé primaire'
     } else if (validate && !validate(operation.body)) {
-      operation._error = errorsText(validate.errors)
+      operation._error = errorsText(validate.errors, '')
       operation._status = 400
     } else if (operation._action !== 'patch') {
       operation.fullBody._hash = getLineHash(operation.body)
@@ -707,10 +706,11 @@ async function commitSingleLine (dataset: RestDataset, lineId: string) {
   }
   const attachments = !!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   const indexName = esUtils.aliasName(dataset)
-  const streams: Stream[] = await readStreams(dataset, { _id: lineId })
-  streams.push(esUtils.indexStream({ esClient: es.client, indexName, dataset, attachments, refresh: config.elasticsearch.singleLineOpRefresh }))
-  streams.push(markIndexedStream(dataset))
-  await pump(streams)
+  await pump(
+    ...await readStreams(dataset, { _id: lineId }),
+    esUtils.indexStream({ esClient: es.client, indexName, dataset, attachments, refresh: config.elasticsearch.singleLineOpRefresh }),
+    markIndexedStream(dataset)
+  )
 
   await mongo.datasets.updateOne({ id: dataset.id, _partialRestStatus: { $exists: false } }, {
     $set: {
@@ -805,7 +805,6 @@ type ReqFile = { filename: string, originalname: string, mimetype: string, path:
 
 export const bulkLines = async (req: RequestWithAuth & RequestWithRestDataset & { files?: { attachments?: ReqFile[], actions?: ReqFile[] } }, res: Response, next: NextFunction) => {
   try {
-    const db = mongo.db
     const validate = compileSchema(req.dataset, !!req.user.adminMode)
     const drop = req.query.drop === 'true'
 
@@ -897,11 +896,11 @@ export const bulkLines = async (req: RequestWithAuth & RequestWithRestDataset & 
     })
 
     try {
-      await pump([
+      await pump(
         inputStream,
         ...parseStreams,
         transactionStream
-      ])
+      )
       if (drop && tmpDataset) {
         if (summary.nbErrors) {
           summary.cancelled = true
@@ -911,10 +910,10 @@ export const bulkLines = async (req: RequestWithAuth & RequestWithRestDataset & 
           await collection(req.dataset).drop()
           await collection(tmpDataset).rename(collectionName(req.dataset))
           summary.dropped = true
-          await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'analyzed' } })
+          await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { status: 'analyzed' } })
         }
       } else {
-        await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
+        await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
       }
     } catch (err: any) {
       internalError('bulk-lines', err)
@@ -947,7 +946,6 @@ export const bulkLines = async (req: RequestWithAuth & RequestWithRestDataset & 
 }
 
 export const syncAttachmentsLines = async (req: RequestWithAuth & RequestWithRestDataset, res: Response, next: NextFunction) => {
-  const db = mongo.db
   const dataset = req.dataset
   const validate = compileSchema(req.dataset, !!req.user.adminMode)
 
@@ -975,9 +973,9 @@ export const syncAttachmentsLines = async (req: RequestWithAuth & RequestWithRes
 
   const summary = initSummary()
   const transactionStream = new TransactionStream({ dataset: req.dataset, user: req.user, linesOwner: req.linesOwner, validate, summary })
-  await pump([filesStream, transactionStream])
+  await pump(filesStream, transactionStream)
 
-  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
+  await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
   await storageUtils.updateStorage(req.dataset)
 
   res.send(summary)
@@ -1136,6 +1134,7 @@ export const count = (dataset: RestDataset, filter?: Filter<DatasetLine>) => {
 export const applyTTL = async (dataset: RestDataset) => {
   if (!dataset.rest.ttl) return
   const qs = `${dataset.rest.ttl.prop}:[* TO ${moment().subtract(dataset.rest.ttl.delay.value, dataset.rest.ttl.delay.unit).toISOString()}]`
+
   const summary = initSummary()
   // @ts-ignore
   const iter = iterHits(es.client, dataset, { size: 1000, qs })
@@ -1144,8 +1143,11 @@ export const applyTTL = async (dataset: RestDataset) => {
     // @ts-ignore
     new Transform({
       objectMode: true,
-      transform (hit, encoding, callback) {
-        return callback(null, { _action: 'delete', _id: hit._id })
+      transform (hits, encoding, callback) {
+        for (const hit of hits) {
+          this.push({ _action: 'delete', _id: hit._id })
+        }
+        callback(null)
       }
     }),
     new TransactionStream({ dataset, summary })
@@ -1153,6 +1155,6 @@ export const applyTTL = async (dataset: RestDataset) => {
   const patch: UpdateFilter<RestDataset> = { 'rest.ttl.checkedAt': new Date().toISOString() }
   if (summary.nbOk) patch._partialRestStatus = 'updated'
 
-  await mongo.db.collection('datasets')
+  await mongo.datasets
     .updateOne({ id: dataset.id }, { $set: patch })
 }

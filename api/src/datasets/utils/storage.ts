@@ -12,8 +12,7 @@ import debug from 'debug'
 import { dataFiles, lsAttachments, lsMetadataAttachments, attachmentPath, metadataAttachmentPath } from './files.ts'
 import type { Account, AccountKeys } from '@data-fair/lib-express'
 import type { Dataset, VirtualDataset } from '#types'
-import { isVirtualDataset } from '#types/dataset/index.ts'
-import { isRestDataset } from '@data-fair/data-fair-shared/types-utils.ts'
+import { isVirtualDataset, isRestDataset } from '#types/dataset/index.ts'
 
 const debugLimits = debug('limits')
 
@@ -76,7 +75,7 @@ export const storage = async (dataset: Dataset) => {
       let storageRatio = remoteService.virtualDatasets?.storageRatio || 0
       const queryableDataset: VirtualDataset = { ...dataset }
       queryableDataset.descendants = [descendant.id]
-      const count = await esUtils.count(es, queryableDataset, {})
+      const count = await esUtils.count(es.client, queryableDataset, {})
       storageRatio *= (count / descendant.count)
       masterDataSize += Math.round(descendant.storage.indexed.size * storageRatio)
     }

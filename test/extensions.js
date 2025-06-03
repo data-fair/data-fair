@@ -913,7 +913,7 @@ other,unknown address
     assert.equal(res.data.status, 'finalized')
     assert.equal(res.data.extensions[0].needsUpdate, true)
     await workers.hook(`extender/${dataset.id}`)
-    const collection = restDatasetsUtils.collection(global.db, dataset)
+    const collection = restDatasetsUtils.collection(dataset)
     const needsIndexingLines = await collection.find({ _needsIndexing: true }).toArray()
     assert.equal(needsIndexingLines.length, 1)
     assert.equal(needsIndexingLines[0].str1, 'str 1')

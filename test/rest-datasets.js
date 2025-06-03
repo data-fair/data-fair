@@ -16,7 +16,7 @@ import pumpOg from 'pump'
 
 const pump = promisify(pumpOg)
 
-describe.only('REST datasets', function () {
+describe('REST datasets', function () {
   it('Create empty REST datasets', async function () {
     const ax = global.ax.dmeadus
 
@@ -133,7 +133,7 @@ describe.only('REST datasets', function () {
     assert.equal(res.data.attr2, 'test2')
   })
 
-  it.only('Index and finalize dataset after write', async function () {
+  it('Index and finalize dataset after write', async function () {
     // Load a few lines
     const ax = global.ax.dmeadus
     await ax.put('/api/v1/datasets/rest3', {
@@ -161,7 +161,7 @@ describe.only('REST datasets', function () {
 
     // Patch one through db query to check that it won't processed
     // we must be sure that the whole dataset is not reindexed each time, only the diffs
-    const collection = restDatasetsUtils.collection(global.db, dataset)
+    const collection = restDatasetsUtils.collection(dataset)
     await collection.updateOne({ _id: 'line4' }, { $set: { attr2: 'altered' } })
     assert.equal((await collection.findOne({ _id: 'line4' })).attr2, 'altered')
 
@@ -710,7 +710,7 @@ describe.only('REST datasets', function () {
     assert.equal(res.data.results[1]._id, 'id1')
     assert.equal(res.data.results[1].attr1, 'test1')
 
-    const revisionsCollection = restDatasetsUtils.revisionsCollection(global.db, dataset)
+    const revisionsCollection = restDatasetsUtils.revisionsCollection(dataset)
     let indexes = await revisionsCollection.listIndexes().toArray()
     assert.equal(indexes.length, 3)
     const index = indexes.find(i => i.name === 'history-ttl')
@@ -856,7 +856,7 @@ describe.only('REST datasets', function () {
     res = await ax.get('/api/v1/datasets/restidem/lines')
     assert.equal(res.data.total, 4)
 
-    const collection = restDatasetsUtils.collection(global.db, dataset)
+    const collection = restDatasetsUtils.collection(dataset)
     res = await ax.post('/api/v1/datasets/restidem/_bulk_lines', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' }
     ])
@@ -903,7 +903,7 @@ describe.only('REST datasets', function () {
       { _action: 'patch', _id: 'line1', attr1: 'test2' },
       { _action: 'patch', _id: 'line2', attr1: 'test1' }
     ])
-    const collection = restDatasetsUtils.collection(global.db, dataset)
+    const collection = restDatasetsUtils.collection(dataset)
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 1)
     await workers.hook('finalizer/resthistidem')
     res = await ax.get('/api/v1/datasets/resthistidem/lines/line1/revisions')
@@ -944,7 +944,7 @@ describe.only('REST datasets', function () {
     await ax.delete('/api/v1/datasets/restdel/lines')
     dataset = await workers.hook('finalizer/restdel')
     assert.equal(dataset.count, 0)
-    const collection = restDatasetsUtils.collection(global.db, dataset)
+    const collection = restDatasetsUtils.collection(dataset)
     assert.equal(await collection.countDocuments({}), 0)
   })
 

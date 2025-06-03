@@ -46,7 +46,7 @@ export const prepareSchema = async (dataset: VirtualDataset) => {
   if (!dataset.virtual.children || !dataset.virtual.children.length) return []
   dataset.schema = dataset.schema || []
   for (const field of dataset.schema) delete field['x-extension']
-  const schema = await datasetUtils.extendedSchema(dataset)
+  const schema = await datasetUtils.extendedSchema(mongo.db, dataset)
   const blackListedFields = new Set<string>([])
   const schemas = await childrenSchemas(dataset.owner, dataset.virtual.children, blackListedFields)
   for (const field of schema) {
@@ -131,7 +131,7 @@ export const prepareSchema = async (dataset: VirtualDataset) => {
 }
 
 // Only non virtual descendants on which to perform the actual ES queries
-export const descendants = async (dataset: VirtualDataset, tolerateStale = false, extraProperties: string[] = [], throwEmpty = true) => {
+export const descendants = async (dataset: VirtualDataset, tolerateStale = false, extraProperties: string[] | null = null, throwEmpty = true) => {
   const project: Record<string, 1> = {
     'descendants.id': 1,
     'descendants.isVirtual': 1,

@@ -3,10 +3,11 @@ import config from '#config'
 import * as esUtils from '../datasets/es/index.ts'
 import * as geoUtils from '../datasets/utils/geo.js'
 import * as datasetUtils from '../datasets/utils/index.js'
+import { updateStorage } from '../datasets/utils/storage.ts'
 import * as datasetService from '../datasets/service.js'
 import * as attachmentsUtils from '../datasets/utils/attachments.js'
 import * as virtualDatasetsUtils from '../datasets/utils/virtual.ts'
-import taskProgress from '../datasets/utils/task-progress.js'
+import taskProgress from '../datasets/utils/task-progress.ts'
 import * as restDatasetsUtils from '../datasets/utils/rest.ts'
 import dayjs from 'dayjs'
 import mongo from '#mongo'
@@ -55,7 +56,7 @@ export const process = async function (app, _dataset) {
   let nbSteps = cardinalityProps.length + 1
   if (startDateField || endDateField) nbSteps += 1
   if (geopoint || geometry) nbSteps += 1
-  const progress = taskProgress(app, dataset.id, eventsPrefix, nbSteps)
+  const progress = taskProgress(dataset.id, eventsPrefix, nbSteps)
   await progress.inc(0)
   const flatten = getFlattenNoCache(queryableDataset)
   for (const prop of cardinalityProps) {
@@ -164,7 +165,7 @@ export const process = async function (app, _dataset) {
     await attachmentsUtils.removeAll(dataset)
   }
 
-  if (!dataset.draftReason) await datasetUtils.updateStorage(dataset)
+  if (!dataset.draftReason) await updateStorage(dataset)
 
   // parent virtual datasets have to be re-finalized too
   if (!dataset.draftReason) {

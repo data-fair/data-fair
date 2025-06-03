@@ -7,7 +7,7 @@
 
 import config from '#config'
 import mongo from '#mongo'
-import * as esUtils from '../src/datasets/es/index.ts'
+import es from '#es'
 
 // this script if often run outside of peak activity
 // we do not want it to last forever if ever it detects that it has a lot of work to do
@@ -20,8 +20,8 @@ const deleteOrphans = process.env.DELETE_ORPHANS === '1'
 async function main () {
   await mongo.connect()
   const db = mongo.db
-  const es = await esUtils.init()
-  const indexes = (await es.cat.indices({ index: `${config.indicesPrefix}-*`, format: 'json', s: 'index', h: 'index,store.size,docs.count,creation.date.string' }))
+  await es.init()
+  const indexes = (await es.client.cat.indices({ index: `${config.indicesPrefix}-*`, format: 'json', s: 'index', h: 'index,store.size,docs.count,creation.date.string' }))
   for (const index of indexes) {
     const indexName = index.index
     if (!indexName) {
@@ -32,14 +32,14 @@ async function main () {
       console.error('Max duration exceeded, stop')
       break
     }
-    const getAliasRes = await es.indices.getAlias({ index: indexName })
+    const getAliasRes = await es.client.indices.getAlias({ index: indexName })
     const aliases = getAliasRes[indexName] && getAliasRes[indexName].aliases && Object.keys(getAliasRes[indexName].aliases)
     const alias = aliases.find((/** @type {any} */ alias) => indexName.startsWith(alias))
     if (!alias) {
       console.log(`index ${indexName} does not have matching alias, size=${index['store.size']}, docs.count=${index['docs.count']}, creation.date=${index['creation.date.string']}`)
       if (deleteOrphans) {
         console.log(`deleting orphan index ${indexName}`)
-        await es.indices.delete({ index: indexName })
+        await es.client.indices.delete({ index: indexName })
       }
       continue
     }
@@ -49,16 +49,16 @@ async function main () {
       console.log(`alias ${alias} does not have matching dataset in database`, index['store.size'])
       if (deleteOrphans) {
         console.log(`deleting orphan index ${indexName}`)
-        await es.indices.delete({ index: indexName })
+        await es.client.indices.delete({ index: indexName })
       }
       continue
     }
-    const segments = await es.cat.segments({ index: indexName, format: 'json' })
+    const segments = await es.client.cat.segments({ index: indexName, format: 'json' })
 
     // force merge is recommended on read-only indexes only, so rest datasets are excluded
     if (segments.length > 2 && !dataset.isRest) {
       if (forceMerge) {
-        await es.indices.forcemerge({ index: indexName, max_num_segments: 1 })
+        await es.client.indices.forcemerge({ index: indexName, max_num_segments: 1 })
         console.log(`merged segments for index ${indexName}, number of segments=${segments.length}`)
       } else {
         console.log(`should merge segments for index ${indexName} ? number of segments=${segments.length}`)

@@ -236,7 +236,7 @@ export default {
         if (!this.parsedExpression) return null
         try {
           const data = unflatten(result)
-          // WARNING: this code is duplicated in server/utils/extensions.js
+          // WARNING: this code is duplicated in server/utils/extensions.ts
           for (const prop of this.dataset.schema) {
             const ext = this.dataset.extensions?.find(e => prop.key.startsWith(getExtensionKey(e) + '.'))
             if (ext) {

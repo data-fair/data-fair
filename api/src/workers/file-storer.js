@@ -1,5 +1,6 @@
 import fs from 'fs-extra'
 import * as datasetUtils from '../datasets/utils/index.js'
+import { updateStorage } from '../datasets/utils/storage.ts'
 import * as datasetsService from '../datasets/service.js'
 import { replaceAllAttachments } from '../datasets/utils/attachments.js'
 import datasetFileSample from '../datasets/utils/file-sample.js'
@@ -113,6 +114,6 @@ export const process = async function (app, dataset) {
   await fs.remove(loadingDir)
 
   await datasetsService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(dataset)
+  if (!dataset.draftReason) await updateStorage(dataset)
   debug('done')
 }

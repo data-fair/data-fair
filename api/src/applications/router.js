@@ -606,7 +606,7 @@ router.post('/:applicationId/keys', readApplication, permissions.middleware('set
 router.post('/:applicationId/attachments', readApplication, permissions.middleware('postAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, async (req, res, next) => {
   req.body.size = (await fs.promises.stat(req.file.path)).size
   req.body.updatedAt = moment().toISOString()
-  await updateStorage(req.application)
+  await updateStorage(req.app, req.application)
   res.status(200).send(req.body)
 })
 
@@ -646,7 +646,7 @@ router.get('/:applicationId/attachments/*attachmentPath', readApplication, permi
 
 router.delete('/:applicationId/attachments/*attachmentPath', readApplication, permissions.middleware('deleteAttachment', 'write'), async (req, res, next) => {
   await fs.remove(attachmentPath(req.application, path.join(...req.params.attachmentPath)))
-  await updateStorage(req.application)
+  await updateStorage(req.app, req.application)
   res.status(204).send()
 })
 

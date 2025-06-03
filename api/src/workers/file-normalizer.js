@@ -12,6 +12,7 @@ import mime from 'mime-types'
 import zlib from 'node:zlib'
 import resolvePath from 'resolve-path'
 import { displayBytes } from '../misc/utils/bytes.js'
+import { updateStorage } from '../datasets/utils/storage.ts'
 import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetService from '../datasets/service.js'
 import { tmpDir as mainTmpDir, unzip } from '../datasets/utils/files.ts'
@@ -181,5 +182,5 @@ export const process = async function (app, dataset) {
   if (dataset.analysis) patch.analysis = dataset.analysis
 
   await datasetService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(dataset, false, true)
+  if (!dataset.draftReason) await updateStorage(dataset, false, true)
 }

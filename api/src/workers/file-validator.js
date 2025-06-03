@@ -6,7 +6,7 @@ import pump from '../misc/utils/pipe.ts'
 import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetsService from '../datasets/service.js'
 import * as schemaUtils from '../datasets/utils/data-schema.js'
-import taskProgress from '../datasets/utils/task-progress.js'
+import taskProgress from '../datasets/utils/task-progress.ts'
 import truncateMiddle from 'truncate-middle'
 import debugLib from 'debug'
 import mongo from '#mongo'
@@ -91,7 +91,7 @@ export const process = async function (app, dataset) {
 
   if (datasetUtils.schemaHasValidationRules(dataset.schema)) {
     debug('Run validator stream')
-    const progress = taskProgress(app, dataset.id, eventsPrefix, 100)
+    const progress = taskProgress(dataset.id, eventsPrefix, 100)
     await progress.inc(0)
     const readStreams = await datasetUtils.readStreams(db, dataset, false, false, false, progress)
     const validateStream = new ValidateStream({ dataset })

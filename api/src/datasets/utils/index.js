@@ -10,7 +10,6 @@ import { prepareMarkdownContent } from '../../misc/utils/markdown.js'
 import * as permissions from '../../misc/utils/permissions.js'
 import * as findUtils from '../../misc/utils/find.js'
 import * as filesUtils from './files.ts'
-import * as storageUtils from './storage.ts'
 import * as dataStreamsUtils from './data-streams.js'
 import * as schemaUtils from './data-schema.js'
 import * as readApiKeyUtils from './read-api-key.js'
@@ -46,8 +45,6 @@ export const schemaHasValidationRules = schemaUtils.schemaHasValidationRules
 export const schemasTransformChange = schemaUtils.schemasTransformChange
 export const jsonSchema = schemaUtils.jsonSchema
 export const createReadApiKey = readApiKeyUtils.create
-
-export const updateStorage = storageUtils.updateStorage
 
 export const sampleValues = dataStreamsUtils.sampleValues
 export const readStreams = dataStreamsUtils.readStreams

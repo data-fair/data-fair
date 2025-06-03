@@ -331,7 +331,7 @@ describe('Master data management', function () {
     assert.ok(!results[0]['_siret.extra'])
     assert.ok(!results[0]['siretextextra'])
     assert.ok(!results[0]['siretextra'])
-    const docs = await restDatasetsUtils.collection(global.db, slave).find({}).toArray()
+    const docs = await restDatasetsUtils.collection(slave).find({}).toArray()
     assert.ok(!docs[0]['_siret'])
     assert.ok(!docs[0]['siretextextra'])
     assert.ok(!docs[0]['siretextra'])

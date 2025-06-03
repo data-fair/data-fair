@@ -1,19 +1,19 @@
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import mongo from '#mongo'
 
-const updateProgress = async (app, datasetId, task, progress) => {
+const updateProgress = async (datasetId: string, task: string, progress: number) => {
   await wsEmitter.emit('datasets/' + datasetId + '/task-progress', { task, progress })
   await mongo.db.collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $set: { taskProgress: { task, progress } } })
 }
 
-export default (app, datasetId, task, nbSteps, progressCallback) => {
+export default (datasetId: string, task: string, nbSteps: number, progressCallback?: (progress: number) => void) => {
   let step = 0
   let lastProgress = -1
   let lastTime = new Date().getTime() - 1000
 
   return {
     async start () {
-      await updateProgress(app, datasetId, task, -1)
+      await updateProgress(datasetId, task, -1)
     },
     async inc (inc = 1) {
       step += inc
@@ -28,7 +28,7 @@ export default (app, datasetId, task, nbSteps, progressCallback) => {
       if (progress > lastProgress || (time - lastTime) > 30000) {
         lastProgress = progress
         lastTime = time
-        await updateProgress(app, datasetId, task, progress)
+        await updateProgress(datasetId, task, progress)
       }
     },
     async end (error = false) {
@@ -40,7 +40,7 @@ export default (app, datasetId, task, nbSteps, progressCallback) => {
         await wsEmitter.emit('datasets/' + datasetId + '/task-progress', {})
         await mongo.db.collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $unset: { taskProgress: 1 } })
       } else {
-        await updateProgress(app, datasetId, task, 100)
+        await updateProgress(datasetId, task, 100)
       }
     }
   }

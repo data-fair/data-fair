@@ -1,9 +1,8 @@
 import debugLib from 'debug'
-import * as extensionsUtils from '../datasets/utils/extensions.js'
-import * as datasetUtils from '../datasets/utils/index.js'
+import * as extensionsUtils from '../datasets/utils/extensions.ts'
+import { updateStorage } from '../datasets/utils/storage.ts'
 import * as datasetService from '../datasets/service.js'
 import * as restDatasetsUtils from '../datasets/utils/rest.ts'
-import mongo from '#mongo'
 
 const debugMasterData = debugLib('master-data')
 
@@ -18,7 +17,6 @@ export const process = async function (app, dataset) {
   else if (dataset._partialRestStatus === 'updated') updateMode = 'updatedLines'
   debug('update mode', updateMode)
 
-  const db = mongo.db
   const patch = {}
   if (updateMode === 'all') {
     patch.status = 'extended'
@@ -30,15 +28,15 @@ export const process = async function (app, dataset) {
   if (updateMode === 'updatedExtensions') extensions = extensions.filter(e => e.needsUpdate)
 
   debug('check extensions validity')
-  await extensionsUtils.checkExtensions(db, dataset.schema, extensions)
+  await extensionsUtils.checkExtensions(dataset.schema, extensions)
 
   debug('apply extensions', dataset.extensions)
-  await extensionsUtils.extend(app, dataset, extensions, updateMode, dataset.validateDraft)
+  await extensionsUtils.extend(dataset, extensions, updateMode, dataset.validateDraft)
   debug('extensions ok')
 
   // Some data was updated in the interval during which we performed indexation
   // keep dataset as "updated" so that this worker keeps going
-  if (updateMode !== 'all' && await restDatasetsUtils.count(db, dataset, { _needsExtending: true })) {
+  if (updateMode !== 'all' && await restDatasetsUtils.count(dataset, { _needsExtending: true })) {
     debug('REST dataset extended, but some data has changed, stay in "updated" status')
     patch._partialRestStatus = 'updated'
   }
@@ -52,6 +50,6 @@ export const process = async function (app, dataset) {
     })
   }
   await datasetService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(dataset, false, true)
+  if (!dataset.draftReason) await updateStorage(dataset, false, true)
   debug('done')
 }

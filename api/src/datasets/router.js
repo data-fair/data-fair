@@ -20,6 +20,7 @@ import privateDatasetAPIDocs from '../../contract/dataset-private-api-docs.js'
 import * as permissions from '../misc/utils/permissions.js'
 import * as usersUtils from '../misc/utils/users.js'
 import * as datasetUtils from './utils/index.js'
+import { updateStorage, updateTotalStorage } from './utils/storage.ts'
 import * as restDatasetsUtils from './utils/rest.ts'
 import * as findUtils from '../misc/utils/find.js'
 import clone from '@data-fair/lib-utils/clone.js'
@@ -30,7 +31,7 @@ import * as cache from '../misc/utils/cache.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as outputs from './utils/outputs.js'
 import * as limits from '../misc/utils/limits.ts'
-import { extend } from './utils/extensions.js'
+import { extend } from './utils/extensions.ts'
 import * as notifications from '../misc/utils/notifications.js'
 import userNotificationSchema from '../../contract/user-notification.js'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
@@ -46,7 +47,6 @@ import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetData
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/data-schema.js'
 import { dir, attachmentsDir } from './utils/files.ts'
 import { preparePatch } from './utils/patch.js'
-import { updateTotalStorage } from './utils/storage.ts'
 import { checkStorage, lockDataset, readDataset } from './middlewares.js'
 import config from '#config'
 import mongo from '#mongo'
@@ -401,7 +401,7 @@ const createDatasetRoute = async (req, res) => {
       const indexName = await esUtils.initDatasetIndex(es, dataset)
       await esUtils.switchAlias(es, dataset, indexName)
       await restDatasetsUtils.configureHistory(dataset)
-      await datasetUtils.updateStorage(dataset)
+      await updateStorage(dataset)
       onClose(() => {
         // this is only to maintain compatibilty, but clients should look for the status in the response
         // and not wait for an event if the dataset is created already finalized
@@ -411,7 +411,7 @@ const createDatasetRoute = async (req, res) => {
       })
     }
     if (dataset.isMetaOnly) {
-      await datasetUtils.updateStorage(dataset)
+      await updateStorage(dataset)
     }
 
     eventsLog.info('df.datasets.create', `created a dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
@@ -580,7 +580,7 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
     resource: { type: 'dataset', title: dataset.title, id: dataset.id }
   }, sessionState)
 
-  await datasetUtils.updateStorage(patchedDataset)
+  await updateStorage(patchedDataset)
   return res.send(patchedDataset)
 })
 
@@ -677,7 +677,7 @@ router.post('/:datasetId/master-data/bulk-searchs/:bulkSearchId', readDataset({ 
   const flatten = getFlatten(req.dataset)
   await pump(
     req,
-    ...await bulkSearchStreams(mongo.db, req.app.get('es'), req.dataset, req.get('Content-Type'), req.params.bulkSearchId, req.query.select, flatten),
+    ...await bulkSearchStreams(req.dataset, req.get('Content-Type'), req.params.bulkSearchId, req.query.select, flatten),
     res
   )
 })
@@ -1191,7 +1191,7 @@ router.get('/:datasetId/data-files/*filePath', readDataset(), apiKeyMiddleware, 
 router.post('/:datasetId/metadata-attachments', readDataset(), apiKeyMiddleware, permissions.middleware('postMetadataAttachment', 'write'), checkStorage(false), attachments.metadataUpload(), clamav.middleware, async (req, res, next) => {
   req.body.size = (await fs.promises.stat(req.file.path)).size
   req.body.updatedAt = moment().toISOString()
-  await datasetUtils.updateStorage(req.dataset)
+  await updateStorage(req.dataset)
   res.status(200).send(req.body)
 })
 router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), apiKeyMiddleware, permissions.middleware('downloadMetadataAttachment', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
@@ -1279,7 +1279,7 @@ router.get('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), ap
 
 router.delete('/:datasetId/metadata-attachments/*attachmentPath', readDataset(), apiKeyMiddleware, permissions.middleware('deleteMetadataAttachment', 'write'), async (req, res, next) => {
   await fs.remove(datasetUtils.metadataAttachmentPath(req.dataset, path.join(...req.params.attachmentPath)))
-  await datasetUtils.updateStorage(req.dataset)
+  await updateStorage(req.dataset)
   res.status(204).send()
 })
 
@@ -1293,7 +1293,7 @@ router.get('/:datasetId/raw', readDataset(), apiKeyMiddleware, permissions.middl
     // add BOM for excel, cf https://stackoverflow.com/a/17879474
     res.write('\ufeff')
     await pump(
-      ...await restDatasetsUtils.readStreams(mongo.db, req.dataset),
+      ...await restDatasetsUtils.readStreams(req.dataset),
       ...outputs.csvStreams(req.dataset, query),
       res
     )
@@ -1437,7 +1437,7 @@ router.get('/:datasetId/read-api-key', readDataset(), permissions.middleware('ge
 router.post('/:datasetId/_simulate-extension', readDataset(), permissions.middleware('simulateExtension', 'write'), async (req, res, next) => {
   const line = req.body
   const dataset = clone(req.dataset)
-  await extend(req.app, dataset, dataset.extensions, undefined, undefined, undefined, line)
+  await extend(dataset, dataset.extensions, undefined, undefined, undefined, line)
   const flatten = getFlatten(req.dataset)
   res.send(flatten(line))
 })

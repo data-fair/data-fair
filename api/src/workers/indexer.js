@@ -6,10 +6,11 @@ import { Writable } from 'stream'
 import pump from '../misc/utils/pipe.ts'
 import * as es from '../datasets/es/index.ts'
 import * as datasetUtils from '../datasets/utils/index.js'
+import { updateStorage } from '../datasets/utils/storage.ts'
 import * as datasetsService from '../datasets/service.js'
 import * as restDatasetsUtils from '../datasets/utils/rest.ts'
 import * as heapUtils from '../misc/utils/heap.js'
-import taskProgress from '../datasets/utils/task-progress.js'
+import taskProgress from '../datasets/utils/task-progress.ts'
 import { tmpDir } from '../datasets/utils/files.ts'
 import * as attachmentsUtils from '../datasets/utils/attachments.js'
 import debugModule from 'debug'
@@ -48,7 +49,7 @@ export const process = async function (app, dataset) {
       } else {
         newAttachments = await attachmentsUtils.addAttachments(dataset, join(tmpDir, a))
       }
-      const bulkOp = restDatasetsUtils.collection(db, dataset).initializeUnorderedBulkOp()
+      const bulkOp = restDatasetsUtils.collection(dataset).initializeUnorderedBulkOp()
       for (const a of newAttachments) {
         bulkOp.find({ [attachmentsProperty.key]: a }).update({ $set: { _needsIndexing: true } })
         // TODO: add option to remove attachments that don't match any line ?
@@ -79,20 +80,20 @@ export const process = async function (app, dataset) {
     if (dataset.file && await fs.pathExists(datasetUtils.fullFilePath(dataset))) {
       debug('Delete previously extended file')
       await fs.remove(datasetUtils.fullFilePath(dataset))
-      if (!dataset.draftReason) await datasetUtils.updateStorage(dataset, false, true)
+      if (!dataset.draftReason) await updateStorage(dataset, false, true)
     }
   }
 
   debug('Run index stream')
   let readStreams, writeStream
-  const progress = taskProgress(app, dataset.id, eventsPrefix, 100, (progress) => {
+  const progress = taskProgress(dataset.id, eventsPrefix, 100, (progress) => {
     debugHeap('progress ' + progress, indexStream)
   })
   await progress.inc(0)
   debugHeap('before-stream')
   if (dataset.isRest) {
-    readStreams = await restDatasetsUtils.readStreams(db, dataset, partialUpdate ? { _needsIndexing: true } : {}, progress)
-    writeStream = restDatasetsUtils.markIndexedStream(db, dataset)
+    readStreams = await restDatasetsUtils.readStreams(dataset, partialUpdate ? { _needsIndexing: true } : {}, progress)
+    writeStream = restDatasetsUtils.markIndexedStream(dataset)
   } else {
     const extended = dataset.extensions && dataset.extensions.find(e => e.active)
     if (!extended) await fs.remove(datasetUtils.fullFilePath(dataset))
@@ -110,7 +111,7 @@ export const process = async function (app, dataset) {
   }
   if (partialUpdate) {
     result._partialRestStatus = 'indexed'
-    result.count = await restDatasetsUtils.count(db, dataset)
+    result.count = await restDatasetsUtils.count(dataset)
   } else {
     result.status = 'indexed'
     debug('Switch alias to point to new datasets index')
@@ -120,10 +121,10 @@ export const process = async function (app, dataset) {
 
   // Some data was updated in the interval during which we performed indexation
   // keep dataset as "updated" so that this worker keeps going
-  if (dataset._partialRestStatus === 'extended' && await restDatasetsUtils.count(db, dataset, { _needsExtending: true })) {
+  if (dataset._partialRestStatus === 'extended' && await restDatasetsUtils.count(dataset, { _needsExtending: true })) {
     debug('REST dataset indexed, but some data still needs extending, get back in "updated" status')
     result._partialRestStatus = 'updated'
-  } else if ((dataset._partialRestStatus === 'updated' || dataset._partialRestStatus === 'extended') && await restDatasetsUtils.count(db, dataset, { _needsIndexing: true })) {
+  } else if ((dataset._partialRestStatus === 'updated' || dataset._partialRestStatus === 'extended') && await restDatasetsUtils.count(dataset, { _needsIndexing: true })) {
     debug(`REST dataset indexed, but some data is still fresh, stay in "${dataset.status}" status`)
     result._partialRestStatus = dataset._partialRestStatus
   }

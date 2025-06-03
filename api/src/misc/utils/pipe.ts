@@ -4,4 +4,4 @@ import pump from 'pump'
 import { promisify } from 'node:util'
 import type { Stream } from 'node:stream'
 
-export default promisify(pump) as (streams: Stream[]) => Promise<void>
+export default promisify(pump) as (...streams: Stream[]) => Promise<void>

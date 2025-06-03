@@ -321,7 +321,7 @@ export const run = async () => {
 export const stop = async () => {
   if (config.mode.includes('server')) {
     await wsServer.stop()
-    await httpTerminator.terminate()
+    if (httpTerminator) await httpTerminator.terminate()
   }
 
   if (config.mode.includes('worker')) {
@@ -339,6 +339,6 @@ export const stop = async () => {
   await new Promise(resolve => setTimeout(resolve, 1000))
   await Promise.all([
     mongo.client.close(),
-    app.get('es').close()
+    es.client.close()
   ])
 }

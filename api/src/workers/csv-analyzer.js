@@ -4,6 +4,7 @@ import iconv from 'iconv-lite'
 import datasetFileSample from '../datasets/utils/file-sample.js'
 import * as csvSniffer from '../misc/utils/csv-sniffer.js'
 import * as datasetUtils from '../datasets/utils/index.js'
+import { updateStorage } from '../datasets/utils/storage.ts'
 import * as datasetsService from '../datasets/service.js'
 import * as fieldsSniffer from '../datasets/utils/fields-sniffer.js'
 import outOfCharacter from 'out-of-character'
@@ -92,5 +93,5 @@ export const process = async function (app, dataset) {
   }
 
   await datasetsService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(dataset, false, true)
+  if (!dataset.draftReason) await updateStorage(dataset, false, true)
 }

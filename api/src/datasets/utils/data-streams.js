@@ -15,7 +15,7 @@ import * as restDatasetsUtils from './rest.ts'
 import { filePath, fullFilePath, tmpDir } from './files.ts'
 import pump from '../../misc/utils/pipe.ts'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import { compileExpression } from './extensions.js'
+import { compileExpression } from './extensions.ts'
 import { getFlattenNoCache } from './flatten.ts'
 
 export const formatLine = (item, schema) => {
@@ -224,7 +224,7 @@ export const getTransformStream = (schema, fileSchema, applyTransform = false) =
 
 // Read the dataset file and get a stream of line items
 export const readStreams = async (db, dataset, raw = false, full = false, ignoreDraftLimit = false, progress) => {
-  if (dataset.isRest) return restDatasetsUtils.readStreams(db, dataset)
+  if (dataset.isRest) return restDatasetsUtils.readStreams(dataset)
   const p = full ? fullFilePath(dataset) : filePath(dataset)
 
   if (!await fs.pathExists(p)) {
@@ -270,8 +270,8 @@ export const readStreams = async (db, dataset, raw = false, full = false, ignore
 }
 
 // Used by extender worker to produce the "full" version of the file
-export const writeExtendedStreams = async (db, dataset, extensions) => {
-  if (dataset.isRest) return restDatasetsUtils.writeExtendedStreams(db, dataset, extensions)
+export const writeExtendedStreams = async (dataset, extensions) => {
+  if (dataset.isRest) return restDatasetsUtils.writeExtendedStreams(dataset, extensions)
   const flatten = getFlattenNoCache(dataset)
   const tmpFullFile = await tmp.tmpName({ tmpdir: tmpDir, prefix: 'full-' })
   // creating empty file before streaming seems to fix some weird bugs with NFS

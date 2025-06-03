@@ -1,3 +1,4 @@
+import es from '#es'
 import { Readable, Transform, Writable } from 'stream'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import mimeTypeStream from 'mime-type-stream'
@@ -22,7 +23,7 @@ export const bulkSearchPromise = async (streams, data) => {
   return Buffer.concat(buffers).toString()
 }
 
-export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearchId, select, flatten) => {
+export const bulkSearchStreams = async (dataset, contentType, bulkSearchId, select, flatten) => {
   const bulkSearch = dataset.masterData && dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.find(bs => bs.id === bulkSearchId)
   if (!bulkSearch) throw httpError(404, `Recherche en masse "${bulkSearchId}" inconnue`)
 
@@ -100,7 +101,7 @@ export const bulkSearchStreams = async (db, es, dataset, contentType, bulkSearch
           }))
           let esResponse
           try {
-            esResponse = await esUtils.multiSearch(es, dataset, queries)
+            esResponse = await esUtils.multiSearch(es.client, dataset, queries)
           } catch (err) {
             internalError('masterdata-multi-query', err)
             const { message, status } = esUtils.extractError(err)
