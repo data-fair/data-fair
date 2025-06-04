@@ -118,6 +118,8 @@ describe('REST datasets', function () {
     assert.equal(res.data.nbOk, 7)
     assert.equal(res.data.nbCreated, 4)
     assert.equal(res.data.nbDeleted, 1)
+    assert.ok(res.data.indexedAt)
+    console.log(res.data)
 
     try {
       await ax.get('/api/v1/datasets/rest2/lines/line2')
@@ -165,7 +167,7 @@ describe('REST datasets', function () {
     await collection.updateOne({ _id: 'line4' }, { $set: { attr2: 'altered' } })
     assert.equal((await collection.findOne({ _id: 'line4' })).attr2, 'altered')
 
-    res = await ax.post('/api/v1/datasets/rest3/_bulk_lines', [
+    res = await ax.post('/api/v1/datasets/rest3/_bulk_lines?async=true', [
       { _action: 'delete', _id: 'line1' },
       { _action: 'patch', _id: 'line2', attr1: 'test2' }
     ])
@@ -857,20 +859,20 @@ describe('REST datasets', function () {
     assert.equal(res.data.total, 4)
 
     const collection = restDatasetsUtils.collection(dataset)
-    res = await ax.post('/api/v1/datasets/restidem/_bulk_lines', [
+    res = await ax.post('/api/v1/datasets/restidem/_bulk_lines?async=true', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' }
     ])
     await workers.hook('finalizer/restidem')
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 0)
 
-    res = await ax.post('/api/v1/datasets/restidem/_bulk_lines', [
+    res = await ax.post('/api/v1/datasets/restidem/_bulk_lines?async=true', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _action: 'delete', _id: 'line2' }
     ])
     assert.equal(await collection.countDocuments({ _needsIndexing: true }), 1)
     await workers.hook('finalizer/restidem')
 
-    res = await ax.post('/api/v1/datasets/restidem/_bulk_lines', [
+    res = await ax.post('/api/v1/datasets/restidem/_bulk_lines?async=true', [
       { _action: 'patch', _id: 'line3', attr1: 'test2' },
       { _action: 'patch', _id: 'line4', attr1: 'test1' }
     ])
@@ -888,7 +890,7 @@ describe('REST datasets', function () {
       schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
     })
     const dataset = res.data
-    await ax.post('/api/v1/datasets/resthistidem/_bulk_lines', [
+    await ax.post('/api/v1/datasets/resthistidem/_bulk_lines?async=true', [
       { _id: 'line1', attr1: 'test1', attr2: 'test1' },
       { _id: 'line2', attr1: 'test1', attr2: 'test1' }
     ])
@@ -899,7 +901,7 @@ describe('REST datasets', function () {
     assert.equal(res.data.total, 1)
 
     // 1 in 2 lines is changed
-    await ax.post('/api/v1/datasets/resthistidem/_bulk_lines', [
+    await ax.post('/api/v1/datasets/resthistidem/_bulk_lines?async=true', [
       { _action: 'patch', _id: 'line1', attr1: 'test2' },
       { _action: 'patch', _id: 'line2', attr1: 'test1' }
     ])
@@ -912,7 +914,7 @@ describe('REST datasets', function () {
     assert.equal(res.data.total, 1)
 
     // no line is actually changed
-    await ax.post('/api/v1/datasets/resthistidem/_bulk_lines', [
+    await ax.post('/api/v1/datasets/resthistidem/_bulk_lines?async=true', [
       { _action: 'patch', _id: 'line1', attr1: 'test2' },
       { _action: 'patch', _id: 'line2', attr1: 'test1' }
     ])
@@ -1662,7 +1664,6 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]['_file.content'], 'This is a test pdf file.')
-    console.log(res.data.results[0])
     res = await ax.get(res.data.results[0]._attachment_url)
     assert.equal(res.headers['content-disposition'], "inline; filename=\"Capture d?écran du 2024-11-19 10-20-57.png\"; filename*=UTF-8''Capture%20d%E2%80%99%C3%A9cran%20du%202024-11-19%2010-20-57.png")
   })

@@ -90,9 +90,9 @@ export const compileExpression = exprEval(config.defaultTimezone).compile
 export const extend = async (
   dataset: Dataset,
   extensions: any[],
-  updateMode?: 'updatedLines' | 'singleLine' | 'updatedExtensions',
+  updateMode?: 'updatedLines' | 'lineIds' | 'updatedExtensions',
   ignoreDraftLimit?: boolean,
-  lineId?: string,
+  lineIds?: string[],
   simulationLine?: DatasetLine
 ) => {
   debugMasterData(`extend dataset ${dataset.id} (${dataset.slug})`, extensions)
@@ -145,7 +145,7 @@ export const extend = async (
   } else if (isRestDataset(dataset)) {
     let filter = {}
     if (updateMode === 'updatedLines') filter = { _needsExtending: true }
-    else if (updateMode === 'singleLine') filter = { _id: lineId }
+    else if (updateMode === 'lineIds') filter = { _id: { $in: lineIds } }
     inputStreams = await restDatasetsUtils.readStreams(dataset, filter, progress)
   } else {
     inputStreams = await readStreams(mongo.db, dataset, false, false, ignoreDraftLimit, progress)
