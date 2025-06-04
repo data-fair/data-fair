@@ -1,14 +1,17 @@
+import mongo from '#mongo'
 import * as datasetUtils from '../../datasets/utils/index.js'
 import capabilitiesSchema from '../../../contract/capabilities.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import type { AccountKeys } from '@data-fair/lib-express'
+import type { Dataset, VirtualDataset } from '#types'
 
 // blacklisted fields are fields that are present in a grandchild but not re-exposed
 // by the child.. it must not be possible to access those fields in the case
 // of another child having the same key
-async function childrenSchemas (db, owner, children, blackListedFields) {
-  let schemas = []
+async function childrenSchemas (owner: AccountKeys, children: string[], blackListedFields: Set<string>) {
+  let schemas: any[] = []
   for (const childId of children) {
-    const child = await db.collection('datasets')
+    const child = await mongo.datasets
       .findOne({
         id: childId,
         $or: [
@@ -18,13 +21,13 @@ async function childrenSchemas (db, owner, children, blackListedFields) {
           { 'owner.id': owner.id, 'owner.type': owner.type },
           { permissions: { $elemMatch: { classes: 'read', type: null, id: null } } }
         ]
-      }, { isVirtual: 1, virtual: 1, schema: 1 })
+      }, { projection: { isVirtual: 1, virtual: 1, schema: 1 } })
     if (!child) continue
-    if (child.isVirtual) {
-      const grandChildrenSchemas = await childrenSchemas(db, owner, child.virtual.children, blackListedFields)
+    if (child.isVirtual && child.virtual) {
+      const grandChildrenSchemas = await childrenSchemas(owner, child.virtual.children, blackListedFields)
       for (const s of grandChildrenSchemas) {
         for (const field of s) {
-          if (!child.schema.find(f => f.key === field.key)) blackListedFields.add(field.key)
+          if (!child.schema?.find(f => f.key === field.key)) blackListedFields.add(field.key)
         }
       }
       schemas.push(child.schema)
@@ -37,14 +40,15 @@ async function childrenSchemas (db, owner, children, blackListedFields) {
 }
 
 // Validate and fill a virtual dataset schema based on its children
-const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter(key => capabilitiesSchema.properties[key].default === false)
-export const prepareSchema = async (db, dataset) => {
+// @ts-ignore
+const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter((key: string) => capabilitiesSchema.properties[key]?.default === false)
+export const prepareSchema = async (dataset: VirtualDataset) => {
   if (!dataset.virtual.children || !dataset.virtual.children.length) return []
   dataset.schema = dataset.schema || []
   for (const field of dataset.schema) delete field['x-extension']
-  const schema = await datasetUtils.extendedSchema(db, dataset)
-  const blackListedFields = new Set([])
-  const schemas = await childrenSchemas(db, dataset.owner, dataset.virtual.children, blackListedFields)
+  const schema = await datasetUtils.extendedSchema(mongo.db, dataset)
+  const blackListedFields = new Set<string>([])
+  const schemas = await childrenSchemas(dataset.owner, dataset.virtual.children, blackListedFields)
   for (const field of schema) {
     if (blackListedFields.has(field.key)) {
       throw httpError(400, `Le champ "${field.key}" est interdit. Il est présent dans un jeu de données enfant mais est protégé.`)
@@ -82,8 +86,7 @@ export const prepareSchema = async (db, dataset) => {
 
     // Some attributes of a field have to be homogeneous accross all children
     field['x-capabilities'] = {}
-    /** @type Record<string, string> */
-    const xLabels = {}
+    const xLabels: Record<string, string> = {}
     for (const f of matchingFields) {
       if (f.type !== field.type) {
         let message = `Le champ "${field.key}" a des types contradictoires (${field.type}, ${f.type}).`
@@ -117,28 +120,28 @@ export const prepareSchema = async (db, dataset) => {
     }
   }
 
-  const fieldsByConcept = {}
+  const fieldsByConcept: Record<string, any> = {}
   for (const f of schema) {
     if (!f || !f['x-refersTo']) continue
     if (fieldsByConcept[f['x-refersTo']]) throw httpError(400, `Le concept "${f['x-refersTo']}" est référencé par plusieurs champs (${fieldsByConcept[f['x-refersTo']]}, ${f.key}).`)
     fieldsByConcept[f['x-refersTo']] = f.key
   }
 
-  return schema.filter(f => !!f)
+  return schema.filter((f: any) => !!f)
 }
 
 // Only non virtual descendants on which to perform the actual ES queries
-export const descendants = async (db, dataset, tolerateStale = false, extraProperties = null, throwEmpty = true) => {
-  const project = {
+export const descendants = async (dataset: VirtualDataset, tolerateStale = false, extraProperties: string[] | null = null, throwEmpty = true) => {
+  const project: Record<string, 1> = {
     'descendants.id': 1,
     'descendants.isVirtual': 1,
     'descendants.virtual': 1
   }
-  const options = tolerateStale ? { readPreference: 'nearest' } : {}
+  const options = tolerateStale ? { readPreference: 'nearest' as const } : undefined
   if (extraProperties) {
     for (const p of extraProperties) project['descendants.' + p] = 1
   }
-  const res = await db.collection('datasets').aggregate([{
+  const res = await mongo.datasets.aggregate([{
     $match: {
       id: dataset.id
     }
@@ -165,13 +168,13 @@ export const descendants = async (db, dataset, tolerateStale = false, extraPrope
   }], options).toArray()
   if (!res[0]) return []
   const virtualDescendantsWithFilters = res[0].descendants
-    .filter(d => d.isVirtual && (d.virtual.filters?.length || d.virtual.filterActiveAccount))
+    .filter((d: Dataset) => d.isVirtual && (d.virtual?.filters?.length || d.virtual?.filterActiveAccount))
   if (virtualDescendantsWithFilters.length) {
     throw httpError(501, 'Le jeu de données virtuel ne peut pas être requêté, il utilise un autre jeu de données virtuel avec des filtres ce qui n\'est pas supporté.')
   }
-  const physicalDescendants = res[0].descendants.filter(d => !d.isVirtual)
+  const physicalDescendants = res[0].descendants.filter((d: Dataset) => !d.isVirtual)
   if (physicalDescendants.length === 0 && throwEmpty) {
     throw httpError(501, 'Le jeu de données virtuel ne peut pas être requêté, il n\'utilise aucun jeu de données requêtable.')
   }
-  return extraProperties ? physicalDescendants : physicalDescendants.map(d => d.id)
+  return extraProperties ? physicalDescendants : physicalDescendants.map((d: Dataset) => d.id)
 }

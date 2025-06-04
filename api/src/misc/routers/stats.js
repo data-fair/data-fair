@@ -1,6 +1,6 @@
 import express from 'express'
 import * as cacheHeaders from '../utils/cache-headers.js'
-import * as limitsUtils from '../utils/limits.js'
+import * as limitsUtils from '../utils/limits.ts'
 import mongo from '#mongo'
 
 const router = express.Router()
@@ -13,7 +13,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
 })
 
 async function ownerStats (db, owner) {
-  const limits = await limitsUtils.getLimits(db, owner)
+  const limits = await limitsUtils.getLimits(owner)
   return {
     limits,
     applications: await ownerCount(db, 'applications', owner)

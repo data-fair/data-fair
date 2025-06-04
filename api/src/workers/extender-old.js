@@ -1,5 +1,5 @@
 // Index tabular datasets with elasticsearch using available information on dataset schema
-import extensionsUtils from '../misc/utils/extensions.js'
+import extensionsUtils from '../misc/utils/extensions.ts'
 import * as datasetUtils from '../datasets/utils/index.js'
 import debugLib from 'debug'
 import mongo from '#mongo'
@@ -28,7 +28,7 @@ export const process = async function (app, dataset) {
       continue
     }
     debug('apply extension', extension)
-    await extensionsUtils.extend(app, dataset, extension, remoteService, action)
+    await extensionsUtils.extend(dataset, extension, remoteService, action)
     debug('extension ok')
   }
 

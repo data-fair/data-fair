@@ -4,8 +4,8 @@ import express from 'express'
 import config from '#config'
 import uiConfig from './ui-config.ts'
 import mongo from '#mongo'
+import es from '#es'
 import memoize from 'memoizee'
-import * as esUtils from './datasets/es/index.ts'
 import * as wsServer from '@data-fair/lib-express/ws-server.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import locks from '@data-fair/lib-node/locks.js'
@@ -43,7 +43,7 @@ export const run = async () => {
   }
 
   if (config.mode.includes('server')) {
-    const limits = await import('./misc/utils/limits.js')
+    const limits = await import('./misc/utils/limits.ts')
     const rateLimiting = await import('./misc/utils/rate-limiting.js')
     const session = (await import('@data-fair/sd-express')).default({
       directoryUrl: config.directoryUrl,
@@ -242,7 +242,8 @@ export const run = async () => {
     await upgradeScripts(db, locks, resolve(import.meta.dirname, '../..'))
   }
 
-  app.set('es', await esUtils.init())
+  await es.init()
+  app.set('es', await es.client)
 
   await wsEmitter.init(db)
 
@@ -252,7 +253,6 @@ export const run = async () => {
     // Error management
     app.use(errorHandler)
 
-    const limits = await import('./misc/utils/limits.js')
     const permissions = await import('./misc/utils/permissions.js')
     const { readApiKey } = await import('./misc/utils/api-key.js')
     await Promise.all([
@@ -260,7 +260,6 @@ export const run = async () => {
       (await import('./misc/utils/cache.js')).init(db),
       (await import('./remote-services/utils.js')).init(db),
       (await import('./base-applications/router.js')).init(db),
-      limits.init(db),
       wsServer.start(server, db, async (channel, sessionState, message) => {
         if (process.env.NODE_ENV === 'test') {
           // TODO: remove this ugly exception, this code should be tested
@@ -322,7 +321,7 @@ export const run = async () => {
 export const stop = async () => {
   if (config.mode.includes('server')) {
     await wsServer.stop()
-    await httpTerminator.terminate()
+    if (httpTerminator) await httpTerminator.terminate()
   }
 
   if (config.mode.includes('worker')) {
@@ -340,6 +339,6 @@ export const stop = async () => {
   await new Promise(resolve => setTimeout(resolve, 1000))
   await Promise.all([
     mongo.client.close(),
-    app.get('es').close()
+    es.client.close()
   ])
 }

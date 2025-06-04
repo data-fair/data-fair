@@ -1,5 +1,6 @@
 import fs from 'fs-extra'
 import * as datasetUtils from '../datasets/utils/index.js'
+import { updateStorage } from '../datasets/utils/storage.ts'
 import * as datasetsService from '../datasets/service.js'
 import { replaceAllAttachments } from '../datasets/utils/attachments.js'
 import datasetFileSample from '../datasets/utils/file-sample.js'
@@ -8,7 +9,7 @@ import md5File from 'md5-file'
 import JSONStream from 'JSONStream'
 import { Transform } from 'node:stream'
 import split2 from 'split2'
-import pump from '../misc/utils/pipe.js'
+import pump from '../misc/utils/pipe.ts'
 import debugLib from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import mongo from '#mongo'
@@ -113,6 +114,6 @@ export const process = async function (app, dataset) {
   await fs.remove(loadingDir)
 
   await datasetsService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset)
+  if (!dataset.draftReason) await updateStorage(dataset)
   debug('done')
 }

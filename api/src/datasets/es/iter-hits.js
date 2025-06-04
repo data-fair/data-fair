@@ -2,7 +2,7 @@ import config from '#config'
 import { prepareQuery, aliasName } from './commons.js'
 
 async function * iterHits (es, dataset, query = { size: 1000 }) {
-  const esQuery = prepareQuery(dataset, query)
+  const esQuery = prepareQuery(dataset, query, undefined, undefined, true, true)
   const index = aliasName(dataset)
 
   while (true) {

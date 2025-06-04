@@ -6,7 +6,7 @@ import FormData from 'form-data'
 import config from 'config'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import dayjs from 'dayjs'
-import * as restDatasetsUtils from '../api/src/datasets/utils/rest.js'
+import * as restDatasetsUtils from '../api/src/datasets/utils/rest.ts'
 import * as workers from '../api/src/workers/index.js'
 
 describe('Extensions', function () {
@@ -913,7 +913,7 @@ other,unknown address
     assert.equal(res.data.status, 'finalized')
     assert.equal(res.data.extensions[0].needsUpdate, true)
     await workers.hook(`extender/${dataset.id}`)
-    const collection = restDatasetsUtils.collection(global.db, dataset)
+    const collection = restDatasetsUtils.collection(dataset)
     const needsIndexingLines = await collection.find({ _needsIndexing: true }).toArray()
     assert.equal(needsIndexingLines.length, 1)
     assert.equal(needsIndexingLines[0].str1, 'str 1')

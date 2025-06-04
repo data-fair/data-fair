@@ -1,5 +1,6 @@
 import { Mongo } from '@data-fair/lib-node/mongo.js'
 import config from '#config'
+import type { Application, Dataset, Limits } from '#types'
 
 export class DfMongo {
   /** @type {Mongo} */
@@ -13,7 +14,17 @@ export class DfMongo {
     return this.mongo.db
   }
 
-  // TODO: export typed collections
+  get datasets () {
+    return this.mongo.db.collection<Dataset & { _id: string }>('datasets')
+  }
+
+  get applications () {
+    return this.mongo.db.collection<Application & { _id: string }>('applications')
+  }
+
+  get limits () {
+    return this.mongo.db.collection<Limits>('limits')
+  }
 
   constructor () {
     this.mongo = new Mongo()

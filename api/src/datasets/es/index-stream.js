@@ -1,7 +1,7 @@
 import { Transform } from 'stream'
 import config from '#config'
 import truncateMiddle from 'truncate-middle'
-import * as extensionsUtils from '../utils/extensions.js'
+import * as extensionsUtils from '../utils/extensions.ts'
 import { nanoid } from 'nanoid'
 import debugLib from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'

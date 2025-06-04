@@ -5,13 +5,14 @@ import path from 'path'
 import fs from 'fs-extra'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import ogr2ogr from 'ogr2ogr'
-import pump from '../misc/utils/pipe.js'
+import pump from '../misc/utils/pipe.ts'
 import { stringify as csvStrStream } from 'csv-stringify'
 import tmp from 'tmp-promise'
 import mime from 'mime-types'
 import zlib from 'node:zlib'
 import resolvePath from 'resolve-path'
 import { displayBytes } from '../misc/utils/bytes.js'
+import { updateStorage } from '../datasets/utils/storage.ts'
 import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetService from '../datasets/service.js'
 import { tmpDir as mainTmpDir, unzip } from '../datasets/utils/files.ts'
@@ -181,5 +182,5 @@ export const process = async function (app, dataset) {
   if (dataset.analysis) patch.analysis = dataset.analysis
 
   await datasetService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
+  if (!dataset.draftReason) await updateStorage(dataset, false, true)
 }

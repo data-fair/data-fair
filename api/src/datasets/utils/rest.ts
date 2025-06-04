@@ -1,12 +1,14 @@
 import config from '#config'
 import mongo from '#mongo'
+import es from '#es'
 import crypto from 'node:crypto'
 import fs from 'fs-extra'
 import path from 'path'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { ajv } from '@data-fair/data-fair-shared/ajv.js'
+import { errorsText } from '@data-fair/lib-validation'
 import { nanoid } from 'nanoid'
-import pump from '../../misc/utils/pipe.js'
-import * as ajv from '../../misc/utils/ajv.js'
+import pump from '../../misc/utils/pipe.ts'
 import multer from 'multer'
 import mime from 'mime-types'
 import { Readable, Transform, Writable } from 'stream'
@@ -18,17 +20,34 @@ import LinkHeader from 'http-link-header'
 import unzipper from 'unzipper'
 import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration.js'
-import * as storageUtils from './storage.js'
-import * as extensionsUtils from './extensions.js'
+import * as storageUtils from './storage.ts'
+import * as extensionsUtils from './extensions.ts'
 import * as findUtils from '../../misc/utils/find.js'
 import * as fieldsSniffer from './fields-sniffer.js'
 import { transformFileStreams, formatLine } from './data-streams.js'
 import { attachmentPath, lsAttachments, tmpDir } from './files.ts'
 import { jsonSchema } from './data-schema.js'
-import * as esUtils from '../../datasets/es/index.ts'
+import * as esUtils from '../es/index.ts'
 import { tabularTypes } from './types.js'
 import { Piscina } from 'piscina'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RequestWithAuth } from '#types'
+import type { NextFunction, Response, RequestHandler } from 'express'
+import type { Account, User } from '@data-fair/lib-express'
+import { type ValidateFunction } from 'ajv'
+import type { RequestWithRestDataset } from '#types/dataset/index.ts'
+import type { Collection, Filter, UnorderedBulkOperation, UpdateFilter } from 'mongodb'
+import iterHits from '../es/iter-hits.js'
+
+type Operation = {
+  _id: string,
+  _action: string,
+  body: any,
+  fullBody: any,
+  filter: { _id: string },
+  _status?: number,
+  _error?: string
+}
 
 dayjs.extend(duration)
 
@@ -41,7 +60,7 @@ export const sheet2csvPiscina = new Piscina({
 
 const actions = ['create', 'update', 'createOrUpdate', 'patch', 'delete']
 
-function cleanLine (line) {
+function cleanLine (line: DatasetLine) {
   delete line._needsIndexing
   delete line._needsExtending
   delete line._deleted
@@ -51,29 +70,29 @@ function cleanLine (line) {
   return line
 }
 
-const destination = async (req, file, cb) => {
+const destination: multer.DiskStorageOptions['destination'] = async (req, file, cb) => {
   try {
     await fs.ensureDir(tmpDir)
     cb(null, tmpDir)
   } catch (err) {
-    cb(err)
+    cb(err as Error, '')
   }
 }
 
-const filename = async (req, file, cb) => {
+const filename: multer.DiskStorageOptions['filename'] = async (req, file, cb) => {
   try {
     const uid = nanoid()
     // creating empty file before streaming seems to fix some weird bugs with NFS
     await fs.ensureFile(path.join(tmpDir, uid))
     cb(null, uid)
   } catch (err) {
-    cb(err)
+    cb(err as Error, '')
   }
 }
 
 const padISize = (config.mongo.maxBulkOps - 1).toString().length
 // cf https://github.com/puckey/pad-number/blob/master/index.js
-const padI = (i) => {
+const padI = (i: number) => {
   const str = i.toString()
   return new Array((padISize - str.length) + 1).join('0') + str
 }
@@ -82,7 +101,7 @@ export const uploadAttachment = multer({
   storage: multer.diskStorage({ destination, filename })
 }).single('attachment')
 
-export const fixFormBody = (req, res, next) => {
+export const fixFormBody: RequestHandler = (req, res, next) => {
   if (req.body?._body) req.body = JSON.parse(req.body._body)
   next()
 }
@@ -91,20 +110,20 @@ export const uploadBulk = multer({
   storage: multer.diskStorage({ destination, filename })
 }).fields([{ name: 'attachments', maxCount: 1 }, { name: 'actions', maxCount: 1 }])
 
-export const collectionName = (dataset) => 'dataset-data-' + dataset.id
-export const collection = (db, dataset) => db.collection(collectionName(dataset))
+export const collectionName = (dataset: RestDataset) => 'dataset-data-' + dataset.id
+export const collection = (dataset: RestDataset) => mongo.db.collection<DatasetLine>(collectionName(dataset))
 
-export const revisionsCollectionName = (dataset) => 'dataset-revisions-' + dataset.id
-export const revisionsCollection = (db, dataset) => db.collection(revisionsCollectionName(dataset))
+export const revisionsCollectionName = (dataset: RestDataset) => 'dataset-revisions-' + dataset.id
+export const revisionsCollection = (dataset: RestDataset) => mongo.db.collection<DatasetLineRevision>(revisionsCollectionName(dataset))
 
-export const initDataset = async (db, dataset) => {
+export const initDataset = async (dataset: RestDataset) => {
   // just in case of badly cleaned data from previous dataset with same id
   try {
-    await deleteDataset(db, dataset)
+    await deleteDataset(dataset)
   } catch (err) {
     // nothing
   }
-  const c = collection(db, dataset)
+  const c = collection(dataset)
   await Promise.all([
     c.createIndex({ _needsIndexing: 1 }, { sparse: true }),
     c.createIndex({ _needsExtending: 1 }, { sparse: true }),
@@ -112,25 +131,24 @@ export const initDataset = async (db, dataset) => {
   ])
 }
 
-export const configureHistory = async (app, dataset) => {
+export const configureHistory = async (dataset: RestDataset) => {
   const db = mongo.db
   const revisionsCollectionExists = (await db.listCollections({ name: revisionsCollectionName(dataset) }).toArray()).length === 1
   if (!dataset.rest.history) {
     if (revisionsCollectionExists) {
-      await revisionsCollection(db, dataset).drop()
-      await storageUtils.updateStorage(app, dataset)
+      await revisionsCollection(dataset).drop()
+      await storageUtils.updateStorage(dataset)
     }
   } else {
-    const rc = revisionsCollection(db, dataset)
+    const rc = revisionsCollection(dataset)
     if (!revisionsCollectionExists) {
       // create revisions collection and fill it with initial state
       await rc.createIndex({ _lineId: 1, _i: -1 })
       let revisionsBulkOp = rc.initializeUnorderedBulkOp()
-      for await (const line of collection(db, dataset).find()) {
-        const revision = { ...line, _action: 'create' }
+      for await (const line of collection(dataset).find<DatasetLine>({})) {
+        const revision: DatasetLineRevision = { ...line, _action: 'create', _lineId: line._id }
         delete revision._needsIndexing
         delete revision._needsExtending
-        revision._lineId = revision._id
         delete revision._id
         if (!revision._deleted) delete revision._deleted
         revisionsBulkOp.insert(revision)
@@ -140,7 +158,7 @@ export const configureHistory = async (app, dataset) => {
         }
       }
       if (revisionsBulkOp.length) await revisionsBulkOp.execute()
-      await storageUtils.updateStorage(app, dataset)
+      await storageUtils.updateStorage(dataset)
     }
 
     // manage history TTL
@@ -150,20 +168,20 @@ export const configureHistory = async (app, dataset) => {
     } else {
       try {
         await rc.dropIndex('history-ttl')
-      } catch (err) {
+      } catch (err: any) {
         if (err.codeName !== 'IndexNotFound') throw err
       }
     }
   }
 }
 
-export const deleteDataset = async (db, dataset) => {
-  await collection(db, dataset).drop()
-  const revisionsCollectionExists = (await db.listCollections({ name: revisionsCollectionName(dataset) }).toArray()).length === 1
-  if (revisionsCollectionExists) revisionsCollection(db, dataset).drop()
+export const deleteDataset = async (dataset: RestDataset) => {
+  await collection(dataset).drop()
+  const revisionsCollectionExists = (await mongo.db.listCollections({ name: revisionsCollectionName(dataset) }).toArray()).length === 1
+  if (revisionsCollectionExists) revisionsCollection(dataset).drop()
 }
 
-const getLineId = (line, dataset) => {
+const getLineId = (line: DatasetLine, dataset: RestDataset) => {
   if (dataset.primaryKey && dataset.primaryKey.length) {
     const primaryKey = dataset.primaryKey.map(p => line[p] + '')
     if (dataset.rest?.primaryKeyMode === 'sha256') {
@@ -175,9 +193,8 @@ const getLineId = (line, dataset) => {
   }
 }
 
-const linesOwnerCols = (linesOwner) => {
-  if (!linesOwner) return {}
-  const cols = { _owner: linesOwner.type + ':' + linesOwner.id }
+const linesOwnerCols = (linesOwner: Account) => {
+  const cols: { _owner: string, _ownerName?: string } = { _owner: linesOwner.type + ':' + linesOwner.id }
   if (linesOwner.department) cols._owner += ':' + linesOwner.department
   if (linesOwner.name) {
     cols._ownerName = linesOwner.name
@@ -185,26 +202,17 @@ const linesOwnerCols = (linesOwner) => {
   }
   return cols
 }
-const linesOwnerFilter = (linesOwner) => {
+const linesOwnerFilter = (linesOwner: Account) => {
   if (!linesOwner) return {}
   const cols = linesOwnerCols(linesOwner)
   return { _owner: cols._owner }
 }
-/**
- * @param {any} body
- * @returns {string}
- */
-const getLineHash = (body) => {
-  return crc.crc32(stableStringify(body)).toString(16)
+
+const getLineHash = (line: DatasetLine) => {
+  return crc.crc32(stableStringify(line)).toString(16)
 }
 
-/** @typedef {{_id: string, _action: string, body: any, fullBody: any, filter: {_id: string}, _status?: number, _error?: string}} Operation */
-
-/**
- * @param {Operation} operation
- * @returns {any}
- */
-const getLineFromOperation = (operation) => {
+const getLineFromOperation = (operation: Operation): DatasetLine => {
   const line = { ...operation, ...operation.fullBody }
   delete line.body
   delete line.fullBody
@@ -219,20 +227,20 @@ const getLineFromOperation = (operation) => {
  * @param {string[]} existingIds
  * @param {any} user
  */
-const checkMissingIdsRevisions = async (db, tmpDataset, dataset, existingIds, user) => {
+const checkMissingIdsRevisions = async (tmpDataset: RestDataset, dataset: RestDataset, existingIds: string[], user: User) => {
   const missingIds = new Set(existingIds)
-  for await (const stillExistingDoc of collection(db, tmpDataset).find({ _id: { $in: existingIds } })) {
+  for await (const stillExistingDoc of collection(tmpDataset).find({ _id: { $in: existingIds } })) {
     missingIds.delete(stillExistingDoc._id)
   }
   if (missingIds.size) {
     const updatedAt = new Date()
     const datasetCreatedAt = new Date(dataset.createdAt).getTime()
     let i = 0
-    const revisionsBulkOp = revisionsCollection(db, dataset).initializeUnorderedBulkOp()
-    for await (const missingDoc of collection(db, dataset).find({ _id: { $in: [...missingIds] } }).project(getPrimaryKeyProjection(dataset))) {
+    const revisionsBulkOp = revisionsCollection(dataset).initializeUnorderedBulkOp()
+    for await (const missingDoc of collection(dataset).find({ _id: { $in: [...missingIds] } }).project(getPrimaryKeyProjection(dataset))) {
       i++
       if (missingDoc._deleted) continue
-      const revision = {
+      const revision: DatasetLineRevision = {
         _action: 'delete',
         _updatedAt: updatedAt,
         ...missingDoc,
@@ -254,44 +262,35 @@ const checkMissingIdsRevisions = async (db, tmpDataset, dataset, existingIds, us
   }
 }
 
-/**
- * @param {import('mongodb').Db} db
- * @param {any} tmpDataset
- * @param {any} dataset
-* @param {any} user
- */
-const createTmpMissingRevisions = async (db, tmpDataset, dataset, user) => {
+const createTmpMissingRevisions = async (tmpDataset: RestDataset, dataset: RestDataset, user: User) => {
   /** @type {string[]} */
   let existingIds = []
 
-  for await (const existingDoc of collection(db, dataset).find({}).project({ _id: 1 })) {
+  for await (const existingDoc of collection(dataset).find({}).project({ _id: 1 })) {
     existingIds.push(existingDoc._id)
     if (existingIds.length === 1000) {
-      await checkMissingIdsRevisions(db, tmpDataset, dataset, existingIds, user)
+      await checkMissingIdsRevisions(tmpDataset, dataset, existingIds, user)
       existingIds = []
     }
   }
-  if (existingIds.length) await checkMissingIdsRevisions(db, tmpDataset, dataset, existingIds, user)
+  if (existingIds.length) await checkMissingIdsRevisions(tmpDataset, dataset, existingIds, user)
 }
 
-/**
- * @param {any} dataset
- */
-const getPrimaryKeyProjection = (dataset) => {
-  const primaryKeyProjection = { _id: 1, _hash: 1, _deleted: 1 }
+const getPrimaryKeyProjection = (dataset: RestDataset) => {
+  const primaryKeyProjection: Record<string, 1> = { _id: 1, _hash: 1, _deleted: 1 }
   if (dataset.primaryKey && dataset.primaryKey.length) {
     for (const key of dataset.primaryKey) primaryKeyProjection[key] = 1
   }
   return primaryKeyProjection
 }
 
-export const applyTransactions = async (db, dataset, user, transacs, validate, linesOwner, tmpDataset) => {
+export const applyTransactions = async (dataset: RestDataset, user: User | undefined, transacs: DatasetLineAction[], validate?: ValidateFunction, linesOwner?: Account, tmpDataset?: RestDataset) => {
   const datasetCreatedAt = new Date(dataset.createdAt).getTime()
   const updatedAt = new Date()
-  const c = collection(db, tmpDataset || dataset)
-  const rc = revisionsCollection(db, dataset)
+  const c = collection(tmpDataset || dataset)
+  const rc = revisionsCollection(dataset)
   const history = dataset.rest && dataset.rest.history
-  const patchProjection = { _id: 1, _hash: 1, _deleted: 1 }
+  const patchProjection: Record<string, 1> = { _id: 1, _hash: 1, _deleted: 1 }
   for (const prop of dataset.schema) {
     if (!prop['x-calculated'] && !prop['x-extension']) {
       patchProjection[prop.key] = 1
@@ -307,16 +306,18 @@ export const applyTransactions = async (db, dataset, user, transacs, validate, l
   const deletePreviousFilters = []
   for (const transac of transacs) {
     const { _action, ...body } = transac
-    if (!actions.includes(_action)) throw httpError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
-    Object.assign(body, linesOwnerCols(linesOwner))
+    if (_action && !actions.includes(_action)) throw httpError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
+    if (linesOwner) Object.assign(body, linesOwnerCols(linesOwner))
     if (!body._id) throw httpError(400, '"_id" attribute is required')
 
-    const operation = {
+    const filter = { _id: body._id }
+    if (linesOwner) Object.assign(filter, linesOwnerFilter(linesOwner))
+    const operation: Operation = {
       _id: body._id,
-      _action,
+      _action: _action ?? 'createOrUpdate',
       body,
       fullBody: { ...body },
-      filter: { _id: body._id, ...linesOwnerFilter(linesOwner) }
+      filter
     }
     operations.push(operation)
 
@@ -419,7 +420,7 @@ export const applyTransactions = async (db, dataset, user, transacs, validate, l
       operation._status = 400
       operation._error = 'identifiant de ligne incompatible avec la clé primaire'
     } else if (validate && !validate(operation.body)) {
-      operation._error = validate.errors
+      operation._error = errorsText(validate.errors, '')
       operation._status = 400
     } else if (operation._action !== 'patch') {
       operation.fullBody._hash = getLineHash(operation.body)
@@ -484,7 +485,7 @@ export const applyTransactions = async (db, dataset, user, transacs, validate, l
   if (bulkOpMatchingOperations.length) {
     try {
       bulkOpResult = await bulkOp.execute()
-    } catch (err) {
+    } catch (err: any) {
       if (!err.writeErrors) throw err
       for (const writeError of err.writeErrors) {
         const operation = bulkOpMatchingOperations[writeError.err.index]
@@ -515,7 +516,7 @@ export const applyTransactions = async (db, dataset, user, transacs, validate, l
       h++
       // lots of objects to process, so we yield to the event loop every 100 lines
       if (h % 100 === 0) await new Promise(resolve => setImmediate(resolve))
-      const revision = getLineFromOperation(operation)
+      const revision = getLineFromOperation(operation) as unknown as DatasetLineRevision
       delete revision._id
       revision._lineId = operation._id
       delete revision._needsIndexing
@@ -536,7 +537,7 @@ export const applyTransactions = async (db, dataset, user, transacs, validate, l
   }
 
   if (user && bulkOpMatchingOperations.length) {
-    db.collection('datasets').updateOne(
+    mongo.datasets.updateOne(
       { id: dataset.id },
       { $set: { dataUpdatedAt: updatedAt.toISOString(), dataUpdatedBy: { id: user.id, name: user.name } } })
   }
@@ -544,21 +545,28 @@ export const applyTransactions = async (db, dataset, user, transacs, validate, l
   return { operations, bulkOpResult }
 }
 
-/**
- * @param {*} req
- * @param {*} transacs
- * @param {*} validate
- * @param {any} [tmpDataset]
- * @returns {{operations: Operation[], bulkOpResult: any}}
- */
-const applyReqTransactions = async (req, transacs, validate, tmpDataset) => {
-  return applyTransactions(mongo.db, req.dataset, req.user, transacs, validate, req.linesOwner, tmpDataset)
+const applyReqTransactions = async (req: RequestWithRestDataset & RequestWithAuth, transacs: DatasetLineAction[], validate: ValidateFunction, tmpDataset?: RestDataset) => {
+  return applyTransactions(req.dataset, req.user, transacs, validate, req.linesOwner, tmpDataset)
 }
 
-const initSummary = () => ({ nbOk: 0, nbNotModified: 0, nbErrors: 0, nbCreated: 0, nbModified: 0, nbDeleted: 0, errors: [] })
+type Summary = { nbOk: number, nbNotModified: number, nbErrors: number, nbCreated: number, nbModified: number, nbDeleted: number, errors: { line: number, error: string, status: number }[], warnings: string[], cancelled?: boolean, dropped?: boolean, _ids: Set<string>, indexedAt?: string }
+
+const initSummary = (): Summary => ({ nbOk: 0, nbNotModified: 0, nbErrors: 0, nbCreated: 0, nbModified: 0, nbDeleted: 0, errors: [], warnings: [], _ids: new Set() })
+
+type TransactionStreamOptions = {
+  dataset: RestDataset,
+  user?: User,
+  linesOwner?: Account,
+  validate?: ValidateFunction,
+  tmpDataset?: RestDataset,
+  summary: Summary
+}
 
 class TransactionStream extends Writable {
-  constructor (options) {
+  options: TransactionStreamOptions
+  i: number
+  transactions: DatasetLineAction[]
+  constructor (options: TransactionStreamOptions) {
     super({ objectMode: true })
     this.options = options
     this.i = 0
@@ -566,7 +574,11 @@ class TransactionStream extends Writable {
   }
 
   async applyTransactions () {
-    const { operations, bulkOpResult } = await applyReqTransactions(this.options.req, this.transactions, this.options.validate, this.options.tmpDataset)
+    const { operations, bulkOpResult } = await applyTransactions(this.options.dataset, this.options.user, this.transactions, this.options.validate, this.options.linesOwner, this.options.tmpDataset)
+
+    if (operations.length + this.options.summary._ids.size < config.elasticsearch.maxBulkLines) {
+      for (const op of operations) this.options.summary._ids.add(op._id)
+    }
 
     this.transactions = []
     if (bulkOpResult) {
@@ -579,7 +591,7 @@ class TransactionStream extends Writable {
       if (operation._error || operation._status === 500) {
         this.options.summary.nbErrors += 1
         if (this.options.summary.errors.length < 10) {
-          this.options.summary.errors.push({ line: this.i, error: operation._error, status: operation._status })
+          this.options.summary.errors.push({ line: this.i, error: operation._error ?? '', status: operation._status ?? 500 })
         }
       } else {
         this.options.summary.nbOk += 1
@@ -596,13 +608,15 @@ class TransactionStream extends Writable {
     this.emit('batch')
   }
 
-  async writePromise (chunk, encoding) {
+  async writePromise (chunk: DatasetLineAction) {
     chunk._action = chunk._action || 'createOrUpdate'
     delete chunk._i
     if (['create', 'createOrUpdate'].includes(chunk._action) && !chunk._id) {
-      chunk._id = getLineId(chunk, this.options.req.dataset) || nanoid()
+      chunk._id = getLineId(chunk, this.options.dataset) || nanoid()
     } else if (!chunk._id) { // delete by primary key
-      chunk._id = getLineId(chunk, this.options.req.dataset)
+      const lineId = getLineId(chunk, this.options.dataset)
+      if (!lineId) throw httpError(400, 'failed to determine required _id from primary key')
+      chunk._id = lineId
     }
 
     // prevent working twice on a line in the same bulk, this way sequentiality doesn't matter and we can use mongodb unordered bulk
@@ -619,27 +633,27 @@ class TransactionStream extends Writable {
     if (this.transactions.length > config.mongo.maxBulkOps) await this.applyTransactions()
   }
 
-  _write (chunk, encoding, cb) {
+  _write (chunk: DatasetLineAction, encoding: string, cb: (err?: any) => void) {
     // use then syntax cf https://github.com/nodejs/node/issues/39535
-    this.writePromise(chunk, encoding).then(() => cb(), cb)
+    this.writePromise(chunk).then(() => cb(), cb)
   }
 
-  _final (cb) {
+  _final (cb: (err?: any) => void) {
     // use then syntax cf https://github.com/nodejs/node/issues/39535
     this.applyTransactions().then(() => cb(), cb)
   }
 }
 
-const compileSchema = (dataset, adminMode) => {
+const compileSchema = (dataset: RestDataset, adminMode: boolean) => {
   const schema = jsonSchema(dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']))
   schema.additionalProperties = false
   schema.properties._id = { type: 'string' }
   // super-admins can set _updatedAt and so rewrite history
   if (adminMode) schema.properties._updatedAt = { type: 'string', format: 'date-time' }
-  return ajv.compile(schema, false)
+  return ajv.compile(schema)
 }
 
-async function checkMatchingAttachment (req, lineId, dir, pathField) {
+async function checkMatchingAttachment (req: { body: any }, lineId: string, dir: string, pathField: { key: string }) {
   if (pathField && req.body[pathField.key] && req.body[pathField.key].startsWith(lineId + '/')) {
     const fileName = req.body[pathField.key].replace(lineId + '/', '')
     try {
@@ -652,7 +666,7 @@ async function checkMatchingAttachment (req, lineId, dir, pathField) {
   return false
 }
 
-async function manageAttachment (req, keepExisting) {
+async function manageAttachment (req: RequestWithRestDataset & { body: any }, keepExisting: boolean) {
   if (req.is('multipart/form-data')) {
     // When taken from form-data everything is string.. convert to actual types
     for (const f of req.dataset.schema) {
@@ -681,7 +695,7 @@ async function manageAttachment (req, keepExisting) {
       throw httpError(400, 'Le schéma ne prévoit pas d\'associer une pièce jointe')
     }
     req.body[pathField.key] = relativePath
-  } else if (!keepExisting) {
+  } else if (!keepExisting && pathField) {
     if (!checkMatchingAttachment(req, lineId, dir, pathField)) {
       await fs.remove(dir)
     }
@@ -690,134 +704,121 @@ async function manageAttachment (req, keepExisting) {
 
 // bulk operations are processed by the workers, but single line changes are processed in real time
 // this allows for read-after-write when editing the dataset
-async function commitSingleLine (app, dataset, lineId) {
-  const db = mongo.db
-  const esClient = app.get('es')
+async function commitLines (dataset: RestDataset, lineIds: string[]) {
   if (dataset.extensions && dataset.extensions.find(e => e.active)) {
-    await extensionsUtils.extend(app, dataset, dataset.extensions, 'singleLine', true, lineId)
+    await extensionsUtils.extend(dataset, dataset.extensions, 'lineIds', true, lineIds)
   }
   const attachments = !!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   const indexName = esUtils.aliasName(dataset)
-  const indexStream = esUtils.indexStream({ esClient, indexName, dataset, attachments, refresh: config.elasticsearch.singleLineOpRefresh })
-  const rs = await readStreams(db, dataset, { _id: lineId })
-  const writeStream = markIndexedStream(db, dataset)
-  await pump(...rs, indexStream, writeStream)
+  await pump(
+    ...await readStreams(dataset, { _id: { $in: lineIds } }),
+    esUtils.indexStream({ esClient: es.client, indexName, dataset, attachments, refresh: config.elasticsearch.singleLineOpRefresh }),
+    markIndexedStream(dataset)
+  )
 
-  await db.collection('datasets').updateOne({ id: dataset.id, _partialRestStatus: { $exists: false } }, {
+  await mongo.datasets.updateOne({ id: dataset.id, _partialRestStatus: { $exists: false } }, {
     $set: {
       _partialRestStatus: 'indexed',
-      count: await count(db, dataset)
+      count: await count(dataset)
     }
   })
 }
 
-export const readLine = async (req, res, next) => {
-  const db = mongo.db
-  const c = collection(db, req.dataset)
-  const line = await c.findOne({ _id: req.params.lineId, ...linesOwnerFilter(req.linesOwner) })
+export const readLine = async (req: RequestWithAuth & RequestWithRestDataset, res: Response, next: NextFunction) => {
+  const c = collection(req.dataset)
+  const filter: Filter<DatasetLine> = { _id: req.params.lineId }
+  if (req.linesOwner) Object.assign(filter, linesOwnerFilter(req.linesOwner))
+  const line = await c.findOne(filter)
   if (!line) return res.status(404).send('Identifiant de ligne inconnu')
   if (line._deleted) return res.status(404).send('Identifiant de ligne inconnu')
   cleanLine(line)
-  const updatedAt = (new Date(line._updatedAt)).toUTCString()
-  const ifModifiedSince = req.get('If-Modified-Since')
-  if (ifModifiedSince && updatedAt === ifModifiedSince) return res.status(304).send()
-  res.setHeader('Last-Modified', updatedAt)
+  const updatedAt = line._updatedAt && (new Date(line._updatedAt)).toUTCString()
+  if (updatedAt) {
+    const ifModifiedSince = req.get('If-Modified-Since')
+    if (ifModifiedSince && updatedAt === ifModifiedSince) return res.status(304).send()
+    res.setHeader('Last-Modified', updatedAt)
+  }
   res.send(line)
 }
 
-export const deleteLine = async (req, res, next) => {
-  // @ts-ignore
-  const dataset = req.dataset
-
-  const [operation] = (await applyReqTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset, req.user.adminMode))).operations
-  if (operation._error) return res.status(operation._status).send(operation._error)
-  await commitSingleLine(req.app, dataset, req.params.lineId)
+export const deleteLine = async (req: RequestWithAuth & RequestWithRestDataset & { params: { lineId: string } }, res: Response, next: NextFunction) => {
+  const [operation] = (await applyReqTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset, !!req.user.adminMode))).operations
+  if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
+  await commitLines(req.dataset, [req.params.lineId])
 
   await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
+    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteLine', `deleted line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
 
   // TODO: delete the attachment if it is the primary key ?
   res.status(204).send()
-  storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
+  storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
 }
 
-export const createOrUpdateLine = async (req, res, next) => {
-  // @ts-ignore
-  const dataset = req.dataset
+export const createOrUpdateLine = async (req: RequestWithAuth & RequestWithRestDataset, res: Response, next: NextFunction) => {
+  formatLine(req.body, req.dataset.schema)
 
-  formatLine(req.body, dataset.schema)
-
-  Object.assign(req.body, linesOwnerCols(req.linesOwner))
+  if (req.linesOwner) Object.assign(req.body, linesOwnerCols(req.linesOwner))
   req.body._action = req.body._action ?? 'createOrUpdate'
   const definedId = req.params.lineId || req.body._id || getLineId(req.body, req.dataset)
   req.body._id = definedId || nanoid()
 
   await manageAttachment(req, false)
-  const [operation] = (await applyReqTransactions(req, [req.body], compileSchema(req.dataset, req.user.adminMode))).operations
-  if (operation._error) return res.status(operation._status).send(operation._error)
-  await commitSingleLine(req.app, dataset, req.body._id)
+  const [operation] = (await applyReqTransactions(req, [req.body], compileSchema(req.dataset, !!req.user.adminMode))).operations
+  if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
+  await commitLines(req.dataset, [req.body._id])
 
   await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
+    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
 
   const line = getLineFromOperation(operation)
-  res.status(line._status || (definedId ? 200 : 201)).send(cleanLine(line))
-  storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
+  res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
+  storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
 }
 
-export const patchLine = async (req, res, next) => {
-  // @ts-ignore
-  const dataset = req.dataset
-
+export const patchLine = async (req: RequestWithAuth & RequestWithRestDataset, res: Response, next: NextFunction) => {
   await manageAttachment(req, true)
   const fullLine = { _action: 'patch', _id: req.params.lineId, ...req.body }
-  formatLine(fullLine, dataset.schema)
-  const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, req.user.adminMode))).operations
-  if (operation._error) return res.status(operation._status).send(operation._error)
-  await commitSingleLine(req.app, dataset, fullLine._id)
+  formatLine(fullLine, req.dataset.schema)
+  const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!req.user.adminMode))).operations
+  if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
+  await commitLines(req.dataset, [fullLine._id])
 
   await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
+    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
 
   const line = getLineFromOperation(operation)
   res.status(200).send(cleanLine(line))
-  storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
+  storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
 }
 
-export const deleteAllLines = async (req, res, next) => {
-  // @ts-ignore
-  const dataset = req.dataset
-
-  const db = mongo.db
-  const esClient = req.app.get('es')
-  await initDataset(db, req.dataset)
-  const indexName = await esUtils.initDatasetIndex(esClient, req.dataset)
-  await esUtils.switchAlias(esClient, req.dataset, indexName)
+export const deleteAllLines = async (req: RequestWithAuth & RequestWithRestDataset, res: Response, next: NextFunction) => {
+  await initDataset(req.dataset)
+  const indexName = await esUtils.initDatasetIndex(es.client, req.dataset)
+  await esUtils.switchAlias(es.client, req.dataset, indexName)
 
   await import('@data-fair/lib-express/events-log.js')
-    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner }))
+    .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
 
-  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
+  await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
 
   res.status(204).send()
-  storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
+  storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after deleteAllLines', err))
 }
 
-export const bulkLines = async (req, res, next) => {
-  // @ts-ignore
-  const dataset = req.dataset
+type ReqFile = { filename: string, originalname: string, mimetype: string, path: string }
 
+export const bulkLines = async (req: RequestWithAuth & RequestWithRestDataset & { files?: { attachments?: ReqFile[], actions?: ReqFile[] } }, res: Response, next: NextFunction) => {
   try {
-    const db = mongo.db
-    const validate = compileSchema(req.dataset, req.user.adminMode)
+    const validate = compileSchema(req.dataset, !!req.user.adminMode)
     const drop = req.query.drop === 'true'
 
     // no buffering of this response in the reverse proxy
     res.setHeader('X-Accel-Buffering', 'no')
 
     // If attachments are sent, add them to the existing ones
-    if (req.files && req.files.attachments && req.files.attachments[0]) {
-      await db.collection('datasets').updateOne({ id: req.dataset.id }, { $push: { _newRestAttachments: (drop ? 'drop:' : '') + req.files.attachments[0].filename } })
+    const attachmentsFile = req.files?.attachments?.[0]
+    if (attachmentsFile) {
+      await mongo.datasets.updateOne({ id: req.dataset.id }, { $push: { _newRestAttachments: (drop ? 'drop:' : '') + req.files.attachments[0].filename } })
     }
 
     // The list of actions/operations/transactions is either in a "actions" file
@@ -840,12 +841,18 @@ export const bulkLines = async (req, res, next) => {
         mimeType = mime.lookup(directory.files[0].path)
         inputStream = directory.files[0].stream()
       } else if (tabularTypes.has(req.files.actions[0].mimetype)) {
-        const destination = req.files.actions[0].path + '.csv'
+        const actionFile = req.files.actions[0]
+        const destination = actionFile.path + '.csv'
         await sheet2csvPiscina.run({
           source: req.files.actions[0].path,
           destination
         })
-        req.files.actions.push({ path: destination })
+        req.files.actions.push({
+          originalname: actionFile.originalname + '.csv',
+          filename: actionFile.filename + '.csv',
+          mimetype: 'text/csv',
+          path: destination
+        })
         inputStream = fs.createReadStream(destination)
         mimeType = 'text/csv'
         fileProps = { fieldsDelimiter: ',', escape: '"', quote: '"', newline: '\n' }
@@ -860,15 +867,16 @@ export const bulkLines = async (req, res, next) => {
     } else {
       inputStream = req
       skipDecoding = true
-      mimeType = (req.get('Content-Type') && req.get('Content-Type').split(';')[0]) || 'application/json'
+      const contentType = req.get('Content-Type')
+      mimeType = (contentType && contentType.split(';')[0]) || 'application/json'
     }
 
     if (!mimeType) return res.status(400).type('text/plain').send('unknown file extension')
 
-    let tmpDataset
+    let tmpDataset: RestDataset | undefined
     if (drop) {
       tmpDataset = { ...req.dataset, id: req.dataset.id + '-' + nanoid() + '-tmp-bulk' }
-      await initDataset(db, tmpDataset)
+      await initDataset(tmpDataset)
     }
 
     // these formats are read strictly as is
@@ -877,7 +885,7 @@ export const bulkLines = async (req, res, next) => {
     const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, req.dataset, true, false)
 
     const summary = initSummary()
-    const transactionStream = new TransactionStream({ req, validate, summary, tmpDataset })
+    const transactionStream = new TransactionStream({ dataset: req.dataset, user: req.user, linesOwner: req.linesOwner, validate, summary, tmpDataset })
 
     // we try both to have a HTTP failure if the transactions are clearly badly formatted
     // and also to start writing in the HTTP response as soon as possible to limit the timeout risks
@@ -885,7 +893,7 @@ export const bulkLines = async (req, res, next) => {
     let firstBatch = true
     transactionStream.on('batch', () => {
       if (firstBatch) {
-        res.writeHeader(!summary.nbOk && summary.nbErrors ? 400 : 200, { 'Content-Type': 'application/json' })
+        res.writeHead(!summary.nbOk && summary.nbErrors ? 400 : 200, { 'Content-Type': 'application/json' })
         firstBatch = false
       } else {
         res.write(' ')
@@ -898,43 +906,52 @@ export const bulkLines = async (req, res, next) => {
         ...parseStreams,
         transactionStream
       )
-      if (drop) {
+      if (drop && tmpDataset) {
         if (summary.nbErrors) {
           summary.cancelled = true
-          await collection(db, tmpDataset).drop()
+          await collection(tmpDataset).drop()
         } else {
-          await createTmpMissingRevisions(db, tmpDataset, req.dataset, req.user)
-          await collection(db, req.dataset).drop()
-          await collection(db, tmpDataset).rename(collectionName(req.dataset))
+          await createTmpMissingRevisions(tmpDataset, req.dataset, req.user)
+          await collection(req.dataset).drop()
+          await collection(tmpDataset).rename(collectionName(req.dataset))
           summary.dropped = true
-          await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'analyzed' } })
+          await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { status: 'analyzed' } })
         }
       } else {
-        await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
+        const contentLength = Number(req.get('content-length'))
+        if (!attachmentsFile && req.query.async !== 'true' && !isNaN(contentLength) && contentLength <= config.elasticsearch.maxBulkChars && summary._ids.size <= config.elasticsearch.maxBulkLines) {
+          await commitLines(req.dataset, [...summary._ids])
+          summary.indexedAt = new Date().toISOString()
+        } else {
+          await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       internalError('bulk-lines', err)
       if (firstBatch) {
-        res.writeHeader(err.statusCode || 500, { 'Content-Type': 'application/json' })
+        res.writeHead(err.statusCode || 500, { 'Content-Type': 'application/json' })
       }
       summary.nbErrors += 1
-      summary.errors.push({ line: -1, error: err.message })
+      summary.errors.push({ line: -1, error: err.message, status: 500 })
 
       if (drop) {
         summary.cancelled = true
-        await collection(db, tmpDataset).drop()
+        if (tmpDataset) await collection(tmpDataset).drop()
       }
     }
     const warnings = parseStreams.map(p => p.__warning).filter(Boolean)
     if (warnings.length) summary.warnings = warnings
 
-    await import('@data-fair/lib-express/events-log.js')
-      .then((eventsLog) => eventsLog.default.info('df.datasets.rest.bulkLines', `applied operations in bulk to dataset ${dataset.slug} (${dataset.id}), ${JSON.stringify(summary)}`, { req, account: dataset.owner }))
+    const result: any = { ...summary }
+    delete result._ids
 
-    res.write(JSON.stringify(summary, null, 2))
+    await import('@data-fair/lib-express/events-log.js')
+      .then((eventsLog) => eventsLog.default.info('df.datasets.rest.bulkLines', `applied operations in bulk to dataset ${req.dataset.slug} (${req.dataset.id}), ${JSON.stringify(result)}`, { req, account: req.dataset.owner as Account }))
+
+    res.write(JSON.stringify(result, null, 2))
     res.end()
 
-    storageUtils.updateStorage(req.app, req.dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
+    storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after bulkLines', err))
   } finally {
     for (const file of req.files?.actions || []) {
       await fs.unlink(file.path)
@@ -942,21 +959,20 @@ export const bulkLines = async (req, res, next) => {
   }
 }
 
-export const syncAttachmentsLines = async (req, res, next) => {
-  const db = mongo.db
+export const syncAttachmentsLines = async (req: RequestWithAuth & RequestWithRestDataset, res: Response, next: NextFunction) => {
   const dataset = req.dataset
-  const validate = compileSchema(req.dataset, req.user.adminMode)
+  const validate = compileSchema(req.dataset, !!req.user.adminMode)
 
   const pathField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (!pathField) {
     throw httpError(400, 'Le schéma ne prévoit pas de pièce jointe')
   }
-  if (!dataset.primaryKey || !dataset.primaryKey.length === 1 || dataset.primaryKey[0] !== pathField.key) {
+  if (!dataset.primaryKey || dataset.primaryKey.length !== 1 || dataset.primaryKey[0] !== pathField.key) {
     throw httpError(400, 'Le schéma ne définit par le chemin de la pièce jointe comme clé primaire')
   }
 
   const files = await lsAttachments(dataset)
-  const toDelete = await collection(db, dataset)
+  const toDelete = await collection(dataset)
     .find({ [pathField.key]: { $nin: files } })
     .limit(10000).project({ [pathField.key]: 1 }).toArray()
 
@@ -970,36 +986,36 @@ export const syncAttachmentsLines = async (req, res, next) => {
   filesStream.push(null)
 
   const summary = initSummary()
-  const transactionStream = new TransactionStream({ req, validate, summary })
+  const transactionStream = new TransactionStream({ dataset: req.dataset, user: req.user, linesOwner: req.linesOwner, validate, summary })
   await pump(filesStream, transactionStream)
 
-  await db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
-  await storageUtils.updateStorage(req.app, req.dataset)
+  await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
+  await storageUtils.updateStorage(req.dataset)
 
   res.send(summary)
 }
 
-export const readRevisions = async (req, res, next) => {
+export const readRevisions = async (req: RequestWithAuth & RequestWithRestDataset, res: Response, next: NextFunction) => {
   if (!req.dataset.rest || !req.dataset.rest.history) {
     return res.status(400).type('text/plain').send('L\'historisation des lignes n\'est pas activée pour ce jeu de données.')
   }
-  const rc = revisionsCollection(mongo.db, req.dataset)
-  const filter = req.params.lineId ? { _lineId: req.params.lineId } : {}
-  Object.assign(filter, linesOwnerFilter(req.linesOwner))
+  const rc = revisionsCollection(req.dataset)
+  const filter: Filter<DatasetLineRevision> = req.params.lineId ? { _lineId: req.params.lineId } : {}
+  if (req.linesOwner) Object.assign(filter, linesOwnerFilter(req.linesOwner))
   const countFilter = { ...filter }
-  if (req.query.before) filter._i = { $lt: parseInt(req.query.before) }
-  // eslint-disable-next-line no-unused-vars
-  const [_, size] = findUtils.pagination(req.query)
+  if (req.query.before && typeof req.query.before === 'string') filter._i = { $lt: parseInt(req.query.before) }
+
+  const [, size] = findUtils.pagination(req.query)
   const [total, results] = await Promise.all([
     rc.countDocuments(countFilter),
-    rc.find(filter).sort({ _i: -1 }).limit(size).toArray()
+    rc.find(filter).sort({ _i: -1 }).limit(size).project({}).toArray()
   ])
   for (const r of results) {
     r._id = r._lineId
     delete r._lineId
   }
 
-  const response = { total, results }
+  const response: { total: number, results: Partial<DatasetLineRevision>[], next?: string } = { total, results }
 
   if (size && results.length === size) {
     const nextLinkURL = new URL(`${req.publicBaseUrl}${req.originalUrl}`)
@@ -1016,9 +1032,9 @@ export const readRevisions = async (req, res, next) => {
   res.send(response)
 }
 
-export const readStreams = async (db, dataset, filter = {}, progress) => {
-  const c = collection(db, dataset)
-  let inc
+export const readStreams = async (dataset: RestDataset, filter = {}, progress?: { inc: (i: number) => void }) => {
+  const c = collection(dataset)
+  let inc: number
   if (progress) {
     const count = await c.countDocuments(filter)
     inc = 100 / count
@@ -1037,14 +1053,16 @@ export const readStreams = async (db, dataset, filter = {}, progress) => {
   ]
 }
 
-export const writeExtendedStreams = (db, dataset, extensions) => {
-  const patchedKeys = []
-  for (const extension of extensions) {
-    if (extension.type === 'remoteService') {
+export const writeExtendedStreams = (dataset: RestDataset, extensions: RestDataset['extensions']) => {
+  const patchedKeys: string[] = []
+  for (const extension of extensions ?? []) {
+    if (extension.type === 'remoteService' && extension.propertyPrefix) {
       patchedKeys.push(extension.propertyPrefix)
       if (extension.overwrite) {
         for (const key in extension.overwrite) {
+          // @ts-ignore
           if (extension.overwrite[key]['x-originalName']) {
+            // @ts-ignore
             patchedKeys.push(fieldsSniffer.escapeKey(extension.overwrite[key]['x-originalName']))
           }
         }
@@ -1052,116 +1070,105 @@ export const writeExtendedStreams = (db, dataset, extensions) => {
     }
     if (extension.type === 'exprEval') patchedKeys.push(extension.property.key)
   }
-  const c = collection(db, dataset)
+  const c = collection(dataset)
   return [new Writable({
     objectMode: true,
     async write (item, encoding, cb) {
       try {
-        const patch = { $set: { _needsIndexing: true }, $unset: { _needsExtending: 1 } }
+        const patch: UpdateFilter<DatasetLine> = { $set: { _needsIndexing: true }, $unset: { _needsExtending: 1 } }
         for (const key of patchedKeys) {
-          if (key in item) patch.$set[key] = item[key]
-          else patch.$unset[key] = item[key]
+          if (key in item && patch.$set) patch.$set[key] = item[key]
+          else if (patch.$unset) patch.$unset[key] = item[key]
         }
         await c.updateOne({ _id: item._id }, patch)
         cb()
-      } catch (err) {
+      } catch (err: any) {
         cb(err)
       }
     }
   })]
 }
 
-export const markIndexedStream = (db, dataset) => {
-  const c = collection(db, dataset)
-  return new Writable({
-    objectMode: true,
-    async write (chunk, encoding, cb) {
-      try {
-        this.i = this.i || 0
-        this.bulkOp = this.bulkOp || c.initializeUnorderedBulkOp()
-        const line = await c.findOne({ _id: chunk._id })
-        // if the line was updated in the interval since reading for indexing
-        // do not mark it as properly indexed
-        if (chunk._updatedAt.getTime() === line._updatedAt.getTime()) {
-          this.i += 1
-          if (chunk._deleted) {
-            this.bulkOp.find({ _id: chunk._id }).deleteOne()
-          } else {
-            this.bulkOp.find({ _id: chunk._id }).updateOne({ $unset: { _needsIndexing: '' } })
-          }
+class MarkIndexedStream extends Writable {
+  c: Collection<DatasetLine>
+  i: number = 0
+  bulkOp: UnorderedBulkOperation | null = null
+
+  constructor (dataset: RestDataset) {
+    super({ objectMode: true })
+    this.c = collection(dataset)
+  }
+
+  async _write (chunk: DatasetLine, encoding: BufferEncoding, cb: (error?: Error) => void) {
+    try {
+      this.i = this.i || 0
+      this.bulkOp = this.bulkOp || this.c.initializeUnorderedBulkOp()
+      const line = await this.c.findOne({ _id: chunk._id })
+      // if the line was updated in the interval since reading for indexing
+      // do not mark it as properly indexed
+      if (chunk._updatedAt && line?._updatedAt && chunk._updatedAt.getTime() === line._updatedAt.getTime()) {
+        this.i += 1
+        if (chunk._deleted) {
+          this.bulkOp.find({ _id: chunk._id }).deleteOne()
+        } else {
+          this.bulkOp.find({ _id: chunk._id }).updateOne({ $unset: { _needsIndexing: '' } })
         }
-        if (this.i === config.mongo.maxBulkOps) {
-          await this.bulkOp.execute()
-          this.i = 0
-          this.bulkOp = null
-        }
-        cb()
-      } catch (err) {
-        cb(err)
       }
-    },
-    async final (cb) {
-      try {
-        if (this.i) await this.bulkOp.execute()
-        cb()
-      } catch (err) {
-        cb(err)
+      if (this.i === config.mongo.maxBulkOps) {
+        await this.bulkOp.execute()
+        this.i = 0
+        this.bulkOp = null
       }
+      cb()
+    } catch (err: any) {
+      cb(err)
     }
-  })
+  }
+
+  async _final (cb: (err?: Error) => void) {
+    try {
+      if (this.bulkOp && this.i) await this.bulkOp.execute()
+      cb()
+    } catch (err: any) {
+      cb(err)
+    }
+  }
 }
 
-export const count = (db, dataset, filter) => {
-  const c = collection(db, dataset)
+export const markIndexedStream = (dataset: RestDataset) => {
+  return new MarkIndexedStream(dataset)
+}
+
+export const count = (dataset: RestDataset, filter?: Filter<DatasetLine>) => {
+  const c = collection(dataset)
   if (filter) return c.countDocuments(filter)
   else return c.estimatedDocumentCount()
 }
 
-export const applyTTL = async (app, dataset) => {
-  const es = app.get('es')
-  const query = `${dataset.rest.ttl.prop}:[* TO ${moment().subtract(dataset.rest.ttl.delay.value, dataset.rest.ttl.delay.unit).toISOString()}]`
+export const applyTTL = async (dataset: RestDataset) => {
+  if (!dataset.rest.ttl) return
+  const qs = `${dataset.rest.ttl.prop}:[* TO ${moment().subtract(dataset.rest.ttl.delay.value, dataset.rest.ttl.delay.unit).toISOString()}]`
+
   const summary = initSummary()
+  // @ts-ignore
+  const iter = iterHits(es.client, dataset, { size: 1000, qs })
   await pump(
-    new Readable({
-      objectMode: true,
-      async read () {
-        try {
-          if (this.reading) return
-          this.reading = true
-          let body = await es.search({
-            index: esUtils.aliasName(dataset),
-            scroll: '15m',
-            size: 1,
-            body: {
-              query: {
-                query_string: { query }
-              },
-              _source: false
-            }
-          })
-          while (body.hits.hits.length) {
-            for (const hit of body.hits.hits) {
-              this.push(hit)
-            }
-            body = await es.scroll({ scroll_id: body._scroll_id, scroll: '15m' })
-          }
-          this.push(null)
-        } catch (err) {
-          this.emit('error', err)
-        }
-      }
-    }),
+    Readable.from(iter),
+    // @ts-ignore
     new Transform({
       objectMode: true,
-      transform (hit, encoding, callback) {
-        return callback(null, { _action: 'delete', _id: hit._id })
+      transform (hits, encoding, callback) {
+        for (const hit of hits) {
+          this.push({ _action: 'delete', _id: hit._id })
+        }
+        callback(null)
       }
     }),
-    new TransactionStream({ req: { app, dataset }, summary })
+    new TransactionStream({ dataset, summary })
   )
-  const patch = { 'rest.ttl.checkedAt': new Date().toISOString() }
+  const patch: UpdateFilter<RestDataset> = { 'rest.ttl.checkedAt': new Date().toISOString() }
   if (summary.nbOk) patch._partialRestStatus = 'updated'
 
-  await mongo.db.collection('datasets')
+  await mongo.datasets
     .updateOne({ id: dataset.id }, { $set: patch })
 }

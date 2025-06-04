@@ -1,12 +1,14 @@
+/* eslint-disable no-new-func */
 // flatten is used extensively in the API
 // for this reason we tried to optimize it as much as possible
 // we compile a function to prevent looping on keys and we memoize the function to avoid recompiling it every time
 
 // TODO: would it be safer to use a code generator, for example https://www.npmjs.com/package/astring ?
 
+import type { DatasetLine } from '#types'
 import memoize from 'memoizee'
 
-const compileFlatten = (datasetId: string, finalizedAt: string, preserveArrays: boolean, dataset: any) => {
+const compileFlatten = (datasetId: string, finalizedAt: string, preserveArrays: boolean, dataset: any): (line: any) => DatasetLine => {
   let jitCode = ''
   const nestedKeys: string[] = []
   for (const prop of dataset.schema) {
@@ -37,7 +39,7 @@ const compileFlatten = (datasetId: string, finalizedAt: string, preserveArrays: 
   }
   jitCode += 'return o;'
 
-  // eslint-disable-next-line no-new-func
+  // @ts-ignore
   return new Function('o', jitCode)
 }
 

@@ -1,0 +1,45 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "type",
+    "lastUpdate"
+  ],
+  "properties": {
+    "type": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "lastUpdate": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "defaults": {
+      "type": "boolean"
+    },
+    "store_bytes": { "$ref": "#/$defs/limit" },
+    "indexed_bytes": { "$ref": "#/$defs/limit" },
+    "nb_datasets": { "$ref": "#/$defs/limit" },
+    "hide_brand": { "$ref": "#/$defs/limit" }
+  },
+  "$defs": {
+    "limit": {
+      "type": "object",
+      "required": ["consumption"],
+      "properties": {
+        "limit": {
+          "type": "number"
+        },
+        "consumption": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

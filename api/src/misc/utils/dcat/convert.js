@@ -1,7 +1,7 @@
 import { RdfXmlParser } from 'rdfxml-streaming-parser'
 import { JsonLdSerializer } from 'jsonld-streaming-serializer'
 import { Writable, Transform } from 'stream'
-import pump from '../pipe.js'
+import pump from '../pipe.ts'
 
 /**
  * @param {string} dcat

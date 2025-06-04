@@ -4,7 +4,7 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import FormData from 'form-data'
-import * as restDatasetsUtils from '../api/src/datasets/utils/rest.js'
+import * as restDatasetsUtils from '../api/src/datasets/utils/rest.ts'
 
 import * as workers from '../api/src/workers/index.js'
 
@@ -331,7 +331,7 @@ describe('Master data management', function () {
     assert.ok(!results[0]['_siret.extra'])
     assert.ok(!results[0]['siretextextra'])
     assert.ok(!results[0]['siretextra'])
-    const docs = await restDatasetsUtils.collection(global.db, slave).find({}).toArray()
+    const docs = await restDatasetsUtils.collection(slave).find({}).toArray()
     assert.ok(!docs[0]['_siret'])
     assert.ok(!docs[0]['siretextextra'])
     assert.ok(!docs[0]['siretextra'])
@@ -368,6 +368,7 @@ describe('Master data management', function () {
         select: ['extra']
       }]
     })
+    await workers.hook('finalizer/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: 'TEST"SIRET*' }].map(item => ({ _id: item.siret, ...item })))
     await workers.hook('finalizer/slave')
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
@@ -515,6 +516,7 @@ describe('Master data management', function () {
         action: 'masterData_bulkSearch_siret'
       }]
     })
+    await workers.hook('finalizer/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
     const slave = await workers.hook('finalizer/slave')
     assert.ok(slave.schema.find(p => p.key === '_siret.extra'))
@@ -570,6 +572,7 @@ describe('Master data management', function () {
         action: 'masterData_bulkSearch_siret2'
       }]
     })).data
+    await workers.hook('finalizer/slave')
 
     // slave schema contains props from both levels of extensions
     assert.ok(slave.schema.find(p => p.key === '_siret2.extra2'))
@@ -809,6 +812,7 @@ describe('Master data management', function () {
         select: ['extra']
       }]
     })
+    await workers.hook('finalizer/slave')
     await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
     await workers.hook('finalizer/slave')
     const results = (await global.ax.cdurning2.get('/api/v1/datasets/slave/lines')).data.results
@@ -872,6 +876,7 @@ describe('Master data management', function () {
         select: ['name']
       }]
     })).data
+    await workers.hook('finalizer/slave')
     assert.ok(slave.schema.find(p => p.key === '_geopoint'))
     assert.ok(slave.schema.find(p => p.key === '_geo.country'))
     assert.ok(slave.schema.find(p => p.key === '_country.name'))
@@ -984,6 +989,7 @@ describe('Master data management', function () {
         select: ['name']
       }]
     })).data
+    await workers.hook('finalizer/slave')
     assert.ok(slave.schema.find(p => p.key === '_geo.country'))
     assert.ok(slave.schema.find(p => p.key === '_country.name'))
 

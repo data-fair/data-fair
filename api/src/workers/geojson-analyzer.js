@@ -3,6 +3,7 @@ import streamJsonParser from 'stream-json/Parser.js'
 import streamJsonPick from 'stream-json/filters/Pick.js'
 import streamValues from 'stream-json/streamers/StreamValues.js'
 import * as datasetUtils from '../datasets/utils/index.js'
+import { updateStorage } from '../datasets/utils/storage.ts'
 import * as datasetsService from '../datasets/service.js'
 import * as fieldsSniffer from '../datasets/utils/fields-sniffer.js'
 import projections from '../../contract/projections.js'
@@ -68,5 +69,5 @@ export const process = async function (app, dataset) {
   if (dataset.projection) patch.projection = dataset.projection
 
   await datasetsService.applyPatch(app, dataset, patch)
-  if (!dataset.draftReason) await datasetUtils.updateStorage(app, dataset, false, true)
+  if (!dataset.draftReason) await updateStorage(dataset, false, true)
 }

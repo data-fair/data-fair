@@ -276,7 +276,7 @@ export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
   maxAge: 1000 * 60 * 60, // 1 hour
 })
 
-export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter) => {
+export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter, ignoreInvalidQS) => {
   const esQuery = {}
   qFields = qFields || (query.q_fields && query.q_fields.split(','))
 
@@ -385,7 +385,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   if (q || query.qs) {
     const { searchFields, qSearchFields, qStandardFields, qWildcardFields, esFields } = getFilterableFields(dataset, q, qFields)
     if (query.qs) {
-      checkQuery(query.qs, dataset.schema, esFields)
+      if (!ignoreInvalidQS) checkQuery(query.qs, dataset.schema, esFields)
       const qs = { query_string: { query: query.qs, fields: searchFields } }
       if (qsAsFilter) filter.push(qs)
       else must.push(qs)

@@ -6,7 +6,7 @@ import locks from '@data-fair/lib-node/locks.js'
 import * as journals from '../misc/utils/journals.js'
 import debugModule from 'debug'
 import mergeDraft from '../datasets/utils/merge-draft.js'
-import taskProgress from '../datasets/utils/task-progress.js'
+import taskProgress from '../datasets/utils/task-progress.ts'
 import { basicTypes, csvTypes } from '../datasets/utils/types.js'
 import moment from 'moment'
 import { spawn } from 'child-process-promise'
@@ -317,7 +317,7 @@ async function iter (app, resource, type) {
     if (task.eventsPrefix) {
       const noStoreEvent = type === 'dataset'
       await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
-      progress = taskProgress(app, resource.id, task.eventsPrefix)
+      progress = taskProgress(resource.id, task.eventsPrefix)
       await progress.start()
     }
 

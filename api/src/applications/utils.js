@@ -13,7 +13,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { getPseudoUser } from '../misc/utils/users.js'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
 import { ownerDir } from '../datasets/utils/files.ts'
-import { updateTotalStorage } from '../datasets/utils/storage.js'
+import { updateTotalStorage } from '../datasets/utils/storage.ts'
 import nodeDir from 'node-dir'
 import { prepareThumbnailUrl } from '../misc/utils/thumbnails.js'
 

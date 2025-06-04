@@ -697,6 +697,7 @@ const datasetProperties = {
     properties: {
       ttl: {
         type: 'object',
+        required: ['prop', 'delay'],
         properties: {
           active: { type: 'boolean' },
           prop: { type: 'string' },
@@ -830,8 +831,10 @@ const dataset = {
   title: 'Dataset',
   type: 'object',
   additionalProperties: false,
+  required: ['id', 'createdAt', 'owner'],
   properties: {
     ...datasetProperties,
+    draftReason: { type: 'string' },
     draft: {
       title: 'Dataset draft',
       description: 'Some properties waiting for confirmation before being merged into the main dataset info',
