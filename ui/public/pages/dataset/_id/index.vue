@@ -554,7 +554,7 @@ export default {
       return this.$store.getters.ownerPublicationSites(this.dataset.owner)
     },
     publicationUrl () {
-      return window.location.origin + '/catalogs/dataset-publications?dataset-id=' + this.dataset.slug
+      return window.location.origin + '/catalogs/dataset-publications?dataset-id=' + this.dataset.id
     },
     fileProperty () {
       if (!this.dataset) return
