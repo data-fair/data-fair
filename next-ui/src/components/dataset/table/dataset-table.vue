@@ -320,10 +320,10 @@ const selectedCols = computed(() => cols.value.length ? cols.value : allCols.val
 const { filters, addFilter, queryParams: filtersQueryParams } = useFilters()
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFilters }))
-const updatedAt = ref<string>()
-const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, updatedAt)
+const indexedAt = ref<string>()
+const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
 const { headers, hideHeader } = useHeaders(selectedCols, noInteraction, edit, fixed)
-const { selectedResults } = provideDatasetEdition(baseFetchUrl, updatedAt)
+const { selectedResults } = provideDatasetEdition(baseFetchUrl, indexedAt)
 
 const virtualScroll = ref<VVirtualScroll>()
 const colsWidths = ref<number[]>([])
