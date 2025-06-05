@@ -86,7 +86,6 @@
                 class="header-wrapper"
               >
                 <async-dataset-table-header-actions
-                  v-model:selected-results="selectedResults"
                   :results="results"
                   :selected-cols="selectedCols"
                   :dense="displayMode === 'table-dense'"
@@ -268,7 +267,7 @@
 import { mdiMagnify, mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset-lines'
 import useHeaders, { type TableHeader } from './use-headers'
-import useEdition from './use-edition'
+import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { type SchemaProperty } from '#api/types'
 import { useFilters, findEqFilter } from '../../../composables/dataset-filters'
@@ -321,9 +320,10 @@ const selectedCols = computed(() => cols.value.length ? cols.value : allCols.val
 const { filters, addFilter, queryParams: filtersQueryParams } = useFilters()
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFilters }))
-const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams)
+const updatedAt = ref<string>()
+const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, updatedAt)
 const { headers, hideHeader } = useHeaders(selectedCols, noInteraction, edit, fixed)
-const { selectedResults } = useEdition(baseFetchUrl)
+const { selectedResults } = provideDatasetEdition(baseFetchUrl, updatedAt)
 
 const virtualScroll = ref<VVirtualScroll>()
 const colsWidths = ref<number[]>([])

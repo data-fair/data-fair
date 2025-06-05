@@ -4,7 +4,6 @@ import { isRestDataset } from '#shared/types-utils'
 
 type ExtendedDataset = Dataset & { userPermissions: string[], draftReason?: string }
 
-// we do not use SSR, so we can use a simple module level singleton
 export type DatasetStore = ReturnType<typeof createDatasetStore>
 const datasetStoreKey = Symbol('dataset-store')
 

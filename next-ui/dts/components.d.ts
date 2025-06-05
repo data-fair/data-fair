@@ -40,7 +40,7 @@ declare module 'vue' {
     SettingsTopics: typeof import('./../src/components/settings/settings-topics.vue')['default']
     SettingsWebhooks: typeof import('./../src/components/settings/settings-webhooks.vue')['default']
     TutorialAlert: typeof import('./../src/components/tutorial/tutorial-alert.vue')['default']
-    UseEdition: typeof import('../src/components/dataset/table/use-edition')['default']
+    UseEdition: typeof import('../src/components/dataset/table/use-dataset-edition.ts')['default']
     UseFilters: typeof import('../src/composables/dataset-filters')['default']
   }
 }

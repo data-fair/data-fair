@@ -22,7 +22,7 @@ export type ExtendedResult = {
   values: Record<string, ExtendedResultValue | ExtendedResultValue[]>
 }
 
-export const useLines = (displayMode: Ref<string>, pageSize: Ref<number>, selectedCols: Ref<string[]>, q: Ref<string>, sort: Ref<string | undefined>, extraParams: Ref<Record<string, string>>) => {
+export const useLines = (displayMode: Ref<string>, pageSize: Ref<number>, selectedCols: Ref<string[]>, q: Ref<string>, sort: Ref<string | undefined>, extraParams: Ref<Record<string, string>>, indexedAt: Ref<string | undefined>) => {
   const { id, dataset, draftMode } = useDatasetStore()
   const { width: windowWidth } = useWindowSize()
 
@@ -43,7 +43,17 @@ export const useLines = (displayMode: Ref<string>, pageSize: Ref<number>, select
   const baseFetchUrl = computed(() => {
     if (!dataset.value?.schema) return null
     if (truncate.value === null) return null
-    return withQuery($apiPath + `/datasets/${id}/lines`, { draftMode, size: pageSize.value, truncate: truncate.value, q: q.value || undefined, sort: sort.value || undefined, ...extraParams.value })
+    const query: Record<string, any> = {
+      draftMode,
+      size: pageSize.value,
+      truncate: truncate.value,
+      q: q.value || undefined,
+      sort: sort.value || undefined,
+      ...extraParams.value
+    }
+    if (indexedAt.value) query.indexedAt = indexedAt.value
+    else query.finalizedAt = dataset.value.finalizedAt
+    return withQuery($apiPath + `/datasets/${id}/lines`, query)
   })
 
   const total = ref<number>()

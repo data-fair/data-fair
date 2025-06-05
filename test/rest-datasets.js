@@ -118,7 +118,7 @@ describe('REST datasets', function () {
     assert.equal(res.data.nbOk, 7)
     assert.equal(res.data.nbCreated, 4)
     assert.equal(res.data.nbDeleted, 1)
-    assert.ok(res.data.indexedAt)
+    assert.ok(res.data.updatedAt)
     console.log(res.data)
 
     try {
