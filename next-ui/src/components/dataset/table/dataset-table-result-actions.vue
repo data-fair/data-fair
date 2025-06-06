@@ -9,6 +9,7 @@
       :size="dense ? 'md' : 'large'"
       variant="text"
       :icon="mdiCheckboxMarked"
+      :disabled="saving"
       @click="selectedResults = selectedResults.filter(r => r !== result)"
     />
     <v-btn
@@ -17,6 +18,7 @@
       variant="text"
       :title="t('selectLine')"
       :icon="mdiCheckboxBlankOutline"
+      :disabled="saving"
       @click="selectedResults.push(result)"
     />
     <v-btn
@@ -26,7 +28,8 @@
       :title="t('deleteLine')"
       variant="text"
       :icon="mdiTrashCanOutline"
-      @click="deletingLines = [result]; deleteselectedResultsDialog = true;"
+      :disabled="saving"
+      @click="emit('delete')"
     />
     <v-btn
       v-if="canUpdateLine"
@@ -34,7 +37,8 @@
       :size="dense ? 'md' : 'large'"
       variant="text"
       :title="t('editLine')"
-      @click="editingLines = [result]; editselectedResultsDialog = true;"
+      :disabled="saving"
+      @click="emit('edit')"
     />
   </v-btn-group>
 </template>
@@ -57,22 +61,20 @@
 <script lang="ts" setup>
 import { mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiPencil, mdiTrashCanOutline } from '@mdi/js'
 import { type ExtendedResult } from '~/composables/dataset-lines'
+import useDatasetEdition from './use-dataset-edition'
 
 defineProps({
   result: { type: Object as () => ExtendedResult, required: true },
   dense: { type: Boolean, default: false }
 })
 
+const emit = defineEmits(['edit', 'delete'])
+
 const selectedResults = defineModel<ExtendedResult[]>('selected-results', { default: [] })
 
 const { can } = useDatasetStore()
 const { t } = useI18n()
-
-const deleteselectedResultsDialog = ref(false)
-const editselectedResultsDialog = ref(false)
-
-const editingLines = ref<ExtendedResult[]>()
-const deletingLines = ref<ExtendedResult[]>()
+const { saving } = useDatasetEdition()
 
 const canDeleteLine = can('deleteLine')
 const canUpdateLine = can('updateLine')

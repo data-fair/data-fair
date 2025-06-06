@@ -104,7 +104,7 @@
       <v-card-text>
         <v-alert
           :value="true"
-          type="error"
+          type="warning"
         >
           {{ t('deleteAllLinesWarning') }}
         </v-alert>
@@ -246,13 +246,13 @@ const addLineForm = ref<VForm>()
 const newLine = ref({})
 const file = ref<File>()
 watch(addLineDialog, () => {
-  if (addLineDialog.value) {
-    newLine.value = {}
-    file.value = undefined
-  }
+  if (!addLineDialog.value) return
+  newLine.value = {}
+  file.value = undefined
 })
 const addLine = useAsyncAction(async () => {
   await addLineForm.value?.validate()
+  if (!addLineValid.value) return
   await saveLine(newLine.value, file.value)
   addLineDialog.value = false
 })

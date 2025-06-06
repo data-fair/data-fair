@@ -161,12 +161,14 @@
                 :dense="displayMode === 'table-dense'"
                 :map-preview-height="mapPreviewHeight"
                 :hovered="hovered && hovered[0] === item && (hovered[1] === item.values[header.key] || (Array.isArray(item.values[header.key]) && hovered[1] && (item.values[header.key] as ExtendedResultValue[]).includes(hovered[1]))) ? hovered[1] : undefined"
-                :filter="findEqFilter(filters, header.property, item)"
+                :filter="header.property && findEqFilter(filters, header.property, item)"
                 @hoverstart="hoverStart"
                 @hoverstop="hoverStop"
                 @show-map-preview="showMapPreview = item._id"
-                @show-detail-dialog="v => showDetailDialog = {result: item, property: header.property}"
+                @show-detail-dialog="showDetailDialog = {result: item, property: header.property}"
                 @filter="f => addFilter(f)"
+                @edit="showEditDialog = item"
+                @delete="showDeleteDialog = item"
               />
             </tr>
           </template>
@@ -252,15 +254,99 @@
   </v-dialog>
 
   <dataset-item-detail-dialog
-    v-if="showDetailDialog"
+    v-if="showDetailDialog && showDetailDialog.property"
     :model-value="!!showDetailDialog"
     :extended-result="showDetailDialog.result"
     :property="showDetailDialog.property"
     @update:model-value="showDetailDialog = undefined"
   />
+
+  <v-dialog
+    :model-value="!!showDeleteDialog"
+    max-width="500px"
+  >
+    <v-card :title="t('deleteLine')">
+      <v-card-text>
+        <v-alert
+          :value="true"
+          type="warning"
+        >
+          {{ t('deleteLineWarning') }}
+        </v-alert>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn
+          variant="text"
+          @click="showDeleteDialog = undefined"
+        >
+          {{ t('cancel') }}
+        </v-btn>
+        <v-btn
+          color="warning"
+          variant="flat"
+          :loading="deleteLine.loading.value"
+          @click="deleteLine.execute()"
+        >
+          {{ t('delete') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <v-dialog
+    :model-value="!!showEditDialog"
+    max-width="500px"
+  >
+    <v-card :title="t('editLine')">
+      <v-form
+        ref="editLineForm"
+        v-model="editLineValid"
+      >
+        <v-card-text>
+          <dataset-edit-line-form
+            v-model="newLine"
+            :loading="editLine.loading.value"
+            @on-file-upload="(f: File) => {file = f}"
+          />
+        </v-card-text>
+      </v-form>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn
+          variant="text"
+          @click="showEditDialog = undefined"
+        >
+          {{ t('cancel') }}
+        </v-btn>
+        <v-btn
+          color="primary"
+          variant="flat"
+          :loading="editLine.loading.value"
+          @click="editLine.execute()"
+        >
+          {{ t('save') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <i18n lang="yaml">
+  fr:
+    cancel: Annuler
+    delete: Supprimer
+    save: Enregistrer
+    editLine: Éditer une ligne
+    deleteLine: Supprimer une ligne
+    deleteLineWarning: Attention, la donnée de cette ligne sera perdue définitivement.
+  en:
+    cancel: Cancel
+    delete: Delete
+    save: Save
+    editLine: Edit a line
+    deleteLine: Delete a line
+    deleteLineWarning: Warning, the data from this line will be lost definitively
 </i18n>
 
 <script lang="ts" setup>
@@ -272,6 +358,7 @@ import { useDisplay } from 'vuetify'
 import { type SchemaProperty } from '#api/types'
 import { useFilters, findEqFilter } from '../../../composables/dataset-filters'
 import { VVirtualScroll } from 'vuetify/components'
+import { type VForm } from 'vuetify/components'
 
 const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/map/dataset-map.vue'))
 const asyncDatasetTableHeaderActions = defineAsyncComponent(() => import('~/components/dataset/table/dataset-table-header-actions.vue'))
@@ -287,6 +374,8 @@ const cols = defineModel<string[]>('cols', { default: [] })
 const sortStr = defineModel<string>('sort')
 const fixed = defineModel<string>('fixed')
 const q = defineModel<string>('q', { default: '' })
+
+const { t } = useI18n()
 
 const lineHeight = computed(() => displayMode.value === 'table-dense' ? 28 : 40)
 const mapPreviewHeight = computed(() => {
@@ -323,7 +412,7 @@ const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFil
 const indexedAt = ref<string>()
 const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
 const { headers, hideHeader } = useHeaders(selectedCols, noInteraction, edit, fixed)
-const { selectedResults } = provideDatasetEdition(baseFetchUrl, indexedAt)
+const { selectedResults, saveLine, bulkLines } = provideDatasetEdition(baseFetchUrl, indexedAt)
 
 const virtualScroll = ref<VVirtualScroll>()
 const colsWidths = ref<number[]>([])
@@ -366,7 +455,31 @@ const mapHeight = computed(() => {
 })
 const showMapPreview = ref<string>()
 
-const showDetailDialog = ref<{ result: ExtendedResult, property: SchemaProperty }>()
+const showDetailDialog = ref<{ result: ExtendedResult, property?: SchemaProperty }>()
+
+const showEditDialog = ref<ExtendedResult>()
+watch(showEditDialog, () => {
+  if (!showEditDialog.value) return
+  newLine.value = JSON.parse(JSON.stringify(showEditDialog.value.raw))
+  file.value = undefined
+})
+const editLineValid = ref(false)
+const editLineForm = ref<VForm>()
+const newLine = ref({})
+const file = ref<File>()
+const editLine = useAsyncAction(async () => {
+  await editLineForm.value?.validate()
+  if (!editLineValid.value) return
+  await saveLine(newLine.value, file.value)
+  showEditDialog.value = undefined
+})
+
+const showDeleteDialog = ref<ExtendedResult>()
+const deleteLine = useAsyncAction(async () => {
+  if (!showDeleteDialog.value) return
+  await bulkLines([{ _action: 'delete', _id: showDeleteDialog.value._id }])
+  showDeleteDialog.value = undefined
+})
 </script>
 
 <style>

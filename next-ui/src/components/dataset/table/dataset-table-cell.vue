@@ -51,6 +51,8 @@
       v-model:selected-results="selectedResults"
       :result="result"
       :dense="dense"
+      @edit="emit('edit')"
+      @delete="emit('delete')"
     />
     <!--{{ item.__formatted[header.key] }}-->
     <dataset-item-value-multiple
@@ -106,7 +108,9 @@ const emit = defineEmits<{
   hoverstart: [result: ExtendedResult, value: ExtendedResultValue],
   hoverstop: [],
   showMapPreview: [],
-  showDetailDialog: [value: ExtendedResultValue]
+  showDetailDialog: [value: ExtendedResultValue],
+  edit: [],
+  delete: []
 }>()
 
 const selectedResults = defineModel<ExtendedResult[]>('selected-results', { default: [] })
