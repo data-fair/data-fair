@@ -1,6 +1,7 @@
 import * as metrics from './misc/utils/metrics.ts' // import early so that memoizee can be used in the following imports
 import { resolve, parse as parsePath, join } from 'node:path'
 import express from 'express'
+import pathToRegexp from 'path-to-regexp'
 import config from '#config'
 import uiConfig from './ui-config.ts'
 import mongo from '#mongo'
@@ -17,7 +18,7 @@ import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import upgradeScripts from '@data-fair/lib-node/upgrade-scripts.js'
-import { createSpaMiddleware } from '@data-fair/lib-express/serve-spa.js'
+import { createSpaMiddleware, defaultNonceCSPDirectives, getCSPHeaderFromDirectives } from '@data-fair/lib-express/serve-spa.js'
 import { cleanTmp } from './datasets/utils/files.ts'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 
@@ -214,7 +215,28 @@ export const run = async () => {
     app.use('/streamsaver/sw.js', express.static(join(streamsaverPath, 'sw.js')))
 
     if (config.serveUi) {
-      app.use('/next-ui', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, { ignoreSitePath: true }))
+      // some embed pages require unsafe-eval as they use vjsf on dynamic schemas
+      const unsafeCSPHeader = getCSPHeaderFromDirectives({
+        ...defaultNonceCSPDirectives,
+        'script-src': ['\'unsafe-eval\'', defaultNonceCSPDirectives['script-src']]
+      })
+      const unsafePaths = [
+        '/embed/dataset/:id/table-edit',
+        '/embed/dataset/:id/form',
+        '/embed/application/:id/config'
+      ].map(p => pathToRegexp.match(p))
+      app.use('/next-ui', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, {
+        ignoreSitePath: true,
+        csp: {
+          nonce: true,
+          header: (req) => {
+            for (const p of unsafePaths) {
+              if (p(req.url)) return unsafeCSPHeader
+            }
+            return true
+          }
+        }
+      }))
     }
 
     server = (await import('http')).createServer(app)

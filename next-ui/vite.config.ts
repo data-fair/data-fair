@@ -28,6 +28,9 @@ export default defineConfig({
       '~': path.resolve(__dirname, 'src/')
     },
   },
+  html: {
+    cspNonce: '{CSP_NONCE}'
+  },
   plugins: [
     VueRouter({
       dts: './dts/typed-router.d.ts',
@@ -43,7 +46,7 @@ export default defineConfig({
         ...(autoImports as any),
         unheadVueComposablesImports,
         {
-          '~/context': ['$uiConfig', '$sitePath', '$siteUrl', '$sdUrl', '$apiPath', '$fetch', '$wsUrl']
+          '~/context': ['$uiConfig', '$sitePath', '$cspNonce', '$siteUrl', '$sdUrl', '$apiPath', '$fetch', '$wsUrl']
         }
       ],
       dirs: [

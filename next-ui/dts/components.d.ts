@@ -8,10 +8,8 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     ApplicationConfig: typeof import('./../src/components/application/application-config.vue')['default']
-    CharSizes: typeof import('./../src/components/char-sizes.vue')['default']
     CharsMeasurer: typeof import('./../src/components/dataset/table/chars-measurer.vue')['default']
     ConfirmMenu: typeof import('./../src/components/confirm-menu.vue')['default']
-    copy: typeof import('./../src/components/dataset/dataset-item-value copy.vue')['default']
     DatasetDownloadResults: typeof import('./../src/components/dataset/dataset-download-results.vue')['default']
     DatasetEditLineForm: typeof import('./../src/components/dataset/form/dataset-edit-line-form.vue')['default']
     DatasetEditMultipleLines: typeof import('./../src/components/dataset/form/dataset-edit-multiple-lines.vue')['default']
@@ -26,7 +24,6 @@ declare module 'vue' {
     DatasetSelectCols: typeof import('./../src/components/dataset/dataset-select-cols.vue')['default']
     DatasetTable: typeof import('./../src/components/dataset/table/dataset-table.vue')['default']
     DatasetTableCell: typeof import('./../src/components/dataset/table/dataset-table-cell.vue')['default']
-    DatasetTableCellAction: typeof import('./../src/components/dataset/table/dataset-table-cell-action.vue')['default']
     DatasetTableHeaderActions: typeof import('./../src/components/dataset/table/dataset-table-header-actions.vue')['default']
     DatasetTableHeaderMenu: typeof import('./../src/components/dataset/table/dataset-table-header-menu.vue')['default']
     DatasetTableResultActions: typeof import('./../src/components/dataset/table/dataset-table-result-actions.vue')['default']
@@ -40,7 +37,5 @@ declare module 'vue' {
     SettingsTopics: typeof import('./../src/components/settings/settings-topics.vue')['default']
     SettingsWebhooks: typeof import('./../src/components/settings/settings-webhooks.vue')['default']
     TutorialAlert: typeof import('./../src/components/tutorial/tutorial-alert.vue')['default']
-    UseEdition: typeof import('../src/components/dataset/table/use-dataset-edition.ts')['default']
-    UseFilters: typeof import('../src/composables/dataset-filters')['default']
   }
 }

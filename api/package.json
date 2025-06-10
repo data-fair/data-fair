@@ -16,7 +16,7 @@
   "dependencies": {
     "@data-fair/data-fair-shared": "*",
     "@data-fair/data-fair-ui": "*",
-    "@data-fair/lib-express": "^1.13.0",
+    "@data-fair/lib-express": "^1.20.0",
     "@data-fair/lib-node": "^2.8.1",
     "@data-fair/lib-utils": "^1.5.0",
     "@data-fair/lib-validation": "^1.0.2",
@@ -94,6 +94,7 @@
     "original-url": "^1.2.3",
     "out-of-character": "^1.2.2",
     "parse5": "^7.2.1",
+    "path-to-regexp": "^8.2.0",
     "piscina": "^5.0.0-alpha.1",
     "proj4": "^2.15.0",
     "prom-client": "^15.1.3",
