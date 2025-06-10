@@ -9,9 +9,9 @@
       :loading="fetchFullValue.loading.value"
     >
       <v-toolbar
-        dense
+        density="compact"
         flat
-        color="transparent"
+        color="surface"
       >
         <v-spacer />
         <v-btn
@@ -19,7 +19,7 @@
           @click="show = false"
         />
       </v-toolbar>
-      <v-card-text v-if="!fetchFullValue.loading">
+      <v-card-text v-if="!fetchFullValue.loading.value">
         <div
           v-if="property['x-display'] === 'textarea'"
           class="item-value-detail item-value-detail-textarea"
@@ -48,9 +48,6 @@ const { extendedResult, property } = defineProps({
 })
 
 const show = defineModel<boolean>({ default: false })
-watch(show, () => {
-  if (show.value) fetchFullValue.refresh()
-})
 
 const { id } = useDatasetStore()
 
@@ -59,8 +56,7 @@ const fetchFullValue = useFetch<{ results: any[] }>(`${$apiPath}/datasets/${id}/
     qs: `_id:"${extendedResult._id}"`,
     select: property.key,
     html: true
-  })),
-  immediate: false
+  }))
 })
 const fullValue = computed(() => fetchFullValue.data.value?.results[0]?.[property.key])
 </script>

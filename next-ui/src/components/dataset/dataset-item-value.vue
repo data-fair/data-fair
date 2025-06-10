@@ -56,6 +56,7 @@
         v-if="extendedValue.displayDetail"
         :icon="dense ? mdiLoupe : mdiMagnifyMinus"
         size="x-small"
+        variant="flat"
         class="item-value-hover-action"
         :style="`background-color:${theme.current.value.dark ? '#212121' : 'white'};`"
         :title="t('showFullValue')"
