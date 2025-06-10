@@ -30,5 +30,6 @@ declare module 'vue-router/auto-routes' {
     '/embed/settings/[type]/[id]/licenses': RouteRecordInfo<'/embed/settings/[type]/[id]/licenses', '/embed/settings/:type/:id/licenses', { type: ParamValue<true>, id: ParamValue<true> }, { type: ParamValue<false>, id: ParamValue<false> }>,
     '/embed/settings/[type]/[id]/topics': RouteRecordInfo<'/embed/settings/[type]/[id]/topics', '/embed/settings/:type/:id/topics', { type: ParamValue<true>, id: ParamValue<true> }, { type: ParamValue<false>, id: ParamValue<false> }>,
     '/embed/settings/[type]/[id]/webhooks': RouteRecordInfo<'/embed/settings/[type]/[id]/webhooks', '/embed/settings/:type/:id/webhooks', { type: ParamValue<true>, id: ParamValue<true> }, { type: ParamValue<false>, id: ParamValue<false> }>,
+    '/embed/workflow/update-dataset': RouteRecordInfo<'/embed/workflow/update-dataset', '/embed/workflow/update-dataset', Record<never, never>, Record<never, never>>,
   }
 }

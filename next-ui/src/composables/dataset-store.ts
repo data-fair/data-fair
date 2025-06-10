@@ -5,9 +5,9 @@ import { isRestDataset } from '#shared/types-utils'
 type ExtendedDataset = Dataset & { userPermissions: string[], draftReason?: string }
 
 export type DatasetStore = ReturnType<typeof createDatasetStore>
-const datasetStoreKey = Symbol('dataset-store')
+export const datasetStoreKey = Symbol('dataset-store')
 
-const createDatasetStore = (id: string, draftMode: boolean | undefined = undefined) => {
+export const createDatasetStore = (id: string, draftMode: boolean | undefined = undefined) => {
   const datasetFetch = useFetch<ExtendedDataset>($apiPath + `/datasets/${id}`)
   const dataset = ref<ExtendedDataset | null>(null)
   watch(datasetFetch.data, () => { dataset.value = datasetFetch.data.value })

@@ -1,0 +1,688 @@
+<!-- eslint-disable vue/no-v-html -->
+<!-- eslint-disable vue/no-v-text-v-html-on-component -->
+<template>
+  <v-stepper
+    v-if="ready"
+    v-model="currentStep"
+    class="elevation-0"
+  >
+    <v-stepper-header>
+      <v-stepper-step
+        :step="1"
+        :complete="!!datasetType"
+        editable
+      >
+        {{ t('datasetType') }}
+        <small
+          v-if="datasetType"
+          v-t="'type_' + datasetType"
+        />
+      </v-stepper-step>
+
+      <!-- FILE steps -->
+      <template v-if="datasetType === 'file'">
+        <v-divider />
+        <v-stepper-step
+          :step="2"
+          :complete="!!file"
+          editable
+        >
+          {{ t('stepFile') }}
+          <small
+            v-if="file"
+          >
+            {{ truncateMiddle(file.name, 30) }}
+          </small>
+        </v-stepper-step>
+        <v-divider />
+
+        <v-stepper-step
+          :step="3"
+          :complete="!!dataset"
+          :editable="!!file"
+        >
+          {{ t('stepDataset') }}
+          <small v-if="dataset">
+            {{ truncateMiddle(dataset.title, 30) }}
+          </small>
+        </v-stepper-step>
+        <v-divider />
+
+        <template v-if="dataset && digitalDocumentField">
+          <v-stepper-step
+            :step="4"
+            :complete="!!attachments"
+            :editable="!!dataset"
+          >
+            {{ t('stepAttachment') }}
+            <small
+              v-if="attachments"
+              v-t="'loaded'"
+            />
+          </v-stepper-step>
+          <v-divider />
+        </template>
+
+        <v-stepper-step
+          :step="(dataset && digitalDocumentField) ? 5 : 4"
+          :complete="imported"
+          :editable="!!dataset"
+        >
+          {{ t('stepAction') }}
+        </v-stepper-step>
+        <v-divider />
+
+        <v-stepper-step
+          :step="(dataset && digitalDocumentField) ? 6 : 5"
+          :editable="imported"
+        >
+          {{ t('stepReview') }}
+        </v-stepper-step>
+      </template>
+
+      <!-- REST steps -->
+      <template v-if="datasetType === 'rest'">
+        <v-divider />
+        <v-stepper-step
+          :step="2"
+          :complete="!!dataset"
+          editable
+        >
+          {{ t('stepDataset') }}
+          <small v-if="dataset">
+            {{ truncateMiddle(dataset.title, 30) }}
+          </small>
+        </v-stepper-step>
+        <v-divider />
+        <v-stepper-step
+          :step="3"
+          :editable="!!dataset"
+        >
+          {{ t('editTable') }}
+        </v-stepper-step>
+      </template>
+    </v-stepper-header>
+
+    <v-stepper-items>
+      <v-stepper-content step="1">
+        <p v-t="'choseType'" />
+        <v-row
+          dense
+          class="mt-2 mb-6"
+        >
+          <v-card
+            width="460px"
+            class="ma-1"
+            border
+            hover
+            tile
+            :loading="fileDatasetsCount.loading.value"
+            :disabled="!fileDatasetsCount.data.value?.count"
+            @click="datasetType = 'file'; $nextTick(() => currentStep = 2);"
+          >
+            <v-card-title class="text-primary">
+              <v-icon
+                color="primary"
+                class="mr-2"
+                :icon="mdiFileUpload"
+              />
+              {{ t('type_file') }}
+            </v-card-title>
+            <v-card-text>
+              <p>
+                {{ t('type_desc_file') }}
+              </p>
+              <p
+                v-if="fileDatasetsCount.data.value"
+                class="text-caption mb-0"
+              >
+                {{ t('datasetsCount', {count: fileDatasetsCount.data.value?.count}, fileDatasetsCount.data.value?.count) }}
+              </p>
+            </v-card-text>
+          </v-card>
+          <v-card
+            width="460px"
+            class="ma-1"
+            border
+            hover
+            tile
+            :loading="restDatasetsCount.loading.value"
+            :disabled="!restDatasetsCount.data.value?.count"
+            @click="datasetType = 'rest'; $nextTick(() => currentStep = 2);"
+          >
+            <v-card-title class="text-primary">
+              <v-icon
+                color="primary"
+                class="mr-2"
+                :icon="mdiAllInclusive"
+              />
+              {{ t('type_rest') }}
+            </v-card-title>
+            <v-card-text>
+              <p>
+                {{ t('type_desc_rest') }}
+              </p>
+              <p
+                v-if="restDatasetsCount.data.value"
+                class="text-caption mb-0"
+              >
+                {{ t('datasetsCount', {count: restDatasetsCount.data.value?.count}, restDatasetsCount.data.value?.count) }}
+              </p>
+            </v-card-text>
+          </v-card>
+        </v-row>
+      </v-stepper-content>
+
+      <!-- FILE steps -->
+      <template v-if="datasetType === 'file'">
+        <v-stepper-content step="2">
+          <p v-t="'loadMainFile'" />
+          <div
+            class="mt-3 mb-3"
+            @drop.prevent="e => {file = e.dataTransfer?.files[0]; if (!suggestArchive) currentStep = 3}"
+            @dragover.prevent
+          >
+            <v-file-input
+              v-model="file"
+              :label="t('selectFile')"
+              variant="outlined"
+              density="compact"
+              hide-details
+              style="max-width: 400px;"
+              :accept="accepted.join(', ')"
+              @change="currentStep = 3"
+            />
+          </div>
+          <v-alert
+            v-if="file && file.size > 50000000 && (file.name.endsWith('.csv') || file.name.endsWith('.tsv') || file.name.endsWith('.txt') || file.name.endsWith('.geojson'))"
+            variant="outlined"
+            type="info"
+            density="compact"
+            v-html="t('suggestArchive', {name: file.name})"
+          />
+          <v-btn
+            v-t="'continue'"
+            class="mt-2"
+            :disabled="!file"
+            color="primary"
+            @group:selected="() => {if (!suggestArchive) currentStep = 3}"
+          />
+
+          <h3
+            v-t="'formats'"
+            class="text-h6 mt-4"
+          />
+          <dataset-file-formats />
+        </v-stepper-content>
+
+        <v-stepper-content step="3">
+          <template v-if="file && similarDatasets.data.value?.results.length">
+            <p class="mb-1">
+              {{ t('similarDatasets', {}, similarDatasets.data.value?.results.length) }}
+            </p>
+            <v-card
+              tile
+              border
+              style="width: 500px;"
+            >
+              <v-list class="py-0">
+                <dataset-list-item
+                  v-for="similarDataset in similarDatasets.data.value?.results"
+                  :key="similarDataset.id"
+                  :dataset="similarDataset"
+                  :show-owner="false"
+                  :no-link="true"
+                  :dense="true"
+                  @click="selectedDataset = similarDataset; currentStep = 4"
+                />
+              </v-list>
+            </v-card>
+          </template>
+
+          <v-row class="mt-4 mb-1 mx-0">
+            <dataset-select
+              :extra-params="fileDatasetsFilter"
+              @change="dataset => {selectedDataset = dataset; currentStep = 4}"
+            />
+          </v-row>
+
+          <v-btn
+            v-t="'continue'"
+            color="primary"
+            class="mt-4"
+            :disabled="!dataset"
+            @click="currentStep = 4"
+          />
+        </v-stepper-content>
+
+        <v-stepper-content
+          v-if="dataset && digitalDocumentField"
+          step="4"
+        >
+          <v-alert
+            type="info"
+            variant="outlined"
+            density="compact"
+            style="max-width:400px;"
+          >
+            {{ t('attachmentInfo') }}
+          </v-alert>
+          <p v-t="'attachmentsMsg1'" />
+          <p v-t="'attachmentsMsg2'" />
+          <div
+            class="mt-3 mb-3"
+            @drop.prevent="e => {attachments = e.dataTransfer?.files[0]; currentStep = 5}"
+            @dragover.prevent
+          >
+            <v-file-input
+              v-model="attachments"
+              :label="t('selectFile')"
+              variant="outlined"
+              density="compact"
+              style="max-width: 400px;"
+              accept=".zip"
+              hide-details
+              clearable
+              @change="currentStep = 5"
+            />
+          </div>
+          <v-btn
+            v-t="'continue'"
+            color="primary"
+            class="mt-4"
+            @click="currentStep = 5"
+          />
+        </v-stepper-content>
+
+        <v-stepper-content :step="(dataset && digitalDocumentField) ? 5 : 4">
+          <template v-if="dataset && file">
+            <p>{{ t('updateMsg') }}</p>
+            <v-row
+              v-if="updateDataset.loading.value"
+              class="mx-0 my-3"
+            >
+              <v-progress-linear
+                v-if="uploadProgress"
+                v-model="uploadProgress.percent"
+                class="my-1"
+                rounded
+                height="28"
+                style="max-width: 600px;"
+              >
+                {{ truncateMiddle(file.name, 40) }}
+                <template v-if="uploadProgress.total && uploadProgress.percent !== undefined">
+                  {{ Math.floor(uploadProgress.percent) }}% {{ t('of') }} {{ formatBytes(uploadProgress.total, locale) }}
+                </template>
+              </v-progress-linear>
+              <v-btn
+                icon
+                color="warning"
+                :title="t('cancel')"
+                @click="cancelUpdateDataset"
+              >
+                <v-icon>mdi-cancel</v-icon>
+              </v-btn>
+            </v-row>
+            <v-btn
+              v-t="'update'"
+              color="primary"
+              :disabled="updateDataset.loading.value"
+              @click="updateDataset.execute()"
+            />
+          </template>
+        </v-stepper-content>
+
+        <v-stepper-content :step="(dataset && digitalDocumentField) ? 6 : 5">
+          <template v-if="imported && dataset">
+            <dataset-status :simple-mode="true" />
+            <dataset-schema />
+            <dataset-table />
+          </template>
+        </v-stepper-content>
+      </template>
+
+      <!-- REST steps -->
+      <template v-if="datasetType === 'rest'">
+        <v-stepper-content step="2">
+          <v-row class="mt-4 mb-1 mx-0">
+            <dataset-select
+              :extra-params="restDatasetsFilter"
+              @change="dataset => {selectedDataset = dataset; currentStep = 3}"
+            />
+          </v-row>
+
+          <v-btn
+            v-t="'continue'"
+            color="primary"
+            class="mt-4"
+            :disabled="!dataset"
+            @click="currentStep = 3"
+          />
+        </v-stepper-content>
+        <v-stepper-content step="3">
+          <dataset-table v-if="dataset" />
+        </v-stepper-content>
+      </template>
+    </v-stepper-items>
+  </v-stepper>
+</template>
+
+<i18n lang="yaml">
+fr:
+  updateDataset: Mettre à jour un jeu de données
+  datasetType: Type de mise à jour
+  choseType: Quelle action de mise à jour souhaitez vous effectuer ?
+  home: Accueil
+  type_file: Remplacer un fichier
+  type_desc_file: Chargez un fichier parmi les nombreux formats supportés et remplacez le fichier d'un jeu de données existant.
+  type_rest: Contribuer à un jeu de données éditable
+  type_desc_rest: Créez, supprimez et éditez des lignes. Vous pouvez également charger un fichier pour mettre à jour plusieurs lignes à la fois.
+  dataset: Jeu de données
+  selectDataset: Choisissez un jeu de données
+  stepFile: Fichier
+  stepDataset: Jeu de données
+  stepAction: Confirmation
+  stepAttachment: Pièces jointes
+  stepReview: Résultat
+  continue: Continuer
+  cancel: Annuler
+  loadMainFile: Chargez un fichier de données principal.
+  selectFile: sélectionnez ou glissez/déposez un fichier
+  formats: Formats supportés
+  attachmentInfo: Cette étape est optionnelle
+  attachmentsMsg1: Vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal.
+  attachmentsMsg2: Le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
+  suggestArchive: |
+    Ce fichier est volumineux. Pour économiser du temps et de l'énergie vous pouvez si vous le souhaitez le charger sous forme compressée.
+    <br>Pour ce faire vous devez créer soit un fichier "{name}.gz" soit une archive .zip contenant uniquement ce fichier.
+  similarDatasets: " | Ce jeu de données a le même nom de fichier : | Ces jeux de données ont le même nom de fichier :"
+  updateMsg: Après la soumission vous pourrez observer les changements et vous serez averti si il y a un risque d'incompatibilité.
+  update: Mettre à jour
+  loaded: chargées
+  editTable: Édition des lignes
+  datasetsCount: "Vous ne pouvez mettre à jour aucun jeu de données | Vous pouvez mettre à jour 1 jeu de données | Vous pouvez mettre à jour {count} jeux de données"
+en:
+  updateDataset: Update a dataset
+  datasetType: Dataset type
+  choseType: What update action do you wish to perform ?
+  home: Home
+  type_file: Replace a file
+  type_desc_file: Load a file among the many supported formats and replace an existing file.
+  type_rest: Contribute to an editable file
+  type_desc_rest: Create, update and delete lines. You can also load a file to upadte multiple lines.
+  dataset: Dataset
+  selectDataset: Select a dataset
+  stepFile: File
+  stepDataset: Dataset
+  stepAction: Confirmation
+  stepAttachment: Attachments
+  stepReview: Review
+  continue: Continue
+  cancel: Cancel
+  loadMainFile: Load the main data file
+  selectFile: select or drag and drop a file
+  formats: Supported formats
+  attachmentInfo: This step is optional
+  attachmentsMsg1: You can load a zip archive containing files to be used as attachments to the lines of the main dataset file.
+  attachmentsMsg2: The main data file must have a column that contains paths of the attachments in the archive.
+  suggestArchive: |
+    This file is large. To save and time and energy you can if you wish send a compressed version of it.
+    <br>To do so you must create a file "{name}.gz" or a zip archive containing only this file.
+  similarDatasets: " | This dataset has the same file name: | These datasets have the same file name:"
+  updateMsg: After submitting you will be be able to review the changes and you will be warned if there is an incompatibility.
+  update: Update
+  loaded: loaded
+  editTable: Edit lines
+  datasetsCount: "You can't update any dataset | You can update 1 dataset | You can update {count} datasets"
+</i18n>
+
+<script lang="ts" setup>
+import truncateMiddle from 'truncate-middle'
+import { withQuery } from 'ufo'
+import { accepted } from '~/utils/dataset'
+import axios, { AxiosRequestConfig, CancelTokenSource } from 'axios'
+import { Dataset } from '#api/types'
+import { mdiFileUpload, mdiAllInclusive } from '@mdi/js'
+import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
+
+const { datasetParams } = defineProps({
+  datasetParams: { type: Object as () => Record<string, string | undefined>, default: () => {} }
+})
+const updated = defineModel('updated', { type: String })
+
+const { account } = useSessionAuthenticated()
+const { sendUiNotif } = useUiNotif()
+const { t, locale } = useI18n()
+
+const currentStep = ref(1)
+
+const file = ref<File>()
+const attachments = ref<File>()
+
+const suggestArchive = computed(() => file.value && file.value.size > 50000000 && (file.value.name.endsWith('.csv') || file.value.name.endsWith('.tsv') || file.value.name.endsWith('.txt') || file.value.name.endsWith('.geojson')))
+
+const ownerFilter = computed(() => {
+  let ownerFilter = `${account.value.type}:${account.value.id}`
+  if (account.value.department) ownerFilter += `:${account.value.department}`
+  return ownerFilter
+})
+
+const datasetType = ref<'file' | 'rest'>()
+
+const fileDatasetsFilter = computed(() => {
+  return { owner: ownerFilter.value, ...datasetParams, file: true, can: 'writeData' }
+})
+
+const fileDatasetsCount = useFetch<{ count: number }>(`${$apiPath}/datasets`, { query: computed(() => ({ size: 0, ...fileDatasetsFilter.value })) })
+
+const restDatasetsFilter = computed(() => {
+  return { owner: ownerFilter.value, ...datasetParams, rest: true, can: 'createLine,updateLine' }
+})
+
+const restDatasetsCount = useFetch<{ count: number }>(`${$apiPath}/datasets`, { query: computed(() => ({ size: 0, ...restDatasetsFilter.value })) })
+
+const similatDatasetsUrl = computed(() => {
+  if (datasetType.value !== 'file' || !file.value) return null
+  return withQuery(`${$apiPath}/datasets`, {
+    filename: file.value?.name,
+    select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions,-links,-owner',
+    ...fileDatasetsFilter.value
+  })
+})
+
+const similarDatasets = useFetch<{ results: Dataset[] }>(similatDatasetsUrl)
+
+const selectedDataset = ref<Dataset>()
+const datasetStore = computed(() => {
+  const id = selectedDataset.value?.id ?? updated.value
+  if (!id) return undefined
+  return createDatasetStore(id, true)
+})
+const ready = computed(() => {
+  if (!updated.value) return true
+  return !!datasetStore.value?.dataset
+})
+watch(selectedDataset, () => {
+  if (selectedDataset.value?.isRest) {
+    updated.value = selectedDataset.value.id
+  } else {
+    updated.value = undefined
+  }
+})
+const dataset = computed(() => datasetStore.value?.dataset?.value)
+const digitalDocumentField = computed(() => datasetStore.value?.digitalDocumentField.value)
+watch(dataset, () => {
+  if (!dataset.value) return
+  if (dataset.value.isRest) {
+    datasetType.value = 'rest'
+    currentStep.value = 3
+  } else {
+    datasetType.value = 'file'
+    currentStep.value = (dataset.value && digitalDocumentField.value) ? 6 : 5
+  }
+})
+
+let cancelUpdate: CancelTokenSource
+const uploadProgress = ref<{ loaded: number, total?: number, percent?: number }>()
+const imported = ref(false)
+
+const updateDataset = useAsyncAction(async () => {
+  if (!file.value) return
+  if (!dataset.value) return
+  cancelUpdate = axios.CancelToken.source()
+  const options: AxiosRequestConfig = {
+    onUploadProgress: (e) => {
+      if (e.lengthComputable) {
+        uploadProgress.value = {
+          loaded: e.loaded,
+          total: e.total,
+          percent: e.total && ((e.loaded / e.total) * 100)
+        }
+      }
+    },
+    cancelToken: cancelUpdate.token,
+    params: { draft: true }
+  }
+  const formData = new FormData()
+  formData.append('dataset', file.value)
+  if (attachments.value) {
+    formData.append('attachments', attachments.value)
+  }
+  try {
+    await axios.post(`${$apiPath}/datasets/` + dataset.value.id, formData, options)
+    imported.value = true
+    currentStep.value += 1
+    updated.value = dataset.value.id
+  } catch (error: any) {
+    const status = error.response && error.response.status
+    if (status === 413) {
+      sendUiNotif({ type: 'error', msg: t('fileTooLarge') })
+    } else {
+      sendUiNotif({ type: 'error', msg: t('importError') })
+    }
+  }
+})
+
+const cancelUpdateDataset = () => {
+  if (!cancelUpdate) return
+  cancelUpdate.cancel(t('cancelled'))
+}
+
+/*
+export default {
+  data: () => ({
+    ready: false,
+    currentStep: 1,
+    file: null,
+    similarDatasets: null,
+    attachment: null,
+    uploadProgress: { rate: 0 },
+    importing: false,
+    imported: false,
+    datasetTypes: ['file', 'rest'],
+    datasetTypeIcons: {
+      file: 'mdi-file-upload',
+      rest: 'mdi-all-inclusive'
+    },
+    datasetType: null,
+    datasetsCount: {
+      file: null,
+      rest: null
+    }
+  }),
+  computed: {
+    ...mapState(['accepted']),
+    ...mapState('session', ['user']),
+    ...mapGetters('session', ['activeAccount']),
+    ...mapState('dataset', ['dataset']),
+    ...mapGetters('dataset', ['digitalDocumentField']),
+  },
+  watch: {
+    '$route.query.updated' () {
+      // updated from parent window
+      if (this.dataset && !this.$route.query.updated) window.location.reload()
+    }
+  },
+  async created () {
+    this.$store.dispatch('dataset/clear')
+    this.$store.dispatch('breadcrumbs', [{ text: this.t('home'), to: '/' }, { text: this.t('updateDataset') }])
+
+    this.datasetsCount.file = (await this.$axios.$get('api/v1/datasets', { params: { size: 0, ...file.valueDatasetsFilter } })).count
+    this.datasetsCount.rest = (await this.$axios.$get('api/v1/datasets', { params: { size: 0, ...this.restDatasetsFilter } })).count
+    if (this.$route.query.updated) {
+      await this.$store.dispatch('dataset/setId', { datasetId: this.$route.query.updated, draftMode: true })
+      this.$store.dispatch('dataset/subscribe')
+      this.imported = true
+      if (this.dataset.isRest) {
+        this.datasetType = 'rest'
+        this.currentStep = 3
+      } else {
+        this.datasetType = 'file'
+        this.currentStep = (this.dataset && this.digitalDocumentField) ? 6 : 5
+      }
+    }
+    this.ready = true
+  },
+  methods: {
+    async toggleDataset (dataset, nextStep) {
+      if (dataset) {
+        await this.$store.dispatch('dataset/setId', { datasetId: dataset.id, draftMode: true })
+        this.$store.dispatch('dataset/subscribe')
+        this.currentStep = nextStep
+        if (this.datasetType === 'rest') {
+          this.$router.push({ query: { ...this.$route.query, updated: this.dataset.id } })
+        }
+      } else {
+        this.$store.dispatch('dataset/clear')
+        if (this.$route.query.updated) {
+          const query = { ...this.$route.query }
+          delete query.updated
+          this.$router.push({ query })
+        }
+      }
+      this.importing = false
+      this.imported = false
+    },
+    async updateDataset () {
+      this.cancelSource = this.$axios.CancelToken.source()
+      const options = {
+        onUploadProgress: (e) => {
+          if (e.lengthComputable) {
+            this.uploadProgress = {
+              loaded: e.loaded,
+              total: e.total,
+              percent: (e.loaded / e.total) * 100
+            }
+          }
+        },
+        cancelToken: this.cancelSource.token,
+        params: { draft: true }
+      }
+      const formData = new FormData()
+      formData.append('dataset', file.value)
+      if (this.attachment) {
+        formData.append('attachments', this.attachment)
+      }
+      this.importing = true
+      try {
+        if (file.value.size > 100000) options.params.draft = 'true'
+        await this.$axios.$post('api/v1/datasets/' + this.dataset.id, formData, options)
+        this.imported = true
+        this.currentStep += 1
+        this.$router.push({ query: { ...this.$route.query, updated: this.dataset.id } })
+      } catch (error) {
+        const status = error.response && error.response.status
+        if (status === 413) {
+          eventBus.$emit('notification', { type: 'error', msg: this.t('fileTooLarge') })
+        } else {
+          eventBus.$emit('notification', { error, msg: this.t('importError') })
+        }
+        this.importing = false
+      }
+    },
+    cancel () {
+      if (this.cancelSource) this.cancelSource.cancel(this.t('cancelled'))
+    }
+  }
+} */
+</script>

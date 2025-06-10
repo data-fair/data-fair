@@ -831,7 +831,7 @@ const dataset = {
   title: 'Dataset',
   type: 'object',
   additionalProperties: false,
-  required: ['id', 'createdAt', 'owner'],
+  required: ['id', 'createdAt', 'owner', 'title'],
   properties: {
     ...datasetProperties,
     draftReason: { type: 'string' },

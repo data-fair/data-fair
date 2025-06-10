@@ -37,5 +37,6 @@ declare module 'vue' {
     SettingsTopics: typeof import('./../src/components/settings/settings-topics.vue')['default']
     SettingsWebhooks: typeof import('./../src/components/settings/settings-webhooks.vue')['default']
     TutorialAlert: typeof import('./../src/components/tutorial/tutorial-alert.vue')['default']
+    WorkflowUpdateDataset: typeof import('./../src/components/workflow/workflow-update-dataset.vue')['default']
   }
 }

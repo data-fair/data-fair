@@ -30,3 +30,26 @@ export const propTypeIcon = (prop: { type: string, format?: string }) => {
   }
   return propertyTypes.find(p => p.type === prop.type)?.icon
 }
+
+export const accepted = [
+  '.csv',
+  '.geojson',
+  '.gpkg',
+  '.zip',
+  '.ods',
+  '.fods',
+  '.xlsx',
+  '.xls',
+  '.dbf',
+  '.txt',
+  '.dif',
+  '.tsv',
+  '.kml',
+  '.kmz',
+  '.xml',
+  '.gpx',
+  '.ics',
+  '.geojson.gz',
+  '.csv.gz',
+  '.tsv.gz'
+]
