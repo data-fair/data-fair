@@ -246,7 +246,7 @@
       <!-- date interval -->
       <v-text-field
         v-if="showDateCompare"
-        :model-value="gte && formatValue(header.property, gte, null, localeDayjs)"
+        :model-value="gte && formatValue(gte, header.property, null, localeDayjs)"
         label="supérieur ou égal à"
         variant="outlined"
         hide-details
@@ -264,7 +264,7 @@
       </v-text-field>
       <v-text-field
         v-if="showDateCompare"
-        :model-value="lte && formatValue(header.property, lte, null, localeDayjs)"
+        :model-value="lte && formatValue(lte, header.property, null, localeDayjs)"
         label="inférieur ou égal à"
         variant="outlined"
         hide-details
@@ -326,7 +326,7 @@
           </template>
 
           <v-list-item-title :class="{'font-weight-bold': important}">
-            {{ formatValue(header.property, value, null, localeDayjs) }}
+            {{ formatValue(value, header.property, null, localeDayjs) }}
           </v-list-item-title>
         </v-list-item>
       </v-list>
@@ -357,12 +357,12 @@ en:
 
 <script lang="ts" setup>
 import { mdiInformation, mdiEyeOffOutline, mdiFormatHorizontalAlignLeft, mdiSortAscending, mdiSortDescending, mdiCheckboxMarked, mdiCheckboxBlankOutline, mdiCheck } from '@mdi/js'
-import { type TableHeader } from './use-headers'
+import { type TableHeaderWithProperty } from './use-headers'
 import { type DatasetFilter } from '~/composables/dataset-filters'
 import { formatValue } from '~/composables/dataset-lines'
 
 const { header, localEnum, filters, closeOnFilter } = defineProps({
-  header: { type: Object as () => TableHeader, required: true },
+  header: { type: Object as () => TableHeaderWithProperty, required: true },
   filters: { type: Array as () => DatasetFilter[], required: true },
   filterHeight: { type: Number, required: true },
   fixed: { type: String, default: null },
@@ -394,18 +394,18 @@ const gte = ref<string>()
 const editDate = ref<string>()
 const showHelp = ref(false)
 
-const formattedTrue = formatValue(header.property, true, null, localeDayjs)
-const formattedFalse = formatValue(header.property, false, null, localeDayjs)
+const formattedTrue = formatValue(true, header.property, null, localeDayjs)
+const formattedFalse = formatValue(false, header.property, null, localeDayjs)
 
 const fullEnum = computed(() => {
   if (!localEnum) return
   const fullEnum = []
   for (const value of localEnum) {
-    fullEnum.push({ value, important: true })
+    fullEnum.push({ value: value + '', important: true })
   }
   if (header.property.enum) {
     for (const value of header.property.enum.slice().sort()) {
-      if (!localEnum.includes(value)) fullEnum.push({ value })
+      if (!localEnum.includes(value)) fullEnum.push({ value: value + '' })
     }
   }
   return fullEnum
@@ -414,7 +414,7 @@ const fullEnum = computed(() => {
 const showEnum = computed(() => {
   if (header.property['x-capabilities'] && header.property['x-capabilities'].index === false) return false
   if (localEnum) return true
-  return header.property.enum && header.property['x-cardinality'] > 1
+  return header.property.enum && header.property['x-cardinality'] && header.property['x-cardinality'] > 1
 })
 
 const enumDense = computed(() => showEnum.value && fullEnum.value?.length && fullEnum.value?.length > 4)
@@ -458,7 +458,9 @@ const showContains = computed(() => {
 const reversedLabels = computed(() => {
   const reversedLabels: Record<string, string> = {}
   for (const key of Object.keys(header.property['x-labels'] || {})) {
-    reversedLabels[header.property['x-labels'][key]] = key
+    if (header.property['x-labels']?.[key]) {
+      reversedLabels[header.property['x-labels']?.[key]] = key
+    }
   }
   return reversedLabels
 })
@@ -483,7 +485,7 @@ const toggleMenu = () => {
       if (header.property.type === 'string' || header.property.type === 'number' || header.property.type === 'integer') {
         equals.value = [...values]
         if (header.property['x-labels']) {
-          equals.value = equals.value.map(v => header.property['x-labels'][v] ?? v)
+          equals.value = equals.value.map(v => header.property['x-labels']?.[v] ?? v)
         }
       }
       if (header.property.type === 'boolean') equalsBool.value = values[0]

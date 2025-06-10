@@ -56,7 +56,7 @@
     />
     <!--{{ item.__formatted[header.key] }}-->
     <dataset-item-value-multiple
-      v-else-if="Array.isArray(result.values[header.key])"
+      v-else-if="header.property && Array.isArray(result.values[header.key])"
       :values="result.values[header.key] as ExtendedResultValue[]"
       :property="header.property"
       :dense="dense"
@@ -67,7 +67,7 @@
       @hoverstop="emit('hoverstop')"
     />
     <dataset-item-value
-      v-else
+      v-else-if="header.property"
       :value="result.values[header.key] as ExtendedResultValue"
       :property="header.property"
       :dense="dense"

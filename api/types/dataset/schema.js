@@ -916,7 +916,12 @@ const dataset = {
         'x-calculated': { type: 'boolean' },
         'x-capabilities': capabilities,
         'x-labels': {
-          type: 'object'
+          type: 'object',
+          patternProperties: {
+            '.*': {
+              type: 'string'
+            }
+          }
         },
         'x-labelsRestricted': {
           type: 'boolean'

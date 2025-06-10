@@ -10,13 +10,15 @@ export type TableHeader = {
   sticky?: boolean
 }
 
+export type TableHeaderWithProperty = Omit<TableHeader, 'property'> & Required<Pick<TableHeader, 'property'>>
+
 export const useHeaders = (selectedCols: Ref<string[]>, noInteraction: boolean, edit: boolean, fixed: Ref<string | undefined>) => {
   const { dataset, imageProperty, can } = useDatasetStore()
   const { vocabulary } = useStore()
 
   const headers = computed(() => {
     if (!dataset.value?.schema) return
-    let headers: TableHeader[] | undefined = dataset.value?.schema?.filter(p => selectedCols.value.includes(p.key)).map((p, i) => ({
+    let headers: TableHeader[] | undefined = dataset.value?.schema?.filter(p => selectedCols.value.includes(p.key)).map((p) => ({
       key: p.key,
       title: p.title || p['x-originalName'] || p.key,
       sortable:
@@ -50,11 +52,19 @@ export const useHeaders = (selectedCols: Ref<string[]>, noInteraction: boolean, 
     return headers
   })
 
+  const headersWithProperty = computed(() => {
+    return headers.value?.filter(h => !!h.property) as TableHeaderWithProperty[]
+  })
+
   const hideHeader = (header: TableHeader) => {
     if (!selectedCols.value.length) selectedCols.value = dataset.value?.schema?.map(p => p.key) ?? []
     selectedCols.value = selectedCols.value.filter(sc => sc !== header.key)
   }
-  return { headers, hideHeader }
+  return {
+    headers,
+    headersWithProperty,
+    hideHeader
+  }
 }
 
 export default useHeaders

@@ -4,7 +4,7 @@ import { type ExtendedResult, type ExtendedResultValue } from './dataset-lines'
 export type DatasetFilter = {
   property: SchemaProperty,
   operator: 'in' | 'nin' | 'eq' | 'neq' | 'gt' | 'lt' | 'gte' | 'lte' | 'search' | 'contains' | 'starts'
-  value: string | number | boolean,
+  value: string,
   formattedValue: string,
   hidden?: boolean
 }
@@ -12,7 +12,9 @@ export type DatasetFilter = {
 export const operators = ['in', 'nin', 'eq', 'neq', 'gt', 'lt', 'gte', 'lte', 'search', 'contains', 'starts']
 
 export const findEqFilter = (filters: DatasetFilter[], property: SchemaProperty, result: ExtendedResult) => {
-  return filters.find(f => f.property.key === property.key && f.operator === 'eq' && (Array.isArray(result.values[property.key]) ? (item.values[header.key] as ExtendedResultValue[]).some(v => v.raw === f.value) : (result.values[property.key] as ExtendedResultValue).raw === f.value))
+  return filters.find(f => f.property.key === property.key && f.operator === 'eq' && (Array.isArray(result.values[property.key])
+    ? (result.values[property.key] as ExtendedResultValue[]).some(v => v.raw === f.value)
+    : (result.values[property.key] as ExtendedResultValue).raw === f.value))
 }
 
 export const useFilters = () => {

@@ -108,7 +108,7 @@
               v-if="header.property && !noInteraction"
               :sort="header.key === sort?.key ? sort.direction : undefined"
               :activator="`#header-${header.key}`"
-              :header="header"
+              :header="header as TableHeaderWithProperty"
               :filters="filters"
               :filter-height="height - 20"
               @filter="addFilter"
@@ -205,7 +205,7 @@
             :filters="filters"
             :filter-height="height - 20"
             :selected-fields="selectedCols"
-            :headers="headers"
+            :headers="headersWithProperty"
             :truncate="truncate"
             :sort="sort"
             :no-interaction="noInteraction"
@@ -352,7 +352,7 @@
 <script lang="ts" setup>
 import { mdiMagnify, mdiSortDescending, mdiSortAscending, mdiMenuDown, mdiClose } from '@mdi/js'
 import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../../composables/dataset-lines'
-import useHeaders, { type TableHeader } from './use-headers'
+import useHeaders, { TableHeaderWithProperty, type TableHeader } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
 import { type SchemaProperty } from '#api/types'
@@ -411,7 +411,7 @@ const conceptFilters = useConceptFilters(useReactiveSearchParams())
 const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFilters }))
 const indexedAt = ref<string>()
 const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
-const { headers, hideHeader } = useHeaders(selectedCols, noInteraction, edit, fixed)
+const { headers, headersWithProperty, hideHeader } = useHeaders(selectedCols, noInteraction, edit, fixed)
 const { selectedResults, saveLine, bulkLines } = provideDatasetEdition(baseFetchUrl, indexedAt)
 
 const virtualScroll = ref<VVirtualScroll>()

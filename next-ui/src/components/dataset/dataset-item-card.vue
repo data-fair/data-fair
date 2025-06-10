@@ -71,7 +71,7 @@
               :disable-hover="true"
               :dense="true"
               style="padding-right: 16px;"
-              @filter="emit('filter', {property: header.property, operator: 'eq', value: (result.values[header.key] as ExtendedResultValue).raw, formattedValue: (result.values[header.key] as ExtendedResultValue).formatted})"
+              @filter="emit('filter', {property: header.property, operator: 'eq', value: (result.values[header.key] as ExtendedResultValue).raw + '', formattedValue: (result.values[header.key] as ExtendedResultValue).formatted})"
               @show-detail-dialog="emit('showDetailDialog', header)"
             />
             <v-icon
@@ -125,7 +125,7 @@
 <script lang="ts" setup>
 import { type DatasetFilter } from '~/composables/dataset-filters'
 import { type ExtendedResult, type ExtendedResultValue } from '~/composables/dataset-lines'
-import { type TableHeader } from './table/use-headers'
+import { type TableHeaderWithProperty } from './table/use-headers'
 import { findEqFilter } from '~/composables/dataset-filters'
 import { mdiSortAscending, mdiSortDescending, mdiMenuDown, mdiMagnifyPlus } from '@mdi/js'
 
@@ -133,7 +133,7 @@ const { headers } = defineProps({
   result: { type: Object as () => ExtendedResult, required: true },
   filters: { type: Array as () => DatasetFilter[], required: false, default: () => ([]) },
   filterHeight: { type: Number, required: true },
-  headers: { type: Array as () => TableHeader[], required: true },
+  headers: { type: Array as () => TableHeaderWithProperty[], required: true },
   sort: { type: Object as () => { direction: 1 | -1, key: string }, default: null },
   truncate: { type: Number, default: 50 },
   noInteraction: { type: Boolean, default: false },
@@ -141,12 +141,12 @@ const { headers } = defineProps({
 })
 
 const emit = defineEmits<{
-  hide: [header: TableHeader],
+  hide: [header: TableHeaderWithProperty],
   filter: [filter: DatasetFilter],
   hoverstart: [result: ExtendedResult, value: ExtendedResultValue],
   hoverstop: [],
   showMapPreview: [],
-  showDetailDialog: [header: TableHeader]
+  showDetailDialog: [header: TableHeaderWithProperty]
 }>()
 
 const { t } = useI18n()
