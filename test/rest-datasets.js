@@ -118,8 +118,7 @@ describe('REST datasets', function () {
     assert.equal(res.data.nbOk, 7)
     assert.equal(res.data.nbCreated, 4)
     assert.equal(res.data.nbDeleted, 1)
-    assert.ok(res.data.updatedAt)
-    console.log(res.data)
+    assert.ok(res.data.indexedAt)
 
     try {
       await ax.get('/api/v1/datasets/rest2/lines/line2')
