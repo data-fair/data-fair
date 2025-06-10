@@ -10,6 +10,7 @@ let config = clone(_config)
 const nuxtDir = process.env.NUXT_DIR || ''
 
 const publicUrl = new URL(config.publicUrl + '/')
+config.origin = publicUrl.origin
 config.basePath = publicUrl.pathname
 
 const isBuilding = process.argv[2] === 'build'
@@ -117,7 +118,7 @@ const nuxtConfig = {
     browserLogLevel: config.browserLogLevel,
     analytics: config.analytics,
     captureUrl: config.captureUrl,
-    notifyUrl: config.privateEventsUrl ? '/events' : config.notifyUrl, // DEPRECATED
+    notifyUrl: config.privateEventsUrl ? (config.origin + '/events') : config.notifyUrl, // DEPRECATED
     notifyWSUrl: config.notifyWSUrl, // DEPRECATED
     catalogsIntegration: !!config.privateCatalogsUrl,
     eventsIntegration: !!config.privateEventsUrl,
