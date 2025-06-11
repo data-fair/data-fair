@@ -223,7 +223,8 @@ export const run = async () => {
       const unsafePaths = [
         '/embed/dataset/:id/table-edit',
         '/embed/dataset/:id/form',
-        '/embed/application/:id/config'
+        '/embed/application/:id/config',
+        '/embed/workflow/update-dataset'
       ].map(p => pathToRegexp.match(p))
       app.use('/next-ui', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, {
         ignoreSitePath: true,

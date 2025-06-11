@@ -307,6 +307,7 @@
           <dataset-edit-line-form
             v-model="newLine"
             :loading="editLine.loading.value"
+            :extension="true"
             @on-file-upload="(f: File) => {file = f}"
           />
         </v-card-text>
