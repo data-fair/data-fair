@@ -340,6 +340,41 @@ describe('datasets in draft mode', function () {
       assert.ok(err.message.includes('ont une erreur de validation'))
       return true
     })
+
+    dataset = await ax.get(`/api/v1/datasets/${dataset.id}?draft=true`).then(r => r.data)
+    assert.equal(dataset.draftReason?.key, 'file-updated')
+  })
+
+  it('create a draft when updating the data file and cancel it if there are some validation errors', async function () {
+    // Send dataset
+    const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
+    const form = new FormData()
+    form.append('file', datasetFd, 'dataset1.csv')
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let dataset = await workers.hook('finalizer')
+
+    const schema = dataset.schema
+    schema[0].pattern = '^[a-z]+$'
+    await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
+    dataset = await workers.hook('fileValidator')
+
+    // upload a new file
+    const datasetFd2 = fs.readFileSync('./resources/datasets/dataset1-invalid.csv')
+    const form2 = new FormData()
+    form2.append('file', datasetFd2, 'dataset1-invalid.csv')
+    form2.append('description', 'draft description')
+    dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: 'compatibleOrCancel' } })).data
+    assert.equal(dataset.status, 'loaded')
+    assert.equal(dataset.draftReason.key, 'file-updated')
+    assert.equal(dataset.draftReason.validationMode, 'compatibleOrCancel')
+    await workers.hook('fileValidator/' + dataset.id)
+
+    dataset = await ax.get(`/api/v1/datasets/${dataset.id}?draft=true`).then(r => r.data)
+    assert.ok(!dataset.draftReason)
+
+    const journal = await ax.get(`/api/v1/datasets/${dataset.id}/journal`).then(r => r.data)
+    assert.equal(journal[0].type, 'draft-cancelled')
   })
 
   it('create a draft at creation and update it with multiple follow-up uploads', async function () {

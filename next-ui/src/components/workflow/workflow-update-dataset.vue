@@ -527,7 +527,7 @@ const updateDataset = useAsyncAction(async () => {
       }
     },
     cancelToken: cancelUpdate.token,
-    params: { draft: true }
+    params: { draft: 'compatibleOrCancel' }
   }
   const formData = new FormData()
   formData.append('dataset', file.value)

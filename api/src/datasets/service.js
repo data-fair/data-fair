@@ -12,6 +12,7 @@ import * as datasetUtils from './utils/index.js'
 import * as restDatasetsUtils from './utils/rest.ts'
 import * as esUtils from './es/index.ts'
 import * as webhooks from '../misc/utils/webhooks.js'
+import es from '#es'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile, metadataAttachmentsDir } from './utils/files.ts'
@@ -589,4 +590,9 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
 
   await esUtils.validateDraftAlias(app.get('es'), dataset)
   await fs.remove(dir(datasetDraft))
+}
+
+export const cancelDraft = async (dataset) => {
+  await fs.remove(dir(dataset))
+  await esUtils.deleteIndex(es.client, dataset)
 }
