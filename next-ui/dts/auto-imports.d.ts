@@ -15,6 +15,7 @@ declare global {
   const $uiConfig: typeof import('~/context')['$uiConfig']
   const $wsUrl: typeof import('~/context')['$wsUrl']
   const EffectScope: typeof import('vue')['EffectScope']
+  const accepted: typeof import('../src/utils/dataset')['accepted']
   const applicationStore: typeof import('../src/composables/application-store')['default']
   const applicationVersions: typeof import('../src/composables/application-versions')['default']
   const computed: typeof import('vue')['computed']
@@ -24,6 +25,7 @@ declare global {
   const customRef: typeof import('vue')['customRef']
   const datasetLines: typeof import('../src/composables/dataset-lines')['default']
   const datasetStore: typeof import('../src/composables/dataset-store')['default']
+  const datasetStoreKey: typeof import('../src/composables/dataset-store')['datasetStoreKey']
   const defineAsyncComponent: typeof import('vue')['defineAsyncComponent']
   const defineComponent: typeof import('vue')['defineComponent']
   const dfPersonalMenu: typeof import('@data-fair/lib-vuetify/personal-menu.vue')['default']
@@ -145,13 +147,16 @@ declare module 'vue' {
     readonly $uiConfig: UnwrapRef<typeof import('~/context')['$uiConfig']>
     readonly $wsUrl: UnwrapRef<typeof import('~/context')['$wsUrl']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
+    readonly accepted: UnwrapRef<typeof import('../src/utils/dataset')['accepted']>
     readonly applicationStore: UnwrapRef<typeof import('../src/composables/application-store')['default']>
     readonly applicationVersions: UnwrapRef<typeof import('../src/composables/application-versions')['default']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
+    readonly createDatasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['createDatasetStore']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
     readonly datasetLines: UnwrapRef<typeof import('../src/composables/dataset-lines')['default']>
     readonly datasetStore: UnwrapRef<typeof import('../src/composables/dataset-store')['default']>
+    readonly datasetStoreKey: UnwrapRef<typeof import('../src/composables/dataset-store')['datasetStoreKey']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
     readonly dfPersonalMenu: UnwrapRef<typeof import('@data-fair/lib-vuetify/personal-menu.vue')['default']>

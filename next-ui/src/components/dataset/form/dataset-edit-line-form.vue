@@ -9,7 +9,7 @@
     <p v-t="'loadAttachment'" />
     <div class="mt-3 mb-3">
       <v-file-input
-        :label="$t('selectFile')"
+        :label="t('selectFile')"
         variant="outlined"
         density="compact"
         clearable

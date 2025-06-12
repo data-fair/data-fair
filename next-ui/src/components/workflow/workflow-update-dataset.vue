@@ -7,104 +7,90 @@
     class="elevation-0"
   >
     <v-stepper-header>
-      <v-stepper-step
-        :step="1"
+      <v-stepper-item
+        :value="1"
         :complete="!!datasetType"
         editable
-      >
-        {{ t('datasetType') }}
-        <small
-          v-if="datasetType"
-          v-t="'type_' + datasetType"
-        />
-      </v-stepper-step>
+        color="primary"
+        :title="t('datasetType')"
+        :subtitle="datasetType && t('type_' + datasetType)"
+      />
 
       <!-- FILE steps -->
       <template v-if="datasetType === 'file'">
         <v-divider />
-        <v-stepper-step
-          :step="2"
+        <v-stepper-item
+          :value="2"
           :complete="!!file"
           editable
-        >
-          {{ t('stepFile') }}
-          <small
-            v-if="file"
-          >
-            {{ truncateMiddle(file.name, 30) }}
-          </small>
-        </v-stepper-step>
+          color="primary"
+          :title="t('stepFile')"
+          :subtitle="file && truncateMiddle(file.name, 30)"
+        />
         <v-divider />
 
-        <v-stepper-step
-          :step="3"
+        <v-stepper-item
+          :value="3"
           :complete="!!dataset"
           :editable="!!file"
-        >
-          {{ t('stepDataset') }}
-          <small v-if="dataset">
-            {{ truncateMiddle(dataset.title, 30) }}
-          </small>
-        </v-stepper-step>
+          color="primary"
+          :title="t('stepDataset')"
+          :subtitle="dataset ? truncateMiddle(dataset.title, 30) : undefined"
+        />
         <v-divider />
 
         <template v-if="dataset && digitalDocumentField">
-          <v-stepper-step
-            :step="4"
+          <v-stepper-item
+            :value="4"
             :complete="!!attachments"
             :editable="!!dataset"
-          >
-            {{ t('stepAttachment') }}
-            <small
-              v-if="attachments"
-              v-t="'loaded'"
-            />
-          </v-stepper-step>
+            color="primary"
+            :title="t('stepAttachment')"
+            :subtitle="attachments && t('loaded')"
+          />
           <v-divider />
         </template>
 
-        <v-stepper-step
-          :step="(dataset && digitalDocumentField) ? 5 : 4"
+        <v-stepper-item
+          :value="(dataset && digitalDocumentField) ? 5 : 4"
           :complete="imported"
           :editable="!!dataset"
-        >
-          {{ t('stepAction') }}
-        </v-stepper-step>
+          color="primary"
+          :title="t('stepAction')"
+        />
         <v-divider />
 
-        <v-stepper-step
-          :step="(dataset && digitalDocumentField) ? 6 : 5"
+        <v-stepper-item
+          :value="(dataset && digitalDocumentField) ? 6 : 5"
           :editable="imported"
-        >
-          {{ t('stepReview') }}
-        </v-stepper-step>
+          color="primary"
+          :title="t('stepReview')"
+        />
       </template>
 
       <!-- REST steps -->
       <template v-if="datasetType === 'rest'">
         <v-divider />
-        <v-stepper-step
-          :step="2"
+        <v-stepper-item
+          :value="2"
           :complete="!!dataset"
           editable
-        >
-          {{ t('stepDataset') }}
-          <small v-if="dataset">
-            {{ truncateMiddle(dataset.title, 30) }}
-          </small>
-        </v-stepper-step>
+          color="primary"
+          :title="t('stepDataset')"
+          :subtitle="dataset ? truncateMiddle(dataset.title, 30) : undefined"
+        />
         <v-divider />
-        <v-stepper-step
-          :step="3"
+        <v-stepper-item
+          :value="3"
           :editable="!!dataset"
-        >
-          {{ t('editTable') }}
-        </v-stepper-step>
+          color="primary"
+          :title="t('editTable')"
+        />
       </template>
     </v-stepper-header>
 
-    <v-stepper-items>
-      <v-stepper-content step="1">
+    <v-stepper-window>
+      <v-stepper-window-item :value="1">
         <p v-t="'choseType'" />
         <v-row
           dense
@@ -171,11 +157,11 @@
             </v-card-text>
           </v-card>
         </v-row>
-      </v-stepper-content>
+      </v-stepper-window-item>
 
       <!-- FILE steps -->
       <template v-if="datasetType === 'file'">
-        <v-stepper-content step="2">
+        <v-stepper-window-item :value="2">
           <p v-t="'loadMainFile'" />
           <div
             class="mt-3 mb-3"
@@ -213,9 +199,9 @@
             class="text-h6 mt-4"
           />
           <dataset-file-formats />
-        </v-stepper-content>
+        </v-stepper-window-item>
 
-        <v-stepper-content step="3">
+        <v-stepper-window-item :value="3">
           <template v-if="file && similarDatasets.data.value?.results.length">
             <p class="mb-1">
               {{ t('similarDatasets', {}, similarDatasets.data.value?.results.length) }}
@@ -242,7 +228,7 @@
           <v-row class="mt-4 mb-1 mx-0">
             <dataset-select
               :extra-params="fileDatasetsFilter"
-              @change="dataset => {selectedDataset = dataset; currentStep = 4}"
+              @update:model-value="dataset => {selectedDataset = dataset; currentStep = 4}"
             />
           </v-row>
 
@@ -253,11 +239,11 @@
             :disabled="!dataset"
             @click="currentStep = 4"
           />
-        </v-stepper-content>
+        </v-stepper-window-item>
 
-        <v-stepper-content
+        <v-stepper-window-item
           v-if="dataset && digitalDocumentField"
-          step="4"
+          :value="4"
         >
           <v-alert
             type="info"
@@ -292,9 +278,9 @@
             class="mt-4"
             @click="currentStep = 5"
           />
-        </v-stepper-content>
+        </v-stepper-window-item>
 
-        <v-stepper-content :step="(dataset && digitalDocumentField) ? 5 : 4">
+        <v-stepper-window-item :value="(dataset && digitalDocumentField) ? 5 : 4">
           <template v-if="dataset && file">
             <p>{{ t('updateMsg') }}</p>
             <v-row
@@ -330,24 +316,24 @@
               @click="updateDataset.execute()"
             />
           </template>
-        </v-stepper-content>
+        </v-stepper-window-item>
 
-        <v-stepper-content :step="(dataset && digitalDocumentField) ? 6 : 5">
+        <v-stepper-window-item :value="(dataset && digitalDocumentField) ? 6 : 5">
           <template v-if="imported && dataset">
-            <dataset-status :simple-mode="true" />
+            <dataset-status />
             <dataset-schema />
             <dataset-table />
           </template>
-        </v-stepper-content>
+        </v-stepper-window-item>
       </template>
 
       <!-- REST steps -->
       <template v-if="datasetType === 'rest'">
-        <v-stepper-content step="2">
+        <v-stepper-window-item :value="2">
           <v-row class="mt-4 mb-1 mx-0">
             <dataset-select
               :extra-params="restDatasetsFilter"
-              @change="dataset => {selectedDataset = dataset; currentStep = 3}"
+              @update:model-value="dataset => {selectedDataset = dataset; currentStep = 3}"
             />
           </v-row>
 
@@ -358,12 +344,12 @@
             :disabled="!dataset"
             @click="currentStep = 3"
           />
-        </v-stepper-content>
-        <v-stepper-content step="3">
+        </v-stepper-window-item>
+        <v-stepper-window-item :value="3">
           <dataset-table v-if="dataset" />
-        </v-stepper-content>
+        </v-stepper-window-item>
       </template>
-    </v-stepper-items>
+    </v-stepper-window>
   </v-stepper>
 </template>
 
@@ -395,7 +381,7 @@ fr:
   suggestArchive: |
     Ce fichier est volumineux. Pour économiser du temps et de l'énergie vous pouvez si vous le souhaitez le charger sous forme compressée.
     <br>Pour ce faire vous devez créer soit un fichier "{name}.gz" soit une archive .zip contenant uniquement ce fichier.
-  similarDatasets: " | Ce jeu de données a le même nom de fichier : | Ces jeux de données ont le même nom de fichier :"
+  similarDatasets: "Ce jeu de données a le même nom de fichier : | Ces jeux de données ont le même nom de fichier :"
   updateMsg: Après la soumission vous pourrez observer les changements et vous serez averti si il y a un risque d'incompatibilité.
   update: Mettre à jour
   loaded: chargées
@@ -428,7 +414,7 @@ en:
   suggestArchive: |
     This file is large. To save and time and energy you can if you wish send a compressed version of it.
     <br>To do so you must create a file "{name}.gz" or a zip archive containing only this file.
-  similarDatasets: " | This dataset has the same file name: | These datasets have the same file name:"
+  similarDatasets: "This dataset has the same file name: | These datasets have the same file name:"
   updateMsg: After submitting you will be be able to review the changes and you will be warned if there is an incompatibility.
   update: Update
   loaded: loaded

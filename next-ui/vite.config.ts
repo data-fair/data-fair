@@ -37,7 +37,7 @@ export default defineConfig({
       // exclude: process.env.NODE_ENV === 'development' ? [] : ['src/pages/dev.vue']
     }),
     Vue({ template: { compilerOptions: { isCustomElement: (tag) => ['d-frame'].includes(tag) } } }),
-    VueI18nPlugin(),
+    VueI18nPlugin({ strictMessage: false }),
     Vuetify({ styles: { configFile: settingsPath } }),
     AutoImport({
       dts: './dts/auto-imports.d.ts',

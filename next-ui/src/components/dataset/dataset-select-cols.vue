@@ -41,7 +41,7 @@
                 :key="'fold-down-' + group"
                 :icon="mdiMenuDown"
                 style="margin-top:-8px;"
-                :title="$t('fold')"
+                :title="t('fold')"
                 @click="unfoldedGroups[group] = false"
               />
               <v-btn
@@ -49,7 +49,7 @@
                 :key="'fold-up-' + group"
                 :icon="mdiMenuLeft"
                 style="margin-top:-8px;"
-                :title="$t('unfold')"
+                :title="t('unfold')"
                 @click="unfoldedGroups[group] = true"
               />
             </template>

@@ -24,7 +24,7 @@
         size="x-small"
         :style="`right: 4px;top: 50%;transform: translate(0, -50%);z-index:100;background-color:${theme.current.value.dark ? '#212121' : 'white'};`"
         absolute
-        :title="$t('showMapPreview')"
+        :title="t('showMapPreview')"
         @click="emit('showMapPreview')"
       />
     </template>

@@ -822,6 +822,23 @@ const datasetProperties = {
   esWarning: {
     type: ['string', 'null'],
     enum: ['MissingIndex', 'IndexHealthRed', 'MissingIndexSettings', 'ShardingRecommended']
+  },
+  draftReason: {
+    type: 'object',
+    title: 'Why was the dataset switched in draft mode',
+    properties: {
+      key: {
+        type: 'string',
+        enum: ['manual', 'file-new', 'file-updated']
+      },
+      message: {
+        type: 'string'
+      },
+      validationMode: {
+        type: 'string',
+        enum: ['never', 'always', 'compatible']
+      }
+    }
   }
 }
 
@@ -834,30 +851,13 @@ const dataset = {
   required: ['id', 'createdAt', 'owner', 'title'],
   properties: {
     ...datasetProperties,
-    draftReason: { type: 'string' },
     draft: {
       title: 'Dataset draft',
       description: 'Some properties waiting for confirmation before being merged into the main dataset info',
       type: 'object',
       additionalProperties: false,
       properties: {
-        draftReason: {
-          type: 'object',
-          title: 'Why was the dataset switched in draft mode',
-          properties: {
-            key: {
-              type: 'string',
-              enum: ['manual', 'file-new', 'file-updated']
-            },
-            message: {
-              type: 'string'
-            },
-            validationMode: {
-              type: 'string',
-              enum: ['never', 'always', 'compatible']
-            }
-          }
-        },
+        draftReason: datasetProperties.draftReason,
         validateDraft: {
           type: 'boolean',
           title: 'indicates that the draft was validated and is being processed to replace the current state'

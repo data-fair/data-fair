@@ -7,8 +7,8 @@
     no-filter
     item-title="title"
     item-value="id"
-    :label="label || $t('selectDataset')"
-    :placeholder="$t('search')"
+    :label="label || t('selectDataset')"
+    :placeholder="t('search')"
     return-object
     variant="outlined"
     density="compact"
