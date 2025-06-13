@@ -81,19 +81,21 @@ export default async (req, res, next) => {
         ...ownerFilter
       }, { projection: { 'configuration.datasets': 1 } })
     if (matchingApplication) {
-    // this is basically the "crowd-sourcing" use case
-    // we apply some anti-spam protection
+      // this is basically the "crowd-sourcing" use case
+      // we apply some anti-spam protection
       if (req.method !== 'GET' && req.method !== 'HEAD') {
-      // 1rst level of anti-spam prevention, no cross origin requests on this route
+        // 1rst level of anti-spam prevention, no cross origin requests on this route
         if (!matchingHost(req)) {
           return res.status(405).send(req.__('errors.noCrossDomain'))
         }
 
         // 2nd level of anti-spam protection, validate that the user was present on the page for a few seconds before sending
         const { verifyToken } = req.app.get('session')
-        if (!req.get('x-anonymousToken')) return res.status(401).type('text/plain').send(req.__('errors.requireAnonymousToken'))
+        const anonymousToken = req.get('x-anonymousToken')
+        let tokenContent
+        if (!anonymousToken) return res.status(401).type('text/plain').send(req.__('errors.requireAnonymousToken'))
         try {
-          await verifyToken(req.get('x-anonymousToken'))
+          tokenContent = await verifyToken(anonymousToken)
         } catch (err) {
           if (err.name === 'NotBeforeError') {
             return res.status(429).type('text/plain').send(req.__('errors.looksLikeSpam'))
@@ -101,9 +103,10 @@ export default async (req, res, next) => {
             return res.status(401).type('text/plain').send('Invalid token')
           }
         }
+        if (!tokenContent.anonymousAction) throw new Error('wrong type of token used for anonymous action')
 
         // 3rd level of anti-spam protection, simple rate limiting based on ip
-        if (!rateLimiting.consume(req, 'postApplicationKey')) {
+        if (!rateLimiting.consume(req, 'postApplicationKey', tokenContent.iat + '')) {
           console.warn('Rate limit error for application key', requestIp.getClientIp(req), req.originalUrl)
           return res.status(429).type('text/plain').send(req.__('errors.exceedAnonymousRateLimiting'))
         }

@@ -29,8 +29,8 @@ export const clear = () => {
   for (const key of Object.keys(tokenBuckets)) delete tokenBuckets[key]
 }
 
-export const getRateLimiter = (req, limitType) => {
-  const throttlingId = req.user ? req.user.id : requestIp.getClientIp(req)
+export const getRateLimiter = (req, limitType, _throttlingId) => {
+  const throttlingId = _throttlingId ?? (req.user ? req.user.id : requestIp.getClientIp(req))
   const rateLimiter = rateLimiters[throttlingId + limitType] = rateLimiters[throttlingId + limitType] || {
     rateLimiter: new RateLimiter({
       tokensPerInterval: config.defaultLimits.apiRate[limitType].nb,
@@ -40,8 +40,8 @@ export const getRateLimiter = (req, limitType) => {
   return rateLimiter
 }
 
-export const consume = (req, limitType) => {
-  const rateLimiter = getRateLimiter(req, limitType)
+export const consume = (req, limitType, throttlingId) => {
+  const rateLimiter = getRateLimiter(req, limitType, throttlingId)
   rateLimiter.lastUsed = Date.now()
   return rateLimiter.rateLimiter.tryRemoveTokens(1)
 }
