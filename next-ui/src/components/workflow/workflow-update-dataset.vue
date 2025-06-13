@@ -2,22 +2,21 @@
 <!-- eslint-disable vue/no-v-text-v-html-on-component -->
 <template>
   <v-stepper
-    v-if="ready"
     v-model="currentStep"
-    class="elevation-0"
+    class="elevation-0 bg-background"
   >
-    <v-stepper-header>
+    <v-stepper-header class="bg-surface">
       <v-stepper-item
         :value="1"
-        :complete="!!datasetType"
+        :complete="!!currentDataset"
         editable
         color="primary"
-        :title="t('datasetType')"
-        :subtitle="datasetType && t('type_' + datasetType)"
+        :title="t('stepDataset')"
+        :subtitle="currentDataset ? truncateMiddle(currentDataset.title, 30) : undefined"
       />
 
       <!-- FILE steps -->
-      <template v-if="datasetType === 'file'">
+      <template v-if="!!currentDataset?.file">
         <v-divider />
         <v-stepper-item
           :value="2"
@@ -29,7 +28,7 @@
         />
         <v-divider />
 
-        <v-stepper-item
+        <!--<v-stepper-item
           :value="3"
           :complete="!!dataset"
           :editable="!!file"
@@ -66,23 +65,15 @@
           color="primary"
           :title="t('stepReview')"
         />
+        -->
       </template>
 
       <!-- REST steps -->
-      <template v-if="datasetType === 'rest'">
+      <template v-if="currentDataset?.isRest">
         <v-divider />
         <v-stepper-item
           :value="2"
-          :complete="!!dataset"
-          editable
-          color="primary"
-          :title="t('stepDataset')"
-          :subtitle="dataset ? truncateMiddle(dataset.title, 30) : undefined"
-        />
-        <v-divider />
-        <v-stepper-item
-          :value="3"
-          :editable="!!dataset"
+          :editable="!!currentDataset"
           color="primary"
           :title="t('editTable')"
         />
@@ -91,116 +82,67 @@
 
     <v-stepper-window>
       <v-stepper-window-item :value="1">
-        <p v-t="'choseType'" />
-        <v-row
-          dense
-          class="mt-2 mb-6"
-        >
-          <v-card
-            width="460px"
-            class="ma-1"
-            border
-            hover
-            tile
-            :loading="fileDatasetsCount.loading.value"
-            :disabled="!fileDatasetsCount.data.value?.count"
-            @click="datasetType = 'file'; $nextTick(() => currentStep = 2);"
-          >
-            <v-card-title class="text-primary">
-              <v-icon
-                color="primary"
-                class="mr-2"
-                :icon="mdiFileUpload"
-              />
-              {{ t('type_file') }}
-            </v-card-title>
-            <v-card-text>
-              <p>
-                {{ t('type_desc_file') }}
-              </p>
-              <p
-                v-if="fileDatasetsCount.data.value"
-                class="text-caption mb-0"
-              >
-                {{ t('datasetsCount', {count: fileDatasetsCount.data.value?.count}, fileDatasetsCount.data.value?.count) }}
-              </p>
-            </v-card-text>
-          </v-card>
-          <v-card
-            width="460px"
-            class="ma-1"
-            border
-            hover
-            tile
-            :loading="restDatasetsCount.loading.value"
-            :disabled="!restDatasetsCount.data.value?.count"
-            @click="datasetType = 'rest'; $nextTick(() => currentStep = 2);"
-          >
-            <v-card-title class="text-primary">
-              <v-icon
-                color="primary"
-                class="mr-2"
-                :icon="mdiAllInclusive"
-              />
-              {{ t('type_rest') }}
-            </v-card-title>
-            <v-card-text>
-              <p>
-                {{ t('type_desc_rest') }}
-              </p>
-              <p
-                v-if="restDatasetsCount.data.value"
-                class="text-caption mb-0"
-              >
-                {{ t('datasetsCount', {count: restDatasetsCount.data.value?.count}, restDatasetsCount.data.value?.count) }}
-              </p>
-            </v-card-text>
-          </v-card>
+        <v-row class="mt-4 mb-1 mx-0">
+          <dataset-select-cards
+            :extra-params="datasetsFilter"
+            @update:model-value="dataset => {selectedDataset = dataset; currentStep = 2}"
+          />
         </v-row>
       </v-stepper-window-item>
 
-      <!-- FILE steps -->
-      <template v-if="datasetType === 'file'">
-        <v-stepper-window-item :value="2">
-          <p v-t="'loadMainFile'" />
-          <div
-            class="mt-3 mb-3"
-            @drop.prevent="e => {file = e.dataTransfer?.files[0]; if (!suggestArchive) currentStep = 3}"
-            @dragover.prevent
-          >
-            <v-file-input
-              v-model="file"
-              :label="t('selectFile')"
+      <dataset-store-provider
+        v-if="currentDatasetId"
+        :id="currentDatasetId"
+        :key="currentDatasetId"
+        ref="dataset-store-provider"
+        v-slot="{ datasetStore }"
+        draft-mode
+      >
+        <!-- FILE steps -->
+        <!--<template v-if="dataset?.file">
+          <v-stepper-window-item :value="2">
+            <p>
+              {{ t('loadMainFile') }}
+            </p>
+            <div
+              class="mt-3 mb-3"
+              @drop.prevent="e => {file = e.dataTransfer?.files[0]; if (!suggestArchive) currentStep = 3}"
+              @dragover.prevent
+            >
+              <v-file-input
+                v-model="file"
+                :label="t('selectFile')"
+                variant="outlined"
+                density="compact"
+                hide-details
+                style="max-width: 400px;"
+                :accept="accepted.join(', ')"
+                @change="currentStep = 3"
+              />
+            </div>
+            <v-alert
+              v-if="file && file.size > 50000000 && (file.name.endsWith('.csv') || file.name.endsWith('.tsv') || file.name.endsWith('.txt') || file.name.endsWith('.geojson'))"
               variant="outlined"
+              type="info"
               density="compact"
-              hide-details
-              style="max-width: 400px;"
-              :accept="accepted.join(', ')"
-              @change="currentStep = 3"
+              v-html="t('suggestArchive', {name: file.name})"
             />
-          </div>
-          <v-alert
-            v-if="file && file.size > 50000000 && (file.name.endsWith('.csv') || file.name.endsWith('.tsv') || file.name.endsWith('.txt') || file.name.endsWith('.geojson'))"
-            variant="outlined"
-            type="info"
-            density="compact"
-            v-html="t('suggestArchive', {name: file.name})"
-          />
-          <v-btn
-            v-t="'continue'"
-            class="mt-2"
-            :disabled="!file"
-            color="primary"
-            @group:selected="() => {if (!suggestArchive) currentStep = 3}"
-          />
+            <v-btn
+              class="mt-2"
+              :disabled="!file"
+              color="primary"
+              @group:selected="() => {if (!suggestArchive) currentStep = 3}"
+            >
+              {{ t('continue') }}
+            </v-btn>
 
-          <h3
-            v-t="'formats'"
-            class="text-h6 mt-4"
-          />
-          <dataset-file-formats />
-        </v-stepper-window-item>
-
+            <h3
+              class="text-h6 mt-4"
+            >
+              {{ t('formats') }}
+            </h3>
+            <dataset-file-formats />
+          </v-stepper-window-item>
         <v-stepper-window-item :value="3">
           <template v-if="file && similarDatasets.data.value?.results.length">
             <p class="mb-1">
@@ -233,12 +175,13 @@
           </v-row>
 
           <v-btn
-            v-t="'continue'"
             color="primary"
             class="mt-4"
             :disabled="!dataset"
             @click="currentStep = 4"
-          />
+          >
+            {{ t('continue') }}
+          </v-btn>
         </v-stepper-window-item>
 
         <v-stepper-window-item
@@ -253,8 +196,13 @@
           >
             {{ t('attachmentInfo') }}
           </v-alert>
-          <p v-t="'attachmentsMsg1'" />
-          <p v-t="'attachmentsMsg2'" />
+          <p>
+            {{ t('attachmentsMsg1') }}
+          </p>
+
+          <p>
+            {{ t('attachmentsMsg2') }}
+          </p>
           <div
             class="mt-3 mb-3"
             @drop.prevent="e => {attachments = e.dataTransfer?.files[0]; currentStep = 5}"
@@ -273,11 +221,12 @@
             />
           </div>
           <v-btn
-            v-t="'continue'"
             color="primary"
             class="mt-4"
             @click="currentStep = 5"
-          />
+          >
+            {{ t('continue') }}
+          </v-btn>
         </v-stepper-window-item>
 
         <v-stepper-window-item :value="(dataset && digitalDocumentField) ? 5 : 4">
@@ -310,45 +259,30 @@
               </v-btn>
             </v-row>
             <v-btn
-              v-t="'update'"
               color="primary"
               :disabled="updateDataset.loading.value"
               @click="updateDataset.execute()"
-            />
+            >
+              {{ t('update') }}
+            </v-btn>
           </template>
         </v-stepper-window-item>
 
         <v-stepper-window-item :value="(dataset && digitalDocumentField) ? 6 : 5">
           <template v-if="imported && dataset">
             <dataset-status />
-            <dataset-schema />
             <dataset-table />
           </template>
         </v-stepper-window-item>
-      </template>
+        -->
 
-      <!-- REST steps -->
-      <template v-if="datasetType === 'rest'">
-        <v-stepper-window-item :value="2">
-          <v-row class="mt-4 mb-1 mx-0">
-            <dataset-select
-              :extra-params="restDatasetsFilter"
-              @update:model-value="dataset => {selectedDataset = dataset; currentStep = 3}"
-            />
-          </v-row>
-
-          <v-btn
-            v-t="'continue'"
-            color="primary"
-            class="mt-4"
-            :disabled="!dataset"
-            @click="currentStep = 3"
-          />
-        </v-stepper-window-item>
-        <v-stepper-window-item :value="3">
-          <dataset-table v-if="dataset" />
-        </v-stepper-window-item>
-      </template>
+        <!-- REST steps -->
+        <template v-if="datasetStore.dataset.value?.isRest">
+          <v-stepper-window-item :value="2">
+            <dataset-table :edit="true" />
+          </v-stepper-window-item>
+        </template>
+      </dataset-store-provider>
     </v-stepper-window>
   </v-stepper>
 </template>
@@ -356,7 +290,6 @@
 <i18n lang="yaml">
 fr:
   updateDataset: Mettre à jour un jeu de données
-  datasetType: Type de mise à jour
   choseType: Quelle action de mise à jour souhaitez vous effectuer ?
   home: Accueil
   type_file: Remplacer un fichier
@@ -389,7 +322,6 @@ fr:
   datasetsCount: "Vous ne pouvez mettre à jour aucun jeu de données | Vous pouvez mettre à jour 1 jeu de données | Vous pouvez mettre à jour {count} jeux de données"
 en:
   updateDataset: Update a dataset
-  datasetType: Dataset type
   choseType: What update action do you wish to perform ?
   home: Home
   type_file: Replace a file
@@ -424,135 +356,131 @@ en:
 
 <script lang="ts" setup>
 import truncateMiddle from 'truncate-middle'
-import { withQuery } from 'ufo'
-import { accepted } from '~/utils/dataset'
-import axios, { AxiosRequestConfig, CancelTokenSource } from 'axios'
-import { Dataset } from '#api/types'
-import { mdiFileUpload, mdiAllInclusive } from '@mdi/js'
-import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
+// import { accepted } from '~/utils/dataset'
+// import axios, { AxiosRequestConfig, CancelTokenSource } from 'axios'
+// import { formatBytes } from '@data-fair/lib-vue/format/bytes.js'
+import { type ListedDataset } from '../dataset/select/utils'
+import { type DatasetStore } from '~/composables/dataset-store'
+import DatasetStoreProvider from '~/components/provide/dataset-store-provider.vue'
+import Debug from 'debug'
+
+const debug = Debug('workflow-update-dataset')
 
 const { datasetParams } = defineProps({
   datasetParams: { type: Object as () => Record<string, string | undefined>, default: () => {} }
 })
 const updated = defineModel('updated', { type: String })
 
-const { account } = useSessionAuthenticated()
-const { sendUiNotif } = useUiNotif()
-const { t, locale } = useI18n()
+// const { sendUiNotif } = useUiNotif()
+const { t } = useI18n()
 
 const currentStep = ref(1)
 
 const file = ref<File>()
-const attachments = ref<File>()
+// const attachments = ref<File>()
 
-const suggestArchive = computed(() => file.value && file.value.size > 50000000 && (file.value.name.endsWith('.csv') || file.value.name.endsWith('.tsv') || file.value.name.endsWith('.txt') || file.value.name.endsWith('.geojson')))
+// const suggestArchive = computed(() => file.value && file.value.size > 50000000 && (file.value.name.endsWith('.csv') || file.value.name.endsWith('.tsv') || file.value.name.endsWith('.txt') || file.value.name.endsWith('.geojson')))
 
-const ownerFilter = computed(() => {
-  let ownerFilter = `${account.value.type}:${account.value.id}`
-  if (account.value.department) ownerFilter += `:${account.value.department}`
-  return ownerFilter
-})
+const datasetsFilter = computed(() => ({
+  ...datasetParams,
+  type: 'file,rest',
+  can: 'writeData,createLine,updateLine'
+}))
 
-const datasetType = ref<'file' | 'rest'>()
-
-const fileDatasetsFilter = computed(() => {
-  return { owner: ownerFilter.value, ...datasetParams, file: true, can: 'writeData' }
-})
-
-const fileDatasetsCount = useFetch<{ count: number }>(`${$apiPath}/datasets`, { query: computed(() => ({ size: 0, ...fileDatasetsFilter.value })) })
-
-const restDatasetsFilter = computed(() => {
-  return { owner: ownerFilter.value, ...datasetParams, rest: true, can: 'createLine,updateLine' }
-})
-
-const restDatasetsCount = useFetch<{ count: number }>(`${$apiPath}/datasets`, { query: computed(() => ({ size: 0, ...restDatasetsFilter.value })) })
-
-const similatDatasetsUrl = computed(() => {
-  if (datasetType.value !== 'file' || !file.value) return null
-  return withQuery(`${$apiPath}/datasets`, {
-    filename: file.value?.name,
-    select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions,-links,-owner',
-    ...fileDatasetsFilter.value
-  })
-})
-
-const similarDatasets = useFetch<{ results: Dataset[] }>(similatDatasetsUrl)
-
-const selectedDataset = ref<Dataset>()
-const datasetStore = computed(() => {
-  const id = selectedDataset.value?.id ?? updated.value
-  if (!id) return undefined
-  return createDatasetStore(id, true)
-})
-const ready = computed(() => {
-  if (!updated.value) return true
-  return !!datasetStore.value?.dataset
-})
+const selectedDataset = ref<ListedDataset>()
+const currentDatasetId = ref(updated.value)
 watch(selectedDataset, () => {
+  debug('selectedDataset', selectedDataset.value)
+  if (selectedDataset.value) currentDatasetId.value = selectedDataset.value.id
   if (selectedDataset.value?.isRest) {
     updated.value = selectedDataset.value.id
   } else {
     updated.value = undefined
   }
 })
-const dataset = computed(() => datasetStore.value?.dataset?.value)
-const digitalDocumentField = computed(() => datasetStore.value?.digitalDocumentField.value)
-watch(dataset, () => {
-  if (!dataset.value) return
-  if (dataset.value.isRest) {
-    datasetType.value = 'rest'
-    currentStep.value = 3
-  } else {
-    datasetType.value = 'file'
-    currentStep.value = (dataset.value && digitalDocumentField.value) ? 6 : 5
+watch(currentStep, () => {
+  debug('step change', currentStep.value)
+  if (!initialized.value) return
+  if (currentStep.value === 1) {
+    currentDatasetId.value = undefined
+    selectedDataset.value = undefined
+    updated.value = undefined
+  }
+}, { onTrigger (e) { console.log(e, new Error('AA')) } })
+
+const datasetStoreProvider = useTemplateRef<typeof DatasetStoreProvider>('dataset-store-provider')
+const currentDatasetStore = computed(() => {
+  return datasetStoreProvider.value?.datasetStore as DatasetStore | null
+})
+const currentDataset = computed(() => currentDatasetStore.value?.dataset?.value)
+const initialized = computed((oldValue) => {
+  if (oldValue) return true
+  if (!updated.value) return true
+  return !!currentDataset?.value
+})
+watch(initialized, () => {
+  if (updated.value && initialized.value) {
+    if (currentDataset.value?.isRest) currentStep.value = 2
   }
 })
+// const digitalDocumentField = computed(() => datasetStore.value?.digitalDocumentField.value)
+// watch(dataset, () => {
+//   if (!dataset.value) return
+//   /* if (dataset.value.isRest) {
+//     datasetType.value = 'rest'
+//     currentStep.value = 3
+//   } else {
+//     datasetType.value = 'file'
+//     currentStep.value = (dataset.value && digitalDocumentField.value) ? 6 : 5
+//   } */
+//   currentStep.value = 2
+// })
 
-let cancelUpdate: CancelTokenSource
-const uploadProgress = ref<{ loaded: number, total?: number, percent?: number }>()
-const imported = ref(false)
+// let cancelUpdate: CancelTokenSource
+// const uploadProgress = ref<{ loaded: number, total?: number, percent?: number }>()
+// const imported = ref(false)
 
-const updateDataset = useAsyncAction(async () => {
-  if (!file.value) return
-  if (!dataset.value) return
-  cancelUpdate = axios.CancelToken.source()
-  const options: AxiosRequestConfig = {
-    onUploadProgress: (e) => {
-      if (e.lengthComputable) {
-        uploadProgress.value = {
-          loaded: e.loaded,
-          total: e.total,
-          percent: e.total && ((e.loaded / e.total) * 100)
-        }
-      }
-    },
-    cancelToken: cancelUpdate.token,
-    params: { draft: 'compatibleOrCancel' }
-  }
-  const formData = new FormData()
-  formData.append('dataset', file.value)
-  if (attachments.value) {
-    formData.append('attachments', attachments.value)
-  }
-  try {
-    await axios.post(`${$apiPath}/datasets/` + dataset.value.id, formData, options)
-    imported.value = true
-    currentStep.value += 1
-    updated.value = dataset.value.id
-  } catch (error: any) {
-    const status = error.response && error.response.status
-    if (status === 413) {
-      sendUiNotif({ type: 'error', msg: t('fileTooLarge') })
-    } else {
-      sendUiNotif({ type: 'error', msg: t('importError') })
-    }
-  }
-})
+// const updateDataset = useAsyncAction(async () => {
+//   if (!file.value) return
+//   if (!dataset.value) return
+//   cancelUpdate = axios.CancelToken.source()
+//   const options: AxiosRequestConfig = {
+//     onUploadProgress: (e) => {
+//       if (e.lengthComputable) {
+//         uploadProgress.value = {
+//           loaded: e.loaded,
+//           total: e.total,
+//           percent: e.total && ((e.loaded / e.total) * 100)
+//         }
+//       }
+//     },
+//     cancelToken: cancelUpdate.token,
+//     params: { draft: 'compatibleOrCancel' }
+//   }
+//   const formData = new FormData()
+//   formData.append('dataset', file.value)
+//   if (attachments.value) {
+//     formData.append('attachments', attachments.value)
+//   }
+//   try {
+//     await axios.post(`${$apiPath}/datasets/` + dataset.value.id, formData, options)
+//     imported.value = true
+//     currentStep.value += 1
+//     updated.value = dataset.value.id
+//   } catch (error: any) {
+//     const status = error.response && error.response.status
+//     if (status === 413) {
+//       sendUiNotif({ type: 'error', msg: t('fileTooLarge') })
+//     } else {
+//       sendUiNotif({ type: 'error', msg: t('importError') })
+//     }
+//   }
+// })
 
-const cancelUpdateDataset = () => {
-  if (!cancelUpdate) return
-  cancelUpdate.cancel(t('cancelled'))
-}
+// const cancelUpdateDataset = () => {
+//   if (!cancelUpdate) return
+//   cancelUpdate.cancel(t('cancelled'))
+// }
 
 /*
 export default {

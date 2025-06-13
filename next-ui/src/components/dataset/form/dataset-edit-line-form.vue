@@ -6,7 +6,9 @@
   />
 
   <template v-if="digitalDocumentField">
-    <p v-t="'loadAttachment'" />
+    <p>
+      {{ t('loadAttachment') }}
+    </p>
     <div class="mt-3 mb-3">
       <v-file-input
         :label="t('selectFile')"
@@ -48,6 +50,8 @@ const { readonlyCols, selectedCols, ownLines, extension, loading } = defineProps
 const model = defineModel<any>()
 
 const emits = defineEmits<{ onFileUpload: [file: File] }>()
+
+const { t } = useI18n()
 
 const { id, restDataset, jsonSchemaFetch } = useDatasetStore()
 

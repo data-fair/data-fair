@@ -862,6 +862,8 @@ const dataset = {
           type: 'boolean',
           title: 'indicates that the draft was validated and is being processed to replace the current state'
         },
+        file: datasetProperties.file,
+        originalFile: datasetProperties.originalFile,
         schema: datasetProperties.schema,
         description: datasetProperties.description,
         title: datasetProperties.title,

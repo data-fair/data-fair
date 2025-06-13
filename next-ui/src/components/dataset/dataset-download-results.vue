@@ -16,14 +16,15 @@
     </template>
     <v-sheet>
       <v-alert
-        v-t="'alert1'"
         type="info"
         :value="true"
         tile
         variant="text"
         :icon="false"
         class="mb-0 mt-1"
-      />
+      >
+        {{ t('alert1') }}
+      </v-alert>
       <v-list
         v-if="total > 10000"
         class="py-0"
@@ -38,7 +39,9 @@
           <template #prepend>
             <v-icon :icon="mdiFileDelimitedOutline" />
           </template>
-          <v-list-item-title v-t="'csv'" />
+          <v-list-item-title>
+            {{ t('csv') }}
+          </v-list-item-title>
         </v-list-item>
         <v-btn
           v-if="largeCsvLoading"
@@ -62,7 +65,6 @@
         </div>
       </v-list>
       <v-alert
-        v-t="'alert2'"
         type="warning"
         :value="total > 10000"
         tile
@@ -70,7 +72,10 @@
         variant="text"
         :icon="false"
         class="my-0"
-      />
+      >
+        {{ t('alert2') }}
+      </v-alert>
+
       <v-list
         class="pt-0"
         density="compact"
@@ -84,7 +89,9 @@
           <template #prepend>
             <v-icon :icon="mdiFileDelimitedOutline" />
           </template>
-          <v-list-item-title v-t="'csv'" />
+          <v-list-item-title>
+            {{ t('csv') }}
+          </v-list-item-title>
         </v-list-item>
         <v-list-item
           :href="downloadUrls.xlsx"
@@ -94,7 +101,9 @@
           <template #prepend>
             <v-icon :icon="mdiMicrosoftExcel" />
           </template>
-          <v-list-item-title v-t="'xlsx'" />
+          <v-list-item-title>
+            {{ t('xlsx') }}
+          </v-list-item-title>
         </v-list-item>
         <v-list-item
           :href="downloadUrls.ods"
@@ -104,7 +113,9 @@
           <template #prepend>
             <v-icon :icon="mdiFileTableOutline" />
           </template>
-          <v-list-item-title v-t="'ods'" />
+          <v-list-item-title>
+            {{ t('ods') }}
+          </v-list-item-title>
         </v-list-item>
         <v-list-item
           v-if="dataset?.bbox"
@@ -115,7 +126,9 @@
           <template #prepend>
             <v-icon :icon="mdiMap" />
           </template>
-          <v-list-item-title v-t="'geojson'" />
+          <v-list-item-title>
+            {{ t('geojson') }}
+          </v-list-item-title>
         </v-list-item>
       </v-list>
     </v-sheet>

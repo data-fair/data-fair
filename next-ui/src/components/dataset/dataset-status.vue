@@ -21,13 +21,11 @@
             />
             <template #append>
               <v-btn
-                icon
+                :icon="mdiPlay"
                 title="Relancer"
                 color="primary"
                 @click="patch({})"
-              >
-                <v-icon>mdi-play</v-icon>
-              </v-btn>
+              />
             </template>
           </v-alert>
           <v-list-item
@@ -73,14 +71,16 @@
             >
               <p
                 v-if="dataset.draftReason.key === 'file-new'"
-                v-t="'draftNew1'"
-              />
+              >
+                {{ t('draftNew1') }}
+              </p>
 
               <p
                 v-else-if="dataset.draftReason.key === 'file-updated'"
-                v-t="'draftUpdated1'"
                 class="mb-0"
-              />
+              >
+                {{ t('draftUpdated1') }}
+              </p>
               <p
                 v-else
                 class="mb-0"
@@ -104,41 +104,47 @@
                 >
                   <span
                     v-if="dataset.draftReason.key === 'file-new'"
-                    v-t="'draftNew2'"
-                  />
+                  >
+                    {{ t('draftNew2') }}
+                  </span>
                   <span
                     v-if="dataset.draftReason.key === 'file-updated'"
-                    v-t="'draftUpdated2'"
-                  />
+                  >
+                    {{ t('draftUpdated2') }}
+                  </span>
                   <span
                     v-if="can('validateDraft')"
-                    v-t="'draftValidateCan'"
-                  />
+                  >
+                    {{ t('draftValidateCan') }}
+                  </span>
                   <span
                     v-else
-                    v-t="'draftValidateCannot'"
-                  />
+                  >
+                    {{ t('draftValidateCannot') }}
+                  </span>
                 </p>
               </template>
             </v-col>
             <v-col class="shrink text-center">
               <v-btn
                 v-if="dataset.draftReason.key !== 'file-new' && (dataset.status === 'error' || dataset.status === 'finalized')"
-                v-t="'cancelDraft'"
                 :disabled="!can('cancelDraft')"
                 :color="(draftError || draftValidationError) ? 'default' : 'warning'"
                 class="ma-1"
                 elevation="0"
                 @click="cancelDraft"
-              />
+              >
+                {{ t('cancelDraft') }}
+              </v-btn>
               <v-btn
                 v-if="dataset.status === 'finalized'"
-                v-t="'validateDraft'"
                 :disabled="!can('validateDraft')"
                 :color="(draftError || draftValidationError) ? 'warning' : 'primary'"
                 class="ma-1"
                 @click="validateDraft"
-              />
+              >
+                {{ t('validateDraft') }}
+              </v-btn>
             </v-col>
             <v-col class="shrink" />
           </v-row>
@@ -170,9 +176,12 @@ en:
 </i18n>
 
 <script lang="ts" setup>
+import { mdiPlay } from '@mdi/js'
 import allEvents from '~/../../shared/events.json'
 
 const events = allEvents.dataset
+
+const { t } = useI18n()
 
 const datasetStore = useDatasetStore()
 const { dataset, journal, journalFetch, can } = datasetStore

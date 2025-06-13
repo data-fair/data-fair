@@ -44,9 +44,9 @@ en:
 </i18n>
 
 <script lang="ts" setup>
-import { type Dataset } from '#api/types'
 import { type AccountKeys } from '@data-fair/lib-vue/session'
 import { withQuery } from 'ufo'
+import { datasetListSelect, type ListedDataset } from './utils'
 
 const { extraParams, masterData, owner: _owner } = defineProps({
   label: { type: String, default: '' },
@@ -55,7 +55,7 @@ const { extraParams, masterData, owner: _owner } = defineProps({
   masterData: { type: String, default: null }
 })
 
-const value = defineModel({ type: Object as () => Dataset })
+const value = defineModel({ type: Object as () => ListedDataset })
 
 const { account } = useSessionAuthenticated()
 const { t } = useI18n()
@@ -82,7 +82,7 @@ const datasetsUrl = computed(() => {
   // WARNING: order is important here, extraParams can overwrite the owner filter
   const query: Record<string, any> = {
     size: 20,
-    select: 'id,title,status,topics,isVirtual,isRest,isMetaOnly,file,remoteFile,originalFile,count,finalizedAt,-userPermissions,-links,-owner',
+    select: datasetListSelect,
     owner: ownerFilter,
     ...extraParams
   }
@@ -90,11 +90,11 @@ const datasetsUrl = computed(() => {
   return withQuery(`${$apiPath}/datasets`, query)
 })
 
-const datasets = ref<(Dataset | { header: string })[]>()
+const datasets = ref<(ListedDataset | { header: string })[]>()
 
 const searchDatasets = useAsyncAction(async () => {
-  let items: (Dataset | { header: string })[] = []
-  let refDatasets: Dataset[]
+  let items: (ListedDataset | { header: string })[] = []
+  let refDatasets: ListedDataset[]
   if (value.value) items.push(value.value)
   if (remoteServicesUrl.value) {
     const remoteServicesRes = await $fetch(remoteServicesUrl.value)
@@ -105,7 +105,7 @@ const searchDatasets = useAsyncAction(async () => {
     }
   }
 
-  const res = await $fetch<{ results: Dataset[] }>(datasetsUrl.value)
+  const res = await $fetch<{ results: ListedDataset[] }>(datasetsUrl.value)
 
   const ownerDatasets = res.results.filter(d => !refDatasets.find(rd => rd.id === d.id))
 

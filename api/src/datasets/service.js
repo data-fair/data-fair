@@ -89,6 +89,16 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
   }
 
   if (reqQuery.file === 'true') extraFilters.push({ file: { $exists: true } })
+  if (reqQuery.type) {
+    const typeFilters = []
+    for (const type of reqQuery.type.split(',')) {
+      if (type === 'file') typeFilters.push({ file: { $exists: true } })
+      if (type === 'rest') typeFilters.push({ isRest: true })
+      if (type === 'virtual') typeFilters.push({ isVirtual: true })
+      if (type === 'metaOnly') typeFilters.push({ isMetaOnly: true })
+    }
+    extraFilters.push({ $or: typeFilters })
+  }
 
   // the api exposed on a secondary domain should not be able to access resources outside of the owner account
   if (publicationSite) {
