@@ -106,7 +106,7 @@ export default async (req, res, next) => {
         if (!tokenContent.anonymousAction) throw new Error('wrong type of token used for anonymous action')
 
         // 3rd level of anti-spam protection, simple rate limiting based on ip
-        if (!rateLimiting.consume(req, 'postApplicationKey', tokenContent.iat)) {
+        if (!rateLimiting.consume(req, 'postApplicationKey', tokenContent.id ?? tokenContent.iat)) {
           console.warn('Rate limit error for application key', requestIp.getClientIp(req), req.originalUrl)
           return res.status(429).type('text/plain').send(req.__('errors.exceedAnonymousRateLimiting'))
         }
