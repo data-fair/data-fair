@@ -1373,6 +1373,7 @@ const sendUserNotificationPublicPermissions = permissions.middleware('sendUserNo
 router.post(
   '/:datasetId/user-notification',
   readDataset(),
+  applicationKey,
   apiKeyMiddleware,
   (req, res, next) => req.body.visibility === 'public' ? sendUserNotificationPublicPermissions(req, res, next) : sendUserNotificationPermissions(req, res, next),
   async (req, res, next) => {
