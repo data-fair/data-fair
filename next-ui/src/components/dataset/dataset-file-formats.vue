@@ -110,4 +110,5 @@ const headers = [
 
 defineProps({ condensed: { type: Boolean, default: false } })
 
+const { t } = useI18n()
 </script>

@@ -18,6 +18,7 @@ export const createDatasetStore = (id: string, draftMode: boolean | undefined = 
   const journalFetch = useFetch<Event[]>($apiPath + `/datasets/${id}/journal`, { query: { draftMode }, immediate: false, watch: false })
   const journal = ref<Event[] | null>(null)
   watch(journalFetch.data, () => { journal.value = journalFetch.data.value })
+  const lastError = computed(() => journal.value?.find(e => e.type === 'error'))
 
   const jsonSchemaFetch = useFetch<any>($apiPath + `/datasets/${id}/schema`, { query: { draftMode, mimeType: 'application/schema+json', extension: 'true' }, immediate: false, watch: false })
 
@@ -41,6 +42,7 @@ export const createDatasetStore = (id: string, draftMode: boolean | undefined = 
     restDataset,
     journalFetch,
     journal,
+    lastError,
     jsonSchemaFetch,
     imageProperty,
     labelField: labelProperty,
