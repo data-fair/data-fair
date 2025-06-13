@@ -32,25 +32,23 @@
             v-else-if="lastProdEvent"
             :class="`pa-2 event-${lastProdEvent.type}`"
           >
-            <v-list-item-avatar
-              v-if="['finalize-end', 'publication', 'error', 'draft-cancelled'].includes(lastProdEvent.type)"
-              class="ml-0 my-0"
-            >
-              <v-icon :color="events[lastProdEvent.type].color || 'primary'">
-                {{ events[lastProdEvent.type].icon }}
-              </v-icon>
-            </v-list-item-avatar>
-            <v-list-item-avatar v-else>
+            <template #prepend>
+              <v-icon
+                v-if="['finalize-end', 'publication', 'error', 'draft-cancelled'].includes(lastProdEvent.type)"
+                :color="events[lastProdEvent.type].color || 'primary'"
+                :icon="events[lastProdEvent.type].icon"
+              />
               <v-progress-circular
+                v-else
                 :size="20"
                 :width="3"
                 small
                 indeterminate
                 color="primary"
               />
-            </v-list-item-avatar>
+            </template>
             <span :class="events[lastProdEvent.type].color ? `${events[lastProdEvent.type].color}--text` : ''">
-              {{ events[lastProdEvent.type] && (events[lastProdEvent.type].text[$i18n.locale] || events[lastProdEvent.type].text[$i18n.defaultLocale]) }}
+              {{ events[lastProdEvent.type] && (events[lastProdEvent.type].text[locale] || events[lastProdEvent.type].text['fr']) }}
             </span>
           </v-list-item>
         </template>
@@ -179,9 +177,9 @@ en:
 import { mdiPlay } from '@mdi/js'
 import allEvents from '~/../../shared/events.json'
 
-const events = allEvents.dataset
+const events = allEvents.dataset as Record<string, { icon: string, color?: string, text: Record<string, string> }>
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const datasetStore = useDatasetStore()
 const { dataset, journal, journalFetch, can } = datasetStore
@@ -221,6 +219,10 @@ const validateDraft = useAsyncAction(async () => {
   if (!dataset.value) return
   await $fetch(`datasets/${dataset.value.id}/draft`, { method: 'post' })
 })
+
+const patch = (patch: any) => {
+  console.log('TODO', patch)
+}
 
 </script>
 

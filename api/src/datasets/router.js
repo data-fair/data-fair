@@ -562,7 +562,6 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
   // @ts-ignore
   const datasetFull = req.datasetFull
 
-  const db = mongo.db
   if (datasetFull.status === 'draft') {
     return res.status(409).send('Impossible d\'annuler un brouillon si aucune version du jeu de données n\'a été validée.')
   }
