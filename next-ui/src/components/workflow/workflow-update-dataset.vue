@@ -42,7 +42,7 @@
 
         <v-stepper-item
           :value="digitalDocumentField ? 4 : 3"
-          :complete="imported"
+          :complete="!!imported"
           :editable="!!file"
           color="primary"
           :title="t('stepAction')"
@@ -51,7 +51,7 @@
 
         <v-stepper-item
           :value="digitalDocumentField ? 5 : 4"
-          :editable="imported"
+          :editable="!!imported"
           color="primary"
           :title="t('stepReview')"
         />
@@ -69,7 +69,7 @@
       </template>
     </v-stepper-header>
 
-    <v-stepper-window>
+    <v-stepper-window class="mx-0 mb-0 mt-2">
       <v-stepper-window-item :value="1">
         <v-row
           v-if="!initialFetch"
@@ -94,7 +94,10 @@
       >
         <!-- FILE steps -->
         <template v-if="currentDataset?.file">
-          <v-stepper-window-item :value="2">
+          <v-stepper-window-item
+            :value="2"
+            class="pa-6"
+          >
             <p>
               {{ t('loadMainFile') }}
             </p>
@@ -141,6 +144,7 @@
           <v-stepper-window-item
             v-if="digitalDocumentField"
             :value="3"
+            class="pa-6"
           >
             <v-alert
               type="info"
@@ -183,7 +187,10 @@
             </v-btn>
           </v-stepper-window-item>
 
-          <v-stepper-window-item :value="digitalDocumentField ? 4 : 3">
+          <v-stepper-window-item
+            :value="digitalDocumentField ? 4 : 3"
+            class="pa-6"
+          >
             <template v-if="file">
               <p class="mb-3">
                 {{ t('updateMsg') }}
@@ -233,24 +240,32 @@
                 v-if="datasetStore.lastError.value && datasetStore.lastError.value.date > imported"
                 type="error"
                 variant="outlined"
+                class="ma-6"
               >
                 {{ datasetStore.lastError.value.data }}
               </v-alert>
-              <dataset-table v-else-if="datasetStore.dataset.value?.finalizedAt && imported < datasetStore.dataset.value?.finalizedAt" />
+              <dataset-table
+                v-else-if="datasetStore.dataset.value?.finalizedAt && imported < datasetStore.dataset.value?.finalizedAt"
+                :height="height - 84"
+              />
               <v-progress-circular
                 v-else
                 indeterminate
                 color="primary"
+                class="ma-6"
               />
             </template>
           </v-stepper-window-item>
+        </template>
 
-          <!-- REST steps -->
-          <template v-if="datasetStore.dataset.value?.isRest">
-            <v-stepper-window-item :value="2">
-              <dataset-table :edit="true" />
-            </v-stepper-window-item>
-          </template>
+        <!-- REST steps -->
+        <template v-if="datasetStore.dataset.value?.isRest">
+          <v-stepper-window-item :value="2">
+            <dataset-table
+              :edit="true"
+              :height="height - 84"
+            />
+          </v-stepper-window-item>
         </template>
       </dataset-store-provider>
     </v-stepper-window>
@@ -334,6 +349,7 @@ import { type DatasetStore } from '~/composables/dataset-store'
 import DatasetStoreProvider from '~/components/provide/dataset-store-provider.vue'
 import Debug from 'debug'
 import { mdiCancel } from '@mdi/js'
+import { useWindowSize } from '@vueuse/core'
 
 const debug = Debug('workflow-update-dataset')
 
@@ -344,6 +360,7 @@ const { datasetParams } = defineProps({
 
 const { sendUiNotif } = useUiNotif()
 const { t, locale } = useI18n()
+const { height } = useWindowSize()
 
 const currentStep = ref(1)
 
