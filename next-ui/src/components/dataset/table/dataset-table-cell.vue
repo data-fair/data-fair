@@ -22,7 +22,7 @@
         v-if="result._geopoint"
         :icon="mdiMap"
         size="x-small"
-        :style="`right: 4px;top: 50%;transform: translate(0, -50%);z-index:100;background-color:${theme.current.value.dark ? '#212121' : 'white'};`"
+        variant="flat"
         absolute
         :title="t('showMapPreview')"
         @click="emit('showMapPreview')"
@@ -88,7 +88,6 @@
 
 <script lang="ts" setup>
 import { mdiMap } from '@mdi/js'
-import { useTheme } from 'vuetify'
 import { type TableHeader } from './use-headers'
 import type { ExtendedResult, ExtendedResultValue } from '../../../composables/dataset-lines'
 import { type DatasetFilter } from '../../../composables/dataset-filters'
@@ -115,7 +114,6 @@ const emit = defineEmits<{
 
 const selectedResults = defineModel<ExtendedResult[]>('selected-results', { default: [] })
 
-const theme = useTheme()
 const { t } = useI18n()
 </script>
 

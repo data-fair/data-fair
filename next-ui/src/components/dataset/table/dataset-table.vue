@@ -243,11 +243,13 @@
       <v-btn
         style="position:absolute;top:4px;right:4px;z-index:1000;"
         :icon="mdiClose"
+        variant="text"
         @click="showMapPreview = undefined"
       />
       <async-dataset-map
         :height="mapHeight"
         navigation-position="top-left"
+        :search="false"
         :single-item="showMapPreview"
       />
     </v-card>

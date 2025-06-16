@@ -1,6 +1,7 @@
 <template lang="html">
   <v-card>
     <v-text-field
+      v-if="search"
       v-model="editQ"
       style="position: absolute;z-index:2;width:250px;"
       placeholder="Rechercher"
@@ -45,7 +46,8 @@ import { withQuery } from 'ufo'
 import { useMap } from './use-map'
 import { type ControlPosition } from 'maplibre-gl'
 
-const { height, singleItem, navigationPosition, noInteraction, sampling } = defineProps({
+const { search, height, singleItem, navigationPosition, noInteraction, sampling } = defineProps({
+  search: { type: Boolean, default: true },
   height: { type: Number, required: true },
   singleItem: { type: String, default: null },
   navigationPosition: { type: String as () => ControlPosition, default: 'top-right' },
