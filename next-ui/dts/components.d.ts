@@ -10,7 +10,6 @@ declare module 'vue' {
     ApplicationConfig: typeof import('./../src/components/application/application-config.vue')['default']
     CharsMeasurer: typeof import('./../src/components/dataset/table/chars-measurer.vue')['default']
     ConfirmMenu: typeof import('./../src/components/confirm-menu.vue')['default']
-    copy: typeof import('./../src/components/dataset/dataset-select copy.vue')['default']
     DatasetCard: typeof import('./../src/components/dataset/dataset-card.vue')['default']
     DatasetDownloadResults: typeof import('./../src/components/dataset/dataset-download-results.vue')['default']
     DatasetEditLineForm: typeof import('./../src/components/dataset/form/dataset-edit-line-form.vue')['default']
@@ -38,7 +37,6 @@ declare module 'vue' {
     JournalView: typeof import('./../src/components/journal-view.vue')['default']
     OwnerDepartment: typeof import('./../src/components/owner/owner-department.vue')['default']
     OwnerShort: typeof import('./../src/components/owner/owner-short.vue')['default']
-    ProvideDatasetStore: typeof import('./../src/components/provide/provide-dataset-store.vue')['default']
     ResourceVisibility: typeof import('./../src/components/resource-visibility.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
@@ -48,8 +46,6 @@ declare module 'vue' {
     SettingsTopics: typeof import('./../src/components/settings/settings-topics.vue')['default']
     SettingsWebhooks: typeof import('./../src/components/settings/settings-webhooks.vue')['default']
     TutorialAlert: typeof import('./../src/components/tutorial/tutorial-alert.vue')['default']
-    Visibility: typeof import('./../src/components/visibility.vue')['default']
-    WithDatasetStore: typeof import('./../src/components/provide/with-dataset-store.vue')['default']
     WorkflowUpdateDataset: typeof import('./../src/components/workflow/workflow-update-dataset.vue')['default']
   }
 }

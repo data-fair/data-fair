@@ -262,6 +262,7 @@
   />
 
   <v-dialog
+    v-if="edit"
     :model-value="!!showDeleteDialog"
     max-width="500px"
   >
@@ -295,6 +296,7 @@
   </v-dialog>
 
   <v-dialog
+    v-if="edit"
     :model-value="!!showEditDialog"
     max-width="500px"
   >
@@ -304,7 +306,7 @@
         v-model="editLineValid"
       >
         <v-card-text>
-          <dataset-edit-line-form
+          <async-dataset-edit-line-form
             v-model="newLine"
             :loading="editLine.loading.value"
             :extension="true"
@@ -363,6 +365,7 @@ import { type VForm } from 'vuetify/components'
 
 const asyncDatasetMap = defineAsyncComponent(() => import('~/components/dataset/map/dataset-map.vue'))
 const asyncDatasetTableHeaderActions = defineAsyncComponent(() => import('~/components/dataset/table/dataset-table-header-actions.vue'))
+const asyncDatasetEditLineForm = defineAsyncComponent(() => import('~/components/dataset/form/dataset-edit-line-form.vue'))
 
 const { height, noInteraction, edit } = defineProps({
   height: { type: Number, default: 800 },

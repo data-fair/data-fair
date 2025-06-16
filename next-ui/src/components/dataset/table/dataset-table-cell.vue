@@ -116,6 +116,7 @@ const emit = defineEmits<{
 const selectedResults = defineModel<ExtendedResult[]>('selected-results', { default: [] })
 
 const theme = useTheme()
+const { t } = useI18n()
 </script>
 
 <style>
