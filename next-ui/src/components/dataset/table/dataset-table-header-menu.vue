@@ -16,7 +16,7 @@
     >
       <v-list
         density="compact"
-        class="pa-0"
+        class="pa-0 dataset-table-header-actions"
       >
         <slot
           name="prepend-items"
@@ -27,37 +27,61 @@
         <v-list-item
           v-if="header.key !== fixed"
           class="pl-2"
-          :icon="mdiEyeOffOutline"
           :title="t('hide')"
           @click="$emit('hide');showMenu=false"
-        />
+        >
+          <template #prepend>
+            <v-icon
+              :icon="mdiEyeOffOutline"
+              size="small"
+            />
+          </template>
+        </v-list-item>
 
         <!-- fix column to the left -->
         <v-list-item
           v-if="!noFix"
           class="pl-2"
           :class="{'v-item--active v-list-item--active': header.key === fixed}"
-          :icon="mdiFormatHorizontalAlignLeft"
           :title="t('fixLeft')"
           @click="$emit('fix-col');showMenu=false"
-        />
+        >
+          <template #prepend>
+            <v-icon
+              :icon="mdiFormatHorizontalAlignLeft"
+              size="small"
+            />
+          </template>
+        </v-list-item>
 
         <!-- sorting -->
         <template v-if="header.sortable">
           <v-list-item
             :active="sort === 1"
             class="pl-2"
-            :icon="mdiSortAscending"
             :title="t('sortAsc')"
             @click="toggleSort(1)"
-          />
+          >
+            <template #prepend>
+              <v-icon
+                :icon="mdiSortAscending"
+                size="small"
+              />
+            </template>
+          </v-list-item>
           <v-list-item
             :active="sort === -1"
             class="pl-2"
-            :icon="mdiSortDescending"
             :title="t('sortDesc')"
             @click="toggleSort(-1)"
-          />
+          >
+            <template #prepend>
+              <v-icon
+                :icon="mdiSortDescending"
+                size="small"
+              />
+            </template>
+          </v-list-item>
         </template>
 
         <!-- show help -->
@@ -65,10 +89,16 @@
           v-if="!!header.tooltip"
           class="pl-2"
           :active="showHelp"
-          :icon="mdiInformation"
           :title="t('showHelp')"
           @click="showHelp = !showHelp"
-        />
+        >
+          <template #prepend>
+            <v-icon
+              :icon="mdiInformation"
+              size="small"
+            />
+          </template>
+        </v-list-item>
         <v-alert
           v-if="showHelp"
           color="info"
@@ -398,14 +428,14 @@ const formattedTrue = formatValue(true, header.property, null, localeDayjs)
 const formattedFalse = formatValue(false, header.property, null, localeDayjs)
 
 const fullEnum = computed(() => {
-  if (!localEnum) return
+  if (!showEnum.value) return
   const fullEnum = []
-  for (const value of localEnum) {
+  for (const value of localEnum ?? []) {
     fullEnum.push({ value: value + '', important: true })
   }
   if (header.property.enum) {
     for (const value of header.property.enum.slice().sort()) {
-      if (!localEnum.includes(value)) fullEnum.push({ value: value + '' })
+      if (!localEnum?.includes(value)) fullEnum.push({ value: value + '' })
     }
   }
   return fullEnum
@@ -413,7 +443,7 @@ const fullEnum = computed(() => {
 
 const showEnum = computed(() => {
   if (header.property['x-capabilities'] && header.property['x-capabilities'].index === false) return false
-  if (localEnum) return true
+  if (localEnum && localEnum.length) return true
   return header.property.enum && header.property['x-cardinality'] && header.property['x-cardinality'] > 1
 })
 
@@ -550,5 +580,7 @@ const toggleSort = (value: 1 | -1) => {
 </script>
 
 <style>
-
+.dataset-table-header-actions .v-list-item__prepend {
+  width: 30px;
+}
 </style>
