@@ -51,7 +51,7 @@ const { values: extendedValues } = defineProps({
 })
 
 const emit = defineEmits<{
-  filter: [value: any],
+  filter: [value: ExtendedResultValue],
   hoverstart: [value: ExtendedResultValue],
   hoverstop: []
 }>()
