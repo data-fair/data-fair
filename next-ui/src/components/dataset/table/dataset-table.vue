@@ -425,8 +425,11 @@ const colsWidths = ref<number[]>([])
 const thead = ref<HTMLElement>()
 watch(baseFetchUrl, () => {
   if (!baseFetchUrl.value) return
-  colsWidths.value = []
+  // colsWidths.value = []
   virtualScroll.value?.scrollToIndex(0)
+})
+watch(displayMode, () => {
+  colsWidths.value = []
 })
 const onScrollItem = async (index: number) => {
   // ignore scroll on deprecated items that will soon be replaced
