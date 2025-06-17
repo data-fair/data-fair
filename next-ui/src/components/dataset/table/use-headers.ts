@@ -2,6 +2,7 @@ import { type SchemaProperty } from '#api/types'
 
 export type TableHeader = {
   key: string,
+  cssKey?: string,
   title: string,
   tooltip?: string,
   filterable?: boolean,
@@ -20,6 +21,7 @@ export const useHeaders = (selectedCols: Ref<string[]>, noInteraction: boolean, 
     if (!dataset.value?.schema) return
     let headers: TableHeader[] | undefined = dataset.value?.schema?.filter(p => selectedCols.value.includes(p.key)).map((p) => ({
       key: p.key,
+      cssKey: p.key.replace(/\./g, '__'),
       title: p.title || p['x-originalName'] || p.key,
       sortable:
         (!p['x-capabilities'] || p['x-capabilities'].values !== false) && (

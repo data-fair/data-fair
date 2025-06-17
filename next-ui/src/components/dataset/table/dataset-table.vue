@@ -65,7 +65,7 @@
             :key="header.key"
           >
             <th
-              :id="`header-${header.key}`"
+              :id="`header-${header.cssKey ?? header.key}`"
               class="text-left"
               :class="{
                 'sticky': header.sticky,
@@ -107,7 +107,7 @@
             <dataset-table-header-menu
               v-if="header.property && !noInteraction"
               :sort="header.key === sort?.key ? sort.direction : undefined"
-              :activator="`#header-${header.key}`"
+              :activator="`#header-${header.cssKey ?? header.key}`"
               :header="header as TableHeaderWithProperty"
               :filters="filters"
               :filter-height="height - 20"
