@@ -415,7 +415,7 @@ const display = useDisplay()
 const { dataset, id: datasetId } = useDatasetStore()
 // const charsWidths = ref<Record<string, number> | null>(null)
 
-const allCols = computed(() => dataset.value?.schema?.map(p => p.key) ?? [])
+const allCols = computed(() => dataset.value?.schema?.filter(field => !field['x-calculated'] || field.key === '_updatedAt' || field.key === '_updatedByName').map(p => p.key) ?? [])
 const selectedCols = computed(() => cols.value.length ? cols.value : allCols.value)
 
 const { filters, addFilter, queryParams: filtersQueryParams } = useFilters()
