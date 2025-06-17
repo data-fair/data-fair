@@ -428,20 +428,25 @@ const { selectedResults, saveLine, bulkLines } = provideDatasetEdition(baseFetch
 const virtualScroll = ref<VVirtualScroll>()
 const colsWidths = ref<number[]>([])
 const thead = ref<HTMLElement>()
+const incColsWidth = async (reset = false) => {
+  if (reset) colsWidths.value = []
+  await nextTick()
+  thead.value?.querySelectorAll('table thead th').forEach((h, i) => {
+    colsWidths.value[i] = Math.max(colsWidths.value[i] ?? 50, Math.round(h.clientWidth))
+  })
+}
+watch(displayMode, () => { incColsWidth(true) })
+watch(selectedCols, () => { incColsWidth(true) })
+
 watch(baseFetchUrl, () => {
   if (!baseFetchUrl.value) return
   // colsWidths.value = []
   virtualScroll.value?.scrollToIndex(0)
 })
-watch(displayMode, () => {
-  colsWidths.value = []
-})
 const onScrollItem = async (index: number) => {
   // ignore scroll on deprecated items that will soon be replaced
   if (fetchResults.loading.value) return
-  thead.value?.querySelectorAll('table thead th').forEach((h, i) => {
-    colsWidths.value[i] = Math.max(colsWidths.value[i] ?? 50, Math.round(h.clientWidth))
-  })
+  incColsWidth()
   if (index === results.value.length - 1) {
     // scrolled until the current end of the table
     if (!fetchResults.loading.value) fetchResults.execute()

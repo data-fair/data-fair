@@ -6,13 +6,13 @@
     location="bottom right"
     :activator="activator"
     :max-height="filterHeight"
-    :max-width="450"
     :close-on-content-click="false"
     @update:model-value="toggleMenu"
   >
     <v-sheet
       class="pa-1"
       tile
+      style="max-width: 450px"
     >
       <v-list
         density="compact"

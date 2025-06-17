@@ -16,7 +16,6 @@
     </template>
     <v-card :subtitle="t('visibleColumns')">
       <v-card-text class="pt-0">
-        {{ selectableProps }}
         <v-btn
           variant="text"
           color="primary"
