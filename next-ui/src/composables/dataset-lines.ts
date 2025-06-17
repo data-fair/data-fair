@@ -88,10 +88,13 @@ export const useLines = (displayMode: Ref<string>, pageSize: Ref<number>, select
           if (property['x-refersTo'] === 'http://schema.org/DigitalDocument') {
             if (raw._attachment_url) {
               extendedValue.raw = raw._attachment_url
-              extendedValue.formatted = truncateMiddle(raw._attachment_url.split('/').pop(), truncate.value - 4, 4)
+              extendedValue.formatted = truncateMiddle(raw._attachment_url.split('/').pop(), truncate.value - 4, 4, '...')
             } else if (raw[property.key]) {
-              extendedValue.formatted = truncateMiddle(raw[property.key], truncate.value - 10, 10)
+              extendedValue.formatted = truncateMiddle(raw[property.key], truncate.value - 10, 10, '...')
             }
+          }
+          if (property['x-refersTo'] === 'https://schema.org/WebPage' && raw[property.key]) {
+            extendedValue.formatted = truncateMiddle(raw[property.key], truncate.value - 10, 10, '...')
           }
           if (property.key === '_updatedByName' && raw._updatedBy && !raw._updatedBy.startsWith('apiKey:')) {
             extendedValue.formatted = `${$sdUrl}/api/avatars/user/${raw._updatedBy}/avatar.png`

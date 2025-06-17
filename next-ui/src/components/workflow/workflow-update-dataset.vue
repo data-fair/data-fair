@@ -12,7 +12,7 @@
         editable
         color="primary"
         :title="t('stepDataset')"
-        :subtitle="currentDataset ? truncateMiddle(currentDataset.title, 30) : undefined"
+        :subtitle="currentDataset ? truncateMiddle(currentDataset.title, 26, 4, '...') : undefined"
       />
 
       <!-- FILE steps -->
@@ -24,7 +24,7 @@
           editable
           color="primary"
           :title="t('stepFile')"
-          :subtitle="file && truncateMiddle(file.name, 30)"
+          :subtitle="file && truncateMiddle(file.name, 26, 4, '...')"
         />
         <v-divider />
 
@@ -207,7 +207,7 @@
                   height="28"
                   style="max-width: 600px;"
                 >
-                  {{ truncateMiddle(file.name, 40) }}
+                  {{ truncateMiddle(file.name, 36, 4, '...') }}
                   <template v-if="uploadProgress.total && uploadProgress.percent !== undefined">
                     {{ Math.floor(uploadProgress.percent) }}% {{ t('of') }} {{ formatBytes(uploadProgress.total, locale) }}
                   </template>

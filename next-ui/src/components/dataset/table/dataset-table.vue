@@ -300,16 +300,20 @@
   <v-dialog
     v-if="edit"
     :model-value="!!showEditDialog"
-    max-width="500px"
+    max-width="700px"
   >
-    <v-card :title="t('editLine')">
+    <v-card
+      :title="t('editLine')"
+      :loading="!editedLine"
+    >
       <v-form
         ref="editLineForm"
         v-model="editLineValid"
       >
         <v-card-text>
           <async-dataset-edit-line-form
-            v-model="newLine"
+            v-if="editedLine"
+            v-model="editedLine"
             :loading="editLine.loading.value"
             :extension="true"
             @on-file-upload="(f: File) => {file = f}"
@@ -360,7 +364,7 @@ import useLines, { type ExtendedResultValue, type ExtendedResult } from '../../.
 import useHeaders, { TableHeaderWithProperty, type TableHeader } from './use-headers'
 import { provideDatasetEdition } from './use-dataset-edition'
 import { useDisplay } from 'vuetify'
-import { type SchemaProperty } from '#api/types'
+import { DatasetLine, type SchemaProperty } from '#api/types'
 import { useFilters, findEqFilter } from '../../../composables/dataset-filters'
 import { VVirtualScroll } from 'vuetify/components'
 import { type VForm } from 'vuetify/components'
@@ -406,7 +410,7 @@ const sort = computed<{ key: string, direction: 1 | -1 } | undefined>({
 
 const display = useDisplay()
 
-const { dataset } = useDatasetStore()
+const { dataset, id: datasetId } = useDatasetStore()
 // const charsWidths = ref<Record<string, number> | null>(null)
 
 const allCols = computed(() => dataset.value?.schema?.map(p => p.key) ?? [])
@@ -467,19 +471,21 @@ const showMapPreview = ref<string>()
 const showDetailDialog = ref<{ result: ExtendedResult, property?: SchemaProperty }>()
 
 const showEditDialog = ref<ExtendedResult>()
-watch(showEditDialog, () => {
+watch(showEditDialog, async () => {
+  editedLine.value = undefined
   if (!showEditDialog.value) return
-  newLine.value = JSON.parse(JSON.stringify(showEditDialog.value.raw))
+  editedLine.value = await $fetch(`datasets/${datasetId}/lines/${showEditDialog.value._id}`)
+  // JSON.parse(JSON.stringify(showEditDialog.value.raw))
   file.value = undefined
 })
 const editLineValid = ref(false)
 const editLineForm = ref<VForm>()
-const newLine = ref({})
+const editedLine = ref<DatasetLine>()
 const file = ref<File>()
 const editLine = useAsyncAction(async () => {
   await editLineForm.value?.validate()
   if (!editLineValid.value) return
-  await saveLine(newLine.value, file.value)
+  await saveLine(editedLine.value, file.value)
   showEditDialog.value = undefined
 })
 

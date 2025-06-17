@@ -15,7 +15,7 @@ import { commonjsDeps } from '@koumoul/vjsf/utils/build.js'
 // https://vitejs.dev/config/
 export default defineConfig({
   base: '/data-fair/next-ui',
-  optimizeDeps: { include: commonjsDeps },
+  optimizeDeps: { include: [...commonjsDeps, 'easymde'] },
   build: {
     rollupOptions: {
       output: {

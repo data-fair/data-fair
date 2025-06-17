@@ -37,14 +37,14 @@
           style="overflow: hidden;"
           :prepend-icon="dataset.remoteFile ? mdiCloudDownload : mdiFile"
         >
-          {{ truncateMiddle((dataset.originalFile || dataset.file).name, 40, 4) }} {{ formatBytes(dataset.originalFile?.size || dataset.file?.size, locale) }}
+          {{ truncateMiddle((dataset.originalFile || dataset.file).name, 40, 4, '...') }} {{ formatBytes(dataset.originalFile?.size || dataset.file?.size, locale) }}
         </v-list-item>
         <v-list-item
           v-else-if="dataset.draft?.file"
           style="overflow: hidden;"
           :prepend-icon="mdiFile"
         >
-          {{ truncateMiddle((dataset.draft.originalFile || dataset.draft.file).name, 40, 4) }} {{ formatBytes(dataset.draft.originalFile?.size || dataset.draft.file?.size, locale) }}
+          {{ truncateMiddle((dataset.draft.originalFile || dataset.draft.file).name, 40, 4, '...') }} {{ formatBytes(dataset.draft.originalFile?.size || dataset.draft.file?.size, locale) }}
         </v-list-item>
         <v-list-item
           v-if="dataset.draft && !dataset.file"

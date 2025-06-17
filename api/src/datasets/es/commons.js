@@ -683,7 +683,9 @@ export const prepareResultItem = (hit, dataset, query, flatten, publicBaseUrl = 
     const truncate = Number(query.truncate)
     for (const key in res) {
       if (typeof res[key] !== 'string') continue
-      if (descriptionField === key) continue
+      // we used to exclude the description field from being truncated, but it doesn't really make sense
+      // I hope this will not create a regression somewhere
+      // if (descriptionField === key) continue
       if (imageField && imageField.key === key) continue
       if (linkField && linkField.key === key) continue
       if (emailField && emailField.key === key) continue

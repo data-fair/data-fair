@@ -16,6 +16,7 @@
     </template>
     <v-card :subtitle="t('visibleColumns')">
       <v-card-text class="pt-0">
+        {{ selectableProps }}
         <v-btn
           variant="text"
           color="primary"
@@ -55,7 +56,7 @@
             </template>
           </v-checkbox>
           <template
-            v-for="(prop) in dataset?.schema?.filter(prop => (prop['x-group'] || '') === group)"
+            v-for="(prop) in selectableProps.filter(prop => (prop['x-group'] || '') === group)"
             :key="prop.key"
           >
             <v-checkbox
@@ -99,8 +100,12 @@ const cols = defineModel<string[]>({ default: [] })
 const { t } = useI18n()
 const { dataset } = useDatasetStore()
 
+const selectableProps = computed(() => {
+  return dataset.value?.schema?.filter(field => !field['x-calculated'] || field.key === '_updatedAt' || field.key === '_updatedByName') ?? []
+})
+
 const groups = computed(() => {
-  return dataset.value?.schema?.reduce((groups, prop) => {
+  return selectableProps.value.reduce((groups, prop) => {
     if (prop['x-group'] && !groups.includes(prop['x-group'])) groups.push(prop['x-group'])
     return groups
   }, [] as string[]).concat([''])
@@ -113,7 +118,7 @@ const groupStatus = computed(() => {
   for (const group of groups.value ?? []) {
     let nbSelected = 0
     let nbTotal = 0
-    for (const prop of dataset.value?.schema ?? []) {
+    for (const prop of selectableProps.value) {
       if (prop['x-group'] !== group) continue
       nbTotal += 1
       if (cols.value.includes(prop.key)) nbSelected += 1
@@ -128,7 +133,7 @@ const groupStatus = computed(() => {
 const toggleGroup = (group: string, value: boolean) => {
   if (value) {
     const newCols = [...cols.value]
-    for (const prop of dataset.value?.schema ?? []) {
+    for (const prop of selectableProps.value) {
       if (prop['x-group'] === group && !cols.value.includes(prop.key)) {
         newCols.push(prop.key)
       }
@@ -136,7 +141,7 @@ const toggleGroup = (group: string, value: boolean) => {
     cols.value = newCols
   } else {
     cols.value = cols.value.filter(v => {
-      const prop = dataset.value?.schema?.find(fh => fh.value === v)
+      const prop = selectableProps.value.find(fh => fh.value === v)
       return prop?.['x-group'] !== group
     })
   }

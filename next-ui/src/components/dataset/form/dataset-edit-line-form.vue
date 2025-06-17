@@ -37,6 +37,7 @@
 
 <script lang="ts" setup>
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
+import VjsfMarkdown from '@koumoul/vjsf-markdown'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 
 const { readonlyCols, selectedCols, ownLines, extension, loading } = defineProps({
@@ -97,7 +98,8 @@ const vjsfOptions: VjsfOptions = {
   locale: 'fr',
   fetchBaseURL: $sitePath + '/data-fair/',
   initialValidation: 'always',
-  removeAdditional: true
+  removeAdditional: true,
+  plugins: [VjsfMarkdown]
 }
 
 const simulateExtensionInputStr = computed(() => {

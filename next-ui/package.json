@@ -22,6 +22,7 @@
     "@data-fair/lib-vuetify": "^1.10.1",
     "@intlify/unplugin-vue-i18n": "^6.0.5",
     "@koumoul/vjsf": "^3.15.1",
+    "@koumoul/vjsf-markdown": "^0.3.2",
     "@mdi/js": "^7.4.47",
     "@types/config": "^3.3.5",
     "@unhead/vue": "^1.11.10",

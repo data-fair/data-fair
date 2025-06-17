@@ -21,16 +21,16 @@
       </v-toolbar>
       <v-card-text v-if="!fetchFullValue.loading.value">
         <div
-          v-if="property['x-display'] === 'textarea'"
+          v-if="(property['x-display'] === 'markdown' || property['x-refersTo'] === 'http://schema.org/description') && !!fullValue"
+          class="item-value-detail"
+          v-html="fullValue"
+        />
+        <div
+          v-else-if="property['x-display'] === 'textarea'"
           class="item-value-detail item-value-detail-textarea"
         >
           {{ fullValue }}
         </div>
-        <div
-          v-else-if="(property['x-display'] === 'markdown' || property['x-refersTo'] === 'http://schema.org/description') && !!fullValue"
-          class="item-value-detail"
-          v-html="fullValue"
-        />
         <span v-else>{{ fullValue }}</span>
       </v-card-text>
     </v-card>
