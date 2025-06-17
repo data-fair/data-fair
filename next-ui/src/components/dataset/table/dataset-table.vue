@@ -75,7 +75,7 @@
                 'pl-2': displayMode === 'table-dense'
               }"
               :style="{
-                'min-width': (colsWidths[i] ?? 50) + 'px',
+                'min-width': header.property ? (colsWidths[i] ?? 50) + 'px' : '',
                 cursor: header.property && !noInteraction ? 'pointer' : 'default',
               }"
               @mouseenter="hoveredHeader = header"
@@ -174,6 +174,7 @@
           </template>
         </v-virtual-scroll>
       </tbody>
+      <layout-scroll-to-top selector=".v-table__wrapper" />
     </v-table>
 
     <!--list mode body -->

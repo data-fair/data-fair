@@ -36,6 +36,7 @@ declare module 'vue' {
     DatasetTableResultActions: typeof import('./../src/components/dataset/table/dataset-table-result-actions.vue')['default']
     DatasetTableSelectDisplay: typeof import('./../src/components/dataset/table/dataset-table-select-display.vue')['default']
     JournalView: typeof import('./../src/components/journal-view.vue')['default']
+    LayoutScrollToTop: typeof import('./../src/components/layout/layout-scroll-to-top.vue')['default']
     OwnerDepartment: typeof import('./../src/components/owner/owner-department.vue')['default']
     OwnerShort: typeof import('./../src/components/owner/owner-short.vue')['default']
     ResourceVisibility: typeof import('./../src/components/resource-visibility.vue')['default']
