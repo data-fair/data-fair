@@ -17,7 +17,6 @@
     <v-sheet>
       <v-alert
         type="info"
-        :value="true"
         tile
         variant="text"
         :icon="false"
@@ -26,7 +25,7 @@
         {{ t('alert1') }}
       </v-alert>
       <v-list
-        v-if="total > 10000"
+        v-if="total > pageSize"
         class="py-0"
         density="compact"
         style="position:relative"
@@ -65,8 +64,8 @@
         </div>
       </v-list>
       <v-alert
+        v-if="total > pageSize"
         type="warning"
-        :value="total > 10000"
         tile
         density="compact"
         variant="text"
@@ -81,7 +80,7 @@
         density="compact"
       >
         <v-list-item
-          v-if="total <= 10000"
+          v-if="total <= pageSize"
           :href="downloadUrls.csv"
           target="download"
           @click="clickDownload('csv')"
@@ -162,8 +161,11 @@ import LinkHeader from 'http-link-header'
 import { withQuery } from 'ufo'
 import { mdiFileDelimitedOutline, mdiFileTableOutline, mdiMicrosoftExcel, mdiMap, mdiDownload, mdiCancel } from '@mdi/js'
 
-const { baseUrl, total } = defineProps({
+const pageSize = 10000
+
+const { baseUrl, selectedCols, total } = defineProps({
   baseUrl: { type: String, required: true },
+  selectedCols: { type: Array as () => String[], required: true },
   total: { type: Number, required: true }
 })
 
@@ -176,12 +178,16 @@ const largeCsvBufferValue = ref(0)
 const largeCsvValue = ref(0)
 const largeCsvCancelled = ref(false)
 
-const baseParams = { size: 1000, page: 1 }
+const baseParams = computed(() => {
+  const p: Record<string, any> = { size: pageSize, page: 1 }
+  if (selectedCols.length) p.select = selectedCols.join(',')
+  return p
+})
 const downloadUrls = computed(() => ({
-  csv: withQuery(baseUrl, { ...baseParams, format: 'csv' }),
-  xlsx: withQuery(baseUrl, { ...baseParams, format: 'xlsx' }),
-  ods: withQuery(baseUrl, { ...baseParams, format: 'ods' }),
-  geojson: withQuery(baseUrl, { ...baseParams, format: 'geojson' })
+  csv: withQuery(baseUrl, { ...baseParams.value, format: 'csv' }),
+  xlsx: withQuery(baseUrl, { ...baseParams.value, format: 'xlsx' }),
+  ods: withQuery(baseUrl, { ...baseParams.value, format: 'ods' }),
+  geojson: withQuery(baseUrl, { ...baseParams.value, format: 'geojson' })
 }))
 
 let fileStream: WritableStream | null = null
@@ -196,25 +202,26 @@ const downloadLargeCSV = useAsyncAction(async () => {
     streamSaver.mitm = `${$sitePath}/data-fair/streamsaver/mitm.html`
     fileStream = streamSaver.createWriteStream(`${dataset.value?.slug}.csv`)
     writer = fileStream.getWriter()
-    const nbChunks = Math.ceil(total / 10000)
+    const nbChunks = Math.ceil(total / pageSize)
     let nextUrl = downloadUrls.value.csv
     for (let chunk = 0; chunk < nbChunks; chunk++) {
       if (largeCsvCancelled.value) break
       largeCsvBufferValue.value = ((chunk + 1) / nbChunks) * 100
       let res
       try {
-        res = await $fetch(nextUrl)
+        res = await $fetch.raw(nextUrl)
       } catch (err) {
         // 1 retry after 10s for network resilience, short service interruption, etc
         await new Promise(resolve => setTimeout(resolve, 10000))
-        res = await $fetch(nextUrl)
+        res = await $fetch.raw(nextUrl)
       }
-
-      const { data, headers } = res
-      if (headers.link) {
-        nextUrl = withQuery(LinkHeader.parse(headers.link).rel('next')[0].uri, { header: 'false' })
+      console.log('RES', res)
+      const { _data, headers } = res
+      const link = headers.get('link')
+      if (link) {
+        nextUrl = withQuery(LinkHeader.parse(link).rel('next')[0].uri, { header: 'false' })
       }
-      await writer.write(new TextEncoder().encode(data))
+      await writer.write(new TextEncoder().encode(_data))
       largeCsvValue.value = ((chunk + 1) / nbChunks) * 100
     }
     if (!largeCsvCancelled.value) {

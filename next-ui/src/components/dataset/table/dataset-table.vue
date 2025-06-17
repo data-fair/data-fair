@@ -46,6 +46,7 @@
       <dataset-download-results
         v-if="baseFetchUrl && total !== undefined"
         :base-url="baseFetchUrl"
+        :selected-cols="selectedCols"
         :total="total"
       />
     </v-btn-group>
