@@ -29,6 +29,7 @@ const createApplicationStore = (id: string) => {
       }
     })
     config.value = config
+    if (application.value) application.value.status = 'configured'
   }
 
   const configDraftFetch = useFetch<AppConfig>($apiPath + `/applications/${id}/configuration-draft`, { immediate: false })
@@ -47,6 +48,7 @@ const createApplicationStore = (id: string) => {
   const cancelConfigDraft = async () => {
     await $fetch('/applications/' + id + '/configuration-draft', { method: 'DELETE' })
     configDraft.value = config.value
+    if (application.value) application.value.status = 'configured'
   }
 
   const baseAppFetch = useFetch<BaseApp>(`api/v1/applications/${id}/base-application`, { immediate: false })

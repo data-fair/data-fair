@@ -176,7 +176,7 @@ const editConfig = ref<AppConfig | null>(null)
 watch(configDraft, (config) => { editConfig.value = config })
 // return true if some local changes were not yet synced with the server
 const hasModification = computed(() => {
-  if (configDraft.value !== editConfig.value) return true // shallom comparison is ok as vjsf returns immutable objects
+  if (toRaw(configDraft.value) !== toRaw(editConfig.value)) return true // shallom comparison is ok as vjsf returns immutable objects
   if (application.value?.urlDraft && editUrl.value !== application.value.urlDraft) return true
   return false
 })
