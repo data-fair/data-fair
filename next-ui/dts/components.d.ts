@@ -22,6 +22,7 @@ declare module 'vue' {
     DatasetItemValueMultiple: typeof import('./../src/components/dataset/dataset-item-value-multiple.vue')['default']
     DatasetMap: typeof import('./../src/components/dataset/map/dataset-map.vue')['default']
     DatasetNbResults: typeof import('./../src/components/dataset/dataset-nb-results.vue')['default']
+    DatasetRestUploadActions: typeof import('./../src/components/dataset/dataset-rest-upload-actions.vue')['default']
     DatasetSchemaView: typeof import('./../src/components/dataset/dataset-schema-view.vue')['default']
     DatasetSelect: typeof import('./../src/components/dataset/select/dataset-select.vue')['default']
     DatasetSelectCards: typeof import('./../src/components/dataset/select/dataset-select-cards.vue')['default']

@@ -13,3 +13,5 @@ export type { Limits, Limit } from './limits/index.js'
 
 export type Request = ExpressRequest & { user?: User } & { query: Record<string, string> } & { publicBaseUrl: string }
 export type RequestWithAuth = Request & { user: User }
+
+export type RestActionsSummary = { nbOk: number, nbNotModified: number, nbErrors: number, nbCreated: number, nbModified: number, nbDeleted: number, errors: { line: number, error: string, status: number }[], warnings: string[], cancelled?: boolean, dropped?: boolean, indexedAt?: string }

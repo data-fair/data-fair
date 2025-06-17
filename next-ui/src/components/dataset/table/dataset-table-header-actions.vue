@@ -45,16 +45,32 @@
         @click="editingResults = [...selectedResults]; editSelectedResultsDialog = true;"
       />
     </template>
-    <v-btn
-      v-else-if="canCreateLine"
-      :icon="mdiPlusCircle"
-      :size="dense ? 'large' : 'x-large'"
-      variant="text"
-      color="primary"
-      :title="t('addLine')"
-      :disabled="saving"
-      @click="addLineDialog = true"
-    />
+    <template v-else>
+      <v-btn
+        v-if="canCreateLine"
+        :icon="mdiPlusCircle"
+        :size="dense ? 'md' : 'large'"
+        variant="text"
+        color="primary"
+        :title="t('addLine')"
+        :disabled="saving"
+        @click="addLineDialog = true"
+      />
+      <dataset-rest-upload-actions
+        v-if="canBulkLines"
+      >
+        <template #activator="{props: activatorProps, title}">
+          <v-btn
+            :size="dense ? 'md' : 'large'"
+            variant="text"
+            color="primary"
+            :title="title"
+            v-bind="activatorProps"
+            :icon="mdiUpload"
+          />
+        </template>
+      </dataset-rest-upload-actions>
+    </template>
   </v-btn-group>
 
   <v-dialog
@@ -192,7 +208,7 @@
 </i18n>
 
 <script lang="ts" setup>
-import { mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiPencil, mdiTrashCanOutline, mdiPlusCircle } from '@mdi/js'
+import { mdiCheckboxBlankOutline, mdiCheckboxMarked, mdiPencil, mdiTrashCanOutline, mdiPlusCircle, mdiUpload } from '@mdi/js'
 import { type VForm } from 'vuetify/components'
 import { type ExtendedResult } from '~/composables/dataset-lines'
 import useDatasetEdition from './use-dataset-edition'
@@ -215,6 +231,7 @@ const deleteSelectedResultsDialog = ref(false)
 const canDeleteLine = can('deleteLine')
 const canUpdateLine = can('updateLine')
 const canCreateLine = can('createLine')
+const canBulkLines = can('bulkLines')
 
 const deletingResults = ref<ExtendedResult[]>()
 const deleteLines = useAsyncAction(async () => {
