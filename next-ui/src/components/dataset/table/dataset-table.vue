@@ -112,9 +112,10 @@
               :header="header as TableHeaderWithProperty"
               :filters="filters"
               :filter-height="height - 20"
+              :fixed="fixed === header.key"
               @filter="addFilter"
               @hide="hideHeader(header)"
-              @fix-col="fixed = header.key"
+              @fix-col="onFixCol(header.key)"
               @update:sort="(direction: 1 | -1 | undefined) => {sort = direction ? {direction, key: header.key} : undefined}"
             />
           </template>
@@ -388,6 +389,11 @@ const fixed = defineModel<string>('fixed')
 const q = defineModel<string>('q', { default: '' })
 
 const { t } = useI18n()
+
+const onFixCol = (key: string) => {
+  if (fixed.value === key) fixed.value = undefined
+  else fixed.value = key
+}
 
 const lineHeight = computed(() => displayMode.value === 'table-dense' ? 28 : 40)
 const mapPreviewHeight = computed(() => {

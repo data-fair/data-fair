@@ -42,7 +42,7 @@
         <v-list-item
           v-if="!noFix"
           class="pl-2"
-          :class="{'v-item--active v-list-item--active': header.key === fixed}"
+          :class="{'v-item--active v-list-item--active': fixed}"
           :title="t('fixLeft')"
           @click="$emit('fix-col');showMenu=false"
         >
@@ -395,7 +395,7 @@ const { header, localEnum, filters, closeOnFilter } = defineProps({
   header: { type: Object as () => TableHeaderWithProperty, required: true },
   filters: { type: Array as () => DatasetFilter[], required: true },
   filterHeight: { type: Number, required: true },
-  fixed: { type: String, default: null },
+  fixed: { type: Boolean, default: false },
   activator: { type: String, required: true },
   noFix: { type: Boolean, default: false },
   localEnum: { type: Array, required: false, default: null },
