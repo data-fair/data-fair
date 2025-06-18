@@ -443,15 +443,13 @@ const { selectedResults, saveLine, bulkLines } = provideDatasetEdition(baseFetch
 const virtualScroll = ref<VVirtualScroll>()
 const colsWidths = ref<number[]>([])
 const thead = ref<HTMLElement>()
-const incColsWidth = async (reset = false) => {
-  if (reset) colsWidths.value = []
-  await nextTick()
+const incColsWidth = async () => {
   thead.value?.querySelectorAll('table thead th').forEach((h, i) => {
     colsWidths.value[i] = Math.max(colsWidths.value[i] ?? 50, Math.round(h.clientWidth))
   })
 }
-watch(displayMode, () => { incColsWidth(true) })
-watch(selectedCols, () => { incColsWidth(true) })
+watch(displayMode, () => { colsWidths.value = [] })
+watch(selectedCols, () => { colsWidths.value = [] })
 
 watch(baseFetchUrl, () => {
   if (!baseFetchUrl.value) return
