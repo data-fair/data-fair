@@ -33,7 +33,7 @@
 
     <v-row
       v-if="datasets.length"
-      v-intersect:quiet="(intersect: boolean) => intersect && fetchDatasets.execute()"
+      v-intersect:quiet="(intersect: boolean) => intersect && !fetchDatasets.loading.value && next && fetchDatasets.execute()"
       align="center"
       class="my-0"
     >
@@ -87,17 +87,27 @@ const datasetsUrl = computed(() => {
 })
 
 const datasets = ref<ListedDataset[]>([])
+const page = ref(1)
+const total = ref<number>()
+const next = computed(() => {
+  if (total.value !== undefined && datasets.value.length >= total.value) return null
+  return withQuery(datasetsUrl.value, { page: page.value })
+})
 
 const fetchDatasets = useAsyncAction(async (reset: boolean = false) => {
+  if (reset) {
+    page.value = 1
+    total.value = undefined
+  }
   if (!next.value) return
-  const { results } = await $fetch<{ results: ListedDataset[] }>(next.value)
+  const { results, count } = await $fetch<{ results: ListedDataset[], count: number }>(next.value)
+  total.value = count
+  page.value += 1
   if (reset) datasets.value = results
   else datasets.value.push(...results)
 })
 
-const next = ref<string>()
 watch(datasetsUrl, () => {
-  next.value = datasetsUrl.value
   fetchDatasets.execute(true)
 }, { immediate: true })
 </script>
