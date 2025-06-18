@@ -11,7 +11,7 @@
 import 'iframe-resizer/js/iframeResizer.contentWindow'
 
 // @ts-ignore
-global.iFrameResizer = {
+window.iFrameResizer = {
   heightCalculationMethod: 'taggedElement'
 }
 
