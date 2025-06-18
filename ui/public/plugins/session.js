@@ -6,7 +6,7 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
   if (env.eventsIntegration && !env.extraNavigationItems.some(e => e.id === 'events')) {
     env.extraNavigationItems.push({
       id: 'events',
-      title: 'Traçabilité',
+      title: 'Traçabilité (bêta)',
       iframe: '/events/embed/events',
       basePath: '/events',
       icon: 'mdi-clipboard-text-clock'

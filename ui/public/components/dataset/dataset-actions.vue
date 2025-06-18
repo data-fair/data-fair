@@ -452,7 +452,7 @@ fr:
   fileTooLarge: Le fichier est trop volumineux pour être importé
   importError: "Erreur pendant l'import du fichier :"
   notifications: Notifications
-  events: Traçabilité
+  events: Traçabilité (bêta)
   webhooks: Webhooks
   ok: ok
   attachmentsMsg: Optionnellement vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal. Dans ce cas le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
@@ -486,7 +486,7 @@ en:
   fileTooLarge: The file is too large to be imported
   importError: "Failure to import the file :"
   notifications: Notifications
-  events: Events
+  events: Events (beta)
   webhooks: Webhooks
   ok: ok
   attachmentsMsg: Optionally you can load a zip archive containing files to be used as attachments to the lines of the main dataset file. In this case the main data file must have a column that contains paths of the attachments in the archive.

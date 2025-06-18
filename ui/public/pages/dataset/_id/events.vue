@@ -31,7 +31,7 @@ export default {
       this.$store.dispatch('breadcrumbs', [
         { text: this.$t('datasets'), to: '/datasets' },
         { text: this.dataset.title || this.dataset.id, to: `/dataset/${this.dataset.id}`, exact: true },
-        { text: 'Traçabilité' }
+        { text: 'Traçabilité (bêta)' }
       ])
     }
   }
