@@ -581,7 +581,6 @@ const emptyFilters = () => {
   editDate.value = undefined
 }
 const toggleSort = (value: 1 | -1) => {
-  console.log('toggle', sort.value, sort.value !== value ? value : undefined)
   sort.value = sort.value !== value ? value : undefined
   showMenu.value = false
 }

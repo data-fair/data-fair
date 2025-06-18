@@ -407,7 +407,7 @@ watch(q, () => { editQ.value = q.value }, { immediate: true })
 const sort = computed<{ key: string, direction: 1 | -1 } | undefined>({
   get () {
     if (!sortStr.value) return undefined
-    if (sortStr.value.startsWith('-')) return { direction: 1, key: sortStr.value.slice(1) }
+    if (sortStr.value.startsWith('-')) return { direction: -1, key: sortStr.value.slice(1) }
     return { direction: 1, key: sortStr.value }
   },
   set (v) {
