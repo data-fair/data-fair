@@ -25,7 +25,7 @@
 
         <!-- hide column -->
         <v-list-item
-          v-if="fixed"
+          v-if="!fixed"
           class="pl-2"
           :title="t('hide')"
           @click="$emit('hide');showMenu=false"

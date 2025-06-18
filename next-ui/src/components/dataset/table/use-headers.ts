@@ -58,14 +58,9 @@ export const useHeaders = (selectedCols: Ref<string[]>, noInteraction: boolean, 
     return headers.value?.filter(h => !!h.property) as TableHeaderWithProperty[]
   })
 
-  const hideHeader = (header: TableHeader) => {
-    if (!selectedCols.value.length) selectedCols.value = dataset.value?.schema?.map(p => p.key) ?? []
-    selectedCols.value = selectedCols.value.filter(sc => sc !== header.key)
-  }
   return {
     headers,
-    headersWithProperty,
-    hideHeader
+    headersWithProperty
   }
 }
 

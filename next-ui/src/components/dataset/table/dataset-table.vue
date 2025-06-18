@@ -424,12 +424,20 @@ const { dataset, id: datasetId } = useDatasetStore()
 const allCols = computed(() => dataset.value?.schema?.filter(field => !field['x-calculated'] || field.key === '_updatedAt' || field.key === '_updatedByName').map(p => p.key) ?? [])
 const selectedCols = computed(() => cols.value.length ? cols.value : allCols.value)
 
+const hideHeader = (header: TableHeader) => {
+  let newCols = cols.value
+  if (!cols.value.length) {
+    newCols = [...allCols.value]
+  }
+  cols.value = newCols.filter(col => col !== header.key)
+}
+
 const { filters, addFilter, queryParams: filtersQueryParams } = useFilters()
 const conceptFilters = useConceptFilters(useReactiveSearchParams())
 const extraParams = computed(() => ({ ...filtersQueryParams.value, ...conceptFilters }))
 const indexedAt = ref<string>()
 const { baseFetchUrl, total, results, fetchResults, truncate } = useLines(displayMode, pageSize, selectedCols, q, sortStr, extraParams, indexedAt)
-const { headers, headersWithProperty, hideHeader } = useHeaders(selectedCols, noInteraction, edit, fixed)
+const { headers, headersWithProperty } = useHeaders(selectedCols, noInteraction, edit, fixed)
 const { selectedResults, saveLine, bulkLines } = provideDatasetEdition(baseFetchUrl, indexedAt)
 
 const virtualScroll = ref<VVirtualScroll>()
