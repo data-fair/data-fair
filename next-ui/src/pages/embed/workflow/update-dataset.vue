@@ -8,13 +8,6 @@
 </template>
 
 <script lang="ts" setup>
-import 'iframe-resizer/js/iframeResizer.contentWindow'
-
-// @ts-ignore
-window.iFrameResizer = {
-  heightCalculationMethod: 'taggedElement'
-}
-
 const route = useRoute<'/embed/workflow/update-dataset'>()
 const { account } = useSessionAuthenticated()
 
