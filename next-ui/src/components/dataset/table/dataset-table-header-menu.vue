@@ -137,6 +137,7 @@
             <v-btn
               v-if="i === equals.length - 1"
               class="mr-1"
+              density="comfortable"
               :disabled="equals.length <= 1"
               color="primary"
               :title="t('applyFilter')"
@@ -163,6 +164,7 @@
         <template #append>
           <v-btn
             class="mr-1"
+            density="comfortable"
             :disabled="!startsWith"
             color="primary"
             :title="t('applyFilter')"
@@ -185,6 +187,7 @@
         <template #append>
           <v-btn
             class="mr-1"
+            density="comfortable"
             :disabled="!search"
             color="primary"
             :title="t('applyFilter')"
@@ -207,6 +210,7 @@
         <template #append>
           <v-btn
             class="mr-1"
+            density="comfortable"
             :disabled="!contains"
             color="primary"
             :title="t('applyFilter')"
@@ -248,7 +252,7 @@
         @keyup.enter="emitIntervalFilter"
       >
         <template #append>
-          <div style="width:36px;height:36px;" />
+          <div style="width:40px;height:36px;" />
         </template>
       </v-text-field>
       <v-text-field
@@ -265,6 +269,8 @@
         <template #append>
           <v-btn
             :disabled="!lte && !gte"
+            class="mr-1"
+            density="comfortable"
             color="primary"
             :title="t('applyFilter')"
             :icon="mdiCheck"
@@ -289,7 +295,7 @@
         @keyup.enter="emitIntervalFilter"
       >
         <template #append>
-          <div style="width:36px;height:36px;" />
+          <div style="width:40px;height:36px;" />
         </template>
       </v-text-field>
       <v-text-field
@@ -309,6 +315,8 @@
         <template #append>
           <v-btn
             :disabled="!lte && !gte"
+            class="mr-1"
+            density="comfortable"
             color="primary"
             :title="t('applyFilter')"
             :icon="mdiCheck"

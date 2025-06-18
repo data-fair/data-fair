@@ -5,7 +5,7 @@
   >
     <v-slide-group-item
       v-for="(filter,i) in filters"
-      :key="i"
+      :key="filter.property.key + '-' + i"
       v-slot="{toggle}"
     >
       <v-chip
