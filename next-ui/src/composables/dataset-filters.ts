@@ -21,9 +21,27 @@ export const useFilters = () => {
   const filters = ref<DatasetFilter[]>([])
 
   const addFilter = (filter: DatasetFilter) => {
-    const existingFilter = filters.value.find(f => f.property === filter.property && f.operator === filter.operator)
+    const existingFilter = filters.value.find(f => f.property.key === filter.property.key && f.operator === filter.operator)
     if (existingFilter) removeFilter(existingFilter)
-    filters.value.push(markRaw(filter))
+    if (filter.operator === 'in') {
+      const existingEqFilter = filters.value.find(f => f.property.key === filter.property.key && f.operator === 'eq')
+      if (existingEqFilter) removeFilter(existingEqFilter)
+    }
+    if (filter.value === '') return
+
+    // special case for "in" filters, if there is a single item use "eq" and remove if 0 items
+    if (filter.operator === 'in') {
+      const values = filter.value.startsWith('"') ? JSON.parse(`[${filter.value}]`) : filter.value.split(',')
+      if (values.length === 0) {
+        // nothing to do
+      } else if (values.length === 1) {
+        filters.value.push(markRaw({ ...filter, operator: 'eq', value: values[0] }))
+      } else {
+        filters.value.push(markRaw(filter))
+      }
+    } else {
+      filters.value.push(markRaw(filter))
+    }
   }
 
   const removeFilter = (filter: DatasetFilter) => {

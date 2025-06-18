@@ -35,6 +35,7 @@
 
 <i18n lang="yaml">
   fr:
+    in: 'parmi'
     eq: '='
     neq: '&ne;'
     starts: 'commence par'

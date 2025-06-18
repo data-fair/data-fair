@@ -518,8 +518,8 @@ const toggleMenu = () => {
     if (filter.operator === 'starts') startsWith.value = filter.value
     if (filter.operator === 'search') search.value = filter.value
     if (filter.operator === 'contains') contains.value = filter.value
-    if (filter.operator === 'in') {
-      const values = filter.value.startsWith('"') ? JSON.parse(`[${filter.value}]`) : filter.value.split(',')
+    if (filter.operator === 'in' || filter.operator === 'eq') {
+      const values = filter.operator === 'eq' ? [filter.value] : filter.value.startsWith('"') ? JSON.parse(`[${filter.value}]`) : filter.value.split(',')
       if (header.property.type === 'string' || header.property.type === 'number' || header.property.type === 'integer') {
         equals.value = [...values]
         if (header.property['x-labels']) {
@@ -538,9 +538,11 @@ const toggleEquals = (value: string) => {
 }
 
 const emitEqualsFilter = () => {
-  let values = equals.value.filter(v => !!v)
+  let values: (string | number)[] = equals.value.filter(v => !!v)
   if (header.property['x-labels']) {
     values = values.map(v => reversedLabels.value[v] ?? v)
+  } else if (header.property.type === 'number' || header.property.type === 'integer') {
+    values = values.map(Number)
   }
   const formattedValue = values.join(', ')
   emitFilter({ operator: 'in', value: JSON.stringify(values).slice(1, -1), formattedValue, property: header.property }, false)
