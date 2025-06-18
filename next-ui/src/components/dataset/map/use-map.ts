@@ -93,10 +93,10 @@ export const useMap = (
           .filter(field => !field['x-calculated'] && field['x-refersTo'] !== 'https://purl.org/geojson/vocab#geometry')
           .filter(field => item[field.key] !== undefined)
           .map(field => {
-            return `<li>${field.title || field['x-originalName'] || field.key}: ${item[field.key]}</li>`
+            return `<li style="list-style-type: none;">${field.title || field['x-originalName'] || field.key}: ${item[field.key]}</li>`
           })
           .join('\n')
-        const html = `<ul style="list-style-type: none;padding-left: 0;">${htmlList}</ul>`
+        const html = `<ul style="padding-left: 0;">${htmlList}</ul>`
 
         // Populate the popup and set its coordinates
         // based on the feature found.

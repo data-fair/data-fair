@@ -38,12 +38,12 @@
         class="bg-transparent pt-0"
       >
         <template
-          v-for="(header, i) in otherHeaders"
+          v-for="header in otherHeaders"
           :key="`input-${header.key}`"
         >
           <div
             v-if="result.values[header.key]"
-            :class="`dataset-item-card-value-${result._id}-${i}`"
+            :class="`dataset-item-card-value-${result._id}-${header.cssKey ?? header.key}`"
             style="position: relative;"
             :style="noInteraction ? '' : 'cursor:pointer'"
             @mouseenter="!Array.isArray(result.values[header.key]) && emit('hoverstart', result, markRaw(result.values[header.key] as ExtendedResultValue))"
@@ -68,9 +68,7 @@
               :value="result.values[header.key] as ExtendedResultValue"
               :property="header.property"
               :filtered="!!findEqFilter(filters, header.property, result)"
-              :disable-hover="true"
               :dense="true"
-              style="padding-right: 16px;"
               @filter="emit('filter', {property: header.property, operator: 'eq', value: (result.values[header.key] as ExtendedResultValue).raw + '', formattedValue: (result.values[header.key] as ExtendedResultValue).formatted})"
               @show-detail-dialog="emit('showDetailDialog', header)"
             />
@@ -87,8 +85,8 @@
             />
           </div>
           <dataset-table-header-menu
-            v-if="!noInteraction && hovered === result.values[header.key]"
-            :activator="`.dataset-item-card-value-${result._id}-${i}`"
+            v-if="!noInteraction"
+            :activator="`.dataset-item-card-value-${result._id}-${header.cssKey ?? header.key}`"
             :header="header"
             :filters="filters"
             :filter-height="filterHeight"
