@@ -32,7 +32,7 @@ import { getThumbnail } from '../misc/utils/thumbnails.js'
 import pump from '../misc/utils/pipe.ts'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
-import { reqSession, reqUser, reqUserAuthenticated, session } from '@data-fair/lib-express'
+import { reqSession, reqSessionAuthenticated, reqUser, reqUserAuthenticated, session } from '@data-fair/lib-express'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 
@@ -328,12 +328,14 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
   const application = req.application
 
   const db = mongo.db
+  const sessionState = reqSessionAuthenticated(req)
+
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
-  if (!permissions.canDoForOwner(req.body, 'applications', 'post', req.user)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
+  if (!permissions.canDoForOwner(req.body, 'applications', 'post', sessionState)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
 
   const patch = {
     owner: req.body,
-    updatedBy: { id: req.user.id, name: req.user.name },
+    updatedBy: { id: sessionState.user.id, name: sessionState.user.name },
     updatedAt: moment().toISOString()
   }
   const sameOrg = application.owner.type === 'organization' && application.owner.type === req.body.type && application.owner.id === req.body.id
@@ -367,7 +369,6 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
   eventsLog.info('df.applications.changeOwnerFrom', eventLogMessage, { req, account: application.owner })
   eventsLog.info('df.applications.changeOwnerTo', eventLogMessage, { req, account: req.body })
 
-  const sessionState = await session.req(req)
   const event = {
     title: 'Changement de propriétaire d\'une application',
     body: `${application.title} (${application.slug}), ${arrowStr}`,
@@ -436,6 +437,7 @@ const writeConfig = async (req, res) => {
   const application = req.application
 
   const db = mongo.db
+  const sessionState = reqSessionAuthenticated(req)
   const { returnValid } = await import('#types/app-config/index.js')
   const appConfig = returnValid(req.body)
   await db.collection('applications').updateOne(
@@ -447,7 +449,7 @@ const writeConfig = async (req, res) => {
       $set: {
         configuration: appConfig,
         updatedAt: moment().toISOString(),
-        updatedBy: { id: req.user.id, name: req.user.name },
+        updatedBy: { id: sessionState.user.id, name: sessionState.user.name },
         lastConfigured: moment().toISOString(),
         status: 'configured'
       }
@@ -456,7 +458,7 @@ const writeConfig = async (req, res) => {
 
   eventsLog.info('df.applications.writeConfig', `wrote application config ${application.slug} (${application.id})`, { req, account: application.owner })
 
-  await journals.log(req.app, application, { type: 'config-updated' }, 'application', false, req.user)
+  await journals.log(req.app, application, { type: 'config-updated' }, 'application', false, sessionState)
   await syncDatasets(db, { configuration: req.body })
   res.status(200).json(req.body)
 }
@@ -471,7 +473,7 @@ router.get('/:applicationId/configuration-draft', readApplication, permissions.m
 router.put('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), async (req, res, next) => {
   // @ts-ignore
   const application = req.application
-
+  const sessionState = reqSessionAuthenticated(req)
   const { returnValid } = await import('#types/app-config/index.js')
   const appConfig = returnValid(req.body)
   await mongo.db.collection('applications').updateOne(
@@ -483,19 +485,20 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
       $set: {
         configurationDraft: appConfig,
         updatedAt: moment().toISOString(),
-        updatedBy: { id: req.user.id, name: req.user.name },
+        updatedBy: { id: sessionState.user.id, name: sessionState.user.name },
         status: 'configured-draft'
       }
     }
   )
   eventsLog.info('df.applications.validateDraft', `vaidated application config draft ${application.slug} (${application.id})`, { req, account: application.owner })
 
-  await journals.log(req.app, application, { type: 'config-draft-updated' }, 'application', false, req.user)
+  await journals.log(req.app, application, { type: 'config-draft-updated' }, 'application', false, sessionState)
   res.status(200).json(req.body)
 })
 router.delete('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), async (req, res, next) => {
   // @ts-ignore
   const application = req.application
+  const sessionState = reqSessionAuthenticated(req)
 
   await mongo.db.collection('applications').updateOne(
     { id: req.params.applicationId },
@@ -506,7 +509,7 @@ router.delete('/:applicationId/configuration-draft', readApplication, permission
       },
       $set: {
         updatedAt: moment().toISOString(),
-        updatedBy: { id: req.user.id, name: req.user.name },
+        updatedBy: { id: sessionState.user.id, name: sessionState.user.name },
         status: application.configuration ? 'configured' : 'created'
       }
     }
@@ -514,7 +517,7 @@ router.delete('/:applicationId/configuration-draft', readApplication, permission
 
   eventsLog.info('df.applications.cancelDraft', `cancelled application config draft ${application.slug} (${application.id})`, { req, account: application.owner })
 
-  await journals.log(req.app, application, { type: 'config-draft-cancelled' }, 'application', false, req.user)
+  await journals.log(req.app, application, { type: 'config-draft-cancelled' }, 'application', false, sessionState)
   res.status(200).json(req.body)
 })
 
@@ -560,7 +563,7 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
     await wsEmitter.emit(`applications/${req.params.applicationId}/draft-error`, req.body)
   } else if (req.application.configuration) {
     await mongo.db.collection('applications').updateOne({ id: req.application.id }, { $set: { status: 'error', errorMessage: message } })
-    await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application', false, req.user)
+    await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application', false, reqSession(req))
   }
   res.status(204).send()
 })

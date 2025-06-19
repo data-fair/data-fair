@@ -17,7 +17,7 @@ import * as schemaUtils from './data-schema.js'
 import { bulkSearchPromise, bulkSearchStreams } from './master-data.js'
 import taskProgress from './task-progress.ts'
 import * as permissionsUtils from '../../misc/utils/permissions.ts'
-import { getPseudoUser } from '../../misc/utils/users.js'
+import { getPseudoSessionState } from '../../misc/utils/users.js'
 import randomSeed from 'random-seed'
 import debugLib from 'debug'
 import { parseURL } from 'ufo'
@@ -320,7 +320,7 @@ class ExtensionsStream extends Transform {
         let data
         if (localMasterData) {
           const masterDatasetId = extension.remoteService.server.replace(`${config.publicUrl}/api/v1/datasets/`, '')
-          const pseudoUser = getPseudoUser(this.dataset.owner, 'extension', '_master-data', 'admin')
+          const pseudoUser = getPseudoSessionState(this.dataset.owner, 'extension', '_master-data', 'admin')
           const masterDataset = await mongo.db.collection('datasets').findOne({ id: masterDatasetId })
           if (!masterDataset) throw new Error('jeu de données de référence inconnu ' + masterDatasetId)
           if (!(permissionsUtils.list('datasets', masterDataset, pseudoUser) as string[]).includes('readLines')) {
