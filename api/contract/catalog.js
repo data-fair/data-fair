@@ -1,6 +1,6 @@
 import owner from './owner.js'
 import eventBy from './event-by.js'
-import permissions from './permissions.js'
+import { resolvedSchema as permissions } from '#types/permissions/index.js'
 import * as catalogs from '../src/catalogs/plugins/index.js'
 
 export default {

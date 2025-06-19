@@ -17,7 +17,6 @@ import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import upgradeScripts from '@data-fair/lib-node/upgrade-scripts.js'
-import { createSpaMiddleware } from '@data-fair/lib-express/serve-spa.js'
 import { cleanTmp } from './datasets/utils/files.ts'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 
@@ -214,6 +213,7 @@ export const run = async () => {
     app.use('/streamsaver/sw.js', express.static(join(streamsaverPath, 'sw.js')))
 
     if (config.serveUi) {
+      const { createSpaMiddleware } = await import('@data-fair/lib-express/serve-spa.js')
       app.use('/next-ui', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, { ignoreSitePath: true }))
     }
 

@@ -1,5 +1,5 @@
-import type { User } from '@data-fair/lib-express'
 import type { Request as ExpressRequest } from 'express'
+import type { Dataset } from './dataset/index.ts'
 
 export type { Application } from './application/index.js'
 export type { AppConfig } from './app-config/index.js'
@@ -10,6 +10,30 @@ export { type Settings, resolvedSchema as settingsSchema } from './settings/inde
 export type { Topic } from './topic/index.js'
 export type { Vocabulary } from './vocabulary/index.js'
 export type { Limits, Limit } from './limits/index.js'
+export type { Permission } from './permissions/index.js'
 
-export type Request = ExpressRequest & { user?: User } & { query: Record<string, string> } & { publicBaseUrl: string }
-export type RequestWithAuth = Request & { user: User }
+export type Request = ExpressRequest & { query: Record<string, string> } & { publicBaseUrl: string }
+
+export type ResourceType = 'datasets' | 'applications' | 'catalogs'
+export type Resource = Pick<Dataset, 'id' | 'title' | 'owner' | 'permissions'>
+export type BypassPermissions = {
+  operations?: string[],
+  classes?: string[]
+}
+export type RequestWithResource = Request & {
+  resourceType: ResourceType,
+  resource: Resource,
+  bypassPermissions?: BypassPermissions,
+  publicOperation?: boolean
+}
+
+export function assertRequestWithResource (req: ExpressRequest): asserts req is RequestWithResource {
+  if (!(req as any).resource) throw new Error('missing req.resource')
+}
+
+export type ApplicationKey = {
+  _id: string,
+  id: string,
+  title: string,
+  keys: { id: string }[]
+}

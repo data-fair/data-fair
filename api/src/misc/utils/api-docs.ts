@@ -1,5 +1,7 @@
+import { ResourceType } from '#types'
+
 // TODO: this could be processed from actual api doc ?
-export const operationsClasses = {
+export const operationsClasses: Record<ResourceType, Record<string, string[]>> = {
   datasets: {
     list: ['list'],
     read: ['readDescription', 'readSchema', 'readSafeSchema', 'readLines', 'getGeoAgg', 'getValuesAgg', 'getValues', 'getMetricAgg', 'getSimpleMetricsAgg', 'getWordsAgg', 'getMinAgg', 'getMaxAgg', 'downloadOriginalData', 'downloadFullData', 'readApiDoc', 'realtime-transactions', 'readLine', 'readLineRevisions', 'readRevisions', 'bulkSearch', 'listDataFiles', 'downloadDataFile', 'downloadMetadataAttachment', 'downloadAttachment', 'getReadApiKey', 'readCompatODSRecords'],
@@ -24,29 +26,34 @@ export const operationsClasses = {
   }
 }
 
-export const adminOperationsClasses = {
+export const adminOperationsClasses: Record<ResourceType, string[]> = {
   datasets: ['manageMasterData'],
-  catalogs: ['post']
+  catalogs: ['post'],
+  applications: []
 }
 
-export const contribOperationsClasses = {
+export const contribOperationsClasses: Record<ResourceType, string[]> = {
   datasets: ['post'],
   applications: ['post'],
   catalogs: ['list', 'read', 'use']
 }
 
 // WARNING: this util is used both in UI and server
-export const operations = (apiDoc) => {
+export const operations = (apiDoc: any): { id: string, title: string }[] => {
   if (!apiDoc) return []
+  // @ts-ignore
   return (apiDoc && [].concat(...Object.keys(apiDoc.paths).map(path => Object.keys(apiDoc.paths[path]).map(method => ({
     id: apiDoc.paths[path][method].operationId,
     title: apiDoc.paths[path][method].summary
   }))))) || []
 }
 
-export const classByOperation = {}
-for (const resourceType of Object.keys(operationsClasses)) {
-  classByOperation[resourceType] = {}
+export const classByOperation: Record<ResourceType, Record<string, string>> = {
+  datasets: {},
+  applications: {},
+  catalogs: {}
+}
+for (const resourceType of Object.keys(operationsClasses) as ResourceType[]) {
   for (const classe of Object.keys(operationsClasses[resourceType])) {
     for (const operation of operationsClasses[resourceType][classe]) {
       classByOperation[resourceType][operation] = classe
