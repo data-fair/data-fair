@@ -21,7 +21,6 @@ import { validateURLFriendly } from '../misc/utils/validation.js'
 import assertImmutable from '../misc/utils/assert-immutable.js'
 import { curateDataset, titleFromFileName } from './utils/index.js'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
-import { prepareInitFrom } from './utils/init-from.js'
 import i18n from 'i18n'
 
 const debugMasterData = debugLib('master-data')
@@ -67,9 +66,9 @@ const fieldsMap = {
  * @param {any} publicationSite
  * @param {string} publicBaseUrl
  * @param {Record<string, string>} reqQuery
- * @param {any} user
+ * @param {import('@data-fair/lib-express').SessionState} sessionState
  */
-export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
+export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, sessionState) => {
   const explain = reqQuery.explain === 'true' && user && (user.isAdmin || user.asAdmin) && {}
   const datasets = db.collection('datasets')
 
@@ -94,7 +93,7 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
     extraFilters.push({ 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id })
   }
 
-  const query = findUtils.query(reqQuery, locale, user, 'datasets', fieldsMap, false, extraFilters)
+  const query = findUtils.query(reqQuery, locale, sessionState, 'datasets', fieldsMap, false, extraFilters)
   const sort = findUtils.sort(reqQuery.sort)
   const project = findUtils.project(reqQuery.select, [], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
@@ -108,12 +107,12 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
     if (explain) explain.resultsMS = Date.now() - t0
     return res
   })
-  const facetsPromise = reqQuery.facets && datasets.aggregate(findUtils.facetsQuery(reqQuery, user, 'datasets', facetFields, filterFields, nullFacetFields, extraFilters), options).toArray().then(res => {
+  const facetsPromise = reqQuery.facets && datasets.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'datasets', facetFields, filterFields, nullFacetFields, extraFilters), options).toArray().then(res => {
     if (explain) explain.facetsMS = Date.now() - t0
     return res
   })
   const sumsPromise = reqQuery.sums && datasets
-    .aggregate(findUtils.sumsQuery(reqQuery, user, 'datasets', sumsFields, filterFields, extraFilters), options).toArray()
+    .aggregate(findUtils.sumsQuery(reqQuery, sessionState, 'datasets', sumsFields, filterFields, extraFilters), options).toArray()
     .then(sumsResponse => {
       const res = sumsResponse[0] || {}
       for (const field of reqQuery.sums.split(',')) {
@@ -200,7 +199,7 @@ export const memoizedGetDataset = memoize(getDataset, {
  * @param {import('mongodb').Db} db
  * @param {import('@elastic/elasticsearch').Client} es
  * @param {string} locale
- * @param {any} user
+ * @param {import('@data-fair/lib-express').SessionStateAuthenticated} sessionState
  * @param {any} owner
  * @param {any} body
  * @param {undefined | any[]} files
@@ -208,7 +207,7 @@ export const memoizedGetDataset = memoize(getDataset, {
  * @param {(callback: () => void) => void} onClose
  * @returns {Promise<any>}
  */
-export const createDataset = async (db, es, locale, user, owner, body, files, draft, onClose) => {
+export const createDataset = async (db, es, locale, sessionState, owner, body, files, draft, onClose) => {
   validateURLFriendly(locale, body.id)
   validateURLFriendly(locale, body.slug)
 
@@ -223,7 +222,7 @@ export const createDataset = async (db, es, locale, user, owner, body, files, dr
   dataset.owner = owner
   const date = new Date().toISOString()
   dataset.createdAt = dataset.updatedAt = date
-  dataset.createdBy = dataset.updatedBy = { id: user.id, name: user.name }
+  dataset.createdBy = dataset.updatedBy = { id: sessionState.user.id, name: sessionState.user.name }
   dataset.permissions = []
   dataset.schema = dataset.schema || []
   if (dataset.extensions) {
@@ -234,7 +233,12 @@ export const createDataset = async (db, es, locale, user, owner, body, files, dr
   curateDataset(dataset)
   permissions.initResourcePermissions(dataset)
 
-  if (dataset.initFrom) prepareInitFrom(dataset, user)
+  if (dataset.initFrom) {
+    dataset.initFrom.role = permissions.getOwnerRole(dataset.owner, sessionState)
+    if (dataset.initFrom.role && dataset.owner.department) {
+      dataset.initFrom.department = sessionState.account.department ?? '-'
+    }
+  }
 
   if (datasetFile) {
     dataset.title = dataset.title || titleFromFileName(datasetFile.originalname)
@@ -328,8 +332,8 @@ export const createDataset = async (db, es, locale, user, owner, body, files, dr
       await fsyncFile(datasetUtils.loadedAttachmentsFilePath(insertedDataset))
     }
   }
-  if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with extensions by ${user?.name} (${user?.id})`, insertedDataset.extensions)
-  if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with masterData by ${user?.name} (${user?.id})`, insertedDataset.masterData)
+  if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with extensions by ${sessionState.user.name} (${sessionState.user.id})`, insertedDataset.extensions)
+  if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with masterData by ${sessionState.user.name} (${sessionState.user.id})`, insertedDataset.masterData)
 
   return insertedDataset
 }

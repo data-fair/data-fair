@@ -1,4 +1,4 @@
-import config from 'config'
+import _config from 'config'
 import datasetAPIDocs from './dataset-api-docs.js'
 import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js'
 import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
@@ -6,17 +6,12 @@ import journalSchema from './journal.js'
 import { visibility } from '../src/misc/utils/visibility.js'
 import * as permissionsDoc from '../src/misc/utils/permissions.ts'
 import * as datasetUtils from '../src/datasets/utils/index.js'
+import { SessionStateAuthenticated } from '@data-fair/lib-express'
+import { Dataset } from '#types'
 
-/**
- *
- * @param {any} dataset
- * @param {string} publicUrl
- * @param {any} user
- * @param {any} settings
- * @returns
- */
-// @ts-ignore
-export default (dataset, publicUrl = config.publicUrl, user, settings) => {
+const config = _config as any
+
+export default (dataset: Dataset, publicUrl = config.publicUrl, sessionState: SessionStateAuthenticated, settings: any) => {
   const { api, userApiRate, anonymousApiRate, bulkLineSchema } = datasetAPIDocs(dataset, publicUrl, settings)
 
   const title = `API privée du jeu de données : ${dataset.title || dataset.id}`
@@ -286,7 +281,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   if (dataset.isRest) {
     const readLineSchema = datasetUtils.jsonSchema(dataset.schema, publicUrl)
-    const writeLineSchema = datasetUtils.jsonSchema(dataset.schema.filter((/** @type {any} */p) => !p['x-calculated'] && !p['x-extension']), publicUrl)
+    const writeLineSchema = datasetUtils.jsonSchema(dataset.schema?.filter((/** @type {any} */p) => !p['x-calculated'] && !p['x-extension']), publicUrl)
     const patchLineSchema = writeLineSchema
     const lineId = {
       in: 'path',
@@ -469,8 +464,8 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       }
     }
 
-    if (dataset.rest.lineOwnership) {
-      const convertOwnLineApiPath = (/** @type {string} */apiPath) => {
+    if (dataset.rest?.lineOwnership) {
+      const convertOwnLineApiPath = (apiPath: string) => {
         if (!api.paths[apiPath]) return
         api.paths['/own/{owner}' + apiPath] = JSON.parse(JSON.stringify(api.paths[apiPath]))
         api.paths['/own/{owner}' + apiPath].parameters = api.paths['/own/{owner}' + apiPath].parameters || []
@@ -483,7 +478,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
             type: 'string'
           }
         })
-        Object.values(api.paths['/own/{owner}' + apiPath]).forEach(p => {
+        Object.values(api.paths['/own/{owner}' + apiPath]).forEach((p: any) => {
           if (!p.operationId) return
           p['x-permissionClass'] = 'manageOwnLines'
           p.operationId = p.operationId.replace('Line', 'OwnLine')
@@ -506,7 +501,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   api.paths['/permissions'] = permissionsDoc
 
-  if (!dataset.isMetaOnly && user.adminMode) {
+  if (!dataset.isMetaOnly && sessionState.user.adminMode) {
     Object.assign(api.paths, {
       '/_diagnose': {
         get: {
@@ -572,7 +567,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
       }
     })
   }
-  if (dataset.isRest && user.adminMode) {
+  if (dataset.isRest && sessionState.user.adminMode) {
     api.paths['/_sync_attachments_lines'] = {
       post: {
         summary: 'Forcer la synchronisation',

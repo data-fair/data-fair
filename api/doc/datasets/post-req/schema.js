@@ -2,28 +2,12 @@ import datasetSchema from '#types/dataset/schema.js'
 import datasetPatch from '../patch-req/schema.js'
 
 const body = {
-  title: 'Post dataset JSON body',
+  title: 'Post dataset body',
   type: 'object',
   additionalProperties: false,
   properties: {
     ...datasetPatch.properties.body.properties,
-    initFrom: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['dataset', 'parts'],
-      properties: {
-        dataset: {
-          type: 'string'
-        },
-        parts: {
-          type: 'array',
-          items: {
-            type: 'string',
-            enum: ['data', 'description', 'schema', 'metadataAttachments', 'primaryKey', 'extensions']
-          }
-        }
-      }
-    },
+    initFrom: { $ref: '#/$defs/initFrom' },
     isVirtual: datasetSchema.properties.isVirtual,
     isRest: datasetSchema.properties.isRest,
     isMetaOnly: datasetSchema.properties.isMetaOnly,
@@ -47,6 +31,26 @@ export default {
     attachments: {
       type: 'string',
       format: 'binary'
+    }
+  },
+  $defs: {
+    initFrom: {
+      type: 'object',
+      title: 'Init from',
+      additionalProperties: false,
+      required: ['dataset', 'parts'],
+      properties: {
+        dataset: {
+          type: 'string'
+        },
+        parts: {
+          type: 'array',
+          items: {
+            type: 'string',
+            enum: ['data', 'description', 'schema', 'metadataAttachments', 'primaryKey', 'extensions']
+          }
+        }
+      }
     }
   }
 }

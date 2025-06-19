@@ -18,13 +18,13 @@ import catalogsPublicationQueue from '../../misc/utils/catalogs-publication-queu
  * @param {any} app
  * @param {any} patch
  * @param {any} dataset
- * @param {any} user
+ * @param {import('@data-fair/lib-express').SessionStateAuthenticated} sessionState
  * @param {string} locale
  * @param {string} draftValidationMode
  * @param {any[]} [files]
  * @returns {Promise<{removedRestProps?: any[], attemptMappingUpdate?: boolean, isEmpty?: boolean}>}
  */
-export const preparePatch = async (app, patch, dataset, user, locale, draftValidationMode, files) => {
+export const preparePatch = async (app, patch, dataset, sessionState, locale, draftValidationMode, files) => {
   const db = mongo.db
 
   patch.id = dataset.id
@@ -95,7 +95,7 @@ export const preparePatch = async (app, patch, dataset, user, locale, draftValid
   if (Object.keys(patch).length === 0) return { isEmpty: true }
 
   patch.updatedAt = moment().toISOString()
-  patch.updatedBy = { id: user.id, name: user.name }
+  patch.updatedBy = { id: sessionState.user.id, name: sessionState.user.name }
   if (datasetFile || attachmentsFile) {
     patch.dataUpdatedAt = patch.updatedAt
     patch.dataUpdatedBy = patch.updatedBy

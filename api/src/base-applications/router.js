@@ -14,6 +14,7 @@ import * as baseAppsUtils from './utils.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import { assertAdminMode, reqAdminMode, reqUser, reqUserAuthenticated } from '@data-fair/lib-express'
 
 const htmlExtractor = new Extractor()
 htmlExtractor.extract = util.promisify(htmlExtractor.extract)
@@ -109,6 +110,7 @@ async function syncBaseApp (db, baseApp) {
 
 router.post('', async (req, res) => {
   const db = mongo.db
+  reqAdminMode(req)
   if (!req.body.url || Object.keys(req.body).length !== 1) {
     return res.status(400).type('text/plain').send(req.__('Initializing a base application only accepts the "url" part.'))
   }
@@ -120,7 +122,7 @@ router.post('', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   const db = mongo.db
-  if (!req.user || !req.user.adminMode) return res.status(403).type('text/plain').send()
+  reqAdminMode(req)
   const patch = req.body
   const storedBaseApp = await db.collection('base-applications')
     .findOneAndUpdate({ id: req.params.id }, { $set: patch }, { returnDocument: 'after' })
@@ -139,12 +141,12 @@ const getQuery = (req, showAll = false) => {
   // You can use ?privateAccess=user:alban,organization:koumoul
   const privateAccess = []
   if (req.query.privateAccess) {
+    const user = reqUserAuthenticated(req)
     for (const p of req.query.privateAccess.split(',')) {
       const [type, id] = p.split(':')
-      if (!req.user) throw httpError(401)
-      if (!req.user.adminMode) {
-        if (type === 'user' && id !== req.user.id) throw httpError(403)
-        if (type === 'organization' && !req.user.organizations.find(o => o.id === id)) throw httpError(403)
+      if (!user.adminMode) {
+        if (type === 'user' && id !== user.id) throw httpError(403)
+        if (type === 'organization' && !user.organizations.find(o => o.id === id)) throw httpError(403)
       }
       privateAccess.push({ type, id })
       accessFilter.push({ privateAccess: { $elemMatch: { type, id } } })
@@ -259,7 +261,8 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
 
 router.get('/:id/icon', async (req, res, next) => {
   const db = mongo.db
-  const { query } = getQuery(req, req.user && req.user.adminMode)
+  const user = reqUser(req)
+  const { query } = getQuery(req, !!(user?.adminMode))
   query.$and.push({ id: req.params.id })
   const baseApp = await db.collection('base-applications').findOne(query, { url: 1 })
   if (!baseApp) return res.status(404).send()
@@ -268,7 +271,8 @@ router.get('/:id/icon', async (req, res, next) => {
 })
 router.get('/:id/thumbnail', async (req, res, next) => {
   const db = mongo.db
-  const { query } = getQuery(req, req.user && req.user.adminMode)
+  const user = reqUser(req)
+  const { query } = getQuery(req, !!(user?.adminMode))
   query.$and.push({ id: req.params.id })
   const baseApp = await db.collection('base-applications').findOne(query, { url: 1 })
   if (!baseApp) return res.status(404).send()

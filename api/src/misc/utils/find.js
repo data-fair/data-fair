@@ -270,12 +270,12 @@ export const setResourceLinks = (resource, resourceType, publicUrl = config.publ
 /**
  *
  * @param {Record<string, string>} reqQuery
- * @param {any} user
+ * @param {import('@data-fair/lib-express').SessionState} sessionState
  * @param {string} resourceType
  * @param {any[]} [extraFilters]
  * @returns {any[]}
  */
-const basePipeline = (reqQuery, user, resourceType, extraFilters) => {
+const basePipeline = (reqQuery, sessionState, resourceType, extraFilters) => {
   /** @type {any[]} */
   const pipeline = []
 
@@ -292,10 +292,10 @@ const basePipeline = (reqQuery, user, resourceType, extraFilters) => {
   // Apply as early as possible the permissions filter
   pipeline.push({
     $match: {
-      $or: permissions.filter(user, resourceType)
+      $or: permissions.filter(sessionState, resourceType)
     }
   })
-  if ((reqQuery.shared === 'false' || reqQuery.mine === 'true') && user) {
+  if ((reqQuery.shared === 'false' || reqQuery.mine === 'true') && sessionState.account) {
     /** @type {any} */
     const accountFilter = { 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id }
     if (sessionState.account.department) accountFilter['owner.department'] = sessionState.account.department
@@ -314,7 +314,7 @@ const basePipeline = (reqQuery, user, resourceType, extraFilters) => {
 /**
  *
  * @param {Record<string, string>} reqQuery
- * @param {any} user
+ * @param {import('@data-fair/lib-express').SessionState} sessionState
  * @param {string} resourceType
  * @param {Record<string, string>} facetFields
  * @param {Record<string, string>} filterFields
@@ -322,10 +322,10 @@ const basePipeline = (reqQuery, user, resourceType, extraFilters) => {
  * @param {any[]} [extraFilters]
  * @returns
  */
-export const facetsQuery = (reqQuery, user, resourceType, facetFields = {}, filterFields, nullFacetFields = [], extraFilters) => {
+export const facetsQuery = (reqQuery, sessionState, resourceType, facetFields = {}, filterFields, nullFacetFields = [], extraFilters) => {
   filterFields = filterFields || facetFields
   const facetsQueryParam = reqQuery.facets
-  const pipeline = basePipeline(reqQuery, user, resourceType, extraFilters)
+  const pipeline = basePipeline(reqQuery, sessionState, resourceType, extraFilters)
 
   const fields = (facetsQueryParam && facetsQueryParam.length && facetsQueryParam.split(',')
     .filter(f => facetFields[f] || f === 'owner' || f === 'visibility')) || []
@@ -466,15 +466,15 @@ export const parseFacets = (facets, nullFacetFields = []) => {
 /**
  *
  * @param {Record<string, string>} reqQuery
- * @param {any} user
+ * @param {import('@data-fair/lib-express').SessionState} sessionState
  * @param {string} resourceType
  * @param {Record<string, string>} sumFields
  * @param {Record<string, string>} filterFields
  * @param {any[]} extraFilters
  * @returns
  */
-export const sumsQuery = (reqQuery, user, resourceType, sumFields = {}, filterFields, extraFilters) => {
-  const pipeline = basePipeline(reqQuery, user, resourceType, extraFilters)
+export const sumsQuery = (reqQuery, sessionState, resourceType, sumFields = {}, filterFields, extraFilters) => {
+  const pipeline = basePipeline(reqQuery, sessionState, resourceType, extraFilters)
   for (const name of Object.keys(filterFields)) {
     if (reqQuery[name] !== undefined) {
       pipeline.push({ $match: { [filterFields[name]]: { $in: reqQuery[name].split(',') } } })

@@ -16,7 +16,7 @@ import axios from '../misc/utils/axios.js'
 import * as esUtils from './es/index.ts'
 import * as uploadUtils from './utils/upload.js'
 import datasetAPIDocs from '../../contract/dataset-api-docs.js'
-import privateDatasetAPIDocs from '../../contract/dataset-private-api-docs.js'
+import privateDatasetAPIDocs from '../../contract/dataset-private-api-docs.ts'
 import * as permissions from '../misc/utils/permissions.ts'
 import * as usersUtils from '../misc/utils/users.js'
 import * as datasetUtils from './utils/index.js'
@@ -53,7 +53,7 @@ import mongo from '#mongo'
 import debugModule from 'debug'
 import contentDisposition from 'content-disposition'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import { session } from '@data-fair/lib-express'
+import { reqAdminMode, reqSession, reqSessionAuthenticated, session } from '@data-fair/lib-express'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import { getFlatten } from './utils/flatten.ts'
@@ -81,11 +81,9 @@ router.get('', apiKeyMiddleware, cacheHeaders.listBased, async (req, res) => {
   const publicationSite = req.publicationSite
   // @ts-ignore
   const publicBaseUrl = req.publicBaseUrl
-  // @ts-ignore
-  const user = req.user
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findDatasets(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, user)
+  const response = await findDatasets(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, reqSession(req))
   for (const r of response.results) {
     datasetUtils.clean(req, r)
   }
@@ -178,16 +176,15 @@ router.patch('/:datasetId',
   async (req, res) => {
     // @ts-ignore
     const dataset = req.dataset
-    // @ts-ignore
-    const user = req.user
 
     const db = mongo.db
     const locale = req.getLocale()
+    const sessionState = reqSessionAuthenticated(req)
 
     const { body: patch } = (await import('#doc/datasets/patch-req/index.js')).returnValid(req)
     validateURLFriendly(locale, patch.slug)
 
-    const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, user, locale)
+    const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, sessionState, locale)
       .catch(err => {
         if (err.code !== 11000) throw err
         throw httpError(400, req.__('errors.dupSlug'))
@@ -197,12 +194,11 @@ router.patch('/:datasetId',
       await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
 
       if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
-        await journals.log(req.app, dataset, { type: 'structure-updated' }, 'dataset', false, req.user)
+        await journals.log(req.app, dataset, { type: 'structure-updated' }, 'dataset', false, sessionState)
       }
 
       eventsLog.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
 
-      const sessionState = await session.req(req)
       const draft = !!dataset.draftReason
       eventsQueue.pushEvent({
         title: `Propriétés modifiées sur un ${draft ? 'brouillon de ' : ''}jeu de données`,
@@ -225,11 +221,13 @@ router.put('/:datasetId/owner', readDataset(), apiKeyMiddleware, permissions.mid
   // @ts-ignore
   const dataset = req.dataset
 
+  const sessionState = reqSessionAuthenticated(req)
+
   // Must be able to delete the current dataset, and to create a new one for the new owner to proceed
-  if (!req.user.adminMode) {
-    if (req.body.type === 'user' && req.body.id !== req.user.id) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
+  if (!sessionState.user.adminMode) {
+    if (req.body.type === 'user' && req.body.id !== sessionState.user.id) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
     if (req.body.type === 'organization') {
-      const userOrg = req.user.organizations.find(o => o.id === req.body.id)
+      const userOrg = sessionState.user.organizations.find(o => o.id === req.body.id)
       if (!userOrg) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
       if (![config.contribRole, config.adminRole].includes(userOrg.role)) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
     }
@@ -255,7 +253,7 @@ router.put('/:datasetId/owner', readDataset(), apiKeyMiddleware, permissions.mid
 
   const patch = {
     owner: req.body,
-    updatedBy: { id: req.user.id, name: req.user.name },
+    updatedBy: { id: sessionState.user.id, name: sessionState.user.name },
     updatedAt: moment().toISOString()
   }
 
@@ -299,7 +297,6 @@ router.put('/:datasetId/owner', readDataset(), apiKeyMiddleware, permissions.mid
 
   eventsLog.info('df.datasets.changeOwnerFrom', eventLogMessage, { req, account: dataset.owner })
   eventsLog.info('df.datasets.changeOwnerTo', eventLogMessage, { req, account: patch.owner })
-  const sessionState = await session.req(req)
   const event = {
     title: 'Changement de propriétaire d\'un jeu de données',
     body: `${dataset.title} (${dataset.slug}), ${arrowStr}`,
@@ -354,18 +351,15 @@ const createDatasetRoute = async (req, res) => {
   const db = mongo.db
   const es = req.app.get('es')
   const locale = req.getLocale()
-  // @ts-ignore
-  const user = /** @type {any} */(req.user)
+  const sessionState = reqSessionAuthenticated(req)
   const draft = req.query.draft === 'true'
-
-  if (!user) throw httpError(401)
 
   /** @type {undefined | any[]} */
   const files = await uploadUtils.getFiles(req, res)
 
   try {
     if (files) {
-      await clamav.checkFiles(files, user)
+      await clamav.checkFiles(files, sessionState.user)
       debugFiles('POST datasets uploaded some files', files)
     }
 
@@ -373,7 +367,7 @@ const createDatasetRoute = async (req, res) => {
     const { body } = (await import('#doc/datasets/post-req/index.js')).returnValid(req)
 
     const owner = usersUtils.owner(req)
-    if (!permissions.canDoForOwner(owner, 'datasets', 'post', user)) {
+    if (!permissions.canDoForOwner(owner, 'datasets', 'post', sessionState)) {
       throw httpError(403, req.__('errors.missingPermission'))
     }
     if ((await limits.remaining(owner)).nbDatasets === 0) {
@@ -392,7 +386,7 @@ const createDatasetRoute = async (req, res) => {
     const onClose = (callback) => res.on('close', callback)
     res.setMaxListeners(100)
 
-    const dataset = await createDataset(db, es, locale, user, owner, body, files, draft, onClose)
+    const dataset = await createDataset(db, es, locale, sessionState, owner, body, files, draft, onClose)
 
     if (dataset.isRest && dataset.status === 'finalized') {
       // case where we simply initialize the empty dataset
@@ -416,7 +410,7 @@ const createDatasetRoute = async (req, res) => {
 
     eventsLog.info('df.datasets.create', `created a dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
 
-    await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset', false, req.user)
+    await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset', false, sessionState)
     await syncRemoteService(db, dataset)
 
     res.status(201).send(clean(req, dataset, draft))
@@ -438,8 +432,6 @@ const updateDatasetRoute = async (req, res, next) => {
     return
   }
 
-  // @ts-ignore
-  const user = req.user
   // TODO: replace this with a string draftValidationMode ?
   const draft = req.query.draft === 'true'
   // force the file upload middleware to write files in draft directory, as updated datasets always go into draft mode
@@ -447,12 +439,13 @@ const updateDatasetRoute = async (req, res, next) => {
 
   const db = mongo.db
   const locale = req.getLocale()
+  const sessionState = reqSessionAuthenticated(req)
 
   const files = await uploadUtils.getFiles(req, res)
 
   try {
     if (files) {
-      await clamav.checkFiles(files, user)
+      await clamav.checkFiles(files, sessionState.user)
     }
 
     req.body = uploadUtils.getFormBody(req.body)
@@ -478,14 +471,14 @@ const updateDatasetRoute = async (req, res, next) => {
       else draftValidationMode = 'compatible'
     }
 
-    const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, user, locale, draftValidationMode, files)
+    const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, sessionState, locale, draftValidationMode, files)
       .catch(err => {
         if (err.code !== 11000) throw err
         throw httpError(400, req.__('errors.dupSlug'))
       })
 
     if (!isEmpty) {
-      await publicationSites.applyPatch(db, dataset, { ...dataset, ...patch }, user, 'dataset')
+      await publicationSites.applyPatch(db, dataset, { ...dataset, ...patch }, sessionState, 'dataset')
       await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
 
       eventsLog.info('df.datasets.update', `updated dataset ${dataset.slug} (${dataset.id}) keys ${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
@@ -502,7 +495,7 @@ const updateDatasetRoute = async (req, res, next) => {
         resource: { type: 'dataset', title: dataset.title, id: dataset.id }
       }, sessionState)
 
-      if (files) await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset', false, req.user)
+      if (files) await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset', false, sessionState)
       await syncRemoteService(db, dataset)
     }
   } catch (err) {
@@ -530,7 +523,7 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
 
   const patch = { status: 'validated', validateDraft: true }
   await applyPatch(req.app, dataset, patch)
-  await journals.log(req.app, dataset, { type: 'draft-validated', data: 'validation manuelle' }, 'dataset', false, req.user)
+  await journals.log(req.app, dataset, { type: 'draft-validated', data: 'validation manuelle' }, 'dataset', false, sessionState)
 
   eventsLog.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
   const sessionState = await session.req(req)
@@ -561,7 +554,7 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
   if (!datasetFull.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
-  await journals.log(req.app, dataset, { type: 'draft-cancelled' }, 'dataset', false, req.user)
+  await journals.log(req.app, dataset, { type: 'draft-cancelled' }, 'dataset', false, sessionState)
   const patchedDataset = await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $unset: { draft: '' } }, { returnDocument: 'after' })
   await fs.remove(dir(dataset))
@@ -607,6 +600,7 @@ router.post('/:datasetId/_sync_attachments_lines', readWritableDataset, isRest, 
 
 // specific routes with rest datasets with lineOwnership activated
 router.use('/:datasetId/own/:owner', readWritableDataset, isRest, apiKeyMiddleware, (req, res, next) => {
+  const sessionState = reqSessionAuthenticated(req)
   if (!req.dataset.rest?.lineOwnership) {
     return res.status(501)
       .send('Les opérations de gestion des lignes par propriétaires ne sont pas supportées pour ce jeu de données.')
@@ -614,16 +608,15 @@ router.use('/:datasetId/own/:owner', readWritableDataset, isRest, apiKeyMiddlewa
   const [type, id, department] = req.params.owner.split(':')
   req.linesOwner = { type, id, department }
   if (!['organization', 'user'].includes(req.linesOwner.type)) return res.status(400).type('text/plain').send('ownerType must be user or organization')
-  if (!req.user) return res.status(401).type('text/plain').send('auth required')
-  if (req.linesOwner.type === 'organization' && req.sessionState.account.type === 'organization' && req.sessionState.account.id === req.linesOwner.id && (req.sessionState.account.department || null) === (req.linesOwner.department || null)) {
-    req.linesOwner.name = req.sessionState.account.name
+  if (req.linesOwner.type === 'organization' && sessionState.account.type === 'organization' && sessionState.account.id === req.linesOwner.id && (sessionState.account.department || null) === (req.linesOwner.department || null)) {
+    req.linesOwner.name = sessionState.account.name
     return next()
   }
-  if (req.linesOwner.type === 'user' && req.user.id === req.linesOwner.id) {
-    req.linesOwner.name = req.user.name
+  if (req.linesOwner.type === 'user' && sessionState.user.id === req.linesOwner.id) {
+    req.linesOwner.name = sessionState.user.name
     return next()
   }
-  if (req.user.adminMode) return next()
+  if (sessionState.user.adminMode) return next()
   res.status(403).type('text/plain').send('only owner can manage his own lines')
 })
 router.get('/:datasetId/own/:owner/lines/:lineId', readDataset(), isRest, apiKeyMiddleware, applicationKey, permissions.middleware('readOwnLine', 'manageOwnLines', 'readDataAPI'), cacheHeaders.noCache, restDatasetsUtils.readLine)
@@ -1007,9 +1000,10 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
 router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('getValuesAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), async (req, res) => {
   res.throttleEnd()
   const db = mongo.db
+  const sessionState = reqSessionAuthenticated(req)
 
   /** @type {object | null} */
-  const explain = req.query.explain === 'true' && req.user && (req.user.isAdmin || req.user.asAdmin) ? {} : null
+  const explain = req.query.explain === 'true' && sessionState.user && (sessionState.user.isAdmin || sessionState.user.asAdmin) ? {} : null
 
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
   const useVTCache = vectorTileRequested && !config.cache.disabled && !(config.cache.reverseProxyCache && req.publicOperation && req.query.finalizedAt)
@@ -1285,8 +1279,9 @@ router.delete('/:datasetId/metadata-attachments/*attachmentPath', readDataset(),
 
 // Download the full dataset in its original form
 router.get('/:datasetId/raw', readDataset(), apiKeyMiddleware, permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
+  const sessionState = reqSession(req)
   // a special case for superadmins.. handy but quite dangerous for the db load
-  if (req.dataset.isRest && req.user.adminMode) {
+  if (req.dataset.isRest && sessionState.user?.adminMode) {
     const query = { ...req.query }
     query.select = query.select || ['_id'].concat(req.dataset.schema.filter(f => !f['x-calculated']).map(f => f.key)).join(',')
     res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.csv'))
@@ -1332,7 +1327,7 @@ router.get('/:datasetId/api-docs.json', readDataset(), apiKeyMiddleware, permiss
 router.get('/:datasetId/private-api-docs.json', readDataset(), apiKeyMiddleware, permissions.middleware('readPrivateApiDoc', 'readAdvanced'), cacheHeaders.noCache, async (req, res) => {
   const settings = await mongo.db.collection('settings')
     .findOne({ type: req.dataset.owner.type, id: req.dataset.owner.id }, { projection: { info: 1, compatODS: 1 } })
-  res.send(privateDatasetAPIDocs(req.dataset, req.publicBaseUrl, req.user, settings))
+  res.send(privateDatasetAPIDocs(req.dataset, req.publicBaseUrl, reqSessionAuthenticated(req), settings))
 })
 
 router.get('/:datasetId/journal', readDataset({ acceptInitialDraft: true }), apiKeyMiddleware, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, async (req, res) => {
@@ -1379,10 +1374,11 @@ router.post(
   async (req, res, next) => {
     const userNotification = req.body
     validateUserNotification(userNotification)
+    const sessionState = reqSessionAuthenticated(req)
     const urlParams = userNotification.urlParams || {}
     userNotification.visibility = userNotification.visibility || 'private'
     if (userNotification.visibility !== 'private') {
-      const ownerRole = permissions.getOwnerRole(req.dataset.owner, req.user)
+      const ownerRole = permissions.getOwnerRole(req.dataset.owner, sessionState)
       if (!['admin', 'contrib'].includes(ownerRole)) return res.status(403).type('text/plain').send('User does not have permission to emit a public notification')
     }
     const notif = {
@@ -1390,10 +1386,10 @@ router.post(
       topic: { key: `data-fair:dataset-user-notification:${req.dataset.slug}:${userNotification.topic}` },
       title: userNotification.title,
       body: userNotification.body,
-      urlParams: { ...urlParams, datasetId: req.dataset.id, datasetSlug: req.dataset.slug, userId: req.user.id },
+      urlParams: { ...urlParams, datasetId: req.dataset.id, datasetSlug: req.dataset.slug, userId: sessionState.user.id },
       visibility: userNotification.visibility,
       recipient: userNotification.recipient,
-      extra: { user: { id: req.user.id, name: req.user.name } },
+      extra: { user: { id: sessionState.user.id, name: sessionState.user.name } },
       resource: { type: 'dataset', id: req.dataset.id }
     }
     const sessionState = await session.req(req)
@@ -1445,8 +1441,7 @@ router.post('/:datasetId/_simulate-extension', readDataset(), permissions.middle
 
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.
 router.get('/:datasetId/_diagnose', readDataset(), cacheHeaders.noCache, async (req, res) => {
-  if (!req.user) return res.status(401).type('text/plain').send()
-  if (!req.user.adminMode) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
+  reqAdminMode(req)
   const esInfos = await esUtils.datasetInfos(req.app.get('es'), req.dataset)
   const filesInfos = await datasetUtils.lsFiles(req.dataset)
   const locks = [
@@ -1458,24 +1453,21 @@ router.get('/:datasetId/_diagnose', readDataset(), cacheHeaders.noCache, async (
 
 // Special admin route to force reindexing a dataset
 router.post('/:datasetId/_reindex', readDataset(), async (req, res) => {
-  if (!req.user) return res.status(401).type('text/plain').send()
-  if (!req.user.adminMode) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
+  reqAdminMode(req)
   const patchedDataset = await datasetUtils.reindex(mongo.db, req.dataset)
   res.status(200).send(patchedDataset)
 })
 
 // Special admin route to force refinalizing a dataset
 router.post('/:datasetId/_refinalize', readDataset(), async (req, res) => {
-  if (!req.user) return res.status(401).type('text/plain').send()
-  if (!req.user.adminMode) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
+  reqAdminMode(req)
   const patchedDataset = await datasetUtils.refinalize(mongo.db, req.dataset)
   res.status(200).send(patchedDataset)
 })
 
 // Special admin route to clear all locks on a dataset
 router.delete('/:datasetId/_lock', readDataset(), async (req, res) => {
-  if (!req.user) return res.status(401).type('text/plain').send()
-  if (!req.user.adminMode) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
+  reqAdminMode(req)
   const db = mongo.db
   await db.collection('locks').deleteOne({ _id: `dataset:${req.dataset.id}` })
   await db.collection('locks').deleteOne({ _id: `dataset:slug:${req.dataset.owner.type}:${req.dataset.owner.id}:${req.dataset.slug}` })

@@ -7,6 +7,7 @@ import { getOwnerRole } from '../misc/utils/permissions.ts'
 import { checkStorage as checkStorageFn } from './utils/storage.ts'
 import * as service from './service.js'
 import { withQuery } from 'ufo'
+import { reqSession, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
 
 /**
  *
@@ -16,8 +17,7 @@ import { withQuery } from 'ufo'
  */
 // @ts-ignore
 export const checkStorage = (overwrite, indexed = false) => async (req, res, next) => {
-  // @ts-ignore
-  if (!req.user) throw httpError(401)
+  reqUserAuthenticated(req)
   if (process.env.NO_STORAGE_CHECK === 'true') return next()
   if (!req.get('Content-Length')) throw httpError(411, 'Content-Length is mandatory')
   const contentLength = Number(req.get('Content-Length'))
@@ -81,16 +81,15 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
   }
 
   if (fillDescendants && dataset.virtual && dataset.virtual.filterActiveAccount) {
-    const activeAccount = req.user?.activeAccount
-    if (!activeAccount) throw httpError(401, 'No active account')
-    const ownerRole = getOwnerRole(dataset.owner, req.user)
+    const { user, account: activeAccount } = reqSessionAuthenticated(req)
+    const ownerRole = getOwnerRole(dataset.owner, reqSession(req))
     if (!ownerRole) {
       let account = `${activeAccount.type}:${activeAccount.id}${activeAccount.department ? ':' + activeAccount.department : ''}`
       if (req.query.account && req.query.account !== account) throw httpError(403, 'You are not allowed to use the account parameter')
       if (!req.query.account) {
         if (activeAccount.type === 'organization') {
           // also use personnal permissions
-          account += `,user:${req.user.id}`
+          account += `,user:${user.id}`
         }
       }
       req.url = withQuery(req.url, { account })

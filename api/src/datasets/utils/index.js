@@ -15,6 +15,7 @@ import * as schemaUtils from './data-schema.js'
 import * as readApiKeyUtils from './read-api-key.js'
 import mergeDraft from './merge-draft.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import { reqSession } from '@data-fair/lib-express'
 
 export { default as mergeDraft } from './merge-draft.js'
 export * from './types.js'
@@ -158,7 +159,7 @@ export const clean = (req, dataset, draft = false) => {
 
   const select = query.select ? query.select.split(',') : []
   if (query.raw !== 'true') {
-    dataset.userPermissions = permissions.list('datasets', dataset, req.user, req.bypassPermissions)
+    dataset.userPermissions = permissions.list('datasets', dataset, reqSession(req), req.bypassPermissions)
     const thumbnail = query.thumbnail || '300x200'
     if (draft) mergeDraft(dataset)
     if (!select.includes('-public')) dataset.public = permissions.isPublic('datasets', dataset)

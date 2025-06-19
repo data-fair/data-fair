@@ -16,9 +16,9 @@ const fieldsMap = {
  * @param {import('mongodb').Db} db
  * @param {string} locale
  * @param {Record<string, string>} reqQuery
- * @param {any} user
+ * @param {SessionState} sessionState
  */
-export const findCatalogs = async (db, locale, reqQuery, user) => {
+export const findCatalogs = async (db, locale, reqQuery, sessionState) => {
   const catalogs = db.collection('catalogs')
   const query = findUtils.query(reqQuery, locale, user, 'catalogs', fieldsMap, false)
   const sort = findUtils.sort(reqQuery.sort)
@@ -34,7 +34,7 @@ export const findCatalogs = async (db, locale, reqQuery, user) => {
   let [results, count, facets] = await Promise.all(mongoQueries)
   // @ts-ignore
   for (const r of results) {
-    r.userPermissions = permissions.list('catalogs', r, user)
+    r.userPermissions = permissions.list('catalogs', r, sessionState)
     clean(r, reqQuery.html === 'true')
   }
   facets = findUtils.parseFacets(facets)
