@@ -4,7 +4,7 @@ import equal from 'deep-equal'
 import vocabulary from '../../../contract/vocabulary.js'
 import * as geoUtils from './geo.js'
 import * as i18nUtils from '../../../i18n/utils.js'
-import * as settingsUtils from '../../misc/utils/settings.js'
+import * as settingsUtils from '../../misc/utils/settings.ts'
 import { cleanJsonSchemaProperty } from '@data-fair/data-fair-shared/schema.js'
 import capabilitiesSchema from '../../../contract/capabilities.js'
 
@@ -225,7 +225,7 @@ export const extendedSchema = async (db, dataset, fixConcept = true) => {
       if (field['x-refersTo']) {
         let concept = standardVocabulary.find(c => c.identifiers.includes(field['x-refersTo']))
         if (!concept) {
-          ownerVocabulary = ownerVocabulary || await settingsUtils.getPrivateOwnerVocabulary(db, dataset.owner)
+          ownerVocabulary = ownerVocabulary || await settingsUtils.getPrivateOwnerVocabulary(dataset.owner)
           concept = ownerVocabulary.find(c => c.identifiers.includes(field['x-refersTo']))
         }
         if (concept) {

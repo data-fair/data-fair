@@ -44,13 +44,8 @@ export const run = async () => {
   if (config.mode.includes('server')) {
     const limits = await import('./misc/utils/limits.ts')
     const rateLimiting = await import('./misc/utils/rate-limiting.js')
-    const session = (await import('@data-fair/sd-express')).default({
-      directoryUrl: config.directoryUrl,
-      privateDirectoryUrl: config.privateDirectoryUrl
-    })
-    const { session: libSession } = await import('@data-fair/lib-express/index.js')
-    libSession.init(config.directoryUrl)
-    app.set('session', session)
+    const { session } = await import('@data-fair/lib-express/index.js')
+    session.init(config.directoryUrl)
 
     app.set('trust proxy', 1)
     app.set('json spaces', 2)
@@ -97,7 +92,7 @@ export const run = async () => {
     })
     app.use((await import('cookie-parser')).default())
     app.use((await import('../i18n/utils.js')).middleware)
-    app.use(session.auth)
+    app.use(session.middleware())
 
     // TODO: we could make this better targetted but more verbose by adding it to all routes
     app.use((await import('./misc/utils/expect-type.js')).default(['application/json', 'application/x-ndjson', 'multipart/form-data', 'text/csv', 'text/csv+gzip']))
@@ -176,7 +171,7 @@ export const run = async () => {
 
     // Business routers
     const { middleware: apiKey } = await import('./misc/utils/api-key.ts')
-    app.use('/api/v1', (await import('./misc/routers/root.js')).default)
+    app.use('/api/v1', (await import('./misc/routers/root.ts')).default)
     app.use('/api/v1/remote-services', (await import('./remote-services/router.js')).router)
     app.use('/api/v1/remote-services-actions', (await import('./remote-services/router.js')).actionsRouter)
     app.use('/api/v1/catalog', apiKey('datasets'), (await import('./misc/routers/catalog.js')).default)
@@ -185,7 +180,7 @@ export const run = async () => {
     app.use('/api/v1/applications', apiKey('applications'), (await import('./applications/router.js')).default)
     app.use('/api/v1/datasets', rateLimiting.middleware(), (await import('./datasets/router.js')).default)
     app.use('/api/v1/stats', apiKey('stats'), (await import('./misc/routers/stats.js')).default)
-    app.use('/api/v1/settings', (await import('./misc/routers/settings.js')).default)
+    app.use('/api/v1/settings', (await import('./misc/routers/settings.ts')).default)
     app.use('/api/v1/admin', (await import('./misc/routers/admin.js')).default)
     app.use('/api/v1/identities', (await import('./misc/routers/identities.js')).default)
     app.use('/api/v1/activity', (await import('./misc/routers/activity.js')).default)

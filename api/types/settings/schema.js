@@ -4,7 +4,7 @@ const publicationSites = _publicationSites()
 export default {
   $id: 'https://github.com/data-fair/data-fair/settings',
   title: 'Settings',
-  'x-exports': ['types', 'resolvedSchema'],
+  'x-exports': ['types', 'resolvedSchema', 'validate'],
   type: 'object',
   required: ['id', 'type'],
   additionalProperties: false,

@@ -1,6 +1,6 @@
 import type { Request as ExpressRequest } from 'express'
 import type { Dataset } from './.type/index.js'
-import type { Account } from '@data-fair/lib-express'
+import { httpError, type Account } from '@data-fair/lib-express'
 export * from './.type/index.js'
 
 type Action = 'create' | 'update' | 'delete' | 'patch' | 'createOrUpdate'
@@ -8,6 +8,9 @@ type Action = 'create' | 'update' | 'delete' | 'patch' | 'createOrUpdate'
 export type RestDataset = Omit<Dataset, 'isRest' | 'rest' | 'schema'> & { isRest: true } & Required<Pick<Dataset, 'rest' | 'schema'>>
 export const isRestDataset = (dataset: Dataset): dataset is RestDataset => {
   return !!dataset.isRest
+}
+export function assertRestDataset (dataset: Dataset): asserts dataset is RestDataset {
+  if (!dataset.isRest) throw httpError(400, 'dataset is not "rest"')
 }
 
 export type VirtualDataset = Omit<Dataset, 'isVirtual' | 'virtual' | 'schema'> & { isVirtual: true, descendants?: string[] } & Required<Pick<Dataset, 'virtual' | 'schema'>>

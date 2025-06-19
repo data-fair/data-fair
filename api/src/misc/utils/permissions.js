@@ -2,7 +2,7 @@ import config from '#config'
 import mongo from '#mongo'
 import express from 'express'
 import permissionsSchema from '../../../contract/permissions.js'
-import * as apiDocsUtil from './api-docs.js'
+import * as apiDocsUtil from './api-docs.ts'
 import * as visibilityUtils from './visibility.js'
 import * as ajv from './ajv.js'
 

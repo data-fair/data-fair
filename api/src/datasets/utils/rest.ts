@@ -31,11 +31,11 @@ import * as esUtils from '../es/index.ts'
 import { tabularTypes } from './types.js'
 import { Piscina } from 'piscina'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RequestWithAuth } from '#types'
+import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision } from '#types'
 import type { NextFunction, Response, RequestHandler } from 'express'
-import type { Account, User } from '@data-fair/lib-express'
+import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionState, type SessionStateAuthenticated, type User } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
-import type { RequestWithRestDataset } from '#types/dataset/index.ts'
+import { assertRestDataset, type Dataset, type RequestWithRestDataset } from '#types/dataset/index.ts'
 import type { Collection, Filter, UnorderedBulkOperation, UpdateFilter } from 'mongodb'
 import iterHits from '../es/iter-hits.js'
 
@@ -220,14 +220,7 @@ const getLineFromOperation = (operation: Operation): DatasetLine => {
   return line
 }
 
-/**
- * @param {import('mongodb').Db} db
- * @param {any} tmpDataset
- * @param {any} dataset
- * @param {string[]} existingIds
- * @param {any} user
- */
-const checkMissingIdsRevisions = async (tmpDataset: RestDataset, dataset: RestDataset, existingIds: string[], user: User) => {
+const checkMissingIdsRevisions = async (tmpDataset: RestDataset, dataset: RestDataset, existingIds: string[], sessionState: SessionStateAuthenticated) => {
   const missingIds = new Set(existingIds)
   for await (const stillExistingDoc of collection(tmpDataset).find({ _id: { $in: existingIds } })) {
     missingIds.delete(stillExistingDoc._id)
@@ -262,18 +255,17 @@ const checkMissingIdsRevisions = async (tmpDataset: RestDataset, dataset: RestDa
   }
 }
 
-const createTmpMissingRevisions = async (tmpDataset: RestDataset, dataset: RestDataset, user: User) => {
-  /** @type {string[]} */
-  let existingIds = []
+const createTmpMissingRevisions = async (tmpDataset: RestDataset, dataset: RestDataset, sessionState: SessionStateAuthenticated) => {
+  let existingIds: string[] = []
 
   for await (const existingDoc of collection(dataset).find({}).project({ _id: 1 })) {
     existingIds.push(existingDoc._id)
     if (existingIds.length === 1000) {
-      await checkMissingIdsRevisions(tmpDataset, dataset, existingIds, user)
+      await checkMissingIdsRevisions(tmpDataset, dataset, existingIds, sessionState)
       existingIds = []
     }
   }
-  if (existingIds.length) await checkMissingIdsRevisions(tmpDataset, dataset, existingIds, user)
+  if (existingIds.length) await checkMissingIdsRevisions(tmpDataset, dataset, existingIds, sessionState)
 }
 
 const getPrimaryKeyProjection = (dataset: RestDataset) => {
@@ -284,7 +276,7 @@ const getPrimaryKeyProjection = (dataset: RestDataset) => {
   return primaryKeyProjection
 }
 
-export const applyTransactions = async (dataset: RestDataset, user: User | undefined, transacs: DatasetLineAction[], validate?: ValidateFunction, linesOwner?: Account, tmpDataset?: RestDataset) => {
+export const applyTransactions = async (dataset: RestDataset, sessionState: SessionStateAuthenticated, transacs: DatasetLineAction[], validate?: ValidateFunction, linesOwner?: Account, tmpDataset?: RestDataset) => {
   const datasetCreatedAt = new Date(dataset.createdAt).getTime()
   const updatedAt = new Date()
   const c = collection(tmpDataset || dataset)
@@ -299,7 +291,6 @@ export const applyTransactions = async (dataset: RestDataset, user: User | undef
   const primaryKeyProjection = getPrimaryKeyProjection(dataset)
 
   // prepare future results that will be completed by the following loops
-  /** @type {Operation[]} */
   const operations = []
   let i = 0
   const patchPreviousFilters = []
@@ -332,9 +323,9 @@ export const applyTransactions = async (dataset: RestDataset, user: User | undef
     // lots of objects to process, so we yield to the event loop every 100 lines
     if (i % 100 === 0) await new Promise(resolve => setImmediate(resolve))
 
-    if (user && dataset.rest.storeUpdatedBy) {
-      operation.fullBody._updatedBy = user.id
-      operation.fullBody._updatedByName = user.name
+    if (dataset.rest.storeUpdatedBy) {
+      operation.fullBody._updatedBy = sessionState.user.id
+      operation.fullBody._updatedByName = sessionState.user.name
     }
 
     if (_action === 'delete') {
@@ -536,17 +527,17 @@ export const applyTransactions = async (dataset: RestDataset, user: User | undef
     }
   }
 
-  if (user && bulkOpMatchingOperations.length) {
+  if (bulkOpMatchingOperations.length) {
     mongo.datasets.updateOne(
       { id: dataset.id },
-      { $set: { dataUpdatedAt: updatedAt.toISOString(), dataUpdatedBy: { id: user.id, name: user.name } } })
+      { $set: { dataUpdatedAt: updatedAt.toISOString(), dataUpdatedBy: { id: sessionState.user.id, name: sessionState.user.name } } })
   }
 
   return { operations, bulkOpResult }
 }
 
-const applyReqTransactions = async (req: RequestWithRestDataset & RequestWithAuth, transacs: DatasetLineAction[], validate: ValidateFunction, tmpDataset?: RestDataset) => {
-  return applyTransactions(req.dataset, req.user, transacs, validate, req.linesOwner, tmpDataset)
+const applyReqTransactions = async (req: RequestWithRestDataset, transacs: DatasetLineAction[], validate: ValidateFunction, tmpDataset?: RestDataset) => {
+  return applyTransactions(req.dataset, reqSessionAuthenticated(req), transacs, validate, req.linesOwner, tmpDataset)
 }
 
 type Summary = { nbOk: number, nbNotModified: number, nbErrors: number, nbCreated: number, nbModified: number, nbDeleted: number, errors: { line: number, error: string, status: number }[], warnings: string[], cancelled?: boolean, dropped?: boolean, _ids: Set<string>, indexedAt?: string }
@@ -555,7 +546,7 @@ const initSummary = (): Summary => ({ nbOk: 0, nbNotModified: 0, nbErrors: 0, nb
 
 type TransactionStreamOptions = {
   dataset: RestDataset,
-  user?: User,
+  sessionState: SessionStateAuthenticated,
   linesOwner?: Account,
   validate?: ValidateFunction,
   tmpDataset?: RestDataset,
@@ -574,7 +565,7 @@ class TransactionStream extends Writable {
   }
 
   async applyTransactions () {
-    const { operations, bulkOpResult } = await applyTransactions(this.options.dataset, this.options.user, this.transactions, this.options.validate, this.options.linesOwner, this.options.tmpDataset)
+    const { operations, bulkOpResult } = await applyTransactions(this.options.dataset, this.options.sessionState, this.transactions, this.options.validate, this.options.linesOwner, this.options.tmpDataset)
 
     if (operations.length + this.options.summary._ids.size < config.elasticsearch.maxBulkLines) {
       for (const op of operations) this.options.summary._ids.add(op._id)
@@ -724,7 +715,7 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
   })
 }
 
-export const readLine = async (req: RequestWithAuth & RequestWithRestDataset, res: Response, next: NextFunction) => {
+export const readLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   const c = collection(req.dataset)
   const filter: Filter<DatasetLine> = { _id: req.params.lineId }
   if (req.linesOwner) Object.assign(filter, linesOwnerFilter(req.linesOwner))
@@ -741,8 +732,8 @@ export const readLine = async (req: RequestWithAuth & RequestWithRestDataset, re
   res.send(line)
 }
 
-export const deleteLine = async (req: RequestWithAuth & RequestWithRestDataset & { params: { lineId: string } }, res: Response, next: NextFunction) => {
-  const [operation] = (await applyReqTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset, !!req.user.adminMode))).operations
+export const deleteLine = async (req: RequestWithRestDataset & { params: { lineId: string } }, res: Response, next: NextFunction) => {
+  const [operation] = (await applyReqTransactions(req, [{ _action: 'delete', _id: req.params.lineId }], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
   if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
   await commitLines(req.dataset, [req.params.lineId])
 
@@ -754,7 +745,7 @@ export const deleteLine = async (req: RequestWithAuth & RequestWithRestDataset &
   storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after deleteLine', err))
 }
 
-export const createOrUpdateLine = async (req: RequestWithAuth & RequestWithRestDataset, res: Response, next: NextFunction) => {
+export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   formatLine(req.body, req.dataset.schema)
 
   if (req.linesOwner) Object.assign(req.body, linesOwnerCols(req.linesOwner))
@@ -763,7 +754,7 @@ export const createOrUpdateLine = async (req: RequestWithAuth & RequestWithRestD
   req.body._id = definedId || nanoid()
 
   await manageAttachment(req, false)
-  const [operation] = (await applyReqTransactions(req, [req.body], compileSchema(req.dataset, !!req.user.adminMode))).operations
+  const [operation] = (await applyReqTransactions(req, [req.body], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
   if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
   await commitLines(req.dataset, [req.body._id])
 
@@ -775,11 +766,11 @@ export const createOrUpdateLine = async (req: RequestWithAuth & RequestWithRestD
   storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
 }
 
-export const patchLine = async (req: RequestWithAuth & RequestWithRestDataset, res: Response, next: NextFunction) => {
+export const patchLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   await manageAttachment(req, true)
   const fullLine = { _action: 'patch', _id: req.params.lineId, ...req.body }
   formatLine(fullLine, req.dataset.schema)
-  const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!req.user.adminMode))).operations
+  const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
   if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
   await commitLines(req.dataset, [fullLine._id])
 
@@ -791,7 +782,7 @@ export const patchLine = async (req: RequestWithAuth & RequestWithRestDataset, r
   storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
 }
 
-export const deleteAllLines = async (req: RequestWithAuth & RequestWithRestDataset, res: Response, next: NextFunction) => {
+export const deleteAllLines = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   await initDataset(req.dataset)
   const indexName = await esUtils.initDatasetIndex(es.client, req.dataset)
   await esUtils.switchAlias(es.client, req.dataset, indexName)
@@ -807,9 +798,9 @@ export const deleteAllLines = async (req: RequestWithAuth & RequestWithRestDatas
 
 type ReqFile = { filename: string, originalname: string, mimetype: string, path: string }
 
-export const bulkLines = async (req: RequestWithAuth & RequestWithRestDataset & { files?: { attachments?: ReqFile[], actions?: ReqFile[] } }, res: Response, next: NextFunction) => {
+export const bulkLines = async (req: RequestWithRestDataset & { files?: { attachments?: ReqFile[], actions?: ReqFile[] } }, res: Response, next: NextFunction) => {
   try {
-    const validate = compileSchema(req.dataset, !!req.user.adminMode)
+    const validate = compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode)
     const drop = req.query.drop === 'true'
 
     // no buffering of this response in the reverse proxy
@@ -818,7 +809,7 @@ export const bulkLines = async (req: RequestWithAuth & RequestWithRestDataset & 
     // If attachments are sent, add them to the existing ones
     const attachmentsFile = req.files?.attachments?.[0]
     if (attachmentsFile) {
-      await mongo.datasets.updateOne({ id: req.dataset.id }, { $push: { _newRestAttachments: (drop ? 'drop:' : '') + req.files.attachments[0].filename } })
+      await mongo.datasets.updateOne({ id: req.dataset.id }, { $push: { _newRestAttachments: (drop ? 'drop:' : '') + attachmentsFile.filename } })
     }
 
     // The list of actions/operations/transactions is either in a "actions" file
@@ -885,7 +876,7 @@ export const bulkLines = async (req: RequestWithAuth & RequestWithRestDataset & 
     const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, req.dataset, true, false)
 
     const summary = initSummary()
-    const transactionStream = new TransactionStream({ dataset: req.dataset, user: req.user, linesOwner: req.linesOwner, validate, summary, tmpDataset })
+    const transactionStream = new TransactionStream({ dataset: req.dataset, sessionState: reqSessionAuthenticated(req), linesOwner: req.linesOwner, validate, summary, tmpDataset })
 
     // we try both to have a HTTP failure if the transactions are clearly badly formatted
     // and also to start writing in the HTTP response as soon as possible to limit the timeout risks
@@ -911,7 +902,7 @@ export const bulkLines = async (req: RequestWithAuth & RequestWithRestDataset & 
           summary.cancelled = true
           await collection(tmpDataset).drop()
         } else {
-          await createTmpMissingRevisions(tmpDataset, req.dataset, req.user)
+          await createTmpMissingRevisions(tmpDataset, req.dataset, reqSessionAuthenticated(req))
           await collection(req.dataset).drop()
           await collection(tmpDataset).rename(collectionName(req.dataset))
           summary.dropped = true
@@ -959,11 +950,11 @@ export const bulkLines = async (req: RequestWithAuth & RequestWithRestDataset & 
   }
 }
 
-export const syncAttachmentsLines = async (req: RequestWithAuth & RequestWithRestDataset, res: Response, next: NextFunction) => {
+export const syncAttachmentsLines = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   const dataset = req.dataset
-  const validate = compileSchema(req.dataset, !!req.user.adminMode)
+  const validate = compileSchema(dataset, !!reqUserAuthenticated(req).adminMode)
 
-  const pathField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
+  const pathField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (!pathField) {
     throw httpError(400, 'Le schéma ne prévoit pas de pièce jointe')
   }
@@ -986,7 +977,7 @@ export const syncAttachmentsLines = async (req: RequestWithAuth & RequestWithRes
   filesStream.push(null)
 
   const summary = initSummary()
-  const transactionStream = new TransactionStream({ dataset: req.dataset, user: req.user, linesOwner: req.linesOwner, validate, summary })
+  const transactionStream = new TransactionStream({ dataset: req.dataset, sessionState: reqSessionAuthenticated(req), linesOwner: req.linesOwner, validate, summary })
   await pump(filesStream, transactionStream)
 
   await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { _partialRestStatus: 'updated' } })
@@ -995,8 +986,8 @@ export const syncAttachmentsLines = async (req: RequestWithAuth & RequestWithRes
   res.send(summary)
 }
 
-export const readRevisions = async (req: RequestWithAuth & RequestWithRestDataset, res: Response, next: NextFunction) => {
-  if (!req.dataset.rest || !req.dataset.rest.history) {
+export const readRevisions = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
+  if (!req.dataset.rest.history) {
     return res.status(400).type('text/plain').send('L\'historisation des lignes n\'est pas activée pour ce jeu de données.')
   }
   const rc = revisionsCollection(req.dataset)

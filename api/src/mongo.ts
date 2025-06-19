@@ -1,6 +1,8 @@
 import { Mongo } from '@data-fair/lib-node/mongo.js'
 import config from '#config'
 import type { Application, ApplicationKey, Dataset, Limits } from '#types'
+import type { DepartmentSettings } from '#types/department-settings/index.js'
+import type { Settings } from '#types/settings/index.js'
 
 export class DfMongo {
   /** @type {Mongo} */
@@ -28,6 +30,10 @@ export class DfMongo {
 
   get limits () {
     return this.mongo.db.collection<Limits>('limits')
+  }
+
+  get settings () {
+    return this.mongo.db.collection<Settings | DepartmentSettings>('settings')
   }
 
   constructor () {

@@ -6,14 +6,14 @@ import * as findUtils from '../utils/find.js'
 import * as baseAppsUtils from '../../base-applications/utils.js'
 import * as cacheHeaders from '../utils/cache-headers.js'
 import mongo from '#mongo'
+import { reqAdminMode } from '@data-fair/lib-express'
 
 const router = express.Router()
 export default router
 
 // All routes in the router are only for the super admins of the service
 router.use(async (req, res, next) => {
-  if (!req.user) return res.status(401).type('text/plain').send()
-  if (!req.user.adminMode) return res.status(403).type('text/plain').send()
+  reqAdminMode(req)
   next()
 })
 

@@ -7,6 +7,7 @@ import * as permissions from '../../misc/utils/permissions.ts'
 import catalogApiDocs from '../../../contract/site-catalog-api-docs.js'
 import dcatContext from '../utils/dcat/context.js'
 import mongo from '#mongo'
+import { reqSession } from '@data-fair/lib-express'
 
 const router = express.Router()
 export default router
@@ -34,7 +35,7 @@ router.get('/datasets', async (req, res) => {
 
   if (req.query.file === 'true') extraFilters.push({ file: { $exists: true } })
 
-  const query = findUtils.query(req, req.getLocale(), req.user, 'datasets', { topics: 'topics.id' }, false, extraFilters)
+  const query = findUtils.query(req, req.getLocale(), reqSession(req), 'datasets', { topics: 'topics.id' }, false, extraFilters)
   const sort = findUtils.sort(req.query.sort || '-createdAt')
   const project = findUtils.project(req.query.select, [], req.query.raw === 'true')
   const [skip, size] = findUtils.pagination(req.query)
@@ -77,7 +78,7 @@ router.get('/dcat', async (req, res) => {
   const query = {
     $and: [
       { publicationSites: `${req.publicationSite.type}:${req.publicationSite.id}` },
-      { $or: permissions.filter(req.user, 'datasets') }
+      { $or: permissions.filter(reqSession(req), 'datasets') }
     ]
   }
 
