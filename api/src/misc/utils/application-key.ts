@@ -4,7 +4,7 @@ import config from '#config'
 import mongo from '#mongo'
 import * as rateLimiting from './rate-limiting.js'
 import { type Request, type Response, type NextFunction } from 'express'
-import { type ApplicationKey, RequestWithResource } from '#types'
+import { type ApplicationKey, type RequestWithResource } from '#types'
 import { reqUser, setReqUser } from '@data-fair/lib-express/session.js'
 
 const matchingHost = (req: Request) => {

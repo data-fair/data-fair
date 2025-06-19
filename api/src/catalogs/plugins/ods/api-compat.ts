@@ -1,5 +1,5 @@
 import express from 'express'
-import * as permissions from '../../../misc/utils/permissions.js'
+import * as permissions from '../../../misc/utils/permissions.ts'
 import { readDataset } from '../../../datasets/middlewares.js'
 import * as cacheHeaders from '../../../misc/utils/cache-headers.js'
 import * as esUtils from '../../../datasets/es/index.ts'

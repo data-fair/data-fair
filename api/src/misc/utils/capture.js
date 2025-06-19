@@ -6,7 +6,7 @@ import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import pump from '../utils/pipe.ts'
 import * as rateLimiting from '../utils/rate-limiting.js'
 import debug from 'debug'
-import * as permissionsUtils from './permissions.js'
+import * as permissionsUtils from './permissions.ts'
 import resolvePath from 'resolve-path'
 import { internalError } from '@data-fair/lib-node/observer.js'
 

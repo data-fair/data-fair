@@ -1,4 +1,4 @@
-import { ResourceType } from '#types'
+import { type ResourceType } from '#types'
 
 // TODO: this could be processed from actual api doc ?
 export const operationsClasses: Record<ResourceType, Record<string, string[]>> = {

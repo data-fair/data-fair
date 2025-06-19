@@ -15,20 +15,20 @@ export type { Permission } from './permissions/index.js'
 export type Request = ExpressRequest & { query: Record<string, string> } & { publicBaseUrl: string }
 
 export type ResourceType = 'datasets' | 'applications' | 'catalogs'
-export type Resource = Pick<Dataset, 'id' | 'title' | 'owner' | 'permissions'>
+export type Resource = Pick<Dataset, 'id' | 'title' | 'owner' | 'permissions'> & { _readApiKey?: { current: string, previous: string } }
 export type BypassPermissions = {
   operations?: string[],
   classes?: string[]
 }
 export type RequestWithResource = Request & {
-  resourceType: ResourceType,
-  resource: Resource,
+  resourceType?: ResourceType,
+  resource?: Resource,
   bypassPermissions?: BypassPermissions,
   publicOperation?: boolean
 }
 
 export function assertRequestWithResource (req: ExpressRequest): asserts req is RequestWithResource {
-  if (!(req as any).resource) throw new Error('missing req.resource')
+  // nothing to do
 }
 
 export type ApplicationKey = {

@@ -4,7 +4,7 @@ import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js
 import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
 import journalSchema from './journal.js'
 import { visibility } from '../src/misc/utils/visibility.js'
-import * as permissionsDoc from '../src/misc/utils/permissions.js'
+import * as permissionsDoc from '../src/misc/utils/permissions.ts'
 import * as datasetUtils from '../src/datasets/utils/index.js'
 
 /**

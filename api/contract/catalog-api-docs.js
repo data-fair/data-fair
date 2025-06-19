@@ -1,6 +1,6 @@
 import config from 'config'
 import catalogSchema from './catalog.js'
-import * as permissionsDoc from '../src/misc/utils/permissions.js'
+import * as permissionsDoc from '../src/misc/utils/permissions.ts'
 
 /**
  *

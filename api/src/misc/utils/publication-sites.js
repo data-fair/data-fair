@@ -1,5 +1,5 @@
 import * as webhooks from './webhooks.js'
-import * as permissions from './permissions.js'
+import * as permissions from './permissions.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 
 const getPublicationSiteInfo = async (db, owner, publicationSite) => {

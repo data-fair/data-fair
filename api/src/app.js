@@ -175,7 +175,7 @@ export const run = async () => {
     })
 
     // Business routers
-    const { middleware: apiKey } = await import('./misc/utils/api-key.js')
+    const { middleware: apiKey } = await import('./misc/utils/api-key.ts')
     app.use('/api/v1', (await import('./misc/routers/root.js')).default)
     app.use('/api/v1/remote-services', (await import('./remote-services/router.js')).router)
     app.use('/api/v1/remote-services-actions', (await import('./remote-services/router.js')).actionsRouter)
@@ -253,8 +253,8 @@ export const run = async () => {
     // Error management
     app.use(errorHandler)
 
-    const permissions = await import('./misc/utils/permissions.js')
-    const { readApiKey } = await import('./misc/utils/api-key.js')
+    const permissions = await import('./misc/utils/permissions.ts')
+    const { readApiKey } = await import('./misc/utils/api-key.ts')
     await Promise.all([
       (await import('./misc/utils/capture.js')).init(),
       (await import('./misc/utils/cache.js')).init(db),
@@ -269,9 +269,8 @@ export const run = async () => {
         const resource = await db.collection(type).findOne({ id })
         if (!resource) throw httpError(404, `Ressource ${type}/${id} inconnue.`)
         let user
-        if (sessionState.user) user = { ...sessionState.user, activeAccount: { ...sessionState.account, role: sessionState.accountRole } }
-        if (message.apiKey) user = await readApiKey(db, message.apiKey, type, message.account)
-        return permissions.can(type, resource, `realtime-${subject}`, user)
+        if (message.apiKey) sessionState = await readApiKey(message.apiKey, type, message.account)
+        return permissions.can(type, resource, `realtime-${subject}`, sessionState)
       })
     ])
     // At this stage the server is ready to respond to API requests
