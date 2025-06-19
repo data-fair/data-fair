@@ -3,15 +3,18 @@ import requestIp from 'request-ip'
 import config from '#config'
 import mongo from '#mongo'
 import * as rateLimiting from './rate-limiting.js'
+import { type Request, type Response, type NextFunction } from 'express'
+import { type ApplicationKey, RequestWithResource } from '#types'
+import { reqUser, setReqUser } from '@data-fair/lib-express/session.js'
 
-const matchingHost = (req) => {
+const matchingHost = (req: Request) => {
   if (!req.headers.origin) return true
-  if (req.publicBaseUrl.startsWith(req.headers.origin)) return true
+  if ((req as Request & { publicBaseUrl: string }).publicBaseUrl.startsWith(req.headers.origin)) return true
   return false
 }
 
-export default async (req, res, next) => {
-  const referer = req.headers.referer || req.headers.referrer
+export default async (req: RequestWithResource, res: Response, next: NextFunction) => {
+  const referer = (req.headers.referer || req.headers.referrer) as string | undefined
   if (!referer) return next()
   let refererUrl
   try {
@@ -21,18 +24,21 @@ export default async (req, res, next) => {
   }
   if (!refererUrl) return next()
 
+  const dataset = req.resource
+
   const ownerFilter = {
-    'owner.type': req.dataset.owner.type,
-    'owner.id': req.dataset.owner.id,
-    'owner.department': req.dataset.owner.department ? req.dataset.owner.department : { $exists: false }
+    'owner.type': dataset.owner.type,
+    'owner.id': dataset.owner.id,
+    'owner.department': dataset.owner.department ? dataset.owner.department : { $exists: false }
   }
-  const datasetHref = `${config.publicUrl}/api/v1/datasets/${req.dataset.id}`
-  let appId, applicationKey
+  const datasetHref = `${config.publicUrl}/api/v1/datasets/${dataset.id}`
+  let appId: string | undefined
+  let applicationKey: ApplicationKey | null = null
 
   if (refererUrl.pathname.startsWith('/data-fair/embed/dataset/')) {
     let refererDatasetId = decodeURIComponent(refererUrl.pathname.replace('/data-fair/embed/dataset/', '').split('/')[0])
     let applicationKeyId = refererUrl.searchParams && refererUrl.searchParams.get('key')
-    if (refererDatasetId !== req.dataset.id) {
+    if (refererDatasetId !== dataset.id) {
       const keys = refererDatasetId.split(':')
       if (keys.length > 1) {
         applicationKeyId = keys[0]
@@ -40,13 +46,13 @@ export default async (req, res, next) => {
       }
     }
     if (!applicationKeyId) return next()
-    applicationKey = await mongo.db.collection('applications-keys').findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
+    applicationKey = await mongo.applicationsKeys.findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
     if (!applicationKey) return next()
     appId = applicationKey._id
     const isParentApplicationKey = await mongo.db.collection('applications')
       .count({
         id: applicationKey._id,
-        $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': req.dataset.id }],
+        $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': dataset.id }],
         ...ownerFilter
       })
     if (!isParentApplicationKey) return next()
@@ -63,7 +69,7 @@ export default async (req, res, next) => {
       }
     }
     if (!applicationKeyId) return next()
-    applicationKey = await mongo.db.collection('applications-keys').findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
+    applicationKey = await mongo.applicationsKeys.findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
     if (!applicationKey) return next()
     if (applicationKey._id !== appId) {
       // the application key can be matched to a parent application key (case of dashboards, etc)
@@ -73,11 +79,11 @@ export default async (req, res, next) => {
     }
   }
 
-  if (appId) {
-    const matchingApplication = await mongo.db.collection('applications')
+  if (applicationKey && appId) {
+    const matchingApplication = await mongo.applications
       .findOne({
         id: appId,
-        $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': req.dataset.id }],
+        $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': dataset.id }],
         ...ownerFilter
       }, { projection: { 'configuration.datasets': 1 } })
     if (matchingApplication) {
@@ -96,7 +102,7 @@ export default async (req, res, next) => {
         if (!anonymousToken) return res.status(401).type('text/plain').send(req.__('errors.requireAnonymousToken'))
         try {
           tokenContent = await verifyToken(anonymousToken)
-        } catch (err) {
+        } catch (err: any) {
           if (err.name === 'NotBeforeError') {
             return res.status(429).type('text/plain').send(req.__('errors.looksLikeSpam'))
           } else {
@@ -114,12 +120,16 @@ export default async (req, res, next) => {
 
       // apply some permissions based on app configuration
       // some dataset might need to be readable, some other writable only for createLine, etc
-      const matchingApplicationDataset = matchingApplication.configuration.datasets.find(d => d.href === datasetHref)
+      const matchingApplicationDataset = matchingApplication.configuration?.datasets?.find(d => d && d.href === datasetHref)
+      if (!matchingApplicationDataset) return next()
       req.bypassPermissions = matchingApplicationDataset.applicationKeyPermissions || { classes: ['read'] }
-      req.user = req.user || {
-        id: applicationKey.id,
-        name: applicationKey.title,
-        isApplicationKey: true
+      if (!reqUser(req)) {
+        setReqUser(
+          req,
+          { id: applicationKey.id, name: applicationKey.title, email: '', organizations: [] },
+          undefined, undefined, undefined,
+          { isApplicationKey: true }
+        )
       }
     }
   }
