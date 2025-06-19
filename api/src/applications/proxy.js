@@ -16,6 +16,7 @@ import * as serviceWorkers from '../misc/utils/service-workers.js'
 import { refreshConfigDatasetsRefs } from './utils.js'
 import Debug from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import { reqSession, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
 
 const debugIframeRedirect = Debug('iframe-redirect')
 
@@ -82,7 +83,7 @@ const setResource = async (req, res, next) => {
 }
 
 router.get('/:applicationId/manifest.json', setResource, async (req, res) => {
-  if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchingApplicationKey) {
+  if (!permissions.can('applications', req.application, 'readConfig', reqSession(req)) && !req.matchingApplicationKey) {
     return res.status(403).type('text/plain').send()
   }
   const baseApp = await mongo.db.collection('base-applications').findOne({ url: req.application.url }, { projection: { id: 1, meta: 1 } })
@@ -165,8 +166,8 @@ const fetchHTML = async (cleanApplicationUrl, targetUrl) => {
 }
 // for debug only
 router.get('/_htmlcache', (req, res, next) => {
-  if (!req.user) return res.status(401)
-  if (!req.user.adminMode) return res.status(403)
+  const user = reqUserAuthenticated(req)
+  if (!user.adminMode) return res.status(403)
   return res.send(htmlCache)
 })
 
@@ -192,7 +193,7 @@ let minifiedIframeRedirectSrc
 router.all(['/:applicationId/*extraPath', '/:applicationId'], setResource, async (req, res, next) => {
   const db = mongo.db
 
-  if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchingApplicationKey) {
+  if (!permissions.can('applications', req.application, 'readConfig', reqSession(req)) && !req.matchingApplicationKey) {
     return res.redirect(`${req.publicBaseUrl}/app/${req.params.applicationId}/login`)
   }
 

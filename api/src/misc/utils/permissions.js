@@ -64,7 +64,7 @@ export const canDoForOwnerMiddleware = function (operationClass, ignoreDepartmen
 }
 
 export const getOwnerRole = (owner, user, ignoreDepartment = false) => {
-  if (!user || user.isApplicationKey || !user.activeAccount) return null
+  if (!user || user.isApplicationKey || !sessionState.account) return null
 
   // user is implicitly admin of his own resources, even if he is currently switched to an organization
   if (owner.type === 'user') {
@@ -72,11 +72,11 @@ export const getOwnerRole = (owner, user, ignoreDepartment = false) => {
     return null
   }
   // user current activeAccount and owner dot not match, the user is not better than anonymous
-  if (user.activeAccount.type !== owner.type || user.activeAccount.id !== owner.id) return null
+  if (sessionState.account.type !== owner.type || sessionState.account.id !== owner.id) return null
 
   // user is in a department but the resource belongs either to no department or to another department
-  if (!ignoreDepartment && user.activeAccount.department && user.activeAccount.department !== owner.department) return null
-  return user.activeAccount.role
+  if (!ignoreDepartment && sessionState.account.department && sessionState.account.department !== owner.department) return null
+  return sessionState.accountRole
 }
 
 const getOwnerClasses = (owner, user, resourceType) => {
@@ -97,7 +97,7 @@ const getOwnerClasses = (owner, user, resourceType) => {
 
 const matchPermission = (owner, permission, user) => {
   if (!permission.type && !permission.id) return true // public
-  if (!user || user.isApplicationKey || !user.activeAccount) return false
+  if (!user || user.isApplicationKey || !sessionState.account) return false
   if (user.adminMode) return true
 
   // individual user permissions are applied no matter the current active account
@@ -110,12 +110,12 @@ const matchPermission = (owner, permission, user) => {
 
   // if a user is switched on an organization, permissions for his role in this organization apply
   // permissions for his other organizations do not apply
-  if (permission.type === 'organization' && user.activeAccount.type === 'organization' && permission.id === user.activeAccount.id) {
+  if (permission.type === 'organization' && sessionState.account.type === 'organization' && permission.id === sessionState.account.id) {
     // department does not match
-    if (user.activeAccount.department && permission.department && permission.department !== '*' && permission.department !== user.activeAccount.department) return false
+    if (sessionState.account.department && permission.department && permission.department !== '*' && permission.department !== sessionState.account.department) return false
     if (!permission.roles || !permission.roles.length) return true
-    if (user.activeAccount.role === config.adminRole) return true
-    if (permission.roles.includes(user.activeAccount.role)) return true
+    if (sessionState.accountRole === config.adminRole) return true
+    if (permission.roles.includes(sessionState.accountRole)) return true
   }
   return false
 }

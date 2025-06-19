@@ -47,7 +47,7 @@ export const fixConceptsFilters = async (db, locale, reqQuery, user) => {
     for (let i = 0; i < values.length; i++) {
       const value = values[i]
       if (value.startsWith('https://') || value.startsWith('http://')) continue
-      vocabulary = vocabulary || await settingsUtils.getFullOwnerVocabulary(db, user && user.activeAccount, locale)
+      vocabulary = vocabulary || await settingsUtils.getFullOwnerVocabulary(db, user && sessionState.account, locale)
       const concept = vocabulary.find(c => c.id === reqQuery[key])
       if (concept && concept.identifiers && concept.identifiers.length) {
         values[i] = concept.identifiers[0]

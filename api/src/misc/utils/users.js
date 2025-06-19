@@ -19,18 +19,18 @@ export const getPseudoUser = (owner, name, defaultId, defaultRole, department) =
   if (owner.type === 'user') {
     pseudoUser.id = owner.id
     pseudoUser.organizations = []
-    pseudoUser.activeAccount = { ...owner, role: 'admin' }
+    pseudosessionState.account = { ...owner, role: 'admin' }
   } else {
     pseudoUser.id = defaultId
-    pseudoUser.activeAccount = { ...owner, role: defaultRole }
+    pseudosessionState.account = { ...owner, role: defaultRole }
     if (department) {
       if (department === '-') {
-        delete pseudoUser.activeAccount.department
+        delete pseudosessionState.account.department
       } else {
-        pseudoUser.activeAccount.department = department
+        pseudosessionState.account.department = department
       }
     }
-    pseudoUser.organizations = [pseudoUser.activeAccount]
+    pseudoUser.organizations = [pseudosessionState.account]
   }
   return pseudoUser
 }

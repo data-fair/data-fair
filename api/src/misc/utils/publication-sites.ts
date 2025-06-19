@@ -1,10 +1,13 @@
+import mongo from '#mongo'
 import * as webhooks from './webhooks.js'
 import * as permissions from './permissions.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { type SessionStateAuthenticated, type AccountKeys } from '@data-fair/lib-express'
+import { type Resource, type ResourceType } from '#types'
 
-const getPublicationSiteInfo = async (db, owner, publicationSite) => {
+const getPublicationSiteInfo = async (owner: AccountKeys, publicationSite: string) => {
   const [type, id] = publicationSite.split(':')
-  const settings = await db.collection('settings')
+  const settings = await mongo.db.collection('settings')
     .findOne(
       { type: owner.type, id: owner.id, publicationSites: { $elemMatch: { type, id } } },
       { projection: { department: 1, publicationSites: { $elemMatch: { type, id } } } }
@@ -14,7 +17,7 @@ const getPublicationSiteInfo = async (db, owner, publicationSite) => {
 }
 
 // this function is called when the resource is patched to check if publicationSites and requestedPublicationSites have changed
-export const applyPatch = async (db, previousResource, resource, user, resourceType) => {
+export const applyPatch = async (previousResource: Resource, resource: Resource, sessionState: SessionStateAuthenticated, resourceType: string) => {
   const previousPublicationSites = previousResource.publicationSites || []
   const previousRequestedPublicationSites = previousResource.requestedPublicationSites || []
   const previousTopics = previousResource.topics || []
@@ -41,28 +44,28 @@ export const applyPatch = async (db, previousResource, resource, user, resourceT
   for (const publicationSite of newPublicationSites) {
     // send a notification either because the publicationSite was added, or because the visibility changed
     if (!previousPublicationSites.includes(publicationSite)) {
-      const publicationSiteInfo = await getPublicationSiteInfo(db, resource.owner, publicationSite)
+      const publicationSiteInfo = await getPublicationSiteInfo(resource.owner, publicationSite)
       if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
-      if (!user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && user.activeAccount.type === 'organization' && user.activeAccount.id === resource.owner.id && !publicationSiteInfo.department && user.activeAccount.department) {
+      if (!sessionState.user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && sessionState.account?.type === 'organization' && sessionState.account.id === resource.owner.id && !publicationSiteInfo.department && sessionState.account.department) {
         throw httpError(403, 'fail to publish: publication site does not belong to user department')
       }
-      if (!publicationSiteInfo.settings?.staging && !permissions.can(resourceType + 's', resource, 'writePublicationSites', user)) {
+      if (!publicationSiteInfo.settings?.staging && !permissions.can((resourceType + 's') as ResourceType, resource, 'writePublicationSites', sessionState)) {
         throw httpError(403, 'fail to publish: publication site requires permission to publish')
       }
       const sender = { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
-      webhooks.trigger(db, resourceType, resource, { type: `published:${publicationSite}` }, sender, user)
+      webhooks.trigger(resourceType, resource, { type: `published:${publicationSite}` }, sender, sessionState)
       for (const topic of newTopics) {
-        webhooks.trigger(db, resourceType, resource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender, user)
+        webhooks.trigger(resourceType, resource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender, sessionState)
       }
     }
   }
   for (const publicationSite of previousPublicationSites) {
     if (!newPublicationSites.includes(publicationSite)) {
-      const publicationSiteInfo = await getPublicationSiteInfo(db, resource.owner, publicationSite)
-      if (!user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && user.activeAccount.type === 'organization' && user.activeAccount.id === resource.owner.id && !publicationSiteInfo.department && user.activeAccount.department) {
+      const publicationSiteInfo = await getPublicationSiteInfo(resource.owner, publicationSite)
+      if (!sessionState.user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && sessionState.account?.type === 'organization' && sessionState.account.id === resource.owner.id && !publicationSiteInfo.department && sessionState.account.department) {
         throw httpError(403, 'fail to unpublish: publication site does not belong to user department')
       }
-      if (publicationSiteInfo && !publicationSiteInfo.settings?.staging && !permissions.can(resourceType + 's', resource, 'writePublicationSites', user)) {
+      if (publicationSiteInfo && !publicationSiteInfo.settings?.staging && !permissions.can((resourceType + 's') as ResourceType, resource, 'writePublicationSites', sessionState)) {
         throw httpError(403, 'fail to unpublish: publication site requires permission to unpublish')
       }
     }
@@ -70,34 +73,34 @@ export const applyPatch = async (db, previousResource, resource, user, resourceT
   for (const requestedPublicationSite of newRequestedPublicationSites) {
     // send a notification because the publication was requeststed
     if (!previousRequestedPublicationSites.includes(requestedPublicationSite)) {
-      const publicationSiteInfo = await getPublicationSiteInfo(db, resource.owner, requestedPublicationSite)
+      const publicationSiteInfo = await getPublicationSiteInfo(resource.owner, requestedPublicationSite)
       if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
       const sender = { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
-      webhooks.trigger(db, resourceType, resource, { type: `publication-requested:${requestedPublicationSite}`, body: `${resource.title || resource.id} - ${user.name}` }, sender, user)
+      webhooks.trigger(resourceType, resource, { type: `publication-requested:${requestedPublicationSite}`, body: `${resource.title || resource.id} - ${sessionState.user.name}` }, sender, sessionState)
     }
   }
   for (const topic of newTopics) {
     // send a notification because the topic was added
     if (!previousTopics.find(t => t.id === topic.id)) {
       for (const publicationSite of newPublicationSites) {
-        const publicationSiteInfo = await getPublicationSiteInfo(db, resource.owner, publicationSite)
+        const publicationSiteInfo = await getPublicationSiteInfo(resource.owner, publicationSite)
         if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
         const sender = { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
-        webhooks.trigger(db, resourceType, resource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender, user)
+        webhooks.trigger(resourceType, resource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender, sessionState)
       }
     }
   }
 }
 
 // this callback function is called when the resource becomes public
-export const onPublic = async (db, patchedResource, resourceType) => {
+export const onPublic = async (patchedResource: Resource, resourceType: string) => {
   for (const publicationSite of patchedResource.publicationSites || []) {
-    const publicationSiteInfo = await getPublicationSiteInfo(db, patchedResource.owner, publicationSite)
+    const publicationSiteInfo = await getPublicationSiteInfo(patchedResource.owner, publicationSite)
     if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
     const sender = { type: patchedResource.owner.type, id: patchedResource.owner.id, department: publicationSiteInfo.department }
-    webhooks.trigger(db, resourceType, patchedResource, { type: `published:${publicationSite}` })
+    webhooks.trigger(resourceType, patchedResource, { type: `published:${publicationSite}` })
     for (const topic of patchedResource.topics || []) {
-      webhooks.trigger(db, resourceType, patchedResource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender)
+      webhooks.trigger(resourceType, patchedResource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender)
     }
   }
 }

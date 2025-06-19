@@ -15,7 +15,8 @@ export type { Permission } from './permissions/index.js'
 export type Request = ExpressRequest & { query: Record<string, string> } & { publicBaseUrl: string }
 
 export type ResourceType = 'datasets' | 'applications' | 'catalogs'
-export type Resource = Pick<Dataset, 'id' | 'title' | 'owner' | 'permissions'> & { _readApiKey?: { current: string, previous: string } }
+export type Resource = Pick<Dataset, 'id' | 'title' | 'owner' | 'permissions' | 'publicationSites' | 'requestedPublicationSites' | 'topics'>
+  & { _readApiKey?: { current: string, previous: string } }
 export type BypassPermissions = {
   operations?: string[],
   classes?: string[]

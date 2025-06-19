@@ -19,7 +19,7 @@ router.get('/api-docs.json', (req, res) => {
 })
 
 router.get('/vocabulary', async (req, res) => {
-  res.json(await settingsUtils.getFullOwnerVocabulary(mongo.db, req.user && req.user.activeAccount, req.getLocale()))
+  res.json(await settingsUtils.getFullOwnerVocabulary(mongo.db, req.user && req.sessionState.account, req.getLocale()))
 })
 
 router.get('/projections', (req, res) => {

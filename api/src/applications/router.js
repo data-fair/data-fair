@@ -24,7 +24,7 @@ import { findApplications } from './service.js'
 import { syncApplications } from '../datasets/service.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import { validateURLFriendly } from '../misc/utils/validation.js'
-import * as publicationSites from '../misc/utils/publication-sites.js'
+import * as publicationSites from '../misc/utils/publication-sites.ts'
 import { checkStorage } from '../datasets/middlewares.js'
 import * as attachments from '../misc/utils/attachments.js'
 import * as clamav from '../misc/utils/clamav.js'
@@ -32,7 +32,7 @@ import { getThumbnail } from '../misc/utils/thumbnails.js'
 import pump from '../misc/utils/pipe.ts'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
-import { session } from '@data-fair/lib-express'
+import { reqSession, reqUser, reqUserAuthenticated, session } from '@data-fair/lib-express'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 
@@ -88,11 +88,9 @@ router.get('', cacheHeaders.listBased, async (req, res) => {
   const publicationSite = req.publicationSite
   // @ts-ignore
   const publicBaseUrl = req.publicBaseUrl
-  // @ts-ignore
-  const user = req.user
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findApplications(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, user)
+  const response = await findApplications(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, reqSession(req))
   res.json(response)
 })
 
@@ -102,7 +100,8 @@ const initNew = async (req, id) => {
   application.owner = usersUtils.owner(req)
   const date = moment().toISOString()
   application.createdAt = application.updatedAt = date
-  application.createdBy = application.updatedBy = { id: req.user.id, name: req.user.name }
+  const user = reqUserAuthenticated(req)
+  application.createdBy = application.updatedBy = { id: user.id, name: user.name }
   application.permissions = []
   await curateApplication(mongo.db, application)
   return application
@@ -111,7 +110,7 @@ const initNew = async (req, id) => {
 // Create an application configuration
 router.post('', async (req, res) => {
   const application = await initNew((await import('#doc/applications/post-req/index.js')).returnValid(req))
-  if (!permissions.canDoForOwner(application.owner, 'applications', 'post', req.user)) return res.status(403).type('text/plain').send()
+  if (!permissions.canDoForOwner(application.owner, 'applications', 'post', reqSession(req))) return res.status(403).type('text/plain').send()
 
   if (application.slug) validateURLFriendly(req.getLocale(), application.slug)
 
@@ -202,7 +201,7 @@ router.use('/:applicationId/permissions', readApplication, permissions.router('a
 
 // retrieve a application by its id
 router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
-  req.application.userPermissions = permissions.list('applications', req.application, req.user)
+  req.application.userPermissions = permissions.list('applications', req.application, reqSession(req))
   res.status(200).send(clean(req.application, req.publicBaseUrl, req.publicationSite, req.query))
 })
 
@@ -214,7 +213,7 @@ const attemptInsert = async (req, res, next) => {
   permissions.initResourcePermissions(newApplication)
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
-  if (permissions.canDoForOwner(newApplication.owner, 'applications', 'post', req.user)) {
+  if (permissions.canDoForOwner(newApplication.owner, 'applications', 'post', reqSession(req))) {
     try {
       await mongo.db.collection('applications').insertOne(newApplication)
 
@@ -240,7 +239,8 @@ router.put('/:applicationId', attemptInsert, readApplication, permissions.middle
     }
   }
   newApplication.updatedAt = moment().toISOString()
-  newApplication.updatedBy = { id: req.user.id, name: req.user.name }
+  const user = reqUserAuthenticated(req)
+  newApplication.updatedBy = { id: user.id, name: user.name }
   newApplication.created = true
 
   if (!req.isNewApplication) {
@@ -287,12 +287,13 @@ router.patch('/:applicationId',
     }
 
     patch.updatedAt = moment().toISOString()
-    patch.updatedBy = { id: req.user.id, name: req.user.name }
+    const user = reqUserAuthenticated(req)
+    patch.updatedBy = { id: user.id, name: user.name }
     patch.id = application.id
     patch.slug = patch.slug || application.slug
     await curateApplication(db, patch)
 
-    await publicationSites.applyPatch(db, application, { ...application, ...patch }, req.user, 'application')
+    await publicationSites.applyPatch(db, application, { ...application, ...patch }, reqSession(req), 'application')
 
     let patchedApplication
     try {

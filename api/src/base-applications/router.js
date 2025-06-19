@@ -184,7 +184,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
     const vocabulary = i18nUtils.vocabulary[req.getLocale()]
     if (req.query.dataset === 'any') {
       // match constraints against all datasets of current account
-      const filter = { 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id }
+      const filter = { 'owner.type': req.sessionState.account.type, 'owner.id': req.sessionState.account.id }
       datasetCount = await db.collection('datasets').countDocuments(filter)
       datasetBBox = !!(await db.collection('datasets').countDocuments({ $and: [{ bbox: { $ne: null } }, filter] }))
       const facet = {
@@ -203,7 +203,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
       // match constraints against a specific dataset
       datasetCount = 1
       datasetId = req.query.dataset
-      const dataset = await db.collection('datasets').findOne({ id: datasetId, 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id })
+      const dataset = await db.collection('datasets').findOne({ id: datasetId, 'owner.type': req.sessionState.account.type, 'owner.id': req.sessionState.account.id })
       if (!dataset) return res.status(404).send(req.__('errors.missingDataset', { id: datasetId }))
       datasetTypes = (dataset.schema || []).filter(field => !field['x-calculated']).map(field => field.type)
       datasetVocabulary = (dataset.schema || []).map(field => field['x-refersTo']).filter(c => !!c)

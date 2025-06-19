@@ -39,7 +39,7 @@ import { bulkSearchStreams } from './utils/master-data.js'
 import applicationKey from '../misc/utils/application-key.ts'
 import { validateURLFriendly } from '../misc/utils/validation.js'
 import * as observe from '../misc/utils/observe.js'
-import * as publicationSites from '../misc/utils/publication-sites.js'
+import * as publicationSites from '../misc/utils/publication-sites.ts'
 import * as clamav from '../misc/utils/clamav.js'
 import * as apiKeyUtils from '../misc/utils/api-key.ts'
 import { syncDataset as syncRemoteService } from '../remote-services/utils.js'
@@ -615,8 +615,8 @@ router.use('/:datasetId/own/:owner', readWritableDataset, isRest, apiKeyMiddlewa
   req.linesOwner = { type, id, department }
   if (!['organization', 'user'].includes(req.linesOwner.type)) return res.status(400).type('text/plain').send('ownerType must be user or organization')
   if (!req.user) return res.status(401).type('text/plain').send('auth required')
-  if (req.linesOwner.type === 'organization' && req.user.activeAccount.type === 'organization' && req.user.activeAccount.id === req.linesOwner.id && (req.user.activeAccount.department || null) === (req.linesOwner.department || null)) {
-    req.linesOwner.name = req.user.activeAccount.name
+  if (req.linesOwner.type === 'organization' && req.sessionState.account.type === 'organization' && req.sessionState.account.id === req.linesOwner.id && (req.sessionState.account.department || null) === (req.linesOwner.department || null)) {
+    req.linesOwner.name = req.sessionState.account.name
     return next()
   }
   if (req.linesOwner.type === 'user' && req.user.id === req.linesOwner.id) {
