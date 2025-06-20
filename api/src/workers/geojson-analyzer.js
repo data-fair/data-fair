@@ -7,6 +7,7 @@ import { updateStorage } from '../datasets/utils/storage.ts'
 import * as datasetsService from '../datasets/service.js'
 import * as fieldsSniffer from '../datasets/utils/fields-sniffer.js'
 import projections from '../../contract/projections.js'
+import { sampleValues as getSampleValues } from '../datasets/utils/data-streams.js'
 
 // Analyze geojson dataset data, check validity and detect schema
 export const eventsPrefix = 'analyze'
@@ -33,7 +34,7 @@ export const process = async function (app, dataset) {
     'x-originalName': 'geometry',
     'x-refersTo': 'https://purl.org/geojson/vocab#geometry'
   }]
-  const sampleValues = await datasetUtils.sampleValues(dataset, ['geometry'], (decodedData) => crsParser.write(decodedData))
+  const sampleValues = await getSampleValues(dataset, ['geometry'], (decodedData) => crsParser.write(decodedData))
   crsParser.end()
 
   for (const property in sampleValues) {
