@@ -8,7 +8,7 @@ import { type DepartmentSettings, assertValid as validateDepartmentSettings } fr
 import * as permissions from '../utils/permissions.ts'
 import * as cacheHeaders from '../utils/cache-headers.js'
 import * as topicsUtils from '../utils/topics.ts'
-import * as notifications from '../utils/notifications.js'
+import * as notifications from '../utils/notifications.ts'
 import config from '#config'
 import mongo from '#mongo'
 import standardLicenses from '../../../contract/licenses.js'

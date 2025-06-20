@@ -32,7 +32,7 @@ import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as outputs from './utils/outputs.js'
 import * as limits from '../misc/utils/limits.ts'
 import { extend } from './utils/extensions.ts'
-import * as notifications from '../misc/utils/notifications.js'
+import * as notifications from '../misc/utils/notifications.ts'
 import userNotificationSchema from '../../contract/user-notification.js'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
 import { bulkSearchStreams } from './utils/master-data.js'
@@ -1392,7 +1392,6 @@ router.post(
       extra: { user: { id: sessionState.user.id, name: sessionState.user.name } },
       resource: { type: 'dataset', id: req.dataset.id }
     }
-    const sessionState = await session.req(req)
     await notifications.send(notif, true, sessionState)
     res.send(notif)
   }

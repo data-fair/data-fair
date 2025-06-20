@@ -52,5 +52,13 @@
 		"qs": "filtre structuré"
 	},
 	"data": "data",
-	"dataset": "dataset"
+	"dataset": "dataset",
+	"notifications": {
+		"datasets": {
+			"test": {
+				"title": "Une notif {label}",
+				"body": "Avec un body {label}"
+			}
+		}
+	}
 }

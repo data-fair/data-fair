@@ -3,9 +3,9 @@ import config from '#config'
 import mongo from '#mongo'
 import moment from 'moment'
 import * as ajv from '../utils/ajv.js'
-import type { Account, AccountKeys } from '@data-fair/lib-express'
+import { reqAdminMode, reqUserAuthenticated, type Account, type AccountKeys } from '@data-fair/lib-express'
 import type { Limit, Limits, Request } from '#types'
-import type { Response, NextFunction, RequestHandler } from 'express'
+import type { Request as ExpressRequest, Response, NextFunction, RequestHandler } from 'express'
 import type { Filter } from 'mongodb'
 
 const limitTypeSchema = { type: 'object', properties: { limit: { type: 'number' }, consumption: { type: 'number' } } }
@@ -89,21 +89,25 @@ export const setConsumption = async (consumer: AccountKeys, type: keyof Limits, 
 export const router = express.Router()
 
 const isSuperAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (req.user && req.user.adminMode) return next()
   if (req.query.key === config.secretKeys.limits) return next()
-  res.status(401).type('text/plain').send()
+  reqAdminMode(req)
+  next()
 }
 
 const isAccountMember = (req: Request, res: Response, next: NextFunction) => {
   if (req.query.key === config.secretKeys.limits) return next()
-  if (!req.user) return res.status(401).type('text/plain').send()
-  if (req.user.adminMode) return next()
-  if (!['organization', 'user'].includes(req.params.type)) return res.status(400).type('text/plain').send('Wrong consumer type')
+  const user = reqUserAuthenticated(req)
+  if (user.adminMode) return next()
+  if (!['organization', 'user'].includes(req.params.type)) {
+    return res.status(400).type('text/plain').send('Wrong consumer type')
+  }
   if (req.params.type === 'user') {
-    if (req.user.id !== req.params.id) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
+    if (user.id !== req.params.id) {
+      return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
+    }
   }
   if (req.params.type === 'organization') {
-    const org = req.user.organizations.find(o => o.id === req.params.id)
+    const org = user.organizations.find(o => o.id === req.params.id)
     if (!org) return res.status(403).type('text/plain').send(req.__('errors.missingPermission'))
   }
   next()

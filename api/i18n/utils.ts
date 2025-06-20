@@ -3,7 +3,15 @@ import i18n from 'i18n'
 import { join } from 'path'
 import vocabularyRaw from '../contract/vocabulary.js'
 
-const defaultLocale = /** @type {'en' | 'fr'} */(config.i18n.defaultLocale)
+export type Locale = 'fr' | 'en'
+
+export type LocalizedConcept = { identifiers: string[], title: string, description: string, tag: string | undefined }
+
+export const vocabularyArray: { en: LocalizedConcept[], fr: LocalizedConcept[] } = { en: [], fr: [] }
+
+export const vocabulary: { en: Record<string, LocalizedConcept>, fr: Record<string, LocalizedConcept> } = { en: {}, fr: {} }
+
+const defaultLocale = config.i18n.defaultLocale as Locale
 
 i18n.configure({
   defaultLocale,
@@ -19,10 +27,12 @@ export const middleware = (req, res, next) => {
   const proto = req.__proto__
   if (!proto.__) {
     proto.__ = function () {
+      // @ts-ignore
       i18n.init(this)
       return i18n.__.apply(this, arguments)
     }
     proto.getLocale = function () {
+      // @ts-ignore
       i18n.init(this)
       return this.locale
     }
@@ -30,19 +40,11 @@ export const middleware = (req, res, next) => {
   next()
 }
 
-/** @typedef {{identifiers: string[], title: string, description: string, tag: string | undefined}} LocalizedConcept */
-
-/** @type {{en: LocalizedConcept[], fr: LocalizedConcept[]}} */
-export const vocabularyArray = { en: [], fr: [] }
-
-/** @type {{en: Record<string, LocalizedConcept>, fr: Record<string, LocalizedConcept>}} */
-export const vocabulary = { en: {}, fr: {} }
-
 for (const _locale of i18n.getLocales()) {
-  const locale = /** @type {'en' | 'fr'} */(_locale)
+  const locale = _locale as Locale
   vocabularyArray[locale] = vocabularyRaw.map(concept => ({
     ...concept,
-    title: /** @type {string} */(concept.title[locale] || concept.title[defaultLocale]),
+    title: concept.title[locale] || concept.title[defaultLocale],
     description: concept.description[locale] || concept.description[defaultLocale],
     tag: concept.tag[locale] || concept.tag[defaultLocale]
   }))
