@@ -92,180 +92,200 @@
         watch
         draft-mode
       >
+        <v-alert
+          v-if="currentDataset && missingPermissions.length"
+          variant="outlined"
+          type="error"
+          class="ma-4"
+        >
+          {{ t('missingPermissions') }}
+          <ul
+            style="list-style-type: disc;"
+          >
+            <li
+              v-for="p of missingPermissions"
+              :key="p"
+            >
+              {{ t('permissions.' + p) }}
+            </li>
+          </ul>
+        </v-alert>
         <!-- FILE steps -->
-        <template v-if="currentDataset?.file">
-          <v-stepper-window-item
-            :value="2"
-            class="pa-6"
-          >
-            <p>
-              {{ t('loadMainFile') }}
-            </p>
-            <div
-              class="mt-3 mb-3"
-              @drop.prevent="e => {file = e.dataTransfer?.files[0]; if (!suggestArchive) currentStep = 3}"
-              @dragover.prevent
+        <template v-else>
+          <template v-if="currentDataset?.file">
+            <v-stepper-window-item
+              :value="2"
+              class="pa-6"
             >
-              <v-file-input
-                v-model="file"
-                :label="t('selectFile')"
-                variant="outlined"
-                density="compact"
-                hide-details
-                style="max-width: 400px;"
-                :accept="accepted.join(', ')"
-                @change="currentStep = 3"
-              />
-            </div>
-            <v-alert
-              v-if="file && file.size > 50000000 && (file.name.endsWith('.csv') || file.name.endsWith('.tsv') || file.name.endsWith('.txt') || file.name.endsWith('.geojson'))"
-              variant="outlined"
-              type="info"
-              density="compact"
-              v-html="t('suggestArchive', {name: file.name})"
-            />
-            <v-btn
-              class="mt-2"
-              :disabled="!file"
-              color="primary"
-              @click="currentStep = 3"
-            >
-              {{ t('continue') }}
-            </v-btn>
-
-            <h3
-              class="text-h6 mt-4"
-            >
-              {{ t('formats') }}
-            </h3>
-            <dataset-file-formats />
-          </v-stepper-window-item>
-
-          <v-stepper-window-item
-            v-if="digitalDocumentField"
-            :value="3"
-            class="pa-6"
-          >
-            <v-alert
-              type="info"
-              variant="outlined"
-              density="compact"
-              style="max-width:400px;"
-            >
-              {{ t('attachmentInfo') }}
-            </v-alert>
-            <p>
-              {{ t('attachmentsMsg1') }}
-            </p>
-
-            <p>
-              {{ t('attachmentsMsg2') }}
-            </p>
-            <div
-              class="mt-3 mb-3"
-              @drop.prevent="e => {attachments = e.dataTransfer?.files[0]; currentStep = 5}"
-              @dragover.prevent
-            >
-              <v-file-input
-                v-model="attachments"
-                :label="t('selectFile')"
-                variant="outlined"
-                density="compact"
-                style="max-width: 400px;"
-                accept=".zip"
-                hide-details
-                clearable
-                @change="currentStep = 5"
-              />
-            </div>
-            <v-btn
-              color="primary"
-              class="mt-4"
-              @click="currentStep = 5"
-            >
-              {{ t('continue') }}
-            </v-btn>
-          </v-stepper-window-item>
-
-          <v-stepper-window-item
-            :value="digitalDocumentField ? 4 : 3"
-            class="pa-6"
-          >
-            <template v-if="file">
-              <p class="mb-3">
-                {{ t('updateMsg') }}
+              <p>
+                {{ t('loadMainFile') }}
               </p>
-              <v-row
-                v-if="updateDataset.loading.value"
-                class="mx-0 my-3"
+              <div
+                class="mt-3 mb-3"
+                @drop.prevent="e => {file = e.dataTransfer?.files[0]; if (!suggestArchive) currentStep = 3}"
+                @dragover.prevent
               >
-                <v-progress-linear
-                  v-if="uploadProgress"
-                  v-model="uploadProgress.percent"
-                  class="my-1"
-                  rounded
-                  height="28"
-                  style="max-width: 600px;"
-                >
-                  {{ truncateMiddle(file.name, 36, 4, '...') }}
-                  <template v-if="uploadProgress.total && uploadProgress.percent !== undefined">
-                    {{ Math.floor(uploadProgress.percent) }}% {{ t('of') }} {{ formatBytes(uploadProgress.total, locale) }}
-                  </template>
-                </v-progress-linear>
-                <v-btn
-                  :icon="mdiCancel"
-                  color="warning"
-                  :title="t('cancel')"
-                  @click="cancelUpdateDataset"
+                <v-file-input
+                  v-model="file"
+                  :label="t('selectFile')"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                  style="max-width: 400px;"
+                  :accept="accepted.join(', ')"
+                  @change="currentStep = 3"
                 />
-              </v-row>
+              </div>
+              <v-alert
+                v-if="file && file.size > 50000000 && (file.name.endsWith('.csv') || file.name.endsWith('.tsv') || file.name.endsWith('.txt') || file.name.endsWith('.geojson'))"
+                variant="outlined"
+                type="info"
+                density="compact"
+                v-html="t('suggestArchive', {name: file.name})"
+              />
+              <v-btn
+                class="mt-2"
+                :disabled="!file"
+                color="primary"
+                @click="currentStep = 3"
+              >
+                {{ t('continue') }}
+              </v-btn>
+
+              <h3
+                class="text-h6 mt-4"
+              >
+                {{ t('formats') }}
+              </h3>
+              <dataset-file-formats />
+            </v-stepper-window-item>
+
+            <v-stepper-window-item
+              v-if="digitalDocumentField"
+              :value="3"
+              class="pa-6"
+            >
+              <v-alert
+                type="info"
+                variant="outlined"
+                density="compact"
+                style="max-width:400px;"
+              >
+                {{ t('attachmentInfo') }}
+              </v-alert>
+              <p>
+                {{ t('attachmentsMsg1') }}
+              </p>
+
+              <p>
+                {{ t('attachmentsMsg2') }}
+              </p>
+              <div
+                class="mt-3 mb-3"
+                @drop.prevent="e => {attachments = e.dataTransfer?.files[0]; currentStep = 5}"
+                @dragover.prevent
+              >
+                <v-file-input
+                  v-model="attachments"
+                  :label="t('selectFile')"
+                  variant="outlined"
+                  density="compact"
+                  style="max-width: 400px;"
+                  accept=".zip"
+                  hide-details
+                  clearable
+                  @change="currentStep = 5"
+                />
+              </div>
               <v-btn
                 color="primary"
-                :disabled="updateDataset.loading.value"
-                @click="updateDataset.execute()"
+                class="mt-4"
+                @click="currentStep = 5"
               >
-                {{ t('update') }}
+                {{ t('continue') }}
               </v-btn>
-            </template>
-          </v-stepper-window-item>
+            </v-stepper-window-item>
 
-          <v-stepper-window-item :value="digitalDocumentField ? 5 : 4">
-            <template v-if="imported">
-              <!--<journal-view
+            <v-stepper-window-item
+              :value="digitalDocumentField ? 4 : 3"
+              class="pa-6"
+            >
+              <template v-if="file">
+                <p class="mb-3">
+                  {{ t('updateMsg') }}
+                </p>
+                <v-row
+                  v-if="updateDataset.loading.value"
+                  class="mx-0 my-3"
+                >
+                  <v-progress-linear
+                    v-if="uploadProgress"
+                    v-model="uploadProgress.percent"
+                    class="my-1"
+                    rounded
+                    height="28"
+                    style="max-width: 600px;"
+                  >
+                    {{ truncateMiddle(file.name, 36, 4, '...') }}
+                    <template v-if="uploadProgress.total && uploadProgress.percent !== undefined">
+                      {{ Math.floor(uploadProgress.percent) }}% {{ t('of') }} {{ formatBytes(uploadProgress.total, locale) }}
+                    </template>
+                  </v-progress-linear>
+                  <v-btn
+                    :icon="mdiCancel"
+                    color="warning"
+                    :title="t('cancel')"
+                    @click="cancelUpdateDataset"
+                  />
+                </v-row>
+                <v-btn
+                  color="primary"
+                  :disabled="updateDataset.loading.value"
+                  @click="updateDataset.execute()"
+                >
+                  {{ t('update') }}
+                </v-btn>
+              </template>
+            </v-stepper-window-item>
+
+            <v-stepper-window-item :value="digitalDocumentField ? 5 : 4">
+              <template v-if="imported">
+                <!--<journal-view
                 v-if="datasetStore.journal.value"
                 :journal="datasetStore.journal.value"
                 type="dataset"
               />-->
-              <v-alert
-                v-if="datasetStore.lastError.value && datasetStore.lastError.value.date > imported"
-                type="error"
-                variant="outlined"
-                class="ma-6"
-              >
-                {{ datasetStore.lastError.value.data }}
-              </v-alert>
+                <v-alert
+                  v-if="datasetStore.lastError.value && datasetStore.lastError.value.date > imported"
+                  type="error"
+                  variant="outlined"
+                  class="ma-6"
+                >
+                  {{ datasetStore.lastError.value.data }}
+                </v-alert>
+                <dataset-table
+                  v-else-if="datasetStore.dataset.value?.finalizedAt && imported < datasetStore.dataset.value?.finalizedAt"
+                  :height="height - 84"
+                />
+                <v-progress-circular
+                  v-else
+                  indeterminate
+                  color="primary"
+                  class="ma-6"
+                />
+              </template>
+            </v-stepper-window-item>
+          </template>
+
+          <!-- REST steps -->
+          <template v-if="datasetStore.dataset.value?.isRest">
+            <v-stepper-window-item :value="2">
               <dataset-table
-                v-else-if="datasetStore.dataset.value?.finalizedAt && imported < datasetStore.dataset.value?.finalizedAt"
+                :edit="true"
                 :height="height - 84"
               />
-              <v-progress-circular
-                v-else
-                indeterminate
-                color="primary"
-                class="ma-6"
-              />
-            </template>
-          </v-stepper-window-item>
-        </template>
-
-        <!-- REST steps -->
-        <template v-if="datasetStore.dataset.value?.isRest">
-          <v-stepper-window-item :value="2">
-            <dataset-table
-              :edit="true"
-              :height="height - 84"
-            />
-          </v-stepper-window-item>
+            </v-stepper-window-item>
+          </template>
         </template>
       </dataset-store-provider>
     </v-stepper-window>
@@ -305,6 +325,10 @@ fr:
   loaded: chargées
   editTable: Édition des lignes
   datasetsCount: "Vous ne pouvez mettre à jour aucun jeu de données | Vous pouvez mettre à jour 1 jeu de données | Vous pouvez mettre à jour {count} jeux de données"
+  missingPermissions: "Vous semblez pouvoir charger des données sur ce jeu de données, mais il vous manque une partie des permissions nécessaires au fonctionnement complet de cette page. Permissions manquantes :"
+  permissions:
+    readJournal: Lister les événements du journal du jeu de données.
+    readLines: Requêter les lignes du jeu de données.
 en:
   updateDataset: Update a dataset
   choseType: What update action do you wish to perform ?
@@ -337,6 +361,10 @@ en:
   loaded: loaded
   editTable: Edit lines
   datasetsCount: "You can't update any dataset | You can update 1 dataset | You can update {count} datasets"
+  missingPermissions: "You seem to be able to load data on this dataset, but you lack some of the permissions necessary for this page. Missing permissions:"
+  permissions:
+    readJournal: List the events of the dataset's log
+    readLines: Query the dataset's lines
 </i18n>
 
 <script lang="ts" setup>
@@ -410,6 +438,9 @@ const initialized = computed((oldValue) => {
 })
 // const initialFetch = ref(!!updated.value)
 const initialFetch = false
+const missingPermissions = computed(() => {
+  return ['readJournal', 'readLines'].filter(p => !currentDataset.value?.userPermissions.includes(p))
+})
 
 watch(currentDataset, (newValue, oldValue) => {
   if (newValue && !oldValue) {
