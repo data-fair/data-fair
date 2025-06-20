@@ -7,6 +7,7 @@ import pump from '../misc/utils/pipe.ts'
 import * as es from '../datasets/es/index.ts'
 import * as datasetUtils from '../datasets/utils/index.js'
 import { updateStorage } from '../datasets/utils/storage.ts'
+import { readStreams as getReadStreams } from '../datasets/utils/data-streams.js'
 import * as datasetsService from '../datasets/service.js'
 import * as restDatasetsUtils from '../datasets/utils/rest.ts'
 import * as heapUtils from '../misc/utils/heap.js'
@@ -97,7 +98,7 @@ export const process = async function (app, dataset) {
   } else {
     const extended = dataset.extensions && dataset.extensions.find(e => e.active)
     if (!extended) await fs.remove(datasetUtils.fullFilePath(dataset))
-    readStreams = await datasetUtils.readStreams(db, dataset, false, extended, dataset.validateDraft, progress)
+    readStreams = await getReadStreams(db, dataset, false, extended, dataset.validateDraft, progress)
     writeStream = new Writable({ objectMode: true, write (chunk, encoding, cb) { cb() } })
   }
   await pump(...readStreams, indexStream, writeStream)
