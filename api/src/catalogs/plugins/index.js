@@ -17,6 +17,7 @@ import * as geonetworkConnector from './geonetwork.js'
 import * as mydatacatalogueConnector from './mydatacatalogue.js'
 import * as udataConnector from './udata.js'
 import * as arcgisConnector from './arcgis.js'
+import { sendResourceEvent } from '../../misc/utils/notifications.ts'
 
 export const connectors = [
   { key: 'data-fair', ...dataFairConnector },
@@ -107,7 +108,8 @@ const getDatasetPatch = (catalog, dataset, props = {}) => {
 
 const insertDataset = async (app, newDataset) => {
   await datasetUtils.insertWithId(mongo.db, newDataset)
-  await journals.log(app, newDataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + newDataset.id }, 'dataset')
+  await journals.log('datasets', newDataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + newDataset.id })
+  await sendResourceEvent('datasets', newDataset, 'dataset-created')
 }
 
 export const updateAllHarvestedDatasets = async (app, catalog) => {
@@ -317,17 +319,17 @@ export const processPublications = async function (app, type, resource) {
   const catalog = await catalogsCollection.findOne({ id: processedPublication.catalog })
 
   if (!catalog) {
-    await journals.log(app, resource, {
+    await journals.log(type + 's', resource, {
       type: 'error',
       data: `Une publication fait référence à un catalogue inexistant (${processedPublication.id})`
-    }, type)
+    })
     return setResult('Catalogue inexistant', true)
   }
   if (catalog.owner.type !== resource.owner.type || catalog.owner.id !== resource.owner.id) {
-    await journals.log(app, resource, {
+    await journals.log(type + 's', resource, {
       type: 'error',
       data: `Une publication fait référence à un catalogue qui n'appartient pas au propriétaire de la resource à publier (${processedPublication.id})`
-    }, type)
+    })
     return setResult('Le catalogue n\'appartient pas au propriétaire de la resource à publier', true)
   }
 
@@ -340,7 +342,7 @@ export const processPublications = async function (app, type, resource) {
     if (processedPublication.status === 'deleted') {
       if (type === 'dataset') res = await connector.deleteDataset(catalog, resource, processedPublication)
       if (type === 'application') res = await connector.deleteApplication(catalog, resource, processedPublication)
-      await journals.log(app, resource, { type: 'publication', data: `Suppression de la publication vers ${catalog.title || catalog.url}` }, type)
+      await journals.log(type + 's', resource, { type: 'publication', data: `Suppression de la publication vers ${catalog.title || catalog.url}` })
     } else if (processedPublication.status === 'waiting') {
       const firstPublication = !processedPublication.result
       if (type === 'dataset') res = await connector.publishDataset(catalog, resource, processedPublication)
@@ -349,13 +351,13 @@ export const processPublications = async function (app, type, resource) {
         // Next line is only here for compatibility.. in next generation of apps, all datasets references should be in .datasets"
         res = await connector.publishApplication(catalog, resource, processedPublication, datasets)
       }
-      if (firstPublication) await journals.log(app, resource, { type: 'publication', data: `Nouvelle publication vers ${catalog.title || catalog.url}` }, type)
-      else await journals.log(app, resource, { type: 'publication', data: `Publication mise à jour vers ${catalog.title || catalog.url}` }, type)
+      if (firstPublication) await journals.log(type + 's', resource, { type: 'publication', data: `Nouvelle publication vers ${catalog.title || catalog.url}` })
+      else await journals.log(type + 's', resource, { type: 'publication', data: `Publication mise à jour vers ${catalog.title || catalog.url}` })
     }
     await setResult(null, res)
   } catch (err) {
     console.warn('Error while processing publication', err)
-    await journals.log(app, resource, { type: 'error', data: err.message || err }, type)
+    await journals.log(type + 's', resource, { type: 'error', data: err.message || err })
     await setResult(err.message || err)
   }
 }

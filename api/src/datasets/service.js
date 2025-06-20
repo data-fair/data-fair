@@ -12,6 +12,7 @@ import * as datasetUtils from './utils/index.js'
 import * as restDatasetsUtils from './utils/rest.ts'
 import * as esUtils from './es/index.ts'
 import * as webhooks from '../misc/utils/webhooks.js'
+import { sendResourceEvent } from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile, metadataAttachmentsDir } from './utils/files.ts'
@@ -527,20 +528,23 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
   const patchedDataset = { ...datasetFull, ...patch }
 
   if (datasetFull.file) {
-    webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' }, null)
+    webhooks.trigger('dataset', patchedDataset, { type: 'data-updated' }, null)
+    sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated')
     const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema)
     if (breakingChanges.length) {
+      const breakingChangesDesc = i18n.getLocales().reduce((a, locale) => {
+        let msg = i18n.__({ phrase: 'hasBreakingChanges', locale }, { title: patchedDataset.title })
+        for (const breakingChange of breakingChanges) {
+          msg += '\n' + i18n.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { key: breakingChange.key })
+        }
+        a[locale] = msg
+        return a
+      }, {})
       webhooks.trigger(db, 'dataset', patchedDataset, {
         type: 'breaking-change',
-        body: i18n.getLocales().reduce((a, locale) => {
-          let msg = i18n.__({ phrase: 'hasBreakingChanges', locale }, { title: patchedDataset.title })
-          for (const breakingChange of breakingChanges) {
-            msg += '\n' + i18n.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { key: breakingChange.key })
-          }
-          a[locale] = msg
-          return a
-        }, {})
+        body: breakingChangesDesc
       })
+      sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated', breakingChangesDesc)
     }
   }
 

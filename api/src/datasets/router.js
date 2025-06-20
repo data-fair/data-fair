@@ -190,11 +190,12 @@ router.patch('/:datasetId',
         throw httpError(400, req.__('errors.dupSlug'))
       })
     if (!isEmpty) {
-      await publicationSites.applyPatch(db, dataset, { ...dataset, ...patch }, user, 'dataset')
+      await publicationSites.applyPatch(db, dataset, { ...dataset, ...patch }, sessionState, 'dataset')
       await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
 
       if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
-        await journals.log(req.app, dataset, { type: 'structure-updated' }, 'dataset', false, sessionState)
+        await journals.log('datasets', dataset, { type: 'structure-updated' })
+        await notifications.sendResourceEvent('datasets', dataset, sessionState, 'structure-updated')
       }
 
       eventsLog.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
@@ -399,7 +400,7 @@ const createDatasetRoute = async (req, res) => {
       onClose(() => {
         // this is only to maintain compatibilty, but clients should look for the status in the response
         // and not wait for an event if the dataset is created already finalized
-        journals.log(req.app, dataset, { type: 'finalize-end' }, 'dataset').catch(err => {
+        journals.log('datasets', dataset, { type: 'finalize-end' }).catch(err => {
           console.error('failure when send finalize-end to journal after rest dataset creation', err)
         })
       })
@@ -410,7 +411,8 @@ const createDatasetRoute = async (req, res) => {
 
     eventsLog.info('df.datasets.create', `created a dataset ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
 
-    await journals.log(req.app, dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id }, 'dataset', false, sessionState)
+    await journals.log('datasets', dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id })
+    await notifications.sendResourceEvent('datasets', dataset, sessionState, 'dataset-created')
     await syncRemoteService(db, dataset)
 
     res.status(201).send(clean(req, dataset, draft))
@@ -495,7 +497,10 @@ const updateDatasetRoute = async (req, res, next) => {
         resource: { type: 'dataset', title: dataset.title, id: dataset.id }
       }, sessionState)
 
-      if (files) await journals.log(req.app, dataset, { type: 'data-updated' }, 'dataset', false, sessionState)
+      if (files) {
+        await journals.log('datasets', dataset, { type: 'data-updated' }, 'dataset')
+        await notifications.sendResourceEvent('datasets', dataset, sessionState, 'data-updated')
+      }
       await syncRemoteService(db, dataset)
     }
   } catch (err) {
@@ -516,6 +521,7 @@ router.put('/:datasetId', lockDataset(), readDataset({ acceptedStatuses: ['final
 router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], alwaysDraft: true }), apiKeyMiddleware, permissions.middleware('validateDraft', 'write'), lockDataset(), async (req, res, next) => {
   // @ts-ignore
   const dataset = req.dataset
+  const sessionState = reqSession(req)
 
   if (!req.datasetFull.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
@@ -523,19 +529,9 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
 
   const patch = { status: 'validated', validateDraft: true }
   await applyPatch(req.app, dataset, patch)
-  await journals.log(req.app, dataset, { type: 'draft-validated', data: 'validation manuelle' }, 'dataset', false, sessionState)
-
+  await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation manuelle' }, 'dataset')
+  await notifications.sendResourceEvent('datasets', dataset, sessionState, 'draft-validated')
   eventsLog.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
-  const sessionState = await session.req(req)
-  eventsQueue.pushEvent({
-    title: 'Brouillon validé',
-    body: `${dataset.title} (${dataset.slug})`,
-    topic: {
-      key: `data-fair:dataset-draft-validated:${dataset.id}`
-    },
-    sender: dataset.owner,
-    resource: { type: 'dataset', title: dataset.title, id: dataset.id }
-  }, sessionState)
 
   return res.send(dataset)
 })
@@ -544,6 +540,7 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
 router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'finalized', 'error'], alwaysDraft: true }), apiKeyMiddleware, permissions.middleware('cancelDraft', 'write'), lockDataset(), async (req, res, next) => {
   // @ts-ignore
   const dataset = req.dataset
+  const sessionState = reqSession(req)
   // @ts-ignore
   const datasetFull = req.datasetFull
 
@@ -554,24 +551,14 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
   if (!datasetFull.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
-  await journals.log(req.app, dataset, { type: 'draft-cancelled' }, 'dataset', false, sessionState)
+  await journals.log('datasets', { type: 'draft-cancelled' }, 'dataset')
   const patchedDataset = await db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, { $unset: { draft: '' } }, { returnDocument: 'after' })
   await fs.remove(dir(dataset))
   await esUtils.deleteIndex(req.app.get('es'), dataset)
 
   eventsLog.info('df.datasets.cancelDraft', `cancelled dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
-
-  const sessionState = await session.req(req)
-  eventsQueue.pushEvent({
-    title: 'Brouillon annulé',
-    body: `${dataset.title} (${dataset.slug})`,
-    topic: {
-      key: `data-fair:dataset-draft-cancelled:${dataset.id}`
-    },
-    sender: dataset.owner,
-    resource: { type: 'dataset', title: dataset.title, id: dataset.id }
-  }, sessionState)
+  await notifications.sendResourceEvent('datasets', dataset, sessionState, 'draft-cancelled')
 
   await updateStorage(patchedDataset)
   return res.send(patchedDataset)
@@ -695,7 +682,7 @@ async function manageESError (req, err) {
   // revert to simply logging
   // if (req.dataset.status === 'finalized' && err.statusCode >= 404 && errBody.type !== 'search_phase_execution_exception') {
   // await mongo.db.collection('datasets').updateOne({ id: req.dataset.id }, { $set: { status: 'error' } })
-  // await journals.log(req.app, req.dataset, { type: 'error', data: message })
+  // await journals.log(req.dataset, { type: 'error', data: message })
   // }
   throw httpError(status, message)
 }

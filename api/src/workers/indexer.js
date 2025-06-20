@@ -105,7 +105,7 @@ export const process = async function (app, dataset) {
   debug('index stream ok')
   debugHeap('after-stream')
   const errorsSummary = indexStream.errorsSummary()
-  if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
+  if (errorsSummary) await journals.log('datasets', dataset, { type: 'error', data: errorsSummary })
 
   const result = {
     schema: datasetUtils.cleanSchema(dataset)

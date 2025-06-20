@@ -77,12 +77,12 @@ export const process = async function (app, dataset) {
       const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
       const breakingChanges = schemaUtils.getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema)
       if (breakingChanges.length) {
-        await journals.log(app, dataset, { type: 'validation-error', data: 'La structure du fichier contient des ruptures de compatibilité.' })
+        await journals.log('datasets', dataset, { type: 'validation-error', data: 'La structure du fichier contient des ruptures de compatibilité.' })
         if (dataset.draftReason.validationMode === 'noBreakingChange' || dataset.draftReason.validationMode === 'compatible') {
           delete patch.validateDraft
         }
       } else if (!schemaUtils.schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
-        await journals.log(app, dataset, { type: 'validation-error', data: 'La structure du fichier contient des changements.' })
+        await journals.log('datasets', dataset, { type: 'validation-error', data: 'La structure du fichier contient des changements.' })
         if (dataset.draftReason.validationMode === 'compatible') {
           delete patch.validateDraft
         }
@@ -101,13 +101,13 @@ export const process = async function (app, dataset) {
 
     const errorsSummary = validateStream.errorsSummary()
     if (errorsSummary) {
-      await journals.log(app, dataset, { type: 'validation-error', data: errorsSummary })
+      await journals.log('datasets', dataset, { type: 'validation-error', data: errorsSummary })
       delete patch.validateDraft
     }
   }
 
   if (patch.validateDraft) {
-    await journals.log(app, dataset, { type: 'draft-validated', data: 'validation automatique' }, 'dataset')
+    await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation automatique' }, 'dataset')
   }
 
   await datasetsService.applyPatch(app, dataset, patch)

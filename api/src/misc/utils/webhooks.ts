@@ -1,3 +1,4 @@
+import mongo from '#mongo'
 import axios from './axios.js'
 import config from '#config'
 import settingsSchema from '../../../contract/settings.js'
@@ -6,11 +7,11 @@ import { Resource, Event, Dataset } from '#types'
 
 const debug = debugLib('webhooks')
 
-export const trigger = async (type: string, resource: Resource, event: Event, sender, user) => {
+export const trigger = async (type: string, resource: Resource, event: Event, sender) => {
   const eventKey = (resource as Dataset).draftReason ? `${type}-draft-${event.type}` : `${type}-${event.type}`
   const eventType = settingsSchema.properties.webhooks.items.properties.events.items.oneOf
     .find(eventType => eventType.const === eventKey)
-  if (!eventType && !(event.type.includes('published:') || event.type.includes('published-topic:') || event.type.includes('publication-requested:'))) {
+  if (!eventType) {
     return debug('Unknown webhook event type', type, event.type)
   }
 
@@ -19,7 +20,7 @@ export const trigger = async (type: string, resource: Resource, event: Event, se
     type: resource.owner.type,
     department: resource.owner.department || { $exists: false }
   }
-  const settings = await db.collection('settings').findOne(settingsFilter) || {}
+  const settings = await mongo.settings.findOne(settingsFilter) || {}
   settings.webhooks = settings.webhooks || []
   for (const webhook of settings.webhooks) {
     if (webhook.events && webhook.events.length && !webhook.events.includes(`${type}-${event.type}`)) continue

@@ -2,26 +2,29 @@ import mongo from '#mongo'
 import moment from 'moment'
 import * as webhooks from './webhooks.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
+import { Dataset, Event, Resource, ResourceType } from '#types'
 
-export const log = async function (app, resource, event, type = 'dataset', noStoreEvent = false, user = null) {
+export const log = async function (resourceType: ResourceType, resource: Resource, event: Event, noStoreEvent = false) {
+  const singularResourceType = resourceType.substring(0, resourceType.length - 1)
+
   try {
     const db = mongo.db
     event.date = moment().toISOString()
-    if (resource.draftReason) event.draft = true
+    if ((resource as Dataset).draftReason) event.draft = true
 
     if (!noStoreEvent) {
       await db.collection('journals')
         .updateOne(
-          { id: resource.id, type, 'owner.type': resource.owner.type, 'owner.id': resource.owner.id },
+          { id: resource.id, type: singularResourceType, 'owner.type': resource.owner.type, 'owner.id': resource.owner.id },
           { $push: { events: { $each: [event], $slice: -1000 } } },
           { upsert: true }
         )
     }
 
     // websockets notifications
-    await wsEmitter.emit(`${type}s/${resource.id}/journal`, { ...event, store: !noStoreEvent })
+    await wsEmitter.emit(`${resourceType}/${resource.id}/journal`, { ...event, store: !noStoreEvent })
 
-    webhooks.trigger(db, type, resource, event, null, user)
+    webhooks.trigger(resourceType, resource, event, null)
   } catch (err) {
     // errors when writing to journal are never blocking for the actual task
     console.warn('Failure when writing event to journal')

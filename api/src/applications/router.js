@@ -35,6 +35,7 @@ import { patchKeys } from '#doc/applications/patch-req/schema.js'
 import { reqSession, reqSessionAuthenticated, reqUser, reqUserAuthenticated, session } from '@data-fair/lib-express'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
+import { sendResourceEvent } from '../misc/utils/notifications.ts'
 
 const unlink = util.promisify(fs.unlink)
 const validateKeys = ajv.compile(applicationKeys)
@@ -109,6 +110,7 @@ const initNew = async (req, id) => {
 
 // Create an application configuration
 router.post('', async (req, res) => {
+  const sessionState = reqSession(req)
   const application = await initNew((await import('#doc/applications/post-req/index.js')).returnValid(req))
   if (!permissions.canDoForOwner(application.owner, 'applications', 'post', reqSession(req))) return res.status(403).type('text/plain').send()
 
@@ -139,7 +141,8 @@ router.post('', async (req, res) => {
 
   eventsLog.info('df.applications.create', `created application ${application.slug} (${application.id})`, { req, account: application.owner })
 
-  await journals.log(req.app, application, { type: 'application-created', href: config.publicUrl + '/application/' + application.id }, 'application')
+  await journals.log('applications', application, { type: 'application-created', href: config.publicUrl + '/application/' + application.id })
+  await sendResourceEvent('applications', application, sessionState, 'application-created')
   res.status(201).json(clean(application, req.publicationSite, req.publicBaseUrl))
 })
 
@@ -209,11 +212,12 @@ router.get('/:applicationId', readApplication, permissions.middleware('readDescr
 const attemptInsert = async (req, res, next) => {
   const { returnValid } = await import('#types/application/index.js')
   const newApplication = returnValid(await initNew(req, req.params.applicationId))
+  const sessionState = reqSession(req)
 
   permissions.initResourcePermissions(newApplication)
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
-  if (permissions.canDoForOwner(newApplication.owner, 'applications', 'post', reqSession(req))) {
+  if (permissions.canDoForOwner(newApplication.owner, 'applications', 'post', sessionState)) {
     try {
       await mongo.db.collection('applications').insertOne(newApplication)
 
@@ -221,7 +225,8 @@ const attemptInsert = async (req, res, next) => {
 
       req.isNewApplication = true
 
-      await journals.log(req.app, newApplication, { type: 'application-created', href: config.publicUrl + '/application/' + newApplication.id }, 'application')
+      await journals.log('applications', newApplication, { type: 'application-created', href: config.publicUrl + '/application/' + newApplication.id })
+      await sendResourceEvent('applications', newApplication, sessionState, 'application-created')
 
       return res.status(201).json(clean(newApplication, req.publicBaseUrl, req.publicationSite))
     } catch (err) {
@@ -458,7 +463,7 @@ const writeConfig = async (req, res) => {
 
   eventsLog.info('df.applications.writeConfig', `wrote application config ${application.slug} (${application.id})`, { req, account: application.owner })
 
-  await journals.log(req.app, application, { type: 'config-updated' }, 'application', false, sessionState)
+  await journals.log('applications', application, { type: 'config-updated' })
   await syncDatasets(db, { configuration: req.body })
   res.status(200).json(req.body)
 }
@@ -492,7 +497,7 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
   )
   eventsLog.info('df.applications.validateDraft', `vaidated application config draft ${application.slug} (${application.id})`, { req, account: application.owner })
 
-  await journals.log(req.app, application, { type: 'config-draft-updated' }, 'application', false, sessionState)
+  await journals.log('applications', application, { type: 'config-draft-updated' })
   res.status(200).json(req.body)
 })
 router.delete('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), async (req, res, next) => {
@@ -517,7 +522,7 @@ router.delete('/:applicationId/configuration-draft', readApplication, permission
 
   eventsLog.info('df.applications.cancelDraft', `cancelled application config draft ${application.slug} (${application.id})`, { req, account: application.owner })
 
-  await journals.log(req.app, application, { type: 'config-draft-cancelled' }, 'application', false, sessionState)
+  await journals.log('applications', application, { type: 'config-draft-cancelled' })
   res.status(200).json(req.body)
 })
 
@@ -563,7 +568,7 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
     await wsEmitter.emit(`applications/${req.params.applicationId}/draft-error`, req.body)
   } else if (req.application.configuration) {
     await mongo.db.collection('applications').updateOne({ id: req.application.id }, { $set: { status: 'error', errorMessage: message } })
-    await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application', false, reqSession(req))
+    await journals.log('applications', req.application, { type: 'error', data: req.body.message })
   }
   res.status(204).send()
 })
