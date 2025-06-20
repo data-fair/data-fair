@@ -224,6 +224,7 @@
                     class="my-1"
                     rounded
                     height="28"
+                    color="primary"
                     style="max-width: 600px;"
                   >
                     {{ truncateMiddle(file.name, 36, 4, '...') }}
@@ -234,6 +235,8 @@
                   <v-btn
                     :icon="mdiCancel"
                     color="warning"
+                    density="compact"
+                    class="mt-1 ml-2"
                     :title="t('cancel')"
                     @click="cancelUpdateDataset"
                   />
