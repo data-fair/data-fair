@@ -89,6 +89,7 @@
         ref="dataset-store-provider"
         v-slot="{ datasetStore }"
         journal
+        task-progress
         watch
         draft-mode
       >
@@ -253,29 +254,21 @@
 
             <v-stepper-window-item :value="digitalDocumentField ? 5 : 4">
               <template v-if="imported">
-                <!--<journal-view
-                v-if="datasetStore.journal.value"
-                :journal="datasetStore.journal.value"
-                type="dataset"
-              />-->
-                <v-alert
-                  v-if="datasetStore.lastError.value && datasetStore.lastError.value.date > imported"
-                  type="error"
-                  variant="outlined"
-                  class="ma-6"
-                >
-                  {{ datasetStore.lastError.value.data }}
-                </v-alert>
-                <dataset-table
-                  v-else-if="datasetStore.dataset.value?.finalizedAt && imported < datasetStore.dataset.value?.finalizedAt"
-                  :height="height - 84"
-                />
-                <v-progress-circular
-                  v-else
-                  indeterminate
-                  color="primary"
-                  class="ma-6"
-                />
+                <div class="mx-4 mb-4">
+                  <journal-view
+                    v-if="datasetStore.journal.value"
+                    :journal="datasetStore.journal.value"
+                    :after="imported"
+                    :task-progress="datasetStore.taskProgress.value"
+                    type="dataset"
+                  />
+                </div>
+                <v-card class="mx-4 mb-4 pt-1">
+                  <dataset-table
+                    v-if="datasetStore.dataset.value?.finalizedAt && imported < datasetStore.dataset.value?.finalizedAt"
+                    :height="Math.max(500, height - 360)"
+                  />
+                </v-card>
               </template>
             </v-stepper-window-item>
           </template>

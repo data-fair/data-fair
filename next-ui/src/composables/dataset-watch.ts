@@ -1,16 +1,23 @@
 import type { Event } from '#api/types'
-import { type DatasetStore } from './dataset-store'
+import { type TaskProgress, type DatasetStore } from './dataset-store'
 
-export type WatchKey = 'journal' | 'info'
+export type WatchKey = 'journal' | 'info' | 'taskProgress'
 
 export const useDatasetWatch = (datasetStore: DatasetStore, keys: WatchKey | WatchKey[]) => {
   const { sendUiNotif } = useUiNotif()
-  const { id, dataset, journal, datasetFetch, draftMode } = datasetStore
+  const { id, dataset, journal, datasetFetch, draftMode, taskProgress } = datasetStore
 
   if (!Array.isArray(keys)) keys = [keys]
   const ws = useWS('/data-fair/')
 
-  if (keys.length) {
+  if (keys.includes('taskProgress')) {
+    ws?.subscribe(`datasets/${id}/task-progress`, async (newTaskProgress: TaskProgress) => {
+      if (newTaskProgress.task) taskProgress.value = newTaskProgress
+      else taskProgress.value = undefined
+    })
+  }
+
+  if (keys.includes('journal') || keys.includes('info')) {
     ws?.subscribe(`datasets/${id}/journal`, async (event: Event) => {
       if (!dataset.value) return
 

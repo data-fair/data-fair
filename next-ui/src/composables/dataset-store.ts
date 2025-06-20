@@ -3,6 +3,7 @@ import type { Event, Dataset } from '#api/types'
 import { isRestDataset } from '#shared/types-utils'
 
 type ExtendedDataset = Dataset & { userPermissions: string[], draftReason?: string }
+export type TaskProgress = { task: string, progress: number, error?: string }
 
 export type DatasetStore = ReturnType<typeof createDatasetStore>
 export const datasetStoreKey = Symbol('dataset-store')
@@ -19,6 +20,10 @@ export const createDatasetStore = (id: string, draftMode: boolean | undefined = 
   const journal = ref<Event[] | null>(null)
   watch(journalFetch.data, () => { journal.value = journalFetch.data.value })
   const lastError = computed(() => journal.value?.find(e => e.type === 'error'))
+
+  const taskProgressFetch = useFetch<TaskProgress>($apiPath + `/datasets/${id}/task-progress`, { query: { draftMode }, immediate: false, watch: false })
+  const taskProgress = ref<TaskProgress>()
+  watch(taskProgressFetch.data, () => { taskProgress.value = taskProgressFetch.data.value?.task ? taskProgressFetch.data.value : undefined })
 
   const jsonSchemaFetch = useFetch<any>($apiPath + `/datasets/${id}/schema`, { query: { draftMode, mimeType: 'application/schema+json', extension: 'true' }, immediate: false, watch: false })
 
@@ -43,6 +48,8 @@ export const createDatasetStore = (id: string, draftMode: boolean | undefined = 
     journalFetch,
     journal,
     lastError,
+    taskProgressFetch,
+    taskProgress,
     jsonSchemaFetch,
     imageProperty,
     labelField: labelProperty,
