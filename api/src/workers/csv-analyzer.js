@@ -7,6 +7,7 @@ import * as datasetUtils from '../datasets/utils/index.js'
 import { updateStorage } from '../datasets/utils/storage.ts'
 import * as datasetsService from '../datasets/service.js'
 import * as fieldsSniffer from '../datasets/utils/fields-sniffer.js'
+import { sampleValues as getSampleValues } from '../datasets/utils/data-streams.js'
 import outOfCharacter from 'out-of-character'
 import debugLib from 'debug'
 
@@ -53,7 +54,7 @@ export const process = async function (app, dataset) {
 
   // get a random sampling to test values type on fewer elements
   debug('extract dataset sample')
-  const sampleValues = await datasetUtils.sampleValues(dataset)
+  const sampleValues = await getSampleValues(dataset)
   debug('list attachments')
   // Now we can extract infos for each field
   const attachments = await datasetUtils.lsAttachments(dataset)
