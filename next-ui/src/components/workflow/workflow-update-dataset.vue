@@ -285,9 +285,11 @@
                   v-else-if="datasetStore.dataset.value?.finalizedAt && imported < datasetStore.dataset.value?.finalizedAt"
                   class="mx-4 mb-4 pt-1"
                 >
+                  before: {{ height }}
                   <dataset-table
                     :height="Math.max(500, height - 360)"
                   />
+                  after
                 </v-card>
               </template>
             </v-stepper-window-item>
