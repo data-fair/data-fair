@@ -79,10 +79,11 @@ export const process = async function (app, dataset) {
     } else {
       Object.assign(datasetFull.draft, patch)
       const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
-      const breakingChanges = schemaUtils.getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema)
-      if (breakingChanges.length || !schemaUtils.schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
-        const validationError = breakingChanges.length ? 'La structure du fichier contient des ruptures de compatibilité.' : 'La structure du fichier contient des changements.'
+      const breakingChanges = schemaUtils.getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema, false, true, false)
+      if (breakingChanges.length) {
+        const validationError = 'La structure du fichier contient des ruptures de compatibilité : ' + breakingChanges.map(b => b.summary).join(', ')
         await journals.log(app, dataset, { type: 'validation-error', data: validationError })
+
         if (dataset.draftReason.validationMode === 'compatible') {
           delete patch.validateDraft
         }

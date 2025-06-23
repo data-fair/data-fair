@@ -535,7 +535,7 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
 
   if (datasetFull.file) {
     webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' }, null)
-    const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema)
+    const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema, false, false, false)
     if (breakingChanges.length) {
       webhooks.trigger(db, 'dataset', patchedDataset, {
         type: 'breaking-change',
