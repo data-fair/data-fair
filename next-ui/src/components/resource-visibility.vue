@@ -2,7 +2,7 @@
   <v-tooltip>
     <template #activator="{props}">
       <v-icon
-        :color="visibility === 'public' ? 'primary' : 'accent'"
+        :color="visibility === 'public' ? 'primary' : 'warning'"
         v-bind="props"
       >
         {{ visibility === 'public' ? mdiLockOpen : mdiLock }}

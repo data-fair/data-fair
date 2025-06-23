@@ -460,8 +460,9 @@ const missingPermissions = computed(() => {
   return ['readJournal', 'readLines'].filter(p => !currentDataset.value?.userPermissions.includes(p))
 })
 const draftCancelledEvent = computed(() => {
-  if (!imported.value) return undefined
-  return currentDatasetStore.value?.journal.value?.find(e => e.type === 'draft-cancelled' && imported && e.date > imported.value)
+  const importedAt = imported.value
+  if (!importedAt) return undefined
+  return currentDatasetStore.value?.journal.value?.find(e => e.type === 'draft-cancelled' && imported && e.date > importedAt)
 })
 
 watch(currentDataset, (newValue, oldValue) => {
