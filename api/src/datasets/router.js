@@ -149,7 +149,7 @@ const descriptionHasBreakingChanges = (req) => {
   }
   if (!req.body.schema) return false
   // TODO: some change in calculated properties should also be rejected here ?
-  const breakingChanges = getSchemaBreakingChanges(req.dataset.schema, req.body.schema, true, false, true)
+  const breakingChanges = getSchemaBreakingChanges(req.dataset.schema, req.body.schema, true, false)
   debugBreakingChanges('breaking changes in schema ? ', breakingChanges)
   return breakingChanges.length > 0
 }

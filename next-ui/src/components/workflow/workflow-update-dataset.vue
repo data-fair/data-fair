@@ -263,9 +263,29 @@
                     type="dataset"
                   />
                 </div>
-                <v-card class="mx-4 mb-4 pt-1">
+                <v-alert
+                  v-if="draftCancelledEvent"
+                  type="error"
+                  variant="outlined"
+                  class="mx-4"
+                >
+                  {{ t('draftCancelled') }}
+                  <template #append>
+                    <v-btn
+                      color="warning"
+                      variant="flat"
+                      @click="currentStep = 2"
+                    >
+                      changer de fichier
+                    </v-btn>
+                  </template>
+                </v-alert>
+
+                <v-card
+                  v-else-if="datasetStore.dataset.value?.finalizedAt && imported < datasetStore.dataset.value?.finalizedAt"
+                  class="mx-4 mb-4 pt-1"
+                >
                   <dataset-table
-                    v-if="datasetStore.dataset.value?.finalizedAt && imported < datasetStore.dataset.value?.finalizedAt"
                     :height="Math.max(500, height - 360)"
                   />
                 </v-card>
@@ -325,6 +345,7 @@ fr:
   permissions:
     readJournal: Lister les événements du journal du jeu de données.
     readLines: Requêter les lignes du jeu de données.
+  draftCancelled: Votre fichier a été rejeté automatiquement. Vous pouvez corriger un problème de structure dans le fichier avant de le charger de nouveau, ou contacter un administrateur.
 en:
   updateDataset: Update a dataset
   choseType: What update action do you wish to perform ?
@@ -361,6 +382,7 @@ en:
   permissions:
     readJournal: List the events of the dataset's log
     readLines: Query the dataset's lines
+  draftCancelled: Your file was rejected. You can fix a structure problem in the file before loading it again, or contact an administrator.
 </i18n>
 
 <script lang="ts" setup>
@@ -436,6 +458,10 @@ const initialized = computed((oldValue) => {
 const initialFetch = false
 const missingPermissions = computed(() => {
   return ['readJournal', 'readLines'].filter(p => !currentDataset.value?.userPermissions.includes(p))
+})
+const draftCancelledEvent = computed(() => {
+  if (!imported.value) return undefined
+  return currentDatasetStore.value?.journal.value?.find(e => e.type === 'draft-cancelled' && imported && e.date > imported.value)
 })
 
 watch(currentDataset, (newValue, oldValue) => {

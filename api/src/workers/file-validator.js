@@ -80,7 +80,7 @@ export const process = async function (app, dataset) {
     } else {
       Object.assign(datasetFull.draft, patch)
       const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
-      const breakingChanges = schemaUtils.getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema, false, true, false)
+      const breakingChanges = schemaUtils.getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema, false, true)
       if (breakingChanges.length) {
         const validationError = 'La structure du fichier contient des ruptures de compatibilité : ' + breakingChanges.map(b => b.summary).join(', ')
         await journals.log(app, dataset, { type: 'validation-error', data: validationError })
@@ -105,7 +105,6 @@ export const process = async function (app, dataset) {
     const validateStream = new ValidateStream({ dataset })
     await pump(...readStreams, validateStream)
     debug('Validator stream ok')
-    await progress.end()
 
     const errorsSummary = validateStream.errorsSummary()
     if (errorsSummary) {

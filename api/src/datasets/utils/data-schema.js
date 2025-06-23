@@ -322,11 +322,11 @@ export const schemasFullyCompatible = (schema1, schema2, ignoreCalculated = fals
   return equal(schema1Bare, schema2Bare)
 }
 
-export const getSchemaBreakingChanges = (schema, patchedSchema, ignoreExtensions = false, strict = false, ignoreCalculated = false) => {
+export const getSchemaBreakingChanges = (schema, patchedSchema, ignoreExtensions = false, strict = false) => {
   const breakingChanges = []
   // WARNING, this functionality is kind of a duplicate of the UI in dataset-schema.vue
   for (const field of schema) {
-    if (field['x-calculated'] && ignoreCalculated) continue
+    if (field['x-calculated']) continue
     if (field['x-extension'] && ignoreExtensions) continue
     const patchedField = patchedSchema.find(pf => pf.key === field.key)
     if (!patchedField) {
@@ -346,7 +346,7 @@ export const getSchemaBreakingChanges = (schema, patchedSchema, ignoreExtensions
   }
   if (strict) {
     for (const field of patchedSchema) {
-      if (field['x-calculated'] && ignoreCalculated) continue
+      if (field['x-calculated']) continue
       if (field['x-extension'] && ignoreExtensions) continue
       const originalField = schema.find(f => f.key === field.key)
       if (!originalField) {
