@@ -9,7 +9,7 @@ import memoize from 'memoizee'
 import * as wsServer from '@data-fair/lib-express/ws-server.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import locks from '@data-fair/lib-node/locks.js'
-import * as observe from './misc/utils/observe.js'
+import * as observe from './misc/utils/observe.ts'
 import catalogsPublicationQueue from './misc/utils/catalogs-publication-queue.ts'
 import debug from 'debug'
 import EventEmitter from 'node:events'
@@ -43,7 +43,7 @@ export const run = async () => {
 
   if (config.mode.includes('server')) {
     const limits = await import('./misc/utils/limits.ts')
-    const rateLimiting = await import('./misc/utils/rate-limiting.js')
+    const rateLimiting = await import('./misc/utils/rate-limiting.ts')
     const { session } = await import('@data-fair/lib-express/index.js')
     session.init(config.directoryUrl)
 

@@ -11,7 +11,7 @@ import * as workers from '../api/src/workers/index.js'
 import axios from 'axios'
 import debugModule from 'debug'
 import * as app from '../api/src/app.js'
-import * as rateLimiting from '../api/src/misc/utils/rate-limiting.js'
+import * as rateLimiting from '../api/src/misc/utils/rate-limiting.ts'
 
 import { axiosAuth } from '@data-fair/lib-node/axios-auth.js'
 

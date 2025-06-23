@@ -4,7 +4,7 @@ import debugLib from 'debug'
 import i18n from 'i18n'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import eventsQueue, { type PushEvent } from '@data-fair/lib-node/events-queue.js'
-import { SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
+import { reqUserAuthenticated, SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ResourceType, type Resource, Dataset } from '#types'
 import * as permissions from './permissions.ts'
 
@@ -74,8 +74,9 @@ export const send = async (event: PushEvent, sessionState?: SessionState) => {
 }
 
 export const subscribe = async (req, subscription) => {
+  const user = reqUserAuthenticated(req)
   subscription = {
-    recipient: { id: req.user.id, name: req.user.name },
+    recipient: { id: user.id, name: user.name },
     ...subscription
   }
   debug('send subscription', subscription)

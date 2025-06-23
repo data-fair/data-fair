@@ -3,6 +3,8 @@ import { Transform } from 'node:stream'
 import { RateLimiter, TokenBucket } from 'limiter' // cf https://github.com/jhurliman/node-rate-limiter/issues/80#issuecomment-1649261071
 import requestIp from 'request-ip'
 import debug from 'debug'
+import { Request, Response } from 'express'
+import { reqUser } from '@data-fair/lib-express'
 
 const debugLimits = debug('limits')
 
@@ -11,7 +13,13 @@ const debugLimits = debug('limits')
 
 const rateLimiters = {}
 
-const tokenBuckets = {}
+const tokenBuckets: Record<string, TokenBucketWrapper> = {}
+
+type TokenBucketWrapper = {
+  lastUsed?: number,
+  bucketSize: number,
+  bucket: TokenBucket
+}
 
 // simple cleanup of the limiters every 20 minutes
 setInterval(() => {
@@ -20,7 +28,7 @@ setInterval(() => {
     if (rateLimiters[key].lastUsed < threshold) delete rateLimiters[key]
   }
   for (const key of Object.keys(tokenBuckets)) {
-    if (tokenBuckets[key].lastUsed < threshold) delete tokenBuckets[key]
+    if (tokenBuckets[key].lastUsed && tokenBuckets[key].lastUsed < threshold) delete tokenBuckets[key]
   }
 }, 20 * 60 * 1000)
 
@@ -29,8 +37,9 @@ export const clear = () => {
   for (const key of Object.keys(tokenBuckets)) delete tokenBuckets[key]
 }
 
-export const getRateLimiter = (req, limitType, throttlingKey = '') => {
-  const throttlingId = throttlingKey + '_' + (req.user ? req.user.id : requestIp.getClientIp(req)) + '_' + limitType
+export const getRateLimiter = (req: Request, limitType: string, throttlingKey = '') => {
+  const user = reqUser(req)
+  const throttlingId = throttlingKey + '_' + (user ? user.id : requestIp.getClientIp(req)) + '_' + limitType
   const rateLimiter = rateLimiters[throttlingId] = rateLimiters[throttlingId] || {
     rateLimiter: new RateLimiter({
       tokensPerInterval: config.defaultLimits.apiRate[limitType].nb,
@@ -40,7 +49,7 @@ export const getRateLimiter = (req, limitType, throttlingKey = '') => {
   return rateLimiter
 }
 
-export const consume = (req, limitType, throttlingKey) => {
+export const consume = (req: Request, limitType: string, throttlingKey?: string) => {
   const rateLimiter = getRateLimiter(req, limitType, throttlingKey)
   rateLimiter.lastUsed = Date.now()
   return rateLimiter.rateLimiter.tryRemoveTokens(1)
@@ -50,7 +59,7 @@ const burstFactor = 4
 export const getTokenBucket = (req, limitType, bandwidthType) => {
   const throttlingId = req.user ? req.user.id : requestIp.getClientIp(req)
   const bucketSize = config.defaultLimits.apiRate[limitType].bandwidth[bandwidthType] * burstFactor
-  const tokenBucket = tokenBuckets[throttlingId + bandwidthType] = tokenBuckets[throttlingId + bandwidthType] || {
+  const tokenBucket: TokenBucketWrapper = tokenBuckets[throttlingId + bandwidthType] = tokenBuckets[throttlingId + bandwidthType] || {
     bucketSize,
     bucket: new TokenBucket({
       bucketSize,
@@ -62,12 +71,14 @@ export const getTokenBucket = (req, limitType, bandwidthType) => {
 }
 
 class Throttle extends Transform {
-  constructor (tokenBucket) {
+  tokenBucket: TokenBucketWrapper
+
+  constructor (tokenBucket: TokenBucketWrapper) {
     super()
     this.tokenBucket = tokenBucket
   }
 
-  async transformPromise (chunk, encoding, callback) {
+  async transformPromise (chunk: Buffer, encoding: string) {
     this.tokenBucket.lastUsed = Date.now()
     let pos = 0
     while (chunk.length > pos) {
@@ -78,12 +89,12 @@ class Throttle extends Transform {
     }
   }
 
-  _transform (chunk, encoding, cb) {
+  _transform (chunk: Buffer, encoding: string, cb) {
     this.transformPromise(chunk, encoding).then(() => cb(), cb)
   }
 }
 
-const throttledEnd = async (res, buffer, tokenBucket) => {
+const throttledEnd = async (res: Response, buffer: Buffer, tokenBucket) => {
   let pos = 0
   while (buffer.length > pos) {
     const slice = buffer.subarray(pos, pos + tokenBucket.bucketSize)
@@ -91,6 +102,7 @@ const throttledEnd = async (res, buffer, tokenBucket) => {
     res.write(slice)
     pos += slice.length
   }
+  // @ts-ignore
   res._originalEnd()
 }
 

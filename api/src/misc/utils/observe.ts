@@ -2,6 +2,8 @@
 
 import client from 'prom-client'
 import debug from 'debug'
+import { Request } from 'express'
+import { reqUser } from '@data-fair/lib-express'
 
 const debugReq = debug('df:observe:req')
 
@@ -28,7 +30,7 @@ export const reqRouteName = (req, routeName) => {
   req[reqObserveKey].routeName = routeName
 }
 
-export const reqStep = (req, stepName) => {
+export const reqStep = (req: Request, stepName: string) => {
   if (!req.route) return
   if (!req[reqObserveKey].routeName) req[reqObserveKey].routeName = req.route.path
 
@@ -38,8 +40,9 @@ export const reqStep = (req, stepName) => {
   debugReq('request', req.method, req.originalUrl, stepName, duration, 'ms')
   if (duration > 1000 && stepName !== 'total' && stepName !== 'finish') {
     const referer = req.headers.referer || req.headers.referrer || 'unknown'
-    const user = req.user ? `${req.user.name}(${req.user.id})` : 'anonymous'
-    console.log(`slow request ${req.method} ${req.originalUrl} ${stepName} ${duration}ms referer=${referer} user=${user}`)
+    const user = reqUser(req)
+    const userStr = user ? `${user.name}(${user.id})` : 'anonymous'
+    console.log(`slow request ${req.method} ${req.originalUrl} ${stepName} ${duration}ms referer=${referer} user=${userStr}`)
   }
   req[reqObserveKey].step = now
 }
