@@ -1,6 +1,7 @@
 import * as metrics from './misc/utils/metrics.ts' // import early so that memoizee can be used in the following imports
 import { resolve, parse as parsePath, join } from 'node:path'
 import express from 'express'
+import { parsePath as parseUrlPath } from 'ufo'
 import pathToRegexp from 'path-to-regexp'
 import config from '#config'
 import uiConfig from './ui-config.ts'
@@ -232,7 +233,7 @@ export const run = async () => {
           nonce: true,
           header: (req) => {
             for (const p of unsafePaths) {
-              if (p(req.url)) return unsafeCSPHeader
+              if (p(parseUrlPath(req.url).pathname)) return unsafeCSPHeader
             }
             return true
           }
