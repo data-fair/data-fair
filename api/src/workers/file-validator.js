@@ -103,6 +103,7 @@ export const process = async function (app, dataset) {
     const validateStream = new ValidateStream({ dataset })
     await pump(...readStreams, validateStream)
     debug('Validator stream ok')
+    await progress.end()
 
     const errorsSummary = validateStream.errorsSummary()
     if (errorsSummary) {
