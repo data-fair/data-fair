@@ -1,29 +1,30 @@
 <template>
   <v-btn-group
-    v-if="results.length >= 2"
     :elevation="selectedResults.length >= 2 ? 4 : 0"
     density="compact"
   >
-    <v-btn
-      v-if="selectedResults.length"
-      :title="t('unselectAllLines')"
-      :color="selectedResults.length === results.length ? 'primary' : 'grey'"
-      :size="dense ? 'md' : 'large'"
-      variant="text"
-      :icon="mdiCheckboxMarked"
-      :disabled="saving"
-      @click="selectedResults = []"
-    />
-    <v-btn
-      v-else
-      :key="'header-actions-check2-' + h"
-      :size="dense ? 'md' : 'large'"
-      variant="text"
-      :title="t('selectAllLines')"
-      :icon="mdiCheckboxBlankOutline"
-      :disabled="saving"
-      @click="selectedResults = [...results]"
-    />
+    <template v-if="results.length >= 2">
+      <v-btn
+        v-if="selectedResults.length"
+        :title="t('unselectAllLines')"
+        :color="selectedResults.length === results.length ? 'primary' : 'grey'"
+        :size="dense ? 'md' : 'large'"
+        variant="text"
+        :icon="mdiCheckboxMarked"
+        :disabled="saving"
+        @click="selectedResults = []"
+      />
+      <v-btn
+        v-else
+        :key="'header-actions-check2-' + h"
+        :size="dense ? 'md' : 'large'"
+        variant="text"
+        :title="t('selectAllLines')"
+        :icon="mdiCheckboxBlankOutline"
+        :disabled="saving"
+        @click="selectedResults = [...results]"
+      />
+    </template>
     <template v-if="selectedResults.length >=2">
       <v-btn
         v-if="canDeleteLine"
