@@ -95,6 +95,8 @@ const editSchema = computed(() => {
   const jsonSchema = jsonSchemaFetch.data.value
   if (!jsonSchema) return
   const schema = v2compat(jsonSchema)
+  // multi-line edition uses a patch action, required properties are meaningless in this case
+  delete schema.required
   Object.keys(schema.properties).forEach(key => {
     if (selectedCols.length && !selectedCols.includes(key)) {
       schema.properties[key].readOnly = true
