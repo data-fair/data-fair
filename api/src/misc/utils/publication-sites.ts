@@ -1,5 +1,5 @@
 import mongo from '#mongo'
-import * as webhooks from './webhooks.js'
+import * as webhooks from './webhooks.ts'
 import * as permissions from './permissions.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type SessionStateAuthenticated, type AccountKeys } from '@data-fair/lib-express'

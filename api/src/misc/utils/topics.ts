@@ -1,6 +1,6 @@
 import mongo from '#mongo'
-import { Topics } from '#types/settings/index.js'
-import { AccountKeys } from '@data-fair/lib-express'
+import { type Topics } from '#types/settings/index.js'
+import { type AccountKeys } from '@data-fair/lib-express'
 
 // propagate topics modifications to applications and datasets
 export const updateTopics = async (owner: AccountKeys, oldTopics: Topics, newTopics: Topics) => {

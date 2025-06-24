@@ -2,8 +2,8 @@ import config from 'config'
 import { resolvedSchema as dataset } from '#types/dataset/index.ts'
 import { resolvedSchema as datasetPost } from '../doc/datasets/post-req/index.js'
 import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
-import remoteService from './remote-service.js'
-import remoteServicePatch from './remote-service-patch.js'
+import { resolvedSchema as remoteServicePatch } from '../doc/remote-services/patch-req/.type/index.js'
+import { resolvedSchema as remoteService } from '#types/remote-service/index.js'
 import catalog from './catalog.js'
 import catalogPatch from './catalog-patch.js'
 import { resolvedSchema as application } from '../types/application/.type/index.js'
@@ -40,8 +40,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
         dataset,
         datasetPatch: datasetPatch.properties.body,
         datasetPost: datasetPost.properties.body,
-        remoteService: { ...remoteService },
-        remoteServicePatch: { ...remoteServicePatch },
+        remoteService,
+        remoteServicePatch: remoteServicePatch.properties.body,
         application,
         applicationPatch: applicationPatchReq.properties.body,
         catalog,

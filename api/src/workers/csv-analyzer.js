@@ -1,4 +1,4 @@
-import * as journals from '../misc/utils/journals.js'
+import * as journals from '../misc/utils/journals.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import iconv from 'iconv-lite'
 import datasetFileSample from '../datasets/utils/file-sample.js'

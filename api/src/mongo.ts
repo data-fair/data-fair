@@ -1,6 +1,6 @@
 import { Mongo } from '@data-fair/lib-node/mongo.js'
 import config from '#config'
-import type { Application, ApplicationKey, Dataset, Limits, RemoteService } from '#types'
+import type { Application, ApplicationKey, Dataset, Limits, RemoteService, BaseApp } from '#types'
 import type { DepartmentSettings } from '#types/department-settings/index.js'
 import type { Settings } from '#types/settings/index.js'
 
@@ -25,6 +25,10 @@ export class DfMongo {
 
   get applicationsKeys () {
     return this.mongo.db.collection<ApplicationKey>('applications-keys')
+  }
+
+  get baseApplications () {
+    return this.mongo.db.collection<BaseApp>('base-applications')
   }
 
   get limits () {

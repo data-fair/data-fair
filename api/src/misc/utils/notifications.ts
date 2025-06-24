@@ -4,8 +4,8 @@ import debugLib from 'debug'
 import i18n from 'i18n'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import eventsQueue, { type PushEvent } from '@data-fair/lib-node/events-queue.js'
-import { reqUserAuthenticated, SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
-import { type ResourceType, type Resource, Dataset } from '#types'
+import { reqUserAuthenticated, type SessionState, type SessionStateAuthenticated } from '@data-fair/lib-express'
+import { type ResourceType, type Resource, type Dataset } from '#types'
 import * as permissions from './permissions.ts'
 
 const debug = debugLib('notifications')

@@ -13,7 +13,7 @@ import debugLib from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { type SessionState } from '@data-fair/lib-express'
 import { type Locale } from '../../i18n/utils.ts'
-import { RemoteService, type Dataset } from '#types'
+import { type RemoteService, type Dataset } from '#types'
 
 const debugMasterData = debugLib('master-data')
 

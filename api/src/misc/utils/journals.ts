@@ -1,8 +1,8 @@
 import mongo from '#mongo'
 import moment from 'moment'
-import * as webhooks from './webhooks.js'
+import * as webhooks from './webhooks.ts'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
-import { Dataset, Event, Resource, ResourceType } from '#types'
+import type { Dataset, Event, Resource, ResourceType } from '#types'
 
 export const log = async function (resourceType: ResourceType, resource: Resource, event: Event, noStoreEvent = false) {
   const singularResourceType = resourceType.substring(0, resourceType.length - 1)

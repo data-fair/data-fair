@@ -13,7 +13,7 @@ import config from '#config'
 import mongo from '#mongo'
 import standardLicenses from '../../../contract/licenses.js'
 import debugLib from 'debug'
-import { type AccountKeys, reqSessionAuthenticated, reqUserAuthenticated, User } from '@data-fair/lib-express'
+import { type AccountKeys, reqSessionAuthenticated, reqUserAuthenticated, type User } from '@data-fair/lib-express'
 import { type Request } from '#types'
 
 const debugPublicationSites = debugLib('publication-sites')

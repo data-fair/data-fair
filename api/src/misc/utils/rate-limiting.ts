@@ -3,7 +3,7 @@ import { Transform } from 'node:stream'
 import { RateLimiter, TokenBucket } from 'limiter' // cf https://github.com/jhurliman/node-rate-limiter/issues/80#issuecomment-1649261071
 import requestIp from 'request-ip'
 import debug from 'debug'
-import { Request, Response } from 'express'
+import { type Request, type Response } from 'express'
 import { reqUser } from '@data-fair/lib-express'
 
 const debugLimits = debug('limits')

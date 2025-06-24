@@ -2,7 +2,7 @@
 
 import client from 'prom-client'
 import debug from 'debug'
-import { Request } from 'express'
+import { type Request } from 'express'
 import { reqUser } from '@data-fair/lib-express'
 
 const debugReq = debug('df:observe:req')

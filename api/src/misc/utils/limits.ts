@@ -5,7 +5,7 @@ import moment from 'moment'
 import * as ajv from '../utils/ajv.js'
 import { reqAdminMode, reqUserAuthenticated, type Account, type AccountKeys } from '@data-fair/lib-express'
 import type { Limit, Limits, Request } from '#types'
-import type { Request as ExpressRequest, Response, NextFunction, RequestHandler } from 'express'
+import type { Response, NextFunction, RequestHandler } from 'express'
 import type { Filter } from 'mongodb'
 
 const limitTypeSchema = { type: 'object', properties: { limit: { type: 'number' }, consumption: { type: 'number' } } }

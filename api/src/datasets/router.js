@@ -11,14 +11,14 @@ import mongodb from 'mongodb'
 import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
 import LinkHeader from 'http-link-header'
 import equal from 'deep-equal'
-import * as journals from '../misc/utils/journals.js'
+import * as journals from '../misc/utils/journals.ts'
 import axios from '../misc/utils/axios.js'
 import * as esUtils from './es/index.ts'
 import * as uploadUtils from './utils/upload.js'
 import datasetAPIDocs from '../../contract/dataset-api-docs.js'
 import privateDatasetAPIDocs from '../../contract/dataset-private-api-docs.ts'
 import * as permissions from '../misc/utils/permissions.ts'
-import * as usersUtils from '../misc/utils/users.js'
+import * as usersUtils from '../misc/utils/users.ts'
 import * as datasetUtils from './utils/index.js'
 import { updateStorage, updateTotalStorage } from './utils/storage.ts'
 import * as restDatasetsUtils from './utils/rest.ts'
@@ -42,7 +42,7 @@ import * as observe from '../misc/utils/observe.ts'
 import * as publicationSites from '../misc/utils/publication-sites.ts'
 import * as clamav from '../misc/utils/clamav.ts'
 import * as apiKeyUtils from '../misc/utils/api-key.ts'
-import { syncDataset as syncRemoteService } from '../remote-services/utils.js'
+import { syncDataset as syncRemoteService } from '../remote-services/utils.ts'
 import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetDataset, cancelDraft } from './service.js'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/data-schema.js'
 import { dir, attachmentsDir } from './utils/files.ts'
@@ -57,7 +57,7 @@ import { reqAdminMode, reqSession, reqSessionAuthenticated, session } from '@dat
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import { getFlatten } from './utils/flatten.ts'
-import { can } from '../misc/utils/permissions.js'
+import { can } from '../misc/utils/permissions.ts'
 
 const validateUserNotification = ajv.compile(userNotificationSchema)
 
@@ -698,7 +698,7 @@ async function manageESError (req, err) {
 // used later to count items in a tile or tile's neighbor
 async function countWithCache (req, db, query) {
   if (config.cache.disabled) return esUtils.count(req.app.get('es'), req.dataset, query)
-  return cache.getSet(db, {
+  return cache.getSet({
     type: 'tile-count',
     datasetId: req.dataset.id,
     finalizedAt: req.dataset.finalizedAt,
@@ -763,7 +763,7 @@ const readLines = async (req, res) => {
   let cacheHash
   const useVTCache = vectorTileRequested && !config.cache.disabled && !(config.cache.reverseProxyCache && req.publicOperation && req.query.finalizedAt)
   if (useVTCache) {
-    const { hash, value } = await cache.get(db, {
+    const { hash, value } = await cache.get({
       type: 'tile',
       sampling,
       datasetId: req.dataset.id,
@@ -898,7 +898,7 @@ const readLines = async (req, res) => {
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
-    if (useVTCache) cache.set(db, cacheHash, { tile: new mongodb.Binary(tile), count: esResponse.hits.hits.length, total: esResponse.hits.total.value })
+    if (useVTCache) cache.set(cacheHash, { tile: new mongodb.Binary(tile), count: esResponse.hits.hits.length, total: esResponse.hits.total.value })
     res.setHeader('x-tilesmode', tilesMode)
     res.setHeader('x-tilesampling', esResponse.hits.hits.length + '/' + esResponse.hits.total.value)
     return res.status(200).send(tile)
@@ -954,7 +954,7 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
   let cacheHash
   const useVTCache = vectorTileRequested && !config.cache.disabled && !(config.cache.reverseProxyCache && req.publicOperation && req.query.finalizedAt)
   if (useVTCache) {
-    const { hash, value } = await cache.get(db, {
+    const { hash, value } = await cache.get({
       type: 'tile-geoagg',
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
@@ -984,7 +984,7 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
-    if (useVTCache) cache.set(db, cacheHash, new mongodb.Binary(tile))
+    if (useVTCache) cache.set(cacheHash, new mongodb.Binary(tile))
     return res.status(200).send(tile)
   }
 
@@ -1005,7 +1005,7 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
   // Is the tile cached ?
   let cacheHash
   if (vectorTileRequested && useVTCache) {
-    const { hash, value } = await cache.get(db, {
+    const { hash, value } = await cache.get({
       type: 'tile-valuesagg',
       datasetId: req.dataset.id,
       finalizedAt: req.dataset.finalizedAt,
@@ -1049,7 +1049,7 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
     if (!tile) return res.status(204).send()
     res.type('application/x-protobuf')
     // write in cache without await on purpose for minimal latency, a cache failure must be detected in the logs
-    if (useVTCache) cache.set(db, cacheHash, new mongodb.Binary(tile))
+    if (useVTCache) cache.set(cacheHash, new mongodb.Binary(tile))
     return res.status(200).send(tile)
   }
 

@@ -5,8 +5,7 @@ import { PromiseSocket } from 'promise-socket'
 import { Counter } from 'prom-client'
 import debugLib from 'debug'
 import config from '#config'
-import { Request } from 'express'
-import { NextFunction } from 'http-proxy-middleware/dist/types.js'
+import { type Request, type NextFunction } from 'express'
 import { reqUserAuthenticated, type User } from '@data-fair/lib-express'
 
 const debug = debugLib('clamav')

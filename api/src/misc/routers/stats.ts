@@ -2,7 +2,7 @@ import express from 'express'
 import * as cacheHeaders from '../utils/cache-headers.js'
 import * as limitsUtils from '../utils/limits.ts'
 import mongo from '#mongo'
-import { Account, reqSessionAuthenticated } from '@data-fair/lib-express'
+import { type Account, reqSessionAuthenticated } from '@data-fair/lib-express'
 
 const router = express.Router()
 

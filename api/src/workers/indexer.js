@@ -1,5 +1,5 @@
 import { join } from 'path'
-import * as journals from '../misc/utils/journals.js'
+import * as journals from '../misc/utils/journals.ts'
 import fs from 'fs-extra'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { Writable } from 'stream'

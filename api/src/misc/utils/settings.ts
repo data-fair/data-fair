@@ -1,7 +1,7 @@
 import mongo from '#mongo'
 import sanitizeHtml from '@data-fair/data-fair-shared/sanitize-html.js'
-import * as i18nUtils from '../../../i18n/utils.js'
-import { Account } from '@data-fair/lib-express'
+import * as i18nUtils from '../../../i18n/utils.ts'
+import { type Account } from '@data-fair/lib-express'
 
 export const getPrivateOwnerVocabulary = async (owner: Account) => {
   const settings = await mongo.db.collection('settings')

@@ -10,7 +10,7 @@ import * as findUtils from '../misc/utils/find.js'
 import clone from '@data-fair/lib-utils/clone.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { getPseudoSessionState } from '../misc/utils/users.js'
+import { getPseudoSessionState } from '../misc/utils/users.ts'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
 import { ownerDir } from '../datasets/utils/files.ts'
 import { updateTotalStorage } from '../datasets/utils/storage.ts'

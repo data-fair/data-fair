@@ -20,24 +20,26 @@ import LinkHeader from 'http-link-header'
 import unzipper from 'unzipper'
 import dayjs from 'dayjs'
 import duration from 'dayjs/plugin/duration.js'
-import * as storageUtils from './storage.ts'
-import * as extensionsUtils from './extensions.ts'
-import * as findUtils from '../../misc/utils/find.js'
-import * as fieldsSniffer from './fields-sniffer.js'
-import { transformFileStreams, formatLine } from './data-streams.js'
-import { attachmentPath, lsAttachments, tmpDir } from './files.ts'
-import { jsonSchema } from './data-schema.js'
-import * as esUtils from '../es/index.ts'
-import { tabularTypes } from './types.js'
+// import * as storageUtils from './storage.ts'
+// import * as extensionsUtils from './extensions.ts'
+// import * as findUtils from '../../misc/utils/find.js'
+// import * as fieldsSniffer from './fields-sniffer.js'
+// import { transformFileStreams, formatLine } from './data-streams.js'
+// import { attachmentPath, lsAttachments, tmpDir } from './files.ts'
+// import { jsonSchema } from './data-schema.js'
+// import { aliasName } from '../es/commons.js'
+// import indexStream from '../es/index-stream.js'
+// import { initDatasetIndex, switchAlias } from '../es/manage-indices.js'
+// import { tabularTypes } from './types.js'
 import { Piscina } from 'piscina'
-import { internalError } from '@data-fair/lib-node/observer.js'
-import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RestActionsSummary } from '#types'
-import type { NextFunction, Response, RequestHandler } from 'express'
-import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionState, type SessionStateAuthenticated, type User } from '@data-fair/lib-express'
-import { type ValidateFunction } from 'ajv'
-import { assertRestDataset, type Dataset, type RequestWithRestDataset } from '#types/dataset/index.ts'
-import type { Collection, Filter, UnorderedBulkOperation, UpdateFilter } from 'mongodb'
-import iterHits from '../es/iter-hits.js'
+// import { internalError } from '@data-fair/lib-node/observer.js'
+// import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RestActionsSummary } from '#types'
+// import type { NextFunction, Response, RequestHandler } from 'express'
+// import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
+// import { type ValidateFunction } from 'ajv'
+// import { type RequestWithRestDataset } from '#types/dataset/index.ts'
+// import type { Collection, Filter, UnorderedBulkOperation, UpdateFilter } from 'mongodb'
+// import iterHits from '../es/iter-hits.js'
 
 type Operation = {
   _id: string,
@@ -700,10 +702,10 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
     await extensionsUtils.extend(dataset, dataset.extensions, 'lineIds', true, lineIds)
   }
   const attachments = !!dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
-  const indexName = esUtils.aliasName(dataset)
+  const indexName = aliasName(dataset)
   await pump(
     ...await readStreams(dataset, { _id: { $in: lineIds } }),
-    esUtils.indexStream({ esClient: es.client, indexName, dataset, attachments, refresh: config.elasticsearch.singleLineOpRefresh }),
+    indexStream({ esClient: es.client, indexName, dataset, attachments, refresh: config.elasticsearch.singleLineOpRefresh }),
     markIndexedStream(dataset)
   )
 
@@ -784,8 +786,8 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
 
 export const deleteAllLines = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   await initDataset(req.dataset)
-  const indexName = await esUtils.initDatasetIndex(es.client, req.dataset)
-  await esUtils.switchAlias(es.client, req.dataset, indexName)
+  const indexName = await initDatasetIndex(es.client, req.dataset)
+  await switchAlias(es.client, req.dataset, indexName)
 
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))

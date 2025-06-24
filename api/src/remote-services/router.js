@@ -11,12 +11,11 @@ import remoteServiceAPIDocs from '../../contract/remote-service-api-docs.js'
 import mongoEscape from 'mongo-escape'
 import config from '#config'
 import mongo from '#mongo'
-import servicePatch from '../../contract/remote-service-patch.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import * as rateLimiting from '../misc/utils/rate-limiting.ts'
 import { httpAgent, httpsAgent } from '../misc/utils/http-agents.js'
-import { clean, validate, validateOpenApi, initNew, computeActions } from './utils.js'
-import { findRemoteServices, findActions } from './service.js'
+import { clean, validateOpenApi, initNew, computeActions } from './utils.ts'
+import { findRemoteServices, findActions } from './service.ts'
 import debugModule from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { reqUser, reqAdminMode } from '@data-fair/lib-express'
@@ -70,6 +69,7 @@ router.post('', async (req, res) => {
   if (req.body.title && !req.body.id) req.body.id = slug(req.body.title, { lower: true, strict: true })
   debugMasterData(`POST remote service manually by ${sessionState.user.name} (${sessionState.user.id})`, req.body)
   const service = initNew(req.body)
+  const { assertValid: validate } = await import('#types/remote-service/index.js')
   validate(service)
 
   // Generate ids and try insertion until there is no conflict on id
@@ -115,6 +115,7 @@ const attemptInsert = async (req, res, next) => {
 
   const newService = initNew(req.body)
   newService.id = req.params.remoteServiceId
+  const { assertValid: validate } = await import('#types/remote-service/index.js')
   validate(newService)
 
   next()
@@ -125,8 +126,9 @@ router.put('/:remoteServiceId', attemptInsert, readService, async (req, res) => 
   const newService = req.body
   debugMasterData(`PUT remote service manually by ${sessionState.user.name} (${sessionState.user.id})`, req.params.remoteServiceId, newService.id)
   // preserve all readonly properties, the rest is overwritten
+  const { schema: servicePatch } = await import('#doc/remote-services/patch-req/index.js')
   for (const key of Object.keys(req.remoteService)) {
-    if (!servicePatch.properties[key]) {
+    if (!servicePatch.properties.body.properties[key]) {
       newService[key] = req.remoteService[key]
     }
   }

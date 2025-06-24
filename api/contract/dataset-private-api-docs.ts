@@ -6,8 +6,8 @@ import journalSchema from './journal.js'
 import { visibility } from '../src/misc/utils/visibility.js'
 import * as permissionsDoc from '../src/misc/utils/permissions.ts'
 import * as datasetUtils from '../src/datasets/utils/index.js'
-import { SessionStateAuthenticated } from '@data-fair/lib-express'
-import { Dataset } from '#types'
+import { type SessionStateAuthenticated } from '@data-fair/lib-express'
+import { type Dataset } from '#types'
 
 const config = _config as any
 

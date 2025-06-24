@@ -93,7 +93,7 @@ export const run = async () => {
       bodyParser(req, res, next)
     })
     app.use((await import('cookie-parser')).default())
-    app.use((await import('../i18n/utils.js')).middleware)
+    app.use((await import('../i18n/utils.ts')).middleware)
     app.use(session.middleware())
 
     // TODO: we could make this better targetted but more verbose by adding it to all routes
@@ -277,9 +277,9 @@ export const run = async () => {
     const { readApiKey } = await import('./misc/utils/api-key.ts')
     await Promise.all([
       (await import('./misc/utils/capture.js')).init(),
-      (await import('./misc/utils/cache.js')).init(db),
-      (await import('./remote-services/utils.js')).init(db),
-      (await import('./base-applications/router.js')).init(db),
+      (await import('./misc/utils/cache.js')).init(),
+      (await import('./remote-services/utils.ts')).init(),
+      (await import('./base-applications/router.js')).init(),
       wsServer.start(server, db, async (channel, sessionState, message) => {
         if (process.env.NODE_ENV === 'test') {
           // TODO: remove this ugly exception, this code should be tested

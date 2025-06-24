@@ -2,7 +2,7 @@ import owner from '../../contract/owner.js'
 
 export default {
   $id: 'https://github.com/data-fair/data-fair/remote-service',
-  'x-exports': ['types', 'validate'],
+  'x-exports': ['types', 'validate', 'resolvedSchema'],
   title: 'Remote service',
   description: 'A remote service must be described with the openAPI 3.0 specification. If the API is secured, there must be at least one api-key based security scheme available.',
   type: 'object',

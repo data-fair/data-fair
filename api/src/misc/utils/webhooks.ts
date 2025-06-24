@@ -3,7 +3,7 @@ import axios from './axios.js'
 import config from '#config'
 import settingsSchema from '../../../contract/settings.js'
 import debugLib from 'debug'
-import { Resource, Event, Dataset } from '#types'
+import type { Resource, Event, Dataset } from '#types'
 
 const debug = debugLib('webhooks')
 

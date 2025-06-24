@@ -1,9 +1,9 @@
 import mongo from '#mongo'
 import * as findUtils from '../misc/utils/find.js'
-import { clean, fixConceptsFilters } from './utils.js'
+import { clean, fixConceptsFilters } from './utils.ts'
 import mongoEscape from 'mongo-escape'
 import { type SessionState } from '@data-fair/lib-express'
-import { Locale } from '../../i18n/utils.js'
+import { type Locale } from '../../i18n/utils.ts'
 
 const filterFieldsMap = {
   'input-concepts': 'actions.input.concept',
