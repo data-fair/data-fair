@@ -65,6 +65,14 @@
             >
               {{ t('dropped') }}
             </v-alert>
+            <v-alert
+              v-if="!result.indexedAt"
+              type="warning"
+              :value="true"
+              variant="outlined"
+            >
+              {{ t('waitForIndex') }}
+            </v-alert>
           </template>
           <v-alert
             v-if="result.nbErrors"
@@ -221,6 +229,7 @@ fr:
   cancelled: "Suppression des lignes existantes et autres opérations annulées à cause des erreurs"
   selectAttachmentsFile: sélectionnez un fichier zip de pièces jointes
   attachmentsMsg: Optionnellement vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal. Dans ce cas le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
+  waitForIndex: Les opérations demandées étant volumineuses, elles seront traitées de manière légèrement différée. Veuillez patienter, la table sera rafraîchie quand les données seront traitées.
 en:
   loadLines: Load multiple lines from a file
   selectFile: select or drag and drop a file
@@ -239,6 +248,7 @@ en:
   cancelled: "Deletion of existing lines and other operations cancelled because of errors"
   selectAttachmentsFile: select an attachments zip file
   attachmentsMsg: Optionally you can load a zip archive containing files to be used as attachments to the lines of the main dataset file. In this case the main data file must have a column that contains paths of the attachments in the archive.
+  waitForIndex: The requested operations are large, they will be processed with a slight delay. Please wait, the table will be refreshed when the data is processed.
 </i18n>
 
 <script lang="ts" setup>

@@ -504,7 +504,7 @@ const file = ref<File>()
 const editLine = useAsyncAction(async () => {
   await editLineForm.value?.validate()
   if (!editLineValid.value) return
-  await saveLine(editedLine.value, file.value)
+  await saveLine({ _id: showEditDialog.value?._id, ...editedLine.value }, file.value)
   showEditDialog.value = undefined
 })
 

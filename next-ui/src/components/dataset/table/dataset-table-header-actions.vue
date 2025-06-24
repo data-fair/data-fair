@@ -19,7 +19,7 @@
         :key="'header-actions-check2-' + h"
         :size="dense ? 'md' : 'large'"
         variant="text"
-        :title="t('selectAllLines')"
+        :title="t('selectAllLines', {nbLines: results.length})"
         :icon="mdiCheckboxBlankOutline"
         :disabled="saving"
         @click="selectedResults = [...results]"
@@ -31,7 +31,7 @@
         :size="dense ? 'md' : 'large'"
         color="warning"
         variant="text"
-        :title="t('deleteAllLines')"
+        :title="t('deleteAllLines', {nbLines: selectedResults.length})"
         :icon="mdiTrashCanOutline"
         :disabled="saving"
         @click="deletingResults = [...selectedResults]; deleteSelectedResultsDialog = true;"
@@ -41,7 +41,7 @@
         :icon="mdiPencil"
         :size="dense ? 'md' : 'large'"
         variant="text"
-        :title="t('editAllLines')"
+        :title="t('editAllLines', {nbLines: selectedResults.length})"
         :disabled="saving"
         @click="editingResults = [...selectedResults]; editSelectedResultsDialog = true;"
       />
@@ -78,7 +78,7 @@
     v-model="editSelectedResultsDialog"
     max-width="600px"
   >
-    <v-card :title="t('editAllLines')">
+    <v-card :title="t('editAllLines', {nbLines: editingResults?.length})">
       <v-form
         ref="editSelectedLinesForm"
         v-model="editSelectedLinesValid"
@@ -117,7 +117,7 @@
     v-model="deleteSelectedResultsDialog"
     max-width="500px"
   >
-    <v-card :title="t('deleteAllLines')">
+    <v-card :title="t('deleteAllLines', {nbLines: deletingResults?.length})">
       <v-card-text>
         <v-alert
           :value="true"
@@ -191,21 +191,21 @@
     delete: Supprimer
     save: Enregistrer
     addLine: Ajouter une ligne
-    selectAllLines: Sélectionner toutes les lignes
+    selectAllLines: Sélectionner les {nbLines} lignes
     unselectAllLines: Désélectionner toutes les lignes
-    deleteAllLines: Supprimer les lines sélectionnées
+    deleteAllLines: Supprimer les {nbLines} lignes sélectionnées
     deleteAllLinesWarning: Attention, la donnée de ces lignes sera perdue définitivement.
-    editAllLines: Éditer les lignes sélectionnées
+    editAllLines: Éditer les lignes {nbLines} sélectionnées
   en:
     cancel: Cancel
     delete: Delete
     save: Save
     addLine: Add a line
-    selectAllLines: Select all lines
+    selectAllLines: Select the {nbLines} lines
     unselectAllLines: Deselect all lines
-    deleteAllLines: Delete the selected lines
+    deleteAllLines: Delete the {nbLines} selected lines
     deleteAllLinesWarning: Warning, the data from these lines will be lost definitively
-    editAllLines: Edit the selected lines
+    editAllLines: Edit the {nbLines} selected lines
 </i18n>
 
 <script lang="ts" setup>
