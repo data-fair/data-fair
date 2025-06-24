@@ -468,7 +468,7 @@ const updateDatasetRoute = async (req, res, next) => {
     validateURLFriendly(locale, patch.slug)
 
     // TODO: do not use always as default value when the dataset is public or published ?
-    const canBreak = can('datasets', req.dataset, 'writeDescriptionBreaking', req.user)
+    const canBreak = can('datasets', req.dataset, 'writeDescriptionBreaking', reqSession(req))
     let draftValidationMode
     if (req.datasetFull.status === 'draft') {
       draftValidationMode = 'never'

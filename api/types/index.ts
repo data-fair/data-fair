@@ -11,6 +11,7 @@ export type { Topic } from './topic/index.js'
 export type { Vocabulary } from './vocabulary/index.js'
 export type { Limits, Limit } from './limits/index.js'
 export type { Permission } from './permissions/index.js'
+export type { RemoteService } from './remote-service/index.js'
 
 export type Request = ExpressRequest & { query: Record<string, string> } & { publicBaseUrl: string }
 

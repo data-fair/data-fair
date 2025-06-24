@@ -8,19 +8,15 @@ import config from '#config'
 import mongoEscape from 'mongo-escape'
 import slug from 'slugify'
 import * as settingsUtils from '../misc/utils/settings.ts'
-import servicePatch from '../../contract/remote-service-patch.js'
 import datasetAPIDocs from '../../contract/dataset-api-docs.js'
-import remoteServiceSchema from '../../contract/remote-service.js'
 import debugLib from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { type SessionState } from '@data-fair/lib-express'
 import { type Locale } from '../../i18n/utils.ts'
-import { type Dataset } from '#types'
+import { RemoteService, type Dataset } from '#types'
 
 const debugMasterData = debugLib('master-data')
 
-export const validate = ajv.compile(remoteServiceSchema)
-export const validatePatch = ajv.compile(servicePatch)
 export const validateOpenApi = ajv.compile('openapi-3.1')
 
 export const initNew = (body) => {
@@ -69,7 +65,7 @@ export const syncDataset = async (dataset: Dataset) => {
     const settings = await mongo.settings
       .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { info: 1, compatODS: 1 } })
 
-    const existingService = await mongo.db.collection('remote-services')
+    const existingService = await mongo.remoteServices
       .findOne({ id })
     const apiDoc = datasetAPIDocs(dataset, config.publicUrl, settings).api
     const service = initNew({
@@ -101,10 +97,11 @@ export const syncDataset = async (dataset: Dataset) => {
         service.virtualDatasets.storageRatio = existingService.virtualDatasets.storageRatio || 0
       }
     }
+    const { assertValid: validate } = await import('#types/remote-service/index.js')
     validate(service)
-    await mongo.db.collection('remote-services').replaceOne({ id }, mongoEscape.escape(service, true), { upsert: true })
+    await mongo.remoteServices.replaceOne({ id }, mongoEscape.escape(service, true), { upsert: true })
   } else {
-    const deleted = await mongo.db.collection('remote-services').deleteOne({ id })
+    const deleted = await mongo.remoteServices.deleteOne({ id })
     if (deleted?.deletedCount) debugMasterData(`deleted remote service ${id}`)
   }
 }
@@ -112,7 +109,7 @@ export const syncDataset = async (dataset: Dataset) => {
 // Create default services for the data-fair instance
 export const init = async () => {
   debugMasterData('init default remote services ?')
-  const remoteServices = mongo.db.collection('remote-services')
+  const remoteServices = mongo.remoteServices
   const existingServices = await remoteServices.find({ owner: { $exists: false } }).limit(1000).project({ url: 1, id: 1 }).toArray()
 
   const servicesToAdd: { url: string }[] = config.remoteServices
@@ -181,10 +178,10 @@ export const computeActions = (apiDoc) => {
   return actions
 }
 
-export const clean = (remoteService, user, html = false) => {
+export const clean = (remoteService: RemoteService, sessionState: SessionState, html = false) => {
   delete remoteService._id
   if (remoteService.apiKey && remoteService.apiKey.value) remoteService.apiKey.value = '**********'
-  if (!user || !user.adminMode) delete remoteService.privateAccess
+  if (!sessionState.user || !sessionState.user.adminMode) delete remoteService.privateAccess
   if (remoteService.description) {
     remoteService.description = prepareMarkdownContent(remoteService.description, html, null, `remoteService:${remoteService.id}`, remoteService.updatedAt)
   }

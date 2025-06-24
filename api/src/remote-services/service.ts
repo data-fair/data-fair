@@ -1,7 +1,9 @@
+import mongo from '#mongo'
 import * as findUtils from '../misc/utils/find.js'
 import { clean, fixConceptsFilters } from './utils.js'
 import mongoEscape from 'mongo-escape'
-import { type User } from '@data-fair/lib-express'
+import { type SessionState } from '@data-fair/lib-express'
+import { Locale } from '../../i18n/utils.js'
 
 const filterFieldsMap = {
   'input-concepts': 'actions.input.concept',
@@ -14,26 +16,17 @@ const filterFieldsMap = {
   status: 'status'
 }
 
-/**
- *
- * @param {import('mongodb').Db} db
- * @param {string} locale
- * @param {any} publicationSite
- * @param {string} publicBaseUrl
- * @param {Record<string, string>} reqQuery
- * @param {any} user
- */
-export const findRemoteServices = async (locale: string, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, user: User) => {
-  const remoteServices = db.collection('remote-services')
-  const extraFilters = []
+export const findRemoteServices = async (locale: Locale, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, sessionState: SessionState) => {
+  const remoteServices = mongo.db.collection('remote-services')
+  const extraFilters: any[] = []
   if (reqQuery['virtual-datasets'] === 'true' || reqQuery.virtualDatasets === 'true') {
     extraFilters.push({ 'virtualDatasets.active': true })
   }
   if (reqQuery['standard-schema'] === 'true' || reqQuery.standardSchema === 'true') {
     extraFilters.push({ 'standardSchema.active': true })
   }
-  await fixConceptsFilters(db, locale, reqQuery, user)
-  const query = findUtils.query(reqQuery, locale, user, 'remote-services', filterFieldsMap, true, extraFilters)
+  await fixConceptsFilters(locale, reqQuery, sessionState)
+  const query = findUtils.query(reqQuery, locale, sessionState, 'remote-services', filterFieldsMap, true, extraFilters)
 
   delete reqQuery.owner
   query.owner = { $exists: false } // restrict to the newly centralized remote services
@@ -45,12 +38,12 @@ export const findRemoteServices = async (locale: string, publicationSite: any, p
     remoteServices.countDocuments(query)
   ]
   if (reqQuery.facets) {
-    mongoQueries.push(remoteServices.aggregate(findUtils.facetsQuery(reqQuery, user, 'remote-services', {}, filterFieldsMap)).toArray())
+    mongoQueries.push(remoteServices.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'remote-services', {}, filterFieldsMap)).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   // @ts-ignore
   for (const r of results) {
-    clean(r, user, reqQuery.html === 'true')
+    clean(r, sessionState, reqQuery.html === 'true')
   }
   facets = findUtils.parseFacets(facets)
   // @ts-ignore
@@ -59,18 +52,9 @@ export const findRemoteServices = async (locale: string, publicationSite: any, p
 
 const actionsExtraFilters = [{ 'actions.type': 'http://schema.org/SearchAction' }]
 
-/**
- *
- * @param {import('mongodb').Db} db
- * @param {string} locale
- * @param {any} publicationSite
- * @param {string} publicBaseUrl
- * @param {Record<string, string>} reqQuery
- * @param {any} user
- */
-export const findActions = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
-  await fixConceptsFilters(db, locale, reqQuery, user)
-  const query = findUtils.query(reqQuery, locale, user, 'remote-services', filterFieldsMap, true, actionsExtraFilters)
+export const findActions = async (locale: Locale, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, sessionState: SessionState) => {
+  await fixConceptsFilters(locale, reqQuery, sessionState)
+  const query = findUtils.query(reqQuery, locale, sessionState, 'remote-services', filterFieldsMap, true, actionsExtraFilters)
 
   delete reqQuery.owner
   query.owner = { $exists: false } // restrict to the newly centralized remote services
@@ -91,8 +75,7 @@ export const findActions = async (db, locale, publicationSite, publicBaseUrl, re
   const actionsQuery = { ...query }
   delete actionsQuery.$text
 
-  /** @type {any[]} */
-  const pipeline = [
+  const pipeline: any[] = [
     { $match: query }, // filter before the unwind for performance
     { $unwind: '$actions' },
     { $match: actionsQuery }, // filter after the unwind to select individual actions
@@ -102,10 +85,9 @@ export const findActions = async (db, locale, publicationSite, publicBaseUrl, re
   pipeline.push({ $skip: skip })
   pipeline.push({ $limit: size })
 
-  const aggRes = await db.collection('remote-services').aggregate(pipeline).toArray()
+  const aggRes = await mongo.db.collection('remote-services').aggregate(pipeline).toArray()
   const results = aggRes.map(remoteService => {
-    /** @type {any} */
-    const result = {
+    const result: any = {
       id: `${remoteService.id}--${remoteService.actions.id}`,
       title: remoteService.actions.summary,
       action: remoteService.actions
