@@ -13,6 +13,7 @@ import * as restDatasetsUtils from './utils/rest.ts'
 import * as esUtils from './es/index.ts'
 import * as webhooks from '../misc/utils/webhooks.js'
 import { sendResourceEvent } from '../misc/utils/notifications.ts'
+import es from '#es'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile, metadataAttachmentsDir } from './utils/files.ts'
@@ -88,6 +89,16 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
   }
 
   if (reqQuery.file === 'true') extraFilters.push({ file: { $exists: true } })
+  if (reqQuery.type) {
+    const typeFilters = []
+    for (const type of reqQuery.type.split(',')) {
+      if (type === 'file') typeFilters.push({ file: { $exists: true } })
+      if (type === 'rest') typeFilters.push({ isRest: true })
+      if (type === 'virtual') typeFilters.push({ isVirtual: true })
+      if (type === 'metaOnly') typeFilters.push({ isMetaOnly: true })
+    }
+    extraFilters.push({ $or: typeFilters })
+  }
 
   // the api exposed on a secondary domain should not be able to access resources outside of the owner account
   if (publicationSite) {
@@ -530,7 +541,7 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
   if (datasetFull.file) {
     webhooks.trigger('dataset', patchedDataset, { type: 'data-updated' }, null)
     sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated')
-    const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema)
+    const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema, false, false)
     if (breakingChanges.length) {
       const breakingChangesDesc = i18n.getLocales().reduce((a, locale) => {
         let msg = i18n.__({ phrase: 'hasBreakingChanges', locale }, { title: patchedDataset.title })
@@ -597,4 +608,9 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
 
   await esUtils.validateDraftAlias(app.get('es'), dataset)
   await fs.remove(dir(datasetDraft))
+}
+
+export const cancelDraft = async (dataset) => {
+  await fs.remove(dir(dataset))
+  await esUtils.deleteIndex(es.client, dataset)
 }

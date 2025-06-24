@@ -48,7 +48,6 @@ class ValidateStream extends Writable {
     let msg = `${Math.round(100 * (this.nbErrors / this.i))}% des lignes ont une erreur de validation.\n<br>`
     msg += this.errors.map(err => truncateMiddle(err, 80, 60, '...')).join('\n<br>')
     if (leftOutErrors > 0) msg += `\n<br>${leftOutErrors} autres erreurs...`
-    if (this.nbErrors) throw new Error('[noretry] ' + msg)
     return msg
   }
 }
@@ -63,6 +62,12 @@ export const process = async function (app, dataset) {
 
   const patch = { status: dataset.status === 'validation-updated' ? 'finalized' : 'validated' }
 
+  const cancelDraft = async () => {
+    await journals.log(app, dataset, { type: 'draft-cancelled', data: 'annulation automatique' }, 'dataset')
+    await datasetsService.cancelDraft(dataset)
+    await datasetsService.applyPatch(app, { ...dataset, draftReason: null }, { draft: null })
+  }
+
   if (dataset.draftReason) {
     // manage auto-validation of a dataset draft
     if (dataset.draftReason.validationMode !== 'never') {
@@ -75,16 +80,18 @@ export const process = async function (app, dataset) {
     } else {
       Object.assign(datasetFull.draft, patch)
       const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
-      const breakingChanges = schemaUtils.getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema)
+      const breakingChanges = schemaUtils.getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema, false, true)
       if (breakingChanges.length) {
-        await journals.log('datasets', dataset, { type: 'validation-error', data: 'La structure du fichier contient des ruptures de compatibilité.' })
-        if (dataset.draftReason.validationMode === 'noBreakingChange' || dataset.draftReason.validationMode === 'compatible') {
-          delete patch.validateDraft
-        }
-      } else if (!schemaUtils.schemasFullyCompatible(datasetFull.schema, datasetDraft.schema, true)) {
-        await journals.log('datasets', dataset, { type: 'validation-error', data: 'La structure du fichier contient des changements.' })
+        const validationError = 'La structure du fichier contient des ruptures de compatibilité : ' + breakingChanges.map(b => b.summary).join(', ')
+        await journals.log(dataset, { type: 'validation-error', data: validationError })
+
         if (dataset.draftReason.validationMode === 'compatible') {
           delete patch.validateDraft
+        }
+        if (dataset.draftReason.validationMode === 'compatibleOrCancel') {
+          delete patch.validateDraft
+          await cancelDraft()
+          return
         }
       }
     }
@@ -103,6 +110,12 @@ export const process = async function (app, dataset) {
     if (errorsSummary) {
       await journals.log('datasets', dataset, { type: 'validation-error', data: errorsSummary })
       delete patch.validateDraft
+      if (dataset.draftReason?.validationMode === 'compatibleOrCancel') {
+        await cancelDraft()
+        return
+      } else {
+        throw new Error(`[noretry] ${errorsSummary}`)
+      }
     }
   }
 

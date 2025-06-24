@@ -138,8 +138,8 @@ export const extend = async (
   }
 
   let inputStreams
-  const progress = taskProgress(dataset.id, 'extend', 100)
-  await progress.inc(0)
+  const progress = updateMode !== 'lineIds' ? taskProgress(dataset.id, 'extend', 100) : undefined
+  await progress?.inc(0)
   if (simulationLine) {
     inputStreams = [intoStream.object([simulationLine])]
   } else if (isRestDataset(dataset)) {

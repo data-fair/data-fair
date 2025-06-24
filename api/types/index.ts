@@ -4,7 +4,7 @@ import type { Dataset } from './dataset/index.ts'
 export type { Application } from './application/index.js'
 export type { AppConfig } from './app-config/index.js'
 export type { BaseApp } from './base-app/index.js'
-export type { Dataset, RestDataset, DatasetLine, DatasetLineAction, DatasetLineRevision, VirtualDataset } from './dataset/index.ts'
+export type { Dataset, DatasetExt, RestDataset, DatasetLine, DatasetLineAction, DatasetLineRevision, VirtualDataset, SchemaProperty } from './dataset/index.ts'
 export type { Event } from './event/index.js'
 export { type Settings, resolvedSchema as settingsSchema } from './settings/index.js'
 export type { Topic } from './topic/index.js'
@@ -38,3 +38,5 @@ export type ApplicationKey = {
   title: string,
   keys: { id: string }[]
 }
+
+export type RestActionsSummary = { nbOk: number, nbNotModified: number, nbErrors: number, nbCreated: number, nbModified: number, nbDeleted: number, errors: { line: number, error: string, status: number }[], warnings: string[], cancelled?: boolean, dropped?: boolean, indexedAt?: string }

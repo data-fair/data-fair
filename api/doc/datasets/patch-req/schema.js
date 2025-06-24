@@ -7,11 +7,11 @@ const body = jsonSchema(datasetSchema)
   .makePatchSchema(patchKeys)
   .schema
 
-export default {
+export default jsonSchema({
   $id: 'https://github.com/data-fair/data-fair/datasets/patch-req',
   title: 'Patch dataset req',
   'x-exports': ['validate', 'types', 'resolvedSchema'],
   type: 'object',
   required: ['body'],
   properties: { body }
-}
+}).addProperty('body', body).schema

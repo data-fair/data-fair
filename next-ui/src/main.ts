@@ -28,7 +28,7 @@ const debug = debugModule('df:main');
   const localeDayjs = createLocaleDayjs(session.state.lang)
   const uiNotif = createUiNotif()
   const vuetify = createVuetify({
-    ...vuetifySessionOptions(session),
+    ...vuetifySessionOptions(session, $cspNonce),
     icons: { defaultSet: 'mdi', aliases, sets: { mdi, } }
   })
   if (vuetify.defaults.value) {

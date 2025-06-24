@@ -1,6 +1,8 @@
 import * as metrics from './misc/utils/metrics.ts' // import early so that memoizee can be used in the following imports
 import { resolve, parse as parsePath, join } from 'node:path'
 import express from 'express'
+import { parsePath as parseUrlPath } from 'ufo'
+import pathToRegexp from 'path-to-regexp'
 import config from '#config'
 import uiConfig from './ui-config.ts'
 import mongo from '#mongo'
@@ -208,8 +210,31 @@ export const run = async () => {
     app.use('/streamsaver/sw.js', express.static(join(streamsaverPath, 'sw.js')))
 
     if (config.serveUi) {
-      const { createSpaMiddleware } = await import('@data-fair/lib-express/serve-spa.js')
+      const { createSpaMiddleware, getCSPHeaderFromDirectives, defaultNonceCSPDirectives } = await import('@data-fair/lib-express/serve-spa.js')
       app.use('/next-ui', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, { ignoreSitePath: true }))
+      // some embed pages require unsafe-eval as they use vjsf on dynamic schemas
+      const unsafeCSPHeader = getCSPHeaderFromDirectives({
+        ...defaultNonceCSPDirectives,
+        'script-src': ['\'unsafe-eval\'', defaultNonceCSPDirectives['script-src']]
+      })
+      const unsafePaths = [
+        '/embed/dataset/:id/table-edit',
+        '/embed/dataset/:id/form',
+        '/embed/application/:id/config',
+        '/embed/workflow/update-dataset'
+      ].map(p => pathToRegexp.match(p))
+      app.use('/next-ui', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, {
+        ignoreSitePath: true,
+        csp: {
+          nonce: true,
+          header: (req) => {
+            for (const p of unsafePaths) {
+              if (p(parseUrlPath(req.url).pathname)) return unsafeCSPHeader
+            }
+            return true
+          }
+        }
+      }))
     }
 
     server = (await import('http')).createServer(app)
@@ -263,7 +288,6 @@ export const run = async () => {
         const [type, id, subject] = channel.split('/')
         const resource = await db.collection(type).findOne({ id })
         if (!resource) throw httpError(404, `Ressource ${type}/${id} inconnue.`)
-        let user
         if (message.apiKey) sessionState = await readApiKey(message.apiKey, type, message.account)
         return permissions.can(type, resource, `realtime-${subject}`, sessionState)
       })

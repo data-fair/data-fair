@@ -322,7 +322,7 @@ export const schemasFullyCompatible = (schema1, schema2, ignoreCalculated = fals
   return equal(schema1Bare, schema2Bare)
 }
 
-export const getSchemaBreakingChanges = (schema, patchedSchema, ignoreExtensions = false) => {
+export const getSchemaBreakingChanges = (schema, patchedSchema, ignoreExtensions = false, strict = false) => {
   const breakingChanges = []
   // WARNING, this functionality is kind of a duplicate of the UI in dataset-schema.vue
   for (const field of schema) {
@@ -330,18 +330,29 @@ export const getSchemaBreakingChanges = (schema, patchedSchema, ignoreExtensions
     if (field['x-extension'] && ignoreExtensions) continue
     const patchedField = patchedSchema.find(pf => pf.key === field.key)
     if (!patchedField) {
-      breakingChanges.push({ type: 'missing', key: field.key })
+      breakingChanges.push({ type: 'missing', key: field.key, summary: `colonne ${field['x-originalName'] ?? field.key} manquante` })
       continue
     }
     if (patchedField.type !== field.type) {
-      breakingChanges.push({ type: 'type', key: field.key })
+      breakingChanges.push({ type: 'type', key: field.key, summary: `colonne ${field['x-originalName'] ?? field.key} a changé de type ${field.type} -> ${patchedField.type}` })
       continue
     }
     const format = (field.format && field.format !== 'uri-reference') ? field.format : null
     const patchedFormat = (patchedField.format && patchedField.format !== 'uri-reference') ? patchedField.format : null
     if (patchedFormat !== format) {
-      breakingChanges.push({ type: 'type', key: field.key })
+      breakingChanges.push({ type: 'type', key: field.key, summary: `colonne ${field['x-originalName'] ?? field.key} a changé de type ${field.format ?? field.type} -> ${patchedField.format ?? patchedField.type}` })
       continue
+    }
+  }
+  if (strict) {
+    for (const field of patchedSchema) {
+      if (field['x-calculated']) continue
+      if (field['x-extension'] && ignoreExtensions) continue
+      const originalField = schema.find(f => f.key === field.key)
+      if (!originalField) {
+        breakingChanges.push({ type: 'added', key: field.key, summary: `colonne ${field['x-originalName'] ?? field.key} ajoutée` })
+        continue
+      }
     }
   }
   return breakingChanges

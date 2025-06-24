@@ -31,12 +31,12 @@ export default (datasetId: string, task: string, nbSteps: number, progressCallba
         await updateProgress(datasetId, task, progress)
       }
     },
-    async end (error = false) {
+    async end (error = false, finalTask = false) {
       if (error) {
         const taskProgress = { task, progress: lastProgress, error }
         await wsEmitter.emit('datasets/' + datasetId + '/task-progress', taskProgress)
         await mongo.db.collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $set: { taskProgress } })
-      } else if (task === 'finalize') {
+      } else if (task === 'finalize' || finalTask) {
         await wsEmitter.emit('datasets/' + datasetId + '/task-progress', {})
         await mongo.db.collection('journals').updateOne({ type: 'dataset', id: datasetId }, { $unset: { taskProgress: 1 } })
       } else {

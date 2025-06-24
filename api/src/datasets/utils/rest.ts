@@ -31,7 +31,7 @@ import * as esUtils from '../es/index.ts'
 import { tabularTypes } from './types.js'
 import { Piscina } from 'piscina'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision } from '#types'
+import type { DatasetLineAction, DatasetLine, RestDataset, DatasetLineRevision, RestActionsSummary } from '#types'
 import type { NextFunction, Response, RequestHandler } from 'express'
 import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionState, type SessionStateAuthenticated, type User } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
@@ -540,7 +540,7 @@ const applyReqTransactions = async (req: RequestWithRestDataset, transacs: Datas
   return applyTransactions(req.dataset, reqSessionAuthenticated(req), transacs, validate, req.linesOwner, tmpDataset)
 }
 
-type Summary = { nbOk: number, nbNotModified: number, nbErrors: number, nbCreated: number, nbModified: number, nbDeleted: number, errors: { line: number, error: string, status: number }[], warnings: string[], cancelled?: boolean, dropped?: boolean, _ids: Set<string>, indexedAt?: string }
+type Summary = RestActionsSummary & { _ids: Set<string> }
 
 const initSummary = (): Summary => ({ nbOk: 0, nbNotModified: 0, nbErrors: 0, nbCreated: 0, nbModified: 0, nbDeleted: 0, errors: [], warnings: [], _ids: new Set() })
 

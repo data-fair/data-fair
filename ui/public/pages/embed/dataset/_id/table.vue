@@ -469,7 +469,7 @@ en:
   displayTitle: Type of display
   displayTable: Table
   displayTableDense: Dense table
-  displayList: Liste of cards
+  displayList: List of cards
   tutorialFilter: Apply filters from the headers and by hovering the values. Sort by clicking on the headers. Click on the button on the top to the right to download in a file the filtered and sorted content.
   noData: The data is not accessible. Either the dataset was not yet entirely processed, or there was an error.
   showMore: Show more lines

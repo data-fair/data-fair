@@ -166,8 +166,8 @@ const readApplication = async (req, res, next) => {
 
 const readBaseApp = async (req, res, next) => {
   req.baseApp = await mongo.db.collection('base-applications').findOne({ url: req.application.url })
-  baseAppsUtils.clean(req.publicBaseUrl, req.baseApp)
   if (!req.baseApp) return res.status(404).send(req.__('errors.missingBaseApp'))
+  baseAppsUtils.clean(req.publicBaseUrl, req.baseApp)
   next()
 }
 

@@ -57,7 +57,6 @@
                 :field="header.field"
                 :filters="filters"
                 :truncate="truncate"
-                :disable-hover="true"
                 :dense="true"
                 style="padding-right: 16px;"
                 @filter="filter => $emit('filter', {field, filter})"

@@ -3,9 +3,9 @@
 </template>
 
 <script setup lang="ts">
-import { createDatasetStore } from '~/composables/dataset-store'
+import { provideDatasetStore } from '~/composables/dataset-store'
 
 const route = useRoute<'/embed/dataset/[id]/fields'>()
 
-createDatasetStore(route.params.id)
+provideDatasetStore(route.params.id)
 </script>

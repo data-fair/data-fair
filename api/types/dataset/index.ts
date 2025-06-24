@@ -18,6 +18,8 @@ export const isVirtualDataset = (dataset: Dataset): dataset is VirtualDataset =>
   return !!dataset.isVirtual
 }
 
+export type DatasetExt = Dataset & { visibility: 'public' | 'private' | 'protected', public: 'boolean' }
+
 export type DatasetLine = {
   _id: string,
   _i?: number,

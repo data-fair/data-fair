@@ -356,7 +356,9 @@ async function iter (app, resource, type) {
       } else {
         await journals.log(type + 's', newResource, { type: task.eventsPrefix + '-end' }, noStoreEvent)
       }
-      await progress?.end()
+      const finalTask = task.eventsPrefix === 'finalize' ||
+      (task.eventsPrefix === 'validate' && resource.draftReason && !newResource.draft && newResource.status) // special case of cancelled draft
+      await progress?.end(false, finalTask)
     }
     hookResolution = newResource
   } catch (err) {

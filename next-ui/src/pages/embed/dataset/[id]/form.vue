@@ -45,12 +45,12 @@
 
 <script setup lang="ts">
 import { VForm } from 'vuetify/components'
-import { createDatasetStore } from '~/composables/dataset-store'
+import { provideDatasetStore } from '~/composables/dataset-store'
 
 const route = useRoute<'/embed/dataset/[id]/form'>()
 const session = useSession()
 
-const { dataset, restDataset, jsonSchemaFetch } = createDatasetStore(route.params.id)
+const { dataset, restDataset, jsonSchemaFetch } = provideDatasetStore(route.params.id)
 if (!jsonSchemaFetch.initialized.value) jsonSchemaFetch.refresh()
 
 const ownLinesMode = computed(() => dataset.value?.rest?.lineOwnership)

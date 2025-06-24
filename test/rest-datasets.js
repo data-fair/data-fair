@@ -119,7 +119,6 @@ describe('REST datasets', function () {
     assert.equal(res.data.nbCreated, 4)
     assert.equal(res.data.nbDeleted, 1)
     assert.ok(res.data.indexedAt)
-    console.log(res.data)
 
     try {
       await ax.get('/api/v1/datasets/rest2/lines/line2')
@@ -184,6 +183,35 @@ describe('REST datasets', function () {
     assert.equal(res.data.total, 3)
     const line4 = res.data.results.find(r => r._id === 'line4')
     assert.equal(line4.attr2, 'test1')
+  })
+
+  it('Reindex after an error', async function () {
+    // Load a few lines
+    const ax = global.ax.dmeadus
+    await ax.put('/api/v1/datasets/trigger-test-error', {
+      isRest: true,
+      title: 'trigger test error',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+    })
+    await ax.post('/api/v1/datasets/trigger-test-error/_bulk_lines', [
+      { _id: 'line1', attr1: 'test1', attr2: 'test1' },
+      { _id: 'line2', attr1: 'test1', attr2: 'test1' },
+      { _id: 'line3', attr1: 'test1', attr2: 'test1' },
+      { _id: 'line4', attr1: 'test1', attr2: 'test1' }
+    ])
+    let dataset = await workers.hook('finalizer/trigger-test-error')
+    await global.ax.superadmin.post('/api/v1/datasets/trigger-test-error/_reindex')
+    await assert.rejects(workers.hook('finalizer/trigger-test-error'))
+    dataset = await ax.get('/api/v1/datasets/trigger-test-error').then(r => r.data)
+    assert.equal(dataset.status, 'error')
+    let journal = await ax.get('/api/v1/datasets/trigger-test-error/journal').then(r => r.data)
+    assert.equal(journal[0].type, 'error')
+    await ax.patch('/api/v1/datasets/trigger-test-error', { slug: 'test-no-trigger' })
+    await ax.get('/api/v1/datasets/trigger-test-error').then(r => r.data)
+    dataset = await workers.hook('finalizer/trigger-test-error')
+    assert.equal(dataset.status, 'finalized')
+    journal = await ax.get('/api/v1/datasets/trigger-test-error/journal').then(r => r.data)
+    assert.equal(journal[0].type, 'finalize-end')
   })
 
   it('Use dataset schema to validate inputs', async function () {
