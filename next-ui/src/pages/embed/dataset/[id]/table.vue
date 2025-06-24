@@ -27,7 +27,7 @@ const { height: windowHeight } = useWindowSize()
 
 const route = useRoute<'/embed/dataset/[id]/table'>()
 
-provideDatasetStore(route.params.id)
+provideDatasetStore(route.params.id, false, true)
 
 const cols = useStringsArraySearchParam('cols')
 const display = useStringSearchParam('display', 'table')

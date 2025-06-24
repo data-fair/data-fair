@@ -7,5 +7,5 @@ import { provideDatasetStore } from '~/composables/dataset-store'
 
 const route = useRoute<'/embed/dataset/[id]/fields'>()
 
-provideDatasetStore(route.params.id)
+provideDatasetStore(route.params.id, false, true)
 </script>

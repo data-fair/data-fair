@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/no-v-html -->
 <template>
   <v-slide-group
     show-arrows
@@ -24,9 +25,10 @@
         <div style="overflow: hidden;">
           <span style="display:inline-block;white-space:nowrap;">{{ (filter.property.title || filter.property['x-originalName'] || filter.property.key) }}</span>
           <br>
-          <span style="display:inline-block">
-            {{ t(filter.operator) }}  {{ filter.formattedValue }}
-          </span>
+          <span
+            style="display:inline-block"
+            v-html="t(filter.operator) + ' ' + filter.formattedValue"
+          />
         </div>
       </v-chip>
     </v-slide-group-item>

@@ -50,7 +50,7 @@ import { provideDatasetStore } from '~/composables/dataset-store'
 const route = useRoute<'/embed/dataset/[id]/form'>()
 const session = useSession()
 
-const { dataset, restDataset, jsonSchemaFetch } = provideDatasetStore(route.params.id)
+const { dataset, restDataset, jsonSchemaFetch } = provideDatasetStore(route.params.id, false, true)
 if (!jsonSchemaFetch.initialized.value) jsonSchemaFetch.refresh()
 
 const ownLinesMode = computed(() => dataset.value?.rest?.lineOwnership)

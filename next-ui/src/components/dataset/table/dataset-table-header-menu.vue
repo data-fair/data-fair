@@ -23,6 +23,30 @@
           :hide="() => {showMenu = false}"
         />
 
+        <!-- show help -->
+        <v-list-item
+          v-if="!!header.tooltip"
+          class="pl-2"
+          :active="showHelp"
+          :title="t('showHelp')"
+          @click="showHelp = !showHelp"
+        >
+          <template #prepend>
+            <v-icon
+              :icon="showHelp ? mdiMenuUp : mdiMenuDown"
+              size="small"
+            />
+          </template>
+        </v-list-item>
+        <v-alert
+          v-if="showHelp"
+          variant="text"
+          tile
+          style="overflow-wrap: break-word"
+          class="mt-0 mb-2 pa-2"
+          v-html="header.tooltip"
+        />
+
         <!-- hide column -->
         <v-list-item
           v-if="!fixed"
@@ -83,31 +107,6 @@
             </template>
           </v-list-item>
         </template>
-
-        <!-- show help -->
-        <v-list-item
-          v-if="!!header.tooltip"
-          class="pl-2"
-          :active="showHelp"
-          :title="t('showHelp')"
-          @click="showHelp = !showHelp"
-        >
-          <template #prepend>
-            <v-icon
-              :icon="mdiInformation"
-              size="small"
-            />
-          </template>
-        </v-list-item>
-        <v-alert
-          v-if="showHelp"
-          color="info"
-          variant="text"
-          tile
-          style="overflow-wrap: break-word"
-          class="mt-0 mb-2 pa-2"
-          v-html="header.tooltip"
-        />
       </v-list>
 
       <v-list-subheader
@@ -118,6 +117,30 @@
       >
         {{ t('filter') }}
       </v-list-subheader>
+
+      <v-text-field
+        v-if="showSearch"
+        v-model="search"
+        label="recherche textuelle"
+        variant="outlined"
+        hide-details
+        density="compact"
+        class="mt-1"
+        @keyup.enter="search && emitFilter({value: search, formattedValue: search, operator: 'search', property: header.property})"
+      >
+        <template #append>
+          <v-btn
+            class="mr-1"
+            density="comfortable"
+            :disabled="!search"
+            color="primary"
+            :title="t('applyFilter')"
+            :icon="mdiCheck"
+            @click="search && emitFilter({value: search, formattedValue: search, operator: 'search', property: header.property})"
+          />
+        </template>
+      </v-text-field>
+
       <template v-if="showEquals">
         <v-text-field
           v-for="i in equals.length"
@@ -151,6 +174,7 @@
           </template>
         </v-text-field>
       </template>
+
       <v-text-field
         v-if="showStartsWith"
         v-model="startsWith"
@@ -170,29 +194,6 @@
             :title="t('applyFilter')"
             :icon="mdiCheck"
             @click="startsWith && emitFilter({value: startsWith, formattedValue: startsWith, operator: 'starts', property: header.property})"
-          />
-        </template>
-      </v-text-field>
-
-      <v-text-field
-        v-if="showSearch"
-        v-model="search"
-        label="contient des mots"
-        variant="outlined"
-        hide-details
-        density="compact"
-        class="mt-1"
-        @keyup.enter="search && emitFilter({value: search, formattedValue: search, operator: 'search', property: header.property})"
-      >
-        <template #append>
-          <v-btn
-            class="mr-1"
-            density="comfortable"
-            :disabled="!search"
-            color="primary"
-            :title="t('applyFilter')"
-            :icon="mdiCheck"
-            @click="search && emitFilter({value: search, formattedValue: search, operator: 'search', property: header.property})"
           />
         </template>
       </v-text-field>
@@ -381,7 +382,7 @@ fr:
   applyFilter: Appliquer le filtre
   info: "Informations :"
   fixLeft: "Fixer la colonne à gauche"
-  showHelp: "Afficher la description"
+  showHelp: "Description"
 en:
   hide: Hide this column
   sortAsc: Ascending sort
@@ -390,11 +391,11 @@ en:
   applyFilter: Apply filter
   info: "Information:"
   fixLeft: "Fix the column to the left"
-  showHelp: "Show description"
+  showHelp: "Description"
 </i18n>
 
 <script lang="ts" setup>
-import { mdiInformation, mdiEyeOffOutline, mdiFormatHorizontalAlignLeft, mdiSortAscending, mdiSortDescending, mdiCheckboxMarked, mdiCheckboxBlankOutline, mdiCheck } from '@mdi/js'
+import { mdiEyeOffOutline, mdiFormatHorizontalAlignLeft, mdiSortAscending, mdiSortDescending, mdiCheckboxMarked, mdiCheckboxBlankOutline, mdiCheck, mdiMenuDown, mdiMenuUp } from '@mdi/js'
 import { type TableHeaderWithProperty } from './use-headers'
 import { type DatasetFilter } from '~/composables/dataset-filters'
 import { formatValue } from '~/composables/dataset-lines'
