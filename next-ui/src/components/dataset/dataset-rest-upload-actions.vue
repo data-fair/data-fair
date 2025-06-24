@@ -119,6 +119,7 @@
               />
             </v-alert>
 
+            type : {{ file?.type }}
             <v-file-input
               v-model="file"
               :label="t('selectFile')"
