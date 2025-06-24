@@ -99,7 +99,7 @@ router.use('/:datasetId/permissions', readDataset(), apiKeyMiddleware, permissio
 }))
 
 // retrieve a dataset by its id
-router.get('/:datasetId', readDataset({ acceptInitialDraft: true }), apiKeyMiddleware, applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId', readDataset({ acceptInitialDraft: true, noCache: true }), apiKeyMiddleware, applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   // @ts-ignore
   const dataset = clone(req.dataset)
   res.status(200).send(clean(req, dataset))

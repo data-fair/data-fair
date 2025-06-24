@@ -102,9 +102,8 @@
           <v-icon
             color="error"
             v-bind="props"
-          >
-            mdi-alert
-          </v-icon>
+            :icon="mdiAlert"
+          />
         </template>
         {{ $t('error') }}
       </v-tooltip>
@@ -131,7 +130,7 @@ en:
 <script lang="ts" setup>
 import truncateMiddle from 'truncate-middle'
 import { type DatasetExt } from '#api/types'
-import { mdiAllInclusive, mdiCloudDownload, mdiFile, mdiPictureInPictureBottomRightOutline, mdiProgressWrench, mdiViewHeadline } from '@mdi/js'
+import { mdiAlert, mdiAllInclusive, mdiCloudDownload, mdiFile, mdiPictureInPictureBottomRightOutline, mdiProgressWrench, mdiViewHeadline } from '@mdi/js'
 import formatBytes from '@data-fair/lib-vue/format/bytes'
 import { Account } from '@data-fair/lib-vue/session'
 
