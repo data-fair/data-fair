@@ -43,7 +43,7 @@ import * as publicationSites from '../misc/utils/publication-sites.js'
 import * as clamav from '../misc/utils/clamav.js'
 import * as apiKeyUtils from '../misc/utils/api-key.js'
 import { syncDataset as syncRemoteService } from '../remote-services/utils.js'
-import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetDataset } from './service.js'
+import { findDatasets, applyPatch, deleteDataset, createDataset, memoizedGetDataset, cancelDraft } from './service.js'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, filterSchema } from './utils/data-schema.js'
 import { dir, attachmentsDir } from './utils/files.ts'
 import { preparePatch } from './utils/patch.js'
@@ -57,6 +57,7 @@ import { session } from '@data-fair/lib-express'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import { getFlatten } from './utils/flatten.ts'
+import { can } from '../misc/utils/permissions.js'
 
 const validateUserNotification = ajv.compile(userNotificationSchema)
 
@@ -98,7 +99,7 @@ router.use('/:datasetId/permissions', readDataset(), apiKeyMiddleware, permissio
 }))
 
 // retrieve a dataset by its id
-router.get('/:datasetId', readDataset({ acceptInitialDraft: true }), apiKeyMiddleware, applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
+router.get('/:datasetId', readDataset({ acceptInitialDraft: true, noCache: true }), apiKeyMiddleware, applicationKey, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
   // @ts-ignore
   const dataset = clone(req.dataset)
   res.status(200).send(clean(req, dataset))
@@ -147,7 +148,8 @@ const descriptionHasBreakingChanges = (req) => {
     return true
   }
   if (!req.body.schema) return false
-  const breakingChanges = getSchemaBreakingChanges(req.dataset.schema, req.body.schema, true)
+  // TODO: some change in calculated properties should also be rejected here ?
+  const breakingChanges = getSchemaBreakingChanges(req.dataset.schema, req.body.schema, true, false)
   debugBreakingChanges('breaking changes in schema ? ', breakingChanges)
   return breakingChanges.length > 0
 }
@@ -440,8 +442,7 @@ const updateDatasetRoute = async (req, res, next) => {
 
   // @ts-ignore
   const user = req.user
-  // TODO: replace this with a string draftValidationMode ?
-  const draft = req.query.draft === 'true'
+
   // force the file upload middleware to write files in draft directory, as updated datasets always go into draft mode
   req._draft = true
 
@@ -470,13 +471,21 @@ const updateDatasetRoute = async (req, res, next) => {
     validateURLFriendly(locale, patch.slug)
 
     // TODO: do not use always as default value when the dataset is public or published ?
-    let draftValidationMode = 'always'
+    const canBreak = can('datasets', req.dataset, 'writeDescriptionBreaking', req.user)
+    let draftValidationMode
     if (req.datasetFull.status === 'draft') {
       draftValidationMode = 'never'
-    } else if (draft) {
-      if ((patch.schema ?? dataset.schema).find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) draftValidationMode = 'never'
-      else draftValidationMode = 'compatible'
+    } else {
+      if (req.query.draft === 'true') {
+        if ((patch.schema ?? dataset.schema).find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')) draftValidationMode = 'never'
+        else draftValidationMode = 'compatible'
+      } else {
+        draftValidationMode = req.query.draft ?? 'always'
+      }
     }
+
+    if (!['never', 'always', 'compatible', 'compatibleOrCancel'].includes(draftValidationMode)) throw httpError(400, `unknown value for draft validation mode ${draftValidationMode}`)
+    if (!canBreak && draftValidationMode === 'always') throw httpError(403, 'draft mode "always" is not permitted')
 
     const { removedRestProps, attemptMappingUpdate, isEmpty } = await preparePatch(req.app, patch, dataset, user, locale, draftValidationMode, files)
       .catch(err => {
@@ -554,18 +563,16 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
   // @ts-ignore
   const datasetFull = req.datasetFull
 
-  const db = mongo.db
   if (datasetFull.status === 'draft') {
     return res.status(409).send('Impossible d\'annuler un brouillon si aucune version du jeu de données n\'a été validée.')
   }
   if (!datasetFull.draft) {
     return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
   }
+  const patch = { draft: null }
+  await cancelDraft(dataset)
+  await applyPatch(req.app, datasetFull, patch)
   await journals.log(req.app, dataset, { type: 'draft-cancelled' }, 'dataset', false, req.user)
-  const patchedDataset = await db.collection('datasets')
-    .findOneAndUpdate({ id: dataset.id }, { $unset: { draft: '' } }, { returnDocument: 'after' })
-  await fs.remove(dir(dataset))
-  await esUtils.deleteIndex(req.app.get('es'), dataset)
 
   eventsLog.info('df.datasets.cancelDraft', `cancelled dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
 
@@ -580,8 +587,8 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
     resource: { type: 'dataset', title: dataset.title, id: dataset.id }
   }, sessionState)
 
-  await updateStorage(patchedDataset)
-  return res.send(patchedDataset)
+  await updateStorage(datasetFull)
+  return res.send(datasetFull)
 })
 
 // CRUD operations for REST datasets

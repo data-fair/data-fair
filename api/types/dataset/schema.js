@@ -33,123 +33,6 @@ publicationSchema.properties.replaceDataset = {
   }
 }
 
-const schema = {
-  type: 'array',
-  description: 'JSON schema properties of the fields',
-  items: {
-    type: 'object',
-    required: ['key'],
-    properties: {
-      key: { type: 'string', readOnly: true, 'x-display': 'hidden' },
-      type: { type: 'string' },
-      format: { type: ['string', 'null'] },
-      'x-originalName': { type: ['string', 'null'] },
-      title: { type: 'string' },
-      description: { type: 'string' },
-      icon: { type: 'string' },
-      'x-group': { type: 'string' },
-      'x-refersTo': {
-        deprecated: true,
-        type: ['string', 'null']
-      },
-      'x-concept': {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          title: { type: 'string' },
-          primary: { type: 'boolean' }
-        }
-      },
-      'x-calculated': { type: 'boolean' },
-      'x-capabilities': capabilities,
-      'x-labels': {
-        type: 'object'
-      },
-      'x-labelsRestricted': {
-        type: 'boolean'
-      },
-      readOnly: {
-        type: 'boolean'
-      },
-      'x-required': {
-        type: 'boolean'
-      },
-      minLength: {
-        type: 'integer'
-      },
-      maxLength: {
-        type: 'integer'
-      },
-      minimum: {
-        type: 'number'
-      },
-      maximum: {
-        type: 'number'
-      },
-      pattern: {
-        type: 'string',
-        format: 'regex'
-      },
-      patternErrorMessage: {
-        type: 'string'
-      },
-      'x-master': {
-        type: 'object',
-        properties: {
-          id: {
-            type: 'string'
-          },
-          title: {
-            type: 'string'
-          },
-          remoteService: {
-            type: 'string',
-            description: "L'identifiant du service distant utilisé pour l'enrichissement"
-          },
-          action: {
-            type: 'string',
-            description: "L'identifiant de l'action du service distant à utiliser pour l'enrichissement"
-          }
-        }
-      },
-      'x-display': {
-        type: 'string'
-      },
-      enum: {
-        type: 'array',
-        readOnly: true,
-        description: 'This differs from JSON schema. It is not a restriction, just and observation of the values that are present in the dataset.'
-      },
-      'x-cardinality': {
-        type: 'integer',
-        description: 'The number of distinct values for this field',
-        readOnly: true
-      },
-      'x-transform': {
-        type: 'object',
-        description: 'Transformation to apply to the field',
-        properties: {
-          expr: {
-            type: 'string'
-          },
-          examples: {
-            type: 'array',
-            items: {
-              type: 'string'
-            }
-          },
-          type: {
-            type: 'string'
-          },
-          format: {
-            type: 'string'
-          }
-        }
-      }
-    }
-  }
-}
-
 const fileSchema = {
   type: 'array',
   description: 'JSON schema properties of the fields in the file',
@@ -572,7 +455,11 @@ const datasetProperties = {
       type: 'string'
     }
   },
-  schema,
+  schema: {
+    type: 'array',
+    description: 'JSON schema properties of the fields',
+    items: { $ref: '#/$defs/schemaProperty' }
+  },
   count: {
     type: 'number',
     description: 'The number of indexed documents of a dataset'
@@ -935,6 +822,23 @@ const datasetProperties = {
   esWarning: {
     type: ['string', 'null'],
     enum: ['MissingIndex', 'IndexHealthRed', 'MissingIndexSettings', 'ShardingRecommended']
+  },
+  draftReason: {
+    type: 'object',
+    title: 'Why was the dataset switched in draft mode',
+    properties: {
+      key: {
+        type: 'string',
+        enum: ['manual', 'file-new', 'file-updated']
+      },
+      message: {
+        type: 'string'
+      },
+      validationMode: {
+        type: 'string',
+        enum: ['never', 'always', 'compatible']
+      }
+    }
   }
 }
 
@@ -944,37 +848,22 @@ const dataset = {
   title: 'Dataset',
   type: 'object',
   additionalProperties: false,
-  required: ['id', 'createdAt', 'owner'],
+  required: ['id', 'createdAt', 'owner', 'title'],
   properties: {
     ...datasetProperties,
-    draftReason: { type: 'string' },
     draft: {
       title: 'Dataset draft',
       description: 'Some properties waiting for confirmation before being merged into the main dataset info',
       type: 'object',
       additionalProperties: false,
       properties: {
-        draftReason: {
-          type: 'object',
-          title: 'Why was the dataset switched in draft mode',
-          properties: {
-            key: {
-              type: 'string',
-              enum: ['manual', 'file-new', 'file-updated']
-            },
-            message: {
-              type: 'string'
-            },
-            validationMode: {
-              type: 'string',
-              enum: ['never', 'always', 'compatible']
-            }
-          }
-        },
+        draftReason: datasetProperties.draftReason,
         validateDraft: {
           type: 'boolean',
           title: 'indicates that the draft was validated and is being processed to replace the current state'
         },
+        file: datasetProperties.file,
+        originalFile: datasetProperties.originalFile,
         schema: datasetProperties.schema,
         description: datasetProperties.description,
         title: datasetProperties.title,
@@ -998,6 +887,125 @@ const dataset = {
         temporal: datasetProperties.temporal,
         keywords: datasetProperties.keywords,
         frequency: datasetProperties.frequency
+      }
+    }
+  },
+  $defs: {
+    schemaProperty: {
+      type: 'object',
+      required: ['key'],
+      properties: {
+        key: { type: 'string', readOnly: true, 'x-display': 'hidden' },
+        type: { type: 'string' },
+        format: { type: ['string', 'null'] },
+        'x-originalName': { type: ['string', 'null'] },
+        title: { type: 'string' },
+        description: { type: 'string' },
+        icon: { type: 'string' },
+        'x-group': { type: 'string' },
+        'x-refersTo': {
+          deprecated: true,
+          type: ['string', 'null']
+        },
+        'x-concept': {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            title: { type: 'string' },
+            primary: { type: 'boolean' }
+          }
+        },
+        'x-calculated': { type: 'boolean' },
+        'x-capabilities': capabilities,
+        'x-labels': {
+          type: 'object',
+          patternProperties: {
+            '.*': {
+              type: 'string'
+            }
+          }
+        },
+        'x-labelsRestricted': {
+          type: 'boolean'
+        },
+        readOnly: {
+          type: 'boolean'
+        },
+        'x-required': {
+          type: 'boolean'
+        },
+        minLength: {
+          type: 'integer'
+        },
+        maxLength: {
+          type: 'integer'
+        },
+        minimum: {
+          type: 'number'
+        },
+        maximum: {
+          type: 'number'
+        },
+        pattern: {
+          type: 'string',
+          format: 'regex'
+        },
+        patternErrorMessage: {
+          type: 'string'
+        },
+        'x-master': {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string'
+            },
+            title: {
+              type: 'string'
+            },
+            remoteService: {
+              type: 'string',
+              description: "L'identifiant du service distant utilisé pour l'enrichissement"
+            },
+            action: {
+              type: 'string',
+              description: "L'identifiant de l'action du service distant à utiliser pour l'enrichissement"
+            }
+          }
+        },
+        'x-display': {
+          type: 'string'
+        },
+        enum: {
+          type: 'array',
+          readOnly: true,
+          description: 'This differs from JSON schema. It is not a restriction, just and observation of the values that are present in the dataset.'
+        },
+        'x-cardinality': {
+          type: 'integer',
+          description: 'The number of distinct values for this field',
+          readOnly: true
+        },
+        'x-transform': {
+          type: 'object',
+          description: 'Transformation to apply to the field',
+          properties: {
+            expr: {
+              type: 'string'
+            },
+            examples: {
+              type: 'array',
+              items: {
+                type: 'string'
+              }
+            },
+            type: {
+              type: 'string'
+            },
+            format: {
+              type: 'string'
+            }
+          }
+        }
       }
     }
   }

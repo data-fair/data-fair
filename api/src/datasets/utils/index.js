@@ -51,14 +51,14 @@ export const reindex = async (db, dataset) => {
   else if (dataset.isRest) patch.status = 'analyzed'
   if (dataset.draftReason) patch = { 'draft.status': patch.status }
   return await db.collection('datasets')
-    .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })
+    .findOneAndUpdate({ id: dataset.id }, { $set: patch, $unset: { _partialRestStatus: 1 } }, { returnDocument: 'after' })
 }
 
 export const refinalize = async (db, dataset) => {
   let patch = { status: 'indexed' }
   if (dataset.draftReason) patch = { 'draft.status': patch.status }
   return await db.collection('datasets')
-    .findOneAndUpdate({ id: dataset.id }, { $set: patch }, { returnDocument: 'after' })
+    .findOneAndUpdate({ id: dataset.id }, { $set: patch, $unset: { _partialRestStatus: 1 } }, { returnDocument: 'after' })
 }
 
 // Generate ids and try insertion until there is no conflict on id

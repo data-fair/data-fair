@@ -24,7 +24,7 @@
     "postinstall": "patch-package",
     "prepare": "husky || true",
     "check-types": "tsc",
-    "quality": "npm run test-deps && npm run lint && npm run build-types && npm run test && npm audit --omit=dev --audit-level=critical"
+    "quality": "npm run test-deps && npm run lint && npm run build-types && npm -w next-ui run build && npm run test && npm audit --omit=dev --audit-level=critical"
   },
   "engines": {
     "node": "v22"
@@ -63,6 +63,7 @@
     "@types/mime-types": "^3.0.0",
     "@types/multer": "^1.4.12",
     "@types/node": "^22.12.0",
+    "@types/streamsaver": "^2.0.5",
     "@types/unzipper": "^0.10.10",
     "clean-modules": "^2.0.4",
     "eslint-plugin-mocha": "^10.5.0",

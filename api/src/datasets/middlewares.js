@@ -60,20 +60,27 @@ export const lockDataset = (_shouldLock = true) => async (req, res, next) => {
 // also checks that the dataset is in a state compatible with some action
 // supports waiting a little bit to be a little permissive with the user
 /**
- * @param {{acceptedStatuses?: string[] | ((body: any, dataset: any) => string[] | null), fillDescendants?: boolean, alwaysDraft?: boolean, acceptMissing?: boolean, acceptInitialDraft?: boolean}} fillDescendants
+ * @param {{acceptedStatuses?: string[] | ((body: any, dataset: any) => string[] | null), fillDescendants?: boolean, alwaysDraft?: boolean, acceptMissing?: boolean, acceptInitialDraft?: boolean, noCache?: boolean}} fillDescendants
  * @returns
  */
-export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing, acceptInitialDraft } = {}) => async (req, res, next) => {
+export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, acceptMissing, acceptInitialDraft, noCache } = {}) => async (req, res, next) => {
   // @ts-ignore
   const publicationSite = req.publicationSite
   // @ts-ignore
   const mainPublicationSite = req.mainPublicationSite
-  const tolerateStale = !!publicationSite && !acceptedStatuses
+  const tolerateStale = !!publicationSite && !acceptedStatuses && !noCache
   const useDraft = req.query.draft === 'true' || alwaysDraft
 
-  const { dataset, datasetFull } = tolerateStale
+  let { dataset, datasetFull } = tolerateStale
     ? await service.memoizedGetDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, tolerateStale, acceptedStatuses, req.body)
     : await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, tolerateStale, acceptedStatuses, req.body)
+
+  // bypass the memory cache if it is contradicted by the finalizedAt parameter
+  if (dataset && tolerateStale && req.query.finalizedAt && req.query.finalizedAt > dataset.finalizedAt) {
+    const result = await service.getDataset(req.params.datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, mongo.db, tolerateStale, acceptedStatuses, req.body)
+    dataset = result.dataset
+    datasetFull = result.datasetFull
+  }
 
   if (!dataset) {
     if (acceptMissing) return next()

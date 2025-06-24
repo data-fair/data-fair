@@ -1,37 +1,46 @@
 import type { Event } from '#api/types'
+import { type TaskProgress, type DatasetStore } from './dataset-store'
 
-type WatchKey = 'journal'
+export type WatchKey = 'journal' | 'info' | 'taskProgress'
 
-export const useDatasetWatch = (keys: WatchKey | WatchKey[]) => {
+export const useDatasetWatch = (datasetStore: DatasetStore, keys: WatchKey | WatchKey[]) => {
   const { sendUiNotif } = useUiNotif()
-  const { id, dataset, journal } = useDatasetStore()
+  const { id, dataset, journal, datasetFetch, draftMode, taskProgress } = datasetStore
 
   if (!Array.isArray(keys)) keys = [keys]
   const ws = useWS('/data-fair/')
 
-  if (keys.includes('journal')) {
+  if (keys.includes('taskProgress')) {
+    ws?.subscribe(`datasets/${id}/task-progress`, async (newTaskProgress: TaskProgress) => {
+      if (newTaskProgress.task) taskProgress.value = newTaskProgress
+      else taskProgress.value = undefined
+    })
+  }
+
+  if (keys.includes('journal') || keys.includes('info')) {
     ws?.subscribe(`datasets/${id}/journal`, async (event: Event) => {
       if (!dataset.value) return
 
-      if (event.type === 'finalize-end') {
-        sendUiNotif({ type: 'success', msg: 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.' })
-      }
-      if (event.type === 'error') {
-        sendUiNotif({ type: 'error', msg: 'Le service a rencontré une erreur pendant le traitement du jeu de données:', error: event.data })
+      if (keys.includes('info')) {
+        if (event.type === 'finalize-end') {
+          sendUiNotif({ type: 'success', msg: 'Le jeu de données a été traité en fonction de vos dernières modifications et est prêt à être utilisé ou édité de nouveau.' })
+        }
+        if (event.type === 'error') {
+          sendUiNotif({ type: 'error', msg: 'Le service a rencontré une erreur pendant le traitement du jeu de données:', error: event.data })
+        }
       }
 
-      // TODO
-      // if (['initialize-end', 'draft-cancelled', 'data-updated'].includes(event.type)) {
-      //   return dispatch('fetchInfo')
-      // }
-      // // looks like the the draft was validated
-      // if (event.type === 'finalize-end' && !event.draft && state.dataset.draftReason) {
-      //   return dispatch('fetchInfo')
-      // }
+      if (keys.includes('info')) {
+        if (event.type === 'finalize-end' || (event.type === 'draft-cancelled' && draftMode)) {
+          datasetFetch.refresh()
+        }
+      }
 
-      if (event.store) { // ignore event that is not stored, prevent different render after refresh
-        if (!journal.value?.find(e => e.date === event.date)) {
-          journal.value?.unshift(event)
+      if (keys.includes('journal')) {
+        if (event.store) { // ignore event that is not stored, prevent different render after refresh
+          if (!journal.value?.find(e => e.date === event.date)) {
+            journal.value?.unshift(event)
+          }
         }
       }
 

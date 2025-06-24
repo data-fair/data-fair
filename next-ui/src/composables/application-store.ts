@@ -1,9 +1,11 @@
 import type { Application, BaseApp, AppConfig } from '#api/types'
+import { provide } from 'vue'
 
 // we do not use SSR, so we can use a simple module level singleton
-let store: ReturnType<typeof prepareApplicationStore> | undefined
+export type ApplicationStore = ReturnType<typeof createApplicationStore>
+const applicationStoreKey = Symbol('application-store')
 
-const prepareApplicationStore = (id: string) => {
+const createApplicationStore = (id: string) => {
   const applicationFetch = useFetch<Application & { userPermissions: string[] }>($apiPath + `/applications/${id}`)
   const application = ref<(Application & { userPermissions: string[] }) | null>(null)
   watch(applicationFetch.data, () => { application.value = applicationFetch.data.value })
@@ -27,6 +29,7 @@ const prepareApplicationStore = (id: string) => {
       }
     })
     config.value = config
+    if (application.value) application.value.status = 'configured'
   }
 
   const configDraftFetch = useFetch<AppConfig>($apiPath + `/applications/${id}/configuration-draft`, { immediate: false })
@@ -45,6 +48,7 @@ const prepareApplicationStore = (id: string) => {
   const cancelConfigDraft = async () => {
     await $fetch('/applications/' + id + '/configuration-draft', { method: 'DELETE' })
     configDraft.value = config.value
+    if (application.value) application.value.status = 'configured'
   }
 
   const baseAppFetch = useFetch<BaseApp>(`api/v1/applications/${id}/base-application`, { immediate: false })
@@ -75,12 +79,14 @@ const prepareApplicationStore = (id: string) => {
   }
 }
 
-export const createApplicationStore = (id: string) => {
-  store = prepareApplicationStore(id)
+export const provideApplicationStore = (id: string) => {
+  const store = createApplicationStore(id)
+  provide(applicationStoreKey, store)
   return store
 }
 
 export const useApplicationStore = () => {
+  const store = inject(applicationStoreKey) as ApplicationStore | undefined
   if (!store) throw new Error('application store was not initialized')
   return store
 }

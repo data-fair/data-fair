@@ -1,12 +1,40 @@
 <template>
-  <v-container>
-    <h2 class="text-h4 mb-4">
-      Data Fair dataset table - TODO
-    </h2>
+  <v-container
+    fluid
+    class="pa-0"
+    :style="`height: ${windowHeight}px`"
+  >
+    <dataset-table
+      v-model:cols="cols"
+      v-model:display="display"
+      v-model:q="q"
+      v-model:sort="sort"
+      v-model:fixed="fixed"
+      :height="windowHeight"
+      :no-interaction="!interaction"
+    />
   </v-container>
 </template>
 
 <script setup lang="ts">
+// exemple avec volumétrie, historique DPE:
+// https://koumoul.com/data-fair/embed/dataset/rr6wq5gxjqpm-89iyna6n4dz/table
+
+import { useWindowSize } from '@vueuse/core'
+import { provideDatasetStore } from '~/composables/dataset-store'
+
+const { height: windowHeight } = useWindowSize()
+
+const route = useRoute<'/embed/dataset/[id]/table'>()
+
+provideDatasetStore(route.params.id)
+
+const cols = useStringsArraySearchParam('cols')
+const display = useStringSearchParam('display', 'table')
+const q = useStringSearchParam('q')
+const sort = useStringSearchParam('sort')
+const fixed = useStringSearchParam('fixed')
+const interaction = useBooleanSearchParam('interaction', true)
 </script>
 
 <style>
