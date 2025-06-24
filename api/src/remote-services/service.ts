@@ -1,6 +1,7 @@
 import * as findUtils from '../misc/utils/find.js'
 import { clean, fixConceptsFilters } from './utils.js'
 import mongoEscape from 'mongo-escape'
+import { type User } from '@data-fair/lib-express'
 
 const filterFieldsMap = {
   'input-concepts': 'actions.input.concept',
@@ -22,7 +23,7 @@ const filterFieldsMap = {
  * @param {Record<string, string>} reqQuery
  * @param {any} user
  */
-export const findRemoteServices = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
+export const findRemoteServices = async (locale: string, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, user: User) => {
   const remoteServices = db.collection('remote-services')
   const extraFilters = []
   if (reqQuery['virtual-datasets'] === 'true' || reqQuery.virtualDatasets === 'true') {

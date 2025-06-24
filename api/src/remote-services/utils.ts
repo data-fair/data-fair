@@ -1,3 +1,4 @@
+import mongo from '#mongo'
 import * as findUtils from '../misc/utils/find.js'
 import { prepareMarkdownContent } from '../misc/utils/markdown.js'
 import soasLoader from 'soas'
@@ -12,6 +13,9 @@ import datasetAPIDocs from '../../contract/dataset-api-docs.js'
 import remoteServiceSchema from '../../contract/remote-service.js'
 import debugLib from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import { type SessionState } from '@data-fair/lib-express'
+import { type Locale } from '../../i18n/utils.ts'
+import { type Dataset } from '#types'
 
 const debugMasterData = debugLib('master-data')
 
@@ -31,15 +35,7 @@ export const initNew = (body) => {
   return service
 }
 
-/**
- * TODO replace this with storing the short id of concepts on remote services ?
- * make output.concept an object as x-concept in datasets schemas ?
- * @param {import('mongodb').Db} db
- * @param {string} locale
- * @param {Record<string, string>} reqQuery
- * @param {any} user
- */
-export const fixConceptsFilters = async (db, locale, reqQuery, user) => {
+export const fixConceptsFilters = async (locale: Locale, reqQuery: Record<string, string>, sessionState: SessionState) => {
   let vocabulary
   for (const key of ['input-concepts', 'output-concepts']) {
     if (!reqQuery[key]) continue
@@ -47,7 +43,7 @@ export const fixConceptsFilters = async (db, locale, reqQuery, user) => {
     for (let i = 0; i < values.length; i++) {
       const value = values[i]
       if (value.startsWith('https://') || value.startsWith('http://')) continue
-      vocabulary = vocabulary || await settingsUtils.getFullOwnerVocabulary(db, user && sessionState.account, locale)
+      vocabulary = vocabulary || await settingsUtils.getFullOwnerVocabulary(sessionState.account, locale)
       const concept = vocabulary.find(c => c.id === reqQuery[key])
       if (concept && concept.identifiers && concept.identifiers.length) {
         values[i] = concept.identifiers[0]
@@ -57,7 +53,7 @@ export const fixConceptsFilters = async (db, locale, reqQuery, user) => {
   }
 }
 
-export const syncDataset = async (db, dataset) => {
+export const syncDataset = async (dataset: Dataset) => {
   if (dataset.draftReason) return
 
   // console.log('SYNC ko', JSON.stringify(dataset, null, 2))
@@ -70,10 +66,10 @@ export const syncDataset = async (db, dataset) => {
     (dataset.masterData.standardSchema && dataset.masterData.standardSchema.active)
   )) {
     debugMasterData(`sync a dataset with master data to a remote service ${dataset.id} (${dataset.slug}) -> ${id}`, dataset.masterData)
-    const settings = await db.collection('settings')
+    const settings = await mongo.settings
       .findOne({ type: dataset.owner.type, id: dataset.owner.id }, { projection: { info: 1, compatODS: 1 } })
 
-    const existingService = await db.collection('remote-services')
+    const existingService = await mongo.db.collection('remote-services')
       .findOne({ id })
     const apiDoc = datasetAPIDocs(dataset, config.publicUrl, settings).api
     const service = initNew({
@@ -106,31 +102,33 @@ export const syncDataset = async (db, dataset) => {
       }
     }
     validate(service)
-    await db.collection('remote-services').replaceOne({ id }, mongoEscape.escape(service, true), { upsert: true })
+    await mongo.db.collection('remote-services').replaceOne({ id }, mongoEscape.escape(service, true), { upsert: true })
   } else {
-    const deleted = await db.collection('remote-services').deleteOne({ id })
+    const deleted = await mongo.db.collection('remote-services').deleteOne({ id })
     if (deleted?.deletedCount) debugMasterData(`deleted remote service ${id}`)
   }
 }
 
 // Create default services for the data-fair instance
-export const init = async (db) => {
+export const init = async () => {
   debugMasterData('init default remote services ?')
-  const remoteServices = db.collection('remote-services')
+  const remoteServices = mongo.db.collection('remote-services')
   const existingServices = await remoteServices.find({ owner: { $exists: false } }).limit(1000).project({ url: 1, id: 1 }).toArray()
 
-  const servicesToAdd = config.remoteServices
+  const servicesToAdd: { url: string }[] = config.remoteServices
     .filter(s => !existingServices.find(es => es.url === s.url || es.id === s.id))
 
   const apisToFetch = new Set(servicesToAdd.map(s => s.url).filter(Boolean))
-  const apisPromises = [...apisToFetch].map(url => {
-    return axios.get(url)
-      .then(resp => ({ url, api: resp.data }))
-      .catch(err => {
-        internalError('service-init', err)
-      })
-  })
-  const apis = (await Promise.all(apisPromises)).filter(a => a && a.api)
+  const apis: { url: string, api: any }[] = []
+  for (const url of [...apisToFetch]) {
+    try {
+      const resp = await axios.get(url)
+      apis.push({ url, api: resp.data })
+    } catch (err) {
+      internalError('service-init', err)
+    }
+  }
+
   const apisDict = Object.assign({}, ...apis.map(a => ({ [a.url]: a.api })))
   const servicesToInsert = servicesToAdd.filter(s => apisDict[s.url] && apisDict[s.url].info).map(s => mongoEscape.escape({
     id: slug(apisDict[s.url].info['x-api-id']),

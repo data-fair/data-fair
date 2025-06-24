@@ -17,7 +17,7 @@ export const getPrivateOwnerVocabulary = async (owner: Account) => {
   }) || []
 }
 
-export const getFullOwnerVocabulary = async (owner?: Account, locale: 'en' | 'fr' = 'fr') => {
+export const getFullOwnerVocabulary = async (owner?: Account, locale: i18nUtils.Locale = 'fr') => {
   if (!owner) return i18nUtils.vocabularyArray[locale]
 
   const privateVocabulary = await getPrivateOwnerVocabulary(owner)

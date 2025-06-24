@@ -19,6 +19,7 @@ import { clean, validate, validateOpenApi, validatePatch, initNew, computeAction
 import { findRemoteServices, findActions } from './service.js'
 import debugModule from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import { reqUser } from '@data-fair/lib-express'
 
 const debug = debugModule('remote-services')
 const debugMasterData = debugModule('master-data')
@@ -40,11 +41,10 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
   const publicationSite = req.publicationSite
   // @ts-ignore
   const publicBaseUrl = req.publicBaseUrl
-  // @ts-ignore
-  const user = req.user
+
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findRemoteServices(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, user)
+  const response = await findRemoteServices(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, reqUser(req))
   res.json(response)
 })
 

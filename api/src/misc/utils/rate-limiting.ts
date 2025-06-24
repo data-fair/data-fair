@@ -57,7 +57,8 @@ export const consume = (req: Request, limitType: string, throttlingKey?: string)
 
 const burstFactor = 4
 export const getTokenBucket = (req, limitType, bandwidthType) => {
-  const throttlingId = req.user ? req.user.id : requestIp.getClientIp(req)
+  const user = reqUser(req)
+  const throttlingId = user ? user.id : requestIp.getClientIp(req)
   const bucketSize = config.defaultLimits.apiRate[limitType].bandwidth[bandwidthType] * burstFactor
   const tokenBucket: TokenBucketWrapper = tokenBuckets[throttlingId + bandwidthType] = tokenBuckets[throttlingId + bandwidthType] || {
     bucketSize,
@@ -107,11 +108,12 @@ const throttledEnd = async (res: Response, buffer: Buffer, tokenBucket) => {
 }
 
 export const middleware = (_limitType) => async (req, res, next) => {
-  const limitType = _limitType || ((req.user && req.user.id) ? 'user' : 'anonymous')
+  const user = reqUser(req)
+  const limitType = _limitType || (user ? 'user' : 'anonymous')
 
   const ignoreRateLimiting = config.secretKeys.ignoreRateLimiting && req.get('x-ignore-rate-limiting') === config.secretKeys.ignoreRateLimiting
   if (!ignoreRateLimiting && !consume(req, limitType)) {
-    debugLimits('exceedRateLimiting', limitType, req.user, requestIp.getClientIp(req))
+    debugLimits('exceedRateLimiting', limitType, user, requestIp.getClientIp(req))
     return res.status(429).type('text/plain').send(req.__('errors.exceedRateLimiting'))
   }
 
