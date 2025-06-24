@@ -124,7 +124,7 @@
               :rules="[(file) => !!file] || ''"
             >
               <template
-                v-if="file && file.type === 'text/csv'"
+                v-if="isCSV"
                 #append-outer
               >
                 <v-select
@@ -245,6 +245,12 @@ export default {
     csvSep: ',',
     drop: false
   }),
+  computed: {
+    isCSV () {
+      // using file.type is buggy in some browsers
+      return this.file?.name && this.file.name.toLowerCase().endsWith('.csv')
+    }
+  },
   watch: {
     dialog () {
       this.result = null
@@ -266,7 +272,7 @@ export default {
         },
         params: { draft: true }
       }
-      if (this.file.type === 'text/csv') {
+      if (this.isCSV) {
         options.params.sep = this.csvSep
       }
       if (this.drop) {

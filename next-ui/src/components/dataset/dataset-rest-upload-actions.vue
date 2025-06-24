@@ -119,7 +119,6 @@
               />
             </v-alert>
 
-            type : {{ file?.type }}
             <v-file-input
               v-model="file"
               :label="t('selectFile')"
@@ -130,7 +129,7 @@
               :rules="[(file) => !!file || '']"
             >
               <template
-                v-if="file && file.type === 'text/csv'"
+                v-if="isCSV"
                 #append
               >
                 <v-select
@@ -259,6 +258,9 @@ const uploadProgress = ref<number>()
 const csvSep = ref(',')
 const drop = ref(false)
 
+// using file.type is buggy in some browsers
+const isCSV = computed(() => file.value?.name && file.value.name.toLowerCase().endsWith('.csv'))
+
 watch(dialog, () => {
   result.value = undefined
   file.value = undefined
@@ -278,7 +280,7 @@ const upload = useAsyncAction(async () => {
     },
     params: { draft: true }
   }
-  if (file.value.type === 'text/csv') {
+  if (isCSV.value) {
     options.params.sep = csvSep.value
   }
   if (drop.value) {
