@@ -38,7 +38,7 @@
 <i18n lang="yaml">
   fr:
     in: 'parmi'
-    nin: 'non parmi'
+    nin: 'hors'
     eq: '='
     neq: '&ne;'
     starts: 'commence par'
