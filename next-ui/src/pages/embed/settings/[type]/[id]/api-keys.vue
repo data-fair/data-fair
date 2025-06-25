@@ -15,6 +15,7 @@
 <script setup lang="ts">
 import type { Settings } from '#api/types'
 
+useFrameContent()
 const route = useRoute<'/embed/settings/[type]/[id]/api-keys'>()
 const settings = ref<Settings | null>(null)
 

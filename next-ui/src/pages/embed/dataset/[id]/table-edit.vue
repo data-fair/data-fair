@@ -25,6 +25,7 @@ import { provideDatasetStore } from '~/composables/dataset-store'
 
 const { height: windowHeight } = useWindowSize()
 
+useFrameContent()
 const route = useRoute<'/embed/dataset/[id]/table'>()
 
 provideDatasetStore(route.params.id, undefined, true)

@@ -5,6 +5,7 @@
 <script setup lang="ts">
 import { provideDatasetStore } from '~/composables/dataset-store'
 
+useFrameContent()
 const route = useRoute<'/embed/dataset/[id]/fields'>()
 
 provideDatasetStore(route.params.id, false, true)
