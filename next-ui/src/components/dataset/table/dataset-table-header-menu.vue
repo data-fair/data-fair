@@ -550,139 +550,34 @@
               </template>
             </v-text-field>
           </template>
+          <template v-if="showDateCompare">
+            <v-list-item
+              v-if="!newFilter.operator"
+              title="supérieur ou égal à"
+              @click="newFilter.operator = 'gte'"
+            />
+            <v-date-picker
+              v-if="newFilter.operator === 'gte'"
+              :model-value="gte && new Date(gte)"
+              hide-header
+              @update:model-value="v => v && emitNewFilter(localeDayjs.dayjs(v).format('YYYY-MM-DD'), localeDayjs.dayjs(v).format('L'))"
+            />
+
+            <v-list-item
+              v-if="!newFilter.operator"
+              title="inférieur ou égal à"
+              @click="newFilter.operator = 'lte'"
+            />
+            <v-date-picker
+              v-if="newFilter.operator === 'lte'"
+              :model-value="lte && new Date(lte)"
+              hide-header
+              @update:model-value="v => v && emitNewFilter(localeDayjs.dayjs(v).format('YYYY-MM-DD'), localeDayjs.dayjs(v).format('L'))"
+            />
+          </template>
         </template>
 
         <v-divider />
-        <!--<template v-if="addFilter && !operator">
-
-          <v-text-field
-            v-if="showNumCompare"
-            v-model="gte"
-            label="supérieur ou égal à"
-            variant="outlined"
-            hide-details
-            density="compact"
-            class="mt-1"
-            type="number"
-            @keyup.enter="emitIntervalFilter"
-          >
-            <template #append>
-              <div style="width:40px;height:36px;" />
-            </template>
-          </v-text-field>
-          <v-text-field
-            v-if="showNumCompare"
-            v-model="lte"
-            label="inférieur ou égal à"
-            variant="outlined"
-            hide-details
-            density="compact"
-            class="mt-1"
-            type="number"
-            @keyup.enter="emitIntervalFilter"
-          >
-            <template #append>
-              <v-btn
-                :disabled="!lte && !gte"
-                class="mr-1"
-                density="comfortable"
-                color="primary"
-                :title="t('applyFilter')"
-                :icon="mdiCheck"
-                @click="emitIntervalFilter"
-              />
-            </template>
-          </v-text-field>
-
-          <v-text-field
-            v-if="showDateCompare"
-            :model-value="gte && formatValue(gte, header.property, null, localeDayjs)"
-            label="supérieur ou égal à"
-            variant="outlined"
-            hide-details
-            density="compact"
-            class="mt-1"
-            readonly
-            clearable
-            @click:clear="gte = undefined"
-            @focus="editDate = 'gte'"
-            @keyup.enter="emitIntervalFilter"
-          >
-            <template #append>
-              <div style="width:40px;height:36px;" />
-            </template>
-          </v-text-field>
-          <v-text-field
-            v-if="showDateCompare"
-            :model-value="lte && formatValue(lte, header.property, null, localeDayjs)"
-            label="inférieur ou égal à"
-            variant="outlined"
-            hide-details
-            density="compact"
-            class="mt-1"
-            readonly
-            clearable
-            @click:clear="lte = undefined"
-            @focus="editDate = 'lte'"
-            @keyup.enter="emitIntervalFilter"
-          >
-            <template #append>
-              <v-btn
-                :disabled="!lte && !gte"
-                class="mr-1"
-                density="comfortable"
-                color="primary"
-                :title="t('applyFilter')"
-                :icon="mdiCheck"
-                @click="emitIntervalFilter"
-              />
-            </template>
-          </v-text-field>
-          <v-date-picker
-            v-if="editDate === 'gte'"
-            v-model="gte"
-            no-title
-          />
-          <v-date-picker
-            v-if="editDate === 'lte'"
-            v-model="lte"
-            no-title
-          />
-
-          <template
-            v-if="showEnum"
-          >
-            <v-list-item
-              v-for="{value, important} in fullEnum"
-              :key="value"
-              :active="equals.includes(value)"
-              :style="{'minHeight': enumDense ? '24px' : '32px'}"
-              class="px-2"
-              @click="toggleEquals(value)"
-            >
-              <template #prepend>
-                <v-icon
-                  v-if="equals.includes(value)"
-                  color="primary"
-                  :icon="mdiCheckboxMarked"
-                  :size="enumDense ? 'small' : undefined"
-                />
-                <v-icon
-                  v-else
-                  :icon="mdiCheckboxBlankOutline"
-                  :size="enumDense ? 'small' : undefined"
-                />
-              </template>
-
-              <v-list-item-title :class="{'font-weight-bold': important}">
-                {{ formatValue(value, header.property, null, localeDayjs) }}
-              </v-list-item-title>
-            </v-list-item>
-
-          </template>
-          <v-divider />
-        </template>
-        -->
       </template>
 
       <!-- hide column -->

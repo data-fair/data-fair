@@ -44,7 +44,7 @@
     starts: 'commence par'
     lte: '&leq;'
     gte: '&GreaterEqual;'
-    search: contient les mots
+    search: recherche textuelle
     contains: contient les caractères
 </i18n>
 
