@@ -84,9 +84,7 @@
       </v-list>
 
       <!-- filters -->
-      <template
-        v-if="showSearch || showEnum || showEquals || showStartsWith || showBoolEquals || showNumCompare || showDateCompare"
-      >
+      <template v-if="showSearch || showEnum || showEquals || showStartsWith || showBoolEquals || showNumCompare || showDateCompare">
         <v-list-item
           :disabled="!!newFilter"
           class="pl-2"
@@ -407,7 +405,7 @@
               hide-details
               density="compact"
               class="mt-1"
-              autofocus=""
+              autofocus
               @keyup.enter="startsWith && emitNewFilter(startsWith)"
             >
               <template #append>
@@ -493,14 +491,69 @@
               </v-list-item>
             </template>
           </template>
+          <template v-if="showNumCompare">
+            <v-list-item
+              v-if="!newFilter.operator"
+              title="supérieur ou égal à"
+              @click="newFilter.operator = 'gte'"
+            />
+            <v-text-field
+              v-if="newFilter.operator === 'gte'"
+              v-model="gte"
+              label="supérieur ou égal à"
+              variant="outlined"
+              hide-details
+              density="compact"
+              class="mt-1"
+              type="number"
+              @keyup.enter="gte && emitNewFilter(gte, formatValue(gte, header.property, null, localeDayjs))"
+            >
+              <template #append>
+                <v-btn
+                  class="mr-1"
+                  density="comfortable"
+                  :disabled="!gte"
+                  color="primary"
+                  :title="t('applyFilter')"
+                  :icon="mdiCheck"
+                  @click="gte && emitNewFilter(gte, formatValue(gte, header.property, null, localeDayjs))"
+                />
+              </template>
+            </v-text-field>
+
+            <v-list-item
+              v-if="!newFilter.operator"
+              title="inférieur ou égal à"
+              @click="newFilter.operator = 'lte'"
+            />
+            <v-text-field
+              v-if="newFilter.operator === 'lte'"
+              v-model="lte"
+              label="inférieur ou égal à"
+              variant="outlined"
+              hide-details
+              density="compact"
+              class="mt-1"
+              type="number"
+              @keyup.enter="lte && emitNewFilter(lte, formatValue(lte, header.property, null, localeDayjs))"
+            >
+              <template #append>
+                <v-btn
+                  class="mr-1"
+                  density="comfortable"
+                  :disabled="!lte"
+                  color="primary"
+                  :title="t('applyFilter')"
+                  :icon="mdiCheck"
+                  @click="lte && emitNewFilter(lte, formatValue(lte, header.property, null, localeDayjs))"
+                />
+              </template>
+            </v-text-field>
+          </template>
         </template>
 
         <v-divider />
         <!--<template v-if="addFilter && !operator">
-
-          <template v-if="showBoolEquals">
-
-          </template>
 
           <v-text-field
             v-if="showNumCompare"
