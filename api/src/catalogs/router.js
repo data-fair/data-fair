@@ -52,7 +52,7 @@ router.get('/_types', cacheHeaders.noCache, async (req, res) => {
 router.get('', cacheHeaders.noCache, async (req, res) => {
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findCatalogs(mongo.db, req.getLocale(), reqQuery, reqSession(req))
+  const response = await findCatalogs(req.getLocale(), reqQuery, reqSession(req))
   res.json(response)
 })
 

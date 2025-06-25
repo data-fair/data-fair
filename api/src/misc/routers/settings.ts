@@ -44,7 +44,6 @@ function isDepartmentSettings (settings: Settings | DepartmentSettings): setting
 
 // @ts-ignore
 router.use('/:type/:id', (req: ExpressRequest, res: Response, next: NextFunction) => {
-  assertSettingsRequest(req)
   if (req.params.type !== 'user' && req.params.type !== 'organization') {
     res.status(400).type('text/plain').send('Invalid type, it must be one of the following : ' + Array.from(allowedTypes).join(', '))
     return

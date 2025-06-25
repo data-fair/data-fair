@@ -5,7 +5,7 @@ import mongo from '#mongo'
 import * as rateLimiting from './rate-limiting.ts'
 import { type Request, type Response, type NextFunction } from 'express'
 import { type ApplicationKey, type RequestWithResource } from '#types'
-import { reqUser, setReqUser } from '@data-fair/lib-express/session.js'
+import { reqUser, setReqUser, session } from '@data-fair/lib-express/session.js'
 
 const matchingHost = (req: Request) => {
   if (!req.headers.origin) return true
@@ -96,12 +96,11 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
         }
 
         // 2nd level of anti-spam protection, validate that the user was present on the page for a few seconds before sending
-        const { verifyToken } = req.app.get('session')
         const anonymousToken = req.get('x-anonymousToken')
         let tokenContent
         if (!anonymousToken) return res.status(401).type('text/plain').send(req.__('errors.requireAnonymousToken'))
         try {
-          tokenContent = await verifyToken(anonymousToken)
+          tokenContent = await session.verifyToken(anonymousToken)
         } catch (err: any) {
           if (err.name === 'NotBeforeError') {
             return res.status(429).type('text/plain').send(req.__('errors.looksLikeSpam'))

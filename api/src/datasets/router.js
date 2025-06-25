@@ -14,6 +14,7 @@ import equal from 'deep-equal'
 import * as journals from '../misc/utils/journals.ts'
 import axios from '../misc/utils/axios.js'
 import * as esUtils from './es/index.ts'
+import { initDatasetIndex, switchAlias, datasetInfos } from '../datasets/es/manage-indices.js'
 import * as uploadUtils from './utils/upload.js'
 import datasetAPIDocs from '../../contract/dataset-api-docs.js'
 import privateDatasetAPIDocs from '../../contract/dataset-private-api-docs.ts'
@@ -93,7 +94,7 @@ router.get('', apiKeyMiddleware, cacheHeaders.listBased, async (req, res) => {
 
 router.use('/:datasetId/permissions', readDataset(), apiKeyMiddleware, permissions.router('datasets', 'dataset', async (req, patchedDataset) => {
   // this callback function is called when the resource becomes public
-  await publicationSites.onPublic(mongo.db, patchedDataset, 'dataset')
+  await publicationSites.onPublic(patchedDataset, 'datasets', reqSessionAuthenticated(req))
 }))
 
 // retrieve a dataset by its id
@@ -192,7 +193,7 @@ router.patch('/:datasetId',
         throw httpError(400, req.__('errors.dupSlug'))
       })
     if (!isEmpty) {
-      await publicationSites.applyPatch(db, dataset, { ...dataset, ...patch }, sessionState, 'dataset')
+      await publicationSites.applyPatch(dataset, { ...dataset, ...patch }, sessionState, 'datasets')
       await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
 
       if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
@@ -213,7 +214,7 @@ router.patch('/:datasetId',
         resource: { type: 'dataset', title: dataset.title, id: dataset.id }
       }, sessionState)
 
-      await syncRemoteService(db, dataset)
+      await syncRemoteService(dataset)
     }
 
     res.status(200).json(clean(req, dataset))
@@ -312,7 +313,7 @@ router.put('/:datasetId/owner', readDataset(), apiKeyMiddleware, permissions.mid
   eventsQueue.pushEvent(event, sessionState)
   eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, admin: true } }, sessionState)
 
-  await syncRemoteService(mongo.db, patchedDataset)
+  await syncRemoteService(patchedDataset)
 
   await updateTotalStorage(dataset.owner)
   await updateTotalStorage(patch.owner)
@@ -344,7 +345,7 @@ router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft:
     resource: { type: 'dataset', title: dataset.title, id: dataset.id }
   }, sessionState)
 
-  await syncRemoteService(mongo.db, { ...datasetFull, masterData: null })
+  await syncRemoteService({ ...datasetFull, masterData: null })
   await updateTotalStorage(datasetFull.owner)
   res.sendStatus(204)
 })
@@ -395,8 +396,8 @@ const createDatasetRoute = async (req, res) => {
       // case where we simply initialize the empty dataset
       // being empty this is not costly and can be performed by the API
       await restDatasetsUtils.initDataset(dataset)
-      const indexName = await esUtils.initDatasetIndex(es, dataset)
-      await esUtils.switchAlias(es, dataset, indexName)
+      const indexName = await initDatasetIndex(es, dataset)
+      await switchAlias(es, dataset, indexName)
       await restDatasetsUtils.configureHistory(dataset)
       await updateStorage(dataset)
       onClose(() => {
@@ -415,7 +416,7 @@ const createDatasetRoute = async (req, res) => {
 
     await journals.log('datasets', dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id })
     await notifications.sendResourceEvent('datasets', dataset, sessionState, 'dataset-created')
-    await syncRemoteService(db, dataset)
+    await syncRemoteService(dataset)
 
     res.status(201).send(clean(req, dataset, draft))
   } catch (err) {
@@ -491,7 +492,7 @@ const updateDatasetRoute = async (req, res, next) => {
       })
 
     if (!isEmpty) {
-      await publicationSites.applyPatch(db, dataset, { ...dataset, ...patch }, sessionState, 'dataset')
+      await publicationSites.applyPatch(dataset, { ...dataset, ...patch }, sessionState, 'datasets')
       await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
 
       eventsLog.info('df.datasets.update', `updated dataset ${dataset.slug} (${dataset.id}) keys ${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
@@ -508,10 +509,10 @@ const updateDatasetRoute = async (req, res, next) => {
       }, sessionState)
 
       if (files) {
-        await journals.log('datasets', dataset, { type: 'data-updated' }, 'dataset')
+        await journals.log('datasets', dataset, { type: 'data-updated' })
         await notifications.sendResourceEvent('datasets', dataset, sessionState, 'data-updated')
       }
-      await syncRemoteService(db, dataset)
+      await syncRemoteService(dataset)
     }
   } catch (err) {
     if (files) {
@@ -539,7 +540,7 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
 
   const patch = { status: 'validated', validateDraft: true }
   await applyPatch(req.app, dataset, patch)
-  await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation manuelle' }, 'dataset')
+  await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation manuelle' })
   await notifications.sendResourceEvent('datasets', dataset, sessionState, 'draft-validated')
   eventsLog.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
 
@@ -563,7 +564,7 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
   const patch = { draft: null }
   await cancelDraft(dataset)
   await applyPatch(req.app, datasetFull, patch)
-  await journals.log(dataset, { type: 'draft-cancelled' }, 'dataset', false, sessionState)
+  await journals.log('datasets', dataset, { type: 'draft-cancelled' }, false, sessionState)
 
   eventsLog.info('df.datasets.cancelDraft', `cancelled dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
   await notifications.sendResourceEvent('datasets', dataset, sessionState, 'draft-cancelled')
@@ -1436,7 +1437,7 @@ router.post('/:datasetId/_simulate-extension', readDataset(), permissions.middle
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.
 router.get('/:datasetId/_diagnose', readDataset(), cacheHeaders.noCache, async (req, res) => {
   reqAdminMode(req)
-  const esInfos = await esUtils.datasetInfos(req.app.get('es'), req.dataset)
+  const esInfos = await datasetInfos(req.app.get('es'), req.dataset)
   const filesInfos = await datasetUtils.lsFiles(req.dataset)
   const locks = [
     await mongo.db.collection('locks').findOne({ _id: `dataset:${req.dataset.id}` }),

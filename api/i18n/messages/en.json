@@ -27,7 +27,7 @@
 		"oneOfConcepts": "one of the concepts {{concepts}}",
 		"aType": "the type {{type}}",
 		"oneOfTypes": "one of the types {{types}}",
-    "orJoin": " or ",
+		"orJoin": " or ",
 		"requires": "requires ",
 		"requiresJoin": " and "
 	},
@@ -50,5 +50,38 @@
 		"sort": "sort",
 		"q": "text search",
 		"qs": "structured filter"
+	},
+	"datasets": {
+		"dataset-created": {
+			"title": "datasets.dataset-created.title",
+			"body": "datasets.dataset-created.body"
+		},
+		"data-updated": {
+			"title": "datasets.data-updated.title",
+			"body": "datasets.data-updated.body"
+		},
+		"structure-updated": {
+			"title": "datasets.structure-updated.title",
+			"body": "datasets.structure-updated.body"
+		},
+		"draft-validated": {
+			"title": "datasets.draft-validated.title",
+			"body": "datasets.draft-validated.body"
+		},
+		"breaking-change": {
+			"title": "datasets.breaking-change.title",
+			"body": "datasets.breaking-change.body"
+		},
+		"draft-cancelled": {
+			"title": "datasets.draft-cancelled.title",
+			"body": "datasets.draft-cancelled.body"
+		},
+		"publication-requested": "data-fair-portals:portal1.title"
+	},
+	"applications": {
+		"application-created": {
+			"title": "applications.application-created.title",
+			"body": "applications.application-created.body"
+		}
 	}
 }

@@ -87,6 +87,9 @@ export default {
                 const: 'dataset-data-updated',
                 title: 'Le fichier d\'un jeu de données a été mis à jour'
               }, {
+                const: 'dataset-structure-updated',
+                title: 'La structure d\'un jeu de données a été mise à jour'
+              }, {
                 const: 'dataset-error',
                 title: 'Un jeu de données a rencontré une erreur'
               }, {
@@ -316,6 +319,12 @@ export default {
           }
         }
       }
+    },
+    compatODS: {
+      type: 'boolean',
+      title: 'Compatibilité ODS',
+      description: 'Active la compatibilité avec l\'API ODS',
+      default: false
     }
   }
 }

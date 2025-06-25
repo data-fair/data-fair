@@ -2,8 +2,9 @@ import mongo from '#mongo'
 import * as webhooks from './webhooks.ts'
 import * as permissions from './permissions.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { type SessionStateAuthenticated, type AccountKeys } from '@data-fair/lib-express'
+import { type SessionStateAuthenticated, type AccountKeys, SessionState } from '@data-fair/lib-express'
 import { type Resource, type ResourceType } from '#types'
+import { sendResourceEvent } from './notifications.ts'
 
 const getPublicationSiteInfo = async (owner: AccountKeys, publicationSite: string) => {
   const [type, id] = publicationSite.split(':')
@@ -17,7 +18,7 @@ const getPublicationSiteInfo = async (owner: AccountKeys, publicationSite: strin
 }
 
 // this function is called when the resource is patched to check if publicationSites and requestedPublicationSites have changed
-export const applyPatch = async (previousResource: Resource, resource: Resource, sessionState: SessionStateAuthenticated, resourceType: string) => {
+export const applyPatch = async (previousResource: Resource, resource: Resource, sessionState: SessionStateAuthenticated, resourceType: ResourceType) => {
   const previousPublicationSites = previousResource.publicationSites || []
   const previousRequestedPublicationSites = previousResource.requestedPublicationSites || []
   const previousTopics = previousResource.topics || []
@@ -49,13 +50,12 @@ export const applyPatch = async (previousResource: Resource, resource: Resource,
       if (!sessionState.user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && sessionState.account?.type === 'organization' && sessionState.account.id === resource.owner.id && !publicationSiteInfo.department && sessionState.account.department) {
         throw httpError(403, 'fail to publish: publication site does not belong to user department')
       }
-      if (!publicationSiteInfo.settings?.staging && !permissions.can((resourceType + 's') as ResourceType, resource, 'writePublicationSites', sessionState)) {
+      if (!publicationSiteInfo.settings?.staging && !permissions.can(resourceType, resource, 'writePublicationSites', sessionState)) {
         throw httpError(403, 'fail to publish: publication site requires permission to publish')
       }
-      const sender = { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
-      webhooks.trigger(resourceType, resource, { type: `published:${publicationSite}` }, sender, sessionState)
+      sendResourceEvent(resourceType, resource, sessionState, `published:${publicationSite}`)
       for (const topic of newTopics) {
-        webhooks.trigger(resourceType, resource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender, sessionState)
+        sendResourceEvent(resourceType, resource, sessionState, `published-topic:${publicationSite}:${topic.id}`)
       }
     }
   }
@@ -65,7 +65,7 @@ export const applyPatch = async (previousResource: Resource, resource: Resource,
       if (!sessionState.user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && sessionState.account?.type === 'organization' && sessionState.account.id === resource.owner.id && !publicationSiteInfo.department && sessionState.account.department) {
         throw httpError(403, 'fail to unpublish: publication site does not belong to user department')
       }
-      if (publicationSiteInfo && !publicationSiteInfo.settings?.staging && !permissions.can((resourceType + 's') as ResourceType, resource, 'writePublicationSites', sessionState)) {
+      if (publicationSiteInfo && !publicationSiteInfo.settings?.staging && !permissions.can(resourceType, resource, 'writePublicationSites', sessionState)) {
         throw httpError(403, 'fail to unpublish: publication site requires permission to unpublish')
       }
     }
@@ -75,8 +75,7 @@ export const applyPatch = async (previousResource: Resource, resource: Resource,
     if (!previousRequestedPublicationSites.includes(requestedPublicationSite)) {
       const publicationSiteInfo = await getPublicationSiteInfo(resource.owner, requestedPublicationSite)
       if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
-      const sender = { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
-      webhooks.trigger(resourceType, resource, { type: `publication-requested:${requestedPublicationSite}`, body: `${resource.title || resource.id} - ${sessionState.user.name}` }, sender, sessionState)
+      sendResourceEvent(resourceType, resource, sessionState, `publication-requested:${requestedPublicationSite}`)
     }
   }
   for (const topic of newTopics) {
@@ -85,22 +84,20 @@ export const applyPatch = async (previousResource: Resource, resource: Resource,
       for (const publicationSite of newPublicationSites) {
         const publicationSiteInfo = await getPublicationSiteInfo(resource.owner, publicationSite)
         if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
-        const sender = { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
-        webhooks.trigger(resourceType, resource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender, sessionState)
+        sendResourceEvent(resourceType, resource, sessionState, `published-topic:${publicationSite}:${topic.id}`)
       }
     }
   }
 }
 
 // this callback function is called when the resource becomes public
-export const onPublic = async (patchedResource: Resource, resourceType: string) => {
+export const onPublic = async (patchedResource: Resource, resourceType: ResourceType, sessionState: SessionState) => {
   for (const publicationSite of patchedResource.publicationSites || []) {
     const publicationSiteInfo = await getPublicationSiteInfo(patchedResource.owner, publicationSite)
     if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
-    const sender = { type: patchedResource.owner.type, id: patchedResource.owner.id, department: publicationSiteInfo.department }
-    webhooks.trigger(resourceType, patchedResource, { type: `published:${publicationSite}` })
+    sendResourceEvent(resourceType, patchedResource, sessionState, `published:${publicationSite}`)
     for (const topic of patchedResource.topics || []) {
-      webhooks.trigger(resourceType, patchedResource, { type: `published-topic:${publicationSite}:${topic.id}` }, sender)
+      sendResourceEvent(resourceType, patchedResource, sessionState, `published-topic:${publicationSite}:${topic.id}`)
     }
   }
 }

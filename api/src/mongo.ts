@@ -40,7 +40,7 @@ export class DfMongo {
   }
 
   get remoteServices () {
-    return this.mongo.db.collection<RemoteService>('settings')
+    return this.mongo.db.collection<RemoteService>('remote-services')
   }
 
   constructor () {

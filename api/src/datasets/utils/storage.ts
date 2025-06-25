@@ -70,7 +70,7 @@ export const storage = async (dataset: Dataset) => {
     for (const descendant of descendants) {
       if (!descendant?.masterData?.virtualDatasets?.active) continue
       if (descendant.owner.type === dataset.owner.type && descendant.owner.id === dataset.owner.id) continue
-      const remoteService = await mongo.db.collection('remote-services').findOne({ id: 'dataset:' + descendant.id })
+      const remoteService = await mongo.remoteServices.findOne({ id: 'dataset:' + descendant.id })
       if (!remoteService) throw new Error(`missing remote service dataset:${descendant.id}`)
       let storageRatio = remoteService.virtualDatasets?.storageRatio || 0
       const queryableDataset: VirtualDataset = { ...dataset }

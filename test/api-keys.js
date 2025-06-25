@@ -88,7 +88,6 @@ describe('API keys', function () {
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'organization')
     assert.equal(dataset.owner.id, 'KWqAGZ4mG')
-    console.log(dataset.owner)
     assert.equal(dataset.owner.name, 'Fivechat testé')
   })
 })

@@ -104,7 +104,7 @@ export const extend = async (
     if (extension.type === 'remoteService') {
       const accessFilter: Filter<WithId<Document>>[] = [{ public: true }]
       accessFilter.push({ privateAccess: { $elemMatch: { type: dataset.owner.type, id: dataset.owner.id } } })
-      const remoteService = await mongo.db.collection('remote-services').findOne({ id: extension.remoteService, $or: accessFilter })
+      const remoteService = await mongo.remoteServices.findOne({ id: extension.remoteService, $or: accessFilter })
       if (!remoteService) {
         throw new Error(`Try to apply extension on dataset ${dataset.id} but remote service ${extension.action} was not found.`)
       }
@@ -436,7 +436,7 @@ export const prepareExtensionsSchema = async (schema: any, extensions: any[]) =>
   for (const extension of extensions) {
     if (!extension.active) continue
     if (extension.type === 'remoteService') {
-      const remoteService = await mongo.db.collection('remote-services').findOne({ id: extension.remoteService })
+      const remoteService = await mongo.remoteServices.findOne({ id: extension.remoteService })
       if (!remoteService) continue
       const action = remoteService.actions.find((action: any) => action.id === extension.action)
       if (!action) continue
@@ -521,7 +521,7 @@ export const checkExtensions = async (schema: any[], extensions: any[] = []) => 
     }
 
     if (extension.type === 'remoteService') {
-      const remoteService = await mongo.db.collection('remote-services').findOne({ id: extension.remoteService })
+      const remoteService = await mongo.remoteServices.findOne({ id: extension.remoteService })
       if (!remoteService) throw httpError(400, `[noretry] source de données de référénce inconnue "${extension.remoteService}"`)
       const action = remoteService.actions.find((action: any) => action.id === extension.action)
       if (!action) throw httpError(400, `[noretry] opération de récupération de données de référénce inconnue "${extension.remoteService} / ${extension.action?.replace('masterData_bulkSearch_', '')}"`)

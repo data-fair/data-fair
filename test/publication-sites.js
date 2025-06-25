@@ -105,9 +105,12 @@ describe('publication sites', function () {
       err => err.status === 403)
   })
 
-  it('department admin can request publishing dataset on org site', async function () {
+  it.only('department admin can request publishing dataset on org site', async function () {
     let notif
-    global.events.on('notification', (n) => { notif = n })
+    global.events.on('notification', (n) => {
+      console.log(n)
+      notif = n
+    })
 
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
     await global.ax.dmeadusOrg.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)

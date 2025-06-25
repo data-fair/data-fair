@@ -14,7 +14,7 @@ import * as baseAppsUtils from './utils.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import { reqAdminMode, reqUser, reqUserAuthenticated } from '@data-fair/lib-express'
+import { reqAdminMode, reqUser, reqUserAuthenticated, reqSession } from '@data-fair/lib-express'
 
 const htmlExtractor = new Extractor()
 htmlExtractor.extract = util.promisify(htmlExtractor.extract)
@@ -160,13 +160,13 @@ const getQuery = (req, showAll = false) => {
 
 // Get the list. Non admin users can only see the public and non deprecated ones.
 router.get('', cacheHeaders.noCache, async (req, res) => {
-  const db = mongo.db
+  const sessionState = reqSession(req)
   const { query, privateAccess } = getQuery(req)
   if (req.query.applicationName) query.$and.push({ $or: [{ applicationName: req.query.applicationName }, { 'meta.application-name': req.query.applicationName }] })
   if (req.query.q) query.$and.push({ $text: { $search: req.query.q } })
 
   const [skip, size] = findUtils.pagination(req.query)
-  const baseApplications = db.collection('base-applications')
+  const baseApplications = mongo.baseApplications
   const findPromise = baseApplications
     .find(query)
     .collation({ locale: 'en' })
@@ -186,7 +186,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
     const vocabulary = i18nUtils.vocabulary[req.getLocale()]
     if (req.query.dataset === 'any') {
       // match constraints against all datasets of current account
-      const filter = { 'owner.type': req.sessionState.account.type, 'owner.id': req.sessionState.account.id }
+      const filter = { 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id }
       datasetCount = mongo.datasets.countDocuments(filter)
       datasetBBox = !!(mongo.datasets.countDocuments({ $and: [{ bbox: { $ne: null } }, filter] }))
       const facet = {
@@ -205,7 +205,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
       // match constraints against a specific dataset
       datasetCount = 1
       datasetId = req.query.dataset
-      const dataset = mongo.datasets.findOne({ id: datasetId, 'owner.type': req.sessionState.account.type, 'owner.id': req.sessionState.account.id })
+      const dataset = mongo.datasets.findOne({ id: datasetId, 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id })
       if (!dataset) return res.status(404).send(req.__('errors.missingDataset', { id: datasetId }))
       datasetTypes = (dataset.schema || []).filter(field => !field['x-calculated']).map(field => field.type)
       datasetVocabulary = (dataset.schema || []).map(field => field['x-refersTo']).filter(c => !!c)

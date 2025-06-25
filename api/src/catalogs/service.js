@@ -1,3 +1,4 @@
+import mongo from '#mongo'
 import * as findUtils from '../misc/utils/find.js'
 import * as permissions from '../misc/utils/permissions.ts'
 import mongoEscape from 'mongo-escape'
@@ -13,14 +14,13 @@ const fieldsMap = {
 }
 
 /**
- * @param {import('mongodb').Db} db
  * @param {string} locale
  * @param {Record<string, string>} reqQuery
  * @param {SessionState} sessionState
  */
-export const findCatalogs = async (db, locale, reqQuery, sessionState) => {
-  const catalogs = db.collection('catalogs')
-  const query = findUtils.query(reqQuery, locale, user, 'catalogs', fieldsMap, false)
+export const findCatalogs = async (locale, reqQuery, sessionState) => {
+  const catalogs = mongo.db.collection('catalogs')
+  const query = findUtils.query(reqQuery, locale, sessionState, 'catalogs', fieldsMap, false)
   const sort = findUtils.sort(reqQuery.sort)
   const project = findUtils.project(reqQuery.select)
   const [skip, size] = findUtils.pagination(reqQuery)
@@ -29,7 +29,7 @@ export const findCatalogs = async (db, locale, reqQuery, sessionState) => {
     catalogs.countDocuments(query)
   ]
   if (reqQuery.facets) {
-    mongoQueries.push(catalogs.aggregate(findUtils.facetsQuery(reqQuery, user, 'catalogs', {}, fieldsMap)).toArray())
+    mongoQueries.push(catalogs.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'catalogs', {}, fieldsMap)).toArray())
   }
   let [results, count, facets] = await Promise.all(mongoQueries)
   // @ts-ignore

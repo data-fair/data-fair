@@ -1,3 +1,4 @@
+import mongo from '#mongo'
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
@@ -497,7 +498,6 @@ export const sumsQuery = (reqQuery, sessionState, resourceType, sumFields = {}, 
 }
 
 /**
- * @param {import('mongodb').Db} db
  * @param {any} publicationSite
  * @param {any} mainPublicationSite
  * @param {Record<string, string>} reqParams
@@ -505,7 +505,7 @@ export const sumsQuery = (reqQuery, sessionState, resourceType, sumFields = {}, 
  * @param {string | null} resourceId
  * @param {boolean | undefined} tolerateStale
  */
-export const getByUniqueRef = async (db, publicationSite, mainPublicationSite, reqParams, resourceType, resourceId, tolerateStale) => {
+export const getByUniqueRef = async (publicationSite, mainPublicationSite, reqParams, resourceType, resourceId, tolerateStale) => {
   const paramId = resourceId ?? reqParams[resourceType + 'Id']
 
   /** @type {any} */
@@ -522,7 +522,7 @@ export const getByUniqueRef = async (db, publicationSite, mainPublicationSite, r
     }
   }
   // @ts-ignore
-  const resources = await db.collection(resourceType + 's').find(filter, options).project({ _id: 0 }).toArray()
+  const resources = await mongo.db.collection(resourceType + 's').find(filter, options).project({ _id: 0 }).toArray()
   // req[resourceType] = req.resource =
   return resources.find(d => d.id === paramId) || resources.find(d => d.slug === paramId)
 }

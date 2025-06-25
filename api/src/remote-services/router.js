@@ -18,7 +18,7 @@ import { clean, validateOpenApi, initNew, computeActions } from './utils.ts'
 import { findRemoteServices, findActions } from './service.ts'
 import debugModule from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import { reqUser, reqAdminMode } from '@data-fair/lib-express'
+import { reqSession, reqAdminMode } from '@data-fair/lib-express'
 
 const debug = debugModule('remote-services')
 const debugMasterData = debugModule('master-data')
@@ -43,7 +43,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
 
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findRemoteServices(req.getLocale(), publicationSite, publicBaseUrl, reqQuery, reqUser(req))
+  const response = await findRemoteServices(req.getLocale(), publicationSite, publicBaseUrl, reqQuery, reqSession(req))
   res.json(response)
 })
 
@@ -58,7 +58,7 @@ actionsRouter.get('', cacheHeaders.noCache, async (req, res) => {
   // @ts-ignore
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findActions(req.getLocale(), publicationSite, publicBaseUrl, reqQuery, reqUser(req))
+  const response = await findActions(req.getLocale(), publicationSite, publicBaseUrl, reqQuery, reqSession(req))
   res.json(response)
 })
 
@@ -148,9 +148,8 @@ router.patch('/:remoteServiceId', readService, async (req, res) => {
 
   debugMasterData(`PATCH remote service manually by ${sessionState.user.name} (${sessionState.user.id})`, req.params.remoteServiceId, req.body)
 
-  const patch = req.body
-  const { assertValid: validatePatch } = await import('#doc/remote-services/patch-req/index.js')
-  validatePatch(patch)
+  const { returnValid: validatePatch } = await import('#doc/remote-services/patch-req/index.js')
+  const { body: patch } = validatePatch(req)
 
   patch.updatedAt = moment().toISOString()
   patch.updatedBy = { id: sessionState.user.id, name: sessionState.user.name }

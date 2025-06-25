@@ -1,3 +1,4 @@
+import mongo from '#mongo'
 import * as findUtils from '../misc/utils/find.js'
 import * as permissions from '../misc/utils/permissions.ts'
 import { clean } from './utils.js'
@@ -25,16 +26,13 @@ const fieldsMap = {
 
 /**
  *
- * @param {import('mongodb').Db} db
  * @param {string} locale
  * @param {any} publicationSite
  * @param {string} publicBaseUrl
  * @param {Record<string, string>} reqQuery
  * @param {import('@data-fair/lib-express').SessionState} sessionState
  */
-export const findApplications = async (db, locale, publicationSite, publicBaseUrl, reqQuery, sessionState) => {
-  const applications = db.collection('applications')
-
+export const findApplications = async (locale, publicationSite, publicBaseUrl, reqQuery, sessionState) => {
   const tolerateStale = !!publicationSite
 
   /** @type {import('mongodb').FindOptions} */
@@ -74,9 +72,9 @@ export const findApplications = async (db, locale, publicationSite, publicBaseUr
   const project = findUtils.project(reqQuery.select, ['configuration', 'configurationDraft'], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
 
-  const countPromise = reqQuery.count !== 'false' && applications.countDocuments(query, options)
-  const resultsPromise = size > 0 && applications.find(query, options).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
-  const facetsPromise = reqQuery.facets && applications.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'applications', facetFields, filterFields, nullFacetFields), options).toArray()
+  const countPromise = reqQuery.count !== 'false' && mongo.applications.countDocuments(query, options)
+  const resultsPromise = size > 0 && mongo.applications.find(query, options).collation({ locale: 'en' }).limit(size).skip(skip).sort(sort).project(project).toArray()
+  const facetsPromise = reqQuery.facets && mongo.applications.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'applications', facetFields, filterFields, nullFacetFields), options).toArray()
   const [count, results, facets] = await Promise.all([countPromise, resultsPromise, facetsPromise])
   /** @type {any} */
   const response = {}

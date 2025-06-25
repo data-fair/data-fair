@@ -145,7 +145,7 @@ export const process = async function (app, dataset) {
             }
           }
           const transactions = hits.map(hit => ({ _action: 'create', _id: hit._id, ...flatten(hit._source) }))
-          await applyTransactions(dataset, pseudoSessionState.user, transactions)
+          await applyTransactions(dataset, pseudoSessionState, transactions)
           await progress.inc(transactions.length)
         }
       } else if (parentDataset.file) {

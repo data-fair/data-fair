@@ -56,17 +56,17 @@ const setUniqueRefs = (application) => {
   }
 }
 
-const curateApplication = async (db, application) => {
+const curateApplication = async (application) => {
   if (application.title) application.title = application.title.trim()
   const projection = { id: 1, url: 1, meta: 1, datasetsFilters: 1 }
   if (application.url) {
-    application.baseApp = await db.collection('base-applications').findOne({ url: application.url }, { projection })
+    application.baseApp = await mongo.baseApplications.findOne({ url: application.url }, { projection })
     if (!application.baseApp) {
       throw httpError(400, 'Base application not found')
     }
   }
   if (application.urlDraft) {
-    application.baseAppDraft = await db.collection('base-applications').findOne({ url: application.urlDraft }, { projection })
+    application.baseAppDraft = await mongo.baseApplications.findOne({ url: application.urlDraft }, { projection })
     if (!application.baseAppDraft) {
       throw httpError(400, 'Base draft application not found')
     }
@@ -75,11 +75,11 @@ const curateApplication = async (db, application) => {
 }
 
 // update references to an application into the datasets it references (or used to reference before a patch)
-const syncDatasets = async (db, newApp, oldApp = {}) => {
+const syncDatasets = async (newApp, oldApp = {}) => {
   const ids = [...(newApp?.configuration?.datasets || []), ...(oldApp?.configuration?.datasets || [])]
     .map(dataset => dataset.href.replace(config.publicUrl + '/api/v1/datasets/', ''))
   for (const id of [...new Set(ids)]) {
-    await syncApplications(db, id)
+    await syncApplications(id)
   }
 }
 
@@ -91,7 +91,7 @@ router.get('', cacheHeaders.listBased, async (req, res) => {
   const publicBaseUrl = req.publicBaseUrl
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findApplications(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, reqSession(req))
+  const response = await findApplications(req.getLocale(), publicationSite, publicBaseUrl, reqQuery, reqSession(req))
   res.json(response)
 })
 
@@ -104,7 +104,7 @@ const initNew = async (req, id) => {
   const user = reqUserAuthenticated(req)
   application.createdBy = application.updatedBy = { id: user.id, name: user.name }
   application.permissions = []
-  await curateApplication(mongo.db, application)
+  await curateApplication(application)
   return application
 }
 
@@ -154,7 +154,7 @@ const readApplication = async (req, res, next) => {
   const mainPublicationSite = req.mainPublicationSite
 
   const tolerateStale = !!publicationSite
-  const application = await findUtils.getByUniqueRef(mongo.db, publicationSite, mainPublicationSite, req.params, 'application', null, tolerateStale)
+  const application = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, req.params, 'application', null, tolerateStale)
   if (!application) return res.status(404).send(req.__('errors.missingApp'))
 
   // @ts-ignore
@@ -199,7 +199,7 @@ const setFullUpdatedAt = async (req, res, next) => {
 
 router.use('/:applicationId/permissions', readApplication, permissions.router('applications', 'application', async (req, patchedApplication) => {
   // this callback function is called when the resource becomes public
-  await publicationSites.onPublic(mongo.db, patchedApplication, 'application')
+  await publicationSites.onPublic(patchedApplication, 'applications', reqSessionAuthenticated(req))
 }))
 
 // retrieve a application by its id
@@ -296,9 +296,9 @@ router.patch('/:applicationId',
     patch.updatedBy = { id: user.id, name: user.name }
     patch.id = application.id
     patch.slug = patch.slug || application.slug
-    await curateApplication(db, patch)
+    await curateApplication(patch)
 
-    await publicationSites.applyPatch(db, application, { ...application, ...patch }, reqSession(req), 'application')
+    await publicationSites.applyPatch(application, { ...application, ...patch }, reqSession(req), 'application')
 
     let patchedApplication
     try {
@@ -322,7 +322,7 @@ router.patch('/:applicationId',
       resource: { type: 'dataset', title: application.title, id: application.id }
     }, sessionState)
 
-    await syncDatasets(db, patchedApplication, application)
+    await syncDatasets(patchedApplication, application)
     res.status(200).json(clean(patchedApplication, req.publicBaseUrl, req.publicationSite))
   }
 )
@@ -386,7 +386,7 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
   eventsQueue.pushEvent(event, sessionState)
   eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, admin: true } }, sessionState)
 
-  await syncDatasets(db, patchedApp)
+  await syncDatasets(patchedApp)
   res.status(200).json(clean(patchedApp, req.publicBaseUrl, req.publicationSite))
 })
 
@@ -423,7 +423,7 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
     resource: { type: 'dataset', title: application.title, id: application.id }
   }, sessionState)
 
-  await syncDatasets(db, application)
+  await syncDatasets(application)
   res.sendStatus(204)
 })
 
@@ -464,7 +464,7 @@ const writeConfig = async (req, res) => {
   eventsLog.info('df.applications.writeConfig', `wrote application config ${application.slug} (${application.id})`, { req, account: application.owner })
 
   await journals.log('applications', application, { type: 'config-updated' })
-  await syncDatasets(db, { configuration: req.body })
+  await syncDatasets({ configuration: req.body })
   res.status(200).json(req.body)
 }
 router.put('/:applicationId/config', readApplication, permissions.middleware('writeConfig', 'write'), writeConfig)

@@ -17,7 +17,7 @@ const filterFieldsMap = {
 }
 
 export const findRemoteServices = async (locale: Locale, publicationSite: any, publicBaseUrl: string, reqQuery: Record<string, string>, sessionState: SessionState) => {
-  const remoteServices = mongo.db.collection('remote-services')
+  const remoteServices = mongo.remoteServices
   const extraFilters: any[] = []
   if (reqQuery['virtual-datasets'] === 'true' || reqQuery.virtualDatasets === 'true') {
     extraFilters.push({ 'virtualDatasets.active': true })
@@ -69,7 +69,7 @@ export const findActions = async (locale: Locale, publicationSite: any, publicBa
     { $match: query }, // filter after the unwind to select individual actions
     { $count: 'count' }
   ]
-  const countRes = await mongo.db.collection('remote-services').aggregate(countPipeline).toArray()
+  const countRes = await mongo.remoteServices.aggregate(countPipeline).toArray()
   console.log('countRes', countRes) */
 
   const actionsQuery = { ...query }
@@ -85,7 +85,7 @@ export const findActions = async (locale: Locale, publicationSite: any, publicBa
   pipeline.push({ $skip: skip })
   pipeline.push({ $limit: size })
 
-  const aggRes = await mongo.db.collection('remote-services').aggregate(pipeline).toArray()
+  const aggRes = await mongo.remoteServices.aggregate(pipeline).toArray()
   const results = aggRes.map(remoteService => {
     const result: any = {
       id: `${remoteService.id}--${remoteService.actions.id}`,

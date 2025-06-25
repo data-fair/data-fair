@@ -11,6 +11,7 @@ import * as permissions from '../misc/utils/permissions.ts'
 import * as datasetUtils from './utils/index.js'
 import * as restDatasetsUtils from './utils/rest.ts'
 import * as esUtils from './es/index.ts'
+import { validateDraftAlias, deleteIndex } from './es/manage-indices.js'
 import * as webhooks from '../misc/utils/webhooks.ts'
 import { sendResourceEvent } from '../misc/utils/notifications.ts'
 import es from '#es'
@@ -165,7 +166,7 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
 export const getDataset = async (datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, tolerateStale, _acceptedStatuses, reqBody) => {
   let dataset, datasetFull
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
-    dataset = await findUtils.getByUniqueRef(db, publicationSite, mainPublicationSite, {}, 'dataset', datasetId, tolerateStale)
+    dataset = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, {}, 'dataset', datasetId, tolerateStale)
     if (!dataset) return { }
     datasetFull = { ...dataset }
 
@@ -374,7 +375,7 @@ export const deleteDataset = async (app, dataset) => {
 
   if (!dataset.isVirtual) {
     try {
-      await esUtils.deleteIndex(es, dataset)
+      await deleteIndex(es, dataset)
     } catch (err) {
       console.warn('Error while deleting dataset indexes and alias', err)
     }
@@ -495,10 +496,10 @@ export const applyPatch = async (app, dataset, patch, removedRestProps, attemptM
 
 // synchronize the list of application references stored in dataset.extras.applications
 // used for quick access to capture, and default sorting in dataset pages
-export const syncApplications = async (db, datasetId) => {
-  const dataset = await db.collection('datasets').findOne({ id: datasetId }, { projection: { owner: 1, extras: 1 } })
+export const syncApplications = async (datasetId) => {
+  const dataset = await mongo.datasets.findOne({ id: datasetId }, { projection: { owner: 1, extras: 1 } })
   if (!dataset) return
-  const applications = await db.collection('applications')
+  const applications = await mongo.applications
     .find({
       'owner.type': dataset.owner.type,
       'owner.id': dataset.owner.id,
@@ -514,7 +515,7 @@ export const syncApplications = async (db, datasetId) => {
       applicationsExtras.push(app)
     }
   }
-  await db.collection('datasets')
+  await mongo.datasets
     .updateOne({ id: datasetId }, { $set: { 'extras.applications': applicationsExtras } })
 }
 
@@ -539,7 +540,7 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
   const patchedDataset = { ...datasetFull, ...patch }
 
   if (datasetFull.file) {
-    webhooks.trigger('dataset', patchedDataset, { type: 'data-updated' }, null)
+    webhooks.trigger('datasets', patchedDataset, { type: 'data-updated' }, null)
     sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated')
     const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema, false, false)
     if (breakingChanges.length) {
@@ -548,14 +549,14 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
         for (const breakingChange of breakingChanges) {
           msg += '\n' + i18n.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { key: breakingChange.key })
         }
-        a[locale] = msg
+        a[locale] = { breakingChanges: msg }
         return a
       }, {})
-      webhooks.trigger(db, 'dataset', patchedDataset, {
+      webhooks.trigger('datasets', patchedDataset, {
         type: 'breaking-change',
         body: breakingChangesDesc
       })
-      sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated', breakingChangesDesc)
+      sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'breaking-change', { localizedParams: breakingChangesDesc })
     }
   }
 
@@ -606,11 +607,11 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
     await fs.remove(oldFilePath)
   }
 
-  await esUtils.validateDraftAlias(app.get('es'), dataset)
+  await validateDraftAlias(app.get('es'), dataset)
   await fs.remove(dir(datasetDraft))
 }
 
 export const cancelDraft = async (dataset) => {
   await fs.remove(dir(dataset))
-  await esUtils.deleteIndex(es.client, dataset)
+  await deleteIndex(es.client, dataset)
 }

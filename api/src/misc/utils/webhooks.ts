@@ -1,18 +1,19 @@
 import mongo from '#mongo'
 import axios from './axios.js'
 import config from '#config'
-import settingsSchema from '../../../contract/settings.js'
+import settingsSchema from '#types/settings/schema.js'
 import debugLib from 'debug'
-import type { Resource, Event, Dataset } from '#types'
+import type { Resource, Event, Dataset, ResourceType } from '#types'
 
 const debug = debugLib('webhooks')
 
-export const trigger = async (type: string, resource: Resource, event: Event, sender) => {
-  const eventKey = (resource as Dataset).draftReason ? `${type}-draft-${event.type}` : `${type}-${event.type}`
+export const trigger = async (resourceType: ResourceType, resource: Resource, event: Event, sender) => {
+  const singularResourceType = resourceType.substring(0, resourceType.length - 1)
+  const eventKey = (resource as Dataset).draftReason ? `${singularResourceType}-draft-${event.type}` : `${singularResourceType}-${event.type}`
   const eventType = settingsSchema.properties.webhooks.items.properties.events.items.oneOf
     .find(eventType => eventType.const === eventKey)
   if (!eventType) {
-    return debug('Unknown webhook event type', type, event.type)
+    return debug('Unknown webhook event type', singularResourceType, event.type)
   }
 
   const settingsFilter = {
@@ -23,10 +24,10 @@ export const trigger = async (type: string, resource: Resource, event: Event, se
   const settings = await mongo.settings.findOne(settingsFilter) || {}
   settings.webhooks = settings.webhooks || []
   for (const webhook of settings.webhooks) {
-    if (webhook.events && webhook.events.length && !webhook.events.includes(`${type}-${event.type}`)) continue
+    if (webhook.events && webhook.events.length && !webhook.events.includes(`${singularResourceType}-${event.type}`)) continue
     debug(`Trigger webhook for event ${event.type}`, webhook)
 
-    const href = `${config.publicUrl}/api/v1/${type}s/${resource.id}`
+    const href = `${config.publicUrl}/api/v1/${resourceType}/${resource.id}`
     try {
       // Simple HTTP POST (mattermost, etc.)
       if (webhook.target.type === 'http') {

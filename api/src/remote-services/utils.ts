@@ -109,8 +109,7 @@ export const syncDataset = async (dataset: Dataset) => {
 // Create default services for the data-fair instance
 export const init = async () => {
   debugMasterData('init default remote services ?')
-  const remoteServices = mongo.remoteServices
-  const existingServices = await remoteServices.find({ owner: { $exists: false } }).limit(1000).project({ url: 1, id: 1 }).toArray()
+  const existingServices = await mongo.remoteServices.find({ owner: { $exists: false } }).limit(1000).project({ url: 1, id: 1 }).toArray()
 
   const servicesToAdd: { url: string }[] = config.remoteServices
     .filter(s => !existingServices.find(es => es.url === s.url || es.id === s.id))
@@ -156,7 +155,7 @@ export const init = async () => {
   }
   if (servicesToInsert.length) {
     debugMasterData('insert default remote services', servicesToInsert)
-    await remoteServices.insertMany(servicesToInsert)
+    await mongo.remoteServices.insertMany(servicesToInsert)
   } else {
     debugMasterData('no default remote services to insert')
   }

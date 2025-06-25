@@ -8,7 +8,7 @@ import { assertRequestWithResource, type RequestWithResource } from '#types'
 import { type OrganizationMembership, type SessionState, setReqSession, type Account } from '@data-fair/lib-express'
 import { type NextFunction, type Request, type Response } from 'express'
 
-export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: Account, req?: RequestWithResource): Promise<SessionState & { isApiKey: true }> => {
+export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: Account | string, req?: RequestWithResource): Promise<SessionState & { isApiKey: true }> => {
   if (req?.resource?._readApiKey && (req.resource._readApiKey.current === rawApiKey || req.resource._readApiKey.previous === rawApiKey)) {
     req.bypassPermissions = { classes: ['read'] }
     const user = {
@@ -113,9 +113,8 @@ export const middleware = (scope: string) => {
     assertRequestWithResource(req)
     const reqApiKey = req.get('x-apiKey') || req.get('x-api-key') || req.query.apiKey
     const asAccountStr = req.get('x-account') || req.query.account
-    const asAccount = typeof asAccountStr === 'string' ? JSON.parse(asAccountStr) as Account : undefined
     if (typeof reqApiKey === 'string') {
-      const sessionState = await readApiKey(reqApiKey, scope, asAccount, req)
+      const sessionState = await readApiKey(reqApiKey, scope, asAccountStr, req)
       setReqSession(req, sessionState)
     }
     next()
