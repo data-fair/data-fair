@@ -575,6 +575,20 @@
               @update:model-value="v => v && emitNewFilter(localeDayjs.dayjs(v).format('YYYY-MM-DD'), localeDayjs.dayjs(v).format('L'))"
             />
           </template>
+          <template v-if="showExists">
+            <v-list-item
+              v-if="!newFilter.operator"
+              title="existe"
+              :active="exists"
+              @click="newFilter.operator = 'exists'; emitNewFilter(' ')"
+            />
+            <v-list-item
+              v-if="!newFilter.operator"
+              title="n'existe pas"
+              :active="nExists"
+              @click="newFilter.operator = 'nexists'; emitNewFilter(' ')"
+            />
+          </template>
         </template>
 
         <v-divider />
@@ -678,11 +692,13 @@ const lte = ref<string>()
 const gte = ref<string>()
 const editDate = ref<string>()
 const showHelp = ref(false)
+const exists = ref(false)
+const nExists = ref(false)
 
 const formattedTrue = formatValue(true, header.property, null, localeDayjs)
 const formattedFalse = formatValue(false, header.property, null, localeDayjs)
 
-const { showSearch, showContains, showEnum, showEquals, showStartsWith, showBoolEquals, showNumCompare, showDateCompare, fullEnum, enumDense } = useHeaderFilters(computed(() => header), computed(() => localEnum))
+const { showSearch, showContains, showEnum, showEquals, showStartsWith, showBoolEquals, showNumCompare, showDateCompare, fullEnum, enumDense, showExists } = useHeaderFilters(computed(() => header), computed(() => localEnum))
 
 const reversedLabels = computed(() => {
   const reversedLabels: Record<string, string> = {}
@@ -716,6 +732,8 @@ const toggleMenu = () => {
     if (filter.operator === 'starts') startsWith.value = filter.value
     if (filter.operator === 'search') search.value = filter.value
     if (filter.operator === 'contains') contains.value = filter.value
+    if (filter.operator === 'exists') exists.value = true
+    if (filter.operator === 'nexists') nExists.value = true
     if (filter.operator === 'in' || filter.operator === 'eq') {
       const values = filter.operator === 'eq' ? [filter.value] : filter.value.startsWith('"') ? JSON.parse(`[${filter.value}]`) : filter.value.split(',')
       if (header.property.type === 'string' || header.property.type === 'number' || header.property.type === 'integer') {

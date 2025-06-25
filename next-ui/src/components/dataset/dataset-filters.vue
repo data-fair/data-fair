@@ -46,6 +46,8 @@
     gte: '&GreaterEqual;'
     search: recherche textuelle
     contains: contient les caractères
+    exists: 'existe'
+    nexists: "n'existe pas"
 </i18n>
 
 <script lang="ts" setup>

@@ -23,6 +23,12 @@ export const useHeaderFilters = (header: Ref<TableHeaderWithProperty>, localEnum
 
   const enumDense = computed(() => showEnum.value && fullEnum.value?.length && fullEnum.value?.length > 4)
 
+  const showExists = computed(() => {
+    if (header.value.property['x-capabilities'] && header.value.property['x-capabilities'].index === false) return false
+    if (header.value.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
+    return true
+  })
+
   const showEquals = computed(() => {
     if (showEnum.value) return false
     if (header.value.property['x-capabilities'] && header.value.property['x-capabilities'].index === false) return false
@@ -74,7 +80,8 @@ export const useHeaderFilters = (header: Ref<TableHeaderWithProperty>, localEnum
     showStartsWith,
     showBoolEquals,
     showNumCompare,
-    showDateCompare
+    showDateCompare,
+    showExists
   }
 }
 
