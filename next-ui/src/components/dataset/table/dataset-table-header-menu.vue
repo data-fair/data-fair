@@ -107,7 +107,7 @@
               variant="outlined"
               hide-details
               density="compact"
-              class="mb-1"
+              class="my-1"
               autofocus
               @keyup.enter="search && emitNewFilter(search)"
             >
@@ -279,8 +279,9 @@
               variant="outlined"
               hide-details
               density="compact"
-              class="mb-1"
+              class="my-1"
               autofocus
+              :type="header.property.type === 'number' || header.property.type === 'integer' ? 'number' : ''"
               @update:model-value="v => equals = [v]"
               @keyup.enter="equals[0] && emitEqualsFilter()"
             >
@@ -311,8 +312,9 @@
               variant="outlined"
               hide-details
               density="compact"
-              class="mb-1"
+              class="my-1"
               autofocus
+              :type="header.property.type === 'number' || header.property.type === 'integer' ? 'number' : ''"
               @update:model-value="v => nEquals = [v]"
               @keyup.enter="nEquals[0] && emitNEqualsFilter()"
             >
@@ -346,7 +348,7 @@
                 variant="outlined"
                 hide-details
                 density="compact"
-                class="mb-1"
+                class="my-1"
                 :autofocus="i === 1"
                 clearable
               >
@@ -386,7 +388,7 @@
                 variant="outlined"
                 hide-details
                 density="compact"
-                class="mb-1"
+                class="my-1"
                 :autofocus="i === 1"
                 clearable
               >
@@ -424,7 +426,7 @@
               variant="outlined"
               hide-details
               density="compact"
-              class="mb-1"
+              class="my-1"
               autofocus
               @keyup.enter="startsWith && emitNewFilter(startsWith)"
             >
@@ -456,7 +458,7 @@
               variant="outlined"
               hide-details
               density="compact"
-              class="mb-1"
+              class="my-1"
               @keyup.enter="contains && emitNewFilter(contains)"
             >
               <template #append>
@@ -532,7 +534,7 @@
               variant="outlined"
               hide-details
               density="compact"
-              class="mb-1"
+              class="my-1"
               type="number"
               @keyup.enter="gte && emitNewFilter(gte, formatValue(gte, header.property, null, localeDayjs))"
             >
@@ -563,7 +565,7 @@
               variant="outlined"
               hide-details
               density="compact"
-              class="mb-1"
+              class="my-1"
               type="number"
               @keyup.enter="lte && emitNewFilter(lte, formatValue(lte, header.property, null, localeDayjs))"
             >
@@ -600,7 +602,7 @@
               :active="newFilter.operator === 'lte'"
               color="primary"
               title="inférieur ou égal à"
-              @click="newFilter.operator = newFilter.operator === 'lte' ? undefined : 'lte'"
+              @click="newFilter.operator = newFilter.operator === 'lte' ? undefined : ''"
             />
             <v-date-picker
               v-if="newFilter.operator === 'lte'"
