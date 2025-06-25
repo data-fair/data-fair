@@ -97,13 +97,13 @@
               v-if="!newFilter.operator || newFilter.operator === 'search'"
               :active="newFilter.operator === 'search'"
               color="primary"
-              title="recherche textuelle"
+              title="recherche texte libre"
               @click="newFilter.operator = newFilter.operator === 'search' ? undefined : 'search'"
             />
             <v-text-field
               v-if="newFilter.operator === 'search'"
               v-model="search"
-              placeholder="recherche textuelle"
+              placeholder="recherche texte libre"
               variant="outlined"
               hide-details
               density="compact"
@@ -129,7 +129,7 @@
               v-if="!newFilter.operator || newFilter.operator === 'eq'"
               :active="newFilter.operator === 'eq'"
               color="primary"
-              title="égal"
+              title="égal à"
               @click="newFilter.operator = newFilter.operator === 'eq' ? undefined : 'eq'"
             />
             <template v-if="newFilter.operator === 'eq'">
@@ -150,7 +150,7 @@
               v-if="!newFilter.operator || newFilter.operator === 'neq'"
               :active="newFilter.operator === 'neq'"
               color="primary"
-              title="différent"
+              title="différent de"
               @click="newFilter.operator = newFilter.operator === 'neq' ? undefined : 'neq'"
             />
             <template v-if="newFilter.operator === 'neq'">
@@ -171,7 +171,7 @@
               v-if="!newFilter.operator || newFilter.operator === 'in'"
               :active="newFilter.operator === 'in'"
               color="primary"
-              title="parmi"
+              title="parmi les valeurs"
               @click="newFilter.operator = newFilter.operator === 'in' ? undefined : 'in'"
             />
             <template v-if="newFilter.operator === 'in'">
@@ -219,7 +219,7 @@
               v-if="!newFilter.operator || newFilter.operator === 'nin'"
               :active="newFilter.operator === 'nin'"
               color="primary"
-              title="hors"
+              title="à l'exclusion des valeurs"
               @click="newFilter.operator = newFilter.operator === 'nin' ? undefined : 'nin'"
             />
             <template v-if="newFilter.operator === 'nin'">
@@ -269,13 +269,13 @@
               v-if="!newFilter.operator || newFilter.operator === 'eq'"
               :active="newFilter.operator === 'eq'"
               color="primary"
-              title="égal"
+              title="égal à"
               @click="newFilter.operator = newFilter.operator === 'eq' ? undefined : 'eq'"
             />
             <v-text-field
               v-if="newFilter.operator === 'eq'"
               :model-value="equals[0]"
-              placeholder="égal"
+              placeholder="égal à"
               variant="outlined"
               hide-details
               density="compact"
@@ -302,13 +302,13 @@
               v-if="!newFilter.operator || newFilter.operator === 'neq'"
               :active="newFilter.operator === 'neq'"
               color="primary"
-              title="différent"
+              title="différent de"
               @click="newFilter.operator = newFilter.operator === 'neq' ? undefined : 'neq'"
             />
             <v-text-field
               v-if="newFilter.operator === 'neq'"
               :model-value="nEquals[0]"
-              placeholder="différent"
+              placeholder="différent de"
               variant="outlined"
               hide-details
               density="compact"
@@ -375,7 +375,7 @@
               v-if="!newFilter.operator || newFilter.operator === 'nin'"
               :active="newFilter.operator === 'nin'"
               color="primary"
-              title="hors"
+              title="à l'exclusion des valeurs"
               @click="newFilter.operator = newFilter.operator === 'nin' ? undefined : 'nin'"
             />
 
@@ -479,7 +479,7 @@
               v-if="!newFilter.operator || newFilter.operator === 'eq'"
               :active="newFilter.operator === 'eq'"
               color="primary"
-              title="égal"
+              title="égal à"
               @click="newFilter.operator = newFilter.operator === 'eq' ? undefined : 'eq'"
             />
             <template v-if="newFilter.operator === 'eq'">
@@ -501,7 +501,7 @@
               v-if="!newFilter.operator || newFilter.operator === 'neq'"
               :active="newFilter.operator === 'neq'"
               color="primary"
-              title="différent"
+              title="différent de"
               @click="newFilter.operator = newFilter.operator === 'neq' ? undefined : 'neq'"
             />
             <template v-if="newFilter.operator === 'neq'">
@@ -602,7 +602,7 @@
               :active="newFilter.operator === 'lte'"
               color="primary"
               title="inférieur ou égal à"
-              @click="newFilter.operator = newFilter.operator === 'lte' ? undefined : ''"
+              @click="newFilter.operator = newFilter.operator === 'lte' ? undefined : 'lte'"
             />
             <v-date-picker
               v-if="newFilter.operator === 'lte'"
@@ -614,14 +614,14 @@
           <template v-if="showExists">
             <v-list-item
               v-if="!newFilter.operator"
-              title="existe"
+              title="est défini"
               :active="exists"
               color="primary"
               @click="newFilter.operator = 'exists'; emitNewFilter(' ')"
             />
             <v-list-item
               v-if="!newFilter.operator"
-              title="n'existe pas"
+              title="n'est pas défini"
               :active="nExists"
               color="primary"
               @click="newFilter.operator = 'nexists'; emitNewFilter(' ')"
