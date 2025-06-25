@@ -1,15 +1,17 @@
 import { type SchemaProperty } from '#api/types'
 import { type ExtendedResult, type ExtendedResultValue } from './dataset-lines'
 
+export type Operator = 'in' | 'nin' | 'eq' | 'neq' | 'gt' | 'lt' | 'gte' | 'lte' | 'search' | 'contains' | 'starts'
+
 export type DatasetFilter = {
   property: SchemaProperty,
-  operator: 'in' | 'nin' | 'eq' | 'neq' | 'gt' | 'lt' | 'gte' | 'lte' | 'search' | 'contains' | 'starts'
+  operator: Operator,
   value: string,
   formattedValue: string,
   hidden?: boolean
 }
 
-export const operators = ['in', 'nin', 'eq', 'neq', 'gt', 'lt', 'gte', 'lte', 'search', 'contains', 'starts']
+export const operators: Operator[] = ['in', 'nin', 'eq', 'neq', 'gt', 'lt', 'gte', 'lte', 'search', 'contains', 'starts']
 
 export const findEqFilter = (filters: DatasetFilter[], property: SchemaProperty, result: ExtendedResult) => {
   return filters.find(f => f.property.key === property.key && f.operator === 'eq' && (Array.isArray(result.values[property.key])
@@ -27,6 +29,10 @@ export const useFilters = () => {
       const existingEqFilter = filters.value.find(f => f.property.key === filter.property.key && f.operator === 'eq')
       if (existingEqFilter) removeFilter(existingEqFilter)
     }
+    if (filter.operator === 'nin') {
+      const existingNEqFilter = filters.value.find(f => f.property.key === filter.property.key && f.operator === 'neq')
+      if (existingNEqFilter) removeFilter(existingNEqFilter)
+    }
     if (filter.value === '') return
 
     // special case for "in" filters, if there is a single item use "eq" and remove if 0 items
@@ -36,6 +42,15 @@ export const useFilters = () => {
         // nothing to do
       } else if (values.length === 1) {
         filters.value.push(markRaw({ ...filter, operator: 'eq', value: values[0] }))
+      } else {
+        filters.value.push(markRaw(filter))
+      }
+    } else if (filter.operator === 'nin') {
+      const values = filter.value.startsWith('"') ? JSON.parse(`[${filter.value}]`) : filter.value.split(',')
+      if (values.length === 0) {
+        // nothing to do
+      } else if (values.length === 1) {
+        filters.value.push(markRaw({ ...filter, operator: 'neq', value: values[0] }))
       } else {
         filters.value.push(markRaw(filter))
       }
