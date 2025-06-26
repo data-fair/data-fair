@@ -108,6 +108,16 @@
         </v-list-item>
 
         <v-list-item
+          v-if="canContrib"
+          :nuxt="true"
+          dense
+          to="/storage"
+        >
+          <v-list-item-action><v-icon>mdi-harddisk</v-icon></v-list-item-action>
+          <v-list-item-title v-t="'storage'" />
+        </v-list-item>
+
+        <v-list-item
           v-if="canAdminDep"
           :nuxt="true"
           dense
@@ -119,16 +129,6 @@
             <v-list-item-title>{{ $t('catalogs') }}</v-list-item-title>
             <v-list-item-subtitle>{{ $t('catalogsSub') }}</v-list-item-subtitle>
           </v-list-item-content>
-        </v-list-item>
-
-        <v-list-item
-          v-if="canContrib"
-          :nuxt="true"
-          dense
-          to="/storage"
-        >
-          <v-list-item-action><v-icon>mdi-harddisk</v-icon></v-list-item-action>
-          <v-list-item-title v-t="'storage'" />
         </v-list-item>
 
         <template v-if="env.extraNavigationItems && user">
@@ -316,7 +316,7 @@ fr:
   params: Paramètres
   paramsSub: Licences, thématiques ...
   catalogs: Catalogues
-  catalogsSub: data.gouv.fr ...
+  catalogsSub: Ancienne version
   storage: Stockage
   subscription: Abonnement
   doc: Documentation
@@ -340,7 +340,7 @@ en:
   params: Parameters
   paramsSub: Licenses, topics ...
   catalogs: Catalogs
-  catalogsSub: data.gouv.fr ...
+  catalogsSub: Old version
   storage: Storage
   subscription: Subscription
   doc: Documentation

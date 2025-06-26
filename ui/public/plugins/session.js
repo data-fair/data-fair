@@ -3,6 +3,8 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
   if (publicUrl.endsWith('/')) publicUrl = publicUrl.substr(0, publicUrl.length - 1)
 
   env.extraNavigationItems = env.extraNavigationItems ?? []
+  env.extraAdminNavigationItems = env.extraAdminNavigationItems ?? []
+
   if (env.eventsIntegration && !env.extraNavigationItems.some(e => e.id === 'events')) {
     env.extraNavigationItems.push({
       id: 'events',
@@ -13,12 +15,11 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
     })
   }
 
-  env.extraAdminNavigationItems = env.extraAdminNavigationItems ?? []
   if (env.catalogsIntegration) {
-    // env.extraNavigationItems.push({
-    env.extraAdminNavigationItems.push({
+    env.extraNavigationItems.unshift({
       id: 'catalogs',
-      title: 'Catalogues',
+      title: 'Catalogues (bêta)',
+      subtitle: 'Nouvelle version',
       can: 'contrib',
       iframe: '/catalogs/catalogs',
       basePath: '/catalogs',
