@@ -22,8 +22,8 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
   const sender = { ...resource.owner }
   delete sender.role
   const fullLabel = `${resource.title} (${resource.slug || resource.id})`
-  const titleI18nKey = `${resourceType}.${options.i18nKey ?? key}.title`
-  const bodyI18nKey = `${resourceType}.${options.i18nKey ?? key}.body`
+  const titleI18nKey = `notifications.${resourceType}.${options.i18nKey ?? key}.title`
+  const bodyI18nKey = `notifications.${resourceType}.${options.i18nKey ?? key}.body`
   if (i18n.__(titleI18nKey) === titleI18nKey) throw new Error('missing i18n for event key ' + titleI18nKey)
   const title = {
     // TODO: truncate title ?

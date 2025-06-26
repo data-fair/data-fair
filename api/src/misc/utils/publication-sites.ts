@@ -1,20 +1,20 @@
 import mongo from '#mongo'
-import * as webhooks from './webhooks.ts'
 import * as permissions from './permissions.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { type SessionStateAuthenticated, type AccountKeys, SessionState } from '@data-fair/lib-express'
+import { type SessionStateAuthenticated, type AccountKeys } from '@data-fair/lib-express'
 import { type Resource, type ResourceType } from '#types'
 import { sendResourceEvent } from './notifications.ts'
+import { type DepartmentSettings } from '#types/department-settings/index.js'
 
 const getPublicationSiteInfo = async (owner: AccountKeys, publicationSite: string) => {
   const [type, id] = publicationSite.split(':')
-  const settings = await mongo.db.collection('settings')
+  const settings = await mongo.settings
     .findOne(
       { type: owner.type, id: owner.id, publicationSites: { $elemMatch: { type, id } } },
       { projection: { department: 1, publicationSites: { $elemMatch: { type, id } } } }
     )
-  if (!settings) return null
-  return { ...settings.publicationSites[0], department: settings.department }
+  if (!settings?.publicationSites?.[0]) return null
+  return { ...settings.publicationSites[0], department: (settings as DepartmentSettings).department }
 }
 
 // this function is called when the resource is patched to check if publicationSites and requestedPublicationSites have changed
@@ -75,7 +75,10 @@ export const applyPatch = async (previousResource: Resource, resource: Resource,
     if (!previousRequestedPublicationSites.includes(requestedPublicationSite)) {
       const publicationSiteInfo = await getPublicationSiteInfo(resource.owner, requestedPublicationSite)
       if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
-      sendResourceEvent(resourceType, resource, sessionState, `publication-requested:${requestedPublicationSite}`)
+      sendResourceEvent(resourceType, resource, sessionState, `publication-requested:${requestedPublicationSite}`, {
+        i18nKey: 'publication-requested',
+        params: { publicationSite: publicationSiteInfo.title ?? publicationSiteInfo.url }
+      })
     }
   }
   for (const topic of newTopics) {
@@ -84,14 +87,17 @@ export const applyPatch = async (previousResource: Resource, resource: Resource,
       for (const publicationSite of newPublicationSites) {
         const publicationSiteInfo = await getPublicationSiteInfo(resource.owner, publicationSite)
         if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
-        sendResourceEvent(resourceType, resource, sessionState, `published-topic:${publicationSite}:${topic.id}`)
+        sendResourceEvent(resourceType, resource, sessionState, `published-topic:${publicationSite}:${topic.id}`, {
+          i18nKey: 'published-topic',
+          params: { publicationSite: publicationSiteInfo.title ?? publicationSiteInfo.url }
+        })
       }
     }
   }
 }
 
 // this callback function is called when the resource becomes public
-export const onPublic = async (patchedResource: Resource, resourceType: ResourceType, sessionState: SessionState) => {
+export const onPublic = async (patchedResource: Resource, resourceType: ResourceType, sessionState: SessionStateAuthenticated) => {
   for (const publicationSite of patchedResource.publicationSites || []) {
     const publicationSiteInfo = await getPublicationSiteInfo(patchedResource.owner, publicationSite)
     if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')

@@ -58,40 +58,15 @@
 			"test": {
 				"title": "Une notif {label}",
 				"body": "Avec un body {label}"
+			},
+			"dataset-created": {
+				"title": "Nouveau jeu de données {label}",
+				"body": "Le jeu de données {label} vient d'être créé."
+			},
+			"publication-requested": {
+				"title": "Demande de publication de jeu de données",
+				"body": "Un contributeur demande de publier le jeu de données {label} sur {publicationSite}"
 			}
-		}
-	},
-	"datasets": {
-		"dataset-created": {
-			"title": "datasets.dataset-created.title",
-			"body": "datasets.dataset-created.body"
-		},
-		"data-updated": {
-			"title": "datasets.data-updated.title",
-			"body": "datasets.data-updated.body"
-		},
-		"structure-updated": {
-			"title": "datasets.structure-updated.title",
-			"body": "datasets.structure-updated.body"
-		},
-		"draft-validated": {
-			"title": "datasets.draft-validated.title",
-			"body": "datasets.draft-validated.body"
-		},
-		"breaking-change": {
-			"title": "datasets.breaking-change.title",
-			"body": "datasets.breaking-change.body"
-		},
-		"draft-cancelled": {
-			"title": "datasets.draft-cancelled.title",
-			"body": "datasets.draft-cancelled.body"
-		},
-		"publication-requested": "data-fair-portals:portal1.title"
-	},
-	"applications": {
-		"application-created": {
-			"title": "applications.application-created.title",
-			"body": "applications.application-created.body"
 		}
 	}
 }

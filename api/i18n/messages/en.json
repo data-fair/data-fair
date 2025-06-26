@@ -51,37 +51,13 @@
 		"q": "text search",
 		"qs": "structured filter"
 	},
-	"datasets": {
-		"dataset-created": {
-			"title": "datasets.dataset-created.title",
-			"body": "datasets.dataset-created.body"
-		},
-		"data-updated": {
-			"title": "datasets.data-updated.title",
-			"body": "datasets.data-updated.body"
-		},
-		"structure-updated": {
-			"title": "datasets.structure-updated.title",
-			"body": "datasets.structure-updated.body"
-		},
-		"draft-validated": {
-			"title": "datasets.draft-validated.title",
-			"body": "datasets.draft-validated.body"
-		},
-		"breaking-change": {
-			"title": "datasets.breaking-change.title",
-			"body": "datasets.breaking-change.body"
-		},
-		"draft-cancelled": {
-			"title": "datasets.draft-cancelled.title",
-			"body": "datasets.draft-cancelled.body"
-		},
-		"publication-requested": "data-fair-portals:portal1.title"
-	},
-	"applications": {
-		"application-created": {
-			"title": "applications.application-created.title",
-			"body": "applications.application-created.body"
+	"notifications": {
+		"datasets": {
+			"dataset-created": {
+				"title": "New dataset {label}",
+				"body": "The new dataset {label} was just created."
+			},
+			"publication-requested": "data-fair-portals:portal1.title"
 		}
 	}
 }
