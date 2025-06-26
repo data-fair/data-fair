@@ -129,7 +129,7 @@
                 v-if="!newFilter.operator || newFilter.operator === 'eq'"
                 :active="newFilter.operator === 'eq'"
 
-                title="égal à"
+                title="égal à une valeur"
                 @click="newFilter.operator = newFilter.operator === 'eq' ? undefined : 'eq'"
               />
               <template v-if="newFilter.operator === 'eq'">
@@ -150,7 +150,7 @@
                 v-if="!newFilter.operator || newFilter.operator === 'neq'"
                 :active="newFilter.operator === 'neq'"
 
-                title="différent de"
+                title="différent d'une valeur"
                 @click="newFilter.operator = newFilter.operator === 'neq' ? undefined : 'neq'"
               />
               <template v-if="newFilter.operator === 'neq'">
@@ -171,7 +171,7 @@
                 v-if="!newFilter.operator || newFilter.operator === 'in'"
                 :active="newFilter.operator === 'in'"
 
-                title="parmi les valeurs"
+                title="parmi des valeurs"
                 @click="newFilter.operator = newFilter.operator === 'in' ? undefined : 'in'"
               />
               <template v-if="newFilter.operator === 'in'">
@@ -269,7 +269,7 @@
                 v-if="!newFilter.operator || newFilter.operator === 'eq'"
                 :active="newFilter.operator === 'eq'"
 
-                title="égal à"
+                title="égal à une valeur"
                 @click="newFilter.operator = newFilter.operator === 'eq' ? undefined : 'eq'"
               />
               <v-text-field
@@ -302,7 +302,7 @@
                 v-if="!newFilter.operator || newFilter.operator === 'neq'"
                 :active="newFilter.operator === 'neq'"
 
-                title="différent de"
+                title="différent d'une valeur"
                 @click="newFilter.operator = newFilter.operator === 'neq' ? undefined : 'neq'"
               />
               <v-text-field
@@ -335,7 +335,7 @@
                 v-if="!newFilter.operator || newFilter.operator === 'in'"
                 :active="newFilter.operator === 'in'"
 
-                title="parmi"
+                title="parmi des valeurs"
                 @click="newFilter.operator = newFilter.operator === 'in' ? undefined : 'in'"
               />
 
@@ -416,13 +416,13 @@
                 v-if="!newFilter.operator || newFilter.operator === 'starts'"
                 :active="newFilter.operator === 'starts'"
 
-                title="commence par"
+                title="commence par les caractères"
                 @click="newFilter.operator = newFilter.operator === 'starts' ? undefined : 'starts'"
               />
               <v-text-field
                 v-if="newFilter.operator === 'starts'"
                 v-model="startsWith"
-                label="commence par"
+                label="commence par les caractères"
                 variant="outlined"
                 hide-details
                 density="compact"
@@ -479,7 +479,7 @@
                 v-if="!newFilter.operator || newFilter.operator === 'eq'"
                 :active="newFilter.operator === 'eq'"
 
-                title="égal à"
+                title="égal à une valeur"
                 @click="newFilter.operator = newFilter.operator === 'eq' ? undefined : 'eq'"
               />
               <template v-if="newFilter.operator === 'eq'">
