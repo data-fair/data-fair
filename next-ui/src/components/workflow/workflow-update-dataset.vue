@@ -92,6 +92,7 @@
         task-progress
         watch
         draft-mode
+        html
       >
         <v-alert
           v-if="currentDataset && missingPermissions.length"

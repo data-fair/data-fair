@@ -14,6 +14,7 @@
 <script setup lang="ts">
 import type { Settings } from '#api/types'
 
+useFrameContent()
 const route = useRoute<'/embed/settings/[type]/[id]/topics'>()
 const settings = ref<Settings | null>(null)
 

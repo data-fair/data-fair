@@ -94,6 +94,7 @@ declare global {
   const useDatasetWatch: typeof import('../src/composables/dataset-watch')['useDatasetWatch']
   const useFetch: typeof import('@data-fair/lib-vue/fetch.js')['useFetch']
   const useFilters: typeof import('../src/composables/dataset-filters')['useFilters']
+  const useFrameContent: typeof import('../src/composables/frame-content')['useFrameContent']
   const useGlobalStore: typeof import('../src/composables/use-global-store')['default']
   const useHead: typeof import('@unhead/vue')['useHead']
   const useHeadSafe: typeof import('@unhead/vue')['useHeadSafe']
@@ -225,6 +226,7 @@ declare module 'vue' {
     readonly useDatasetWatch: UnwrapRef<typeof import('../src/composables/dataset-watch')['useDatasetWatch']>
     readonly useFetch: UnwrapRef<typeof import('@data-fair/lib-vue/fetch.js')['useFetch']>
     readonly useFilters: UnwrapRef<typeof import('../src/composables/dataset-filters')['useFilters']>
+    readonly useFrameContent: UnwrapRef<typeof import('../src/composables/frame-content')['useFrameContent']>
     readonly useHead: UnwrapRef<typeof import('@unhead/vue')['useHead']>
     readonly useHeadSafe: UnwrapRef<typeof import('@unhead/vue')['useHeadSafe']>
     readonly useI18n: UnwrapRef<typeof import('vue-i18n')['useI18n']>

@@ -430,7 +430,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
     }
   }
   for (const queryKey of Object.keys(query)) {
-    const filterSuffix = ['_in', '_nin', '_eq', '_neq', '_gt', '_lt', '_gte', '_lte', '_search', '_contains', '_starts'].find(suffix => queryKey.endsWith(suffix))
+    const filterSuffix = ['_in', '_nin', '_eq', '_neq', '_gt', '_lt', '_gte', '_lte', '_search', '_contains', '_starts', '_exists', '_nexists'].find(suffix => queryKey.endsWith(suffix))
     if (!filterSuffix) continue
     let prop
     if (queryKey.startsWith('_c_')) {
@@ -501,6 +501,14 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
       if (prop['x-capabilities']?.text !== false) subfields.push('text')
       if (!subfields.length) requiredCapability(prop, filterSuffix, 'textStandard')
       must.push({ simple_query_string: { query: query[queryKey], fields: subfields.map(subfield => `${prop.key}.${subfield}`) } })
+    }
+    if (filterSuffix === '_exists') {
+      requiredCapability(prop, filterSuffix)
+      filter.push({ exists: { field: prop.key } })
+    }
+    if (filterSuffix === '_nexists') {
+      requiredCapability(prop, filterSuffix)
+      mustNot.push({ exists: { field: prop.key } })
     }
   }
 
