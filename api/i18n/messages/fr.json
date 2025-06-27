@@ -59,19 +59,50 @@
 				"title": "Nouveau jeu de données {{label}}",
 				"body": "Le jeu de données {{label}} vient d'être créé."
 			},
+			"draft-dataset-created": {
+				"title": "Nouveau jeu de données brouillon {{label}}",
+				"body": "Le jeu de données {{label}} vient d'être créé en mode brouillon."
+			},
 			"publication-requested": {
 				"title": "Demande de publication de jeu de données",
 				"body": "Un contributeur demande de publier le jeu de données {{label}} sur {{publicationSite}}."
 			},
+			"draft-data-updated": {
+				"title": "Fichier brouillon mis à jour {{label}}",
+				"body": "Un nouveau fichier a été chargé sur le jeu de données {{label}} en mode brouillon."
+			},
 			"data-updated": {
-				"title": "notifications.datasets.data-updated.title"
-			}
+				"title": "Fichier mis à jour {{label}}",
+				"body": "Un nouveau fichier a été chargé sur le jeu de données {{label}}."
+			},
+			"structure-updated": {
+				"title": "Changement de structure {{label}}",
+				"body": "La structure du jeu de données {{label}} a été modifiée."
+			},
+			"draft-structure-updated": {
+				"title": "Changement de structure brouillon {{label}}",
+				"body": "La structure du brouillon du jeu de données {{label}} a été modifiée."
+			},
+			"draft-draft-validated": {
+				"title": "Brouillon validé {{label}}",
+				"body": "Le brouillon du jeu de données {{label}} a été validé ({{cause}})."
+			},
+			"breaking-change": {
+				"title": "Rupture de compatibilité de {{label}}",
+				"body": "Le jeu de données {{label}} a été modifié d'une manière qui inclue des risques de rupture de compatibilité : {{breakingChangesDesc}}."
+			},
+			"draft-draft-cancelled": {
+				"title": "Brouillon annulé {{label}}",
+				"body": "Le brouillon du jeu de données {{label}} a été annulé, il est de retour à son état validé précédent."
+			},
+			"published": "data-fair-portals:portal1.title"
 		},
 		"applications": {
 			"application-created": {
-				"title": "Nouvelle appliaction {{label}}",
+				"title": "Nouvelle application {{label}}",
 				"body": "L'application' {{label}} vient d'être créée."
-			}
+			},
+			"published": "data-fair-portals:portal1.title"
 		}
 	}
 }

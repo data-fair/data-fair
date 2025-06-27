@@ -10,8 +10,7 @@ import * as findUtils from '../misc/utils/find.js'
 import * as permissions from '../misc/utils/permissions.ts'
 import * as datasetUtils from './utils/index.js'
 import * as restDatasetsUtils from './utils/rest.ts'
-import * as esUtils from './es/index.ts'
-import { validateDraftAlias, deleteIndex } from './es/manage-indices.js'
+import { validateDraftAlias, deleteIndex, updateDatasetMapping } from './es/manage-indices.js'
 import * as webhooks from '../misc/utils/webhooks.ts'
 import { sendResourceEvent } from '../misc/utils/notifications.ts'
 import es from '#es'
@@ -72,7 +71,7 @@ const fieldsMap = {
  * @param {import('@data-fair/lib-express').SessionState} sessionState
  */
 export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, sessionState) => {
-  const explain = reqQuery.explain === 'true' && user && (user.isAdmin || user.asAdmin) && {}
+  const explain = reqQuery.explain === 'true' && sessionState.user && (sessionState.user.isAdmin || sessionState.user.asAdmin) && {}
   const datasets = db.collection('datasets')
 
   const tolerateStale = !!publicationSite
@@ -438,7 +437,7 @@ export const applyPatch = async (app, dataset, patch, removedRestProps, attemptM
       // this method will routinely throw errors
       // we just try in case elasticsearch considers the new mapping compatible
       // so that we might optimize and reindex only when necessary
-      await esUtils.updateDatasetMapping(app.get('es'), { id: dataset.id, schema: patch.schema }, dataset)
+      await updateDatasetMapping(app.get('es'), { id: dataset.id, schema: patch.schema }, dataset)
       patch.status = 'indexed'
     } catch (err) {
       // generated ES mappings are not compatible, trigger full re-indexing
@@ -523,7 +522,6 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
   Object.assign(datasetFull.draft, patch)
   const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
 
-  const db = mongo.db
   const draftPatch = { ...datasetFull.draft }
   if (datasetFull.draft.dataUpdatedAt) {
     draftPatch.dataUpdatedAt = draftPatch.updatedAt
@@ -556,7 +554,7 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
         type: 'breaking-change',
         body: breakingChangesDesc
       })
-      sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'breaking-change', { localizedParams: breakingChangesDesc })
+      await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'breaking-change', { localizedParams: breakingChangesDesc })
     }
   }
 

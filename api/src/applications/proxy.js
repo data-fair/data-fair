@@ -16,7 +16,7 @@ import * as serviceWorkers from '../misc/utils/service-workers.js'
 import { refreshConfigDatasetsRefs } from './utils.js'
 import Debug from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
-import { reqSession, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
+import { reqSession, reqUserAuthenticated } from '@data-fair/lib-express'
 
 const debugIframeRedirect = Debug('iframe-redirect')
 

@@ -34,7 +34,7 @@ export default {
     }
   },
   $defs: {
-    ... datasetSchema.$defs,
+    ...datasetSchema.$defs,
     initFrom: {
       type: 'object',
       title: 'Init from',

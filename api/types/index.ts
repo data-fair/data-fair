@@ -23,14 +23,10 @@ export type BypassPermissions = {
   classes?: string[]
 }
 export type RequestWithResource = Request & {
-  resourceType?: ResourceType,
-  resource?: Resource,
+  resourceType: ResourceType,
+  resource: Resource,
   bypassPermissions?: BypassPermissions,
   publicOperation?: boolean
-}
-
-export function assertRequestWithResource (req: ExpressRequest): asserts req is RequestWithResource {
-  // nothing to do
 }
 
 export type ApplicationKey = {

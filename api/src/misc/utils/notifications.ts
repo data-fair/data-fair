@@ -16,6 +16,7 @@ type SendResourceEventOptions = {
   params?: Record<string, string>
   localizedParams?: Record<Locale, Record<string, string>>
   sender?: AccountKeys
+  extra?: Record<string, unknown>
 }
 
 export const sendResourceEvent = async (resourceType: ResourceType, resource: Resource, originator: SessionStateAuthenticated | 'string', key: string, options: SendResourceEventOptions = {}) => {
@@ -24,8 +25,9 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
   // @ts-ignore
   delete sender.role
   const fullLabel = `${resource.title} (${resource.slug || resource.id})`
-  const titleI18nKey = `notifications.${resourceType}.${options.i18nKey ?? key}.title`
-  const bodyI18nKey = `notifications.${resourceType}.${options.i18nKey ?? key}.body`
+  const draftPrefix = (resource as Dataset).draftReason ? 'draft-' : ''
+  const titleI18nKey = `notifications.${resourceType}.${draftPrefix}${options.i18nKey ?? key}.title`
+  const bodyI18nKey = `notifications.${resourceType}.${draftPrefix}${options.i18nKey ?? key}.body`
   if (i18n.__(titleI18nKey) === titleI18nKey) throw new Error('missing i18n for event key ' + titleI18nKey)
   const title = {
     // TODO: truncate title ?
@@ -44,7 +46,8 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
     body,
     urlParams: { id: resource.id, slug: resource.slug ?? '' },
     visibility: permissions.isPublic(resourceType, resource) ? 'public' : 'private',
-    resource: { type: singularResourceType, id: resource.id, title: resource.title }
+    resource: { type: singularResourceType, id: resource.id, title: resource.title },
+    extra: options.extra
   }
 
   if (typeof originator === 'string') {

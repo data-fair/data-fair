@@ -3,6 +3,7 @@ import * as journals from '../misc/utils/journals.ts'
 import { jsonSchema } from '../datasets/utils/data-schema.js'
 import * as ajv from '../misc/utils/ajv.js'
 import pump from '../misc/utils/pipe.ts'
+import { sendResourceEvent } from '../misc/utils/notifications.ts'
 import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetsService from '../datasets/service.js'
 import * as schemaUtils from '../datasets/utils/data-schema.js'
@@ -121,6 +122,7 @@ export const process = async function (app, dataset) {
 
   if (patch.validateDraft) {
     await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation automatique' })
+    await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'draft-validated', { localizedParams: { cause: { fr: 'validation automatique', en: 'automatic validation' } } })
   }
 
   await datasetsService.applyPatch(app, dataset, patch)

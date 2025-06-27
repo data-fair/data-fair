@@ -47,7 +47,7 @@ describe('root', function () {
 
     const sw = await ax.get('/streamsaver/sw.js')
     assert.equal(sw.status, 200)
-    assert.equal(sw.headers['content-type'], 'application/javascript; charset=utf-8')
+    assert.equal(sw.headers['content-type'], 'text/javascript; charset=utf-8')
     assert.ok(sw.data.includes('self.onmessage'))
   })
 })

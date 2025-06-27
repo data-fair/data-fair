@@ -1,11 +1,11 @@
 import config from '#config'
 import mongo from '#mongo'
-import { Router, type Request, type Response, type NextFunction } from 'express'
+import { Router, type Response, type NextFunction, type RequestHandler } from 'express'
 import { validate, resolvedSchema as permissionsSchema } from '#types/permissions/index.js'
 import * as apiDocsUtil from './api-docs.ts'
 import * as visibilityUtils from './visibility.js'
 import { type AccountKeys, getAccountRole, reqSession, type SessionState } from '@data-fair/lib-express'
-import { type RequestWithResource, type ResourceType, type Permission, type Resource, type BypassPermissions, assertRequestWithResource } from '#types'
+import { type RequestWithResource, type ResourceType, type Permission, type Resource, type BypassPermissions } from '#types'
 
 const resourceTypesLabels = {
   datasets: 'Le jeu de données',
@@ -14,8 +14,7 @@ const resourceTypesLabels = {
 }
 
 export const middleware = function (operationId: string, operationClass: string, trackingCategory?: string, acceptMissing?: boolean) {
-  return function (req: Request, res: Response, next: NextFunction) {
-    assertRequestWithResource(req)
+  return function (req: RequestWithResource, res: Response, next: NextFunction) {
     const sessionState = reqSession(req)
 
     if ((acceptMissing && !req.resource)) {
@@ -66,9 +65,7 @@ export const middleware = function (operationId: string, operationClass: string,
 }
 
 export const canDoForOwnerMiddleware = function (operationClass: string, ignoreDepartment = false) {
-  return function (req: Request, res: Response, next: NextFunction) {
-    assertRequestWithResource(req)
-
+  return function (req: RequestWithResource, res: Response, next: NextFunction) {
     const owner: AccountKeys = ignoreDepartment ? { ...req.resource.owner, department: undefined } : req.resource.owner
     if (!canDoForOwner(owner, req.resourceType, operationClass, reqSession(req))) {
       return res.status(403).type('text/plain').send('Permission manquante pour l\'opération.')
@@ -297,13 +294,11 @@ export const initResourcePermissions = async (resource: Resource, extraPermissio
 export const router = (resourceType: ResourceType, resourceName: string, onPublicCallback: ((req: RequestWithResource, resource: Resource) => void)) => {
   const router = Router()
 
-  router.get('', middleware('getPermissions', 'admin'), async (req, res, next) => {
-    assertRequestWithResource(req)
+  router.get('', middleware('getPermissions', 'admin') as RequestHandler, (async (req: RequestWithResource, res, next) => {
     res.status(200).send(req.resource.permissions || [])
-  })
+  }) as RequestHandler)
 
-  router.put('', middleware('setPermissions', 'admin'), async (req, res, next) => {
-    assertRequestWithResource(req)
+  router.put('', middleware('setPermissions', 'admin') as RequestHandler, (async (req, res, next) => {
     validate(req.body)
     const permissions = (req.body || []) as Permission[]
     let valid = true
@@ -339,7 +334,7 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
     } catch (err) {
       next(err)
     }
-  })
+  }) as RequestHandler)
 
   return router
 }

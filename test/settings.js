@@ -49,7 +49,7 @@ describe('settings API', function () {
 
   it('should write and read settings as organization department admin', async function () {
     await assert.rejects(global.ax.hlalonde3Org.put('/api/v1/settings/organization/KWqAGZ4mG:dep1', { topics: [{ id: 'topic1', title: 'Topic 1' }] }), (err) => err.status === 400)
-    await global.ax.dmeadusOrg.put('/api/v1/settings/organization/KWqAGZ4mG:dep1', { apiKeys: [{ title: 'Api key 1' }] })
+    await global.ax.dmeadusOrg.put('/api/v1/settings/organization/KWqAGZ4mG:dep1', { apiKeys: [{ title: 'Api key 1', scopes: [] }] })
     const res = await global.ax.hlalonde3Org.get('/api/v1/settings/organization/KWqAGZ4mG:dep1')
     assert.equal(res.status, 200)
     assert.equal(res.data.name, 'Fivechat - dep1')

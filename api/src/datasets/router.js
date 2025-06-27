@@ -180,7 +180,6 @@ router.patch('/:datasetId',
     // @ts-ignore
     const dataset = req.dataset
 
-    const db = mongo.db
     const locale = req.getLocale()
     const sessionState = reqSessionAuthenticated(req)
 
@@ -198,7 +197,7 @@ router.patch('/:datasetId',
 
       if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
         await journals.log('datasets', dataset, { type: 'structure-updated' })
-        await notifications.sendResourceEvent('datasets', dataset, sessionState, 'structure-updated')
+        await notifications.sendResourceEvent('datasets', dataset, sessionState, 'structure-updated', { extra: { patch: Object.keys(patch).join(', ') } })
       }
 
       eventsLog.info('df.datasets.patch', `patched dataset ${dataset.slug} (${dataset.id}), keys=${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
@@ -437,13 +436,9 @@ const updateDatasetRoute = async (req, res, next) => {
     return
   }
 
-  // TODO: replace this with a string draftValidationMode ?
-  const draft = req.query.draft === 'true'
-
   // force the file upload middleware to write files in draft directory, as updated datasets always go into draft mode
   req._draft = true
 
-  const db = mongo.db
   const locale = req.getLocale()
   const sessionState = reqSessionAuthenticated(req)
 
@@ -541,7 +536,7 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
   const patch = { status: 'validated', validateDraft: true }
   await applyPatch(req.app, dataset, patch)
   await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation manuelle' })
-  await notifications.sendResourceEvent('datasets', dataset, sessionState, 'draft-validated')
+  await notifications.sendResourceEvent('datasets', dataset, sessionState, 'draft-validated', { localizedParams: { cause: { fr: 'validation manuelle', en: 'manual validation' } } })
   eventsLog.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
 
   return res.send(dataset)
@@ -948,7 +943,6 @@ router.get('/:datasetId/own/:owner/lines', readDataset({ fillDescendants: true }
 // Special geo aggregation
 router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('getGeoAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), async (req, res) => {
   res.throttleEnd()
-  const db = mongo.db
 
   const vectorTileRequested = ['mvt', 'vt', 'pbf'].includes(req.query.format)
   // Is the tile cached ?
@@ -995,7 +989,6 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
 // Standard aggregation to group items by value and perform an optional metric calculation on each group
 router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('getValuesAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), async (req, res) => {
   res.throttleEnd()
-  const db = mongo.db
   const sessionState = reqSessionAuthenticated(req)
 
   /** @type {object | null} */

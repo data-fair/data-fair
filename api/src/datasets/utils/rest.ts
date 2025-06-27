@@ -245,9 +245,9 @@ const checkMissingIdsRevisions = async (tmpDataset: RestDataset, dataset: RestDa
         _lineId: missingDoc._id
       }
       delete revision._id
-      if (user && dataset.rest.storeUpdatedBy) {
-        revision._updatedBy = user.id
-        revision._updatedByName = user.name
+      if (sessionState.user && dataset.rest.storeUpdatedBy) {
+        revision._updatedBy = sessionState.user.id
+        revision._updatedByName = sessionState.user.name
       }
       delete revision._needsIndexing
       delete revision._needsExtending
@@ -278,7 +278,7 @@ const getPrimaryKeyProjection = (dataset: RestDataset) => {
   return primaryKeyProjection
 }
 
-export const applyTransactions = async (dataset: RestDataset, sessionState: SessionStateAuthenticated, transacs: DatasetLineAction[], validate?: ValidateFunction, linesOwner?: Account, tmpDataset?: RestDataset) => {
+export const applyTransactions = async (dataset: RestDataset, sessionState: SessionStateAuthenticated | undefined, transacs: DatasetLineAction[], validate?: ValidateFunction, linesOwner?: Account, tmpDataset?: RestDataset) => {
   const datasetCreatedAt = new Date(dataset.createdAt).getTime()
   const updatedAt = new Date()
   const c = collection(tmpDataset || dataset)
@@ -325,7 +325,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     // lots of objects to process, so we yield to the event loop every 100 lines
     if (i % 100 === 0) await new Promise(resolve => setImmediate(resolve))
 
-    if (dataset.rest.storeUpdatedBy) {
+    if (dataset.rest.storeUpdatedBy && sessionState) {
       operation.fullBody._updatedBy = sessionState.user.id
       operation.fullBody._updatedByName = sessionState.user.name
     }
@@ -529,7 +529,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     }
   }
 
-  if (bulkOpMatchingOperations.length) {
+  if (bulkOpMatchingOperations.length && sessionState) {
     mongo.datasets.updateOne(
       { id: dataset.id },
       { $set: { dataUpdatedAt: updatedAt.toISOString(), dataUpdatedBy: { id: sessionState.user.id, name: sessionState.user.name } } })
@@ -548,7 +548,7 @@ const initSummary = (): Summary => ({ nbOk: 0, nbNotModified: 0, nbErrors: 0, nb
 
 type TransactionStreamOptions = {
   dataset: RestDataset,
-  sessionState: SessionStateAuthenticated,
+  sessionState?: SessionStateAuthenticated,
   linesOwner?: Account,
   validate?: ValidateFunction,
   tmpDataset?: RestDataset,
