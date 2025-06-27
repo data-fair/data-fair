@@ -8,12 +8,13 @@ import jsonRefs from 'json-refs'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import Extractor from 'html-extractor'
 import i18n from 'i18n'
-import * as i18nUtils from '../../i18n/utils.js'
+import * as i18nUtils from '../../i18n/utils.ts'
 import * as findUtils from '../misc/utils/find.js'
 import * as baseAppsUtils from './utils.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import { reqAdminMode, reqUser, reqUserAuthenticated, reqSession } from '@data-fair/lib-express'
 
 const htmlExtractor = new Extractor()
 htmlExtractor.extract = util.promisify(htmlExtractor.extract)
@@ -21,17 +22,17 @@ export const router = express.Router()
 
 // Fill the collection using the default base applications from config
 // and cleanup non-public apps that are not used anywhere
-export const init = async (db) => {
-  await removeDeprecated(db)
-  await Promise.all(config.applications.map(app => failSafeInitBaseApp(db, app)))
+export const init = async () => {
+  await removeDeprecated()
+  await Promise.all(config.applications.map(app => failSafeInitBaseApp(app)))
 }
 
 // Auto removal of deprecated apps used in 0 configs
-async function removeDeprecated (db) {
-  const baseApps = await db.collection('base-applications').find({ deprecated: true }).limit(10000).toArray()
+async function removeDeprecated () {
+  const baseApps = await mongo.baseApplications.find({ deprecated: true }).limit(10000).toArray()
   for (const baseApp of baseApps) {
-    const nbApps = await db.collection('applications').countDocuments({ url: baseApp.url })
-    if (nbApps === 0) await db.collection('base-applications').deleteOne({ id: baseApp.id })
+    const nbApps = await mongo.applications.countDocuments({ url: baseApp.url })
+    if (nbApps === 0) await mongo.baseApplications.deleteOne({ id: baseApp.id })
   }
 }
 
@@ -41,16 +42,16 @@ function prepareQuery (/** @type {URLSearchParams} */query) {
     .reduce((a, key) => { a[key] = query.get(key).split(','); return a }, /** @type {Record<string, string[]>} */({}))
 }
 
-async function failSafeInitBaseApp (db, app) {
+async function failSafeInitBaseApp (app) {
   try {
-    await initBaseApp(db, app)
+    await initBaseApp(app)
   } catch (err) {
     internalError('app-init', err)
   }
 }
 
 // Attempts to init an application's description from a URL
-async function initBaseApp (db, app) {
+async function initBaseApp (app) {
   if (app.url[app.url.length - 1] !== '/') app.url += '/'
   const html = (await axios.get(app.url + 'index.html')).data
   const data = await htmlExtractor.extract(html)
@@ -95,7 +96,7 @@ async function initBaseApp (db, app) {
 
   patch.datasetsFilters = patch.datasetsFilters || []
 
-  const storedBaseApp = await db.collection('base-applications')
+  const storedBaseApp = await mongo.baseApplications
     .findOneAndUpdate({ id: patch.id }, { $set: patch }, { upsert: true, returnDocument: 'after' })
   baseAppsUtils.clean(config.publicUrl, storedBaseApp)
   return storedBaseApp
@@ -103,12 +104,13 @@ async function initBaseApp (db, app) {
 
 async function syncBaseApp (db, baseApp) {
   const baseAppReference = { id: baseApp.id, url: baseApp.url, meta: baseApp.meta, datasetsFilters: baseApp.datasetsFilters }
-  await db.collection('applications').updateMany({ url: baseApp.url }, { $set: { baseApp: baseAppReference } })
-  await db.collection('applications').updateMany({ urlDraft: baseApp.url }, { $set: { baseAppDraft: baseAppReference } })
+  await mongo.applications.updateMany({ url: baseApp.url }, { $set: { baseApp: baseAppReference } })
+  await mongo.applications.updateMany({ urlDraft: baseApp.url }, { $set: { baseAppDraft: baseAppReference } })
 }
 
 router.post('', async (req, res) => {
   const db = mongo.db
+  reqAdminMode(req)
   if (!req.body.url || Object.keys(req.body).length !== 1) {
     return res.status(400).type('text/plain').send(req.__('Initializing a base application only accepts the "url" part.'))
   }
@@ -120,9 +122,9 @@ router.post('', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   const db = mongo.db
-  if (!req.user || !req.user.adminMode) return res.status(403).type('text/plain').send()
+  reqAdminMode(req)
   const patch = req.body
-  const storedBaseApp = await db.collection('base-applications')
+  const storedBaseApp = mongo.baseApplications
     .findOneAndUpdate({ id: req.params.id }, { $set: patch }, { returnDocument: 'after' })
   if (!storedBaseApp) return res.status(404).send()
   syncBaseApp(db, storedBaseApp)
@@ -139,12 +141,12 @@ const getQuery = (req, showAll = false) => {
   // You can use ?privateAccess=user:alban,organization:koumoul
   const privateAccess = []
   if (req.query.privateAccess) {
+    const user = reqUserAuthenticated(req)
     for (const p of req.query.privateAccess.split(',')) {
       const [type, id] = p.split(':')
-      if (!req.user) throw httpError(401)
-      if (!req.user.adminMode) {
-        if (type === 'user' && id !== req.user.id) throw httpError(403)
-        if (type === 'organization' && !req.user.organizations.find(o => o.id === id)) throw httpError(403)
+      if (!user.adminMode) {
+        if (type === 'user' && id !== user.id) throw httpError(403)
+        if (type === 'organization' && !user.organizations.find(o => o.id === id)) throw httpError(403)
       }
       privateAccess.push({ type, id })
       accessFilter.push({ privateAccess: { $elemMatch: { type, id } } })
@@ -158,13 +160,13 @@ const getQuery = (req, showAll = false) => {
 
 // Get the list. Non admin users can only see the public and non deprecated ones.
 router.get('', cacheHeaders.noCache, async (req, res) => {
-  const db = mongo.db
+  const sessionState = reqSession(req)
   const { query, privateAccess } = getQuery(req)
   if (req.query.applicationName) query.$and.push({ $or: [{ applicationName: req.query.applicationName }, { 'meta.application-name': req.query.applicationName }] })
   if (req.query.q) query.$and.push({ $text: { $search: req.query.q } })
 
   const [skip, size] = findUtils.pagination(req.query)
-  const baseApplications = db.collection('base-applications')
+  const baseApplications = mongo.baseApplications
   const findPromise = baseApplications
     .find(query)
     .collation({ locale: 'en' })
@@ -184,14 +186,14 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
     const vocabulary = i18nUtils.vocabulary[req.getLocale()]
     if (req.query.dataset === 'any') {
       // match constraints against all datasets of current account
-      const filter = { 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id }
-      datasetCount = await db.collection('datasets').countDocuments(filter)
-      datasetBBox = !!(await db.collection('datasets').countDocuments({ $and: [{ bbox: { $ne: null } }, filter] }))
+      const filter = { 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id }
+      datasetCount = mongo.datasets.countDocuments(filter)
+      datasetBBox = !!(mongo.datasets.countDocuments({ $and: [{ bbox: { $ne: null } }, filter] }))
       const facet = {
         types: [{ $match: { 'schema.x-calculated': { $ne: true } } }, { $group: { _id: { type: '$schema.type' } } }],
         concepts: [{ $group: { _id: { concept: '$schema.x-refersTo' } } }]
       }
-      const facetResults = await db.collection('datasets').aggregate([
+      const facetResults = mongo.datasets.aggregate([
         { $match: filter },
         { $project: { 'schema.type': 1, 'schema.x-refersTo': 1, 'schema.x-calculated': 1 } },
         { $unwind: '$schema' },
@@ -203,7 +205,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
       // match constraints against a specific dataset
       datasetCount = 1
       datasetId = req.query.dataset
-      const dataset = await db.collection('datasets').findOne({ id: datasetId, 'owner.type': req.user.activeAccount.type, 'owner.id': req.user.activeAccount.id })
+      const dataset = mongo.datasets.findOne({ id: datasetId, 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id })
       if (!dataset) return res.status(404).send(req.__('errors.missingDataset', { id: datasetId }))
       datasetTypes = (dataset.schema || []).filter(field => !field['x-calculated']).map(field => field.type)
       datasetVocabulary = (dataset.schema || []).map(field => field['x-refersTo']).filter(c => !!c)
@@ -258,19 +260,19 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
 })
 
 router.get('/:id/icon', async (req, res, next) => {
-  const db = mongo.db
-  const { query } = getQuery(req, req.user && req.user.adminMode)
+  const user = reqUser(req)
+  const { query } = getQuery(req, !!(user?.adminMode))
   query.$and.push({ id: req.params.id })
-  const baseApp = await db.collection('base-applications').findOne(query, { url: 1 })
+  const baseApp = mongo.baseApplications.findOne(query, { url: 1 })
   if (!baseApp) return res.status(404).send()
   const iconUrl = baseApp.url.replace(/\/$/, '') + '/icon.png'
   await getThumbnail(req, res, iconUrl)
 })
 router.get('/:id/thumbnail', async (req, res, next) => {
-  const db = mongo.db
-  const { query } = getQuery(req, req.user && req.user.adminMode)
+  const user = reqUser(req)
+  const { query } = getQuery(req, !!(user?.adminMode))
   query.$and.push({ id: req.params.id })
-  const baseApp = await db.collection('base-applications').findOne(query, { url: 1 })
+  const baseApp = mongo.baseApplications.findOne(query, { url: 1 })
   if (!baseApp) return res.status(404).send()
   const imageUrl = baseApp.image || baseApp.url.replace(/\/$/, '') + '/thumbnail.png'
   await getThumbnail(req, res, imageUrl)

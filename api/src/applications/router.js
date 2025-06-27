@@ -14,27 +14,28 @@ import applicationAPIDocs from '../../contract/application-api-docs.js'
 import * as ajv from '../misc/utils/ajv.js'
 import applicationKeys from '../../contract/application-keys.js'
 import * as baseAppsUtils from '../base-applications/utils.js'
-import * as permissions from '../misc/utils/permissions.js'
-import * as usersUtils from '../misc/utils/users.js'
+import * as permissions from '../misc/utils/permissions.ts'
+import * as usersUtils from '../misc/utils/users.ts'
 import * as findUtils from '../misc/utils/find.js'
-import * as journals from '../misc/utils/journals.js'
+import * as journals from '../misc/utils/journals.ts'
 import * as capture from '../misc/utils/capture.js'
 import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir, dir } from './utils.js'
 import { findApplications } from './service.js'
 import { syncApplications } from '../datasets/service.js'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import { validateURLFriendly } from '../misc/utils/validation.js'
-import * as publicationSites from '../misc/utils/publication-sites.js'
+import * as publicationSites from '../misc/utils/publication-sites.ts'
 import { checkStorage } from '../datasets/middlewares.js'
 import * as attachments from '../misc/utils/attachments.js'
-import * as clamav from '../misc/utils/clamav.js'
+import * as clamav from '../misc/utils/clamav.ts'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
 import pump from '../misc/utils/pipe.ts'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import { patchKeys } from '#doc/applications/patch-req/schema.js'
-import { session } from '@data-fair/lib-express'
+import { reqSession, reqSessionAuthenticated, reqUserAuthenticated, session } from '@data-fair/lib-express'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
+import { sendResourceEvent } from '../misc/utils/notifications.ts'
 
 const unlink = util.promisify(fs.unlink)
 const validateKeys = ajv.compile(applicationKeys)
@@ -55,17 +56,17 @@ const setUniqueRefs = (application) => {
   }
 }
 
-const curateApplication = async (db, application) => {
+const curateApplication = async (application) => {
   if (application.title) application.title = application.title.trim()
   const projection = { id: 1, url: 1, meta: 1, datasetsFilters: 1 }
   if (application.url) {
-    application.baseApp = await db.collection('base-applications').findOne({ url: application.url }, { projection })
+    application.baseApp = await mongo.baseApplications.findOne({ url: application.url }, { projection })
     if (!application.baseApp) {
       throw httpError(400, 'Base application not found')
     }
   }
   if (application.urlDraft) {
-    application.baseAppDraft = await db.collection('base-applications').findOne({ url: application.urlDraft }, { projection })
+    application.baseAppDraft = await mongo.baseApplications.findOne({ url: application.urlDraft }, { projection })
     if (!application.baseAppDraft) {
       throw httpError(400, 'Base draft application not found')
     }
@@ -74,11 +75,11 @@ const curateApplication = async (db, application) => {
 }
 
 // update references to an application into the datasets it references (or used to reference before a patch)
-const syncDatasets = async (db, newApp, oldApp = {}) => {
+const syncDatasets = async (newApp, oldApp = {}) => {
   const ids = [...(newApp?.configuration?.datasets || []), ...(oldApp?.configuration?.datasets || [])]
     .map(dataset => dataset.href.replace(config.publicUrl + '/api/v1/datasets/', ''))
   for (const id of [...new Set(ids)]) {
-    await syncApplications(db, id)
+    await syncApplications(id)
   }
 }
 
@@ -88,11 +89,9 @@ router.get('', cacheHeaders.listBased, async (req, res) => {
   const publicationSite = req.publicationSite
   // @ts-ignore
   const publicBaseUrl = req.publicBaseUrl
-  // @ts-ignore
-  const user = req.user
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findApplications(mongo.db, req.getLocale(), publicationSite, publicBaseUrl, reqQuery, user)
+  const response = await findApplications(req.getLocale(), publicationSite, publicBaseUrl, reqQuery, reqSession(req))
   res.json(response)
 })
 
@@ -102,16 +101,18 @@ const initNew = async (req, id) => {
   application.owner = usersUtils.owner(req)
   const date = moment().toISOString()
   application.createdAt = application.updatedAt = date
-  application.createdBy = application.updatedBy = { id: req.user.id, name: req.user.name }
+  const user = reqUserAuthenticated(req)
+  application.createdBy = application.updatedBy = { id: user.id, name: user.name }
   application.permissions = []
-  await curateApplication(mongo.db, application)
+  await curateApplication(application)
   return application
 }
 
 // Create an application configuration
 router.post('', async (req, res) => {
+  const sessionState = reqSession(req)
   const application = await initNew((await import('#doc/applications/post-req/index.js')).returnValid(req))
-  if (!permissions.canDoForOwner(application.owner, 'applications', 'post', req.user)) return res.status(403).type('text/plain').send()
+  if (!permissions.canDoForOwner(application.owner, 'applications', 'post', reqSession(req))) return res.status(403).type('text/plain').send()
 
   if (application.slug) validateURLFriendly(req.getLocale(), application.slug)
 
@@ -140,7 +141,8 @@ router.post('', async (req, res) => {
 
   eventsLog.info('df.applications.create', `created application ${application.slug} (${application.id})`, { req, account: application.owner })
 
-  await journals.log(req.app, application, { type: 'application-created', href: config.publicUrl + '/application/' + application.id }, 'application')
+  await journals.log('applications', application, { type: 'application-created', href: config.publicUrl + '/application/' + application.id })
+  await sendResourceEvent('applications', application, sessionState, 'application-created')
   res.status(201).json(clean(application, req.publicationSite, req.publicBaseUrl))
 })
 
@@ -152,7 +154,7 @@ const readApplication = async (req, res, next) => {
   const mainPublicationSite = req.mainPublicationSite
 
   const tolerateStale = !!publicationSite
-  const application = await findUtils.getByUniqueRef(mongo.db, publicationSite, mainPublicationSite, req.params, 'application', null, tolerateStale)
+  const application = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, req.params, 'application', null, tolerateStale)
   if (!application) return res.status(404).send(req.__('errors.missingApp'))
 
   // @ts-ignore
@@ -197,12 +199,12 @@ const setFullUpdatedAt = async (req, res, next) => {
 
 router.use('/:applicationId/permissions', readApplication, permissions.router('applications', 'application', async (req, patchedApplication) => {
   // this callback function is called when the resource becomes public
-  await publicationSites.onPublic(mongo.db, patchedApplication, 'application')
+  await publicationSites.onPublic(patchedApplication, 'applications', reqSessionAuthenticated(req))
 }))
 
 // retrieve a application by its id
 router.get('/:applicationId', readApplication, permissions.middleware('readDescription', 'read'), cacheHeaders.noCache, (req, res, next) => {
-  req.application.userPermissions = permissions.list('applications', req.application, req.user)
+  req.application.userPermissions = permissions.list('applications', req.application, reqSession(req))
   res.status(200).send(clean(req.application, req.publicBaseUrl, req.publicationSite, req.query))
 })
 
@@ -210,11 +212,12 @@ router.get('/:applicationId', readApplication, permissions.middleware('readDescr
 const attemptInsert = async (req, res, next) => {
   const { returnValid } = await import('#types/application/index.js')
   const newApplication = returnValid(await initNew(req, req.params.applicationId))
+  const sessionState = reqSession(req)
 
   permissions.initResourcePermissions(newApplication)
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
-  if (permissions.canDoForOwner(newApplication.owner, 'applications', 'post', req.user)) {
+  if (permissions.canDoForOwner(newApplication.owner, 'applications', 'post', sessionState)) {
     try {
       await mongo.db.collection('applications').insertOne(newApplication)
 
@@ -222,7 +225,8 @@ const attemptInsert = async (req, res, next) => {
 
       req.isNewApplication = true
 
-      await journals.log(req.app, newApplication, { type: 'application-created', href: config.publicUrl + '/application/' + newApplication.id }, 'application')
+      await journals.log('applications', newApplication, { type: 'application-created', href: config.publicUrl + '/application/' + newApplication.id })
+      await sendResourceEvent('applications', newApplication, sessionState, 'application-created')
 
       return res.status(201).json(clean(newApplication, req.publicBaseUrl, req.publicationSite))
     } catch (err) {
@@ -240,7 +244,8 @@ router.put('/:applicationId', attemptInsert, readApplication, permissions.middle
     }
   }
   newApplication.updatedAt = moment().toISOString()
-  newApplication.updatedBy = { id: req.user.id, name: req.user.name }
+  const user = reqUserAuthenticated(req)
+  newApplication.updatedBy = { id: user.id, name: user.name }
   newApplication.created = true
 
   if (!req.isNewApplication) {
@@ -287,12 +292,13 @@ router.patch('/:applicationId',
     }
 
     patch.updatedAt = moment().toISOString()
-    patch.updatedBy = { id: req.user.id, name: req.user.name }
+    const user = reqUserAuthenticated(req)
+    patch.updatedBy = { id: user.id, name: user.name }
     patch.id = application.id
     patch.slug = patch.slug || application.slug
-    await curateApplication(db, patch)
+    await curateApplication(patch)
 
-    await publicationSites.applyPatch(db, application, { ...application, ...patch }, req.user, 'application')
+    await publicationSites.applyPatch(application, { ...application, ...patch }, reqSession(req), 'applications')
 
     let patchedApplication
     try {
@@ -316,7 +322,7 @@ router.patch('/:applicationId',
       resource: { type: 'dataset', title: application.title, id: application.id }
     }, sessionState)
 
-    await syncDatasets(db, patchedApplication, application)
+    await syncDatasets(patchedApplication, application)
     res.status(200).json(clean(patchedApplication, req.publicBaseUrl, req.publicationSite))
   }
 )
@@ -327,12 +333,14 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
   const application = req.application
 
   const db = mongo.db
+  const sessionState = reqSessionAuthenticated(req)
+
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
-  if (!permissions.canDoForOwner(req.body, 'applications', 'post', req.user)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
+  if (!permissions.canDoForOwner(req.body, 'applications', 'post', sessionState)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
 
   const patch = {
     owner: req.body,
-    updatedBy: { id: req.user.id, name: req.user.name },
+    updatedBy: { id: sessionState.user.id, name: sessionState.user.name },
     updatedAt: moment().toISOString()
   }
   const sameOrg = application.owner.type === 'organization' && application.owner.type === req.body.type && application.owner.id === req.body.id
@@ -366,7 +374,6 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
   eventsLog.info('df.applications.changeOwnerFrom', eventLogMessage, { req, account: application.owner })
   eventsLog.info('df.applications.changeOwnerTo', eventLogMessage, { req, account: req.body })
 
-  const sessionState = await session.req(req)
   const event = {
     title: 'Changement de propriétaire d\'une application',
     body: `${application.title} (${application.slug}), ${arrowStr}`,
@@ -379,7 +386,7 @@ router.put('/:applicationId/owner', readApplication, permissions.middleware('del
   eventsQueue.pushEvent(event, sessionState)
   eventsQueue.pushEvent({ ...event, sender: { ...patch.owner, admin: true } }, sessionState)
 
-  await syncDatasets(db, patchedApp)
+  await syncDatasets(patchedApp)
   res.status(200).json(clean(patchedApp, req.publicBaseUrl, req.publicationSite))
 })
 
@@ -416,7 +423,7 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
     resource: { type: 'dataset', title: application.title, id: application.id }
   }, sessionState)
 
-  await syncDatasets(db, application)
+  await syncDatasets(application)
   res.sendStatus(204)
 })
 
@@ -435,6 +442,7 @@ const writeConfig = async (req, res) => {
   const application = req.application
 
   const db = mongo.db
+  const sessionState = reqSessionAuthenticated(req)
   const { returnValid } = await import('#types/app-config/index.js')
   const appConfig = returnValid(req.body)
   await db.collection('applications').updateOne(
@@ -446,7 +454,7 @@ const writeConfig = async (req, res) => {
       $set: {
         configuration: appConfig,
         updatedAt: moment().toISOString(),
-        updatedBy: { id: req.user.id, name: req.user.name },
+        updatedBy: { id: sessionState.user.id, name: sessionState.user.name },
         lastConfigured: moment().toISOString(),
         status: 'configured'
       }
@@ -455,8 +463,8 @@ const writeConfig = async (req, res) => {
 
   eventsLog.info('df.applications.writeConfig', `wrote application config ${application.slug} (${application.id})`, { req, account: application.owner })
 
-  await journals.log(req.app, application, { type: 'config-updated' }, 'application', false, req.user)
-  await syncDatasets(db, { configuration: req.body })
+  await journals.log('applications', application, { type: 'config-updated' })
+  await syncDatasets({ configuration: req.body })
   res.status(200).json(req.body)
 }
 router.put('/:applicationId/config', readApplication, permissions.middleware('writeConfig', 'write'), writeConfig)
@@ -470,7 +478,7 @@ router.get('/:applicationId/configuration-draft', readApplication, permissions.m
 router.put('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), async (req, res, next) => {
   // @ts-ignore
   const application = req.application
-
+  const sessionState = reqSessionAuthenticated(req)
   const { returnValid } = await import('#types/app-config/index.js')
   const appConfig = returnValid(req.body)
   await mongo.db.collection('applications').updateOne(
@@ -482,19 +490,20 @@ router.put('/:applicationId/configuration-draft', readApplication, permissions.m
       $set: {
         configurationDraft: appConfig,
         updatedAt: moment().toISOString(),
-        updatedBy: { id: req.user.id, name: req.user.name },
+        updatedBy: { id: sessionState.user.id, name: sessionState.user.name },
         status: 'configured-draft'
       }
     }
   )
   eventsLog.info('df.applications.validateDraft', `vaidated application config draft ${application.slug} (${application.id})`, { req, account: application.owner })
 
-  await journals.log(req.app, application, { type: 'config-draft-updated' }, 'application', false, req.user)
+  await journals.log('applications', application, { type: 'config-draft-updated' })
   res.status(200).json(req.body)
 })
 router.delete('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), async (req, res, next) => {
   // @ts-ignore
   const application = req.application
+  const sessionState = reqSessionAuthenticated(req)
 
   await mongo.db.collection('applications').updateOne(
     { id: req.params.applicationId },
@@ -505,7 +514,7 @@ router.delete('/:applicationId/configuration-draft', readApplication, permission
       },
       $set: {
         updatedAt: moment().toISOString(),
-        updatedBy: { id: req.user.id, name: req.user.name },
+        updatedBy: { id: sessionState.user.id, name: sessionState.user.name },
         status: application.configuration ? 'configured' : 'created'
       }
     }
@@ -513,7 +522,7 @@ router.delete('/:applicationId/configuration-draft', readApplication, permission
 
   eventsLog.info('df.applications.cancelDraft', `cancelled application config draft ${application.slug} (${application.id})`, { req, account: application.owner })
 
-  await journals.log(req.app, application, { type: 'config-draft-cancelled' }, 'application', false, req.user)
+  await journals.log('applications', application, { type: 'config-draft-cancelled' })
   res.status(200).json(req.body)
 })
 
@@ -559,7 +568,7 @@ router.post('/:applicationId/error', readApplication, permissions.middleware('wr
     await wsEmitter.emit(`applications/${req.params.applicationId}/draft-error`, req.body)
   } else if (req.application.configuration) {
     await mongo.db.collection('applications').updateOne({ id: req.application.id }, { $set: { status: 'error', errorMessage: message } })
-    await journals.log(req.app, req.application, { type: 'error', data: req.body.message }, 'application', false, req.user)
+    await journals.log('applications', req.application, { type: 'error', data: req.body.message })
   }
   res.status(204).send()
 })

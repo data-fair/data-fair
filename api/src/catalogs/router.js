@@ -10,11 +10,12 @@ import catalogSchema from '../../contract/catalog.js'
 import * as catalogs from './plugins/index.js'
 import * as ajv from '../misc/utils/ajv.js'
 import catalogPatch from '../../contract/catalog-patch.js'
-import * as permissions from '../misc/utils/permissions.js'
-import * as usersUtils from '../misc/utils/users.js'
+import * as permissions from '../misc/utils/permissions.ts'
+import * as usersUtils from '../misc/utils/users.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import { clean } from './utils.js'
 import { findCatalogs } from './service.js'
+import { reqSession, reqUserAuthenticated } from '@data-fair/lib-express'
 
 const validate = ajv.compile(catalogSchema)
 const validatePatch = ajv.compile(catalogPatch)
@@ -49,11 +50,9 @@ router.get('/_types', cacheHeaders.noCache, async (req, res) => {
 
 // Get the list of catalogs
 router.get('', cacheHeaders.noCache, async (req, res) => {
-  // @ts-ignore
-  const user = req.user
   const reqQuery = /** @type {Record<string, string>} */(req.query)
 
-  const response = await findCatalogs(mongo.db, req.getLocale(), reqQuery, user)
+  const response = await findCatalogs(req.getLocale(), reqQuery, reqSession(req))
   res.json(response)
 })
 
@@ -62,7 +61,8 @@ const initNew = (req) => {
   catalog.owner = usersUtils.owner(req)
   const date = moment().toISOString()
   catalog.createdAt = catalog.updatedAt = date
-  catalog.createdBy = catalog.updatedBy = { id: req.user.id, name: req.user.name }
+  const user = reqUserAuthenticated(req)
+  catalog.createdBy = catalog.updatedBy = { id: user.id, name: user.name }
   catalog.permissions = []
   return catalog
 }
@@ -70,7 +70,7 @@ const initNew = (req) => {
 // Create a catalog
 router.post('', async (req, res) => {
   const catalog = initNew(req)
-  if (!permissions.canDoForOwner(catalog.owner, 'catalogs', 'post', req.user)) return res.status(403).type('text/plain').send()
+  if (!permissions.canDoForOwner(catalog.owner, 'catalogs', 'post', reqSession(req))) return res.status(403).type('text/plain').send()
   validate(catalog)
 
   // Generate ids and try insertion until there is no conflict on id
@@ -106,7 +106,7 @@ router.use('/:catalogId/permissions', readCatalog, permissions.router('catalogs'
 
 // retrieve a catalog by its id
 router.get('/:catalogId', readCatalog, permissions.middleware('readDescription', 'read'), cacheHeaders.resourceBased(), (req, res, next) => {
-  req.catalog.userPermissions = permissions.list('catalogs', req.catalog, req.user)
+  req.catalog.userPermissions = permissions.list('catalogs', req.catalog, reqSession(req))
   res.status(200).send(clean(req.catalog, req.query.html === 'true'))
 })
 
@@ -117,7 +117,7 @@ const attemptInsert = async (req, res, next) => {
   validate(newCatalog)
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
-  if (permissions.canDoForOwner(newCatalog.owner, 'catalogs', 'post', req.user)) {
+  if (permissions.canDoForOwner(newCatalog.owner, 'catalogs', 'post', reqSession(req))) {
     try {
       await mongo.db.collection('catalogs').insertOne(mongoEscape.escape(newCatalog, true))
       return res.status(201).json(clean(newCatalog))
@@ -134,7 +134,8 @@ router.put('/:catalogId', attemptInsert, readCatalog, permissions.middleware('wr
     if (!catalogPatch.properties[key]) newCatalog[key] = req.catalog[key]
   }
   newCatalog.updatedAt = moment().toISOString()
-  newCatalog.updatedBy = { id: req.user.id, name: req.user.name }
+  const user = reqUserAuthenticated(req)
+  newCatalog.updatedBy = { id: user.id, name: user.name }
   await mongo.db.collection('catalogs').replaceOne({ id: req.params.catalogId }, mongoEscape.escape(newCatalog, true))
   res.status(200).json(clean(newCatalog))
 })
@@ -144,7 +145,8 @@ router.patch('/:catalogId', readCatalog, permissions.middleware('writeDescriptio
   const patch = req.body
   validatePatch(patch)
   patch.updatedAt = moment().toISOString()
-  patch.updatedBy = { id: req.user.id, name: req.user.name }
+  const user = reqUserAuthenticated(req)
+  patch.updatedBy = { id: user.id, name: user.name }
 
   // manage automatic export of REST datasets into files
   if (patch.autoUpdate) {
@@ -167,7 +169,7 @@ router.patch('/:catalogId', readCatalog, permissions.middleware('writeDescriptio
 // Change ownership of a catalog
 router.put('/:catalogId/owner', readCatalog, permissions.middleware('delete', 'admin'), async (req, res) => {
   // Must be able to delete the current catalog, and to create a new one for the new owner to proceed
-  if (!permissions.canDoForOwner(req.body, 'catalogs', 'post', req.user)) return res.sendStatus(403)
+  if (!permissions.canDoForOwner(req.body, 'catalogs', 'post', reqSession(req))) return res.sendStatus(403)
   const patchedCatalog = await mongo.db.collection('catalogs')
     .findOneAndUpdate({ id: req.params.catalogId }, { $set: { owner: req.body } }, { returnDocument: 'after' })
   res.status(200).json(clean(patchedCatalog))

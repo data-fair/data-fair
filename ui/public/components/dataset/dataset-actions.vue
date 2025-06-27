@@ -497,7 +497,7 @@ import { mapState, mapGetters, mapActions } from 'vuex'
 import 'iframe-resizer/js/iframeResizer'
 import VIframe from '@koumoul/v-iframe'
 import eventBus from '~/event-bus'
-import settingsSchema from '~/../../api/contract/settings.js'
+import settingsSchema from '~/../../api/types/settings/schema.js'
 const webhooksSchema = settingsSchema.properties.webhooks
 
 export default {
@@ -540,7 +540,7 @@ export default {
     },
     notifUrl () {
       const webhooks = webhooksSchema.items.properties.events.items.oneOf
-        .filter(item => item.const.startsWith('dataset') && item.const !== 'dataset-dataset-created')
+        .filter(item => item.const.startsWith('dataset') && item.const !== 'dataset-dataset-created' && item.const !== 'dataset-finalize-end')
 
       const keysParam = webhooks.map(w => `data-fair:${w.const}:${this.dataset.slug}`).join(',')
       const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')

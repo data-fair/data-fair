@@ -1,7 +1,7 @@
 import config from 'config'
-import _remoteServiceSchema from './remote-service.js'
-import _remoteServicePatchSchema from './remote-service-patch.js'
-import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.js'
+import { resolvedSchema as _remoteServicePatchSchema } from '../doc/remote-services/patch-req/.type/index.js'
+import { resolvedSchema as _remoteServiceSchema } from '#types/remote-service/index.js'
+import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.ts'
 
 const remoteServiceSchema = { ..._remoteServiceSchema }
 const remoteServicePatchSchema = { ..._remoteServicePatchSchema }

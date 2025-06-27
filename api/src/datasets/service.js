@@ -7,11 +7,12 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import memoize from 'memoizee'
 import equal from 'deep-equal'
 import * as findUtils from '../misc/utils/find.js'
-import * as permissions from '../misc/utils/permissions.js'
+import * as permissions from '../misc/utils/permissions.ts'
 import * as datasetUtils from './utils/index.js'
 import * as restDatasetsUtils from './utils/rest.ts'
-import * as esUtils from './es/index.ts'
-import * as webhooks from '../misc/utils/webhooks.js'
+import { validateDraftAlias, deleteIndex, updateDatasetMapping } from './es/manage-indices.js'
+import * as webhooks from '../misc/utils/webhooks.ts'
+import { sendResourceEvent } from '../misc/utils/notifications.ts'
 import es from '#es'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
@@ -22,7 +23,6 @@ import { validateURLFriendly } from '../misc/utils/validation.js'
 import assertImmutable from '../misc/utils/assert-immutable.js'
 import { curateDataset, titleFromFileName } from './utils/index.js'
 import * as virtualDatasetsUtils from './utils/virtual.ts'
-import { prepareInitFrom } from './utils/init-from.js'
 import i18n from 'i18n'
 
 const debugMasterData = debugLib('master-data')
@@ -68,10 +68,10 @@ const fieldsMap = {
  * @param {any} publicationSite
  * @param {string} publicBaseUrl
  * @param {Record<string, string>} reqQuery
- * @param {any} user
+ * @param {import('@data-fair/lib-express').SessionState} sessionState
  */
-export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, user) => {
-  const explain = reqQuery.explain === 'true' && user && (user.isAdmin || user.asAdmin) && {}
+export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, reqQuery, sessionState) => {
+  const explain = reqQuery.explain === 'true' && sessionState.user && (sessionState.user.isAdmin || sessionState.user.asAdmin) && {}
   const datasets = db.collection('datasets')
 
   const tolerateStale = !!publicationSite
@@ -105,7 +105,7 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
     extraFilters.push({ 'owner.type': publicationSite.owner.type, 'owner.id': publicationSite.owner.id })
   }
 
-  const query = findUtils.query(reqQuery, locale, user, 'datasets', fieldsMap, false, extraFilters)
+  const query = findUtils.query(reqQuery, locale, sessionState, 'datasets', fieldsMap, false, extraFilters)
   const sort = findUtils.sort(reqQuery.sort)
   const project = findUtils.project(reqQuery.select, [], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
@@ -119,12 +119,12 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
     if (explain) explain.resultsMS = Date.now() - t0
     return res
   })
-  const facetsPromise = reqQuery.facets && datasets.aggregate(findUtils.facetsQuery(reqQuery, user, 'datasets', facetFields, filterFields, nullFacetFields, extraFilters), options).toArray().then(res => {
+  const facetsPromise = reqQuery.facets && datasets.aggregate(findUtils.facetsQuery(reqQuery, sessionState, 'datasets', facetFields, filterFields, nullFacetFields, extraFilters), options).toArray().then(res => {
     if (explain) explain.facetsMS = Date.now() - t0
     return res
   })
   const sumsPromise = reqQuery.sums && datasets
-    .aggregate(findUtils.sumsQuery(reqQuery, user, 'datasets', sumsFields, filterFields, extraFilters), options).toArray()
+    .aggregate(findUtils.sumsQuery(reqQuery, sessionState, 'datasets', sumsFields, filterFields, extraFilters), options).toArray()
     .then(sumsResponse => {
       const res = sumsResponse[0] || {}
       for (const field of reqQuery.sums.split(',')) {
@@ -165,7 +165,7 @@ export const findDatasets = async (db, locale, publicationSite, publicBaseUrl, r
 export const getDataset = async (datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, tolerateStale, _acceptedStatuses, reqBody) => {
   let dataset, datasetFull
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
-    dataset = await findUtils.getByUniqueRef(db, publicationSite, mainPublicationSite, {}, 'dataset', datasetId, tolerateStale)
+    dataset = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, {}, 'dataset', datasetId, tolerateStale)
     if (!dataset) return { }
     datasetFull = { ...dataset }
 
@@ -211,7 +211,7 @@ export const memoizedGetDataset = memoize(getDataset, {
  * @param {import('mongodb').Db} db
  * @param {import('@elastic/elasticsearch').Client} es
  * @param {string} locale
- * @param {any} user
+ * @param {import('@data-fair/lib-express').SessionStateAuthenticated} sessionState
  * @param {any} owner
  * @param {any} body
  * @param {undefined | any[]} files
@@ -219,7 +219,7 @@ export const memoizedGetDataset = memoize(getDataset, {
  * @param {(callback: () => void) => void} onClose
  * @returns {Promise<any>}
  */
-export const createDataset = async (db, es, locale, user, owner, body, files, draft, onClose) => {
+export const createDataset = async (db, es, locale, sessionState, owner, body, files, draft, onClose) => {
   validateURLFriendly(locale, body.id)
   validateURLFriendly(locale, body.slug)
 
@@ -234,7 +234,7 @@ export const createDataset = async (db, es, locale, user, owner, body, files, dr
   dataset.owner = owner
   const date = new Date().toISOString()
   dataset.createdAt = dataset.updatedAt = date
-  dataset.createdBy = dataset.updatedBy = { id: user.id, name: user.name }
+  dataset.createdBy = dataset.updatedBy = { id: sessionState.user.id, name: sessionState.user.name }
   dataset.permissions = []
   dataset.schema = dataset.schema || []
   if (dataset.extensions) {
@@ -245,7 +245,12 @@ export const createDataset = async (db, es, locale, user, owner, body, files, dr
   curateDataset(dataset)
   permissions.initResourcePermissions(dataset)
 
-  if (dataset.initFrom) prepareInitFrom(dataset, user)
+  if (dataset.initFrom) {
+    dataset.initFrom.role = permissions.getOwnerRole(dataset.owner, sessionState)
+    if (dataset.initFrom.role && dataset.owner.department) {
+      dataset.initFrom.department = sessionState.account.department ?? '-'
+    }
+  }
 
   if (datasetFile) {
     dataset.title = dataset.title || titleFromFileName(datasetFile.originalname)
@@ -339,8 +344,8 @@ export const createDataset = async (db, es, locale, user, owner, body, files, dr
       await fsyncFile(datasetUtils.loadedAttachmentsFilePath(insertedDataset))
     }
   }
-  if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with extensions by ${user?.name} (${user?.id})`, insertedDataset.extensions)
-  if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with masterData by ${user?.name} (${user?.id})`, insertedDataset.masterData)
+  if (dataset.extensions) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with extensions by ${sessionState.user.name} (${sessionState.user.id})`, insertedDataset.extensions)
+  if (dataset.masterData) debugMasterData(`POST dataset ${dataset.id} (${insertedDataset.slug}) with masterData by ${sessionState.user.name} (${sessionState.user.id})`, insertedDataset.masterData)
 
   return insertedDataset
 }
@@ -369,7 +374,7 @@ export const deleteDataset = async (app, dataset) => {
 
   if (!dataset.isVirtual) {
     try {
-      await esUtils.deleteIndex(es, dataset)
+      await deleteIndex(es, dataset)
     } catch (err) {
       console.warn('Error while deleting dataset indexes and alias', err)
     }
@@ -432,7 +437,7 @@ export const applyPatch = async (app, dataset, patch, removedRestProps, attemptM
       // this method will routinely throw errors
       // we just try in case elasticsearch considers the new mapping compatible
       // so that we might optimize and reindex only when necessary
-      await esUtils.updateDatasetMapping(app.get('es'), { id: dataset.id, schema: patch.schema }, dataset)
+      await updateDatasetMapping(app.get('es'), { id: dataset.id, schema: patch.schema }, dataset)
       patch.status = 'indexed'
     } catch (err) {
       // generated ES mappings are not compatible, trigger full re-indexing
@@ -490,10 +495,10 @@ export const applyPatch = async (app, dataset, patch, removedRestProps, attemptM
 
 // synchronize the list of application references stored in dataset.extras.applications
 // used for quick access to capture, and default sorting in dataset pages
-export const syncApplications = async (db, datasetId) => {
-  const dataset = await db.collection('datasets').findOne({ id: datasetId }, { projection: { owner: 1, extras: 1 } })
+export const syncApplications = async (datasetId) => {
+  const dataset = await mongo.datasets.findOne({ id: datasetId }, { projection: { owner: 1, extras: 1 } })
   if (!dataset) return
-  const applications = await db.collection('applications')
+  const applications = await mongo.applications
     .find({
       'owner.type': dataset.owner.type,
       'owner.id': dataset.owner.id,
@@ -509,7 +514,7 @@ export const syncApplications = async (db, datasetId) => {
       applicationsExtras.push(app)
     }
   }
-  await db.collection('datasets')
+  await mongo.datasets
     .updateOne({ id: datasetId }, { $set: { 'extras.applications': applicationsExtras } })
 }
 
@@ -517,7 +522,6 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
   Object.assign(datasetFull.draft, patch)
   const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
 
-  const db = mongo.db
   const draftPatch = { ...datasetFull.draft }
   if (datasetFull.draft.dataUpdatedAt) {
     draftPatch.dataUpdatedAt = draftPatch.updatedAt
@@ -534,20 +538,23 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
   const patchedDataset = { ...datasetFull, ...patch }
 
   if (datasetFull.file) {
-    webhooks.trigger(db, 'dataset', patchedDataset, { type: 'data-updated' }, null)
+    webhooks.trigger('datasets', patchedDataset, { type: 'data-updated' }, null)
+    sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated')
     const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema, false, false)
     if (breakingChanges.length) {
-      webhooks.trigger(db, 'dataset', patchedDataset, {
+      const breakingChangesDesc = i18n.getLocales().reduce((a, locale) => {
+        let msg = i18n.__({ phrase: 'hasBreakingChanges', locale }, { title: patchedDataset.title })
+        for (const breakingChange of breakingChanges) {
+          msg += '\n' + i18n.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { key: breakingChange.key })
+        }
+        a[locale] = { breakingChanges: msg }
+        return a
+      }, {})
+      webhooks.trigger('datasets', patchedDataset, {
         type: 'breaking-change',
-        body: i18n.getLocales().reduce((a, locale) => {
-          let msg = i18n.__({ phrase: 'hasBreakingChanges', locale }, { title: patchedDataset.title })
-          for (const breakingChange of breakingChanges) {
-            msg += '\n' + i18n.__({ phrase: 'breakingChanges.' + breakingChange.type, locale }, { key: breakingChange.key })
-          }
-          a[locale] = msg
-          return a
-        }, {})
+        body: breakingChangesDesc
       })
+      await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'breaking-change', { localizedParams: breakingChangesDesc })
     }
   }
 
@@ -598,11 +605,11 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
     await fs.remove(oldFilePath)
   }
 
-  await esUtils.validateDraftAlias(app.get('es'), dataset)
+  await validateDraftAlias(app.get('es'), dataset)
   await fs.remove(dir(datasetDraft))
 }
 
 export const cancelDraft = async (dataset) => {
   await fs.remove(dir(dataset))
-  await esUtils.deleteIndex(es.client, dataset)
+  await deleteIndex(es.client, dataset)
 }

@@ -3,7 +3,7 @@ import { resolvedSchema as applicationSchema } from '../types/application/index.
 import { resolvedSchema as appConfigSchema } from '../types/app-config/index.js'
 
 import journalSchema from './journal.js'
-import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.js'
+import { apiDoc as permissionsDoc } from '../src/misc/utils/permissions.ts'
 import pJson from './p-json.js'
 
 /**

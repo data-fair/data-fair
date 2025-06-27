@@ -107,7 +107,9 @@ describe('publication sites', function () {
 
   it('department admin can request publishing dataset on org site', async function () {
     let notif
-    global.events.on('notification', (n) => { notif = n })
+    global.events.on('notification', (n) => {
+      notif = n
+    })
 
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
     await global.ax.dmeadusOrg.post('/api/v1/settings/organization/KWqAGZ4mG/publication-sites', portal)
@@ -115,7 +117,8 @@ describe('publication sites', function () {
     const dataset = (await global.ax.hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
     await global.ax.hlalonde3Org.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
     assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:' + dataset.slug)
-    assert.equal(notif.body, 'published dataset - Huntington Lalonde')
+    assert.equal(notif.title.fr, 'Demande de publication de jeu de données')
+    assert.equal(notif.body.fr, 'Un contributeur demande de publier le jeu de données published dataset (published-dataset) sur portal.com.')
     assert.equal(notif.sender.type, 'organization')
     assert.equal(notif.sender.id, 'KWqAGZ4mG')
     assert.equal(notif.sender.department, undefined)
@@ -163,7 +166,8 @@ describe('publication sites', function () {
     const dataset = (await global.ax.hlalonde3Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
     await global.ax.ddecruce5Org.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
     assert.equal(notif.topic.key, 'data-fair:dataset-publication-requested:data-fair-portals:portal1:' + dataset.slug)
-    assert.equal(notif.body, 'published dataset - Duky De Cruce')
+    assert.equal(notif.title.fr, 'Demande de publication de jeu de données')
+    assert.equal(notif.body.fr, 'Un contributeur demande de publier le jeu de données published dataset (published-dataset) sur portal.com.')
     assert.equal(notif.sender.type, 'organization')
     assert.equal(notif.sender.id, 'KWqAGZ4mG')
     assert.equal(notif.sender.department, 'dep1')

@@ -6,8 +6,8 @@ import * as restUtils from '../datasets/utils/rest.ts'
 import * as datasetUtils from '../datasets/utils/index.js'
 import { updateStorage } from '../datasets/utils/storage.ts'
 import * as datasetsService from '../datasets/service.js'
-import { getPseudoUser } from '../misc/utils/users.js'
-import * as permissionsUtils from '../misc/utils/permissions.js'
+import { getPseudoSessionState } from '../misc/utils/users.ts'
+import * as permissionsUtils from '../misc/utils/permissions.ts'
 import { lsMetadataAttachments, metadataAttachmentPath, lsAttachments, attachmentPath } from '../datasets/utils/files.ts'
 import { applyTransactions } from '../datasets/utils/rest.ts'
 import iterHits from '../datasets/es/iter-hits.js'
@@ -42,10 +42,10 @@ export const process = async function (app, dataset) {
   }
 
   if (dataset.initFrom) {
-    const pseudoUser = getPseudoUser(dataset.owner, 'initializer', '_init_from', dataset.initFrom.role, dataset.initFrom.department)
+    const pseudoSessionState = getPseudoSessionState(dataset.owner, 'initializer', '_init_from', dataset.initFrom.role, dataset.initFrom.department)
     const parentDataset = await db.collection('datasets').findOne({ id: dataset.initFrom.dataset })
     if (!parentDataset) throw new Error('[noretry] jeu de données d\'initialisation inconnu ' + dataset.initFrom.dataset)
-    const parentDatasetPermissions = permissionsUtils.list('datasets', parentDataset, pseudoUser)
+    const parentDatasetPermissions = permissionsUtils.list('datasets', parentDataset, pseudoSessionState)
     if (!parentDatasetPermissions.includes('readDescription')) {
       throw new Error(`[noretry] permission manquante sur le jeu de données d'initialisation "${parentDataset.slug}" (${parentDataset.id})`)
     }
@@ -145,7 +145,7 @@ export const process = async function (app, dataset) {
             }
           }
           const transactions = hits.map(hit => ({ _action: 'create', _id: hit._id, ...flatten(hit._source) }))
-          await applyTransactions(dataset, pseudoUser, transactions)
+          await applyTransactions(dataset, pseudoSessionState, transactions)
           await progress.inc(transactions.length)
         }
       } else if (parentDataset.file) {

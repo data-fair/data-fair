@@ -1,7 +1,8 @@
+import mongo from '#mongo'
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import i18n from 'i18n'
-import * as permissions from './permissions.js'
+import * as permissions from './permissions.ts'
 import * as visibility from './visibility.js'
 
 // Util functions shared accross the main find (GET on collection) endpoints
@@ -21,14 +22,14 @@ function queryVal (val) {
  *
  * @param {Record<string, string>} reqQuery
  * @param {string} locale
- * @param {any} user
+ * @param {import('@data-fair/lib-express').SessionState} sessionState
  * @param {string} resourceType
  * @param {Record<string, string>} fieldsMap
  * @param {boolean} globalMode
  * @param {any[]} extraFilters
  * @returns
  */
-export const query = (reqQuery, locale, user, resourceType, fieldsMap, globalMode, extraFilters = []) => {
+export const query = (reqQuery, locale, sessionState, resourceType, fieldsMap, globalMode, extraFilters = []) => {
   /** @type {any} */
   const query = {}
   if (!reqQuery) return query
@@ -58,7 +59,7 @@ export const query = (reqQuery, locale, user, resourceType, fieldsMap, globalMod
     // they are managed by superadmin and then are shared by public / privateAccess attributes
 
     const showAll = reqQuery.showAll === 'true'
-    if (showAll && !user.adminMode) throw httpError(400, 'Only super admins can override permissions filter with showAll parameter')
+    if (showAll && !sessionState?.user?.adminMode) throw httpError(400, 'Only super admins can override permissions filter with showAll parameter')
 
     const accessFilter = []
     if (!showAll) {
@@ -69,10 +70,10 @@ export const query = (reqQuery, locale, user, resourceType, fieldsMap, globalMod
     if (reqQuery.privateAccess) {
       for (const p of reqQuery.privateAccess.split(',')) {
         const [type, id] = p.split(':')
-        if (!user) throw httpError(401)
-        if (!user.adminMode) {
-          if (type === 'user' && id !== user.id) throw httpError(403, i18n.__({ locale, phrase: 'errors.missingPermission' }))
-          if (type === 'organization' && !user.organizations.find((/** @type{any} */o) => o.id === id)) throw httpError(403, i18n.__({ locale, phrase: 'errors.missingPermission' }))
+        if (!sessionState.user) throw httpError(401)
+        if (!sessionState.user.adminMode) {
+          if (type === 'user' && id !== sessionState.user.id) throw httpError(403, i18n.__({ locale, phrase: 'errors.missingPermission' }))
+          if (type === 'organization' && !sessionState.user.organizations.find((/** @type{any} */o) => o.id === id)) throw httpError(403, i18n.__({ locale, phrase: 'errors.missingPermission' }))
         }
         privateAccess.push({ type, id })
         accessFilter.push({ privateAccess: { $elemMatch: { type, id } } })
@@ -82,10 +83,10 @@ export const query = (reqQuery, locale, user, resourceType, fieldsMap, globalMod
   } else {
     // in normal mode (datasets and applications) the visibility is determined from the owner and permissions
 
-    query.$and.push({ $or: permissions.filter(user, resourceType) })
+    query.$and.push({ $or: permissions.filter(sessionState, resourceType) })
 
     if (reqQuery.can) {
-      query.$and.push({ $or: permissions.filterCan(user, resourceType, reqQuery.can) })
+      query.$and.push({ $or: permissions.filterCan(sessionState, resourceType, reqQuery.can) })
     }
 
     if (visibility.filters(reqQuery)) {
@@ -94,12 +95,12 @@ export const query = (reqQuery, locale, user, resourceType, fieldsMap, globalMod
     if (reqQuery.owner) {
       delete query['owner.type']
       delete query['owner.id']
-      query.$and = query.$and.concat(ownerFilters(reqQuery, user && user.activeAccount))
+      query.$and = query.$and.concat(ownerFilters(reqQuery))
     }
-    if ((reqQuery.shared === 'false' || reqQuery.mine === 'true') && user) {
+    if ((reqQuery.shared === 'false' || reqQuery.mine === 'true') && sessionState.account) {
       /** @type {any} */
-      const accountFilter = { 'owner.type': user.activeAccount.type, 'owner.id': user.activeAccount.id }
-      if (user.activeAccount.department) accountFilter['owner.department'] = user.activeAccount.department
+      const accountFilter = { 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id }
+      if (sessionState.account.department) accountFilter['owner.department'] = sessionState.account.department
       query.$and.push(accountFilter)
     }
   }
@@ -110,10 +111,9 @@ export const query = (reqQuery, locale, user, resourceType, fieldsMap, globalMod
 /**
  *
  * @param {Record<string, string>} reqQuery
- * @param {any} activeAccount
  * @returns {any}
  */
-export const ownerFilters = (reqQuery, activeAccount) => {
+export const ownerFilters = (reqQuery) => {
   const or = []
   const nor = []
   for (const ownerStr of reqQuery.owner.split(',')) {
@@ -271,12 +271,12 @@ export const setResourceLinks = (resource, resourceType, publicUrl = config.publ
 /**
  *
  * @param {Record<string, string>} reqQuery
- * @param {any} user
+ * @param {import('@data-fair/lib-express').SessionState} sessionState
  * @param {string} resourceType
  * @param {any[]} [extraFilters]
  * @returns {any[]}
  */
-const basePipeline = (reqQuery, user, resourceType, extraFilters) => {
+const basePipeline = (reqQuery, sessionState, resourceType, extraFilters) => {
   /** @type {any[]} */
   const pipeline = []
 
@@ -293,13 +293,13 @@ const basePipeline = (reqQuery, user, resourceType, extraFilters) => {
   // Apply as early as possible the permissions filter
   pipeline.push({
     $match: {
-      $or: permissions.filter(user, resourceType)
+      $or: permissions.filter(sessionState, resourceType)
     }
   })
-  if ((reqQuery.shared === 'false' || reqQuery.mine === 'true') && user) {
+  if ((reqQuery.shared === 'false' || reqQuery.mine === 'true') && sessionState.account) {
     /** @type {any} */
-    const accountFilter = { 'owner.type': user.activeAccount.type, 'owner.id': user.activeAccount.id }
-    if (user.activeAccount.department) accountFilter['owner.department'] = user.activeAccount.department
+    const accountFilter = { 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id }
+    if (sessionState.account.department) accountFilter['owner.department'] = sessionState.account.department
     pipeline.push({ $match: accountFilter })
   }
 
@@ -315,7 +315,7 @@ const basePipeline = (reqQuery, user, resourceType, extraFilters) => {
 /**
  *
  * @param {Record<string, string>} reqQuery
- * @param {any} user
+ * @param {import('@data-fair/lib-express').SessionState} sessionState
  * @param {string} resourceType
  * @param {Record<string, string>} facetFields
  * @param {Record<string, string>} filterFields
@@ -323,10 +323,10 @@ const basePipeline = (reqQuery, user, resourceType, extraFilters) => {
  * @param {any[]} [extraFilters]
  * @returns
  */
-export const facetsQuery = (reqQuery, user, resourceType, facetFields = {}, filterFields, nullFacetFields = [], extraFilters) => {
+export const facetsQuery = (reqQuery, sessionState, resourceType, facetFields = {}, filterFields, nullFacetFields = [], extraFilters) => {
   filterFields = filterFields || facetFields
   const facetsQueryParam = reqQuery.facets
-  const pipeline = basePipeline(reqQuery, user, resourceType, extraFilters)
+  const pipeline = basePipeline(reqQuery, sessionState, resourceType, extraFilters)
 
   const fields = (facetsQueryParam && facetsQueryParam.length && facetsQueryParam.split(',')
     .filter(f => facetFields[f] || f === 'owner' || f === 'visibility')) || []
@@ -338,7 +338,7 @@ export const facetsQuery = (reqQuery, user, resourceType, facetFields = {}, filt
     }
   }
   if (reqQuery.owner && !fields.includes('owner')) {
-    pipeline.push({ $match: { $and: ownerFilters(reqQuery, user && user.activeAccount) } })
+    pipeline.push({ $match: { $and: ownerFilters(reqQuery) } })
   }
   if (!fields.includes('visibility') && visibility.filters(reqQuery)) {
     pipeline.push({ $match: { $or: visibility.filters(reqQuery) } })
@@ -356,7 +356,7 @@ export const facetsQuery = (reqQuery, user, resourceType, facetFields = {}, filt
         }
       }
       if (reqQuery.owner && fields.includes('owner') && f !== 'owner') {
-        facet.push({ $match: { $and: ownerFilters(reqQuery, user?.activeAccount) } })
+        facet.push({ $match: { $and: ownerFilters(reqQuery) } })
       }
       if (fields.includes('visibility') && f !== 'visibility' && visibility.filters(reqQuery)) {
         facet.push({ $match: { $or: visibility.filters(reqQuery) } })
@@ -467,22 +467,22 @@ export const parseFacets = (facets, nullFacetFields = []) => {
 /**
  *
  * @param {Record<string, string>} reqQuery
- * @param {any} user
+ * @param {import('@data-fair/lib-express').SessionState} sessionState
  * @param {string} resourceType
  * @param {Record<string, string>} sumFields
  * @param {Record<string, string>} filterFields
  * @param {any[]} extraFilters
  * @returns
  */
-export const sumsQuery = (reqQuery, user, resourceType, sumFields = {}, filterFields, extraFilters) => {
-  const pipeline = basePipeline(reqQuery, user, resourceType, extraFilters)
+export const sumsQuery = (reqQuery, sessionState, resourceType, sumFields = {}, filterFields, extraFilters) => {
+  const pipeline = basePipeline(reqQuery, sessionState, resourceType, extraFilters)
   for (const name of Object.keys(filterFields)) {
     if (reqQuery[name] !== undefined) {
       pipeline.push({ $match: { [filterFields[name]]: { $in: reqQuery[name].split(',') } } })
     }
   }
   if (reqQuery.owner) {
-    pipeline.push({ $match: { $and: ownerFilters(reqQuery, user?.activeAccount) } })
+    pipeline.push({ $match: { $and: ownerFilters(reqQuery) } })
   }
   if (visibility.filters(reqQuery)) {
     pipeline.push({ $match: { $or: visibility.filters(reqQuery) } })
@@ -498,7 +498,6 @@ export const sumsQuery = (reqQuery, user, resourceType, sumFields = {}, filterFi
 }
 
 /**
- * @param {import('mongodb').Db} db
  * @param {any} publicationSite
  * @param {any} mainPublicationSite
  * @param {Record<string, string>} reqParams
@@ -506,7 +505,7 @@ export const sumsQuery = (reqQuery, user, resourceType, sumFields = {}, filterFi
  * @param {string | null} resourceId
  * @param {boolean | undefined} tolerateStale
  */
-export const getByUniqueRef = async (db, publicationSite, mainPublicationSite, reqParams, resourceType, resourceId, tolerateStale) => {
+export const getByUniqueRef = async (publicationSite, mainPublicationSite, reqParams, resourceType, resourceId, tolerateStale) => {
   const paramId = resourceId ?? reqParams[resourceType + 'Id']
 
   /** @type {any} */
@@ -523,7 +522,7 @@ export const getByUniqueRef = async (db, publicationSite, mainPublicationSite, r
     }
   }
   // @ts-ignore
-  const resources = await db.collection(resourceType + 's').find(filter, options).project({ _id: 0 }).toArray()
+  const resources = await mongo.db.collection(resourceType + 's').find(filter, options).project({ _id: 0 }).toArray()
   // req[resourceType] = req.resource =
   return resources.find(d => d.id === paramId) || resources.find(d => d.slug === paramId)
 }

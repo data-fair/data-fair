@@ -66,7 +66,7 @@ describe('limits', function () {
       await ax.post('/api/v1/limits/user/dmeadus0', baseLimit)
       assert.fail()
     } catch (err) {
-      assert.equal(err.status, 401)
+      assert.equal(err.status, 403)
     }
   })
 
@@ -84,7 +84,7 @@ describe('limits', function () {
       await ax.get('/api/v1/limits')
       assert.fail()
     } catch (err) {
-      assert.equal(err.status, 401)
+      assert.equal(err.status, 403)
     }
   })
 

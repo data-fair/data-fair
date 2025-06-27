@@ -1,10 +1,12 @@
 import { join } from 'path'
-import * as journals from '../misc/utils/journals.js'
+import * as journals from '../misc/utils/journals.ts'
 import fs from 'fs-extra'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { Writable } from 'stream'
 import pump from '../misc/utils/pipe.ts'
 import * as es from '../datasets/es/index.ts'
+import { initDatasetIndex, switchAlias } from '../datasets/es/manage-indices.js'
+import getIndexStream from '../datasets/es/index-stream.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import { updateStorage } from '../datasets/utils/storage.ts'
 import { readStreams as getReadStreams } from '../datasets/utils/data-streams.js'
@@ -66,7 +68,7 @@ export const process = async function (app, dataset) {
     debug(`Update index ${indexName}`)
   } else {
     try {
-      indexName = await es.initDatasetIndex(esClient, dataset)
+      indexName = await initDatasetIndex(esClient, dataset)
     } catch (err) {
       internalError('es-init-index', err)
       const { message } = es.extractError(err)
@@ -75,7 +77,7 @@ export const process = async function (app, dataset) {
     debug(`Initialize new dataset index ${indexName}`)
   }
 
-  const indexStream = es.indexStream({ esClient, indexName, dataset, attachments: !!attachmentsProperty })
+  const indexStream = getIndexStream({ esClient, indexName, dataset, attachments: !!attachmentsProperty })
 
   if (!dataset.extensions || dataset.extensions.filter(e => e.active).length === 0) {
     if (dataset.file && await fs.pathExists(datasetUtils.fullFilePath(dataset))) {
@@ -105,7 +107,9 @@ export const process = async function (app, dataset) {
   debug('index stream ok')
   debugHeap('after-stream')
   const errorsSummary = indexStream.errorsSummary()
-  if (errorsSummary) await journals.log(app, dataset, { type: 'error', data: errorsSummary })
+  if (errorsSummary) {
+    await journals.log('datasets', dataset, { type: 'error', data: errorsSummary })
+  }
 
   const result = {
     schema: datasetUtils.cleanSchema(dataset)
@@ -116,7 +120,7 @@ export const process = async function (app, dataset) {
   } else {
     result.status = 'indexed'
     debug('Switch alias to point to new datasets index')
-    await es.switchAlias(esClient, dataset, indexName)
+    await switchAlias(esClient, dataset, indexName)
     result.count = indexStream.i
   }
 

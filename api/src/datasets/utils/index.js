@@ -7,13 +7,14 @@ import nanoid from '../../misc/utils/nanoid.js'
 import * as visibilityUtils from '../../misc/utils/visibility.js'
 import { prepareThumbnailUrl } from '../../misc/utils/thumbnails.js'
 import { prepareMarkdownContent } from '../../misc/utils/markdown.js'
-import * as permissions from '../../misc/utils/permissions.js'
+import * as permissions from '../../misc/utils/permissions.ts'
 import * as findUtils from '../../misc/utils/find.js'
 import * as filesUtils from './files.ts'
 import * as schemaUtils from './data-schema.js'
 import * as readApiKeyUtils from './read-api-key.js'
 import mergeDraft from './merge-draft.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import { reqSession } from '@data-fair/lib-express'
 
 export { default as mergeDraft } from './merge-draft.js'
 export * from './types.js'
@@ -154,7 +155,7 @@ export const clean = (req, dataset, draft = false) => {
 
   const select = query.select ? query.select.split(',') : []
   if (query.raw !== 'true') {
-    dataset.userPermissions = permissions.list('datasets', dataset, req.user, req.bypassPermissions)
+    dataset.userPermissions = permissions.list('datasets', dataset, reqSession(req), req.bypassPermissions)
     const thumbnail = query.thumbnail || '300x200'
     if (draft) mergeDraft(dataset)
     if (!select.includes('-public')) dataset.public = permissions.isPublic('datasets', dataset)

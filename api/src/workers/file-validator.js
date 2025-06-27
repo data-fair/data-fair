@@ -1,8 +1,9 @@
 import { Writable } from 'stream'
-import * as journals from '../misc/utils/journals.js'
+import * as journals from '../misc/utils/journals.ts'
 import { jsonSchema } from '../datasets/utils/data-schema.js'
 import * as ajv from '../misc/utils/ajv.js'
 import pump from '../misc/utils/pipe.ts'
+import { sendResourceEvent } from '../misc/utils/notifications.ts'
 import * as datasetUtils from '../datasets/utils/index.js'
 import * as datasetsService from '../datasets/service.js'
 import * as schemaUtils from '../datasets/utils/data-schema.js'
@@ -63,7 +64,7 @@ export const process = async function (app, dataset) {
   const patch = { status: dataset.status === 'validation-updated' ? 'finalized' : 'validated' }
 
   const cancelDraft = async () => {
-    await journals.log(app, dataset, { type: 'draft-cancelled', data: 'annulation automatique' }, 'dataset')
+    await journals.log('datasets', dataset, { type: 'draft-cancelled', data: 'annulation automatique' })
     await datasetsService.cancelDraft(dataset)
     await datasetsService.applyPatch(app, { ...dataset, draftReason: null }, { draft: null })
   }
@@ -83,7 +84,7 @@ export const process = async function (app, dataset) {
       const breakingChanges = schemaUtils.getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema, false, true)
       if (breakingChanges.length) {
         const validationError = 'La structure du fichier contient des ruptures de compatibilité : ' + breakingChanges.map(b => b.summary).join(', ')
-        await journals.log(app, dataset, { type: 'validation-error', data: validationError })
+        await journals.log('datasets', dataset, { type: 'validation-error', data: validationError })
 
         if (dataset.draftReason.validationMode === 'compatible') {
           delete patch.validateDraft
@@ -108,6 +109,8 @@ export const process = async function (app, dataset) {
 
     const errorsSummary = validateStream.errorsSummary()
     if (errorsSummary) {
+      await journals.log('datasets', dataset, { type: 'validation-error', data: errorsSummary })
+      delete patch.validateDraft
       if (dataset.draftReason?.validationMode === 'compatibleOrCancel') {
         await cancelDraft()
         return
@@ -118,7 +121,8 @@ export const process = async function (app, dataset) {
   }
 
   if (patch.validateDraft) {
-    await journals.log(app, dataset, { type: 'draft-validated', data: 'validation automatique' }, 'dataset')
+    await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation automatique' })
+    await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'draft-validated', { localizedParams: { cause: { fr: 'validation automatique', en: 'automatic validation' } } })
   }
 
   await datasetsService.applyPatch(app, dataset, patch)

@@ -3,7 +3,7 @@ import mongo from '#mongo'
 import path from 'path'
 import { Histogram } from 'prom-client'
 import locks from '@data-fair/lib-node/locks.js'
-import * as journals from '../misc/utils/journals.js'
+import * as journals from '../misc/utils/journals.ts'
 import debugModule from 'debug'
 import mergeDraft from '../datasets/utils/merge-draft.js'
 import taskProgress from '../datasets/utils/task-progress.ts'
@@ -316,7 +316,7 @@ async function iter (app, resource, type) {
 
     if (task.eventsPrefix) {
       const noStoreEvent = type === 'dataset'
-      await journals.log(app, resource, { type: task.eventsPrefix + '-start' }, type, noStoreEvent)
+      await journals.log(type + 's', resource, { type: task.eventsPrefix + '-start' }, noStoreEvent)
       progress = taskProgress(resource.id, task.eventsPrefix)
       await progress.start()
     }
@@ -352,9 +352,9 @@ async function iter (app, resource, type) {
     if (task.eventsPrefix && newResource) {
       const noStoreEvent = type === 'dataset' && (task.eventsPrefix !== 'finalize' || !!resource._partialRestStatus)
       if (resource.draftReason) {
-        await journals.log(app, mergeDraft({ ...newResource }), { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
+        await journals.log(type + 's', mergeDraft({ ...newResource }), { type: task.eventsPrefix + '-end' }, noStoreEvent)
       } else {
-        await journals.log(app, newResource, { type: task.eventsPrefix + '-end' }, type, noStoreEvent)
+        await journals.log(type + 's', newResource, { type: task.eventsPrefix + '-end' }, noStoreEvent)
       }
       const finalTask = task.eventsPrefix === 'finalize' ||
       (task.eventsPrefix === 'validate' && resource.draftReason && !newResource.draft && newResource.status) // special case of cancelled draft
@@ -415,10 +415,10 @@ async function iter (app, resource, type) {
       }
     }
     if (retry) {
-      await journals.log(app, resource, { type: 'error-retry', data: errorMessage }, type)
+      await journals.log(type + 's', resource, { type: 'error-retry', data: errorMessage })
       patch.$set[propertyPrefix + 'errorRetry'] = new Date((new Date()).getTime() + config.worker.errorRetryDelay).toISOString()
     } else {
-      await journals.log(app, resource, { type: 'error', data: errorMessage }, type)
+      await journals.log(type + 's', resource, { type: 'error', data: errorMessage })
       patch.$unset = { [propertyPrefix + 'errorRetry']: 1 }
     }
 

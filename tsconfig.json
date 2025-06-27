@@ -10,5 +10,6 @@
     "checkJs": true,
     "skipLibCheck": true
   },
-  "exclude": ["node_modules", "types", "public", "nuxt-dist", "data", ".nuxt", "upgrade"]
+  "exclude": ["node_modules", "types", "public", "nuxt-dist", "data", ".nuxt", "upgrade"],
+  "files": ["api/types/express.d.ts"]
 }

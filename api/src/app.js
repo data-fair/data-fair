@@ -11,7 +11,7 @@ import memoize from 'memoizee'
 import * as wsServer from '@data-fair/lib-express/ws-server.js'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import locks from '@data-fair/lib-node/locks.js'
-import * as observe from './misc/utils/observe.js'
+import * as observe from './misc/utils/observe.ts'
 import catalogsPublicationQueue from './misc/utils/catalogs-publication-queue.ts'
 import debug from 'debug'
 import EventEmitter from 'node:events'
@@ -19,7 +19,6 @@ import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import upgradeScripts from '@data-fair/lib-node/upgrade-scripts.js'
-import { createSpaMiddleware, defaultNonceCSPDirectives, getCSPHeaderFromDirectives } from '@data-fair/lib-express/serve-spa.js'
 import { cleanTmp } from './datasets/utils/files.ts'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
 
@@ -46,14 +45,9 @@ export const run = async () => {
 
   if (config.mode.includes('server')) {
     const limits = await import('./misc/utils/limits.ts')
-    const rateLimiting = await import('./misc/utils/rate-limiting.js')
-    const session = (await import('@data-fair/sd-express')).default({
-      directoryUrl: config.directoryUrl,
-      privateDirectoryUrl: config.privateDirectoryUrl
-    })
-    const { session: libSession } = await import('@data-fair/lib-express/index.js')
-    libSession.init(config.directoryUrl)
-    app.set('session', session)
+    const rateLimiting = await import('./misc/utils/rate-limiting.ts')
+    const { session } = await import('@data-fair/lib-express/index.js')
+    session.init(config.directoryUrl)
 
     app.set('trust proxy', 1)
     app.set('json spaces', 2)
@@ -99,8 +93,8 @@ export const run = async () => {
       bodyParser(req, res, next)
     })
     app.use((await import('cookie-parser')).default())
-    app.use((await import('../i18n/utils.js')).middleware)
-    app.use(session.auth)
+    app.use((await import('../i18n/utils.ts')).middleware)
+    app.use(session.middleware())
 
     // TODO: we could make this better targetted but more verbose by adding it to all routes
     app.use((await import('./misc/utils/expect-type.js')).default(['application/json', 'application/x-ndjson', 'multipart/form-data', 'text/csv', 'text/csv+gzip']))
@@ -178,8 +172,8 @@ export const run = async () => {
     })
 
     // Business routers
-    const { middleware: apiKey } = await import('./misc/utils/api-key.js')
-    app.use('/api/v1', (await import('./misc/routers/root.js')).default)
+    const { middleware: apiKey } = await import('./misc/utils/api-key.ts')
+    app.use('/api/v1', (await import('./misc/routers/root.ts')).default)
     app.use('/api/v1/remote-services', (await import('./remote-services/router.js')).router)
     app.use('/api/v1/remote-services-actions', (await import('./remote-services/router.js')).actionsRouter)
     app.use('/api/v1/catalog', apiKey('datasets'), (await import('./misc/routers/catalog.js')).default)
@@ -187,8 +181,8 @@ export const run = async () => {
     app.use('/api/v1/base-applications', (await import('./base-applications/router.js')).router)
     app.use('/api/v1/applications', apiKey('applications'), (await import('./applications/router.js')).default)
     app.use('/api/v1/datasets', rateLimiting.middleware(), (await import('./datasets/router.js')).default)
-    app.use('/api/v1/stats', apiKey('stats'), (await import('./misc/routers/stats.js')).default)
-    app.use('/api/v1/settings', (await import('./misc/routers/settings.js')).default)
+    app.use('/api/v1/stats', apiKey('stats'), (await import('./misc/routers/stats.ts')).default)
+    app.use('/api/v1/settings', (await import('./misc/routers/settings.ts')).default)
     app.use('/api/v1/admin', (await import('./misc/routers/admin.js')).default)
     app.use('/api/v1/identities', (await import('./misc/routers/identities.js')).default)
     app.use('/api/v1/activity', (await import('./misc/routers/activity.js')).default)
@@ -216,6 +210,8 @@ export const run = async () => {
     app.use('/streamsaver/sw.js', express.static(join(streamsaverPath, 'sw.js')))
 
     if (config.serveUi) {
+      const { createSpaMiddleware, getCSPHeaderFromDirectives, defaultNonceCSPDirectives } = await import('@data-fair/lib-express/serve-spa.js')
+      app.use('/next-ui', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, { ignoreSitePath: true }))
       // some embed pages require unsafe-eval as they use vjsf on dynamic schemas
       const unsafeCSPHeader = getCSPHeaderFromDirectives({
         ...defaultNonceCSPDirectives,
@@ -277,13 +273,13 @@ export const run = async () => {
     // Error management
     app.use(errorHandler)
 
-    const permissions = await import('./misc/utils/permissions.js')
-    const { readApiKey } = await import('./misc/utils/api-key.js')
+    const permissions = await import('./misc/utils/permissions.ts')
+    const { readApiKey } = await import('./misc/utils/api-key.ts')
     await Promise.all([
       (await import('./misc/utils/capture.js')).init(),
-      (await import('./misc/utils/cache.js')).init(db),
-      (await import('./remote-services/utils.js')).init(db),
-      (await import('./base-applications/router.js')).init(db),
+      (await import('./misc/utils/cache.js')).init(),
+      (await import('./remote-services/utils.ts')).init(),
+      (await import('./base-applications/router.js')).init(),
       wsServer.start(server, db, async (channel, sessionState, message) => {
         if (process.env.NODE_ENV === 'test') {
           // TODO: remove this ugly exception, this code should be tested
@@ -292,10 +288,8 @@ export const run = async () => {
         const [type, id, subject] = channel.split('/')
         const resource = await db.collection(type).findOne({ id })
         if (!resource) throw httpError(404, `Ressource ${type}/${id} inconnue.`)
-        let user
-        if (sessionState.user) user = { ...sessionState.user, activeAccount: { ...sessionState.account, role: sessionState.accountRole } }
-        if (message.apiKey) user = await readApiKey(db, message.apiKey, type, message.account)
-        return permissions.can(type, resource, `realtime-${subject}`, user)
+        if (message.apiKey) sessionState = await readApiKey(message.apiKey, type, message.account)
+        return permissions.can(type, resource, `realtime-${subject}`, sessionState)
       })
     ])
     // At this stage the server is ready to respond to API requests

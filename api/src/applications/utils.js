@@ -4,18 +4,19 @@ import memoize from 'memoizee'
 import path from 'path'
 import fs from 'fs-extra'
 import * as visibilityUtils from '../misc/utils/visibility.js'
-import * as permissions from '../misc/utils/permissions.js'
+import * as permissions from '../misc/utils/permissions.ts'
 import { prepareMarkdownContent } from '../misc/utils/markdown.js'
 import * as findUtils from '../misc/utils/find.js'
 import clone from '@data-fair/lib-utils/clone.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { getPseudoUser } from '../misc/utils/users.js'
+import { getPseudoSessionState } from '../misc/utils/users.ts'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
 import { ownerDir } from '../datasets/utils/files.ts'
 import { updateTotalStorage } from '../datasets/utils/storage.ts'
 import nodeDir from 'node-dir'
 import { prepareThumbnailUrl } from '../misc/utils/thumbnails.js'
+import { reqSession } from '@data-fair/lib-express'
 
 export const clean = (application, publicUrl, publicationSite, query = {}) => {
   const select = query.select ? query.select.split(',') : []
@@ -67,8 +68,6 @@ export const refreshConfigDatasetsRefs = async (req, application, draft) => {
   const db = mongo.db
   // @ts-ignore
   const publicBaseUrl = req.publicBaseUrl
-  // @ts-ignore
-  const user = req.user
 
   const configuration = (draft ? (application.configurationDraft || application.configuration) : application.configuration) || {}
 
@@ -98,14 +97,14 @@ export const refreshConfigDatasetsRefs = async (req, application, draft) => {
         : (await db.collection('datasets').findOne({ id: dataset.id }))
 
       if (freshDataset) {
-        const pseudoUser = getPseudoUser(application.owner, 'application config', application.id, 'admin')
-        if (!permissions.list('datasets', freshDataset, pseudoUser).includes('readDescription')) {
+        const pseudoSessionState = getPseudoSessionState(application.owner, 'application config', application.id, 'admin')
+        if (!permissions.list('datasets', freshDataset, pseudoSessionState).includes('readDescription')) {
           throw httpError(403, `permission manquante sur le jeu de données référencé dans l'application ${freshDataset.id}`)
         }
 
         datasetUtils.clean(req, freshDataset)
         for (const key of refreshKeys) {
-          if (key === 'userPermissions') dataset.userPermissions = permissions.list('datasets', freshDataset, user)
+          if (key === 'userPermissions') dataset.userPermissions = permissions.list('datasets', freshDataset, reqSession(req))
           if (key in freshDataset) dataset[key] = freshDataset[key]
         }
       }

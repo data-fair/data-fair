@@ -5,7 +5,6 @@ import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import FormData from 'form-data'
 import * as restDatasetsUtils from '../api/src/datasets/utils/rest.ts'
-
 import * as workers from '../api/src/workers/index.js'
 
 const initMaster = async (ax, info, masterData, id = 'master') => {

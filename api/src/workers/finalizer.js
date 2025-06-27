@@ -1,6 +1,7 @@
 // Finalize dataset for publication
 import config from '#config'
 import * as esUtils from '../datasets/es/index.ts'
+import { datasetWarning } from '../datasets/es/manage-indices.js'
 import * as geoUtils from '../datasets/utils/geo.js'
 import * as datasetUtils from '../datasets/utils/index.js'
 import { updateStorage } from '../datasets/utils/storage.ts'
@@ -123,7 +124,7 @@ export const process = async function (app, _dataset) {
     await progress.inc()
   }
 
-  result.esWarning = await esUtils.datasetWarning(es, dataset)
+  result.esWarning = await datasetWarning(es, dataset)
 
   if (dataset.isRest) {
     await restDatasetsUtils.configureHistory(dataset)

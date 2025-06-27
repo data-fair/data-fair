@@ -11,11 +11,12 @@ import * as parse5 from 'parse5'
 import pump from '../misc/utils/pipe.ts'
 import CacheableLookup from 'cacheable-lookup'
 import * as findUtils from '../misc/utils/find.js'
-import * as permissions from '../misc/utils/permissions.js'
+import * as permissions from '../misc/utils/permissions.ts'
 import * as serviceWorkers from '../misc/utils/service-workers.js'
 import { refreshConfigDatasetsRefs } from './utils.js'
 import Debug from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import { reqSession, reqUserAuthenticated } from '@data-fair/lib-express'
 
 const debugIframeRedirect = Debug('iframe-redirect')
 
@@ -36,17 +37,15 @@ const setResource = async (req, res, next) => {
   // @ts-ignore
   const publicBaseUrl = req.publicBaseUrl
 
-  const db = mongo.db
-
   const tolerateStale = !!publicationSite
   // protected application can be given either as /applicationKey:applicationId or /applicationId?key=applicationKey
-  let application = await findUtils.getByUniqueRef(db, publicationSite, mainPublicationSite, req.params, 'application', null, tolerateStale)
+  let application = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, req.params, 'application', null, tolerateStale)
   let applicationKeyId = req.query.key
   if (!application && !applicationKeyId) {
     const keys = req.params.applicationId.split(':')
     applicationKeyId = keys[0]
     const applicationIdCandidate = req.params.applicationId.replace(keys[0] + ':', '')
-    application = await findUtils.getByUniqueRef(db, publicationSite, mainPublicationSite, req.params, 'application', applicationIdCandidate, tolerateStale)
+    application = await findUtils.getByUniqueRef(publicationSite, mainPublicationSite, req.params, 'application', applicationIdCandidate, tolerateStale)
   }
   if (!application) return res.status(404).send(req.__('errors.missingApp'))
   const ownerFilter = {
@@ -82,7 +81,7 @@ const setResource = async (req, res, next) => {
 }
 
 router.get('/:applicationId/manifest.json', setResource, async (req, res) => {
-  if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchingApplicationKey) {
+  if (!permissions.can('applications', req.application, 'readConfig', reqSession(req)) && !req.matchingApplicationKey) {
     return res.status(403).type('text/plain').send()
   }
   const baseApp = await mongo.db.collection('base-applications').findOne({ url: req.application.url }, { projection: { id: 1, meta: 1 } })
@@ -165,8 +164,8 @@ const fetchHTML = async (cleanApplicationUrl, targetUrl) => {
 }
 // for debug only
 router.get('/_htmlcache', (req, res, next) => {
-  if (!req.user) return res.status(401)
-  if (!req.user.adminMode) return res.status(403)
+  const user = reqUserAuthenticated(req)
+  if (!user.adminMode) return res.status(403)
   return res.send(htmlCache)
 })
 
@@ -192,7 +191,7 @@ let minifiedIframeRedirectSrc
 router.all(['/:applicationId/*extraPath', '/:applicationId'], setResource, async (req, res, next) => {
   const db = mongo.db
 
-  if (!permissions.can('applications', req.application, 'readConfig', req.user) && !req.matchingApplicationKey) {
+  if (!permissions.can('applications', req.application, 'readConfig', reqSession(req)) && !req.matchingApplicationKey) {
     return res.redirect(`${req.publicBaseUrl}/app/${req.params.applicationId}/login`)
   }
 

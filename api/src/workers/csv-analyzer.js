@@ -1,4 +1,4 @@
-import * as journals from '../misc/utils/journals.js'
+import * as journals from '../misc/utils/journals.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import iconv from 'iconv-lite'
 import datasetFileSample from '../datasets/utils/file-sample.js'
@@ -77,9 +77,10 @@ export const process = async function (app, dataset) {
   }
   const emptyCols = dataset.file.schema.filter(p => p.type === 'empty')
   if (emptyCols.length) {
-    await journals.log(app, dataset, {
+    const errorMessage = `le fichier contient une ou plusieurs colonnes vides qui seront ignorées : ${emptyCols.map(c => c['x-originalName' || c.key]).join(', ')}`
+    await journals.log('datasets', dataset, {
       type: 'error',
-      data: `le fichier contient une ou plusieurs colonnes vides qui seront ignorées : ${emptyCols.map(c => c['x-originalName' || c.key]).join(', ')}`
+      data: errorMessage
     })
   }
   debug('apply detected schema')

@@ -1,7 +1,7 @@
 import config from '#config'
 import fs from 'fs-extra'
 import { Readable } from 'stream'
-import * as i18nUtils from '../../../i18n/utils.js'
+import * as i18nUtils from '../../../i18n/utils.ts'
 import icalendar from '@koumoul/icalendar'
 import moment from 'moment'
 import 'moment-timezone'

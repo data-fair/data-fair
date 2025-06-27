@@ -1,6 +1,5 @@
 import owner from '../../contract/owner.js'
 import eventBy from '../../contract/event-by.js'
-import permissions from '../../contract/permissions.js'
 import capabilities from '../../contract/capabilities.js'
 import _publicationSchema from '../../contract/publication.js'
 import * as masterData from '../../contract/master-data.js'
@@ -796,7 +795,7 @@ const datasetProperties = {
       }
     }
   },
-  permissions,
+  permissions: { $ref: 'https://github.com/data-fair/data-fair/permissions' },
   previews: {
     type: 'array',
     title: 'Prévisualisations',

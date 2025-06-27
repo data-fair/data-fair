@@ -1,10 +1,11 @@
 import { Mongo } from '@data-fair/lib-node/mongo.js'
 import config from '#config'
-import type { Application, Dataset, Limits } from '#types'
+import type { Application, ApplicationKey, Dataset, Limits, RemoteService, BaseApp } from '#types'
+import type { DepartmentSettings } from '#types/department-settings/index.js'
+import type { Settings } from '#types/settings/index.js'
 
 export class DfMongo {
-  /** @type {Mongo} */
-  mongo
+  mongo: Mongo
 
   get client () {
     return this.mongo.client
@@ -22,8 +23,24 @@ export class DfMongo {
     return this.mongo.db.collection<Application & { _id: string }>('applications')
   }
 
+  get applicationsKeys () {
+    return this.mongo.db.collection<ApplicationKey>('applications-keys')
+  }
+
+  get baseApplications () {
+    return this.mongo.db.collection<BaseApp>('base-applications')
+  }
+
   get limits () {
     return this.mongo.db.collection<Limits>('limits')
+  }
+
+  get settings () {
+    return this.mongo.db.collection<Settings | DepartmentSettings>('settings')
+  }
+
+  get remoteServices () {
+    return this.mongo.db.collection<RemoteService>('remote-services')
   }
 
   constructor () {
