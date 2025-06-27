@@ -1,6 +1,7 @@
 import mongo from '#mongo'
 import moment from 'moment'
 import * as webhooks from './webhooks.ts'
+import { sendResourceEvent } from './notifications.ts'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import type { Dataset, Event, Resource, ResourceType } from '#types'
 
@@ -25,6 +26,12 @@ export const log = async function (resourceType: ResourceType, resource: Resourc
     await wsEmitter.emit(`${resourceType}/${resource.id}/journal`, { ...event, store: !noStoreEvent })
 
     webhooks.trigger(resourceType, resource, event, null)
+
+    if (event.type === 'error') {
+      // other notifs/events are sent explicitly not through journals.log for greater control
+      // except for error for simplicity
+      await sendResourceEvent(resourceType, resource, 'data-fair-worker', 'error', { params: { detail: event.data ?? '' } })
+    }
   } catch (err) {
     // errors when writing to journal are never blocking for the actual task
     console.warn('Failure when writing event to journal')

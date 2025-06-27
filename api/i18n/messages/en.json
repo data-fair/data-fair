@@ -53,6 +53,10 @@
 	},
 	"notifications": {
 		"datasets": {
+			"error": {
+				"title": "Error of dataset {{label}}",
+				"body": "There was an error during processing of the dataset {{label}}: {{detail}}."
+			},
 			"dataset-created": {
 				"title": "New dataset {{label}}",
 				"body": "The new dataset {{label}} was just created."
@@ -64,6 +68,10 @@
 			"publication-requested": {
 				"title": "Request for publicatiin of a dataset",
 				"body": "A contributor is asking to publish the dataset {{label}} on {{publicationSite}}."
+			},
+			"published": {
+				"title": "Publication of {{label}}",
+				"body": "The dataset {{label}} has been published on {{publicationSite}}."
 			},
 			"draft-data-updated": {
 				"title": "Draft file updated {{label}}",
@@ -92,15 +100,21 @@
 			"draft-draft-cancelled": {
 				"title": "Draft cancelled {{label}}",
 				"body": "The draft of the dataset {{label}} was cancelled, it is back to its previous validated state."
-			},
-			"published": "data-fair-portals:portal1.title"
+			}
 		},
 		"applications": {
+			"error": {
+				"title": "Error of application {{label}}",
+				"body": "There was an error during processing of the application {{label}}: {{detail}}."
+			},
 			"application-created": {
 				"title": "New application {{label}}",
 				"body": "The new application {{label}} was just created."
 			},
-			"published": "data-fair-portals:portal1.title"
+			"published": {
+				"title": "Publication of {{label}}",
+				"body": "The application {{label}} has been published on {{publicationSite}}."
+			}
 		}
 	}
 }

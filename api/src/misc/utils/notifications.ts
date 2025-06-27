@@ -19,7 +19,7 @@ type SendResourceEventOptions = {
   extra?: Record<string, unknown>
 }
 
-export const sendResourceEvent = async (resourceType: ResourceType, resource: Resource, originator: SessionStateAuthenticated | 'string', key: string, options: SendResourceEventOptions = {}) => {
+export const sendResourceEvent = async (resourceType: ResourceType, resource: Resource, originator: SessionStateAuthenticated | string, key: string, options: SendResourceEventOptions = {}) => {
   const singularResourceType = resourceType.substring(0, resourceType.length - 1)
   const sender = options.sender ?? { ...resource.owner }
   // @ts-ignore

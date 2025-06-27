@@ -29,7 +29,7 @@ import Vue from 'vue'
 import { mapState } from 'vuex'
 import eventBus from '~/event-bus'
 import publicationSitesContract from '~/../../api/contract/publication-sites'
-import settingsSchema from '~/../../api/contract/settings'
+import settingsSchema from '~/../../api/types/settings/schema.js'
 
 if (process.browser) {
   const Draggable = require('vuedraggable')

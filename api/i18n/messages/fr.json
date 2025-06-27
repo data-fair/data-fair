@@ -55,6 +55,10 @@
 	"dataset": "dataset",
 	"notifications": {
 		"datasets": {
+			"error": {
+				"title": "Erreur du jeu de données {{label}}",
+				"body": "Il y a eu une erreur pendant le traitement du jeu de données {{label}} : {{detail}}."
+			},
 			"dataset-created": {
 				"title": "Nouveau jeu de données {{label}}",
 				"body": "Le jeu de données {{label}} vient d'être créé."
@@ -66,6 +70,10 @@
 			"publication-requested": {
 				"title": "Demande de publication de jeu de données",
 				"body": "Un contributeur demande de publier le jeu de données {{label}} sur {{publicationSite}}."
+			},
+			"published": {
+				"title": "Publication de {{label}}",
+				"body": "Le jeu de données {{label}} a été publié sur {{publicationSite}}."
 			},
 			"draft-data-updated": {
 				"title": "Fichier brouillon mis à jour {{label}}",
@@ -94,15 +102,21 @@
 			"draft-draft-cancelled": {
 				"title": "Brouillon annulé {{label}}",
 				"body": "Le brouillon du jeu de données {{label}} a été annulé, il est de retour à son état validé précédent."
-			},
-			"published": "data-fair-portals:portal1.title"
+			}
 		},
 		"applications": {
+			"error": {
+				"title": "Erreur de l'application {{label}}",
+				"body": "Il y a eu une erreur pendant le traitement de l'application {{label}} : {{detail}}."
+			},
 			"application-created": {
 				"title": "Nouvelle application {{label}}",
 				"body": "L'application' {{label}} vient d'être créée."
 			},
-			"published": "data-fair-portals:portal1.title"
+			"published": {
+				"title": "Publication de {{label}}",
+				"body": "L'application {{label}} a été publiée sur {{publicationSite}}."
+			}
 		}
 	}
 }

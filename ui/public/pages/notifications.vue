@@ -79,7 +79,7 @@ fr:
 import { mapState, mapGetters } from 'vuex'
 import 'iframe-resizer/js/iframeResizer'
 import VIframe from '@koumoul/v-iframe'
-import settingsSchema from '~/../../api/contract/settings'
+import settingsSchema from '~/../../api/types/settings/schema.js'
 
 const webhooksSchema = settingsSchema.properties.webhooks
 

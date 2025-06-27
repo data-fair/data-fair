@@ -13,7 +13,7 @@
 
 <script>
 import eventBus from '~/event-bus'
-import settingsSchema from '~/../../api/contract/settings'
+import settingsSchema from '~/../../api/types/settings/schema.js'
 
 const infoSchema = settingsSchema.properties.info
 const wrapperSchema = {

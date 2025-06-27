@@ -77,9 +77,10 @@ export const process = async function (app, dataset) {
   }
   const emptyCols = dataset.file.schema.filter(p => p.type === 'empty')
   if (emptyCols.length) {
+    const errorMessage = `le fichier contient une ou plusieurs colonnes vides qui seront ignorées : ${emptyCols.map(c => c['x-originalName' || c.key]).join(', ')}`
     await journals.log('datasets', dataset, {
       type: 'error',
-      data: `le fichier contient une ou plusieurs colonnes vides qui seront ignorées : ${emptyCols.map(c => c['x-originalName' || c.key]).join(', ')}`
+      data: errorMessage
     })
   }
   debug('apply detected schema')
