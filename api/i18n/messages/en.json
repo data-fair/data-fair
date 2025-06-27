@@ -54,10 +54,19 @@
 	"notifications": {
 		"datasets": {
 			"dataset-created": {
-				"title": "New dataset {label}",
-				"body": "The new dataset {label} was just created."
+				"title": "New dataset {{label}}",
+				"body": "The new dataset {{label}} was just created."
 			},
-			"publication-requested": "data-fair-portals:portal1.title"
+			"publication-requested": {
+				"title": "Request for publicatiin of a dataset",
+				"body": "A contributor is asking to publish the dataset {{label}} on {{publicationSite}}."
+			}
+		},
+		"applications": {
+			"application-created": {
+				"title": "New application {{label}}",
+				"body": "The new application {{label}} was just created."
+			}
 		}
 	}
 }

@@ -55,17 +55,22 @@
 	"dataset": "dataset",
 	"notifications": {
 		"datasets": {
-			"test": {
-				"title": "Une notif {label}",
-				"body": "Avec un body {label}"
-			},
 			"dataset-created": {
-				"title": "Nouveau jeu de données {label}",
-				"body": "Le jeu de données {label} vient d'être créé."
+				"title": "Nouveau jeu de données {{label}}",
+				"body": "Le jeu de données {{label}} vient d'être créé."
 			},
 			"publication-requested": {
 				"title": "Demande de publication de jeu de données",
-				"body": "Un contributeur demande de publier le jeu de données {label} sur {publicationSite}"
+				"body": "Un contributeur demande de publier le jeu de données {{label}} sur {{publicationSite}}."
+			},
+			"data-updated": {
+				"title": "notifications.datasets.data-updated.title"
+			}
+		},
+		"applications": {
+			"application-created": {
+				"title": "Nouvelle appliaction {{label}}",
+				"body": "L'application' {{label}} vient d'être créée."
 			}
 		}
 	}

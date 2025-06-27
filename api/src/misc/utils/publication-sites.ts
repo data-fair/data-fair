@@ -62,6 +62,7 @@ export const applyPatch = async (previousResource: Resource, resource: Resource,
   for (const publicationSite of previousPublicationSites) {
     if (!newPublicationSites.includes(publicationSite)) {
       const publicationSiteInfo = await getPublicationSiteInfo(resource.owner, publicationSite)
+      if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
       if (!sessionState.user.adminMode && !publicationSiteInfo.settings?.staging && resource.owner.type === 'organization' && sessionState.account?.type === 'organization' && sessionState.account.id === resource.owner.id && !publicationSiteInfo.department && sessionState.account.department) {
         throw httpError(403, 'fail to unpublish: publication site does not belong to user department')
       }
@@ -77,7 +78,8 @@ export const applyPatch = async (previousResource: Resource, resource: Resource,
       if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
       sendResourceEvent(resourceType, resource, sessionState, `publication-requested:${requestedPublicationSite}`, {
         i18nKey: 'publication-requested',
-        params: { publicationSite: publicationSiteInfo.title ?? publicationSiteInfo.url }
+        params: { publicationSite: publicationSiteInfo.title ?? new URL(publicationSiteInfo.url).host },
+        sender: { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
       })
     }
   }
@@ -89,7 +91,8 @@ export const applyPatch = async (previousResource: Resource, resource: Resource,
         if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
         sendResourceEvent(resourceType, resource, sessionState, `published-topic:${publicationSite}:${topic.id}`, {
           i18nKey: 'published-topic',
-          params: { publicationSite: publicationSiteInfo.title ?? publicationSiteInfo.url }
+          params: { publicationSite: publicationSiteInfo.title ?? new URL(publicationSiteInfo.url).host },
+          sender: { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
         })
       }
     }
@@ -101,9 +104,17 @@ export const onPublic = async (patchedResource: Resource, resourceType: Resource
   for (const publicationSite of patchedResource.publicationSites || []) {
     const publicationSiteInfo = await getPublicationSiteInfo(patchedResource.owner, publicationSite)
     if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
-    sendResourceEvent(resourceType, patchedResource, sessionState, `published:${publicationSite}`)
+    sendResourceEvent(resourceType, patchedResource, sessionState, `published:${publicationSite}`, {
+      i18nKey: 'published',
+      params: { publicationSite: publicationSiteInfo.title ?? new URL(publicationSiteInfo.url).host },
+      sender: { type: patchedResource.owner.type, id: patchedResource.owner.id, department: publicationSiteInfo.department }
+    })
     for (const topic of patchedResource.topics || []) {
-      sendResourceEvent(resourceType, patchedResource, sessionState, `published-topic:${publicationSite}:${topic.id}`)
+      sendResourceEvent(resourceType, patchedResource, sessionState, `published-topic:${publicationSite}:${topic.id}`, {
+        i18nKey: 'published-topic',
+        params: { publicationSite: publicationSiteInfo.title ?? new URL(publicationSiteInfo.url).host },
+        sender: { type: patchedResource.owner.type, id: patchedResource.owner.id, department: publicationSiteInfo.department }
+      })
     }
   }
 }

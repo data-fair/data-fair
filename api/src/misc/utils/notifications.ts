@@ -4,7 +4,7 @@ import debugLib from 'debug'
 import i18n from 'i18n'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import eventsQueue, { type PushEvent } from '@data-fair/lib-node/events-queue.js'
-import { reqUserAuthenticated, type SessionState, type SessionStateAuthenticated } from '@data-fair/lib-express'
+import { type AccountKeys, reqUserAuthenticated, type SessionState, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ResourceType, type Resource, type Dataset } from '#types'
 import * as permissions from './permissions.ts'
 import { type Locale } from '../../../i18n/utils.ts'
@@ -15,11 +15,13 @@ type SendResourceEventOptions = {
   i18nKey?: string
   params?: Record<string, string>
   localizedParams?: Record<Locale, Record<string, string>>
+  sender?: AccountKeys
 }
 
 export const sendResourceEvent = async (resourceType: ResourceType, resource: Resource, originator: SessionStateAuthenticated | 'string', key: string, options: SendResourceEventOptions = {}) => {
   const singularResourceType = resourceType.substring(0, resourceType.length - 1)
-  const sender = { ...resource.owner }
+  const sender = options.sender ?? { ...resource.owner }
+  // @ts-ignore
   delete sender.role
   const fullLabel = `${resource.title} (${resource.slug || resource.id})`
   const titleI18nKey = `notifications.${resourceType}.${options.i18nKey ?? key}.title`

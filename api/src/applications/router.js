@@ -298,7 +298,7 @@ router.patch('/:applicationId',
     patch.slug = patch.slug || application.slug
     await curateApplication(patch)
 
-    await publicationSites.applyPatch(application, { ...application, ...patch }, reqSession(req), 'application')
+    await publicationSites.applyPatch(application, { ...application, ...patch }, reqSession(req), 'applications')
 
     let patchedApplication
     try {
