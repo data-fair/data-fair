@@ -1326,7 +1326,7 @@ router.get('/:datasetId/private-api-docs.json', readDataset(), apiKeyMiddleware,
   res.send(privateDatasetAPIDocs(req.dataset, req.publicBaseUrl, reqSessionAuthenticated(req), settings))
 })
 
-router.get('/:datasetId/journal', readDataset({ acceptInitialDraft: true }), apiKeyMiddleware, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, async (req, res) => {
+router.get('/:datasetId/journal', readDataset({ acceptInitialDraft: true }), apiKeyMiddleware, permissions.middleware('readJournal', 'readAdvanced'), cacheHeaders.noCache, async (req, res) => {
   const journal = await mongo.db.collection('journals').findOne({
     type: 'dataset',
     id: req.dataset.id,
@@ -1347,7 +1347,7 @@ router.get('/:datasetId/journal', readDataset({ acceptInitialDraft: true }), api
   res.json(journal.events)
 })
 
-router.get('/:datasetId/task-progress', readDataset(), apiKeyMiddleware, permissions.middleware('readJournal', 'read'), cacheHeaders.noCache, async (req, res) => {
+router.get('/:datasetId/task-progress', readDataset(), apiKeyMiddleware, permissions.middleware('readJournal', 'readAdvanced'), cacheHeaders.noCache, async (req, res) => {
   const journal = await mongo.db.collection('journals').findOne({
     type: 'dataset',
     id: req.dataset.id,

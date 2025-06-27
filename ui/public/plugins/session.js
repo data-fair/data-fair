@@ -3,23 +3,25 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
   if (publicUrl.endsWith('/')) publicUrl = publicUrl.substr(0, publicUrl.length - 1)
 
   env.extraNavigationItems = env.extraNavigationItems ?? []
+  env.extraAdminNavigationItems = env.extraAdminNavigationItems ?? []
+
   if (env.eventsIntegration && !env.extraNavigationItems.some(e => e.id === 'events')) {
     env.extraNavigationItems.push({
       id: 'events',
       title: 'Traçabilité (bêta)',
+      can: 'admin',
       iframe: '/events/embed/events',
       basePath: '/events',
       icon: 'mdi-clipboard-text-clock'
     })
   }
 
-  env.extraAdminNavigationItems = env.extraAdminNavigationItems ?? []
   if (env.catalogsIntegration) {
-    // env.extraNavigationItems.push({
-    env.extraAdminNavigationItems.push({
+    env.extraNavigationItems.unshift({
       id: 'catalogs',
-      title: 'Catalogues',
-      can: 'contrib',
+      title: 'Catalogues (bêta)',
+      subtitle: 'Nouvelle version',
+      can: 'admin',
       iframe: '/catalogs/catalogs',
       basePath: '/catalogs',
       icon: 'mdi-transit-connection'

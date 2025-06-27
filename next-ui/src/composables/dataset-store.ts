@@ -8,8 +8,8 @@ export type TaskProgress = { task: string, progress: number, error?: string }
 export type DatasetStore = ReturnType<typeof createDatasetStore>
 export const datasetStoreKey = Symbol('dataset-store')
 
-export const createDatasetStore = (id: string, draftMode: boolean | undefined = undefined) => {
-  const datasetFetch = useFetch<ExtendedDataset>($apiPath + `/datasets/${id}`)
+export const createDatasetStore = (id: string, draftMode?: boolean, html?: boolean) => {
+  const datasetFetch = useFetch<ExtendedDataset>($apiPath + `/datasets/${id}`, { query: { draftMode, html } })
   const dataset = ref<ExtendedDataset | null>(null)
   watch(datasetFetch.data, () => { dataset.value = datasetFetch.data.value })
   const restDataset = computed(() => {
@@ -60,8 +60,8 @@ export const createDatasetStore = (id: string, draftMode: boolean | undefined = 
   }
 }
 
-export const provideDatasetStore = (id: string, draftMode: boolean | undefined = undefined) => {
-  const store = createDatasetStore(id, draftMode)
+export const provideDatasetStore = (id: string, draftMode?: boolean, html?: boolean) => {
+  const store = createDatasetStore(id, draftMode, html)
   provide(datasetStoreKey, store)
   return store
 }

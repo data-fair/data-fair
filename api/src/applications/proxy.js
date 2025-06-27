@@ -342,7 +342,7 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setResource, async
       })
     }
   } else {
-  // add @koumoul/v-iframe/content-window.min.js to support state sync with portals, etc.
+    // add @koumoul/v-iframe/content-window.min.js to support state sync with portals, etc.
     if (baseApp.meta['df:sync-state'] === 'true') {
       body.childNodes.push({
         nodeName: 'script',
