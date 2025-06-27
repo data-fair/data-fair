@@ -9,6 +9,7 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
     env.extraNavigationItems.push({
       id: 'events',
       title: 'Traçabilité (bêta)',
+      can: 'admin',
       iframe: '/events/embed/events',
       basePath: '/events',
       icon: 'mdi-clipboard-text-clock'
@@ -20,7 +21,7 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
       id: 'catalogs',
       title: 'Catalogues (bêta)',
       subtitle: 'Nouvelle version',
-      can: 'contrib',
+      can: 'admin',
       iframe: '/catalogs/catalogs',
       basePath: '/catalogs',
       icon: 'mdi-transit-connection'
