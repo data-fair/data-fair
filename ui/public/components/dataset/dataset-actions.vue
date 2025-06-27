@@ -540,7 +540,7 @@ export default {
     },
     notifUrl () {
       const webhooks = webhooksSchema.items.properties.events.items.oneOf
-        .filter(item => item.const.startsWith('dataset') && item.const !== 'dataset-dataset-created')
+        .filter(item => item.const.startsWith('dataset') && item.const !== 'dataset-dataset-created' && item.const !== 'dataset-finalize-end')
 
       const keysParam = webhooks.map(w => `data-fair:${w.const}:${this.dataset.slug}`).join(',')
       const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')

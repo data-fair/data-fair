@@ -97,7 +97,7 @@ export default {
     ...mapGetters('session', ['activeAccount']),
     datasetsSubscribeUrl () {
       const webhooks = webhooksSchema.items.properties.events.items.oneOf
-        .filter(item => item.const.startsWith('dataset'))
+        .filter(item => item.const.startsWith('dataset') && item.const !== 'dataset-finalize-end')
       const keysParam = webhooks.map(w => 'data-fair:' + w.const).join(',')
       const titlesParam = webhooks.map(w => w.title.replace(/,/g, ' ')).join(',')
       const urlTemplate = this.env.publicUrl + '/dataset/{id}'

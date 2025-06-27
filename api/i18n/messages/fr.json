@@ -59,6 +59,10 @@
 				"title": "Erreur du jeu de données {{label}}",
 				"body": "Il y a eu une erreur pendant le traitement du jeu de données {{label}} : {{detail}}."
 			},
+			"draft-error": {
+				"title": "Erreur du brouillon du jeu de données {{label}}",
+				"body": "Il y a eu une erreur pendant le traitement du brouillon du jeu de données {{label}} : {{detail}}."
+			},
 			"dataset-created": {
 				"title": "Nouveau jeu de données {{label}}",
 				"body": "Le jeu de données {{label}} vient d'être créé."

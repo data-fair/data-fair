@@ -57,6 +57,10 @@
 				"title": "Error of dataset {{label}}",
 				"body": "There was an error during processing of the dataset {{label}}: {{detail}}."
 			},
+			"draft-error": {
+				"title": "Error of draft dataset {{label}}",
+				"body": "There was an error during processing of the draft of the dataset {{label}}: {{detail}}."
+			},
 			"dataset-created": {
 				"title": "New dataset {{label}}",
 				"body": "The new dataset {{label}} was just created."
