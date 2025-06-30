@@ -91,6 +91,22 @@
             </ul>
           </v-alert>
           <v-alert
+            v-if="result.nbWarnings"
+            type="error"
+            :value="true"
+            variant="outlined"
+          >
+            {{ t('resultWarnings', {nb: result.nbWarnings.toLocaleString()}) }}
+            <ul>
+              <li
+                v-for="(warning, i) in result.warnings"
+                :key="i"
+              >
+                <span v-if="warning.line !== -1">{{ t('line') }} {{ warning.line }} : </span>{{ warning.warning }}
+              </li>
+            </ul>
+          </v-alert>
+          <v-alert
             v-if="result.warnings?.length"
             type="warning"
             :value="true"
@@ -221,6 +237,7 @@ fr:
   resultModified: "{nb} ligne(s) modifiée(s)"
   resultNotModified: "{nb} ligne(s) sans modification"
   resultErrors: "{nb} erreur(s)"
+  resultWarnings: "{nb} avertissement(s)"
   resultCreated: "{nb} ligne(s) créée(s)"
   resultDeleted: "{nb} ligne(s) supprimées(s)"
   separator: séparateur
@@ -240,6 +257,7 @@ en:
   resultModified: "{nb} modified line(s)"
   resultNotModified: "{nb} line(s) without modifications"
   resultErrors: "{nb} error(s)"
+  resultWarnings: "{nb} warning(s)"
   resultCreated: "{nb} created line(s)"
   resultDeleted: "{nb} deleted line(s)"
   separator: separator

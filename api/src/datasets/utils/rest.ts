@@ -412,10 +412,18 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     if (primaryKeyId && operation._id !== primaryKeyId) {
       operation._status = 400
       operation._error = 'identifiant de ligne incompatible avec la clé primaire'
-    } else if (validate && !validate(operation.body)) {
-      operation._error = errorsText(validate.errors, '')
-      operation._status = 400
-    } else if (operation._action !== 'patch') {
+      continue
+    } if (validate && !validate(operation.body)) {
+      if (dataset.nonBlockingValidation) {
+        operation._warning = errorsText(validate.errors, '')
+      } else {
+        operation._error = errorsText(validate.errors, '')
+        operation._status = 400
+        continue
+      }
+    }
+
+    if (operation._action !== 'patch') {
       operation.fullBody._hash = getLineHash(operation.body)
       if (operation._action === 'create' || operation._action === 'update') {
         createUpdatePreviousFilters.push(operation.filter)
@@ -544,7 +552,7 @@ const applyReqTransactions = async (req: RequestWithRestDataset, transacs: Datas
 
 type Summary = RestActionsSummary & { _ids: Set<string> }
 
-const initSummary = (): Summary => ({ nbOk: 0, nbNotModified: 0, nbErrors: 0, nbCreated: 0, nbModified: 0, nbDeleted: 0, errors: [], warnings: [], _ids: new Set() })
+const initSummary = (): Summary => ({ nbOk: 0, nbNotModified: 0, nbErrors: 0, nbWarnings: 0, nbCreated: 0, nbModified: 0, nbDeleted: 0, errors: [], warnings: [], _ids: new Set() })
 
 type TransactionStreamOptions = {
   dataset: RestDataset,
@@ -587,6 +595,12 @@ class TransactionStream extends Writable {
           this.options.summary.errors.push({ line: this.i, error: operation._error ?? '', status: operation._status ?? 500 })
         }
       } else {
+        if (operation._warning) {
+          this.options.summary.nbWarnings += 1
+          if (this.options.summary.warnings.length < 10) {
+            this.options.summary.warnings.push({ line: this.i, warning: operation._warning })
+          }
+        }
         this.options.summary.nbOk += 1
         if (operation._status === 304) {
           this.options.summary.nbNotModified += 1
@@ -932,8 +946,12 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
         if (tmpDataset) await collection(tmpDataset).drop()
       }
     }
-    const warnings = parseStreams.map(p => p.__warning).filter(Boolean)
-    if (warnings.length) summary.warnings = warnings
+    for (const warning of parseStreams.map(p => p.__warning)) {
+      if (warning) {
+        summary.nbWarnings += 1
+        summary.warnings.push({ line: -1, warning })
+      }
+    }
 
     const result: any = { ...summary }
     delete result._ids

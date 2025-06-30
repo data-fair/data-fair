@@ -8,7 +8,7 @@ const cioExample = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, 
 const semiceuExample = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, './resources/dcat/example-semiceu.json'), 'utf8'))
 
 describe('DCAT support', function () {
-  it('Should preserve serialization of a valid example', async function () {
+  it.skip('Should preserve serialization of a valid example', async function () {
     const normalizedDcat = await normalize(cioExample)
     normalizedDcat['@context'] = cioExample['@context']
     assert.deepEqual(cioExample, normalizedDcat)

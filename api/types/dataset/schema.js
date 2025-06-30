@@ -838,6 +838,9 @@ const datasetProperties = {
         enum: ['never', 'always', 'compatible']
       }
     }
+  },
+  nonBlockingValidation: {
+    type: 'boolean'
   }
 }
 

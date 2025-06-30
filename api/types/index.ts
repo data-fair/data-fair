@@ -36,4 +36,17 @@ export type ApplicationKey = {
   keys: { id: string }[]
 }
 
-export type RestActionsSummary = { nbOk: number, nbNotModified: number, nbErrors: number, nbCreated: number, nbModified: number, nbDeleted: number, errors: { line: number, error: string, status: number }[], warnings: string[], cancelled?: boolean, dropped?: boolean, indexedAt?: string }
+export type RestActionsSummary = {
+  nbOk: number,
+  nbNotModified: number,
+  nbErrors: number,
+  errors: { line: number, error: string, status: number }[],
+  nbCreated: number,
+  nbModified: number,
+  nbDeleted: number,
+  nbWarnings: number,
+  warnings: { line: number, warning: string }[],
+  cancelled?: boolean,
+  dropped?: boolean,
+  indexedAt?: string
+}

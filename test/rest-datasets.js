@@ -280,6 +280,32 @@ describe('REST datasets', function () {
     await workers.hook('finalizer/rest4')
   })
 
+  it('Use nonBlockingValidation option', async function () {
+    const ax = global.ax.dmeadus
+    await ax.put('/api/v1/datasets/rest4', {
+      isRest: true,
+      title: 'rest4',
+      nonBlockingValidation: true,
+      schema: [{ key: 'attr1', type: 'string', 'x-required': true }, { key: 'attr2', type: 'string', pattern: '^test[0-9]$' }]
+    })
+
+    const resPost = await ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', attr3: 'test1' })
+    assert.equal(resPost.data._warning, 'ne doit pas contenir de propriétés additionnelles (attr3)')
+
+    const res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
+      { _id: 'line1', attr1: 'test' },
+      { _id: 'line1', attr1: 111 }
+    ])
+
+    assert.equal(res.data.nbOk, 2)
+    assert.equal(res.data.nbWarnings, 1)
+    assert.equal(res.data.warnings.length, 1)
+    assert.equal(res.data.warnings[0].line, 1)
+    assert.equal(res.data.warnings[0].warning, '/attr1 doit être de type string')
+
+    await workers.hook('finalizer/rest4')
+  })
+
   it('Send attachment with multipart request', async function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets/rest5', {
