@@ -21,7 +21,7 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
       id: 'catalogs',
       title: 'Catalogues (bêta)',
       subtitle: 'Nouvelle version',
-      can: 'admin',
+      can: 'adminDep',
       iframe: '/catalogs/catalogs',
       basePath: '/catalogs',
       icon: 'mdi-transit-connection'

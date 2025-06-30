@@ -12,6 +12,8 @@ const nuxtDir = process.env.NUXT_DIR || ''
 const publicUrl = new URL(config.publicUrl + '/')
 config.origin = publicUrl.origin
 config.basePath = publicUrl.pathname
+config.catalogsIntegration = !!config.privateCatalogsUrl
+config.eventsIntegration = !!config.privateEventsUrl
 
 const isBuilding = process.argv[2] === 'build'
 
@@ -120,8 +122,8 @@ const nuxtConfig = {
     captureUrl: config.captureUrl,
     notifyUrl: config.privateEventsUrl ? (config.origin + '/events') : config.notifyUrl, // DEPRECATED
     notifyWSUrl: config.notifyWSUrl, // DEPRECATED
-    catalogsIntegration: !!config.privateCatalogsUrl,
-    eventsIntegration: !!config.privateEventsUrl,
+    catalogsIntegration: config.catalogsIntegration,
+    eventsIntegration: config.eventsIntegration,
     subscriptionUrl: config.subscriptionUrl,
     theme: config.theme,
     baseAppsCategories: config.baseAppsCategories,
