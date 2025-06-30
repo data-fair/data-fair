@@ -1066,6 +1066,26 @@ router.get('/:datasetId/values/:fieldKey', readDataset({ fillDescendants: true }
   res.status(200).send(result)
 })
 
+// Same as previous, but also uses x-labels for a better experience
+router.get('/:datasetId/values-labels/:fieldKey', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('getValues', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), async (req, res) => {
+  res.throttleEnd()
+  let result
+  const field = req.dataset.schema.find(p => p.key === req.params.fieldKey)
+  if (!field) throw httpError(400, `field "${req.params.fieldKey}" is unknown`)
+  if (field['x-labels'] && field['x-labelsRestricted']) {
+    result = Object.entries(field['x-labels']).map(([value, label]) => ({ value, label }))
+  } else {
+    req.query.size = req.query.size ?? '1000'
+    try {
+      const values = await esUtils.values(req.app.get('es'), req.dataset, req.params.fieldKey, req.query)
+      result = values.map(value => ({ value, label: field['x-labels']?.[value] ?? value }))
+    } catch (err) {
+      await manageESError(req, err)
+    }
+  }
+  res.status(200).send(result)
+})
+
 // Simple metric aggregation to calculate 1 value (sum, avg, etc.) about 1 column
 router.get('/:datasetId/metric_agg', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('getMetricAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), async (req, res) => {
   res.throttleEnd()

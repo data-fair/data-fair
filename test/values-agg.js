@@ -13,8 +13,7 @@ describe('values aggs', function () {
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    const dataset = res.data
-    await workers.hook('finalizer/' + dataset.id)
+    const dataset = await workers.hook('finalizer/' + res.data.id)
 
     // Simple value aggregation
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=id`)
@@ -124,6 +123,16 @@ describe('values aggs', function () {
     assert.equal(res.data[0], '2017-10-10T00:00:00.000Z')
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values/somedate?q=2017-10&q_mode=complete`)
     assert.equal(res.data[0], '2017-10-10T00:00:00.000Z')
+
+    // also with labels
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/values-labels/id`)
+    assert.equal(res.data.length, 2)
+    assert.deepEqual(res.data[0], { value: 'bidule', label: 'bidule' })
+    dataset.schema[0]['x-labels'] = { bidule: 'Bidule' }
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema })
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/values-labels/id`)
+    assert.equal(res.data.length, 2)
+    assert.deepEqual(res.data[0], { value: 'bidule', label: 'Bidule' })
   })
 
   it('Get values buckets based on number values', async function () {
