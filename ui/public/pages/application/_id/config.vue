@@ -1,5 +1,8 @@
 <template>
-  <application-config v-if="application" />
+  <div>
+    {{ application.baseApp }}
+    <application-config v-if="application" />
+  </div>
 </template>
 
 <script>
