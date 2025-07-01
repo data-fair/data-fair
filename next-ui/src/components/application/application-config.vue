@@ -21,10 +21,11 @@
         />
         <d-frame
           v-else
+          ref="frame"
           height="100vh"
           resize="no"
           :src="applicationLink + '?embed=true&draft=true'"
-          :reload="reloadDraftPreview"
+          :reload="draftPreviewInc"
         />
       </v-col>
       <v-col
@@ -229,12 +230,17 @@ const completeSchema = (schema: any) => {
     }
   }
   if (!schema.layout?.comp) schema.layout = 'expansion-panels'
-  return v2compat(schema)
+  if (application.value?.baseApp?.meta?.['df:vjsf'] === '3') {
+    return schema
+  } else {
+    return v2compat(schema)
+  }
 }
 
-const reloadDraftPreview = ref(0)
+const draftPreviewInc = ref(0)
 const formValid = ref(false)
 const showFullOrg = ref(false)
+const frame = useTemplateRef('frame')
 
 const vjsfOptions = computed<VjsfOptions | null>(() => {
   if (!application.value) return null
@@ -258,181 +264,29 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
 const saveDraft = async () => {
   if (!canWriteConfig.value || !formValid.value || !editConfig.value) return
   await writeConfigDraft(editConfig.value)
-  reloadDraftPreview.value++
+  if (application.value?.baseApp?.meta?.['df:sync-config'] === 'true') {
+    // @ts-ignore
+    frame.value?.postMessageToChild({ type: 'set-config', content: toRaw(editConfig.value) })
+  } else {
+    draftPreviewInc.value++
+  }
 }
 
 const cancelDraft = async () => {
   if (!canWriteConfig.value) return
   await patch({ urlDraft: application.value?.url })
   await cancelConfigDraft()
-  reloadDraftPreview.value++
+  draftPreviewInc.value++
 }
 
 const validateDraft = async () => {
   if (!canWriteConfig.value || !configDraft.value) return
   await patch({ url: application.value?.urlDraft, urlDraft: '' })
   await writeConfig(configDraft.value)
-  reloadDraftPreview.value++
+  draftPreviewInc.value++
 }
 
 </script>
 
-<!--<script>
-import { mapState, mapActions, mapGetters } from 'vuex'
-import { setProperty } from 'dot-prop'
-import 'iframe-resizer/js/iframeResizer'
-import VIframe from '@koumoul/v-iframe'
-import eventBus from '~/event-bus'
-
-export default {
-  components: { VIframe },
-  props: ['roDataset'],
-  data () {
-    return {
-      showForm: false,
-      showDraftPreview: true,
-      showProdPreview: true,
-      showDraftConfig: true,
-      draftSchema: null,
-      formValid: false,
-      editConfig: null,
-      editUrl: null,
-      eventBus,
-      showCancelDialog: false,
-      expansion: [0],
-      showFullOrg: false
-    }
-  },
-  computed: {
-    ...mapState('application', ['application', 'config', 'configDraft', 'prodBaseApp']),
-    ...mapGetters('application', ['applicationLink', 'can', 'availableVersions']),
-    vjsfOptions () {
-      const owner = this.application.owner
-      let ownerFilter = `${owner.type}:${owner.id}`
-      if (owner.department && !this.showFullOrg) ownerFilter += ':' + owner.department
-      const datasetFilter = `owner=${ownerFilter}`
-      const remoteServiceFilter = `privateAccess=${ownerFilter}`
-      return {
-        disableAll: !this.canWriteConfig,
-        context: { owner, ownerFilter, datasetFilter, remoteServiceFilter, attachments: this.application.attachments },
-        locale: 'fr',
-        rootDisplay: 'expansion-panels',
-        // rootDisplay: 'tabs',
-        expansionPanelsProps: {
-          value: 0,
-          hover: true
-        },
-        dialogProps: {
-          maxWidth: 500,
-          overlayOpacity: 0 // better when inside an iframe
-        },
-        arrayItemCardProps: { outlined: true, tile: true },
-        dialogCardProps: { outlined: true }
-      }
-    }
-  },
-  async created () {
-    await this.fetchConfigs()
-    await this.fetchSchema()
-    this.postMessageHandler = msg => {
-      if (msg.data.type === 'set-config') {
-        this.editConfig = setProperty({ ...this.editConfig }, msg.data.content.field, msg.data.content.value)
-        this.saveDraft()
-      }
-    }
-    window.addEventListener('message', this.postMessageHandler)
-  },
-  unmounted () {
-    window.removeEventListener('message', this.postMessageHandler)
-  },
-  methods: {
-    ...mapActions('application', ['readConfig', 'writeConfig', 'readConfigDraft', 'writeConfigDraft', 'cancelConfigDraft', 'patchAndCommit', 'fetchProdBaseApp']),
-    async fetchConfigs () {
-      this.editUrl = this.application.urlDraft || this.application.url
-      this.editConfig = JSON.parse(JSON.stringify(await this.readConfigDraft()))
-    },
-    // make at least 1 dataset required
-    // this should be done by each application, but for easier compatibility we do it globally here
-    completeSchema (schema) {
-      let datasetsProp
-      if (schema.definitions && schema.definitions.datasets) {
-        datasetsProp = schema.definitions.datasets
-      } else if (schema.properties && schema.properties.datasets) {
-        datasetsProp = schema.properties && schema.properties.datasets
-      } else if (schema.allOf) {
-        const datasetsAllOf = schema.allOf.find(a => a.properties && a.properties.datasets)
-        if (datasetsAllOf) datasetsProp = datasetsAllOf.properties.datasets
-      }
-      if (!datasetsProp) {
-        console.error('dit not find a "datasets" property in schema')
-      } else {
-        if (this.roDataset) {
-          datasetsProp.readOnly = true
-        }
-
-        const fixFromUrl = (fromUrl) => {
-          return fromUrl.replace('owner={context.owner.type}:{context.owner.id}', '{context.datasetFilter}')
-        }
-        // manage retro-compatibility of use of "context.owner" to "context.datasetsFilter"
-        if (datasetsProp['x-fromUrl']) datasetsProp['x-fromUrl'] = fixFromUrl(datasetsProp['x-fromUrl'])
-        if (datasetsProp.items['x-fromUrl']) datasetsProp.items['x-fromUrl'] = fixFromUrl(datasetsProp.items['x-fromUrl'])
-        if (Array.isArray(datasetsProp.items)) {
-          for (const item of datasetsProp.items) {
-            if (item['x-fromUrl']) item['x-fromUrl'] = fixFromUrl(item['x-fromUrl'])
-          }
-        }
-      }
-    },
-    async fetchSchema () {
-      this.draftSchema = null
-
-      // Only try the deprecated iframe mode, if config schema is not found
-      const draftSchemaUrl = this.editUrl + 'config-schema.json'
-      try {
-        this.draftSchema = await this.$axios.$get(draftSchemaUrl)
-
-        if (typeof this.draftSchema !== 'object') {
-          console.error(`Schema fetched at ${draftSchemaUrl} is not a valid JSON`)
-        } else {
-          this.completeSchema(this.draftSchema)
-          // console.log(JSON.stringify(this.draftSchema, null, 1))
-          this.showForm = true
-        }
-      } catch (error) {
-        if (error.response && error.response.status === 404) {
-          console.error(`Schema not found at ${draftSchemaUrl}`)
-        } else {
-          eventBus.$emit('notification', { error })
-        }
-      }
-    },
-    refreshDraftConfig () {
-      this.showDraftConfig = false
-      setTimeout(() => { this.showDraftConfig = true }, 1)
-    },
-    async fetchStatus () {
-      const application = await this.$axios.$get(`api/v1/applications/${this.application.id}`)
-      this.$store.commit('application/patch', { status: application.status, errorMessage: application.errorMessage, errorMessageDraft: application.errorMessageDraft })
-    },
-    async validateDraft (e) {
-      e.preventDefault()
-      if (!this.canWriteConfig) return
-      this.patchAndCommit({ url: this.application.urlDraft })
-      await this.writeConfig(this.configDraft)
-      this.fetchStatus()
-      this.fetchProdBaseApp()
-    },
-    async cancelDraft () {
-      if (!this.canWriteConfig) return
-      this.patchAndCommit({ urlDraft: this.application.url, silent: true })
-      await this.cancelConfigDraft()
-      await this.fetchConfigs()
-      this.refreshDraftConfig()
-      this.fetchStatus()
-    }
-  }
-}
-</script>
--->
 <style lang="css">
 </style>
