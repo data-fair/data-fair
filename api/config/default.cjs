@@ -199,65 +199,6 @@ module.exports = {
     'https://cdn.jsdelivr.net/npm/@data-fair/',
     'https://cdn.jsdelivr.net/npm/iframe-resizer'
   ],
-  applications: [{
-    url: 'https://koumoul.com/apps/infos-parcelles/2.7/'
-  }, {
-    url: 'https://koumoul.com/apps/infos-loc/0.10/'
-  }, {
-    url: 'https://cdn.jsdelivr.net/npm/@data-fair/app-charts@0.10/dist/'
-  }, {
-    url: 'https://koumoul.com/apps/word-cloud/0.3/'
-  }, {
-    url: 'https://koumoul.com/apps/sankey/0.5/'
-  }, {
-    url: 'https://koumoul.com/apps/sunburst/0.2/'
-  }, {
-    url: 'https://koumoul.com/apps/data-fair-networks/0.1/'
-  }, {
-    url: 'https://koumoul.com/apps/list-details/0.4/'
-  }, {
-    url: 'https://koumoul.com/apps/carto-stats/0.6/'
-  }, {
-    url: 'https://koumoul.com/apps/data-fair-series/0.2/'
-  }, {
-    url: 'https://koumoul.com/apps/bar-chart-race/0.2/'
-  }, {
-    url: 'https://koumoul.com/apps/data-fair-geo-shapes/0.1/'
-  }, {
-    url: 'https://koumoul.com/apps/scdl-deliberations/0.1/'
-  }, {
-    url: 'https://koumoul.com/apps/scdl-equipements/0.1/'
-  }, {
-    url: 'https://koumoul.com/apps/data-fair-events/1.0/'
-  }, {
-    url: 'https://koumoul.com/apps/atelier-carto/1.0/'
-  }, {
-    url: 'https://koumoul.com/apps/admin-divs-levels/0.3/'
-  }, {
-    url: 'https://koumoul.com/apps/data-fair-proportions/0.2/'
-  }, {
-    url: 'https://cdn.jsdelivr.net/npm/@data-fair/app-carousel@0.2/dist/'
-  }, {
-    url: 'https://koumoul.com/apps/data-fair-form/1.0/'
-  }, {
-    url: 'https://koumoul.com/apps/data-fair-radar/0.1/'
-  }, {
-    url: 'https://koumoul.com/apps/data-fair-locate-game/0.1/'
-  }, {
-    url: 'https://koumoul.com/apps/data-fair-quizz/0.1/'
-  }, {
-    url: 'https://koumoul.com/apps/data-fair-sort-game/0.1/'
-  }, {
-    url: 'https://koumoul.com/apps/data-fair-relations/0.2/'
-  }, {
-    url: 'https://koumoul.com/apps/app-table/0.1/'
-  }, {
-    url: 'https://koumoul.com/apps/data-fair-table/0.1/'
-  }, {
-    url: 'https://koumoul.com/apps/app-treemap/0.2/'
-  }, {
-    url: 'https://koumoul.com/apps/admin-divs-catchment/0.1/'
-  }],
   applicationsPrivateMapping: ['', ''], // an optional 2 items array mapping url prefixes from application to the local equivalent
   baseAppsCategories: ['carte', 'graphique', 'textuelle', 'SCDL'],
   remoteServices: [{

@@ -24,7 +24,6 @@ export const router = express.Router()
 // and cleanup non-public apps that are not used anywhere
 export const init = async () => {
   await removeDeprecated()
-  await Promise.all(config.applications.map(app => failSafeInitBaseApp(app)))
 }
 
 // Auto removal of deprecated apps used in 0 configs
@@ -40,14 +39,6 @@ function prepareQuery (/** @type {URLSearchParams} */query) {
   return [...query.keys()]
     .filter(key => !['skip', 'size', 'q', 'status', '{context.datasetFilter}', 'owner'].includes(key))
     .reduce((a, key) => { a[key] = query.get(key).split(','); return a }, /** @type {Record<string, string[]>} */({}))
-}
-
-async function failSafeInitBaseApp (app) {
-  try {
-    await initBaseApp(app)
-  } catch (err) {
-    internalError('app-init', err)
-  }
 }
 
 // Attempts to init an application's description from a URL
@@ -114,7 +105,7 @@ router.post('', async (req, res) => {
   if (!req.body.url || Object.keys(req.body).length !== 1) {
     return res.status(400).type('text/plain').send(req.__('Initializing a base application only accepts the "url" part.'))
   }
-  const baseApp = config.applications.find(a => a.url === req.body.url) || req.body
+  const baseApp = req.body
   const fullBaseApp = await initBaseApp(db, baseApp)
   syncBaseApp(db, fullBaseApp)
   res.send(fullBaseApp)
