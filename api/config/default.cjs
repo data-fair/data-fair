@@ -199,6 +199,7 @@ module.exports = {
     'https://cdn.jsdelivr.net/npm/@data-fair/',
     'https://cdn.jsdelivr.net/npm/iframe-resizer'
   ],
+  applications: [],
   applicationsPrivateMapping: ['', ''], // an optional 2 items array mapping url prefixes from application to the local equivalent
   baseAppsCategories: ['carte', 'graphique', 'textuelle', 'SCDL'],
   remoteServices: [{
