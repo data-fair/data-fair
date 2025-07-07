@@ -105,7 +105,7 @@
                     <v-btn
                       variant="elevated"
                       color="warning"
-                      @click="cancelDraft(); isActive.value = false;"
+                      @click="cancelDraft.execute(); isActive.value = false;"
                     >
                       {{ t('confirm') }}
                     </v-btn>
@@ -118,7 +118,7 @@
               :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
               color="accent"
               class="ml-2"
-              @click="validateDraft"
+              @click="validateDraft.execute()"
             >
               {{ t('validate') }}
             </v-btn>
@@ -156,6 +156,10 @@ import { v2compat } from '@koumoul/vjsf/compat/v2'
 import { clone } from '@json-layout/core'
 import { type AppConfig } from '#api/types'
 import { VForm } from 'vuetify/components'
+import { setProperty } from 'dot-prop'
+import Debug from 'debug'
+
+const debug = Debug('application-config')
 
 const display = useDisplay()
 const { sendUiNotif } = useUiNotif()
@@ -174,7 +178,10 @@ if (!configDraftFetch.initialized.value) configDraftFetch.refresh()
 
 const editUrl = computed(() => application.value?.urlDraft || application.value?.url)
 const editConfig = ref<AppConfig | null>(null)
-watch(configDraft, (config) => { editConfig.value = config })
+watch(configDraft, (config) => {
+  debug('update editConfig from stored draft', editConfig.value === config)
+  editConfig.value = config
+})
 // return true if some local changes were not yet synced with the server
 const hasModification = computed(() => {
   if (toRaw(configDraft.value) !== toRaw(editConfig.value)) return true // shallom comparison is ok as vjsf returns immutable objects
@@ -201,6 +208,7 @@ watch(schemaFetch.data, (schema) => {
 })
 
 const completeSchema = (schema: any) => {
+  debug('complete schema for vjsf')
   let datasetsProp
   if (schema.definitions && schema.definitions.datasets) {
     datasetsProp = schema.definitions.datasets
@@ -249,6 +257,7 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
   if (owner.department && !showFullOrg.value) ownerFilter += ':' + owner.department
   const datasetFilter = `owner=${ownerFilter}`
   const remoteServiceFilter = `privateAccess=${ownerFilter}`
+  debug('compute vjsf options')
   return {
     titleDepth: 4,
     density: 'comfortable',
@@ -263,28 +272,50 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
 
 const saveDraft = async () => {
   if (!canWriteConfig.value || !formValid.value || !editConfig.value) return
+  debug('save draft', editConfig.value)
   await writeConfigDraft(editConfig.value)
   if (application.value?.baseApp?.meta?.['df:sync-config'] === 'true') {
+    debug('send set-config message to app', editConfig.value)
     // @ts-ignore
     frame.value?.postMessageToChild({ type: 'set-config', content: toRaw(editConfig.value) })
   } else {
+    debug('force draft preview refresh')
     draftPreviewInc.value++
   }
 }
 
-const cancelDraft = async () => {
+const onMessage = async (msg: any) => {
+  // @ts-ignore
+  if (frame.value?.iframeElement?.contentWindow === msg.source && msg.data.type === 'set-config') {
+    debug('received set-config message from app', msg.data)
+    editConfig.value = setProperty(JSON.parse(JSON.stringify(toRaw(editConfig.value))), msg.data.content.field, msg.data.content.value)
+    saveDraft()
+  }
+}
+window.addEventListener('message', onMessage)
+onUnmounted(() => window.removeEventListener('message', onMessage))
+
+const cancelDraft = useAsyncAction(async () => {
   if (!canWriteConfig.value) return
+  if (!application.value?.url) {
+    console.error('try to cancel draft but application.url is not defined')
+    throw new Error('échec de l\'annulation du brouillon')
+  }
   await patch({ urlDraft: application.value?.url })
   await cancelConfigDraft()
   draftPreviewInc.value++
-}
+})
 
-const validateDraft = async () => {
+const validateDraft = useAsyncAction(async () => {
   if (!canWriteConfig.value || !configDraft.value) return
+  if (!application.value?.urlDraft) {
+    console.error('try to validate draft but application.urlDraft is not defined')
+    throw new Error('échec de la validation du brouillon')
+  }
   await patch({ url: application.value?.urlDraft, urlDraft: '' })
   await writeConfig(configDraft.value)
   draftPreviewInc.value++
-}
+})
 
 </script>
 
