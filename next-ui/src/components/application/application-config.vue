@@ -158,7 +158,7 @@ import { type AppConfig } from '#api/types'
 import { VForm } from 'vuetify/components'
 import { setProperty } from 'dot-prop'
 import Debug from 'debug'
-import { diff } from 'deep-object-diff'
+// import { diff } from 'deep-object-diff'
 
 const debug = Debug('application-config')
 
@@ -274,7 +274,7 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
 const saveDraft = async () => {
   if (!canWriteConfig.value || !formValid.value || !editConfig.value) return
   if (toRaw(configDraft.value) === toRaw(editConfig.value)) return
-  debug('save draft', diff(configDraft.value ?? {}, editConfig.value))
+  // debug('save draft', diff(configDraft.value ?? {}, editConfig.value))
   await writeConfigDraft(editConfig.value)
   if (application.value?.baseApp?.meta?.['df:sync-config'] === 'true') {
     debug('send set-config message to app', editConfig.value)
