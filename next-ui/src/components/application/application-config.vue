@@ -273,6 +273,7 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
 
 const saveDraft = async () => {
   if (!canWriteConfig.value || !formValid.value || !editConfig.value) return
+  if (toRaw(configDraft.value) === toRaw(editConfig.value)) return
   debug('save draft', diff(configDraft.value ?? {}, editConfig.value))
   await writeConfigDraft(editConfig.value)
   if (application.value?.baseApp?.meta?.['df:sync-config'] === 'true') {
