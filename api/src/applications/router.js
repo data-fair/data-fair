@@ -258,7 +258,7 @@ router.put('/:applicationId', attemptInsert, readApplication, permissions.middle
         key: `data-fair:application-updated:${newApplication.id}`
       },
       sender: newApplication.owner,
-      resource: { type: 'dataset', title: newApplication.title, id: newApplication.id }
+      resource: { type: 'application', title: newApplication.title, id: newApplication.id }
     }, sessionState)
   }
 
@@ -319,7 +319,7 @@ router.patch('/:applicationId',
         key: `data-fair:application-patched-properties:${application.id}`
       },
       sender: application.owner,
-      resource: { type: 'dataset', title: application.title, id: application.id }
+      resource: { type: 'application', title: application.title, id: application.id }
     }, sessionState)
 
     await syncDatasets(patchedApplication, application)
@@ -420,7 +420,7 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
       key: `data-fair:application-delete:${application.id}`
     },
     sender: application.owner,
-    resource: { type: 'dataset', title: application.title, id: application.id }
+    resource: { type: 'application', title: application.title, id: application.id }
   }, sessionState)
 
   await syncDatasets(application)
@@ -605,7 +605,7 @@ router.post('/:applicationId/keys', readApplication, permissions.middleware('set
       key: `data-fair:application-write-keys:${application.id}`
     },
     sender: { ...application.owner, role: 'admin' },
-    resource: { type: 'dataset', title: application.title, id: application.id }
+    resource: { type: 'application', title: application.title, id: application.id }
   }, sessionState)
 
   res.send(req.body)
