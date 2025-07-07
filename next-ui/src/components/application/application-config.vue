@@ -158,6 +158,7 @@ import { type AppConfig } from '#api/types'
 import { VForm } from 'vuetify/components'
 import { setProperty } from 'dot-prop'
 import Debug from 'debug'
+import { diff } from 'deep-object-diff'
 
 const debug = Debug('application-config')
 
@@ -179,7 +180,7 @@ if (!configDraftFetch.initialized.value) configDraftFetch.refresh()
 const editUrl = computed(() => application.value?.urlDraft || application.value?.url)
 const editConfig = ref<AppConfig | null>(null)
 watch(configDraft, (config) => {
-  debug('update editConfig from stored draft', editConfig.value === config)
+  debug('update editConfig from stored draft', toRaw(editConfig.value) === toRaw(config))
   editConfig.value = config
 })
 // return true if some local changes were not yet synced with the server
@@ -272,7 +273,7 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
 
 const saveDraft = async () => {
   if (!canWriteConfig.value || !formValid.value || !editConfig.value) return
-  debug('save draft', editConfig.value)
+  debug('save draft', diff(configDraft.value ?? {}, editConfig.value))
   await writeConfigDraft(editConfig.value)
   if (application.value?.baseApp?.meta?.['df:sync-config'] === 'true') {
     debug('send set-config message to app', editConfig.value)
