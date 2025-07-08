@@ -224,7 +224,7 @@ export const run = async () => {
           nonce: true,
           header: (req) => {
             const urlPath = parseUrlPath(req.url).pathname
-            const directives = { ...defaultNonceCSPDirectives }
+            const directives = { ...defaultNonceCSPDirectives, 'frame-src': "'self'" }
             for (const p of unsafePaths) {
               if (p(urlPath)) {
                 // some embed pages require unsafe-eval as they use vjsf on dynamic schemas
