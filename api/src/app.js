@@ -211,7 +211,6 @@ export const run = async () => {
 
     if (config.serveUi) {
       const { createSpaMiddleware, defaultNonceCSPDirectives } = await import('@data-fair/lib-express/serve-spa.js')
-      app.use('/next-ui', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, { ignoreSitePath: true }))
 
       const unsafePaths = [
         '/embed/dataset/:id/table-edit',
