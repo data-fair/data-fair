@@ -210,7 +210,7 @@ export const run = async () => {
     app.use('/streamsaver/sw.js', express.static(join(streamsaverPath, 'sw.js')))
 
     if (config.serveUi) {
-      const { createSpaMiddleware, getCSPHeaderFromDirectives, defaultNonceCSPDirectives } = await import('@data-fair/lib-express/serve-spa.js')
+      const { createSpaMiddleware, defaultNonceCSPDirectives } = await import('@data-fair/lib-express/serve-spa.js')
       app.use('/next-ui', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, { ignoreSitePath: true }))
 
       const unsafePaths = [
@@ -224,17 +224,18 @@ export const run = async () => {
         csp: {
           nonce: true,
           header: (req) => {
+            const urlPath = parseUrlPath(req.url).pathname
             const directives = { ...defaultNonceCSPDirectives }
             for (const p of unsafePaths) {
-              if (p(parseUrlPath(req.url).pathname)) {
+              if (p(urlPath)) {
                 // some embed pages require unsafe-eval as they use vjsf on dynamic schemas
                 directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
               }
-              if (p.startsWith('/embed/')) {
-                directives['frame-ancestors'] = "'self' http: https:"
-              }
             }
-            return getCSPHeaderFromDirectives(directives)
+            if (urlPath.startsWith('/embed/')) {
+              directives['frame-ancestors'] = "'self' http: https:"
+            }
+            return directives
           }
         }
       }))
