@@ -229,6 +229,7 @@ export const run = async () => {
               if (p(urlPath)) {
                 // some embed pages require unsafe-eval as they use vjsf on dynamic schemas
                 directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
+                directives['connect-src'] = "'self' https:"
               }
             }
             if (urlPath.startsWith('/embed/')) {
