@@ -18,7 +18,7 @@ export const useHeaderFilters = (header: Ref<TableHeaderWithProperty>, localEnum
   const showEnum = computed(() => {
     if (header.value.property['x-capabilities'] && header.value.property['x-capabilities'].index === false) return false
     if (localEnum.value?.length) return true
-    return header.value.property.enum && header.value.property['x-cardinality'] && header.value.property['x-cardinality'] > 1
+    return !!header.value.property.enum?.length
   })
 
   const enumDense = computed(() => showEnum.value && fullEnum.value?.length && fullEnum.value?.length > 4)
@@ -30,7 +30,6 @@ export const useHeaderFilters = (header: Ref<TableHeaderWithProperty>, localEnum
   })
 
   const showEquals = computed(() => {
-    if (showEnum.value) return false
     if (header.value.property['x-capabilities'] && header.value.property['x-capabilities'].index === false) return false
     if (header.value.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
     if (header.value.property.type === 'string' && (!header.value.property.format || header.value.property.format === 'uri-reference')) return true
@@ -40,7 +39,7 @@ export const useHeaderFilters = (header: Ref<TableHeaderWithProperty>, localEnum
 
   const showBoolEquals = computed(() => {
     if (header.value.property['x-capabilities'] && header.value.property['x-capabilities'].index === false) return false
-    return !showEnum.value && header.value.property.type === 'boolean'
+    return header.value.property.type === 'boolean'
   })
 
   const showStartsWith = computed(() => header.value.property.type === 'string' && showEquals.value && !header.value.property['x-labels'])
@@ -55,7 +54,6 @@ export const useHeaderFilters = (header: Ref<TableHeaderWithProperty>, localEnum
     return header.value.property.type === 'string' && (header.value.property.format === 'date' || header.value.property.format === 'date-time')
   })
   const showSearch = computed(() => {
-    if (showEnum.value) return false
     if (header.value.property['x-labels']) return false
     if (header.value.property.type !== 'string') return false
     if (header.value.property.format && header.value.property.format !== 'uri-reference') return false
@@ -66,7 +64,7 @@ export const useHeaderFilters = (header: Ref<TableHeaderWithProperty>, localEnum
     return header.value.property['x-capabilities'] && header.value.property['x-capabilities'].wildcard && !header.value.property['x-labels']
   })
   const showFilters = computed(() => {
-    return showEnum.value || showEquals.value || showStartsWith.value || showBoolEquals.value || showNumCompare.value || showDateCompare.value
+    return showEnum.value || showSearch.value || showEquals.value || showStartsWith.value || showBoolEquals.value || showNumCompare.value || showDateCompare.value
   })
 
   return {
