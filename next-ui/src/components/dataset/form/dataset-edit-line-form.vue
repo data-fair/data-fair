@@ -5,7 +5,7 @@
     :options="vjsfOptions"
   />
 
-  <template v-if="digitalDocumentField">
+  <template v-if="digitalDocumentField && digitalDocumentField['x-display'] !== 'text-field'">
     <p>
       {{ t('loadAttachment') }}
     </p>
@@ -40,12 +40,13 @@ import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import VjsfMarkdown from '@koumoul/vjsf-markdown'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 
-const { readonlyCols, selectedCols, ownLines, extension, loading } = defineProps({
+const { readonlyCols, selectedCols, ownLines, extension, loading, roPrimaryKey } = defineProps({
   readonlyCols: { type: Array as PropType<string[] | null>, default: null },
   selectedCols: { type: Array as PropType<string[] | null>, default: null },
   ownLines: { type: Boolean, default: false },
   extension: { type: Boolean, default: false },
-  loading: { type: Boolean, default: false }
+  loading: { type: Boolean, default: false },
+  roPrimaryKey: { type: Boolean, default: false }
 })
 
 const model = defineModel<any>()
@@ -69,14 +70,18 @@ const editSchema = computed(() => {
     delete schema.properties._ownerName
   }
   Object.keys(schema.properties).forEach(key => {
+    if (typeof schema.properties[key].layout === 'string') schema.properties[key].layout = { comp: schema.properties[key].layout }
     if (readonlyCols && readonlyCols.includes(key)) {
+      schema.properties[key].readOnly = true
+    }
+    if (roPrimaryKey && restDataset.value?.primaryKey?.includes(key)) {
       schema.properties[key].readOnly = true
     }
     if (selectedCols && selectedCols.length && !selectedCols.includes(key)) {
       schema.properties[key].layout = schema.properties[key].layout ?? {}
       schema.properties[key].layout.comp = 'none'
     }
-    if (schema.properties[key]['x-refersTo'] === 'http://schema.org/DigitalDocument') {
+    if (schema.properties[key]['x-refersTo'] === 'http://schema.org/DigitalDocument' && schema.properties[key].layout?.comp !== 'text-field') {
       schema.properties[key].layout = schema.properties[key].layout ?? {}
       schema.properties[key].layout.comp = 'none'
     }
@@ -114,7 +119,7 @@ const simulateExtensionInputStr = computed(() => {
 })
 
 watch(simulateExtensionInputStr, () => {
-  if (!simulateExtensionInputStr.value) return
+  if (!simulateExtensionInputStr.value || !extensionKeys.value.length) return
   const input = JSON.parse(simulateExtensionInputStr.value)
   simulateExtension.execute(input)
 })

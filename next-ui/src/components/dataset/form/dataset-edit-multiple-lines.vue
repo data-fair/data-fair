@@ -60,7 +60,7 @@ const { results, selectedCols } = defineProps({
 
 const patch = defineModel<Record<string, string>>()
 
-const { jsonSchemaFetch } = useDatasetStore()
+const { jsonSchemaFetch, restDataset } = useDatasetStore()
 const { t } = useI18n()
 
 const vjsfOptions: VjsfOptions = {
@@ -98,7 +98,11 @@ const editSchema = computed(() => {
   // multi-line edition uses a patch action, required properties are meaningless in this case
   delete schema.required
   Object.keys(schema.properties).forEach(key => {
+    if (typeof schema.properties[key].layout === 'string') schema.properties[key].layout = { comp: schema.properties[key].layout }
     if (selectedCols.length && !selectedCols.includes(key)) {
+      schema.properties[key].readOnly = true
+    }
+    if (restDataset.value?.primaryKey?.includes(key)) {
       schema.properties[key].readOnly = true
     }
     if (!homogeneity.value?.homogenousProperties.includes(key)) {
@@ -111,7 +115,7 @@ const editSchema = computed(() => {
         // schema.properties[key].readOnly = true
       }
     }
-    if (schema.properties[key]['x-refersTo'] === 'http://schema.org/DigitalDocument') {
+    if (schema.properties[key]['x-refersTo'] === 'http://schema.org/DigitalDocument' && schema.properties[key].layout.comp !== 'text-field') {
       delete schema.properties[key]
     }
   })

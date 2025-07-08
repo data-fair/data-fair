@@ -11,7 +11,7 @@
       @input="val => $emit('input', val)"
     />
 
-    <template v-if="dataset && dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')">
+    <template v-if="digitalDocumentField && digitalDocumentField['x-display'] !== 'text-field'">
       <p v-t="'loadAttachment'" />
       <div class="mt-3 mb-3">
         <v-file-input
@@ -85,7 +85,7 @@ export default {
           schema.properties[key]['x-options'] = schema.properties[key]['x-options'] || {}
           schema.properties[key]['x-options'].hideReadOnly = true
         }
-        if (schema.properties[key]['x-refersTo'] === 'http://schema.org/DigitalDocument') {
+        if (schema.properties[key]['x-refersTo'] === 'http://schema.org/DigitalDocument' && schema.properties[key]['x-display'] !== 'text-field') {
           schema.properties[key].readOnly = true
           schema.properties[key]['x-options'] = schema.properties[key]['x-options'] || {}
           schema.properties[key]['x-options'].hideReadOnly = true
@@ -96,7 +96,7 @@ export default {
   },
   created () {
     if (!this.jsonSchema) this.$store.dispatch('dataset/fetchJsonSchema')
-    if (this.digitalDocumentField && this.value[this.digitalDocumentField.key]) {
+    if (this.digitalDocumentField && this.digitalDocumentField['x-display'] !== 'text-field' && this.value[this.digitalDocumentField.key]) {
       this.file = { name: this.value[this.digitalDocumentField.key].replace(this.value._id + '/', '') }
     } else {
       this.file = null

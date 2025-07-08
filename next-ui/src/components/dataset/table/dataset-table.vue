@@ -319,6 +319,7 @@
             v-model="editedLine"
             :loading="editLine.loading.value"
             :extension="true"
+            :ro-primary-key="true"
             @on-file-upload="(f: File) => {file = f}"
           />
         </v-card-text>

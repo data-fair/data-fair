@@ -91,15 +91,17 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
     const { user, account: activeAccount } = reqSessionAuthenticated(req)
     const ownerRole = getOwnerRole(dataset.owner, reqSession(req))
     if (!ownerRole) {
-      let account = `${activeAccount.type}:${activeAccount.id}${activeAccount.department ? ':' + activeAccount.department : ''}`
-      if (req.query.account && req.query.account !== account) throw httpError(403, 'You are not allowed to use the account parameter')
-      if (!req.query.account) {
-        if (activeAccount.type === 'organization') {
-          // also use personnal permissions
-          account += `,user:${user.id}`
-        }
+      const accounts = [`${activeAccount.type}:${activeAccount.id}${activeAccount.department ? ':' + activeAccount.department : ''}`]
+      if (activeAccount.type === 'organization') {
+        // also use personnal permissions
+        accounts.push(`user:${user.id}`)
       }
-      req.url = withQuery(req.url, { account })
+      if (req.query.account) {
+        const queryAccounts = req.query.account.split(',')
+        const rejectedAccount = queryAccounts.find(a => !accounts.includes(a))
+        if (rejectedAccount) throw httpError(403, `You are not allowed to use the "${rejectedAccount}" account parameter`)
+      }
+      req.url = withQuery(req.url, { account: req.query.account || accounts.join(',') })
     }
     req.noCache = true
   }

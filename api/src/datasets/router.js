@@ -1442,6 +1442,7 @@ router.get('/:datasetId/read-api-key', readDataset(), permissions.middleware('ge
 router.post('/:datasetId/_simulate-extension', readDataset(), permissions.middleware('simulateExtension', 'write'), async (req, res, next) => {
   const line = req.body
   const dataset = clone(req.dataset)
+  if (!dataset.extensions?.length) throw httpError(400, 'no extension to simulate')
   await extend(dataset, dataset.extensions, undefined, undefined, undefined, line)
   const flatten = getFlatten(req.dataset)
   res.send(flatten(line))
