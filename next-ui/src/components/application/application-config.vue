@@ -310,11 +310,9 @@ const cancelDraft = useAsyncAction(async () => {
 
 const validateDraft = useAsyncAction(async () => {
   if (!canWriteConfig.value || !configDraft.value) return
-  if (!application.value?.urlDraft) {
-    console.error('try to validate draft but application.urlDraft is not defined')
-    throw new Error('échec de la validation du brouillon')
+  if (application.value?.urlDraft) {
+    await patch({ url: application.value?.urlDraft, urlDraft: '' })
   }
-  await patch({ url: application.value?.urlDraft, urlDraft: '' })
   await writeConfig(configDraft.value)
   draftPreviewInc.value++
 })
