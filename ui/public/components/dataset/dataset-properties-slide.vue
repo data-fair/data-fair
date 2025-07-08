@@ -204,7 +204,7 @@
             </template>
           </v-checkbox>
           <v-select
-            v-if="currentPropRef.prop.type === 'string' && !currentPropRef.prop.format && currentPropRef.prop['x-refersTo'] !== 'http://schema.org/description'"
+            v-if="currentPropRef.prop.type === 'string' && !currentPropRef.prop.format && currentPropRef.prop['x-refersTo'] !== 'http://schema.org/description' && currentPropRef.prop['x-refersTo'] !== 'http://schema.org/DigitalDocument'"
             v-model="xDisplay"
             :items="[{value: 'singleline', text: $t('singleline')}, {value: 'textarea', text: $t('textarea')}, {value: 'markdown', text: $t('markdown')}]"
             :label="$t('xDisplay')"
@@ -215,6 +215,20 @@
               <help-tooltip>{{ $t('xDisplayHelp') }}</help-tooltip>
             </template>
           </v-select>
+          <v-checkbox
+            v-if="dataset.isRest && !currentPropRef.prop['x-extension'] && currentPropRef.prop['x-refersTo'] === 'http://schema.org/DigitalDocument'"
+            :input-value="currentPropRef.prop['x-display'] === 'text-field'"
+            :disabled="!editable || !currentPropRef.editable"
+            :label="$t('attachmentTextField')"
+            hide-details
+            dense
+            @change="v => {if (currentPropRef.prop['x-display'] === 'text-field') { $delete(currentPropRef.prop, 'x-display')} else { $set(currentPropRef.prop, 'x-display', 'text-field')}}"
+          >
+            <template #append>
+              <help-tooltip>{{ $t('attachmentTextFieldHelp') }}</help-tooltip>
+            </template>
+          </v-checkbox>
+
           <v-text-field
             v-if="dataset.isRest && !currentPropRef.prop['x-extension'] && currentPropRef.prop.type === 'string' && !currentPropRef.prop.format"
             v-model.number="maxLength"
@@ -329,6 +343,8 @@ fr:
   deletePropertyTitle: Supprimer la colonne
   deletePropertyText: Souhaitez vous supprimer cette colonne ? Attention la donnée sera effacée et définitivement perdue !
   maxLength: Nombre maximum de caractères
+  attachmentTextField: Saisie libre d'URL
+  attachmentTextFieldHelp: Si vous cochez cette case, l'utilisateur pourra saisir librement une URL vers un fichier, sinon l'utilisateur pourra charger un fichier.
 en:
   detailedInfo: Click on a column title to display its detailed information.
   extension: "Extension: "
@@ -359,6 +375,8 @@ en:
   deletePropertyTitle: Delete the column
   deletePropertyText: Do you want to delete this column ? Warning, data will be definitively erased !
   maxLength: Max number of characters
+  attachmentTextField: Free input URL
+  attachmentTextFieldHelp: If you check this box, the user will be able to provide a URL to an external file, otherwise the file will be uploaded to the server.
 </i18n>
 
 <script>

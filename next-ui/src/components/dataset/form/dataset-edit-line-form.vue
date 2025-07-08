@@ -5,7 +5,7 @@
     :options="vjsfOptions"
   />
 
-  <template v-if="digitalDocumentField">
+  <template v-if="digitalDocumentField && digitalDocumentField['x-display'] !== 'text-field'">
     <p>
       {{ t('loadAttachment') }}
     </p>
@@ -70,6 +70,7 @@ const editSchema = computed(() => {
     delete schema.properties._ownerName
   }
   Object.keys(schema.properties).forEach(key => {
+    if (typeof schema.properties[key].layout === 'string') schema.properties[key].layout = { comp: schema.properties[key].layout }
     if (readonlyCols && readonlyCols.includes(key)) {
       schema.properties[key].readOnly = true
     }
@@ -80,7 +81,7 @@ const editSchema = computed(() => {
       schema.properties[key].layout = schema.properties[key].layout ?? {}
       schema.properties[key].layout.comp = 'none'
     }
-    if (schema.properties[key]['x-refersTo'] === 'http://schema.org/DigitalDocument') {
+    if (schema.properties[key]['x-refersTo'] === 'http://schema.org/DigitalDocument' && schema.properties[key].layout?.comp !== 'text-field') {
       schema.properties[key].layout = schema.properties[key].layout ?? {}
       schema.properties[key].layout.comp = 'none'
     }
@@ -118,7 +119,7 @@ const simulateExtensionInputStr = computed(() => {
 })
 
 watch(simulateExtensionInputStr, () => {
-  if (!simulateExtensionInputStr.value) return
+  if (!simulateExtensionInputStr.value || !extensionKeys.value.length) return
   const input = JSON.parse(simulateExtensionInputStr.value)
   simulateExtension.execute(input)
 })
