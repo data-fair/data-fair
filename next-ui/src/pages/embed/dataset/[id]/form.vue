@@ -24,6 +24,7 @@
           :readonly-cols="readonlyCols"
           :extension="extension"
           :loading="saveLine.loading.value"
+          :ro-primary-key="!!existingLine"
           @on-file-upload="(f: File) => {file = f}"
         />
         <v-row>

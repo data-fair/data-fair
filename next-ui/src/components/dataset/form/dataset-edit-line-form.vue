@@ -40,12 +40,13 @@ import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import VjsfMarkdown from '@koumoul/vjsf-markdown'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 
-const { readonlyCols, selectedCols, ownLines, extension, loading } = defineProps({
+const { readonlyCols, selectedCols, ownLines, extension, loading, roPrimaryKey } = defineProps({
   readonlyCols: { type: Array as PropType<string[] | null>, default: null },
   selectedCols: { type: Array as PropType<string[] | null>, default: null },
   ownLines: { type: Boolean, default: false },
   extension: { type: Boolean, default: false },
-  loading: { type: Boolean, default: false }
+  loading: { type: Boolean, default: false },
+  roPrimaryKey: { type: Boolean, default: false }
 })
 
 const model = defineModel<any>()
@@ -70,6 +71,9 @@ const editSchema = computed(() => {
   }
   Object.keys(schema.properties).forEach(key => {
     if (readonlyCols && readonlyCols.includes(key)) {
+      schema.properties[key].readOnly = true
+    }
+    if (roPrimaryKey && restDataset.value?.primaryKey?.includes(key)) {
       schema.properties[key].readOnly = true
     }
     if (selectedCols && selectedCols.length && !selectedCols.includes(key)) {
