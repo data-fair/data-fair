@@ -126,7 +126,7 @@
             <template v-if="showEquals">
               <v-list-item
                 v-if="!newFilter.operator || newFilter.operator === 'eq'"
-                :active="newFilter.operator === 'eq'"
+                :active="newFilter.operator === 'eq' || !!equals[0]"
                 title="égal à une valeur"
                 @click="newFilter.operator = newFilter.operator === 'eq' ? undefined : 'eq'"
               />
@@ -174,8 +174,7 @@
 
               <v-list-item
                 v-if="!newFilter.operator || newFilter.operator === 'neq'"
-                :active="newFilter.operator === 'neq'"
-
+                :active="newFilter.operator === 'neq' || !!nEquals[0]"
                 title="différent d'une valeur"
                 @click="newFilter.operator = newFilter.operator === 'neq' ? undefined : 'neq'"
               />
@@ -223,8 +222,7 @@
 
               <v-list-item
                 v-if="!newFilter.operator || newFilter.operator === 'in'"
-                :active="newFilter.operator === 'in'"
-
+                :active="newFilter.operator === 'in' || equals.length > 2"
                 title="parmi des valeurs"
                 @click="newFilter.operator = newFilter.operator === 'in' ? undefined : 'in'"
               />
@@ -306,8 +304,7 @@
 
               <v-list-item
                 v-if="!newFilter.operator || newFilter.operator === 'nin'"
-                :active="newFilter.operator === 'nin'"
-
+                :active="newFilter.operator === 'nin' || nEquals.length > 2"
                 title="à l'exclusion des valeurs"
                 @click="newFilter.operator = newFilter.operator === 'nin' ? undefined : 'nin'"
               />
@@ -390,8 +387,7 @@
             <template v-if="showStartsWith">
               <v-list-item
                 v-if="!newFilter.operator || newFilter.operator === 'starts'"
-                :active="newFilter.operator === 'starts'"
-
+                :active="newFilter.operator === 'starts' || !!startsWith"
                 title="commence par les caractères"
                 @click="newFilter.operator = newFilter.operator === 'starts' ? undefined : 'starts'"
               />
@@ -422,8 +418,7 @@
             <template v-if="showContains">
               <v-list-item
                 v-if="!newFilter.operator || newFilter.operator === 'contains'"
-                :active="newFilter.operator === 'contains'"
-
+                :active="newFilter.operator === 'contains' || !!contains"
                 title="contient les caractères"
                 @click="newFilter.operator = newFilter.operator === 'contains' ? undefined : 'contains'"
               />
@@ -453,8 +448,7 @@
             <template v-if="showBoolEquals">
               <v-list-item
                 v-if="!newFilter.operator || newFilter.operator === 'eq'"
-                :active="newFilter.operator === 'eq'"
-
+                :active="newFilter.operator === 'eq' || equalsBool !== undefined"
                 title="égal à une valeur"
                 @click="newFilter.operator = newFilter.operator === 'eq' ? undefined : 'eq'"
               />
@@ -475,8 +469,7 @@
 
               <v-list-item
                 v-if="!newFilter.operator || newFilter.operator === 'neq'"
-                :active="newFilter.operator === 'neq'"
-
+                :active="newFilter.operator === 'neq' || nEqualsBool !== undefined"
                 title="différent de"
                 @click="newFilter.operator = newFilter.operator === 'neq' ? undefined : 'neq'"
               />
@@ -498,8 +491,7 @@
             <template v-if="showNumCompare">
               <v-list-item
                 v-if="!newFilter.operator || newFilter.operator === 'gte'"
-                :active="newFilter.operator === 'gte'"
-
+                :active="newFilter.operator === 'gte' || !!gte"
                 title="supérieur ou égal à"
                 @click="newFilter.operator = newFilter.operator === 'gte' ? undefined : 'gte'"
               />
@@ -529,8 +521,7 @@
 
               <v-list-item
                 v-if="!newFilter.operator || newFilter.operator === 'lte'"
-                :active="newFilter.operator === 'lte'"
-
+                :active="newFilter.operator === 'lte' || !!lte"
                 title="inférieur ou égal à"
                 @click="newFilter.operator = newFilter.operator === 'lte' ? undefined : 'lte'"
               />
@@ -561,8 +552,7 @@
             <template v-if="showDateCompare">
               <v-list-item
                 v-if="!newFilter.operator || newFilter.operator === 'gte'"
-                :active="newFilter.operator === 'gte'"
-
+                :active="newFilter.operator === 'gte' || !!gte"
                 title="supérieur ou égal à"
                 @click="newFilter.operator = newFilter.operator === 'gte' ? undefined : 'gte'"
               />
@@ -575,8 +565,7 @@
 
               <v-list-item
                 v-if="!newFilter.operator || newFilter.operator === 'lte'"
-                :active="newFilter.operator === 'lte'"
-
+                :active="newFilter.operator === 'lte' || !!lte"
                 title="inférieur ou égal à"
                 @click="newFilter.operator = newFilter.operator === 'lte' ? undefined : 'lte'"
               />
@@ -592,14 +581,12 @@
                 v-if="!newFilter.operator"
                 title="est défini"
                 :active="exists"
-
                 @click="newFilter.operator = 'exists'; emitNewFilter(' ')"
               />
               <v-list-item
                 v-if="!newFilter.operator"
                 title="n'est pas défini"
                 :active="nExists"
-
                 @click="newFilter.operator = 'nexists'; emitNewFilter(' ')"
               />
             </template>
