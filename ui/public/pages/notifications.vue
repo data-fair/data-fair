@@ -4,7 +4,14 @@
       v-t="'devices'"
       class="mt-8 mb-2 text-h5"
     />
-    <v-iframe :src="`${env.notifyUrl}/embed/devices`" />
+    <d-frame
+      :src="`${env.notifyUrl}/embed/devices`"
+      resize
+    >
+      <div slot="loader">
+        <v-skeleton-loader type="paragraph" />
+      </div>
+    </d-frame>
 
     <h2
       v-if="activeAccount.type ==='organization'"
@@ -16,7 +23,14 @@
       v-t="'datasetsUserEvents'"
       class="mt-8 mb-2 text-h5"
     />
-    <v-iframe :src="datasetsSubscribeUrl" />
+    <d-frame
+      :src="datasetsSubscribeUrl"
+      resize
+    >
+      <div slot="loader">
+        <v-skeleton-loader type="paragraph" />
+      </div>
+    </d-frame>
 
     <h2
       v-if="activeAccount.type ==='organization'"
@@ -28,7 +42,14 @@
       v-t="'appsUserEvents'"
       class="mt-8 mb-2 text-h5"
     />
-    <v-iframe :src="appsSubscribeUrl" />
+    <d-frame
+      :src="appsSubscribeUrl"
+      resize
+    >
+      <div slot="loader">
+        <v-skeleton-loader type="paragraph" />
+      </div>
+    </d-frame>
 
     <h2
       v-t="{path: 'sites', args: {name: activeAccount.name}}"
@@ -46,14 +67,37 @@
       class="mt-6 mb-3"
     />
     <template v-if="selectedSite">
-      <v-iframe :src="selectedSite.subscribeUrl" />
+      <d-frame
+        :src="selectedSite.subscribeUrl"
+        resize
+      >
+        <div slot="loader">
+          <v-skeleton-loader type="paragraph" />
+        </div>
+      </d-frame>
     </template>
+    <!--
     <div v-if="requestedDatasetPublicationSiteUrl">
-      <v-iframe :src="requestedDatasetPublicationSiteUrl" />
+      <d-frame
+        :src="requestedDatasetPublicationSiteUrl"
+        resize
+      >
+        <div slot="loader">
+          <v-skeleton-loader type="paragraph" />
+        </div>
+      </d-frame>
     </div>
     <div v-if="requestedApplicationPublicationSiteUrl">
-      <v-iframe :src="requestedApplicationPublicationSiteUrl" />
+      <d-frame
+        :src="requestedApplicationPublicationSiteUrl"
+        resize
+      >
+        <div slot="loader">
+          <v-skeleton-loader type="paragraph" />
+        </div>
+      </d-frame>
     </div>
+    -->
   </v-container>
 </template>
 
@@ -71,6 +115,7 @@ fr:
   datasetPublishedTopic: "Un jeu de données a été publié dans la thématique {topic} sur {title}"
   datasetPublicationRequested: "Un contributeur demande de publier un jeu de données sur {title}"
   applicationPublicationRequested: "Un contributeur demande de publier une application sur {title}"
+  userCreated: "Un utilisateur s'est enregistré sur {title}"
   sites: "Événements liés à un portail de l'organisation {name}"
   selectSite: "Sélectionnez un portail"
 </i18n>
@@ -78,13 +123,12 @@ fr:
 <script>
 import { mapState, mapGetters } from 'vuex'
 import 'iframe-resizer/js/iframeResizer'
-import VIframe from '@koumoul/v-iframe'
 import settingsSchema from '~/../../api/types/settings/schema.js'
+import '@data-fair/frame/lib/d-frame.js'
 
 const webhooksSchema = settingsSchema.properties.webhooks
 
 export default {
-  components: { VIframe },
   middleware: ['auth-required'],
   data: () => ({
     webhooksSchema,
@@ -120,6 +164,21 @@ export default {
           keys.push(`data-fair:dataset-published-topic:${p.type}:${p.id}:${topic.id}`)
           titles.push(this.$t('datasetPublishedTopic', { title: p.title || p.url || p.id, topic: topic.title }))
         }
+
+        if ((this.activeAccount.department || null) === (p.department || null)) {
+          // requested dataset publication
+          keys.push(`data-fair:dataset-publication-requested:${p.type}:${p.id}`)
+          titles.push(this.$t('datasetPublicationRequested', { title: p.title || p.url || p.id }))
+
+          // requested application publication
+          keys.push(`data-fair:application-publication-requested:${p.type}:${p.id}`)
+          titles.push(this.$t('applicationPublicationRequested', { title: p.title || p.url || p.id }))
+
+          // account creation
+          keys.push(`simple-directory:user-created:${p.type}:${p.id}`)
+          titles.push(this.$t('userCreated', { title: p.title || p.url || p.id }))
+        }
+
         // we used to direct to the publication site, but it is better that a notif coming from the back-office directs to the back-office
         // and this prevents problem when subscribing before the publication of the site on a domain
         const urlTemplate = this.env.publicUrl + '/dataset/{id}'
@@ -130,7 +189,7 @@ export default {
         }
       })
     },
-    requestedDatasetPublicationSiteUrl () {
+    /* requestedDatasetPublicationSiteUrl () {
       if (!this.selectedSite) return null
       if ((this.activeAccount.department || null) !== (this.selectedSite.department || null)) return
       const key = `data-fair:dataset-publication-requested:${this.selectedSite.type}:${this.selectedSite.id}`
@@ -145,7 +204,7 @@ export default {
       const title = this.$t('applicationPublicationRequested', { title: this.selectedSite.title || this.selectedSite.url || this.selectedSite.id })
       const urlTemplate = this.env.publicUrl + '/application/{id}'
       return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no&sender=${encodeURIComponent(this.siteSender(this.selectedSite))}`
-    }
+    } */
   },
   async mounted () {
     let publicationSitesUrl = 'api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id
