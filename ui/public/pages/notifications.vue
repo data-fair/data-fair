@@ -146,7 +146,7 @@ export default {
   }),
   computed: {
     ...mapState(['env']),
-    ...mapGetters('session', ['activeAccount']),
+    ...mapGetters('session', ['activeAccount', 'accountRole']),
     datasetsSubscribeUrl () {
       const webhooks = webhooksSchema.items.properties.events.items.oneOf
         .filter(item => item.const.startsWith('dataset') && item.const !== 'dataset-finalize-end')
@@ -202,9 +202,10 @@ export default {
     userCreationPublicationSiteUrl () {
       if (!this.selectedSite) return null
       if ((this.activeAccount.department || null) !== (this.selectedSite.department || null)) return
+      if (this.accountRole !== 'admin') return
       const key = `simple-directory:user-created:${this.selectedSite.type}:${this.selectedSite.id}`
       const title = this.$t('userCreated', { title: this.selectedSite.title || this.selectedSite.url || this.selectedSite.id })
-      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}&register=false&header=no&sender=${encodeURIComponent(this.siteSender(this.selectedSite))}`
+      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}&register=false&header=no&sender=${encodeURIComponent(this.siteSender(this.selectedSite, 'admin'))}`
     }
   },
   async mounted () {
@@ -219,11 +220,14 @@ export default {
     this.selectedSite = this.publicationSites[0]
   },
   methods: {
-    siteSender (site) {
-      let sender = this.activeAccount.type + ':' + this.activeAccount.id
-      if (this.activeAccount.department) sender += ':' + this.activeAccount.department
-      else if (site.department) sender += ':' + site.department
-      return sender
+    siteSender (site, role) {
+      const parts = [
+        this.activeAccount.type,
+        this.activeAccount.id,
+        this.activeAccount.department ?? site.department ?? ''
+      ]
+      if (role) parts.push(role)
+      return parts.join(':')
     }
   }
 }
