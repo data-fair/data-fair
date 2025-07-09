@@ -106,4 +106,21 @@ describe('file datasets with transformation rules', function () {
     assert.equal(lines[0].horodatage, '2050-01-01')
     assert.equal(lines[1].horodatage, '2050-01-01')
   })
+
+  it('create manage transform type error', async function () {
+    const form = new FormData()
+    form.append('file', 'id,col1,col2\ntest,val,2025-04-03T18:00:00+02:00\ntest2,val,\n,val,2025-04-03T19:00:00+02:00', 'dataset1.csv')
+    const ax = global.ax.dmeadus
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    dataset = await workers.hook('finalizer/' + dataset.id)
+
+    const schema = dataset.schema
+    schema[0]['x-transform'] = { type: 'number', expr: '"test"' }
+    dataset = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema })).data
+    const message = 'échec de l\'évaluation de l\'expression ""test"" : /id doit être de type number (résultat : "test")'
+    await assert.rejects(workers.hook('finalizer/' + dataset.id), { message })
+    const journal = await ax.get('/api/v1/datasets/' + dataset.id + '/journal').then(r => r.data)
+    assert.equal(journal[0].type, 'error')
+    assert.equal(journal[0].data, message)
+  })
 })

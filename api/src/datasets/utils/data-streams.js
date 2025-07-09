@@ -204,7 +204,7 @@ export const getTransformStream = (schema, fileSchema, applyTransform = false) =
               item[prop.key] = compiledExpressions[prop.key]({ value })
             } catch (err) {
               const message = `[noretry] échec de l'évaluation de l'expression "${prop['x-transform']?.expr}" : ${err.message}`
-              throw new Error(message)
+              return callback(new Error(message))
             }
           }
         } else {
