@@ -272,7 +272,7 @@ router.get('/:id/icon', async (req, res, next) => {
   const user = reqUser(req)
   const { query } = getQuery(req, !!(user?.adminMode))
   query.$and.push({ id: req.params.id })
-  const baseApp = mongo.baseApplications.findOne(query, { url: 1 })
+  const baseApp = await mongo.baseApplications.findOne(query, { projection: { url: 1 } })
   if (!baseApp) return res.status(404).send()
   const iconUrl = baseApp.url.replace(/\/$/, '') + '/icon.png'
   await getThumbnail(req, res, iconUrl)
@@ -281,7 +281,7 @@ router.get('/:id/thumbnail', async (req, res, next) => {
   const user = reqUser(req)
   const { query } = getQuery(req, !!(user?.adminMode))
   query.$and.push({ id: req.params.id })
-  const baseApp = mongo.baseApplications.findOne(query, { url: 1 })
+  const baseApp = await mongo.baseApplications.findOne(query, { projection: { image: 1, url: 1 } })
   if (!baseApp) return res.status(404).send()
   const imageUrl = baseApp.image || baseApp.url.replace(/\/$/, '') + '/thumbnail.png'
   await getThumbnail(req, res, imageUrl)
