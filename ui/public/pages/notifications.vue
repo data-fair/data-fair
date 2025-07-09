@@ -7,6 +7,7 @@
     <d-frame
       :src="`${env.notifyUrl}/embed/devices`"
       resize
+      @notif="(frameNotif) => emitNotification(frameNotif.detail)"
     >
       <div slot="loader">
         <v-skeleton-loader type="paragraph" />
@@ -26,6 +27,7 @@
     <d-frame
       :src="datasetsSubscribeUrl"
       resize
+      @notif="(frameNotif) => emitNotification(frameNotif.detail)"
     >
       <div slot="loader">
         <v-skeleton-loader type="paragraph" />
@@ -45,6 +47,7 @@
     <d-frame
       :src="appsSubscribeUrl"
       resize
+      @notif="(frameNotif) => emitNotification(frameNotif.detail)"
     >
       <div slot="loader">
         <v-skeleton-loader type="paragraph" />
@@ -70,6 +73,7 @@
       <d-frame
         :src="selectedSite.subscribeUrl"
         resize
+        @notif="(frameNotif) => emitNotification(frameNotif.detail)"
       >
         <div slot="loader">
           <v-skeleton-loader type="paragraph" />
@@ -90,6 +94,7 @@
       <d-frame
         :src="requestedApplicationPublicationSiteUrl"
         resize
+        @notif="(frameNotif) => emitNotification(frameNotif.detail)"
       >
         <div slot="loader">
           <v-skeleton-loader type="paragraph" />
@@ -100,6 +105,7 @@
       <d-frame
         :src="userCreationPublicationSiteUrl"
         resize
+        @notif="(frameNotif) => emitNotification(frameNotif.detail)"
       >
         <div slot="loader">
           <v-skeleton-loader type="paragraph" />
@@ -129,7 +135,7 @@ fr:
 </i18n>
 
 <script>
-import { mapState, mapGetters } from 'vuex'
+import { mapState, mapGetters, mapActions } from 'vuex'
 import 'iframe-resizer/js/iframeResizer'
 import settingsSchema from '~/../../api/types/settings/schema.js'
 import '@data-fair/frame/lib/d-frame.js'
@@ -220,6 +226,7 @@ export default {
     this.selectedSite = this.publicationSites[0]
   },
   methods: {
+    ...mapActions(['emitNotification']),
     siteSender (site, role) {
       const parts = [
         this.activeAccount.type,

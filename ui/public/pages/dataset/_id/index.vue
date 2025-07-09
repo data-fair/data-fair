@@ -290,10 +290,10 @@
                 </v-tab>
 
                 <v-tab
-                  v-if="user.adminMode && env.catalogsIntegration"
+                  v-if="env.catalogsIntegration && ['admin', 'contrib'].includes(userOwnerRole(dataset.owner))"
                   href="#share-publications-next"
                 >
-                  <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogs') }}
+                  <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogsBeta') }}
                 </v-tab>
 
                 <v-tab
@@ -352,6 +352,7 @@
                   <d-frame
                     :src="publicationUrl"
                     sync-params
+                    @notif="(frameNotif) => emitNotification(frameNotif.detail)"
                   />
                 </v-tab-item>
 
@@ -450,6 +451,7 @@ fr:
   permissions: Permissions
   portals: Portails
   catalogs: Catalogues
+  catalogsBeta: Catalogues (bêta)
   tutorialShare: Configurez des portails pour mieux partager vos données au public ou en interne.
   activity: Activité
   journal: Journal
@@ -493,6 +495,7 @@ en:
   permissions: Permissions
   portals: Portals
   catalogs: Catalogs
+  catalogsBeta: Catalogs (beta)
   tutorialShare: Configure portals to better publish your data privately or publicly.
   activity: Activity
   journal: Journal
@@ -598,6 +601,7 @@ export default {
     }
   },
   methods: {
+    ...mapActions(['emitNotification']),
     ...mapActions('dataset', ['subscribe', 'patch'])
   }
 }

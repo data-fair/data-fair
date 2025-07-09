@@ -6,6 +6,7 @@
       :height="`${windowHeight - 48}px`"
       resize="no"
       sync-params
+      @notif="(frameNotif) => emitNotification(frameNotif.detail)"
     />
     <lazy-application-config v-else />
   </div>
@@ -13,7 +14,7 @@
 
 <script>
 import '@data-fair/frame/lib/d-frame.js'
-import { mapState } from 'vuex'
+import { mapState, mapActions } from 'vuex'
 
 export default {
   middleware: ['auth-required'],
@@ -38,6 +39,9 @@ export default {
         { text: 'configuration' }
       ])
     }
+  },
+  methods: {
+    ...mapActions(['emitNotification'])
   }
 }
 </script>

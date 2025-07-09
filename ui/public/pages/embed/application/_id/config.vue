@@ -6,6 +6,7 @@
       :height="`${windowHeight}px`"
       resize="no"
       sync-params
+      @notif="(frameNotif) => emitNotification(frameNotif.detail)"
     />
     <lazy-application-config
       v-else
@@ -15,11 +16,14 @@
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapState, mapActions } from 'vuex'
 
 export default {
   computed: {
     ...mapState('application', ['application'])
+  },
+  methods: {
+    ...mapActions(['emitNotification'])
   }
 }
 </script>

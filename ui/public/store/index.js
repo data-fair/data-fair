@@ -6,6 +6,7 @@ import remoteService from './remote-service'
 import application from './application'
 import catalog from './catalog'
 import style from './style'
+import eventBus from '~/event-bus'
 
 Vue.use(Vuex)
 
@@ -170,6 +171,9 @@ export default () => {
       }
     },
     actions: {
+      emitNotification (context, notif) {
+        eventBus.$emit('notification', notif)
+      },
       async fetchLimits ({ getters, commit }) {
         const activeAccount = getters['session/activeAccount']
         if (!activeAccount) return

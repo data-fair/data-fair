@@ -4,11 +4,12 @@
     :height="`${windowHeight - 48}px`"
     resize="no"
     sync-params
+    @notif="(frameNotif) => emitNotification(frameNotif.detail)"
   />
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import { mapState, mapActions } from 'vuex'
 import '@data-fair/frame/lib/d-frame.js'
 
 export default {
@@ -33,6 +34,9 @@ export default {
       if (this.env.openapiViewerV2) return this.env.openapiViewerUrl + `?drawerLocation=right&urlType=${this.type}` + (this.id ? `&id=${this.id}` : '')
       else return this.env.openapiViewerUrl + '?hide-toolbar=true&drawerLocation=right' + '&url=' + this.url
     }
+  },
+  methods: {
+    ...mapActions(['emitNotification'])
   }
 }
 </script>
