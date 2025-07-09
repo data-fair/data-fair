@@ -15,7 +15,6 @@
       style="max-width: 450px"
     >
       <v-list
-        v-if="!!header.tooltip || header.sortable"
         density="compact"
         color="primary"
         class="pa-0 dataset-table-header-actions"
