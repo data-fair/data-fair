@@ -171,8 +171,9 @@ export default () => {
       }
     },
     actions: {
-      emitNotification (context, notif) {
-        eventBus.$emit('notification', notif)
+      emitFrameNotif (context, notif) {
+        console.log('d-frame notif', notif)
+        eventBus.$emit('notification', notif.detail)
       },
       async fetchLimits ({ getters, commit }) {
         const activeAccount = getters['session/activeAccount']

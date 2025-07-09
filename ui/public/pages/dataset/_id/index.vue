@@ -290,7 +290,7 @@
                 </v-tab>
 
                 <v-tab
-                  v-if="env.catalogsIntegration && ['admin', 'contrib'].includes(userOwnerRole(dataset.owner))"
+                  v-if="env.catalogsIntegration && userOwnerRole(dataset.owner) === 'admin'"
                   href="#share-publications-next"
                 >
                   <v-icon>mdi-transit-connection</v-icon>&nbsp;&nbsp;{{ $t('catalogsBeta') }}
@@ -352,7 +352,7 @@
                   <d-frame
                     :src="publicationUrl"
                     sync-params
-                    @notif="(frameNotif) => emitNotification(frameNotif.detail)"
+                    @notif="emitFrameNotif"
                   />
                 </v-tab-item>
 
@@ -601,7 +601,7 @@ export default {
     }
   },
   methods: {
-    ...mapActions(['emitNotification']),
+    ...mapActions(['emitFrameNotif']),
     ...mapActions('dataset', ['subscribe', 'patch'])
   }
 }

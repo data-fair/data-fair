@@ -6,7 +6,7 @@
       :height="`${windowHeight - 48}px`"
       resize="no"
       sync-params
-      @notif="(frameNotif) => emitNotification(frameNotif.detail)"
+      @notif="emitFrameNotif"
     />
     <lazy-application-config v-else />
   </div>
@@ -41,7 +41,7 @@ export default {
     }
   },
   methods: {
-    ...mapActions(['emitNotification'])
+    ...mapActions(['emitFrameNotif'])
   }
 }
 </script>

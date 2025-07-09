@@ -7,7 +7,7 @@
     <d-frame
       :src="`${env.notifyUrl}/embed/devices`"
       resize
-      @notif="(frameNotif) => emitNotification(frameNotif.detail)"
+      @notif="emitFrameNotif"
     >
       <div slot="loader">
         <v-skeleton-loader type="paragraph" />
@@ -27,7 +27,7 @@
     <d-frame
       :src="datasetsSubscribeUrl"
       resize
-      @notif="(frameNotif) => emitNotification(frameNotif.detail)"
+      @notif="emitFrameNotif"
     >
       <div slot="loader">
         <v-skeleton-loader type="paragraph" />
@@ -47,7 +47,7 @@
     <d-frame
       :src="appsSubscribeUrl"
       resize
-      @notif="(frameNotif) => emitNotification(frameNotif.detail)"
+      @notif="emitFrameNotif"
     >
       <div slot="loader">
         <v-skeleton-loader type="paragraph" />
@@ -73,7 +73,7 @@
       <d-frame
         :src="selectedSite.subscribeUrl"
         resize
-        @notif="(frameNotif) => emitNotification(frameNotif.detail)"
+        @notif="emitFrameNotif"
       >
         <div slot="loader">
           <v-skeleton-loader type="paragraph" />
@@ -94,7 +94,7 @@
       <d-frame
         :src="requestedApplicationPublicationSiteUrl"
         resize
-        @notif="(frameNotif) => emitNotification(frameNotif.detail)"
+        @notif="emitFrameNotif"
       >
         <div slot="loader">
           <v-skeleton-loader type="paragraph" />
@@ -105,7 +105,7 @@
       <d-frame
         :src="userCreationPublicationSiteUrl"
         resize
-        @notif="(frameNotif) => emitNotification(frameNotif.detail)"
+        @notif="emitFrameNotif"
       >
         <div slot="loader">
           <v-skeleton-loader type="paragraph" />
@@ -226,7 +226,7 @@ export default {
     this.selectedSite = this.publicationSites[0]
   },
   methods: {
-    ...mapActions(['emitNotification']),
+    ...mapActions(['emitFrameNotif']),
     siteSender (site, role) {
       const parts = [
         this.activeAccount.type,
