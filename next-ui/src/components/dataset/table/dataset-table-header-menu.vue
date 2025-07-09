@@ -127,7 +127,6 @@
               <v-list-item
                 v-if="!newFilter.operator || newFilter.operator === 'eq'"
                 :active="newFilter.operator === 'eq'"
-
                 title="égal à une valeur"
                 @click="newFilter.operator = newFilter.operator === 'eq' ? undefined : 'eq'"
               />
