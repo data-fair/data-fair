@@ -76,7 +76,6 @@
         </div>
       </d-frame>
     </template>
-    <!--
     <div v-if="requestedDatasetPublicationSiteUrl">
       <d-frame
         :src="requestedDatasetPublicationSiteUrl"
@@ -97,7 +96,16 @@
         </div>
       </d-frame>
     </div>
-    -->
+    <div v-if="userCreationPublicationSiteUrl">
+      <d-frame
+        :src="userCreationPublicationSiteUrl"
+        resize
+      >
+        <div slot="loader">
+          <v-skeleton-loader type="paragraph" />
+        </div>
+      </d-frame>
+    </div>
   </v-container>
 </template>
 
@@ -165,20 +173,6 @@ export default {
           titles.push(this.$t('datasetPublishedTopic', { title: p.title || p.url || p.id, topic: topic.title }))
         }
 
-        if ((this.activeAccount.department || null) === (p.department || null)) {
-          // requested dataset publication
-          keys.push(`data-fair:dataset-publication-requested:${p.type}:${p.id}`)
-          titles.push(this.$t('datasetPublicationRequested', { title: p.title || p.url || p.id }))
-
-          // requested application publication
-          keys.push(`data-fair:application-publication-requested:${p.type}:${p.id}`)
-          titles.push(this.$t('applicationPublicationRequested', { title: p.title || p.url || p.id }))
-
-          // account creation
-          keys.push(`simple-directory:user-created:${p.type}:${p.id}`)
-          titles.push(this.$t('userCreated', { title: p.title || p.url || p.id }))
-        }
-
         // we used to direct to the publication site, but it is better that a notif coming from the back-office directs to the back-office
         // and this prevents problem when subscribing before the publication of the site on a domain
         const urlTemplate = this.env.publicUrl + '/dataset/{id}'
@@ -189,7 +183,7 @@ export default {
         }
       })
     },
-    /* requestedDatasetPublicationSiteUrl () {
+    requestedDatasetPublicationSiteUrl () {
       if (!this.selectedSite) return null
       if ((this.activeAccount.department || null) !== (this.selectedSite.department || null)) return
       const key = `data-fair:dataset-publication-requested:${this.selectedSite.type}:${this.selectedSite.id}`
@@ -204,7 +198,14 @@ export default {
       const title = this.$t('applicationPublicationRequested', { title: this.selectedSite.title || this.selectedSite.url || this.selectedSite.id })
       const urlTemplate = this.env.publicUrl + '/application/{id}'
       return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no&sender=${encodeURIComponent(this.siteSender(this.selectedSite))}`
-    } */
+    },
+    userCreationPublicationSiteUrl () {
+      if (!this.selectedSite) return null
+      if ((this.activeAccount.department || null) !== (this.selectedSite.department || null)) return
+      const key = `simple-directory:user-created:${this.selectedSite.type}:${this.selectedSite.id}`
+      const title = this.$t('userCreated', { title: this.selectedSite.title || this.selectedSite.url || this.selectedSite.id })
+      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}&register=false&header=no&sender=${encodeURIComponent(this.siteSender(this.selectedSite))}`
+    }
   },
   async mounted () {
     let publicationSitesUrl = 'api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id
