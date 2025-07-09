@@ -340,8 +340,7 @@ router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft:
     topic: {
       key: `data-fair:dataset-delete:${dataset.id}`
     },
-    sender: dataset.owner,
-    resource: { type: 'dataset', title: dataset.title, id: dataset.id }
+    sender: dataset.owner
   }, sessionState)
 
   await syncRemoteService({ ...datasetFull, masterData: null })

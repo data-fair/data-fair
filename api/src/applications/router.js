@@ -419,8 +419,7 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
     topic: {
       key: `data-fair:application-delete:${application.id}`
     },
-    sender: application.owner,
-    resource: { type: 'application', title: application.title, id: application.id }
+    sender: application.owner
   }, sessionState)
 
   await syncDatasets(application)
