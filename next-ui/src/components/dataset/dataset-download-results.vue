@@ -47,8 +47,7 @@
           :icon="mdiCancel"
           :title="t('cancel')"
           color="warning"
-          absolute
-          location="right"
+          density="compact"
           style="position:absolute;top:6px;right:8px;"
           @click="cancelLargeCsv"
         />

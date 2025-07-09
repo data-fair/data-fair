@@ -29,7 +29,6 @@ let _scrollElement: Element | Window | null
 const show = ref(false)
 
 const onScroll: EventListener = (e: any) => {
-  console.log('SCROLL')
   const top = selector ? e.target.scrollTop : (window.pageYOffset || document.documentElement.offsetTop || 0)
   show.value = top > 300
 }

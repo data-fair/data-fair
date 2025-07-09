@@ -4,12 +4,13 @@
     :height="`${windowHeight - 48}px`"
     resize="no"
     sync-params
+    @notif="emitFrameNotif"
   />
 </template>
 
 <script>
 import '@data-fair/frame/lib/d-frame.js'
-import { mapState, mapGetters } from 'vuex'
+import { mapState, mapGetters, mapActions } from 'vuex'
 
 export default {
   async fetch ({ store, route }) {
@@ -34,6 +35,9 @@ export default {
         { text: 'Traçabilité (bêta)' }
       ])
     }
+  },
+  methods: {
+    ...mapActions(['emitFrameNotif'])
   }
 }
 </script>

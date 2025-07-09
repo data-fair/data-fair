@@ -337,12 +337,14 @@ export default {
     async saveUrlDraft (e) {
       if (!this.can('writeConfig')) return
       this.patchAndCommit({ urlDraft: this.editUrl, silent: true })
-      await this.fetchStatus()
+      // full page reload in case we need to show next-ui's page for this version of the app
+      window.location.reload()
+      /* await this.fetchStatus()
       await this.fetchSchema()
       this.refreshDraftPreview()
       // errors in draft app should be pushed by websocket, but to be extra safe we check after 5 seconds
       await new Promise(resolve => setTimeout(resolve, 5000))
-      await this.fetchStatus()
+      await this.fetchStatus() */
     },
     async validateDraft (e) {
       e.preventDefault()

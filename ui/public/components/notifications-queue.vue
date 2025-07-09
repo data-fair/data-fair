@@ -49,7 +49,10 @@
           :href="notif.url"
         >
           <v-list-item-content>
-            <v-list-item-title style="whitespace:normal">
+            <v-list-item-title
+              style="whitespace:normal"
+              :title="notif.title[$i18n.locale] || notif.title[$i18n.defaultLocale] || notif.title"
+            >
               {{ notif.title[$i18n.locale] || notif.title[$i18n.defaultLocale] || notif.title }}
             </v-list-item-title>
             <v-list-item-subtitle>{{ notif.date | moment("lll") }}</v-list-item-subtitle>

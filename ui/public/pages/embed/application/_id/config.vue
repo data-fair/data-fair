@@ -1,18 +1,31 @@
 <template lang="html">
-  <application-config
-    :ro-dataset="$route.query.roDataset === 'true'"
-    data-iframe-height
-  />
+  <div v-if="application">
+    <d-frame
+      v-if="application.baseApp?.meta?.['df:vjsf'] === '3'"
+      :src="`/data-fair/next-ui/embed/application/${$route.params.id}/config`"
+      :height="`${windowHeight}px`"
+      resize="no"
+      sync-params
+      @notif="emitFrameNotif"
+    />
+    <lazy-application-config
+      v-else
+      :ro-dataset="$route.query.roDataset === 'true'"
+    />
+  </div>
 </template>
 
 <script>
-import 'iframe-resizer/js/iframeResizer.contentWindow'
+import { mapState, mapActions } from 'vuex'
 
-global.iFrameResizer = {
-  heightCalculationMethod: 'taggedElement'
+export default {
+  computed: {
+    ...mapState('application', ['application'])
+  },
+  methods: {
+    ...mapActions(['emitFrameNotif'])
+  }
 }
-
-export default {}
 </script>
 
 <style lang="css">

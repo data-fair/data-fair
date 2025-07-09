@@ -116,7 +116,7 @@
               @filter="addFilter"
               @hide="hideHeader(header)"
               @fix-col="onFixCol(header.key)"
-              @update:sort="(direction: 1 | -1 | undefined) => {sort = direction ? {direction, key: header.key} : undefined}"
+              @update:sort="direction => {sort = direction ? {direction, key: header.key} : undefined}"
             />
           </template>
         </tr>
@@ -204,13 +204,13 @@
           xl="2"
         >
           <dataset-item-card
+            v-model:sort="sort"
             :result="result"
             :filters="filters"
             :filter-height="height - 20"
             :selected-fields="selectedCols"
             :headers="headersWithProperty"
             :truncate="truncate"
-            :sort="sort"
             :no-interaction="noInteraction"
             :hovered="hovered && hovered[0] === result ? hovered[1] : undefined"
             @filter="f => addFilter(f)"

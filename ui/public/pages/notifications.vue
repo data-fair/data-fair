@@ -7,6 +7,7 @@
     <d-frame
       :src="`${env.notifyUrl}/embed/devices`"
       resize
+      @notif="emitFrameNotif"
     >
       <div slot="loader">
         <v-skeleton-loader type="paragraph" />
@@ -26,6 +27,7 @@
     <d-frame
       :src="datasetsSubscribeUrl"
       resize
+      @notif="emitFrameNotif"
     >
       <div slot="loader">
         <v-skeleton-loader type="paragraph" />
@@ -45,6 +47,7 @@
     <d-frame
       :src="appsSubscribeUrl"
       resize
+      @notif="emitFrameNotif"
     >
       <div slot="loader">
         <v-skeleton-loader type="paragraph" />
@@ -70,13 +73,13 @@
       <d-frame
         :src="selectedSite.subscribeUrl"
         resize
+        @notif="emitFrameNotif"
       >
         <div slot="loader">
           <v-skeleton-loader type="paragraph" />
         </div>
       </d-frame>
     </template>
-    <!--
     <div v-if="requestedDatasetPublicationSiteUrl">
       <d-frame
         :src="requestedDatasetPublicationSiteUrl"
@@ -91,13 +94,24 @@
       <d-frame
         :src="requestedApplicationPublicationSiteUrl"
         resize
+        @notif="emitFrameNotif"
       >
         <div slot="loader">
           <v-skeleton-loader type="paragraph" />
         </div>
       </d-frame>
     </div>
-    -->
+    <div v-if="userCreationPublicationSiteUrl">
+      <d-frame
+        :src="userCreationPublicationSiteUrl"
+        resize
+        @notif="emitFrameNotif"
+      >
+        <div slot="loader">
+          <v-skeleton-loader type="paragraph" />
+        </div>
+      </d-frame>
+    </div>
   </v-container>
 </template>
 
@@ -121,7 +135,7 @@ fr:
 </i18n>
 
 <script>
-import { mapState, mapGetters } from 'vuex'
+import { mapState, mapGetters, mapActions } from 'vuex'
 import 'iframe-resizer/js/iframeResizer'
 import settingsSchema from '~/../../api/types/settings/schema.js'
 import '@data-fair/frame/lib/d-frame.js'
@@ -138,7 +152,7 @@ export default {
   }),
   computed: {
     ...mapState(['env']),
-    ...mapGetters('session', ['activeAccount']),
+    ...mapGetters('session', ['activeAccount', 'accountRole']),
     datasetsSubscribeUrl () {
       const webhooks = webhooksSchema.items.properties.events.items.oneOf
         .filter(item => item.const.startsWith('dataset') && item.const !== 'dataset-finalize-end')
@@ -165,20 +179,6 @@ export default {
           titles.push(this.$t('datasetPublishedTopic', { title: p.title || p.url || p.id, topic: topic.title }))
         }
 
-        if ((this.activeAccount.department || null) === (p.department || null)) {
-          // requested dataset publication
-          keys.push(`data-fair:dataset-publication-requested:${p.type}:${p.id}`)
-          titles.push(this.$t('datasetPublicationRequested', { title: p.title || p.url || p.id }))
-
-          // requested application publication
-          keys.push(`data-fair:application-publication-requested:${p.type}:${p.id}`)
-          titles.push(this.$t('applicationPublicationRequested', { title: p.title || p.url || p.id }))
-
-          // account creation
-          keys.push(`simple-directory:user-created:${p.type}:${p.id}`)
-          titles.push(this.$t('userCreated', { title: p.title || p.url || p.id }))
-        }
-
         // we used to direct to the publication site, but it is better that a notif coming from the back-office directs to the back-office
         // and this prevents problem when subscribing before the publication of the site on a domain
         const urlTemplate = this.env.publicUrl + '/dataset/{id}'
@@ -189,7 +189,7 @@ export default {
         }
       })
     },
-    /* requestedDatasetPublicationSiteUrl () {
+    requestedDatasetPublicationSiteUrl () {
       if (!this.selectedSite) return null
       if ((this.activeAccount.department || null) !== (this.selectedSite.department || null)) return
       const key = `data-fair:dataset-publication-requested:${this.selectedSite.type}:${this.selectedSite.id}`
@@ -204,7 +204,15 @@ export default {
       const title = this.$t('applicationPublicationRequested', { title: this.selectedSite.title || this.selectedSite.url || this.selectedSite.id })
       const urlTemplate = this.env.publicUrl + '/application/{id}'
       return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}&url-template=${encodeURIComponent(urlTemplate)}&register=false&header=no&sender=${encodeURIComponent(this.siteSender(this.selectedSite))}`
-    } */
+    },
+    userCreationPublicationSiteUrl () {
+      if (!this.selectedSite) return null
+      if ((this.activeAccount.department || null) !== (this.selectedSite.department || null)) return
+      if (this.accountRole !== 'admin') return
+      const key = `simple-directory:user-created:${this.selectedSite.type}:${this.selectedSite.id}`
+      const title = this.$t('userCreated', { title: this.selectedSite.title || this.selectedSite.url || this.selectedSite.id })
+      return `${this.env.notifyUrl}/embed/subscribe?key=${encodeURIComponent(key)}&title=${encodeURIComponent(title)}&register=false&header=no&sender=${encodeURIComponent(this.siteSender(this.selectedSite, 'admin'))}`
+    }
   },
   async mounted () {
     let publicationSitesUrl = 'api/v1/settings/' + this.activeAccount.type + '/' + this.activeAccount.id
@@ -218,11 +226,15 @@ export default {
     this.selectedSite = this.publicationSites[0]
   },
   methods: {
-    siteSender (site) {
-      let sender = this.activeAccount.type + ':' + this.activeAccount.id
-      if (this.activeAccount.department) sender += ':' + this.activeAccount.department
-      else if (site.department) sender += ':' + site.department
-      return sender
+    ...mapActions(['emitFrameNotif']),
+    siteSender (site, role) {
+      const parts = [
+        this.activeAccount.type,
+        this.activeAccount.id,
+        this.activeAccount.department ?? site.department ?? ''
+      ]
+      if (role) parts.push(role)
+      return parts.join(':')
     }
   }
 }

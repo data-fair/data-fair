@@ -38,8 +38,18 @@ async function removeDeprecated () {
 
 function prepareQuery (/** @type {URLSearchParams} */query) {
   return [...query.keys()]
-    .filter(key => !['skip', 'size', 'q', 'status', '{context.datasetFilter}', 'owner'].includes(key))
+    .filter(key => !['skip', 'size', 'q', 'status', '{context.datasetFilter}', 'owner'].includes(key) && !key.startsWith('${'))
     .reduce((a, key) => { a[key] = query.get(key).split(','); return a }, /** @type {Record<string, string[]>} */({}))
+}
+
+const getFragmentFetchUrl = (fragment) => {
+  if (!fragment) return null
+  if (fragment['x-fromUrl']) return fragment['x-fromUrl']
+  if (fragment.layout?.getItems?.url) {
+    if (typeof fragment.layout.getItems.url === 'string') return fragment.layout.getItems.url
+    return fragment.layout.getItems.url.expr
+  }
+  return null
 }
 
 async function failSafeInitBaseApp (app) {
@@ -73,9 +83,8 @@ async function initBaseApp (app) {
     const datasetsDefinition = (configSchema.properties && configSchema.properties.datasets) || (configSchema.allOf && configSchema.allOf[0].properties && configSchema.allOf[0].properties.datasets)
     let datasetsFetches = []
     if (datasetsDefinition) {
-      if (datasetsDefinition['x-fromUrl']) datasetsFetches = [datasetsDefinition['x-fromUrl']]
-      if (datasetsDefinition.items && datasetsDefinition.items['x-fromUrl']) datasetsFetches = [{ fromUrl: datasetsDefinition.items['x-fromUrl'], properties: datasetsDefinition.items.properties }]
-      if (Array.isArray(datasetsDefinition.items)) datasetsFetches = datasetsDefinition.items.map(item => ({ fromUrl: item['x-fromUrl'], properties: item.properties }))
+      if (getFragmentFetchUrl(datasetsDefinition.items)) datasetsFetches = [{ fromUrl: getFragmentFetchUrl(datasetsDefinition.items), properties: datasetsDefinition.items.properties }]
+      if (Array.isArray(datasetsDefinition.items)) datasetsFetches = datasetsDefinition.items.filter(item => getFragmentFetchUrl(item)).map(item => ({ fromUrl: getFragmentFetchUrl(item), properties: item.properties }))
     }
     const datasetsFilters = []
     for (const datasetFetch of datasetsFetches) {
@@ -115,7 +124,7 @@ router.post('', async (req, res) => {
     return res.status(400).type('text/plain').send(req.__('Initializing a base application only accepts the "url" part.'))
   }
   const baseApp = config.applications.find(a => a.url === req.body.url) || req.body
-  const fullBaseApp = await initBaseApp(db, baseApp)
+  const fullBaseApp = await initBaseApp(baseApp)
   syncBaseApp(db, fullBaseApp)
   res.send(fullBaseApp)
 })
@@ -199,8 +208,8 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
         { $unwind: '$schema' },
         { $facet: facet }]).toArray()
 
-      datasetTypes = facetResults[0].types.map(t => t._id.type)
-      datasetVocabulary = facetResults[0].concepts.map(t => t._id.concept).filter(c => !!c)
+      datasetTypes = facetResults[0]?.types.map(t => t._id.type) ?? []
+      datasetVocabulary = facetResults[0]?.concepts.map(t => t._id.concept).filter(c => !!c) ?? []
     } else {
       // match constraints against a specific dataset
       datasetCount = 1

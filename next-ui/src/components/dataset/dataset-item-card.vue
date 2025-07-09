@@ -96,6 +96,7 @@
             :local-enum="Array.isArray(result.values[header.key]) ? (result.values[header.key] as ExtendedResultValue[]).map(v => v.raw) : [(result.values[header.key] as ExtendedResultValue).raw]"
             @filter="filter => emit('filter', filter)"
             @hide="$emit('hide', header)"
+            @update:sort="direction => {sort = direction ? {direction, key: header.key} : undefined}"
           >
             <template #prepend-items="{hide}">
               <v-list-item
@@ -132,11 +133,12 @@ const { headers } = defineProps({
   filters: { type: Array as () => DatasetFilter[], required: false, default: () => ([]) },
   filterHeight: { type: Number, required: true },
   headers: { type: Array as () => TableHeaderWithProperty[], required: true },
-  sort: { type: Object as () => { direction: 1 | -1, key: string }, default: null },
   truncate: { type: Number, default: 50 },
   noInteraction: { type: Boolean, default: false },
   hovered: { type: Object as () => ExtendedResultValue, default: null }
 })
+
+const sort = defineModel<{ direction: 1 | -1, key: string }>('sort')
 
 const emit = defineEmits<{
   hide: [header: TableHeaderWithProperty],

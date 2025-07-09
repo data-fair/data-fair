@@ -1,9 +1,20 @@
 <template>
-  <application-config v-if="application" />
+  <div v-if="application">
+    <d-frame
+      v-if="application.baseApp?.meta?.['df:vjsf'] === '3'"
+      :src="`/data-fair/next-ui/embed/application/${$route.params.id}/config`"
+      :height="`${windowHeight - 48}px`"
+      resize="no"
+      sync-params
+      @notif="emitFrameNotif"
+    />
+    <lazy-application-config v-else />
+  </div>
 </template>
 
 <script>
-import { mapState } from 'vuex'
+import '@data-fair/frame/lib/d-frame.js'
+import { mapState, mapActions } from 'vuex'
 
 export default {
   middleware: ['auth-required'],
@@ -28,6 +39,9 @@ export default {
         { text: 'configuration' }
       ])
     }
+  },
+  methods: {
+    ...mapActions(['emitFrameNotif'])
   }
 }
 </script>

@@ -46,8 +46,8 @@ jobs:
         tags: ${{ steps.docker_meta.outputs.tags }}
         platforms: linux/amd64
         labels: ${{ steps.docker_meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        cache-from: type=registry,ref=ghcr.io/${{ github.repository }}/buildcache
+        cache-to: type=registry,ref=ghcr.io/${{ github.repository }}/buildcache,mode=max
     
     - name: Stop test dependencies
       run: docker compose stop
