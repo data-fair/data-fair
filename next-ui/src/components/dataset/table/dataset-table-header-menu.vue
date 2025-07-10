@@ -111,7 +111,7 @@
             <template v-if="showSearch">
               <v-list-item
                 v-if="!newFilter.operator || newFilter.operator === 'search'"
-                :active="newFilter.operator === 'search'"
+                :active="newFilter.operator === 'search' || !!search"
                 title="recherche texte libre"
                 @click="newFilter.operator = newFilter.operator === 'search' ? undefined : 'search'"
               />
