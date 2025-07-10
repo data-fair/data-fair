@@ -49,8 +49,7 @@
             v-if="showHelp"
             variant="text"
             tile
-            style="overflow-wrap: break-word"
-            class="mt-0 mb-2 pa-2"
+            class="mt-0 mb-2 pa-2 description-alert"
             v-html="header.tooltip"
           />
           <v-divider />
@@ -864,5 +863,14 @@ const newFilter = ref<Partial<DatasetFilter>>()
 <style>
 .dataset-table-header-actions .v-list-item__prepend {
   width: 30px;
+}
+
+.dataset-table-header-actions .description-alert {
+  overflow-wrap: break-word;
+  display: block;
+}
+
+.dataset-table-header-actions .description-alert p {
+  margin-bottom: 8px;
 }
 </style>
