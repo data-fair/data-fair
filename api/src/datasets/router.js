@@ -988,7 +988,7 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
 // Standard aggregation to group items by value and perform an optional metric calculation on each group
 router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('getValuesAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), async (req, res) => {
   res.throttleEnd()
-  const sessionState = reqSessionAuthenticated(req)
+  const sessionState = reqSession(req)
 
   /** @type {object | null} */
   const explain = req.query.explain === 'true' && sessionState.user && (sessionState.user.isAdmin || sessionState.user.asAdmin) ? {} : null
