@@ -27,13 +27,18 @@
         <!-- show help -->
         <template v-if="!!header.tooltip">
           <v-list-item
-
             class="pl-2"
             :active="showHelp"
             :title="t('showHelp')"
             @click="showHelp = !showHelp"
           >
             <template #prepend>
+              <v-icon
+                :icon="mdiInformation"
+                size="small"
+              />
+            </template>
+            <template #append>
               <v-icon
                 :icon="showHelp ? mdiMenuUp : mdiMenuDown"
                 size="small"
@@ -85,17 +90,29 @@
         <!-- filters -->
         <template v-if="showFilters">
           <v-list-item
-            :disabled="!!newFilter"
             class="pl-2"
+            :active="!!newFilter"
             :title="t('addFilter')"
-            @click="newFilter = {}"
-          />
+            @click="newFilter = newFilter ? undefined : {}"
+          >
+            <template #prepend>
+              <v-icon
+                :icon="mdiFilterVariant"
+                size="small"
+              />
+            </template>
+            <template #append>
+              <v-icon
+                :icon="newFilter ? mdiMenuUp : mdiMenuDown"
+                size="x-small"
+              />
+            </template>
+          </v-list-item>
           <template v-if="newFilter">
             <template v-if="showSearch">
               <v-list-item
                 v-if="!newFilter.operator || newFilter.operator === 'search'"
                 :active="newFilter.operator === 'search'"
-
                 title="recherche texte libre"
                 @click="newFilter.operator = newFilter.operator === 'search' ? undefined : 'search'"
               />
@@ -591,38 +608,39 @@
               />
             </template>
           </template>
-
-          <!-- hide column -->
-          <v-list-item
-            v-if="!fixed"
-            class="pl-2"
-            :title="t('hide')"
-            @click="$emit('hide');showMenu=false"
-          >
-            <template #prepend>
-              <v-icon
-                :icon="mdiEyeOffOutline"
-                size="small"
-              />
-            </template>
-          </v-list-item>
-
-          <!-- fix column to the left -->
-          <v-list-item
-            v-if="!noFix"
-            class="pl-2"
-            :class="{'v-item--active v-list-item--active': fixed}"
-            :title="t('fixLeft')"
-            @click="$emit('fix-col');showMenu=false"
-          >
-            <template #prepend>
-              <v-icon
-                :icon="mdiFormatHorizontalAlignLeft"
-                size="small"
-              />
-            </template>
-          </v-list-item>
+          <v-divider />
         </template>
+
+        <!-- hide column -->
+        <v-list-item
+          v-if="!fixed"
+          class="pl-2"
+          :title="t('hide')"
+          @click="$emit('hide');showMenu=false"
+        >
+          <template #prepend>
+            <v-icon
+              :icon="mdiEyeOffOutline"
+              size="small"
+            />
+          </template>
+        </v-list-item>
+
+        <!-- fix column to the left -->
+        <v-list-item
+          v-if="!noFix"
+          class="pl-2"
+          :class="{'v-item--active v-list-item--active': fixed}"
+          :title="t('fixLeft')"
+          @click="$emit('fix-col');showMenu=false"
+        >
+          <template #prepend>
+            <v-icon
+              :icon="mdiFormatHorizontalAlignLeft"
+              size="small"
+            />
+          </template>
+        </v-list-item>
       </v-list>
     </v-sheet>
   </v-menu>
@@ -652,7 +670,7 @@ en:
 </i18n>
 
 <script lang="ts" setup>
-import { mdiEyeOffOutline, mdiFormatHorizontalAlignLeft, mdiSortAscending, mdiSortDescending, mdiCheckboxMarked, mdiCheckboxBlankOutline, mdiCheck, mdiMenuDown, mdiMenuUp } from '@mdi/js'
+import { mdiEyeOffOutline, mdiFormatHorizontalAlignLeft, mdiSortAscending, mdiSortDescending, mdiCheckboxMarked, mdiCheckboxBlankOutline, mdiCheck, mdiMenuDown, mdiMenuUp, mdiFilterVariant, mdiInformation } from '@mdi/js'
 import { type TableHeaderWithProperty } from './use-headers'
 import { type DatasetFilter } from '~/composables/dataset-filters'
 import { formatValue } from '~/composables/dataset-lines'
