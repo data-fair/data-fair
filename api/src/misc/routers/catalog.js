@@ -35,7 +35,7 @@ router.get('/datasets', async (req, res) => {
 
   if (req.query.file === 'true') extraFilters.push({ file: { $exists: true } })
 
-  const query = findUtils.query(req, req.getLocale(), reqSession(req), 'datasets', { topics: 'topics.id' }, false, extraFilters)
+  const query = findUtils.query(req.query, req.getLocale(), reqSession(req), 'datasets', { topics: 'topics.id' }, false, extraFilters)
   const sort = findUtils.sort(req.query.sort || '-createdAt')
   const project = findUtils.project(req.query.select, [], req.query.raw === 'true')
   const [skip, size] = findUtils.pagination(req.query)
