@@ -46,7 +46,7 @@ export default defineConfig({
         ...(autoImports as any),
         unheadVueComposablesImports,
         {
-          '~/context': ['$uiConfig', '$sitePath', '$cspNonce', '$siteUrl', '$sdUrl', '$apiPath', '$fetch', '$wsUrl']
+          '~/context': ['$uiConfig', '$sitePath', '$appSubPath', '$cspNonce', '$siteUrl', '$sdUrl', '$apiPath', '$fetch', '$wsUrl']
         }
       ],
       dirs: [
@@ -61,7 +61,7 @@ export default defineConfig({
         // in production this injection will be performed by an express middleware
         if (process.env.NODE_ENV !== 'development') return html
         const { uiConfig } = await import('../api/src/ui-config.ts')
-        return microTemplate(html, { SITE_PATH: '', UI_CONFIG: JSON.stringify(uiConfig) })
+        return microTemplate(html, { SITE_PATH: '', APP_SUB_PATH: '/data-fair/next-ui/', UI_CONFIG: JSON.stringify(uiConfig) })
       }
     }
   ],

@@ -212,32 +212,53 @@ export const run = async () => {
     if (config.serveUi) {
       const { createSpaMiddleware, defaultNonceCSPDirectives } = await import('@data-fair/lib-express/serve-spa.js')
 
+      const getCSPHeader = (req) => {
+        const urlPath = parseUrlPath(req.url).pathname
+        const directives = { ...defaultNonceCSPDirectives }
+        for (const p of unsafePaths) {
+          if (p(urlPath)) {
+            // some embed pages require unsafe-eval as they use vjsf on dynamic schemas
+            directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
+            directives['connect-src'] = "'self' https:"
+          }
+        }
+        if (urlPath.startsWith('/embed/')) {
+          directives['frame-ancestors'] = "'self' http: https:"
+        }
+        return directives
+      }
       const unsafePaths = [
         '/embed/dataset/:id/table-edit',
         '/embed/dataset/:id/form',
         '/embed/application/:id/config',
         '/embed/workflow/update-dataset'
       ].map(p => pathToRegexp.match(p))
+      // expose all next-ui on sub path
       app.use('/next-ui', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, {
+        extraHtmlTemplateParams: { APP_SUB_PATH: '/data-fair/next-ui/' },
         ignoreSitePath: true,
-        csp: {
-          nonce: true,
-          header: (req) => {
-            const urlPath = parseUrlPath(req.url).pathname
-            const directives = { ...defaultNonceCSPDirectives }
-            for (const p of unsafePaths) {
-              if (p(urlPath)) {
-                // some embed pages require unsafe-eval as they use vjsf on dynamic schemas
-                directives['script-src'] = "'unsafe-eval' " + defaultNonceCSPDirectives['script-src']
-                directives['connect-src'] = "'self' https:"
-              }
-            }
-            if (urlPath.startsWith('/embed/')) {
-              directives['frame-ancestors'] = "'self' http: https:"
-            }
-            return directives
-          }
-        }
+        csp: { nonce: true, header: getCSPHeader }
+      }))
+      // alswo overwrite specific embeds that are production ready
+      app.use('/embed/dataset/:id/table', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, {
+        extraHtmlTemplateParams: { APP_SUB_PATH: '/data-fair/' },
+        ignoreSitePath: true,
+        csp: { nonce: true, header: getCSPHeader }
+      }))
+      app.use('/embed/dataset/:id/table-edit', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, {
+        extraHtmlTemplateParams: { APP_SUB_PATH: '/data-fair/' },
+        ignoreSitePath: true,
+        csp: { nonce: true, header: getCSPHeader }
+      }))
+      app.use('/embed/dataset/:id/form', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, {
+        extraHtmlTemplateParams: { APP_SUB_PATH: '/data-fair/' },
+        ignoreSitePath: true,
+        csp: { nonce: true, header: getCSPHeader }
+      }))
+      app.use('/embed/workflow/update-dataset', await createSpaMiddleware(resolve(import.meta.dirname, '../../next-ui/dist'), uiConfig, {
+        extraHtmlTemplateParams: { APP_SUB_PATH: '/data-fair/' },
+        ignoreSitePath: true,
+        csp: { nonce: true, header: getCSPHeader }
       }))
     }
 

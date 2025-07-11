@@ -3,6 +3,7 @@ import type { UiConfig } from '../../api/src/ui-config'
 
 export const $uiConfig = (window as any).__UI_CONFIG as UiConfig
 export const $sitePath = (window as any).__SITE_PATH as string
+export const $appSubPath = (window as any).__SITE_PATH as string + (window as any).__APP_SUB_PATH
 export const $cspNonce = (window as any).__CSP_NONCE as string
 export const $siteUrl = window.location.origin + $sitePath
 export const $sdUrl = $sitePath + '/simple-directory'
