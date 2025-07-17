@@ -1,7 +1,7 @@
 <template>
   <div v-if="application">
     <d-frame
-      v-if="application.baseApp?.meta?.['df:vjsf'] === '3'"
+      v-if="baseAppDraft?.meta?.['df:vjsf'] === '3'"
       :src="`/data-fair/next-ui/embed/application/${$route.params.id}/config`"
       :height="`${windowHeight - 48}px`"
       resize="no"
@@ -28,7 +28,10 @@ export default {
     }
   },
   computed: {
-    ...mapState('application', ['application'])
+    ...mapState('application', ['application']),
+    baseAppDraft () {
+      return this.application && (this.application.baseAppDraft ?? this.application.baseApp)
+    }
   },
   created () {
     // children pages are deprecated
