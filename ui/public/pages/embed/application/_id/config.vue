@@ -1,7 +1,7 @@
 <template lang="html">
   <div v-if="application">
     <d-frame
-      v-if="application.baseApp?.meta?.['df:vjsf'] === '3'"
+      v-if="baseAppDraft?.meta?.['df:vjsf'] === '3'"
       :src="`/data-fair/next-ui/embed/application/${$route.params.id}/config`"
       :height="`${windowHeight}px`"
       resize="no"
@@ -20,7 +20,10 @@ import { mapState, mapActions } from 'vuex'
 
 export default {
   computed: {
-    ...mapState('application', ['application'])
+    ...mapState('application', ['application']),
+    baseAppDraft () {
+      return this.application && (this.application.baseAppDraft ?? this.application.baseApp)
+    }
   },
   methods: {
     ...mapActions(['emitFrameNotif'])

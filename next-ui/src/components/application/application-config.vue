@@ -177,6 +177,10 @@ useApplicationWatch('draft-error')
 if (!configFetch.initialized.value) configFetch.refresh()
 if (!configDraftFetch.initialized.value) configDraftFetch.refresh()
 
+const baseAppDraft = computed(() => {
+  return application.value?.baseAppDraft ?? application.value?.baseApp
+})
+
 const editUrl = computed(() => application.value?.urlDraft || application.value?.url)
 const editConfig = ref<AppConfig | null>(null)
 watch(configDraft, (config) => {
@@ -239,7 +243,7 @@ const completeSchema = (schema: any) => {
     }
   }
   if (!schema.layout?.comp) schema.layout = 'expansion-panels'
-  if (application.value?.baseApp?.meta?.['df:vjsf'] === '3') {
+  if (baseAppDraft.value?.meta?.['df:vjsf'] === '3') {
     return schema
   } else {
     return v2compat(schema)
@@ -271,13 +275,14 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
   }
 })
 
+// TODO: editUrl is not saved yet as urlDraft ?
 const saveDraft = async () => {
   if (!canWriteConfig.value || !formValid.value || !editConfig.value) return
   if (toRaw(configDraft.value) === toRaw(editConfig.value)) return
   // debug('save draft', diff(configDraft.value ?? {}, editConfig.value))
   const wasInError = !!application.value?.errorMessageDraft
   await writeConfigDraft(editConfig.value)
-  if (application.value?.baseApp?.meta?.['df:sync-config'] === 'true') {
+  if (baseAppDraft.value?.meta?.['df:sync-config'] === 'true') {
     debug('send set-config message to app', editConfig.value)
     // @ts-ignore
     frame.value?.postMessageToChild({ type: 'set-config', content: toRaw(editConfig.value) })
