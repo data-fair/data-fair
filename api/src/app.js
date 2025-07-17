@@ -47,7 +47,7 @@ export const run = async () => {
     const limits = await import('./misc/utils/limits.ts')
     const rateLimiting = await import('./misc/utils/rate-limiting.ts')
     const { session } = await import('@data-fair/lib-express/index.js')
-    session.init(config.directoryUrl)
+    session.init(config.privateDirectoryUrl || config.directoryUrl)
 
     app.set('trust proxy', 1)
     app.set('json spaces', 2)
