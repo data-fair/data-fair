@@ -44,6 +44,7 @@ const createApplicationStore = (id: string) => {
       }
     })
     configDraft.value = config
+    if (application.value) delete application.value.errorMessageDraft
   }
   const cancelConfigDraft = async () => {
     await $fetch('/applications/' + id + '/configuration-draft', { method: 'DELETE' })
