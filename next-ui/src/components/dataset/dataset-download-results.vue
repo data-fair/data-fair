@@ -178,7 +178,7 @@ const largeCsvValue = ref(0)
 const largeCsvCancelled = ref(false)
 
 const baseParams = computed(() => {
-  const p: Record<string, any> = { size: pageSize, page: 1 }
+  const p: Record<string, any> = { size: pageSize, page: 1, truncate: undefined }
   if (selectedCols.length) p.select = selectedCols.join(',')
   return p
 })
