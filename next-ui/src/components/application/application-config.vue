@@ -275,12 +275,13 @@ const saveDraft = async () => {
   if (!canWriteConfig.value || !formValid.value || !editConfig.value) return
   if (toRaw(configDraft.value) === toRaw(editConfig.value)) return
   // debug('save draft', diff(configDraft.value ?? {}, editConfig.value))
+  const wasInError = !!application.value?.errorMessageDraft
   await writeConfigDraft(editConfig.value)
   if (application.value?.baseApp?.meta?.['df:sync-config'] === 'true') {
     debug('send set-config message to app', editConfig.value)
     // @ts-ignore
     frame.value?.postMessageToChild({ type: 'set-config', content: toRaw(editConfig.value) })
-  } else {
+  } else if (!wasInError) {
     debug('force draft preview refresh')
     draftPreviewInc.value++
   }
