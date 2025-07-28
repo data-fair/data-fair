@@ -196,13 +196,13 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
     if (req.query.dataset === 'any') {
       // match constraints against all datasets of current account
       const filter = { 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id }
-      datasetCount = mongo.datasets.countDocuments(filter)
-      datasetBBox = !!(mongo.datasets.countDocuments({ $and: [{ bbox: { $ne: null } }, filter] }))
+      datasetCount = await mongo.datasets.countDocuments(filter)
+      datasetBBox = !!(await mongo.datasets.countDocuments({ $and: [{ bbox: { $ne: null } }, filter] }))
       const facet = {
         types: [{ $match: { 'schema.x-calculated': { $ne: true } } }, { $group: { _id: { type: '$schema.type' } } }],
         concepts: [{ $group: { _id: { concept: '$schema.x-refersTo' } } }]
       }
-      const facetResults = mongo.datasets.aggregate([
+      const facetResults = await mongo.datasets.aggregate([
         { $match: filter },
         { $project: { 'schema.type': 1, 'schema.x-refersTo': 1, 'schema.x-calculated': 1 } },
         { $unwind: '$schema' },
@@ -214,7 +214,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
       // match constraints against a specific dataset
       datasetCount = 1
       datasetId = req.query.dataset
-      const dataset = mongo.datasets.findOne({ id: datasetId, 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id })
+      const dataset = await mongo.datasets.findOne({ id: datasetId, 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id })
       if (!dataset) return res.status(404).send(req.__('errors.missingDataset', { id: datasetId }))
       datasetTypes = (dataset.schema || []).filter(field => !field['x-calculated']).map(field => field.type)
       datasetVocabulary = (dataset.schema || []).map(field => field['x-refersTo']).filter(c => !!c)
