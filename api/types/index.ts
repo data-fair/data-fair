@@ -16,7 +16,7 @@ export type { RemoteService } from './remote-service/index.js'
 export type Request = ExpressRequest & { query: Record<string, string> } & { publicBaseUrl: string }
 
 export type ResourceType = 'datasets' | 'applications' | 'catalogs'
-export type Resource = Pick<Dataset, 'id' | 'slug' | 'title' | 'owner' | 'permissions' | 'publicationSites' | 'requestedPublicationSites' | 'topics'>
+export type Resource = Pick<Dataset, 'id' | 'slug' | 'title' | 'owner' | 'permissions' | 'publicationSites' | 'requestedPublicationSites' | 'topics' | 'updatedAt'>
   & { _readApiKey?: { current: string, previous: string } }
 export type BypassPermissions = {
   operations?: string[],
