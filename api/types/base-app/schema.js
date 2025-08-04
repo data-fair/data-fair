@@ -1,3 +1,5 @@
+import owner from '../../contract/owner.js'
+
 export default {
   $id: 'https://github.com/data-fair/data-fair/base-app',
   title: 'Base app',
@@ -9,8 +11,19 @@ export default {
     url: { type: 'string' },
     applicationName: { type: 'string' },
     version: { type: 'string' },
+    category: { type: 'string' },
     meta: {
       type: 'object'
+    },
+    privateAccess: {
+      type: 'array',
+      items: owner
+    },
+    datasetsFilters: {
+      type: 'array',
+      items: {
+        type: 'object'
+      }
     }
   }
 }

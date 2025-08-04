@@ -1,5 +1,6 @@
 import type { Request as ExpressRequest } from 'express'
 import type { Dataset } from './dataset/index.ts'
+import type { BaseApp } from './base-app/index.js'
 
 export type { Application } from './application/index.js'
 export type { AppConfig } from './app-config/index.js'
@@ -50,3 +51,5 @@ export type RestActionsSummary = {
   dropped?: boolean,
   indexedAt?: string
 }
+
+export type BaseAppWithContext = BaseApp & { disabled: string[] }

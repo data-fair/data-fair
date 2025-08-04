@@ -64,12 +64,16 @@ const curateApplication = async (application) => {
     if (!application.baseApp) {
       throw httpError(400, 'Base application not found')
     }
+  } else {
+    delete application.baseApp
   }
   if (application.urlDraft) {
     application.baseAppDraft = await mongo.baseApplications.findOne({ url: application.urlDraft }, { projection })
     if (!application.baseAppDraft) {
       throw httpError(400, 'Base draft application not found')
     }
+  } else {
+    delete application.baseAppDraft
   }
   setUniqueRefs(application)
 }

@@ -30,7 +30,10 @@ export default {
   computed: {
     ...mapState('application', ['application']),
     baseAppDraft () {
-      return this.application && (this.application.baseAppDraft ?? this.application.baseApp)
+      if (!this.application) return null
+      return (this.application.baseAppDraft && Object.keys(this.application.baseAppDraft).length)
+        ? this.application.baseAppDraft
+        : this.application.baseApp
     }
   },
   created () {

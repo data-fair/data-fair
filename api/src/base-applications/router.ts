@@ -1,4 +1,3 @@
-import util from 'util'
 import config from '#config'
 import mongo from '#mongo'
 import express from 'express'
@@ -15,9 +14,9 @@ import * as cacheHeaders from '../misc/utils/cache-headers.js'
 import { getThumbnail } from '../misc/utils/thumbnails.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import { reqAdminMode, reqUser, reqUserAuthenticated, reqSession } from '@data-fair/lib-express'
+import type { BaseApp, BaseAppWithContext, Request } from '#types'
 
 const htmlExtractor = new Extractor()
-htmlExtractor.extract = util.promisify(htmlExtractor.extract)
 export const router = express.Router()
 
 // Fill the collection using the default base applications from config
@@ -36,10 +35,10 @@ async function removeDeprecated () {
   }
 }
 
-function prepareQuery (/** @type {URLSearchParams} */query) {
-  return [...query.keys()]
-    .filter(key => !['skip', 'size', 'q', 'status', '{context.datasetFilter}', 'owner'].includes(key) && !key.startsWith('${'))
-    .reduce((a, key) => { a[key] = query.get(key).split(','); return a }, /** @type {Record<string, string[]>} */({}))
+function prepareQuery (query: URLSearchParams) {
+  return [...query.entries()]
+    .filter(entry => !['skip', 'size', 'q', 'status', '{context.datasetFilter}', 'owner'].includes(entry[0]) && !entry[0].startsWith('${'))
+    .reduce((a, entry) => { a[entry[0]] = entry[1].split(','); return a }, ({} as Record<string, string[]>))
 }
 
 const getFragmentFetchUrl = (fragment) => {
@@ -64,8 +63,8 @@ async function failSafeInitBaseApp (app) {
 async function initBaseApp (app) {
   if (app.url[app.url.length - 1] !== '/') app.url += '/'
   const html = (await axios.get(app.url + 'index.html')).data
-  const data = await htmlExtractor.extract(html)
-  const patch = {
+  const data: { meta: Record<string, string> } = await new Promise((resolve, reject) => htmlExtractor.extract(html, (err, data) => err ? reject(err) : resolve(data)))
+  const patch: Partial<BaseApp> = {
     meta: data.meta,
     id: slug(app.url, { lower: true }),
     updatedAt: new Date().toISOString(),
@@ -75,20 +74,20 @@ async function initBaseApp (app) {
   try {
     const res = (await axios.get(app.url + 'config-schema.json'))
     if (typeof res.data !== 'object') throw new Error('Invalid json')
-    const configSchema = (await jsonRefs.resolveRefs(res.data, { filter: ['local'] })).resolved
+    const configSchema: any = (await jsonRefs.resolveRefs(res.data, { filter: ['local'] })).resolved
 
     patch.hasConfigSchema = true
 
     // Read the config schema to deduce filters on datasets
     const datasetsDefinition = (configSchema.properties && configSchema.properties.datasets) || (configSchema.allOf && configSchema.allOf[0].properties && configSchema.allOf[0].properties.datasets)
-    let datasetsFetches = []
+    let datasetsFetches: { fromUrl: string, properties: Record<string, any> }[] = []
     if (datasetsDefinition) {
       if (getFragmentFetchUrl(datasetsDefinition.items)) datasetsFetches = [{ fromUrl: getFragmentFetchUrl(datasetsDefinition.items), properties: datasetsDefinition.items.properties }]
       if (Array.isArray(datasetsDefinition.items)) datasetsFetches = datasetsDefinition.items.filter(item => getFragmentFetchUrl(item)).map(item => ({ fromUrl: getFragmentFetchUrl(item), properties: item.properties }))
     }
-    const datasetsFilters = []
+    const datasetsFilters: any[] = []
     for (const datasetFetch of datasetsFetches) {
-      const info = prepareQuery(new URL(datasetFetch.fromUrl, config.publicUrl).searchParams)
+      const info = prepareQuery(new URL(datasetFetch.fromUrl, config.publicUrl).searchParams) as Record<string, any>
       info.fromUrl = datasetFetch.fromUrl
       if (datasetFetch.properties) info.properties = datasetFetch.properties
       datasetsFilters.push(info)
@@ -108,47 +107,49 @@ async function initBaseApp (app) {
   const storedBaseApp = await mongo.baseApplications
     .findOneAndUpdate({ id: patch.id }, { $set: patch }, { upsert: true, returnDocument: 'after' })
   baseAppsUtils.clean(config.publicUrl, storedBaseApp)
-  return storedBaseApp
+  return storedBaseApp as BaseApp
 }
 
-async function syncBaseApp (db, baseApp) {
+async function syncBaseApp (baseApp: BaseApp) {
   const baseAppReference = { id: baseApp.id, url: baseApp.url, meta: baseApp.meta, datasetsFilters: baseApp.datasetsFilters }
   await mongo.applications.updateMany({ url: baseApp.url }, { $set: { baseApp: baseAppReference } })
   await mongo.applications.updateMany({ urlDraft: baseApp.url }, { $set: { baseAppDraft: baseAppReference } })
 }
 
 router.post('', async (req, res) => {
-  const db = mongo.db
   reqAdminMode(req)
   if (!req.body.url || Object.keys(req.body).length !== 1) {
-    return res.status(400).type('text/plain').send(req.__('Initializing a base application only accepts the "url" part.'))
+    res.status(400).type('text/plain').send(req.__('Initializing a base application only accepts the "url" part.'))
+    return
   }
   const baseApp = config.applications.find(a => a.url === req.body.url) || req.body
   const fullBaseApp = await initBaseApp(baseApp)
-  syncBaseApp(db, fullBaseApp)
+  await syncBaseApp(fullBaseApp)
   res.send(fullBaseApp)
 })
 
 router.patch('/:id', async (req, res) => {
-  const db = mongo.db
   reqAdminMode(req)
   const patch = req.body
-  const storedBaseApp = mongo.baseApplications
+  const storedBaseApp = await mongo.baseApplications
     .findOneAndUpdate({ id: req.params.id }, { $set: patch }, { returnDocument: 'after' })
-  if (!storedBaseApp) return res.status(404).send()
-  syncBaseApp(db, storedBaseApp)
+  if (!storedBaseApp) {
+    res.status(404).send()
+    return
+  }
+  await syncBaseApp(storedBaseApp)
   res.send(storedBaseApp)
 })
 
 const getQuery = (req, showAll = false) => {
-  const query = { $and: [{ deprecated: { $ne: true } }] }
-  const accessFilter = []
+  const query: any = { $and: [{ deprecated: { $ne: true } }] }
+  const accessFilter: any[] = []
 
   accessFilter.push({ public: true })
   // Private access to applications is managed in a similar way as owner filter for
   // other resources (datasets, etc)
   // You can use ?privateAccess=user:alban,organization:koumoul
-  const privateAccess = []
+  const privateAccess: any[] = []
   if (req.query.privateAccess) {
     const user = reqUserAuthenticated(req)
     for (const p of req.query.privateAccess.split(',')) {
@@ -168,7 +169,8 @@ const getQuery = (req, showAll = false) => {
 }
 
 // Get the list. Non admin users can only see the public and non deprecated ones.
-router.get('', cacheHeaders.noCache, async (req, res) => {
+router.get('', cacheHeaders.noCache, async (_req, res) => {
+  const req = _req as Request
   const sessionState = reqSession(req)
   const { query, privateAccess } = getQuery(req)
   if (req.query.applicationName) query.$and.push({ $or: [{ applicationName: req.query.applicationName }, { 'meta.application-name': req.query.applicationName }] })
@@ -191,13 +193,15 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
 
   // optionally complete informations based on a dataset to guide user in selecting suitable application
   if (req.query.dataset) {
+    const account = sessionState.account
+    if (!account) throw httpError(403, 'dataset parameter requires authentication')
     let datasetBBox, datasetVocabulary, datasetTypes, datasetId, datasetCount
     const vocabulary = i18nUtils.vocabulary[req.getLocale()]
     if (req.query.dataset === 'any') {
       // match constraints against all datasets of current account
-      const filter = { 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id }
+      const filter = { 'owner.type': account.type, 'owner.id': account.id }
       datasetCount = await mongo.datasets.countDocuments(filter)
-      datasetBBox = !!(await mongo.datasets.countDocuments({ $and: [{ bbox: { $ne: null } }, filter] }))
+      datasetBBox = !!(await mongo.datasets.countDocuments({ $and: [{ bbox: { $exists: true } }, filter] }))
       const facet = {
         types: [{ $match: { 'schema.x-calculated': { $ne: true } } }, { $group: { _id: { type: '$schema.type' } } }],
         concepts: [{ $group: { _id: { concept: '$schema.x-refersTo' } } }]
@@ -214,19 +218,23 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
       // match constraints against a specific dataset
       datasetCount = 1
       datasetId = req.query.dataset
-      const dataset = await mongo.datasets.findOne({ id: datasetId, 'owner.type': sessionState.account.type, 'owner.id': sessionState.account.id })
-      if (!dataset) return res.status(404).send(req.__('errors.missingDataset', { id: datasetId }))
+      const dataset = await mongo.datasets.findOne({ id: datasetId, 'owner.type': account.type, 'owner.id': account.id })
+      if (!dataset) {
+        res.status(404).send(req.__('errors.missingDataset', { id: datasetId }))
+        return
+      }
       datasetTypes = (dataset.schema || []).filter(field => !field['x-calculated']).map(field => field.type)
       datasetVocabulary = (dataset.schema || []).map(field => field['x-refersTo']).filter(c => !!c)
       datasetBBox = !!dataset.bbox
     }
-    for (const application of results) {
+    for (const _application of results) {
+      const application = _application as unknown as BaseAppWithContext
       application.disabled = []
       application.category = application.category || 'autre'
       if (datasetId && (!application.datasetsFilters || !application.datasetsFilters.length)) {
         application.disabled.push(req.__('appRequire.noDataset'))
       } else {
-        const requirements = []
+        const requirements: string[] = []
         if (application.datasetsFilters && application.datasetsFilters.length && !datasetCount) {
           requirements.push(req.__('appRequire.aDataset'))
         } else {
@@ -235,25 +243,27 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
               requirements.push(req.__('appRequire.geoData'))
             }
             if (filter.concepts) {
-              const foundConcepts = []
-              for (const concept of filter.concepts) {
+              const concepts = filter.concepts as string[]
+              const foundConcepts: string[] = []
+              for (const concept of concepts) {
                 if (datasetVocabulary.includes(concept)) {
                   foundConcepts.push(concept)
                 }
               }
               if (!foundConcepts.length) {
-                if (filter.concepts.length === 1) {
+                if (concepts.length === 1) {
                   requirements.push(req.__('appRequire.aConcept', { concept: vocabulary[filter.concepts[0]].title }))
                 } else {
-                  requirements.push(req.__('appRequire.oneOfConcepts', { concepts: filter.concepts.map(concept => vocabulary[concept].title).join(req.__('appRequire.orJoin')) }))
+                  requirements.push(req.__('appRequire.oneOfConcepts', { concepts: concepts.map(concept => vocabulary[concept].title).join(req.__('appRequire.orJoin')) }))
                 }
               }
             }
-            if (filter['field-type'] && !datasetTypes.find(t => filter['field-type'].includes(t))) {
-              if (filter['field-type'].length === 1) {
-                requirements.push(req.__('appRequire.aType', { type: filter['field-type'][0] }))
+            const fieldTypes = filter['field-type'] as string[]
+            if (fieldTypes && !datasetTypes.find(t => fieldTypes.includes(t))) {
+              if (fieldTypes.length === 1) {
+                requirements.push(req.__('appRequire.aType', { type: fieldTypes[0] }))
               } else {
-                requirements.push(req.__('appRequire.oneOfTypes', { types: filter['field-type'].join(req.__('appRequire.orJoin')) }))
+                requirements.push(req.__('appRequire.oneOfTypes', { types: fieldTypes.join(req.__('appRequire.orJoin')) }))
               }
             }
           }
@@ -273,7 +283,10 @@ router.get('/:id/icon', async (req, res, next) => {
   const { query } = getQuery(req, !!(user?.adminMode))
   query.$and.push({ id: req.params.id })
   const baseApp = await mongo.baseApplications.findOne(query, { projection: { url: 1 } })
-  if (!baseApp) return res.status(404).send()
+  if (!baseApp) {
+    res.status(404).send()
+    return
+  }
   const iconUrl = baseApp.url.replace(/\/$/, '') + '/icon.png'
   await getThumbnail(req, res, iconUrl)
 })
@@ -282,7 +295,10 @@ router.get('/:id/thumbnail', async (req, res, next) => {
   const { query } = getQuery(req, !!(user?.adminMode))
   query.$and.push({ id: req.params.id })
   const baseApp = await mongo.baseApplications.findOne(query, { projection: { image: 1, url: 1 } })
-  if (!baseApp) return res.status(404).send()
+  if (!baseApp) {
+    res.status(404).send()
+    return
+  }
   const imageUrl = baseApp.image || baseApp.url.replace(/\/$/, '') + '/thumbnail.png'
   await getThumbnail(req, res, imageUrl)
 })
