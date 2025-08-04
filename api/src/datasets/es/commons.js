@@ -610,7 +610,7 @@ export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilte
   }
 
   const minimumShouldMatch = should.length ? 1 : 0
-  esQuery.query = { bool: { filter, must, should, mustNot, minimum_should_match: minimumShouldMatch } }
+  esQuery.query = { bool: { filter, must, should, must_not: mustNot, minimum_should_match: minimumShouldMatch } }
 
   return esQuery
 }
