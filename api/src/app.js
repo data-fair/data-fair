@@ -283,7 +283,7 @@ export const run = async () => {
       (await import('./misc/utils/capture.ts')).init(),
       (await import('./misc/utils/cache.js')).init(),
       (await import('./remote-services/utils.ts')).init(),
-      (await import('./base-applications/router.js')).init(),
+      (await import('./base-applications/router.ts')).init(),
       wsServer.start(server, db, async (channel, sessionState, message) => {
         if (process.env.NODE_ENV === 'test') {
           // TODO: remove this ugly exception, this code should be tested
