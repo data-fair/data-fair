@@ -12,17 +12,18 @@ export default {
     },
     title: {
       type: 'string',
-      title: 'Title',
+      title: 'Titre',
       'x-i18n-title': {
-        fr: 'Titre'
+        en: 'Title'
       }
     },
     color: {
       type: 'string',
-      title: 'Color',
+      title: 'Couleur',
       'x-i18n-title': {
-        fr: 'Couleur'
+        en: 'Color'
       },
+      'x-display': 'color-picker',
       layout: {
         comp: 'color-picker',
         cols: 6
@@ -30,14 +31,19 @@ export default {
     },
     icon: {
       type: 'object',
-      title: 'Icon',
+      title: 'Icône',
       'x-i18n-title': {
-        fr: 'Icône'
+        en: 'Icon',
       },
-      description: "You can easily browse the list of available icons on this <a href='https://pictogrammers.com/library/mdi/' target='_blank'>this website</a>.<br>Start typing to search through the complete collection of icons. Only a few icons are loaded initially for better performance.",
+      description: "Il est possible de consulter plus facilement la liste des icônes disponibles sur <a href='https://pictogrammers.com/library/mdi/' target='_blank'>ce site </a>.<br>Commencez à taper pour rechercher dans la collection complète d'icônes. Seuls quelques icônes sont chargées initialement pour de meilleures performances.",
       'x-i18n-description': {
-        fr: "Il est possible de consulter plus facilement la liste des icônes disponibles sur <a href='https://pictogrammers.com/library/mdi/' target='_blank'>ce site </a>.<br>Commencez à taper pour rechercher dans la collection complète d'icônes. Seuls quelques icônes sont chargées initialement pour de meilleures performances."
+        en: "You can easily browse the list of available icons on this <a href='https://pictogrammers.com/library/mdi/' target='_blank'>this website</a>.<br>Start typing to search through the complete collection of icons. Only a few icons are loaded initially for better performance.",
       },
+      'x-fromUrl': 'https://koumoul.com/data-fair/api/v1/datasets/icons-mdi-latest/lines?q={q}',
+      'x-itemKey': 'name',
+      'x-itemTitle': 'name',
+      'x-itemIcon': 'name',
+      'x-itemsProp': 'results',
       layout: {
         getItems: {
           url: 'https://koumoul.com/data-fair/api/v1/datasets/icons-mdi-latest/lines?q={q}&select=name,svg&size=25',

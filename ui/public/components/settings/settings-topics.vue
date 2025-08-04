@@ -14,7 +14,7 @@
 <script>
 import Vue from 'vue'
 import eventBus from '~/event-bus'
-import settingsSchema from '~/../../api/types/settings/schema.js'
+import { resolvedSchema as settingsSchema } from '~/../../api/types/settings/.type/index'
 
 if (process.browser) {
   const Draggable = require('vuedraggable')
