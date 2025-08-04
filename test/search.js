@@ -163,6 +163,23 @@ describe('search', function () {
     assert.ok(Number(res.headers['content-length']) > 5000)
   })
 
+  it('Filter on line existence', async function () {
+    const ax = global.ax.dmeadus
+    const dataset = await testUtils.sendDataset('datasets/dataset2.csv', ax)
+
+    let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
+    assert.equal(res.data.total, 6)
+
+    // check existance of property
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_exists`)
+    assert.equal(res.data.total, 5)
+    assert.equal(res.data.results[0].id, 'koumoul')
+    // check non-existance of property
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?id_nexists`)
+    assert.equal(res.data.total, 1)
+    assert.equal(res.data.results[0].adr, 'missing id')
+  })
+
   it('search lines and collapse on field', async function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/collapsable.csv', ax)
