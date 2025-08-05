@@ -170,19 +170,12 @@ const { roDataset } = defineProps({
   roDataset: { type: Boolean, default: false }
 })
 
-const { application, applicationLink, patch, canWriteConfig, configFetch, configDraftFetch, configDraft, writeConfig, writeConfigDraft, cancelConfigDraft } = useApplicationStore()
+const { application, applicationLink, patch, canWriteConfig, configFetch, configDraftFetch, configDraft, writeConfig, writeConfigDraft, cancelConfigDraft, baseAppDraft } = useApplicationStore()
 const { availableVersions } = useApplicationVersions()
 useApplicationWatch('draft-error')
 
 if (!configFetch.initialized.value) configFetch.refresh()
 if (!configDraftFetch.initialized.value) configDraftFetch.refresh()
-
-const baseAppDraft = computed(() => {
-  if (!application.value) return null
-  return (application.value.baseAppDraft && Object.keys(application.value.baseAppDraft).length)
-    ? application.value.baseAppDraft
-    : application.value.baseApp
-})
 
 const editUrl = computed(() => application.value?.urlDraft || application.value?.url)
 const editConfig = ref<AppConfig | null>(null)
