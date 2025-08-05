@@ -79,6 +79,10 @@
 				"title": "Publication de {{label}}",
 				"body": "Le jeu de données {{label}} a été publié sur {{publicationSite}}."
 			},
+			"published-topic": {
+				"title": "Publication de {{label}} dans {{topic}}",
+				"body": "Le jeu de données {{label}} a été publié sur {{publicationSite}} dans la thématique {{topic}}."
+			},
 			"draft-data-updated": {
 				"title": "Fichier brouillon mis à jour {{label}}",
 				"body": "Un nouveau fichier a été chargé sur le jeu de données {{label}} en mode brouillon."

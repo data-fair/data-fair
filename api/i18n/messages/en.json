@@ -77,6 +77,10 @@
 				"title": "Publication of {{label}}",
 				"body": "The dataset {{label}} has been published on {{publicationSite}}."
 			},
+			"published-topic": {
+				"title": "Publication of {{label}} in {{topic}}",
+				"body": "The dataset {{label}} has been published on {{publicationSite}} in the topic {{topic}}."
+			},
 			"draft-data-updated": {
 				"title": "Draft file updated {{label}}",
 				"body": "A new file was loaded on the dataset {{label}} in draft mode."

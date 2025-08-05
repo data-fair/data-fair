@@ -53,9 +53,17 @@ export const applyPatch = async (previousResource: Resource, resource: Resource,
       if (!publicationSiteInfo.settings?.staging && !permissions.can(resourceType, resource, 'writePublicationSites', sessionState)) {
         throw httpError(403, 'fail to publish: publication site requires permission to publish')
       }
-      await sendResourceEvent(resourceType, resource, sessionState, `published:${publicationSite}`)
+      await sendResourceEvent(resourceType, resource, sessionState, `published:${publicationSite}`, {
+        i18nKey: 'published',
+        params: { publicationSite: publicationSiteInfo.title ?? new URL(publicationSiteInfo.url).host },
+        sender: { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
+      })
       for (const topic of newTopics) {
-        await sendResourceEvent(resourceType, resource, sessionState, `published-topic:${publicationSite}:${topic.id}`)
+        await sendResourceEvent(resourceType, resource, sessionState, `published-topic:${publicationSite}:${topic.id}`, {
+          i18nKey: 'published-topic',
+          params: { publicationSite: publicationSiteInfo.title ?? new URL(publicationSiteInfo.url).host, topic: topic.title },
+          sender: { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
+        })
       }
     }
   }
@@ -91,7 +99,7 @@ export const applyPatch = async (previousResource: Resource, resource: Resource,
         if (!publicationSiteInfo) throw httpError(404, 'unknown publication site')
         await sendResourceEvent(resourceType, resource, sessionState, `published-topic:${publicationSite}:${topic.id}`, {
           i18nKey: 'published-topic',
-          params: { publicationSite: publicationSiteInfo.title ?? new URL(publicationSiteInfo.url).host },
+          params: { publicationSite: publicationSiteInfo.title ?? new URL(publicationSiteInfo.url).host, topic: topic.title },
           sender: { type: resource.owner.type, id: resource.owner.id, department: publicationSiteInfo.department }
         })
       }
@@ -112,7 +120,7 @@ export const onPublic = async (patchedResource: Resource, resourceType: Resource
     for (const topic of patchedResource.topics || []) {
       await sendResourceEvent(resourceType, patchedResource, sessionState, `published-topic:${publicationSite}:${topic.id}`, {
         i18nKey: 'published-topic',
-        params: { publicationSite: publicationSiteInfo.title ?? new URL(publicationSiteInfo.url).host },
+        params: { publicationSite: publicationSiteInfo.title ?? new URL(publicationSiteInfo.url).host, topic: topic.title },
         sender: { type: patchedResource.owner.type, id: patchedResource.owner.id, department: publicationSiteInfo.department }
       })
     }
