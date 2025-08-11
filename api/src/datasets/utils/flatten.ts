@@ -8,9 +8,10 @@
 import type { DatasetLine } from '#types'
 import memoize from 'memoizee'
 
-const compileFlatten = (datasetId: string, finalizedAt: string, preserveArrays: boolean, dataset: any): (line: any) => DatasetLine => {
+const compileFlatten = (datasetId: string, finalizedAt: string, preserveArrays: boolean, fillNull: string, dataset: any): (line: any) => DatasetLine => {
   let jitCode = ''
   const nestedKeys: string[] = []
+  const fillNullArr = fillNull.split(',').filter(Boolean)
   for (const prop of dataset.schema) {
     const key = prop.key.split('.')
     if (key.length > 1) {
@@ -37,6 +38,9 @@ const compileFlatten = (datasetId: string, finalizedAt: string, preserveArrays: 
   for (const nestedKey of nestedKeys) {
     jitCode += `delete o["${nestedKey}"];\n`
   }
+  for (const fillNullKey of fillNullArr) {
+    jitCode += `if (o["${fillNullKey}"] === undefined) { o["${fillNullKey}"] = null }\n`
+  }
   jitCode += 'return o;'
 
   // @ts-ignore
@@ -48,13 +52,13 @@ const memoizedCompileFlatten = memoize(compileFlatten, {
   max: 10000,
   maxAge: 1000 * 60 * 60, // 1 hour
   primitive: true,
-  length: 3, // datasetId/finalizedAt/preserveArrays are the keys
+  length: 4, // datasetId/finalizedAt/preserveArrays/fillNull are the keys
 })
 
-export const getFlatten = (dataset: any, preserveArrays: boolean = false) => {
-  return memoizedCompileFlatten(dataset.id, dataset.finalizedAt, preserveArrays, dataset)
+export const getFlatten = (dataset: any, preserveArrays: boolean = false, fillNull: string[] = []) => {
+  return memoizedCompileFlatten(dataset.id, dataset.finalizedAt, preserveArrays, fillNull.join(','), dataset)
 }
 
-export const getFlattenNoCache = (dataset: any, preserveArrays: boolean = false) => {
-  return compileFlatten(dataset.id, dataset.finalizedAt, preserveArrays, dataset)
+export const getFlattenNoCache = (dataset: any, preserveArrays: boolean = false, fillNull: string[] = []) => {
+  return compileFlatten(dataset.id, dataset.finalizedAt, preserveArrays, fillNull.join(','), dataset)
 }

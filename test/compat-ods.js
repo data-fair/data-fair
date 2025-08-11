@@ -110,4 +110,19 @@ describe('compatibility layer for ods api', function () {
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id,nb', offset: 1 } })
     assert.deepEqual(res.data.results, [{ id: 'koumoul', nb: 11 }])
   })
+
+  it('should manage some other record list cases', async function () {
+    const ax = global.ax.dmeadusOrg
+
+    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+
+    const dataset = await testUtils.sendDataset('datasets/dataset2.csv', ax)
+
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.results.length, 6)
+    assert.equal(res.data.total_count, 6)
+    // missing values are "null"
+    assert.equal(res.data.results[5].somedate, null)
+  })
 })

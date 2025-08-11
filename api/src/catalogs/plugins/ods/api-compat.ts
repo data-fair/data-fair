@@ -197,7 +197,7 @@ const getRecords = async (req, res, next) => {
     res.send(result)
   } else {
     const result = { total_count: esResponse.hits.total.value, results: [] as any[] }
-    const flatten = getFlatten(dataset)
+    const flatten = getFlatten(dataset, false, esQuery._source)
     for (let i = 0; i < esResponse.hits.hits.length; i++) {
     // avoid blocking the event loop
       if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
