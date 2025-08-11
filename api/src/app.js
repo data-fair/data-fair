@@ -109,7 +109,7 @@ export const run = async () => {
     const getPublicationSiteSettings = async (publicationSiteUrl, publicationSiteQuery, db) => {
       const elemMatch = publicationSiteQuery
         ? { type: publicationSiteQuery.split(':')[0], id: publicationSiteQuery.split(':')[1] }
-        : { url: publicationSiteUrl }
+        : { $or: [{ url: publicationSiteUrl }, { draftUrl: publicationSiteUrl }] }
       return db.collection('settings').findOne({ publicationSites: { $elemMatch: elemMatch } }, {
         projection: {
           type: 1,

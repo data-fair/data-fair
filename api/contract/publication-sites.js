@@ -29,6 +29,11 @@ export default (admin = false) => ({
         title: 'Adresse du site',
         readOnly: !admin
       },
+      draftUrl: {
+        type: 'string',
+        title: 'Adresse du brouillon du site',
+        readOnly: !admin
+      },
       private: {
         type: 'boolean',
         title: 'Site privé (déprécié)',
