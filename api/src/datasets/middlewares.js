@@ -88,13 +88,12 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
   }
 
   if (fillDescendants && dataset.virtual && dataset.virtual.filterActiveAccount) {
-    const { user, account: activeAccount } = reqSessionAuthenticated(req)
+    const { user } = reqSessionAuthenticated(req)
     const ownerRole = getOwnerRole(dataset.owner, reqSession(req))
     if (!ownerRole) {
-      const accounts = [`${activeAccount.type}:${activeAccount.id}${activeAccount.department ? ':' + activeAccount.department : ''}`]
-      if (activeAccount.type === 'organization') {
-        // also use personnal permissions
-        accounts.push(`user:${user.id}`)
+      const accounts = [`user:${user.id}`]
+      for (const org of user.organizations) {
+        accounts.push(`organization:${org.id}${org.department ? ':' + org.department : ''}`)
       }
       if (req.query.account) {
         const queryAccounts = req.query.account.split(',')
