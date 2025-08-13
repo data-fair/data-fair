@@ -70,6 +70,7 @@ const debugFiles = debugModule('files')
 const debugLimits = debugModule('limits')
 
 const apiKeyMiddleware = apiKeyUtils.middleware('datasets')
+export const datasetsApiKeyMiddleware = apiKeyMiddleware
 
 router.use((req, res, next) => {
   // @ts-ignore
