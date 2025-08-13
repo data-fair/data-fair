@@ -692,10 +692,16 @@ describe('virtual datasets', function () {
     // another user can read the line where is current orga is referenced and those where he is personnally reference
     res = await global.ax.hlalonde3.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.status, 200)
-    assert.equal(res.data.total, 1)
+    assert.equal(res.data.total, 2)
     res = await global.ax.hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
+    res = await global.ax.hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user:hlalonde3`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 1)
+    res = await global.ax.hlalonde3Org.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=organization:KWqAGZ4mG:dep1`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.total, 1)
   })
 
   it('a virtual dataset of a dataset with attachments re-expose those attachments', async function () {

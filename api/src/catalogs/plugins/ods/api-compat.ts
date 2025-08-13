@@ -7,7 +7,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { Counter } from 'prom-client'
 import { getFlatten } from '../../../datasets/utils/flatten.ts'
 import config from '#config'
-import datasetsRouter from '../../../datasets/router.js'
+import datasetsRouter, { datasetsApiKeyMiddleware } from '../../../datasets/router.js'
 import { parse as parseWhere } from './where.peg.js'
 import mongo from '#mongo'
 import memoize from 'memoizee'
@@ -212,6 +212,7 @@ const getRecords = async (req, res, next) => {
 router.get(
   '/v2.1/catalog/datasets/:datasetId/records',
   readDataset({ fillDescendants: true }),
+  datasetsApiKeyMiddleware,
   permissions.middleware('readCompatODSRecords', 'read', 'readDataAPI'),
   cacheHeaders.resourceBased('finalizedAt'),
   getRecords
@@ -221,6 +222,7 @@ router.get(
 datasetsRouter.get(
   '/:datasetId/compat-ods/records',
   readDataset({ fillDescendants: true }),
+  datasetsApiKeyMiddleware,
   permissions.middleware('readCompatODSRecords', 'read', 'readDataAPI'),
   cacheHeaders.resourceBased('finalizedAt'),
   getRecords

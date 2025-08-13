@@ -191,7 +191,7 @@ export default {
     },
     requestedDatasetPublicationSiteUrl () {
       if (!this.selectedSite) return null
-      if ((this.activeAccount.department || null) !== (this.selectedSite.department || null)) return
+      if (this.activeAccount.department && this.activeAccount.department !== this.selectedSite.department) return
       const key = `data-fair:dataset-publication-requested:${this.selectedSite.type}:${this.selectedSite.id}`
       const title = this.$t('datasetPublicationRequested', { title: this.selectedSite.title || this.selectedSite.url || this.selectedSite.id })
       const urlTemplate = this.env.publicUrl + '/dataset/{id}'
@@ -199,7 +199,7 @@ export default {
     },
     requestedApplicationPublicationSiteUrl () {
       if (!this.selectedSite) return null
-      if ((this.activeAccount.department || null) !== (this.selectedSite.department || null)) return
+      if (this.activeAccount.department && this.activeAccount.department !== this.selectedSite.department) return
       const key = `data-fair:application-publication-requested:${this.selectedSite.type}:${this.selectedSite.id}`
       const title = this.$t('applicationPublicationRequested', { title: this.selectedSite.title || this.selectedSite.url || this.selectedSite.id })
       const urlTemplate = this.env.publicUrl + '/application/{id}'
@@ -207,7 +207,7 @@ export default {
     },
     userCreationPublicationSiteUrl () {
       if (!this.selectedSite) return null
-      if ((this.activeAccount.department || null) !== (this.selectedSite.department || null)) return
+      if (this.activeAccount.department && this.activeAccount.department !== this.selectedSite.department) return
       if (this.accountRole !== 'admin') return
       const key = `simple-directory:user-created:${this.selectedSite.type}:${this.selectedSite.id}`
       const title = this.$t('userCreated', { title: this.selectedSite.title || this.selectedSite.url || this.selectedSite.id })
