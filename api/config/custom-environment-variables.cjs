@@ -15,6 +15,7 @@ module.exports = {
   privateNotifyUrl: 'PRIVATE_NOTIFY_URL',
   notifyWSUrl: 'NOTIFY_WS_URL',
   privateEventsUrl: 'PRIVATE_EVENTS_URL',
+  privatePortalsManagerUrl: 'PRIVATE_PORTALS_MANAGER_URL',
   subscriptionUrl: 'SUBSCRIPTION_URL',
   mongo: {
     url: 'MONGO_URL',

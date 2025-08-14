@@ -14,6 +14,7 @@ config.origin = publicUrl.origin
 config.basePath = publicUrl.pathname
 config.catalogsIntegration = !!config.privateCatalogsUrl
 config.eventsIntegration = !!config.privateEventsUrl
+config.portalsIntegration = !!config.privatePortalsManagerUrl
 
 const isBuilding = process.argv[2] === 'build'
 
@@ -124,6 +125,7 @@ const nuxtConfig = {
     notifyWSUrl: config.notifyWSUrl, // DEPRECATED
     catalogsIntegration: config.catalogsIntegration,
     eventsIntegration: config.eventsIntegration,
+    portalsIntegration: config.portalsIntegration,
     subscriptionUrl: config.subscriptionUrl,
     theme: config.theme,
     baseAppsCategories: config.baseAppsCategories,

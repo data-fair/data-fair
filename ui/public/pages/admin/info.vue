@@ -90,6 +90,9 @@ if (process.env.eventsIntegration) {
 if (process.env.catalogsIntegration) {
   services.push({ name: 'data-fair/catalogs', infoUrl: '/catalogs/api/admin/info' })
 }
+if (process.env.portalsIntegration) {
+  services.push({ name: 'data-fair/portals', infoUrl: '/portals-manager/api/admin/info' })
+}
 
 export default {
   middleware: ['admin-required'],

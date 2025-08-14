@@ -18,6 +18,7 @@ module.exports = {
   privateNotifyUrl: null, // DEPRECATED
   notifyWSUrl: null, // DEPRECATED
   privateEventsUrl: null,
+  privatePortalsManagerUrl: null,
   subscriptionUrl: null,
   pluginsDir: './plugins',
   mongo: {
