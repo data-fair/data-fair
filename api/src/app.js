@@ -50,7 +50,7 @@ export const run = async () => {
     session.init(config.privateDirectoryUrl || config.directoryUrl)
 
     app.set('trust proxy', 1)
-    app.set('json spaces', 2)
+    // app.set('json spaces', 2)
 
     app.set('query parser', 'simple')
     app.use((req, res, next) => {
