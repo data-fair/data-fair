@@ -36,6 +36,27 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
     })
   }
 
+  if (env.portalsIntegration) {
+    env.extraNavigationItems.push({
+      id: 'portals-manager-portals',
+      title: 'Portails (bêta)',
+      subtitle: 'Nouvelle version',
+      can: 'adminDep',
+      iframe: '/portals-manager/portals',
+      basePath: '/portals-manager',
+      icon: 'mdi-presentation'
+    })
+    env.extraNavigationItems.push({
+      id: 'portals-manager-pages',
+      title: 'Pages de portails (bêta)',
+      subtitle: 'Nouvelle version',
+      can: 'adminDep',
+      iframe: '/portals-manager/pages',
+      basePath: '/portals-manager',
+      icon: 'mdi-text-box-edit-outline'
+    })
+  }
+
   store.commit('setAny', {
     env: {
       ...env,
