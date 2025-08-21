@@ -125,4 +125,18 @@ describe('compatibility layer for ods api', function () {
     // missing values are "null"
     assert.equal(res.data.results[5].somedate, null)
   })
+
+  it.skip('manages geo data', async function () {
+    const ax = global.ax.dmeadusOrg
+
+    await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
+
+    const dataset = await testUtils.sendDataset('geo/geojson-example.geojson', ax)
+
+    const res = await ax.get(`/api/v1/compat-ods/v2.1/catalog/datasets/${dataset.id}/records`)
+    assert.equal(res.status, 200)
+    assert.equal(res.data.results.length, 3)
+    assert.equal(res.data.total_count, 3)
+    console.log(res.data)
+  })
 })

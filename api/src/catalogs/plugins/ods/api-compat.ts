@@ -49,7 +49,7 @@ const getRecords = async (req, res, next) => {
   if (!config.compatODS) throw httpError(404, 'unknown API')
   if (!(await getCompatODS(dataset.owner.type, dataset.owner.id))) throw httpError(404, 'unknown API')
 
-  const esQuery: any = {}
+  const esQuery: any = { track_total_hits: true }
   esQuery.size = query.limit ? Number(query.limit) : 20
   if (query.offset) esQuery.from = Number(query.offset)
 
@@ -59,6 +59,7 @@ const getRecords = async (req, res, next) => {
   esQuery._source = (query.select && query.select !== '*' && typeof query.select === 'string')
     ? query.select.split(',')
     : fields.filter(key => !key.startsWith('_'))
+
   if (esQuery._source.some(s => s.includes(' as ') || s.includes(' AS '))) {
     compatReqCounter.inc({ endpoint: 'records', status: 'unsupported' })
     throw httpError(400, 'la syntaxe " as " n\'est pas supportée dans le paramètre "select" de cette couche de compatibilité pour la version d\'API précédente.')
@@ -199,7 +200,7 @@ const getRecords = async (req, res, next) => {
     const result = { total_count: esResponse.hits.total.value, results: [] as any[] }
     const flatten = getFlatten(dataset, false, esQuery._source)
     for (let i = 0; i < esResponse.hits.hits.length; i++) {
-    // avoid blocking the event loop
+      // avoid blocking the event loop
       if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
       result.results.push(esUtils.prepareResultItem(esResponse.hits.hits[i], dataset, query, flatten, publicBaseUrl))
     }
