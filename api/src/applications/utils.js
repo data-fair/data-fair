@@ -64,7 +64,7 @@ const memoizedGetFreshDataset = memoize(async (id, db) => {
  * @param {any} application
  * @param {boolean} draft
  */
-export const refreshConfigDatasetsRefs = async (req, application, draft) => {
+export const refreshConfigDatasetsRefs = async (req, application, draft, checkWithPersonalSession = false) => {
   const db = mongo.db
   // @ts-ignore
   const publicBaseUrl = req.publicBaseUrl
@@ -97,9 +97,16 @@ export const refreshConfigDatasetsRefs = async (req, application, draft) => {
         : (await db.collection('datasets').findOne({ id: dataset.id }))
 
       if (freshDataset) {
-        const pseudoSessionState = getPseudoSessionState(application.owner, 'application config', application.id, 'admin')
-        if (!permissions.list('datasets', freshDataset, pseudoSessionState).includes('readDescription')) {
-          throw httpError(403, `permission manquante sur le jeu de données référencé dans l'application ${freshDataset.id}`)
+        if (checkWithPersonalSession) {
+          if (!permissions.list('datasets', freshDataset, reqSession(req)).includes('readDescription')) {
+            throw httpError(403, `Vous n'avez pas la permission de consulter les informations du jeu de données ${freshDataset.title ?? freshDataset.slug ?? freshDataset.id} référencé dans l'application.`)
+          }
+        } else {
+          if (!permissions.list('datasets', freshDataset, getPseudoSessionState(application.owner, 'application config', application.id, 'admin')).includes('readDescription')) {
+            let ownerName = application.owner.name
+            if (application.department) ownerName += `(${application.departmentName})`
+            throw httpError(403, `Le compte propriétaire de l'application (${ownerName}) n'a pas la permission de consulter les informations du jeu de données ${freshDataset.title ?? freshDataset.slug ?? freshDataset.id} référencé dans la configuration.`)
+          }
         }
 
         datasetUtils.clean(req, freshDataset)
