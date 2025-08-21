@@ -432,7 +432,7 @@ router.delete('/:applicationId', readApplication, permissions.middleware('delete
 
 // Get only the configuration part of the application
 const getConfig = async (req, res, next) => {
-  await refreshConfigDatasetsRefs(req, req.application, false)
+  await refreshConfigDatasetsRefs(req, req.application, false, true)
   res.status(200).send(req.application.configuration || {})
 }
 // 2 paths kept for compatibility.. but /config is deprecated because not homogeneous with the structure of the object
@@ -475,7 +475,7 @@ router.put('/:applicationId/configuration', readApplication, permissions.middlew
 
 // Configuration draft management
 router.get('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
-  await refreshConfigDatasetsRefs(req, req.application, true)
+  await refreshConfigDatasetsRefs(req, req.application, true, true)
   res.status(200).send(req.application.configurationDraft || req.application.configuration || {})
 })
 router.put('/:applicationId/configuration-draft', readApplication, permissions.middleware('writeConfig', 'write'), async (req, res, next) => {

@@ -6,6 +6,7 @@ import * as apiDocsUtil from './api-docs.ts'
 import * as visibilityUtils from './visibility.js'
 import { type AccountKeys, getAccountRole, reqSession, type SessionState } from '@data-fair/lib-express'
 import { type RequestWithResource, type ResourceType, type Permission, type Resource, type BypassPermissions } from '#types'
+import catalogsPublicationQueue from './catalogs-publication-queue.ts'
 
 const resourceTypesLabels = {
   datasets: 'Le jeu de données',
@@ -322,6 +323,11 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
             { id: resource.id, 'publications.status': 'published' },
             { $set: { 'publications.$.status': 'waiting' } }
           )
+
+          if (resourceType === 'datasets') {
+            // Re-publish publications (with catalogs service)
+            catalogsPublicationQueue.updatePublication(resource.id)
+          }
         }
       }
       await resources.updateOne({ id: resource.id }, { $set: { permissions: req.body } })

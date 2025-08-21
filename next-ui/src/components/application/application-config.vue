@@ -35,10 +35,20 @@
         class="pa-0"
       >
         <v-form
-          v-if="draftSchema && editConfig"
+          v-if="draftSchema"
           v-model="formValid"
         >
+          <template v-if="configDraftFetch.error.value">
+            <v-alert
+              type="error"
+              variant="outlined"
+              class="ma-2"
+            >
+              {{ configDraftFetch.error.value }}
+            </v-alert>
+          </template>
           <v-sheet
+            v-else-if="editConfig"
             class="pa-4"
             color="rgb(0,0,0,0)"
             style="overflow-y: auto; overflow-x:hidden;"
@@ -115,6 +125,7 @@
             </v-dialog>
 
             <v-btn
+              v-if="editConfig"
               :disabled="hasModification || !hasDraft || !!application.errorMessageDraft"
               color="accent"
               class="ml-2"
