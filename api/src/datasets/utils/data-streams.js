@@ -283,9 +283,6 @@ export const writeExtendedStreams = async (dataset, extensions) => {
   const transforms = []
 
   if (dataset.file.mimetype === 'text/csv') {
-    // add BOM for excel, cf https://stackoverflow.com/a/17879474
-    writeStream.write('\ufeff')
-
     transforms.push(new Transform({
       transform (chunk, encoding, callback) {
         const flatChunk = flatten(chunk)
@@ -294,6 +291,7 @@ export const writeExtendedStreams = async (dataset, extensions) => {
       objectMode: true
     }))
     transforms.push(csvStrStream({
+      bom: true,
       columns: relevantSchema.map(field => field['x-originalName'] || field.key),
       header: true,
       cast: {

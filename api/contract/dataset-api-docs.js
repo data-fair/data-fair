@@ -1086,6 +1086,68 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
         }
       }
     }
+
+    api.paths['/compat-ods/exports/{format}'] = {
+      get: {
+        summary: 'Exporter les données',
+        description: '**AVERTISSEMENT** : Cette opération est un prototype en cours de conception. Elle permettra d\'exporter le contenu du jeu de données de manière identique à l\'API "/exports" du portail précédent.',
+        operationId: 'readCompatODSExports',
+        'x-permissionClass': 'read',
+        tags: ['Compatibilité ODS'],
+        deprecated: true,
+        parameters: [{
+          in: 'path',
+          name: 'format',
+          schema: {
+            type: 'string',
+            enum: ['csv']
+          }
+        }, {
+          in: 'query',
+          name: 'select',
+          schema: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: schema.length ? schema.map((/** @type {any} */ p) => p.key) : undefined
+            }
+          },
+          style: 'form',
+          explode: false
+        }, {
+          in: 'query',
+          name: 'where',
+          schema: {
+            type: 'string'
+          }
+        }, {
+          in: 'query',
+          name: 'order_by',
+          schema: {
+            type: 'string'
+          }
+        }, {
+          in: 'query',
+          name: 'limit',
+          schema: {
+            type: 'integer',
+            default: 20
+          }
+        }],
+        responses: {
+          200: {
+            description: 'Les enregistrements.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object'
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   return { api, userApiRate, anonymousApiRate, bulkLineSchema }

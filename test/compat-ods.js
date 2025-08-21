@@ -65,7 +65,7 @@ describe('compatibility layer for ods api', function () {
     )
   })
 
-  it('exposes records api on 2 urls', async function () {
+  it('exposes records and exports api on 2 urls', async function () {
     const ax = global.ax.dmeadusOrg
 
     await ax.put('/api/v1/settings/organization/KWqAGZ4mG', { compatODS: true })
@@ -109,6 +109,13 @@ describe('compatibility layer for ods api', function () {
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/records`, { params: { group_by: 'id,nb', offset: 1 } })
     assert.deepEqual(res.data.results, [{ id: 'koumoul', nb: 11 }])
+
+    // csv export
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/compat-ods/exports/csv`)
+    assert.equal(res.data, `"id","adr","some date","loc","bool","nb"
+"koumoul","19 rue de la voie lactée saint avé","2017-12-12","47.687375,-2.748526",0,11
+"bidule","adresse inconnue","2017-10-10","45.5,2.6",1,22.2
+`)
   })
 
   it('should manage some other record list cases', async function () {
