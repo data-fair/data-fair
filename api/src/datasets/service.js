@@ -290,6 +290,7 @@ export const createDataset = async (db, es, locale, sessionState, owner, body, f
     if (attachmentsFile) throw httpError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
     dataset.rest = dataset.rest || {}
     dataset.rest.primaryKeyMode = dataset.rest.primaryKeyMode || 'sha256'
+    dataset.rest.indiceMode = dataset.rest.indiceMode || 'timestamp2'
     dataset.schema = dataset.schema || []
     if (dataset.initFrom) {
       // case where we go through the full workers sequence

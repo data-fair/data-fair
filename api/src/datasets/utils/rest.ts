@@ -214,6 +214,16 @@ const getLineHash = (line: DatasetLine) => {
   return crc.crc32(stableStringify(line)).toString(16)
 }
 
+const getLineIndice = (dataset: RestDataset, updatedAt: Date, i: number, datasetCreatedAt: number, chunkRand: string) => {
+  if (!updatedAt) throw new Error('getLineIndice requires _updatedAt')
+  if (dataset.rest.indiceMode === 'timestamp2') {
+    // we added a random component in case of parallel operations
+    return Number((updatedAt.getTime() - datasetCreatedAt) + chunkRand + padI(i))
+  } else {
+    return Number((updatedAt.getTime() - datasetCreatedAt) + padI(i))
+  }
+}
+
 const getLineFromOperation = (operation: Operation): DatasetLine => {
   const line = { ...operation, ...operation.fullBody }
   delete line.body
@@ -232,6 +242,8 @@ const checkMissingIdsRevisions = async (tmpDataset: RestDataset, dataset: RestDa
     const datasetCreatedAt = new Date(dataset.createdAt).getTime()
     let i = 0
     const revisionsBulkOp = revisionsCollection(dataset).initializeUnorderedBulkOp()
+    const chunkRand = Math.random().toString().slice(2, 7)
+
     for await (const missingDoc of collection(dataset).find({ _id: { $in: [...missingIds] } }).project(getPrimaryKeyProjection(dataset))) {
       i++
       if (missingDoc._deleted) continue
@@ -239,7 +251,7 @@ const checkMissingIdsRevisions = async (tmpDataset: RestDataset, dataset: RestDa
         _action: 'delete',
         _updatedAt: updatedAt,
         ...missingDoc,
-        _i: Number((updatedAt.getTime() - datasetCreatedAt) + padI(i)),
+        _i: getLineIndice(dataset, updatedAt, i, datasetCreatedAt, chunkRand),
         _deleted: true,
         _hash: null,
         _lineId: missingDoc._id
@@ -297,6 +309,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
   let i = 0
   const patchPreviousFilters = []
   const deletePreviousFilters = []
+  const chunkRand = Math.random().toString().slice(2, 7)
   for (const transac of transacs) {
     const { _action, ...body } = transac
     if (_action && !actions.includes(_action)) throw httpError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
@@ -320,7 +333,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       operation.fullBody._needsIndexing = true
     }
     operation.fullBody._updatedAt = body._updatedAt ? new Date(body._updatedAt) : updatedAt
-    operation.fullBody._i = Number((new Date(operation.fullBody._updatedAt).getTime() - datasetCreatedAt) + padI(i))
+    operation.fullBody._i = getLineIndice(dataset, operation.fullBody._updatedAt, i, datasetCreatedAt, chunkRand)
     i++
     // lots of objects to process, so we yield to the event loop every 100 lines
     if (i % 100 === 0) await new Promise(resolve => setImmediate(resolve))
@@ -491,13 +504,18 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       for (const writeError of err.writeErrors) {
         const operation = bulkOpMatchingOperations[writeError.err.index]
         if (writeError.err.code === 11000) {
-          if (operation._action === 'create') {
-            operation._status = 409
-            operation._error = 'cet identifiant de ligne est déjà utilisé'
-          }
-          if (operation._action === 'createOrUpdate') {
+          if (writeError.err.errmsg?.includes('_i_')) {
+            operation._status = 500
+            operation._error = 'erreur dans la gestion des conflits de données insérées'
+          } else {
+            if (operation._action === 'create') {
+              operation._status = 409
+              operation._error = 'cet identifiant de ligne est déjà utilisé'
+            }
+            if (operation._action === 'createOrUpdate') {
             // this conflict means that the hash was unchanged
-            operation._status = 304
+              operation._status = 304
+            }
           }
         } else {
           operation._status = 500

@@ -63,7 +63,7 @@
       data-fair/openapi-viewer: Documentation des API
       data-fair/events: Gestion des événements/notifications
       data-fair/catalogs: Gestion des catalogues
-
+      data-fair/portals: Portails
   en:
     installed: installed
     available: available
@@ -73,6 +73,7 @@
       data-fair/openapi-viewer: API documentation
       data-fair/events: Events/notifications management
       data-fair/catalogs: Catalogs management
+      data-fair/portals: Portals
   </i18n>
 
 <script>
