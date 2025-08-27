@@ -1120,6 +1120,7 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
     line1,test1
     line2,test1
     line3,test1`, { headers: { 'content-type': 'text/csv' } }), (err) => {
+      assert.equal(err.status, 400)
       assert.equal(err.data.nbErrors, 1)
       assert.equal(err.data.nbOk, 0)
       return true

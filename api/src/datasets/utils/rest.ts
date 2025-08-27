@@ -952,12 +952,13 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
         }
       }
     } catch (err: any) {
-      internalError('bulk-lines', err)
+      const status = err.status ?? err.statusCode ?? 500
+      if (status === 500) internalError('bulk-lines', err)
       if (firstBatch) {
-        res.writeHead(err.statusCode || 500, { 'Content-Type': 'application/json' })
+        res.writeHead(status, { 'Content-Type': 'application/json' })
       }
       summary.nbErrors += 1
-      summary.errors.push({ line: -1, error: err.message, status: 500 })
+      summary.errors.push({ line: -1, error: err.message, status })
 
       if (drop) {
         summary.cancelled = true
