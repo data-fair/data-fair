@@ -79,7 +79,7 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
     }
     if (!applicationKeyId) return next()
     applicationKey = await mongo.applicationsKeys.findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
-    debug('found applicationKey', applicationKey)
+    debug('found applicationKey', applicationKey, appId)
     if (!applicationKey) return next()
     if (applicationKey._id !== appId) {
       // the application key can be matched to a parent application key (case of dashboards, etc)
@@ -96,12 +96,13 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
         id: appId,
         $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': dataset.id }],
         ...ownerFilter
-      }, { projection: { 'configuration.datasets': 1 } })
+      }, { projection: { 'configuration.datasets': 1, id: 1 } })
     debug('matchingApplication', matchingApplication)
     if (matchingApplication) {
       // this is basically the "crowd-sourcing" use case
       // we apply some anti-spam protection
       if (req.method !== 'GET' && req.method !== 'HEAD') {
+        debug('protect anonymous write operation with multiple security tools')
         // 1rst level of anti-spam prevention, no cross origin requests on this route
         if (!matchingHost(req)) {
           return res.status(405).send(req.__('errors.noCrossDomain'))
