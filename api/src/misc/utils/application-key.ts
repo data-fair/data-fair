@@ -6,6 +6,9 @@ import * as rateLimiting from './rate-limiting.ts'
 import { type Request, type Response, type NextFunction } from 'express'
 import { type ApplicationKey, type RequestWithResource } from '#types'
 import { reqUser, setReqUser, session } from '@data-fair/lib-express/session.js'
+import debugModule from 'debug'
+
+const debug = debugModule('application-keys')
 
 const matchingHost = (req: Request) => {
   if (!req.headers.origin) return true
@@ -19,8 +22,10 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
   let refererUrl
   try {
     refererUrl = new URL(referer)
+    debug('referer url', refererUrl.href)
   } catch (err) {
     // invalid URL in referer header, it happens
+    debug('invalid URL in referer header', err)
   }
   if (!refererUrl) return next()
 
@@ -36,6 +41,7 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
   let applicationKey: ApplicationKey | null = null
 
   if (refererUrl.pathname.startsWith('/data-fair/embed/dataset/')) {
+    debug('referer is an embed page')
     let refererDatasetId = decodeURIComponent(refererUrl.pathname.replace('/data-fair/embed/dataset/', '').split('/')[0])
     let applicationKeyId = refererUrl.searchParams && refererUrl.searchParams.get('key')
     if (refererDatasetId !== dataset.id) {
@@ -59,22 +65,27 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
   }
 
   if (refererUrl.pathname.startsWith('/data-fair/app/')) {
+    debug('referer is an app')
     appId = decodeURIComponent(refererUrl.pathname.replace('/data-fair/app/', '').split('/')[0])
     let applicationKeyId = refererUrl.searchParams && refererUrl.searchParams.get('key')
+    debug('applicationKeyId from referer searchParams', applicationKeyId)
     if (!applicationKeyId) {
       const keys = appId.split(':')
       if (keys.length > 1) {
         applicationKeyId = keys[0]
+        debug('applicationKeyId from referer path', applicationKeyId)
         appId = appId.replace(keys[0] + ':', '')
       }
     }
     if (!applicationKeyId) return next()
     applicationKey = await mongo.applicationsKeys.findOne({ 'keys.id': applicationKeyId, ...ownerFilter })
+    debug('found applicationKey', applicationKey)
     if (!applicationKey) return next()
     if (applicationKey._id !== appId) {
       // the application key can be matched to a parent application key (case of dashboards, etc)
       const isParentApplicationKey = await mongo.db.collection('applications')
-        .count({ id: applicationKey._id, 'configuration.applications.id': appId, ...ownerFilter })
+        .countDocuments({ id: applicationKey._id, 'configuration.applications.id': appId, ...ownerFilter })
+      debug('found isParentApplicationKey', isParentApplicationKey)
       if (!isParentApplicationKey) return next()
     }
   }
@@ -86,6 +97,7 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
         $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': dataset.id }],
         ...ownerFilter
       }, { projection: { 'configuration.datasets': 1 } })
+    debug('matchingApplication', matchingApplication)
     if (matchingApplication) {
       // this is basically the "crowd-sourcing" use case
       // we apply some anti-spam protection
@@ -120,9 +132,12 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
       // apply some permissions based on app configuration
       // some dataset might need to be readable, some other writable only for createLine, etc
       const matchingApplicationDataset = matchingApplication.configuration?.datasets?.find(d => d && d.href === datasetHref)
+      debug('matchingApplicationDataset', matchingApplicationDataset)
       if (!matchingApplicationDataset) return next()
       req.bypassPermissions = matchingApplicationDataset.applicationKeyPermissions || { classes: ['read'] }
+      debug('apply bypass permissions', req.bypassPermissions)
       if (!reqUser(req)) {
+        debug('set pseudo user')
         setReqUser(
           req,
           { id: applicationKey.id, name: applicationKey.title, email: '', organizations: [] },
