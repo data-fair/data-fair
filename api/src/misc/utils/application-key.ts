@@ -56,7 +56,7 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
     if (!applicationKey) return next()
     appId = applicationKey._id
     const isParentApplicationKey = await mongo.db.collection('applications')
-      .count({
+      .countDocuments({
         id: applicationKey._id,
         $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': dataset.id }],
         ...ownerFilter
@@ -96,7 +96,7 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
         id: appId,
         $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': dataset.id }],
         ...ownerFilter
-      }, { projection: { 'configuration.datasets': 1, id: 1 } })
+      }, { projection: { 'configuration.datasets': 1, id: 1, baseApp: 1 } })
     debug('matchingApplication', matchingApplication)
     if (matchingApplication) {
       // this is basically the "crowd-sourcing" use case
@@ -132,9 +132,23 @@ export default async (req: RequestWithResource, res: Response, next: NextFunctio
 
       // apply some permissions based on app configuration
       // some dataset might need to be readable, some other writable only for createLine, etc
-      const matchingApplicationDataset = matchingApplication.configuration?.datasets?.find(d => d && d.href === datasetHref)
-      debug('matchingApplicationDataset', matchingApplicationDataset)
+      const datasetIndex = matchingApplication.configuration?.datasets?.findIndex(d => d && d.href === datasetHref)
+      if (datasetIndex === undefined || datasetIndex === -1) {
+        debug('dataset is not referenced in app configuration')
+        return next()
+      }
+      const matchingApplicationDataset = matchingApplication.configuration?.datasets?.[datasetIndex]
       if (!matchingApplicationDataset) return next()
+      debug('matchingApplicationDataset', matchingApplicationDataset)
+      const datasetFilters = matchingApplication.baseApp?.datasetsFilters?.[datasetIndex]
+      debug('matching baseApp.datasetFilters', datasetFilters)
+      if (datasetFilters?.properties) {
+        for (const key of Object.keys(datasetFilters.properties)) {
+          if (datasetFilters.properties[key].default && !(key in dataset)) matchingApplicationDataset[key] = datasetFilters.properties[key].default
+          if (datasetFilters.properties[key].const) matchingApplicationDataset[key] = datasetFilters.properties[key].const
+        }
+      }
+
       req.bypassPermissions = matchingApplicationDataset.applicationKeyPermissions || { classes: ['read'] }
       debug('apply bypass permissions', req.bypassPermissions)
       if (!reqUser(req)) {

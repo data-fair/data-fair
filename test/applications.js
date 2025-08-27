@@ -59,18 +59,20 @@ describe('Applications', function () {
 
     const dataset = await testUtils.sendDataset('datasets/split.csv', ax)
     const datasetRefInit = (await ax.get('/api/v1/datasets', { params: { id: dataset.id, select: 'id' } })).data.results[0]
+    const dataset2 = await testUtils.sendDataset('datasets/split.csv', ax)
+    const datasetRefInit2 = (await ax.get('/api/v1/datasets', { params: { id: dataset2.id, select: 'id' } })).data.results[0]
 
     let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/' })
     const appId = res.data.id
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
-      datasets: [{ id: dataset.id, href: datasetRefInit.href }]
+      datasets: [{ id: dataset.id, href: datasetRefInit.href }, { id: dataset2.id, href: datasetRefInit2.href }]
     })
     assert.equal(res.status, 200)
     res = await ax.get('/api/v1/applications/' + appId + '/config')
     assert.equal(res.status, 200)
-    assert.equal(res.data.datasets.length, 1)
+    assert.equal(res.data.datasets.length, 2)
     assert.equal(res.data.datasets[0].title, 'split')
-    assert.deepEqual(res.data.datasets[0].applicationKeyPermissions, { operations: ['readSafeSchema', 'createLine'] })
+    assert.deepEqual(res.data.datasets[1].applicationKeyPermissions, { operations: ['readSafeSchema', 'createLine'] })
     res = await ax.get('/api/v1/applications', { params: { dataset: 'nope' } })
     assert.equal(res.data.count, 0)
     res = await ax.get('/api/v1/applications', { params: { dataset: dataset.id } })
@@ -79,7 +81,7 @@ describe('Applications', function () {
     await ax.patch('/api/v1/datasets/' + dataset.id, { title: 'changed title' })
     res = await ax.get('/api/v1/applications/' + appId + '/configuration-draft')
     assert.equal(res.status, 200)
-    assert.equal(res.data.datasets.length, 1)
+    assert.equal(res.data.datasets.length, 2)
     assert.equal(res.data.datasets[0].title, 'changed title')
   })
 
@@ -88,10 +90,19 @@ describe('Applications', function () {
     const adminAx = global.ax.alban
 
     const dataset = await testUtils.sendDataset('datasets/split.csv', ax)
-
     const datasetRefInit = (await ax.get('/api/v1/datasets', { params: { id: dataset.id, select: 'id' } })).data.results[0]
+    const dataset2 = await testUtils.sendDataset('datasets/split.csv', ax)
+    const datasetRefInit2 = (await ax.get('/api/v1/datasets', { params: { id: dataset2.id, select: 'id' } })).data.results[0]
 
-    let res = await ax.post('/api/v1/applications', { url: 'http://monapp1.com/', configuration: { datasets: [{ id: dataset.id, href: datasetRefInit.href }] } })
+    let res = await ax.post('/api/v1/applications', {
+      url: 'http://monapp1.com/',
+      configuration: {
+        datasets: [
+          { id: dataset.id, href: datasetRefInit.href },
+          { id: dataset2.id, href: datasetRefInit2.href }
+        ]
+      }
+    })
     const appId = res.data.id
 
     res = await ax.get(`/app/${appId}/dir1/info.txt`)
@@ -114,8 +125,8 @@ describe('Applications', function () {
     const application = JSON.parse(/>window\.APPLICATION=(.*);</.exec(res.data)[1])
     assert.ok(application.configuration)
     assert.ok(application.configuration.datasets?.length, 1)
-    const datasetRef = application.configuration.datasets[0]
-    assert.deepEqual(Object.keys(datasetRef).sort(), ['applicationKeyPermissions', 'finalizedAt', 'href', 'id', 'schema', 'slug', 'title', 'userPermissions'])
+    assert.deepEqual(Object.keys(application.configuration.datasets[0]).sort(), ['finalizedAt', 'href', 'id', 'schema', 'slug', 'title', 'userPermissions'])
+    assert.deepEqual(Object.keys(application.configuration.datasets[1]).sort(), ['applicationKeyPermissions', 'finalizedAt', 'href', 'id', 'schema', 'slug', 'title', 'userPermissions'])
 
     // A link to the manifest is injected
     assert.ok(res.data.includes(`<link rel="manifest" crossorigin="use-credentials" href="/data-fair/app/${appId}/manifest.json">`))
