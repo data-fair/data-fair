@@ -59,14 +59,14 @@ const setResource = async (req, res, next) => {
     if (applicationKey) {
       if (applicationKey._id === application.id) {
         // @ts-ignore
-        req.matchingApplicationKey = true
+        req.matchingApplicationKey = applicationKeyId
       } else {
         // ths application key can be matched to a parent application key (case of dashboards, etc)
         const isParentApplicationKey = await mongo.db.collection('applications')
           .count({ id: applicationKey._id, 'configuration.applications.id': application.id, ...ownerFilter })
         if (isParentApplicationKey) {
           // @ts-ignore
-          req.matchingApplicationKey = true
+          req.matchingApplicationKey = applicationKeyId
         }
       }
     }
@@ -200,6 +200,8 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setResource, async
   // TODO: captureUrl should be on same domain too ?
   req.application.captureUrl = config.captureUrl
   req.application.wsUrl = req.publicWsBaseUrl
+  if (req.matchingApplicationKey) req.application.applicationKey = req.matchingApplicationKey
+
   const draft = req.query.draft === 'true'
   if (draft) {
     req.application.configuration = req.application.configurationDraft || req.application.configuration

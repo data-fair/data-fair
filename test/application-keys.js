@@ -69,15 +69,22 @@ describe('Applications keys for unauthenticated readOnly access', function () {
     const appId = res.data.id
 
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
+    const dataset2 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
 
     res = await ax.put('/api/v1/applications/' + appId + '/config', {
-      datasets: [{ href: `${config.publicUrl}/api/v1/datasets/${dataset.id}` }]
+      datasets: [
+        { href: `${config.publicUrl}/api/v1/datasets/${dataset.id}` },
+        { href: `${config.publicUrl}/api/v1/datasets/${dataset2.id}` }
+      ]
     })
 
-    await assert.rejects(global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/lines`), err => err.status === 403)
+    await assert.rejects(global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/lines`), { status: 403 })
+    await assert.rejects(global.ax.anonymous.get(`/api/v1/datasets/${dataset2.id}/lines`), { status: 403 })
 
-    res = await ax.post(`/api/v1/applications/${appId}/keys`, [{ title: 'Access key', permissions: { read: true, createLine: false } }])
+    res = await ax.post(`/api/v1/applications/${appId}/keys`, [{ title: 'Access key' }])
     const key = res.data[0].id
+
+    // 1rst dataset has default permission of application key (classes=read)
     res = await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/lines`, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } })
     assert.equal(res.status, 200)
     res = await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}`, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } })
@@ -86,10 +93,14 @@ describe('Applications keys for unauthenticated readOnly access', function () {
     assert.ok(res.data.userPermissions.includes('readLines'))
     assert.ok(res.data.userPermissions.includes('readDescription'))
     assert.ok(!res.data.userPermissions.includes('writeDescription'))
-
     res = await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}`, { headers: { referrer: config.publicUrl + `/app/${encodeURIComponent(key + ':' + appId)}/` } })
     assert.equal(res.status, 200)
     res = await global.ax.anonymous.get(`/api/v1/datasets/${dataset.id}/lines`, { headers: { referrer: config.publicUrl + `/app/${encodeURIComponent(key + ':' + appId)}/` } })
+    assert.equal(res.status, 200)
+
+    // 2nd dataset has more specific permissions based on applicationKeyPermissions
+    await assert.rejects(global.ax.anonymous.get(`/api/v1/datasets/${dataset2.id}/lines`, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } }), { status: 403 })
+    res = await global.ax.anonymous.get(`/api/v1/datasets/${dataset2.id}/safe-schema`, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}` } })
     assert.equal(res.status, 200)
   })
 

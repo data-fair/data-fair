@@ -88,6 +88,29 @@ before('global mocks', async function () {
                 },
                 finalizedAt: {
                   type: 'string'
+                }
+              }
+            },
+            {
+              title: 'Jeu de données de contribution',
+              type: 'object',
+              'x-fromUrl': 'api/v1/datasets?status=finalized&q={q}&select=id,title,schema,userPermissions&{context.datasetFilter}',
+              'x-itemsProp': 'results',
+              'x-itemTitle': 'title',
+              'x-itemKey': 'href',
+              additionalProperties: false,
+              properties: {
+                href: {
+                  type: 'string'
+                },
+                title: {
+                  type: 'string'
+                },
+                id: {
+                  type: 'string'
+                },
+                finalizedAt: {
+                  type: 'string'
                 },
                 applicationKeyPermissions: {
                   type: 'object',

@@ -1120,6 +1120,7 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
     line1,test1
     line2,test1
     line3,test1`, { headers: { 'content-type': 'text/csv' } }), (err) => {
+      assert.equal(err.status, 400)
       assert.equal(err.data.nbErrors, 1)
       assert.equal(err.data.nbOk, 0)
       return true
@@ -1213,6 +1214,25 @@ test3,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(lines[0].attr1, 'val1')
     assert.ok(!('attr2' in lines[0]))
     return true
+  })
+
+  it.skip('Send multiple lines in parallel', async function () {
+    // activate temporarily to check that we manage correctly parallel insertions
+    // it is also necessary to change defaultLimits.apiRate.user.nb to support this number of requests
+
+    const ax = global.ax.dmeadus
+    await ax.post('/api/v1/datasets/restparallel', {
+      isRest: true,
+      // rest: { indiceMode: 'timestamp1' },
+      title: 'restparallel',
+      schema: [{ key: 'attr1', type: 'string' }, { key: 'attr2', type: 'string' }]
+    })
+    const promises = []
+    for (let i = 0; i < 900; i++) {
+      promises.push(ax.post('/api/v1/datasets/restparallel/lines', { attr1: 'val1', attr2: 'val2' }))
+    }
+    const responses = await Promise.all(promises)
+    console.log(responses.map(r => r.status).filter(s => s !== 201))
   })
 
   it('Send bulk actions as a gzipped CSV', async function () {

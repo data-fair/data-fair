@@ -735,6 +735,10 @@ const datasetProperties = {
       primaryKeyMode: {
         type: 'string',
         enum: ['base64', 'sha256']
+      },
+      indiceMode: {
+        type: 'string',
+        enum: ['timestamp1', 'timestamp2']
       }
     }
   },
