@@ -21,6 +21,10 @@ describe('compatibility layer for ods api', function () {
       { term: { id: 'koumoul' } }
     )
     assert.deepEqual(
+      whereParser.parse('id:\'koumoul\'', { dataset: { schema: [{ key: 'id' }] } }),
+      { term: { id: 'koumoul' } }
+    )
+    assert.deepEqual(
       whereParser.parse('id: "koumoul"', { dataset: { schema: [{ key: 'id' }] } }),
       { term: { id: 'koumoul' } }
     )
@@ -62,6 +66,28 @@ describe('compatibility layer for ods api', function () {
     assert.deepEqual(
       whereParser.parse('NOT id = "koumoul"', { dataset: { schema: [{ key: 'id' }] } }),
       { bool: { must_not: [{ term: { id: 'koumoul' } }] } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('id in ("koumoul", "test1", "test2")', { dataset: { schema: [{ key: 'id' }] } }),
+      { terms: { id: ['koumoul', 'test1', 'test2'] } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('nb IN [1 TO 10]', { dataset: { schema: [{ key: 'nb' }] } }),
+      { range: { nb: { gte: 1, lte: 10 } } }
+    )
+    assert.deepEqual(
+      whereParser.parse('nb IN [1..10]', { dataset: { schema: [{ key: 'nb' }] } }),
+      { range: { nb: { gte: 1, lte: 10 } } }
+    )
+    assert.deepEqual(
+      whereParser.parse('nb IN [1 TO 10]', { dataset: { schema: [{ key: 'nb' }] } }),
+      { range: { nb: { gte: 1, lte: 10 } } }
+    )
+    assert.deepEqual(
+      whereParser.parse('nb IN ]1..10[', { dataset: { schema: [{ key: 'nb' }] } }),
+      { range: { nb: { gt: 1, lt: 10 } } }
     )
   })
 

@@ -81,9 +81,19 @@ BooleanLiteral
   = TrueToken  { return { type: "Literal", value: true  }; }
   / FalseToken { return { type: "Literal", value: false }; }
 
+// Simplified numbers as the more complete ones created conflicts with some odsql syntax
+NumericLiteral "number"
+  = DecimalIntegerLiteral {
+      return { type: "Literal", value: parseFloat(text()) };
+    }
+  / DecimalIntegerLiteral "." DecimalDigit+ {
+      return { type: "Literal", value: parseFloat(text()) };
+    }
+
+
 // The "!(IdentifierStart / DecimalDigit)" predicate is not part of the official
 // grammar, it comes from text in section 7.8.3.
-NumericLiteral "number"
+/*NumericLiteral "number"
   = literal:HexIntegerLiteral !(IdentifierStart / DecimalDigit) {
       return literal;
     }
@@ -101,7 +111,7 @@ DecimalLiteral
   / DecimalIntegerLiteral ExponentPart? {
       return { type: "Literal", value: parseFloat(text()) };
     }
-
+*/
 DecimalIntegerLiteral
   = "0"
   / NonZeroDigit DecimalDigit*
