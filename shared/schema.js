@@ -42,25 +42,36 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
   delete cleanProp.label
   delete cleanProp['x-required']
 
-  if (cleanProp['x-separator'] && !flatArrays) {
-    const itemsProps = { ...cleanProp }
-    delete itemsProps.title
-    delete itemsProps.description
-    delete itemsProps.readOnly
-    delete itemsProps['x-separator']
-    delete itemsProps['x-fromUrl']
+  if (cleanProp['x-separator']) {
+    if (flatArrays) {
+      // flat usage of separator is incompatible with validation
+      return {
+        type: 'string',
+        title: cleanProp.title,
+        description: cleanProp.description,
+        readOnly: cleanProp.readOnly,
+        'x-separator': cleanProp['x-separator'],
+        'x-fromUrl': cleanProp['x-fromUrl']
+      }
+    } else {
+      const itemsProps = { ...cleanProp }
+      delete itemsProps.title
+      delete itemsProps.description
+      delete itemsProps.readOnly
+      delete itemsProps['x-separator']
+      delete itemsProps['x-fromUrl']
 
-    const arrayProp = {
-      type: 'array',
-      title: cleanProp.title,
-      description: cleanProp.description,
-      readOnly: cleanProp.readOnly,
-      'x-separator': cleanProp['x-separator'],
-      'x-fromUrl': cleanProp['x-fromUrl'],
-      items: itemsProps
+      return {
+        type: 'array',
+        title: cleanProp.title,
+        description: cleanProp.description,
+        readOnly: cleanProp.readOnly,
+        'x-separator': cleanProp['x-separator'],
+        'x-fromUrl': cleanProp['x-fromUrl'],
+        items: itemsProps
+      }
     }
-    return arrayProp
-  } else {
-    return cleanProp
   }
+
+  return cleanProp
 }
