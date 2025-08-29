@@ -249,11 +249,11 @@ export const tableSchema = (schema: SchemaProperty[]) => {
   }
 }
 
-export const jsonSchema = (schema: SchemaProperty[], publicBaseUrl?: string): any => {
+export const jsonSchema = (schema: SchemaProperty[], publicBaseUrl?: string, flatArrays?: boolean): any => {
   /** @type {any} */
   const properties = {}
   for (const p of schema) {
-    properties[p.key] = cleanJsonSchemaProperty(p, config.publicUrl, publicBaseUrl)
+    properties[p.key] = cleanJsonSchemaProperty(p, config.publicUrl, publicBaseUrl, flatArrays)
   }
   return {
     type: 'object',

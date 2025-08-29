@@ -113,7 +113,7 @@ const sendSchema = (req, res, schema) => {
     schema = tableSchema(schema)
   } else if (req.query.mimeType === 'application/schema+json') {
     res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '-schema.json'))
-    schema = jsonSchema(schema, req.publicBaseUrl)
+    schema = jsonSchema(schema, req.publicBaseUrl, req.query.arrays !== 'true')
   } else {
     for (const field of schema) {
       field.label = field.title || field['x-originalName'] || field.key

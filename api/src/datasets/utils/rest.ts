@@ -318,6 +318,13 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
 
     const filter = { _id: body._id }
     if (linesOwner) Object.assign(filter, linesOwnerFilter(linesOwner))
+    // manage retro-compatibility of basic multi-valued properties
+    for (const property of dataset.schema) {
+      if (property.separator && typeof body[property.key] === 'string') {
+        body[property.key] = (body[property.key] as string).split((property.separator as string).trim()).map((part: string) => part.trim())
+      }
+    }
+
     const operation: Operation = {
       _id: body._id,
       _action: _action ?? 'createOrUpdate',
@@ -426,13 +433,15 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       operation._status = 400
       operation._error = 'identifiant de ligne incompatible avec la clé primaire'
       continue
-    } if (validate && !validate(operation.body)) {
-      if (dataset.nonBlockingValidation) {
-        operation._warning = errorsText(validate.errors, '')
-      } else {
-        operation._error = errorsText(validate.errors, '')
-        operation._status = 400
-        continue
+    } if (validate) {
+      if (!validate(operation.body)) {
+        if (dataset.nonBlockingValidation) {
+          operation._warning = errorsText(validate.errors, '')
+        } else {
+          operation._error = errorsText(validate.errors, '')
+          operation._status = 400
+          continue
+        }
       }
     }
 

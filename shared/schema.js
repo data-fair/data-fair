@@ -1,4 +1,4 @@
-export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl) => {
+export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flatArrays = false) => {
   const cleanProp = { ...p }
   // we badly named enum from the start, too bad, now we accept this semantic difference with json schema
   if (cleanProp.enum) {
@@ -40,5 +40,27 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl) => {
   delete cleanProp.ignoreIntegerDetection
   delete cleanProp.icon
   delete cleanProp.label
-  return cleanProp
+  delete cleanProp['x-required']
+
+  if (cleanProp['x-separator'] && !flatArrays) {
+    const itemsProps = { ...cleanProp }
+    delete itemsProps.title
+    delete itemsProps.description
+    delete itemsProps.readOnly
+    delete itemsProps['x-separator']
+    delete itemsProps['x-fromUrl']
+
+    const arrayProp = {
+      type: 'array',
+      title: cleanProp.title,
+      description: cleanProp.description,
+      readOnly: cleanProp.readOnly,
+      'x-separator': cleanProp['x-separator'],
+      'x-fromUrl': cleanProp['x-fromUrl'],
+      items: itemsProps
+    }
+    return arrayProp
+  } else {
+    return cleanProp
+  }
 }
