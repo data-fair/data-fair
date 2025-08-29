@@ -904,7 +904,7 @@ const readLines = async (req, res) => {
   if (nextLinkURL) result.next = nextLinkURL.href
   if (query.collapse) result.totalCollapse = esResponse.aggregations.totalCollapse.value
   result.results = []
-  const flatten = getFlatten(req.dataset)
+  const flatten = getFlatten(req.dataset, req.query.arrays === 'true')
   for (let i = 0; i < esResponse.hits.hits.length; i++) {
     // avoid blocking the event loop
     if (i % 500 === 499) await new Promise(resolve => setTimeout(resolve, 0))
@@ -959,7 +959,7 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
     cacheHash = hash
   }
   let result
-  const flatten = getFlatten(req.dataset)
+  const flatten = getFlatten(req.dataset, req.query.arrays === 'true')
   try {
     result = await esUtils.geoAgg(req.app.get('es'), req.dataset, req.query, req.publicBaseUrl, flatten)
   } catch (err) {
@@ -1010,7 +1010,7 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
   }
 
   let result
-  const flatten = getFlatten(req.dataset)
+  const flatten = getFlatten(req.dataset, req.query.arrays === 'true')
   try {
     result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, { ...req.query }, vectorTileRequested || req.query.format === 'geojson', req.publicBaseUrl, explain, flatten)
     if (result.next) {
@@ -1444,7 +1444,7 @@ router.post('/:datasetId/_simulate-extension', readDataset(), permissions.middle
   const dataset = clone(req.dataset)
   if (!dataset.extensions?.length) throw httpError(400, 'no extension to simulate')
   await extend(dataset, dataset.extensions, undefined, undefined, undefined, line)
-  const flatten = getFlatten(req.dataset)
+  const flatten = getFlatten(req.dataset, req.query.arrays === 'true')
   res.send(flatten(line))
 })
 
