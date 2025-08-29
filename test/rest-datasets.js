@@ -266,7 +266,7 @@ describe('REST datasets', function () {
       return true
     })
 
-    const res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
+    let res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
       { _id: 'line1', attr1: 'test' },
       { _id: 'line1', attr1: 111 }
     ])
@@ -293,6 +293,32 @@ describe('REST datasets', function () {
       assert.equal(err.status, 400)
       return true
     })
+
+    res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', `attr1,attr2,attr3
+test1,test1,test1
+test1,test1,"test1, test2"
+test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
+
+    assert.equal(res.data.nbOk, 2)
+    assert.equal(res.data.nbErrors, 1)
+    assert.equal(res.data.errors.length, 1)
+    assert.equal(res.data.errors[0].line, 2)
+    console.log(res.data.errors[0].error)
+    assert.ok(res.data.errors[0].error.startsWith('/attr3/1 doit correspondre au format'))
+
+    res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
+      { attr1: 'test1', attr2: 'test1', attr3: 'test1' },
+      { attr1: 'test1', attr2: 'test1', attr3: 'test1, test2' },
+      { attr1: 'test1', attr2: 'test1', attr3: ['test1', 'test2'] },
+      { attr1: 'test1', attr2: 'test1', attr3: 'test1, testko' }
+    ])
+
+    console.log(res.data)
+    assert.equal(res.data.nbOk, 3)
+    assert.equal(res.data.nbErrors, 1)
+    assert.equal(res.data.errors.length, 1)
+    assert.equal(res.data.errors[0].line, 3)
+    assert.ok(res.data.errors[0].error.startsWith('/attr3/1 doit correspondre au format'))
 
     await workers.hook('finalizer/rest4')
   })

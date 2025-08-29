@@ -113,4 +113,47 @@ describe('file datasets with validation rules', function () {
     assert.equal(lines.length, 2)
     assert.equal(lines[0].id, 'test')
   })
+
+  it('manage validation rules for multi-valued cols', async function () {
+    const schema = [{
+      key: 'id',
+      type: 'string'
+    }, {
+      key: 'multinb',
+      type: 'number',
+      separator: ';'
+    }, {
+      key: 'multipattern',
+      type: 'string',
+      pattern: '^test[0-9]$',
+      separator: ', '
+    }]
+
+    // Create a valid dataset
+    const form = new FormData()
+    form.append('file', `id,multinb,multipattern
+koumoul,"111 ; 222","test1, test2"
+bidule,123,test3`, 'dataset1.csv')
+    form.append('schema', JSON.stringify(schema))
+    const ax = global.ax.dmeadus
+    let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
+    dataset = await workers.hook('finalizer/' + dataset.id)
+    assert.equal(dataset.count, 2)
+    let lines = await ax.get(`/api/v1/datasets/${dataset.id}/lines`).then(r => r.data.results)
+    assert.equal(lines[0].multipattern, 'test1, test2')
+    lines = await ax.get(`/api/v1/datasets/${dataset.id}/lines?arrays=true`).then(r => r.data.results)
+    assert.deepEqual(lines[0].multipattern, ['test1', 'test2'])
+
+    // then an invalid dataset
+    const form2 = new FormData()
+    form2.append('file', `id,multinb,multipattern
+koumoul,"111 ; 222","test1, testko"
+bidule,123,test3`, 'dataset1.csv')
+    form2.append('schema', JSON.stringify(schema))
+    const dataset2 = await ax.post('/api/v1/datasets', form2, { headers: testUtils.formHeaders(form2) }).then(r => r.data)
+    await assert.rejects(workers.hook('finalizer/' + dataset2.id), (err) => {
+      assert.ok(err.message.includes('/multipattern/1 doit correspondre au format'))
+      return true
+    })
+  })
 })

@@ -115,6 +115,5 @@ export const sniff = async (sample) => {
   // debug('combinations', combinations)
   const result = bestCombination.props
   if (!result.labels || !result.labels.length) throw new Error('Échec de l\'analyse du fichier tabulaire, pas de colonne détectée.')
-  debug('bestCombination', JSON.stringify(bestCombination, null, 2))
   return result
 }

@@ -50,8 +50,11 @@ const checkInteger = (val) => {
   return Number.isInteger(number)
 }
 
-export const format = (value, prop, fileProp) => {
+export const format = (value, prop, fileProp, ignoreSeparator) => {
   if (value === null || value === undefined || value === '') return null
+  if (!ignoreSeparator && typeof value === 'string' && prop.separator) {
+    return value.split(prop.separator.trim()).map(part => format(part.trim(), prop, fileProp, true))
+  }
   if (typeof value !== 'string') value = JSON.stringify(value)
   value = value.trim()
   if (!value) return null

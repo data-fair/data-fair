@@ -183,8 +183,9 @@ export const deleteDataset = async (dataset: RestDataset) => {
   if (revisionsCollectionExists) revisionsCollection(dataset).drop()
 }
 
-const getLineId = (line: DatasetLine, dataset: RestDataset) => {
+const getLineId = (line: DatasetLine, dataset: RestDataset, raw?: boolean) => {
   if (dataset.primaryKey && dataset.primaryKey.length) {
+    if (raw) line = formatLine({ ...line }, dataset.schema)
     const primaryKey = dataset.primaryKey.map(p => line[p] + '')
     if (dataset.rest?.primaryKeyMode === 'sha256') {
       return crypto.createHash('sha256').update(JSON.stringify(primaryKey)).digest('hex')
@@ -328,12 +329,6 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
 
     const filter = { _id: body._id }
     if (linesOwner) Object.assign(filter, linesOwnerFilter(linesOwner))
-    // manage retro-compatibility of basic multi-valued properties
-    for (const property of dataset.schema) {
-      if (property.separator && typeof body[property.key] === 'string') {
-        body[property.key] = (body[property.key] as string).split((property.separator as string).trim()).map((part: string) => part.trim())
-      }
-    }
 
     const operation: Operation = {
       _id: body._id,
@@ -799,17 +794,17 @@ export const deleteLine = async (req: RequestWithRestDataset & { params: { lineI
 }
 
 export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
-  formatLine(req.body, req.dataset.schema)
-
   if (req.linesOwner) Object.assign(req.body, linesOwnerCols(req.linesOwner))
-  req.body._action = req.body._action ?? 'createOrUpdate'
-  const definedId = req.params.lineId || req.body._id || getLineId(req.body, req.dataset)
+  const definedId = req.params.lineId || req.body._id || getLineId(req.body, req.dataset, true)
   req.body._id = definedId || nanoid()
-
   await manageAttachment(req, false)
-  const [operation] = (await applyReqTransactions(req, [req.body], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
+
+  const fullLine = { _action: 'createOrUpdate', ...req.body }
+  formatLine(fullLine, req.dataset.schema)
+
+  const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
   if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
-  await commitLines(req.dataset, [req.body._id])
+  await commitLines(req.dataset, [fullLine._id])
 
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
@@ -823,6 +818,7 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
   await manageAttachment(req, true)
   const fullLine = { _action: 'patch', _id: req.params.lineId, ...req.body }
   formatLine(fullLine, req.dataset.schema)
+
   const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
   if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
   await commitLines(req.dataset, [fullLine._id])
