@@ -39,6 +39,7 @@ const fileSchema = {
     type: 'object',
     required: ['key'],
     properties: {
+      key: { type: 'string' },
       separator: { type: ['string', 'null'] },
       dateFormat: { type: ['string', 'null'] },
       dateTimeFormat: { type: ['string', 'null'] },
@@ -112,7 +113,7 @@ const datasetProperties = {
   file: {
     type: 'object',
     additionalProperties: false,
-    required: ['name', 'size', 'encoding', 'mimetype'],
+    required: ['name', 'size', 'encoding', 'mimetype', 'schema'],
     properties: {
       name: {
         type: 'string',

@@ -18,6 +18,11 @@ export const isVirtualDataset = (dataset: Dataset): dataset is VirtualDataset =>
   return !!dataset.isVirtual
 }
 
+export type FileDataset = Omit<Dataset, 'file' | 'originalFile' | 'schema'> & Required<Pick<Dataset, 'file' | 'originalFile' | 'schema'>>
+export const isFileDataset = (dataset: Dataset): dataset is FileDataset => {
+  return !!dataset.file
+}
+
 export type DatasetExt = Dataset & { visibility: 'public' | 'private' | 'protected', public: 'boolean' }
 
 export type DatasetLine = {

@@ -5,7 +5,7 @@ import vocabularyRaw from '../contract/vocabulary.js'
 
 export type Locale = 'fr' | 'en'
 
-export type LocalizedConcept = { identifiers: string[], title: string, description: string, tag: string | undefined }
+export type LocalizedConcept = { identifiers: string[], id: string, title: string, description: string, tag: string | undefined }
 
 export const vocabularyArray: { en: LocalizedConcept[], fr: LocalizedConcept[] } = { en: [], fr: [] }
 
