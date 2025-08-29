@@ -21,17 +21,18 @@ PrimaryFilter
   = StringFilter
   / EqualityFilter
   / InLiteralsFilter
-  / RangeFilter
+  / InRangeFilter
+  / InMultiValued
   / ComparisonFilter
   / NotFilter
   / "(" _ filter:Filter _ ")" { return filter }
 
 EqualityFilter
-  = key:IdentifierName _ EqualOperator _ value:Literal {
-    const prop = options.dataset.schema.find(p => p.key === key.name)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key.name}, il n'existe pas dans le jeu de données.`)
+  = key:FieldName _ EqualOperator _ value:Literal {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     requiredCapability(prop, '_eq')
-    return { term: { [key.name]: value.value } }
+    return { term: { [key]: value.value } }
   }
 
 EqualOperator
@@ -40,14 +41,14 @@ EqualOperator
 
 // https://help.opendatasoft.com/apis/ods-explore-v2/#section/ODSQL-predicates/IN-filter
 InLiteralsFilter
-  = key:IdentifierName __ In _ "(" values:LiteralsList ")" {
-    return { terms: {[key.name]: values }}
+  = key:FieldName __ In _ "(" values:LiteralsList ")" {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    requiredCapability(prop, '_eq')
+    return { terms: {[key]: values }}
   }
 
-In
-  = "in"
-  / "IN"
-  / "In"
+In = "in"i
 
 LiteralsList
   = head:Literal tail:(LiteralAfterListSeparator)* {
@@ -62,9 +63,12 @@ LiteralAfterListSeparator
 ListSeparator
   = _ "," _
 
-RangeFilter
-  = key: IdentifierName __ In _ startOperator:RangeStart start:Literal RangeSeparator end:Literal endOperator:RangeEnd {
-    return { range: { [key.name]: { [startOperator]: start.value, [endOperator]: end.value } } }
+InRangeFilter
+  = key:FieldName __ In _ startOperator:RangeStart start:Literal RangeSeparator end:Literal endOperator:RangeEnd {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    requiredCapability(prop, '_eq')
+    return { range: { [key]: { [startOperator]: start.value, [endOperator]: end.value } } }
   }
 
 RangeStart
@@ -79,18 +83,23 @@ RangeSeparator
   = _ ".." _
   / __ To __
 
-To
-  = "to"
-  / "TO"
-  / "To"
+InMultiValued
+  = value:Literal __ In __ key:FieldName {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    requiredCapability(prop, '_eq')
+    return { term: {[key]: value.value} }
+  }
+
+To = "to"i
 
 ComparisonFilter
-  = key:IdentifierName _ operator:ComparisonOperator _ value:Literal {
-    const prop = options.dataset.schema.find(p => p.key === key.name)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key.name}, il n'existe pas dans le jeu de données.`)
+  = key:FieldName _ operator:ComparisonOperator _ value:Literal {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
     const esOperator = esOperators[operator]
     requiredCapability(prop, '_lt')
-    return { range: { [key.name]: { [esOperator]: value.value } } }
+    return { range: { [key]: { [esOperator]: value.value } } }
   }
 
 ComparisonOperator
@@ -115,10 +124,7 @@ OrFilter
       }
     }
 
-Or
-  = "or"
-  / "OR"
-  / "Or"
+Or = "or"i
 
 AndFilter
   = before:PrimaryFilter
@@ -131,10 +137,7 @@ AndFilter
       }
    }
 
-And
-  = "and"
-  / "AND"
-  / "And"
+And = "and"i
 
 
 NotFilter
@@ -146,7 +149,4 @@ NotFilter
     }
   }
 
-Not
-  = "not"
-  / "NOT"
-  / "Not"
+Not = "not"i

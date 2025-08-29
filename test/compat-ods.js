@@ -21,6 +21,10 @@ describe('compatibility layer for ods api', function () {
       { term: { id: 'koumoul' } }
     )
     assert.deepEqual(
+      whereParser.parse('`10`:"koumoul"', { dataset: { schema: [{ key: '10' }] } }),
+      { term: { 10: 'koumoul' } }
+    )
+    assert.deepEqual(
       whereParser.parse('id:\'koumoul\'', { dataset: { schema: [{ key: 'id' }] } }),
       { term: { id: 'koumoul' } }
     )
@@ -88,6 +92,20 @@ describe('compatibility layer for ods api', function () {
     assert.deepEqual(
       whereParser.parse('nb IN ]1..10[', { dataset: { schema: [{ key: 'nb' }] } }),
       { range: { nb: { gt: 1, lt: 10 } } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('10 IN nb', { dataset: { schema: [{ key: 'nb' }] } }),
+      { term: { nb: 10 } }
+    )
+
+    assert.deepEqual(
+      whereParser.parse('date: date\'2020/12/01\'', { dataset: { schema: [{ key: 'date' }] } }),
+      { term: { date: '2020-12-01' } }
+    )
+    assert.deepEqual(
+      whereParser.parse('date: date\'2020-12-01\'', { dataset: { schema: [{ key: 'date' }] } }),
+      { term: { date: '2020-12-01' } }
     )
   })
 

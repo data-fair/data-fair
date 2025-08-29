@@ -1,4 +1,28 @@
-// copied from parts of https://github.com/pegjs/pegjs/blob/master/examples/javascript.pegjs
+FieldName
+  = identifier:IdentifierName {
+    return identifier.name
+  }
+  / "`" identifier:IdentifierName "`" {
+    return identifier.name
+  }
+  / "`" identifier:NumericLiteral "`" {
+    return '' + identifier.value
+  }
+
+DateLiteral = "date'" year:DateYear "/" month:DateMonth "/" day:DateDay "'" {
+    return { value: year + '-' + month + '-' + day }
+  }
+  / "date'" date:DatePartialIso "'" {
+    return { value: date }
+  }
+
+DateYear = DecimalDigit DecimalDigit DecimalDigit DecimalDigit { return text() }
+DateMonth = DecimalDigit DecimalDigit { return text() }
+DateDay = DecimalDigit DecimalDigit { return text() }
+DatePartialIso = (DecimalDigit / "-" / "T" / "Z" / ":")* { return text() }
+
+// the following is copied and adapted from parts of
+// https://github.com/pegjs/pegjs/blob/master/examples/javascript.pegjs
 
 IdentifierName "identifier"
   = head:IdentifierStart tail:IdentifierPart* {
@@ -73,6 +97,7 @@ Literal
   / BooleanLiteral
   / NumericLiteral
   / StringLiteral
+  / DateLiteral
 
 NullLiteral
   = NullToken { return { type: "Literal", value: null }; }
@@ -200,8 +225,8 @@ UnicodeEscapeSequence
       return String.fromCharCode(parseInt(digits, 16));
     }
 
-FalseToken      = "false"      !IdentifierPart
-TrueToken       = "true"       !IdentifierPart
+FalseToken      = "false"i      !IdentifierPart
+TrueToken       = "true"i       !IdentifierPart
 NullToken       = "null"       !IdentifierPart
 
 // Letter, Lowercase
