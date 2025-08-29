@@ -224,11 +224,21 @@ const getLineIndice = (dataset: RestDataset, updatedAt: Date, i: number, dataset
   }
 }
 
-const getLineFromOperation = (operation: Operation): DatasetLine => {
-  const line = { ...operation, ...operation.fullBody }
+const getLineFromOperation = (operation: Operation, ogBody?: any): DatasetLine => {
+  const line: any = { ...operation }
   delete line.body
   delete line.fullBody
   delete line.filter
+  Object.assign(line, operation.fullBody)
+
+  // restore multi-valued data that was sent as a string
+  if (ogBody) {
+    for (const key of Object.keys(ogBody)) {
+      if (Array.isArray(line[key]) && typeof ogBody[key] === 'string') {
+        line[key] = ogBody[key]
+      }
+    }
+  }
   return line
 }
 
@@ -804,7 +814,7 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
 
-  const line = getLineFromOperation(operation)
+  const line = getLineFromOperation(operation, req.body)
   res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
   storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
 }
@@ -820,7 +830,7 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
 
-  const line = getLineFromOperation(operation)
+  const line = getLineFromOperation(operation, req.body)
   res.status(200).send(cleanLine(line))
   storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
 }
