@@ -44,6 +44,12 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
 
   if (cleanProp['x-separator']) {
     if (flatArrays) {
+      if (cleanProp['x-display'] || cleanProp.format) {
+        // separator is incompatible with custom input components, we chose to render the proper component
+        // but with a single value, instead of multi-value in a basic text field
+        delete cleanProp['x-separator']
+        return cleanProp
+      }
       // flat usage of separator is incompatible with validation
       return {
         type: 'string',
@@ -66,7 +72,6 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
         title: cleanProp.title,
         description: cleanProp.description,
         readOnly: cleanProp.readOnly,
-        'x-separator': cleanProp['x-separator'],
         'x-fromUrl': cleanProp['x-fromUrl'],
         items: itemsProps
       }

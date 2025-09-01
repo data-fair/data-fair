@@ -105,7 +105,8 @@ watch(queryContext, async () => {
     const existingLines = await $fetch<{ results: any[] }>(`/datasets/${route.params.id}/lines`, {
       query: {
         ...queryContext.value.filters,
-        t: new Date().getTime()
+        t: new Date().getTime(),
+        arrays: true
       }
     })
     existingLine.value = existingLines.results[0]
