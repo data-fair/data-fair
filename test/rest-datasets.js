@@ -284,6 +284,11 @@ describe('REST datasets', function () {
     assert.equal(line.attr3, 'test1, test2')
     line = await ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', attr3: ['test1', 'test2'] }).then(r => r.data)
     assert.deepEqual(line.attr3, ['test1', 'test2'])
+    const form = new FormData()
+    form.append('attr1', 'test')
+    form.append('attr3', 'test1, test2')
+    line = await ax.post('/api/v1/datasets/rest4/lines', form, { headers: testUtils.formHeaders(form) }).then(r => r.data)
+    assert.equal(line.attr3, 'test1, test2')
 
     await assert.rejects(ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', attr3: 'test1, testko' }), (err) => {
       assert.ok(err.data.startsWith('/attr3/1 doit correspondre au format'))
@@ -316,7 +321,6 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
       { attr1: 'test1', attr2: 'test1', attr3: 'test1, testko' }
     ])
 
-    console.log(res.data)
     assert.equal(res.data.nbOk, 3)
     assert.equal(res.data.nbErrors, 1)
     assert.equal(res.data.errors.length, 1)

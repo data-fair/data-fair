@@ -104,7 +104,10 @@ export const uploadAttachment = multer({
 }).single('attachment')
 
 export const fixFormBody: RequestHandler = (req, res, next) => {
-  if (req.body?._body) req.body = JSON.parse(req.body._body)
+  if (req.body?._body) {
+    req.body = JSON.parse(req.body._body)
+    req._fixedFormBody = true
+  }
   next()
 }
 
@@ -720,7 +723,8 @@ async function checkMatchingAttachment (req: { body: any }, lineId: string, dir:
 }
 
 async function manageAttachment (req: RequestWithRestDataset & { body: any }, keepExisting: boolean) {
-  if (req.is('multipart/form-data')) {
+  if (req.is('multipart/form-data') && !req._fixedFormBody) {
+    req._rawBody = { ...req.body }
     // When taken from form-data everything is string.. convert to actual types
     for (const f of req.dataset.schema) {
       if (!f['x-calculated']) {
@@ -823,7 +827,7 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
 
-  const line = getLineFromOperation(operation, req.body)
+  const line = getLineFromOperation(operation, req._rawBody ?? req.body)
   res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
   storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
 }
@@ -840,7 +844,7 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
 
-  const line = getLineFromOperation(operation, req.body)
+  const line = getLineFromOperation(operation, req._rawBody ?? req.body)
   res.status(200).send(cleanLine(line))
   storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
 }

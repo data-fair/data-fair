@@ -57,7 +57,9 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
         description: cleanProp.description,
         readOnly: cleanProp.readOnly,
         'x-separator': cleanProp['x-separator'],
-        'x-fromUrl': cleanProp['x-fromUrl']
+        'x-fromUrl': cleanProp['x-fromUrl'],
+        anyOf: cleanProp.anyOf,
+        oneOf: cleanProp.oneOf
       }
     } else {
       const itemsProps = { ...cleanProp }
