@@ -739,7 +739,7 @@ const datasetProperties = {
       },
       indiceMode: {
         type: 'string',
-        enum: ['timestamp1', 'timestamp2']
+        enum: ['timestamp1', 'timestamp2', 'timestamp3']
       }
     }
   },

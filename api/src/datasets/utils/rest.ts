@@ -94,9 +94,9 @@ const filename: multer.DiskStorageOptions['filename'] = async (req, file, cb) =>
 
 const padISize = (config.mongo.maxBulkOps - 1).toString().length
 // cf https://github.com/puckey/pad-number/blob/master/index.js
-const padI = (i: number) => {
+const padI = (i: number, padSize = padISize) => {
   const str = i.toString()
-  return new Array((padISize - str.length) + 1).join('0') + str
+  return new Array((padSize - str.length) + 1).join('0') + str
 }
 
 export const uploadAttachment = multer({
@@ -217,9 +217,22 @@ const getLineHash = (line: DatasetLine) => {
 
 const getLineIndice = (dataset: RestDataset, updatedAt: Date, i: number, datasetCreatedAt: number, chunkRand: string) => {
   if (!updatedAt) throw new Error('getLineIndice requires _updatedAt')
-  if (dataset.rest.indiceMode === 'timestamp2') {
+  // timestamp2 produced too large number and there was some precision loss
+  if (dataset.rest.indiceMode === 'timestamp3') {
+    // in hundredth of a second
+    const timeDiff = Math.floor((updatedAt.getTime() - datasetCreatedAt) / 10)
+    const padSize = Math.max(padISize, chunkRand.length) + 1
+    return Number(timeDiff + padI(i + Number(chunkRand), padSize))
+  } else if (dataset.rest.indiceMode === 'timestamp2') {
     // we added a random component in case of parallel operations
-    return Number((updatedAt.getTime() - datasetCreatedAt) + chunkRand + padI(i))
+    let nbStr = (updatedAt.getTime() - datasetCreatedAt) + chunkRand + padI(i)
+    let nb = Number(nbStr)
+    if (nbStr !== nb.toString()) {
+      // loss of precision on too big numbers, use random number to create unique value
+      nbStr = (updatedAt.getTime() - datasetCreatedAt) + Math.random().toString().slice(2, 7) + padI(i)
+      nb = Number(nbStr)
+    }
+    return nb
   } else {
     return Number((updatedAt.getTime() - datasetCreatedAt) + padI(i))
   }
@@ -519,6 +532,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
         const operation = bulkOpMatchingOperations[writeError.err.index]
         if (writeError.err.code === 11000) {
           if (writeError.err.errmsg?.includes('_i_')) {
+            console.error(writeError)
             operation._status = 500
             operation._error = 'erreur dans la gestion des conflits de données insérées'
           } else {
