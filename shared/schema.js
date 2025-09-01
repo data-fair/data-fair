@@ -40,6 +40,7 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
   delete cleanProp.ignoreIntegerDetection
   delete cleanProp.icon
   delete cleanProp.label
+  const required = cleanProp['x-required']
   delete cleanProp['x-required']
 
   if (cleanProp['x-separator']) {
@@ -69,7 +70,8 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
       delete itemsProps['x-separator']
       delete itemsProps['x-fromUrl']
 
-      return {
+      /** @type {any} */
+      const array = {
         type: 'array',
         title: cleanProp.title,
         description: cleanProp.description,
@@ -77,6 +79,8 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flat
         'x-fromUrl': cleanProp['x-fromUrl'],
         items: itemsProps
       }
+      if (required) array.minItems = 1
+      return array
     }
   }
 
