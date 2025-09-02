@@ -43,7 +43,7 @@
         variant="text"
         :title="t('editAllLines', {nbLines: selectedResults.length})"
         :disabled="saving"
-        @click="editingResults = [...selectedResults]; editSelectedResultsDialog = true;"
+        @click="showEditSelectedResultsDialog.execute()"
       />
     </template>
     <template v-else>
@@ -78,16 +78,16 @@
     v-model="editSelectedResultsDialog"
     max-width="600px"
   >
-    <v-card :title="t('editAllLines', {nbLines: editingResults?.length})">
+    <v-card :title="t('editAllLines', {nbLines: editingLines?.length})">
       <v-form
         ref="editSelectedLinesForm"
         v-model="editSelectedLinesValid"
       >
         <v-card-text>
           <dataset-edit-multiple-lines
-            v-if="editSelectedResultsDialog && editingResults?.length"
+            v-if="editSelectedResultsDialog && editingLines?.length"
             v-model="editingLinesPatch"
-            :results="editingResults"
+            :lines="editingLines"
             :selected-cols="selectedCols"
           />
         </v-card-text>
@@ -175,7 +175,8 @@
         <v-btn
           color="primary"
           variant="flat"
-          :loading="deleteLines.loading.value"
+          :disabled="!addLineValid"
+          :loading="addLine.loading.value"
           @click="addLine.execute()"
         >
           {{ t('save') }}
@@ -222,7 +223,7 @@ defineProps({
 
 const { selectedResults, bulkLines, saveLine, saving } = useDatasetEdition()
 
-const { can, jsonSchemaFetch } = useDatasetStore()
+const { can, jsonSchemaFetch, id: datasetId } = useDatasetStore()
 const { t } = useI18n()
 
 if (!jsonSchemaFetch.initialized.value) jsonSchemaFetch.refresh()
@@ -239,24 +240,29 @@ const deleteLines = useAsyncAction(async () => {
   if (!deletingResults.value?.length) return
   await bulkLines(deletingResults.value.map(line => ({ _id: line._id, _action: 'delete' })))
   deleteSelectedResultsDialog.value = false
-  for (const result of deletingResults.value) {
-    result.deleted = true
-  }
 })
 
-const editingResults = ref<ExtendedResult[]>()
+const showEditSelectedResultsDialog = useAsyncAction(async () => {
+  editingLines.value = await $fetch<{ results: Record<string, any>[] }>(`datasets/${datasetId}/lines`, {
+    params: {
+      arrays: true,
+      _id_in: selectedResults.value.map(r => r._id).join(','),
+      limit: 10000
+    }
+  }).then(r => r.results)
+  editSelectedResultsDialog.value = true
+})
+
+const editingLines = ref<Record<string, any>[]>()
 const editSelectedResultsDialog = ref(false)
 const editSelectedLinesForm = ref<VForm>()
 const editSelectedLinesValid = ref(false)
 const editingLinesPatch = ref({})
 const saveLinesPatch = useAsyncAction(async () => {
   await editSelectedLinesForm.value?.validate()
-  if (!editingResults.value?.length) return
-  await bulkLines(editingResults.value.map(result => ({ ...editingLinesPatch.value, _id: result._id, _action: 'patch' })))
+  if (!editingLines.value?.length) return
+  await bulkLines(editingLines.value.map(result => ({ ...editingLinesPatch.value, _id: result._id, _action: 'patch' })))
   editSelectedResultsDialog.value = false
-  for (const result of editingResults.value) {
-    result.edited = { ...result.raw, ...result.edited, ...editingLinesPatch.value }
-  }
 })
 
 const addLineDialog = ref(false)

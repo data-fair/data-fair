@@ -17,8 +17,6 @@ export type ExtendedResult = {
   _owner?: string,
   _highlight?: Record<string, string[]>,
   raw: Record<string, any>,
-  edited?: Record<string, any>,
-  deleted?: boolean,
   values: Record<string, ExtendedResultValue | ExtendedResultValue[]>
 }
 

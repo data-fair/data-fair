@@ -1,4 +1,4 @@
-export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl) => {
+export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl, flatArrays = false) => {
   const cleanProp = { ...p }
   // we badly named enum from the start, too bad, now we accept this semantic difference with json schema
   if (cleanProp.enum) {
@@ -40,5 +40,49 @@ export const cleanJsonSchemaProperty = (p, defaultPublicUrl, publicBaseUrl) => {
   delete cleanProp.ignoreIntegerDetection
   delete cleanProp.icon
   delete cleanProp.label
+  const required = cleanProp['x-required']
+  delete cleanProp['x-required']
+
+  if (cleanProp['x-separator']) {
+    if (flatArrays) {
+      if (cleanProp['x-display'] || cleanProp.format) {
+        // separator is incompatible with custom input components, we chose to render the proper component
+        // but with a single value, instead of multi-value in a basic text field
+        delete cleanProp['x-separator']
+        return cleanProp
+      }
+      // flat usage of separator is incompatible with validation
+      return {
+        type: 'string',
+        title: cleanProp.title,
+        description: cleanProp.description,
+        readOnly: cleanProp.readOnly,
+        'x-separator': cleanProp['x-separator'],
+        'x-fromUrl': cleanProp['x-fromUrl'],
+        anyOf: cleanProp.anyOf,
+        oneOf: cleanProp.oneOf
+      }
+    } else {
+      const itemsProps = { ...cleanProp }
+      delete itemsProps.title
+      delete itemsProps.description
+      delete itemsProps.readOnly
+      delete itemsProps['x-separator']
+      delete itemsProps['x-fromUrl']
+
+      /** @type {any} */
+      const array = {
+        type: 'array',
+        title: cleanProp.title,
+        description: cleanProp.description,
+        readOnly: cleanProp.readOnly,
+        'x-fromUrl': cleanProp['x-fromUrl'],
+        items: itemsProps
+      }
+      if (required) array.minItems = 1
+      return array
+    }
+  }
+
   return cleanProp
 }
