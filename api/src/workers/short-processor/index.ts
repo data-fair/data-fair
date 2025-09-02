@@ -40,6 +40,7 @@ export const publishDataset = async function (dataset: Dataset) {
 }
 
 export const renewApiKey = async function (dataset: DatasetInternal) {
+  await mongo.connect(true)
   const datasetsService = await import('../../datasets/service.js')
   const readApiKeyUtils = await import('../../datasets/utils/read-api-key.js')
   const debug = debugLib(`worker:read-api-key-renewer:${dataset.id}`)
@@ -52,8 +53,22 @@ export const renewApiKey = async function (dataset: DatasetInternal) {
 }
 
 export const manageTTL = async function (dataset: RestDataset) {
+  await mongo.connect(true)
   const restUtils = await import('../../datasets/utils/rest.ts')
   return restUtils.applyTTL(dataset)
+}
+
+export const autoUpdate = async function (dataset: Dataset) {
+  await mongo.connect(true)
+  const draft = {
+    status: 'imported',
+    draftReason: {
+      key: 'file-updated' as const,
+      message: 'Nouveau fichier chargé sur un jeu de données existant',
+      validationMode: 'always' as const
+    }
+  }
+  await mongo.datasets.updateOne({ id: dataset.id }, { $set: { draft } })
 }
 
 export const finalize = async function (dataset: Dataset) {
