@@ -175,7 +175,8 @@
         <v-btn
           color="primary"
           variant="flat"
-          :loading="deleteLines.loading.value"
+          :disabled="!addLineValid"
+          :loading="addLine.loading.value"
           @click="addLine.execute()"
         >
           {{ t('save') }}
