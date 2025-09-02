@@ -7,6 +7,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { type RequestWithResource } from '#types'
 import { type OrganizationMembership, type SessionState, setReqSession, type Account } from '@data-fair/lib-express'
 import { type NextFunction, type Response, type Request } from 'express'
+import { isDepartmentSettings, isUserSettings } from '../routers/settings.ts'
 
 export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: Account | string, req?: RequestWithResource): Promise<SessionState & { isApiKey: true }> => {
   if (req?.resource?._readApiKey && (req.resource._readApiKey.current === rawApiKey || req.resource._readApiKey.previous === rawApiKey)) {
@@ -28,10 +29,11 @@ export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: A
     const hash = crypto.createHash('sha512')
     hash.update(rawApiKey)
     const hashedApiKey = hash.digest('hex')
-    const settings = await mongo.db.collection('settings')
-      .findOne({ 'apiKeys.key': hashedApiKey }, { projection: { _id: 0, id: 1, type: 1, department: 1, name: 1, 'apiKeys.$': 1 } })
+    const settings = await mongo.settings
+      .findOne({ 'apiKeys.key': hashedApiKey }, { projection: { _id: 0, id: 1, type: 1, department: 1, name: 1, email: 1, 'apiKeys.$': 1 } })
     if (!settings) throw httpError(401, 'Cette clé d\'API est inconnue.')
-    const apiKey = settings.apiKeys[0]
+    const apiKey = settings.apiKeys?.[0]
+    if (!apiKey) throw httpError(401, 'Cette clé d\'API est inconnue.')
     if (!apiKey.scopes.includes(scope)) throw httpError(403, 'Cette clé d\'API n\'a pas la portée nécessaire.')
 
     const sessionState: SessionState & { isApiKey: true } = {
@@ -40,11 +42,13 @@ export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: A
     }
     if (apiKey.adminMode && apiKey.asAccount) {
       if (!asAccount) throw httpError(403, 'Cette clé d\'API requiert de spécifier le compte à incarner')
-      let account = asAccount
+      let account: Account
       if (typeof asAccount === 'string') {
         account = JSON.parse(asAccount) as Account
         if (account.name) account.name = decodeURIComponent(account.name)
         if (account.departmentName) account.departmentName = decodeURIComponent(account.departmentName)
+      } else {
+        account = asAccount
       }
       if (account.type === 'user') {
         sessionState.user = {
@@ -75,18 +79,20 @@ export const readApiKey = async (rawApiKey: string, scope: string, asAccount?: A
       }
     } else {
       if (asAccount) throw httpError(403, 'Cette clé d\'API ne supporte pas de spécifier le compte à incarner')
-      if (settings.type === 'user') {
+      if (isUserSettings(settings)) {
         sessionState.user = {
           id: settings.id,
           name: `${settings.name} (${apiKey.title})`,
           email: '',
           organizations: []
         }
+        // this should always be defined from now own, but not in older settings
+        if (settings.email) sessionState.user.email = settings.email
         sessionState.account = { type: 'user', id: sessionState.user.id, name: sessionState.user.name }
         sessionState.accountRole = config.adminRole
       } else {
         const userOrg: OrganizationMembership = { id: settings.id, name: settings.name, role: config.adminRole }
-        if (settings.department) {
+        if (isDepartmentSettings(settings)) {
           userOrg.department = settings.department
           if (settings.departmentName) userOrg.departmentName = settings.departmentName
         }

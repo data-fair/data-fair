@@ -35,10 +35,13 @@ function assertSettingsRequest (req: ExpressRequest): asserts req is SettingsReq
   if (!(req as SettingsRequest).owner) throw new Error('middleware not applied')
 }
 
-function isOrgSettings (settings: Settings | DepartmentSettings): settings is Settings {
+export function isMainSettings (settings: Settings | DepartmentSettings): settings is Settings {
   return !(settings as DepartmentSettings).department
 }
-function isDepartmentSettings (settings: Settings | DepartmentSettings): settings is DepartmentSettings {
+export function isUserSettings (settings: Settings | DepartmentSettings): settings is Settings {
+  return (settings as DepartmentSettings).type === 'user'
+}
+export function isDepartmentSettings (settings: Settings | DepartmentSettings): settings is DepartmentSettings {
   return !!(settings as DepartmentSettings).department
 }
 
@@ -96,8 +99,10 @@ router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, async (req, res) =>
 
 const fillSettings = (owner: AccountKeys, user: User, settings: any): Settings | DepartmentSettings => {
   Object.assign(settings, owner)
-  if (owner.type === 'user') settings.name = user.name
-  else {
+  if (owner.type === 'user') {
+    settings.name = user.name
+    settings.email = user.email
+  } else {
     const org = user.organizations.find(o => o.id === owner.id)
     if (!org) throw new Error('base org ref in user')
     settings.name = org.name
@@ -142,21 +147,21 @@ router.put('/:type/:id', isOwnerAdmin, async (req, res) => {
     }
   }
 
-  if (isOrgSettings(settings) && settings.privateVocabulary) {
+  if (isMainSettings(settings) && settings.privateVocabulary) {
     for (const concept of req.body.privateVocabulary) {
       if (!concept.id) concept.id = slug.default(concept.title, { lower: true, strict: true })
       if (!concept.identifiers || !concept.identifiers.length) concept.identifiers = [concept.id]
     }
   }
 
-  if (isOrgSettings(settings) && settings.topics) {
+  if (isMainSettings(settings) && settings.topics) {
     for (const topic of settings.topics) {
       if (!topic.id) topic.id = nanoid()
     }
   }
   const oldSettings = (await mongo.settings.findOneAndReplace(req.ownerFilter, settings, { upsert: true }))
 
-  if (oldSettings && isOrgSettings(oldSettings) && isOrgSettings(settings) && settings.topics) {
+  if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings) && settings.topics) {
     await topicsUtils.updateTopics(req.owner, oldSettings.topics || [], settings.topics)
   }
   res.status(200).send({ ...settings, apiKeys: fullApiKeys })
@@ -167,7 +172,7 @@ router.get('/:type/:id/topics', isOwnerMember, async (req, res) => {
   assertSettingsRequest(req)
   const settings = mongo.settings
   const result = await settings.findOne(req.ownerFilter)
-  res.status(200).send(result && isOrgSettings(result) && result.topics ? result.topics : [])
+  res.status(200).send(result && isMainSettings(result) && result.topics ? result.topics : [])
 })
 
 // Get licenses list as anyone
@@ -179,7 +184,7 @@ router.get('/:type/:id/licenses', cacheHeaders.noCache, async (req, res) => {
   for (const l of standardLicenses) {
     licenses.push({ href: l.href, title: l.title })
   }
-  if (result && isOrgSettings(result)) {
+  if (result && isMainSettings(result)) {
     for (const l of result.licenses ?? []) {
       licenses.push(l)
     }
@@ -193,7 +198,7 @@ router.get('/:type/:id/datasets-metadata', isOwnerMember, async (req, res) => {
   assertSettingsRequest(req)
   const settings = mongo.settings
   const result = await settings.findOne(req.ownerFilter)
-  res.status(200).send(result && isOrgSettings(result) && result.datasetsMetadata ? result.datasetsMetadata : {})
+  res.status(200).send(result && isMainSettings(result) && result.datasetsMetadata ? result.datasetsMetadata : {})
 })
 
 // Get publication sites as owner
