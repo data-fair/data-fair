@@ -22,6 +22,10 @@ export default {
       type: 'string',
       description: 'The name of the owner'
     },
+    email: {
+      type: 'string',
+      description: 'The email associated to the owner'
+    },
     info: {
       type: 'object',
       properties: {
