@@ -155,10 +155,13 @@ describe('REST datasets', function () {
     assert.equal(res.data.total, 4)
 
     // check that _i is incremental and unique even inside the same bulk
-    assert.ok(res.data.results[0]._i.toString().endsWith('03'))
-    assert.ok(res.data.results[1]._i.toString().endsWith('02'))
-    assert.ok(res.data.results[2]._i.toString().endsWith('01'))
-    assert.ok(res.data.results[3]._i.toString().endsWith('00'))
+    assert.equal(res.data.results[0]._i, res.data.results[1]._i + 1)
+    assert.equal(res.data.results[1]._i, res.data.results[2]._i + 1)
+    assert.equal(res.data.results[2]._i, res.data.results[3]._i + 1)
+    assert.equal(res.data.results[0]._id, 'line4')
+    assert.equal(res.data.results[1]._id, 'line3')
+    assert.equal(res.data.results[2]._id, 'line2')
+    assert.equal(res.data.results[3]._id, 'line1')
 
     // Patch one through db query to check that it won't processed
     // we must be sure that the whole dataset is not reindexed each time, only the diffs
@@ -219,17 +222,17 @@ describe('REST datasets', function () {
     await ax.put('/api/v1/datasets/rest4', {
       isRest: true,
       title: 'rest4',
-      schema: [{ key: 'attr1', type: 'string', 'x-required': true }, { key: 'attr2', type: 'string', pattern: '^test[0-9]$' }]
+      schema: [{ key: 'attr1', type: 'string', 'x-required': true }, { key: 'attr2', type: 'string', pattern: '^test[0-9]$' }, { key: 'attr3', type: 'string', pattern: '^test[0-9]$', separator: ', ' }]
     })
 
-    await assert.rejects(ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', attr3: 'test1' }), (err) => {
-      assert.equal(err.data, 'ne doit pas contenir de propriétés additionnelles (attr3)')
+    await assert.rejects(ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', attrko: 'test1' }), (err) => {
+      assert.equal(err.data, 'ne doit pas contenir de propriétés additionnelles (attrko)')
       assert.equal(err.status, 400)
       return true
     })
 
-    await assert.rejects(ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', _attr3: 'test1' }), (err) => {
-      assert.equal(err.data, 'ne doit pas contenir de propriétés additionnelles (_attr3)')
+    await assert.rejects(ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', _attrko: 'test1' }), (err) => {
+      assert.equal(err.data, 'ne doit pas contenir de propriétés additionnelles (_attrko)')
       assert.equal(err.status, 400)
       return true
     })
@@ -266,7 +269,7 @@ describe('REST datasets', function () {
       return true
     })
 
-    const res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
+    let res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
       { _id: 'line1', attr1: 'test' },
       { _id: 'line1', attr1: 111 }
     ])
@@ -276,6 +279,53 @@ describe('REST datasets', function () {
     assert.equal(res.data.errors.length, 1)
     assert.equal(res.data.errors[0].line, 1)
     assert.equal(res.data.errors[0].error, '/attr1 doit être de type string')
+
+    let line = await ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', attr3: 'test1, test2' }).then(r => r.data)
+    assert.equal(line.attr3, 'test1, test2')
+    line = await ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', attr3: ['test1', 'test2'] }).then(r => r.data)
+    assert.deepEqual(line.attr3, ['test1', 'test2'])
+    const form = new FormData()
+    form.append('attr1', 'test')
+    form.append('attr3', 'test1, test2')
+    line = await ax.post('/api/v1/datasets/rest4/lines', form, { headers: testUtils.formHeaders(form) }).then(r => r.data)
+    assert.equal(line.attr3, 'test1, test2')
+
+    await assert.rejects(ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', attr3: 'test1, testko' }), (err) => {
+      assert.ok(err.data.startsWith('/attr3/1 doit correspondre au format'))
+      assert.equal(err.status, 400)
+      return true
+    })
+
+    await assert.rejects(ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', attr3: ['test1', 'testko'] }), (err) => {
+      assert.ok(err.data.startsWith('/attr3/1 doit correspondre au format'))
+      assert.equal(err.status, 400)
+      return true
+    })
+
+    res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', `attr1,attr2,attr3
+test1,test1,test1
+test1,test1,"test1, test2"
+test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
+
+    assert.equal(res.data.nbOk, 2)
+    assert.equal(res.data.nbErrors, 1)
+    assert.equal(res.data.errors.length, 1)
+    assert.equal(res.data.errors[0].line, 2)
+    console.log(res.data.errors[0].error)
+    assert.ok(res.data.errors[0].error.startsWith('/attr3/1 doit correspondre au format'))
+
+    res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
+      { attr1: 'test1', attr2: 'test1', attr3: 'test1' },
+      { attr1: 'test1', attr2: 'test1', attr3: 'test1, test2' },
+      { attr1: 'test1', attr2: 'test1', attr3: ['test1', 'test2'] },
+      { attr1: 'test1', attr2: 'test1', attr3: 'test1, testko' }
+    ])
+
+    assert.equal(res.data.nbOk, 3)
+    assert.equal(res.data.nbErrors, 1)
+    assert.equal(res.data.errors.length, 1)
+    assert.equal(res.data.errors[0].line, 3)
+    assert.ok(res.data.errors[0].error.startsWith('/attr3/1 doit correspondre au format'))
 
     await workers.hook('finalizer/rest4')
   })

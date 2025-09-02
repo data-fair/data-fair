@@ -30,6 +30,7 @@ export const formatLine = (item, schema) => {
       if (item[key] === null) delete item[key]
     }
   }
+  return item
 }
 
 // used both by readStream and bulk transactions in rest datasets

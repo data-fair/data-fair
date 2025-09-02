@@ -90,11 +90,17 @@ describe('Master data management', function () {
   it('should define and use a dataset as master-data remote-service used for extensions', async function () {
     const ax = global.ax.superadmin
 
-    const { remoteService, apiDoc } = await initMaster(
+    const { remoteService, apiDoc, master } = await initMaster(
       ax,
       [
         siretProperty,
-        { key: 'extra', type: 'string', 'x-labels': { value1: 'label1' }, 'x-capabilities': { text: false } },
+        {
+          key: 'extra',
+          type: 'string',
+          'x-labels': { value1: 'label1' },
+          'x-capabilities': { text: false },
+          'x-refersTo': 'http://schema.org/description'
+        },
         { key: 'extraFilter', type: 'string' },
         { key: 'extraMulti', type: 'string', separator: ', ' }
       ]
@@ -107,6 +113,9 @@ describe('Master data management', function () {
         input: [{ type: 'equals', property: siretProperty }]
       }]
     )
+    assert.equal(master.schema[0]['x-concept'].id, 'siret')
+    assert.equal(master.schema[1]['x-concept'].id, 'description')
+
     // the api doc should be extended based on masterData parameters
     const bulkSearchDoc = apiDoc.paths['/master-data/bulk-searchs/siret']
     assert.ok(bulkSearchDoc)
@@ -176,6 +185,9 @@ describe('Master data management', function () {
     })
     await workers.hook('extender/slave')
     let slave = await workers.hook('finalizer/slave')
+
+    assert.equal(slave.schema[0]['x-concept'].id, 'siret')
+    assert.equal(slave.schema[1]['x-concept'].id, 'description')
 
     let extraProp = slave.schema.find(p => p.key === '_siret.extra')
     assert.ok(extraProp)

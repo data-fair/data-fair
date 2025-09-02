@@ -1,5 +1,5 @@
 <template lang="html">
-  <v-form
+  <template
     v-if="editSchema && patch"
   >
     <tutorial-alert
@@ -38,7 +38,7 @@
         </v-alert>
       </template>
     </vjsf>
-  </v-form>
+  </template>
 </template>
 
 <i18n lang="yaml">
@@ -48,13 +48,13 @@ en:
 </i18n>
 
 <script lang="ts" setup>
-import { type ExtendedResult } from '~/composables/dataset-lines'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import VjsfMarkdown from '@koumoul/vjsf-markdown'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
+import equal from 'fast-deep-equal'
 
-const { results, selectedCols } = defineProps({
-  results: { type: Object as () => ExtendedResult[], required: true },
+const { lines, selectedCols } = defineProps({
+  lines: { type: Object as () => Record<string, any>[], required: true },
   selectedCols: { type: Array as () => string[], required: true }
 })
 
@@ -81,8 +81,8 @@ const homogeneity = computed(() => {
   const propertyValues: Record<string, any[]> = {}
   for (const key of Object.keys(jsonSchema.properties)) {
     const values: any[] = []
-    for (const result of results) {
-      if (!values.includes(result.raw[key])) values.push(result.raw[key])
+    for (const line of lines) {
+      if (!values.some(v => equal(v, line[key]))) values.push(line[key])
     }
     if (values.length <= 1) homogenousProperties.push(key)
     else heterogenousProperties.push(key)
@@ -126,13 +126,13 @@ const initPatch = () => {
   if (!homogeneity.value) return
   const homogeneousContent: Record<string, any> = {}
   for (const prop of homogeneity.value?.homogenousProperties) {
-    homogeneousContent[prop] = results[0].raw[prop]
+    homogeneousContent[prop] = lines[0][prop]
   }
   patch.value = homogeneousContent
 }
 watch(homogeneity, initPatch)
 watch(editSchema, initPatch)
-watch(() => results, initPatch, { immediate: true })
+watch(() => lines, initPatch, { immediate: true })
 
 </script>
 

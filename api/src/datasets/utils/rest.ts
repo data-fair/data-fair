@@ -26,7 +26,7 @@ import * as findUtils from '../../misc/utils/find.js'
 import * as fieldsSniffer from './fields-sniffer.js'
 import { transformFileStreams, formatLine } from './data-streams.js'
 import { attachmentPath, lsAttachments, tmpDir } from './files.ts'
-import { jsonSchema } from './data-schema.js'
+import { jsonSchema } from './data-schema.ts'
 import { aliasName } from '../es/commons.js'
 import indexStream from '../es/index-stream.js'
 import { initDatasetIndex, switchAlias } from '../es/manage-indices.js'
@@ -94,9 +94,9 @@ const filename: multer.DiskStorageOptions['filename'] = async (req, file, cb) =>
 
 const padISize = (config.mongo.maxBulkOps - 1).toString().length
 // cf https://github.com/puckey/pad-number/blob/master/index.js
-const padI = (i: number) => {
+const padI = (i: number, padSize = padISize) => {
   const str = i.toString()
-  return new Array((padISize - str.length) + 1).join('0') + str
+  return new Array((padSize - str.length) + 1).join('0') + str
 }
 
 export const uploadAttachment = multer({
@@ -104,7 +104,10 @@ export const uploadAttachment = multer({
 }).single('attachment')
 
 export const fixFormBody: RequestHandler = (req, res, next) => {
-  if (req.body?._body) req.body = JSON.parse(req.body._body)
+  if (req.body?._body) {
+    req.body = JSON.parse(req.body._body)
+    req._fixedFormBody = true
+  }
   next()
 }
 
@@ -183,8 +186,9 @@ export const deleteDataset = async (dataset: RestDataset) => {
   if (revisionsCollectionExists) revisionsCollection(dataset).drop()
 }
 
-const getLineId = (line: DatasetLine, dataset: RestDataset) => {
+const getLineId = (line: DatasetLine, dataset: RestDataset, raw?: boolean) => {
   if (dataset.primaryKey && dataset.primaryKey.length) {
+    if (raw) line = formatLine({ ...line }, dataset.schema)
     const primaryKey = dataset.primaryKey.map(p => line[p] + '')
     if (dataset.rest?.primaryKeyMode === 'sha256') {
       return crypto.createHash('sha256').update(JSON.stringify(primaryKey)).digest('hex')
@@ -216,19 +220,42 @@ const getLineHash = (line: DatasetLine) => {
 
 const getLineIndice = (dataset: RestDataset, updatedAt: Date, i: number, datasetCreatedAt: number, chunkRand: string) => {
   if (!updatedAt) throw new Error('getLineIndice requires _updatedAt')
-  if (dataset.rest.indiceMode === 'timestamp2') {
+  // timestamp2 produced too large number and there was some precision loss
+  if (dataset.rest.indiceMode === 'timestamp3') {
+    // in hundredth of a second
+    const timeDiff = Math.floor((updatedAt.getTime() - datasetCreatedAt) / 10)
+    const padSize = Math.max(padISize, chunkRand.length) + 1
+    return Number(timeDiff + padI(i + Number(chunkRand), padSize))
+  } else if (dataset.rest.indiceMode === 'timestamp2') {
     // we added a random component in case of parallel operations
-    return Number((updatedAt.getTime() - datasetCreatedAt) + chunkRand + padI(i))
+    let nbStr = (updatedAt.getTime() - datasetCreatedAt) + chunkRand + padI(i)
+    let nb = Number(nbStr)
+    if (nbStr !== nb.toString()) {
+      // loss of precision on too big numbers, use random number to create unique value
+      nbStr = (updatedAt.getTime() - datasetCreatedAt) + Math.random().toString().slice(2, 7) + padI(i)
+      nb = Number(nbStr)
+    }
+    return nb
   } else {
     return Number((updatedAt.getTime() - datasetCreatedAt) + padI(i))
   }
 }
 
-const getLineFromOperation = (operation: Operation): DatasetLine => {
-  const line = { ...operation, ...operation.fullBody }
+const getLineFromOperation = (operation: Operation, ogBody?: any): DatasetLine => {
+  const line: any = { ...operation }
   delete line.body
   delete line.fullBody
   delete line.filter
+  Object.assign(line, operation.fullBody)
+
+  // restore multi-valued data that was sent as a string
+  if (ogBody) {
+    for (const key of Object.keys(ogBody)) {
+      if (Array.isArray(line[key]) && typeof ogBody[key] === 'string') {
+        line[key] = ogBody[key]
+      }
+    }
+  }
   return line
 }
 
@@ -318,6 +345,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
 
     const filter = { _id: body._id }
     if (linesOwner) Object.assign(filter, linesOwnerFilter(linesOwner))
+
     const operation: Operation = {
       _id: body._id,
       _action: _action ?? 'createOrUpdate',
@@ -426,13 +454,15 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       operation._status = 400
       operation._error = 'identifiant de ligne incompatible avec la clé primaire'
       continue
-    } if (validate && !validate(operation.body)) {
-      if (dataset.nonBlockingValidation) {
-        operation._warning = errorsText(validate.errors, '')
-      } else {
-        operation._error = errorsText(validate.errors, '')
-        operation._status = 400
-        continue
+    } if (validate) {
+      if (!validate(operation.body)) {
+        if (dataset.nonBlockingValidation) {
+          operation._warning = errorsText(validate.errors, '')
+        } else {
+          operation._error = errorsText(validate.errors, '')
+          operation._status = 400
+          continue
+        }
       }
     }
 
@@ -505,6 +535,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
         const operation = bulkOpMatchingOperations[writeError.err.index]
         if (writeError.err.code === 11000) {
           if (writeError.err.errmsg?.includes('_i_')) {
+            console.error(writeError)
             operation._status = 500
             operation._error = 'erreur dans la gestion des conflits de données insérées'
           } else {
@@ -692,7 +723,8 @@ async function checkMatchingAttachment (req: { body: any }, lineId: string, dir:
 }
 
 async function manageAttachment (req: RequestWithRestDataset & { body: any }, keepExisting: boolean) {
-  if (req.is('multipart/form-data')) {
+  if (req.is('multipart/form-data') && !req._fixedFormBody) {
+    req._rawBody = { ...req.body }
     // When taken from form-data everything is string.. convert to actual types
     for (const f of req.dataset.schema) {
       if (!f['x-calculated']) {
@@ -780,22 +812,22 @@ export const deleteLine = async (req: RequestWithRestDataset & { params: { lineI
 }
 
 export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
-  formatLine(req.body, req.dataset.schema)
-
   if (req.linesOwner) Object.assign(req.body, linesOwnerCols(req.linesOwner))
-  req.body._action = req.body._action ?? 'createOrUpdate'
-  const definedId = req.params.lineId || req.body._id || getLineId(req.body, req.dataset)
+  const definedId = req.params.lineId || req.body._id || getLineId(req.body, req.dataset, true)
   req.body._id = definedId || nanoid()
-
   await manageAttachment(req, false)
-  const [operation] = (await applyReqTransactions(req, [req.body], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
+
+  const fullLine = { _action: 'createOrUpdate', ...req.body }
+  formatLine(fullLine, req.dataset.schema)
+
+  const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
   if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
-  await commitLines(req.dataset, [req.body._id])
+  await commitLines(req.dataset, [fullLine._id])
 
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.createOrUpdateLine', `updated or created line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
 
-  const line = getLineFromOperation(operation)
+  const line = getLineFromOperation(operation, req._rawBody ?? req.body)
   res.status(operation._status || (definedId ? 200 : 201)).send(cleanLine(line))
   storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after updateLine', err))
 }
@@ -804,6 +836,7 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
   await manageAttachment(req, true)
   const fullLine = { _action: 'patch', _id: req.params.lineId, ...req.body }
   formatLine(fullLine, req.dataset.schema)
+
   const [operation] = (await applyReqTransactions(req, [fullLine], compileSchema(req.dataset, !!reqUserAuthenticated(req).adminMode))).operations
   if (operation._error) return res.status(operation._status ?? 200).send(operation._error)
   await commitLines(req.dataset, [fullLine._id])
@@ -811,7 +844,7 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.patchLine', `patched line ${operation._id} from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
 
-  const line = getLineFromOperation(operation)
+  const line = getLineFromOperation(operation, req._rawBody ?? req.body)
   res.status(200).send(cleanLine(line))
   storageUtils.updateStorage(req.dataset).catch((err) => console.error('failed to update storage after patchLine', err))
 }

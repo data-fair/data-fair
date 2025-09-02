@@ -494,7 +494,7 @@ const showEditDialog = ref<ExtendedResult>()
 watch(showEditDialog, async () => {
   editedLine.value = undefined
   if (!showEditDialog.value) return
-  editedLine.value = await $fetch(`datasets/${datasetId}/lines/${showEditDialog.value._id}`)
+  editedLine.value = await $fetch(`datasets/${datasetId}/lines/${showEditDialog.value._id}`, { params: { arrays: true } })
   // JSON.parse(JSON.stringify(showEditDialog.value.raw))
   file.value = undefined
 })

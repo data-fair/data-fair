@@ -25,19 +25,21 @@ const createDatasetEdition = (baseFetchUrl: Ref<string | null>, indexedAt: Ref<s
   const saveLine = async (line: any, file?: File) => {
     if (!dataset.value?.schema) return
     saving.value = true
-    console.log('SAVE LINE', line)
     try {
       const formData = new FormData()
       if (file) formData.append('attachment', file)
+      const body: Record<string, any> = { }
       dataset.value.schema.filter(f => !f['x-calculated'] && !f['x-extension']).forEach(f => {
-        if (line[f.key] !== null && line[f.key] !== undefined) formData.append(f.key, line[f.key])
+        if (line[f.key] !== null && line[f.key] !== undefined) body[f.key] = line[f.key]
       })
+
       if (line._id) {
-        formData.append('_id', line._id)
-        formData.append('_action', 'update')
+        body._id = line._id
+        body._action = 'update'
       } else {
-        formData.append('_action', 'create')
+        body._action = 'create'
       }
+      formData.append('_body', JSON.stringify(body))
       const res = await $fetch(`/datasets/${id}/lines`, { method: 'POST', body: formData })
       indexedAt.value = res._updatedAt
     } finally {

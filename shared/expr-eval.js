@@ -240,7 +240,7 @@ export default (defaultTimezone) => {
       const schema = {
         type: 'object',
         properties: {
-          [property.key]: property.separator ? { type: 'array', items: propertySchema } : propertySchema
+          [property.key]: propertySchema
         }
       }
       if (property['x-required']) schema.required = [property.key]
@@ -252,7 +252,7 @@ export default (defaultTimezone) => {
       return (data) => {
         let result = parsedExpression.evaluate(data)
         if (property.separator && typeof result === 'string') {
-          result = result.split(property.separator)
+          result = result.split(property.separator.trim()).map(part => part.trim())
         }
         if (property.separator && Array.isArray(result)) {
           result = result.map(value => fixValue(value, property))

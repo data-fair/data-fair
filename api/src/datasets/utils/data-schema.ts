@@ -7,22 +7,18 @@ import * as i18nUtils from '../../../i18n/utils.ts'
 import * as settingsUtils from '../../misc/utils/settings.ts'
 import { cleanJsonSchemaProperty } from '@data-fair/data-fair-shared/schema.js'
 import capabilitiesSchema from '../../../contract/capabilities.js'
+import type { SchemaProperty, FileDataset } from '#types'
 
 const capabilitiesDefaultFalse = Object.keys(capabilitiesSchema.properties).filter(key => capabilitiesSchema.properties[key]?.default === false)
 
-/**
- *
- * @param {any[]} schema
- * @param {Record<string, string>} reqQuery
- */
-export const filterSchema = (schema, reqQuery) => {
+export const filterSchema = (schema: SchemaProperty[], reqQuery: Record<string, string>) => {
   if (reqQuery.type) {
     const types = reqQuery.type.split(',')
-    schema = schema.filter(field => types.includes(field.type))
+    schema = schema.filter(field => field.type && types.includes(field.type))
   }
   if (reqQuery.format) {
     const formats = reqQuery.format.split(',')
-    schema = schema.filter(field => formats.includes(field.format))
+    schema = schema.filter(field => field.format && formats.includes(field.format))
   }
   if (reqQuery.enum === 'true') {
     schema = schema.filter(field => !!field.enum)
@@ -70,7 +66,7 @@ export const filterSchema = (schema, reqQuery) => {
   return schema
 }
 
-export const mergeFileSchema = (dataset) => {
+export const mergeFileSchema = (dataset: FileDataset) => {
   dataset.schema = dataset.schema || []
   const fileFields = dataset.file.schema
     .map(field => {
@@ -89,7 +85,7 @@ export const mergeFileSchema = (dataset) => {
   for (const field of extensionFields) {
     if (fileFields.find(f => f.key === field.key)) throw httpError(400, `[noretry] Une extension essaie de créer la colonne "${field.key}" mais cette clé est déjà utilisée.`)
   }
-  let schema = []
+  let schema: SchemaProperty[] = []
   for (const prop of dataset.schema) {
     const newProp = fileFields.find(p => p.key === prop.key) ?? extensionFields.find(p => p.key === prop.key)
     if (newProp) schema.push(newProp)
@@ -239,12 +235,12 @@ export const extendedSchema = async (db, dataset, fixConcept = true) => {
   return schema
 }
 
-export const tableSchema = (schema) => {
+export const tableSchema = (schema: SchemaProperty[]) => {
   return {
     fields: schema.filter(f => !f['x-calculated'])
       .filter(f => !f['x-extension'])
       .map(f => {
-        const field = { name: f.key, title: f.title || f['x-originalName'], type: f.type }
+        const field: any = { name: f.key, title: f.title || f['x-originalName'], type: f.type }
         if (f.description) field.description = f.description
         // if (f.format) field.format = f.format // commented besause uri-reference format is not in tableschema
         if (f['x-refersTo']) field.rdfType = f['x-refersTo']
@@ -253,17 +249,11 @@ export const tableSchema = (schema) => {
   }
 }
 
-/**
- *
- * @param {any} schema
- * @param {string} [publicBaseUrl]
- * @returns {any}
- */
-export const jsonSchema = (schema, publicBaseUrl) => {
+export const jsonSchema = (schema: SchemaProperty[], publicBaseUrl?: string, flatArrays?: boolean): any => {
   /** @type {any} */
   const properties = {}
   for (const p of schema) {
-    properties[p.key] = cleanJsonSchemaProperty(p, config.publicUrl, publicBaseUrl)
+    properties[p.key] = cleanJsonSchemaProperty(p, config.publicUrl, publicBaseUrl, flatArrays)
   }
   return {
     type: 'object',
@@ -283,18 +273,14 @@ export const schemaHasValidationRules = (schema) => {
   return false
 }
 
-/**
- * @param {any[]} newSchema
- * @param {any[]} oldSchema
- */
-export const schemasValidationCompatible = (newSchema, oldSchema) => {
+export const schemasValidationCompatible = (newSchema: SchemaProperty[], oldSchema: SchemaProperty[]) => {
   for (const prop of newSchema) {
     const existingProp = oldSchema.find(p => p.key === prop.key)
     if (existingProp) {
       for (const validationProp of validationProps) {
         if (validationProp in prop && prop[validationProp] !== existingProp[validationProp]) return false
       }
-      if (prop['x-labelsRestricted'] && existingProp['x-labelsRestricted'] && JSON.stringify(prop['x-labels'] !== JSON.stringify(existingProp['x-labels']))) {
+      if (prop['x-labelsRestricted'] && existingProp['x-labelsRestricted'] && !equal(prop['x-labels'], existingProp['x-labels'])) {
         return false
       }
     }
@@ -302,8 +288,7 @@ export const schemasValidationCompatible = (newSchema, oldSchema) => {
   return true
 }
 
-/** @type {(p1:any, p2:any) => boolean} */
-const sortSchema = (p1, p2) => p1.key.localeCompare(p2.key)
+const sortSchema = (p1: SchemaProperty, p2: SchemaProperty) => p1.key.localeCompare(p2.key)
 
 const innociousSchemaProps = validationProps.concat(['title', 'description', 'icon', 'x-display', 'x-master', 'x-labels', 'x-group', 'x-cardinality', 'readOnly', 'enum', 'x-originalName', 'x-transform', 'x-concept'])
 
@@ -314,7 +299,7 @@ const removeInnocuous = (p) => {
 }
 
 // TODO: we should never ignore calculated properties, they have an impact on true compatibility
-export const schemasFullyCompatible = (schema1, schema2, ignoreCalculated = false) => {
+export const schemasFullyCompatible = (schema1: SchemaProperty[], schema2: SchemaProperty[], ignoreCalculated = false) => {
   // a change in these properties does not consitute a breaking change of the api
   // and does not require a re-finalization of the dataset when patched
   const schema1Bare = schema1.filter(p => !(p['x-calculated'] && ignoreCalculated)).map(removeInnocuous).sort(sortSchema)
@@ -322,8 +307,8 @@ export const schemasFullyCompatible = (schema1, schema2, ignoreCalculated = fals
   return equal(schema1Bare, schema2Bare)
 }
 
-export const getSchemaBreakingChanges = (schema, patchedSchema, ignoreExtensions = false, strict = false) => {
-  const breakingChanges = []
+export const getSchemaBreakingChanges = (schema: SchemaProperty[], patchedSchema: SchemaProperty[], ignoreExtensions = false, strict = false) => {
+  const breakingChanges: { type: string, key: string, summary: string }[] = []
   // WARNING, this functionality is kind of a duplicate of the UI in dataset-schema.vue
   for (const field of schema) {
     if (field['x-calculated']) continue

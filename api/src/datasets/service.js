@@ -17,7 +17,7 @@ import es from '#es'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile, metadataAttachmentsDir } from './utils/files.ts'
-import { getSchemaBreakingChanges } from './utils/data-schema.js'
+import { getSchemaBreakingChanges } from './utils/data-schema.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
 import { validateURLFriendly } from '../misc/utils/validation.js'
 import assertImmutable from '../misc/utils/assert-immutable.js'
@@ -187,7 +187,12 @@ export const getDataset = async (datasetId, publicationSite, mainPublicationSite
       if (fillDescendants && dataset.isVirtual) {
         dataset.descendants = await virtualDatasetsUtils.descendants(dataset, tolerateStale)
       }
-
+      if (dataset.schema) {
+        for (const prop of dataset.schema) {
+          if (prop['x-refersTo'] === null) delete prop['x-refersTo']
+          if (prop.separator === null) delete prop.separator
+        }
+      }
       return !_acceptedStatuses ? assertImmutable({ dataset, datasetFull }, `dataset ${dataset.id}`) : { dataset, datasetFull }
     }
 
@@ -290,7 +295,7 @@ export const createDataset = async (db, es, locale, sessionState, owner, body, f
     if (attachmentsFile) throw httpError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
     dataset.rest = dataset.rest || {}
     dataset.rest.primaryKeyMode = dataset.rest.primaryKeyMode || 'sha256'
-    dataset.rest.indiceMode = dataset.rest.indiceMode || 'timestamp2'
+    dataset.rest.indiceMode = dataset.rest.indiceMode || 'timestamp3'
     dataset.schema = dataset.schema || []
     if (dataset.initFrom) {
       // case where we go through the full workers sequence

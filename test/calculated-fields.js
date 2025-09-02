@@ -37,10 +37,15 @@ describe('Calculated fields', function () {
     keywordsProp.separator = ' ; '
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     await workers.hook('finalizer')
+    // result is rejoined by default
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: 'keywords', qs: 'keywords:opendata' } })
     assert.equal(res.data.total, 1)
-    // result is rejoined
     assert.equal(res.data.results[0].keywords, 'informatique ; opendata ; sas')
+    // arrays is preserved if using ?arrays=true
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: 'keywords', qs: 'keywords:opendata', arrays: true } })
+    assert.equal(res.data.total, 1)
+    assert.deepEqual(res.data.results[0].keywords, ['informatique', 'opendata', 'sas'])
+
     // agregations work with the splitted values
     res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=keywords`)
     assert.equal(res.data.aggs.find(agg => agg.value === 'opendata').total, 1)
