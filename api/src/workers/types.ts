@@ -1,19 +1,25 @@
-import { Application, Dataset } from '#types'
+import { Application, DatasetInternal } from '#types'
 
 export type DatasetTask = {
   name: string
+  eventsPrefix?: string
   worker: string
-  resourceType: 'dataset'
-  mongoFilter: any
-  jsFilter: (dataset: Dataset) => boolean
+  mongoFilter: () => any
+  jsFilter: (dataset: DatasetInternal) => boolean | undefined
 }
 
 export type ApplicationTask = {
   name: string
   worker: string
-  resourceType: 'application'
-  mongoFilter: any
-  jsFilter: (application: Application) => boolean
+  mongoFilter: () => any
+  jsFilter: (application: Application) => boolean | undefined
 }
 
-export type Task = DatasetTask | ApplicationTask
+export type CatalogTask = {
+  name: string
+  worker: string
+  mongoFilter: () => any
+  jsFilter: (catalog: any) => boolean | undefined
+}
+
+export type Task = DatasetTask | ApplicationTask | CatalogTask

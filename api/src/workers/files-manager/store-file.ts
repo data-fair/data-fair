@@ -1,26 +1,24 @@
 import fs from 'fs-extra'
-import * as datasetUtils from '../datasets/utils/index.js'
-import { updateStorage } from '../datasets/utils/storage.ts'
-import * as datasetsService from '../datasets/service.js'
-import { replaceAllAttachments } from '../datasets/utils/attachments.js'
-import datasetFileSample from '../datasets/utils/file-sample.js'
+import * as datasetUtils from '../../datasets/utils/index.js'
+import { updateStorage } from '../../datasets/utils/storage.ts'
+import * as datasetsService from '../../datasets/service.js'
+import { replaceAllAttachments } from '../../datasets/utils/attachments.js'
+import datasetFileSample from '../../datasets/utils/file-sample.js'
 import chardet from 'chardet'
 import md5File from 'md5-file'
 import JSONStream from 'JSONStream'
 import { Transform } from 'node:stream'
 import split2 from 'split2'
-import pump from '../misc/utils/pipe.ts'
+import pump from '../../misc/utils/pipe.ts'
 import debugLib from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
 import mongo from '#mongo'
+import type { DatasetInternal } from '#types'
 
-export const eventsPrefix = 'store'
-
-export const process = async function (app, dataset) {
+export default async function (dataset: DatasetInternal) {
   const debug = debugLib(`worker:file-storer:${dataset.id}`)
 
-  /** @type {any} */
-  const patch = { loaded: null, status: 'stored' }
+  const patch: Partial<DatasetInternal> = { loaded: null, status: 'stored' }
   const draft = !!dataset.draftReason
   const loadingDir = datasetUtils.loadingDir(dataset)
 
@@ -81,12 +79,13 @@ export const process = async function (app, dataset) {
     datasetFile.md5 = await md5File(loadedFilePath)
     const fileSample = await datasetFileSample(loadedFilePath)
     debug(`Attempt to detect encoding from ${fileSample.length} first bytes of file ${loadedFilePath}`)
-    datasetFile.encoding = chardet.detect(fileSample)
+    const encoding = chardet.detect(fileSample)
+    if (encoding) datasetFile.encoding = encoding
     debug(`Detected encoding ${datasetFile.encoding} for file ${loadedFilePath}`)
 
     patch.originalFile = datasetFile
     if (datasetUtils.basicTypes.includes(datasetFile.mimetype)) {
-      patch.file = patch.originalFile
+      patch.file = { ...patch.originalFile, schema: [] }
     }
 
     const newFilePath = datasetUtils.originalFilePath({ ...dataset, ...patch })
@@ -113,7 +112,7 @@ export const process = async function (app, dataset) {
 
   await fs.remove(loadingDir)
 
-  await datasetsService.applyPatch(app, dataset, patch)
+  await datasetsService.applyPatch(dataset, patch)
   if (!dataset.draftReason) await updateStorage(dataset)
   debug('done')
 }

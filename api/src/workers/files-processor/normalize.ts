@@ -5,27 +5,28 @@ import path from 'path'
 import fs from 'fs-extra'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import ogr2ogr from 'ogr2ogr'
-import pump from '../misc/utils/pipe.ts'
+import pump from '../../misc/utils/pipe.ts'
 import { stringify as csvStrStream } from 'csv-stringify'
 import tmp from 'tmp-promise'
 import mime from 'mime-types'
 import zlib from 'node:zlib'
 import resolvePath from 'resolve-path'
-import { displayBytes } from '../misc/utils/bytes.js'
-import { updateStorage } from '../datasets/utils/storage.ts'
-import * as datasetUtils from '../datasets/utils/index.js'
-import * as datasetService from '../datasets/service.js'
-import { tmpDir as mainTmpDir, unzip } from '../datasets/utils/files.ts'
-import * as icalendar from '../misc/utils/icalendar.js'
-import * as xlsx from '../misc/utils/xlsx.js'
-import * as i18nUtils from '../../i18n/utils.ts'
+import { displayBytes } from '../../misc/utils/bytes.js'
+import { updateStorage } from '../../datasets/utils/storage.ts'
+import * as datasetUtils from '../../datasets/utils/index.js'
+import * as datasetService from '../../datasets/service.js'
+import { tmpDir as mainTmpDir, unzip } from '../../datasets/utils/files.ts'
+import * as icalendar from '../../misc/utils/icalendar.js'
+import * as xlsx from '../../misc/utils/xlsx.js'
+import * as i18nUtils from '../../../i18n/utils.ts'
 import config from '#config'
 import debugLib from 'debug'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import type { DatasetInternal, FileDataset } from '#types'
 
 export const eventsPrefix = 'normalize'
 
-export const process = async function (app, dataset) {
+export default async function (dataset: FileDataset) {
   const debug = debugLib(`worker:file-normalizer:${dataset.id}`)
   const originalFilePath = datasetUtils.originalFilePath(dataset)
   const baseName = path.parse(dataset.originalFile.name).name
@@ -51,15 +52,16 @@ export const process = async function (app, dataset) {
         filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.shx')) &&
         filePaths.find(f => f.name === shpFile.name && f.ext.toLowerCase().endsWith('.dbf'))) {
       isShapefile = true
-    } else if (filePaths.length === 1 && datasetUtils.basicTypes.includes(mime.lookup(filePaths[0].base))) {
+    } else if (filePaths.length === 1 && datasetUtils.basicTypes.includes(mime.lookup(filePaths[0].base) as string)) {
       // case of a single data file in an archive
       const filePath = resolvePath(datasetUtils.dir(dataset), filePaths[0].base)
       await fs.move(resolvePath(tmpDir, files[0]), filePath, { overwrite: true })
       dataset.file = {
         name: filePaths[0].base,
-        size: await fs.stat(filePath).size,
-        mimetype: mime.lookup(filePaths[0].base),
-        encoding: 'utf-8'
+        size: (await fs.stat(filePath)).size,
+        mimetype: mime.lookup(filePaths[0].base) as string,
+        encoding: 'utf-8',
+        schema: []
       }
     } else {
       if (await fs.pathExists(datasetUtils.attachmentsDir(dataset))) {
@@ -72,12 +74,13 @@ export const process = async function (app, dataset) {
       await fs.writeFile(csvFilePath, csvContent)
       dataset.file = {
         name: path.parse(dataset.originalFile.name).name + '.csv',
-        size: await fs.stat(csvFilePath).size,
+        size: (await fs.stat(csvFilePath)).size,
         mimetype: 'text/csv',
-        encoding: 'utf-8'
+        encoding: 'utf-8',
+        schema: []
       }
       if (!dataset.schema.find(f => f.key === 'file')) {
-        const concept = i18nUtils.vocabulary[config.i18n.defaultLocale]['http://schema.org/DigitalDocument']
+        const concept = i18nUtils.vocabulary[config.i18n.defaultLocale as 'en' | 'fr']['http://schema.org/DigitalDocument']
         dataset.schema.push({
           key: 'attachment',
           'x-originalName': 'attachment',
@@ -96,9 +99,10 @@ export const process = async function (app, dataset) {
     await pump(fs.createReadStream(originalFilePath), zlib.createGunzip(), fs.createWriteStream(filePath))
     dataset.file = {
       name: basicTypeFileName,
-      size: await fs.stat(filePath).size,
-      mimetype: mime.lookup(basicTypeFileName),
-      encoding: 'utf-8'
+      size: (await fs.stat(filePath)).size,
+      mimetype: mime.lookup(basicTypeFileName) as string,
+      encoding: 'utf-8',
+      schema: []
     }
   }
 
@@ -116,9 +120,10 @@ export const process = async function (app, dataset) {
     )
     dataset.file = {
       name: path.parse(dataset.originalFile.name).name + '.csv',
-      size: await fs.stat(filePath).size,
+      size: (await fs.stat(filePath)).size,
       mimetype: 'text/csv',
-      encoding: 'utf-8'
+      encoding: 'utf-8',
+      schema: []
     }
     icalendar.prepareSchema(dataset, infos)
     dataset.analysis = { escapeKeyAlgorithm: 'legacy' }
@@ -130,9 +135,10 @@ export const process = async function (app, dataset) {
     await pipeline(xlsx.iterCSV(originalFilePath), fs.createWriteStream(filePath))
     dataset.file = {
       name: path.parse(dataset.originalFile.name).name + '.csv',
-      size: await fs.stat(filePath).size,
+      size: (await fs.stat(filePath)).size,
       mimetype: 'text/csv',
-      encoding: 'utf-8'
+      encoding: 'utf-8',
+      schema: []
     }
   } else if (isShapefile || datasetUtils.geographicalTypes.has(dataset.originalFile.mimetype)) {
     if (config.ogr2ogr.skip) {
@@ -163,9 +169,10 @@ export const process = async function (app, dataset) {
     // await pump(geoJsonStream, fs.createWriteStream(filePath))
     dataset.file = {
       name: path.parse(dataset.originalFile.name).name + '.geojson',
-      size: await fs.stat(filePath).size,
+      size: (await fs.stat(filePath)).size,
       mimetype: 'application/geo+json',
-      encoding: 'utf-8'
+      encoding: 'utf-8',
+      schema: []
     }
   }
 
@@ -177,10 +184,10 @@ export const process = async function (app, dataset) {
 
   dataset.status = 'normalized'
 
-  const patch = { status: dataset.status, file: dataset.file, schema: dataset.schema }
+  const patch: Partial<DatasetInternal> = { status: dataset.status, file: dataset.file, schema: dataset.schema }
   if (dataset.timeZone) patch.timeZone = dataset.timeZone
   if (dataset.analysis) patch.analysis = dataset.analysis
 
-  await datasetService.applyPatch(app, dataset, patch)
+  await datasetService.applyPatch(dataset, patch)
   if (!dataset.draftReason) await updateStorage(dataset, false, true)
 }

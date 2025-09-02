@@ -1,17 +1,19 @@
 import { Writable } from 'stream'
-import * as journals from '../misc/utils/journals.ts'
-import { jsonSchema } from '../datasets/utils/data-schema.ts'
-import * as ajv from '../misc/utils/ajv.js'
-import pump from '../misc/utils/pipe.ts'
-import { sendResourceEvent } from '../misc/utils/notifications.ts'
-import * as datasetUtils from '../datasets/utils/index.js'
-import * as datasetsService from '../datasets/service.js'
-import * as schemaUtils from '../datasets/utils/data-schema.ts'
-import taskProgress from '../datasets/utils/task-progress.ts'
-import { readStreams as getReadStreams } from '../datasets/utils/data-streams.js'
+import * as journals from '../../misc/utils/journals.ts'
+import { jsonSchema } from '../../datasets/utils/data-schema.ts'
+import * as ajv from '../../misc/utils/ajv.ts'
+import pump from '../../misc/utils/pipe.ts'
+import { sendResourceEvent } from '../../misc/utils/notifications.ts'
+import * as datasetUtils from '../../datasets/utils/index.js'
+import * as datasetsService from '../../datasets/service.js'
+import * as schemaUtils from '../../datasets/utils/data-schema.ts'
+import taskProgress from '../../datasets/utils/task-progress.ts'
+import { readStreams as getReadStreams } from '../../datasets/utils/data-streams.js'
 import truncateMiddle from 'truncate-middle'
 import debugLib from 'debug'
 import mongo from '#mongo'
+import type { DatasetInternal } from '#types'
+import { CustomAjvValidate } from '../../misc/utils/ajv.ts'
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
 export const eventsPrefix = 'validate'
@@ -19,19 +21,19 @@ export const eventsPrefix = 'validate'
 const maxErrors = 3
 
 class ValidateStream extends Writable {
-  constructor (options) {
+  validate: CustomAjvValidate
+  errors: string[] = []
+  nbErrors = 0
+  i = 0
+
+  constructor (options: { dataset: DatasetInternal }) {
     super({ objectMode: true })
 
-    const schema = jsonSchema(options.dataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']))
+    const schema = jsonSchema((options.dataset.schema ?? []).filter(p => !p['x-calculated'] && !p['x-extension']))
     this.validate = ajv.compile(schema, false)
-
-    /** @type {string[]} */
-    this.errors = []
-    this.nbErrors = 0
-    this.i = 0
   }
 
-  _write (chunk, encoding, callback) {
+  _write (chunk: any, encoding: string, callback: () => void) {
     this.i++
     const valid = this.validate(chunk)
     if (!valid) {
@@ -53,20 +55,18 @@ class ValidateStream extends Writable {
   }
 }
 
-export const process = async function (app, dataset) {
+export default async function (dataset: DatasetInternal) {
   const debug = debugLib(`worker:indexer:${dataset.id}`)
 
   if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape validation.')
   if (dataset.isRest) throw new Error('Un jeu de données éditable ne devrait pas passer par l\'étape validation.')
 
-  const db = mongo.db
-
-  const patch = { status: dataset.status === 'validation-updated' ? 'finalized' : 'validated' }
+  const patch: Partial<DatasetInternal> = { status: dataset.status === 'validation-updated' ? 'finalized' : 'validated' }
 
   const cancelDraft = async () => {
-    await journals.log('datasets', dataset, { type: 'draft-cancelled', data: 'annulation automatique' })
+    await journals.log('datasets', dataset, { type: 'draft-cancelled', data: 'annulation automatique' } as any)
     await datasetsService.cancelDraft(dataset)
-    await datasetsService.applyPatch(app, { ...dataset, draftReason: null }, { draft: null })
+    await datasetsService.applyPatch({ ...dataset, draftReason: null }, { draft: null })
   }
 
   if (dataset.draftReason) {
@@ -75,16 +75,17 @@ export const process = async function (app, dataset) {
       patch.validateDraft = true
     }
 
-    const datasetFull = await mongo.db.collection('datasets').findOne({ id: dataset.id })
+    const datasetFull = await mongo.datasets.findOne({ id: dataset.id })
+    if (!datasetFull) throw new Error('missing dataset')
     if (datasetFull.status === 'draft' && !datasetFull.schema?.length) {
       // nothing pre-existing schema to compare to
     } else {
-      Object.assign(datasetFull.draft, patch)
+      if (datasetFull.draft) Object.assign(datasetFull.draft, patch)
       const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
-      const breakingChanges = schemaUtils.getSchemaBreakingChanges(datasetFull.schema, datasetDraft.schema, false, true)
+      const breakingChanges = schemaUtils.getSchemaBreakingChanges(datasetFull.schema ?? [], datasetDraft.schema, false, true)
       if (breakingChanges.length) {
         const validationError = 'La structure du fichier contient des ruptures de compatibilité : ' + breakingChanges.map(b => b.summary).join(', ')
-        await journals.log('datasets', dataset, { type: 'validation-error', data: validationError })
+        await journals.log('datasets', dataset, { type: 'validation-error', data: validationError } as any)
 
         if (dataset.draftReason.validationMode === 'compatible') {
           delete patch.validateDraft
@@ -102,14 +103,14 @@ export const process = async function (app, dataset) {
     debug('Run validator stream')
     const progress = taskProgress(dataset.id, eventsPrefix, 100)
     await progress.inc(0)
-    const readStreams = await getReadStreams(db, dataset, false, false, false, progress)
+    const readStreams = await getReadStreams(dataset, false, false, false, progress)
     const validateStream = new ValidateStream({ dataset })
     await pump(...readStreams, validateStream)
     debug('Validator stream ok')
 
     const errorsSummary = validateStream.errorsSummary()
     if (errorsSummary) {
-      await journals.log('datasets', dataset, { type: 'validation-error', data: errorsSummary })
+      await journals.log('datasets', dataset, { type: 'validation-error', data: errorsSummary } as any)
       delete patch.validateDraft
       if (dataset.draftReason?.validationMode === 'compatibleOrCancel') {
         await cancelDraft()
@@ -121,9 +122,9 @@ export const process = async function (app, dataset) {
   }
 
   if (patch.validateDraft) {
-    await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation automatique' })
-    await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'draft-validated', { localizedParams: { cause: { fr: 'validation automatique', en: 'automatic validation' } } })
+    await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation automatique' } as any)
+    await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'draft-validated', { localizedParams: { fr: { cause: 'validation automatique' }, en: { cause: 'automatic validation' } } })
   }
 
-  await datasetsService.applyPatch(app, dataset, patch)
+  await datasetsService.applyPatch(dataset, patch)
 }

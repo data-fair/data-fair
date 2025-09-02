@@ -1,11 +1,10 @@
 import config from '#config'
 import mongo from '#mongo'
-import es from '#es'
 import crypto from 'node:crypto'
 import fs from 'fs-extra'
 import path from 'path'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { ajv } from '@data-fair/data-fair-shared/ajv.js'
+import { ajv } from '@data-fair/data-fair-shared/ajv.ts'
 import { errorsText } from '@data-fair/lib-validation'
 import { nanoid } from 'nanoid'
 import pump from '../../misc/utils/pipe.ts'
@@ -769,7 +768,7 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
   const indexName = aliasName(dataset)
   await pump(
     ...await readStreams(dataset, { _id: { $in: lineIds } }),
-    indexStream({ esClient: es.client, indexName, dataset, attachments, refresh: config.elasticsearch.singleLineOpRefresh }),
+    indexStream({ indexName, dataset, attachments, refresh: config.elasticsearch.singleLineOpRefresh }),
     markIndexedStream(dataset)
   )
 
@@ -851,8 +850,8 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
 
 export const deleteAllLines = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   await initDataset(req.dataset)
-  const indexName = await initDatasetIndex(es.client, req.dataset)
-  await switchAlias(es.client, req.dataset, indexName)
+  const indexName = await initDatasetIndex(req.dataset)
+  await switchAlias(req.dataset, indexName)
 
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
@@ -1214,7 +1213,7 @@ export const applyTTL = async (dataset: RestDataset) => {
 
   const summary = initSummary()
   // @ts-ignore
-  const iter = iterHits(es.client, dataset, { size: 1000, qs })
+  const iter = iterHits(dataset, { size: 1000, qs })
   await pump(
     Readable.from(iter),
     // @ts-ignore

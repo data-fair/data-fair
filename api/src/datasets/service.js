@@ -13,7 +13,6 @@ import * as restDatasetsUtils from './utils/rest.ts'
 import { validateDraftAlias, deleteIndex, updateDatasetMapping } from './es/manage-indices.js'
 import * as webhooks from '../misc/utils/webhooks.ts'
 import { sendResourceEvent } from '../misc/utils/notifications.ts'
-import es from '#es'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { updateStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, exportedFilePath, fsyncFile, metadataAttachmentsDir } from './utils/files.ts'
@@ -358,7 +357,6 @@ export const createDataset = async (db, es, locale, sessionState, owner, body, f
 
 export const deleteDataset = async (app, dataset) => {
   const db = mongo.db
-  const es = app.get('es')
   try {
     await fs.remove(dir(dataset))
   } catch (err) {
@@ -380,7 +378,7 @@ export const deleteDataset = async (app, dataset) => {
 
   if (!dataset.isVirtual) {
     try {
-      await deleteIndex(es, dataset)
+      await deleteIndex(dataset)
     } catch (err) {
       console.warn('Error while deleting dataset indexes and alias', err)
     }
@@ -392,13 +390,12 @@ export const deleteDataset = async (app, dataset) => {
 
 /**
  *
- * @param {any} app
  * @param {any} dataset
  * @param {any} patch
  * @param {any[]} [removedRestProps]
  * @param {boolean} [attemptMappingUpdate]
  */
-export const applyPatch = async (app, dataset, patch, removedRestProps, attemptMappingUpdate) => {
+export const applyPatch = async (dataset, patch, removedRestProps, attemptMappingUpdate) => {
   if (patch.extensions) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) extensions`, dataset.extensions, patch.extensions)
   if (patch.masterData) debugMasterData(`PATCH dataset ${dataset.id} (${dataset.slug}) masterData`, dataset.masterData, patch.masterData)
 
@@ -443,7 +440,7 @@ export const applyPatch = async (app, dataset, patch, removedRestProps, attemptM
       // this method will routinely throw errors
       // we just try in case elasticsearch considers the new mapping compatible
       // so that we might optimize and reindex only when necessary
-      await updateDatasetMapping(app.get('es'), { id: dataset.id, schema: patch.schema }, dataset)
+      await updateDatasetMapping({ id: dataset.id, schema: patch.schema }, dataset)
       patch.status = 'indexed'
     } catch (err) {
       // generated ES mappings are not compatible, trigger full re-indexing
@@ -493,7 +490,7 @@ export const applyPatch = async (app, dataset, patch, removedRestProps, attemptM
     for await (const virtualDataset of db.collection('datasets').find({ 'virtual.children': dataset.id })) {
       const virtualDatasetSchema = await virtualDatasetsUtils.prepareSchema(virtualDataset)
       if (!equal(virtualDatasetSchema, virtualDataset.schema)) {
-        await applyPatch(app, virtualDataset, { schema: virtualDatasetSchema, updatedAt: patch.updatedAt })
+        await applyPatch(virtualDataset, { schema: virtualDatasetSchema, updatedAt: patch.updatedAt })
       }
     }
   }
@@ -524,7 +521,7 @@ export const syncApplications = async (datasetId) => {
     .updateOne({ id: datasetId }, { $set: { 'extras.applications': applicationsExtras } })
 }
 
-export const validateDraft = async (app, dataset, datasetFull, patch) => {
+export const validateDraft = async (dataset, datasetFull, patch) => {
   Object.assign(datasetFull.draft, patch)
   const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
 
@@ -611,11 +608,11 @@ export const validateDraft = async (app, dataset, datasetFull, patch) => {
     await fs.remove(oldFilePath)
   }
 
-  await validateDraftAlias(app.get('es'), dataset)
+  await validateDraftAlias(dataset)
   await fs.remove(dir(datasetDraft))
 }
 
 export const cancelDraft = async (dataset) => {
   await fs.remove(dir(dataset))
-  await deleteIndex(es.client, dataset)
+  await deleteIndex(dataset)
 }

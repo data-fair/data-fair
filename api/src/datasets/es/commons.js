@@ -277,6 +277,7 @@ export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
 })
 
 export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter, ignoreInvalidQS) => {
+  /** @type {any} */
   const esQuery = {}
   qFields = qFields || (query.q_fields && query.q_fields.split(','))
 

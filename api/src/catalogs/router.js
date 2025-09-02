@@ -8,7 +8,7 @@ import { CronJob } from 'cron'
 import catalogAPIDocs from '../../contract/catalog-api-docs.js'
 import catalogSchema from '../../contract/catalog.js'
 import * as catalogs from './plugins/index.js'
-import * as ajv from '../misc/utils/ajv.js'
+import * as ajv from '../misc/utils/ajv.ts'
 import catalogPatch from '../../contract/catalog-patch.js'
 import * as permissions from '../misc/utils/permissions.ts'
 import * as usersUtils from '../misc/utils/users.ts'
@@ -191,9 +191,9 @@ router.get('/:catalogId/datasets', readCatalog, permissions.middleware('readData
 })
 
 router.post('/:catalogId/datasets/:datasetId', readCatalog, permissions.middleware('harvestDataset', 'use'), async (req, res, next) => {
-  res.status(201).send(await catalogs.harvestDataset(req.app, req.catalog, req.params.datasetId))
+  res.status(201).send(await catalogs.harvestDataset(req.catalog, req.params.datasetId))
 })
 
 router.post('/:catalogId/datasets/:datasetId/resources/:resourceId', readCatalog, permissions.middleware('harvestDatasetResource', 'use'), async (req, res, next) => {
-  res.status(201).send(await catalogs.harvestDatasetResource(req.app, req.catalog, req.params.datasetId, req.params.resourceId))
+  res.status(201).send(await catalogs.harvestDatasetResource(req.catalog, req.params.datasetId, req.params.resourceId))
 })

@@ -5,7 +5,7 @@ import type { BaseApp } from './base-app/index.js'
 export type { Application } from './application/index.js'
 export type { AppConfig } from './app-config/index.js'
 export type { BaseApp } from './base-app/index.js'
-export type { Dataset, DatasetExt, RestDataset, DatasetLine, DatasetLineAction, DatasetLineRevision, VirtualDataset, FileDataset, SchemaProperty } from './dataset/index.ts'
+export type { Dataset, DatasetExt, DatasetInternal, RestDataset, DatasetLine, DatasetLineAction, DatasetLineRevision, VirtualDataset, FileDataset, SchemaProperty } from './dataset/index.ts'
 export type { Event } from './event/index.js'
 export { type Settings, resolvedSchema as settingsSchema } from './settings/index.js'
 export type { Topic } from './topic/index.js'
@@ -53,3 +53,5 @@ export type RestActionsSummary = {
 }
 
 export type BaseAppWithContext = BaseApp & { disabled: string[] }
+
+export type Nullable<T> = { [K in keyof T]: T[K] | null }

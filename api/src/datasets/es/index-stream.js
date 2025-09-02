@@ -4,6 +4,7 @@ import truncateMiddle from 'truncate-middle'
 import * as extensionsUtils from '../utils/extensions.ts'
 import { nanoid } from 'nanoid'
 import debugLib from 'debug'
+import es from '#es'
 import { internalError } from '@data-fair/lib-node/observer.js'
 
 const debug = debugLib('index-stream')
@@ -82,10 +83,10 @@ class IndexStream extends Transform {
     this.sendBulk()
       .then(() => {
         if (this.options.refresh) return
-        return this.options.esClient.indices.refresh({ index: this.options.indexName }).catch(() => {
+        return es.client.indices.refresh({ index: this.options.indexName }).catch(() => {
           // refresh can take some time on large datasets, try one more time
           return new Promise(resolve => setTimeout(resolve, 30000)).finally(() => {
-            return this.options.esClient.indices.refresh({ index: this.options.indexName }).catch(err => {
+            return es.client.indices.refresh({ index: this.options.indexName }).catch(err => {
               internalError('es-refresh-index', err)
               throw new Error('Échec pendant le rafraichissement de la donnée après indexation.')
             })
@@ -109,7 +110,7 @@ class IndexStream extends Transform {
     try {
       // Use the ingest plugin to parse attached files
       if (this.options.attachments) bulkOpts.pipeline = 'attachment'
-      const res = await this.options.esClient.bulk(bulkOpts)
+      const res = await es.client.bulk(bulkOpts)
       debug('Bulk sent OK')
       for (let i = 0; i < res.items.length; i++) {
         const item = res.items[i]

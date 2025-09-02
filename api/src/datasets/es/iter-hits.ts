@@ -1,12 +1,14 @@
 import config from '#config'
+import es from '#es'
+import type { Dataset } from '#types'
 import { prepareQuery, aliasName } from './commons.js'
 
-async function * iterHits (es, dataset, query = { size: 1000 }) {
+async function * iterHits (dataset: Dataset, query: { size: number } & Record<string, string | number> = { size: 1000 }) {
   const esQuery = prepareQuery(dataset, query, undefined, undefined, true, true)
   const index = aliasName(dataset)
 
   while (true) {
-    const hits = (await es.search({
+    const hits: any[] = (await es.client.search({
       index,
       body: esQuery,
       timeout: config.elasticsearch.searchTimeout,

@@ -1,7 +1,7 @@
 export default {
   type: 'object',
   additionalProperties: false,
-  required: ['type', 'id'],
+  required: ['type', 'id', 'name'],
   properties: {
     type: {
       type: 'string',

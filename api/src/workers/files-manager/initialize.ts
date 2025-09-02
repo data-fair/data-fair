@@ -1,32 +1,31 @@
 import fs from 'fs-extra'
 import path from 'path'
 import { Readable, Transform } from 'stream'
-import pump from '../misc/utils/pipe.ts'
-import * as restUtils from '../datasets/utils/rest.ts'
-import * as datasetUtils from '../datasets/utils/index.js'
-import { updateStorage } from '../datasets/utils/storage.ts'
-import * as datasetsService from '../datasets/service.js'
-import { getPseudoSessionState } from '../misc/utils/users.ts'
-import * as permissionsUtils from '../misc/utils/permissions.ts'
-import { lsMetadataAttachments, metadataAttachmentPath, lsAttachments, attachmentPath } from '../datasets/utils/files.ts'
-import { applyTransactions } from '../datasets/utils/rest.ts'
-import iterHits from '../datasets/es/iter-hits.js'
-import taskProgress from '../datasets/utils/task-progress.ts'
-import * as filesUtils from '../datasets/utils/files.ts'
-import * as virtualDatasetsUtils from '../datasets/utils/virtual.ts'
-
+import pump from '../../misc/utils/pipe.ts'
+import * as restUtils from '../../datasets/utils/rest.ts'
+import * as datasetUtils from '../../datasets/utils/index.js'
+import { updateStorage } from '../../datasets/utils/storage.ts'
+import * as datasetsService from '../../datasets/service.js'
+import { getPseudoSessionState } from '../../misc/utils/users.ts'
+import * as permissionsUtils from '../../misc/utils/permissions.ts'
+import { lsMetadataAttachments, metadataAttachmentPath, lsAttachments, attachmentPath } from '../../datasets/utils/files.ts'
+import { applyTransactions } from '../../datasets/utils/rest.ts'
+import iterHits from '../../datasets/es/iter-hits.js'
+import taskProgress from '../../datasets/utils/task-progress.ts'
+import * as filesUtils from '../../datasets/utils/files.ts'
+import * as virtualDatasetsUtils from '../../datasets/utils/virtual.ts'
 import debugLib from 'debug'
 import mongo from '#mongo'
-import { getFlattenNoCache } from '../datasets/utils/flatten.ts'
+import { getFlattenNoCache } from '../../datasets/utils/flatten.ts'
+import type { DatasetInternal, DatasetLineAction } from '#types'
+import { isRestDataset, isVirtualDataset } from '#types/dataset/index.ts'
 
 export const eventsPrefix = 'initialize'
 
-export const process = async function (app, dataset) {
+export default async function (dataset: DatasetInternal) {
   const debug = debugLib(`worker:initializer:${dataset.id}`)
-  const db = mongo.db
 
-  /** @type {any} */
-  const patch = { updatedAt: (new Date()).toISOString() }
+  const patch: Partial<DatasetInternal> = { updatedAt: (new Date()).toISOString() }
   if (dataset.isRest) {
     patch.status = 'analyzed'
   } else if (dataset.remoteFile) {
@@ -37,31 +36,29 @@ export const process = async function (app, dataset) {
     patch.status = 'loaded'
   }
 
-  if (dataset.isRest) {
+  if (isRestDataset(dataset)) {
     await restUtils.initDataset(dataset)
   }
 
   if (dataset.initFrom) {
     const pseudoSessionState = getPseudoSessionState(dataset.owner, 'initializer', '_init_from', dataset.initFrom.role, dataset.initFrom.department)
-    const parentDataset = await db.collection('datasets').findOne({ id: dataset.initFrom.dataset })
+    const parentDataset = await mongo.datasets.findOne({ id: dataset.initFrom.dataset })
     if (!parentDataset) throw new Error('[noretry] jeu de données d\'initialisation inconnu ' + dataset.initFrom.dataset)
     const parentDatasetPermissions = permissionsUtils.list('datasets', parentDataset, pseudoSessionState)
     if (!parentDatasetPermissions.includes('readDescription')) {
       throw new Error(`[noretry] permission manquante sur le jeu de données d'initialisation "${parentDataset.slug}" (${parentDataset.id})`)
     }
-    const hasAttachments = parentDataset.schema.find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
+    const hasAttachments = parentDataset.schema?.find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
 
     let count = 0
-    /** @type {any[]} */
-    let attachments = []
-    /** @type {any[]} */
-    let metadataAttachments = []
+    let attachments: any[] = []
+    let metadataAttachments: any[] = []
 
     if (dataset.initFrom.parts.includes('data')) {
       if (!parentDatasetPermissions.includes('readLines')) {
         throw new Error(`[noretry] permission manquante sur le jeu de données d'initialisation "${parentDataset.slug}" (${parentDataset.id})`)
       }
-      count += parentDataset.count
+      count += parentDataset.count ?? 0
 
       if (hasAttachments && !parentDatasetPermissions.includes('downloadAttachment')) {
         throw new Error(`[noretry] permission manquante sur le jeu de données d'initialisation "${parentDataset.slug}" (${parentDataset.id})`)
@@ -86,9 +83,9 @@ export const process = async function (app, dataset) {
 
     if (dataset.initFrom.parts.includes('schema')) {
       if (dataset.initFrom.parts.includes('extensions')) {
-        patch.schema = parentDataset.schema.filter(p => !p['x-calculated'] || p['x-extension'])
+        patch.schema = (parentDataset.schema ?? []).filter(p => !p['x-calculated'] || p['x-extension'])
       } else {
-        patch.schema = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension'])
+        patch.schema = (parentDataset.schema ?? []).filter(p => !p['x-calculated'] && !p['x-extension'])
       }
       patch.schema = patch.schema.map(p => {
         const newProperty = { ...p }
@@ -127,15 +124,15 @@ export const process = async function (app, dataset) {
 
     if (dataset.initFrom.parts.includes('data')) {
       const flatten = getFlattenNoCache(parentDataset)
-      if (parentDataset.isVirtual) {
+      if (isVirtualDataset(parentDataset)) {
         parentDataset.descendantsFull = await virtualDatasetsUtils.descendants(parentDataset, false, ['owner'])
-        parentDataset.descendants = parentDataset.descendantsFull.map(d => d.id)
+        parentDataset.descendants = parentDataset.descendantsFull!.map(d => d.id)
       }
-      if (dataset.isRest) {
+      if (isRestDataset(dataset)) {
         // from any kind of dataset to rest: copy data in bulk into the mongodb collection
-        const select = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => p.key)
+        const select = (parentDataset.schema ?? []).filter(p => !p['x-calculated'] && !p['x-extension']).map(p => p.key)
         if (hasAttachments && parentDataset.isVirtual) select.push('_attachment_url')
-        for await (const hits of iterHits(app.get('es'), parentDataset, { size: 1000, select: select.join(',') })) {
+        for await (const hits of iterHits(parentDataset, { size: 1000, select: select.join(',') })) {
           if (hasAttachments && parentDataset.isVirtual) {
             for (const hit of hits) {
               if (hit._source._attachment_url) {
@@ -144,7 +141,7 @@ export const process = async function (app, dataset) {
               }
             }
           }
-          const transactions = hits.map(hit => ({ _action: 'create', _id: hit._id, ...flatten(hit._source) }))
+          const transactions: DatasetLineAction[] = hits.map(hit => ({ _action: 'create', _id: hit._id, ...flatten(hit._source) }))
           await applyTransactions(dataset, pseudoSessionState, transactions)
           await progress.inc(transactions.length)
         }
@@ -168,11 +165,11 @@ export const process = async function (app, dataset) {
         await fs.ensureFile(filePath)
 
         let inputStreams
-        if (parentDataset.isRest) inputStreams = await restUtils.readStreams(parentDataset)
-        else if (parentDataset.isVirtual) {
+        if (isRestDataset(parentDataset)) inputStreams = await restUtils.readStreams(parentDataset)
+        else if (isVirtualDataset(parentDataset)) {
           const select = parentDataset.schema.filter(p => !p['x-calculated'] && !p['x-extension']).map(p => p.key)
           if (hasAttachments && parentDataset.isVirtual) select.push('_attachment_url')
-          const iter = iterHits(app.get('es'), parentDataset, { size: 1000, select: select.join(',') })
+          const iter = iterHits(parentDataset, { size: 1000, select: select.join(',') })
           inputStreams = [
             Readable.from(iter),
             new Transform({
@@ -189,6 +186,8 @@ export const process = async function (app, dataset) {
               }
             })
           ]
+        } else {
+          throw new Error('dataset cannot be used to init data')
         }
 
         await pump(
@@ -200,12 +199,12 @@ export const process = async function (app, dataset) {
                 await progress.inc()
                 this.push(item)
                 callback()
-              } catch (err) {
+              } catch (err: any) {
                 callback(err)
               }
             }
           }),
-          ...(await import('../datasets/utils/outputs.js')).csvStreams({ ...dataset, ...patch }),
+          ...(await import('../../datasets/utils/outputs.js')).csvStreams({ ...dataset, ...patch }),
           fs.createWriteStream(filePath)
         )
         await filesUtils.fsyncFile(filePath)
@@ -227,9 +226,11 @@ export const process = async function (app, dataset) {
       for (const attachment of attachments) {
         let relPath = attachment
         let copyPath = attachmentPath(parentDataset, attachment)
-        if (parentDataset.isVirtual) {
+        if (isVirtualDataset(parentDataset)) {
+          parentDataset.descendantsFull = parentDataset.descendantsFull ?? await virtualDatasetsUtils.descendants(parentDataset, false, ['owner'])
+          parentDataset.descendants = parentDataset.descendantsFull!.map(d => d.id)
           const pathParts = new URL(attachment).pathname.split('/')
-          const descendant = parentDataset.descendantsFull.find(d => d.id === pathParts[5])
+          const descendant = parentDataset.descendantsFull!.find(d => d.id === pathParts[5])
           if (!descendant) continue
           relPath = pathParts.slice(7).join('/')
           copyPath = attachmentPath(descendant, relPath)
@@ -243,16 +244,16 @@ export const process = async function (app, dataset) {
 
     if (dataset.draftReason) {
       const datasetFull = await mongo.db.collection('datasets').findOne({ id: dataset.id })
-      const datasetFullPatch = { initFrom: null }
+      const datasetFullPatch: Partial<DatasetInternal> = { initFrom: null }
       // we apply schema not only to the draft but also to the main dataset info so that file validation rules apply correctly
       if (patch.schema) datasetFullPatch.schema = patch.schema
-      await datasetsService.applyPatch(app, datasetFull, datasetFullPatch)
+      await datasetsService.applyPatch(datasetFull, datasetFullPatch)
     } else {
       patch.initFrom = null
     }
   }
 
-  await datasetsService.applyPatch(app, dataset, patch)
+  await datasetsService.applyPatch(dataset, patch)
   if (!dataset.draftReason) await updateStorage(dataset)
   debug('done')
 }
