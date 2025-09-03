@@ -8,6 +8,7 @@ import { checkStorage as checkStorageFn } from './utils/storage.ts'
 import * as service from './service.js'
 import { withQuery } from 'ufo'
 import { reqSession, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
+import { emit as workerPing } from '../workers/ping.ts'
 
 /**
  *
@@ -46,7 +47,14 @@ export const lockDataset = (_shouldLock = true) => async (req, res, next) => {
     const lockKey = `datasets:${datasetId}`
     const ack = await locks.acquire(lockKey, `${req.method} ${req.originalUrl}`)
     if (ack) {
-      res.on('close', () => locks.release(lockKey).catch(err => console.error('failure to release dataset lock', err)))
+      res.on('close', async () => {
+        try {
+          await locks.release(lockKey)
+          await workerPing('datasets', datasetId)
+        } catch (err) {
+          console.error('failure to release dataset lock', err)
+        }
+      })
       return next()
     } else {
       // dataset found but locked : we cannot safely work on it, wait a little while before failing

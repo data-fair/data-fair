@@ -18,7 +18,7 @@ describe('geo files support', function () {
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
-    let dataset = await workers.hook('geojsonAnalyzer')
+    let dataset = await workers.hook('analyzeGeojson/' + res.data.id)
     assert.equal(dataset.status, 'analyzed')
     assert.equal(dataset.schema.length, 8)
     const idField = dataset.schema.find(field => field.key === 'id')
@@ -120,7 +120,7 @@ describe('geo files support', function () {
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
-    let dataset = await workers.hook('geojsonAnalyzer')
+    let dataset = await workers.hook('analyzeGeojson/' + res.data.id)
     assert.equal(dataset.status, 'analyzed')
     assert.equal(dataset.schema.length, 6)
     const idField = dataset.schema.find(field => field.key === 'id')
@@ -177,7 +177,7 @@ describe('geo files support', function () {
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
-    const dataset = await workers.hook('geojsonAnalyzer/' + res.data.id)
+    const dataset = await workers.hook('analyzeGeojson/' + res.data.id)
     const prop1 = dataset.schema.find(p => p.key === 'prop1')
     assert.equal(prop1['x-refersTo'], 'http://rdf.insee.fr/def/geo#codeRegion')
     await workers.hook('finalize/' + dataset.id)
@@ -252,7 +252,7 @@ describe('geo files support', function () {
     assert.equal(res.status, 201)
 
     // dataset converted
-    const dataset = await workers.hook('fileNormalizer/' + res.data.id)
+    const dataset = await workers.hook('normalizeFile/' + res.data.id)
     assert.equal(dataset.status, 'normalized')
     assert.equal(dataset.file.name, 'stations.geojson')
 
@@ -275,7 +275,7 @@ describe('geo files support', function () {
     assert.equal(res.status, 201)
 
     // dataset converted
-    const dataset = await workers.hook('fileNormalizer/' + res.data.id)
+    const dataset = await workers.hook('normalizeFile/' + res.data.id)
     assert.equal(dataset.status, 'normalized')
     assert.equal(dataset.file.name, 'stations2.geojson')
     await workers.hook('finalize/' + dataset.id)
@@ -313,7 +313,7 @@ describe('geo files support', function () {
     assert.equal(res.status, 201)
 
     // dataset converted
-    let dataset = await workers.hook('fileNormalizer/' + res.data.id)
+    let dataset = await workers.hook('normalizeFile/' + res.data.id)
     assert.equal(dataset.status, 'normalized')
     assert.equal(dataset.file.name, 'paths.geojson')
 

@@ -27,7 +27,9 @@ export const events = new EventEmitter()
 
 export const hook = async (key: string) => {
   const { type, id } = await eventPromise<{ type: string, id: string }>(events, key, { timeout: 10000 })
-  return mongo.db.collection(type).findOne({ id })
+  const newResource = await mongo.db.collection(type).findOne({ id })
+  if (!newResource) throw new Error('resource not found after webhook hook')
+  return newResource
 }
 
 const getFreeWorkers = () => {
@@ -123,7 +125,6 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
     }
 
     endTask({ status: 'error' })
-    events.emit('error', err)
 
     console.warn(`failure in worker ${task.name} - ${type} / ${resource.slug} (${resource.id})`, errorMessage)
 
@@ -161,6 +162,8 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
     }
 
     await mongo.db.collection(type).updateOne({ id: resource.id }, patch)
+
+    events.emit('error', err)
   } finally {
     pendingTasks[task.worker]--
     await locks.release(`${type}:${id}`)

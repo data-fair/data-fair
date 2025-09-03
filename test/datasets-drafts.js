@@ -25,7 +25,7 @@ describe('datasets in draft mode', function () {
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
-    let dataset = await workers.hook('csvAnalyzer')
+    let dataset = await workers.hook('analyzeCsv/' + res.data.id)
     assert.equal(dataset.status, 'draft')
     assert.equal(dataset.file, undefined)
     assert.equal(dataset.draft.draftReason.key, 'file-new')
@@ -36,7 +36,7 @@ describe('datasets in draft mode', function () {
     assert.equal(dataset.draft.schema.length, 6)
 
     // ES indexation and finalization
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'draft')
     assert.equal(dataset.draft.status, 'finalized')
     assert.equal(dataset.draft.count, 2)
@@ -59,7 +59,7 @@ describe('datasets in draft mode', function () {
     assert.equal(patchedLocProp['x-refersTo'], 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long')
 
     // Second ES indexation
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'draft')
     assert.equal(dataset.draft.status, 'finalized')
     assert.ok(dataset.draft.bbox)
@@ -84,7 +84,7 @@ describe('datasets in draft mode', function () {
     // validate the draft
     assert.ok(await fs.pathExists(`../data/test/user/dmeadus0/datasets-drafts/${dataset.id}`))
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
     assert.ok(!dataset.draftReason)
     assert.equal(dataset.count, 2)
@@ -129,7 +129,7 @@ describe('datasets in draft mode', function () {
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    let dataset = await workers.hook('finalizer')
+    let dataset = await workers.hook('finalize/' + res.data.id)
 
     // upload a new file with incompatible schema
     const datasetFd2 = fs.readFileSync('./resources/datasets/dataset2.csv')
@@ -139,7 +139,7 @@ describe('datasets in draft mode', function () {
     dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.draftReason.key, 'file-updated')
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.file.name, 'dataset1.csv')
     assert.equal(dataset.count, 2)
     assert.equal(dataset.draft.file.name, 'dataset2.csv')
@@ -161,7 +161,7 @@ describe('datasets in draft mode', function () {
 
     // validate the draft
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.file.name, 'dataset2.csv')
     assert.ok(dataset.updatedAt > dataset.createdAt)
@@ -218,7 +218,7 @@ describe('datasets in draft mode', function () {
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    let dataset = await workers.hook('finalizer')
+    let dataset = await workers.hook('finalize/' + res.data.id)
 
     // upload a new file with incompatible schema
     const datasetFd2 = fs.readFileSync('./resources/datasets/dataset2.csv')
@@ -226,7 +226,7 @@ describe('datasets in draft mode', function () {
     form2.append('file', datasetFd2, 'dataset2.csv')
     form2.append('description', 'draft description')
     dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
@@ -273,7 +273,7 @@ describe('datasets in draft mode', function () {
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = global.ax.dmeadus
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    let dataset = await workers.hook('finalizer')
+    let dataset = await workers.hook('finalize/' + res.data.id)
 
     // upload a new file
     const datasetFd2 = fs.readFileSync('./resources/datasets/dataset1.csv')
@@ -283,7 +283,7 @@ describe('datasets in draft mode', function () {
     dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.draftReason.key, 'file-updated')
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.file.name, 'dataset1.csv')
     assert.equal(dataset.count, 2)
     // console.log(dataset)
@@ -319,8 +319,8 @@ describe('datasets in draft mode', function () {
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    let dataset = await workers.hook('finalizer')
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let dataset = await workers.hook('finalize/' + res.data.id)
 
     const schema = dataset.schema
     schema[0].pattern = '^[a-z]+$'
@@ -350,8 +350,8 @@ describe('datasets in draft mode', function () {
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    let dataset = await workers.hook('finalizer')
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let dataset = await workers.hook('finalize/' + res.data.id)
 
     const schema = dataset.schema
     schema[0].pattern = '^[a-z]+$'
@@ -382,8 +382,8 @@ describe('datasets in draft mode', function () {
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
-    let dataset = await workers.hook('finalizer')
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    let dataset = await workers.hook('finalize/' + res.data.id)
     assert.ok(!dataset.file)
     assert.equal(dataset.status, 'draft')
     assert.ok(dataset.draft.draftReason.key, 'file-new')
@@ -398,7 +398,7 @@ describe('datasets in draft mode', function () {
     form2.append('description', 'draft description 2')
     const datasetDraft2 = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
     assert.equal(datasetDraft2.status, 'created')
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset)
     assert.ok(!dataset.file)
     assert.equal(dataset.status, 'draft')
     assert.ok(dataset.draft.draftReason.key, 'file-new')
@@ -411,7 +411,7 @@ describe('datasets in draft mode', function () {
     form3.append('description', 'draft description 3')
     const datasetDraft3 = (await ax.post('/api/v1/datasets/' + dataset.id, form3, { headers: testUtils.formHeaders(form3), params: { draft: true } })).data
     assert.equal(datasetDraft3.status, 'loaded')
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.ok(!dataset.file)
     assert.equal(dataset.status, 'draft')
     assert.ok(dataset.draft.draftReason.key, 'file-new')
@@ -419,7 +419,7 @@ describe('datasets in draft mode', function () {
 
     // validate the last file
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.ok(!dataset.draft)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.file.name, 'dataset1-draft3.csv')
@@ -431,8 +431,8 @@ describe('datasets in draft mode', function () {
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    let dataset = await workers.hook('finalizer')
+    const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
+    let dataset = await workers.hook('finalize/' + res.data.id)
 
     // upload a new file
     const datasetFd2 = fs.readFileSync('./resources/datasets/dataset2.csv')
@@ -442,7 +442,7 @@ describe('datasets in draft mode', function () {
     const datasetDraft1 = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
     assert.equal(datasetDraft1.status, 'loaded')
     assert.equal(datasetDraft1.draftReason.key, 'file-updated')
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.file.name, 'dataset1.csv')
     assert.equal(dataset.draft.file.name, 'dataset1-draft1.csv')
 
@@ -454,13 +454,13 @@ describe('datasets in draft mode', function () {
     const datasetDraft2 = (await ax.post('/api/v1/datasets/' + dataset.id, form3, { headers: testUtils.formHeaders(form3), params: { draft: true } })).data
     assert.equal(datasetDraft2.status, 'loaded')
     assert.equal(datasetDraft2.draftReason.key, 'file-updated')
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.file.name, 'dataset1.csv')
     assert.equal(dataset.draft.file.name, 'dataset1-draft2.csv')
 
     // validate the third file
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.ok(!dataset.draft)
     assert.equal(dataset.file.name, 'dataset1-draft2.csv')
   })
@@ -473,15 +473,15 @@ describe('datasets in draft mode', function () {
     const form = new FormData()
     form.append('file', content, 'dataset.csv')
     const ax = global.ax.dmeadus
-    await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
-    let dataset = await workers.hook('finalizer')
+    let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
+    let dataset = await workers.hook('finalize/' + res.data.id)
     assert.equal(dataset.draft.count, 100)
-    let res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
     assert.equal(res.data.total, 100)
 
     // validate the draft
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.count, 2000)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2000)
@@ -618,7 +618,7 @@ describe('datasets in draft mode', function () {
     assert.equal(dataset.draft.status, 'normalized')
     assert.equal(dataset.draft.file.name, 'stations.geojson')
 
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
     assert.equal(res.data.total, 86)

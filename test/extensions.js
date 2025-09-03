@@ -359,7 +359,7 @@ empty,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
-    await workers.hook('finalizer')
+    await workers.hook('finalize/' + dataset.id)
   })
 
   it('Delete extended file when removing extensions', async function () {
@@ -388,7 +388,7 @@ koumoul,19 rue de la voie lactée saint avé
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
-    await workers.hook('finalizer')
+    await workers.hook('finalize/' + dataset.id)
 
     // check extended file
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
@@ -402,7 +402,7 @@ koumoul,19 rue de la voie lactée saint avé
       extensions: [{ active: false, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
-    await workers.hook('finalizer')
+    await workers.hook('finalize/' + dataset.id)
 
     // check extended file was deleted
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)

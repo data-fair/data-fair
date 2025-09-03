@@ -22,7 +22,7 @@ describe('workers', function () {
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
-    let dataset = await workers.hook('csvAnalyzer')
+    let dataset = await workers.hook('analyzeCsv/' + res.data.id)
     assert.equal(dataset.status, 'analyzed')
     const idField = dataset.schema.find(f => f.key === 'id')
     const dateField = dataset.schema.find(f => f.key === 'some_date')
@@ -32,7 +32,7 @@ describe('workers', function () {
     assert.equal(dateField.format, 'date')
 
     // ES indexation and finalization
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.count, 2)
     const idProp = dataset.schema.find(p => p.key === 'id')
@@ -52,7 +52,7 @@ describe('workers', function () {
     assert.equal(res.status, 200)
 
     // Second ES indexation
-    dataset = await workers.hook('finalizer')
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.count, 2)
     const esIndices2 = await global.es.indices.get({ index: esUtils.aliasName(dataset) })
@@ -89,7 +89,7 @@ describe('workers', function () {
     form.append('file', datasetFd, 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    let dataset = await workers.hook('finalizer')
+    let dataset = await workers.hook('finalize/' + res.data.id)
     assert.equal(dataset.status, 'finalized')
 
     // Update dataset to ask for a publication
@@ -111,7 +111,7 @@ describe('workers', function () {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    let dataset = await workers.hook(`csvAnalyzer/${res.data.id}`)
+    let dataset = await workers.hook(`analyzeCsv/${res.data.id}`)
     assert.equal(dataset.status, 'analyzed')
     dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.equal(dataset.status, 'finalized')

@@ -13,8 +13,12 @@ export const analyzeGeojson = async function (dataset: FileDataset) {
   await analyzeGeojson.default(dataset)
 }
 
-export const normalize = async function (dataset: FileDataset) {
+export const normalizeFile = async function (dataset: FileDataset) {
   await mongo.connect(true)
   const normalize = await import('./normalize.ts')
   await normalize.default(dataset)
+}
+
+export const setEnv = function ({ key, value }: { key: string, value: string | undefined }) {
+  process.env[key] = value
 }

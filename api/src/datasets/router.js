@@ -195,7 +195,7 @@ router.patch('/:datasetId',
       })
     if (!isEmpty) {
       await publicationSites.applyPatch(dataset, { ...dataset, ...patch }, sessionState, 'datasets')
-      await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
+      await applyPatch(dataset, patch, removedRestProps, attemptMappingUpdate)
 
       if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
         await journals.log('datasets', dataset, { type: 'structure-updated' })
@@ -216,8 +216,6 @@ router.patch('/:datasetId',
       }, sessionState)
 
       await syncRemoteService(dataset)
-
-      await workerPing('datasets', dataset.id)
     }
 
     res.status(200).json(clean(req, dataset))
@@ -574,8 +572,6 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
   await notifications.sendResourceEvent('datasets', dataset, sessionState, 'draft-cancelled')
 
   await updateStorage(datasetFull)
-
-  await workerPing('datasets', dataset.id)
 
   return res.send(datasetFull)
 })

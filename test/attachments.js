@@ -18,7 +18,7 @@ describe('Attachments', function () {
     assert.equal(dataset.status, 'created')
 
     // dataset converted
-    dataset = await workers.hook(`fileNormalizer/${dataset.id}`)
+    dataset = await workers.hook(`normalizeFile/${dataset.id}`)
     assert.equal(dataset.status, 'normalized')
     assert.equal(dataset.file.name, 'files.csv')
 
@@ -80,7 +80,6 @@ describe('Attachments', function () {
   })
 
   it('Keep attachments when updating data', async function () {
-    console.log(1)
     const ax = global.ax.cdurning2
 
     // Send dataset with a CSV and attachments in an archive

@@ -11,7 +11,7 @@ import { validate } from 'tableschema'
 const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
 
 let notifier
-describe.only('datasets', function () {
+describe('datasets', function () {
   before('prepare notifier', async function () {
     notifier = (await import('./resources/app-notifier.js')).default
     await eventPromise(notifier, 'listening')
@@ -247,7 +247,7 @@ describe.only('datasets', function () {
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 401)
   })
 
-  it.only('Upload dataset - full test with webhooks', async function () {
+  it('Upload dataset - full test with webhooks', async function () {
     const wsCli = new WebSocket(config.publicUrl)
     const ax = global.ax.cdurning2
     await ax.put('/api/v1/settings/user/cdurning2', { webhooks: [{ title: 'test', events: ['dataset-finalize-end'], target: { type: 'http', params: { url: 'http://localhost:5900' } } }] })
@@ -293,6 +293,7 @@ describe.only('datasets', function () {
     schema.find(field => field.key === 'lat')['x-refersTo'] = 'http://schema.org/latitude'
     schema.find(field => field.key === 'lon')['x-refersTo'] = 'http://schema.org/longitude'
     res = await ax.patch(webhook.href, { schema })
+
     assert.ok(res.data.dataUpdatedAt > res.data.createdAt)
     assert.ok(res.data.updatedAt > res.data.dataUpdatedAt)
 
