@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('projections', function () {
   it('Create REST dataset and apply specific projection to simple coords', async function () {

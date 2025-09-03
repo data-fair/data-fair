@@ -2,7 +2,7 @@ import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import fs from 'fs-extra'
 import FormData from 'form-data'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('safe relative paths management', function () {
   it('relative path in dataset file name', async function () {

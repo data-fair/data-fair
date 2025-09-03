@@ -1,6 +1,6 @@
 import * as testUtils from './resources/test-utils.js'
 import { strict as assert } from 'node:assert'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('Elasticsearch disk watermarks', function () {
   afterEach(function () {

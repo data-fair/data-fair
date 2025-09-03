@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('REST datasets exported', function () {
   it('Configure automatic export of CSV file from REST dataset', async function () {

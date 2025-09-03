@@ -3,7 +3,7 @@ import * as testUtils from './resources/test-utils.js'
 import fs from 'node:fs'
 import FormData from 'form-data'
 import nock from 'nock'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 import config from 'config'
 
 describe('Datasets with auto-initialization from another one', function () {

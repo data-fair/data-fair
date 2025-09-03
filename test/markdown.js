@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('markdown contents management', function () {
   it('Get dataset description and content as HTML', async function () {

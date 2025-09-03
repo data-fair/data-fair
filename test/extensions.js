@@ -7,7 +7,7 @@ import config from 'config'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import dayjs from 'dayjs'
 import * as restDatasetsUtils from '../api/src/datasets/utils/rest.ts'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('Extensions', function () {
   it('Extend dataset using remote service', async function () {

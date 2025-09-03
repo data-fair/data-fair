@@ -3,7 +3,7 @@
 
 import { strict as assert } from 'node:assert'
 
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 const initMaster = async (ax, schema, id = 'master') => {
   await ax.put('/api/v1/datasets/' + id, {

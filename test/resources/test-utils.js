@@ -8,7 +8,7 @@ export const formHeaders = (form) => {
 }
 
 export const sendDataset = async (fileName, ax, opts, body) => {
-  const workers = await import('../../api/src/workers/index.js')
+  const workers = await import('../../api/src/workers/index.ts')
   const datasetFd = fs.readFileSync(path.resolve('./resources/', fileName))
   const form = new FormData()
   form.append('file', datasetFd, fileName)

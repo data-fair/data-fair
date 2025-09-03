@@ -4,7 +4,7 @@ import crypto from 'node:crypto'
 import fs from 'fs-extra'
 import path from 'path'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { ajv } from '@data-fair/data-fair-shared/ajv.ts'
+import { ajv } from '@data-fair/data-fair-shared/ajv.js'
 import { errorsText } from '@data-fair/lib-validation'
 import { nanoid } from 'nanoid'
 import pump from '../../misc/utils/pipe.ts'
@@ -38,7 +38,7 @@ import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type Sessi
 import { type ValidateFunction } from 'ajv'
 import { type RequestWithRestDataset } from '#types/dataset/index.ts'
 import type { Collection, Filter, UnorderedBulkOperation, UpdateFilter } from 'mongodb'
-import iterHits from '../es/iter-hits.js'
+import iterHits from '../es/iter-hits.ts'
 
 type Operation = {
   _id: string,

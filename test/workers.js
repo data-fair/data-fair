@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import nock from 'nock'
 import FormData from 'form-data'
 import config from 'config'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 import * as esUtils from '../api/src/datasets/es/index.ts'
 
 // Prepare mock for outgoing HTTP requests

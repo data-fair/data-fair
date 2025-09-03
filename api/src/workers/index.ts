@@ -1,4 +1,4 @@
-import { ResourceType } from '#types'
+import type { ResourceType } from '#types'
 import { workers, tasks } from './tasks.ts'
 import type { WorkerId } from './types.ts'
 import mergeDraft from '../datasets/utils/merge-draft.js'

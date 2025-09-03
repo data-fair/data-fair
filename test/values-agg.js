@@ -3,7 +3,7 @@ import * as testUtils from './resources/test-utils.js'
 import fs from 'node:fs'
 import FormData from 'form-data'
 
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('values aggs', function () {
   it('Get values buckets', async function () {

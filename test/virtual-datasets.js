@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import { strict as assert } from 'node:assert'
 import FormData from 'form-data'
 import * as testUtils from './resources/test-utils.js'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('virtual datasets', function () {
   it('Create an empty virtual dataset', async function () {

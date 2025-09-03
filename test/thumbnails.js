@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import nock from 'nock'
 import FormData from 'form-data'
 
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('thumbnails', function () {
   it(' should create thumbnails for datasets with illustrations', async function () {

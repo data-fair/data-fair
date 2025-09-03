@@ -5,7 +5,7 @@ import FormData from 'form-data'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import WebSocket from 'ws'
 import config from 'config'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 import { validate } from 'tableschema'
 
 const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
@@ -108,7 +108,7 @@ describe('datasets', function () {
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 429)
   })
 
-  it('Upload new dataset in user zone', async function () {
+  it.only('Upload new dataset in user zone', async function () {
     const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')

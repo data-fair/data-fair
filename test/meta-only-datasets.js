@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('meta only datasets', function () {
   it('Create simple meta only datasets', async function () {
