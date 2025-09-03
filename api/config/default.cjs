@@ -146,9 +146,9 @@ module.exports = {
   worker: {
     // base interval for polling the database for new resources to work on
     interval: 4000,
-    concurrency: 4,
-    spawnTask: true,
-    errorRetryDelay: 600000 // 10 minutes
+    baseConcurrency: 2,
+    errorRetryDelay: 600000, // 10 minutes
+    closeTimeout: 60000 // 10 minutes to finish running tasks before shutting down
   },
   adminRole: 'admin',
   contribRole: 'contrib',

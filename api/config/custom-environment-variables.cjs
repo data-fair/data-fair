@@ -175,18 +175,18 @@ module.exports = {
       __name: 'WORKER_INTERVAL',
       __format: 'json'
     },
-    concurrency: {
-      __name: 'WORKER_CONCURRENCY',
-      __format: 'json'
-    },
-    spawnTask: {
-      __name: 'WORKER_SPAWN_TASK',
+    baseConcurrency: {
+      __name: 'WORKER_BASE_CONCURRENCY',
       __format: 'json'
     },
     errorRetryDelay: {
       __name: 'WORKER_ERROR_RETRY_DELAY',
       __format: 'json'
-    }
+    },
+    closeTimeout: {
+      __name: 'WORKER_CLOSE_TIMEOUT',
+      __format: 'json'
+    },
   },
   browserLogLevel: 'BROWSER_LOG_LEVEL',
   listenWhenReady: {

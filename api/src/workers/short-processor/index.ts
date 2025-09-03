@@ -71,6 +71,31 @@ export const autoUpdate = async function (dataset: Dataset) {
   await mongo.datasets.updateOne({ id: dataset.id }, { $set: { draft } })
 }
 
+export const errorRetry = async function (dataset: Dataset) {
+  const propertyPrefix = dataset.draftReason ? 'draft.' : ''
+  const patch = {
+    $set: {
+      [propertyPrefix + 'status']: dataset.errorStatus
+    },
+    $unset: {
+      [propertyPrefix + 'errorStatus']: 1 as const,
+      [propertyPrefix + 'errorRetry']: 1 as const
+    }
+  }
+  await mongo.datasets.updateOne({ id: dataset.id }, patch)
+}
+
+export const autoUpdateExtension = async function (dataset: Dataset) {
+  const extensions = [...dataset.extensions!]
+  for (const e of extensions) {
+    if (e.nextUpdate && e.nextUpdate < new Date().toISOString()) {
+      e.needsUpdate = true
+      delete e.nextUpdate
+    }
+  }
+  await mongo.datasets.updateOne({ id: dataset.id }, { $set: { extensions } })
+}
+
 export const finalize = async function (dataset: Dataset) {
   await mongo.connect(true)
   const finalize = await import('./finalize.ts')

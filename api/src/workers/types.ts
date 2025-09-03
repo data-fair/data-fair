@@ -12,6 +12,7 @@ export type DatasetTask = {
 
 export type ApplicationTask = {
   name: string
+  eventsPrefix?: string
   worker: WorkerId
   mongoFilter: () => any
   jsFilter: (application: Application) => boolean | undefined
@@ -19,6 +20,7 @@ export type ApplicationTask = {
 
 export type CatalogTask = {
   name: string
+  eventsPrefix?: string
   worker: WorkerId
   mongoFilter: () => any
   jsFilter: (catalog: any) => boolean | undefined

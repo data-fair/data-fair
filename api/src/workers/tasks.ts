@@ -1,6 +1,7 @@
 import path from 'node:path'
 import type { ApplicationTask, CatalogTask, DatasetTask } from './types.ts'
 import { Piscina } from 'piscina'
+import config from '#config'
 import type { FileDataset, DatasetInternal } from '#types'
 import { basicTypes, csvTypes } from '../datasets/utils/types.js'
 import { isFileDataset, isRestDataset } from '#types/dataset/index.ts'
@@ -13,7 +14,8 @@ export const workers = {
     minThreads: 0,
     idleTimeout: 60 * 1000,
     maxThreads: 1,
-    concurrentTasksPerWorker: 10
+    concurrentTasksPerWorker: config.worker.baseConcurrency * 4,
+    closeTimeout: config.worker.closeTimeout
   }),
   // mostly IO bound worker for anything that is mostly about moving files, downloading files, etc
   filesManager: new Piscina({
@@ -21,23 +23,26 @@ export const workers = {
     minThreads: 0,
     idleTimeout: 60 * 1000,
     maxThreads: 1,
-    concurrentTasksPerWorker: 4
+    concurrentTasksPerWorker: config.worker.baseConcurrency * 2,
+    closeTimeout: config.worker.closeTimeout
   }),
   // files analysis and normalization can be quite memory and cpu hungry, better to use thread segregation and a small concurrency
   filesProcessor: new Piscina({
     filename: path.resolve(import.meta.dirname, './files-processor/index.ts'),
     minThreads: 0,
     idleTimeout: 60 * 1000,
-    maxThreads: 2,
-    concurrentTasksPerWorker: 1
+    maxThreads: config.worker.baseConcurrency,
+    concurrentTasksPerWorker: 1,
+    closeTimeout: config.worker.closeTimeout
   }),
   // a worker that works on large batches of data, mostly IO and sometimes CPU intensive but streamed so memory should be ok
   batchProcessor: new Piscina({
     filename: path.resolve(import.meta.dirname, './batch-processor/index.ts'),
     minThreads: 0,
     idleTimeout: 60 * 1000,
-    maxThreads: 2,
-    concurrentTasksPerWorker: 2
+    maxThreads: 1,
+    concurrentTasksPerWorker: config.worker.baseConcurrency,
+    closeTimeout: config.worker.closeTimeout
   })
 }
 
@@ -219,6 +224,21 @@ const datasetTasks: DatasetTask[] = [{
     'dataset.remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() }
   }),
   jsFilter: (dataset) => !!(dataset.remoteFile?.autoUpdate?.active && dataset.remoteFile.autoUpdate.nextUpdate && dataset.remoteFile.autoUpdate.nextUpdate < new Date().toISOString() && !dataset.draftReason)
+}, {
+  name: 'errorRetry',
+  worker: 'shortProcessor',
+  mongoFilter: () => ({
+    $or: [
+      { status: 'error', errorStatus: { $exists: true }, errorRetry: { $lt: new Date().toISOString() } },
+      { 'draft.status': 'error', 'draft.errorStatus': { $exists: true }, 'draft.errorRetry': { $lt: new Date().toISOString() } }
+    ]
+  }),
+  jsFilter: (dataset) => !!(dataset.status === 'error' && dataset.errorStatus && dataset.errorRetry && dataset.errorRetry < new Date().toISOString())
+}, {
+  name: 'autoUpdateExtension',
+  worker: 'shortProcessor',
+  mongoFilter: () => ({ status: 'finalized', isRest: true, 'extensions.nextUpdate': { $lt: new Date().toISOString() } }),
+  jsFilter: (dataset) => !!(dataset.status === 'finalized' && dataset.isRest && dataset.extensions?.some(e => e.nextUpdate && e.nextUpdate < new Date().toISOString()))
 }]
 
 const applicationTasks: ApplicationTask[] = [{

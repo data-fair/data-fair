@@ -50,9 +50,9 @@ module.exports = {
   },
   worker: {
     interval: 50,
-    concurrency: 1,
-    spawnTask: false,
-    errorRetryDelay: 0
+    baseConcurrency: 1,
+    errorRetryDelay: 0,
+    closeTimeout: 1
   },
   mongo: {
     maxBulkOps: 100
