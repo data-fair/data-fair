@@ -76,7 +76,7 @@ const datasetTasks: DatasetTask[] = [{
   name: 'initialize',
   eventsPrefix: 'initialize',
   worker: 'filesManager',
-  mongoFilter: () => ({ status: 'created' })
+  mongoFilter: () => ({ $or: [{ status: 'created' }, { 'draft.status': 'created' }] })
 }, {
   name: 'storeFile',
   eventsPrefix: 'store',

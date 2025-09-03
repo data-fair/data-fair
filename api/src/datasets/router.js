@@ -511,8 +511,6 @@ const updateDatasetRoute = async (req, res, next) => {
         await notifications.sendResourceEvent('datasets', dataset, sessionState, 'data-updated')
       }
       await syncRemoteService(dataset)
-
-      await workerPing('datasets', dataset.id)
     }
   } catch (err) {
     if (files) {
@@ -543,8 +541,6 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
   await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation manuelle' })
   await notifications.sendResourceEvent('datasets', dataset, sessionState, 'draft-validated', { localizedParams: { cause: { fr: 'validation manuelle', en: 'manual validation' } } })
   eventsLog.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
-
-  await workerPing('datasets', dataset.id)
 
   return res.send(dataset)
 })
