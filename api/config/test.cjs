@@ -49,7 +49,7 @@ module.exports = {
     }
   },
   worker: {
-    interval: 500,
+    interval: 10000,
     baseConcurrency: 1,
     errorRetryDelay: 0,
     closeTimeout: 1

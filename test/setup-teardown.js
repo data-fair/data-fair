@@ -8,6 +8,7 @@ import es from '../api/src/es.ts'
 import fs from 'fs-extra'
 import nock from 'nock'
 import { forceResetWorkers } from '../api/src/workers/tasks.ts'
+import { reset as resetPing } from '@data-fair/data-fair-api/src/workers/ping.ts'
 import axios from 'axios'
 import debugModule from 'debug'
 import * as app from '../api/src/app.js'
@@ -209,6 +210,7 @@ beforeEach('scratch data', async function () {
   }
 
   debug('force reset the workers')
+  await resetPing()
   await forceResetWorkers()
 
   debug('scratch data')

@@ -271,6 +271,15 @@ export const run = async () => {
 
   await wsEmitter.init(db)
 
+  if (config.mode.includes('worker')) {
+    const workers = await import('./workers/index.ts')
+    await workers.init()
+    workers.loop().catch(error => {
+      internalError('workers-loop-error', error)
+      throw error
+    })
+  }
+
   if (config.mode.includes('server')) {
     const errorHandler = (await import('@data-fair/lib-express/error-handler.js')).default
 
@@ -314,13 +323,6 @@ export const run = async () => {
       server.listen(config.port)
       await eventPromise(server, 'listening')
     }
-  }
-
-  if (config.mode.includes('worker')) {
-    (await import('./workers/index.ts')).start().catch(error => {
-      internalError('workers-loop-error', error)
-      throw error
-    })
   }
 
   if (config.observer.active) {

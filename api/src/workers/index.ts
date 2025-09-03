@@ -9,6 +9,7 @@ import debugLib from 'debug'
 import EventEmitter from 'node:events'
 import eventPromise from '@data-fair/lib-utils/event-promise.js'
 import * as journals from '../misc/utils/journals.ts'
+import * as ping from './ping.ts'
 import taskProgress from '../datasets/utils/task-progress.ts'
 import { Histogram } from 'prom-client'
 import { internalError } from '@data-fair/lib-node/observer.js'
@@ -38,8 +39,9 @@ const getFreeTasks = (type: ResourceType) => {
   return tasks[type].filter(t => freeWorkers.includes(t.worker))
 }
 
-export const queryNextResourceTask = async () => {
+export const queryNextResourceTask = async (_type?: string, _id?: string) => {
   for (const type of ['catalogs', 'applications', 'datasets'] as ResourceType[]) {
+    if (_type && _type !== type) continue
     const freeTasks = getFreeTasks(type)
     const facets: any = {}
     for (const task of freeTasks) {
@@ -53,6 +55,7 @@ export const queryNextResourceTask = async () => {
         { $match: { _locks: { $size: 0 } } },
         { $limit: 1 }
       ]
+      if (_id) facet.unshift({ $match: { id: _id } })
       facets[task.name] = facet
     }
     const results = await mongo.db.collection<any>(type).aggregate([{ $facet: facets }]).toArray().then(agg => agg[0])
@@ -149,6 +152,17 @@ let stopped = false
 
 export const start = async () => {
   debug('start workers loop')
+
+  await ping.listen(async (type, id) => {
+    const resourceTask = await queryNextResourceTask(type, id)
+    debug('fetch resourceTask from ping', resourceTask)
+    if (resourceTask) {
+      processResourceTask(resourceTask.type, resourceTask.resource, resourceTask.task).catch(err => {
+        internalError('worker-task', err)
+      })
+    }
+  }).catch(err => internalError('worker-ping-listen', err))
+
   let resolveWaitInterval: (() => void) | undefined
   while (true) {
     if (stopped) break
@@ -158,7 +172,52 @@ export const start = async () => {
       debug('work on resource', resourceTask.type, resourceTask.resource.id, resourceTask.task.name)
       if (stopped) break
       processResourceTask(resourceTask.type, resourceTask.resource, resourceTask.task).catch(err => {
-        internalError('worker', err)
+        internalError('worker-task', err)
+      }).then(() => {
+        // at the end of task ignore the wait interval and loop immediately
+        if (resolveWaitInterval) resolveWaitInterval()
+      })
+      resourceTask = await queryNextResourceTask()
+    }
+    debug('wait for ' + config.worker.interval)
+    await new Promise<void>(resolve => {
+      resolveWaitInterval = resolve
+      setTimeout(resolve, config.worker.interval)
+    })
+  }
+  debug('finished workers loop')
+}
+
+export const init = async () => {
+  await ping.init()
+}
+
+export const loop = async () => {
+  debug('start workers loop')
+  let resolveWaitInterval: (() => void) | undefined
+
+  ping.listen(async (type, id) => {
+    const resourceTask = await queryNextResourceTask(type, id)
+    debug('fetch resourceTask from ping', resourceTask)
+    if (resourceTask) {
+      processResourceTask(resourceTask.type, resourceTask.resource, resourceTask.task).catch(err => {
+        internalError('worker-task', err)
+      }).then(() => {
+        // at the end of task ignore the wait interval and loop immediately
+        if (resolveWaitInterval) resolveWaitInterval()
+      })
+    }
+  }).catch(err => internalError('worker-ping-listen', err))
+
+  while (true) {
+    if (stopped) break
+    let resourceTask = await queryNextResourceTask()
+    // console.log('RESOURCE REF', resourceRef)
+    while (resourceTask) {
+      debug('work on resource', resourceTask.type, resourceTask.resource.id, resourceTask.task.name)
+      if (stopped) break
+      processResourceTask(resourceTask.type, resourceTask.resource, resourceTask.task).catch(err => {
+        internalError('worker-task', err)
       }).then(() => {
         // at the end of task ignore the wait interval and loop immediately
         if (resolveWaitInterval) resolveWaitInterval()
@@ -177,6 +236,7 @@ export const start = async () => {
 export const stop = async () => {
   debug('stop workers loop')
   stopped = true
+  await ping.stop()
   for (const worker of Object.values(workers)) {
     await worker.close()
   }

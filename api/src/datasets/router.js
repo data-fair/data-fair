@@ -59,6 +59,7 @@ import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import { getFlatten } from './utils/flatten.ts'
 import { can } from '../misc/utils/permissions.ts'
+import { emit as workerPing } from '../workers/ping.ts'
 
 const validateUserNotification = ajv.compile(userNotificationSchema)
 
@@ -215,6 +216,8 @@ router.patch('/:datasetId',
       }, sessionState)
 
       await syncRemoteService(dataset)
+
+      await workerPing('datasets', dataset.id)
     }
 
     res.status(200).json(clean(req, dataset))
@@ -417,6 +420,8 @@ const createDatasetRoute = async (req, res) => {
     await notifications.sendResourceEvent('datasets', dataset, sessionState, 'dataset-created')
     await syncRemoteService(dataset)
 
+    await workerPing('datasets', dataset.id)
+
     res.status(201).send(clean(req, dataset, draft))
   } catch (err) {
     if (files) {
@@ -508,6 +513,8 @@ const updateDatasetRoute = async (req, res, next) => {
         await notifications.sendResourceEvent('datasets', dataset, sessionState, 'data-updated')
       }
       await syncRemoteService(dataset)
+
+      await workerPing('datasets', dataset.id)
     }
   } catch (err) {
     if (files) {
@@ -539,6 +546,8 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
   await notifications.sendResourceEvent('datasets', dataset, sessionState, 'draft-validated', { localizedParams: { cause: { fr: 'validation manuelle', en: 'manual validation' } } })
   eventsLog.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
 
+  await workerPing('datasets', dataset.id)
+
   return res.send(dataset)
 })
 
@@ -565,6 +574,9 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
   await notifications.sendResourceEvent('datasets', dataset, sessionState, 'draft-cancelled')
 
   await updateStorage(datasetFull)
+
+  await workerPing('datasets', dataset.id)
+
   return res.send(datasetFull)
 })
 
