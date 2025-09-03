@@ -14,7 +14,7 @@ describe('Elasticsearch disk watermarks', function () {
     // upload a new file but the index won't be writable (simulates a lock from flood watermark errors)
     process.env.READ_ONLY_ES_INDEX = 'true'
     await global.ax.superadmin.post(`/api/v1/datasets/${dataset.id}/_reindex`)
-    await assert.rejects(workers.hook(`finalizer/${dataset.id}`))
+    await assert.rejects(workers.hook(`finalize/${dataset.id}`))
 
     // dataset is in error, but still queryable from previous index
     dataset = (await ax.get('/api/v1/datasets/' + dataset.id)).data

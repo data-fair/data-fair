@@ -482,7 +482,6 @@ export const applyPatch = async (dataset, patch, removedRestProps, attemptMappin
       mongoPatch.$set[key] = patch[key]
     }
   }
-
   await db.collection('datasets').updateOne({ id: dataset.id }, mongoPatch)
 
   if (!dataset.draftReason && !patch.status && patch.schema) {

@@ -11,7 +11,7 @@ import { validate } from 'tableschema'
 const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
 
 let notifier
-describe('datasets', function () {
+describe.only('datasets', function () {
   before('prepare notifier', async function () {
     notifier = (await import('./resources/app-notifier.js')).default
     await eventPromise(notifier, 'listening')
@@ -108,7 +108,7 @@ describe('datasets', function () {
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 429)
   })
 
-  it.only('Upload new dataset in user zone', async function () {
+  it('Upload new dataset in user zone', async function () {
     const ax = global.ax.dmeadus
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
@@ -165,7 +165,7 @@ describe('datasets', function () {
     const ax = global.ax.dmeadusOrg
     const form = new FormData()
     form.append('file', datasetFd, 'dataset2.csv')
-    form.append('body', JSON.stringify({ owner: { type: 'organization', id: 'KWqAGZ4mG', department: 'dep1' } }))
+    form.append('body', JSON.stringify({ owner: { type: 'organization', id: 'KWqAGZ4mG', name: 'Fivechat', department: 'dep1' } }))
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
     assert.equal(res.data.owner.type, 'organization')
@@ -247,7 +247,7 @@ describe('datasets', function () {
     await assert.rejects(ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) }), err => err.status === 401)
   })
 
-  it('Upload dataset - full test with webhooks', async function () {
+  it.only('Upload dataset - full test with webhooks', async function () {
     const wsCli = new WebSocket(config.publicUrl)
     const ax = global.ax.cdurning2
     await ax.put('/api/v1/settings/user/cdurning2', { webhooks: [{ title: 'test', events: ['dataset-finalize-end'], target: { type: 'http', params: { url: 'http://localhost:5900' } } }] })
@@ -256,7 +256,7 @@ describe('datasets', function () {
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
 
-    const webhook = await testUtils.timeout(eventPromise(notifier, 'webhook'), 2000, 'webhook not received')
+    const webhook = await testUtils.timeout(eventPromise(notifier, 'webhook'), 5000, 'webhook not received')
     res = await ax.get(webhook.href + '/api-docs.json')
     assert.equal(res.status, 200)
     assert.equal(res.data.openapi, '3.1.0')

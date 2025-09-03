@@ -149,7 +149,7 @@ describe('values aggs', function () {
       { nb: 2 },
       { nb: 3 }
     ])
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
 
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=year&metric_field=nb&metric=sum`)
     assert.equal(res.data.aggs.length, 2)
@@ -186,7 +186,7 @@ describe('values aggs', function () {
       { nb: 2 },
       { nb: 3 }
     ])
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
 
     let res = await ax.get(`/api/v1/datasets/${dataset.id}/values_agg?field=active&metric_field=nb&metric=sum`)
     assert.equal(res.data.aggs.length, 2)

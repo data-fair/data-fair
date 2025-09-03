@@ -218,7 +218,7 @@ describe('Master data management', function () {
 `
     form.append('dataset', csvSlave, 'slave.csv')
     const slaveFile = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    await workers.hook(`finalizer/${slaveFile.id}`)
+    await workers.hook(`finalize/${slaveFile.id}`)
     let lines = (await ax.get(`/api/v1/datasets/${slaveFile.id}/lines`)).data.results
     await ax.patch(`/api/v1/datasets/${slaveFile.id}`, {
       schema: [siretProperty],
@@ -230,7 +230,7 @@ describe('Master data management', function () {
         select: ['extra', 'extraMulti']
       }]
     })
-    await workers.hook(`finalizer/${slaveFile.id}`)
+    await workers.hook(`finalize/${slaveFile.id}`)
     extraMultiProp = slave.schema.find(p => p.key === '_siret.extraMulti')
     assert.ok(extraMultiProp)
     assert.equal(extraMultiProp.separator, ', ')
@@ -457,7 +457,7 @@ describe('Master data management', function () {
       }]
     })
     assert.equal(res.status, 200)
-    geojsonSlave = await workers.hook(`finalizer/${geojsonSlave.id}`)
+    geojsonSlave = await workers.hook(`finalize/${geojsonSlave.id}`)
     res = await ax.get(`/api/v1/datasets/${geojsonSlave.id}/full`)
     assert.equal(res.data.type, 'FeatureCollection')
     assert.equal(res.data.features.length, 1)
@@ -489,7 +489,7 @@ describe('Master data management', function () {
         }
       }]
     })
-    geojsonSlave = await workers.hook(`finalizer/${geojsonSlave.id}`)
+    geojsonSlave = await workers.hook(`finalize/${geojsonSlave.id}`)
     res = await ax.get(`/api/v1/datasets/${geojsonSlave.id}/full`)
     assert.equal(res.data.features.length, 1)
     assert.equal(res.data.features[0].properties.siretExtra, 'Extra information')
@@ -907,7 +907,7 @@ describe('Master data management', function () {
 `
     form.append('dataset', csvSlave, 'slave.csv')
     const slaveFile = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    await workers.hook(`finalizer/${slaveFile.id}`)
+    await workers.hook(`finalize/${slaveFile.id}`)
     let lines = (await ax.get(`/api/v1/datasets/${slaveFile.id}/lines`)).data.results
     await ax.patch(`/api/v1/datasets/${slaveFile.id}`, {
       // latlonProperty will be calculated
@@ -928,7 +928,7 @@ describe('Master data management', function () {
         select: ['name']
       }]
     })
-    await workers.hook(`finalizer/${slaveFile.id}`)
+    await workers.hook(`finalize/${slaveFile.id}`)
     lines = (await ax.get(`/api/v1/datasets/${slaveFile.id}/lines`)).data.results
     assert.equal(lines[0]['_geo.country'], 'JPN')
     assert.equal(lines[0]['_country.name'], 'Japan')
@@ -940,7 +940,7 @@ describe('Master data management', function () {
 `
     form2.append('dataset', csvSlave2, 'slave2.csv')
     await ax.post(`/api/v1/datasets/${slaveFile.id}`, form2, { headers: testUtils.formHeaders(form2) })
-    await workers.hook(`finalizer/${slaveFile.id}`)
+    await workers.hook(`finalize/${slaveFile.id}`)
     lines = (await ax.get(`/api/v1/datasets/${slaveFile.id}/lines`)).data.results
     assert.equal(lines[0]['_geo.country'], 'FRA')
     assert.equal(lines[0]['_country.name'], 'France')

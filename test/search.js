@@ -11,7 +11,7 @@ describe('search', function () {
     locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
     let res = await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     assert.equal(res.status, 200)
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)

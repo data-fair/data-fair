@@ -88,13 +88,23 @@ const datasetTasks: DatasetTask[] = [{
   worker: 'filesManager',
   mongoFilter: () => ({ status: 'imported' })
 }, {
+  name: 'normalizeFile',
+  eventsPrefix: 'normalize',
+  worker: 'filesProcessor',
+  mongoFilter: () => ({
+    $or: [
+      { $and: [{ status: 'stored' }, isNormalizedMongoFilter('', true)] },
+      { $and: [{ 'draft.status': 'stored' }, isNormalizedMongoFilter('draft.', true)] },
+    ]
+  })
+}, {
   name: 'analyzeCsv',
   eventsPrefix: 'analyze',
   worker: 'filesProcessor',
   mongoFilter: () => ({
     $or: [
       { $and: [isNormalizedMongoFilter(), { 'file.mimetype': { $in: csvTypes } }] },
-      { $and: [isNormalizedMongoFilter('draft'), { 'draft.file.mimetype': { $in: csvTypes } }] }
+      { $and: [isNormalizedMongoFilter('draft.'), { 'draft.file.mimetype': { $in: csvTypes } }] }
     ]
   })
 }, {
@@ -105,6 +115,16 @@ const datasetTasks: DatasetTask[] = [{
     $or: [
       { $and: [isNormalizedMongoFilter(), { 'file.mimetype': 'application/geo+json' }] },
       { $and: [isNormalizedMongoFilter('draft.'), { 'draft.file.mimetype': 'application/geo+json' }] }
+    ]
+  })
+}, {
+  name: 'validateFile',
+  eventsPrefix: 'validate',
+  worker: 'batchProcessor',
+  mongoFilter: () => ({
+    $or: [
+      { file: { $exists: true }, status: { $in: ['analyzed', 'validation-updated'] } },
+      { 'draft.file': { $exists: true }, 'draft.status': { $in: ['analyzed', 'validation-updated'] } }
     ]
   })
 }, {
@@ -128,26 +148,6 @@ const datasetTasks: DatasetTask[] = [{
       { status: 'extended' },
       { 'draft.status': 'extended' },
       { isRest: true, _partialRestStatus: 'extended' }
-    ]
-  })
-}, {
-  name: 'normalizeFile',
-  eventsPrefix: 'normalize',
-  worker: 'filesProcessor',
-  mongoFilter: () => ({
-    $or: [
-      { $and: [{ status: 'stored' }, isNormalizedMongoFilter('', true)] },
-      { $and: [{ 'draft.status': 'stored' }, isNormalizedMongoFilter('draft.', true)] },
-    ]
-  })
-}, {
-  name: 'validateFile',
-  eventsPrefix: 'validate',
-  worker: 'batchProcessor',
-  mongoFilter: () => ({
-    $or: [
-      { file: { $exists: true }, status: { $in: ['analyzed', 'validation-updated'] } },
-      { 'draft.file': { $exists: true }, 'draft.status': { $in: ['analyzed', 'validation-updated'] } }
     ]
   })
 }, {

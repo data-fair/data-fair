@@ -500,7 +500,7 @@ describe('datasets in draft mode', function () {
     assert.equal(res.status, 201)
 
     // ES indexation and finalization of draft
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.equal(dataset.status, 'draft')
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })
     assert.equal(res.data.total, 3)
@@ -513,7 +513,7 @@ describe('datasets in draft mode', function () {
 
     // validate the draft
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 3)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'test' } })
@@ -528,13 +528,13 @@ describe('datasets in draft mode', function () {
     form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
 
     // update only the attachments
     const form2 = new FormData()
     form2.append('attachments', fs.readFileSync('./resources/datasets/files2.zip'), 'files2.zip')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })
-    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), (err) => {
+    await assert.rejects(workers.hook(`finalize/${dataset.id}`), (err) => {
       if (!err.message.includes('Valeurs invalides : dir1/test.pdf')) {
         console.error('wrong error message in error', err)
         assert.fail(`error message should contain "Valeurs invalides : dir1/test.pdf", instead got "${err.message}"`)
@@ -550,14 +550,14 @@ describe('datasets in draft mode', function () {
     const form3 = new FormData()
     form3.append('dataset', fs.readFileSync('./resources/datasets/attachments2.csv'), 'attachments2.csv')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form3, { headers: testUtils.formHeaders(form3), params: { draft: true } })
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
     let lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })).data
     assert.equal(lines.total, 2)
     assert.equal(lines.results[0]['_file.content'], 'This is another test libreoffice file.')
 
     // finally validate the draft
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
     assert.equal(lines.total, 2)
     assert.equal(lines.results[0]['_file.content'], 'This is another test libreoffice file.')
@@ -571,13 +571,13 @@ describe('datasets in draft mode', function () {
     form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
 
     // update only the data (not the attachments)
     const form2 = new FormData()
     form2.append('dataset', fs.readFileSync('./resources/datasets/attachments2.csv'), 'attachments2.csv')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
     let lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })).data
     assert.equal(lines.total, 2)
     assert.equal(lines.results[0]['_file.content'], 'This is a test libreoffice file.')
@@ -586,14 +586,14 @@ describe('datasets in draft mode', function () {
     const form3 = new FormData()
     form3.append('attachments', fs.readFileSync('./resources/datasets/files2.zip'), 'files2.zip')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form3, { headers: testUtils.formHeaders(form3), params: { draft: true } })
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
     lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { draft: true } })).data
     assert.equal(lines.total, 2)
     assert.equal(lines.results[0]['_file.content'], 'This is another test libreoffice file.')
 
     // finally validate the draft
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
     assert.equal(lines.total, 2)
     assert.equal(lines.results[0]['_file.content'], 'This is another test libreoffice file.')
@@ -625,7 +625,7 @@ describe('datasets in draft mode', function () {
 
     // validate the draft
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 86)
 
@@ -655,7 +655,7 @@ other,unknown address
     form.append('file', content, 'dataset2.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
     assert.equal(res.status, 201)
-    let dataset = await workers.hook(`finalizer/${res.data.id}`)
+    let dataset = await workers.hook(`finalize/${res.data.id}`)
     dataset.draft.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     // Prepare for extension failure with HTTP error code
     nock('http://test.com').post('/geocoder/coords').reply(500, 'some error')
@@ -687,7 +687,7 @@ other,address
     form.append('file', content, 'dataset2.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
     assert.equal(res.status, 201)
-    let dataset = await workers.hook(`finalizer/${res.data.id}`)
+    let dataset = await workers.hook(`finalize/${res.data.id}`)
     dataset.draft.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     // Prepare for extension
     nock('http://test.com').post('/geocoder/coords').reply(200, (uri, requestBody) => {
@@ -702,11 +702,11 @@ other,address
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     }, { params: { draft: true } })
     assert.equal(res.status, 200)
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
 
     // validate the draft
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.equal(dataset.schema.length, 11)
 
     // load a file missing the address property
@@ -719,7 +719,7 @@ other
     form2.append('file', content2, 'dataset2-noadr.csv')
     res = await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })
     assert.equal(res.status, 200)
-    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), (err) => {
+    await assert.rejects(workers.hook(`finalize/${dataset.id}`), (err) => {
       assert.ok(err.message.includes('un concept nécessaire'))
       return true
     })

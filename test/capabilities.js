@@ -238,7 +238,7 @@ describe('Properties capabilities', function () {
     let dataset = res.data
     assert.equal(res.status, 201)
 
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     // _file.content is searchable
     assert.ok(dataset.schema.find(p => p.key === '_file.content'))
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'libreoffice' } })
@@ -253,7 +253,7 @@ describe('Properties capabilities', function () {
       ]
     })
 
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     // _file.content is no longer searchable
     assert.equal(dataset.schema.find(p => p.key === '_file.content'), undefined)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { q: 'libreoffice' } })

@@ -94,7 +94,24 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
   try {
     debug('run task', task.name, type, id)
     await workers[task.worker].run(resource, { name: task.name })
-    debug('finished task', task.name, type, id)
+    endTask({ status: 'ok' })
+    debug(`finished task ${task.name} - ${type} / ${resource.slug} (${resource.id})${resource.draftReason ? ' - draft' : ''}`)
+
+    let finalTask = false
+    if (task.eventsPrefix) {
+      const newResource = await mongo.db.collection(type).findOne({ id: resource.id })
+      if (newResource) {
+        const noStoreEvent = type === 'datasets' && (task.eventsPrefix !== 'finalize' || !!resource._partialRestStatus)
+        if (resource.draftReason) {
+          await journals.log(type, mergeDraft({ ...newResource }), { type: task.eventsPrefix + '-end' } as any, noStoreEvent)
+        } else {
+          await journals.log(type, newResource as any, { type: task.eventsPrefix + '-end' } as any, noStoreEvent)
+        }
+        finalTask = task.eventsPrefix === 'finalize' ||
+          (task.eventsPrefix === 'validate' && resource.draftReason && !newResource.draft && newResource.status) // special case of cancelled draft
+      }
+      await progress?.end(false, finalTask)
+    }
     events.emit(task.name + '/' + id, { type, id })
   } catch (err: any) {
     let errorMessage = err.message as string
@@ -169,7 +186,6 @@ export const start = async () => {
   while (true) {
     if (stopped) break
     let resourceTask = await queryNextResourceTask()
-    // console.log('RESOURCE REF', resourceRef)
     while (resourceTask) {
       debug('work on resource', resourceTask.type, resourceTask.resource.id, resourceTask.task.name)
       if (stopped) break

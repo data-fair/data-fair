@@ -30,7 +30,7 @@ describe('Extensions', function () {
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     nockScope.done()
     const extensionKey = dataset.extensions[0].propertyPrefix
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lat'))
@@ -60,7 +60,7 @@ describe('Extensions', function () {
     assert.equal(dataset.schema[0].key, '_coords.lat')
     assert.equal(dataset.schema[0].title, 'Latitude')
     await global.ax.superadmin.post(`/api/v1/datasets/${dataset.id}/_reindex`)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.equal(dataset.schema[0].key, '_coords.lat')
     assert.equal(dataset.schema[0].title, 'Latitude')
 
@@ -79,7 +79,7 @@ describe('Extensions', function () {
     form.append('file', content, 'dataset.csv')
     res = await ax.post(`/api/v1/datasets/${dataset.id}`, form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 200)
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
     nockScope.done()
     // A search to check re-indexed results with preserved extensions
     // and new result with new extension
@@ -110,7 +110,7 @@ describe('Extensions', function () {
     })
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords', select: ['lat', 'lon'] }] })
     assert.equal(res.status, 200)
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
     nockScope.done()
 
     // Download extended file
@@ -141,7 +141,7 @@ describe('Extensions', function () {
     // remove the extension
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [] })
     assert.equal(res.status, 200)
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)
     assert.equal(res.status, 200)
     assert.ok(res.data.find(file => file.key === 'original'))
@@ -168,7 +168,7 @@ describe('Extensions', function () {
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     nockScope.done()
     const extensionKey = dataset.extensions[0].propertyPrefix
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lat'))
@@ -208,7 +208,7 @@ describe('Extensions', function () {
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     nockScope.done()
     const extensionKey = dataset.extensions[0].propertyPrefix
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lat'))
@@ -259,7 +259,7 @@ describe('Extensions', function () {
       }]
     })
     assert.equal(res.status, 200)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     nockScope.done()
     const extensionKey = dataset.extensions[0].propertyPrefix
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.location.lat'))
@@ -298,7 +298,7 @@ other,unknown address
     form.append('file', content, 'dataset2.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    let dataset = await workers.hook(`finalizer/${res.data.id}`)
+    let dataset = await workers.hook(`finalize/${res.data.id}`)
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     // Prepare for extension failure with HTTP error code
     nock('http://test.com').post('/geocoder/coords').reply(500, 'some error')
@@ -343,7 +343,7 @@ empty,
     form.append('file', content, 'dataset3.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    const dataset = await workers.hook(`finalizer/${res.data.id}`)
+    const dataset = await workers.hook(`finalize/${res.data.id}`)
 
     nock('http://test.com', { reqheaders: { 'x-apiKey': 'test_default_key' } })
       .post('/geocoder/coords').reply(200, (uri, requestBody) => {
@@ -373,7 +373,7 @@ koumoul,19 rue de la voie lactée saint avé
     form.append('file', content, 'dataset4.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    const dataset = await workers.hook(`finalizer/${res.data.id}`)
+    const dataset = await workers.hook(`finalize/${res.data.id}`)
 
     nock('http://test.com', { reqheaders: { 'x-apiKey': 'test_default_key' } })
       .post('/geocoder/coords').reply(200, (uri, requestBody) => {
@@ -456,7 +456,7 @@ koumoul,19 rue de la voie lactée saint avé
       }]
     })
     assert.equal(res.status, 200)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     nockScope.done()
     const extensionKey = dataset.extensions[0].propertyPrefix
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.location.lat'))
@@ -482,7 +482,7 @@ koumoul,19 rue de la voie lactée saint avé
       schema: [{ key: 'address', type: 'string', 'x-refersTo': 'http://schema.org/address' }],
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })).data
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
 
     // extend first inserted line
     let nockScope = getExtensionNock({ lat: 10, lon: 10 })
@@ -491,7 +491,7 @@ koumoul,19 rue de la voie lactée saint avé
       eventPromise(global.events, 'extension-inputs')
     ])
     assert.equal(inputsEvent, 1)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     nockScope.done()
     // console.log(dataset)
 
@@ -509,7 +509,7 @@ koumoul,19 rue de la voie lactée saint avé
       eventPromise(global.events, 'extension-inputs')
     ])
     assert.equal(inputsEvent, 1)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     nockScope.done()
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     const anotherAddress = res.data.results.find(r => r.address === 'another address')
@@ -523,7 +523,7 @@ koumoul,19 rue de la voie lactée saint avé
       eventPromise(global.events, 'extension-inputs')
     ])
     assert.equal(inputsEvent, 1)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     nockScope.done()
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     const unknownAddress = res.data.results.find(r => r.address === 'unknown address')
@@ -535,7 +535,7 @@ koumoul,19 rue de la voie lactée saint avé
       eventPromise(global.events, 'extension-inputs')
     ])
     assert.equal(inputsEvent, 1)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     const anotherAddress2 = res.data.results.sort((a, b) => b._i - a._i)[0]
     assert.equal(anotherAddress2[extensionKey + '.lat'], 11)
@@ -548,7 +548,7 @@ koumoul,19 rue de la voie lactée saint avé
       eventPromise(global.events, 'extension-inputs')
     ])
     // assert.equal(inputsEvent, 1)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     const anotherAddress3 = res.data.results.sort((a, b) => b._i - a._i)[0]
     assert.equal(anotherAddress3[extensionKey + '.lat'], 12)
@@ -558,7 +558,7 @@ koumoul,19 rue de la voie lactée saint avé
     await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       extensions: []
     })
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.results[0][extensionKey + '.lat'], undefined)
   })
@@ -575,7 +575,7 @@ other,unknown address
     form.append('file', content, 'dataset2.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    let dataset = await workers.hook(`finalizer/${res.data.id}`)
+    let dataset = await workers.hook(`finalize/${res.data.id}`)
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     const nockScope = nock('http://test.com').post('/geocoder/coords').reply(200, (uri, requestBody) => {
       const inputs = requestBody.trim().split('\n').map(JSON.parse)
@@ -590,7 +590,7 @@ other,unknown address
     })
     await workers.hook(`extender/${dataset.id}`)
     nockScope.done()
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.equal(dataset.extensions.length, 1)
     assert.equal(dataset.schema.length, 11)
 
@@ -615,7 +615,7 @@ other,unknown address
     form.append('file', content, 'dataset2.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    let dataset = await workers.hook(`finalizer/${res.data.id}`)
+    let dataset = await workers.hook(`finalize/${res.data.id}`)
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     const nockScope = nock('http://test.com').post('/geocoder/coords').reply(200, (uri, requestBody) => {
       const inputs = requestBody.trim().split('\n').map(JSON.parse)
@@ -630,7 +630,7 @@ other,unknown address
     })
     await workers.hook(`extender/${dataset.id}`)
     nockScope.done()
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.equal(dataset.extensions.length, 1)
     assert.equal(dataset.schema.length, 11)
 
@@ -639,7 +639,7 @@ other,unknown address
     form2.append('file', content, 'dataset2.csv')
     res = await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
     assert.equal(res.status, 200)
-    dataset = await workers.hook(`finalizer/${res.data.id}`)
+    dataset = await workers.hook(`finalize/${res.data.id}`)
     assert.equal(dataset.extensions.length, 1)
     assert.equal(dataset.schema.length, 11)
   })
@@ -679,7 +679,7 @@ other,unknown address
       }]
     })
     assert.equal(res.status, 200)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     nockScope.done()
     const extensionKey = dataset.extensions[0].propertyPrefix
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.NOMEN_LONG'))
@@ -714,7 +714,7 @@ other,unknown address
       extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(id, " - ", adr)', property: { key: 'calc1', type: 'string' } }]
     })
     assert.equal(res.status, 200)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.ok(dataset.schema.find(field => field.key === 'calc1'))
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -733,7 +733,7 @@ other,unknown address
       extensions: [{ active: true, type: 'exprEval', expr: '"Test"', property: { 'x-originalName': 'Test', key: 'test', type: 'string' } }]
     })
     assert.equal(res.status, 200)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.ok(dataset.schema.find(field => field.key === 'test'))
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -753,7 +753,7 @@ other,unknown address
       extensions: [{ active: true, type: 'exprEval', expr: 'f(item) = item != "koumoul"; join(" - ", filter(f, [id, adr]))', property: { key: 'calc1', type: 'string' } }]
     })
     assert.equal(res.status, 200)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.ok(dataset.schema.find(field => field.key === 'calc1'))
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -788,7 +788,7 @@ other,unknown address
       ]
     })
     assert.equal(res.status, 200)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     nockScope.done()
     assert.ok(dataset.schema.find(field => field.key === 'calc1'))
 
@@ -854,14 +854,14 @@ other,unknown address
       extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(id, " - ", adr)', property: { key: 'employees', type: 'string' } }]
     })
     assert.equal(res.status, 200)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.ok(dataset.schema.find(field => field.key === 'employees'))
 
     const form = new FormData()
     form.append('file', fs.readFileSync('./resources/datasets/dataset2.csv'), 'dataset2.csv')
     dataset = (await ax.put(`/api/v1/datasets/${dataset.id}`, form, { headers: testUtils.formHeaders(form), params: { draft: true } })).data
 
-    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), (err) => {
+    await assert.rejects(workers.hook(`finalize/${dataset.id}`), (err) => {
       assert.equal(err.message, 'Une extension essaie de créer la colonne "employees" mais cette clé est déjà utilisée.')
       return true
     })
@@ -875,13 +875,13 @@ other,unknown address
       schema: dataset.schema,
       extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(id, " - ", adr)', property: { key: 'employees', type: 'string' } }]
     })
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{ active: true, type: 'exprEval', expr: 'CONCAT(id, " / ", adr)', property: { key: 'employees', type: 'string' } }]
     })
     assert.equal(res.data.status, 'validated')
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
     assert.equal(lines[0].employees, 'koumoul / 19 rue de la voie lactée saint avé')
   })
@@ -901,9 +901,9 @@ other,unknown address
         property: { key: 'exp', type: 'string' }
       }]
     })).data
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
     await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ str1: 'str 1', str2: 'str 2' }, { str1: 'UPPER STR 1', str2: 'UPPER STR 2' }])
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
     assert.equal(lines[0].exp, 'UPPER STR 1 - UPPER STR 2 - ' + today)
     assert.equal(lines[1].exp, 'str 1 - str 2 - ' + today)
@@ -918,7 +918,7 @@ other,unknown address
     assert.equal(needsIndexingLines.length, 1)
     assert.equal(needsIndexingLines[0].str1, 'str 1')
     assert.equal(needsIndexingLines[0].exp, 'STR 1 - STR 2 - ' + today)
-    dataset = await workers.hook(`finalizer/${dataset.id}`)
+    dataset = await workers.hook(`finalize/${dataset.id}`)
   })
 
   it('Manage cases where extension returns wrong type', async function () {
@@ -933,7 +933,7 @@ other,unknown address
       ]
     })
     assert.equal(res.status, 200)
-    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"\"value\"\" : /calc1 doit être de type number (résultat : \"value\")" })
+    await assert.rejects(workers.hook(`finalize/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"\"value\"\" : /calc1 doit être de type number (résultat : \"value\")" })
 
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -942,7 +942,7 @@ other,unknown address
       ]
     })
     assert.equal(res.status, 200)
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.results[0].calc1, 1.1)
 
@@ -953,7 +953,7 @@ other,unknown address
       ]
     })
     assert.equal(res.status, 200)
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.results[0].calc1, 1)
 
@@ -964,7 +964,7 @@ other,unknown address
       ]
     })
     assert.equal(res.status, 200)
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.results[0].calc1, '1')
 
@@ -975,7 +975,7 @@ other,unknown address
       ]
     })
     assert.equal(res.status, 200)
-    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"[[1],[2]]\" : /calc1 doit être de type number (résultat : [[1],[2]])" })
+    await assert.rejects(workers.hook(`finalize/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"[[1],[2]]\" : /calc1 doit être de type number (résultat : [[1],[2]])" })
 
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -984,6 +984,6 @@ other,unknown address
       ]
     })
     assert.equal(res.status, 200)
-    await assert.rejects(workers.hook(`finalizer/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"\"wrongDate\"\" : /calc1 doit correspondre au format \"date-time\" (date-time) (résultat : \"wrongDate\")" })
+    await assert.rejects(workers.hook(`finalize/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"\"wrongDate\"\" : /calc1 doit correspondre au format \"date-time\" (date-time) (résultat : \"wrongDate\")" })
   })
 })

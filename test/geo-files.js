@@ -79,7 +79,7 @@ describe('geo files support', function () {
     geomProp['x-capabilities'] = { vtPrepare: true }
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     await workers.hook(`indexer/${dataset.id}`)
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=49,31,6&format=pbf&q=blabla&sampling=max`)
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'application/x-protobuf')
@@ -95,7 +95,7 @@ describe('geo files support', function () {
       },
       schema: dataset.schema.filter(p => !p.key.startsWith('_')).map(p => ({ key: p.key }))
     }).then(r => r.data)
-    virtualDataset = await workers.hook(`finalizer/${virtualDataset.id}`)
+    virtualDataset = await workers.hook(`finalize/${virtualDataset.id}`)
     const geomPropVirtual = virtualDataset.schema.find(p => p.key === 'geometry')
     assert.ok(geomPropVirtual['x-capabilities'].vtPrepare)
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines?xyz=49,31,6&format=pbf&q=blabla&sampling=max`, { responseType: 'arraybuffer' })
