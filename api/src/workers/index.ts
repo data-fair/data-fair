@@ -1,5 +1,5 @@
 import type { ResourceType } from '#types'
-import { workers, tasks } from './tasks.ts'
+import { workers, tasks, pendingTasks } from './tasks.ts'
 import type { Task, WorkerId } from './types.ts'
 import mergeDraft from '../datasets/utils/merge-draft.js'
 import locks from '@data-fair/lib-node/locks.js'
@@ -81,6 +81,7 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
     debug('failed to acquire lock for resource', type, id)
     return
   }
+  pendingTasks[task.worker]++
 
   const endTask = workersTasksHistogram.startTimer({ task: task.name })
   let progress: ReturnType<typeof taskProgress> | null = null
@@ -144,6 +145,7 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
 
     await mongo.db.collection(type).updateOne({ id: resource.id }, patch)
   } finally {
+    pendingTasks[task.worker]--
     await locks.release(`${type}:${id}`)
   }
 }

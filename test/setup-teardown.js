@@ -7,7 +7,7 @@ import mongo from '../api/src/mongo.ts'
 import es from '../api/src/es.ts'
 import fs from 'fs-extra'
 import nock from 'nock'
-import { forceResetWorkers } from '../api/src/workers/tasks.ts'
+import { pendingTasks } from '../api/src/workers/tasks.ts'
 import { reset as resetPing } from '@data-fair/data-fair-api/src/workers/ping.ts'
 import axios from 'axios'
 import debugModule from 'debug'
@@ -211,7 +211,9 @@ beforeEach('scratch data', async function () {
 
   debug('force reset the workers')
   await resetPing()
-  await forceResetWorkers()
+  for (const pending of Object.values(pendingTasks)) {
+    if (pending > 0) throw new Error(`the test "${this.currentTest?.title}" didn't wait for some pending tasks (${JSON.stringify(pendingTasks)})`)
+  }
 
   debug('scratch data')
   try {

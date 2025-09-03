@@ -7,7 +7,7 @@ import moment from 'moment'
 
 const createWorkers = () => {
   return {
-  // IO based worker for all small-ish tasks that we don't want to be blocked by longer tasks
+    // IO based worker for all small-ish tasks that we don't want to be blocked by longer tasks
     shortProcessor: new Piscina({
       filename: path.resolve(import.meta.dirname, './short-processor/index.ts'),
       minThreads: 0,
@@ -48,12 +48,11 @@ const createWorkers = () => {
 
 export const workers = createWorkers()
 
-// used during tests
-export const forceResetWorkers = async () => {
-  for (const worker of Object.values(workers)) {
-    await worker.destroy()
-  }
-  Object.assign(workers, createWorkers())
+export const pendingTasks = {
+  shortProcessor: 0,
+  filesManager: 0,
+  filesProcessor: 0,
+  batchProcessor: 0
 }
 
 const isNormalizedMongoFilter = (prefix = '', not = false) => ({
