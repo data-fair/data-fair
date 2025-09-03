@@ -43,7 +43,7 @@ export const lockDataset = (_shouldLock = true) => async (req, res, next) => {
   // @ts-ignore
   const datasetId = req.dataset ? req.dataset.id : req.params.datasetId
   for (let i = 0; i < config.datasetStateRetries.nb; i++) {
-    const lockKey = `dataset:${datasetId}`
+    const lockKey = `datasets:${datasetId}`
     const ack = await locks.acquire(lockKey, `${req.method} ${req.originalUrl}`)
     if (ack) {
       res.on('close', () => locks.release(lockKey).catch(err => console.error('failure to release dataset lock', err)))

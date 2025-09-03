@@ -1,9 +1,11 @@
 import config from '#config'
 import mongo from '#mongo'
+import es from '#es'
 import debugLib from 'debug'
 import { CronJob } from 'cron'
 import * as catalogs from '../../catalogs/plugins/index.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
+import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import type { Application, Dataset, DatasetInternal, RestDataset } from '#types'
 
 export const harvest = async function (catalog: any) {
@@ -72,6 +74,7 @@ export const autoUpdate = async function (dataset: Dataset) {
 }
 
 export const errorRetry = async function (dataset: Dataset) {
+  await mongo.connect(true)
   const propertyPrefix = dataset.draftReason ? 'draft.' : ''
   const patch = {
     $set: {
@@ -86,6 +89,7 @@ export const errorRetry = async function (dataset: Dataset) {
 }
 
 export const autoUpdateExtension = async function (dataset: Dataset) {
+  await mongo.connect(true)
   const extensions = [...dataset.extensions!]
   for (const e of extensions) {
     if (e.nextUpdate && e.nextUpdate < new Date().toISOString()) {
@@ -97,7 +101,8 @@ export const autoUpdateExtension = async function (dataset: Dataset) {
 }
 
 export const finalize = async function (dataset: Dataset) {
-  await mongo.connect(true)
+  await Promise.all([mongo.connect(true), es.connect()])
+  await wsEmitter.init(mongo.db)
   const finalize = await import('./finalize.ts')
   await finalize.default(dataset)
 }

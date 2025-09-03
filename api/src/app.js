@@ -317,7 +317,10 @@ export const run = async () => {
   }
 
   if (config.mode.includes('worker')) {
-    (await import('./workers/index.ts')).start(app)
+    (await import('./workers/index.ts')).start().catch(error => {
+      internalError('workers-loop-error', error)
+      throw error
+    })
   }
 
   if (config.observer.active) {

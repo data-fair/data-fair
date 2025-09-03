@@ -15,7 +15,7 @@ import mongo from '#mongo'
 
 import debugLib from 'debug'
 import { getFlattenNoCache } from '../../datasets/utils/flatten.ts'
-import { DatasetInternal, Nullable } from '#types'
+import type { DatasetInternal, Nullable } from '#types'
 import { isVirtualDataset } from '#types/dataset/index.ts'
 import { isRestDataset } from '@data-fair/data-fair-shared/types-utils.ts'
 

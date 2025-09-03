@@ -13,7 +13,7 @@ import truncateMiddle from 'truncate-middle'
 import debugLib from 'debug'
 import mongo from '#mongo'
 import type { DatasetInternal } from '#types'
-import { CustomAjvValidate } from '../../misc/utils/ajv.ts'
+import type { CustomAjvValidate } from '../../misc/utils/ajv.ts'
 
 // Index tabular datasets with elasticsearch using available information on dataset schema
 export const eventsPrefix = 'validate'

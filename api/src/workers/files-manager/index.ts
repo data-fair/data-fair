@@ -1,10 +1,11 @@
 import mongo from '#mongo'
 import es from '#es'
+import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import type { Dataset } from '#types'
 
 export const initialize = async function (dataset: Dataset) {
-  await mongo.connect(true)
-  await es.connect()
+  await Promise.all([mongo.connect(true), es.connect()])
+  await wsEmitter.init(mongo.db)
   const initialize = await import('./initialize.ts')
   await initialize.default(dataset)
 }

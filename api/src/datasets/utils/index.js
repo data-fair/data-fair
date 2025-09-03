@@ -72,7 +72,7 @@ export const insertWithId = async (db, dataset, onClose) => {
   let insertOk = false
   let i = 1
   while (!insertOk) {
-    const idLockKey = `dataset:${dataset.id}`
+    const idLockKey = `datasets:${dataset.id}`
     const idAck = locks.acquire(idLockKey, 'insertWithBaseid')
     if (!idAck) throw new Error(`dataset id ${dataset.id} is locked`)
     if (onClose) {
@@ -84,7 +84,7 @@ export const insertWithId = async (db, dataset, onClose) => {
       })
     }
 
-    const slugLockKey = `dataset:slug:${owner.type}:${owner.id}:${dataset.slug}`
+    const slugLockKey = `datasets:slug:${owner.type}:${owner.id}:${dataset.slug}`
     const slugAck = locks.acquire(slugLockKey, 'insertWithBaseid')
     if (slugAck) {
       try {

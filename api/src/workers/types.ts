@@ -1,5 +1,3 @@
-import { Application, DatasetInternal } from '#types'
-
 export type WorkerId = 'shortProcessor' | 'batchProcessor' | 'filesManager' | 'filesProcessor'
 
 export type DatasetTask = {
@@ -7,7 +5,6 @@ export type DatasetTask = {
   eventsPrefix?: string
   worker: WorkerId
   mongoFilter: () => any
-  jsFilter: (dataset: DatasetInternal) => boolean | undefined
 }
 
 export type ApplicationTask = {
@@ -15,7 +12,6 @@ export type ApplicationTask = {
   eventsPrefix?: string
   worker: WorkerId
   mongoFilter: () => any
-  jsFilter: (application: Application) => boolean | undefined
 }
 
 export type CatalogTask = {
@@ -23,7 +19,6 @@ export type CatalogTask = {
   eventsPrefix?: string
   worker: WorkerId
   mongoFilter: () => any
-  jsFilter: (catalog: any) => boolean | undefined
 }
 
 export type Task = DatasetTask | ApplicationTask | CatalogTask
