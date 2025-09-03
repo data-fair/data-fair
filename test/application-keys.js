@@ -214,7 +214,7 @@ describe('Applications keys for unauthenticated readOnly access', function () {
     // accepted because token is the right age
     res = await global.ax.anonymous.post('/api/v1/datasets/restcrowd/lines', {}, { headers: { referrer: config.publicUrl + `/app/${appId}/?key=${key}`, 'x-anonymousToken': anonymousToken } })
     assert.equal(res.status, 201)
-    await workers.hook('finalizer/restcrowd')
+    await workers.hook('finalize/restcrowd')
 
     // rejected because of simple rate limiting
     await assert.rejects(
@@ -255,7 +255,7 @@ describe('Applications keys for unauthenticated readOnly access', function () {
 
     res = await global.ax.cdurning2.post('/api/v1/datasets/restcrowdown/own/user:cdurning2/lines', {}, { headers })
     assert.equal(res.status, 201)
-    await workers.hook('finalizer/restcrowdown')
+    await workers.hook('finalize/restcrowdown')
 
     res = await global.ax.cdurning2.get('/api/v1/datasets/restcrowdown/own/user:cdurning2/lines', { headers })
     assert.equal(res.status, 200)

@@ -13,7 +13,7 @@ describe('REST datasets exported', function () {
       { attr1: 'test1', attr2: 'test1' },
       { attr1: 'test2', attr2: 'test2' }
     ])
-    await workers.hook('finalizer/rest')
+    await workers.hook('finalize/rest')
     const patched = (await ax.patch('/api/v1/datasets/rest', { exports: { restToCSV: { active: true } } })).data
     assert.ok(!!patched.exports.restToCSV.nextExport)
 
@@ -44,7 +44,7 @@ describe('REST datasets exported', function () {
     await ax.post('/api/v1/datasets/rest/_bulk_lines', [
       { attr1: 'test3', attr2: 'test3' }
     ])
-    await workers.hook('finalizer/rest')
+    await workers.hook('finalize/rest')
 
     await assert.rejects(ax.get('/api/v1/datasets/rest/raw'), err => err.status === 404)
 

@@ -101,7 +101,7 @@ describe('datasets', function () {
     let form = new FormData()
     form.append('file', Buffer.alloc(110000), 'largedataset1.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    await assert.rejects(workers.hook('finalizer/' + res.data.id))
+    await assert.rejects(workers.hook('finalize/' + res.data.id))
 
     form = new FormData()
     form.append('file', Buffer.alloc(110000), 'largedataset2.csv')
@@ -122,7 +122,7 @@ describe('datasets', function () {
     assert.ok(res.data.previews[0].href.endsWith(`/embed/dataset/${res.data.id}/table`))
     assert.equal(res.data.updatedAt, res.data.createdAt)
     assert.equal(res.data.updatedAt, res.data.dataUpdatedAt)
-    const dataset = await workers.hook('finalizer/' + res.data.id)
+    const dataset = await workers.hook('finalize/' + res.data.id)
     assert.equal(dataset.file.encoding, 'UTF-8')
     assert.equal(dataset.count, 2)
   })
@@ -136,7 +136,7 @@ describe('datasets', function () {
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, 'my-title')
     assert.equal(res.data.title, 'My title\'')
-    await workers.hook('finalizer/' + res.data.id)
+    await workers.hook('finalize/' + res.data.id)
   })
 
   it('Upload new dataset with utf8 filename', async function () {
@@ -147,7 +147,7 @@ describe('datasets', function () {
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, '1-reponse-n-1')
     assert.equal(res.data.title, '1 Réponse N° 1')
-    await workers.hook('finalizer/' + res.data.id)
+    await workers.hook('finalize/' + res.data.id)
   })
 
   it('Upload new dataset in organization zone', async function () {
@@ -158,7 +158,7 @@ describe('datasets', function () {
     assert.equal(res.status, 201)
     assert.equal(res.data.owner.type, 'organization')
     assert.equal(res.data.owner.id, 'KWqAGZ4mG')
-    await workers.hook('finalizer/' + res.data.id)
+    await workers.hook('finalize/' + res.data.id)
   })
 
   it('Upload new dataset in organization zone with explicit department', async function () {
@@ -171,7 +171,7 @@ describe('datasets', function () {
     assert.equal(res.data.owner.type, 'organization')
     assert.equal(res.data.owner.id, 'KWqAGZ4mG')
     assert.equal(res.data.owner.department, 'dep1')
-    await workers.hook('finalizer/' + res.data.id)
+    await workers.hook('finalize/' + res.data.id)
   })
 
   it('Uploading same file twice should increment slug', async function () {
@@ -182,7 +182,7 @@ describe('datasets', function () {
       const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
       assert.equal(res.status, 201)
       assert.equal(res.data.slug, 'my-dataset' + (i === 1 ? '' : '-' + i))
-      await workers.hook('finalizer/' + res.data.id)
+      await workers.hook('finalize/' + res.data.id)
     }
   })
 
@@ -194,7 +194,7 @@ describe('datasets', function () {
     form.append('file', datasetFd, 'yet-a-dataset.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.data.title, 'A dataset with pre-filled title')
-    await workers.hook('finalizer/' + res.data.id)
+    await workers.hook('finalize/' + res.data.id)
   })
 
   it('Upload new dataset with JSON body', async function () {
@@ -204,7 +204,7 @@ describe('datasets', function () {
     form.append('file', datasetFd, 'yet-a-dataset.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.data.title, 'A dataset with both file and JSON body')
-    await workers.hook('finalizer/' + res.data.id)
+    await workers.hook('finalize/' + res.data.id)
   })
 
   it('Upload new dataset with defined id', async function () {
@@ -216,13 +216,13 @@ describe('datasets', function () {
     assert.equal(res.status, 201)
     assert.equal(res.data.title, 'my title')
     assert.equal(res.data.id, 'my-dataset-id')
-    await workers.hook('finalizer/my-dataset-id')
+    await workers.hook('finalize/my-dataset-id')
     form = new FormData()
     form.append('title', 'my other title')
     form.append('file', datasetFd, 'yet-a-dataset.csv')
     res = await ax.post('/api/v1/datasets/my-dataset-id', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 200)
-    await workers.hook('finalizer/my-dataset-id')
+    await workers.hook('finalize/my-dataset-id')
   })
 
   it('Reject some not URL friendly id', async function () {
@@ -312,7 +312,7 @@ describe('datasets', function () {
     const form = new FormData()
     form.append('file', datasetFd, 'dataset-name.csv')
     let res = await ax.post('/api/v1/datasets/dataset-name', form, { headers: testUtils.formHeaders(form) })
-    await workers.hook('finalizer/dataset-name')
+    await workers.hook('finalize/dataset-name')
     res = await ax.get('/api/v1/limits/user/dmeadus0')
     assert.ok(res.data.store_bytes.consumption > 150)
     assert.ok(res.data.store_bytes.consumption < 300)
@@ -321,7 +321,7 @@ describe('datasets', function () {
     const form2 = new FormData()
     form2.append('file', datasetFd, 'dataset-name2.csv')
     res = await ax.put('/api/v1/datasets/dataset-name', form2, { headers: testUtils.formHeaders(form2) })
-    const dataset = await workers.hook('finalizer/dataset-name')
+    const dataset = await workers.hook('finalize/dataset-name')
     assert.equal(dataset.originalFile.name, 'dataset-name2.csv')
     assert.equal(dataset.file.name, 'dataset-name2.csv')
     assert.equal(dataset.updatedAt, dataset.dataUpdatedAt)
@@ -365,7 +365,7 @@ describe('datasets', function () {
     const form = new FormData()
     form.append('file', datasetFd, 'dataset-name.csv')
     let res = await ax.post('/api/v1/datasets/dataset-name', form, { headers: testUtils.formHeaders(form) })
-    await workers.hook('finalizer/dataset-name')
+    await workers.hook('finalize/dataset-name')
     res = await ax.get('/api/v1/datasets/dataset-name')
     const schema = res.data.schema.filter(f => !f['x-calculated'])
     schema.forEach(f => {
@@ -379,7 +379,7 @@ describe('datasets', function () {
     form2.append('file', datasetFd, 'dataset-name.csv')
     form2.append('schema', JSON.stringify(schema))
     res = await ax.post('/api/v1/datasets/dataset-name', form2, { headers: testUtils.formHeaders(form2) })
-    await workers.hook('finalizer/dataset-name')
+    await workers.hook('finalize/dataset-name')
     res = await ax.get('/api/v1/datasets/dataset-name')
     assert.equal(res.data.schema.filter(f => f['x-transform']).length, 6)
   })

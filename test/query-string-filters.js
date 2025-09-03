@@ -23,7 +23,7 @@ describe('qs parameter', function () {
       { _id: 'line4', str1: 'special , char' }
     ]
     let res = await ax.post('/api/v1/datasets/qsfilters/_bulk_lines', items)
-    await workers.hook('finalizer/qsfilters')
+    await workers.hook('finalize/qsfilters')
 
     res = await ax.get('/api/v1/datasets/qsfilters/lines')
     assert.equal(res.data.total, items.length)

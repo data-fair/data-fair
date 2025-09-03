@@ -7,7 +7,7 @@ describe('datasets based on remote files', function () {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets', { remoteFile: { url: 'http://localhost:5600/notafile' } })
     const dataset = res.data
-    await assert.rejects(workers.hook('finalizer/' + dataset.id), (err) => {
+    await assert.rejects(workers.hook('finalize/' + dataset.id), (err) => {
       assert.ok(err.message.includes('404 - Not Found'))
       return true
     })
@@ -22,7 +22,7 @@ describe('datasets based on remote files', function () {
       .get('/data.ppt').reply(200, 'fake ppt')
     const res = await ax.post('/api/v1/datasets', { remoteFile: { url: 'http://test-remote.com/data.ppt' } })
     const dataset = res.data
-    await assert.rejects(workers.hook('finalizer/' + dataset.id), (err) => {
+    await assert.rejects(workers.hook('finalize/' + dataset.id), (err) => {
       assert.ok(err.message.includes('Le format de ce fichier n\'est pas supporté'))
       return true
     })
@@ -38,7 +38,7 @@ describe('datasets based on remote files', function () {
       .get('/data.geojson').reply(200, '{"type":"FeatureCollection","features": [{}]}', { 'content-type': 'application/json' })
     const res = await ax.post('/api/v1/datasets', { remoteFile: { url: 'http://test-remote.com/data.geojson' } })
     let dataset = res.data
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.originalFile.name, 'data.geojson')
     assert.equal(dataset.file.name, 'data.geojson')
     assert.equal(dataset.count, 1)
@@ -53,7 +53,7 @@ describe('datasets based on remote files', function () {
       remoteFile: { url: 'http://test-remote.com/data.csv', autoUpdate: { active: true } }
     })
     let dataset = res.data
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.title, 'data')
     assert.equal(dataset.originalFile.name, 'data.csv')
     assert.equal(dataset.file.name, 'data.csv')
@@ -92,7 +92,7 @@ describe('datasets based on remote files', function () {
       { id: dataset.id }, { $set: { 'remoteFile.autoUpdate.nextUpdate': nextUpdate } })
     nockScope = nock('http://test-remote.com')
       .get('/data.csv').reply(200, 'col\nval11\nval22')
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
     assert.ok(dataset.remoteFile.autoUpdate.nextUpdate > nextUpdate)
     nockScope.done()
@@ -101,7 +101,7 @@ describe('datasets based on remote files', function () {
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { remoteFile: { url: 'http://test-remote.com/data2.csv' } })
     nockScope = nock('http://test-remote.com')
       .get('/data2.csv').reply(200, 'col\nval11\nval22')
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.originalFile.name, 'data2.csv')
     nockScope.done()
 
@@ -109,7 +109,7 @@ describe('datasets based on remote files', function () {
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { remoteFile: { url: 'http://test-remote.com/data3.csv' } })
     nockScope = nock('http://test-remote.com')
       .get('/data3.csv').reply(200, 'col\nval11\nval22', { 'content-disposition': 'attachment; filename="remote-data.csv"' })
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.originalFile.name, 'remote-data.csv')
     nockScope.done()
   })

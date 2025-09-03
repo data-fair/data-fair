@@ -21,7 +21,7 @@ describe('thumbnails', function () {
       { imageUrl: 'http://test-thumbnail.com/avatar.jpg', desc: '2 avatar' },
       { imageUrl: 'http://test-thumbnail.com/wikipedia.gif', desc: '3 wikipedia animated' }
     ])
-    await workers.hook('finalizer/thumbnails1')
+    await workers.hook('finalize/thumbnails1')
     res = await ax.get('/api/v1/datasets/thumbnails1/lines', { params: { thumbnail: true, select: 'desc', sort: 'desc' } })
     assert.equal(res.data.results.length, 3)
     assert.equal(res.data.results[0].desc, '1 image')
@@ -86,7 +86,7 @@ describe('thumbnails', function () {
     form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
-    let dataset = await workers.hook('finalizer/' + res.data.id)
+    let dataset = await workers.hook('finalize/' + res.data.id)
     assert.ok(dataset.draft.schema.some((field) => field.key === '_attachment_url' && field['x-refersTo'] === 'http://schema.org/image'))
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true } })
     const thumbnail1 = res.data.results[0]._thumbnail

@@ -14,7 +14,7 @@ describe('truncate', function () {
       { str: 'bla' },
       { str: 'blablabla' }
     ])
-    await workers.hook('finalizer/truncate1')
+    await workers.hook('finalize/truncate1')
     const res = await ax.get('/api/v1/datasets/truncate1/lines', { params: { truncate: '4', sort: '_i' } })
     assert.equal(res.data.results.length, 2)
     assert.equal(res.data.results[0].str, 'bla')

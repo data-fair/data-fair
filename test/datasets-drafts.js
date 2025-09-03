@@ -335,7 +335,7 @@ describe('datasets in draft mode', function () {
     dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.draftReason.key, 'file-updated')
-    await assert.rejects(workers.hook('finalizer/' + dataset.id), (err) => {
+    await assert.rejects(workers.hook('finalize/' + dataset.id), (err) => {
       assert.ok(err.message.includes('ont une erreur de validation'))
       return true
     })
@@ -734,7 +734,7 @@ other
     form.append('file', datasetFd, 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
     assert.equal(res.status, 201)
-    const dataset = await workers.hook('finalizer/' + res.data.id)
+    const dataset = await workers.hook('finalize/' + res.data.id)
 
     assert.ok(await fs.pathExists('../data/test/user/dmeadus0/datasets-drafts/' + dataset.id))
     assert.ok(!await fs.pathExists('../data/test/user/dmeadus0/datasets/' + dataset.id))
@@ -748,7 +748,7 @@ other
     form.append('file', fs.readFileSync('./resources/datasets/dataset1-names.csv'), 'dataset1.csv')
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.schema[0].key, 'id')
     assert.equal(dataset.schema[0]['x-originalName'], 'Id')
     let lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
@@ -759,7 +759,7 @@ other
     const form2 = new FormData()
     form2.append('file', fs.readFileSync('./resources/datasets/dataset1.csv'), 'dataset1.csv')
     dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.schema[0].key, 'id')
     assert.equal(dataset.schema[0]['x-originalName'], 'Id')
     assert.equal(dataset.file.schema[0].key, 'id')

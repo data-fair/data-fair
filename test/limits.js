@@ -20,7 +20,7 @@ describe('limits', function () {
     form.append('file', Buffer.alloc(150000), 'dataset.csv')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
-    await assert.rejects(workers.hook('finalizer/' + res.data.id))
+    await assert.rejects(workers.hook('finalize/' + res.data.id))
 
     // Send dataset applying default limits
     form = new FormData()
@@ -34,7 +34,7 @@ describe('limits', function () {
     form = new FormData()
     form.append('file', Buffer.alloc(100000), 'dataset.csv')
     res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    await assert.rejects(workers.hook('finalizer/' + res.data.id))
+    await assert.rejects(workers.hook('finalize/' + res.data.id))
     assert.equal(res.status, 201)
     form = new FormData()
     form.append('file', Buffer.alloc(100004), 'dataset.csv')

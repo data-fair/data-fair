@@ -48,7 +48,7 @@ describe('Virtual master data management', function () {
       { str1: 'LINE3' },
       { str1: 'LINE4' }
     ])
-    const master = await workers.hook('finalizer/master')
+    const master = await workers.hook('finalize/master')
 
     const res = await global.ax.dmeadus.post('/api/v1/datasets', {
       isVirtual: true,
@@ -57,7 +57,7 @@ describe('Virtual master data management', function () {
       },
       title: 'a virtual dataset'
     })
-    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    const virtualDataset = await workers.hook('finalize/' + res.data.id)
     assert.equal(virtualDataset.storage.size, 0)
     assert.ok(virtualDataset.storage.indexed.size > 0)
     assert.equal(virtualDataset.storage.indexed.size, Math.round(master.storage.indexed.size / 2))

@@ -49,7 +49,7 @@ describe('file datasets with validation rules', function () {
     form.append('schema', JSON.stringify(schema))
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.count, 2)
   })
 
@@ -60,7 +60,7 @@ describe('file datasets with validation rules', function () {
     form.append('schema', JSON.stringify(schema))
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    await assert.rejects(workers.hook('finalizer/' + dataset.id), err => {
+    await assert.rejects(workers.hook('finalize/' + dataset.id), err => {
       assert.ok(err.message.includes('ont une erreur de validation'))
       return true
     })
@@ -68,7 +68,7 @@ describe('file datasets with validation rules', function () {
     // apply a transformation to fix the issue
     const patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema: schemaWithFix })).data
     assert.equal(patched.status, 'analyzed')
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
     const lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
     assert.equal(lines.length, 2)
@@ -81,7 +81,7 @@ describe('file datasets with validation rules', function () {
     form.append('file', fs.readFileSync('./resources/datasets/dataset1.csv'), 'dataset1.csv')
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.count, 2)
     const patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema })).data
     assert.equal(patched.status, 'validation-updated')
@@ -95,7 +95,7 @@ describe('file datasets with validation rules', function () {
     form.append('file', fs.readFileSync('./resources/datasets/dataset1-invalid.csv'), 'dataset1.csv')
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.count, 2)
     let patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema })).data
     assert.equal(patched.status, 'validation-updated')
@@ -107,7 +107,7 @@ describe('file datasets with validation rules', function () {
     // apply a transformation to fix the issue
     patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema: schemaWithFix })).data
     assert.equal(patched.status, 'analyzed')
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
     const lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
     assert.equal(lines.length, 2)
@@ -137,7 +137,7 @@ bidule,123,test3`, 'dataset1.csv')
     form.append('schema', JSON.stringify(schema))
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.count, 2)
     let lines = await ax.get(`/api/v1/datasets/${dataset.id}/lines`).then(r => r.data.results)
     assert.equal(lines[0].multipattern, 'test1, test2')
@@ -151,7 +151,7 @@ koumoul,"111 ; 222","test1, testko"
 bidule,123,test3`, 'dataset1.csv')
     form2.append('schema', JSON.stringify(schema))
     const dataset2 = await ax.post('/api/v1/datasets', form2, { headers: testUtils.formHeaders(form2) }).then(r => r.data)
-    await assert.rejects(workers.hook('finalizer/' + dataset2.id), (err) => {
+    await assert.rejects(workers.hook('finalize/' + dataset2.id), (err) => {
       assert.ok(err.message.includes('/multipattern/1 doit correspondre au format'))
       return true
     })

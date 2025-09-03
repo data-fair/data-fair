@@ -16,7 +16,7 @@ describe('Date filters', function () {
       { date1: '2023-11-22T08:00:00.000Z' }, // morning of 22/11/2023
       { date1: '2023-11-23T08:00:00.000Z' } // morning of 23/11/2023
     ])
-    await workers.hook('finalizer/rest-date-match')
+    await workers.hook('finalize/rest-date-match')
 
     // filter on a simple date
     res = await ax.get('/api/v1/datasets/rest-date-match/lines', { params: { sort: 'date1', _c_date_match: '2023-11-21' } })
@@ -51,7 +51,7 @@ describe('Date filters', function () {
       { start: '2023-11-18T23:00:00.000Z', end: '2023-11-28T23:00:00.000Z' }, // a larger encompassing interval
       { start: '2023-11-05T23:00:00.000Z', end: '2023-11-07T23:00:00.000Z' } // a separate interval
     ])
-    await workers.hook('finalizer/rest-date-match')
+    await workers.hook('finalize/rest-date-match')
 
     // filter on a simple date inside an interval
     res = await ax.get('/api/v1/datasets/rest-date-match/lines', { params: { sort: 'start', _c_date_match: '2023-11-21' } })
