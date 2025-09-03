@@ -149,6 +149,7 @@ let stopped = false
 
 export const start = async () => {
   debug('start workers loop')
+  let resolveWaitInterval: (() => void) | undefined
   while (true) {
     if (stopped) break
     let resourceTask = await queryNextResourceTask()
@@ -158,11 +159,17 @@ export const start = async () => {
       if (stopped) break
       processResourceTask(resourceTask.type, resourceTask.resource, resourceTask.task).catch(err => {
         internalError('worker', err)
+      }).then(() => {
+        // at the end of task ignore the wait interval and loop immediately
+        if (resolveWaitInterval) resolveWaitInterval()
       })
       resourceTask = await queryNextResourceTask()
     }
     debug('wait for ' + config.worker.interval)
-    await new Promise(resolve => setTimeout(resolve, config.worker.interval))
+    await new Promise<void>(resolve => {
+      resolveWaitInterval = resolve
+      setTimeout(resolve, config.worker.interval)
+    })
   }
   debug('finished workers loop')
 }
