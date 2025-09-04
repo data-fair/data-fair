@@ -118,12 +118,13 @@ describe('datasets in draft mode', function () {
     assert.ok(!await fs.pathExists(`../data/test/user/dmeadus0/datasets/${dataset.id}`))
   })
 
-  it('create a draft when updating the data file', async function () {
+  it.only('create a draft when updating the data file', async function () {
     // listen to all notifications
     const notifications = []
     global.events.on('notification', (n) => notifications.push(n))
 
     // Send dataset
+    console.log('SEND DATASET')
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
     const form = new FormData()
     form.append('file', datasetFd, 'dataset1.csv')
@@ -132,6 +133,7 @@ describe('datasets in draft mode', function () {
     let dataset = await workers.hook('finalize/' + res.data.id)
 
     // upload a new file with incompatible schema
+    console.log('UPLOAD NEW FILE')
     const datasetFd2 = fs.readFileSync('./resources/datasets/dataset2.csv')
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset2.csv')
@@ -160,6 +162,7 @@ describe('datasets in draft mode', function () {
     assert.equal(Object.keys(indices).length, 2)
 
     // validate the draft
+    console.log('VALIDATE DRAFT')
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
     dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'finalized')

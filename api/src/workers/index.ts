@@ -172,43 +172,6 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
 
 let stopped = false
 
-export const start = async () => {
-  debug('start workers loop')
-
-  await ping.listen(async (type, id) => {
-    const resourceTask = await queryNextResourceTask(type, id)
-    debug('fetch resourceTask from ping', resourceTask)
-    if (resourceTask) {
-      processResourceTask(resourceTask.type, resourceTask.resource, resourceTask.task).catch(err => {
-        internalError('worker-task', err)
-      })
-    }
-  }).catch(err => internalError('worker-ping-listen', err))
-
-  let resolveWaitInterval: (() => void) | undefined
-  while (true) {
-    if (stopped) break
-    let resourceTask = await queryNextResourceTask()
-    while (resourceTask) {
-      debug('work on resource', resourceTask.type, resourceTask.resource.id, resourceTask.task.name)
-      if (stopped) break
-      processResourceTask(resourceTask.type, resourceTask.resource, resourceTask.task).catch(err => {
-        internalError('worker-task', err)
-      }).then(() => {
-        // at the end of task ignore the wait interval and loop immediately
-        if (resolveWaitInterval) resolveWaitInterval()
-      })
-      resourceTask = await queryNextResourceTask()
-    }
-    debug('wait for ' + config.worker.interval)
-    await new Promise<void>(resolve => {
-      resolveWaitInterval = resolve
-      setTimeout(resolve, config.worker.interval)
-    })
-  }
-  debug('finished workers loop')
-}
-
 export const init = async () => {
   await ping.init()
 }
@@ -219,7 +182,7 @@ export const loop = async () => {
 
   ping.listen(async (type, id) => {
     const resourceTask = await queryNextResourceTask(type, id)
-    debug('fetch resourceTask from ping', resourceTask)
+    debug('fetch resourceTask from ping', type, id, resourceTask?.task.name)
     if (resourceTask) {
       processResourceTask(resourceTask.type, resourceTask.resource, resourceTask.task).catch(err => {
         internalError('worker-task', err)
