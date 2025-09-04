@@ -219,11 +219,11 @@ describe('REST datasets', function () {
 
   it('Use dataset schema to validate inputs', async function () {
     const ax = global.ax.dmeadus
-    await ax.put('/api/v1/datasets/rest4', {
+    const dataset = await ax.put('/api/v1/datasets/rest4', {
       isRest: true,
       title: 'rest4',
       schema: [{ key: 'attr1', type: 'string', 'x-required': true }, { key: 'attr2', type: 'string', pattern: '^test[0-9]$' }, { key: 'attr3', type: 'string', pattern: '^test[0-9]$', separator: ', ' }]
-    })
+    }).then(r => r.data)
 
     await assert.rejects(ax.post('/api/v1/datasets/rest4/lines', { attr1: 'test', attrko: 'test1' }), (err) => {
       assert.equal(err.data, 'ne doit pas contenir de propriétés additionnelles (attrko)')
@@ -311,7 +311,6 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.nbErrors, 1)
     assert.equal(res.data.errors.length, 1)
     assert.equal(res.data.errors[0].line, 2)
-    console.log(res.data.errors[0].error)
     assert.ok(res.data.errors[0].error.startsWith('/attr3/1 doit correspondre au format'))
 
     res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [
@@ -326,6 +325,16 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.errors.length, 1)
     assert.equal(res.data.errors[0].line, 3)
     assert.ok(res.data.errors[0].error.startsWith('/attr3/1 doit correspondre au format'))
+
+    const lines = await ax.get('/api/v1/datasets/rest4/lines').then(r => r.data.results)
+    line = lines.find(l => l.attr3 === 'test1, test2')
+    res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [{ _action: 'patch', _id: line._id, attr1: 'patched1' }])
+    assert.equal(res.data.nbOk, 1)
+
+    // on older datasets that multivalued data was stored with separator, we simulate this situation
+    await restDatasetsUtils.collection(dataset).updateOne({ _id: line._id }, { $set: { attr3: 'test1, test2' } })
+    res = await ax.post('/api/v1/datasets/rest4/_bulk_lines', [{ _action: 'patch', _id: line._id, attr1: 'patched1' }])
+    assert.equal(res.data.nbOk, 1)
 
     await workers.hook('finalizer/rest4')
   })
