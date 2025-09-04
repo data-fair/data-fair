@@ -541,7 +541,7 @@ export const validateDraft = async (dataset, datasetFull, patch) => {
 
   if (datasetFull.file) {
     webhooks.trigger('datasets', patchedDataset, { type: 'data-updated' }, null)
-    sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated')
+    await sendResourceEvent('datasets', patchedDataset, 'data-fair-worker', 'data-updated')
     const breakingChanges = getSchemaBreakingChanges(datasetFull.schema, patchedDataset.schema, false, false)
     if (breakingChanges.length) {
       const breakingChangesDesc = i18n.getLocales().reduce((a, locale) => {

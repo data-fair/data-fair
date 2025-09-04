@@ -94,7 +94,7 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
     await progress.start()
   }
   try {
-    debug('run task', task.name, type, id)
+    debug(`run task ${task.name} - ${type} / ${resource.slug} (${resource.id})${resource.draftReason ? ' - draft' : ''}`)
     await workers[task.worker].run(resource, { name: task.name })
     endTask({ status: 'ok' })
     debug(`finished task ${task.name} - ${type} / ${resource.slug} (${resource.id})${resource.draftReason ? ' - draft' : ''}`)

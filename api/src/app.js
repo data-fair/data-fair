@@ -21,12 +21,13 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import upgradeScripts from '@data-fair/lib-node/upgrade-scripts.js'
 import { cleanTmp } from './datasets/utils/files.ts'
 import eventsQueue from '@data-fair/lib-node/events-queue.js'
+import { isMainThread } from 'node:worker_threads'
 
 const debugDomain = debug('domain')
 
 // a global event emitter for testing
 if (process.env.NODE_ENV === 'test') {
-  global.events = new EventEmitter()
+  if (isMainThread) global.events = new EventEmitter()
 }
 
 let app, server, httpTerminator

@@ -8,6 +8,7 @@ import { type AccountKeys, reqUserAuthenticated, type SessionState, type Session
 import { type ResourceType, type Resource, type Dataset } from '#types'
 import * as permissions from './permissions.ts'
 import { type Locale } from '../../../i18n/utils.ts'
+import { isMainThread, parentPort } from 'node:worker_threads'
 
 const debug = debugLib('notifications')
 
@@ -52,16 +53,20 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
 
   if (typeof originator === 'string') {
     event.originator = { internalProcess: { id: originator } }
-    send(event)
+    await send(event)
   } else {
-    send(event, originator)
+    await send(event, originator)
   }
 }
 
 export const send = async (event: PushEvent, sessionState?: SessionState) => {
-  if (global.events) global.events.emit('notification', event)
   const notifyUrl = config.privateNotifyUrl || config.notifyUrl
-  if (process.env.NODE_ENV !== 'test') {
+  if (process.env.NODE_ENV === 'test') {
+    // @ts-ignore
+    if (isMainThread) global.events.emit('notification', event)
+    // @ts-ignore
+    else parentPort?.postMessage(event)
+  } else {
     if (config.privateEventsUrl) {
       if (sessionState?.user && (sessionState as SessionState & { isApiKey?: boolean }).isApiKey) {
         event.originator = { apiKey: { id: sessionState.user.id.replace('apiKey:', ''), title: sessionState.user.name } }

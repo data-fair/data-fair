@@ -20,7 +20,7 @@ export const init = async () => {
 export const emit = async (type: ResourceType, id: string) => {
   if (!messagesCollection) await init()
   const message = { type, id, date: new Date().toISOString() }
-  debug('insert ping message', message)
+  debug('insert ping message', type, id, message.date)
   await messagesCollection!.insertOne(message)
 }
 
@@ -51,7 +51,7 @@ export const listen = async (callback: (type: ResourceType, id: string) => Promi
       debug('create ping messages cursor', nbCursors, startDate)
       cursor = messagesCollection!.find({}, { tailable: true, awaitData: true })
       for await (const doc of cursor) {
-        debug('receive ping message', doc, startDate)
+        debug('receive ping message', doc.type, doc.id, doc.date, startDate)
         if (doc.date && doc.date < startDate) continue
         callback(doc.type, doc.id).catch(err => internalError('worker-ping-callback', err))
       }

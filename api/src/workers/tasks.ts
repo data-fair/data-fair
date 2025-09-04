@@ -6,7 +6,7 @@ import { basicTypes, csvTypes } from '../datasets/utils/types.js'
 import moment from 'moment'
 
 const createWorkers = () => {
-  return {
+  const workers = {
     // IO based worker for all small-ish tasks that we don't want to be blocked by longer tasks
     shortProcessor: new Piscina({
       filename: path.resolve(import.meta.dirname, './short-processor/index.ts'),
@@ -44,6 +44,16 @@ const createWorkers = () => {
       closeTimeout: config.worker.closeTimeout
     })
   }
+  if (process.env.NODE_ENV === 'test') {
+    for (const worker of Object.values(workers)) {
+      worker.on('message', (message) => {
+        // @ts-ignore
+        global.events.emit('notification', message)
+      })
+    }
+  }
+
+  return workers
 }
 
 export const workers = createWorkers()
