@@ -1,5 +1,6 @@
 import mongo from '#mongo'
 import es from '#es'
+import config from '#config'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import type { FileDataset, RestDataset, Dataset } from '#types'
 
@@ -42,16 +43,87 @@ export type NockInfo = {
 
 export const setNock = async function (nockInfo: NockInfo) {
   const nock = (await import('nock')).default
+  nock(nockInfo.origin)[nockInfo.method ?? 'get'](nockInfo.path).reply(nockInfo.reply.status, nockInfo.reply.body)
+}
+
+export const setCoordsNock = async function (params: { nbInputs: number, latLon?: number, query?: string, multiply?: boolean, error?: string }) {
+  const nock = (await import('nock')).default
   const assert = (await import('node:assert'))
-  let body = nockInfo.reply.body
-  if (body === '_coords') {
-    body = (uri: string, requestBody: string) => {
-      const inputs = requestBody.trim().split('\n').map(line => JSON.parse(line))
-      assert.equal(inputs.length, 2)
-      assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-      return inputs.map(input => ({ key: input.key, lat: 10, lon: 10 }))
-        .map(line => JSON.stringify(line)).join('\n') + '\n'
-    }
-  }
-  nock(nockInfo.origin)[nockInfo.method ?? 'get'](nockInfo.path).reply(nockInfo.reply.status, body)
+
+  nock('http://test.com').post('/geocoder/coords' + (params.query ?? '')).reply(200, (uri: string, requestBody: string) => {
+    const inputs = requestBody.trim().split('\n').map(line => JSON.parse(line))
+    assert.equal(inputs.length, params.nbInputs)
+    assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
+    return inputs
+      .map((input, i) => {
+        if (params.error) return { key: input.key, error: params.error }
+        let latLon = params.latLon ?? 10
+        if (params.multiply) latLon = latLon * i
+        return { key: input.key, lat: latLon, lon: latLon, matchLevel: 'match' + i }
+      })
+      .map(line => JSON.stringify(line)).join('\n') + '\n'
+  })
+}
+
+export const setSireneNock = async function () {
+  const nock = (await import('nock')).default
+  const assert = (await import('node:assert'))
+  nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
+  // /sirene/api/v1/etablissements_bulk?select=NOMEN_LONG%2Cbodacc.capital%2CTEFET%2Clocation.lat%2Clocation.lon'
+    .post('/sirene/etablissements_bulk?select=NOMEN_LONG%2Cbodacc.capital%2CTEFET%2Clocation.lat%2Clocation.lon')
+  // .query({ params: { select: 'NOMEN_LONG,bodacc.capital,TEFET,location.lat,location.lon' } })
+    .reply(200, (uri, requestBody) => {
+      const inputs = requestBody.trim().split('\n').map(JSON.parse)
+      assert.equal(inputs.length, 1)
+      assert.deepEqual(Object.keys(inputs[0]), ['siret', 'key'])
+      return JSON.stringify({
+        NOMEN_LONG: 'KOUMOUL',
+        'location.lon': '-2.748514',
+        'location.lat': '47.687173',
+        key: inputs[0].key
+      }) + '\n'
+    })
+}
+
+export const setSireneNock2 = async function () {
+  const nock = (await import('nock')).default
+  const assert = (await import('node:assert'))
+  nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
+  // /sirene/api/v1/etablissements_bulk?select=NOMEN_LONG%2Cbodacc.capital%2CTEFET%2Clocation.lat%2Clocation.lon'
+    .post('/sirene/etablissements_bulk?select=siret,NOMEN_LONG%2Cbodacc.capital%2CTEFET%2Clocation.lat%2Clocation.lon')
+  // .query({ params: { select: 'NOMEN_LONG,bodacc.capital,TEFET,location.lat,location.lon' } })
+    .reply(200, (uri, requestBody) => {
+      const inputs = requestBody.trim().split('\n').map(JSON.parse)
+      assert.equal(inputs.length, 1)
+      assert.deepEqual(Object.keys(inputs[0]), ['siret', 'key'])
+      return JSON.stringify({
+        siret: '82898347800011',
+        NOMEN_LONG: 'KOUMOUL',
+        'location.lon': '-2.748514',
+        'location.lat': '47.687173',
+        key: inputs[0].key
+      }) + '\n'
+    })
+}
+
+export const setSireneNock3 = async function () {
+  const nock = (await import('nock')).default
+  const assert = (await import('node:assert'))
+  nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
+  // /sirene/api/v1/etablissements_bulk?select=NOMEN_LONG%2Cbodacc.capital%2CTEFET%2Clocation.lat%2Clocation.lon'
+    .post('/sirene/etablissements_bulk?select=NOMEN_LONG%2Cbodacc.capital%2CTEFET')
+  // .query({ params: { select: 'NOMEN_LONG,bodacc.capital,TEFET,location.lat,location.lon' } })
+    .reply(200, (uri, requestBody) => {
+      const inputs = requestBody.trim().split('\n').map(JSON.parse)
+      assert.equal(inputs.length, 1)
+      assert.deepEqual(Object.keys(inputs[0]), ['siret', 'key'])
+      return JSON.stringify({
+        NOMEN_LONG: 'KOUMOUL',
+        key: inputs[0].key
+      }) + '\n'
+    })
+}
+
+export const setEnv = function ({ key, value }: { key: string, value: string | undefined }) {
+  process.env[key] = value
 }

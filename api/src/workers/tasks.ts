@@ -109,7 +109,7 @@ const datasetTasks: DatasetTask[] = [{
   name: 'downloadFile',
   eventsPrefix: 'download',
   worker: 'filesManager',
-  mongoFilter: () => ({ status: 'imported' })
+  mongoFilter: () => ({ $or: [{ status: 'imported', ...noActiveDraftFilter }, { 'draft.status': 'imported' }] })
 }, {
   name: 'normalizeFile',
   eventsPrefix: 'normalize',
@@ -171,7 +171,9 @@ const datasetTasks: DatasetTask[] = [{
   mongoFilter: () => ({
     $or: [
       { $and: [isValidatedMongoFilter(), noActiveDraftFilter, activeExtensionMongoFilter()] },
-      { $and: [isValidatedMongoFilter('draft.'), activeExtensionMongoFilter(true)] }
+      { $and: [isValidatedMongoFilter('draft.'), activeExtensionMongoFilter(true)] },
+      { isRest: true, status: 'finalized', 'extensions.active': true, _partialRestStatus: 'updated' },
+      { isRest: true, status: 'finalized', extensions: { $elemMatch: { active: true, needsUpdate: true } }, _partialRestStatus: null }
     ]
   })
 }, {
@@ -184,7 +186,8 @@ const datasetTasks: DatasetTask[] = [{
       { $and: [isValidatedMongoFilter('draft.'), activeExtensionMongoFilter(true, true)] },
       { status: 'extended', ...noActiveDraftFilter },
       { 'draft.status': 'extended' },
-      { isRest: true, _partialRestStatus: 'extended' }
+      { isRest: true, status: 'finalized', _partialRestStatus: 'extended' },
+      { isRest: true, status: 'finalized', _partialRestStatus: 'updated', extensions: { $not: { $elemMatch: { active: true } } } }
     ]
   })
 }, {
@@ -195,7 +198,7 @@ const datasetTasks: DatasetTask[] = [{
     $or: [
       { status: 'indexed', ...noActiveDraftFilter },
       { 'draft.status': 'indexed' },
-      { isRest: true, _partialRestStatus: 'indexed' }
+      { isRest: true, status: 'finalized', _partialRestStatus: 'indexed' }
     ]
   }),
 }, {

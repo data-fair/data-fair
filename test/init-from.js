@@ -2,9 +2,7 @@ import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import fs from 'node:fs'
 import FormData from 'form-data'
-import nock from 'nock'
 import * as workers from '../api/src/workers/index.ts'
-import config from 'config'
 
 describe('Datasets with auto-initialization from another one', function () {
   it('Create REST dataset with copied information from file dataset', async function () {
@@ -163,14 +161,7 @@ describe('Datasets with auto-initialization from another one', function () {
     attachmentForm.append('attachment', fs.readFileSync('./resources/avatar.jpeg'), 'avatar.jpeg')
     await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
 
-    const nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
-      .post('/geocoder/coords?select=lat,lon').reply(200, (uri, requestBody) => {
-        const inputs = requestBody.trim().split('\n').map(JSON.parse)
-        assert.equal(inputs.length, 2)
-        assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-        return inputs.map((input, i) => ({ key: input.key, lat: 10, lon: 10, matchLevel: 'match' + i }))
-          .map(JSON.stringify).join('\n') + '\n'
-      })
+    await workers.workers.batchProcessor.run({ nbInputs: 2, latLon: 10, query: '?select=lat,lon' }, { name: 'setCoordsNock' })
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
 
     await ax.patch('/api/v1/datasets/' + dataset.id, {
@@ -194,7 +185,6 @@ describe('Datasets with auto-initialization from another one', function () {
       attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }]
     })
     await workers.hook('finalize/' + dataset.id)
-    nockScope.done()
 
     const res = await ax.post('/api/v1/datasets', {
       title: 'init from schema',
@@ -256,7 +246,7 @@ describe('Datasets with auto-initialization from another one', function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
 
-    const nockScope = nock('http://test-remote.com').get('/data.csv').reply(200, 'col\nval1\nval2')
+    await workers.workers.filesManager.run({ origin: 'http://test-remote.com', method: 'get', path: '/data.csv', reply: { status: 200, body: 'col\nval1\nval' } }, { name: 'setNock' })
     let initFromDataset = (await ax.post('/api/v1/datasets', {
       title: 'init from schema remote file',
       initFrom: {
@@ -265,7 +255,6 @@ describe('Datasets with auto-initialization from another one', function () {
       remoteFile: { url: 'http://test-remote.com/data.csv', autoUpdate: { active: true } }
     }, { params: { draft: true } })).data
     initFromDataset = await workers.hook('finalize/' + initFromDataset.id)
-    nockScope.done()
 
     assert.equal(initFromDataset.status, 'draft')
     assert.equal(initFromDataset.draft.file.name, 'data.csv')
@@ -338,7 +327,7 @@ describe('Datasets with auto-initialization from another one', function () {
       }
     })
     assert.equal(res.status, 201)
-    assert.rejects(workers.hook('finalize/' + res.data.id), err => err.message.includes('permission manquante'))
+    await assert.rejects(workers.hook('finalize/' + res.data.id), err => err.message.includes('permission manquante'))
   })
 
   it('Initialize dataset in a department from dataset in orga', async function () {

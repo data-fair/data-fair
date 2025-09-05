@@ -69,7 +69,7 @@ describe('workers', function () {
     const form2 = new FormData()
     form2.append('file', datasetFd2, 'dataset.csv')
     await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })
-    await assert.rejects(workers.hook('indexer'), () => true)
+    await assert.rejects(workers.hook('indexLines'), () => true)
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
     assert.equal(res.status, 200)
     assert.equal(res.data[0].type, 'error')
@@ -149,7 +149,7 @@ describe('workers', function () {
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
     const dataset = res.data
-    await assert.rejects(workers.hook(`indexer/${dataset.id}`), () => true)
+    await assert.rejects(workers.hook(`indexLines/${dataset.id}`), () => true)
     // Check that there is an error message in the journal
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
     assert.equal(res.status, 200)
@@ -163,7 +163,7 @@ describe('workers', function () {
     const ax = global.ax.dmeadus
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'trigger test error 400', schema: [{ key: 'test', type: 'string' }] })).data
     await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines?async=true`, [{ test: 'test' }])
-    await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
+    await assert.rejects(workers.hook('indexLines/' + dataset.id), () => true)
     // Check that there is an error message in the journal
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal[0].type, 'error')
@@ -181,7 +181,7 @@ describe('workers', function () {
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
 
-    await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
+    await assert.rejects(workers.hook('indexLines/' + dataset.id), () => true)
     let journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal[0].type, 'error-retry')
     assert.equal(journal[0].data, 'This is a test error')
@@ -192,7 +192,7 @@ describe('workers', function () {
 
     await new Promise(resolve => setTimeout(resolve, 100))
 
-    await assert.rejects(workers.hook('indexer/' + dataset.id), () => true)
+    await assert.rejects(workers.hook('indexLines/' + dataset.id), () => true)
     journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     assert.equal(journal[0].type, 'error')
     assert.equal(journal[0].data, 'This is a test error')

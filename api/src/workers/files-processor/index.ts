@@ -1,5 +1,6 @@
 import mongo from '#mongo'
 import type { FileDataset } from '#types'
+import config from '#config'
 
 export const analyzeCsv = async function (dataset: FileDataset) {
   await mongo.connect(true)
@@ -21,4 +22,8 @@ export const normalizeFile = async function (dataset: FileDataset) {
 
 export const setEnv = function ({ key, value }: { key: string, value: string | undefined }) {
   process.env[key] = value
+}
+
+export const setConfig = function ({ key, value }: { key: string, value: any }) {
+  config[key] = value
 }

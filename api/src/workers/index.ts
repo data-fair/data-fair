@@ -122,7 +122,7 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
     }
     events.emit(task.name + '/' + id, { type, id })
   } catch (err: any) {
-    let errorMessage = err.message as string
+    let errorMessage = (typeof err === 'string' ? err : (err.message as string)) || 'unknown error'
 
     if (stopped) {
       console.log('task failed while service was shutting down', errorMessage)
@@ -142,7 +142,7 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
     }
     if (retry) {
       // if this is the second time we get this error, do not retry anymore
-      const hasErrorRetry = await journals.hasErrorRetry(mongo.db, resource, type)
+      const hasErrorRetry = await journals.hasErrorRetry(resource, type)
       debug('does the journal have a recent error-retry event', hasErrorRetry)
       if (hasErrorRetry) {
         debug('last log in journal was already a retry')

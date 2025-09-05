@@ -16,14 +16,8 @@ describe('Extensions', function () {
     let dataset = await testUtils.sendDataset('datasets/dataset-extensions.csv', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
-    let nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
-      .post('/geocoder/coords').reply(200, (uri, requestBody) => {
-        const inputs = requestBody.trim().split('\n').map(JSON.parse)
-        assert.equal(inputs.length, 2)
-        assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-        return inputs.map((input, i) => ({ key: input.key, lat: 10, lon: 10, matchLevel: 'match' + i }))
-          .map(JSON.stringify).join('\n') + '\n'
-      })
+    await workers.workers.batchProcessor.run({ nbInputs: 2, latLon: 10 }, { name: 'setCoordsNock' })
+
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -31,7 +25,6 @@ describe('Extensions', function () {
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalize/${dataset.id}`)
-    nockScope.done()
     const extensionKey = dataset.extensions[0].propertyPrefix
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lat'))
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lon'))
@@ -66,13 +59,7 @@ describe('Extensions', function () {
 
     // Add a line to dataset
     // Re-prepare for extension, it should only process the new line
-    nockScope = nock('http://test.com').post('/geocoder/coords').reply(200, (uri, requestBody) => {
-      const inputs = requestBody.trim().split('\n').map(JSON.parse)
-      assert.equal(inputs.length, 1)
-      assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-      return inputs.map(input => ({ key: input.key, lat: 50, lon: 50 }))
-        .map(JSON.stringify).join('\n') + '\n'
-    })
+    await workers.workers.batchProcessor.run({ nbInputs: 1, latLon: 50 }, { name: 'setCoordsNock' })
     const form = new FormData()
     let content = await fs.readFile('resources/datasets/dataset-extensions.csv')
     content += 'me,3 les noés la chapelle caro\n'
@@ -80,7 +67,6 @@ describe('Extensions', function () {
     res = await ax.post(`/api/v1/datasets/${dataset.id}`, form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 200)
     await workers.hook(`finalize/${dataset.id}`)
-    nockScope.done()
     // A search to check re-indexed results with preserved extensions
     // and new result with new extension
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?select=*`)
@@ -101,17 +87,10 @@ describe('Extensions', function () {
     assert.equal(res.data.length, 2)
 
     // Reduce selected output using extension.select
-    nockScope = nock('http://test.com').post('/geocoder/coords?select=lat,lon').reply(200, (uri, requestBody) => {
-      const inputs = requestBody.trim().split('\n').map(JSON.parse)
-      assert.equal(inputs.length, 3)
-      assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-      return inputs.map(input => ({ key: input.key, lat: 40, lon: 40 }))
-        .map(JSON.stringify).join('\n') + '\n'
-    })
+    await workers.workers.batchProcessor.run({ nbInputs: 3, latLon: 40, query: '?select=lat,lon' }, { name: 'setCoordsNock' })
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords', select: ['lat', 'lon'] }] })
     assert.equal(res.status, 200)
     await workers.hook(`finalize/${dataset.id}`)
-    nockScope.done()
 
     // Download extended file
     res = await ax.get(`/api/v1/datasets/${dataset.id}/full`)
@@ -127,7 +106,7 @@ describe('Extensions', function () {
     assert.equal(res.data.length, 2)
 
     // perform the extension as a simulation on a pseudo line
-    nockScope = nock('http://test.com').post('/geocoder/coords?select=lat,lon').reply(200, (uri, requestBody) => {
+    nock('http://test.com').post('/geocoder/coords?select=lat,lon').reply(200, (uri, requestBody) => {
       const inputs = requestBody.trim().split('\n').map(JSON.parse)
       assert.equal(inputs.length, 1)
       assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
@@ -135,7 +114,6 @@ describe('Extensions', function () {
         .map(JSON.stringify).join('\n') + '\n'
     })
     res = await ax.post(`/api/v1/datasets/${dataset.id}/_simulate-extension`, { adr: 'test simulation' })
-    nockScope.done()
     assert.deepEqual(res.data, { adr: 'test simulation', '_coords.lat': 30, '_coords.lon': 30 })
 
     // remove the extension
@@ -154,14 +132,7 @@ describe('Extensions', function () {
     let dataset = await testUtils.sendDataset('datasets/dataset-extensions.xlsx', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
-    const nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
-      .post('/geocoder/coords').reply(200, (uri, requestBody) => {
-        const inputs = requestBody.trim().split('\n').map(JSON.parse)
-        assert.equal(inputs.length, 3)
-        assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-        return inputs.map((input, i) => ({ key: input.key, lat: 10 * i, lon: 10 * i }))
-          .map(JSON.stringify).join('\n') + '\n'
-      })
+    await workers.workers.batchProcessor.run({ nbInputs: 3, latLon: 10, multiply: true }, { name: 'setCoordsNock' })
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -169,7 +140,6 @@ describe('Extensions', function () {
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalize/${dataset.id}`)
-    nockScope.done()
     const extensionKey = dataset.extensions[0].propertyPrefix
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lat'))
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lon'))
@@ -194,14 +164,7 @@ describe('Extensions', function () {
     let dataset = await testUtils.sendDataset('datasets/dataset-extensions2.csv', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
-    const nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
-      .post('/geocoder/coords').reply(200, (uri, requestBody) => {
-        const inputs = requestBody.trim().split('\n').map(JSON.parse)
-        assert.equal(inputs.length, 2)
-        assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-        return inputs.map(input => ({ key: input.key, lat: 10, lon: 10 }))
-          .map(JSON.stringify).join('\n') + '\n'
-      })
+    await workers.workers.batchProcessor.run({ nbInputs: 2, latLon: 10 }, { name: 'setCoordsNock' })
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -209,7 +172,6 @@ describe('Extensions', function () {
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalize/${dataset.id}`)
-    nockScope.done()
     const extensionKey = dataset.extensions[0].propertyPrefix
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lat'))
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.lon'))
@@ -226,21 +188,7 @@ describe('Extensions', function () {
     let dataset = await testUtils.sendDataset('datasets/dataset-siret-extensions.csv', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
-    const nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
-      // /sirene/api/v1/etablissements_bulk?select=NOMEN_LONG%2Cbodacc.capital%2CTEFET%2Clocation.lat%2Clocation.lon'
-      .post('/sirene/etablissements_bulk?select=NOMEN_LONG%2Cbodacc.capital%2CTEFET%2Clocation.lat%2Clocation.lon')
-      // .query({ params: { select: 'NOMEN_LONG,bodacc.capital,TEFET,location.lat,location.lon' } })
-      .reply(200, (uri, requestBody) => {
-        const inputs = requestBody.trim().split('\n').map(JSON.parse)
-        assert.equal(inputs.length, 1)
-        assert.deepEqual(Object.keys(inputs[0]), ['siret', 'key'])
-        return JSON.stringify({
-          NOMEN_LONG: 'KOUMOUL',
-          'location.lon': '-2.748514',
-          'location.lat': '47.687173',
-          key: inputs[0].key
-        }) + '\n'
-      })
+    await workers.workers.batchProcessor.run({}, { name: 'setSireneNock' })
     dataset.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -260,7 +208,6 @@ describe('Extensions', function () {
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalize/${dataset.id}`)
-    nockScope.done()
     const extensionKey = dataset.extensions[0].propertyPrefix
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.location.lat'))
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.location.lon'))
@@ -301,32 +248,29 @@ other,unknown address
     let dataset = await workers.hook(`finalize/${res.data.id}`)
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     // Prepare for extension failure with HTTP error code
-    nock('http://test.com').post('/geocoder/coords').reply(500, 'some error')
+    const nockInfo1 = { origin: 'http://test.com', method: 'post', path: '/geocoder/coords', reply: { status: 500, body: 'some error' } }
+    await workers.workers.batchProcessor.run(nockInfo1, { name: 'setNock' })
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     assert.equal(res.status, 200)
-    try {
-      await workers.hook('extend/' + dataset.id)
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.message, '500 - some error')
-    }
+    await assert.rejects(workers.hook('extend/' + dataset.id), { message: '500 - some error' })
 
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
     assert.equal(dataset.status, 'error')
+    assert.ok(dataset.errorRetry)
+    assert.equal(dataset.errorStatus, 'validated')
+
+    // 1 auto-retry
+    await workers.workers.batchProcessor.run(nockInfo1, { name: 'setNock' })
+    await assert.rejects(workers.hook('extend/' + dataset.id), { message: '500 - some error' })
 
     // Prepare for extension failure with bad body in response
-    nock('http://test.com').post('/geocoder/coords').reply(200, 'some error')
+    await workers.workers.batchProcessor.run({ origin: 'http://test.com', method: 'post', path: '/geocoder/coords', reply: { status: 200, body: 'some error' } }, { name: 'setNock' })
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, type: 'remoteService', forceNext: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }] })
     assert.equal(res.status, 200)
-    try {
-      await workers.hook('extend/' + dataset.id)
-      assert.fail()
-    } catch (err) {
-      assert.ok(err.message.includes('Unexpected token'))
-    }
+    await assert.rejects(workers.hook('extend/' + dataset.id), { message: /Unexpected token/ })
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`)).data
     assert.equal(dataset.status, 'error')
   })
@@ -345,14 +289,7 @@ empty,
     assert.equal(res.status, 201)
     const dataset = await workers.hook(`finalize/${res.data.id}`)
 
-    nock('http://test.com', { reqheaders: { 'x-apiKey': 'test_default_key' } })
-      .post('/geocoder/coords').reply(200, (uri, requestBody) => {
-        const inputs = requestBody.trim().split('\n').map(JSON.parse)
-        assert.equal(inputs.length, 1)
-        return inputs.map(input => ({ key: input.key, lat: 10, lon: 10 }))
-          .map(JSON.stringify).join('\n') + '\n'
-      })
-
+    await workers.workers.batchProcessor.run({ nbInputs: 1, latLon: 10 }, { name: 'setCoordsNock' })
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -375,12 +312,7 @@ koumoul,19 rue de la voie lactée saint avé
     assert.equal(res.status, 201)
     const dataset = await workers.hook(`finalize/${res.data.id}`)
 
-    nock('http://test.com', { reqheaders: { 'x-apiKey': 'test_default_key' } })
-      .post('/geocoder/coords').reply(200, (uri, requestBody) => {
-        const inputs = requestBody.trim().split('\n').map(JSON.parse)
-        return inputs.map(input => ({ key: input.key, lat: 10, lon: 10 }))
-          .map(JSON.stringify).join('\n') + '\n'
-      })
+    await workers.workers.batchProcessor.run({ nbInputs: 1, latLon: 10 }, { name: 'setCoordsNock' })
 
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
@@ -421,7 +353,8 @@ koumoul,19 rue de la voie lactée saint avé
     let dataset = await testUtils.sendDataset('datasets/dataset-siret-extensions.csv', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
-    const nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
+    await workers.workers.batchProcessor.run({}, { name: 'setSireneNock2' })
+    /* const nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
       // /sirene/api/v1/etablissements_bulk?select=NOMEN_LONG%2Cbodacc.capital%2CTEFET%2Clocation.lat%2Clocation.lon'
       .post('/sirene/etablissements_bulk?select=siret,NOMEN_LONG%2Cbodacc.capital%2CTEFET%2Clocation.lat%2Clocation.lon')
       // .query({ params: { select: 'NOMEN_LONG,bodacc.capital,TEFET,location.lat,location.lon' } })
@@ -436,7 +369,7 @@ koumoul,19 rue de la voie lactée saint avé
           'location.lat': '47.687173',
           key: inputs[0].key
         }) + '\n'
-      })
+      }) */
     dataset.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
     const res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -457,7 +390,6 @@ koumoul,19 rue de la voie lactée saint avé
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalize/${dataset.id}`)
-    nockScope.done()
     const extensionKey = dataset.extensions[0].propertyPrefix
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.location.lat'))
     const extSiret = dataset.schema.find(field => field.key === extensionKey + '.siret')
@@ -482,7 +414,7 @@ koumoul,19 rue de la voie lactée saint avé
       schema: [{ key: 'address', type: 'string', 'x-refersTo': 'http://schema.org/address' }],
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })).data
-    await workers.hook(`finalize/${dataset.id}`)
+    // await workers.hook(`finalize/${dataset.id}`)
 
     // extend first inserted line
     let nockScope = getExtensionNock({ lat: 10, lon: 10 })
@@ -577,19 +509,13 @@ other,unknown address
     assert.equal(res.status, 201)
     let dataset = await workers.hook(`finalize/${res.data.id}`)
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
-    const nockScope = nock('http://test.com').post('/geocoder/coords').reply(200, (uri, requestBody) => {
-      const inputs = requestBody.trim().split('\n').map(JSON.parse)
-      assert.equal(inputs.length, 2)
-      assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-      return inputs.map(input => ({ key: input.key, lat: 50, lon: 50 }))
-        .map(JSON.stringify).join('\n') + '\n'
-    })
+    await workers.workers.batchProcessor.run({ nbInputs: 2, latLon: 50 }, { name: 'setCoordsNock' })
+
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     await workers.hook(`extend/${dataset.id}`)
-    nockScope.done()
     dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.equal(dataset.extensions.length, 1)
     assert.equal(dataset.schema.length, 11)
@@ -617,19 +543,12 @@ other,unknown address
     assert.equal(res.status, 201)
     let dataset = await workers.hook(`finalize/${res.data.id}`)
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
-    const nockScope = nock('http://test.com').post('/geocoder/coords').reply(200, (uri, requestBody) => {
-      const inputs = requestBody.trim().split('\n').map(JSON.parse)
-      assert.equal(inputs.length, 2)
-      assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-      return inputs.map(input => ({ key: input.key, lat: 50, lon: 50 }))
-        .map(JSON.stringify).join('\n') + '\n'
-    })
+    await workers.workers.batchProcessor.run({ nbInputs: 2, latLon: 50 }, { name: 'setCoordsNock' })
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
     await workers.hook(`extend/${dataset.id}`)
-    nockScope.done()
     dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.equal(dataset.extensions.length, 1)
     assert.equal(dataset.schema.length, 11)
@@ -650,19 +569,7 @@ other,unknown address
     let dataset = await testUtils.sendDataset('datasets/dataset-siret-extensions.geojson', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
-    const nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
-      // /sirene/api/v1/etablissements_bulk?select=NOMEN_LONG%2Cbodacc.capital%2CTEFET%2Clocation.lat%2Clocation.lon'
-      .post('/sirene/etablissements_bulk?select=NOMEN_LONG%2Cbodacc.capital%2CTEFET')
-      // .query({ params: { select: 'NOMEN_LONG,bodacc.capital,TEFET,location.lat,location.lon' } })
-      .reply(200, (uri, requestBody) => {
-        const inputs = requestBody.trim().split('\n').map(JSON.parse)
-        assert.equal(inputs.length, 1)
-        assert.deepEqual(Object.keys(inputs[0]), ['siret', 'key'])
-        return JSON.stringify({
-          NOMEN_LONG: 'KOUMOUL',
-          key: inputs[0].key
-        }) + '\n'
-      })
+    await workers.workers.batchProcessor.run({}, { name: 'setSireneNock3' })
     dataset.schema.find(field => field.key === 'siret')['x-refersTo'] = 'http://www.datatourisme.fr/ontology/core/1.0/#siret'
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -680,7 +587,6 @@ other,unknown address
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalize/${dataset.id}`)
-    nockScope.done()
     const extensionKey = dataset.extensions[0].propertyPrefix
     assert.ok(dataset.schema.find(field => field.key === extensionKey + '.NOMEN_LONG'))
 
@@ -738,7 +644,6 @@ other,unknown address
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
-    console.log(res.data.results)
     assert.equal(res.data.results[0].test, 'Test')
     assert.equal(res.data.results[1].test, 'Test')
   })
@@ -768,16 +673,7 @@ other,unknown address
     let dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
 
     // Prepare for extension using created remote service and patch dataset to ask for it
-    const nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
-      .post('/geocoder/coords').reply(200, (uri, requestBody) => {
-        const inputs = requestBody.trim().split('\n').map(JSON.parse)
-        assert.equal(inputs.length, 2)
-        assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-        return inputs
-          .filter((input, i) => i !== 0)
-          .map((input, i) => ({ key: input.key, lat: 10 * i, lon: 10 * i, matchLevel: 'street' }))
-          .map(JSON.stringify).join('\n') + '\n'
-      })
+    await workers.workers.batchProcessor.run({ nbInputs: 2, latLon: 10, multiply: true }, { name: 'setCoordsNock' })
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
 
     let res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
@@ -789,13 +685,12 @@ other,unknown address
     })
     assert.equal(res.status, 200)
     dataset = await workers.hook(`finalize/${dataset.id}`)
-    nockScope.done()
     assert.ok(dataset.schema.find(field => field.key === 'calc1'))
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
-    assert.equal(res.data.results[0].calc1, 'koumoul - 19 rue de la voie lactée saint avé -')
-    assert.equal(res.data.results[1].calc1, 'bidule - adresse inconnue - street')
+    assert.equal(res.data.results[0].calc1, 'koumoul - 19 rue de la voie lactée saint avé - match0')
+    assert.equal(res.data.results[1].calc1, 'bidule - adresse inconnue - match1')
   })
 
   it('Manage some errors in expressions', async function () {
@@ -862,7 +757,7 @@ other,unknown address
     dataset = (await ax.put(`/api/v1/datasets/${dataset.id}`, form, { headers: testUtils.formHeaders(form), params: { draft: true } })).data
 
     await assert.rejects(workers.hook(`finalize/${dataset.id}`), (err) => {
-      assert.equal(err.message, 'Une extension essaie de créer la colonne "employees" mais cette clé est déjà utilisée.')
+      assert.equal(err.message, '[noretry] Une extension essaie de créer la colonne "employees" mais cette clé est déjà utilisée.')
       return true
     })
   })
@@ -901,7 +796,6 @@ other,unknown address
         property: { key: 'exp', type: 'string' }
       }]
     })).data
-    await workers.hook(`finalize/${dataset.id}`)
     await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ str1: 'str 1', str2: 'str 2' }, { str1: 'UPPER STR 1', str2: 'UPPER STR 2' }])
     await workers.hook(`finalize/${dataset.id}`)
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
@@ -933,7 +827,7 @@ other,unknown address
       ]
     })
     assert.equal(res.status, 200)
-    await assert.rejects(workers.hook(`finalize/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"\"value\"\" : /calc1 doit être de type number (résultat : \"value\")" })
+    await assert.rejects(workers.hook(`finalize/${dataset.id}`), { message: "[noretry] échec de l'évaluation de l'expression \"\"value\"\" : /calc1 doit être de type number (résultat : \"value\")" })
 
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -975,7 +869,7 @@ other,unknown address
       ]
     })
     assert.equal(res.status, 200)
-    await assert.rejects(workers.hook(`finalize/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"[[1],[2]]\" : /calc1 doit être de type number (résultat : [[1],[2]])" })
+    await assert.rejects(workers.hook(`finalize/${dataset.id}`), { message: "[noretry] échec de l'évaluation de l'expression \"[[1],[2]]\" : /calc1 doit être de type number (résultat : [[1],[2]])" })
 
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.schema,
@@ -984,6 +878,6 @@ other,unknown address
       ]
     })
     assert.equal(res.status, 200)
-    await assert.rejects(workers.hook(`finalize/${dataset.id}`), { message: "échec de l'évaluation de l'expression \"\"wrongDate\"\" : /calc1 doit correspondre au format \"date-time\" (date-time) (résultat : \"wrongDate\")" })
+    await assert.rejects(workers.hook(`finalize/${dataset.id}`), { message: "[noretry] échec de l'évaluation de l'expression \"\"wrongDate\"\" : /calc1 doit correspondre au format \"date-time\" (date-time) (résultat : \"wrongDate\")" })
   })
 })

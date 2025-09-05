@@ -78,7 +78,7 @@ describe('geo files support', function () {
     const geomProp = dataset.schema.find(p => p.key === 'geometry')
     geomProp['x-capabilities'] = { vtPrepare: true }
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
-    await workers.hook(`indexer/${dataset.id}`)
+    await workers.hook(`indexLines/${dataset.id}`)
     await workers.hook(`finalize/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=49,31,6&format=pbf&q=blabla&sampling=max`)
     assert.equal(res.status, 200)
@@ -212,7 +212,7 @@ describe('geo files support', function () {
 
     // ES indexation and finalization
     try {
-      await workers.hook('indexer/' + dataset.id)
+      await workers.hook('indexLines/' + dataset.id)
       assert.fail()
     } catch (err) {
       // Check that there is an error message in the journal
@@ -235,7 +235,7 @@ describe('geo files support', function () {
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     const dataset = res.data
     assert.equal(res.status, 201)
-    await workers.hook('indexer/' + dataset.id)
+    await workers.hook('indexLines/' + dataset.id)
   })
 
   it('Process uploaded shapefile dataset', async function () {
@@ -303,6 +303,7 @@ describe('geo files support', function () {
     }
     const oldLimit = { ...config.defaultLimits }
     config.defaultLimits.totalStorage = config.defaultLimits.datasetStorage = 10000000
+    await workers.workers.filesProcessor.run({ key: 'defaultLimits', value: config.defaultLimits }, { name: 'setConfig' })
 
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/geo/paths.gpx')
@@ -327,5 +328,6 @@ describe('geo files support', function () {
     assert.equal(lines.results[0].name, 'Tronçon n°1 - de Saint-Brieuc (22) à Saint-Nic (29)')
 
     config.defaultLimits = oldLimit
+    await workers.workers.filesProcessor.run({ key: 'defaultLimits', value: oldLimit }, { name: 'setConfig' })
   })
 })

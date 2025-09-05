@@ -1533,7 +1533,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
 
     res = await ax.patch('/api/v1/datasets/restunset', { schema: [{ key: 'attr1', type: 'string', readOnly: true }] })
 
-    await workers.hook('indexer/restunset')
+    await workers.hook('indexLines/restunset')
     dataset = await workers.hook('finalize/restunset')
     const storage2 = dataset.storage.size
     assert.ok(storage2 < storage1)
@@ -1556,7 +1556,7 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
 
     res = await ax.patch('/api/v1/datasets/updatedby', { rest: { storeUpdatedBy: true } })
 
-    await workers.hook('indexer/updatedby')
+    await workers.hook('indexLines/updatedby')
     await workers.hook('finalize/updatedby')
 
     res = await ax.get('/api/v1/datasets/updatedby/lines')

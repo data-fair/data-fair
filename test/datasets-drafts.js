@@ -14,7 +14,7 @@ import { indexPrefix } from '../api/src/datasets/es/manage-indices.js'
 nock('http://test-catalog.com').persist()
   .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
 
-describe.only('datasets in draft mode', function () {
+describe('datasets in draft mode', function () {
   it('create new dataset in draft mode and validate it', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
@@ -691,8 +691,7 @@ other,address
     let dataset = await workers.hook(`finalize/${res.data.id}`)
     dataset.draft.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     // Prepare for extension
-    const nockInfo = { origin: 'http://test.com', method: 'post', path: '/geocoder/coords', reply: { status: 200, body: '_coords' } }
-    await workers.workers.batchProcessor.run(nockInfo, { name: 'setNock' })
+    await workers.workers.batchProcessor.run({ nbInputs: 2, latLon: 10 }, { name: 'setCoordsNock' })
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.draft.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
