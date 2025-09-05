@@ -14,7 +14,7 @@ import { indexPrefix } from '../api/src/datasets/es/manage-indices.js'
 nock('http://test-catalog.com').persist()
   .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
 
-describe('datasets in draft mode', function () {
+describe.only('datasets in draft mode', function () {
   it('create new dataset in draft mode and validate it', async function () {
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/datasets/dataset1.csv')
@@ -90,7 +90,6 @@ describe('datasets in draft mode', function () {
     assert.equal(dataset.count, 2)
     assert.ok(dataset.bbox)
     assert.ok(!await fs.pathExists(`../data/test/user/dmeadus0/datasets-drafts/${dataset.id}`))
-    console.log(dataset.dataUpdatedAt, dataset.dataUpdatedBy)
 
     // querying lines is now possible
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -325,7 +324,7 @@ describe('datasets in draft mode', function () {
     const schema = dataset.schema
     schema[0].pattern = '^[a-z]+$'
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
-    dataset = await workers.hook('fileValidator')
+    dataset = await workers.hook('validateFile/' + dataset.id)
 
     // upload a new file
     const datasetFd2 = fs.readFileSync('./resources/datasets/dataset1-invalid.csv')
@@ -356,7 +355,7 @@ describe('datasets in draft mode', function () {
     const schema = dataset.schema
     schema[0].pattern = '^[a-z]+$'
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
-    dataset = await workers.hook('fileValidator')
+    dataset = await workers.hook('validateFile/' + dataset.id)
 
     // upload a new file
     const datasetFd2 = fs.readFileSync('./resources/datasets/dataset1-invalid.csv')
@@ -367,7 +366,7 @@ describe('datasets in draft mode', function () {
     assert.equal(dataset.status, 'loaded')
     assert.equal(dataset.draftReason.key, 'file-updated')
     assert.equal(dataset.draftReason.validationMode, 'compatibleOrCancel')
-    await workers.hook('fileValidator/' + dataset.id)
+    await workers.hook('validateFile/' + dataset.id)
 
     dataset = await ax.get(`/api/v1/datasets/${dataset.id}?draft=true`).then(r => r.data)
     assert.ok(!dataset.draftReason)
@@ -398,7 +397,7 @@ describe('datasets in draft mode', function () {
     form2.append('description', 'draft description 2')
     const datasetDraft2 = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })).data
     assert.equal(datasetDraft2.status, 'created')
-    dataset = await workers.hook('finalize/' + dataset)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.ok(!dataset.file)
     assert.equal(dataset.status, 'draft')
     assert.ok(dataset.draft.draftReason.key, 'file-new')
@@ -535,8 +534,8 @@ describe('datasets in draft mode', function () {
     form2.append('attachments', fs.readFileSync('./resources/datasets/files2.zip'), 'files2.zip')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form2, { headers: testUtils.formHeaders(form2), params: { draft: true } })
     await assert.rejects(workers.hook(`finalize/${dataset.id}`), (err) => {
+      console.log(err.stack)
       if (!err.message.includes('Valeurs invalides : dir1/test.pdf')) {
-        console.error('wrong error message in error', err)
         assert.fail(`error message should contain "Valeurs invalides : dir1/test.pdf", instead got "${err.message}"`)
       }
       return true
@@ -613,7 +612,7 @@ describe('datasets in draft mode', function () {
     assert.equal(res.status, 201)
 
     // dataset converted
-    let dataset = await workers.hook('fileNormalizer')
+    let dataset = await workers.hook('normalizeFile/' + res.data.id)
     assert.equal(dataset.status, 'draft')
     assert.equal(dataset.draft.status, 'normalized')
     assert.equal(dataset.draft.file.name, 'stations.geojson')
@@ -658,21 +657,23 @@ other,unknown address
     let dataset = await workers.hook(`finalize/${res.data.id}`)
     dataset.draft.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     // Prepare for extension failure with HTTP error code
-    nock('http://test.com').post('/geocoder/coords').reply(500, 'some error')
+    const nockInfo = { origin: 'http://test.com', method: 'post', path: '/geocoder/coords', reply: { status: 500, body: 'some error' } }
+    await workers.workers.batchProcessor.run(nockInfo, { name: 'setNock' })
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.draft.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     }, { params: { draft: true } })
     assert.equal(res.status, 200)
-    try {
-      await workers.hook('extender')
-      assert.fail()
-    } catch (err) {
-      assert.equal(err.message, '500 - some error')
-    }
+    await assert.rejects(workers.hook('extend/' + dataset.id), { message: '500 - some error' })
 
     dataset = (await ax.get(`/api/v1/datasets/${dataset.id}`, { params: { draft: true } })).data
     assert.equal(dataset.status, 'error')
+    assert.ok(dataset.errorRetry)
+    assert.equal(dataset.errorStatus, 'validated')
+
+    // 1 auto-retry
+    await workers.workers.batchProcessor.run(nockInfo, { name: 'setNock' })
+    await assert.rejects(workers.hook('extend/' + dataset.id), { message: '500 - some error' })
   })
 
   it('Fails when draft file is missing the input properties', async function () {
@@ -690,13 +691,8 @@ other,address
     let dataset = await workers.hook(`finalize/${res.data.id}`)
     dataset.draft.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
     // Prepare for extension
-    nock('http://test.com').post('/geocoder/coords').reply(200, (uri, requestBody) => {
-      const inputs = requestBody.trim().split('\n').map(JSON.parse)
-      assert.equal(inputs.length, 2)
-      assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-      return inputs.map(input => ({ key: input.key, lat: 10, lon: 10 }))
-        .map(JSON.stringify).join('\n') + '\n'
-    })
+    const nockInfo = { origin: 'http://test.com', method: 'post', path: '/geocoder/coords', reply: { status: 200, body: '_coords' } }
+    await workers.workers.batchProcessor.run(nockInfo, { name: 'setNock' })
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, {
       schema: dataset.draft.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]

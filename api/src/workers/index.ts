@@ -16,6 +16,8 @@ import { internalError } from '@data-fair/lib-node/observer.js'
 
 const debug = debugLib('workers')
 
+export { workers } from './tasks.ts'
+
 const workersTasksHistogram = new Histogram({
   name: 'df_datasets_workers_tasks',
   help: 'Number and duration in seconds of tasks run by the workers',
@@ -61,13 +63,17 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
       facets[task.name] = facet
     }
     const results = await mongo.db.collection<any>(type).aggregate([{ $facet: facets }]).toArray().then(agg => agg[0])
+    if (process.env.NODE_ENV === 'test') {
+      const matchedTasks = freeTasks.map(t => t.name).filter(t => results[t]?.length)
+      if (matchedTasks.length > 1) throw new Error('task selecion was not exclusive ' + JSON.stringify(matchedTasks))
+    }
     for (const task of freeTasks) {
       const resource = results[task.name][0]
       if (resource) {
         delete resource._locks
         delete resource._lockId
         // if there is something to be done in the draft mode of the dataset, it is prioritary
-        if (type === 'datasets' && resource.draft && resource.draft.status !== 'finalized' && resource.draft.status !== 'error') {
+        if (type === 'datasets' && resource.draft && resource.draft.status !== 'finalized' && (resource.draft.status !== 'error' || task.name === 'errorRetry')) {
           mergeDraft(resource)
         }
         return { type, resource, task }
@@ -196,7 +202,6 @@ export const loop = async () => {
   while (true) {
     if (stopped) break
     let resourceTask = await queryNextResourceTask()
-    // console.log('RESOURCE REF', resourceRef)
     while (resourceTask) {
       debug('work on resource', resourceTask.type, resourceTask.resource.id, resourceTask.task.name)
       if (stopped) break

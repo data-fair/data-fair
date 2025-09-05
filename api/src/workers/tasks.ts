@@ -65,12 +65,17 @@ export const pendingTasks = {
   batchProcessor: 0
 }
 
-const isNormalizedMongoFilter = (prefix = '', not = false) => ({
-  [not ? '$nor' : '$or']: [
+const isNormalizedMongoFilter = (draft = false, not = false) => {
+  const prefix = draft ? 'draft.' : ''
+  const conditions: any[] = [
     { [prefix + 'status']: 'stored', [prefix + 'originalFile.mimetype']: { $in: basicTypes } },
     { [prefix + 'status']: 'normalized' }
   ]
-})
+  if (draft) {
+    conditions.push({ 'draft.status': 'stored', 'draft.originalFile': { $exists: false }, 'originalFile.mimetype': { $in: basicTypes } })
+  }
+  return { [not ? '$nor' : '$or']: conditions }
+}
 
 const isValidatedMongoFilter = (prefix = '') => ({
   $or: [
@@ -79,19 +84,27 @@ const isValidatedMongoFilter = (prefix = '') => ({
     { isRest: true, _partialRestStatus: 'updated' }
   ]
 })
-const activeExtensionMongoFilter = (prefix = '') => ({ [prefix + 'extensions.active']: true })
-const noActiveExtensionMongoFilter = (prefix = '') => ({ [prefix + 'extensions']: { $not: { $elemMatch: { active: true } } } })
+const activeExtensionMongoFilter = (draft = false, not = false) => {
+  const prefix = draft ? 'draft.' : ''
+  const conditions: any[] = [{ [prefix + 'extensions.active']: true }]
+  if (draft) {
+    conditions.push({ 'extensions.active': true, 'draft.extensions': { $exists: false } })
+  }
+  return { [not ? '$nor' : '$or']: conditions }
+}
+
+const noActiveDraftFilter = { 'draft.status': { $in: [null, 'finalized', 'error'] } }
 
 const datasetTasks: DatasetTask[] = [{
   name: 'initialize',
   eventsPrefix: 'initialize',
   worker: 'filesManager',
-  mongoFilter: () => ({ $or: [{ status: 'created' }, { 'draft.status': 'created' }] })
+  mongoFilter: () => ({ $or: [{ status: 'created', ...noActiveDraftFilter }, { 'draft.status': 'created' }] })
 }, {
   name: 'storeFile',
   eventsPrefix: 'store',
   worker: 'filesManager',
-  mongoFilter: () => ({ $or: [{ status: 'loaded' }, { 'draft.status': 'loaded' }] })
+  mongoFilter: () => ({ $or: [{ status: 'loaded', ...noActiveDraftFilter }, { 'draft.status': 'loaded' }] })
 }, {
   name: 'downloadFile',
   eventsPrefix: 'download',
@@ -103,8 +116,8 @@ const datasetTasks: DatasetTask[] = [{
   worker: 'filesProcessor',
   mongoFilter: () => ({
     $or: [
-      { $and: [{ status: 'stored' }, isNormalizedMongoFilter('', true)] },
-      { $and: [{ 'draft.status': 'stored' }, isNormalizedMongoFilter('draft.', true)] },
+      { $and: [{ status: 'stored', ...noActiveDraftFilter }, isNormalizedMongoFilter(false, true)] },
+      { $and: [{ 'draft.status': 'stored' }, isNormalizedMongoFilter(true, true)] },
     ]
   })
 }, {
@@ -113,8 +126,15 @@ const datasetTasks: DatasetTask[] = [{
   worker: 'filesProcessor',
   mongoFilter: () => ({
     $or: [
-      { $and: [isNormalizedMongoFilter(), { 'file.mimetype': { $in: csvTypes } }] },
-      { $and: [isNormalizedMongoFilter('draft.'), { 'draft.file.mimetype': { $in: csvTypes } }] }
+      { $and: [isNormalizedMongoFilter(), noActiveDraftFilter, { 'file.mimetype': { $in: csvTypes } }] },
+      {
+        $and: [isNormalizedMongoFilter(true), {
+          $or: [
+            { 'draft.file.mimetype': { $in: csvTypes } },
+            { 'draft.file': { $exists: false }, 'file.mimetype': { $in: csvTypes } }
+          ]
+        }]
+      }
     ]
   })
 }, {
@@ -123,8 +143,15 @@ const datasetTasks: DatasetTask[] = [{
   worker: 'filesProcessor',
   mongoFilter: () => ({
     $or: [
-      { $and: [isNormalizedMongoFilter(), { 'file.mimetype': 'application/geo+json' }] },
-      { $and: [isNormalizedMongoFilter('draft.'), { 'draft.file.mimetype': 'application/geo+json' }] }
+      { $and: [isNormalizedMongoFilter(), noActiveDraftFilter, { 'file.mimetype': 'application/geo+json' }] },
+      {
+        $and: [isNormalizedMongoFilter(true), {
+          $or: [
+            { 'draft.file.mimetype': 'application/geo+json' },
+            { 'draft.file': { $exists: false }, 'file.mimetype': 'application/geo+json' }
+          ]
+        }]
+      }
     ]
   })
 }, {
@@ -133,7 +160,7 @@ const datasetTasks: DatasetTask[] = [{
   worker: 'batchProcessor',
   mongoFilter: () => ({
     $or: [
-      { file: { $exists: true }, status: { $in: ['analyzed', 'validation-updated'] } },
+      { file: { $exists: true }, status: { $in: ['analyzed', 'validation-updated'] }, ...noActiveDraftFilter },
       { 'draft.file': { $exists: true }, 'draft.status': { $in: ['analyzed', 'validation-updated'] } }
     ]
   })
@@ -143,8 +170,8 @@ const datasetTasks: DatasetTask[] = [{
   worker: 'batchProcessor',
   mongoFilter: () => ({
     $or: [
-      { $and: [isValidatedMongoFilter(), activeExtensionMongoFilter()] },
-      { $and: [isValidatedMongoFilter('draft.'), activeExtensionMongoFilter('draft.')] }
+      { $and: [isValidatedMongoFilter(), noActiveDraftFilter, activeExtensionMongoFilter()] },
+      { $and: [isValidatedMongoFilter('draft.'), activeExtensionMongoFilter(true)] }
     ]
   })
 }, {
@@ -153,9 +180,9 @@ const datasetTasks: DatasetTask[] = [{
   worker: 'batchProcessor',
   mongoFilter: () => ({
     $or: [
-      { $and: [isValidatedMongoFilter(), noActiveExtensionMongoFilter()] },
-      { $and: [isValidatedMongoFilter('draft.'), noActiveExtensionMongoFilter('draft.')] },
-      { status: 'extended' },
+      { $and: [isValidatedMongoFilter(), noActiveDraftFilter, activeExtensionMongoFilter(false, true)] },
+      { $and: [isValidatedMongoFilter('draft.'), activeExtensionMongoFilter(true, true)] },
+      { status: 'extended', ...noActiveDraftFilter },
       { 'draft.status': 'extended' },
       { isRest: true, _partialRestStatus: 'extended' }
     ]
@@ -164,7 +191,13 @@ const datasetTasks: DatasetTask[] = [{
   name: 'finalize',
   eventsPrefix: 'finalize',
   worker: 'shortProcessor',
-  mongoFilter: () => ({ $or: [{ status: 'indexed' }, { 'draft.status': 'indexed' }, { isRest: true, _partialRestStatus: 'indexed' }] }),
+  mongoFilter: () => ({
+    $or: [
+      { status: 'indexed', ...noActiveDraftFilter },
+      { 'draft.status': 'indexed' },
+      { isRest: true, _partialRestStatus: 'indexed' }
+    ]
+  }),
 }, {
   name: 'exportRest',
   worker: 'batchProcessor',
@@ -205,7 +238,7 @@ const datasetTasks: DatasetTask[] = [{
   worker: 'shortProcessor',
   mongoFilter: () => ({
     $or: [
-      { status: 'error', errorStatus: { $exists: true }, errorRetry: { $lt: new Date().toISOString() } },
+      { status: 'error', errorStatus: { $exists: true }, errorRetry: { $lt: new Date().toISOString() }, ...noActiveDraftFilter },
       { 'draft.status': 'error', 'draft.errorStatus': { $exists: true }, 'draft.errorRetry': { $lt: new Date().toISOString() } }
     ]
   })

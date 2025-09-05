@@ -183,7 +183,7 @@ describe('Master data management', function () {
         select: ['extra', 'extraMulti']
       }]
     })
-    await workers.hook('extender/slave')
+    await workers.hook('extend/slave')
     let slave = await workers.hook('finalize/slave')
 
     assert.equal(slave.schema[0]['x-concept'].id, 'siret')
@@ -277,7 +277,7 @@ describe('Master data management', function () {
         },
       }]
     })
-    await workers.hook('extender/slave')
+    await workers.hook('extend/slave')
     slave = await workers.hook('finalize/slave')
     assert.equal(slave.schema.find(p => p.key === '_siret.extra'), undefined)
     extraProp = slave.schema.find(p => p.key === 'siretextra')
@@ -303,7 +303,7 @@ describe('Master data management', function () {
         },
       }]
     })
-    await workers.hook('extender/slave')
+    await workers.hook('extend/slave')
     slave = await workers.hook('finalize/slave')
     assert.equal(slave.schema.find(p => p.key === '_siret.extra'), undefined)
     assert.equal(slave.schema.find(p => p.key === 'siretextra'), undefined)

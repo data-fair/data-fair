@@ -308,7 +308,7 @@ other,unknown address
     })
     assert.equal(res.status, 200)
     try {
-      await workers.hook('extender')
+      await workers.hook('extend/' + dataset.id)
       assert.fail()
     } catch (err) {
       assert.equal(err.message, '500 - some error')
@@ -322,7 +322,7 @@ other,unknown address
     res = await ax.patch(`/api/v1/datasets/${dataset.id}`, { extensions: [{ active: true, type: 'remoteService', forceNext: true, remoteService: 'geocoder-koumoul', action: 'postCoords' }] })
     assert.equal(res.status, 200)
     try {
-      await workers.hook('extender/' + dataset.id)
+      await workers.hook('extend/' + dataset.id)
       assert.fail()
     } catch (err) {
       assert.ok(err.message.includes('Unexpected token'))
@@ -588,7 +588,7 @@ other,unknown address
       schema: dataset.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
-    await workers.hook(`extender/${dataset.id}`)
+    await workers.hook(`extend/${dataset.id}`)
     nockScope.done()
     dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.equal(dataset.extensions.length, 1)
@@ -628,7 +628,7 @@ other,unknown address
       schema: dataset.schema,
       extensions: [{ active: true, type: 'remoteService', remoteService: 'geocoder-koumoul', action: 'postCoords' }]
     })
-    await workers.hook(`extender/${dataset.id}`)
+    await workers.hook(`extend/${dataset.id}`)
     nockScope.done()
     dataset = await workers.hook(`finalize/${dataset.id}`)
     assert.equal(dataset.extensions.length, 1)
@@ -912,7 +912,7 @@ other,unknown address
     })
     assert.equal(res.data.status, 'finalized')
     assert.equal(res.data.extensions[0].needsUpdate, true)
-    await workers.hook(`extender/${dataset.id}`)
+    await workers.hook(`extend/${dataset.id}`)
     const collection = restDatasetsUtils.collection(dataset)
     const needsIndexingLines = await collection.find({ _needsIndexing: true }).toArray()
     assert.equal(needsIndexingLines.length, 1)
