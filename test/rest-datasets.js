@@ -317,10 +317,11 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
       { attr1: 'test1', attr2: 'test1', attr3: 'test1' },
       { attr1: 'test1', attr2: 'test1', attr3: 'test1, test2' },
       { attr1: 'test1', attr2: 'test1', attr3: ['test1', 'test2'] },
-      { attr1: 'test1', attr2: 'test1', attr3: 'test1, testko' }
+      { attr1: 'test1', attr2: 'test1', attr3: 'test1, testko' },
+      { attr1: 'test1', attr2: 'test1', attr3: '' }
     ])
 
-    assert.equal(res.data.nbOk, 3)
+    assert.equal(res.data.nbOk, 4)
     assert.equal(res.data.nbErrors, 1)
     assert.equal(res.data.errors.length, 1)
     assert.equal(res.data.errors[0].line, 3)
