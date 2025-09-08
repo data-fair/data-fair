@@ -12,7 +12,8 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
       can: 'admin',
       iframe: '/events/embed/events',
       basePath: '/events',
-      icon: 'mdi-clipboard-text-clock'
+      icon: 'mdi-clipboard-text-clock',
+      dFrame: true
     })
   }
 
@@ -24,7 +25,8 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
       can: 'adminDep',
       iframe: '/catalogs/catalogs',
       basePath: '/catalogs',
-      icon: 'mdi-transit-connection'
+      icon: 'mdi-transit-connection',
+      dFrame: true
     })
 
     env.extraAdminNavigationItems.push({
@@ -32,7 +34,8 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
       title: 'Plugins - Catalogues',
       iframe: '/catalogs/admin/plugins',
       basePath: '/catalogs',
-      icon: 'mdi-transit-connection'
+      icon: 'mdi-transit-connection',
+      dFrame: true
     })
   }
 
@@ -44,7 +47,8 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
       can: 'adminDep',
       iframe: '/portals-manager/portals',
       basePath: '/portals-manager',
-      icon: 'mdi-presentation'
+      icon: 'mdi-presentation',
+      dFrame: true
     })
     env.extraNavigationItems.push({
       id: 'portals-manager-pages',
@@ -53,7 +57,8 @@ export default async ({ store, app, env, $vuetify, route, i18n }) => {
       can: 'adminDep',
       iframe: '/portals-manager/pages',
       basePath: '/portals-manager',
-      icon: 'mdi-text-box-edit-outline'
+      icon: 'mdi-text-box-edit-outline',
+      dFrame: true
     })
   }
 
