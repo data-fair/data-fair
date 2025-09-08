@@ -392,7 +392,8 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
       for (const f of dataset.schema) {
         if (f.separator && typeof previousBody[f.key] === 'string') {
           const value = fieldsSniffer.format(previousBody[f.key], f)
-          if (value !== null) previousBody[f.key] = value
+          if (value === null) delete previousBody[f.key]
+          else previousBody[f.key] = value
         }
       }
 
@@ -738,7 +739,8 @@ async function manageAttachment (req: RequestWithRestDataset & { body: any }, ke
       if (!f['x-calculated']) {
         if (req.body[f.key] !== undefined) {
           const value = fieldsSniffer.format(req.body[f.key], f)
-          if (value !== null) req.body[f.key] = value
+          if (value === null) delete req.body[f.key]
+          else req.body[f.key] = value
         }
       }
     }
