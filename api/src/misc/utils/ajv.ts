@@ -10,14 +10,17 @@ const openApiSchema = JSON.parse(openApiSchemaStr)
 
 ajv.addSchema(openApiSchema, 'openapi-3.1')
 
-export const compile = (schema, throws = true) => {
+export type CustomAjvValidate = ((data: any, locale?: 'fr' | 'en', errorsCallback?: (err: any) => void) => boolean) & { errors?: string }
+
+export const compile = (schema: any, throws = true) => {
   const validate = typeof schema === 'string' ? ajv.getSchema(schema) : ajv.compile(schema)
-  const myValidate = (data, locale = 'fr', errorsCallback) => {
+  const myValidate: CustomAjvValidate = (data, locale = 'fr', errorsCallback) => {
     const valid = validate(data)
     if (!valid) {
       if (errorsCallback) errorsCallback(validate.errors);
+      // @ts-ignore
       (localize[locale] || localize.fr)(validate.errors)
-      const message = errorsText(validate.errors)
+      const message = errorsText(validate.errors) as string
       if (throws) {
         throw httpError(400, message)
       } else {

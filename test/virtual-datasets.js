@@ -2,13 +2,13 @@ import fs from 'node:fs'
 import { strict as assert } from 'node:assert'
 import FormData from 'form-data'
 import * as testUtils from './resources/test-utils.js'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('virtual datasets', function () {
   it('Create an empty virtual dataset', async function () {
     const ax = global.ax.dmeadus
     const res = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset' })
-    await assert.rejects(workers.hook('finalizer/' + res.data.id))
+    await assert.rejects(workers.hook('finalize/' + res.data.id))
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, 'a-virtual-dataset')
   })
@@ -16,7 +16,7 @@ describe('virtual datasets', function () {
   it('Create a new virtual dataset with predefined id', async function () {
     const ax = global.ax.dmeadus
     const res = await ax.put('/api/v1/datasets/my-id', { isVirtual: true, title: 'a virtual dataset' })
-    await assert.rejects(workers.hook('finalizer/' + res.data.id))
+    await assert.rejects(workers.hook('finalize/' + res.data.id))
     assert.equal(res.status, 201)
     assert.equal(res.data.slug, 'a-virtual-dataset')
   })
@@ -32,7 +32,7 @@ describe('virtual datasets', function () {
       },
       title: 'a virtual dataset'
     })
-    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    const virtualDataset = await workers.hook('finalize/' + res.data.id)
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
@@ -54,7 +54,7 @@ describe('virtual datasets', function () {
       },
       title: 'a virtual dataset'
     })
-    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    const virtualDataset = await workers.hook('finalize/' + res.data.id)
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}`)
     assert.equal(res.data.description, 'Description')
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
@@ -74,7 +74,7 @@ describe('virtual datasets', function () {
       title: 'a virtual dataset'
     })
     let virtualDataset = res.data
-    await assert.rejects(workers.hook('finalizer/' + virtualDataset.id))
+    await assert.rejects(workers.hook('finalize/' + virtualDataset.id))
 
     await ax.patch('/api/v1/datasets/' + virtualDataset.id, {
       virtual: {
@@ -84,7 +84,7 @@ describe('virtual datasets', function () {
         key: 'id'
       }]
     })
-    virtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
+    virtualDataset = await workers.hook('finalize/' + virtualDataset.id)
     assert.equal(virtualDataset.count, 6)
     assert.equal(virtualDataset.dataUpdatedAt, dataset3.dataUpdatedAt)
     assert.deepEqual(virtualDataset.dataUpdatedBy, dataset3.dataUpdatedBy)
@@ -113,7 +113,7 @@ describe('virtual datasets', function () {
         key: 'id'
       }]
     })
-    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    const virtualDataset = await workers.hook('finalize/' + res.data.id)
     assert.ok(virtualDataset.schema.find(f => f.key === 'id'))
     assert.ok(virtualDataset.schema.find(f => f.key === 'id').type === 'string')
     res = await ax.patch('/api/v1/datasets/' + virtualDataset.id, {
@@ -145,7 +145,7 @@ describe('virtual datasets', function () {
     await ax.patch('/api/v1/datasets/' + datasetInt.id, {
       schema: datasetInt.schema
     })
-    datasetInt = await workers.hook('finalizer/' + datasetInt.id)
+    datasetInt = await workers.hook('finalize/' + datasetInt.id)
     assert.equal(datasetInt.schema.find(p => p.key === 'num').type, 'number')
 
     const res = await ax.post('/api/v1/datasets', {
@@ -156,7 +156,7 @@ describe('virtual datasets', function () {
       },
       schema: [{ key: 'str' }, { key: 'num' }]
     })
-    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    const virtualDataset = await workers.hook('finalize/' + res.data.id)
     assert.equal(virtualDataset.schema.find(p => p.key === 'num').type, 'number')
   })
 
@@ -173,7 +173,7 @@ describe('virtual datasets', function () {
         key: 'adr'
       }]
     })
-    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    const virtualDataset = await workers.hook('finalize/' + res.data.id)
     assert.ok(!virtualDataset.schema.find(f => f.key === 'id'))
 
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`, { params: { q: 'koumoul' } })
@@ -244,7 +244,7 @@ describe('virtual datasets', function () {
         key: 'adr'
       }]
     })
-    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    const virtualDataset = await workers.hook('finalize/' + res.data.id)
     assert.ok(!virtualDataset.schema.find(f => f.key === 'id'))
 
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
@@ -262,7 +262,7 @@ describe('virtual datasets', function () {
       }
     })
 
-    const newVirtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
+    const newVirtualDataset = await workers.hook('finalize/' + virtualDataset.id)
     assert.ok(newVirtualDataset.finalizedAt, virtualDataset.finalizedAt)
 
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
@@ -283,7 +283,7 @@ describe('virtual datasets', function () {
         key: 'adr'
       }]
     })
-    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    const virtualDataset = await workers.hook('finalize/' + res.data.id)
 
     res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -295,7 +295,7 @@ describe('virtual datasets', function () {
         key: 'adr'
       }]
     })
-    const virtualDataset2 = await workers.hook('finalizer/' + res.data.id)
+    const virtualDataset2 = await workers.hook('finalize/' + res.data.id)
 
     res = await ax.put('/api/v1/datasets/my-id3', {
       isVirtual: true,
@@ -307,7 +307,7 @@ describe('virtual datasets', function () {
         key: 'adr'
       }]
     })
-    const virtualDataset3 = await workers.hook('finalizer/' + res.data.id)
+    const virtualDataset3 = await workers.hook('finalize/' + res.data.id)
 
     res = await ax.get(`/api/v1/datasets/${virtualDataset3.id}/lines`)
     assert.equal(res.data.total, 2, 'return matching line')
@@ -322,7 +322,7 @@ describe('virtual datasets', function () {
         children: []
       }
     })
-    await assert.rejects(workers.hook('finalizer/' + res.data.id))
+    await assert.rejects(workers.hook('finalize/' + res.data.id))
 
     res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -331,7 +331,7 @@ describe('virtual datasets', function () {
         children: [res.data.id]
       }
     })
-    await assert.rejects(workers.hook('finalizer/' + res.data.id))
+    await assert.rejects(workers.hook('finalize/' + res.data.id))
 
     await assert.rejects(ax.get(`/api/v1/datasets/${res.data.id}/lines`), (err) => {
       assert.equal(err.status, 501)
@@ -356,7 +356,7 @@ describe('virtual datasets', function () {
         key: 'adr'
       }]
     })
-    await workers.hook('finalizer/' + res.data.id)
+    await workers.hook('finalize/' + res.data.id)
 
     res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -366,7 +366,10 @@ describe('virtual datasets', function () {
       }
     })
     const virtualDataset = res.data
-    await assert.rejects(workers.hook('finalizer/' + virtualDataset.id))
+    await assert.rejects(workers.hook('finalize/' + virtualDataset.id), (err) => {
+      console.log(err)
+      return true
+    })
 
     try {
       await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
@@ -387,7 +390,7 @@ describe('virtual datasets', function () {
       title: 'a virtual dataset'
     })
     const virtualDataset = res.data
-    await workers.hook('finalizer/' + virtualDataset.id)
+    await workers.hook('finalize/' + virtualDataset.id)
 
     let dateField = dataset.schema.find(f => f.key === 'some_date')
     let virtualDateField = virtualDataset.schema.find(f => f.key === 'some_date')
@@ -395,11 +398,11 @@ describe('virtual datasets', function () {
 
     dateField['x-transform'] = { type: 'string' }
     res = await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     dateField = dataset.schema.find(f => f.key === 'some_date')
     assert.equal(dateField.format, undefined)
 
-    virtualDateField = await workers.hook('finalizer/' + virtualDataset.id)
+    virtualDateField = await workers.hook('finalize/' + virtualDataset.id)
     virtualDateField = virtualDataset.schema.find(f => f.key === 'some_date')
 
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
@@ -417,7 +420,7 @@ describe('virtual datasets', function () {
       title: 'a virtual dataset'
     })
     let virtualDataset = res.data
-    await workers.hook('finalizer/' + virtualDataset.id)
+    await workers.hook('finalize/' + virtualDataset.id)
 
     let dateField = dataset.schema.find(f => f.key === 'some_date')
     let virtualDateField = virtualDataset.schema.find(f => f.key === 'some_date')
@@ -425,11 +428,11 @@ describe('virtual datasets', function () {
 
     dateField['x-transform'] = { type: 'string' }
     res = await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     dateField = dataset.schema.find(f => f.key === 'some_date')
     assert.equal(dateField.format, undefined)
 
-    virtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
+    virtualDataset = await workers.hook('finalize/' + virtualDataset.id)
     virtualDateField = virtualDataset.schema.find(f => f.key === 'some_date')
     assert.equal(virtualDateField.format, undefined)
 
@@ -450,15 +453,15 @@ describe('virtual datasets', function () {
       title: 'a virtual dataset'
     })
     let virtualDataset = res.data
-    await workers.hook('finalizer/' + virtualDataset.id)
+    await workers.hook('finalize/' + virtualDataset.id)
 
     const dateField = dataset1.schema.find(f => f.key === 'some_date')
     dateField['x-transform'] = { type: 'string' }
     res = await ax.patch('/api/v1/datasets/' + dataset1.id, { schema: dataset1.schema })
-    await workers.hook('finalizer/' + dataset1.id)
+    await workers.hook('finalize/' + dataset1.id)
 
     try {
-      virtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
+      virtualDataset = await workers.hook('finalize/' + virtualDataset.id)
       assert.fail()
     } catch (err) {
       assert.equal(err.message, 'Le champ "some_date" a des formats contradictoires (non défini, date).')
@@ -478,7 +481,7 @@ describe('virtual datasets', function () {
         children: [dataset.id]
       }
     })
-    await assert.rejects(workers.hook('finalizer/' + res.data.id))
+    await assert.rejects(workers.hook('finalize/' + res.data.id))
 
     try {
       await global.ax.cdurning2.get(`/api/v1/datasets/${res.data.id}/lines`)
@@ -502,7 +505,7 @@ describe('virtual datasets', function () {
         children: [dataset.id]
       }
     })
-    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    const virtualDataset = await workers.hook('finalize/' + res.data.id)
 
     await global.ax.cdurning2.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
   })
@@ -512,11 +515,11 @@ describe('virtual datasets', function () {
     const child1 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     child1.schema[0]['x-capabilities'] = { text: false, values: false }
     await ax.patch('/api/v1/datasets/' + child1.id, { schema: child1.schema })
-    await workers.hook('finalizer/' + child1.id)
+    await workers.hook('finalize/' + child1.id)
     const child2 = await testUtils.sendDataset('datasets/dataset1.csv', ax)
     child2.schema[0]['x-capabilities'] = { text: false, insensitive: false }
     await ax.patch('/api/v1/datasets/' + child2.id, { schema: child2.schema })
-    await workers.hook('finalizer/' + child2.id)
+    await workers.hook('finalize/' + child2.id)
 
     const res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -527,15 +530,15 @@ describe('virtual datasets', function () {
       schema: [{ key: 'id' }]
     })
 
-    let virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    let virtualDataset = await workers.hook('finalize/' + res.data.id)
     assert.deepEqual(virtualDataset.schema[0]['x-capabilities'], { text: false, insensitive: false, values: false })
 
     child1.schema[0]['x-capabilities'] = { values: false }
     await ax.patch('/api/v1/datasets/' + child1.id, { schema: child1.schema })
-    virtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
+    virtualDataset = await workers.hook('finalize/' + virtualDataset.id)
     child2.schema[0]['x-capabilities'] = { insensitive: false }
     await ax.patch('/api/v1/datasets/' + child2.id, { schema: child2.schema })
-    virtualDataset = await workers.hook('finalizer/' + virtualDataset.id)
+    virtualDataset = await workers.hook('finalize/' + virtualDataset.id)
     assert.deepEqual(virtualDataset.schema[0]['x-capabilities'], { insensitive: false, values: false })
   })
 
@@ -557,7 +560,7 @@ describe('virtual datasets', function () {
       schema: [{ key: 'id' }]
     })
 
-    let virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    let virtualDataset = await workers.hook('finalize/' + res.data.id)
     assert.deepEqual(virtualDataset.schema[0]['x-labels'], { koumoul: 'Koumoul', bidule: 'Bidule' })
 
     child2.schema[0]['x-labels'] = { bidule: 'BiBidule' }
@@ -575,7 +578,7 @@ describe('virtual datasets', function () {
     locProp['x-refersTo'] = 'http://www.w3.org/2003/01/geo/wgs84_pos#lat_long'
     let res = await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
     assert.equal(res.status, 200)
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
     assert.equal(res.data.total, 2)
@@ -590,7 +593,7 @@ describe('virtual datasets', function () {
       },
       schema: [{ key: 'id' }, { key: 'loc' }]
     })).data
-    await workers.hook('finalizer/' + virtual1.id)
+    await workers.hook('finalize/' + virtual1.id)
 
     res = await ax.get(`/api/v1/datasets/${virtual1.id}/lines`)
     assert.equal(res.data.total, 2)
@@ -609,7 +612,7 @@ describe('virtual datasets', function () {
       },
       schema: [{ key: 'id' }, { key: 'loc' }]
     })).data
-    await workers.hook('finalizer/' + virtual2.id)
+    await workers.hook('finalize/' + virtual2.id)
 
     res = await ax.get(`/api/v1/datasets/${virtual2.id}/lines`)
     assert.equal(res.data.total, 1)
@@ -634,7 +637,7 @@ describe('virtual datasets', function () {
       { attr1: 'test6', account: 'user:hlalonde3' }
     ]
     await ax.post('/api/v1/datasets/rest1/_bulk_lines', lines)
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('finalize/' + dataset.id)
 
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -645,7 +648,7 @@ describe('virtual datasets', function () {
       title: 'a virtual dataset',
       schema: [{ key: 'attr1' }, { key: 'account' }]
     })
-    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    const virtualDataset = await workers.hook('finalize/' + res.data.id)
     await ax.put('/api/v1/datasets/' + virtualDataset.id + '/permissions', [
       { classes: ['read'] }
     ])
@@ -728,7 +731,7 @@ describe('virtual datasets', function () {
     assert.ok(line._id)
     assert.ok(line.attachmentPath.startsWith(res.data._id + '/'))
     assert.ok(line.attachmentPath.endsWith('/avatar.jpeg'))
-    await workers.hook('finalizer/' + child.id)
+    await workers.hook('finalize/' + child.id)
     const lines = (await ax.get(`/api/v1/datasets/${child.id}/lines`)).data.results
     assert.equal(lines.length, 1)
     const attachmentPath = lines[0].attachmentPath
@@ -745,7 +748,7 @@ describe('virtual datasets', function () {
       title: 'a virtual dataset',
       schema: [{ key: 'attr1' }]
     })
-    const virtualDataset = await workers.hook('finalizer/' + res.data.id)
+    const virtualDataset = await workers.hook('finalize/' + res.data.id)
 
     await assert.rejects(
       ax.get(`/api/v1/datasets/${virtualDataset.id}/attachments/badid/dir1/avatar.jpeg`),

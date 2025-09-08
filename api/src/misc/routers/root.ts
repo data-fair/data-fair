@@ -3,7 +3,7 @@ import * as status from './status.js'
 import apiDocs from '../../../contract/api-docs.ts'
 import projections from '../../../contract/projections.js'
 import * as settingsUtils from '../utils/settings.ts'
-import * as ajv from '../utils/ajv.js'
+import * as ajv from '../utils/ajv.ts'
 import config from '#config'
 import { reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
 

@@ -1,6 +1,5 @@
 import config from '#config'
 import mongo from '#mongo'
-import es from '#es'
 import crypto from 'node:crypto'
 import fs from 'fs-extra'
 import path from 'path'
@@ -39,7 +38,7 @@ import { reqSessionAuthenticated, reqUserAuthenticated, type Account, type Sessi
 import { type ValidateFunction } from 'ajv'
 import { type RequestWithRestDataset } from '#types/dataset/index.ts'
 import type { Collection, Filter, UnorderedBulkOperation, UpdateFilter } from 'mongodb'
-import iterHits from '../es/iter-hits.js'
+import iterHits from '../es/iter-hits.ts'
 
 type Operation = {
   _id: string,
@@ -388,6 +387,14 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     const missingPatchPrevious = new Set(patchPreviousFilters.map(f => f._id))
     for await (const patchPrevious of c.find({ $or: patchPreviousFilters }).project(patchProjection)) {
       const { _id, _hash, _deleted, ...previousBody } = patchPrevious
+      // manage the case of older data that was stored when we didn't apply the separator before storing lines
+      for (const f of dataset.schema) {
+        if (f.separator && typeof previousBody[f.key] === 'string') {
+          const value = fieldsSniffer.format(previousBody[f.key], f)
+          if (value !== null) previousBody[f.key] = value
+        }
+      }
+
       if (!_deleted) {
         missingPatchPrevious.delete(_id)
         const operation = operations.find(op => op._id === _id)
@@ -769,7 +776,7 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
   const indexName = aliasName(dataset)
   await pump(
     ...await readStreams(dataset, { _id: { $in: lineIds } }),
-    indexStream({ esClient: es.client, indexName, dataset, attachments, refresh: config.elasticsearch.singleLineOpRefresh }),
+    indexStream({ indexName, dataset, attachments, refresh: config.elasticsearch.singleLineOpRefresh }),
     markIndexedStream(dataset)
   )
 
@@ -851,8 +858,8 @@ export const patchLine = async (req: RequestWithRestDataset, res: Response, next
 
 export const deleteAllLines = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   await initDataset(req.dataset)
-  const indexName = await initDatasetIndex(es.client, req.dataset)
-  await switchAlias(es.client, req.dataset, indexName)
+  const indexName = await initDatasetIndex(req.dataset)
+  await switchAlias(req.dataset, indexName)
 
   await import('@data-fair/lib-express/events-log.js')
     .then((eventsLog) => eventsLog.default.info('df.datasets.rest.deleteAllLines', `deleted all lines from dataset ${req.dataset.slug} (${req.dataset.id})`, { req, account: req.dataset.owner as Account }))
@@ -939,6 +946,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
 
     // these formats are read strictly as is
     const raw = mimeType === 'application/x-ndjson' || mimeType === 'application/json'
+    const contentLength = Number(req.get('content-length'))
 
     const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, req.dataset, true, false)
 
@@ -976,7 +984,6 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
           await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { status: 'analyzed' } })
         }
       } else {
-        const contentLength = Number(req.get('content-length'))
         if (!attachmentsFile && req.query.async !== 'true' && !isNaN(contentLength) && contentLength <= config.elasticsearch.maxBulkChars && summary._ids.size <= config.elasticsearch.maxBulkLines) {
           await commitLines(req.dataset, [...summary._ids])
           summary.indexedAt = new Date().toISOString()
@@ -1214,7 +1221,7 @@ export const applyTTL = async (dataset: RestDataset) => {
 
   const summary = initSummary()
   // @ts-ignore
-  const iter = iterHits(es.client, dataset, { size: 1000, qs })
+  const iter = iterHits(dataset, { size: 1000, qs })
   await pump(
     Readable.from(iter),
     // @ts-ignore

@@ -2,8 +2,8 @@
   "name": "@data-fair/data-fair-api",
   "type": "module",
   "scripts": {
-    "dev": "DEBUG=upgrade*,i18n*,catalogs*,thumbnails,workers* NODE_ENV=development node --watch --experimental-strip-types index.ts",
-    "dev-memory": "DEBUG=upgrade*,i18n*,notifications,worker:* DEBUG_HEAP=* NODE_ENV=development node --expose-gc --watch --experimental-strip-types index.ts"
+    "dev": "DEBUG=upgrade*,i18n*,catalogs*,thumbnails,workers* NODE_ENV=development node --watch --experimental-strip-types --disable-warning=ExperimentalWarning index.ts",
+    "dev-memory": "DEBUG=upgrade*,i18n*,notifications,worker:* DEBUG_HEAP=* NODE_ENV=development node --expose-gc --watch --experimental-strip-types --disable-warning=ExperimentalWarning index.ts"
   },
   "imports": {
     "#config": "./src/config.ts",

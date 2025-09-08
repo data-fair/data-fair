@@ -10,7 +10,7 @@ addFormats(ajv)
 export const sniff = (values, attachmentsPaths = [], existingField) => {
   if (!values.length) return { type: 'empty' }
 
-  if (attachmentsPaths && attachmentsPaths.length && checkAll(values, isOneOf, attachmentsPaths, 'Vous avez chargé des pièces jointes, et une colonne semble contenir des chemins vers ces pièces jointes. Mais certaines valeurs sont erronées.')) {
+  if (attachmentsPaths && attachmentsPaths.length && checkAll(values, isOneOf, attachmentsPaths, '[noretry] Vous avez chargé des pièces jointes, et une colonne semble contenir des chemins vers ces pièces jointes. Mais certaines valeurs sont erronées.')) {
     return { type: 'string', 'x-refersTo': 'http://schema.org/DigitalDocument' }
   }
   if (checkAll(values, val => booleanRegexp.test(val))) return { type: 'boolean' }

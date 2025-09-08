@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('Wildcard fields', function () {
   const items = {
@@ -21,7 +21,7 @@ describe('Wildcard fields', function () {
       schema: [{ key: 'content', type: 'string', 'x-capabilities': { wildcard: true } }]
     })
     let res = await ax.post('/api/v1/datasets/wildcards/_bulk_lines', Object.keys(items).map(key => ({ _id: key, content: items[key] })))
-    await workers.hook('finalizer/wildcards')
+    await workers.hook('finalize/wildcards')
 
     // query with a trailing wildcard works well on the main keyword field
     res = await ax.get('/api/v1/datasets/wildcards/lines', { params: { qs: 'content:prefix' } })
@@ -54,13 +54,13 @@ describe('Wildcard fields', function () {
       schema: [{ key: 'content', type: 'string' }]
     })
     await ax.post('/api/v1/datasets/wildcards2/_bulk_lines', Object.keys(items).map(key => ({ _id: key, content: items[key] })))
-    await workers.hook('finalizer/wildcards2')
+    await workers.hook('finalize/wildcards2')
 
     // leading wildcard filter is rejected by default
     await assert.rejects(ax.get('/api/v1/datasets/wildcards2/lines', { params: { qs: 'content.wildcard:*suite' } }), (err) => err.status === 400)
 
     await ax.patch('/api/v1/datasets/wildcards2', { schema: [{ key: 'content', type: 'string', 'x-capabilities': { wildcard: true } }] })
-    await workers.hook('finalizer/wildcards2')
+    await workers.hook('finalize/wildcards2')
     const res = await ax.get('/api/v1/datasets/wildcards2/lines', { params: { qs: 'content.wildcard:*suite' } })
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0]._id, 't2')

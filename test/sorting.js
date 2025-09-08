@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('Sorting', function () {
   it('Ignore case and diacritics', async function () {
@@ -19,7 +19,7 @@ describe('Sorting', function () {
       { attr1: 'eee', attr2: 6 },
       { attr1: 'ééé', attr2: 7 }
     ])
-    await workers.hook('finalizer/restsort1')
+    await workers.hook('finalize/restsort1')
 
     let lines = await ax.get('/api/v1/datasets/restsort1/lines', { params: { sort: 'attr1' } })
     assert.deepEqual(lines.data.results.map(r => r.attr1), ['AAA', 'aaa', 'BBB', 'bbb', 'eee', 'ééé', 'zzz'])

@@ -1,20 +1,20 @@
-import * as journals from '../misc/utils/journals.ts'
+import * as journals from '../../misc/utils/journals.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import iconv from 'iconv-lite'
-import datasetFileSample from '../datasets/utils/file-sample.js'
-import * as csvSniffer from '../misc/utils/csv-sniffer.js'
-import * as datasetUtils from '../datasets/utils/index.js'
-import { updateStorage } from '../datasets/utils/storage.ts'
-import * as datasetsService from '../datasets/service.js'
-import * as fieldsSniffer from '../datasets/utils/fields-sniffer.js'
-import { sampleValues as getSampleValues } from '../datasets/utils/data-streams.js'
+import datasetFileSample from '../../datasets/utils/file-sample.js'
+import * as csvSniffer from '../../misc/utils/csv-sniffer.js'
+import * as datasetUtils from '../../datasets/utils/index.js'
+import { updateStorage } from '../../datasets/utils/storage.ts'
+import * as datasetsService from '../../datasets/service.js'
+import * as fieldsSniffer from '../../datasets/utils/fields-sniffer.js'
+import { sampleValues as getSampleValues } from '../../datasets/utils/data-streams.js'
 import outOfCharacter from 'out-of-character'
 import debugLib from 'debug'
+import type { Event, FileDataset } from '#types'
 
 // Analyze dataset data, check validity and extract a few metadata for next workers
-export const eventsPrefix = 'analyze'
 
-export const process = async function (app, dataset) {
+export default async function (dataset: FileDataset) {
   const debug = debugLib(`worker:csv-analyzer:${dataset.id}`)
 
   debug('extract file sample')
@@ -22,7 +22,9 @@ export const process = async function (app, dataset) {
   if (!fileSample) throw httpError(400, '[noretry] Échec d\'échantillonage du fichier tabulaire, il est vide')
   let decodedSample
   try {
-    decodedSample = dataset.file.encoding === 'UTF-8' ? fileSample.toString() : iconv.decode(fileSample, dataset.file.encoding)
+    decodedSample = (dataset.file.encoding === 'UTF-8' || !dataset.file.encoding)
+      ? fileSample.toString()
+      : iconv.decode(fileSample, dataset.file.encoding)
   } catch (err) {
     throw httpError(400, `[noretry] Échec de décodage du fichier selon l'encodage détecté ${dataset.file.encoding}`)
   }
@@ -39,7 +41,7 @@ export const process = async function (app, dataset) {
     // do not keep columns with empty string as header
     .filter(field => !!field.key)
 
-  const keys = new Set([])
+  const keys = new Set<string>([])
   for (const field of dataset.file.schema) {
     if (keys.has(field.key)) throw httpError(400, `[noretry] Échec de l'analyse du fichier tabulaire, il contient plusieurs fois la colonne "${field.key}".`)
     keys.add(field.key)
@@ -77,11 +79,11 @@ export const process = async function (app, dataset) {
   }
   const emptyCols = dataset.file.schema.filter(p => p.type === 'empty')
   if (emptyCols.length) {
-    const errorMessage = `le fichier contient une ou plusieurs colonnes vides qui seront ignorées : ${emptyCols.map(c => c['x-originalName' || c.key]).join(', ')}`
+    const errorMessage = `le fichier contient une ou plusieurs colonnes vides qui seront ignorées : ${emptyCols.map(c => c['x-originalName'] || c.key).join(', ')}`
     await journals.log('datasets', dataset, {
       type: 'error',
       data: errorMessage
-    })
+    } as Event)
   }
   debug('apply detected schema')
   dataset.file.schema = dataset.file.schema.filter(p => p.type !== 'empty')
@@ -94,6 +96,6 @@ export const process = async function (app, dataset) {
     schema: dataset.schema
   }
 
-  await datasetsService.applyPatch(app, dataset, patch)
+  await datasetsService.applyPatch(dataset, patch)
   if (!dataset.draftReason) await updateStorage(dataset, false, true)
 }

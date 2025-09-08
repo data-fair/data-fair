@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('markdown contents management', function () {
   it('Get dataset description and content as HTML', async function () {
@@ -14,7 +14,7 @@ describe('markdown contents management', function () {
     assert.equal(res.status, 201)
     const dataset = res.data
     res = await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { prop1: 'This is a **markdown** content.' })
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('finalize/' + dataset.id)
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}`)
     assert.equal(res.data.description, 'This is a **markdown** description.')

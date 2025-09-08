@@ -7,7 +7,8 @@ import mongo from '../api/src/mongo.ts'
 import es from '../api/src/es.ts'
 import fs from 'fs-extra'
 import nock from 'nock'
-import * as workers from '../api/src/workers/index.js'
+import { pendingTasks } from '../api/src/workers/tasks.ts'
+import { reset as resetPing } from '@data-fair/data-fair-api/src/workers/ping.ts'
 import axios from 'axios'
 import debugModule from 'debug'
 import * as app from '../api/src/app.js'
@@ -207,12 +208,14 @@ beforeEach('scratch data', async function () {
     // not scratching in case of failure can be handy to check the data
     return
   }
-  debug('scratch data')
-  const runningTasks = workers.runningTasks()
-  if (runningTasks.length) {
-    throw new Error(`the test "${this.currentTest.title}" didn't wait for some running tasks (${runningTasks.join(', ')})`)
-    // await workers.clear(this.currentTest.title)
+
+  debug('force reset the workers')
+  await resetPing()
+  for (const pending of Object.values(pendingTasks)) {
+    if (Object.keys(pending).length > 0) throw new Error(`the test "${this.currentTest?.title}" didn't wait for some pending tasks (${JSON.stringify(pendingTasks)})`)
   }
+
+  debug('scratch data')
   try {
     await Promise.all([
       global.db.collection('datasets').deleteMany({}),

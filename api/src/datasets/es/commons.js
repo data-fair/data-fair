@@ -161,11 +161,7 @@ function checkQuery (query, schema, esFields, currentField) {
     try {
       query = queryParser.parse(query)
     } catch (err) {
-      throw httpError(400, `<p>Impossible d'effectuer cette recherche, la syntaxe du paramètre "qs" n'est pas respectée :</p>
- <ul>
-  <li>requête : ${query}</li>
-  <li>erreur : ${err.message}</li>
-</ul>`)
+      throw httpError(400, `Impossible d'effectuer cette recherche, la syntaxe du paramètre "qs" n'est pas respectée : requête = "${query}", erreur = "${err.message}"`)
     }
   }
   query.field = query.field && query.field.replace(/\\/g, '')
@@ -277,6 +273,7 @@ export const getFilterableFields = memoize((dataset, hasQ, qFields) => {
 })
 
 export const prepareQuery = (dataset, query, qFields, sqsOptions = {}, qsAsFilter, ignoreInvalidQS) => {
+  /** @type {any} */
   const esQuery = {}
   qFields = qFields || (query.q_fields && query.q_fields.split(','))
 

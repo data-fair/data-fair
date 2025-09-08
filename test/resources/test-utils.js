@@ -8,13 +8,13 @@ export const formHeaders = (form) => {
 }
 
 export const sendDataset = async (fileName, ax, opts, body) => {
-  const workers = await import('../../api/src/workers/index.js')
+  const workers = await import('../../api/src/workers/index.ts')
   const datasetFd = fs.readFileSync(path.resolve('./resources/', fileName))
   const form = new FormData()
   form.append('file', datasetFd, fileName)
   if (body) form.append('body', JSON.stringify(body))
   const res = await ax.post('/api/v1/datasets', form, { ...opts, headers: formHeaders(form) })
-  return workers.hook(`finalizer/${res.data.id}`)
+  return workers.hook(`finalize/${res.data.id}`)
 }
 
 export const timeout = (promise, delay = 1000, message = 'time limit exceeded') => {

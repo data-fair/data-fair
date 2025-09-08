@@ -2,9 +2,7 @@ import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import fs from 'node:fs'
 import FormData from 'form-data'
-import nock from 'nock'
-import * as workers from '../api/src/workers/index.js'
-import config from 'config'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('Datasets with auto-initialization from another one', function () {
   it('Create REST dataset with copied information from file dataset', async function () {
@@ -28,7 +26,7 @@ describe('Datasets with auto-initialization from another one', function () {
       }
     })
     assert.equal(res.status, 201)
-    const initFromDataset = await workers.hook('finalizer/' + res.data.id)
+    const initFromDataset = await workers.hook('finalize/' + res.data.id)
     assert.equal(initFromDataset.schema[0].key, 'date')
     assert.equal(initFromDataset.schema[2].key, 'date_fr')
     assert.equal(initFromDataset.schema[2]['x-originalName'], 'date fr')
@@ -46,7 +44,7 @@ describe('Datasets with auto-initialization from another one', function () {
     // accept posting lines as csv with original column names
     await ax.post(`/api/v1/datasets/${initFromDataset.id}/_bulk_lines`, `date,datetime,date fr,datetime fr
 2024-01-13,2024-01-13T19:42:02.790Z,13/01/2024,13/01/2024 19:42`, { headers: { 'content-type': 'text/csv' } })
-    await workers.hook('finalizer/' + initFromDataset.id)
+    await workers.hook('finalize/' + initFromDataset.id)
     lines = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines`)).data
     assert.equal(lines.total, 4)
     assert.equal(lines.results[0].datetime_fr, '2024-01-13T19:42:00+01:00')
@@ -54,7 +52,7 @@ describe('Datasets with auto-initialization from another one', function () {
     // also accept posting lines as csv with keys as column names
     await ax.post(`/api/v1/datasets/${initFromDataset.id}/_bulk_lines`, `date,datetime,date_fr,datetime_fr
       2025-01-13,2025-01-13T19:42:02.790Z,13/01/2025,13/01/2025 19:42`, { headers: { 'content-type': 'text/csv' } })
-    await workers.hook('finalizer/' + initFromDataset.id)
+    await workers.hook('finalize/' + initFromDataset.id)
     lines = (await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines`)).data
     assert.equal(lines.total, 5)
     assert.equal(lines.results[0].datetime_fr, '2025-01-13T19:42:00+01:00')
@@ -80,7 +78,7 @@ describe('Datasets with auto-initialization from another one', function () {
     form.append('dataset', fs.readFileSync('./resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./resources/datasets/files.zip'), 'files.zip')
     let res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
-    const dataset = await workers.hook('finalizer/' + res.data.id)
+    const dataset = await workers.hook('finalize/' + res.data.id)
     await checkDatasetAttachments(dataset)
 
     const virtualDataset = await ax.post('/api/v1/datasets', {
@@ -89,7 +87,7 @@ describe('Datasets with auto-initialization from another one', function () {
       virtual: { children: [dataset.id] },
       schema: [{ key: 'attachment' }, { key: 'comment' }, { key: 'date' }]
     }).then(r => r.data)
-    await workers.hook('finalizer/' + virtualDataset.id)
+    await workers.hook('finalize/' + virtualDataset.id)
     await checkDatasetAttachments(virtualDataset)
 
     res = await ax.post('/api/v1/datasets', {
@@ -100,7 +98,7 @@ describe('Datasets with auto-initialization from another one', function () {
         parts: ['schema', 'data']
       }
     })
-    const initFromDatasetRest = await workers.hook('finalizer/' + res.data.id)
+    const initFromDatasetRest = await workers.hook('finalize/' + res.data.id)
     await checkDatasetAttachments(initFromDatasetRest)
 
     res = await ax.post('/api/v1/datasets', {
@@ -110,7 +108,7 @@ describe('Datasets with auto-initialization from another one', function () {
         parts: ['schema', 'data']
       }
     })
-    const initFromDatasetFile = await workers.hook('finalizer/' + res.data.id)
+    const initFromDatasetFile = await workers.hook('finalize/' + res.data.id)
     assert.equal(initFromDatasetFile.file.name, 'virtual.csv')
     await checkDatasetAttachments(initFromDatasetFile)
     const file = (await ax.get(`/api/v1/datasets/${initFromDatasetFile.id}/data-files/${initFromDatasetFile.file.name}`)).data
@@ -137,7 +135,7 @@ describe('Datasets with auto-initialization from another one', function () {
       }
     })
     assert.equal(res.status, 201)
-    const initFromDataset = await workers.hook('finalizer/' + res.data.id)
+    const initFromDataset = await workers.hook('finalize/' + res.data.id)
 
     assert.equal(initFromDataset.file.name, 'dataset1.csv')
     assert.equal(initFromDataset.schema[0].key, 'id')
@@ -163,14 +161,7 @@ describe('Datasets with auto-initialization from another one', function () {
     attachmentForm.append('attachment', fs.readFileSync('./resources/avatar.jpeg'), 'avatar.jpeg')
     await ax.post(`/api/v1/datasets/${dataset.id}/metadata-attachments`, attachmentForm, { headers: testUtils.formHeaders(attachmentForm) })
 
-    const nockScope = nock('http://test.com', { reqheaders: { 'x-apiKey': config.defaultRemoteKey.value } })
-      .post('/geocoder/coords?select=lat,lon').reply(200, (uri, requestBody) => {
-        const inputs = requestBody.trim().split('\n').map(JSON.parse)
-        assert.equal(inputs.length, 2)
-        assert.deepEqual(Object.keys(inputs[0]), ['q', 'key'])
-        return inputs.map((input, i) => ({ key: input.key, lat: 10, lon: 10, matchLevel: 'match' + i }))
-          .map(JSON.stringify).join('\n') + '\n'
-      })
+    await workers.workers.batchProcessor.run({ nbInputs: 2, latLon: 10, query: '?select=lat,lon' }, { name: 'setCoordsNock' })
     dataset.schema.find(field => field.key === 'adr')['x-refersTo'] = 'http://schema.org/address'
 
     await ax.patch('/api/v1/datasets/' + dataset.id, {
@@ -193,8 +184,7 @@ describe('Datasets with auto-initialization from another one', function () {
       }],
       attachments: [{ type: 'file', name: 'avatar.jpeg', title: 'Avatar' }]
     })
-    await workers.hook('finalizer/' + dataset.id)
-    nockScope.done()
+    await workers.hook('finalize/' + dataset.id)
 
     const res = await ax.post('/api/v1/datasets', {
       title: 'init from schema',
@@ -203,14 +193,14 @@ describe('Datasets with auto-initialization from another one', function () {
       }
     }, { params: { draft: true } })
     assert.equal(res.status, 201)
-    let initFromDataset = await workers.hook('finalizer/' + res.data.id)
+    let initFromDataset = await workers.hook('finalize/' + res.data.id)
     assert.equal(initFromDataset.draft.file.name, 'dataset-extensions.csv')
     const lines = await ax.get(`/api/v1/datasets/${initFromDataset.id}/lines?draft=true`)
     assert.equal(lines.data.results[0].latitude, 10)
 
     // validate the draft
     await ax.post(`/api/v1/datasets/${initFromDataset.id}/draft`)
-    initFromDataset = await workers.hook('finalizer/' + res.data.id)
+    initFromDataset = await workers.hook('finalize/' + res.data.id)
 
     assert.equal(initFromDataset.file.name, 'dataset-extensions.csv')
     assert.ok(initFromDataset.storage.metadataAttachments.size > 1000)
@@ -233,7 +223,7 @@ describe('Datasets with auto-initialization from another one', function () {
     }))
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form), params: { draft: true } })
     assert.equal(res.status, 201)
-    const initFromDataset = await workers.hook('finalizer/' + res.data.id)
+    const initFromDataset = await workers.hook('finalize/' + res.data.id)
 
     assert.equal(initFromDataset.status, 'draft')
     assert.equal(initFromDataset.draft.file.name, 'dataset2.csv')
@@ -256,7 +246,7 @@ describe('Datasets with auto-initialization from another one', function () {
     const ax = global.ax.dmeadus
     const dataset = await testUtils.sendDataset('datasets/dataset1.csv', ax)
 
-    const nockScope = nock('http://test-remote.com').get('/data.csv').reply(200, 'col\nval1\nval2')
+    await workers.workers.filesManager.run({ origin: 'http://test-remote.com', method: 'get', path: '/data.csv', reply: { status: 200, body: 'col\nval1\nval' } }, { name: 'setNock' })
     let initFromDataset = (await ax.post('/api/v1/datasets', {
       title: 'init from schema remote file',
       initFrom: {
@@ -264,8 +254,7 @@ describe('Datasets with auto-initialization from another one', function () {
       },
       remoteFile: { url: 'http://test-remote.com/data.csv', autoUpdate: { active: true } }
     }, { params: { draft: true } })).data
-    initFromDataset = await workers.hook('finalizer/' + initFromDataset.id)
-    nockScope.done()
+    initFromDataset = await workers.hook('finalize/' + initFromDataset.id)
 
     assert.equal(initFromDataset.status, 'draft')
     assert.equal(initFromDataset.draft.file.name, 'data.csv')
@@ -292,7 +281,7 @@ describe('Datasets with auto-initialization from another one', function () {
       schema: [{ key: 'attr1', type: 'string', description: 'A description' }, { key: 'attr2', type: 'string' }]
     })).data
     await ax.post('/api/v1/datasets/rest1/lines', { attr1: 'test1', attr2: 'test1' })
-    await workers.hook('finalizer/rest1')
+    await workers.hook('finalize/rest1')
 
     const attachmentForm = new FormData()
     attachmentForm.append('attachment', fs.readFileSync('./resources/avatar.jpeg'), 'avatar.jpeg')
@@ -307,7 +296,7 @@ describe('Datasets with auto-initialization from another one', function () {
       }
     })
     assert.equal(res.status, 201)
-    const initFromDataset = await workers.hook('finalizer/' + res.data.id)
+    const initFromDataset = await workers.hook('finalize/' + res.data.id)
 
     assert.equal(initFromDataset.file.name, 'rest1.csv')
     assert.equal(initFromDataset.schema[0].key, 'attr1')
@@ -338,7 +327,7 @@ describe('Datasets with auto-initialization from another one', function () {
       }
     })
     assert.equal(res.status, 201)
-    assert.rejects(workers.hook('finalizer/' + res.data.id), err => err.message.includes('permission manquante'))
+    await assert.rejects(workers.hook('finalize/' + res.data.id), err => err.message.includes('permission manquante'))
   })
 
   it('Initialize dataset in a department from dataset in orga', async function () {
@@ -360,7 +349,7 @@ describe('Datasets with auto-initialization from another one', function () {
       }
     })
     assert.equal(res.status, 201)
-    const initFromDataset = await workers.hook('finalizer/' + res.data.id)
+    const initFromDataset = await workers.hook('finalize/' + res.data.id)
     assert.equal(initFromDataset.owner.department, 'dep1')
     assert.equal(initFromDataset.count, 2)
   })

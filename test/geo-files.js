@@ -3,7 +3,7 @@ import * as testUtils from './resources/test-utils.js'
 import fs from 'node:fs'
 import config from 'config'
 import FormData from 'form-data'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 import { VectorTile } from '@mapbox/vector-tile'
 import Protobuf from 'pbf'
 
@@ -18,7 +18,7 @@ describe('geo files support', function () {
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
-    let dataset = await workers.hook('geojsonAnalyzer')
+    let dataset = await workers.hook('analyzeGeojson/' + res.data.id)
     assert.equal(dataset.status, 'analyzed')
     assert.equal(dataset.schema.length, 8)
     const idField = dataset.schema.find(field => field.key === 'id')
@@ -34,7 +34,7 @@ describe('geo files support', function () {
     assert.ok(dataset.schema.find(field => field.key === 'objp2'))
 
     // ES indexation and finalization
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
 
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
@@ -78,8 +78,8 @@ describe('geo files support', function () {
     const geomProp = dataset.schema.find(p => p.key === 'geometry')
     geomProp['x-capabilities'] = { vtPrepare: true }
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema: dataset.schema })
-    await workers.hook(`indexer/${dataset.id}`)
-    await workers.hook(`finalizer/${dataset.id}`)
+    await workers.hook(`indexLines/${dataset.id}`)
+    await workers.hook(`finalize/${dataset.id}`)
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?xyz=49,31,6&format=pbf&q=blabla&sampling=max`)
     assert.equal(res.status, 200)
     assert.equal(res.headers['content-type'], 'application/x-protobuf')
@@ -95,7 +95,7 @@ describe('geo files support', function () {
       },
       schema: dataset.schema.filter(p => !p.key.startsWith('_')).map(p => ({ key: p.key }))
     }).then(r => r.data)
-    virtualDataset = await workers.hook(`finalizer/${virtualDataset.id}`)
+    virtualDataset = await workers.hook(`finalize/${virtualDataset.id}`)
     const geomPropVirtual = virtualDataset.schema.find(p => p.key === 'geometry')
     assert.ok(geomPropVirtual['x-capabilities'].vtPrepare)
     res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines?xyz=49,31,6&format=pbf&q=blabla&sampling=max`, { responseType: 'arraybuffer' })
@@ -120,7 +120,7 @@ describe('geo files support', function () {
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
-    let dataset = await workers.hook('geojsonAnalyzer')
+    let dataset = await workers.hook('analyzeGeojson/' + res.data.id)
     assert.equal(dataset.status, 'analyzed')
     assert.equal(dataset.schema.length, 6)
     const idField = dataset.schema.find(field => field.key === 'id')
@@ -134,7 +134,7 @@ describe('geo files support', function () {
     assert.equal(intField.type, 'integer')
 
     // ES indexation and finalization
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.status, 'finalized')
 
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data.results
@@ -149,7 +149,7 @@ describe('geo files support', function () {
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     assert.equal(res.status, 201)
 
-    const dataset = await workers.hook('finalizer/' + res.data.id)
+    const dataset = await workers.hook('finalize/' + res.data.id)
     assert.ok(dataset.projection)
     assert.equal(dataset.projection.code, 'EPSG:27572')
     assert.equal(dataset.schema[0]['x-refersTo'], 'http://data.ign.fr/def/geometrie#Geometry')
@@ -177,10 +177,10 @@ describe('geo files support', function () {
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
-    const dataset = await workers.hook('geojsonAnalyzer/' + res.data.id)
+    const dataset = await workers.hook('analyzeGeojson/' + res.data.id)
     const prop1 = dataset.schema.find(p => p.key === 'prop1')
     assert.equal(prop1['x-refersTo'], 'http://rdf.insee.fr/def/geo#codeRegion')
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('finalize/' + dataset.id)
   })
 
   it('Upload geojson dataset with some managed fixes', async function () {
@@ -196,7 +196,7 @@ describe('geo files support', function () {
     assert.equal(res.status, 201)
 
     // Dataset received and parsed
-    const dataset = await workers.hook('finalizer/' + res.data.id)
+    const dataset = await workers.hook('finalize/' + res.data.id)
     assert.equal(dataset.count, 2)
   })
 
@@ -212,7 +212,7 @@ describe('geo files support', function () {
 
     // ES indexation and finalization
     try {
-      await workers.hook('indexer/' + dataset.id)
+      await workers.hook('indexLines/' + dataset.id)
       assert.fail()
     } catch (err) {
       // Check that there is an error message in the journal
@@ -235,7 +235,7 @@ describe('geo files support', function () {
     const res = await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })
     const dataset = res.data
     assert.equal(res.status, 201)
-    await workers.hook('indexer/' + dataset.id)
+    await workers.hook('indexLines/' + dataset.id)
   })
 
   it('Process uploaded shapefile dataset', async function () {
@@ -252,13 +252,13 @@ describe('geo files support', function () {
     assert.equal(res.status, 201)
 
     // dataset converted
-    const dataset = await workers.hook('fileNormalizer/' + res.data.id)
+    const dataset = await workers.hook('normalizeFile/' + res.data.id)
     assert.equal(dataset.status, 'normalized')
     assert.equal(dataset.file.name, 'stations.geojson')
 
     assert.equal(dataset.storage.dataFiles.length, 2)
     assert.equal(dataset.storage.attachments.size, 0)
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('finalize/' + dataset.id)
   })
 
   it('Process shapefile dataset where zip file has different name from contents', async function () {
@@ -275,10 +275,10 @@ describe('geo files support', function () {
     assert.equal(res.status, 201)
 
     // dataset converted
-    const dataset = await workers.hook('fileNormalizer/' + res.data.id)
+    const dataset = await workers.hook('normalizeFile/' + res.data.id)
     assert.equal(dataset.status, 'normalized')
     assert.equal(dataset.file.name, 'stations2.geojson')
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('finalize/' + dataset.id)
   })
 
   it('Upload CSV file with WKT geometries', async function () {
@@ -286,7 +286,7 @@ describe('geo files support', function () {
     let dataset = await testUtils.sendDataset('geo/wkt.csv', ax)
     dataset.schema.find(p => p.key === 'geom')['x-refersTo'] = 'https://purl.org/geojson/vocab#geometry'
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { schema: dataset.schema })
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.ok(dataset.bbox)
 
     const geojson = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { format: 'geojson' } })).data
@@ -303,6 +303,7 @@ describe('geo files support', function () {
     }
     const oldLimit = { ...config.defaultLimits }
     config.defaultLimits.totalStorage = config.defaultLimits.datasetStorage = 10000000
+    await workers.workers.filesProcessor.run({ key: 'defaultLimits', value: config.defaultLimits }, { name: 'setConfig' })
 
     // Send dataset
     const datasetFd = fs.readFileSync('./resources/geo/paths.gpx')
@@ -313,19 +314,20 @@ describe('geo files support', function () {
     assert.equal(res.status, 201)
 
     // dataset converted
-    let dataset = await workers.hook('fileNormalizer/' + res.data.id)
+    let dataset = await workers.hook('normalizeFile/' + res.data.id)
     assert.equal(dataset.status, 'normalized')
     assert.equal(dataset.file.name, 'paths.geojson')
 
     assert.equal(dataset.storage.dataFiles.length, 2)
     assert.equal(dataset.storage.attachments.size, 0)
 
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.count, 1)
 
     const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`)).data
     assert.equal(lines.results[0].name, 'Tronçon n°1 - de Saint-Brieuc (22) à Saint-Nic (29)')
 
     config.defaultLimits = oldLimit
+    await workers.workers.filesProcessor.run({ key: 'defaultLimits', value: oldLimit }, { name: 'setConfig' })
   })
 })

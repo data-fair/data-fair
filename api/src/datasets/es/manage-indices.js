@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import config from '#config'
+import es from '#es'
 import * as datasetUtils from '../utils/index.js'
 import { aliasName, esProperty } from './commons.js'
 import { internalError } from '@data-fair/lib-node/observer.js'
@@ -34,17 +35,17 @@ export function indexPrefix (dataset) {
   return `${config.indicesPrefix}-${dataset.id}-${crypto.createHash('sha1').update(dataset.id).digest('hex').slice(0, 12)}`
 }
 
-export const initDatasetIndex = async (client, dataset) => {
+export const initDatasetIndex = async (dataset) => {
   const tempId = `${indexPrefix(dataset)}-${Date.now()}`
   const body = await indexDefinition(dataset)
-  await client.indices.create({ index: tempId, body })
+  await es.client.indices.create({ index: tempId, body })
   return tempId
 }
 
 // this method will routinely throw errors
 // we just try in case elasticsearch considers the new mapping compatible
 // so that we might optimize and reindex only when necessary
-export const updateDatasetMapping = async (client, dataset, oldDataset) => {
+export const updateDatasetMapping = async (dataset, oldDataset) => {
   const index = aliasName(dataset)
   const newMapping = (await indexDefinition(dataset)).mappings
   if (oldDataset) {
@@ -62,19 +63,19 @@ export const updateDatasetMapping = async (client, dataset, oldDataset) => {
       }
     }
   }
-  await client.indices.putMapping({ index, body: newMapping })
+  await es.client.indices.putMapping({ index, body: newMapping })
 }
 
-const getAliases = async (client, dataset) => {
+const getAliases = async (dataset) => {
   let prodAlias
   try {
-    prodAlias = await client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: null }) })
+    prodAlias = await es.client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: null }) })
   } catch (err) {
     if (err.statusCode !== 404) throw err
   }
   let draftAlias
   try {
-    draftAlias = await client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: true }) })
+    draftAlias = await es.client.indices.getAlias({ name: aliasName({ ...dataset, draftReason: true }) })
   } catch (err) {
     if (err.statusCode !== 404) throw err
   }
@@ -83,34 +84,34 @@ const getAliases = async (client, dataset) => {
 
 // deletion failures can happen during ES snapshots
 // it is acceptable to tolerate these errors, log them and do some cleanup later
-const safeDeleteIndex = async (client, index) => {
+const safeDeleteIndex = async (index) => {
   try {
-    await client.indices.delete({ index })
+    await es.client.indices.delete({ index })
   } catch (err) {
     internalError('es-delete-index', err)
   }
 }
 
 // delete indices and aliases of a dataset
-export const deleteIndex = async (client, dataset) => {
-  const { prodAlias } = await getAliases(client, dataset)
+export const deleteIndex = async (dataset) => {
+  const { prodAlias } = await getAliases(dataset)
 
   if (dataset.draftReason) {
     // in case of a draft dataset, delete all indices not used by the production alias
-    const previousIndices = await client.indices.get({ index: `${indexPrefix(dataset)}-*`, ignore_unavailable: true })
+    const previousIndices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*`, ignore_unavailable: true })
     for (const index in previousIndices) {
       if (prodAlias && prodAlias[index]) continue
-      await safeDeleteIndex(client, index)
+      await safeDeleteIndex(index)
     }
   } else {
-    await safeDeleteIndex(client, `${indexPrefix(dataset)}-*`)
+    await safeDeleteIndex(`${indexPrefix(dataset)}-*`)
   }
 }
 
 // replace the index referenced by a dataset's alias
-export const switchAlias = async (client, dataset, tempId) => {
+export const switchAlias = async (dataset, tempId) => {
   const name = aliasName(dataset)
-  await client.indices.updateAliases({
+  await es.client.indices.updateAliases({
     body: {
       actions: [
         { remove: { alias: name, index: '*' } },
@@ -120,21 +121,21 @@ export const switchAlias = async (client, dataset, tempId) => {
   })
 
   // Delete indices of this dataset that are not referenced by either the draft or prod aliases
-  const { prodAlias, draftAlias } = await getAliases(client, dataset)
-  const indices = await client.indices.get({ index: `${indexPrefix(dataset)}-*`, ignore_unavailable: true })
+  const { prodAlias, draftAlias } = await getAliases(dataset)
+  const indices = await es.client.indices.get({ index: `${indexPrefix(dataset)}-*`, ignore_unavailable: true })
   for (const index in indices) {
     if (prodAlias && prodAlias[index]) continue
     if (draftAlias && draftAlias[index]) continue
-    await safeDeleteIndex(client, index)
+    await safeDeleteIndex(index)
   }
 }
 
 // move an index from the draft alias to the production alias
-export const validateDraftAlias = async (client, dataset, tempId) => {
-  const { draftAlias } = await getAliases(client, dataset)
+export const validateDraftAlias = async (dataset, tempId) => {
+  const { draftAlias } = await getAliases(dataset)
   if (!draftAlias || Object.keys(draftAlias).length !== 1) throw new Error('no draft alias to validate')
-  await client.indices.deleteAlias({ name: aliasName({ ...dataset, draftReason: true }), index: '_all' })
-  await switchAlias(client, { ...dataset, draftReason: null }, Object.keys(draftAlias)[0])
+  await es.client.indices.deleteAlias({ name: aliasName({ ...dataset, draftReason: true }), index: '_all' })
+  await switchAlias({ ...dataset, draftReason: null }, Object.keys(draftAlias)[0])
 }
 
 const getNbShards = (dataset) => {
@@ -203,13 +204,13 @@ const indexBase = (dataset) => {
   }
 }
 
-export const datasetInfos = async (client, dataset) => {
+export const datasetInfos = async (dataset) => {
   // const indices = await client.indices.get({index: `${indexPrefix(dataset)}-*`})
-  const indices = await client.cat.indices({ index: `${indexPrefix(dataset)}-*`, format: 'json' })
+  const indices = await es.client.cat.indices({ index: `${indexPrefix(dataset)}-*`, format: 'json' })
   for (const index of indices) {
-    index.definition = (await client.indices.get({ index: index.index }))[index.index]
+    index.definition = (await es.client.indices.get({ index: index.index }))[index.index]
   }
-  const alias = await client.indices.getAlias({ index: aliasName(dataset) })
+  const alias = await es.client.indices.getAlias({ index: aliasName(dataset) })
   const aliasedIndexName = Object.keys(alias ?? {})[0]
   const index = indices.find(index => index.index === aliasedIndexName)
   return {
@@ -221,9 +222,9 @@ export const datasetInfos = async (client, dataset) => {
   }
 }
 
-export const datasetWarning = async (client, dataset) => {
+export const datasetWarning = async (dataset) => {
   if (dataset.isVirtual || dataset.isMetaOnly || dataset.status === 'draft' || dataset.status === 'error') return null
-  const esInfos = await datasetInfos(client, dataset)
+  const esInfos = await datasetInfos(dataset)
   if (!esInfos.index) return 'MissingIndex'
   else if (esInfos.index.health === 'red') return 'IndexHealthRed'
   else if (!esInfos.index.definition?.settings?.index?.number_of_shards) return 'MissingIndexSettings'

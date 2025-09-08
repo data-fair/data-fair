@@ -113,7 +113,7 @@ const datasetProperties = {
   file: {
     type: 'object',
     additionalProperties: false,
-    required: ['name', 'size', 'encoding', 'mimetype', 'schema'],
+    required: ['name', 'size', 'mimetype', 'schema'],
     properties: {
       name: {
         type: 'string',
@@ -129,7 +129,6 @@ const datasetProperties = {
       },
       mimetype: {
         type: 'string',
-        enum: ['text/csv'],
         description: 'Mime type of the file'
       },
       schema: fileSchema,
@@ -152,6 +151,10 @@ const datasetProperties = {
           escapeChar: {
             type: 'string',
             description: 'Character used to escape string'
+          },
+          quote: {
+            type: 'string',
+            description: 'Character used to wrap strings'
           }
         }
       }
@@ -170,9 +173,12 @@ const datasetProperties = {
         type: 'number',
         description: 'Size of the file on disk'
       },
+      encoding: {
+        type: 'string',
+        description: 'Encoding of the file'
+      },
       mimetype: {
         type: 'string',
-        enum: ['text/csv'],
         description: 'Mime type of the file'
       },
       md5: {
@@ -435,12 +441,12 @@ const datasetProperties = {
   owner,
   status: {
     type: 'string',
-    enum: ['remote', 'uploaded', 'loaded', 'analyzed', 'schematized', 'indexed', 'extended', 'finalized', 'error'],
+    enum: ['draft', 'created', 'remote', 'uploaded', 'loaded', 'imported', 'stored', 'analyzed', 'normalized', 'validated', 'validation-updated', 'schematized', 'indexed', 'extended', 'finalized', 'error'],
     description: 'The processing steps of a dataset.'
   },
   errorStatus: {
     type: 'string',
-    enum: ['remote', 'uploaded', 'loaded', 'analyzed', 'schematized', 'indexed', 'extended', 'finalized', 'error'],
+    enum: ['draft', 'created', 'remote', 'uploaded', 'loaded', 'imported', 'stored', 'analyzed', 'normalized', 'validated', 'validation-updated', 'schematized', 'indexed', 'extended', 'finalized', 'error'],
     description: 'The processing step the dataset was in when it encountered an error.'
   },
   errorRetry: {
@@ -840,7 +846,7 @@ const datasetProperties = {
       },
       validationMode: {
         type: 'string',
-        enum: ['never', 'always', 'compatible']
+        enum: ['never', 'always', 'compatible', 'compatibleOrCancel']
       }
     }
   },

@@ -9,7 +9,7 @@ export class DfEs {
     return this._client
   }
 
-  async init () {
+  async connect () {
     let node = config.elasticsearch.nodes
     if (!node) {
       node = config.elasticsearch.host
@@ -34,7 +34,12 @@ export class DfEs {
       await new Promise(resolve => setTimeout(resolve, 2000))
       await client.ping()
     }
-    await client.ingest.putPipeline({
+    this._client = client
+  }
+
+  async init () {
+    await this.connect()
+    await this.client.ingest.putPipeline({
       id: 'attachment',
       body: {
         description: 'Extract information from attached files',
@@ -52,7 +57,6 @@ export class DfEs {
         }]
       }
     })
-    this._client = client
   }
 }
 

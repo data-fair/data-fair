@@ -1,6 +1,6 @@
 import { text as stream2text } from 'node:stream/consumers'
 import express from 'express'
-import * as ajv from '../misc/utils/ajv.js'
+import * as ajv from '../misc/utils/ajv.ts'
 import fs from 'fs-extra'
 import path from 'path'
 import moment from 'moment'
@@ -59,6 +59,7 @@ import eventsQueue from '@data-fair/lib-node/events-queue.js'
 import eventsLog from '@data-fair/lib-express/events-log.js'
 import { getFlatten } from './utils/flatten.ts'
 import { can } from '../misc/utils/permissions.ts'
+import { emit as workerPing } from '../workers/ping.ts'
 
 const validateUserNotification = ajv.compile(userNotificationSchema)
 
@@ -194,7 +195,7 @@ router.patch('/:datasetId',
       })
     if (!isEmpty) {
       await publicationSites.applyPatch(dataset, { ...dataset, ...patch }, sessionState, 'datasets')
-      await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
+      await applyPatch(dataset, patch, removedRestProps, attemptMappingUpdate)
 
       if (patch.status && patch.status !== 'indexed' && patch.status !== 'finalized' && patch.status !== 'validation-updated') {
         await journals.log('datasets', dataset, { type: 'structure-updated' })
@@ -395,8 +396,8 @@ const createDatasetRoute = async (req, res) => {
       // case where we simply initialize the empty dataset
       // being empty this is not costly and can be performed by the API
       await restDatasetsUtils.initDataset(dataset)
-      const indexName = await initDatasetIndex(es, dataset)
-      await switchAlias(es, dataset, indexName)
+      const indexName = await initDatasetIndex(dataset)
+      await switchAlias(dataset, indexName)
       await restDatasetsUtils.configureHistory(dataset)
       await updateStorage(dataset)
       onClose(() => {
@@ -416,6 +417,8 @@ const createDatasetRoute = async (req, res) => {
     await journals.log('datasets', dataset, { type: 'dataset-created', href: config.publicUrl + '/dataset/' + dataset.id })
     await notifications.sendResourceEvent('datasets', dataset, sessionState, 'dataset-created')
     await syncRemoteService(dataset)
+
+    await workerPing('datasets', dataset.id)
 
     res.status(201).send(clean(req, dataset, draft))
   } catch (err) {
@@ -488,7 +491,7 @@ const updateDatasetRoute = async (req, res, next) => {
 
     if (!isEmpty) {
       await publicationSites.applyPatch(dataset, { ...dataset, ...patch }, sessionState, 'datasets')
-      await applyPatch(req.app, dataset, patch, removedRestProps, attemptMappingUpdate)
+      await applyPatch(dataset, patch, removedRestProps, attemptMappingUpdate)
 
       eventsLog.info('df.datasets.update', `updated dataset ${dataset.slug} (${dataset.id}) keys ${JSON.stringify(Object.keys(patch))}`, { req, account: dataset.owner })
 
@@ -534,7 +537,7 @@ router.post('/:datasetId/draft', readDataset({ acceptedStatuses: ['finalized'], 
   }
 
   const patch = { status: 'validated', validateDraft: true }
-  await applyPatch(req.app, dataset, patch)
+  await applyPatch(dataset, patch)
   await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation manuelle' })
   await notifications.sendResourceEvent('datasets', dataset, sessionState, 'draft-validated', { localizedParams: { cause: { fr: 'validation manuelle', en: 'manual validation' } } })
   eventsLog.info('df.datasets.validateDraft', `validated dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
@@ -558,13 +561,14 @@ router.delete('/:datasetId/draft', readDataset({ acceptedStatuses: ['draft', 'fi
   }
   const patch = { draft: null }
   await cancelDraft(dataset)
-  await applyPatch(req.app, datasetFull, patch)
+  await applyPatch(datasetFull, patch)
   await journals.log('datasets', dataset, { type: 'draft-cancelled' }, false, sessionState)
 
   eventsLog.info('df.datasets.cancelDraft', `cancelled dataset draft ${dataset.slug} (${dataset.id})`, { req, account: dataset.owner })
   await notifications.sendResourceEvent('datasets', dataset, sessionState, 'draft-cancelled')
 
   await updateStorage(datasetFull)
+
   return res.send(datasetFull)
 })
 
@@ -693,14 +697,14 @@ async function manageESError (req, err) {
 
 // used later to count items in a tile or tile's neighbor
 async function countWithCache (req, db, query) {
-  if (config.cache.disabled) return esUtils.count(req.app.get('es'), req.dataset, query)
+  if (config.cache.disabled) return esUtils.count(req.dataset, query)
   return cache.getSet({
     type: 'tile-count',
     datasetId: req.dataset.id,
     finalizedAt: req.dataset.finalizedAt,
     query
   }, async () => {
-    return esUtils.count(req.app.get('es'), req.dataset, query)
+    return esUtils.count(req.dataset, query)
   })
 }
 
@@ -871,7 +875,7 @@ const readLines = async (req, res) => {
     const geojson = geo.result2geojson(esResponse, flatten)
     observe.reqStep(req, 'result2geojson')
     // geojson format benefits from bbox info
-    geojson.bbox = (await esUtils.bboxAgg(req.app.get('es'), req.dataset, { ...query })).bbox
+    geojson.bbox = (await esUtils.bboxAgg(req.dataset, { ...query })).bbox
     observe.reqStep(req, 'bboxAgg')
     res.setHeader('content-disposition', contentDisposition(req.dataset.slug + '.geojson'))
     return res.status(200).send(geojson)
@@ -968,7 +972,7 @@ router.get('/:datasetId/geo_agg', readDataset({ fillDescendants: true }), applic
 
   if (req.query.format === 'geojson') {
     const geojson = geo.aggs2geojson(result)
-    geojson.bbox = (await esUtils.bboxAgg(req.app.get('es'), req.dataset, { ...req.query })).bbox
+    geojson.bbox = (await esUtils.bboxAgg(req.dataset, { ...req.query })).bbox
     return res.status(200).send(geojson)
   }
 
@@ -1012,7 +1016,7 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
   let result
   const flatten = getFlatten(req.dataset, req.query.arrays === 'true')
   try {
-    result = await esUtils.valuesAgg(req.app.get('es'), req.dataset, { ...req.query }, vectorTileRequested || req.query.format === 'geojson', req.publicBaseUrl, explain, flatten)
+    result = await esUtils.valuesAgg(req.dataset, { ...req.query }, vectorTileRequested || req.query.format === 'geojson', req.publicBaseUrl, explain, flatten)
     if (result.next) {
       const nextLinkURL = new URL(`${req.publicBaseUrl}/api/v1/datasets/${req.dataset.id}/values_agg`)
       for (const key of Object.keys(req.query)) {
@@ -1032,7 +1036,7 @@ router.get('/:datasetId/values_agg', readDataset({ fillDescendants: true }), app
 
   if (req.query.format === 'geojson') {
     const geojson = geo.aggs2geojson(result)
-    geojson.bbox = (await esUtils.bboxAgg(req.app.get('es'), req.dataset, { ...req.query })).bbox
+    geojson.bbox = (await esUtils.bboxAgg(req.dataset, { ...req.query })).bbox
     return res.status(200).send(geojson)
   }
 
@@ -1127,7 +1131,7 @@ router.get('/:datasetId/words_agg', readDataset({ fillDescendants: true }), appl
 router.get('/:datasetId/max/:fieldKey', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('getMaxAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), async (req, res) => {
   let result
   try {
-    result = await esUtils.maxAgg(req.app.get('es'), req.dataset, req.params.fieldKey, req.query)
+    result = await esUtils.maxAgg(req.dataset, req.params.fieldKey, req.query)
   } catch (err) {
     await manageESError(req, err)
   }
@@ -1139,7 +1143,7 @@ router.get('/:datasetId/max/:fieldKey', readDataset({ fillDescendants: true }), 
 router.get('/:datasetId/min/:fieldKey', readDataset({ fillDescendants: true }), applicationKey, apiKeyMiddleware, permissions.middleware('getMinAgg', 'read', 'readDataAPI'), cacheHeaders.resourceBased('finalizedAt'), async (req, res) => {
   let result
   try {
-    result = await esUtils.minAgg(req.app.get('es'), req.dataset, req.params.fieldKey, req.query)
+    result = await esUtils.minAgg(req.dataset, req.params.fieldKey, req.query)
   } catch (err) {
     await manageESError(req, err)
   }
@@ -1425,7 +1429,7 @@ router.get('/:datasetId/thumbnail/:thumbnailId', readDataset({ fillDescendants: 
     }
   } else {
     const imageField = req.dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/image')
-    const count = await esUtils.count(req.app.get('es'), req.dataset, {
+    const count = await esUtils.count(req.dataset, {
       qs: `${esUtils.escapeFilter(imageField.key)}:${esUtils.escapeFilter(url)}`
     })
     if (!count) return res.status(404).send('thumbnail does not match a URL from this dataset')
@@ -1450,7 +1454,7 @@ router.post('/:datasetId/_simulate-extension', readDataset(), permissions.middle
 // Special route with very technical informations to help diagnose bugs, broken indices, etc.
 router.get('/:datasetId/_diagnose', readDataset(), cacheHeaders.noCache, async (req, res) => {
   reqAdminMode(req)
-  const esInfos = await datasetInfos(req.app.get('es'), req.dataset)
+  const esInfos = await datasetInfos(req.dataset)
   const filesInfos = await datasetUtils.lsFiles(req.dataset)
   const locks = [
     await mongo.db.collection('locks').findOne({ _id: `dataset:${req.dataset.id}` }),

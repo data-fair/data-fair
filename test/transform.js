@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 import * as testUtils from './resources/test-utils.js'
 import FormData from 'form-data'
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 import fs from 'fs-extra'
 
 describe('file datasets with transformation rules', function () {
@@ -10,7 +10,7 @@ describe('file datasets with transformation rules', function () {
     form.append('file', 'id\n Test\nTest2', 'dataset1.csv')
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.count, 2)
 
     let lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
@@ -21,7 +21,7 @@ describe('file datasets with transformation rules', function () {
     schema[0]['x-transform'] = { expr: 'PAD_LEFT(LOWER(value), 6, "0")' }
     const patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema })).data
     assert.equal(patched.status, 'analyzed')
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
 
     lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
     assert.equal(lines[0].id, '00test')
@@ -33,7 +33,7 @@ describe('file datasets with transformation rules', function () {
     form.append('file', 'id,col1,col2\ntest,val,2025-04-03T18:00:00+02:00\ntest2,val,\n,val,2025-04-03T19:00:00+02:00', 'dataset1.csv')
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.schema[0].type, 'string')
     assert.equal(dataset.schema[2].type, 'string')
     assert.equal(dataset.schema[2].format, 'date-time')
@@ -56,7 +56,7 @@ describe('file datasets with transformation rules', function () {
       ]
     })).data
     assert.equal(dataset.status, 'validated')
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
     assert.equal(dataset.schema[0].type, 'boolean')
     assert.equal(dataset.schema[2].type, 'string')
     assert.equal(dataset.schema[2].format, undefined)
@@ -74,7 +74,7 @@ describe('file datasets with transformation rules', function () {
     form2.append('file', 'id,col1,col2\ntest,val,2025-04-03T16:00:00+02:00\ntest2,val', 'dataset1.csv')
     dataset = (await ax.post('/api/v1/datasets/' + dataset.id, form2, { headers: testUtils.formHeaders(form2) })).data
     assert.equal(dataset.status, 'loaded')
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
 
     lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
     assert.equal(lines.length, 2)
@@ -89,7 +89,7 @@ describe('file datasets with transformation rules', function () {
     form.append('file', fs.readFileSync('resources/datasets/date-time.xlsx'), 'dataset1.xlsx')
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
 
     let lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
     assert.equal(lines[0].horodatage, '2050-01-01T00:00:00.000Z')
@@ -100,7 +100,7 @@ describe('file datasets with transformation rules', function () {
     col['x-transform'] = { type: 'string', format: 'date', expr: 'SUBSTRING(value, 0, 10)' }
     const patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema })).data
     assert.equal(patched.status, 'analyzed')
-    await workers.hook('finalizer/' + dataset.id)
+    await workers.hook('finalize/' + dataset.id)
 
     lines = (await ax.get('/api/v1/datasets/' + dataset.id + '/lines')).data.results
     assert.equal(lines[0].horodatage, '2050-01-01')
@@ -112,13 +112,13 @@ describe('file datasets with transformation rules', function () {
     form.append('file', 'id,col1,col2\ntest,val,2025-04-03T18:00:00+02:00\ntest2,val,\n,val,2025-04-03T19:00:00+02:00', 'dataset1.csv')
     const ax = global.ax.dmeadus
     let dataset = (await ax.post('/api/v1/datasets', form, { headers: testUtils.formHeaders(form) })).data
-    dataset = await workers.hook('finalizer/' + dataset.id)
+    dataset = await workers.hook('finalize/' + dataset.id)
 
     const schema = dataset.schema
     schema[0]['x-transform'] = { type: 'number', expr: '"test"' }
     dataset = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema })).data
     const message = 'échec de l\'évaluation de l\'expression ""test"" : /id doit être de type number (résultat : "test")'
-    await assert.rejects(workers.hook('finalizer/' + dataset.id), { message })
+    await assert.rejects(workers.hook('finalize/' + dataset.id), { message: '[noretry] ' + message })
     const journal = await ax.get('/api/v1/datasets/' + dataset.id + '/journal').then(r => r.data)
     assert.equal(journal[0].type, 'error')
     assert.equal(journal[0].data, message)

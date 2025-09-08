@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 
-import * as workers from '../api/src/workers/index.js'
+import * as workers from '../api/src/workers/index.ts'
 
 describe('qs parameter', function () {
   it('Use the full power of ES query string syntax', async function () {
@@ -23,7 +23,7 @@ describe('qs parameter', function () {
       { _id: 'line4', str1: 'special , char' }
     ]
     let res = await ax.post('/api/v1/datasets/qsfilters/_bulk_lines', items)
-    await workers.hook('finalizer/qsfilters')
+    await workers.hook('finalize/qsfilters')
 
     res = await ax.get('/api/v1/datasets/qsfilters/lines')
     assert.equal(res.data.total, items.length)

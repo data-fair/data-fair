@@ -2,17 +2,18 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import streamJsonParser from 'stream-json/Parser.js'
 import streamJsonPick from 'stream-json/filters/Pick.js'
 import streamValues from 'stream-json/streamers/StreamValues.js'
-import * as datasetUtils from '../datasets/utils/index.js'
-import { updateStorage } from '../datasets/utils/storage.ts'
-import * as datasetsService from '../datasets/service.js'
-import * as fieldsSniffer from '../datasets/utils/fields-sniffer.js'
-import projections from '../../contract/projections.js'
-import { sampleValues as getSampleValues } from '../datasets/utils/data-streams.js'
+import * as datasetUtils from '../../datasets/utils/index.js'
+import { updateStorage } from '../../datasets/utils/storage.ts'
+import * as datasetsService from '../../datasets/service.js'
+import * as fieldsSniffer from '../../datasets/utils/fields-sniffer.js'
+import projections from '../../../contract/projections.js'
+import { sampleValues as getSampleValues } from '../../datasets/utils/data-streams.js'
+import type { DatasetInternal, FileDataset, SchemaProperty } from '#types'
 
 // Analyze geojson dataset data, check validity and detect schema
 export const eventsPrefix = 'analyze'
 
-export const process = async function (app, dataset) {
+export default async function (dataset: FileDataset) {
   const attachments = await datasetUtils.lsAttachments(dataset)
 
   // the stream is mainly read to get the features, but we also support extracting the crs property if it is present
@@ -23,18 +24,18 @@ export const process = async function (app, dataset) {
   const crsPipeline = crsParser
     .pipe(streamJsonPick.pick({ filter: 'crs' }))
     .pipe(streamValues.streamValues())
-  let crs
+  let crs: any
   crsPipeline.on('data', (data) => {
     crs = data.value
   })
 
-  const schema = [{
+  const schema: SchemaProperty[] = [{
     type: 'string',
     key: 'geometry',
     'x-originalName': 'geometry',
     'x-refersTo': 'https://purl.org/geojson/vocab#geometry'
   }]
-  const sampleValues = await getSampleValues(dataset, ['geometry'], (decodedData) => crsParser.write(decodedData))
+  const sampleValues = await getSampleValues(dataset, ['geometry'], (decodedData: any) => crsParser.write(decodedData))
   crsParser.end()
 
   for (const property in sampleValues) {
@@ -62,13 +63,13 @@ export const process = async function (app, dataset) {
   datasetUtils.mergeFileSchema(dataset)
   datasetUtils.cleanSchema(dataset)
 
-  const patch = {
+  const patch: Partial<DatasetInternal> = {
     status: 'analyzed',
     file: dataset.file,
     schema: dataset.schema
   }
   if (dataset.projection) patch.projection = dataset.projection
 
-  await datasetsService.applyPatch(app, dataset, patch)
+  await datasetsService.applyPatch(dataset, patch)
   if (!dataset.draftReason) await updateStorage(dataset, false, true)
 }

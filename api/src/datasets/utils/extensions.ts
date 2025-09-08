@@ -36,10 +36,10 @@ const debugMasterData = debugLib('master-data')
 const debug = debugLib('extensions')
 const debugOverwrite = debugLib('extensions-overwrite')
 
-export const prepareExtensions = (locale: string, extensions: any[], oldExtensions: any[] = []) => {
+export const prepareExtensions = (locale: string, extensions: any[], oldExtensions?: any[]) => {
   for (const e of extensions) {
     if (e.type === 'remoteService') {
-      const oldExtension = oldExtensions.find((/** @type {any} */oldE) => oldE.remoteService === e.remoteService && oldE.action === e.action)
+      const oldExtension = oldExtensions?.find((/** @type {any} */oldE) => oldE.remoteService === e.remoteService && oldE.action === e.action)
       if (oldExtension) {
         if (!equal(oldExtension.select, e.select)) e.needsUpdate = true
         if (!equal(oldExtension.overwrite, e.overwrite)) e.needsUpdate = true
@@ -62,15 +62,15 @@ export const prepareExtensions = (locale: string, extensions: any[], oldExtensio
           e.propertyPrefix = propertyPrefix.replace(/__/g, '_').replace(/^_/, '').replace(/_$/, '')
           e.propertyPrefix = '_' + e.propertyPrefix
 
-          e.needsUpdate = true
+          if (oldExtensions) e.needsUpdate = true
 
           // TODO: also check if there is a conflict with an existing calculate property ?
         }
       }
     }
     if (e.type === 'exprEval' && e.active) {
-      const oldExtension = oldExtensions.find(oe => oe.type === 'exprEval' && oe.property?.key === e.property?.key)
-      if (!oldExtension || (oldExtension && oldExtension.active && oldExtension.expr !== e.expr)) {
+      const oldExtension = oldExtensions?.find(oe => oe.type === 'exprEval' && oe.property?.key === e.property?.key)
+      if (oldExtensions && (!oldExtension || (oldExtension && oldExtension.active && oldExtension.expr !== e.expr))) {
         e.needsUpdate = true
       }
     }
@@ -90,7 +90,7 @@ export const compileExpression = exprEval(config.defaultTimezone).compile
 export const extend = async (
   dataset: Dataset,
   extensions: any[],
-  updateMode?: 'updatedLines' | 'lineIds' | 'updatedExtensions',
+  updateMode?: 'all' | 'updatedLines' | 'lineIds' | 'updatedExtensions',
   ignoreDraftLimit?: boolean,
   lineIds?: string[],
   simulationLine?: DatasetLine
@@ -148,7 +148,7 @@ export const extend = async (
     else if (updateMode === 'lineIds') filter = { _id: { $in: lineIds } }
     inputStreams = await restDatasetsUtils.readStreams(dataset, filter, progress)
   } else {
-    inputStreams = await readStreams(mongo.db, dataset, false, false, ignoreDraftLimit, progress)
+    inputStreams = await readStreams(dataset, false, false, ignoreDraftLimit, progress)
   }
 
   let writeStreams
