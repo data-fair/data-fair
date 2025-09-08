@@ -37,13 +37,14 @@ export type NockInfo = {
   path: string,
   reply: {
     status?: number,
+    headers?: Record<string, string>
     body: any
   }
 }
 
 export const setNock = async function (nockInfo: NockInfo) {
   const nock = (await import('nock')).default
-  nock(nockInfo.origin)[nockInfo.method ?? 'get'](nockInfo.path).reply(nockInfo.reply.status, nockInfo.reply.body)
+  nock(nockInfo.origin)[nockInfo.method ?? 'get'](nockInfo.path).reply(nockInfo.reply.status, nockInfo.reply.body, nockInfo.reply.headers)
 }
 
 export const setCoordsNock = async function (params: { nbInputs: number, latLon?: number, query?: string, multiply?: boolean, error?: string }) {

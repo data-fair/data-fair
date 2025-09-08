@@ -118,7 +118,7 @@ describe('file datasets with transformation rules', function () {
     schema[0]['x-transform'] = { type: 'number', expr: '"test"' }
     dataset = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema })).data
     const message = 'échec de l\'évaluation de l\'expression ""test"" : /id doit être de type number (résultat : "test")'
-    await assert.rejects(workers.hook('finalize/' + dataset.id), { message })
+    await assert.rejects(workers.hook('finalize/' + dataset.id), { message: '[noretry] ' + message })
     const journal = await ax.get('/api/v1/datasets/' + dataset.id + '/journal').then(r => r.data)
     assert.equal(journal[0].type, 'error')
     assert.equal(journal[0].data, message)

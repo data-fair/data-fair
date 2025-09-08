@@ -366,7 +366,10 @@ describe('virtual datasets', function () {
       }
     })
     const virtualDataset = res.data
-    await assert.rejects(workers.hook('finalize/' + virtualDataset.id))
+    await assert.rejects(workers.hook('finalize/' + virtualDataset.id), (err) => {
+      console.log(err)
+      return true
+    })
 
     try {
       await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines`)

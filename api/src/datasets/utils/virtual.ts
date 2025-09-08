@@ -170,11 +170,11 @@ export const descendants = async (dataset: VirtualDataset, tolerateStale = false
   const virtualDescendantsWithFilters = res[0].descendants
     .filter((d: Dataset) => d.isVirtual && (d.virtual?.filters?.length || d.virtual?.filterActiveAccount))
   if (virtualDescendantsWithFilters.length) {
-    throw httpError(501, 'Le jeu de données virtuel ne peut pas être requêté, il utilise un autre jeu de données virtuel avec des filtres ce qui n\'est pas supporté.')
+    throw httpError(501, '[noretry] Le jeu de données virtuel ne peut pas être requêté, il utilise un autre jeu de données virtuel avec des filtres ce qui n\'est pas supporté.')
   }
   const physicalDescendants = res[0].descendants.filter((d: Dataset) => !d.isVirtual)
   if (physicalDescendants.length === 0 && throwEmpty) {
-    throw httpError(501, 'Le jeu de données virtuel ne peut pas être requêté, il n\'utilise aucun jeu de données requêtable.')
+    throw httpError(501, '[noretry] Le jeu de données virtuel ne peut pas être requêté, il n\'utilise aucun jeu de données requêtable.')
   }
   return extraProperties ? physicalDescendants : physicalDescendants.map((d: Dataset) => d.id)
 }

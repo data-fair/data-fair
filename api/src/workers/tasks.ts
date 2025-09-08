@@ -59,10 +59,10 @@ const createWorkers = () => {
 export const workers = createWorkers()
 
 export const pendingTasks = {
-  shortProcessor: 0,
-  filesManager: 0,
-  filesProcessor: 0,
-  batchProcessor: 0
+  shortProcessor: {} as Record<string, string>,
+  filesManager: {} as Record<string, string>,
+  filesProcessor: {} as Record<string, string>,
+  batchProcessor: {} as Record<string, string>
 }
 
 const isNormalizedMongoFilter = (draft = false, not = false) => {
@@ -208,16 +208,13 @@ const datasetTasks: DatasetTask[] = [{
     status: 'finalized',
     isRest: true,
     'exports.restToCSV.active': true,
-    'dataset.exports.restToCSV.nextExport': { $lt: new Date().toISOString() }
+    'exports.restToCSV.nextExport': { $lt: new Date().toISOString() }
   })
 }, {
   name: 'publishDataset',
   worker: 'shortProcessor',
   mongoFilter: () => ({
-    $or: [{
-      isMetaOnly: true,
-      status: 'finalized'
-    }],
+    $or: [{ isMetaOnly: true }, { status: 'finalized' }],
     draftReason: { $exists: false },
     'publications.status': { $in: ['waiting', 'delete'] }
   })
@@ -228,13 +225,22 @@ const datasetTasks: DatasetTask[] = [{
 }, {
   name: 'manageTTL',
   worker: 'shortProcessor',
-  mongoFilter: () => ({ status: 'finalized', count: { $gt: 0 }, isRest: true, 'rest.ttl.active': true, $or: [{ 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } }, { 'rest.ttl.checkedAt': { $exists: false } }] })
+  mongoFilter: () => ({
+    status: 'finalized',
+    count: { $gt: 0 },
+    isRest: true,
+    'rest.ttl.active': true,
+    _partialRestStatus: null,
+    $or: [{ 'rest.ttl.checkedAt': { $lt: moment().subtract(1, 'hours').toISOString() } }, { 'rest.ttl.checkedAt': { $exists: false } }]
+  })
 }, {
   name: 'autoUpdate',
   worker: 'shortProcessor',
   mongoFilter: () => ({
+    status: 'finalized',
+    draft: { $exists: false },
     'remoteFile.autoUpdate.active': true,
-    'dataset.remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() }
+    'remoteFile.autoUpdate.nextUpdate': { $lt: new Date().toISOString() }
   })
 }, {
   name: 'errorRetry',

@@ -212,7 +212,7 @@ beforeEach('scratch data', async function () {
   debug('force reset the workers')
   await resetPing()
   for (const pending of Object.values(pendingTasks)) {
-    if (pending > 0) throw new Error(`the test "${this.currentTest?.title}" didn't wait for some pending tasks (${JSON.stringify(pendingTasks)})`)
+    if (Object.keys(pending).length > 0) throw new Error(`the test "${this.currentTest?.title}" didn't wait for some pending tasks (${JSON.stringify(pendingTasks)})`)
   }
 
   debug('scratch data')

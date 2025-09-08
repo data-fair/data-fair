@@ -161,11 +161,7 @@ function checkQuery (query, schema, esFields, currentField) {
     try {
       query = queryParser.parse(query)
     } catch (err) {
-      throw httpError(400, `<p>Impossible d'effectuer cette recherche, la syntaxe du paramètre "qs" n'est pas respectée :</p>
- <ul>
-  <li>requête : ${query}</li>
-  <li>erreur : ${err.message}</li>
-</ul>`)
+      throw httpError(400, `Impossible d'effectuer cette recherche, la syntaxe du paramètre "qs" n'est pas respectée : requête = "${query}", erreur = "${err.message}"`)
     }
   }
   query.field = query.field && query.field.replace(/\\/g, '')

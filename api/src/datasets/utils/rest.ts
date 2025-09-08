@@ -938,6 +938,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
 
     // these formats are read strictly as is
     const raw = mimeType === 'application/x-ndjson' || mimeType === 'application/json'
+    const contentLength = Number(req.get('content-length'))
 
     const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, req.dataset, true, false)
 
@@ -975,7 +976,6 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
           await mongo.datasets.updateOne({ id: req.dataset.id }, { $set: { status: 'analyzed' } })
         }
       } else {
-        const contentLength = Number(req.get('content-length'))
         if (!attachmentsFile && req.query.async !== 'true' && !isNaN(contentLength) && contentLength <= config.elasticsearch.maxBulkChars && summary._ids.size <= config.elasticsearch.maxBulkLines) {
           await commitLines(req.dataset, [...summary._ids])
           summary.indexedAt = new Date().toISOString()

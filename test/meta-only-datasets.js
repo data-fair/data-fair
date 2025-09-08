@@ -16,7 +16,7 @@ describe('meta only datasets', function () {
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { publications: [{ catalog: 'test', status: 'waiting' }] })
 
     // Go through the publisher worker
-    dataset = await workers.hook('datasetPublisher')
+    dataset = await workers.hook('publishDataset/' + dataset.id)
     assert.equal(dataset.publications[0].status, 'error')
   })
 })

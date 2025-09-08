@@ -34,7 +34,7 @@ export const log = async function (resourceType: ResourceType, resource: Resourc
     }
   } catch (err) {
     // errors when writing to journal are never blocking for the actual task
-    console.warn('Failure when writing event to journal')
+    console.warn('Failure when writing event to journal', err)
   }
 }
 

@@ -63,13 +63,14 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
       facets[task.name] = facet
     }
     const results = await mongo.db.collection<any>(type).aggregate([{ $facet: facets }]).toArray().then(agg => agg[0])
-    if (process.env.NODE_ENV === 'test') {
-      const matchedTasks = freeTasks.map(t => t.name).filter(t => results[t]?.length)
-      if (matchedTasks.length > 1) throw new Error('task selecion was not exclusive ' + JSON.stringify(matchedTasks))
-    }
     for (const task of freeTasks) {
       const resource = results[task.name][0]
       if (resource) {
+        if (process.env.NODE_ENV === 'test') {
+          const resourceMatchedTasks = freeTasks.map(t => t.name).filter(t => results[t]?.some(r => r.id === resource.id))
+          if (resourceMatchedTasks.length > 1) events.emit('error', new Error('task selecion was not exclusive ' + JSON.stringify(resourceMatchedTasks)))
+        }
+
         delete resource._locks
         delete resource._lockId
         // if there is something to be done in the draft mode of the dataset, it is prioritary
@@ -89,7 +90,8 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
     debug('failed to acquire lock for resource', type, id)
     return
   }
-  pendingTasks[task.worker]++
+  const taskFullKey = `${type}/${resource.id}/${task.name}`
+  pendingTasks[task.worker][`${type}/${resource.id}/${task.name}`] = resource.slug
 
   const endTask = workersTasksHistogram.startTimer({ task: task.name })
   let progress: ReturnType<typeof taskProgress> | null = null
@@ -171,7 +173,7 @@ export const processResourceTask = async (type: ResourceType, resource: any, tas
 
     events.emit('error', err)
   } finally {
-    pendingTasks[task.worker]--
+    delete pendingTasks[task.worker][taskFullKey]
     await locks.release(`${type}:${id}`)
   }
 }

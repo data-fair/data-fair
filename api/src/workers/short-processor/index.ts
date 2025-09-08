@@ -33,11 +33,13 @@ export const harvest = async function (catalog: any) {
 
 export const publishApplication = async function (application: Application) {
   await mongo.connect(true)
+  await wsEmitter.init(mongo.db)
   return catalogs.processPublications('application', application)
 }
 
 export const publishDataset = async function (dataset: Dataset) {
   await mongo.connect(true)
+  await wsEmitter.init(mongo.db)
   return catalogs.processPublications('dataset', dataset)
 }
 
@@ -105,4 +107,19 @@ export const finalize = async function (dataset: Dataset) {
   await wsEmitter.init(mongo.db)
   const finalize = await import('./finalize.ts')
   await finalize.default(dataset)
+}
+
+if (process.env.NODE_ENV === 'test') {
+  const nock = (await import('nock')).default
+  // fake catalog
+  nock('http://test-catalog.com')
+    .persist()
+    .get('/api/1/site/').reply(200, { title: 'My catalog' })
+    .get('/api/1/organizations/suggest/?q=koumoul').reply(200, [{ name: 'Koumoul' }])
+    .get('/api/1/datasets/suggest/?q=test').reply(200, [{ title: 'Test dataset' }])
+    .post('/api/1/datasets/').reply(201, { slug: 'my-dataset', page: 'http://test-catalog.com/datasets/my-dataset' })
+
+  // fake catalog
+  nock('http://not-a-catalog.com')
+    .persist()
 }

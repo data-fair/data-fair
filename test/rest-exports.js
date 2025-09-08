@@ -23,7 +23,7 @@ describe('REST datasets exported', function () {
       { id: 'rest' }, { $set: { 'exports.restToCSV.nextExport': nextExport } })
     // console.log(await global.db.collection('datasets').findOne({ id: 'rest' }))
 
-    const dataset = await workers.hook('restExporterCSV/rest')
+    const dataset = await workers.hook('exportRest/rest')
     assert.ok(!!dataset.exports.restToCSV.lastExport)
     assert.ok(dataset.exports.restToCSV.nextExport !== nextExport)
     const exportedDataFile = dataset.storage.dataFiles.find(df => df.key === 'export-csv')

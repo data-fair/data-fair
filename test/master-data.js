@@ -379,7 +379,6 @@ describe('Master data management', function () {
         select: ['extra']
       }]
     })
-    await workers.hook('finalize/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: 'TEST"SIRET*' }].map(item => ({ _id: item.siret, ...item })))
     await workers.hook('finalize/slave')
     const results = (await ax.get('/api/v1/datasets/slave/lines')).data.results
@@ -417,9 +416,16 @@ describe('Master data management', function () {
         select: ['extra']
       }]
     })
-    await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: 'test " failure' }].map(item => ({ _id: item.siret, ...item })))
+    let res = await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: 'test " failure' }].map(item => ({ _id: item.siret, ...item })))
+    assert.equal(res.data.nbErrors, 1)
+    assert.ok(res.data.errors[0].error.includes('Impossible d\'effectuer cette recherche'))
+
+    // in drop mode the lines are not commited immediately
+    res = await ax.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: 'test " failure' }].map(item => ({ _id: item.siret, ...item })))
+    assert.equal(res.data.nbOk, 1)
+
     await assert.rejects(workers.hook('finalize/slave'), (err) => {
-      assert.ok(err.message.includes('Impossible d\'effectuer cette recherche'), `message was ${err.message}`)
+      assert.ok(err.message.includes('Impossible d\'effectuer cette recherche'))
       return true
     })
     const journal = (await ax.get('/api/v1/datasets/slave/journal')).data
@@ -527,7 +533,6 @@ describe('Master data management', function () {
         action: 'masterData_bulkSearch_siret'
       }]
     })
-    await workers.hook('finalize/slave')
     await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
     const slave = await workers.hook('finalize/slave')
     assert.ok(slave.schema.find(p => p.key === '_siret.extra'))
@@ -583,7 +588,6 @@ describe('Master data management', function () {
         action: 'masterData_bulkSearch_siret2'
       }]
     })).data
-    await workers.hook('finalize/slave')
 
     // slave schema contains props from both levels of extensions
     assert.ok(slave.schema.find(p => p.key === '_siret2.extra2'))
@@ -752,6 +756,7 @@ describe('Master data management', function () {
         select: ['extra']
       }]
     })
+    await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: '82898347800011' }])
     await assert.rejects(workers.hook('finalize/slave'), err => err.message.startsWith('Try to apply extension'))
   })
 
@@ -784,8 +789,8 @@ describe('Master data management', function () {
         select: ['extra']
       }]
     })
-    await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
-    await assert.rejects(workers.hook('finalize/slave'), err => err.message.startsWith('permission manquante'))
+    await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
+    await assert.rejects(workers.hook('finalize/slave'), err => err.message.startsWith('[noretry] permission manquante'))
   })
 
   it('should support using master-data from other account if visibility is ok', async function () {
@@ -823,7 +828,6 @@ describe('Master data management', function () {
         select: ['extra']
       }]
     })
-    await workers.hook('finalize/slave')
     await global.ax.cdurning2.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
     await workers.hook('finalize/slave')
     const results = (await global.ax.cdurning2.get('/api/v1/datasets/slave/lines')).data.results
@@ -887,7 +891,6 @@ describe('Master data management', function () {
         select: ['name']
       }]
     })).data
-    await workers.hook('finalize/slave')
     assert.ok(slave.schema.find(p => p.key === '_geopoint'))
     assert.ok(slave.schema.find(p => p.key === '_geo.country'))
     assert.ok(slave.schema.find(p => p.key === '_country.name'))
@@ -1000,7 +1003,6 @@ describe('Master data management', function () {
         select: ['name']
       }]
     })).data
-    await workers.hook('finalize/slave')
     assert.ok(slave.schema.find(p => p.key === '_geo.country'))
     assert.ok(slave.schema.find(p => p.key === '_country.name'))
 

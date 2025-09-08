@@ -25,5 +25,5 @@ export const storeFile = async function (dataset: Dataset) {
 
 export const setNock = async function (nockInfo: NockInfo) {
   const nock = (await import('nock')).default
-  nock(nockInfo.origin)[nockInfo.method ?? 'get'](nockInfo.path).reply(nockInfo.reply.status, nockInfo.reply.body)
+  nock(nockInfo.origin)[nockInfo.method ?? 'get'](nockInfo.path).reply(nockInfo.reply.status, nockInfo.reply.body, nockInfo.reply.headers)
 }
