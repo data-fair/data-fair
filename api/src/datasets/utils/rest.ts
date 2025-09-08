@@ -387,6 +387,14 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
     const missingPatchPrevious = new Set(patchPreviousFilters.map(f => f._id))
     for await (const patchPrevious of c.find({ $or: patchPreviousFilters }).project(patchProjection)) {
       const { _id, _hash, _deleted, ...previousBody } = patchPrevious
+      // manage the case of older data that was stored when we didn't apply the separator before storing lines
+      for (const f of dataset.schema) {
+        if (f.separator && typeof previousBody[f.key] === 'string') {
+          const value = fieldsSniffer.format(previousBody[f.key], f)
+          if (value !== null) previousBody[f.key] = value
+        }
+      }
+
       if (!_deleted) {
         missingPatchPrevious.delete(_id)
         const operation = operations.find(op => op._id === _id)
