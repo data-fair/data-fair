@@ -110,13 +110,15 @@ describe('REST datasets', function () {
       { _id: 'line2', attr1: 'test1', attr2: 'test1' },
       { _id: 'line3', attr1: 'test1', attr2: 'test1' },
       { _id: 'line4', attr1: 'test1', attr2: 'test1' },
+      { _id: 'line5', attr1: 'test1', attr2: 'test1' },
       { _action: 'delete', _id: 'line2' },
       { _action: 'patch', _id: 'line3', attr1: 'test2' },
-      { _action: 'update', _id: 'line4', attr1: 'test2', attr2: 'test2' }
+      { _action: 'update', _id: 'line4', attr1: 'test2', attr2: 'test2' },
+      { _action: 'patch', _id: 'line5', attr1: 'test2', attr2: null },
     ])
     await workers.hook('finalize/rest2')
-    assert.equal(res.data.nbOk, 7)
-    assert.equal(res.data.nbCreated, 4)
+    assert.equal(res.data.nbOk, 9)
+    assert.equal(res.data.nbCreated, 5)
     assert.equal(res.data.nbDeleted, 1)
     assert.ok(res.data.indexedAt)
 
@@ -132,6 +134,9 @@ describe('REST datasets', function () {
     res = await ax.get('/api/v1/datasets/rest2/lines/line4')
     assert.equal(res.data.attr1, 'test2')
     assert.equal(res.data.attr2, 'test2')
+    res = await ax.get('/api/v1/datasets/rest2/lines/line5')
+    assert.equal(res.data.attr1, 'test2')
+    assert.equal(res.data.attr2, undefined)
   })
 
   it('Index and finalize dataset after write', async function () {
@@ -324,7 +329,6 @@ test1,test1,"test1, testko"`, { headers: { 'content-type': 'text/csv' } })
       { attr1: 'test1', attr2: 'test1', attr3: 'test1, testko' },
       { attr1: 'test1', attr2: 'test1', attr3: '' }
     ])
-
     assert.equal(res.data.nbOk, 4)
     assert.equal(res.data.nbErrors, 1)
     assert.equal(res.data.errors.length, 1)

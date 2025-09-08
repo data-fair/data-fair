@@ -22,8 +22,9 @@ export const formatLine = (item, schema) => {
   for (const key of Object.keys(item)) {
     const prop = schema.find(p => p.key === key)
     if (prop && typeof item[key] === 'string') {
-      const value = fieldsSniffer.format(item[prop['x-originalName'] || key], prop)
-      if (value !== null) item[key] = value
+      const value = fieldsSniffer.format(item[key], prop)
+      if (value === null) delete item[key]
+      else item[key] = value
     }
     // special case for rest datasets where null values are kept in a patch
     if (item._action !== 'patch') {
@@ -211,11 +212,8 @@ export const getTransformStream = (schema, fileSchema, applyTransform = false) =
         } else {
           const fileProp = fileSchema && fileSchema.find(p => p.key === prop.key)
           const value = fieldsSniffer.format(item[prop.key], prop, fileProp)
-          if (value === null) {
-            delete item[prop.key]
-          } else {
-            item[prop.key] = value
-          }
+          if (value === null) delete item[prop.key]
+          else item[prop.key] = value
         }
       }
       callback(null, item)

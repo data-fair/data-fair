@@ -51,10 +51,7 @@ const checkInteger = (val) => {
 }
 
 export const format = (value, prop, fileProp, ignoreSeparator) => {
-  if (value === null || value === undefined || value === '') {
-    if (!ignoreSeparator && prop.separator) return []
-    return null
-  }
+  if (value === null || value === undefined || value === '') return null
   if (!ignoreSeparator && typeof value === 'string' && prop.separator) {
     return value.split(prop.separator.trim()).map(part => format(part.trim(), prop, fileProp, true))
   }
